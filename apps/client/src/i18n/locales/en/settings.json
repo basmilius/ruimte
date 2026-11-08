@@ -1032,32 +1032,43 @@
             "not-installed": "cloudflared is not installed",
             "installing": "Installing cloudflared",
             "cannot-install": "cloudflared cannot be installed here",
-            "signed-out": "Not signed in to Cloudflare",
-            "signing-in": "Signing in to Cloudflare",
+            "no-token": "No Cloudflare API token",
+            "checking": "Checking with Cloudflare",
             "no-tunnel": "No tunnel yet",
             "starting": "Updating the tunnel",
             "running": "The tunnel is running",
-            "failed": "cloudflared reported a problem"
+            "failed": "Tunnels ran into a problem"
         },
         "install": {
             "label": "Install cloudflared",
             "description": "Ruimte downloads Cloudflare's official build, checks it against a checksum pinned in this release, and keeps it in its own folder.",
             "action": "Install"
         },
-        "signIn": {
-            "label": "Sign in with Cloudflare",
-            "description": "Ruimte runs cloudflared, which opens Cloudflare in your browser. You pick the domain there. Ruimte never reads your Cloudflare login.",
-            "action": "Sign in",
-            "waiting": "Finish signing in in your browser, then come back.",
-            "open": "Open the page"
+        "token": {
+            "label": "Cloudflare API token",
+            "description": "Ruimte manages one tunnel on your Cloudflare account with a token you make. It needs Zone read, DNS edit and Cloudflare Tunnel edit. The token stays on this machine and goes only to Cloudflare.",
+            "placeholder": "Paste the token",
+            "make": "Make a token",
+            "action": "Check token",
+            "accepted_one": "Cloudflare accepts this token. It reaches {{count}} domain on {{account}}.",
+            "accepted_other": "Cloudflare accepts this token. It reaches {{count}} domains on {{account}}.",
+            "remove": "Remove token"
         },
-        "domain": {
-            "label": "Domain",
-            "description": "The domain on your Cloudflare account that the hostnames use.",
+        "tunnel": {
+            "label": "Tunnel",
+            "description": "Ruimte makes one tunnel for this machine on your Cloudflare account. It also shows in the Cloudflare dashboard.",
+            "account": "Cloudflare account",
+            "pickAccount": "Pick an account",
             "action": "Create tunnel"
+        },
+        "zone": {
+            "label": "Domain",
+            "pick": "Pick a domain"
         },
         "rows": {
             "title": "Hostnames",
+            "tunnel": "Tunnel {{name}}",
+            "tunnelHint": "Its hostnames show in the Cloudflare dashboard too. Ruimte only changes the records it made.",
             "mcp": "Ruimte's MCP, guarded by a credential on every request",
             "dev": "Dev server on port {{port}}, open to anyone with the address",
             "enabled": "{{hostname}} is on",
@@ -1071,15 +1082,15 @@
             "label": "External MCP",
             "on": "Listening on 127.0.0.1, port {{port}}. A hostname below makes it reachable from outside.",
             "off": "Off. Nothing listens until you turn it on.",
-            "hostname": "MCP hostname",
-            "hostnameHint": "A long random name, so scanners do not find it. The name protects nothing: your credentials do."
+            "hostname": "MCP label or hostname",
+            "hostnameHint": "Start from a long random label, so scanners do not find it. The name protects nothing: your credentials do."
         },
         "dev": {
             "label": "Add a dev server",
-            "description": "Pick a port a session of yours listens on, and the hostname to give it. Nothing sits in front of a dev server: anyone with the address reaches it.",
+            "description": "Pick a port a session of yours listens on, then a label or a full hostname on one of your domains. Nothing sits in front of a dev server: anyone with the address reaches it.",
             "port": "Port",
             "pick": "Pick a port",
-            "hostname": "Hostname",
+            "hostname": "Label or hostname",
             "gate": "I know anyone with the address reaches this server"
         },
         "credentials": {

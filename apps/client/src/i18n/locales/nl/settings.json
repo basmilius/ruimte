@@ -1032,32 +1032,43 @@
             "not-installed": "cloudflared is niet geïnstalleerd",
             "installing": "cloudflared wordt geïnstalleerd",
             "cannot-install": "cloudflared kan hier niet worden geïnstalleerd",
-            "signed-out": "Niet ingelogd bij Cloudflare",
-            "signing-in": "Inloggen bij Cloudflare",
+            "no-token": "Geen Cloudflare API-token",
+            "checking": "Controleren bij Cloudflare",
             "no-tunnel": "Nog geen tunnel",
             "starting": "De tunnel wordt bijgewerkt",
             "running": "De tunnel draait",
-            "failed": "cloudflared meldt een probleem"
+            "failed": "Tunnels lopen tegen een probleem aan"
         },
         "install": {
             "label": "cloudflared installeren",
             "description": "Ruimte downloadt de officiële build van Cloudflare, controleert die met een checksum die in deze release is vastgelegd en bewaart hem in een eigen map.",
             "action": "Installeren"
         },
-        "signIn": {
-            "label": "Inloggen bij Cloudflare",
-            "description": "Ruimte start cloudflared, dat Cloudflare in je browser opent. Daar kies je het domein. Ruimte leest je Cloudflare-login nooit.",
-            "action": "Inloggen",
-            "waiting": "Rond het inloggen af in je browser en kom dan terug.",
-            "open": "Pagina openen"
+        "token": {
+            "label": "Cloudflare API-token",
+            "description": "Ruimte beheert één tunnel op je Cloudflare-account met een token die je zelf maakt. Hij heeft Zone read, DNS edit en Cloudflare Tunnel edit nodig. De token blijft op deze machine en gaat alleen naar Cloudflare.",
+            "placeholder": "Plak de token",
+            "make": "Token maken",
+            "action": "Token controleren",
+            "accepted_one": "Cloudflare accepteert deze token. Hij bereikt {{count}} domein op {{account}}.",
+            "accepted_other": "Cloudflare accepteert deze token. Hij bereikt {{count}} domeinen op {{account}}.",
+            "remove": "Token verwijderen"
         },
-        "domain": {
-            "label": "Domein",
-            "description": "Het domein op je Cloudflare-account waar de hostnamen onder vallen.",
+        "tunnel": {
+            "label": "Tunnel",
+            "description": "Ruimte maakt één tunnel voor deze machine op je Cloudflare-account. Je ziet hem ook in het Cloudflare-dashboard.",
+            "account": "Cloudflare-account",
+            "pickAccount": "Kies een account",
             "action": "Tunnel maken"
+        },
+        "zone": {
+            "label": "Domein",
+            "pick": "Kies een domein"
         },
         "rows": {
             "title": "Hostnamen",
+            "tunnel": "Tunnel {{name}}",
+            "tunnelHint": "De hostnamen staan ook in het Cloudflare-dashboard. Ruimte past alleen records aan die het zelf maakte.",
             "mcp": "De MCP van Ruimte, beveiligd met een inlogsleutel bij elk verzoek",
             "dev": "Dev server op poort {{port}}, open voor iedereen met het adres",
             "enabled": "{{hostname}} staat aan",
@@ -1071,15 +1082,15 @@
             "label": "Externe MCP",
             "on": "Luistert op 127.0.0.1, poort {{port}}. Een hostnaam hieronder maakt hem van buitenaf bereikbaar.",
             "off": "Uit. Er luistert niets totdat je hem aanzet.",
-            "hostname": "MCP-hostnaam",
-            "hostnameHint": "Een lange willekeurige naam, zodat scanners hem niet vinden. De naam beschermt niets: je inlogsleutels doen dat."
+            "hostname": "MCP-label of hostnaam",
+            "hostnameHint": "Begin met een lang willekeurig label, zodat scanners hem niet vinden. De naam beschermt niets: je inlogsleutels doen dat."
         },
         "dev": {
             "label": "Dev server toevoegen",
-            "description": "Kies een poort waarop een sessie van jou luistert en de hostnaam die je eraan geeft. Voor een dev server staat niets: iedereen met het adres komt erbij.",
+            "description": "Kies een poort waarop een sessie van jou luistert, en daarna een label of een volledige hostnaam op een van je domeinen. Voor een dev server staat niets: iedereen met het adres komt erbij.",
             "port": "Poort",
             "pick": "Kies een poort",
-            "hostname": "Hostnaam",
+            "hostname": "Label of hostnaam",
             "gate": "Ik weet dat iedereen met het adres bij deze server komt"
         },
         "credentials": {

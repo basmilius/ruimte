@@ -1,19 +1,20 @@
-import { Button, ErrorBoundary, FormError, Input } from '@adecore/ui';
+import { Button, ErrorBoundary, FormError, Input, Select } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import type { TunnelState } from '@ruimte/contracts';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { machineMode, openInSystemBrowser } from '@/desktop/bridge';
 import { usePickedMachine } from '@/shell/settings/picked-machine';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { CLOUDFLARE_TOKEN_URL } from '@/shell/settings/tunnels/cloudflare-token-link';
 import { CredentialsSection } from '@/shell/settings/tunnels/CredentialsSection';
 import { TunnelRows } from '@/shell/settings/tunnels/TunnelRows';
 import { useTunnels } from '@/shell/settings/tunnels/use-tunnels';
 import { LOCAL_ENDPOINT_ID, type Endpoint } from '@/state/endpoints';
 
 /*
- * Reaching Ruimte's MCP and your dev servers from outside, under your own Cloudflare account. Only the desktop app on the
- * machine it runs manages them; any other window reads the state and changes nothing.
+ * Reaching Ruimte's MCP and your dev servers from outside, through a tunnel on your own Cloudflare account. Only the
+ * desktop app on the machine it runs manages them; any other window reads the state and changes nothing.
  */
 export function TunnelsPane() {
     const { t } = useTranslation('settings');
@@ -44,6 +45,7 @@ function TunnelsOf({ endpoint }: { endpoint: Endpoint }) {
             : !manages
               ? t('tunnels.elsewhere')
               : null;
+    const installed = state !== null && state.stage !== 'not-installed' && state.stage !== 'installing' && state.stage !== 'cannot-install';
 
     return (
         <>
@@ -51,9 +53,10 @@ function TunnelsOf({ endpoint }: { endpoint: Endpoint }) {
                 {waiting !== null && <SettingsRow label={waiting} />}
                 {tunnels.failure !== null && <FormError>{tunnels.failure}</FormError>}
                 {state !== null && manages && <Stage state={state} change={tunnels.change} />}
+                {state !== null && manages && installed && <TokenRow state={state} change={tunnels.change} />}
                 {state !== null && !manages && tunnels.answers && <ReadOnlyRows state={state} />}
             </SettingsSection>
-            {state !== null && manages && (state.stage === 'running' || state.stage === 'starting') && (
+            {state !== null && manages && state.tunnel !== null && state.hasToken && (state.stage === 'running' || state.stage === 'starting') && (
                 <TunnelRows state={state} change={tunnels.change} endpointId={endpoint.id} />
             )}
             {state !== null && manages && (
@@ -63,15 +66,6 @@ function TunnelsOf({ endpoint }: { endpoint: Endpoint }) {
     );
 }
 
-/* The address cloudflared printed, opened in the person's browser the moment it is known. */
-function OpenOnce({ url }: { url: string }) {
-    useEffect(() => {
-        openInSystemBrowser(url);
-    }, [url]);
-
-    return null;
-}
-
 /* What a window that does not manage the tunnels still sees: whether they run, and how many clients use them. */
 function ReadOnlyRows({ state }: { state: TunnelState }) {
     const { t } = useTranslation('settings');
@@ -79,12 +73,60 @@ function ReadOnlyRows({ state }: { state: TunnelState }) {
     return <SettingsRow label={t(`tunnels.stage.${state.stage}`)} description={t('tunnels.clients', { count: state.clients })} />;
 }
 
-type Change = (type: 'tunnel.install' | 'tunnel.signIn' | 'tunnel.setup' | 'tunnel.retry', payload?: object) => Promise<void>;
+type Change = (type: 'tunnel.install' | 'tunnel.setToken' | 'tunnel.clearToken' | 'tunnel.setup' | 'tunnel.retry', payload?: object) => Promise<void>;
 
-/* The screen as far as there are hostnames: install, sign in, a domain, and what went wrong. */
+/* The API token: a field and a link to make one while there is none, and a way to take it away once Cloudflare accepted it. */
+function TokenRow({ state, change }: { state: TunnelState; change: Change }) {
+    const { t } = useTranslation('settings');
+    const [token, setToken] = useState('');
+
+    if (state.hasToken) {
+        return (
+            <SettingsRow
+                label={t('tunnels.token.label')}
+                description={t('tunnels.token.accepted', { count: state.zones.length, account: state.account?.name ?? '' })}
+                control={<Button onClick={() => void change('tunnel.clearToken')}>{t('tunnels.token.remove')}</Button>}
+            />
+        );
+    }
+
+    return (
+        <SettingsRow
+            label={t('tunnels.token.label')}
+            description={t('tunnels.token.description')}
+            control={
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                    <Input
+                        type="password"
+                        autoComplete="off"
+                        spellCheck={false}
+                        aria-label={t('tunnels.token.label')}
+                        placeholder={t('tunnels.token.placeholder')}
+                        value={token}
+                        onChange={(e) => setToken(e.target.value)}
+                    />
+                    <Button onClick={() => openInSystemBrowser(CLOUDFLARE_TOKEN_URL)}>{t('tunnels.token.make')}</Button>
+                    <Button
+                        variant="primary"
+                        disabled={token.trim().length < 10}
+                        onClick={() => {
+                            void change('tunnel.setToken', { token: token.trim() });
+                            setToken('');
+                        }}
+                    >
+                        {t('tunnels.token.action')}
+                    </Button>
+                </div>
+            }
+        />
+    );
+}
+
+/* The screen as far as there are hostnames: install, checking the token, making the tunnel, and what went wrong. */
 function Stage({ state, change }: { state: TunnelState; change: Change }) {
     const { t } = useTranslation('settings');
-    const [domain, setDomain] = useState('');
+    const [picked, setPicked] = useState<string | null>(null);
+    const account = picked ?? state.account?.id ?? null;
 
     switch (state.stage) {
         case 'not-installed':
@@ -99,54 +141,33 @@ function Stage({ state, change }: { state: TunnelState; change: Change }) {
             return <SettingsRow label={t('tunnels.stage.installing')} />;
         case 'cannot-install':
             return <SettingsRow label={t('tunnels.cannotInstall')} description={state.message ?? undefined} />;
-        case 'signed-out':
-            return (
-                <SettingsRow
-                    label={t('tunnels.signIn.label')}
-                    description={t('tunnels.signIn.description')}
-                    control={
-                        <Button
-                            variant="primary"
-                            onClick={() => {
-                                void change('tunnel.signIn');
-                            }}
-                        >
-                            {t('tunnels.signIn.action')}
-                        </Button>
-                    }
-                />
-            );
-        case 'signing-in':
-            return (
-                <SettingsRow
-                    label={t('tunnels.stage.signing-in')}
-                    description={t('tunnels.signIn.waiting')}
-                    control={
-                        state.signInUrl === null ? undefined : (
-                            <>
-                                <OpenOnce url={state.signInUrl} />
-                                <Button onClick={() => openInSystemBrowser(state.signInUrl!)}>{t('tunnels.signIn.open')}</Button>
-                            </>
-                        )
-                    }
-                />
-            );
+        case 'no-token':
+            return null;
+        case 'checking':
+            return <SettingsRow label={t('tunnels.stage.checking')} />;
         case 'no-tunnel':
             return (
                 <SettingsRow
-                    label={t('tunnels.domain.label')}
-                    description={t('tunnels.domain.description')}
+                    label={t('tunnels.tunnel.label')}
+                    description={t('tunnels.tunnel.description')}
                     control={
                         <div className="flex items-center gap-1.5">
-                            <Input
-                                aria-label={t('tunnels.domain.label')}
-                                placeholder="example.com"
-                                spellCheck={false}
-                                value={domain}
-                                onChange={(e) => setDomain(e.target.value)}
-                            />
-                            <Button variant="primary" disabled={domain.trim().length < 3} onClick={() => void change('tunnel.setup', { domain })}>
-                                {t('tunnels.domain.action')}
+                            {state.accounts.length > 1 && (
+                                <Select<string>
+                                    label={t('tunnels.tunnel.account')}
+                                    variant="outlined"
+                                    value={account ?? ''}
+                                    placeholder={t('tunnels.tunnel.pickAccount')}
+                                    items={state.accounts.map((entry) => ({ value: entry.id, label: entry.name }))}
+                                    onValueChange={setPicked}
+                                />
+                            )}
+                            <Button
+                                variant="primary"
+                                disabled={account === null}
+                                onClick={() => void change('tunnel.setup', account === null ? {} : { account })}
+                            >
+                                {t('tunnels.tunnel.action')}
                             </Button>
                         </div>
                     }

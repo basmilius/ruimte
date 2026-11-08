@@ -26,12 +26,15 @@ function tunnelState(rows: TunnelRow[]): TunnelState {
     return {
         stage: 'running',
         message: null,
-        signInUrl: null,
-        domain: 'example.com',
+        hasToken: true,
+        accounts: [],
+        account: null,
+        zones: [],
+        tunnel: { name: 'ruimte-studio' },
         rows,
         mcp: { enabled: false, port: null },
         clients: 0,
-        suggestedMcpHostname: null
+        suggestedMcpLabel: null
     };
 }
 

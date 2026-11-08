@@ -5,6 +5,7 @@ import { Trash } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { ZoneField } from '@/shell/settings/tunnels/ZoneField';
 import { transportFor } from '@/transport';
 
 type Change = (type: 'tunnel.add' | 'tunnel.update' | 'tunnel.remove' | 'tunnel.setMcp', payload?: object) => Promise<void>;
@@ -17,6 +18,7 @@ export function TunnelRows({ state, change, endpointId }: { state: TunnelState; 
 
     return (
         <SettingsSection title={t('tunnels.rows.title')} description={t('tunnels.visibility')} scope="machine" machine="picked">
+            {state.tunnel !== null && <SettingsRow label={t('tunnels.rows.tunnel', { name: state.tunnel.name })} description={t('tunnels.rows.tunnelHint')} />}
             {mcp === undefined ? <AddMcp state={state} change={change} /> : <HostnameRow row={mcp} change={change} />}
             {devs.map((row) => (
                 <HostnameRow key={row.id} row={row} change={change} />
@@ -63,16 +65,21 @@ function HostnameRow({ row, change }: { row: TunnelRow; change: Change }) {
 
 function AddMcp({ state, change }: { state: TunnelState; change: Change }) {
     const { t } = useTranslation('settings');
-    const [hostname, setHostname] = useState(state.suggestedMcpHostname ?? '');
+    const [zone, setZone] = useState('');
+    const [label, setLabel] = useState(state.suggestedMcpLabel ?? '');
+    const chosen = state.zones.find((entry) => entry.id === zone) ?? state.zones[0];
 
     return (
         <SettingsRow
             label={t('tunnels.mcp.hostname')}
             description={t('tunnels.mcp.hostnameHint')}
             control={
-                <div className="flex items-center gap-1.5">
-                    <Input aria-label={t('tunnels.mcp.hostname')} spellCheck={false} value={hostname} onChange={(e) => setHostname(e.target.value)} />
-                    <Button disabled={hostname.trim().length < 3} onClick={() => void change('tunnel.add', { kind: 'mcp', hostname })}>
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                    <ZoneField zones={state.zones} zone={zone} label={label} labelName={t('tunnels.mcp.hostname')} onZone={setZone} onLabel={setLabel} />
+                    <Button
+                        disabled={chosen === undefined || label.trim() === ''}
+                        onClick={() => void change('tunnel.add', { kind: 'mcp', zone: chosen?.id, label })}
+                    >
                         {t('tunnels.rows.add')}
                     </Button>
                 </div>
@@ -86,8 +93,10 @@ function AddDev({ state, change, endpointId }: { state: TunnelState; change: Cha
     const { t } = useTranslation('settings');
     const [ports, setPorts] = useState<Array<{ port: number; session: string | null }>>([]);
     const [port, setPort] = useState<string>('');
-    const [hostname, setHostname] = useState('');
+    const [zone, setZone] = useState('');
+    const [label, setLabel] = useState('');
     const [understood, setUnderstood] = useState(false);
+    const chosenZone = state.zones.find((entry) => entry.id === zone) ?? state.zones[0];
 
     useEffect(() => {
         transportFor(endpointId)
@@ -97,12 +106,12 @@ function AddDev({ state, change, endpointId }: { state: TunnelState; change: Cha
     }, [endpointId, state.rows.length]);
 
     const chosen = Number(port);
-    const ready = Number.isInteger(chosen) && chosen > 0 && hostname.trim().length >= 3 && understood;
+    const ready = Number.isInteger(chosen) && chosen > 0 && chosenZone !== undefined && label.trim() !== '' && understood;
     const suggest = (next: string): void => {
         setPort(next);
 
-        if (hostname === '' && state.domain !== null && next !== '') {
-            setHostname(`dev-${next}.${state.domain}`);
+        if (label === '' && next !== '') {
+            setLabel(`dev-${next}`);
         }
     };
 
@@ -131,7 +140,7 @@ function AddDev({ state, change, endpointId }: { state: TunnelState; change: Cha
                             value={port}
                             onChange={(e) => suggest(e.target.value.replace(/\D/g, ''))}
                         />
-                        <Input aria-label={t('tunnels.dev.hostname')} spellCheck={false} value={hostname} onChange={(e) => setHostname(e.target.value)} />
+                        <ZoneField zones={state.zones} zone={zone} label={label} labelName={t('tunnels.dev.hostname')} onZone={setZone} onLabel={setLabel} />
                     </div>
                 }
             />
@@ -143,9 +152,9 @@ function AddDev({ state, change, endpointId }: { state: TunnelState; change: Cha
                         <Button
                             disabled={!ready}
                             onClick={() => {
-                                void change('tunnel.add', { kind: 'dev', hostname, port: chosen });
+                                void change('tunnel.add', { kind: 'dev', zone: chosenZone?.id, label, port: chosen });
                                 setPort('');
-                                setHostname('');
+                                setLabel('');
                                 setUnderstood(false);
                             }}
                         >

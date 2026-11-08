@@ -8,7 +8,7 @@ import { useConsent } from '@/state/consent';
 import { useEndpoints } from '@/state/endpoints';
 import { useUi } from '@/state/ui';
 import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
-import { buttonWithText, everything, installDesktop, removeDesktop, typeInto } from '../../../../testing/dom-helpers';
+import { buttonWithText, everything, installDesktop, menuItem, removeDesktop, typeInto } from '../../../../testing/dom-helpers';
 import { connectFakeMachine, FakeMachine } from '../../../../testing/fake-machine';
 import { machineBridge } from '../../../../testing/machine-bridge';
 import { TunnelsPane } from '../panes/TunnelsPane';
@@ -19,16 +19,29 @@ let release: () => void;
 let state: TunnelState;
 let credentials: Credential[];
 
+const ZONES = [
+    { id: 'zone-bmnw', name: 'bmnw.nl' },
+    { id: 'zone-passly', name: 'passly.dev' }
+];
+
+/* The state of a machine that has no token and no tunnel yet. */
+function bareState(change: Partial<TunnelState> = {}): TunnelState {
+    return stateOf({ stage: 'no-token', hasToken: false, accounts: [], account: null, zones: [], tunnel: null, suggestedMcpLabel: null, ...change });
+}
+
 function stateOf(change: Partial<TunnelState> = {}): TunnelState {
     return {
         stage: 'running',
         message: null,
-        signInUrl: null,
-        domain: 'example.com',
+        hasToken: true,
+        accounts: [{ id: 'acc-1', name: 'Bas' }],
+        account: { id: 'acc-1', name: 'Bas' },
+        zones: ZONES,
+        tunnel: { name: 'ruimte-studio' },
         rows: [],
         mcp: { enabled: false, port: null },
         clients: 0,
-        suggestedMcpHostname: 'mcp-0123456789abcdef.example.com',
+        suggestedMcpLabel: 'mcp-0123456789abcdef',
         ...change
     };
 }
@@ -52,6 +65,17 @@ afterEach(async () => {
     useConsent.setState({ requests: [] });
 });
 
+function tokenField(): HTMLInputElement | null {
+    return document.querySelector<HTMLInputElement>('input[aria-label="Cloudflare API token"]');
+}
+
+/* The Add buttons of the hostnames section: the MCP row first, the dev server row last. */
+function addButton(row: 'mcp' | 'dev'): HTMLButtonElement | null {
+    const buttons = [...document.querySelectorAll<HTMLButtonElement>('button')].filter((button) => button.textContent?.trim() === 'Add');
+
+    return (row === 'mcp' ? buttons[0] : buttons.at(-1)) ?? null;
+}
+
 async function open(): Promise<void> {
     await page.render(<TunnelsPane />);
     await until(() => everything().includes('Tunnels'));
@@ -59,8 +83,8 @@ async function open(): Promise<void> {
 
 describe('the states of the screen', () => {
     test('offers to install cloudflared first, and installs on a click', async () => {
-        state = stateOf({ stage: 'not-installed', domain: null });
-        machine.answer('tunnel.install', () => (state = stateOf({ stage: 'installing', domain: null })));
+        state = bareState({ stage: 'not-installed' });
+        machine.answer('tunnel.install', () => (state = bareState({ stage: 'installing' })));
         await open();
         await until(() => buttonWithText('Install') !== null);
         await clickOn(buttonWithText('Install'));
@@ -69,44 +93,123 @@ describe('the states of the screen', () => {
     });
 
     test('says what to install where cloudflared has no build', async () => {
-        state = stateOf({ stage: 'cannot-install', message: 'Install cloudflared yourself and put it on your path.', domain: null });
+        state = bareState({ stage: 'cannot-install', message: 'Install cloudflared yourself and put it on your path.' });
         await open();
         await until(() => everything().includes('Install cloudflared yourself and put it on your path.'));
         expect(buttonWithText('Install')).toBeNull();
     });
 
-    test('asks to sign in with Cloudflare, then for a domain', async () => {
-        state = stateOf({ stage: 'signed-out', domain: null });
-        machine.answer('tunnel.signIn', () => (state = stateOf({ stage: 'signing-in', domain: null })));
-        await open();
-        await until(() => buttonWithText('Sign in') !== null);
-        await clickOn(buttonWithText('Sign in'));
-        await until(() => everything().includes('Finish signing in in your browser'));
-        expect(machine.requests('tunnel.signIn')).toHaveLength(1);
-
-        state = stateOf({ stage: 'no-tunnel', domain: null });
-        await act(async () => machine.emit('tunnel.changed', {}));
-        await until(() => buttonWithText('Create tunnel') !== null);
-        expect(buttonWithText('Create tunnel')?.disabled).toBe(true);
-    });
-
-    test('opens the address cloudflared printed in the browser as soon as it is known', async () => {
+    test('asks for the API token, with a link to make one, and checks it on a click', async () => {
         const opened: string[] = [];
 
         installDesktop({ machine: machineBridge('local'), openExternal: async (url: string) => void opened.push(url) });
-        state = stateOf({ stage: 'signing-in', signInUrl: 'https://dash.cloudflare.com/argotunnel?aud=x', domain: null });
+        state = bareState();
+        machine.answer(
+            'tunnel.setToken',
+            () =>
+                (state = bareState({
+                    stage: 'no-tunnel',
+                    hasToken: true,
+                    accounts: [{ id: 'acc-1', name: 'Bas' }],
+                    account: { id: 'acc-1', name: 'Bas' },
+                    zones: ZONES
+                }))
+        );
         await open();
-        await until(() => opened.length > 0);
-        expect(opened).toEqual(['https://dash.cloudflare.com/argotunnel?aud=x']);
+        await until(() => tokenField() !== null);
+        expect(everything()).toContain('Zone read, DNS edit and Cloudflare Tunnel edit');
+        expect(buttonWithText('Check token')?.disabled).toBe(true);
+
+        await clickOn(buttonWithText('Make a token'));
+        expect(opened).toHaveLength(1);
+
+        const link = new URL(opened[0]!);
+
+        expect(link.origin + link.pathname).toBe('https://dash.cloudflare.com/profile/api-tokens');
+        expect(JSON.parse(link.searchParams.get('permissionGroupKeys')!)).toEqual([
+            { key: 'zone', type: 'read' },
+            { key: 'dns', type: 'edit' },
+            { key: 'argotunnel', type: 'edit' }
+        ]);
+
+        const field = tokenField()!;
+
+        expect(field.type).toBe('password');
+        await typeInto(field, 'cf-api-token-0123456789');
+        await clickOn(buttonWithText('Check token'));
+        await until(() => buttonWithText('Create tunnel') !== null);
+        expect(machine.requests('tunnel.setToken')).toEqual([{ token: 'cf-api-token-0123456789' }]);
+        // The token leaves the field once it is sent, and the state never brings it back.
+        expect(everything()).toContain('Cloudflare accepts this token. It reaches 2 domains on Bas.');
+        expect(everything()).not.toContain('cf-api-token-0123456789');
     });
 
-    test('shows the sentence cloudflared gave, with Try again', async () => {
-        state = stateOf({ stage: 'failed', message: 'Cannot determine default origin certificate path' });
+    test('says why Cloudflare refused a token, in the words the machine gave', async () => {
+        state = bareState();
+        machine.answer('tunnel.setToken', () => {
+            throw new Error('Checking the API token failed. Cloudflare does not accept this API token; make a new one and paste it here.');
+        });
+        await open();
+        await until(() => tokenField() !== null);
+        await typeInto(tokenField()!, 'typed-wrong-0123456789');
+        await clickOn(buttonWithText('Check token'));
+        await until(() => everything().includes('Cloudflare does not accept this API token'));
+        expect(buttonWithText('Check token')).not.toBeNull();
+    });
+
+    test('removes the token on request', async () => {
+        machine.answer('tunnel.clearToken', () => (state = bareState()));
+        await open();
+        await until(() => buttonWithText('Remove token') !== null);
+        await clickOn(buttonWithText('Remove token'));
+        await until(() => tokenField() !== null);
+        expect(machine.requests('tunnel.clearToken')).toHaveLength(1);
+    });
+
+    test('makes the tunnel, and asks which account when the token reaches more than one', async () => {
+        const accounts = [
+            { id: 'acc-1', name: 'Bas' },
+            { id: 'acc-2', name: 'Studio' }
+        ];
+
+        state = stateOf({ stage: 'no-tunnel', tunnel: null, accounts, account: null, zones: [] });
+        machine.answer('tunnel.setup', () => (state = stateOf({ account: accounts[1]!, zones: ZONES })));
+        await open();
+        await until(() => buttonWithText('Create tunnel') !== null);
+        expect(buttonWithText('Create tunnel')?.disabled).toBe(true);
+
+        await clickOn(document.querySelector('button[aria-label="Cloudflare account"], [aria-label="Cloudflare account"]'));
+        await until(() => menuItem('Studio', 'option') !== null);
+        await clickOn(menuItem('Studio', 'option'));
+        await until(() => buttonWithText('Create tunnel')?.disabled === false);
+        await clickOn(buttonWithText('Create tunnel'));
+        await until(() => machine.requests('tunnel.setup').length === 1);
+        expect(machine.requests('tunnel.setup')).toEqual([{ account: 'acc-2' }]);
+    });
+
+    test('makes the tunnel at once when the token reaches one account', async () => {
+        state = stateOf({ stage: 'no-tunnel', tunnel: null });
+        machine.answer('tunnel.setup', () => (state = stateOf()));
+        await open();
+        await until(() => buttonWithText('Create tunnel') !== null);
+        await clickOn(buttonWithText('Create tunnel'));
+        await until(() => machine.requests('tunnel.setup').length === 1);
+        expect(machine.requests('tunnel.setup')).toEqual([{ account: 'acc-1' }]);
+    });
+
+    test('shows the sentence the machine gave, with Try again', async () => {
+        state = stateOf({ stage: 'failed', message: 'Looking up the tunnel failed. Cloudflare could not find it.' });
         machine.answer('tunnel.retry', () => (state = stateOf()));
         await open();
-        await until(() => everything().includes('Cannot determine default origin certificate path'));
+        await until(() => everything().includes('Looking up the tunnel failed. Cloudflare could not find it.'));
         await clickOn(buttonWithText('Try again'));
         await until(() => machine.requests('tunnel.retry').length === 1);
+    });
+
+    test('shows that Cloudflare is being asked', async () => {
+        state = stateOf({ stage: 'checking' });
+        await open();
+        await until(() => everything().includes('Checking with Cloudflare'));
     });
 
     test('lists a row per hostname with what it reaches, and says a dev server has no gate', async () => {
@@ -128,7 +231,7 @@ describe('the states of the screen', () => {
         // Another machine of the account: its state is readable here, and nothing on it changes from this window.
         const other = new FakeMachine();
 
-        other.answer('tunnel.state', () => stateOf({ stage: 'not-installed', domain: null, clients: 2 }));
+        other.answer('tunnel.state', () => bareState({ stage: 'not-installed', clients: 2 }));
         useEndpoints.getState().add({
             id: 'tunnels-other',
             label: 'Build Mac',
@@ -152,6 +255,83 @@ describe('the states of the screen', () => {
     });
 });
 
+describe('the hostnames', () => {
+    function inputNamed(name: string): HTMLInputElement {
+        return document.querySelector<HTMLInputElement>(`input[aria-label="${name}"]`)!;
+    }
+
+    test('shows the tunnel by its name in Cloudflare', async () => {
+        await open();
+        await until(() => everything().includes('Tunnel ruimte-studio'));
+        expect(everything()).toContain('Ruimte only changes the records it made.');
+    });
+
+    test('adds a dev server on a zone from the list: a label first, then a full hostname on the other zone', async () => {
+        machine.answer('tunnel.add', () => state);
+        await open();
+        await until(() => inputNamed('Port') !== null);
+        await typeInto(inputNamed('Port'), '3000');
+        // A label is proposed from the port, in front of the first zone.
+        expect(inputNamed('Label or hostname').value).toBe('dev-3000');
+
+        await typeInto(inputNamed('Label or hostname'), 'shop');
+        await clickOn(document.querySelector('input[type="checkbox"], [role="checkbox"]'));
+        await clickOn(addButton('dev'));
+        await until(() => machine.requests('tunnel.add').length === 1);
+        expect(machine.requests('tunnel.add')[0]).toEqual({ kind: 'dev', zone: 'zone-bmnw', label: 'shop', port: 3000 });
+
+        await typeInto(inputNamed('Port'), '3001');
+        await typeInto(inputNamed('Label or hostname'), 'api-tunnel.passly.dev');
+        // The MCP row has a domain list too; the dev server row is the last.
+        await clickOn([...document.querySelectorAll('[aria-label="Domain"]')].at(-1) ?? null);
+        await until(() => menuItem('.passly.dev', 'option') !== null);
+        await clickOn(menuItem('.passly.dev', 'option'));
+        await clickOn(document.querySelector('input[type="checkbox"], [role="checkbox"]'));
+        await clickOn(addButton('dev'));
+        await until(() => machine.requests('tunnel.add').length === 2);
+        expect(machine.requests('tunnel.add')[1]).toEqual({ kind: 'dev', zone: 'zone-passly', label: 'api-tunnel.passly.dev', port: 3001 });
+    });
+
+    test('proposes a long random label for the MCP and adds it on the first zone', async () => {
+        machine.answer('tunnel.add', () => state);
+        await open();
+        await until(() => inputNamed('MCP label or hostname') !== null);
+        expect(inputNamed('MCP label or hostname').value).toBe('mcp-0123456789abcdef');
+
+        await clickOn(addButton('mcp'));
+        await until(() => machine.requests('tunnel.add').length === 1);
+        expect(machine.requests('tunnel.add')[0]).toEqual({ kind: 'mcp', zone: 'zone-bmnw', label: 'mcp-0123456789abcdef' });
+    });
+
+    test('shows the refusal for a name that has a record Ruimte did not make', async () => {
+        machine.answer('tunnel.add', () => {
+            throw new Error('app.bmnw.nl already has a A record pointing at 203.0.113.9 that Ruimte did not make, so Ruimte leaves it alone.');
+        });
+        await open();
+        await until(() => inputNamed('MCP label or hostname') !== null);
+        await clickOn(addButton('mcp'));
+        await until(() => everything().includes('app.bmnw.nl already has a A record'));
+        expect(everything()).toContain('Ruimte leaves it alone.');
+    });
+
+    test('removes a hostname, which takes the record Ruimte made with it', async () => {
+        state = stateOf({ rows: [{ id: 'b', kind: 'dev', hostname: 'shop.bmnw.nl', port: 3000, enabled: true, comeBack: false }] });
+        machine.answer('tunnel.remove', () => (state = stateOf()));
+        await open();
+        await until(() => document.querySelector('button[aria-label="Remove shop.bmnw.nl"]') !== null);
+        await clickOn(document.querySelector('button[aria-label="Remove shop.bmnw.nl"]'));
+        await until(() => machine.requests('tunnel.remove').length === 1);
+        expect(machine.requests('tunnel.remove')).toEqual([{ id: 'b' }]);
+    });
+
+    test('offers no hostnames before there is a tunnel and a token', async () => {
+        state = stateOf({ stage: 'no-tunnel', tunnel: null });
+        await open();
+        await until(() => buttonWithText('Create tunnel') !== null);
+        expect(everything()).not.toContain('Add a dev server');
+    });
+});
+
 describe('the external MCP', () => {
     test('shows no address while it is off', async () => {
         await open();
@@ -160,11 +340,8 @@ describe('the external MCP', () => {
     });
 
     test('turns on without a tunnel, which is how it works on loopback with no Cloudflare account', async () => {
-        state = stateOf({ stage: 'signed-out', domain: null });
-        machine.answer(
-            'tunnel.setMcp',
-            ({ enabled }) => (state = stateOf({ stage: 'signed-out', domain: null, mcp: { enabled, port: enabled ? 4230 : null } }))
-        );
+        state = bareState();
+        machine.answer('tunnel.setMcp', ({ enabled }) => (state = bareState({ mcp: { enabled, port: enabled ? 4230 : null } })));
         await open();
         await until(() => document.querySelector('[role="switch"][aria-label="External MCP"]') !== null);
         await clickOn(document.querySelector('[role="switch"][aria-label="External MCP"]'));
