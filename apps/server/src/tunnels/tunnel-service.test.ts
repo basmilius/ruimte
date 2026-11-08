@@ -971,6 +971,37 @@ describe('an existing tunnel', () => {
         ]);
     });
 
+    test('recognizes a catch-all that Cloudflare sends with an empty path and hostname, and adds no second one', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        ourTunnel(f).ingress = [{ hostname: '', path: '', service: 'http_status:404', originRequest: {} }];
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 });
+        await f.service.idle();
+
+        expect(ourTunnel(f).ingress).toEqual([{ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' }, { service: 'http_status:404' }]);
+    });
+
+    test('writes nothing when Cloudflare sends its rules back with empty fields and keys in another order', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 });
+        await f.service.idle();
+        ourTunnel(f).ingress = [
+            { service: 'http://127.0.0.1:3000', path: null, originRequest: {}, hostname: 'a.bmnw.nl' },
+            { service: 'http_status:404', hostname: null, path: '' }
+        ];
+
+        const writes = f.cloudflare.called('PUT', '/accounts/acc-1/cfd_tunnel').length;
+
+        await f.service.retry();
+        await f.service.idle();
+
+        expect(f.cloudflare.called('PUT', '/accounts/acc-1/cfd_tunnel')).toHaveLength(writes);
+        expect((await f.state()).tunnel?.others).toEqual([]);
+    });
+
     test('writes nothing to a picked tunnel without a catch-all while it has no hostname of Ruimte', async () => {
         const f = await fixture();
         const picked = f.cloudflare.tunnel('acc-1', 'bare', [{ hostname: 'nas.bmnw.nl', service: 'http://nas:80' }]);

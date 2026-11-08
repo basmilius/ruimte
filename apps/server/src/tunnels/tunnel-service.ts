@@ -82,6 +82,15 @@ function mayCatch(rule: CloudflareIngressRule, hostname: string): boolean {
     return !rule.hostname.startsWith('*.') || hostname.endsWith(rule.hostname.slice(1));
 }
 
+/* JSON with the keys of every object sorted, since Cloudflare need not send a rule's keys back in the order Ruimte wrote them. */
+function canonical(value: unknown): string {
+    return JSON.stringify(value, (_key, inner: unknown) =>
+        typeof inner === 'object' && inner !== null && !Array.isArray(inner)
+            ? Object.fromEntries(Object.entries(inner).sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0)))
+            : inner
+    );
+}
+
 export interface TunnelPorts {
     store: Pick<JsonFileStore<StoredTunnels>, 'read' | 'write'>;
     installer: Pick<CloudflaredInstaller, 'locate' | 'install' | 'impossible'>;
@@ -1025,7 +1034,7 @@ export class TunnelService {
 
         ingress.push(...waiting, { ...catchAll });
 
-        if (JSON.stringify(ingress) === JSON.stringify(current.ingress)) {
+        if (canonical(ingress) === canonical(current.ingress)) {
             return;
         }
 

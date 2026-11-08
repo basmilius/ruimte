@@ -75,6 +75,26 @@ export function isRunning(tunnel: CloudflareTunnel): boolean {
 /* A rule of a tunnel's ingress as Cloudflare keeps it. Rules Ruimte did not write keep every key they had. */
 export type CloudflareIngressRule = Record<string, unknown>;
 
+/*
+ * A rule as Cloudflare sends it back, without an empty or null hostname or path and without an empty `originRequest`,
+ * so a catch-all still reads as one and a rule Ruimte wrote compares equal to what it wrote.
+ */
+function normalizedRule(rule: CloudflareIngressRule): CloudflareIngressRule {
+    const kept = Object.entries(rule).filter(([key, value]) => {
+        if (key === 'hostname' || key === 'path') {
+            return value !== '' && value !== null;
+        }
+
+        if (key === 'originRequest') {
+            return !(typeof value === 'object' && value !== null && Object.keys(value).length === 0);
+        }
+
+        return true;
+    });
+
+    return Object.fromEntries(kept);
+}
+
 /* A tunnel's configuration: its ingress, and the settings beside it (such as `warp-routing`) that Ruimte never changes. */
 export interface CloudflareTunnelConfig {
     readonly ingress: readonly CloudflareIngressRule[];
@@ -181,7 +201,7 @@ export class CloudflareApi {
         );
         const { ingress, ...rest } = config ?? {};
 
-        return { ingress: ingress ?? [], rest };
+        return { ingress: (ingress ?? []).map(normalizedRule), rest };
     }
 
     /* Writes the ingress back with every other setting the configuration had, since Cloudflare replaces it whole. */
