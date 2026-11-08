@@ -30,7 +30,7 @@ function tunnelState(rows: TunnelRow[]): TunnelState {
         accounts: [],
         account: null,
         zones: [],
-        tunnel: { name: 'ruimte-studio' },
+        tunnel: { name: 'ruimte-studio-4f2a', created: true, runner: 'ruimte', others: [] },
         rows,
         mcp: { enabled: false, port: null },
         clients: 0,

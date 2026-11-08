@@ -1063,6 +1063,22 @@
             "pickAccount": "Pick an account",
             "action": "Create tunnel"
         },
+        "existing": {
+            "label": "Your tunnels",
+            "description": "Ruimte adds only its own hostnames.",
+            "loading": "Loading your tunnels.",
+            "none": "No tunnels on this account.",
+            "loadFailed": "Could not list your tunnels.",
+            "running": "Already running. Ruimte starts nothing.",
+            "idle": "Not running. Ruimte runs it here.",
+            "local": "Managed in a file, not in the dashboard.",
+            "action": "Use"
+        },
+        "unlink": {
+            "action": "Stop using",
+            "title": "Stop using {{name}}?",
+            "description": "Ruimte removes its hostnames. The tunnel stays in Cloudflare."
+        },
         "zone": {
             "label": "Domain",
             "pick": "Pick a domain"
@@ -1070,7 +1086,14 @@
         "rows": {
             "title": "Hostnames",
             "tunnel": "Tunnel {{name}}",
-            "tunnelHint": "Its hostnames show in the Cloudflare dashboard too. Ruimte only changes the records it made.",
+            "others": "Already on this tunnel",
+            "made": "Made by Ruimte.",
+            "picked": "Your own tunnel.",
+            "runner": {
+                "ruimte": "Ruimte runs it.",
+                "other": "Already running here or elsewhere. Ruimte starts nothing.",
+                "none": "Runs once a hostname is on."
+            },
             "mcp": "Ruimte's MCP, which asks for a credential on every request",
             "dev": "Dev server on port {{port}}, open to anyone with the address",
             "enabled": "{{hostname}} is on",
@@ -1089,11 +1112,13 @@
         },
         "dev": {
             "label": "Add a dev server",
-            "description": "Pick a port a session of yours listens on, then a label or a full hostname on one of your domains. Nothing guards a dev server. Anyone with the address reaches it.",
             "port": "Port",
-            "pick": "Pick a port",
+            "other": "Other port",
             "hostname": "Label or hostname",
-            "gate": "I know anyone with the address reaches this server"
+            "confirm": {
+                "title": "Open to anyone?",
+                "description": "Anyone with the address reaches this server, without a login."
+            }
         },
         "credentials": {
             "title": "External clients",

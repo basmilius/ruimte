@@ -14,7 +14,7 @@ export function useTunnels(endpointId: string) {
     const { t } = useTranslation('settings');
     const status = useEndpointConnection(endpointId).status;
     // The newest request of the section, so a machine with an older shape of the state offers no Tunnels.
-    const answers = useMachineAnswers(endpointId, 'tunnel.setToken');
+    const answers = useMachineAnswers(endpointId, 'tunnel.link');
     const [state, setState] = useState<TunnelState | null>(null);
     const [credentials, setCredentials] = useState<Credential[] | null>(null);
     const [failure, setFailure] = useState<string | null>(null);

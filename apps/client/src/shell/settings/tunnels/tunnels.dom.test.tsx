@@ -37,7 +37,7 @@ function stateOf(change: Partial<TunnelState> = {}): TunnelState {
         accounts: [{ id: 'acc-1', name: 'Bas' }],
         account: { id: 'acc-1', name: 'Bas' },
         zones: ZONES,
-        tunnel: { name: 'ruimte-studio' },
+        tunnel: { name: 'ruimte-studio-4f2a', created: true, runner: 'ruimte', others: [] },
         rows: [],
         mcp: { enabled: false, port: null },
         clients: 0,
@@ -54,6 +54,7 @@ beforeEach(() => {
     machine.answer('tunnel.state', () => state);
     machine.answer('tunnel.discover', () => ({ ports: [{ port: 3000, session: 'Vite' }] }));
     machine.answer('credential.list', () => ({ credentials }));
+    machine.answer('tunnel.list', () => ({ tunnels: [] }));
     release = connectFakeMachine(machine);
     page = mount();
 });
@@ -198,6 +199,31 @@ describe('the states of the screen', () => {
         expect(machine.requests('tunnel.setup')).toEqual([{ account: 'acc-1' }]);
     });
 
+    test('lists the tunnels of the account next to Create tunnel, and uses the one picked', async () => {
+        state = stateOf({ stage: 'no-tunnel', tunnel: null });
+        machine.answer('tunnel.list', () => ({
+            tunnels: [
+                { id: 'tun-office', name: 'office', usable: true, running: true },
+                { id: 'tun-home', name: 'home-lab', usable: true, running: false },
+                { id: 'tun-legacy', name: 'legacy', usable: false, running: true }
+            ]
+        }));
+        machine.answer('tunnel.link', () => (state = stateOf({ tunnel: { name: 'office', created: false, runner: 'other', others: [] } })));
+        await open();
+        await until(() => everything().includes('legacy'));
+        expect(buttonWithText('Create tunnel')).not.toBeNull();
+        expect(machine.requests('tunnel.list')).toEqual([{ account: 'acc-1' }]);
+        expect(everything()).toContain('Already running. Ruimte starts nothing.');
+        expect(everything()).toContain('Not running. Ruimte runs it here.');
+        expect(everything()).toContain('Managed in a file, not in the dashboard.');
+        expect([...document.querySelectorAll('button')].filter((button) => button.textContent?.trim() === 'Use')).toHaveLength(2);
+
+        await clickOn(buttonWithText('Use'));
+        await until(() => machine.requests('tunnel.link').length === 1);
+        expect(machine.requests('tunnel.link')).toEqual([{ account: 'acc-1', tunnel: 'tun-office' }]);
+        await until(() => everything().includes('Tunnel office'));
+    });
+
     test('shows the sentence the machine gave, with Try again', async () => {
         state = stateOf({ stage: 'failed', message: 'Looking up the tunnel failed. Cloudflare could not find it.' });
         machine.answer('tunnel.retry', () => (state = stateOf()));
@@ -261,34 +287,84 @@ describe('the hostnames', () => {
         return document.querySelector<HTMLInputElement>(`input[aria-label="${name}"]`)!;
     }
 
-    test('shows the tunnel by its name in Cloudflare', async () => {
+    test('shows the tunnel by its name in Cloudflare, and that Ruimte made and runs it', async () => {
         await open();
-        await until(() => everything().includes('Tunnel ruimte-studio'));
-        expect(everything()).toContain('Ruimte only changes the records it made.');
+        await until(() => everything().includes('Tunnel ruimte-studio-4f2a'));
+        expect(everything()).toContain('Made by Ruimte. Ruimte runs it.');
+        expect(everything()).not.toContain('Already on this tunnel');
+    });
+
+    test('says when something else runs a tunnel the person had, and shows its other hostnames without controls', async () => {
+        state = stateOf({
+            tunnel: {
+                name: 'office',
+                created: false,
+                runner: 'other',
+                others: [
+                    { hostname: 'nas.bmnw.nl', path: null, service: 'http://localhost:3000' },
+                    { hostname: 'shop.bmnw.nl', path: '/admin', service: 'https://10.0.0.5:8443' }
+                ]
+            }
+        });
+        await open();
+        await until(() => everything().includes('Tunnel office'));
+        expect(everything()).toContain('Your own tunnel. Already running here or elsewhere. Ruimte starts nothing.');
+        expect(everything()).toContain('Already on this tunnel');
+        expect(everything()).toContain('localhost:3000');
+        expect(everything()).toContain('shop.bmnw.nl/admin');
+        expect(everything()).toContain('10.0.0.5:8443');
+        expect(document.querySelector('[aria-label="Remove nas.bmnw.nl"], [aria-label="nas.bmnw.nl is on"]')).toBeNull();
+    });
+
+    test('stops using the tunnel after a confirmation that says it stays in Cloudflare', async () => {
+        machine.answer('tunnel.unlink', () => (state = stateOf({ stage: 'no-tunnel', tunnel: null })));
+        await open();
+        await until(() => buttonWithText('Stop using') !== null);
+        await clickOn(buttonWithText('Stop using'));
+        await until(() => everything().includes('The tunnel stays in Cloudflare.'));
+        expect(machine.requests('tunnel.unlink')).toHaveLength(0);
+
+        await clickOn(buttonWithText('Stop using', document.querySelector('[role="dialog"]') ?? document));
+        await until(() => machine.requests('tunnel.unlink').length === 1);
+        await until(() => buttonWithText('Create tunnel') !== null);
     });
 
     test('adds a dev server on a zone from the list: a label first, then a full hostname on the other zone', async () => {
         machine.answer('tunnel.add', () => state);
         await open();
-        await until(() => inputNamed('Port') !== null);
-        await typeInto(inputNamed('Port'), '3000');
+        // A port a session listens on comes from the list.
+        await until(() => document.querySelector('[aria-label="Port"]') !== null);
+        await clickOn(document.querySelector('[aria-label="Port"]'));
+        await until(() => menuItem('3000 · Vite', 'option') !== null);
+        await clickOn(menuItem('3000 · Vite', 'option'));
         // A label is proposed from the port, in front of the first zone.
-        expect(inputNamed('Label or hostname').value).toBe('dev-3000');
+        await until(() => inputNamed('Label or hostname').value === 'dev-3000');
 
         await typeInto(inputNamed('Label or hostname'), 'shop');
-        await clickOn(document.querySelector('input[type="checkbox"], [role="checkbox"]'));
         await clickOn(addButton('dev'));
+        // Nothing guards a dev server, so Add asks once more before anything goes over the wire.
+        await until(() => everything().includes('Anyone with the address reaches this server, without a login.'));
+        expect(machine.requests('tunnel.add')).toHaveLength(0);
+
+        await clickOn(buttonWithText('Add', document.querySelector('[role="dialog"]') ?? document));
         await until(() => machine.requests('tunnel.add').length === 1);
         expect(machine.requests('tunnel.add')[0]).toEqual({ kind: 'dev', zone: 'zone-bmnw', label: 'shop', port: 3000 });
 
+        // Another port is typed in.
+        await until(() => document.querySelector('[role="dialog"]') === null);
+        await clickOn(document.querySelector('[aria-label="Port"]'));
+        await until(() => menuItem('Other port', 'option') !== null);
+        await clickOn(menuItem('Other port', 'option'));
+        await until(() => document.querySelector('input[aria-label="Port"]') !== null);
         await typeInto(inputNamed('Port'), '3001');
         await typeInto(inputNamed('Label or hostname'), 'api-tunnel.passly.dev');
         // The MCP row has a domain list too; the dev server row is the last.
         await clickOn([...document.querySelectorAll('[aria-label="Domain"]')].at(-1) ?? null);
         await until(() => menuItem('.passly.dev', 'option') !== null);
         await clickOn(menuItem('.passly.dev', 'option'));
-        await clickOn(document.querySelector('input[type="checkbox"], [role="checkbox"]'));
         await clickOn(addButton('dev'));
+        await until(() => document.querySelector('[role="dialog"]') !== null);
+        await clickOn(buttonWithText('Add', document.querySelector('[role="dialog"]') ?? document));
         await until(() => machine.requests('tunnel.add').length === 2);
         expect(machine.requests('tunnel.add')[1]).toEqual({ kind: 'dev', zone: 'zone-passly', label: 'api-tunnel.passly.dev', port: 3001 });
     });

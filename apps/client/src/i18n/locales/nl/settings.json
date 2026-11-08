@@ -1063,6 +1063,22 @@
             "pickAccount": "Kies een account",
             "action": "Tunnel maken"
         },
+        "existing": {
+            "label": "Je tunnels",
+            "description": "Ruimte voegt alleen eigen hostnamen toe.",
+            "loading": "Je tunnels laden.",
+            "none": "Geen tunnels op dit account.",
+            "loadFailed": "Kon je tunnels niet ophalen.",
+            "running": "Draait al. Ruimte start niets.",
+            "idle": "Draait niet. Ruimte draait hem hier.",
+            "local": "Beheerd in een bestand, niet in het dashboard.",
+            "action": "Gebruiken"
+        },
+        "unlink": {
+            "action": "Niet meer gebruiken",
+            "title": "{{name}} niet meer gebruiken?",
+            "description": "Ruimte haalt zijn hostnamen weg. De tunnel blijft in Cloudflare."
+        },
         "zone": {
             "label": "Domein",
             "pick": "Kies een domein"
@@ -1070,7 +1086,14 @@
         "rows": {
             "title": "Hostnamen",
             "tunnel": "Tunnel {{name}}",
-            "tunnelHint": "De hostnamen staan ook in het Cloudflare-dashboard. Ruimte past alleen records aan die het zelf maakte.",
+            "others": "Al op deze tunnel",
+            "made": "Gemaakt door Ruimte.",
+            "picked": "Je eigen tunnel.",
+            "runner": {
+                "ruimte": "Ruimte draait hem.",
+                "other": "Draait al hier of ergens anders. Ruimte start niets.",
+                "none": "Draait zodra een hostnaam aanstaat."
+            },
             "mcp": "De MCP van Ruimte, die bij elk verzoek om een inlogsleutel vraagt",
             "dev": "Dev server op poort {{port}}, open voor iedereen met het adres",
             "enabled": "{{hostname}} staat aan",
@@ -1089,11 +1112,13 @@
         },
         "dev": {
             "label": "Dev server toevoegen",
-            "description": "Kies een poort waarop een sessie van jou luistert, en daarna een label of een volledige hostnaam op een van je domeinen. Niets beschermt een dev server. Iedereen met het adres komt erbij.",
             "port": "Poort",
-            "pick": "Kies een poort",
+            "other": "Andere poort",
             "hostname": "Label of hostnaam",
-            "gate": "Ik weet dat iedereen met het adres bij deze server komt"
+            "confirm": {
+                "title": "Open voor iedereen?",
+                "description": "Iedereen met het adres komt bij deze server, zonder inloggen."
+            }
         },
         "credentials": {
             "title": "Externe clients",
