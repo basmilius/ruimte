@@ -6,7 +6,15 @@ import { join } from 'node:path';
 import type { OutboxClock } from '@adecore/agents/coordination';
 import { ManualClock } from '@adecore/agents/testing';
 import type { AgentRequest, AgentStatus, ChatRequestSummary, ChatTurnLimit, ProcessAlert, PushSubscribePayload, ServerFrame } from '@ruimte/contracts';
-import { PUSH_HKDF_SALT, pushEncryptionInfo, pushMessage, pushRoutingMessage, type PushEnvelope } from '@ruimte/pulsar';
+import {
+    PUSH_HKDF_SALT,
+    PUSH_MAX_AGE_MS,
+    PUSH_MAX_CLOCK_SKEW_MS,
+    pushEncryptionInfo,
+    pushMessage,
+    pushRoutingMessage,
+    type PushEnvelope
+} from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { AuthStore } from '../auth/auth-store.ts';
 import { generateKeyPair, signMessage } from '../auth/keys.ts';
@@ -1388,6 +1396,98 @@ describe('a device in quiet hours', () => {
         await untilMorning();
         expect(alerts()).toMatchObject([{ kind: 'attention', nodeId: 'node', body: 'Wants to run a command' }]);
         expect(alerts(OTHER_HANDLE)).toHaveLength(1);
+    });
+
+    test('announces a wait with an envelope the pulsar worker accepts, and the ledger entry a read names', async () => {
+        status('running', 'node', quiet);
+        status('needs-you', 'node', quiet);
+        await untilMorning();
+
+        const [push] = pushes.filter((entry) => entry.pushType === 'alert' && entry.handle === subscription.handle);
+
+        expect(push).toBeDefined();
+        // The same rule as `sendPush` in apps/pulsar-worker/src/push.ts.
+        const now = clock.now();
+        expect(push!.issuedAt).toBeLessThanOrEqual(now + PUSH_MAX_CLOCK_SKEW_MS);
+        expect(push!.issuedAt).toBeGreaterThanOrEqual(now - PUSH_MAX_AGE_MS);
+        expect(push!.expiresAt).toBeGreaterThan(now);
+        expect(push!.expiresAt).toBeGreaterThan(push!.issuedAt);
+        expect(push!.expiresAt - push!.issuedAt).toBeLessThanOrEqual(PUSH_MAX_AGE_MS);
+        expect(quiet.attention.snapshot()).toMatchObject([{ nodeId: 'node', issuedAt: push!.issuedAt, readThrough: 0 }]);
+    });
+
+    test('says nothing for a wait that stopped without running in between', async () => {
+        status('running', 'node', quiet);
+        status('needs-you', 'node', quiet);
+        status('idle', 'node', quiet);
+        await untilMorning();
+        expect(alerts()).toEqual([]);
+    });
+
+    test('says nothing for a wait whose node is gone', async () => {
+        status('running', 'node', quiet);
+        status('needs-you', 'node', quiet);
+        quiet.consume({ event: 'session.exit', payload: { sessionId: 'node', exitCode: 0 } });
+        await untilMorning();
+        expect(alerts()).toEqual([]);
+    });
+
+    describe('when chats stop on one usage limit in the night', () => {
+        const RESET = MORNING + 3_600_000;
+
+        const stopOnLimit = (chatId: string, resetsAt: number | null = RESET): void => {
+            for (const value of ['running', 'error'] as const) {
+                quiet.consume({
+                    event: 'chat.event',
+                    payload: {
+                        chatId,
+                        event: {
+                            type: 'info',
+                            info: {
+                                chatId,
+                                provider: 'codex',
+                                account: 'blis',
+                                cwd: home,
+                                agentSessionId: 'cli',
+                                model: null,
+                                selection: { model: 'default', options: {} },
+                                runtimeMode: 'supervised',
+                                status: value,
+                                running: true,
+                                activeTurnId: value === 'running' ? 'turn' : null,
+                                slashCommands: [],
+                                usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+                                ...(value === 'error' ? { limit: { kind: 'usage' as const, ...(resetsAt === null ? {} : { resetsAt }) } } : {}),
+                                createdAt: NOW
+                            }
+                        }
+                    }
+                });
+            }
+        };
+
+        beforeEach(async () => {
+            await auth.setPush(sessionId, { ...subscription, followAll: true, quietHours: hours });
+        });
+
+        test('send one push in the morning', async () => {
+            stopOnLimit('chat-1');
+            stopOnLimit('chat-2');
+            await quiet.settled();
+            expect(alerts()).toEqual([]);
+            await untilMorning();
+            expect(alerts()).toHaveLength(1);
+        });
+
+        test('send one push for a limit without a reset, even when its hour of quiet passed in the night', async () => {
+            stopOnLimit('chat-1', null);
+            await quiet.settled();
+            clock.advance(2 * 3_600_000);
+            stopOnLimit('chat-2', null);
+            await quiet.settled();
+            await untilMorning();
+            expect(alerts()).toHaveLength(1);
+        });
     });
 
     test('a wait that changes its ask meanwhile is announced as it is then', async () => {

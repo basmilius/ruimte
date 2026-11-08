@@ -12,6 +12,9 @@ export interface WithheldAlert {
 
     /* A wait's alert, whose body says what the node asks when it goes out rather than when it was raised. */
     wait?: boolean;
+
+    /* The `limitKey` of a usage limit this alert raises, so the release sends one alert per limit of an account. */
+    limit?: string;
 }
 
 export interface QuietRelease {

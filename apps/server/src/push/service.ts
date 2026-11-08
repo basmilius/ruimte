@@ -36,7 +36,7 @@ import { PushAttention } from './attention.ts';
 import { encryptPush } from './encrypt.ts';
 import { limitBody, limitKey, limitWindow, type LimitContext } from './limit-alert.ts';
 import { processAlertBody } from './process-alert.ts';
-import { QuietHold, type QuietRelease } from './quiet-hold.ts';
+import { QuietHold, type QuietRelease, type WithheldAlert } from './quiet-hold.ts';
 import type { SnoozeChange } from './snoozes.ts';
 
 interface PushServiceOptions {
@@ -436,30 +436,62 @@ export class PushService {
      */
     private releaseQuiet(sessionId: string, { alerts, activities }: QuietRelease): void {
         const now = this.now();
+        const limits = new Set<string>();
 
         for (const alert of alerts) {
             const { content } = alert;
 
             if (
                 this.snoozed(content.nodeId) ||
+                (alert.ledger && this.attention.isRead(content.nodeId, alert.issuedAt)) ||
+                (alert.wait && !this.waiting(content.nodeId)) ||
                 (content.kind === 'approval' && !this.approvals.get(content.nodeId)?.has(content.requestId ?? '')) ||
-                (content.resetsAt !== undefined && content.resetsAt <= now)
+                (content.resetsAt !== undefined && content.resetsAt <= now) ||
+                (alert.limit !== undefined && limits.has(alert.limit))
             ) {
                 continue;
             }
 
+            if (alert.limit !== undefined) {
+                limits.add(alert.limit);
+            }
+
+            // The pulsar worker refuses an envelope older than `PUSH_MAX_AGE_MS`, so a release goes out as issued now.
+            const issuedAt = this.reissue(alert);
             const fresh = {
                 ...content,
                 ...(alert.wait ? { body: clipText(this.waitBody(content.nodeId), BODY_MAX) } : {}),
-                expiresAt: now + (content.kind === 'approval' ? APPROVAL_MAX_AGE_MS : PUSH_MAX_AGE_MS)
+                expiresAt: issuedAt + (content.kind === 'approval' ? APPROVAL_MAX_AGE_MS : PUSH_MAX_AGE_MS)
             };
 
-            this.queueAlert(() => this.deliverAlert(fresh, alert.issuedAt, alert.preference, alert.ledger, { session: sessionId }));
+            this.queueAlert(() => this.deliverAlert(fresh, issuedAt, alert.preference, alert.ledger, { session: sessionId }));
         }
 
         if (activities) {
             this.synchronizeActivities();
         }
+    }
+
+    /* Whether a node still exists and still asks for a person. */
+    private waiting(nodeId: string): boolean {
+        return this.activityNodes().find((node) => node.nodeId === nodeId)?.status === 'needs-you';
+    }
+
+    /*
+     * The time a released alert is issued at. One in the ledger moves its entry along, since a phone marks
+     * the push read by that time and a read acknowledgment names the entry it saw; a read of the old entry
+     * was checked before this.
+     */
+    private reissue(alert: WithheldAlert): number {
+        if (!alert.ledger) {
+            return this.now();
+        }
+
+        const entry = this.attention.notify(alert.content.nodeId);
+
+        this.tell(entry);
+
+        return entry.issuedAt;
     }
 
     private activityNodes(): { nodeId: string; target: PushAlertContent['target']; title: string; status: AgentStatus }[] {
@@ -822,6 +854,7 @@ export class PushService {
     ): Promise<void> {
         const { limit, session } = delivery;
         let sent = false;
+        let withheld = false;
 
         try {
             const projectId = this.options.projectOf?.(content.nodeId) ?? null;
@@ -840,7 +873,15 @@ export class PushService {
                 if (quiet) {
                     // A finished turn or a process warning is over by the time the quiet ends; a wait, an approval or an alert the daemon raised is not.
                     if (preference === 'needs-you') {
-                        this.quietHold.withhold(sessionId, quiet, { content, issuedAt, preference, ledger, ...(delivery.wait ? { wait: true } : {}) });
+                        this.quietHold.withhold(sessionId, quiet, {
+                            content,
+                            issuedAt,
+                            preference,
+                            ledger,
+                            ...(delivery.wait ? { wait: true } : {}),
+                            ...(limit ? { limit: limit.key } : {})
+                        });
+                        withheld = true;
                     }
 
                     continue;
@@ -857,7 +898,8 @@ export class PushService {
             }
         } finally {
             if (limit) {
-                this.settleLimit(limit, sent);
+                // An alert held for the morning counts as raised, or every chat on the limit would hold its own.
+                this.settleLimit(limit, sent || withheld);
             }
         }
     }
