@@ -651,7 +651,7 @@
         },
         "tunnels": {
             "label": "Tunnels",
-            "description": "Reach Ruimte's MCP and your dev servers from outside."
+            "description": "Reach Ruimte's MCP and your dev servers from outside, through your own Cloudflare account."
         },
         "voice": {
             "label": "Voice",
@@ -1017,7 +1017,6 @@
     },
     "tunnels": {
         "title": "Tunnels",
-        "description": "Reach Ruimte's MCP and your dev servers from outside, through your own Cloudflare account.",
         "visibility": "Cloudflare ends the encryption at its edge, so it can read everything that passes through a tunnel: prompts, file contents, credentials and the cookies of a dev site. Ruimte adds no encryption of its own on top.",
         "update": "This machine needs a newer Ruimte to offer tunnels.",
         "loading": "Loading the tunnels.",

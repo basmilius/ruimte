@@ -1,10 +1,12 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import type { Credential, TunnelState } from '@ruimte/contracts';
 import { act } from 'react';
 import { usePickedMachineState } from '@/shell/settings/picked-machine';
+import { SettingsDialog } from '@/shell/SettingsDialog';
 import { ConsentDialog } from '@/shell/tunnels/ConsentDialog';
 import { useConsent } from '@/state/consent';
 import { useEndpoints } from '@/state/endpoints';
+import { useUi } from '@/state/ui';
 import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
 import { buttonWithText, everything, installDesktop, removeDesktop, typeInto } from '../../../../testing/dom-helpers';
 import { connectFakeMachine, FakeMachine } from '../../../../testing/fake-machine';
@@ -225,6 +227,90 @@ describe('a bearer', () => {
         await until(() => everything().includes('Let it answer approvals'));
         expect(everything()).toContain('With this on, the client can run shell commands on this machine.');
         expect(everything()).toContain('Supervised then limits nothing.');
+    });
+});
+
+describe('the use of a credential', () => {
+    const NOW = 1_800_000_000_000;
+
+    beforeEach(() => setSystemTime(NOW));
+    afterEach(() => setSystemTime());
+
+    function bearer(lastUsedAt: number | null): Credential {
+        return {
+            id: 'cred-1',
+            label: 'Hosted bot',
+            kind: 'bearer',
+            grant: { tier: 'work', projects: null, ceiling: 'supervised', approvals: false },
+            bearerOnHostname: false,
+            expiresAt: null,
+            createdAt: 1,
+            lastUsedAt
+        };
+    }
+
+    test('shows a first use while the pane stays open', async () => {
+        state = stateOf({ mcp: { enabled: true, port: 4230 }, clients: 0 });
+        credentials = [bearer(null)];
+        await open();
+        await until(() => everything().includes('never used'));
+        expect(everything()).toContain('0 clients used a credential lately');
+
+        state = stateOf({ mcp: { enabled: true, port: 4230 }, clients: 1 });
+        credentials = [bearer(NOW - 2 * 60_000)];
+        await act(async () => machine.emit('tunnel.changed', {}));
+        await until(() => everything().includes('1 client used a credential lately'));
+        expect(everything()).toContain('last used');
+        expect(everything()).not.toContain('never used');
+    });
+
+    test('shows the clients of another machine as they use it', async () => {
+        const other = new FakeMachine();
+        let clients = 0;
+
+        other.answer('tunnel.state', () => stateOf({ clients }));
+        useEndpoints.getState().add({
+            id: 'tunnels-other',
+            label: 'Build Mac',
+            httpBaseUrl: 'http://127.0.0.1:2',
+            wsBaseUrl: 'ws://127.0.0.1:2',
+            reachability: 'lan',
+            daemonId: null,
+            daemonPublicKey: null
+        });
+
+        const stop = connectFakeMachine(other, 'tunnels-other');
+
+        usePickedMachineState.getState().pick('tunnels-other');
+        await open();
+        await until(() => everything().includes('0 clients used a credential lately'));
+
+        clients = 1;
+        await act(async () => other.emit('tunnel.changed', {}));
+        await until(() => everything().includes('1 client used a credential lately'));
+        stop();
+        usePickedMachineState.setState({ id: null });
+    });
+});
+
+describe('the subtitle of the pane', () => {
+    test('is said once, in the header and not again in the first section', async () => {
+        await page.render(<SettingsDialog />);
+        await act(async () => useUi.getState().setSettings({ open: true, section: 'tunnels' }));
+
+        const subtitle = "Reach Ruimte's MCP and your dev servers from outside";
+
+        await until(() => everything().includes(subtitle));
+        await until(() => everything().includes('Cloudflare ends the encryption'));
+
+        // The dialog also gives the subtitle to screen readers, which a person does not see.
+        const seen = [...document.querySelectorAll<HTMLElement>('*')].filter(
+            (element) => element.children.length === 0 && element.textContent?.includes(subtitle) && element.closest('.sr-only') === null
+        );
+
+        expect(seen).toHaveLength(1);
+        expect(seen[0]!.textContent).toContain('through your own Cloudflare account');
+        useUi.getState().setSettings({ open: false });
     });
 });
 

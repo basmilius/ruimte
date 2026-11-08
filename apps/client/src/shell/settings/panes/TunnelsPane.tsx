@@ -47,7 +47,7 @@ function TunnelsOf({ endpoint }: { endpoint: Endpoint }) {
 
     return (
         <>
-            <SettingsSection title={t('tunnels.title')} description={t('tunnels.description')} scope="machine" machine="picked">
+            <SettingsSection title={t('tunnels.title')} scope="machine" machine="picked">
                 {waiting !== null && <SettingsRow label={waiting} />}
                 {tunnels.failure !== null && <FormError>{tunnels.failure}</FormError>}
                 {state !== null && manages && <Stage state={state} change={tunnels.change} />}

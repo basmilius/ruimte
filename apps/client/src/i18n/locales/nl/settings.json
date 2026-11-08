@@ -651,7 +651,7 @@
         },
         "tunnels": {
             "label": "Tunnels",
-            "description": "Bereik de MCP van Ruimte en je dev servers van buitenaf."
+            "description": "Bereik de MCP van Ruimte en je dev servers van buitenaf, via je eigen Cloudflare-account."
         },
         "voice": {
             "label": "Voice",
@@ -1017,7 +1017,6 @@
     },
     "tunnels": {
         "title": "Tunnels",
-        "description": "Bereik de MCP van Ruimte en je dev servers van buitenaf, via je eigen Cloudflare-account.",
         "visibility": "Cloudflare beëindigt de versleuteling aan zijn rand en kan dus alles lezen wat door een tunnel gaat: prompts, bestandsinhoud, inloggegevens en de cookies van een dev site. Ruimte voegt zelf geen versleuteling toe.",
         "update": "Deze machine heeft een nieuwere Ruimte nodig voor tunnels.",
         "loading": "De tunnels worden geladen.",
