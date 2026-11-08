@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { ToolRefusal } from '@adecore/agents/context';
 import { isCanvasView, nodeChats, viewChats, type ProjectContent, type RuntimeMode } from '@ruimte/contracts';
 import { z } from 'zod';
@@ -28,9 +29,12 @@ export interface ApprovalPorts {
     answerChat(chatId: string, requestId: string, decision: 'allow' | 'deny'): void;
     /* The terminals of this machine that hold a command a person has not approved. */
     heldCommands(): Array<{ sessionId: string; command: string }>;
-    approveCommand(sessionId: string): Promise<void>;
-    unapprovedLaunches(projectId: string): Promise<Array<{ launchId: string; name: string }>>;
-    approveLaunch(projectId: string, launchId: string): Promise<void>;
+    /* Runs the command only while the terminal still holds the one `digest` names; false when it holds another or none. */
+    approveCommand(sessionId: string, digest: string): Promise<boolean>;
+    /* What would run is in `command` and `folder`, and `digest` covers those and the environment, which is not shown. */
+    unapprovedLaunches(projectId: string): Promise<Array<{ launchId: string; name: string; command: string; folder: string; digest: string }>>;
+    /* Approves the launch only while it still hashes to `digest`; false when it changed. */
+    approveLaunch(projectId: string, launchId: string, digest: string): Promise<boolean>;
     unapprovedRoutines(projectId: string): Promise<Array<{ routineId: string; name: string; digest: string }>>;
     answerRoutine(projectId: string, routineId: string, digest: string, approve: boolean): Promise<void>;
     approvedMode(folder: string, nodeId: string): RuntimeMode | null;
@@ -82,12 +86,25 @@ export async function pendingApprovals(ports: ApprovalPorts, projectId: string):
 
     for (const held of ports.heldCommands()) {
         if (terminals.has(held.sessionId)) {
-            items.push({ kind: 'command', projectId, subject: held.sessionId, key: held.sessionId, text: `A terminal holds the command ${held.command}` });
+            // The key is a digest of the command, so an id from the list names this command and no other that lands in the terminal later.
+            items.push({
+                kind: 'command',
+                projectId,
+                subject: held.sessionId,
+                key: commandDigest(held.command),
+                text: `A terminal holds the shell command ${held.command}`
+            });
         }
     }
 
     for (const launch of await ports.unapprovedLaunches(projectId)) {
-        items.push({ kind: 'launch', projectId, subject: launch.launchId, key: launch.launchId, text: `The launch ${launch.name} waits for approval` });
+        items.push({
+            kind: 'launch',
+            projectId,
+            subject: launch.launchId,
+            key: launch.digest,
+            text: `The launch ${launch.name} waits for approval. Approving lets it run the shell command ${launch.command} in ${launch.folder}`
+        });
     }
 
     for (const routine of await ports.unapprovedRoutines(projectId)) {
@@ -103,6 +120,11 @@ export async function pendingApprovals(ports: ApprovalPorts, projectId: string):
     }
 
     return items;
+}
+
+/* What an id names of a held command: a fingerprint, so the id carries no command text. */
+export function commandDigest(command: string): string {
+    return createHash('sha256').update(command).digest('hex').slice(0, 32);
 }
 
 /* The id a tool prints for an approval and takes back: opaque, and every part checked again when it is used. */
@@ -149,7 +171,8 @@ export function approvalTools(ports: ApprovalPorts): Tool[] {
 
     const answer = defineTool('approval', {
         name: 'approval_answer',
-        description: 'Approves or declines one thing approval_list names, as the person would.',
+        description:
+            'Approves or declines one thing approval_list names, as the person would. Approving a command, launch or routine lets it run shell commands on this machine; only what approval_list showed is approved, and an id whose command changed since is refused.',
         input: z.object({
             id: z.string({ error: 'approval_answer needs id, from approval_list' }).min(1, 'approval_answer needs id, from approval_list'),
             decision: z.enum(['allow', 'deny']).optional().describe('allow when left out; only a chat request and a routine can be denied')
@@ -188,10 +211,16 @@ export function approvalTools(ports: ApprovalPorts): Tool[] {
                         throw new ToolRefusal('cannot-deny', `A ${waiting.kind} is only approved here; leave it waiting for the person to decline`);
                     }
 
-                    if (waiting.kind === 'command') {
-                        await ports.approveCommand(waiting.subject);
-                    } else if (waiting.kind === 'launch') {
-                        await ports.approveLaunch(waiting.projectId, waiting.subject);
+                    if (waiting.kind === 'command' || waiting.kind === 'launch') {
+                        // Checked once more where the approval is given, since the list above and the yes are two moments.
+                        const settled =
+                            waiting.kind === 'command'
+                                ? await ports.approveCommand(waiting.subject, waiting.key)
+                                : await ports.approveLaunch(waiting.projectId, waiting.subject, waiting.key);
+
+                        if (!settled) {
+                            throw new ToolRefusal('not-waiting', `${input.id} changed since approval_list showed it; nothing was approved`);
+                        }
                     } else {
                         const folder = ports.folderOf(waiting.projectId);
                         const mode = waiting.key as RuntimeMode;

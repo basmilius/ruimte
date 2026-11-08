@@ -1147,7 +1147,7 @@
                 "365": "Na een jaar"
             },
             "approvals": "Laat hem goedkeuringen beantwoorden",
-            "approvalsWarning": "Staat dit aan, dan beantwoordt de client de goedkeuringen van zijn eigen agents en kan hij een command op deze machine goedkeuren. Supervised beperkt dan niets, en de inlogsleutel reikt ongeveer zo ver als een shell."
+            "approvalsWarning": "Staat dit aan, dan kan de client shell commands op deze machine uitvoeren. Hij keurt de commands goed die terminals, launches en routines vasthouden, en wat hij goedkeurt draait als jijzelf. Supervised beperkt dan niets."
         },
         "consent": {
             "title": "{{host}} wil Ruimte gebruiken",

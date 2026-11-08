@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { CodedError, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
 import { Serializer } from '@adecore/utils/async';
@@ -190,6 +191,11 @@ function worktreesDigestIn(resolved: ResolvedLaunch): string {
 /* Everything that decides what runs, approved as one, so a change to any of it asks again. */
 function digestOf(resolved: Pick<ResolvedLaunch, 'command' | 'cwd' | 'env'>): string {
     return JSON.stringify([resolved.command, resolved.cwd, sortedEnv(resolved.env)]);
+}
+
+/* A short fingerprint of everything a launch's approval covers, for an id that has to name exactly what was listed. */
+export function launchDigest(resolved: Pick<ResolvedLaunch, 'command' | 'cwd' | 'env'>): string {
+    return createHash('sha256').update(digestOf(resolved)).digest('hex').slice(0, 32);
 }
 
 /*
@@ -388,6 +394,26 @@ export class LaunchStore {
                 }
             }
             this.emitChanged(projectId, state);
+        });
+    }
+
+    /*
+     * An answer given for a launch as it was listed: approves only while what would run still hashes to `digest`, and says whether it
+     * did. A launch edited between the list and the yes stays unapproved.
+     */
+    approveIfUnchanged(projectId: string, launchId: string, digest: string): Promise<boolean> {
+        return this.writes.run(async () => {
+            const state = await this.load(projectId);
+            const resolved = this.resolvedAll(projectId, state).find((entry) => entry.launch.id === launchId);
+
+            if (resolved === undefined || resolved.launch.kind === 'group' || launchDigest(resolved) !== digest) {
+                return false;
+            }
+
+            await this.approvals.approve(state.folder, approvalKeyOf(launchId), digestOf(resolved));
+            this.emitChanged(projectId, state);
+
+            return true;
         });
     }
 

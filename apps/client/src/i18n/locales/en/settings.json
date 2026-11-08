@@ -1147,7 +1147,7 @@
                 "365": "After a year"
             },
             "approvals": "Let it answer approvals",
-            "approvalsWarning": "With this on, the client answers its own agents' approvals and can approve a command on this machine. Supervised then limits nothing, and the credential reaches about as far as a shell."
+            "approvalsWarning": "With this on, the client can run shell commands on this machine. It approves the commands that terminals, launches and routines hold, and what it approves runs as you. Supervised then limits nothing."
         },
         "consent": {
             "title": "{{host}} wants to use Ruimte",

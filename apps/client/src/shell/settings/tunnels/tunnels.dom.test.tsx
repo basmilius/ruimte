@@ -223,7 +223,8 @@ describe('a bearer', () => {
         await until(() => buttonWithText('New bearer') !== null);
         await clickOn(buttonWithText('New bearer'));
         await until(() => everything().includes('Let it answer approvals'));
-        expect(everything()).toContain('Supervised then limits nothing, and the credential reaches about as far as a shell.');
+        expect(everything()).toContain('With this on, the client can run shell commands on this machine.');
+        expect(everything()).toContain('Supervised then limits nothing.');
     });
 });
 

@@ -1,5 +1,6 @@
 import { chatRequests } from '@adecore/agents/coordination';
-import type { ApprovalPorts } from '../tunnels/approvals.ts';
+import { launchDigest } from '../launches/store.ts';
+import { commandDigest, type ApprovalPorts } from '../tunnels/approvals.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { LaunchesBundle } from './launches.ts';
 import type { ProjectsBundle } from './projects.ts';
@@ -31,10 +32,29 @@ export function approvalPorts({ stores, agents, projects, launches, routines }: 
                 .flatMap((session) =>
                     session.exited || session.heldCommand === undefined ? [] : [{ sessionId: session.sessionId, command: session.heldCommand }]
                 ),
-        approveCommand: (sessionId) => agents.sessions.runHeld(sessionId),
+        approveCommand: async (sessionId, digest) => {
+            // No await between the look and the call, so the command that is run is the one the digest names.
+            const held = agents.sessions.list().find((session) => session.sessionId === sessionId && !session.exited);
+
+            if (held?.heldCommand === undefined || commandDigest(held.heldCommand) !== digest) {
+                return false;
+            }
+
+            await agents.sessions.runHeld(sessionId);
+
+            return true;
+        },
         unapprovedLaunches: async (projectId) =>
-            (await launches.agentHost.list(projectId)).filter((launch) => !launch.approved).map((launch) => ({ launchId: launch.launchId, name: launch.name })),
-        approveLaunch: (projectId, launchId) => launches.store.approve(projectId, [launchId]),
+            (await launches.store.resolveAll(projectId))
+                .filter((entry) => !entry.approved && entry.launch.kind !== 'group')
+                .map((entry) => ({
+                    launchId: entry.launch.id,
+                    name: entry.launch.name,
+                    command: entry.command,
+                    folder: entry.cwd,
+                    digest: launchDigest(entry)
+                })),
+        approveLaunch: (projectId, launchId, digest) => launches.store.approveIfUnchanged(projectId, launchId, digest),
         unapprovedRoutines: async (projectId) =>
             (await routines.routines.list(projectId)).routines
                 .filter((entry) => !entry.approved)

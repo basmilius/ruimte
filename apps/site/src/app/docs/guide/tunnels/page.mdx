@@ -36,7 +36,7 @@ Each hostname has its own switch and its own choice for after a restart. A dev s
 
 The bot connects in one of two ways.
 
-A client that supports OAuth asks Ruimte for access. A window opens on your machine with the client's name and a short code. Check that the code matches the one on the client's page, choose what the client may do, and approve. Until you do, the client's page only waits, and it gives up after a few minutes.
+A client that supports OAuth asks Ruimte for access. A window opens on your machine with the address the client comes from and a short code. The name the client gives itself comes after that, and Ruimte has not checked it, so trust the address. Check that the code matches the one on the client's page, choose what the client may do, and approve. Requests wait one at a time, and the client's page only waits until you do. It gives up after a few minutes.
 
 A client that can only set a header gets a bearer. Click **New bearer** under External clients, name it and copy the secret. Ruimte shows it once and keeps a hash, so it cannot show it again. A bearer works on this machine without a tunnel. On the public hostname it works only if you tick that box, and it is the weaker form. The same secret then crosses Cloudflare on every request, and nothing notices a stolen copy.
 
@@ -50,11 +50,11 @@ A client acts as you, and what it gets is set when you approve it or make the be
 | Projects | All | A client sees and changes only the projects you name. |
 | Agents it starts run up to | Supervised | A mode wider than this is refused. |
 | Ends | Never | A credential lasts until you revoke it, unless you set an end. |
-| Let it answer approvals | Off | See below. |
+| Let it answer approvals | Off | The client can run shell commands. See below. |
 
-A client never types into a terminal, and a terminal's prompts stay where they are. It cannot make a credential, change its own reach or open the tunnels.
+A client never types into a terminal, and a terminal's prompts stay where they are. It can read every terminal in the projects it may use. It cannot make a credential, change its own reach or open the tunnels.
 
-<Note tone="warning">With **Let it answer approvals** on, the client answers its own agents' approvals and can approve a command, launch, routine or mode on this machine. Supervised then limits nothing, and the credential reaches about as far as a shell.</Note>
+<Note tone="warning">With **Let it answer approvals** on, the client can run shell commands on this machine. It approves the commands that terminals, launches and routines hold, and what it approves runs as you. It sees each command in full before it approves, and an approval holds only for the command it was shown. Supervised then limits nothing.</Note>
 
 ## Keep an eye on clients
 
