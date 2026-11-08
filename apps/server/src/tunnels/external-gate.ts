@@ -43,8 +43,16 @@ export class FailureLimiter {
     private readonly failures = new Map<string, number[]>();
     private readonly now: () => number;
 
-    constructor(now: () => number) {
+    private readonly capacity: number;
+
+    constructor(now: () => number, capacity = MAX_TRACKED_SOURCES) {
         this.now = now;
+        this.capacity = capacity;
+    }
+
+    /* The bucket a source counts in: its own, or the shared one once the map is full and the source is not in it. */
+    private bucketOf(source: string): string {
+        return this.failures.size >= this.capacity && !this.failures.has(source) ? '*' : source;
     }
 
     private recent(source: string): number[] {
@@ -61,16 +69,15 @@ export class FailureLimiter {
     }
 
     blocked(source: string): boolean {
-        return this.recent(source).length >= FAILURES_PER_WINDOW;
+        // A flood from many sources fills the shared bucket, and then every source that is not tracked is slowed down with it.
+        return this.recent(this.bucketOf(source)).length >= FAILURES_PER_WINDOW;
     }
 
     fail(source: string): void {
-        if (this.failures.size >= MAX_TRACKED_SOURCES && !this.failures.has(source)) {
-            // A flood from many sources shares one bucket instead of growing the map.
-            source = '*';
-        }
+        // A flood from many sources shares one bucket instead of growing the map.
+        const bucket = this.bucketOf(source);
 
-        this.failures.set(source, [...this.recent(source), this.now()]);
+        this.failures.set(bucket, [...this.recent(bucket), this.now()]);
     }
 }
 
