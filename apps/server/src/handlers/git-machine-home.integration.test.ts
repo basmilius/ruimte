@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promi
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
-import type { GitBundleResult, GitDiffResult, GitStatus, ServerFrame } from '@ruimte/contracts';
+import type { GitBundleResult, GitCompareResult, GitDiffResult, GitStatus, ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
 import { MachineHome } from '../fs/machine-home.ts';
 import { BundleStore } from '../git/bundles.ts';
@@ -196,6 +196,25 @@ test('git.bundle of the files of the checkout bundles no machine state', async (
 
     expect(reply).toMatchObject({ ok: true });
     expect(await treeOf(checkout, (reply.result as GitBundleResult).commit)).toEqual(['new.txt', 'readme.md', ...OPEN_WORK.toSorted()]);
+});
+
+test('git.compare of commits that hold the home leaves the machine state out, and git.blob refuses it', async () => {
+    const checkout = await checkoutAroundHome('compare');
+    await gitIn(checkout.repo, ['add', '--all']);
+    await gitIn(checkout.repo, ['commit', '--quiet', '--message', 'everything']);
+
+    const reply = await checkout.ask('git.compare', { cwd: checkout.repo, from: 'HEAD^', to: 'HEAD', mode: 'tips' });
+    const paths = ((reply.result as GitCompareResult).diff.files ?? []).map((file) => file.path);
+
+    expect(reply.ok).toBe(true);
+    expect(paths).toEqual(expect.arrayContaining(['readme.md', ...OPEN_WORK]));
+    expect(paths.filter((path) => MACHINE_STATE.includes(path))).toEqual([]);
+    expect(JSON.stringify(reply)).not.toContain('the local secret');
+
+    const commit = (reply.result as GitCompareResult).toCommit;
+
+    expect(await checkout.ask('git.blob', { cwd: checkout.repo, commit, path: MACHINE_STATE[0] })).toMatchObject(refused);
+    expect(await checkout.ask('git.blob', { cwd: checkout.repo, commit, path: 'readme.md' })).toMatchObject({ ok: true });
 });
 
 test('the checkout around the home and the worktrees inside it still answer', async () => {

@@ -6,7 +6,7 @@ import { resolveBase } from './status.ts';
 // A branch menu nobody scrolls past this; the field on top of it is what finds the rest.
 const MAX_REFS = 200;
 
-const REF_FORMAT = `%(refname:short)${FIELD}%(committerdate:unix)${FIELD}%(HEAD)${FIELD}%(objectname)`;
+const REF_FORMAT = `%(refname:short)${FIELD}%(committerdate:unix)${FIELD}%(HEAD)${FIELD}%(objectname)${FIELD}%(refname)`;
 
 /* One entry of `git worktree list --porcelain`. */
 export interface Listed {
@@ -53,7 +53,7 @@ export function parseRefs(output: string, kind: GitRef['kind'], worktrees: Map<s
         if (line === '') {
             continue;
         }
-        const [name = '', at = '', head = '', commit = ''] = line.split(FIELD);
+        const [name = '', at = '', head = '', commit = '', fullName = ''] = line.split(FIELD);
         // Git's own pointer at the remote's default branch is a symbolic ref, not a branch to check out.
         if (name === '' || name.endsWith('/HEAD')) {
             continue;
@@ -62,6 +62,7 @@ export function parseRefs(output: string, kind: GitRef['kind'], worktrees: Map<s
         refs.push({
             name,
             kind,
+            ...(fullName === '' ? {} : { fullName }),
             current: head === '*',
             isDefault: name === base,
             ...(worktree ? { worktree } : {}),

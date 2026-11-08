@@ -314,6 +314,8 @@ export type GitDiscardResult = z.infer<typeof GitDiscardResultSchema>;
 export const GitRefSchema = z.object({
     // `main` for a local branch, `origin/main` for a remote one, as git itself shortens them.
     name: z.string(),
+    // `refs/heads/main`, which tells a remote `origin/main` from a local branch of that name. A daemon from before it leaves it out.
+    fullName: z.string().optional(),
     kind: z.enum(['local', 'remote']),
     current: z.boolean(),
     isDefault: z.boolean(),
@@ -866,3 +868,79 @@ export const GitFetchBundleResultSchema = z.object({
     commit: z.string()
 });
 export type GitFetchBundleResult = z.infer<typeof GitFetchBundleResultSchema>;
+
+export const GitCompareModeSchema = z.enum(['merge-base', 'tips']);
+export type GitCompareMode = z.infer<typeof GitCompareModeSchema>;
+
+const CommitOidSchema = z.string().regex(/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/);
+const CompareRefSchema = z
+    .string()
+    .min(1)
+    .max(1024)
+    .regex(/^[^\0]+$/);
+
+/* One page of the commits that lie on a single side of a comparison. */
+export const GitComparePageSchema = z.object({
+    commits: z.array(GitCommitSchema).max(100),
+    // Where the next page starts, as a count of the commits before it; null when this was the last page.
+    next: z.number().int().nonnegative().nullable()
+});
+export type GitComparePage = z.infer<typeof GitComparePageSchema>;
+
+/* `git.compare`: two refs of one checkout's repository, read from the repository alone. Nothing is checked out or fetched. */
+export const GitComparePayloadSchema = z.object({
+    cwd: z.string().min(1),
+    from: CompareRefSchema,
+    to: CompareRefSchema,
+    // `merge-base` shows what `to` adds since the branches diverged, `tips` the plain difference of the two tips.
+    mode: GitCompareModeSchema.default('merge-base')
+});
+
+export const GitCompareResultSchema = z.object({
+    // The names as they were asked for; the commits below are what they resolved to.
+    from: CompareRefSchema,
+    to: CompareRefSchema,
+    fromCommit: CommitOidSchema,
+    toCommit: CommitOidSchema,
+    // The old side of the diff: the common ancestor in `merge-base` mode, `fromCommit` in `tips` mode.
+    baseCommit: CommitOidSchema,
+    mode: GitCompareModeSchema,
+    diff: GitDiffResultSchema,
+    // Commits only `fromCommit` has, and commits only `toCommit` has; the first page of each.
+    left: GitComparePageSchema,
+    right: GitComparePageSchema
+});
+export type GitCompareResult = z.infer<typeof GitCompareResultSchema>;
+
+/* `git.compareCommits`: a later page of one side, read against the commits `git.compare` pinned. */
+export const GitCompareCommitsPayloadSchema = z.object({
+    cwd: z.string().min(1),
+    fromCommit: CommitOidSchema,
+    toCommit: CommitOidSchema,
+    side: z.enum(['left', 'right']),
+    skip: z.number().int().min(0).max(1_000_000).default(0),
+    limit: z.number().int().min(1).max(100).default(30)
+});
+
+// A file side past this is not handed over.
+export const GIT_BLOB_MAX_BYTES = 512 * 1024;
+
+/* `git.blob`: one file of a pinned commit, without the working tree and without following a symlink. */
+export const GitBlobPayloadSchema = z.object({
+    cwd: z.string().min(1),
+    commit: CommitOidSchema,
+    // Relative to the repository root, without `.`, `..` or empty segments.
+    path: z.string().min(1).max(4096)
+});
+
+export const GitBlobResultSchema = z.object({
+    commit: CommitOidSchema,
+    path: z.string(),
+    text: z.string().max(GIT_BLOB_MAX_BYTES).optional(),
+    // Why there is no text: no such entry, not text, over the limit, a submodule, or a folder.
+    omitted: z.enum(['missing', 'binary', 'too-large', 'gitlink', 'not-file']).optional(),
+    // The text is the path the link points at.
+    symlink: z.boolean().optional(),
+    language: z.string().optional()
+});
+export type GitBlobResult = z.infer<typeof GitBlobResultSchema>;

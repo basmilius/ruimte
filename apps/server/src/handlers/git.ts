@@ -9,6 +9,7 @@ import { fetchBundle, makeBundle, type BundleStore } from '../git/bundles.ts';
 import { readCapabilities } from '../git/capabilities.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import { cloneRepository } from '../git/clone.ts';
+import { compareBranches, compareCommits, readSnapshot } from '../git/compare.ts';
 import { readConflict, readConflicts, resolveConflict, runOperation } from '../git/conflict.ts';
 import { diffCheckout, diffCommit, diffFile } from '../git/diff.ts';
 import { parseIssueRef, readIssue, readPullRequest, runGh } from '../git/github.ts';
@@ -165,6 +166,21 @@ export function registerGitHandlers(
             ...(payload.commit ? { commit: payload.commit } : {})
         };
         return await diffFile(payload.cwd, payload.path, options, await mergeBaseWith(payload.cwd, payload.base));
+    });
+
+    dispatcher.register('git.compare', async (payload) => {
+        await refuse(payload.cwd);
+        return await compareBranches(payload.cwd, payload.from, payload.to, payload.mode, leftOut);
+    });
+
+    dispatcher.register('git.compareCommits', async (payload) => {
+        await refuse(payload.cwd);
+        return await compareCommits(payload.cwd, payload.fromCommit, payload.toCommit, payload.side, payload.skip, payload.limit);
+    });
+
+    dispatcher.register('git.blob', async (payload) => {
+        await refuseFiles(payload.cwd, [payload.path]);
+        return await readSnapshot(payload.cwd, payload.commit, payload.path);
     });
 
     dispatcher.register('git.blame', async (payload) => {
