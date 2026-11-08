@@ -112,6 +112,8 @@ export interface ConnectionServices {
     routines?: Subscribable;
     /* A person's templates, which every client hears change, and a project's, which the clients that hold it hear. */
     templates?: Subscribable;
+    /* Tunnels, credentials and the consent of a client that waits, which every client hears change. */
+    tunnels?: Subscribable;
 }
 
 export interface OpenConnection {
@@ -162,7 +164,8 @@ function subscribeClient(services: ConnectionServices, client: ClientConnection,
         services.voicePreferences,
         services.artifacts,
         services.routines,
-        services.templates
+        services.templates,
+        services.tunnels
     ];
     const none = (): void => undefined;
 

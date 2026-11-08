@@ -484,6 +484,24 @@ import {
     TerminalPrepareResultSchema
 } from './terminal-prepare.ts';
 import {
+    ConsentAnswerPayloadSchema,
+    ConsentAnswerResultSchema,
+    ConsentListResultSchema,
+    CredentialCreatePayloadSchema,
+    CredentialCreateResultSchema,
+    CredentialListResultSchema,
+    CredentialRevokePayloadSchema,
+    CredentialSchema,
+    CredentialUpdatePayloadSchema,
+    TunnelAddPayloadSchema,
+    TunnelDiscoverResultSchema,
+    TunnelRemovePayloadSchema,
+    TunnelSetMcpPayloadSchema,
+    TunnelSetupPayloadSchema,
+    TunnelStateSchema,
+    TunnelUpdatePayloadSchema
+} from './tunnel.ts';
+import {
     VoiceActivityEventSchema,
     VoiceConfirmPayloadSchema,
     VoiceConfirmResultSchema,
@@ -572,6 +590,7 @@ export * from './sql-binding.ts';
 export * from './task.ts';
 export * from './built-in-templates.ts';
 export * from './templates.ts';
+export * from './tunnel.ts';
 export * from './terminal-prepare.ts';
 export * from './text.ts';
 export * from './usage.ts';
@@ -942,6 +961,23 @@ export const REQUEST_SCHEMAS = {
     // Any client may ask, `update-no-app` without the desktop app and `update-none` with nothing to install.
     'endpoint.installUpdate': { payload: EndpointInstallUpdatePayloadSchema, result: EndpointInstallUpdateResultSchema },
     'endpoint.reach': { payload: EndpointReachPayloadSchema, result: EndpointReachResultSchema },
+    // Tunnels run `cloudflared` under the person's own Cloudflare account. Any client reads the state; every other request is the local secret's.
+    'tunnel.state': { payload: EmptySchema, result: TunnelStateSchema },
+    'tunnel.discover': { payload: EmptySchema, result: TunnelDiscoverResultSchema },
+    'tunnel.install': { payload: EmptySchema, result: TunnelStateSchema },
+    'tunnel.signIn': { payload: EmptySchema, result: TunnelStateSchema },
+    'tunnel.setup': { payload: TunnelSetupPayloadSchema, result: TunnelStateSchema },
+    'tunnel.add': { payload: TunnelAddPayloadSchema, result: TunnelStateSchema },
+    'tunnel.update': { payload: TunnelUpdatePayloadSchema, result: TunnelStateSchema },
+    'tunnel.remove': { payload: TunnelRemovePayloadSchema, result: TunnelStateSchema },
+    'tunnel.retry': { payload: EmptySchema, result: TunnelStateSchema },
+    'tunnel.setMcp': { payload: TunnelSetMcpPayloadSchema, result: TunnelStateSchema },
+    'credential.list': { payload: EmptySchema, result: CredentialListResultSchema },
+    'credential.create': { payload: CredentialCreatePayloadSchema, result: CredentialCreateResultSchema },
+    'credential.update': { payload: CredentialUpdatePayloadSchema, result: z.object({ credential: CredentialSchema }) },
+    'credential.revoke': { payload: CredentialRevokePayloadSchema, result: EmptySchema },
+    'consent.list': { payload: EmptySchema, result: ConsentListResultSchema },
+    'consent.answer': { payload: ConsentAnswerPayloadSchema, result: ConsentAnswerResultSchema },
     'auth.sessions': { payload: EmptySchema, result: AuthSessionsResultSchema },
     'auth.revoke': { payload: AuthRevokePayloadSchema, result: EmptySchema },
     'direct.signal': { payload: DirectSignalPayloadSchema, result: EmptySchema },
@@ -1008,6 +1044,9 @@ export const EVENT_SCHEMAS = {
     'activity.changed': NodeActivityListSchema,
     // The links of other machines to projects here changed, so the list in settings reloads.
     'peer.changed': EmptySchema,
+    // Tunnels or the external MCP changed, and a client waits for a person's consent; every client reloads what it shows.
+    'tunnel.changed': EmptySchema,
+    'consent.changed': EmptySchema,
     // Sent to the machine that gave the task, over its own link only.
     'peer.taskSettled': PeerTaskSettledEventSchema,
     // The link to another machine opened, was lost or is waiting to be tried again.
