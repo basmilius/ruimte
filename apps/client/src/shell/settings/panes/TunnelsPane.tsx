@@ -44,7 +44,8 @@ function TunnelsOf({ endpoint }: { endpoint: Endpoint }) {
             : !manages
               ? t('tunnels.elsewhere')
               : null;
-    const linked = state !== null && state.tunnel !== null && state.hasToken && (state.stage === 'running' || state.stage === 'starting');
+    // Also while a stage failed: a refused change or a crashed child says so in the tunnel's line, and the hostnames stay.
+    const linked = state !== null && state.tunnel !== null && state.hasToken;
 
     return (
         <>

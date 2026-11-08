@@ -383,6 +383,19 @@ describe('the hostnames', () => {
         expect(machine.requests('tunnel.add')[1]).toEqual({ kind: 'dev', zone: 'zone-passly', label: 'api-tunnel.passly.dev', port: 3001 });
     });
 
+    test('asks for a port on the computer that runs the tunnel when that is another one, without offering the ports here', async () => {
+        state = stateOf({ tunnel: { name: 'office', created: false, runner: 'other', others: [] } });
+        await open();
+        await until(() => buttonWithText('Add hostname') !== null);
+        await clickOn(buttonWithText('Add hostname'));
+        await until(() => dialog() !== null);
+        expect(document.querySelector('input[aria-label="Port"]')).not.toBeNull();
+
+        await typeInto(inputNamed('Port'), '8080');
+        await until(() => everything().includes('Points to port 8080 on the computer that runs this tunnel.'));
+        expect(machine.requests('tunnel.discover')).toEqual([]);
+    });
+
     test('proposes a long random label for the MCP and adds it on the first domain, without a port', async () => {
         machine.answer('tunnel.add', () => state);
         await open();
@@ -512,6 +525,18 @@ describe('the hostnames', () => {
         await clickOn(menuItem('Remove'));
         await until(() => machine.requests('tunnel.remove').length === 1);
         expect(machine.requests('tunnel.remove')).toEqual([{ id: 'b' }]);
+    });
+
+    test('keeps the hostnames when the tunnel failed, with the reason in its line', async () => {
+        state = stateOf({
+            stage: 'failed',
+            message: 'cloudflared stopped with code 1',
+            rows: [{ id: 'b', kind: 'dev', hostname: 'shop.example.com', port: 3000, enabled: true, comeBack: false }]
+        });
+        await open();
+        await until(() => cells().includes('shop.example.com'));
+        expect(everything()).toContain('cloudflared stopped with code 1');
+        expect(buttonWithText('Add hostname')).not.toBeNull();
     });
 
     test('offers no hostnames before there is a tunnel and a token', async () => {
