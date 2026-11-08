@@ -7,6 +7,7 @@ import type { SqlAnalysis, SqlChoice } from '../database/sql-analysis.ts';
 import { languageOf } from '../fs/read.ts';
 import type { AgentDocument, LanguageHost } from './host.ts';
 import { KIND_PROFILES, lspLanguageId } from './profiles.ts';
+import { BUILD_HELD_MESSAGE } from './worktree-build.ts';
 
 /* A place in a file as an agent writes it: lines and columns from 1, a column counting characters. */
 interface AgentPosition {
@@ -563,6 +564,15 @@ export class AgentLanguage {
         }
         if (document.servers.some((server) => server.state === 'ready' || server.state === 'indexing')) {
             return;
+        }
+        if (
+            document.servers.some((server) => server.buildHeld === true) &&
+            document.servers.every((server) => server.buildHeld === true || server.state === 'not-installed')
+        ) {
+            throw new ToolRefusal(
+                'language-server-build-held',
+                `${BUILD_HELD_MESSAGE}; a person turns them on in the app, in the language status of the project`
+            );
         }
         const missing = document.servers.filter((server) => server.state === 'not-installed').map((server) => server.kind);
         if (missing.length === document.servers.length) {

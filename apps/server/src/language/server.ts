@@ -48,6 +48,7 @@ import { mergeCodeActions, mergeProviders } from './merge.ts';
 import {
     CARGO_DEPTH,
     componentServes,
+    initializationOptionsOf,
     KIND_PROFILES,
     lspLanguageId,
     pinnedNativeTypescript,
@@ -105,6 +106,8 @@ export interface SharedDocument {
     readonly clients: Set<string>;
     /* What each process last reported for it, by the name of the process, which an agent reads back. */
     reported?: Map<string, Diagnostic[]>;
+    /* The kinds that would serve it but stay off it because its file lies in a worktree whose build code a person has not allowed. */
+    buildHeld?: LanguageServerId[];
 }
 
 export interface LanguageServerHooks {
@@ -151,6 +154,8 @@ export interface LanguageServerOptions {
     realPath?: (path: string) => Promise<string>;
     /* False for a project folder made from another machine's work, whose own TypeScript is never run; the pinned one is. */
     ownTypescript?: boolean;
+    /* True while the project lies in a worktree whose build code a person has not allowed; asked at each start. */
+    buildHeld?: () => boolean;
     hooks: LanguageServerHooks;
 }
 
@@ -985,6 +990,7 @@ export class LanguageServer {
             projectFolder: folder,
             typescriptLib: ownTypescript ? await resolveTypescriptLib(folder, installDirectory, exists) : pinnedTypescriptLib(installDirectory),
             native: this.options.native?.() ?? null,
+            buildHeld: this.options.buildHeld?.() === true,
             sql: this.readsSettings()
                 ? await (this.options.sqlSettings?.() ?? Promise.resolve(null)).catch((error: unknown) => {
                       this.log.push('host', `Could not work out the SQL settings of the project: ${errorText(error)}`);
@@ -1085,22 +1091,23 @@ export class LanguageServer {
     private spawnComponent(profile: ComponentProfile, context: LaunchContext, generation: number): Component {
         const { runtime } = this.options;
         const own = profile.native ? context.typescriptExecutable : (profile.program?.(context) ?? profile.command);
+        const env = { ...profile.env, ...(context.buildHeld === true ? this.options.profile.runsBuildCode?.env : {}) };
         const child = this.options.spawn(
             own === undefined
                 ? {
                       command: runtime.command,
                       args: [...runtime.args, `${context.installDirectory}/node_modules/${profile.entry}`, ...profile.args(context)],
                       cwd: this.options.folder,
-                      env: { ...runtime.env, ...profile.env }
+                      env: { ...runtime.env, ...env }
                   }
-                : { command: own, args: profile.args(context), cwd: this.options.folder, env: { ...profile.env } }
+                : { command: own, args: profile.args(context), cwd: this.options.folder, env }
         );
         const rootUri = pathToFileUri(this.options.folder);
         const configuration = configurationOf(profile, context);
         const session = new LspSession(child.transport, {
             rootUri,
             workspaceFolders: [{ uri: rootUri, name: basename(this.options.folder) }],
-            initializationOptions: profile.initializationOptions(context),
+            initializationOptions: initializationOptionsOf(this.options.profile, profile, context),
             clientInfo: { name: 'ruimte' },
             snippetSupport: true,
             resourceOperations: ['create', 'rename', 'delete'],

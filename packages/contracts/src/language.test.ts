@@ -76,6 +76,7 @@ describe('language wire', () => {
             'language.rollback': [language.LanguageRollbackPayloadSchema, language.LanguageServerStatusResultSchema],
             'language.restart': [language.LanguageServerTargetPayloadSchema, language.LanguageServerStatusResultSchema],
             'language.log': [language.LanguageServerTargetPayloadSchema, language.LanguageLogResultSchema],
+            'language.worktreeBuild': [language.LanguageWorktreeBuildPayloadSchema, language.LanguageStatusResultSchema],
             'language.custom.list': [EmptySchema, language.LanguageCustomListResultSchema],
             'language.custom.save': [language.LanguageCustomSavePayloadSchema, language.LanguageCustomSaveResultSchema],
             'language.custom.remove': [language.LanguageCustomRemovePayloadSchema, EmptySchema],

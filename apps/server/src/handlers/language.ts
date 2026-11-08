@@ -13,6 +13,11 @@ export function registerLanguageHandlers(dispatcher: Dispatcher, host: LanguageH
 
     dispatcher.register('language.restart', async (payload) => ({ status: await host.restart(payload.projectId, payload.server) }));
 
+    /* Lets a server build code an agent just wrote, so only the local secret turns it on, as it alone saves a server of a person's own. */
+    dispatcher.register('language.worktreeBuild', async (payload) => ({ servers: await host.setWorktreeBuild(payload.projectId, payload.on) }), {
+        owner: true
+    });
+
     dispatcher.register('language.log', async (payload) => ({ lines: await host.log(payload.projectId, payload.server) }));
 
     dispatcher.register('language.custom.list', async () => ({ servers: host.customList() }));

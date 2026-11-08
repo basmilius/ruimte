@@ -266,7 +266,8 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         projects: projects.store,
         sqlAnalysis: databases.sqlAnalysis,
         agents,
-        providers
+        providers,
+        git
     });
     agents.context.useExtensionNodes(async (extension, type, data) => {
         const parts = await extensions.nodeContext(extension, type, data);

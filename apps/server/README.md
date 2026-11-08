@@ -240,6 +240,7 @@ $RUIMTE_HOME/
   language-servers/
     choices.json                   which server this machine uses where kinds are alternatives (none are today)
     custom.json                    a person's own language servers
+    worktree-build.json            the repositories whose servers may build code in the worktrees of agents
     <kind>/                        one folder per installed kind (see "Language servers")
     packages/<setId>/              shared, immutable npm package sets the installs link to
   usage/                           0700
@@ -486,6 +487,8 @@ Native servers (`src/language/native.ts`, `installer.ts`):
 - Install downloads PHP's stubs for the server's commit; the server starts with `storagePath` and `stubsPath` and never goes online.
 
 The `rust` kind runs the `rust-analyzer` on `PATH` or in `~/.cargo/bin` that answers `--version` (`src/language/toolchain.ts`), with `~/.cargo/bin` on its `PATH`. Without one it says to run `rustup component add rust-analyzer`; Install only looks again. It is told every `Cargo.toml` no other one holds (`linkedProjects`, `src/language/manifests.ts`).
+
+A kind with `runsBuildCode` builds the code it reads. In a worktree the register made for an agent's node it runs without that (rust-analyzer gets build scripts, proc macros and `checkOnSave` off) or, like Swift and Zig, does not start, until a person calls `language.worktreeBuild` for the repository (local secret only). `language-servers/worktree-build.json` holds the main checkouts they allowed. The status carries `buildHeld`, and an agent reads the same sentence as the `message` of that server.
 
 `language-servers/choices.json` holds the kind in use where kinds are alternatives, set with `language.prefer`; none are today, so a pick an older Ruimte stored is ignored. `language-servers/custom.json` holds a person's own servers (`src/language/custom.ts`): command, arguments, environment, initialization options, languages, patterns and folders. `language.custom.save`, `remove` and `check` are local secret only; an entry edited by hand so it no longer matches its saved hash never starts until saved again.
 

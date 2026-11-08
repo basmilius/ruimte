@@ -306,7 +306,8 @@ import {
     LanguageTracePayloadSchema,
     LanguageWillSavePayloadSchema,
     LanguageWorkspaceProblemsPayloadSchema,
-    LanguageWorkspaceProblemsResultSchema
+    LanguageWorkspaceProblemsResultSchema,
+    LanguageWorktreeBuildPayloadSchema
 } from './language.ts';
 import {
     LaunchListResultSchema,
@@ -798,6 +799,8 @@ export const REQUEST_SCHEMAS = {
     // A person's step back from an update; like an install, never the daemon's own or a verb's.
     'language.rollback': { payload: LanguageRollbackPayloadSchema, result: LanguageServerStatusResultSchema },
     'language.restart': { payload: LanguageServerTargetPayloadSchema, result: LanguageServerStatusResultSchema },
+    // Only the local secret turns build scripts and macros on in the worktrees of agents: it lets a server run what an agent just wrote.
+    'language.worktreeBuild': { payload: LanguageWorktreeBuildPayloadSchema, result: LanguageStatusResultSchema },
     'language.log': { payload: LanguageServerTargetPayloadSchema, result: LanguageLogResultSchema },
     'language.custom.list': { payload: EmptySchema, result: LanguageCustomListResultSchema },
     // Only the local secret saves or removes a server of a person's own: starting what it names is what the save approves.

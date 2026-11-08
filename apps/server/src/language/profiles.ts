@@ -18,6 +18,8 @@ export interface LaunchContext {
     sql?: ProjectSqlSettings | null;
     /* The topmost `Cargo.toml` files of the project, absolute, for a component that asks for them. */
     cargoManifests?: readonly string[];
+    /* Whether the project lies in the worktree of an agent whose build code a person has not allowed, so `KindProfile.runsBuildCode.off` applies. */
+    buildHeld?: boolean;
 }
 
 /* The settings of the project's SQL as each server that reads it takes them. */
@@ -92,6 +94,13 @@ export interface KindProfile {
     activation?: Activation;
     /* Set for a kind that runs code of the project it reads (a config it loads, a build script, a macro), which never runs on work another machine sent. */
     runsProjectCode?: true;
+    /*
+     * Set for a kind that builds the code it reads, which it does not do in the worktree of an agent until a
+     * person allows it. `off` holds the initialization options that turn the building off for a kind that
+     * works without it; a kind without `off` does not start there, since loading its project already runs it.
+     * `env` is set on the process there as well, for what its settings cannot reach.
+     */
+    runsBuildCode?: { off?: Record<string, unknown>; env?: Record<string, string> };
 }
 
 /* Where the TypeScript 6 SDK of the `typescript` kind sits beside its TypeScript 7 package, under an alias of the same npm package. */
@@ -462,6 +471,12 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
     rust: {
         kind: 'rust',
         runsProjectCode: true,
+        runsBuildCode: {
+            // `cargo check` on save runs build scripts and macros as well.
+            off: { cargo: { buildScripts: { enable: false } }, procMacro: { enable: false }, checkOnSave: false },
+            // `cargo metadata` runs the compiler wrapper a project's `.cargo/config.toml` names; an empty value overrides the file.
+            env: { RUSTC_WRAPPER: '', RUSTC_WORKSPACE_WRAPPER: '', CARGO_BUILD_RUSTC_WRAPPER: '', CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER: '' }
+        },
         activation: { files: ['Cargo.toml'], deeper: { file: 'Cargo.toml', depth: CARGO_DEPTH } },
         components: [
             {
@@ -498,6 +513,29 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
         ]
     }
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function mergeOptions(base: Record<string, unknown>, over: Record<string, unknown>): Record<string, unknown> {
+    const merged: Record<string, unknown> = { ...base };
+
+    for (const [key, value] of Object.entries(over)) {
+        const current = merged[key];
+        merged[key] = isRecord(current) && isRecord(value) ? mergeOptions(current, value) : value;
+    }
+
+    return merged;
+}
+
+/* The initialization options of a process, with the building of code off when the project lies in a worktree held back (`KindProfile.runsBuildCode`). */
+export function initializationOptionsOf(kind: KindProfile, component: ComponentProfile, context: LaunchContext): unknown {
+    const options = component.initializationOptions(context);
+    const off = context.buildHeld === true ? kind.runsBuildCode?.off : undefined;
+
+    return off === undefined || !isRecord(options) ? options : mergeOptions(options, off);
+}
 
 /* The names a client may use for a language, by the id LSP gives it. */
 const LANGUAGE_ALIASES: Record<string, string> = {

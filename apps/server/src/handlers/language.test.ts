@@ -121,6 +121,20 @@ describe('language handlers', () => {
         expect(await call('language.install', { server: 'php' })).toMatchObject({ ok: false, error: { code: 'invalid-server' } });
     });
 
+    test('only the owner of the machine lets servers build code in the worktrees of agents', async () => {
+        for (const access of [undefined, GUEST]) {
+            expect(await call('language.worktreeBuild', { projectId: 'p1', on: true }, access)).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+        }
+        const peer: ClientAccess = { reachability: 'lan', sessionId: 'peer-session', peer: { machineId: 'machine-a' } };
+        expect(await call('language.worktreeBuild', { projectId: 'p1', on: true }, peer)).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+        expect(dispatcher.peerTypes()).not.toContain('language.worktreeBuild');
+        // The owner is told when the project has no repository to turn it on for.
+        expect(await call('language.worktreeBuild', { projectId: 'p1', on: true }, OWNER)).toMatchObject({
+            ok: false,
+            error: { code: 'language-unavailable' }
+        });
+    });
+
     test('a step back needs an earlier version to go back to', async () => {
         expect(await call('language.rollback', { server: 'css' })).toMatchObject({ ok: false, error: { code: 'language-failed' } });
         expect(await call('language.rollback', { server: 'nope' })).toMatchObject({ ok: false, error: { code: 'bad-request' } });

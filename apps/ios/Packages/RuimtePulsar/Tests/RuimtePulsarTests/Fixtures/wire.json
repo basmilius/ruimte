@@ -272,6 +272,7 @@
     "language.prefer",
     "language.rollback",
     "language.restart",
+    "language.worktreeBuild",
     "language.log",
     "language.custom.list",
     "language.custom.save",

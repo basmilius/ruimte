@@ -15,6 +15,7 @@ import { KIND_PROFILES, type CatalogKind, type ProjectSqlSettings } from './prof
 import { tarGz } from './test-archives.ts';
 import { FULL_CAPABILITIES, fakeSpawner, makeAlternatives, ManualClock, settle, type FakeProcess, type FakeSpawner } from './test-fakes.ts';
 import { LANGUAGE_KIND_PACKAGES, pinnedVersionsOf, versionOf, type NpmKind } from './versions.ts';
+import { BUILD_HELD_MESSAGE, WorktreeBuildChoices } from './worktree-build.ts';
 
 let root = '';
 
@@ -70,6 +71,13 @@ function rig(
         sqlSettings?: (projectId: string) => Promise<ProjectSqlSettings | null>;
         /* The folders made from another machine's work. */
         untrusted?: string[];
+        /* The project folder, `/work` by default. */
+        folder?: string;
+        /* Where the toolchain's programs are, such as rust-analyzer. */
+        programs?: string[];
+        /* The main checkout and the worktrees made for agents' nodes, as the register would say. */
+        agentWorktrees?: { main: string; paths: string[] };
+        worktreeBuild?: WorktreeBuildChoices;
     } = {}
 ): Rig {
     const spawner = options.spawner ?? fakeSpawner();
@@ -80,9 +88,11 @@ function rig(
     const disk = new Set<string>();
     const host = new LanguageHost({
         root,
-        folderOf: (projectId) => (projectId === 'p1' ? WORK : null),
+        folderOf: (projectId) => (projectId === 'p1' ? (options.folder ?? WORK) : null),
         holders: () => [...holders],
-        findProgram: () => [],
+        findProgram: () => options.programs ?? [],
+        ...(options.agentWorktrees === undefined ? {} : { agentWorktrees: async () => options.agentWorktrees! }),
+        ...(options.worktreeBuild === undefined ? {} : { worktreeBuild: options.worktreeBuild }),
         machineHome: {
             refuse: async (path) => {
                 if (path.startsWith(`${MACHINE_STATE}${sep}`)) {
@@ -105,6 +115,10 @@ function rig(
                 installs.push('php-native');
                 await mkdir(join(spec.cwd, 'target', 'release'), { recursive: true });
                 await writeFile(join(spec.cwd, 'target', 'release', nativeProgramFile('php-native', process.platform)), '');
+                return 0;
+            }
+            if (spec.command.endsWith('rust-analyzer')) {
+                onLine('rust-analyzer 1.85.0 (4d91de4e 2025-02-17)');
                 return 0;
             }
             if (spec.args.includes('--version')) {
@@ -163,6 +177,10 @@ async function installed(
         folders?: string[];
         sqlSettings?: (projectId: string) => Promise<ProjectSqlSettings | null>;
         untrusted?: string[];
+        folder?: string;
+        programs?: string[];
+        agentWorktrees?: { main: string; paths: string[] };
+        worktreeBuild?: WorktreeBuildChoices;
     } = {}
 ): Promise<Rig> {
     const choices = new LanguageChoices({ path: join(root, 'choices.json') });
@@ -2436,5 +2454,133 @@ describe('the problems of the whole project', () => {
                 .filter((report) => report.path === 'src/b.ts')
                 .at(-1)
         ).toMatchObject({ diagnostics: [] });
+    });
+});
+
+describe('build code in the worktree of an agent', () => {
+    const MAIN = resolve('/main');
+    const WORKTREE = join(WORK, '.worktrees', 'agent');
+
+    async function withRust(options: {
+        agentWorktrees?: { main: string; paths: string[] };
+        folder?: string;
+        worktreeBuild?: WorktreeBuildChoices;
+        untrusted?: string[];
+    }) {
+        const program = join(root, 'bin', 'rust-analyzer');
+        await mkdir(dirname(program), { recursive: true });
+        await writeFile(program, '');
+        const folder = options.folder ?? WORK;
+
+        return installed(['rust'], { files: [join(folder, 'Cargo.toml')], programs: [program], ...options });
+    }
+
+    const openRust = (host: LanguageHost, path: string) => open(host, path, 'fn main() {}', 'client-1', 'rust');
+
+    it('keeps a kind that builds code off a file in a worktree made for a node, and not off the checkout', async () => {
+        const { host, spawner } = await withRust({ agentWorktrees: { main: MAIN, paths: [WORKTREE] } });
+
+        expect((await openRust(host, 'src/main.rs')).servers).toEqual(['rust']);
+        expect((await openRust(host, '.worktrees/agent/src/main.rs')).servers).toEqual([]);
+        await ready(host, 'rust');
+        expect(spawner.of('rust')[0]!.server.documents.has(uri('src/main.rs'))).toBe(true);
+        expect(spawner.of('rust')[0]!.server.documents.has(uri('.worktrees/agent/src/main.rs'))).toBe(false);
+        expect((await host.status('p1')).find((status) => status.server === 'rust')).toMatchObject({ state: 'ready', buildHeld: true });
+    });
+
+    it('holds back nothing in a repository without a worktree of an agent, or outside one', async () => {
+        const none = await withRust({ agentWorktrees: { main: MAIN, paths: [] } });
+
+        expect((await openRust(none.host, '.worktrees/agent/src/main.rs')).servers).toEqual(['rust']);
+        expect((await none.host.status('p1')).find((status) => status.server === 'rust')?.buildHeld).toBeUndefined();
+
+        const outside = await withRust({});
+
+        expect((await openRust(outside.host, 'src/main.rs')).servers).toEqual(['rust']);
+    });
+
+    it('lets the servers of a repository build there once a person turns it on, and keeps the choice per main checkout', async () => {
+        const path = join(root, 'worktree-build.json');
+        const { host } = await withRust({ agentWorktrees: { main: MAIN, paths: [WORKTREE] }, worktreeBuild: new WorktreeBuildChoices({ path }) });
+
+        await openRust(host, '.worktrees/agent/src/main.rs');
+        const statuses = await host.setWorktreeBuild('p1', true);
+
+        expect(statuses.find((status) => status.server === 'rust')?.buildHeld).toBeUndefined();
+        expect(JSON.parse(await readFile(path, 'utf8'))).toEqual({ on: [MAIN] });
+        expect((await openRust(host, '.worktrees/agent/src/lib.rs')).servers).toEqual(['rust']);
+
+        await host.setWorktreeBuild('p1', false);
+
+        expect((await openRust(host, '.worktrees/agent/src/bin.rs')).servers).toEqual([]);
+        expect(JSON.parse(await readFile(path, 'utf8'))).toEqual({ on: [] });
+    });
+
+    it('moves the open files of a worktree to the kind when the switch goes on, and takes them off when it goes off', async () => {
+        const { host, spawner } = await withRust({ agentWorktrees: { main: MAIN, paths: [WORKTREE] } });
+
+        await openRust(host, 'src/main.rs');
+        await ready(host, 'rust');
+        await openRust(host, '.worktrees/agent/src/lib.rs');
+        await host.setWorktreeBuild('p1', true);
+        await settle();
+
+        expect(spawner.of('rust')[0]!.server.documents.has(uri('.worktrees/agent/src/lib.rs'))).toBe(true);
+
+        await host.setWorktreeBuild('p1', false);
+        await settle();
+
+        expect(spawner.of('rust')[0]!.server.documents.has(uri('.worktrees/agent/src/lib.rs'))).toBe(false);
+        expect(spawner.of('rust')[0]!.server.documents.has(uri('src/main.rs'))).toBe(true);
+    });
+
+    it('starts the server of a project that is such a worktree with building off, and with the profile alone after the switch', async () => {
+        const { host, spawner } = await withRust({ agentWorktrees: { main: MAIN, paths: [WORK] } });
+
+        await openRust(host, 'src/main.rs');
+        await ready(host, 'rust');
+
+        expect(spawner.of('rust')[0]!.server.paramsOf('initialize')[0]).toMatchObject({
+            initializationOptions: { cargo: { buildScripts: { enable: false } }, procMacro: { enable: false }, checkOnSave: false }
+        });
+        expect(spawner.of('rust')[0]!.spec.env).toMatchObject({ RUSTC_WRAPPER: '', RUSTC_WORKSPACE_WRAPPER: '' });
+        expect((await host.status('p1')).find((status) => status.server === 'rust')).toMatchObject({ buildHeld: true });
+
+        await host.setWorktreeBuild('p1', true);
+        await settle();
+        await ready(host, 'rust');
+
+        expect(spawner.of('rust')).toHaveLength(2);
+        expect(spawner.of('rust')[1]!.spec.env).not.toHaveProperty('RUSTC_WRAPPER');
+        expect(JSON.stringify(spawner.of('rust')[1]!.server.paramsOf('initialize')[0])).not.toContain('procMacro');
+    });
+
+    it('lets work from another machine win over the switch', async () => {
+        const choices = new WorktreeBuildChoices({ path: join(root, 'worktree-build.json') });
+        await choices.set(MAIN, true);
+        const { host } = await withRust({ agentWorktrees: { main: MAIN, paths: [WORKTREE] }, worktreeBuild: choices, untrusted: [WORKTREE] });
+
+        expect((await openRust(host, 'src/main.rs')).servers).toEqual(['rust']);
+        expect((await openRust(host, '.worktrees/agent/src/main.rs')).servers).toEqual([]);
+    });
+
+    it('says why to an agent: the sentence is the message of the server it would have asked', async () => {
+        const { host } = await withRust({ agentWorktrees: { main: MAIN, paths: [WORKTREE] } });
+        const path = join(WORKTREE, 'src', 'main.rs');
+
+        const servers = await host.forAgent(
+            'p1',
+            { path, languageId: 'rust', disk: 'fn main() {}', owner: 'agent:chat-1' },
+            async (document) => document.servers
+        );
+
+        expect(servers).toEqual([{ kind: 'rust', state: 'stopped', message: BUILD_HELD_MESSAGE, buildHeld: true }]);
+    });
+
+    it('refuses to switch for a project outside a repository', async () => {
+        const { host } = await withRust({});
+
+        await expect(host.setWorktreeBuild('p1', true)).rejects.toMatchObject({ code: LANGUAGE_ERROR_CODES.unavailable });
+        await expect(host.setWorktreeBuild('none', true)).rejects.toMatchObject({ code: LANGUAGE_ERROR_CODES.projectNotFound });
     });
 });

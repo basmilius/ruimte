@@ -6,6 +6,7 @@ import {
     alongsideKindsForPath,
     componentServes,
     documentLanguageId,
+    initializationOptionsOf,
     KIND_PROFILES,
     kindForLanguage,
     lspLanguageId,
@@ -111,6 +112,27 @@ describe('server profiles', () => {
         expect(component!.initializationOptions(launch)).toEqual({});
         const manifests = ['/work/apps/bridge/Cargo.toml', '/work/apps/speech/Cargo.toml'];
         expect(component!.initializationOptions({ ...launch, cargoManifests: manifests })).toEqual({ linkedProjects: manifests });
+    });
+
+    it('turns the building of code off in the initialization options only for a project held back', () => {
+        const rust = KIND_PROFILES.rust;
+        const [component] = rust.components;
+        const launch = { ...context, native: { executable: '/home/.cargo/bin/rust-analyzer' }, cargoManifests: ['/work/Cargo.toml'] };
+        const off = { cargo: { buildScripts: { enable: false } }, procMacro: { enable: false }, checkOnSave: false };
+
+        expect(initializationOptionsOf(rust, component!, launch)).toEqual({ linkedProjects: ['/work/Cargo.toml'] });
+        expect(initializationOptionsOf(rust, component!, { ...launch, buildHeld: false })).toEqual({ linkedProjects: ['/work/Cargo.toml'] });
+        expect(initializationOptionsOf(rust, component!, { ...launch, buildHeld: true })).toEqual({ linkedProjects: ['/work/Cargo.toml'], ...off });
+    });
+
+    it('marks every kind that builds code as one that runs project code, and lists what it turns off or that it cannot', () => {
+        const building = Object.values(KIND_PROFILES).filter((profile) => profile.runsBuildCode !== undefined);
+
+        expect(building.map((profile) => profile.kind)).toContain('rust');
+        for (const profile of building) {
+            expect(profile.runsProjectCode).toBe(true);
+            expect(profile.runsBuildCode?.off === undefined || Object.keys(profile.runsBuildCode.off).length > 0).toBe(true);
+        }
     });
 
     it('opens a JSON file that allows comments as JSONC and any other as JSON', () => {

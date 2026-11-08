@@ -85,7 +85,9 @@ export const LanguageServerStatusSchema = z.object({
     // The version the kind ran before, which `language.rollback` goes back to.
     previous: z.object({ version: z.string() }).optional(),
     // `messages` or `verbose` while the server traces, absent while off. Open on purpose, like `server`.
-    trace: z.string().optional()
+    trace: z.string().optional(),
+    // The kind builds code it reads, and in this project it runs without that or not at all, because the project or an open file lies in a worktree an agent works in. `language.worktreeBuild` turns that on.
+    buildHeld: z.boolean().optional()
 });
 export type LanguageServerStatus = z.infer<typeof LanguageServerStatusSchema>;
 
@@ -102,6 +104,9 @@ export const LanguageRollbackPayloadSchema = z.object({ server: LanguageServerKi
 export const LanguagePreferPayloadSchema = z.object({ server: LanguageServerKindSchema });
 
 export const LanguageServerTargetPayloadSchema = z.object({ projectId: ProjectIdSchema, server: LanguageServerIdSchema });
+
+/* Lets the servers of the project's repository run build scripts and macros in the worktrees of agents (`on`), or keeps them from it. The answer is the project's statuses. */
+export const LanguageWorktreeBuildPayloadSchema = z.object({ projectId: ProjectIdSchema, on: z.boolean() });
 
 /* The status right after the request: an install answers while it runs and its end comes as an event, a restart answers once the server is up again, crashed again, or not installed. */
 export const LanguageServerStatusResultSchema = z.object({ status: LanguageServerStatusSchema });
