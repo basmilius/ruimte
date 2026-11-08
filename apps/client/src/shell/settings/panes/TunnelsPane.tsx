@@ -84,7 +84,11 @@ function TokenRow({ state, change }: { state: TunnelState; change: Change }) {
         return (
             <SettingsRow
                 label={t('tunnels.token.label')}
-                description={t('tunnels.token.accepted', { count: state.zones.length, account: state.account?.name ?? '' })}
+                description={
+                    state.account === null
+                        ? t('tunnels.token.acceptedAccounts', { count: state.zoneCount ?? 0, accounts: state.accounts.length })
+                        : t('tunnels.token.accepted', { count: state.zones.length, account: state.account.name })
+                }
                 control={<Button onClick={() => void change('tunnel.clearToken')}>{t('tunnels.token.remove')}</Button>}
             />
         );

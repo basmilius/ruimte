@@ -1052,6 +1052,8 @@
             "action": "Token controleren",
             "accepted_one": "Cloudflare accepteert deze token. Hij bereikt {{count}} domein op {{account}}.",
             "accepted_other": "Cloudflare accepteert deze token. Hij bereikt {{count}} domeinen op {{account}}.",
+            "acceptedAccounts_one": "Cloudflare accepteert deze token. Hij bereikt {{count}} domein op {{accounts}} accounts.",
+            "acceptedAccounts_other": "Cloudflare accepteert deze token. Hij bereikt {{count}} domeinen op {{accounts}} accounts.",
             "remove": "Token verwijderen"
         },
         "tunnel": {

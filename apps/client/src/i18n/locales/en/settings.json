@@ -1052,6 +1052,8 @@
             "action": "Check token",
             "accepted_one": "Cloudflare accepts this token. It reaches {{count}} domain on {{account}}.",
             "accepted_other": "Cloudflare accepts this token. It reaches {{count}} domains on {{account}}.",
+            "acceptedAccounts_one": "Cloudflare accepts this token. It reaches {{count}} domain on {{accounts}} accounts.",
+            "acceptedAccounts_other": "Cloudflare accepts this token. It reaches {{count}} domains on {{accounts}} accounts.",
             "remove": "Remove token"
         },
         "tunnel": {

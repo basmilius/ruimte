@@ -172,11 +172,12 @@ describe('the states of the screen', () => {
             { id: 'acc-2', name: 'Studio' }
         ];
 
-        state = stateOf({ stage: 'no-tunnel', tunnel: null, accounts, account: null, zones: [] });
+        state = stateOf({ stage: 'no-tunnel', tunnel: null, accounts, account: null, zones: [], zoneCount: 3 });
         machine.answer('tunnel.setup', () => (state = stateOf({ account: accounts[1]!, zones: ZONES })));
         await open();
         await until(() => buttonWithText('Create tunnel') !== null);
         expect(buttonWithText('Create tunnel')?.disabled).toBe(true);
+        expect(document.body.textContent).toContain('Cloudflare accepts this token. It reaches 3 domains on 2 accounts.');
 
         await clickOn(document.querySelector('button[aria-label="Cloudflare account"], [aria-label="Cloudflare account"]'));
         await until(() => menuItem('Studio', 'option') !== null);
