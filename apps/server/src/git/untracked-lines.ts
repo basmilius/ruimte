@@ -1,3 +1,4 @@
+import { constants } from 'node:fs';
 import { lstat, open, type FileHandle } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Numstat } from './diff.ts';
@@ -100,10 +101,15 @@ export async function untrackedNumstat(root: string, path: string, now: number =
     return result;
 }
 
+/* A file swapped for a FIFO after lstat would block an open that waits for a writer, and with it a thread of the pool. Windows has neither flag. */
+export function openFlags(platform: NodeJS.Platform = process.platform): string | number {
+    return platform === 'win32' ? 'r' : constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW;
+}
+
 async function countFile(absolute: string, path: string, version: FileVersion): Promise<Numstat | null> {
     let handle: FileHandle;
     try {
-        handle = await open(absolute, 'r');
+        handle = await open(absolute, openFlags());
     } catch {
         return null;
     }

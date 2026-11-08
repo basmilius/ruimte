@@ -1,9 +1,10 @@
 import { afterAll, beforeAll, describe, expect, spyOn, test } from 'bun:test';
+import { constants } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import { mkdir, mkdtemp, rename, rm, symlink, truncate, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { untrackedNumstat as readUntrackedNumstat } from './untracked-lines.ts';
+import { openFlags, untrackedNumstat as readUntrackedNumstat } from './untracked-lines.ts';
 
 async function untrackedNumstat(root: string, path: string) {
     const stat = await fs.lstat(join(root, path), { bigint: true }).catch(() => null);
@@ -26,6 +27,18 @@ async function counted(name: string, content: string | Uint8Array): Promise<unkn
     await writeFile(join(root, name), content);
     return await untrackedNumstat(root, name);
 }
+
+describe('openFlags', () => {
+    test('opens read-only without blocking or following a link, except on Windows', () => {
+        const flags = openFlags('darwin') as number;
+
+        expect(flags & constants.O_NONBLOCK).toBe(constants.O_NONBLOCK);
+        expect(flags & constants.O_NOFOLLOW).toBe(constants.O_NOFOLLOW);
+        expect(flags & (constants.O_WRONLY | constants.O_RDWR)).toBe(0);
+        expect(openFlags('linux')).toBe(flags);
+        expect(openFlags('win32')).toBe('r');
+    });
+});
 
 describe('untrackedNumstat', () => {
     test('unchanged counts reopen no content on the next read', async () => {
