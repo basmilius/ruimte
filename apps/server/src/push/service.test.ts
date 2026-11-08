@@ -3,6 +3,7 @@ import { createDecipheriv, createPublicKey, diffieHellman, generateKeyPairSync, 
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { OutboxClock } from '@adecore/agents/coordination';
 import { ManualClock } from '@adecore/agents/testing';
 import type { AgentRequest, AgentStatus, ChatRequestSummary, ChatTurnLimit, ProcessAlert, PushSubscribePayload, ServerFrame } from '@ruimte/contracts';
 import { PUSH_HKDF_SALT, pushEncryptionInfo, pushMessage, pushRoutingMessage, type PushEnvelope } from '@ruimte/pulsar';
@@ -1318,13 +1319,32 @@ describe('a device in quiet hours', () => {
     let clock: ManualClock;
     let otherSession: string;
     let quiet: PushService;
+    /* The timers the service has set and not yet seen fire or cleared. */
+    const armed = new Set<unknown>();
+    const watched: OutboxClock = {
+        now: () => clock.now(),
+        setTimeout: (run, ms) => {
+            const handle = clock.setTimeout(() => {
+                armed.delete(handle);
+                run();
+            }, ms);
+
+            armed.add(handle);
+
+            return handle;
+        },
+        clearTimeout: (handle) => {
+            armed.delete(handle);
+            clock.clearTimeout(handle);
+        }
+    };
 
     const open = (snoozes?: ConstructorParameters<typeof PushService>[0]['snoozes']): PushService =>
         new PushService({
             auth,
             identity: { id: 'machine', sign: (text) => signMessage(machine.privateKey, text) },
             now: () => clock.now(),
-            clock,
+            clock: watched,
             send: async (push) => {
                 pushes.push(push);
                 return 204;
@@ -1347,7 +1367,8 @@ describe('a device in quiet hours', () => {
 
     beforeEach(async () => {
         clock = new ManualClock();
-        clock.time = NIGHT;
+        clock.advance(NIGHT - clock.now());
+        armed.clear();
         await auth.setPush(sessionId, { ...subscription, quietHours: hours });
         otherSession = await admitClient(auth, generateKeyPair().publicKey, 'Tablet');
         await auth.setPush(otherSession, { ...subscription, handle: OTHER_HANDLE });
@@ -1385,7 +1406,7 @@ describe('a device in quiet hours', () => {
     });
 
     test('lets an alert someone asked for through', async () => {
-        quiet.notify('chat', 'node', 'Agent', 'Look at this', {});
+        quiet.notify('chat', 'node', 'Agent', 'Look at this', { projectId: 'project', viewId: 'view' });
         await quiet.settled();
         expect(alerts().map((alert) => alert.body)).toEqual(['Look at this']);
     });
@@ -1404,7 +1425,7 @@ describe('a device in quiet hours', () => {
         status('idle', 'node', quiet);
         await untilMorning();
         expect(alerts()).toEqual([]);
-        expect(clock.timers).toEqual([]);
+        expect(armed.size).toBe(0);
     });
 
     test('says nothing for a wait that was answered in the night', async () => {
@@ -1442,21 +1463,21 @@ describe('a device in quiet hours', () => {
         status('running', 'node', quiet);
         status('idle', 'node', quiet);
         await quiet.settled();
-        expect(clock.timers).toEqual([]);
+        expect(armed.size).toBe(0);
         status('needs-you', 'node', quiet);
         await quiet.settled();
-        expect(clock.timers).toHaveLength(1);
+        expect(armed.size).toBe(1);
         await untilMorning();
-        expect(clock.timers).toEqual([]);
+        expect(armed.size).toBe(0);
     });
 
     test('hears nothing twice when it was not quiet', async () => {
-        clock.time = MORNING;
+        clock.advance(MORNING - clock.now());
         status('running', 'node', quiet);
         status('needs-you', 'node', quiet);
         await quiet.settled();
         expect(alerts()).toHaveLength(1);
-        expect(clock.timers).toEqual([]);
+        expect(armed.size).toBe(0);
     });
 
     test('new hours that no longer cover now announce what was held at once', async () => {
@@ -1492,7 +1513,7 @@ describe('a device in quiet hours', () => {
         quiet.subscriptionsChanged();
         await untilMorning();
         expect(alerts()).toEqual([]);
-        expect(clock.timers).toEqual([]);
+        expect(armed.size).toBe(0);
     });
 
     test('keeps its Live Activities quiet and sends the counts again when the hours end', async () => {
