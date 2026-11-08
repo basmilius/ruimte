@@ -14,9 +14,10 @@ import { cargoBin, toolchainCandidates } from './toolchain.ts';
  */
 
 const fixtureRoot = process.env.RUIMTE_INTEGRATION_FIXTURE_ROOT;
+// rustup puts a rust-analyzer proxy on every machine with Rust, which fails until the component is added, so the binary has to answer.
+const answers = (path: string): boolean => Bun.file(path).size > 0 && Bun.spawnSync([path, '--version'], { stdout: 'ignore', stderr: 'ignore' }).exitCode === 0;
 const hasToolchain =
-    toolchainCandidates('rust-analyzer').some((path) => Bun.file(path).size > 0) &&
-    [Bun.which('cargo'), join(cargoBin(), 'cargo')].some((path) => path !== null && Bun.file(path).size > 0);
+    toolchainCandidates('rust-analyzer').some(answers) && [Bun.which('cargo'), join(cargoBin(), 'cargo')].some((path) => path !== null && answers(path));
 
 let base = '';
 let project = '';

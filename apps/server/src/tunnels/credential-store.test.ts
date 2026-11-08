@@ -89,8 +89,11 @@ describe('a bearer', () => {
 
         expect(text).not.toContain(secret);
         expect(text).toContain('secretHash');
-        expect((await stat(path)).mode & 0o777).toBe(0o600);
-        expect((await stat(join(home, 'tunnels'))).mode & 0o777).toBe(0o700);
+        // Windows has no POSIX modes; there the file lives in the user's own profile.
+        if (process.platform !== 'win32') {
+            expect((await stat(path)).mode & 0o777).toBe(0o600);
+            expect((await stat(join(home, 'tunnels'))).mode & 0o777).toBe(0o700);
+        }
 
         const again = store(home).credentials;
 
