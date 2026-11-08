@@ -45,7 +45,19 @@ enum BrowserLoopback {
     /// Content rules that keep a page from another site from asking this phone's loopback for anything: images,
     /// scripts, fetches and frames alike. Documents are judged by the navigation policy instead.
     static let contentRules: String = {
-        let hosts = ["localhost", "127\\\\.[0-9.]*", "\\\\[::1\\\\]", "0\\\\.0\\\\.0\\\\.0", "[^/:]*\\\\.localhost"]
+        // WebKit hands the rules the parsed URL, so an IPv4 shorthand is already dotted decimal and an IPv6 address
+        // is compressed, with a mapped IPv4 address in hexadecimal. A trailing dot on a name stays. The syntax has
+        // no disjunction and no counted repeat, so every spelling is a rule of its own.
+        let hosts = [
+            "localhost\\\\.?",
+            "[^/:]*\\\\.localhost\\\\.?",
+            "127\\\\.[0-9.]*",
+            "0\\\\.[0-9.]*",
+            "\\\\[::1\\\\]",
+            "\\\\[::\\\\]",
+            "\\\\[::ffff:7f[0-9a-f]*:[0-9a-f]*\\\\]",
+            "\\\\[::ffff:[0-9a-f]?[0-9a-f]:[0-9a-f]*\\\\]",
+        ]
         let types = ["image", "style-sheet", "script", "font", "raw", "svg-document", "media", "popup", "ping", "fetch", "websocket", "other"]
         let rules = hosts.map { host in
             """
