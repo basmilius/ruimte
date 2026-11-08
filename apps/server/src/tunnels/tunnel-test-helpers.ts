@@ -127,7 +127,18 @@ export class FakeCloudflare {
     acceptedToken = FAKE_API_TOKEN;
     /* Paths (method and path start) answered with a status, to make Cloudflare refuse one thing. */
     readonly failing = new Map<string, number>();
+    /* Changes another writer makes to a tunnel's configuration right after a PUT of Ruimte's landed, one per PUT. */
+    readonly writers: Array<(tunnel: FakeTunnel) => void> = [];
+    private readonly losses: Array<{ key: string; status: number | null; skip: number }> = [];
     private counter = 0;
+
+    /*
+     * Carries out a request (method and path start) and then answers it with a status, or with no answer at all for
+     * null, as a 5xx or a dropped connection after Cloudflare took the write does. Once, after `skip` matching requests.
+     */
+    lose(key: string, status: number | null, skip = 0): void {
+        this.losses.push({ key, status, skip });
+    }
 
     readonly fetch: CloudflareFetch = async (url, init) => {
         const parsed = new URL(url);
@@ -153,7 +164,26 @@ export class FakeCloudflare {
             }
         }
 
-        return this.route(method, path, parsed.searchParams, body);
+        const answer = this.route(method, path, parsed.searchParams, body);
+        const loss = this.losses.find((candidate) => `${method} ${path}`.startsWith(candidate.key));
+
+        if (loss === undefined) {
+            return answer;
+        }
+
+        if (loss.skip > 0) {
+            loss.skip -= 1;
+
+            return answer;
+        }
+
+        this.losses.splice(this.losses.indexOf(loss), 1);
+
+        if (loss.status === null) {
+            throw new Error('The connection dropped');
+        }
+
+        return this.fail(loss.status, 'Fake failure');
     };
 
     zone(name: string, account = { id: 'acc-1', name: 'Bas' }): FakeZone {
@@ -278,6 +308,7 @@ export class FakeCloudflare {
 
                 tunnel.ingress = ingress;
                 tunnel.rest = rest;
+                this.writers.shift()?.(tunnel);
             }
 
             return this.ok({ config: { ...tunnel.rest, ingress: tunnel.ingress } });

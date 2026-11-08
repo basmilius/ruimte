@@ -215,6 +215,35 @@ export function ingressRules({ rows, listenerPort, denied }: IngressInput): Ingr
     return rules;
 }
 
+/*
+ * What a rule for a row's hostname serves, read back as a row keeps it: null for a rule that answers a status (the 404
+ * that holds the name), else whether it serves, with the port and origin of a rule that points at loopback the way
+ * `devRule` writes one. A rule changed into something else still serves, so it counts as on.
+ */
+export function servedBy(rule: Record<string, unknown>): { port?: number; origin?: TunnelOrigin } | null {
+    const service = typeof rule.service === 'string' ? rule.service : '';
+
+    if (service.startsWith('http_status:')) {
+        return null;
+    }
+
+    const loopback = /^(https?):\/\/127\.0\.0\.1:(\d{1,5})$/.exec(service);
+
+    if (loopback === null) {
+        return {};
+    }
+
+    const request = typeof rule.originRequest === 'object' && rule.originRequest !== null ? (rule.originRequest as Record<string, unknown>) : {};
+    const origin: TunnelOrigin = {
+        ...(loopback[1] === 'https' ? { https: true } : {}),
+        ...(typeof request.httpHostHeader === 'string' && request.httpHostHeader !== '' ? { hostHeader: request.httpHostHeader } : {}),
+        ...(request.noTLSVerify === true ? { noTlsVerify: true } : {}),
+        ...(typeof request.originServerName === 'string' && request.originServerName !== '' ? { serverName: request.originServerName } : {})
+    };
+
+    return { port: Number(loopback[2]), ...(Object.keys(origin).length === 0 ? {} : { origin }) };
+}
+
 /* The catch-all every ingress ends in, which answers 404 for any other hostname. */
 export const CATCH_ALL = { service: 'http_status:404' } as const;
 
