@@ -581,6 +581,7 @@ export * from './session.ts';
 export * from './session-ports.ts';
 export * from './render.ts';
 export * from './push.ts';
+export * from './quiet-hours.ts';
 export * from './peer.ts';
 export * from './remote.ts';
 export * from './snooze.ts';

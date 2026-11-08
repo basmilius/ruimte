@@ -22,7 +22,7 @@ export const ROUTINE_LIMITS = {
 } as const;
 
 // `HH:MM` on a 24-hour clock, in the machine's time zone.
-const ClockTimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+export const ClockTimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
 // `YYYY-MM-DD`, a day in the machine's time zone.
 const DaySchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/);

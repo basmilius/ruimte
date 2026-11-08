@@ -1,5 +1,6 @@
 import { PushHandleSchema } from '@ruimte/pulsar';
 import { z } from 'zod';
+import { QuietHoursSchema } from './quiet-hours.ts';
 
 /*
  * What a device wants to hear of: an agent that needs a person (its approvals as well, while `approvals` is on),
@@ -35,7 +36,9 @@ export const PushSubscribePayloadSchema = z.object({
     projects: z
         .array(PushProjectPreferenceSchema.extend({ notify: PushNotifyWordsSchema }))
         .max(500)
-        .optional()
+        .optional(),
+    // The hours this device wants no alert in; the machine holds them back and tells what still waits when they end.
+    quietHours: QuietHoursSchema.optional()
 });
 export type PushSubscribePayload = z.infer<typeof PushSubscribePayloadSchema>;
 export const PushUnsubscribePayloadSchema = z.object({ handle: PushHandleSchema });
@@ -45,7 +48,9 @@ export const PushPreferencesResultSchema = z.object({
     subscribed: z.boolean(),
     approvals: z.boolean(),
     notify: z.array(PushNotifyKindSchema),
-    projects: z.array(PushProjectPreferenceSchema)
+    projects: z.array(PushProjectPreferenceSchema),
+    // Absent from a machine that predates quiet hours, which a phone with hours set reads as needing an update.
+    quietHours: QuietHoursSchema.optional()
 });
 
 export const PushAttentionEntrySchema = z.object({

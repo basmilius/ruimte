@@ -35,7 +35,8 @@ export function registerPushHandlers(dispatcher: Dispatcher, auth: AuthStore, ch
             subscribed: subscription !== undefined,
             approvals: subscription?.approvals ?? false,
             notify: subscription?.notify ?? [...PUSH_NOTIFY_DEFAULT],
-            projects: subscription?.projects ?? []
+            projects: subscription?.projects ?? [],
+            ...(subscription?.quietHours ? { quietHours: subscription.quietHours } : {})
         };
     });
     dispatcher.register('push.unsubscribe', async (payload, client) => {
