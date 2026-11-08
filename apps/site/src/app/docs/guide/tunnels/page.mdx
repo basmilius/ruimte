@@ -48,7 +48,9 @@ For the MCP, Ruimte suggests a long random label, so scanners do not find it. Th
 
 If the name already has a DNS record that Ruimte did not make, Ruimte refuses and leaves the record alone.
 
-Each hostname has a switch. Its menu has **Copy address**, **Open**, **On after restart** and **Remove**. A dev server stays off after a restart unless you turn on **On after restart**, because its port may hold something else by then.
+Some local sites only answer to their own name. Open **Advanced** in the dialog and type it under **Host header**, such as `passly.test` for a PHP site on port 80. For a server on https, pick **HTTPS**; with a self-signed certificate, also tick **Skip TLS check**, and fill in **Server name** if the certificate is for another name. **Points to** shows the host header after the port, and so do hostnames already on the tunnel that set one.
+
+Each hostname has a switch. Its menu has **Copy address**, **Open**, **On after restart** and **Remove**, and for a dev server **Edit**, which changes its port and **Advanced** settings. The hostname itself stays; to change it, remove the row and add a new one. A dev server stays off after a restart unless you turn on **On after restart**, because its port may hold something else by then.
 
 ## Connect a bot to the MCP
 
