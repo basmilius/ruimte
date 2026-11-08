@@ -155,7 +155,7 @@ The web authentication callback is exactly `ruimte://pulsar/callback`, checked w
 
 ## Notifications and Live Activities
 
-Notifications are opt-in. The phone picks the kinds (needs you, turn finished, process misbehaves) and per project All, Needs you only or Off (`NotificationPreferences`), and hands them to every machine with `push.subscribe`. The daemon decides what to send (`apps/server/README.md#push-notifications`); the address book relays (`apps/pulsar-worker/APNS.md`).
+Notifications are opt-in. The phone picks the kinds (needs you, turn finished, process misbehaves) and per project All, Needs you only or Off (`NotificationPreferences`), and hands them to every machine with `push.subscribe`. Quiet hours (days, a start and an end on this phone's clock) ride along as `quietHours` while they are on; a machine that answers `push.preferences` without them needs an update, and the page says so. The daemon decides what to send (`apps/server/README.md#push-notifications`); the address book relays (`apps/pulsar-worker/APNS.md`).
 
 Alert content uses ephemeral X25519, HKDF-SHA256 and AES-256-GCM, with routing fields as additional authenticated data and the whole envelope signed with ed25519. The notification extension verifies the pinned machine key, device handle and validity window, then claims the message ID under a shared lock before it shows plaintext. A background approval action is claimed once and checked against fresh machine state; an expired or answered request opens its conversation without sending a decision. Responses that arrive before the account is restored wait in a queue.
 

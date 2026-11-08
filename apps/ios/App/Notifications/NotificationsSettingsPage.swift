@@ -33,6 +33,9 @@ struct NotificationsSettingsPage: View {
                     kind(.process, String(localized: "A process misbehaves"), icon: "triangle-alert")
                 }
             }
+            if coordinator.enabled {
+                quietHoursSection
+            }
             if coordinator.supportsActivities {
                 Section {
                     Toggle(isOn: $coordinator.activities) {
@@ -77,6 +80,90 @@ struct NotificationsSettingsPage: View {
             await coordinator.restore()
             await coordinator.readPreferences()
         }
+    }
+
+    /// Hours in which no machine pushes to this phone. They follow this phone's clock and time zone.
+    private var quietHoursSection: some View {
+        Section {
+            Toggle(isOn: quietBinding(\.on)) {
+                Label(String(localized: "Keep quiet in these hours"), lucideIcon: "moon")
+            }
+            if coordinator.preferences.quiet.on {
+                HStack(spacing: 6) {
+                    ForEach(1...7, id: \.self) { day in
+                        dayChip(day)
+                    }
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(String(localized: "Days"))
+                DatePicker(
+                    String(localized: "From"), selection: timeBinding(\.start), displayedComponents: .hourAndMinute)
+                DatePicker(
+                    String(localized: "Until"), selection: timeBinding(\.end), displayedComponents: .hourAndMinute)
+            }
+        } header: {
+            Text("Quiet hours")
+        } footer: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(
+                    "No alert on this iPhone in these hours. Agents keep working, and what still waits is announced when they end."
+                )
+                if coordinator.preferences.quiet.on, !outdatedMachines.isEmpty {
+                    Text("\(outdatedMachines.joined(separator: ", ")) needs an update to hold alerts in quiet hours.")
+                        .foregroundStyle(MobileStyle.statusNeedsYou)
+                }
+            }
+        }
+    }
+
+    private var outdatedMachines: [String] {
+        coordinator.machines.filter { coordinator.machinesWithoutQuietHours.contains($0.id) }.map(\.name)
+    }
+
+    private func quietBinding<Value>(_ keyPath: WritableKeyPath<QuietHours, Value>) -> Binding<Value> {
+        Binding(
+            get: { coordinator.preferences.quiet[keyPath: keyPath] },
+            set: { coordinator.preferences.quiet[keyPath: keyPath] = $0 })
+    }
+
+    /// A time of day as the picker wants it, a date today whose clock is the minutes.
+    private func timeBinding(_ keyPath: WritableKeyPath<QuietHours, Int>) -> Binding<Date> {
+        Binding(
+            get: {
+                let minutes = coordinator.preferences.quiet[keyPath: keyPath]
+                return Calendar.current.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: Date())
+                    ?? Date()
+            },
+            set: { date in
+                let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
+                coordinator.preferences.quiet[keyPath: keyPath] = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
+            })
+    }
+
+    private func dayChip(_ day: Int) -> some View {
+        let listed = coordinator.preferences.quiet.days.contains(day)
+        // ISO weekdays count from Monday and the calendar's symbols from Sunday.
+        let name = Calendar.current.shortStandaloneWeekdaySymbols[day % 7]
+        return Button {
+            var days = coordinator.preferences.quiet.days
+            if listed {
+                // Hours on no day would be hours that are on and never quiet.
+                if days.count > 1 { days.remove(day) }
+            } else {
+                days.insert(day)
+            }
+            coordinator.preferences.quiet.days = days
+        } label: {
+            Text(name)
+                .font(.caption)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(maxWidth: .infinity, minHeight: 32)
+                .background(listed ? MobileStyle.active : Color.clear, in: Capsule())
+                .overlay(Capsule().strokeBorder(MobileStyle.border))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(listed ? .isSelected : [])
     }
 
     private func kind(_ kind: PushNotifyKind, _ title: String, icon: String) -> some View {

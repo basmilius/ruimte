@@ -3739,6 +3739,17 @@
         }
       }
     },
+    "%@ needs an update to hold alerts in quiet hours." : {
+      "comment" : "%@ is the machine name, or several separated by commas",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ heeft een update nodig om meldingen in stille uren vast te houden."
+          }
+        }
+      }
+    },
     "%@ is not answering" : {
       "localizations" : {
         "nl" : {
@@ -16190,6 +16201,69 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Meldingen op je telefoons en tablets."
+          }
+        }
+      }
+    },
+    "Quiet hours" : {
+      "comment" : "Notification settings: the hours in which no alert comes",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stille uren"
+          }
+        }
+      }
+    },
+    "Keep quiet in these hours" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stil in deze uren"
+          }
+        }
+      }
+    },
+    "No alert on this iPhone in these hours. Agents keep working, and what still waits is announced when they end." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geen melding op deze iPhone in deze uren. Agents blijven werken, en wat nog wacht hoor je als de uren eindigen."
+          }
+        }
+      }
+    },
+    "Days" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dagen"
+          }
+        }
+      }
+    },
+    "From" : {
+      "comment" : "Start of the quiet hours",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vanaf"
+          }
+        }
+      }
+    },
+    "Until" : {
+      "comment" : "End of the quiet hours",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tot"
           }
         }
       }

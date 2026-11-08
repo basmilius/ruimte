@@ -87,6 +87,74 @@ final class NotificationPreferencesTests: XCTestCase {
         XCTAssertEqual(preferences.notify, [.needsYou])
     }
 
+    func testQuietHoursRideOnTheSubscriptionOnlyWhileTheyAreOn() {
+        var preferences = NotificationPreferences()
+        preferences.quiet.days = [1, 2, 3, 4, 5]
+        XCTAssertNil(preferences.subscription(machineID: "studio", timeZone: "Europe/Amsterdam")["quietHours"])
+        preferences.quiet.on = true
+        XCTAssertEqual(
+            preferences.subscription(machineID: "studio", timeZone: "Europe/Amsterdam")["quietHours"],
+            .object([
+                "days": .array([1, 2, 3, 4, 5].map { .number($0) }), "start": .string("22:00"), "end": .string("07:00"),
+                "timeZone": .string("Europe/Amsterdam"),
+            ]))
+        preferences.quiet.on = false
+        XCTAssertNil(preferences.subscription(machineID: "studio")["quietHours"])
+        XCTAssertEqual(preferences.quiet.days, [1, 2, 3, 4, 5])
+    }
+
+    func testQuietHoursWriteTheirTimesAsAClock() {
+        var preferences = NotificationPreferences()
+        preferences.quiet = QuietHours(on: true, days: [6, 7], start: 0, end: 6 * 60 + 5)
+        let hours = preferences.subscription(machineID: "studio", timeZone: "UTC")["quietHours"]
+        XCTAssertEqual(hours?["start"], .string("00:00"))
+        XCTAssertEqual(hours?["end"], .string("06:05"))
+        XCTAssertEqual(hours?["days"], .array([.number(6), .number(7)]))
+    }
+
+    func testAMachinesQuietHoursAreOnlyAdoptedWithItsKinds() {
+        let result = JSONValue.object([
+            "subscribed": .bool(true), "approvals": .bool(true), "notify": .array([.string("needs-you")]),
+            "projects": .array([]),
+            "quietHours": .object([
+                "days": .array([.number(1), .number(7)]), "start": .string("23:15"), "end": .string("06:45"),
+                "timeZone": .string("Europe/Amsterdam"),
+            ]),
+        ])
+        var preferences = NotificationPreferences()
+        preferences.adopt(result, machineID: "studio", kinds: false)
+        XCTAssertNil(preferences.quietHours)
+        preferences.adopt(result, machineID: "studio", kinds: true)
+        XCTAssertEqual(preferences.quietHours, QuietHours(on: true, days: [1, 7], start: 23 * 60 + 15, end: 6 * 60 + 45))
+    }
+
+    func testHoursThatAreNoHoursAreNotAdopted() {
+        XCTAssertNil(QuietHours(wire: nil))
+        XCTAssertNil(QuietHours(wire: .object(["days": .array([]), "start": .string("22:00"), "end": .string("07:00")])))
+        XCTAssertNil(
+            QuietHours(wire: .object(["days": .array([.number(1)]), "start": .string("25:00"), "end": .string("07:00")])))
+        XCTAssertNil(
+            QuietHours(wire: .object(["days": .array([.number(9)]), "start": .string("22:00"), "end": .string("07:00")])))
+    }
+
+    func testPreferencesStoredBeforeQuietHoursStillLoad() throws {
+        let old = #"{"notify":["turn"],"projects":{}}"#
+        let preferences = try JSONDecoder().decode(NotificationPreferences.self, from: Data(old.utf8))
+        XCTAssertEqual(preferences.notify, [.turn])
+        XCTAssertNil(preferences.quietHours)
+        XCTAssertFalse(preferences.quiet.on)
+    }
+
+    func testQuietHoursSurviveARestart() {
+        let name = "NotificationPreferencesTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defaults.removePersistentDomain(forName: name)
+        var preferences = NotificationPreferences()
+        preferences.quiet = QuietHours(on: true, days: [2, 4], start: 21 * 60, end: 5 * 60)
+        preferences.save(defaults)
+        XCTAssertEqual(NotificationPreferences.load(defaults)?.quietHours, preferences.quietHours)
+    }
+
     func testPreferencesSurviveARestart() {
         let name = "NotificationPreferencesTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: name)!
