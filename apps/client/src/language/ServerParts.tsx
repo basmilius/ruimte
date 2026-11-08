@@ -113,6 +113,11 @@ export function ServerActionButtons({
                     {t('language.rollback', { version: status.previous.version })}
                 </Button>
             )}
+            {status.buildHeld === true && tracker.canAllowWorktreeBuild() && (
+                <Button size={size} variant="secondary" onClick={() => void tracker.allowWorktreeBuild().catch(fail)}>
+                    {t('language.buildAllow')}
+                </Button>
+            )}
             {actions.restart && (
                 <Button size={size} variant="secondary" onClick={() => void tracker.restart(status.server).catch(fail)}>
                     {t('language.restart')}

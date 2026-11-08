@@ -85,7 +85,7 @@ function isActive(state: LanguageServerState): boolean {
 
 /* The servers the status popover lists: the ones that serve the open file, and any other that is up or has failed. The alternative the machine does not use is left to the switch on the one it does. */
 export function listedServers(statuses: readonly LanguageServerStatus[], serving: readonly string[]): LanguageServerStatus[] {
-    return statuses.filter((status) => status.chosen !== false && (serving.includes(status.server) || isActive(status.state)));
+    return statuses.filter((status) => status.chosen !== false && (serving.includes(status.server) || isActive(status.state) || status.buildHeld === true));
 }
 
 /* The server that serves the same language instead of this one, when this is the one the machine uses. */

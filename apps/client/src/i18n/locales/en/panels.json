@@ -895,6 +895,8 @@
         "useInstead": "Use {{name}} instead",
         "restart": "Restart",
         "restartAll": "Restart all",
+        "buildHeld": "Build scripts and macros are off in this worktree.",
+        "buildAllow": "Turn on for this repository",
         "showLog": "Show log",
         "logTitle": "{{name}} log",
         "logEmpty": "Nothing logged yet",

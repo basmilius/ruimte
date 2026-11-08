@@ -895,6 +895,8 @@
         "useInstead": "Gebruik liever {{name}}",
         "restart": "Herstart",
         "restartAll": "Alles herstarten",
+        "buildHeld": "Buildscripts en macro's staan uit in deze worktree.",
+        "buildAllow": "Aanzetten voor deze repository",
         "showLog": "Toon log",
         "logTitle": "Log van {{name}}",
         "logEmpty": "Nog niets gelogd",

@@ -31,6 +31,8 @@ Besides code, Ruimte shows images, PDFs, audio, video, Markdown, HTML pages, tab
 
 The editor uses language servers for TypeScript, Vue, PHP, SQL, CSS, Python and more: completion, problems while you type, go to definition, find usages, rename, code actions, refactorings, organize imports and formatting. **Toggle problems panel** lists the problems of the open files.
 
+A server that builds the code it reads, such as the one for Rust, builds nothing in a worktree where an agent works. The language status then says "Build scripts and macros are off in this worktree." and the server answers with less, for instance without expanded macros. **Turn on for this repository** lets the servers of that repository build there. Only you can press it, and no agent can.
+
 | Shortcut | Action |
 | --- | --- |
 | <Shortcut keys="Mod+F" /> | Find in the file |
