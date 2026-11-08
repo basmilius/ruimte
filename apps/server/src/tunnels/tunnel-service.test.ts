@@ -357,7 +357,7 @@ describe('a row', () => {
 
         expect(refused).toBeInstanceOf(TunnelConfigError);
         expect(refused).toMatchObject({ code: 'foreign-record' });
-        expect((refused as Error).message).toContain('app.bmnw.nl already has a A record pointing at 203.0.113.9 that Ruimte did not make');
+        expect((refused as Error).message).toContain('app.bmnw.nl already has a DNS record of type A pointing at 203.0.113.9 that Ruimte did not make');
         expect(f.cloudflare.calls.slice(before).map((call) => call.method)).toEqual(['GET']);
         expect(f.cloudflare.records).toEqual([foreign]);
         expect(ourTunnel(f).ingress).toEqual([{ service: 'http_status:404' }]);
@@ -606,7 +606,7 @@ describe('after a restart', () => {
         await again.service.idle();
 
         expect(await again.state()).toMatchObject({ stage: 'failed' });
-        expect((await again.state()).message).toContain('Ruimte could not reach api.cloudflare.com');
+        expect((await again.state()).message).toContain('Ruimte could not reach Cloudflare');
     });
 
     test('leaves a child that will not stop running and says so', async () => {

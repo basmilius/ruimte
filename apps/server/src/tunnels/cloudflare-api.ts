@@ -206,7 +206,7 @@ export class CloudflareApi {
                 signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
             });
         } catch {
-            throw new CloudflareError('unreachable', `${what} failed. Ruimte could not reach api.cloudflare.com; check the connection.`);
+            throw new CloudflareError('unreachable', `${what} failed. Ruimte could not reach Cloudflare. Check the internet connection.`);
         }
 
         const parsed = EnvelopeSchema.safeParse(await response.json().catch(() => null));
@@ -225,7 +225,7 @@ export class CloudflareApi {
         if (status === 401) {
             return new CloudflareError(
                 'token-refused',
-                `${what} failed. Cloudflare does not accept this API token; make a new one and paste it here.${reason}`
+                `${what} failed. Cloudflare does not accept this API token. Make a new one and paste it here.${reason}`
             );
         }
 
@@ -241,11 +241,11 @@ export class CloudflareApi {
         }
 
         if (status === 409) {
-            return new CloudflareError('conflict', `${what} failed. It exists already.${reason}`);
+            return new CloudflareError('conflict', `${what} failed. It already exists.${reason}`);
         }
 
         if (status === 429) {
-            return new CloudflareError('rate-limited', `${what} failed. Cloudflare asks Ruimte to slow down; try again in a minute.`);
+            return new CloudflareError('rate-limited', `${what} failed. Cloudflare asks Ruimte to slow down. Try again in a minute.`);
         }
 
         return new CloudflareError('cloudflare', `${what} failed (Cloudflare answered ${status}).${reason}`);

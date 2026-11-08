@@ -67,7 +67,7 @@ export class CloudflaredInstaller {
         }
 
         if (this.ports.sha256(bytes) !== asset.sha256) {
-            throw new CloudflaredInstallError('The cloudflared download did not match the checksum pinned in this Ruimte release, so it was not installed.');
+            throw new CloudflaredInstallError('The cloudflared download is not the build this Ruimte release expects, so Ruimte did not install it.');
         }
 
         await mkdir(this.folder, { recursive: true, mode: 0o700 });

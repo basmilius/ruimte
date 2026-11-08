@@ -20,7 +20,7 @@ export function normalizedHostname(raw: string): string {
     if (hostname.length > 253 || !HOSTNAME.test(hostname)) {
         throw new TunnelConfigError(
             'invalid-hostname',
-            `${raw.trim()} is no hostname Cloudflare takes; use lowercase letters, digits and hyphens, with a domain after the first label`
+            `${raw.trim()} is not a hostname Cloudflare accepts. Use lowercase letters, digits and hyphens, with a domain after the first label.`
         );
     }
 
@@ -35,7 +35,7 @@ export function hostnameInZone(raw: string, zone: string, otherZones: readonly s
     const typed = raw.trim().toLowerCase().replace(/\.$/, '');
 
     if (typed === zone) {
-        throw new TunnelConfigError('apex', `${zone} itself is not a name for a tunnel; give it a label, such as app.${zone}`);
+        throw new TunnelConfigError('apex', `A tunnel needs a name under ${zone}, such as app.${zone}`);
     }
 
     if (!typed.endsWith(`.${zone}`)) {

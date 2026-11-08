@@ -356,7 +356,7 @@ export class TunnelService {
 
             if (input.kind === 'mcp') {
                 if (this.stored.rows.some((row) => row.kind === 'mcp')) {
-                    throw new TunnelConfigError('mcp-exists', 'The MCP has a hostname already; remove it first');
+                    throw new TunnelConfigError('mcp-exists', 'The MCP already has a hostname. Remove that one first');
                 }
             } else {
                 if (input.port === undefined) {
@@ -575,7 +575,7 @@ export class TunnelService {
 
         throw new TunnelConfigError(
             'tunnel-gone',
-            `The tunnel ${tunnel.name} is not on the Cloudflare account this token reaches, so Ruimte forgot it and its hostnames. Their DNS records are still in Cloudflare; delete them there if you no longer want them.`
+            `The tunnel ${tunnel.name} is not on the Cloudflare account this token reaches, so Ruimte forgot it and its hostnames. Their DNS records are still in Cloudflare. Delete them there if you no longer need them.`
         );
     }
 
@@ -610,7 +610,7 @@ export class TunnelService {
         if (foreign !== undefined) {
             throw new TunnelConfigError(
                 'foreign-record',
-                `${hostname} already has a ${foreign.type} record${foreign.content === undefined ? '' : ` pointing at ${foreign.content}`} that Ruimte did not make, so Ruimte leaves it alone. Delete it in Cloudflare or pick another name.`
+                `${hostname} already has a DNS record of type ${foreign.type}${foreign.content === undefined ? '' : ` pointing at ${foreign.content}`} that Ruimte did not make, so Ruimte leaves it alone. Delete it in Cloudflare or pick another name.`
             );
         }
 
@@ -717,7 +717,7 @@ export class TunnelService {
 
         // A child that will not end gets a warning and no signal of ours, since another one would only be a guess.
         if (!waited) {
-            throw new Error('cloudflared did not stop when asked. It was left running; end it yourself, then try again.');
+            throw new Error('cloudflared did not stop when asked and is still running. End it yourself, then try again.');
         }
 
         this.child = null;
