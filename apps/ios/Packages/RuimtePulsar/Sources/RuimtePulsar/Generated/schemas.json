@@ -69242,6 +69242,2392 @@
       "reach"
     ]
   },
+  "request.tunnel.state.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.tunnel.state.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "stage": {
+        "type": "string",
+        "enum": [
+          "not-installed",
+          "installing",
+          "cannot-install",
+          "signed-out",
+          "signing-in",
+          "no-tunnel",
+          "starting",
+          "running",
+          "failed"
+        ]
+      },
+      "message": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "signInUrl": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2048
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "domain": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "rows": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "mcp",
+                "dev"
+              ]
+            },
+            "hostname": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "port": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "comeBack": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "hostname",
+            "port",
+            "enabled",
+            "comeBack"
+          ]
+        }
+      },
+      "mcp": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "port"
+        ]
+      },
+      "clients": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "suggestedMcpHostname": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "stage",
+      "message",
+      "signInUrl",
+      "domain",
+      "rows",
+      "mcp",
+      "clients",
+      "suggestedMcpHostname"
+    ]
+  },
+  "request.tunnel.discover.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.tunnel.discover.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "ports": {
+        "maxItems": 128,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "session": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "port",
+            "session"
+          ]
+        }
+      }
+    },
+    "required": [
+      "ports"
+    ]
+  },
+  "request.tunnel.install.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.tunnel.install.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "stage": {
+        "type": "string",
+        "enum": [
+          "not-installed",
+          "installing",
+          "cannot-install",
+          "signed-out",
+          "signing-in",
+          "no-tunnel",
+          "starting",
+          "running",
+          "failed"
+        ]
+      },
+      "message": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "signInUrl": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2048
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "domain": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "rows": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "mcp",
+                "dev"
+              ]
+            },
+            "hostname": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "port": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "comeBack": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "hostname",
+            "port",
+            "enabled",
+            "comeBack"
+          ]
+        }
+      },
+      "mcp": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "port"
+        ]
+      },
+      "clients": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "suggestedMcpHostname": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "stage",
+      "message",
+      "signInUrl",
+      "domain",
+      "rows",
+      "mcp",
+      "clients",
+      "suggestedMcpHostname"
+    ]
+  },
+  "request.tunnel.signIn.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.tunnel.signIn.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "stage": {
+        "type": "string",
+        "enum": [
+          "not-installed",
+          "installing",
+          "cannot-install",
+          "signed-out",
+          "signing-in",
+          "no-tunnel",
+          "starting",
+          "running",
+          "failed"
+        ]
+      },
+      "message": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "signInUrl": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2048
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "domain": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "rows": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "mcp",
+                "dev"
+              ]
+            },
+            "hostname": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "port": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "comeBack": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "hostname",
+            "port",
+            "enabled",
+            "comeBack"
+          ]
+        }
+      },
+      "mcp": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "port"
+        ]
+      },
+      "clients": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "suggestedMcpHostname": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "stage",
+      "message",
+      "signInUrl",
+      "domain",
+      "rows",
+      "mcp",
+      "clients",
+      "suggestedMcpHostname"
+    ]
+  },
+  "request.tunnel.setup.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "domain": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 253
+      }
+    },
+    "required": [
+      "domain"
+    ]
+  },
+  "request.tunnel.setup.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "stage": {
+        "type": "string",
+        "enum": [
+          "not-installed",
+          "installing",
+          "cannot-install",
+          "signed-out",
+          "signing-in",
+          "no-tunnel",
+          "starting",
+          "running",
+          "failed"
+        ]
+      },
+      "message": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "signInUrl": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2048
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "domain": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "rows": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "mcp",
+                "dev"
+              ]
+            },
+            "hostname": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "port": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "comeBack": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "hostname",
+            "port",
+            "enabled",
+            "comeBack"
+          ]
+        }
+      },
+      "mcp": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "port"
+        ]
+      },
+      "clients": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "suggestedMcpHostname": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "stage",
+      "message",
+      "signInUrl",
+      "domain",
+      "rows",
+      "mcp",
+      "clients",
+      "suggestedMcpHostname"
+    ]
+  },
+  "request.tunnel.add.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "kind": {
+        "type": "string",
+        "enum": [
+          "mcp",
+          "dev"
+        ]
+      },
+      "hostname": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 253
+      },
+      "port": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 65535
+      },
+      "comeBack": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "kind",
+      "hostname"
+    ]
+  },
+  "request.tunnel.add.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "stage": {
+        "type": "string",
+        "enum": [
+          "not-installed",
+          "installing",
+          "cannot-install",
+          "signed-out",
+          "signing-in",
+          "no-tunnel",
+          "starting",
+          "running",
+          "failed"
+        ]
+      },
+      "message": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "signInUrl": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2048
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "domain": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "rows": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "mcp",
+                "dev"
+              ]
+            },
+            "hostname": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "port": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "comeBack": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "hostname",
+            "port",
+            "enabled",
+            "comeBack"
+          ]
+        }
+      },
+      "mcp": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "port"
+        ]
+      },
+      "clients": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "suggestedMcpHostname": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "stage",
+      "message",
+      "signInUrl",
+      "domain",
+      "rows",
+      "mcp",
+      "clients",
+      "suggestedMcpHostname"
+    ]
+  },
+  "request.tunnel.update.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "enabled": {
+        "type": "boolean"
+      },
+      "comeBack": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "id"
+    ]
+  },
+  "request.tunnel.update.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "stage": {
+        "type": "string",
+        "enum": [
+          "not-installed",
+          "installing",
+          "cannot-install",
+          "signed-out",
+          "signing-in",
+          "no-tunnel",
+          "starting",
+          "running",
+          "failed"
+        ]
+      },
+      "message": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "signInUrl": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2048
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "domain": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "rows": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "mcp",
+                "dev"
+              ]
+            },
+            "hostname": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "port": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "comeBack": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "hostname",
+            "port",
+            "enabled",
+            "comeBack"
+          ]
+        }
+      },
+      "mcp": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "port"
+        ]
+      },
+      "clients": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "suggestedMcpHostname": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "stage",
+      "message",
+      "signInUrl",
+      "domain",
+      "rows",
+      "mcp",
+      "clients",
+      "suggestedMcpHostname"
+    ]
+  },
+  "request.tunnel.remove.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      }
+    },
+    "required": [
+      "id"
+    ]
+  },
+  "request.tunnel.remove.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "stage": {
+        "type": "string",
+        "enum": [
+          "not-installed",
+          "installing",
+          "cannot-install",
+          "signed-out",
+          "signing-in",
+          "no-tunnel",
+          "starting",
+          "running",
+          "failed"
+        ]
+      },
+      "message": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "signInUrl": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2048
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "domain": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "rows": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "mcp",
+                "dev"
+              ]
+            },
+            "hostname": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "port": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "comeBack": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "hostname",
+            "port",
+            "enabled",
+            "comeBack"
+          ]
+        }
+      },
+      "mcp": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "port"
+        ]
+      },
+      "clients": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "suggestedMcpHostname": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "stage",
+      "message",
+      "signInUrl",
+      "domain",
+      "rows",
+      "mcp",
+      "clients",
+      "suggestedMcpHostname"
+    ]
+  },
+  "request.tunnel.retry.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.tunnel.retry.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "stage": {
+        "type": "string",
+        "enum": [
+          "not-installed",
+          "installing",
+          "cannot-install",
+          "signed-out",
+          "signing-in",
+          "no-tunnel",
+          "starting",
+          "running",
+          "failed"
+        ]
+      },
+      "message": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "signInUrl": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2048
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "domain": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "rows": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "mcp",
+                "dev"
+              ]
+            },
+            "hostname": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "port": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "comeBack": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "hostname",
+            "port",
+            "enabled",
+            "comeBack"
+          ]
+        }
+      },
+      "mcp": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "port"
+        ]
+      },
+      "clients": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "suggestedMcpHostname": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "stage",
+      "message",
+      "signInUrl",
+      "domain",
+      "rows",
+      "mcp",
+      "clients",
+      "suggestedMcpHostname"
+    ]
+  },
+  "request.tunnel.setMcp.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "enabled": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "enabled"
+    ]
+  },
+  "request.tunnel.setMcp.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "stage": {
+        "type": "string",
+        "enum": [
+          "not-installed",
+          "installing",
+          "cannot-install",
+          "signed-out",
+          "signing-in",
+          "no-tunnel",
+          "starting",
+          "running",
+          "failed"
+        ]
+      },
+      "message": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "signInUrl": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2048
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "domain": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "rows": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "mcp",
+                "dev"
+              ]
+            },
+            "hostname": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "port": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "comeBack": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "hostname",
+            "port",
+            "enabled",
+            "comeBack"
+          ]
+        }
+      },
+      "mcp": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "port"
+        ]
+      },
+      "clients": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "suggestedMcpHostname": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 253
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "stage",
+      "message",
+      "signInUrl",
+      "domain",
+      "rows",
+      "mcp",
+      "clients",
+      "suggestedMcpHostname"
+    ]
+  },
+  "request.credential.list.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.credential.list.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "credentials": {
+        "maxItems": 1000,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "oauth",
+                "bearer"
+              ]
+            },
+            "grant": {
+              "type": "object",
+              "properties": {
+                "tier": {
+                  "type": "string",
+                  "enum": [
+                    "read",
+                    "work",
+                    "machine"
+                  ]
+                },
+                "projects": {
+                  "anyOf": [
+                    {
+                      "maxItems": 1000,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "ceiling": {
+                  "type": "string",
+                  "x-open-enum": [
+                    "supervised",
+                    "auto-accept-edits",
+                    "auto",
+                    "full-access"
+                  ]
+                },
+                "approvals": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "tier",
+                "projects",
+                "ceiling",
+                "approvals"
+              ]
+            },
+            "bearerOnHostname": {
+              "type": "boolean"
+            },
+            "expiresAt": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "createdAt": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "lastUsedAt": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "label",
+            "kind",
+            "grant",
+            "bearerOnHostname",
+            "expiresAt",
+            "createdAt",
+            "lastUsedAt"
+          ]
+        }
+      }
+    },
+    "required": [
+      "credentials"
+    ]
+  },
+  "request.credential.create.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "label": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 120
+      },
+      "grant": {
+        "type": "object",
+        "properties": {
+          "tier": {
+            "type": "string",
+            "enum": [
+              "read",
+              "work",
+              "machine"
+            ]
+          },
+          "projects": {
+            "anyOf": [
+              {
+                "maxItems": 1000,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ceiling": {
+            "type": "string",
+            "x-open-enum": [
+              "supervised",
+              "auto-accept-edits",
+              "auto",
+              "full-access"
+            ]
+          },
+          "approvals": {
+            "type": "boolean"
+          }
+        }
+      },
+      "bearerOnHostname": {
+        "type": "boolean"
+      },
+      "expiresAt": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "label"
+    ]
+  },
+  "request.credential.create.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "credential": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "oauth",
+              "bearer"
+            ]
+          },
+          "grant": {
+            "type": "object",
+            "properties": {
+              "tier": {
+                "type": "string",
+                "enum": [
+                  "read",
+                  "work",
+                  "machine"
+                ]
+              },
+              "projects": {
+                "anyOf": [
+                  {
+                    "maxItems": 1000,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "ceiling": {
+                "type": "string",
+                "x-open-enum": [
+                  "supervised",
+                  "auto-accept-edits",
+                  "auto",
+                  "full-access"
+                ]
+              },
+              "approvals": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "tier",
+              "projects",
+              "ceiling",
+              "approvals"
+            ]
+          },
+          "bearerOnHostname": {
+            "type": "boolean"
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "lastUsedAt": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "kind",
+          "grant",
+          "bearerOnHostname",
+          "expiresAt",
+          "createdAt",
+          "lastUsedAt"
+        ]
+      },
+      "secret": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "credential",
+      "secret"
+    ]
+  },
+  "request.credential.update.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "label": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 120
+      },
+      "grant": {
+        "type": "object",
+        "properties": {
+          "tier": {
+            "type": "string",
+            "enum": [
+              "read",
+              "work",
+              "machine"
+            ]
+          },
+          "projects": {
+            "anyOf": [
+              {
+                "maxItems": 1000,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ceiling": {
+            "type": "string",
+            "x-open-enum": [
+              "supervised",
+              "auto-accept-edits",
+              "auto",
+              "full-access"
+            ]
+          },
+          "approvals": {
+            "type": "boolean"
+          }
+        }
+      },
+      "bearerOnHostname": {
+        "type": "boolean"
+      },
+      "expiresAt": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "id"
+    ]
+  },
+  "request.credential.update.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "credential": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "oauth",
+              "bearer"
+            ]
+          },
+          "grant": {
+            "type": "object",
+            "properties": {
+              "tier": {
+                "type": "string",
+                "enum": [
+                  "read",
+                  "work",
+                  "machine"
+                ]
+              },
+              "projects": {
+                "anyOf": [
+                  {
+                    "maxItems": 1000,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "ceiling": {
+                "type": "string",
+                "x-open-enum": [
+                  "supervised",
+                  "auto-accept-edits",
+                  "auto",
+                  "full-access"
+                ]
+              },
+              "approvals": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "tier",
+              "projects",
+              "ceiling",
+              "approvals"
+            ]
+          },
+          "bearerOnHostname": {
+            "type": "boolean"
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "lastUsedAt": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "kind",
+          "grant",
+          "bearerOnHostname",
+          "expiresAt",
+          "createdAt",
+          "lastUsedAt"
+        ]
+      }
+    },
+    "required": [
+      "credential"
+    ]
+  },
+  "request.credential.revoke.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      }
+    },
+    "required": [
+      "id"
+    ]
+  },
+  "request.credential.revoke.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.consent.list.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.consent.list.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "requests": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "clientName": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "clientUrl": {
+              "type": "string",
+              "maxLength": 2048
+            },
+            "code": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 16
+            },
+            "requestedAt": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "defaults": {
+              "type": "object",
+              "properties": {
+                "tier": {
+                  "type": "string",
+                  "enum": [
+                    "read",
+                    "work",
+                    "machine"
+                  ]
+                },
+                "projects": {
+                  "anyOf": [
+                    {
+                      "maxItems": 1000,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "ceiling": {
+                  "type": "string",
+                  "x-open-enum": [
+                    "supervised",
+                    "auto-accept-edits",
+                    "auto",
+                    "full-access"
+                  ]
+                },
+                "approvals": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "tier",
+                "projects",
+                "ceiling",
+                "approvals"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "clientName",
+            "clientUrl",
+            "code",
+            "requestedAt",
+            "defaults"
+          ]
+        }
+      }
+    },
+    "required": [
+      "requests"
+    ]
+  },
+  "request.consent.answer.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "approve": {
+        "type": "boolean"
+      },
+      "grant": {
+        "type": "object",
+        "properties": {
+          "tier": {
+            "type": "string",
+            "enum": [
+              "read",
+              "work",
+              "machine"
+            ]
+          },
+          "projects": {
+            "anyOf": [
+              {
+                "maxItems": 1000,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ceiling": {
+            "type": "string",
+            "x-open-enum": [
+              "supervised",
+              "auto-accept-edits",
+              "auto",
+              "full-access"
+            ]
+          },
+          "approvals": {
+            "type": "boolean"
+          }
+        }
+      },
+      "expiresAt": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "id",
+      "approve"
+    ]
+  },
+  "request.consent.answer.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "credential": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "oauth",
+                  "bearer"
+                ]
+              },
+              "grant": {
+                "type": "object",
+                "properties": {
+                  "tier": {
+                    "type": "string",
+                    "enum": [
+                      "read",
+                      "work",
+                      "machine"
+                    ]
+                  },
+                  "projects": {
+                    "anyOf": [
+                      {
+                        "maxItems": 1000,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "ceiling": {
+                    "type": "string",
+                    "x-open-enum": [
+                      "supervised",
+                      "auto-accept-edits",
+                      "auto",
+                      "full-access"
+                    ]
+                  },
+                  "approvals": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "tier",
+                  "projects",
+                  "ceiling",
+                  "approvals"
+                ]
+              },
+              "bearerOnHostname": {
+                "type": "boolean"
+              },
+              "expiresAt": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "createdAt": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "lastUsedAt": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "kind",
+              "grant",
+              "bearerOnHostname",
+              "expiresAt",
+              "createdAt",
+              "lastUsedAt"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "credential"
+    ]
+  },
   "request.auth.sessions.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -76287,6 +78673,16 @@
     ]
   },
   "event.peer.changed": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "event.tunnel.changed": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "event.consent.changed": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
