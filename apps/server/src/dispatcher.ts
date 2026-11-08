@@ -33,6 +33,10 @@ export interface ClientConnection {
     send(frame: ServerFrame): void;
     // A channel that carries binary frames; a reply that asked for one goes out this way.
     sendBinary?(frame: Uint8Array): void;
+    /* Bytes the channel holds that are not on the wire yet, for bulk data that must wait rather than fill it. Without it a client takes any frame. */
+    bufferedAmount?(): number;
+    /* Calls `listener` whenever the channel drained; returns the way to stop. */
+    onDrain?(listener: () => void): () => void;
 }
 
 export function sendEvent<E extends EventType>(client: ClientConnection, event: E, payload: EventMap[E]): void {

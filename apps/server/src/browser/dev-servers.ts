@@ -1,4 +1,4 @@
-import { clipText, type DevServer } from '@ruimte/contracts';
+import { clipText, type DevServer, type PortHost } from '@ruimte/contracts';
 
 /* As much of `fetch` as a probe uses, so a test can hand it an answer. */
 type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
@@ -47,11 +47,12 @@ async function readStart(response: Response): Promise<string> {
     return html;
 }
 
-async function probePort(port: number, request: Fetch): Promise<DevServer | null> {
+async function probePort(port: number, request: Fetch, host: PortHost): Promise<DevServer | null> {
     try {
-        // 127.0.0.1 rather than localhost: a resolver that answers ::1 first would call a server
+        // A literal address rather than localhost: a resolver that answers ::1 first would call a server
         // bound to IPv4 down. A redirect is an answer as well, and following one could leave the machine.
-        const response = await request(`http://127.0.0.1:${port}/`, { redirect: 'manual', signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
+        const origin = host === '::1' ? `http://[::1]:${port}/` : `http://127.0.0.1:${port}/`;
+        const response = await request(origin, { redirect: 'manual', signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
         if (!(response.headers.get('content-type') ?? '').includes('text/html')) {
             await response.body?.cancel().catch(() => undefined);
             return { port };
@@ -68,7 +69,7 @@ async function probePort(port: number, request: Fetch): Promise<DevServer | null
  * connection: a page with a name is worth more on the splash than an open socket, and a port that
  * answers something other than HTTP is not one a browser node can open anyway.
  */
-export async function probeDevServers(ports: readonly number[], request: Fetch = fetch): Promise<DevServer[]> {
-    const answers = await Promise.all(ports.map((port) => probePort(port, request)));
+export async function probeDevServers(ports: readonly number[], request: Fetch = fetch, host: PortHost = '127.0.0.1'): Promise<DevServer[]> {
+    const answers = await Promise.all(ports.map((port) => probePort(port, request, host)));
     return answers.filter((server): server is DevServer => server !== null).sort((one, other) => one.port - other.port);
 }

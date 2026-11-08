@@ -32,6 +32,8 @@ export interface TunnelsBundle {
     listener: ExternalListener;
     /* What every client hears: the tunnel state or the consent waiting for a person moved. */
     sinks: ClientSinks;
+    /* The ports Ruimte listens on, which neither a tunnel row nor a shared port may name. */
+    deniedPorts(): number[];
 }
 
 interface TunnelsInput {
@@ -86,13 +88,16 @@ export async function wireTunnels(input: TunnelsInput): Promise<TunnelsBundle> {
 
     listener = new ExternalListener(handler, config.externalPort);
 
+    // The API, the door on the local network and the listener itself: a dev server row or a shared port never points at Ruimte.
+    const deniedPorts = (): number[] =>
+        [later.apiPort(), config.lanPort, config.externalPort, listener.port].filter((port): port is number => port !== null && port > 0);
+
     const service = new TunnelService({
         home: config.home,
         store: tunnelStore(config.home),
         installer: new CloudflaredInstaller(tunnelsFolder(config.home), realInstallerPorts()),
         runner: spawnRunner,
-        // The API, the door on the local network and the listener itself: a dev server row never points at Ruimte.
-        deniedPorts: () => [later.apiPort(), config.lanPort, config.externalPort, listener.port].filter((port): port is number => port !== null && port > 0),
+        deniedPorts,
         setListener: async (enabled) => {
             if (enabled) {
                 listener.start();
@@ -122,5 +127,5 @@ export async function wireTunnels(input: TunnelsInput): Promise<TunnelsBundle> {
         log: (line) => console.log(line)
     });
 
-    return { service, credentials, consent, listener, sinks };
+    return { service, credentials, consent, listener, sinks, deniedPorts };
 }

@@ -104,6 +104,8 @@ export interface ConnectionServices {
     peerTasks?: { channelClosed(clientId: string): void };
     /* The Voice sessions a client started, which end with its channel: there is no resume. */
     voice?: { channelClosed(clientId: string): void };
+    /* The streams of shared ports a client opened, which end with its channel. */
+    ports?: { channelClosed(clientId: string): void };
     /* How Voice on this machine talks, which every client hears change. */
     voicePreferences?: Subscribable;
     /* The artifacts of this machine, which only a client that asked with `artifact.watch` hears change. */
@@ -114,6 +116,8 @@ export interface ConnectionServices {
     templates?: Subscribable;
     /* Tunnels, credentials and the consent of a client that waits, which every client hears change. */
     tunnels?: Subscribable;
+    /* The development ports a person shared, which every client hears change. */
+    portGrants?: Subscribable;
 }
 
 export interface OpenConnection {
@@ -165,7 +169,8 @@ function subscribeClient(services: ConnectionServices, client: ClientConnection,
         services.artifacts,
         services.routines,
         services.templates,
-        services.tunnels
+        services.tunnels,
+        services.portGrants
     ];
     const none = (): void => undefined;
 
@@ -204,6 +209,7 @@ export function connectionOpener(services: ConnectionServices): (channel: Client
             share: channel.outputShare
         });
         let closed = false;
+        const drainListeners = new Set<() => void>();
         const client: ClientConnection = {
             id: clientId,
             access,
@@ -215,6 +221,14 @@ export function connectionOpener(services: ConnectionServices): (channel: Client
             },
             sendBinary(frame: Uint8Array) {
                 gate.sendBinary(frame);
+            },
+            bufferedAmount: () => channel.bufferedAmount(),
+            onDrain(listener) {
+                drainListeners.add(listener);
+
+                return () => {
+                    drainListeners.delete(listener);
+                };
             }
         };
         const sink: LiveSink = (event) => {
@@ -233,6 +247,10 @@ export function connectionOpener(services: ConnectionServices): (channel: Client
         channel.onDrain(() => {
             if (!closed) {
                 gate.onDrain();
+
+                for (const listener of [...drainListeners]) {
+                    listener();
+                }
             }
         });
         channel.onClose(() => {
@@ -259,6 +277,8 @@ export function connectionOpener(services: ConnectionServices): (channel: Client
                 services.voice?.channelClosed(clientId);
             }
             void services.databases?.release(clientId);
+            services.ports?.channelClosed(clientId);
+            drainListeners.clear();
             for (const unsubscribe of unsubscribes) {
                 unsubscribe();
             }

@@ -65,5 +65,5 @@ export function registerBrowserHandlers(dispatcher: Dispatcher, browsers: Browse
         return {};
     });
     // Outside the gate: it opens no browser and only reports which local ports answer.
-    dispatcher.register('browser.devServers', async (payload) => ({ servers: await probeDevServers(payload.ports) }));
+    dispatcher.register('browser.devServers', async (payload) => ({ servers: await probeDevServers(payload.ports, fetch, payload.host) }));
 }

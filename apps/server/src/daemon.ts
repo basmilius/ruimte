@@ -16,6 +16,7 @@ import { ExtensionRefusal } from './extensions/refusal.ts';
 import { ExtensionStore } from './extensions/store.ts';
 import { registerExtensionChatRead } from './handlers/extension-chat-read.ts';
 import { registerExtensionHandlers, runExtensionPrompt } from './handlers/extensions.ts';
+import { registerPortHandlers } from './handlers/ports.ts';
 import { registerRoutineHandlers } from './handlers/routine.ts';
 import { registerTemplateHandlers } from './handlers/template.ts';
 import { registerTunnelHandlers } from './handlers/tunnels.ts';
@@ -43,6 +44,7 @@ import { wireLaunches } from './wiring/launches.ts';
 import { wireMachine } from './wiring/machine.ts';
 import { wireMaintenance } from './wiring/maintenance.ts';
 import { wireNetwork } from './wiring/network.ts';
+import { wirePorts } from './wiring/ports.ts';
 import { wirePower } from './wiring/power.ts';
 import { wireProcesses } from './wiring/processes.ts';
 import { wireProjects } from './wiring/projects.ts';
@@ -203,6 +205,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         routines,
         later: { apiPort: () => server.port ?? config.port }
     });
+    const ports = wirePorts(config, tunnels.deniedPorts);
 
     const { sessions, chats } = agents;
     const push = wirePush(home, machine.auth, identity, agents, projects.store, work.snoozes, usage);
@@ -258,6 +261,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         consent: tunnels.consent,
         changed: () => tunnels.sinks.emit({ event: 'tunnel.changed', payload: {} })
     });
+    registerPortHandlers(dispatcher, ports.grants, ports.streams);
     const language = await wireLanguage({
         home,
         compiled,
@@ -413,7 +417,9 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         artifacts: artifacts.artifacts,
         routines: routines.watchers,
         templates: templates.store,
-        tunnels: tunnels.sinks
+        tunnels: tunnels.sinks,
+        portGrants: ports.sinks,
+        ports: ports.streams
     });
     // Before the socket answers, so no client attaches to or writes in a chat that is half moved; the outbox starts after.
     await repairChatMoves({
