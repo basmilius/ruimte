@@ -1,12 +1,12 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { Server, WebStandardStreamableHTTPServerTransport, type CallToolResult } from '@modelcontextprotocol/server';
-import { bearerCaller } from '../agents/bearer.ts';
 import { errorText } from '../error-text.ts';
 import { ProjectError } from '../projects/project-error.ts';
 import { MCP_MAX_IMAGE_BYTES } from '../providers/ruimte-mcp.ts';
 import type { CanvasHost } from '../tools/host.ts';
 import { callerKind } from '../tools/tasks.ts';
 import { VERSION } from '../version.ts';
+import { callerOf } from './caller.ts';
 import { catalog, type Tool, type ToolContext } from './catalog.ts';
 import { AgentFiles } from './files.ts';
 import { MCP_INSTRUCTIONS } from './instructions.ts';
@@ -117,12 +117,13 @@ function toolContext(caller: string, deps: McpDeps): ToolContext {
  * bearer token on every request, never a session id.
  */
 export async function handleMcpRequest(request: Request, deps: McpDeps): Promise<Response> {
-    const caller = bearerCaller(request, deps.targetForToken);
+    const identity = callerOf(request, deps.targetForToken);
 
-    if (caller === null) {
+    if (identity === null) {
         return new Response('Unknown token', { status: 401 });
     }
 
+    const caller = identity.id;
     const server = new Server({ name: 'ruimte', version: VERSION }, { capabilities: { tools: {} }, instructions: MCP_INSTRUCTIONS });
 
     server.setRequestHandler('tools/list', async () => ({
