@@ -108,6 +108,7 @@
     "approval": {
         "fromOutside": "Added through the project file",
         "byAgent": "Added by an agent in \"{{title}}\"",
+        "byClient": "Added by {{title}}",
         "anAgent": "a chat",
         "deny": "Deny",
         "approve": "Approve",

@@ -108,6 +108,7 @@
     "approval": {
         "fromOutside": "Toegevoegd via het projectbestand",
         "byAgent": "Toegevoegd door een agent in \"{{title}}\"",
+        "byClient": "Toegevoegd door {{title}}",
         "anAgent": "een chat",
         "deny": "Weigeren",
         "approve": "Goedkeuren",

@@ -3,6 +3,7 @@ import { ToolRefusal } from '@adecore/agents/context';
 import { isWithin } from '@adecore/utils/path';
 import type { ActionHandlers, ActionInput } from '@ruimte/actions';
 import { ROUTINE_LIMITS, RoutineSchema, type Routine, type RoutineEntry, type RoutineKind } from '@ruimte/contracts';
+import { externalActorTitle } from '../mcp/caller.ts';
 import { providerFor } from '../providers/registry.ts';
 import { nameOf, requireInstalled } from '../tools/agents.ts';
 import { field, orNote, type RoutineAgentHost } from '../tools/host.ts';
@@ -143,7 +144,8 @@ async function routineFrom(context: ServerActionContext, caller: string, id: str
 }
 
 async function saved(context: ServerActionContext, caller: string, routine: Routine, shared: boolean) {
-    const result = await routinesOf(context).save(context.place.projectId, routine, context.host.starts.modeOf(caller), caller, shared);
+    const title = context.external === undefined ? undefined : externalActorTitle(context.external);
+    const result = await routinesOf(context).save(context.place.projectId, routine, context.host.starts.modeOf(caller), caller, shared, title);
     const kept = result.routine;
     return {
         output: {

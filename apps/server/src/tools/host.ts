@@ -180,8 +180,15 @@ export interface CanvasHost {
  */
 export interface RoutineAgentHost {
     list(projectId: string): Promise<RoutineListResult>;
-    /* `shared` places a new routine; one that exists stays in the file it is in. */
-    save(projectId: string, routine: Routine, ceiling: RuntimeMode, caller: string, shared: boolean): Promise<{ routine: Routine; shared: boolean }>;
+    /* `shared` places a new routine; one that exists stays in the file it is in. `title` names a caller no project does, such as an external MCP client. */
+    save(
+        projectId: string,
+        routine: Routine,
+        ceiling: RuntimeMode,
+        caller: string,
+        shared: boolean,
+        title?: string
+    ): Promise<{ routine: Routine; shared: boolean }>;
     pause(projectId: string, routineId: string): Promise<void>;
     resume(projectId: string, routineId: string): Promise<void>;
     runNow(projectId: string, routineId: string): Promise<RoutineRunNowResult>;

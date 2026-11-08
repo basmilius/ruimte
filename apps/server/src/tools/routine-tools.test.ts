@@ -200,6 +200,11 @@ describe('the routine tools', () => {
         ]);
     });
 
+    test('names an external MCP client as the maker by the name it is read by, not by its actor id', async () => {
+        await host.routines!.save('p1', report, 'supervised', 'external-cred-1', false, 'MCP · Hosted bot');
+        expect(saves[0]!.madeBy).toEqual({ chatId: 'external-cred-1', title: 'MCP · Hosted bot', at: 1_000 });
+    });
+
     test('an id that is taken gets a number, and shared puts a new routine in the shared file', async () => {
         await call('routine_new', { title: 'Weekly report', at: 'mon 09:00', prompt: 'Again.', shared: true });
         expect(saves[0]!.routine.id).toBe('weekly-report-2');

@@ -12,8 +12,8 @@ export function agentRoutines(
 ): RoutineAgentHost {
     return {
         list: (projectId) => routines.list(projectId),
-        save: async (projectId, routine, ceiling, caller, shared) => {
-            const madeBy = { chatId: caller, title: titleOf(caller) ?? caller, at: now() };
+        save: async (projectId, routine, ceiling, caller, shared, title) => {
+            const madeBy = { chatId: caller, title: title ?? titleOf(caller) ?? caller, at: now() };
             const saved = await routines.saveByAgent(projectId, routine, ceiling, madeBy, shared);
             return { routine: saved.routine, shared: saved.shared };
         },
