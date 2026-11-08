@@ -12,7 +12,6 @@ import { useAppShortcuts } from '@/shell/app-shortcuts';
 import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
 import { MachineUpdateDialog } from '@/shell/MachineUpdateDialog';
 import { useNativeMenu } from '@/shell/menu/native-menu';
-import { useBranchCompare } from '@/shell/panels/branch-compare';
 import { DormantScreen, ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
 import { allSettingsSections } from '@/shell/settings/sections';
 import { StartScreen } from '@/shell/StartScreen';
@@ -52,12 +51,6 @@ const ModelsDialog = lazyDialog(
     'ModelsDialog',
     useUi,
     (s) => s.modelsOpen
-);
-const BranchCompareDialog = lazyDialog(
-    () => import('@/shell/panels/BranchCompareDialog'),
-    'BranchCompareDialog',
-    useBranchCompare,
-    (state) => state.request !== null
 );
 const LoginDialog = lazyDialog(
     () => import('@/chat/LoginDialog'),
@@ -196,7 +189,6 @@ export function App() {
                     </Floating>
                     <UsageDialog />
                     <ModelsDialog />
-                    <BranchCompareDialog />
                     <Floating surface="toasts">
                         <Toasts />
                         <HostDialogs />

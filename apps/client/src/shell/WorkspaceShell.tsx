@@ -28,6 +28,7 @@ import { LeaveConflictDialog } from '@/shell/LeaveConflictDialog';
 import { MachineLostScreen } from '@/shell/MachineLostScreen';
 import { MergeWorktreeDialog } from '@/shell/MergeWorktreeDialog';
 import { Panel } from '@/shell/Panel';
+import { useBranchCompare } from '@/shell/panels/branch-compare';
 import { DiscardEditsDialog } from '@/shell/panels/DiscardEditsDialog';
 import { useFileChoice } from '@/shell/panels/file-links';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
@@ -99,6 +100,13 @@ const PullRequestDialog = lazyDialog(
     'PullRequestDialog',
     useUi,
     (s) => s.pullRequestDialog !== null
+);
+
+const BranchCompareDialog = lazyDialog(
+    () => import('@/shell/panels/BranchCompareDialog'),
+    'BranchCompareDialog',
+    useBranchCompare,
+    (s) => s.request !== null
 );
 
 const FileChoiceDialog = lazyDialog(
@@ -189,6 +197,7 @@ const DIALOGS: readonly (readonly [surface: string | null, dialog: ComponentType
     ['dialog', NewWorktreeChatDialog],
     ['dialog', IssueStartDialog],
     ['dialog', PullRequestDialog],
+    ['dialog', BranchCompareDialog],
     ['dialog', FileChoiceDialog],
     [null, RoutinesStage],
     ['dialog', RoutineFormDialog],
