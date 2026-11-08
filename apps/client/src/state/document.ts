@@ -164,6 +164,8 @@ export interface DocumentState {
     /* A file as a view of its own. `opens` is false for a caller that puts it on the grid itself, such as a loose
        view that becomes this one: opening it first would take the cell that has the focus. */
     addFileView(name: string, path: string, opens?: boolean): string;
+    /* The file views of a file or folder that moved follow it. `from` and `to` are the daemon's paths, `folder` the project's. A view named after its file takes the new file name. */
+    followMovedFiles(folder: string | null, from: string, to: string): void;
     /* A table of a database connection as a view of its own; `opens` means the same as for a file. */
     addDatabaseView(name: string, table: ProjectDatabaseTarget, opens?: boolean): string;
     /* A chat, terminal or browser without a canvas under it. The id is the session id, as for a node. */

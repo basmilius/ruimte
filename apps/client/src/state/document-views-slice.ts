@@ -10,6 +10,7 @@ import {
     withoutView,
     type ProjectView
 } from '@ruimte/contracts';
+import { basenameOf, isPathBelow, resolveStoredPath, storedPathOf } from '@/shell/panels/files-tree';
 import { closeTab, collapseTabHosts, locateView, singleLayout } from '@/shell/split';
 import { nextId } from '@/state/canvas';
 import type { DocumentState } from '@/state/document';
@@ -29,6 +30,7 @@ export function createDocumentViewsSlice({
     | 'addDrawingView'
     | 'addDiagramView'
     | 'addFileView'
+    | 'followMovedFiles'
     | 'addDatabaseView'
     | 'addStandaloneView'
     | 'addExtensionView'
@@ -114,6 +116,30 @@ export function createDocumentViewsSlice({
 
         addFileView(name, path, opens = true) {
             return addView({ kind: 'file', id: nextId('view'), name, path }, opens);
+        },
+
+        followMovedFiles(folder, from, to) {
+            const views = get().views;
+            const next = views.map((view): ProjectView => {
+                if (view.kind !== 'file') {
+                    return view;
+                }
+
+                const absolute = resolveStoredPath(folder, view.path);
+
+                if (absolute === null || (absolute !== from && !isPathBelow(from, absolute))) {
+                    return view;
+                }
+
+                const moved = `${to}${absolute.slice(from.length)}`;
+                const name = view.name === basenameOf(absolute) ? basenameOf(moved) : view.name;
+
+                return { ...view, name, path: storedPathOf(folder, moved) };
+            });
+
+            if (next.some((view, index) => view !== views[index])) {
+                write(next);
+            }
         },
 
         addDatabaseView(name, table, opens = true) {
