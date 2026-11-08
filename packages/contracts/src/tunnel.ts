@@ -117,6 +117,17 @@ export type TunnelRow = z.infer<typeof TunnelRowSchema>;
 export const TunnelNamedSchema = z.object({ id: z.string().min(1).max(64), name: z.string().min(1).max(253) });
 export type TunnelNamed = z.infer<typeof TunnelNamedSchema>;
 
+export const TunnelRunnerSchema = z.enum(['ruimte', 'other']);
+export type TunnelRunner = z.infer<typeof TunnelRunnerSchema>;
+
+/* A hostname someone else put on the tunnel, with where Cloudflare sends it (such as `http://localhost:3000`). */
+export const TunnelOtherRuleSchema = z.object({
+    hostname: z.string().max(253).nullable(),
+    path: z.string().max(500).nullable(),
+    service: z.string().max(500)
+});
+export type TunnelOtherRule = z.infer<typeof TunnelOtherRuleSchema>;
+
 /* The state every client may read; no tool and no client let in changes a tunnel. The API token is never in it. */
 export const TunnelStateSchema = z.object({
     stage: TunnelStageSchema,
@@ -133,8 +144,20 @@ export const TunnelStateSchema = z.object({
     zones: z.array(TunnelNamedSchema).max(1000),
     /* How many zones the token reaches on all its accounts, for the sentence shown before an account is picked. */
     zoneCount: z.number().int().nonnegative().optional(),
-    /* The name of this machine's tunnel in the Cloudflare dashboard; null until it is made. */
-    tunnel: z.object({ name: z.string().max(253) }).nullable(),
+    /*
+     * The tunnel this machine uses, by its name in the Cloudflare dashboard; null until one is made or picked. `created`
+     * says whether Ruimte made it. `runner` says who runs it as far as Ruimte last saw: Ruimte's own `cloudflared`, or
+     * something else (on this computer or another) that already ran it, so Ruimte started nothing; null for neither.
+     */
+    tunnel: z
+        .object({
+            name: z.string().max(253),
+            created: z.boolean(),
+            runner: TunnelRunnerSchema.nullable(),
+            /* The rules on the tunnel that are not Ruimte's, as Ruimte last read them; it never changes these. */
+            others: z.array(TunnelOtherRuleSchema).max(200)
+        })
+        .nullable(),
     rows: z.array(TunnelRowSchema).max(100),
     /* Whether the external MCP listener is on, and where it listens on loopback. */
     mcp: z.object({ enabled: z.boolean(), port: z.number().int().min(0).max(65535).nullable() }),
@@ -153,6 +176,23 @@ export const TunnelDiscoverResultSchema = z.object({
 export const TunnelSetTokenPayloadSchema = z.object({ token: z.string().trim().min(10).max(500) });
 
 export const TunnelSetupPayloadSchema = z.object({ account: TunnelNamedSchema.shape.id.optional() });
+
+/* The tunnels already on an account, which the screen offers next to making a new one. */
+export const TunnelListPayloadSchema = z.object({ account: TunnelNamedSchema.shape.id.optional() });
+
+export const TunnelExistingSchema = z.object({
+    id: z.string().min(1).max(64),
+    name: z.string().min(1).max(253),
+    /* Whether its settings live in the Cloudflare dashboard, which is the only kind Ruimte can add hostnames to. */
+    usable: z.boolean(),
+    /* Whether Cloudflare sees something running it now. */
+    running: z.boolean()
+});
+export type TunnelExisting = z.infer<typeof TunnelExistingSchema>;
+
+export const TunnelListResultSchema = z.object({ tunnels: z.array(TunnelExistingSchema).max(1000) });
+
+export const TunnelLinkPayloadSchema = z.object({ account: TunnelNamedSchema.shape.id.optional(), tunnel: TunnelExistingSchema.shape.id });
 
 export const TunnelAddPayloadSchema = z.object({
     kind: TunnelRowKindSchema,

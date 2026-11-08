@@ -1860,6 +1860,7 @@
         "starting"
     ],
     "request.tunnel.state.result #/properties/rows/items/properties/kind": ["dev", "mcp"],
+    "request.tunnel.state.result #/properties/tunnel/anyOf/0/properties/runner/anyOf/0": ["other", "ruimte"],
     "request.tunnel.install.result #/properties/stage": [
         "cannot-install",
         "checking",
@@ -1872,6 +1873,7 @@
         "starting"
     ],
     "request.tunnel.install.result #/properties/rows/items/properties/kind": ["dev", "mcp"],
+    "request.tunnel.install.result #/properties/tunnel/anyOf/0/properties/runner/anyOf/0": ["other", "ruimte"],
     "request.tunnel.setToken.result #/properties/stage": [
         "cannot-install",
         "checking",
@@ -1884,6 +1886,7 @@
         "starting"
     ],
     "request.tunnel.setToken.result #/properties/rows/items/properties/kind": ["dev", "mcp"],
+    "request.tunnel.setToken.result #/properties/tunnel/anyOf/0/properties/runner/anyOf/0": ["other", "ruimte"],
     "request.tunnel.clearToken.result #/properties/stage": [
         "cannot-install",
         "checking",
@@ -1896,6 +1899,7 @@
         "starting"
     ],
     "request.tunnel.clearToken.result #/properties/rows/items/properties/kind": ["dev", "mcp"],
+    "request.tunnel.clearToken.result #/properties/tunnel/anyOf/0/properties/runner/anyOf/0": ["other", "ruimte"],
     "request.tunnel.setup.result #/properties/stage": [
         "cannot-install",
         "checking",
@@ -1908,6 +1912,33 @@
         "starting"
     ],
     "request.tunnel.setup.result #/properties/rows/items/properties/kind": ["dev", "mcp"],
+    "request.tunnel.setup.result #/properties/tunnel/anyOf/0/properties/runner/anyOf/0": ["other", "ruimte"],
+    "request.tunnel.link.result #/properties/stage": [
+        "cannot-install",
+        "checking",
+        "failed",
+        "installing",
+        "no-token",
+        "no-tunnel",
+        "not-installed",
+        "running",
+        "starting"
+    ],
+    "request.tunnel.link.result #/properties/rows/items/properties/kind": ["dev", "mcp"],
+    "request.tunnel.link.result #/properties/tunnel/anyOf/0/properties/runner/anyOf/0": ["other", "ruimte"],
+    "request.tunnel.unlink.result #/properties/stage": [
+        "cannot-install",
+        "checking",
+        "failed",
+        "installing",
+        "no-token",
+        "no-tunnel",
+        "not-installed",
+        "running",
+        "starting"
+    ],
+    "request.tunnel.unlink.result #/properties/rows/items/properties/kind": ["dev", "mcp"],
+    "request.tunnel.unlink.result #/properties/tunnel/anyOf/0/properties/runner/anyOf/0": ["other", "ruimte"],
     "request.tunnel.add.result #/properties/stage": [
         "cannot-install",
         "checking",
@@ -1920,6 +1951,7 @@
         "starting"
     ],
     "request.tunnel.add.result #/properties/rows/items/properties/kind": ["dev", "mcp"],
+    "request.tunnel.add.result #/properties/tunnel/anyOf/0/properties/runner/anyOf/0": ["other", "ruimte"],
     "request.tunnel.update.result #/properties/stage": [
         "cannot-install",
         "checking",
@@ -1932,6 +1964,7 @@
         "starting"
     ],
     "request.tunnel.update.result #/properties/rows/items/properties/kind": ["dev", "mcp"],
+    "request.tunnel.update.result #/properties/tunnel/anyOf/0/properties/runner/anyOf/0": ["other", "ruimte"],
     "request.tunnel.remove.result #/properties/stage": [
         "cannot-install",
         "checking",
@@ -1944,6 +1977,7 @@
         "starting"
     ],
     "request.tunnel.remove.result #/properties/rows/items/properties/kind": ["dev", "mcp"],
+    "request.tunnel.remove.result #/properties/tunnel/anyOf/0/properties/runner/anyOf/0": ["other", "ruimte"],
     "request.tunnel.retry.result #/properties/stage": [
         "cannot-install",
         "checking",
@@ -1956,6 +1990,7 @@
         "starting"
     ],
     "request.tunnel.retry.result #/properties/rows/items/properties/kind": ["dev", "mcp"],
+    "request.tunnel.retry.result #/properties/tunnel/anyOf/0/properties/runner/anyOf/0": ["other", "ruimte"],
     "request.tunnel.setMcp.result #/properties/stage": [
         "cannot-install",
         "checking",
@@ -1968,6 +2003,7 @@
         "starting"
     ],
     "request.tunnel.setMcp.result #/properties/rows/items/properties/kind": ["dev", "mcp"],
+    "request.tunnel.setMcp.result #/properties/tunnel/anyOf/0/properties/runner/anyOf/0": ["other", "ruimte"],
     "request.credential.list.result #/properties/credentials/items/properties/kind": ["bearer", "oauth"],
     "request.credential.list.result #/properties/credentials/items/properties/grant/properties/tier": ["machine", "read", "work"],
     "request.credential.create.result #/properties/credential/properties/kind": ["bearer", "oauth"],

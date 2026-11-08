@@ -69679,10 +69679,70 @@
               "name": {
                 "type": "string",
                 "maxLength": 253
+              },
+              "created": {
+                "type": "boolean"
+              },
+              "runner": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "ruimte",
+                      "other"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "others": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "hostname": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 253
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "path": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "service": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  },
+                  "required": [
+                    "hostname",
+                    "path",
+                    "service"
+                  ]
+                }
               }
             },
             "required": [
-              "name"
+              "name",
+              "created",
+              "runner",
+              "others"
             ]
           },
           {
@@ -69962,10 +70022,70 @@
               "name": {
                 "type": "string",
                 "maxLength": 253
+              },
+              "created": {
+                "type": "boolean"
+              },
+              "runner": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "ruimte",
+                      "other"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "others": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "hostname": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 253
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "path": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "service": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  },
+                  "required": [
+                    "hostname",
+                    "path",
+                    "service"
+                  ]
+                }
               }
             },
             "required": [
-              "name"
+              "name",
+              "created",
+              "runner",
+              "others"
             ]
           },
           {
@@ -70211,10 +70331,70 @@
               "name": {
                 "type": "string",
                 "maxLength": 253
+              },
+              "created": {
+                "type": "boolean"
+              },
+              "runner": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "ruimte",
+                      "other"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "others": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "hostname": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 253
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "path": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "service": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  },
+                  "required": [
+                    "hostname",
+                    "path",
+                    "service"
+                  ]
+                }
               }
             },
             "required": [
-              "name"
+              "name",
+              "created",
+              "runner",
+              "others"
             ]
           },
           {
@@ -70451,10 +70631,70 @@
               "name": {
                 "type": "string",
                 "maxLength": 253
+              },
+              "created": {
+                "type": "boolean"
+              },
+              "runner": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "ruimte",
+                      "other"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "others": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "hostname": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 253
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "path": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "service": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  },
+                  "required": [
+                    "hostname",
+                    "path",
+                    "service"
+                  ]
+                }
               }
             },
             "required": [
-              "name"
+              "name",
+              "created",
+              "runner",
+              "others"
             ]
           },
           {
@@ -70697,10 +70937,735 @@
               "name": {
                 "type": "string",
                 "maxLength": 253
+              },
+              "created": {
+                "type": "boolean"
+              },
+              "runner": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "ruimte",
+                      "other"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "others": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "hostname": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 253
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "path": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "service": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  },
+                  "required": [
+                    "hostname",
+                    "path",
+                    "service"
+                  ]
+                }
               }
             },
             "required": [
+              "name",
+              "created",
+              "runner",
+              "others"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "rows": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "mcp",
+                "dev"
+              ]
+            },
+            "hostname": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "port": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "comeBack": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "hostname",
+            "port",
+            "enabled",
+            "comeBack"
+          ]
+        }
+      },
+      "mcp": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "port"
+        ]
+      },
+      "clients": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "suggestedMcpLabel": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 63
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "stage",
+      "message",
+      "hasToken",
+      "accounts",
+      "account",
+      "zones",
+      "tunnel",
+      "rows",
+      "mcp",
+      "clients",
+      "suggestedMcpLabel"
+    ]
+  },
+  "request.tunnel.list.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "account": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      }
+    }
+  },
+  "request.tunnel.list.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "tunnels": {
+        "maxItems": 1000,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "usable": {
+              "type": "boolean"
+            },
+            "running": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "usable",
+            "running"
+          ]
+        }
+      }
+    },
+    "required": [
+      "tunnels"
+    ]
+  },
+  "request.tunnel.link.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "account": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "tunnel": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      }
+    },
+    "required": [
+      "tunnel"
+    ]
+  },
+  "request.tunnel.link.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "stage": {
+        "type": "string",
+        "enum": [
+          "not-installed",
+          "installing",
+          "cannot-install",
+          "no-token",
+          "checking",
+          "no-tunnel",
+          "starting",
+          "running",
+          "failed"
+        ]
+      },
+      "message": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "hasToken": {
+        "type": "boolean"
+      },
+      "accounts": {
+        "maxItems": 1000,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "account": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "id",
               "name"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "zones": {
+        "maxItems": 1000,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "zoneCount": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "tunnel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 253
+              },
+              "created": {
+                "type": "boolean"
+              },
+              "runner": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "ruimte",
+                      "other"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "others": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "hostname": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 253
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "path": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "service": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  },
+                  "required": [
+                    "hostname",
+                    "path",
+                    "service"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "name",
+              "created",
+              "runner",
+              "others"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "rows": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "mcp",
+                "dev"
+              ]
+            },
+            "hostname": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "port": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "comeBack": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "hostname",
+            "port",
+            "enabled",
+            "comeBack"
+          ]
+        }
+      },
+      "mcp": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "port"
+        ]
+      },
+      "clients": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "suggestedMcpLabel": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 63
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "stage",
+      "message",
+      "hasToken",
+      "accounts",
+      "account",
+      "zones",
+      "tunnel",
+      "rows",
+      "mcp",
+      "clients",
+      "suggestedMcpLabel"
+    ]
+  },
+  "request.tunnel.unlink.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.tunnel.unlink.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "stage": {
+        "type": "string",
+        "enum": [
+          "not-installed",
+          "installing",
+          "cannot-install",
+          "no-token",
+          "checking",
+          "no-tunnel",
+          "starting",
+          "running",
+          "failed"
+        ]
+      },
+      "message": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 2000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "hasToken": {
+        "type": "boolean"
+      },
+      "accounts": {
+        "maxItems": 1000,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "account": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "zones": {
+        "maxItems": 1000,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "zoneCount": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "tunnel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 253
+              },
+              "created": {
+                "type": "boolean"
+              },
+              "runner": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "ruimte",
+                      "other"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "others": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "hostname": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 253
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "path": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "service": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  },
+                  "required": [
+                    "hostname",
+                    "path",
+                    "service"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "name",
+              "created",
+              "runner",
+              "others"
             ]
           },
           {
@@ -70968,10 +71933,70 @@
               "name": {
                 "type": "string",
                 "maxLength": 253
+              },
+              "created": {
+                "type": "boolean"
+              },
+              "runner": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "ruimte",
+                      "other"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "others": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "hostname": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 253
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "path": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "service": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  },
+                  "required": [
+                    "hostname",
+                    "path",
+                    "service"
+                  ]
+                }
               }
             },
             "required": [
-              "name"
+              "name",
+              "created",
+              "runner",
+              "others"
             ]
           },
           {
@@ -71223,10 +72248,70 @@
               "name": {
                 "type": "string",
                 "maxLength": 253
+              },
+              "created": {
+                "type": "boolean"
+              },
+              "runner": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "ruimte",
+                      "other"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "others": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "hostname": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 253
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "path": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "service": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  },
+                  "required": [
+                    "hostname",
+                    "path",
+                    "service"
+                  ]
+                }
               }
             },
             "required": [
-              "name"
+              "name",
+              "created",
+              "runner",
+              "others"
             ]
           },
           {
@@ -71472,10 +72557,70 @@
               "name": {
                 "type": "string",
                 "maxLength": 253
+              },
+              "created": {
+                "type": "boolean"
+              },
+              "runner": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "ruimte",
+                      "other"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "others": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "hostname": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 253
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "path": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "service": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  },
+                  "required": [
+                    "hostname",
+                    "path",
+                    "service"
+                  ]
+                }
               }
             },
             "required": [
-              "name"
+              "name",
+              "created",
+              "runner",
+              "others"
             ]
           },
           {
@@ -71712,10 +72857,70 @@
               "name": {
                 "type": "string",
                 "maxLength": 253
+              },
+              "created": {
+                "type": "boolean"
+              },
+              "runner": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "ruimte",
+                      "other"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "others": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "hostname": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 253
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "path": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "service": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  },
+                  "required": [
+                    "hostname",
+                    "path",
+                    "service"
+                  ]
+                }
               }
             },
             "required": [
-              "name"
+              "name",
+              "created",
+              "runner",
+              "others"
             ]
           },
           {
@@ -71959,10 +73164,70 @@
               "name": {
                 "type": "string",
                 "maxLength": 253
+              },
+              "created": {
+                "type": "boolean"
+              },
+              "runner": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "ruimte",
+                      "other"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "others": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "hostname": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 253
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "path": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "service": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  },
+                  "required": [
+                    "hostname",
+                    "path",
+                    "service"
+                  ]
+                }
               }
             },
             "required": [
-              "name"
+              "name",
+              "created",
+              "runner",
+              "others"
             ]
           },
           {
