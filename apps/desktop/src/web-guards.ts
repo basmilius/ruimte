@@ -9,9 +9,12 @@ import { EXTENSION_FILES_PATH, VISUAL_HOST_PATH } from '@ruimte/csp';
 
 export { isExternalLink, isWebLink } from '@adecore/shell';
 
-// The partitions a `<webview>` may name: a browser node's (`apps/client/src/browser/registry.ts`) and a sealed preview's.
+// The partitions a `<webview>` may name: a browser node's (`apps/client/src/browser/registry.ts`), a sealed preview's and a tunnel's that the shell made.
 export const BROWSER_PARTITION = 'persist:ruimte';
 export const PREVIEW_PARTITION = 'preview';
+
+/* The in-memory partition of a shared port opened as a page (`port-tunnel/tunnel-session.ts`); no `persist:`, so nothing stays on disk. */
+export const TUNNEL_PARTITION_PREFIX = 'ruimte-port-';
 
 /* The System Settings panes the app's page may open: the two grants computer use needs, and nothing a URL could smuggle beside them. */
 const SYSTEM_SETTINGS_PANES: ReadonlySet<string> = new Set([
@@ -121,8 +124,13 @@ export interface GuestWebPreferences {
  * its own; the guest preload is registered on the session and survives this. A guest never sets the
  * window's full screen itself either, so leaving a video's full screen keeps the window as it was.
  */
-export function hardenGuestPreferences(preferences: GuestWebPreferences): boolean {
-    if (preferences.partition !== BROWSER_PARTITION && preferences.partition !== PREVIEW_PARTITION) {
+export function hardenGuestPreferences(preferences: GuestWebPreferences, ownsTunnel: (partition: string) => boolean = () => false): boolean {
+    const partition = preferences.partition;
+
+    // A tunnel's partition is one the shell made for this very window, never a name an element chose.
+    const tunnel = partition !== undefined && partition.startsWith(TUNNEL_PARTITION_PREFIX) && ownsTunnel(partition);
+
+    if (partition !== BROWSER_PARTITION && partition !== PREVIEW_PARTITION && !tunnel) {
         return false;
     }
     delete preferences.preload;

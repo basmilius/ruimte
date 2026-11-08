@@ -6,6 +6,7 @@ import { createAppIpc, createPageKeys, createTheme, createWindows, type WindowOr
 import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
 import { windowUrl } from './app-windows';
 import { installBrowserRoutes } from './browser-routes';
+import { installPortTunnels } from './port-tunnel/tunnel-session';
 import { askDaemonWork, clearVoiceKey, handVoiceKey } from './daemon-proof';
 import { LAUNCHER_PIPE_VARIABLE } from './launcher-pipe';
 import { moveLegacyStorage } from './legacy-storage';
@@ -467,7 +468,7 @@ if (!app.requestSingleInstanceLock()) {
         }
         sealAppSession();
         sealPreviewSession();
-        browserRoutes = installBrowserRoutes(fromAppWindow, join(here, 'guest.cjs'));
+        browserRoutes = installBrowserRoutes(fromAppWindow, join(here, 'guest.cjs'), installPortTunnels(fromAppWindow, join(here, 'guest.cjs')).owns);
         power.followPowerSource();
         followDisplays();
         await startApp({

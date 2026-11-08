@@ -1,6 +1,7 @@
 import { createGestureGate, type AppIpc } from '@adecore/shell';
 import { editFrameOf, runGuestEdit } from '../guest-edit';
 import { contextMenuPayload, editableMenuTemplate, PREVIEW_ACTIONS, type BrowserContextAction, type GuestKind } from '../guest-menu';
+import { isTunnelSession } from '../port-tunnel/tunnel-sessions';
 import { BROWSER_PARTITION, isExternalLink, PREVIEW_PARTITION } from '../web-guards';
 import { electron } from './electron';
 
@@ -21,8 +22,9 @@ function isGuestOf(contents: Electron.WebContents, partition: string): boolean {
     return contents.getType() === 'webview' && contents.session === session.fromPartition(partition);
 }
 
+/* A page of a browser node, on the shared session or on the session of a shared port. */
 export function isBrowserGuest(contents: Electron.WebContents): boolean {
-    return isGuestOf(contents, BROWSER_PARTITION);
+    return isGuestOf(contents, BROWSER_PARTITION) || (contents.getType() === 'webview' && isTunnelSession(contents.session));
 }
 
 export function isPreviewGuest(contents: Electron.WebContents): boolean {

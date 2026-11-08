@@ -14,6 +14,10 @@ import type {
     OpenAiLivePreferences,
     MachineStopPreview,
     OpenPathRequest,
+    PortTunnelOpened,
+    PortTunnelRequest,
+    PortTunnelToPage,
+    PortTunnelToShell,
     ReleaseNotesState,
     SavePathRequest,
     SpeechEvent,
@@ -76,6 +80,10 @@ const bridge = {
     platform: process.platform,
     bindBrowserRoute: (binding: BrowserRouteBinding): Promise<boolean> => ipcRenderer.invoke('browser:bind-route', binding),
     onBrowserRouteBlocked: subscribe<[event: BrowserRouteBlocked]>('browser:route-blocked'),
+    openPortTunnel: (request: PortTunnelRequest): Promise<PortTunnelOpened | null> => ipcRenderer.invoke('port-tunnel:open', request),
+    closePortTunnel: (id: string): void => ipcRenderer.send('port-tunnel:close', id),
+    portTunnelSend: (message: PortTunnelToShell): void => ipcRenderer.send('port-tunnel:send', message),
+    onPortTunnel: subscribe<[message: PortTunnelToPage]>('port-tunnel:message'),
     versions: { electron: process.versions.electron, chrome: process.versions.chrome, node: process.versions.node },
     /* Handed down as an argument rather than fetched, because `app` is the main process alone and
        the client needs both before it draws its first word or its first number. */
