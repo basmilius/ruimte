@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import type { PortGrant, ProjectCanvasView } from '@ruimte/contracts';
+import type { PortGrant, ProjectCanvasView, TunnelRow, TunnelState } from '@ruimte/contracts';
 import { act } from 'react';
 import { usePortGrants } from '@/port-tunnel/grants';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
@@ -21,6 +21,19 @@ const GRANT: PortGrant = { id: 'grant-1', projectId: 'project-atlas', host: '127
 
 /* What the shell offers for a page of another machine at all. */
 const ROUTES = { bindBrowserRoute: async () => true, onBrowserRouteBlocked: () => () => undefined };
+
+function tunnelState(rows: TunnelRow[]): TunnelState {
+    return {
+        stage: 'running',
+        message: null,
+        signInUrl: null,
+        domain: 'example.com',
+        rows,
+        mcp: { enabled: false, port: null },
+        clients: 0,
+        suggestedMcpHostname: null
+    };
+}
 
 let machine: FakeMachine;
 let workspace: FakeWorkspace;
@@ -52,16 +65,7 @@ beforeEach(() => {
     machine = new FakeMachine();
     machine.answer('browser.devServers', () => ({ servers: [{ port: 5173, title: 'Vite App' }] }));
     machine.answer('port.list', () => ({ grants }));
-    machine.answer('tunnel.state', () => ({
-        stage: 'running',
-        message: null,
-        signInUrl: null,
-        domain: 'example.com',
-        rows: [],
-        mcp: { enabled: false, port: null },
-        clients: 0,
-        suggestedMcpHostname: null
-    }));
+    machine.answer('tunnel.state', () => tunnelState([]));
 });
 
 afterEach(async () => {
@@ -119,16 +123,9 @@ describe('sharing a dev port from the start page of a browser node', () => {
 
         expect(buttonWith('Put this port on a tunnel')).not.toBeNull();
 
-        machine.answer('tunnel.state', () => ({
-            stage: 'running',
-            message: null,
-            signInUrl: null,
-            domain: 'example.com',
-            rows: [{ id: 'row-1', kind: 'dev', hostname: 'docs.example.com', port: 5173, enabled: true, comeBack: false }],
-            mcp: { enabled: false, port: null },
-            clients: 0,
-            suggestedMcpHostname: null
-        }));
+        machine.answer('tunnel.state', () =>
+            tunnelState([{ id: 'row-1', kind: 'dev', hostname: 'docs.example.com', port: 5173, enabled: true, comeBack: false }])
+        );
         await act(async () => machine.emit('tunnel.changed', {}));
         await until(() => buttonWith('Copy https://docs.example.com') !== null);
     });
