@@ -223,7 +223,7 @@ describe('the states of the screen', () => {
         await open();
         await until(() => everything().includes('shop.example.com'));
         expect(everything()).toContain('Dev server on port 3000, open to anyone with the address');
-        expect(everything()).toContain("Ruimte's MCP, guarded by a credential on every request");
+        expect(everything()).toContain("Ruimte's MCP, which asks for a credential on every request");
         expect(everything()).toContain('Cloudflare ends the encryption at its edge');
     });
 

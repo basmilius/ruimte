@@ -1021,17 +1021,17 @@
         "update": "This machine needs a newer Ruimte to offer tunnels.",
         "loading": "Loading the tunnels.",
         "elsewhere": "Tunnels are set up in the desktop app on the machine itself. This window only shows their state.",
-        "loadFailed": "The tunnels could not be loaded.",
+        "loadFailed": "Could not load the tunnels.",
         "changeFailed": "That did not work.",
-        "failed": "Tunnels could not be shown",
-        "cannotInstall": "cloudflared cannot be installed here",
+        "failed": "Could not show the tunnels",
+        "cannotInstall": "Ruimte cannot install cloudflared here",
         "retry": "Try again",
         "clients_one": "{{count}} client used a credential lately",
         "clients_other": "{{count}} clients used a credential lately",
         "stage": {
             "not-installed": "cloudflared is not installed",
             "installing": "Installing cloudflared",
-            "cannot-install": "cloudflared cannot be installed here",
+            "cannot-install": "Ruimte cannot install cloudflared here",
             "no-token": "No Cloudflare API token",
             "checking": "Checking with Cloudflare",
             "no-tunnel": "No tunnel yet",
@@ -1041,7 +1041,7 @@
         },
         "install": {
             "label": "Install cloudflared",
-            "description": "Ruimte downloads Cloudflare's official build, checks it against a checksum pinned in this release, and keeps it in its own folder.",
+            "description": "Ruimte downloads Cloudflare's official build, checks that it is the build this release expects, and keeps it in its own folder.",
             "action": "Install"
         },
         "token": {
@@ -1069,7 +1069,7 @@
             "title": "Hostnames",
             "tunnel": "Tunnel {{name}}",
             "tunnelHint": "Its hostnames show in the Cloudflare dashboard too. Ruimte only changes the records it made.",
-            "mcp": "Ruimte's MCP, guarded by a credential on every request",
+            "mcp": "Ruimte's MCP, which asks for a credential on every request",
             "dev": "Dev server on port {{port}}, open to anyone with the address",
             "enabled": "{{hostname}} is on",
             "afterRestart": "{{hostname}} after a restart",
@@ -1080,14 +1080,14 @@
         },
         "mcp": {
             "label": "External MCP",
-            "on": "Listening on 127.0.0.1, port {{port}}. A hostname below makes it reachable from outside.",
+            "on": "Listening on 127.0.0.1, port {{port}}. A hostname above makes it reachable from outside.",
             "off": "Off. Nothing listens until you turn it on.",
             "hostname": "MCP label or hostname",
-            "hostnameHint": "Start from a long random label, so scanners do not find it. The name protects nothing: your credentials do."
+            "hostnameHint": "Start from a long random label, so scanners do not find it. Your credentials protect the MCP, not the name."
         },
         "dev": {
             "label": "Add a dev server",
-            "description": "Pick a port a session of yours listens on, then a label or a full hostname on one of your domains. Nothing sits in front of a dev server: anyone with the address reaches it.",
+            "description": "Pick a port a session of yours listens on, then a label or a full hostname on one of your domains. Nothing guards a dev server. Anyone with the address reaches it.",
             "port": "Port",
             "pick": "Pick a port",
             "hostname": "Label or hostname",
@@ -1118,7 +1118,7 @@
             "lastUsed": "last used {{ago}}",
             "revokeOne": "Revoke {{label}}",
             "revoke": "Revoke",
-            "createFailed": "The credential could not be made.",
+            "createFailed": "Could not make the credential.",
             "confirm": {
                 "title": "Revoke {{label}}?",
                 "text": "The client loses access from its next request. Agents it already started keep running."
@@ -1169,7 +1169,7 @@
             "code": "Code",
             "deny": "Deny",
             "approve": "Approve",
-            "failed": "The answer could not be sent."
+            "failed": "Could not send the answer."
         }
     },
     "agents": {

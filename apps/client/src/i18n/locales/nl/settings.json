@@ -1017,31 +1017,31 @@
     },
     "tunnels": {
         "title": "Tunnels",
-        "visibility": "Cloudflare beëindigt de versleuteling aan zijn rand en kan dus alles lezen wat door een tunnel gaat: prompts, bestandsinhoud, inloggegevens en de cookies van een dev site. Ruimte voegt zelf geen versleuteling toe.",
+        "visibility": "Cloudflare ontsleutelt het verkeer op zijn eigen servers en kan dus alles lezen wat door een tunnel gaat: prompts, bestandsinhoud, inloggegevens en de cookies van een dev site. Ruimte voegt zelf geen versleuteling toe.",
         "update": "Deze machine heeft een nieuwere Ruimte nodig voor tunnels.",
         "loading": "De tunnels worden geladen.",
         "elsewhere": "Tunnels stel je in met de desktop-app op de machine zelf. Dit venster toont alleen hun status.",
         "loadFailed": "De tunnels konden niet worden geladen.",
         "changeFailed": "Dat is niet gelukt.",
         "failed": "Tunnels konden niet worden getoond",
-        "cannotInstall": "cloudflared kan hier niet worden geïnstalleerd",
+        "cannotInstall": "Ruimte kan cloudflared hier niet installeren",
         "retry": "Opnieuw proberen",
         "clients_one": "{{count}} client gebruikte onlangs een inlogsleutel",
         "clients_other": "{{count}} clients gebruikten onlangs een inlogsleutel",
         "stage": {
             "not-installed": "cloudflared is niet geïnstalleerd",
             "installing": "cloudflared wordt geïnstalleerd",
-            "cannot-install": "cloudflared kan hier niet worden geïnstalleerd",
+            "cannot-install": "Ruimte kan cloudflared hier niet installeren",
             "no-token": "Geen Cloudflare API-token",
             "checking": "Controleren bij Cloudflare",
             "no-tunnel": "Nog geen tunnel",
             "starting": "De tunnel wordt bijgewerkt",
             "running": "De tunnel draait",
-            "failed": "Tunnels lopen tegen een probleem aan"
+            "failed": "Er ging iets mis met de tunnels"
         },
         "install": {
             "label": "cloudflared installeren",
-            "description": "Ruimte downloadt de officiële build van Cloudflare, controleert die met een checksum die in deze release is vastgelegd en bewaart hem in een eigen map.",
+            "description": "Ruimte downloadt de officiële build van Cloudflare, controleert of het de build is die deze release verwacht en bewaart hem in een eigen map.",
             "action": "Installeren"
         },
         "token": {
@@ -1069,7 +1069,7 @@
             "title": "Hostnamen",
             "tunnel": "Tunnel {{name}}",
             "tunnelHint": "De hostnamen staan ook in het Cloudflare-dashboard. Ruimte past alleen records aan die het zelf maakte.",
-            "mcp": "De MCP van Ruimte, beveiligd met een inlogsleutel bij elk verzoek",
+            "mcp": "De MCP van Ruimte, die bij elk verzoek om een inlogsleutel vraagt",
             "dev": "Dev server op poort {{port}}, open voor iedereen met het adres",
             "enabled": "{{hostname}} staat aan",
             "afterRestart": "{{hostname}} na een herstart",
@@ -1080,14 +1080,14 @@
         },
         "mcp": {
             "label": "Externe MCP",
-            "on": "Luistert op 127.0.0.1, poort {{port}}. Een hostnaam hieronder maakt hem van buitenaf bereikbaar.",
+            "on": "Luistert op 127.0.0.1, poort {{port}}. Een hostnaam hierboven maakt hem van buitenaf bereikbaar.",
             "off": "Uit. Er luistert niets totdat je hem aanzet.",
             "hostname": "MCP-label of hostnaam",
-            "hostnameHint": "Begin met een lang willekeurig label, zodat scanners hem niet vinden. De naam beschermt niets: je inlogsleutels doen dat."
+            "hostnameHint": "Begin met een lang willekeurig label, zodat scanners hem niet vinden. Je inlogsleutels beschermen de MCP, niet de naam."
         },
         "dev": {
             "label": "Dev server toevoegen",
-            "description": "Kies een poort waarop een sessie van jou luistert, en daarna een label of een volledige hostnaam op een van je domeinen. Voor een dev server staat niets: iedereen met het adres komt erbij.",
+            "description": "Kies een poort waarop een sessie van jou luistert, en daarna een label of een volledige hostnaam op een van je domeinen. Niets beschermt een dev server. Iedereen met het adres komt erbij.",
             "port": "Poort",
             "pick": "Kies een poort",
             "hostname": "Label of hostnaam",
@@ -1095,7 +1095,7 @@
         },
         "credentials": {
             "title": "Externe clients",
-            "description": "Met een inlogsleutel bedient een gehoste client, zoals een bot, Ruimte als jij. Zonder einddatum, tenzij je er een kiest. Trek hem in als je de client niet meer vertrouwt.",
+            "description": "Met een inlogsleutel bedient een gehoste client, zoals een bot, Ruimte als jij. Hij heeft geen einddatum, tenzij je er een kiest. Trek hem in als je de client niet meer vertrouwt.",
             "address": "Adres op deze machine",
             "addressOff": "Zet de externe MCP aan voor een adres.",
             "clients_one": "{{count}} client gebruikte onlangs een inlogsleutel",
@@ -1164,8 +1164,8 @@
             "description": "Controleer of de code hieronder dezelfde is als op de pagina van de client. Kies dan wat hij mag en keur goed.",
             "unverifiedName": "Hij noemt zichzelf \"{{name}}\". Ruimte heeft die naam niet gecontroleerd.",
             "terminals": "Een client kan elke terminal lezen in de projecten die hij mag gebruiken.",
-            "others_one": "Nog {{count}} client wacht na deze.",
-            "others_other": "Nog {{count}} clients wachten na deze.",
+            "others_one": "Na deze wacht nog {{count}} client.",
+            "others_other": "Na deze wachten nog {{count}} clients.",
             "code": "Code",
             "deny": "Weigeren",
             "approve": "Goedkeuren",
