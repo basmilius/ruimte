@@ -19,6 +19,7 @@ import {
     CATCH_ALL,
     deniedPortReason,
     hostnameInZone,
+    type IngressRule,
     ingressRules,
     isCatchAll,
     machineMarkOf,
@@ -546,6 +547,7 @@ export class TunnelService {
             await this.stopChild();
 
             const target = this.targetOf(tunnel.id);
+            const hostnames = this.stored.rows.map((row) => row.hostname);
 
             for (const row of this.stored.rows) {
                 const live = (await api.recordsNamed(row.zoneId, row.hostname)).find((record) => record.id === row.recordId);
@@ -556,6 +558,10 @@ export class TunnelService {
 
                 this.stored = { ...this.stored, rows: this.stored.rows.filter((candidate) => candidate.id !== row.id) };
                 this.save();
+            }
+
+            if (found !== null) {
+                await this.syncRows([], hostnames);
             }
 
             this.forget();
@@ -645,6 +651,9 @@ export class TunnelService {
             // Saved off first, so Remove still finds the record, and on only once Cloudflare took the rule.
             this.stored = { ...this.stored, rows: [...this.stored.rows, row] };
             this.save();
+
+            // The record is proxied already, so the name answers 404 before it tries to serve, and stays so if Cloudflare refuses that.
+            await this.syncRows(this.stored.rows);
 
             const rows = this.stored.rows.map((candidate) => (candidate.id === row.id ? { ...candidate, enabled: true } : candidate));
 
@@ -768,7 +777,11 @@ export class TunnelService {
                 await api.deleteRecord(row.zoneId, row.recordId, row.hostname);
             }
 
-            this.stored = { ...this.stored, rows: this.stored.rows.filter((candidate) => candidate.id !== id) };
+            const remaining = this.stored.rows.filter((candidate) => candidate.id !== id);
+
+            // The 404 held the name while its record stood; with the record gone the rule goes too.
+            await this.syncRows(remaining, [row.hostname]);
+            this.stored = { ...this.stored, rows: remaining };
             this.save();
         });
         await this.followUp();
@@ -975,9 +988,9 @@ export class TunnelService {
      * the saved rows stay, the screen says why, and a child with no hostname left to serve stops, since a route that
      * may still be public is the unsafe side.
      */
-    private async syncRows(rows: readonly StoredRow[]): Promise<void> {
+    private async syncRows(rows: readonly StoredRow[], gone: readonly string[] = []): Promise<void> {
         try {
-            await this.syncIngress(rows);
+            await this.syncIngress(rows, gone);
         } catch (e) {
             this.failure = this.plain(e, 'Saving the hostnames did not work');
             this.ports.log(`Tunnels: ${this.failure}`);
@@ -996,9 +1009,11 @@ export class TunnelService {
      * Writes the hostnames of the rows that are on into the tunnel's ingress in Cloudflare. Ruimte owns only the rule
      * without a path for each hostname of a row, on or off; every other rule stays as it was and where it was, and so
      * does a catch-all someone set in the dashboard. Cloudflare takes the first rule that matches, so a rule of Ruimte's
-     * goes before the first other rule that could catch its hostname (a wildcard, or a path on any host).
+     * goes before the first other rule that could catch its hostname (a wildcard, or a path on any host). A hostname of a
+     * row that serves nothing gets a 404 of its own wherever what would catch it does not answer 404, since its proxied
+     * record stays. The hostnames in `gone` are Ruimte's but get no rule, for a row whose record is deleted already.
      */
-    private async syncIngress(rows: readonly StoredRow[] = this.stored.rows): Promise<void> {
+    private async syncIngress(rows: readonly StoredRow[] = this.stored.rows, gone: readonly string[] = []): Promise<void> {
         const tunnel = this.stored.tunnel;
 
         if (tunnel === null) {
@@ -1007,17 +1022,27 @@ export class TunnelService {
 
         const api = this.api();
         const current = await api.configuration(tunnel.account.id, tunnel.id);
-        const managed = new Set(rows.map((row) => row.hostname));
+        const managed = new Set([...rows.map((row) => row.hostname), ...gone]);
         const isOurs = (rule: CloudflareIngressRule): boolean => typeof rule.hostname === 'string' && rule.path === undefined && managed.has(rule.hostname);
         const kept = current.ingress.filter((rule) => !isCatchAll(rule) && !isOurs(rule));
 
         this.others = kept.slice(0, MAX_OTHER_RULES).map(otherRuleOf);
         const catchAll = current.ingress.find((rule) => isCatchAll(rule)) ?? CATCH_ALL;
-        const rules = ingressRules({
+        const serving = ingressRules({
             rows,
             listenerPort: this.stored.mcp.enabled ? this.ports.listenerPort() : null,
             denied: this.ports.deniedPorts()
         });
+        const served = new Set(serving.map((rule) => rule.hostname));
+        const answers404 = (hostname: string): boolean => {
+            const first = [...kept, catchAll as CloudflareIngressRule].find((rule) => mayCatch(rule, hostname));
+
+            return first !== undefined && first.path === undefined && first.service === CATCH_ALL.service;
+        };
+        const rules: IngressRule[] = [
+            ...serving,
+            ...rows.filter((row) => !served.has(row.hostname) && !answers404(row.hostname)).map((row) => ({ hostname: row.hostname, ...CATCH_ALL }))
+        ];
 
         // Without a rule of Ruimte's before or after, a tunnel Ruimte did not make gets no write, also when it lacks a catch-all.
         if (!tunnel.created && rules.length === 0 && !current.ingress.some(isOurs)) {

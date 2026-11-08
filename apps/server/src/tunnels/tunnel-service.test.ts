@@ -567,7 +567,7 @@ describe('a row', () => {
         expect(f.cloudflare.records).toHaveLength(0);
     });
 
-    test('leaves the rules of the dashboard on a hostname of its own with a path, and the catch-all it set', async () => {
+    test('leaves the rules of the dashboard on a hostname of its own with a path, and the catch-all it set, holding the name with a 404 once off', async () => {
         const f = await fixture();
 
         await readyTunnel(f);
@@ -584,7 +584,11 @@ describe('a row', () => {
         await f.service.update((await f.state()).rows[0]!.id, { enabled: false });
         await f.service.idle();
 
-        expect(ourTunnel(f).ingress).toEqual([{ hostname: 'a.bmnw.nl', path: '/api', service: 'http://localhost:9000' }, { service: 'http_status:503' }]);
+        expect(ourTunnel(f).ingress).toEqual([
+            { hostname: 'a.bmnw.nl', path: '/api', service: 'http://localhost:9000' },
+            { hostname: 'a.bmnw.nl', service: 'http_status:404' },
+            { service: 'http_status:503' }
+        ]);
     });
 });
 
@@ -908,6 +912,115 @@ describe('an existing tunnel', () => {
         expect(picked.ingress).toEqual(OFFICE_INGRESS);
         expect(picked.rest).toEqual({ 'warp-routing': { enabled: true } });
         expect(f.cloudflare.records).toEqual([stranger]);
+    });
+
+    test('holds the hostname of a row that is off with a 404 before a catch-all that serves, and the rule follows the switch', async () => {
+        const f = await fixture();
+        const picked = f.cloudflare.tunnel('acc-1', 'home', [{ service: 'http://localhost:8080' }]);
+
+        await linked(f, picked);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+
+        expect(picked.ingress).toEqual([{ hostname: 'shop.bmnw.nl', service: 'http://127.0.0.1:3000' }, { service: 'http://localhost:8080' }]);
+
+        const id = (await f.state()).rows[0]!.id;
+
+        await f.service.update(id, { enabled: false });
+        await f.service.idle();
+
+        expect(picked.ingress).toEqual([{ hostname: 'shop.bmnw.nl', service: 'http_status:404' }, { service: 'http://localhost:8080' }]);
+
+        await f.service.update(id, { enabled: true });
+        await f.service.idle();
+
+        expect(picked.ingress).toEqual([{ hostname: 'shop.bmnw.nl', service: 'http://127.0.0.1:3000' }, { service: 'http://localhost:8080' }]);
+    });
+
+    test('puts the 404 of a row that is off before a rule of the dashboard without a hostname that could catch it', async () => {
+        const f = await fixture();
+        const picked = f.cloudflare.tunnel('acc-1', 'home', [
+            { hostname: 'nas.bmnw.nl', service: 'http://nas:80' },
+            { path: '/status', service: 'http://localhost:9000' },
+            { service: 'http_status:404' }
+        ]);
+
+        await linked(f, picked);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+        await f.service.update((await f.state()).rows[0]!.id, { enabled: false });
+        await f.service.idle();
+
+        expect(picked.ingress).toEqual([
+            { hostname: 'nas.bmnw.nl', service: 'http://nas:80' },
+            { hostname: 'shop.bmnw.nl', service: 'http_status:404' },
+            { path: '/status', service: 'http://localhost:9000' },
+            { service: 'http_status:404' }
+        ]);
+    });
+
+    test('takes the 404 of a removed row off once its record is gone, and leaves what the dashboard set', async () => {
+        const f = await fixture();
+        const picked = f.cloudflare.tunnel('acc-1', 'home', [{ service: 'http://localhost:8080' }]);
+
+        await linked(f, picked);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+        await f.service.update((await f.state()).rows[0]!.id, { enabled: false });
+        await f.service.idle();
+        await f.service.remove((await f.state()).rows[0]!.id);
+        await f.service.idle();
+
+        expect(picked.ingress).toEqual([{ service: 'http://localhost:8080' }]);
+        expect(f.cloudflare.records).toEqual([]);
+        expect((await f.state()).rows).toEqual([]);
+    });
+
+    test('takes every 404 of Ruimte off when unlinking', async () => {
+        const f = await fixture();
+        const picked = f.cloudflare.tunnel('acc-1', 'home', [{ service: 'http://localhost:8080' }]);
+
+        await linked(f, picked);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+        await f.service.idle();
+        await f.service.update((await f.state()).rows[0]!.id, { enabled: false });
+        await f.service.idle();
+        await f.service.unlink();
+
+        expect(picked.ingress).toEqual([{ service: 'http://localhost:8080' }]);
+        expect(f.cloudflare.records).toEqual([]);
+    });
+
+    test('leaves the hostname of a refused add on a 404, so the catch-all never serves it', async () => {
+        let writes = 0;
+        const cloudflare = new FakeCloudflare();
+        const f = await fixture(
+            {
+                // Cloudflare takes the 404 and refuses the rule that would serve the row.
+                cloudflare: async (url, init) => {
+                    if (init.method === 'PUT' && url.endsWith('/configurations') && (writes += 1) === 2) {
+                        return Response.json(
+                            { success: false, errors: [{ code: 1000, message: 'Fake failure' }], messages: [], result: null },
+                            { status: 400 }
+                        );
+                    }
+
+                    return cloudflare.fetch(url, init);
+                }
+            },
+            '/usr/bin/cloudflared',
+            { cloudflare }
+        );
+        const picked = cloudflare.tunnel('acc-1', 'home', [{ service: 'http://localhost:8080' }]);
+
+        await linked(f, picked);
+
+        expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 })).rejects.toBeInstanceOf(CloudflareError);
+
+        await f.service.idle();
+
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'shop.bmnw.nl', enabled: false }]);
+        expect(picked.ingress).toEqual([{ hostname: 'shop.bmnw.nl', service: 'http_status:404' }, { service: 'http://localhost:8080' }]);
     });
 
     test('writes the origin settings into its own rule only, and lists the host header of a rule of the dashboard', async () => {
