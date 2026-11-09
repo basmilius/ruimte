@@ -2819,6 +2819,43 @@ describe('build code in the worktree of an agent', () => {
         expect(JSON.stringify(spawner.of('rust')[1]!.server.paramsOf('initialize')[0])).not.toContain('procMacro');
     });
 
+    // Council round 16: a status read while the choice was saved moved the hold first, so the switch skipped the restart.
+    it('starts the server again once when a status read comes while the switch is still saving', async () => {
+        let saving!: () => void;
+        let release!: () => void;
+        const called = new Promise<void>((resolve) => (saving = resolve));
+        const gate = new Promise<void>((resolve) => (release = resolve));
+
+        class PausedChoices extends WorktreeBuildChoices {
+            override async set(main: string, on: boolean): Promise<void> {
+                const saved = super.set(main, on);
+                saving();
+                await gate;
+                await saved;
+            }
+        }
+
+        const { host, spawner } = await withRust({
+            agentWorktrees: { main: MAIN, paths: [WORK] },
+            worktreeBuild: new PausedChoices({ path: join(root, 'worktree-build.json') })
+        });
+
+        await openRust(host, 'src/main.rs');
+        await ready(host, 'rust');
+
+        const switching = host.setWorktreeBuild('p1', true);
+
+        await called;
+        await host.status('p1');
+        release();
+        await switching;
+        await settle();
+        await ready(host, 'rust');
+
+        expect(spawner.of('rust')).toHaveLength(2);
+        expect(JSON.stringify(spawner.of('rust')[1]!.server.paramsOf('initialize')[0])).not.toContain('procMacro');
+    });
+
     it('lets work from another machine win over the switch', async () => {
         const choices = new WorktreeBuildChoices({ path: join(root, 'worktree-build.json') });
         await choices.set(MAIN, true);

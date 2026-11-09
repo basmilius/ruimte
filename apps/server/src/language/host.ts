@@ -24,6 +24,7 @@ import {
     type WorkspaceEditPlan,
     type WorkspaceEditSource
 } from '@adecore/lsp';
+import { KeyedSerializer } from '@adecore/utils/async';
 import { fileExists } from '@adecore/utils/fs';
 import { isWithin } from '@adecore/utils/path';
 import {
@@ -323,6 +324,8 @@ export class LanguageHost {
     private readonly custom: CustomLanguageServers;
     private readonly choices: LanguageChoices;
     private readonly worktreeBuild: WorktreeBuildChoices;
+    /* One switch of build code at a time per main checkout, so two presses never save or apply out of order. */
+    private readonly buildSwitches = new KeyedSerializer();
     private readonly clock: LanguageClock;
     private readonly exists: (path: string) => Promise<boolean>;
     private readonly isFolder: (path: string) => Promise<boolean>;
@@ -530,33 +533,37 @@ export class LanguageHost {
         if (worktrees === undefined || worktrees === null) {
             throw new LanguageError(LANGUAGE_ERROR_CODES.unavailable, 'The project is not in a git repository');
         }
-        await this.worktreeBuild.set(worktrees.main, on);
-        for (const project of this.projects.values()) {
-            if ((await this.options.agentWorktrees?.(project.folder))?.main === worktrees.main) {
-                await this.applyBuildHold(project);
+        await this.buildSwitches.run(worktrees.main, async () => {
+            await this.worktreeBuild.set(worktrees.main, on);
+            for (const project of this.projects.values()) {
+                if ((await this.options.agentWorktrees?.(project.folder))?.main === worktrees.main) {
+                    await this.applyBuildHold(project);
+                }
             }
-        }
+        });
         return this.status(projectId);
     }
 
-    /* The hold on build code changed for a project: its documents take the kinds they have now, and a server whose own start depends on it starts again. */
+    /*
+     * The hold on build code changed for a project: its documents take the kinds they have now, and a server whose own
+     * start depends on it starts again. Each server is judged by the hold it started with, never by `project.buildHeld`,
+     * which any status read moves as soon as the choice changed in memory.
+     */
     private async applyBuildHold(project: ProjectLanguage): Promise<void> {
-        const before = project.buildHeld;
         await this.refreshStanding(project);
         for (const document of project.documents.values()) {
             await this.reroute(project, document);
         }
-        if (before !== project.buildHeld) {
-            for (const [kind, server] of [...project.servers]) {
-                const build = buildCodeOf(kind);
-                if (build === undefined || server.state === 'stopped') {
-                    continue;
-                }
-                if (project.buildHeld && build.off === undefined) {
-                    await server.stop();
-                } else {
-                    void server.restart().catch(() => undefined);
-                }
+        for (const [kind, server] of [...project.servers]) {
+            const build = buildCodeOf(kind);
+            const applied = server.appliedBuildHeld;
+            if (build === undefined || server.state === 'stopped' || applied === null || applied === project.buildHeld) {
+                continue;
+            }
+            if (project.buildHeld && build.off === undefined) {
+                await server.stop();
+            } else {
+                void server.restart().catch(() => undefined);
             }
         }
         for (const kind of CATALOG_KINDS.filter((candidate) => buildCodeOf(candidate) !== undefined)) {

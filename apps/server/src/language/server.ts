@@ -328,6 +328,11 @@ export class LanguageServer {
         return this.failure;
     }
 
+    /* The hold on build code its last start read, which is what its processes run with; null before its first start read it. */
+    get appliedBuildHeld(): boolean | null {
+        return this.context?.buildHeld ?? null;
+    }
+
     get traceValue(): TraceValue {
         return this.trace;
     }
