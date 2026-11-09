@@ -12,9 +12,14 @@ let cached: { at: number; gh: boolean } | null = null;
  * "Write message" button needs an agent CLI that answers a single prompt. A client hides what is
  * not there instead of showing a button that fails.
  */
-export async function readCapabilities(registry: ProviderRegistry, now: number = Date.now(), chosen?: AgentKind): Promise<GitCapabilitiesResult> {
+export async function readCapabilities(
+    registry: ProviderRegistry,
+    now: number = Date.now(),
+    chosen?: AgentKind,
+    detect: typeof detectCli = detectCli
+): Promise<GitCapabilitiesResult> {
     if (cached === null || now - cached.at >= TTL_MS) {
-        cached = { at: now, gh: (await detectCli('gh')).installed };
+        cached = { at: now, gh: (await detect('gh')).installed };
     }
     // The machine's pick is reported even when it cannot write now, so a client sending that kind is told why instead of falling back.
     const provider = chosen === undefined ? await registry.oneShotProvider() : null;

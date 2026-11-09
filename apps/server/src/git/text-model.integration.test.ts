@@ -37,8 +37,9 @@ test('a commit message comes from the prepared writer and leaves the staged diff
 });
 
 test('capabilities report an explicit pick even when no CLI is installed', async () => {
-    const registry = new ProviderRegistry({ providers: [], detect: async () => ({ installed: false, version: null }) });
+    const detect = async () => ({ installed: false, version: null });
+    const registry = new ProviderRegistry({ providers: [], detect });
 
-    expect((await readCapabilities(registry, 0, 'codex')).messageProvider).toBe('codex');
-    expect((await readCapabilities(registry, 0)).messageProvider).toBeNull();
+    expect((await readCapabilities(registry, 0, 'codex', detect)).messageProvider).toBe('codex');
+    expect((await readCapabilities(registry, 0, undefined, detect)).messageProvider).toBeNull();
 });
