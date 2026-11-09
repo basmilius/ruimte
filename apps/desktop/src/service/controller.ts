@@ -81,6 +81,8 @@ function foreignService(path: string): string {
 const UNPROVEN =
     'Something else answers where this machine should be, and it could not prove that it belongs to you, so Ruimte does not connect to it. If it is an earlier Ruimte started from a terminal, stop or update it and open Ruimte again.';
 
+const STILL_STARTING = 'This machine is still starting. Open Ruimte again in a moment.';
+
 /* A daemon that ends this often in a row, each time within a minute of its start, is not started again. */
 const RESPAWNS = 5;
 const STAYED_UP_MS = 60_000;
@@ -258,29 +260,27 @@ export function createServiceController(deps: ServiceControllerDeps): ServiceCon
                 }
             }
             let probed = await deps.probe();
-            let outwaited = false;
 
             if (probed?.starting) {
                 // Its port is held by a Ruimte that is still wiring itself: starting a second daemon would fight it for the port.
-                let waitFailure: string | null = null;
+                let waitFailed = false;
 
                 try {
                     await deps.waitForHealth(() => true);
-                } catch (e) {
-                    waitFailure = messageOf(e);
+                } catch {
+                    waitFailed = true;
                 }
 
                 // A daemon that crashed while it booted answers nothing now, and starts the normal way.
                 probed = await deps.probe();
 
-                if (waitFailure !== null && probed?.starting) {
-                    outwaited = true;
-                    failure = waitFailure;
-                    deps.report?.({ kind: 'service-fallback', step: 'start', reason: waitFailure });
+                if (waitFailed && probed?.starting) {
+                    // It answers nothing but /health yet, so the proof would fail and read as a stranger on the port. The caller reports the throw.
+                    throw new Error(STILL_STARTING);
                 }
             }
 
-            const decision = outwaited ? 'attach-external' : decideStart(probed, deps.expected, managedService && failure === null);
+            const decision = decideStart(probed, deps.expected, managedService && failure === null);
             if (decision === 'attach') {
                 owner = 'service';
                 if (manager && definitionChanged) {

@@ -216,16 +216,17 @@ describe('start', () => {
         expect(controller.state().owner).toBe('external');
     });
 
-    test('attaches as external and reports it when a daemon is still wiring itself after the wait ran out', async () => {
+    test('says the machine is still starting when a daemon is still wiring itself after the wait ran out', async () => {
         const { controller, fake, events, reports, deps } = setup({ fake: fakeManager({ installed: true }) });
         deps.probe = async () => ({ ...EXPECTED, starting: true });
         deps.waitForHealth = async () => {
             throw new Error('Timed out');
         };
-        deps.verify = async () => true;
-        expect(await controller.start()).toBe(true);
-        expect(controller.state()).toMatchObject({ owner: 'external', failure: 'Timed out' });
-        expect(reports).toEqual([{ kind: 'service-fallback', step: 'start', reason: 'Timed out' }]);
+        // A booting daemon answers every request but /health with 503, so it cannot show the proof.
+        deps.verify = async () => false;
+        await expect(controller.start()).rejects.toThrow('This machine is still starting. Open Ruimte again in a moment.');
+        expect(controller.state().owner).toBeNull();
+        expect(reports).toEqual([]);
         expect(fake.calls).toEqual([]);
         expect(events).toEqual([]);
     });
