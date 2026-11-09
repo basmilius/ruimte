@@ -100,12 +100,21 @@ function HostnameRow({ row, change, onEdit }: { row: TunnelRow; change: TunnelCh
                 <div className="flex min-w-0 flex-col">
                     <span>{row.hostname}</span>
                     {row.reason !== undefined && (
-                        <Tooltip label={row.reason}>
+                        <>
                             <span className="flex items-center gap-1 text-xs text-status-needs-you">
                                 <Icon icon={TriangleAlert} size={12} className="shrink-0" />
                                 {t('tunnels.hostnames.unreachable')}
                             </span>
-                        </Tooltip>
+                            {/* Focusable, so the keyboard reaches the whole reason a narrow column cuts off. */}
+                            <Tooltip label={row.reason}>
+                                <span
+                                    tabIndex={0}
+                                    className="truncate rounded-sm text-xs text-text-muted focus-visible:outline-2 focus-visible:outline-accent-on-surface"
+                                >
+                                    {row.reason}
+                                </span>
+                            </Tooltip>
+                        </>
                     )}
                 </div>
             </Table.Cell>

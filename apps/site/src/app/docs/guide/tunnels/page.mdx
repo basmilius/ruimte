@@ -52,7 +52,7 @@ Some local sites only answer to their own name. Open **Advanced** in the dialog 
 
 Each hostname has a switch. Its menu has **Copy address**, **Open**, **On after restart** and **Remove**, and for a dev server **Edit**, which changes its port and **Advanced** settings. The hostname itself stays; to change it, remove the row and add a new one. A dev server stays off after a restart unless you turn on **On after restart**, because its port may hold something else by then.
 
-A hostname that is on but gets no traffic says **Not reachable** under its name. Point at it to see why, such as a DNS record Cloudflare would not make or a port Ruimte now uses itself. Fix that, then click **Try again**. The other hostnames keep working meanwhile.
+A hostname that is on but gets no traffic says **Not reachable** under its name, with the reason on the line below. It may be a DNS record Cloudflare would not make, a port Ruimte now uses itself, or a port another app took from the MCP. Point at a long reason, or tab to it, to read all of it. Fix the cause, then click **Try again**. The other hostnames keep working meanwhile. A hostname whose removal did not finish says so the same way, and **Try again** finishes it.
 
 ## Connect a bot to the MCP
 

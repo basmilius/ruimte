@@ -564,9 +564,25 @@ describe('the hostnames', () => {
             ]
         });
         await open();
-        await until(() => cells().includes('blog.example.comNot reachable'));
+        await until(() => cells().includes('blog.example.comNot reachablePort 4210 belongs to Ruimte itself'));
         expect(cells()).toContain('shop.example.com');
         expect(buttonWithText('Try again')).not.toBeNull();
+    });
+
+    test('lets the keyboard reach the reason of a hostname that is not reachable', async () => {
+        state = stateOf({
+            rows: [
+                { id: 'b', kind: 'dev', hostname: 'blog.example.com', port: 3000, enabled: true, comeBack: false, reason: 'Cloudflare refused its DNS record' }
+            ]
+        });
+        await open();
+        await until(() => cells().includes('blog.example.comNot reachableCloudflare refused its DNS record'));
+
+        const reason = [...document.querySelectorAll<HTMLElement>('[role="cell"] span')].find(
+            (span) => span.textContent === 'Cloudflare refused its DNS record'
+        );
+
+        expect(reason?.tabIndex).toBe(0);
     });
 
     test('offers no hostnames before there is a tunnel and a token', async () => {
