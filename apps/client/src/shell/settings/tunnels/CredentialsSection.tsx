@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { NewCredentialDialog } from '@/shell/settings/tunnels/NewCredentialDialog';
+import type { TunnelChange } from '@/shell/settings/tunnels/use-tunnels';
 import { transportFor } from '@/transport';
 
 const MINUTE_MS = 60_000;
@@ -37,7 +38,7 @@ export function CredentialsSection({
     state: TunnelState;
     credentials: Credential[] | null;
     reload: () => void;
-    change: (type: 'tunnel.setMcp', payload: { enabled: boolean }) => Promise<void>;
+    change: TunnelChange;
 }) {
     const { t } = useTranslation('settings');
     const [creating, setCreating] = useState(false);
@@ -62,7 +63,15 @@ export function CredentialsSection({
                         {t('tunnels.clients.address')} <code className="font-mono select-all">{address}</code>
                     </>
                 ) : state.mcp.enabled && state.mcp.failure !== undefined ? (
-                    <span className="text-status-error">{t('tunnels.clients.notListening')}</span>
+                    <span className="flex flex-wrap items-center gap-2">
+                        <span className="text-status-error">{t('tunnels.clients.notListening')}</span>
+                        {/* Without a tunnel the Cloudflare rows offer no Try again, and the machine starts the listener without a token. */}
+                        {(state.stage === 'no-token' || state.stage === 'no-tunnel') && (
+                            <Button size="sm" variant="ghost" onClick={() => void change('tunnel.retry')}>
+                                {t('tunnels.retry')}
+                            </Button>
+                        )}
+                    </span>
                 ) : undefined
             }
             action={
