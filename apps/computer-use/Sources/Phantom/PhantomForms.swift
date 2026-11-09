@@ -251,13 +251,13 @@ public enum PhantomGeometry {
         return path
     }
 
-    /// A text cursor with flat serifs.
+    /// A text cursor with flat serifs, 6.2 wide: wider than the design's 4.4, by Bas's choice (2026-11-09).
     static var beam: CGPath {
         let path = CGMutablePath()
         path.addLines(between: [
-            CGPoint(x: 1.8, y: -4.6), CGPoint(x: 6.2, y: -4.6), CGPoint(x: 6.2, y: -3.5), CGPoint(x: 4.65, y: -3.5),
-            CGPoint(x: 4.65, y: 10.5), CGPoint(x: 6.2, y: 10.5), CGPoint(x: 6.2, y: 11.6), CGPoint(x: 1.8, y: 11.6),
-            CGPoint(x: 1.8, y: 10.5), CGPoint(x: 3.35, y: 10.5), CGPoint(x: 3.35, y: -3.5), CGPoint(x: 1.8, y: -3.5),
+            CGPoint(x: 0.9, y: -4.6), CGPoint(x: 7.1, y: -4.6), CGPoint(x: 7.1, y: -3.5), CGPoint(x: 4.65, y: -3.5),
+            CGPoint(x: 4.65, y: 10.5), CGPoint(x: 7.1, y: 10.5), CGPoint(x: 7.1, y: 11.6), CGPoint(x: 0.9, y: 11.6),
+            CGPoint(x: 0.9, y: 10.5), CGPoint(x: 3.35, y: 10.5), CGPoint(x: 3.35, y: -3.5), CGPoint(x: 0.9, y: -3.5),
         ])
         path.closeSubpath()
         return path
