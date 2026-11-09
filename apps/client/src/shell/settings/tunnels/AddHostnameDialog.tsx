@@ -1,7 +1,7 @@
-import { Button, Dialog, Field, FormError, Icon, Input, Segmented, Select } from '@adecore/ui';
+import { Button, Dialog, Field, FormError, Icon, Input, Segmented, Select, Spinner } from '@adecore/ui';
 import type { TunnelRow, TunnelRowKind, TunnelState } from '@ruimte/contracts';
 import { TriangleAlert } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { originDraftOf, originOf } from '@/shell/settings/tunnels/origin-draft';
 import { OriginFields } from '@/shell/settings/tunnels/OriginFields';
@@ -32,10 +32,22 @@ export function AddHostnameDialog({
     attempt: (type: TunnelChangeType, payload?: object) => Promise<string | null>;
     onOpenChange: (open: boolean) => void;
 }) {
+    // The dialog stays until Cloudflare answered, so a refusal has a place to show.
+    const [busy, setBusy] = useState(false);
+
     return (
-        <Dialog.Root open={open} onOpenChange={onOpenChange}>
+        <Dialog.Root open={open} onOpenChange={(next) => (next || !busy) && onOpenChange(next)}>
             <Dialog.Popup size="sm">
-                <HostnameForm key={row?.id ?? ''} row={row} state={state} endpointId={endpointId} attempt={attempt} onClose={() => onOpenChange(false)} />
+                <HostnameForm
+                    key={row?.id ?? ''}
+                    row={row}
+                    state={state}
+                    endpointId={endpointId}
+                    attempt={attempt}
+                    busy={busy}
+                    onBusy={setBusy}
+                    onClose={() => onOpenChange(false)}
+                />
             </Dialog.Popup>
         </Dialog.Root>
     );
@@ -47,12 +59,16 @@ function HostnameForm({
     state,
     endpointId,
     attempt,
+    busy,
+    onBusy,
     onClose
 }: {
     row: TunnelRow | null;
     state: TunnelState;
     endpointId: string;
     attempt: (type: TunnelChangeType, payload?: object) => Promise<string | null>;
+    busy: boolean;
+    onBusy: (busy: boolean) => void;
     onClose: () => void;
 }) {
     const { t } = useTranslation('settings');
@@ -63,10 +79,10 @@ function HostnameForm({
     const [port, setPort] = useState(row === null || row.port === null ? '' : String(row.port));
     const [typing, setTyping] = useState(editing);
     const [zone, setZone] = useState('');
-    const [label, setLabel] = useState('');
+    // What the person typed as the label; until then the label follows the port, or is the MCP's long random one.
+    const [ownLabel, setOwnLabel] = useState<string | null>(null);
     const [origin, setOrigin] = useState(() => originDraftOf(row?.origin));
     const [failure, setFailure] = useState<string | null>(null);
-    const [busy, setBusy] = useState(false);
     const chosenZone = state.zones.find((entry) => entry.id === zone) ?? state.zones[0];
     // A hostname points at loopback of whatever computer runs the tunnel, so this machine's ports mean nothing then.
     const elsewhere = state.tunnel?.runner === 'other';
@@ -82,21 +98,15 @@ function HostnameForm({
             .catch(() => setPorts([]));
     }, [endpointId, editing, elsewhere]);
 
+    const suggestedLabel = kind === 'mcp' ? (state.suggestedMcpLabel ?? '') : port === '' ? '' : `dev-${port}`;
+    const label = ownLabel ?? suggestedLabel;
     const chosenPort = Number(port);
     const portReady = Number.isInteger(chosenPort) && chosenPort > 0;
     const ready = row === null ? chosenZone !== undefined && label.trim() !== '' && (kind === 'mcp' || portReady) : portReady;
 
     const switchKind = (next: TunnelRowKind): void => {
         setKind(next);
-        setLabel(next === 'mcp' ? (state.suggestedMcpLabel ?? '') : port === '' ? '' : `dev-${port}`);
-    };
-
-    const suggest = (next: string): void => {
-        setPort(next);
-
-        if (row === null && label === '' && next !== '') {
-            setLabel(`dev-${next}`);
-        }
+        setOwnLabel(null);
     };
 
     const pick = (next: string): void => {
@@ -107,7 +117,7 @@ function HostnameForm({
             return;
         }
 
-        suggest(next);
+        setPort(next);
     };
 
     const payload = (): [TunnelChangeType, object] => {
@@ -125,11 +135,16 @@ function HostnameForm({
     };
 
     const submit = async (): Promise<void> => {
-        setBusy(true);
+        if (!ready || busy) {
+            return;
+        }
+
+        onBusy(true);
+        setFailure(null);
 
         const refused = await attempt(...payload());
 
-        setBusy(false);
+        onBusy(false);
 
         if (refused !== null) {
             setFailure(refused);
@@ -140,79 +155,106 @@ function HostnameForm({
         onClose();
     };
 
+    // Enter in a field adds or saves. The portaled search of a list stays out: its Enter picks a row.
+    const submitOnEnter = (event: KeyboardEvent<HTMLFormElement>): void => {
+        const target = event.target;
+
+        if (event.key !== 'Enter' || event.nativeEvent.isComposing || !(target instanceof HTMLInputElement) || !event.currentTarget.contains(target)) {
+            return;
+        }
+
+        event.preventDefault();
+        void submit();
+    };
+
     return (
         <>
             <Dialog.Title>{t(row === null ? 'tunnels.add.title' : 'tunnels.add.editTitle')}</Dialog.Title>
-            <div className="flex flex-col gap-3 py-3">
-                {row === null && !hasMcp && (
-                    <Segmented<TunnelRowKind>
-                        value={kind}
-                        label={t('tunnels.add.kind')}
-                        options={[
-                            { id: 'dev', label: t('tunnels.add.dev') },
-                            { id: 'mcp', label: t('tunnels.add.mcp') }
-                        ]}
-                        onValueChange={switchKind}
-                    />
-                )}
-                {kind === 'dev' && (
-                    <Field orientation="horizontal" label={t('tunnels.add.port')}>
-                        {ports.length > 0 && !typing && !elsewhere ? (
-                            <Select<string>
-                                label={t('tunnels.add.port')}
-                                variant="outlined"
-                                value={ports.some((entry) => String(entry.port) === port) ? port : ''}
-                                placeholder={t('tunnels.add.pickPort')}
-                                items={[
-                                    ...ports.map((entry) => ({
-                                        value: String(entry.port),
-                                        label: entry.session === null ? String(entry.port) : `${entry.port} · ${entry.session}`
-                                    })),
-                                    { value: OTHER_PORT, label: t('tunnels.add.otherPort') }
-                                ]}
-                                onValueChange={pick}
-                            />
-                        ) : (
-                            <Input
-                                aria-label={t('tunnels.add.port')}
-                                className="w-24"
-                                inputMode="numeric"
-                                value={port}
-                                onChange={(e) => suggest(e.target.value.replace(/\D/g, ''))}
-                            />
-                        )}
-                    </Field>
-                )}
-                {row === null ? (
-                    <Field orientation="horizontal" group label={t('tunnels.add.hostname')}>
-                        <ZoneField zones={state.zones} zone={zone} label={label} onZone={setZone} onLabel={setLabel} />
-                    </Field>
-                ) : (
-                    <Field orientation="horizontal" group label={t('tunnels.add.hostname')}>
-                        <span className="min-w-0 text-sm break-all text-text">{row.hostname}</span>
-                    </Field>
-                )}
-                {kind === 'dev' && <OriginFields draft={origin} initiallyOpen={row?.origin !== undefined} onChange={setOrigin} />}
-                {row === null && kind === 'dev' && (
-                    <p className="flex items-center gap-2 text-xs text-status-needs-you">
-                        <Icon icon={TriangleAlert} size={14} className="shrink-0" />
-                        {t('tunnels.add.devWarning')}
-                    </p>
-                )}
-                {elsewhere && kind === 'dev' && portReady && (
-                    <p className="flex items-center gap-2 text-xs text-status-needs-you">
-                        <Icon icon={TriangleAlert} size={14} className="shrink-0" />
-                        {t('tunnels.add.otherRunner', { port: String(chosenPort) })}
-                    </p>
-                )}
-                {failure !== null && <FormError>{failure}</FormError>}
-            </div>
-            <Dialog.Footer>
-                <Button onClick={onClose}>{t('common:action.cancel')}</Button>
-                <Button variant="primary" disabled={!ready || busy} onClick={() => void submit()}>
-                    {row === null ? t('tunnels.add.action') : t('common:action.save')}
-                </Button>
-            </Dialog.Footer>
+            <form
+                aria-busy={busy || undefined}
+                onKeyDown={submitOnEnter}
+                onSubmit={(event) => {
+                    event.preventDefault();
+                    void submit();
+                }}
+            >
+                <fieldset disabled={busy} className="flex min-w-0 flex-col gap-3 py-3">
+                    {row === null && !hasMcp && (
+                        <Segmented<TunnelRowKind>
+                            value={kind}
+                            label={t('tunnels.add.kind')}
+                            options={[
+                                { id: 'dev', label: t('tunnels.add.dev') },
+                                { id: 'mcp', label: t('tunnels.add.mcp') }
+                            ]}
+                            disabled={busy}
+                            onValueChange={switchKind}
+                        />
+                    )}
+                    {kind === 'dev' && (
+                        <Field orientation="horizontal" label={t('tunnels.add.port')}>
+                            {ports.length > 0 && !typing && !elsewhere ? (
+                                <Select<string>
+                                    label={t('tunnels.add.port')}
+                                    variant="outlined"
+                                    value={ports.some((entry) => String(entry.port) === port) ? port : ''}
+                                    placeholder={t('tunnels.add.pickPort')}
+                                    items={[
+                                        ...ports.map((entry) => ({
+                                            value: String(entry.port),
+                                            label: entry.session === null ? String(entry.port) : `${entry.port} · ${entry.session}`
+                                        })),
+                                        { value: OTHER_PORT, label: t('tunnels.add.otherPort') }
+                                    ]}
+                                    disabled={busy}
+                                    onValueChange={pick}
+                                />
+                            ) : (
+                                <Input
+                                    aria-label={t('tunnels.add.port')}
+                                    className="w-24"
+                                    inputMode="numeric"
+                                    value={port}
+                                    onChange={(e) => setPort(e.target.value.replace(/\D/g, ''))}
+                                />
+                            )}
+                        </Field>
+                    )}
+                    {row === null ? (
+                        <Field orientation="horizontal" group label={t('tunnels.add.hostname')}>
+                            <ZoneField zones={state.zones} zone={zone} label={label} disabled={busy} onZone={setZone} onLabel={setOwnLabel} />
+                        </Field>
+                    ) : (
+                        <Field orientation="horizontal" group label={t('tunnels.add.hostname')}>
+                            {/* As tall as a field, so the name sits on the line of its label. */}
+                            <span className="block py-1.5 text-sm break-all text-text">{row.hostname}</span>
+                        </Field>
+                    )}
+                    {kind === 'dev' && <OriginFields draft={origin} initiallyOpen={row?.origin !== undefined} disabled={busy} onChange={setOrigin} />}
+                    {row === null && kind === 'dev' && (
+                        <p className="flex items-center gap-2 text-xs text-status-needs-you">
+                            <Icon icon={TriangleAlert} size={14} className="shrink-0" />
+                            {t('tunnels.add.devWarning')}
+                        </p>
+                    )}
+                    {elsewhere && kind === 'dev' && portReady && (
+                        <p className="flex items-center gap-2 text-xs text-status-needs-you">
+                            <Icon icon={TriangleAlert} size={14} className="shrink-0" />
+                            {t('tunnels.add.otherRunner', { port: String(chosenPort) })}
+                        </p>
+                    )}
+                    {failure !== null && <FormError>{failure}</FormError>}
+                </fieldset>
+                <Dialog.Footer>
+                    <Button disabled={busy} onClick={onClose}>
+                        {t('common:action.cancel')}
+                    </Button>
+                    <Button type="submit" variant="primary" disabled={!ready || busy}>
+                        {busy && <Spinner size={14} />}
+                        {row === null ? t('tunnels.add.action') : t('common:action.save')}
+                    </Button>
+                </Dialog.Footer>
+            </form>
         </>
     );
 }

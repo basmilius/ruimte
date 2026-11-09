@@ -8,7 +8,17 @@ import type { OriginDraft } from '@/shell/settings/tunnels/origin-draft';
 type Protocol = 'http' | 'https';
 
 /* How Cloudflare talks to a dev server, behind a disclosure: most servers need none of it. */
-export function OriginFields({ draft, initiallyOpen, onChange }: { draft: OriginDraft; initiallyOpen: boolean; onChange: (draft: OriginDraft) => void }) {
+export function OriginFields({
+    draft,
+    initiallyOpen,
+    disabled,
+    onChange
+}: {
+    draft: OriginDraft;
+    initiallyOpen: boolean;
+    disabled?: boolean;
+    onChange: (draft: OriginDraft) => void;
+}) {
     const { t } = useTranslation('settings');
     const [open, setOpen] = useState(initiallyOpen);
 
@@ -33,6 +43,7 @@ export function OriginFields({ draft, initiallyOpen, onChange }: { draft: Origin
                                 { id: 'http', label: 'HTTP' },
                                 { id: 'https', label: 'HTTPS' }
                             ]}
+                            disabled={disabled}
                             onValueChange={(protocol) => onChange({ ...draft, https: protocol === 'https' })}
                         />
                     </Field>
@@ -51,6 +62,7 @@ export function OriginFields({ draft, initiallyOpen, onChange }: { draft: Origin
                                 <Checkbox
                                     label={t('tunnels.origin.noTlsVerify')}
                                     checked={draft.noTlsVerify}
+                                    disabled={disabled}
                                     onCheckedChange={(noTlsVerify) => onChange({ ...draft, noTlsVerify })}
                                 />
                                 <span className="flex flex-col gap-0.5">

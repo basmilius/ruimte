@@ -8,7 +8,7 @@ import { useConsent } from '@/state/consent';
 import { useEndpoints } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
 import { useUi } from '@/state/ui';
-import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
+import { clickOn, mount, pressKey, until, type Mounted } from '../../../../testing/dom';
 import { buttonWithText, everything, installDesktop, menuItem, removeDesktop, typeInto } from '../../../../testing/dom-helpers';
 import { connectFakeMachine, FakeMachine } from '../../../../testing/fake-machine';
 import { machineBridge } from '../../../../testing/machine-bridge';
@@ -529,6 +529,90 @@ describe('the hostnames', () => {
         await clickOn(buttonWithText('Add', dialog()!));
         await until(() => dialog()?.textContent?.includes('app.bmnw.nl already has a A record') === true);
         expect(dialog()?.textContent).toContain('Ruimte leaves it alone.');
+    });
+
+    test('proposes a label that follows every digit of the port until the person types one of their own', async () => {
+        await open();
+        await until(() => buttonWithText('Add hostname') !== null);
+        await clickOn(buttonWithText('Add hostname'));
+        await until(() => dialog() !== null);
+        await pick('Port', 'Other port');
+        await until(() => document.querySelector('input[aria-label="Port"]') !== null);
+        await typeInto(inputNamed('Port'), '4');
+        expect(inputNamed('Label').value).toBe('dev-4');
+
+        await typeInto(inputNamed('Port'), '4299');
+        expect(inputNamed('Label').value).toBe('dev-4299');
+
+        await typeInto(inputNamed('Label'), 'shop');
+        await typeInto(inputNamed('Port'), '3000');
+        expect(inputNamed('Label').value).toBe('shop');
+    });
+
+    test('adds with Enter in a field, and saves an edit with Enter', async () => {
+        state = stateOf({ rows: [{ id: 'b', kind: 'dev', hostname: 'passly.bmnw.nl', port: 80, enabled: true, comeBack: false }] });
+        machine.answer('tunnel.add', () => state);
+        machine.answer('tunnel.update', () => state);
+        await open();
+        await until(() => buttonWithText('Add hostname') !== null);
+        await clickOn(buttonWithText('Add hostname'));
+        await until(() => dialog() !== null);
+        await pick('Port', 'Other port');
+        await until(() => document.querySelector('input[aria-label="Port"]') !== null);
+        await typeInto(inputNamed('Port'), '5173');
+        await pressKey(inputNamed('Label'), 'Enter');
+        await until(() => machine.requests('tunnel.add').length === 1);
+        expect(machine.requests('tunnel.add')[0]).toEqual({ kind: 'dev', zone: 'zone-bmnw', label: 'dev-5173', port: 5173 });
+        await until(() => dialog() === null);
+
+        await clickOn(document.querySelector('button[aria-label="More for passly.bmnw.nl"]'));
+        await until(() => menuItem('Edit') !== null);
+        await clickOn(menuItem('Edit'));
+        await until(() => dialog()?.textContent?.includes('Edit hostname') === true);
+        await typeInto(inputNamed('Port'), '8080');
+        await pressKey(inputNamed('Port'), 'Enter');
+        await until(() => machine.requests('tunnel.update').length === 1);
+        expect(machine.requests('tunnel.update')[0]).toEqual({ id: 'b', port: 8080, origin: {} });
+    });
+
+    test('keeps the dialog open and busy while Cloudflare takes the new hostname, then closes it', async () => {
+        let answer: (next: TunnelState) => void = () => undefined;
+
+        machine.answer('tunnel.add', () => new Promise<TunnelState>((resolve) => (answer = resolve)));
+        await open();
+        await until(() => buttonWithText('Add hostname') !== null);
+        await clickOn(buttonWithText('Add hostname'));
+        await until(() => dialog() !== null);
+        await pick('Port', '3000 · Vite');
+        await clickOn(buttonWithText('Add', dialog()!));
+        await until(() => machine.requests('tunnel.add').length === 1);
+        expect(buttonWithText('Add', dialog()!)?.disabled).toBe(true);
+        expect(buttonWithText('Cancel', dialog()!)?.disabled).toBe(true);
+        expect(inputNamed('Label').disabled).toBe(true);
+
+        // A second Enter while the first add is on its way sends nothing.
+        await pressKey(inputNamed('Label'), 'Enter');
+        expect(machine.requests('tunnel.add')).toHaveLength(1);
+
+        await act(async () => answer(state));
+        await until(() => dialog() === null);
+    });
+
+    test('finds a domain by typing when the account has many', async () => {
+        const zones = Array.from({ length: 12 }, (_, index) => ({ id: `zone-${index}`, name: `site-${index}.nl` }));
+
+        state = stateOf({ zones: [...zones, { id: 'zone-passly', name: 'passly.dev' }] });
+        machine.answer('tunnel.add', () => state);
+        await open();
+        await until(() => buttonWithText('Add hostname') !== null);
+        await clickOn(buttonWithText('Add hostname'));
+        await until(() => dialog() !== null);
+        await clickOn(document.querySelector('[aria-label="Domain"]'));
+        await until(() => document.querySelector('input[aria-label="Find domain"]') !== null);
+        await typeInto(document.querySelector<HTMLInputElement>('input[aria-label="Find domain"]')!, 'passly');
+        await until(() => document.querySelectorAll('[role="option"]').length === 1);
+        await clickOn(menuItem('.passly.dev', 'option'));
+        await until(() => document.querySelector('[aria-label="Domain"]')?.textContent?.includes('.passly.dev') === true);
     });
 
     test('removes a hostname from its menu', async () => {

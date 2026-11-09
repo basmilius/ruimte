@@ -1105,6 +1105,7 @@
             "label": "Label",
             "zone": "Domein",
             "pickZone": "Kies domein",
+            "findZone": "Zoek domein",
             "devWarning": "Iedereen met het adres bereikt deze dev server.",
             "otherRunner": "Wijst naar poort {{port}} op de computer die deze tunnel draait.",
             "action": "Toevoegen"
