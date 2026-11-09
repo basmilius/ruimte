@@ -81,6 +81,21 @@ class NoCheckpoints extends Checkpoints {
 
 const NO_GH: GhRunner = () => Promise.resolve({ code: 1, stdout: '', stderr: 'no gh in this test' });
 
+/* A machine that holds nothing awake and has no closed-lid rule, so nothing of it starts a process. */
+const NO_POWER: DaemonSeams['power'] = {
+    hold: () => () => ({ kill: () => undefined, exited: Promise.resolve() }),
+    closedLid: () => ({
+        rulePresent: async () => false,
+        sleepDisabled: async () => false,
+        setSleepDisabled: async () => false,
+        enableSleepNow: () => false,
+        startWatchdog: () => ({ dismiss: () => undefined }),
+        watchPower: () => ({ stop: () => undefined }),
+        runAsAdmin: async () => ({ ok: false, cancelled: true, message: 'no administrator in this test' }),
+        marker: { present: async () => false, write: async () => undefined, remove: async () => undefined, removeNow: () => undefined }
+    })
+};
+
 /* What a test reads from the fakes its seams brought in. */
 export interface TestFakes {
     /* The fake terminals, which stay empty when `ptyAdapter` brings real ones. */
@@ -180,6 +195,7 @@ export function testSeams(choices: TestSeamChoices, overrides: Partial<DaemonSea
             throw new Error('no browser in this test');
         },
         voiceLive: openAiLive(),
+        power: NO_POWER,
         machine: { model: async () => null, sessionFs: nodeSessionFs },
         remote: { connections: (real) => real, reconnect: (real) => real },
         peerNotify: (real) => real,

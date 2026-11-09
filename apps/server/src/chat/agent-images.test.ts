@@ -64,7 +64,6 @@ async function bootWithChat(): Promise<TestDaemon> {
         machine: { resumeAtReset: false, visualReplies: true }
     });
     running.push(daemon);
-    daemon.worker.start();
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     return daemon;
 }

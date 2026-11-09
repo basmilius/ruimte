@@ -260,7 +260,6 @@ describe('plans and the chat they belong to', () => {
 
     test('a restarted daemon reads the plan, and a resumed turn is told about it', async () => {
         const first = await boot();
-        first.worker.start();
         const planId = await newPlan(first);
         await first.chats.create({ chatId: 'chat-lead', cwd: folder, provider: 'claude' });
         await first.chats.send('chat-lead', 'slow');
@@ -274,7 +273,6 @@ describe('plans and the chat they belong to', () => {
         expect(await second.request('plan.list', {})).toMatchObject({ ok: true, result: { plans: [{ chatId: 'chat-lead', plan: { id: planId } }] } });
         expect((await invokeTool(second, 'chat-lead', 'plan_read', {}))[0]).toStartWith(`Plan "Ship the feature" (${planId}, steps, rev 0)`);
 
-        second.worker.start();
         await second.chats.recoverInterrupted();
         const turnDone = (): boolean => {
             const turn = second.chats.get('chat-lead')?.thread.get(turnId);
@@ -290,7 +288,6 @@ describe('plans and the chat they belong to', () => {
 
     test('a fork gets a copy of the plans, and a change in the fork leaves the original alone', async () => {
         const daemon = await boot(['claude', 'codex']);
-        daemon.worker.start();
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
         await say(daemon, 'chat-lead', 'one');
         const planId = await newPlan(daemon);
@@ -315,7 +312,6 @@ describe('plans and the chat they belong to', () => {
 
     test('clearing a chat removes its plans file and says so for each plan', async () => {
         const daemon = await boot();
-        daemon.worker.start();
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
         const planId = await newPlan(daemon);
         const path = join(home, 'chats', planFileName('chat-lead'));
@@ -329,7 +325,6 @@ describe('plans and the chat they belong to', () => {
 
     test('killing a chat removes its plans file and says so for each plan', async () => {
         const daemon = await boot();
-        daemon.worker.start();
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
         const planId = await newPlan(daemon);
         const path = join(home, 'chats', planFileName('chat-lead'));

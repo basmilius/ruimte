@@ -67,7 +67,6 @@ async function delegate(daemon: TestDaemon, caller = 'chat-lead', prompt = 'coun
 
 test('a chat view delegates to the requested provider and model without adding a view or canvas', async () => {
     const daemon = await boot();
-    daemon.worker.start();
     await leadIdle(daemon);
     const before = await store.read(projectId);
     const revision = await store.revision(projectId);
@@ -141,7 +140,6 @@ test.each([
     );
     expect(daemon.chats.get(childId!)?.info).toMatchObject({ runtimeMode: expected, model: `gpt-6.1-sol ${policy}` });
 
-    daemon.worker.start();
     await daemon.until(() => daemon.tasks.get(taskId!)?.wake === 'sent');
     await daemon.worker.settled();
     expect(
@@ -170,7 +168,6 @@ test('hidden agent and team previews leave no sessions, records or project write
 
 test('a hidden team returns all results in one wake without a group on a canvas', async () => {
     const daemon = await boot();
-    daemon.worker.start();
     await leadIdle(daemon);
     const lines = await invokeTool(daemon, 'chat-lead', 'agent_team', {
         label: 'Counters',
@@ -197,6 +194,8 @@ test('a hidden team returns all results in one wake without a group on a canvas'
 test('queued hidden agents and their lineage survive a restart of the machine', async () => {
     const first = await boot();
     await leadIdle(first);
+    // Held, so the machine goes down with the start still owed.
+    first.worker.stop();
     const { childId, taskId } = await delegate(first);
     await first.stop();
     daemons = [];
@@ -207,7 +206,6 @@ test('queued hidden agents and their lineage survive a restart of the machine', 
     expect(store.index.locate(childId)).toEqual({ projectId, folder, canvasId: null });
     expect(second.lineage.startedBy(childId)).toBe('chat-lead');
     expect(second.lineage.depthOf(childId)).toBe(1);
-    second.worker.start();
     await second.until(() => second.tasks.get(taskId)?.wake === 'sent');
     await second.worker.settled();
     expect(second.tasks.get(taskId)?.status).toBe('done');
@@ -226,7 +224,6 @@ test('a hidden chat can open a hidden helper and is held to the same depth and p
 
 test('a hidden agent accepts a follow-up task from its parent', async () => {
     const daemon = await boot();
-    daemon.worker.start();
     await leadIdle(daemon);
     const { childId, taskId } = await delegate(daemon);
     await daemon.until(() => daemon.tasks.get(taskId)?.wake === 'sent');
@@ -240,6 +237,8 @@ test('a hidden agent accepts a follow-up task from its parent', async () => {
 
 test('queued hidden agents count toward the concurrent agent limit', async () => {
     const daemon = await boot();
+    // Held, so every start stays owed.
+    daemon.worker.stop();
     for (let i = 0; i < MAX_OPENED_PER_CALLER; i++) {
         await delegate(daemon);
     }
@@ -248,7 +247,6 @@ test('queued hidden agents count toward the concurrent agent limit', async () =>
 
 test('deleting the parent chat stops its hidden agents and removes their placement', async () => {
     const daemon = await boot();
-    daemon.worker.start();
     await leadIdle(daemon);
     const { childId } = await delegate(daemon, 'chat-lead', 'slow');
     await daemon.until(() => daemon.chats.get(childId)?.info.activeTurnId != null);

@@ -85,7 +85,6 @@ beforeEach(async () => {
                     : { code: 0, stdout: page, stderr: '' }
             )
     });
-    daemon.worker.start();
 });
 
 afterEach(async () => {

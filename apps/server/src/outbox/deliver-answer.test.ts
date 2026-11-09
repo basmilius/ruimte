@@ -73,7 +73,6 @@ beforeEach(async () => {
                 }
             })
     });
-    daemon.worker.start();
     await daemon.chats.create({ chatId: CHAT, provider: 'claude', cwd: folder });
 });
 

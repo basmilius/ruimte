@@ -60,7 +60,6 @@ describe('forking a Claude chat', () => {
     beforeEach(async () => {
         ({ root, home, folder, store, projectId } = await releasedProject('ruimte-fork-', leadProject()));
         daemon = await bootTestDaemon({ home, store, clock: new ManualClock(), installed: ['claude', 'codex'] });
-        daemon.worker.start();
     });
 
     afterEach(async () => {

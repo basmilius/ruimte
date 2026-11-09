@@ -64,7 +64,6 @@ async function boot(claudeCli: FakeCli = fakeClaude): Promise<Daemon> {
 
 async function bootStarted(claudeCli?: FakeCli): Promise<Daemon> {
     const daemon = await boot(claudeCli);
-    daemon.worker.start();
     return daemon;
 }
 
@@ -209,7 +208,6 @@ describe('a task wakes the chat that gave it', () => {
     test("a chat child's first message is the lead's prompt alone, and the brief is a note it hears on that turn", async () => {
         const daemon = await bootTestDaemon({ home, store, clock });
         running.push(daemon);
-        daemon.worker.start();
         await leadIdle(daemon);
         const child = await delegate(daemon, 'Lexer', 'fix the tokenizer');
         await daemon.until(() => daemon.tasks.get(child.taskId)?.status === 'done');
@@ -650,7 +648,6 @@ describe('resume at reset', () => {
 
     test('a Claude child on its limit continues by itself at the reset, and its task settles on that turn', async () => {
         const daemon = await bootOn();
-        daemon.worker.start();
         await leadIdle(daemon);
 
         const child = await delegate(daemon, 'Lexer', `fix the tokenizer\nlimit:${RESET_AT / 1000}`);
@@ -678,7 +675,6 @@ describe('resume at reset', () => {
 
     test('the resume survives a restart between owing it and the reset, and runs once', async () => {
         const first = await bootOn();
-        first.worker.start();
         await leadIdle(first);
         const child = await delegate(first, 'Lexer', `fix the tokenizer\nlimit:${RESET_AT / 1000}`);
         await first.until(() => owedResumes(first).length === 1);
@@ -687,7 +683,6 @@ describe('resume at reset', () => {
         await first.stop();
 
         const second = await bootOn();
-        second.worker.start();
         await second.worker.settled();
         expect(owedResumes(second)).toHaveLength(1);
         clock.advance(RESET_AT - clock.now());
@@ -704,7 +699,6 @@ describe('resume at reset', () => {
     /* A child limited with its resume owed, and the daemon gone after the chat showed the time but before the entry was written. */
     const shownButNotOwed = async (next: () => Promise<Daemon>): Promise<{ daemon: Daemon; childId: string; taskId: string }> => {
         const first = await bootOn();
-        first.worker.start();
         await leadIdle(first);
         const child = await delegate(first, 'Lexer', `fix the tokenizer\nlimit:${RESET_AT / 1000}`);
         await first.until(() => owedResumes(first).length === 1);
@@ -724,7 +718,6 @@ describe('resume at reset', () => {
         expect(owedResumes(daemon)[0]).toMatchObject({ target: childId, notBefore: RESET_AT });
         expect(daemon.chats.get(childId)?.info.resumeAt).toBe(RESET_AT);
 
-        daemon.worker.start();
         clock.advance(RESET_AT - clock.now());
         await daemon.until(() => daemon.tasks.get(taskId)?.wake === 'sent');
         await daemon.worker.settled();
@@ -743,7 +736,6 @@ describe('resume at reset', () => {
 
     test('a task that settles while the lead waits for its reset wakes it after the resume turn, which spends no try', async () => {
         const daemon = await bootOn();
-        daemon.worker.start();
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
         await daemon.chats.send('chat-lead', `limit:${RESET_AT / 1000}`);
         await daemon.until(() => owedResumes(daemon).length === 1);
@@ -767,7 +759,6 @@ describe('resume at reset', () => {
 
     test('a Codex turn on an overloaded server is tried again after a minute by itself', async () => {
         const daemon = await bootOn(['claude', 'codex']);
-        daemon.worker.start();
         await leadIdle(daemon);
 
         const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'codex', task: 'Parser', prompt: 'fix the parser\noverloaded' });
@@ -788,7 +779,6 @@ describe('resume at reset', () => {
 
     test('the resume lapses when a person writes first, stops the chat or turns its switch off', async () => {
         const daemon = await bootOn();
-        daemon.worker.start();
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
         const limit = async (): Promise<void> => {
             await daemon.chats.send('chat-lead', `limit:${RESET_AT / 1000}`);
@@ -1129,7 +1119,6 @@ describe('a child with work running in the background', () => {
         // The fake reads its scenario from the start of a message, so it is told where the task's brief in front of it ends.
         const daemon = await bootTestDaemon({ home, store, clock, installed: ['claude', 'codex'], codexCli: fakeCodexWith({ resumeLead: BRIEF_TITLE }) });
         running.push(daemon);
-        daemon.worker.start();
         await leadIdle(daemon);
         const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'codex', task: 'Survey', prompt: 'spawn agent: survey the docs' });
         const fields = line!.split('\t');

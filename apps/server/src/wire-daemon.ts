@@ -61,8 +61,6 @@ interface WiredDaemon {
     readonly bundles: DaemonBundles;
     readonly areas: readonly Area[];
     readonly dispatcher: Dispatcher;
-    /* The tasks a restart left open, picked up again; `start` does this too, a test that starts nothing else calls it alone. */
-    recoverWork(): Promise<void>;
     /*
      * Brings the daemon up: finishes what a restart interrupted, hands the routes to `serve` and starts
      * everything that runs on its own. `requestStop` is how a request to the routes ends the daemon.
@@ -183,7 +181,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
         'voice',
         wireVoice({ config, projects: projects.store, machine: identity, canvasHost, actions: later.actions(), chats, live: seams.voiceLive })
     );
-    const power = provide('power', wirePower(home, identity, agents));
+    const power = provide('power', wirePower(home, identity, agents, seams.power));
     sessions.observe((event) => computer.observe(event));
     chats.observe((event) => computer.observe(event));
     chats.observe((event) => launches.secrets.observe(event));
@@ -337,35 +335,11 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
         ports
     };
 
-    // `recoverWork` and `start` both pick the tasks up, and a test calls the first before the second: the work runs once.
-    let recovery: Promise<void> | null = null;
-    let childrenStarted = false;
-    const recoverTasks = (): Promise<void> => {
-        recovery ??= (async () => {
-            await work.tasks.recover();
-            await work.peerTasks.recover();
-        })();
-
-        return recovery;
-    };
-    const startEndChildren = (): void => {
-        if (childrenStarted) {
-            return;
-        }
-
-        childrenStarted = true;
-        work.endChildren.start();
-    };
-
     return {
         runtime,
         bundles,
         areas,
         dispatcher,
-        recoverWork: async () => {
-            await recoverTasks();
-            startEndChildren();
-        },
         start: async ({ port, requestStop, serve }) => {
             servedPort = port;
             noteMoment('daemon.boot', 'wired');
@@ -412,11 +386,12 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
             providers.accounts.start();
             processes.processes.start();
 
-            await recoverTasks();
+            await work.tasks.recover();
+            await work.peerTasks.recover();
             // Before the outbox works, so a routine whose time passed while the machine was off runs once now.
             await routines.routines.start().catch((e: unknown) => console.error('Scheduling routines failed:', errorText(e)));
             work.worker.start();
-            startEndChildren();
+            work.endChildren.start();
             maintenance.start();
             // Beside the daemon answering: a turn a restart interrupted is taken up again without waiting for a client.
             void chats.recoverInterrupted().catch((e) => console.error('Resuming interrupted turns failed:', errorText(e)));

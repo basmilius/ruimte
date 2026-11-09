@@ -81,7 +81,6 @@ async function restartWhileWatching(before?: (daemon: TestDaemon) => Promise<voi
     running = [];
 
     const second = await boot();
-    second.worker.start();
     await second.chats.recoverInterrupted();
 
     return second;
@@ -109,7 +108,6 @@ describe('background commands a restart took', () => {
         await daemon.stop();
         running = [];
         const again = await boot();
-        again.worker.start();
         await again.chats.recoverInterrupted();
         await again.worker.settled();
 
@@ -140,7 +138,6 @@ describe('background commands a restart took', () => {
         running = [];
 
         const daemon = await boot();
-        daemon.worker.start();
         await daemon.chats.recoverInterrupted();
         await daemon.worker.settled();
 

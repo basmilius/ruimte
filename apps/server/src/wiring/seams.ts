@@ -12,6 +12,8 @@ import type { RunCommand } from '../language/runtime.ts';
 import type { OutboxWork } from '../outbox/outbox.ts';
 import type { ConnectPeer } from '../peer/giver/connect-peer.ts';
 import type { RemoteConnections } from '../peer/giver/remote-connections.ts';
+import type { ClosedLidSystem } from '../power/closed-lid.ts';
+import type { HeldProcess, KeepAwakeBlock } from '../power/keep-awake.ts';
 import type { ProjectOverlays } from '../projects/overlays.ts';
 import type { ProjectLinks, ProjectStore } from '../projects/project-store.ts';
 import type { PtyAdapter } from '../pty/pty.ts';
@@ -103,6 +105,11 @@ export interface DaemonSeams {
     };
     visualLauncher: RenderLauncher;
     voiceLive: OpenAiLive;
+    /* What holds the machine awake and keeps it on with the lid closed: `caffeinate`, `pmset` and `sudo` on a real Mac. */
+    power: {
+        hold(): (block: KeepAwakeBlock) => HeldProcess;
+        closedLid(home: string, uid: number): ClosedLidSystem;
+    };
     machine: {
         /* The hardware's name in a person's words. */
         model(): Promise<string | null>;

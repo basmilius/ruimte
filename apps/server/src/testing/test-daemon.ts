@@ -177,7 +177,8 @@ export async function bootTestDaemon(options: TestDaemonOptions): Promise<TestDa
         host.remote = { ...host.remote!, machines: remote.machines };
     }
 
-    await wired.recoverWork();
+    // The start production runs, with no socket to serve: the outbox and every clock of the daemon start here, as in the app.
+    await wired.start({ port: 0, requestStop: () => undefined, serve: () => undefined });
     sessions.observe(fakes.recheck);
     chats.observe(fakes.recheck);
     // A task is written after the event that settled it, so the wait looks again once it is on disk.

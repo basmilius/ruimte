@@ -90,7 +90,6 @@ async function team(...roles: { title: string; writes: string }[]): Promise<stri
     const asked = roles.map(({ title, writes }) => ({ title, prompt: `write: ${writes}`, provider: 'claude' }));
     const lines = await invokeTool(daemon, 'chat-lead', 'agent_team', { label: 'Crew', worktree: true, roles: JSON.stringify(asked) });
     const nodes = lines.slice(1).map((line) => line.split('\t')[0]!);
-    daemon.worker.start();
     await daemon.worker.settled();
     await daemon.until(() => nodes.every((node) => firstTurn(node)?.state === 'done'));
     return nodes;

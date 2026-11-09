@@ -64,7 +64,6 @@ describe('a fork summarizing for its original', () => {
     };
 
     test('the fork writes it in a turn of its own, and the original gets one note and one preamble for its next prompt', async () => {
-        daemon.worker.start();
         const forkId = await forked();
         const turn = await summarize(forkId);
         expect(turn).toMatchObject({ origin: 'agent', summaryFor: 'chat-lead', label: 'Summary for Lexer' });
@@ -96,7 +95,6 @@ describe('a fork summarizing for its original', () => {
     });
 
     test('an original in a turn gets the note at once and the preamble with the prompt after it', async () => {
-        daemon.worker.start();
         const forkId = await forked();
         await daemon.chats.send('chat-lead', 'slow');
         await daemon.until(() => daemon.chats.get('chat-lead')?.info.activeTurnId !== null);
@@ -119,7 +117,6 @@ describe('a fork summarizing for its original', () => {
 
         await daemon.stop();
         await boot();
-        daemon.worker.start();
         await daemon.worker.settled();
         await daemon.chats.create({ chatId: 'chat-lead' });
         expect(summaryNotes(items('chat-lead'))).toHaveLength(1);

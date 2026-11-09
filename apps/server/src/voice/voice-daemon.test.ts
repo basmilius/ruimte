@@ -75,7 +75,6 @@ beforeEach(async () => {
         }
     }
     daemon = await bootTestDaemon({ home, store, clock: new ManualClock(), installed: ['claude', 'codex'] });
-    daemon.worker.start();
     voiceClock = new FakeClock();
     live = new FakeLive(voiceClock);
 });

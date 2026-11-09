@@ -92,7 +92,6 @@ function taskOf(daemon: Daemon, taskId: string): Task {
 describe('a task given to an agent that is already open', () => {
     test('runs in a turn of its own and wakes the chat that gave it exactly once', async () => {
         const daemon = await boot();
-        daemon.worker.start();
         await leadIdle(daemon);
         const childId = await opened(daemon, 'look around');
         await daemon.until(() => turnsOf(daemon, childId).some((turn) => turn.state === 'done'));
@@ -116,7 +115,6 @@ describe('a task given to an agent that is already open', () => {
 
     test('waits for the turn the agent is in and settles on the turn it opens, never on the one in its way', async () => {
         const daemon = await boot();
-        daemon.worker.start();
         await leadIdle(daemon);
         // `slow` keeps the child's first turn open, the way a person's prompt waits for one that runs.
         const childId = await opened(daemon, 'slow');
@@ -141,7 +139,6 @@ describe('a task given to an agent that is already open', () => {
 
     test('to a child that finished the task it was opened with, runs it again on a row of its own in the thread that gave it', async () => {
         const daemon = await boot();
-        daemon.worker.start();
         await leadIdle(daemon);
         const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', task: 'Survey', prompt: 'look around' });
         const [childId = '', , , , , first = ''] = line!.split('\t');
@@ -165,7 +162,6 @@ describe('a task given to an agent that is already open', () => {
 
     test('is refused while that agent still works on one, naming the task in its way', async () => {
         const daemon = await boot();
-        daemon.worker.start();
         await leadIdle(daemon);
         const childId = await opened(daemon, 'slow');
         await daemon.until(() => daemon.chats.get(childId)?.info.activeTurnId !== null);
@@ -182,7 +178,6 @@ describe('a task given to an agent that is already open', () => {
 
     test('is refused for an agent the caller did not open, whichever lines run between them', async () => {
         const daemon = await boot();
-        daemon.worker.start();
         await leadIdle(daemon);
         await invokeTool(daemon, 'chat-lead', 'link_new', { to: 'chat-other' });
 
@@ -194,7 +189,6 @@ describe('a task given to an agent that is already open', () => {
 
     test('is refused for a node that runs no agent at all', async () => {
         const daemon = await boot();
-        daemon.worker.start();
         await leadIdle(daemon);
 
         const refused = await invokeTool(daemon, 'chat-lead', 'task_new', { id: 'note-1', prompt: 'check the note' });
@@ -204,7 +198,6 @@ describe('a task given to an agent that is already open', () => {
 
     test('is refused for a terminal it opened, since nothing is typed into a shell', async () => {
         const daemon = await boot();
-        daemon.worker.start();
         await leadIdle(daemon);
         const childId = await opened(daemon, 'look around', true);
 
@@ -263,7 +256,6 @@ describe('task recovery between durable writes', () => {
         expect(recovered.tasks.get(task.id)).toMatchObject({ status: 'failed', result: { source: 'exit' } });
         expect(recovered.tasks.get(task.id)?.result?.text).toContain('Workflow');
         expect(recovered.chats.get('chat-other')?.preambles.join('\n')).toContain('will not send a result');
-        recovered.worker.start();
         await recovered.until(() => recovered.tasks.get(task.id)?.wake === 'sent');
         await recovered.worker.settled();
         expect(turnsFor(recovered, 'chat-lead', task.id)).toHaveLength(1);
@@ -271,7 +263,6 @@ describe('task recovery between durable writes', () => {
         running = [];
 
         const again = await boot();
-        again.worker.start();
         await again.worker.settled();
         await again.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
         expect(turnsFor(again, 'chat-lead', task.id)).toHaveLength(1);
@@ -287,7 +278,6 @@ describe('task recovery between durable writes', () => {
         running = [];
         const recovered = await boot();
         expect(recovered.outbox.list().filter((entry) => entry.kind === 'wake-parent')).toHaveLength(1);
-        recovered.worker.start();
         await recovered.until(() => recovered.tasks.get(task.id)?.wake === 'sent');
         await recovered.worker.settled();
         expect(turnsFor(recovered, 'chat-lead', task.id)).toHaveLength(1);
@@ -296,7 +286,6 @@ describe('task recovery between durable writes', () => {
         running = [];
         await writeFile(join(home, 'tasks', `${task.id}.json`), JSON.stringify({ ...recovered.tasks.get(task.id), wake: 'pending' }));
         const again = await boot();
-        again.worker.start();
         await again.until(() => again.tasks.get(task.id)?.wake === 'sent');
         await again.worker.settled();
         expect(turnsFor(again, 'chat-lead', task.id)).toHaveLength(1);
@@ -315,7 +304,6 @@ describe('task recovery between durable writes', () => {
         running = [];
         const recovered = await boot();
         expect(recovered.outbox.list().filter((entry) => entry.kind === 'give-task')).toHaveLength(1);
-        recovered.worker.start();
         await recovered.until(() => recovered.tasks.get(task.id)?.wake === 'sent');
         await recovered.worker.settled();
         expect(turnsFor(recovered, 'chat-other', task.id)).toHaveLength(1);

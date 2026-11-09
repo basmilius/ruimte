@@ -30,7 +30,6 @@ beforeEach(async () => {
     });
     links = store.peers;
     daemon = await bootTestDaemon({ home: join(root, 'home'), store, clock: new ManualClock(), installed: ['claude', 'codex'] });
-    daemon.worker.start();
 });
 
 afterEach(async () => {

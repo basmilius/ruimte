@@ -2,12 +2,12 @@ import { userInfo } from 'node:os';
 import type { Area } from '../area.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { errorText } from '../error-text.ts';
-import { macClosedLidSystem } from '../power/closed-lid-system.ts';
 import { ClosedLid } from '../power/closed-lid.ts';
 import { caffeinateCommand, KeepAwake, agentsWorking, type KeepAwakeBlock, type HeldProcess } from '../power/keep-awake.ts';
 import { MachineUpdates } from '../power/machine-update.ts';
 import { ExecutionStateHold, windowsPower } from '../power/windows-keep-awake.ts';
 import type { AgentsBundle } from './agents.ts';
+import type { DaemonSeams } from './seams.ts';
 
 /* What keeps the machine awake while its agents work, and the update of the desktop app on it. */
 export interface PowerBundle {
@@ -19,7 +19,7 @@ export interface PowerBundle {
 }
 
 /* A Mac holds through a process, Windows on the daemon's own thread. The system libraries load on the first block, and a failure there is the block's to report. */
-function blockHolder(): (block: KeepAwakeBlock) => HeldProcess {
+export function blockHolder(): (block: KeepAwakeBlock) => HeldProcess {
     if (process.platform !== 'win32') {
         return (block) => Bun.spawn(caffeinateCommand(block, process.pid), { stdin: 'ignore', stdout: 'ignore', stderr: 'ignore' });
     }
@@ -27,14 +27,14 @@ function blockHolder(): (block: KeepAwakeBlock) => HeldProcess {
     return (block) => (hold ??= new ExecutionStateHold(windowsPower())).hold(block);
 }
 
-export function wirePower(home: string, identity: EndpointIdentity, agents: AgentsBundle): PowerBundle {
+export function wirePower(home: string, identity: EndpointIdentity, agents: AgentsBundle, power: DaemonSeams['power']): PowerBundle {
     const { sessions, chats } = agents;
     // Held by the daemon, so the machine stays awake with no window open and for a daemon from npm.
     const keepAwake = new KeepAwake({
         platform: process.platform,
         setting: () => identity.keepAwakeSetting,
         work: () => ({ sessions: sessions.list(), chats: chats.list() }),
-        hold: blockHolder(),
+        hold: power.hold(),
         log: (line) => console.log(line)
     });
     const uid = process.getuid?.() ?? -1;
@@ -45,7 +45,7 @@ export function wirePower(home: string, identity: EndpointIdentity, agents: Agen
         user: userInfo().username,
         setting: () => identity.keepAwakeSetting,
         working: () => agentsWorking({ sessions: sessions.list(), chats: chats.list() }),
-        system: macClosedLidSystem(home, uid),
+        system: power.closedLid(home, uid),
         // A rule that went takes the switch with it, so a new rule never turns sleep off on a choice made before it.
         ruleChanged: (present) => {
             if (!present && identity.keepAwakeLidClosed) {

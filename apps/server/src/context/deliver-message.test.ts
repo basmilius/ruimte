@@ -54,7 +54,6 @@ afterEach(async () => {
 
 async function boot(): Promise<TestDaemon> {
     const daemon = await bootTestDaemon({ home, store, clock });
-    daemon.worker.start();
     running.push(daemon);
     return daemon;
 }

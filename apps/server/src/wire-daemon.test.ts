@@ -61,7 +61,6 @@ describe('wireDaemon', () => {
             );
             expect(frames[0]).toMatchObject({ id: 'r', ok: true });
             expect(wired.bundles.canvasHost.tasks).toBe(wired.bundles.work.tasks.host);
-            await wired.recoverWork();
         } finally {
             await wired.bundles.agents.sessions.killAllSettled();
             await wired.stop();
@@ -165,7 +164,7 @@ describe('wireDaemon', () => {
         }
     });
 
-    test('recovers the tasks once, however often the work is recovered', async () => {
+    test('starts in the order the app needs: interrupted moves and old hidden chats before the socket, the open work before the outbox, the lid last', async () => {
         const home = join(await homeOf(), 'home');
         const wired = await wireDaemon({
             runtime: testRuntime(home),
@@ -173,22 +172,42 @@ describe('wireDaemon', () => {
             seams: testSeams({ home, clock: new ManualClock() }),
             shutdown: async () => undefined
         });
-        const recover = spyOn(wired.bundles.work.tasks, 'recover');
-        const peerRecover = spyOn(wired.bundles.work.peerTasks, 'recover');
-        const startChildren = spyOn(wired.bundles.work.endChildren, 'start');
+        const { chatMover, projects, work, routines, processes, power } = wired.bundles;
+        const started: string[] = [];
+        const told = (name: string) => () => void started.push(name);
+        const spies = [
+            spyOn(chatMover, 'repair').mockImplementation(async () => (told('chat moves')(), [])),
+            spyOn(projects.store.hiddenAgents, 'all').mockImplementation(() => (told('hidden chats')(), [])),
+            spyOn(work.tasks, 'recover').mockImplementation(async () => told('tasks')()),
+            spyOn(work.peerTasks, 'recover').mockImplementation(async () => told('peer tasks')()),
+            spyOn(routines.routines, 'start').mockImplementation(async () => told('routines')()),
+            spyOn(work.worker, 'start').mockImplementation(told('outbox')),
+            spyOn(work.endChildren, 'start').mockImplementation(told('end children')),
+            spyOn(processes.selfUpdate, 'start').mockImplementation(told('self update')),
+            spyOn(power.keepAwake, 'check').mockImplementation(told('keep awake')),
+            spyOn(power.closedLid, 'start').mockImplementation(async () => told('closed lid')())
+        ];
 
         try {
-            await wired.recoverWork();
-            await wired.recoverWork();
+            await wired.start({ port: 0, requestStop: () => undefined, serve: told('serve') });
 
-            expect(recover).toHaveBeenCalledTimes(1);
-            expect(peerRecover).toHaveBeenCalledTimes(1);
-            expect(startChildren).toHaveBeenCalledTimes(1);
+            expect(started).toEqual([
+                'chat moves',
+                'hidden chats',
+                'serve',
+                'tasks',
+                'peer tasks',
+                'routines',
+                'outbox',
+                'end children',
+                'self update',
+                'keep awake',
+                'closed lid'
+            ]);
         } finally {
-            recover.mockRestore();
-            peerRecover.mockRestore();
-            startChildren.mockRestore();
-            await wired.bundles.agents.sessions.killAllSettled();
+            for (const spy of spies) {
+                spy.mockRestore();
+            }
             await wired.stop();
         }
     });

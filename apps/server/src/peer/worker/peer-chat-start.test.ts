@@ -43,6 +43,8 @@ async function createChat(chatId: string): Promise<ServerFrame> {
 }
 
 test('a window cannot start the chat of a task another machine gave before the daemon did, so it never runs in the project folder', async () => {
+    // Held, so the window asks while the daemon's start is still owed.
+    daemon.worker.stop();
     await daemon.peerTasks.start(MACHINE, 'channel-1', {
         projectId,
         nodeId: 'chat-given',

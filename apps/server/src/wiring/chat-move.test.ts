@@ -194,7 +194,6 @@ describe('what the machine says about moving a chat', () => {
 
             await daemon.until(() => daemon.enqueued.some((work) => work.kind === 'deliver-answer'));
             expect(daemon.outbox.list()).toMatchObject([{ kind: 'deliver-answer', target: chatId, projectId: result.summary.projectId }]);
-            daemon.worker.start();
 
             const answered = () =>
                 daemon.chats
@@ -211,7 +210,6 @@ describe('what the machine says about moving a chat', () => {
         });
 
         test('a decline wakes the chat where it is, once', async () => {
-            daemon.worker.start();
             expect(proposals.decline(proposals.list()[0]!.proposalId)).toBe(true);
 
             const declined = () =>

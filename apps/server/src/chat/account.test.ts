@@ -72,7 +72,6 @@ beforeEach(async () => {
         env,
         onLimits: (update) => limitUpdates.push(update)
     });
-    daemon.worker.start();
 });
 
 afterEach(async () => {

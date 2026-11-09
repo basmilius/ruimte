@@ -45,7 +45,6 @@ describe('fork', () => {
     beforeEach(async () => {
         ({ root, home, folder, store, projectId } = await releasedProject('ruimte-fork-tool-', content()));
         daemon = await bootTestDaemon({ home, store, clock: new ManualClock() });
-        daemon.worker.start();
     });
 
     afterEach(async () => {

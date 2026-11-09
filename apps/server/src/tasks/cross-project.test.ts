@@ -63,7 +63,6 @@ afterEach(async () => {
 
 async function boot(): Promise<TestDaemon> {
     daemon = await bootTestDaemon({ home, store, clock: new ManualClock(), installed: ['claude', 'codex'] });
-    daemon.worker.start();
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: join(root, 'repo') });
     await daemon.chats.send('chat-lead', 'plan');
     await daemon.until(

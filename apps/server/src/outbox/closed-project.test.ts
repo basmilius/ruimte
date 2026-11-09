@@ -45,7 +45,6 @@ beforeEach(async () => {
     ({ root, folder, store, projectId } = released);
     clock = new ManualClock();
     daemon = await bootTestDaemon({ home: released.home, store, clock, machine: { resumeAtReset: true } });
-    daemon.worker.start();
     await store.closeProject(projectId, 'client-1');
 });
 

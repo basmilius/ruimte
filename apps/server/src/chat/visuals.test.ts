@@ -57,7 +57,6 @@ async function boot(
 
 async function bootWithChat(options: Parameters<typeof boot>[0] = {}): Promise<TestDaemon> {
     const daemon = await boot(options);
-    daemon.worker.start();
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     return daemon;
 }

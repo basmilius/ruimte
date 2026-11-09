@@ -191,7 +191,6 @@ async function bootA(): Promise<TestDaemon> {
     // The label names the remote the work comes back under, which the wiring reads from the project's links.
     await a.store.remote.link(a.projectId, { machineId: B, label: 'Studio', remoteProjectId: b.projectId, rootCommit: '' });
     running.push(daemon);
-    daemon.worker.start();
     daemonA = daemon;
     return daemon;
 }
@@ -210,7 +209,6 @@ async function bootB(claudeCli?: FakeCli): Promise<TestDaemon> {
         }
     });
     running.push(daemon);
-    daemon.worker.start();
     daemonB = daemon;
     return daemon;
 }

@@ -67,7 +67,6 @@ beforeEach(async () => {
             reconnect: { owe: async (machineId) => void owed.push(machineId) }
         }
     });
-    daemon.worker.start();
 });
 
 afterEach(async () => {
@@ -103,7 +102,6 @@ describe('agent --machine', () => {
                 reconnect: { owe: async (machineId) => void owed.push(machineId) }
             }
         });
-        daemon.worker.start();
         open = fakeLink();
         answer = (type) => {
             if (type === 'peer.taskStart') {
