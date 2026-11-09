@@ -6,12 +6,14 @@ const ADECORE = String.raw`(?:@adecore|adecore/packages)`;
  * What only a workspace draws with: the editor, the drawing painters, the SQL console and shiki's
  * grammars. The start screen is the first load, so none of it may be in what `index.html` preloads.
  * The editor's key table and view state stay allowed: the application menu shows its keys from the
- * start, and moving a file moves what its editor remembers.
+ * start, and moving a file moves what its editor remembers. So does the language id table, a few lines
+ * without imports that the wire contracts name editor assist rules from.
  */
 export const WORKSPACE_MODULES: readonly RegExp[] = [
     /\/src\/shell\/(?:WorkspaceShell\.tsx|commands\.ts)$/,
     /\/src\/actions\/(?:client-actions|canvas-actions|developer-actions|layout-actions|view-actions)\.ts$/,
-    new RegExp(`${ADECORE}/(?:editor-core|lsp|merge|database)/`),
+    new RegExp(`${ADECORE}/(?:editor-core|merge|database)/`),
+    new RegExp(`${ADECORE}/lsp/src/(?!language-ids\\.ts$)`),
     new RegExp(`${ADECORE}/editor/src/(?!keymap-table\\.ts$)`),
     new RegExp(`${ADECORE}/editor-react/src/(?!view-state\\.ts$)`),
     new RegExp(`${ADECORE}/(?:drawing|diagram)/src/svg\\.ts$`),
