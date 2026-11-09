@@ -10,12 +10,10 @@ import { useSettings } from '@/state/settings';
 import { fireAndForget } from '@/transport-api/transport';
 import { useWindow } from '@/workspace/window';
 
-/* The projects this window opened, as `endpointKey`s in the order of its tabs, and the one on screen. */
 export interface WindowTabs {
     keys: string[];
     /* Null on the start screen and in the Chats project, which has no tab. */
     active: string | null;
-    /* The tabs pinned in this window, which lead the strip in this order. Absent when none is. */
     pinned?: string[];
 }
 
@@ -25,7 +23,6 @@ export function pinnedOf(tabs: WindowTabs): readonly string[] {
     return tabs.pinned ?? [];
 }
 
-/* The pins that still have a tab, and those tabs in front of the rest. */
 function settled(tabs: WindowTabs): WindowTabs {
     const { pinned: was, ...rest } = tabs;
     const pinned = (was ?? []).filter((key) => tabs.keys.includes(key));
@@ -44,7 +41,6 @@ export function showTab(tabs: WindowTabs, key: string): WindowTabs {
     return { ...tabs, keys: [...tabs.keys.slice(0, after), key, ...tabs.keys.slice(after)], active: key };
 }
 
-/* A pinned tab goes to the end of the pinned ones, and one that is let go of to the start of the rest. */
 export function pinTab(tabs: WindowTabs, key: string, pin: boolean): WindowTabs {
     const was = pinnedOf(tabs);
     if (!tabs.keys.includes(key) || was.includes(key) === pin) {
@@ -67,7 +63,6 @@ export function withoutTab(tabs: WindowTabs, key: string): WindowTabs {
     return settled({ ...tabs, keys: tabs.keys.filter((one) => one !== key), active: tabs.active === key ? null : tabs.active });
 }
 
-/* Takes out the tabs of the projects this client closed, in this window or another. */
 export function withoutClosed(tabs: WindowTabs, closed: ReadonlySet<string>): WindowTabs {
     if (!tabs.keys.some((key) => closed.has(key))) {
         return tabs;
@@ -79,7 +74,6 @@ export function withoutClosed(tabs: WindowTabs, closed: ReadonlySet<string>): Wi
     });
 }
 
-/* The tab that comes to the front when `key` closes: the one to its right, or else the one to its left. */
 export function neighborOf(tabs: WindowTabs, key: string): string | null {
     const index = tabs.keys.indexOf(key);
     if (index === -1) {
@@ -100,7 +94,6 @@ export function landingOf(tabs: WindowTabs, key: string, index: number): number 
     return from === -1 || from === to ? null : to;
 }
 
-/* The tabs with `key` moved to `index` among them, on its own side of the pinned ones. */
 export function moveTab(tabs: WindowTabs, key: string, index: number): WindowTabs {
     const to = landingOf(tabs, key, index);
     if (to === null) {
@@ -112,12 +105,10 @@ export function moveTab(tabs: WindowTabs, key: string, index: number): WindowTab
     return { ...tabs, keys, ...(pins.includes(key) ? { pinned: keys.slice(0, pins.length) } : {}) };
 }
 
-/* The tabs with `key` one place to the left or right, or the same tabs when it is at the end of its side. */
 export function stepMove(tabs: WindowTabs, key: string, step: 1 | -1): WindowTabs {
     return moveTab(tabs, key, tabs.keys.indexOf(key) + step);
 }
 
-/* The tabs that are left of the ones a window asked to keep, in their order. */
 export function keptTabs(tabs: WindowTabs, kept: readonly string[]): WindowTabs {
     const refused = tabs.keys.filter((key) => !kept.includes(key) && key !== tabs.active);
     return refused.length === 0 ? tabs : settled({ ...tabs, keys: tabs.keys.filter((key) => !refused.includes(key)) });
@@ -158,7 +149,6 @@ export function parseWindowState(state: string | null, keep: (key: string) => bo
     }
 }
 
-/* What `parseWindowState` reads back; null for a window without tabs. */
 export function windowStateOf(tabs: WindowTabs): string | null {
     if (tabs.keys.length === 0) {
         return null;
@@ -201,7 +191,6 @@ interface WindowTabsState {
 
 export const useWindowTabs = create<WindowTabsState>(() => ({ tabs: NO_TABS }));
 
-/* The project the window shows, as its tab key; null on the start screen and in the Chats project. */
 function shownKey(): string | null {
     if (useWindow.getState().content.kind !== 'workspace') {
         return null;
@@ -213,10 +202,8 @@ function shownKey(): string | null {
     return endpointKey(currentEndpointId, current.projectId);
 }
 
-/* The pieces a test stands in for; the app passes none of them. */
 interface WindowTabsDeps {
     place: TabsPlace | null;
-    /* Whether a switch of project is under way, and a call whenever that changes. */
     switches(): Promise<{ busy(): boolean; subscribe(listener: () => void): () => void }>;
     shell: () => TabsShell | null;
     open(key: string): void;
@@ -241,7 +228,6 @@ const REAL_DEPS: WindowTabsDeps = {
 
 let place: TabsPlace | null = null;
 let shell: TabsShell | null = null;
-/* Where along the strip a point lies, as the place a tab dragged there takes; the strip on screen sets it. */
 let stripIndexAt: ((key: string, x: number) => number) | null = null;
 /*
  * Tabs that left this window while it shows them or is on its way to them, as when one tears off or
@@ -250,7 +236,6 @@ let stripIndexAt: ((key: string, x: number) => number) | null = null;
  */
 const leaving = new Set<string>();
 
-/* Whether a switch of project is under way in this window, which the switch itself answers once it loaded. */
 let switching: () => boolean = () => false;
 
 /* A tab dragged in from another window and the tab that was in front before it, which comes back if it goes again. */
@@ -260,7 +245,6 @@ export function setStripIndexAt(locate: ((key: string, x: number) => number) | n
     stripIndexAt = locate;
 }
 
-/* Tells the shell which projects the window keeps, and lets go of the ones another window keeps already. */
 function hold(keys: string[]): void {
     void fireAndForget(
         'shell.holdTabs',
@@ -273,7 +257,6 @@ function hold(keys: string[]): void {
     );
 }
 
-/* Sets the window's tabs and writes them where a reload, a restart and the shell find them. */
 function commit(tabs: WindowTabs, tell = true): void {
     const previous = useWindowTabs.getState().tabs;
     if (tabs === previous) {
@@ -292,7 +275,6 @@ export function pinWindowTab(key: string, pin: boolean): void {
     commit(pinTab(useWindowTabs.getState().tabs, key, pin));
 }
 
-/* Takes a tab out of this window, without closing its project or showing another one. */
 export function dropWindowTab(key: string): void {
     leaveTab(key, true);
 }
@@ -312,7 +294,6 @@ function leaveTab(key: string, tellShell: boolean): void {
     commit(withoutTab(useWindowTabs.getState().tabs, key), tellShell);
 }
 
-/* Puts the tabs back as they were, after a drag the shell did not start. */
 export function restoreWindowTabs(tabs: WindowTabs): void {
     for (const key of tabs.keys) {
         leaving.delete(key);
@@ -324,7 +305,6 @@ export function reorderWindowTab(key: string, index: number): void {
     commit(moveTab(useWindowTabs.getState().tabs, key, index));
 }
 
-/* Moves a tab of this window one place along its side of the strip. */
 export function stepWindowTab(key: string, step: 1 | -1): void {
     commit(stepMove(useWindowTabs.getState().tabs, key, step));
 }
@@ -375,7 +355,6 @@ function follow(): void {
     commit(key === null || leaving.has(key) ? showNoTab(tabs) : showTab(tabs, key));
 }
 
-/* A tab dragged over this window comes in where the pointer is, or at the end, and is shown at once. */
 function take(key: string, x: number | null, open: (key: string) => void): void {
     leaving.delete(key);
     const { tabs } = useWindowTabs.getState();
@@ -387,7 +366,6 @@ function take(key: string, x: number | null, open: (key: string) => void): void 
     open(key);
 }
 
-/* The tab dragged in went on, still held: what was in front before it comes back. */
 function release(key: string, open: (key: string) => void): void {
     const { tabs } = useWindowTabs.getState();
     const before = taken?.key === key ? taken.before : null;
@@ -420,7 +398,6 @@ export function startWindowTabs(deps: WindowTabsDeps = REAL_DEPS): () => void {
     const on = (): void => {
         place = deps.place;
         shell = deps.shell();
-        // A reload or a restart hands the page the tabs its window had.
         const { keys, pinned } = parseWindowState(place?.read() ?? null, (key) => isRealMachine(splitKey(key).endpointId));
         const restored = settled({ keys, active: null, pinned });
         useWindowTabs.setState({ tabs: restored });

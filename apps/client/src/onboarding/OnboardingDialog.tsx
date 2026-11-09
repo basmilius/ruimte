@@ -121,7 +121,6 @@ function Welcome({ titleId }: { titleId: string }) {
     );
 }
 
-/* The tasks on the left with how far each is, and the one picked on the right. */
 function Hub({ titleId }: { titleId: string }) {
     const { t } = useTranslation('onboarding');
     const endpoint = useLocalMachine();
@@ -229,7 +228,6 @@ const INTRO_ROWS = [
     { id: 'machines', icon: Server }
 ] as const;
 
-/* Three things about Ruimte that the rest of the app takes for granted. */
 function IntroTask({ onRead }: { onRead(): void }) {
     const { t } = useTranslation('onboarding');
     return (
@@ -264,7 +262,6 @@ function IntroTask({ onRead }: { onRead(): void }) {
     );
 }
 
-/* The end of the walk: what is done, what is left and where it waits, and the way into the app. */
 function DonePane({ tasks, facts }: { tasks: readonly OnboardingTask[]; facts: OnboardingFacts }) {
     const { t } = useTranslation(['onboarding', 'common']);
     const summary = summaryOf(tasks, facts);

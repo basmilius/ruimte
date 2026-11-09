@@ -12,8 +12,6 @@ export interface DialogContribution {
     readonly component: ComponentType;
 }
 
-/* Dialogs of the window: they open on the start screen too. */
 export const windowDialogs = createRegistry<DialogContribution>('window dialog');
 
-/* Dialogs about the project that is open. */
 export const workspaceDialogs = createRegistry<DialogContribution>('workspace dialog');

@@ -22,9 +22,7 @@ export function callerName(views: readonly ProjectView[], nodesOf: NodesOfView<P
 }
 
 interface ShowViewNotice {
-    /* One line, the title of the toast. Its button already says the rest. */
     message: string;
-    /* The way out it offers: over to the view, back out of the one that was shown, or nothing at all. */
     action: 'go' | 'back' | null;
 }
 

@@ -18,7 +18,6 @@ interface PlansStore {
     byChat: Readonly<Record<string, ChatPlans>>;
     /* The machines that answered `plan.list`. Before that, a plan missing here may just not have arrived. */
     loaded: Readonly<Record<string, true>>;
-    /* The chats with a plan made while nobody was looking at them, by chat key, with that plan's id. */
     unseen: Readonly<Record<string, string>>;
     setMachinePlans(endpointId: string, plans: readonly PlanOfChat[]): void;
     putPlan(endpointId: string, chatId: string, plan: Plan): void;

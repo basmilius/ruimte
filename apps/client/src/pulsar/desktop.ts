@@ -6,7 +6,6 @@ import type { LoginStorage } from './web';
 
 const LoginCallbackSchema = z.object({ code: z.string().nullable(), state: z.string().nullable(), error: z.string().nullable() });
 
-/* What a login needs from the platform it runs on. */
 export interface PulsarPlatform {
     keeper: SessionKeeper;
     addressBook(): Promise<string>;

@@ -39,13 +39,10 @@ export function ArtifactNodeBody({ id }: { id: string }) {
 
 interface ArtifactOnCanvasProps {
     artifactId: string;
-    /* The version it shows; the latest when undefined. */
     version: string | undefined;
     /* How a person picks another version, with null for following the latest; without it the version is set elsewhere and offers no picker. */
     onPin: ((versionId: string | null) => void) | null;
-    /* Puts the artifact's title in the header beside the controls, for a header that has no title of its own. */
     titled?: boolean;
-    /* A line over the version, for what the surface around it has to say about which one it shows. */
     note?: string | null;
 }
 

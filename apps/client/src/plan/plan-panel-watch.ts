@@ -30,7 +30,6 @@ function activeRules(): PlanPanelRules {
     return (rules ??= new PlanPanelRules(uiIo(windowClock)));
 }
 
-/* Opens the plan in the panel, even after a person closed it. */
 export function openPlanFromPill(chatId: string, planId: string): void {
     usePlans.getState().markSeen(currentEndpointId(), chatId);
     activeRules().pill(chatId, planId);

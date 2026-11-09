@@ -1,6 +1,5 @@
 import { isAbsolutePath, slugOf, type ChatMoveInfoResult, type ChatMoveTarget } from '@ruimte/contracts';
 
-/* The value of the project select that stands for a project to make. */
 export const NEW_PROJECT = '__new__';
 
 /* Which folder a new project goes in: where the chat worked (by position), a folder made for it, or one the person picked. */
@@ -11,16 +10,13 @@ export interface MoveForm {
     destination: string | null;
     folder: FolderChoice;
     name: string;
-    /* The path of the folder to make, as typed. */
     newPath: string;
     initGit: boolean;
-    /* The folder the picker or the path field gave for "Choose a folder…". */
     chosenPath: string;
 }
 
 export const MAX_WORKED_CARDS = 3;
 
-/* A folder name out of a project name: lower case words joined with hyphens. */
 export function folderSlug(name: string): string {
     return slugOf(name, '');
 }
@@ -43,7 +39,6 @@ export function baseName(path: string): string {
     );
 }
 
-/* The card a choice stands for, or null when the answer has no such folder (yet). */
 export function workedCard(info: ChatMoveInfoResult | null, choice: FolderChoice): ChatMoveInfoResult['folders'][number] | null {
     if (info === null || !choice.startsWith('worked:')) {
         return null;

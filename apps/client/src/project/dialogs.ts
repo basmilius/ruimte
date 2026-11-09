@@ -47,7 +47,6 @@ export const PROJECT_DIALOGS: readonly DialogContribution[] = [
     { id: 'move-chat', surface: 'dialog', component: MoveChatDialog }
 ];
 
-/* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
 type ViewDialog =
     | { kind: 'settings'; viewId: string }
     /* Promoting a node that has lines drawn into it. Those lines do not survive the move. */

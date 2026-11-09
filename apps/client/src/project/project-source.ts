@@ -15,7 +15,6 @@ export interface ProjectSource {
     views: ProjectView[];
     activeViewId: string | null;
     openViewIds: string[];
-    /* The nodes of every canvas view by its id, in its order, live where the canvas is on screen. */
     nodes: Record<string, readonly ProjectSourceNode[]>;
     nodesOf: NodesOfView<ProjectSourceNode>;
 }

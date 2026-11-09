@@ -47,7 +47,6 @@ describe('find in a terminal node', () => {
     });
 });
 
-/* A drag out of the file manager as a browser delivers it: bytes with a name, and the shell can say where each one lives. */
 function finderDrag(type: 'dragover' | 'drop', ...paths: string[]): DragEvent {
     const event = new Event(type, { bubbles: true, cancelable: true }) as DragEvent;
     Object.defineProperty(event, 'dataTransfer', {

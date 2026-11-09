@@ -20,7 +20,6 @@ interface ProvidersTaskProps {
     next: { label: string; go(): void };
 }
 
-/* Asks the machine for its CLIs and who is logged in again, for a CLI installed or logged in from outside Ruimte. */
 async function checkAgain(): Promise<void> {
     const link = transportFor(LOCAL_ENDPOINT_ID);
     if (!link) {
@@ -37,7 +36,6 @@ async function checkAgain(): Promise<void> {
     }
 }
 
-/* The agent CLIs of this machine: who is logged in where, a login for the ones nobody is, and what is missing. */
 export function ProvidersTask({ machine, rows, missing, done, next }: ProvidersTaskProps) {
     const { t } = useTranslation('onboarding');
     const loaded = useProviders((s) => s.loaded);
@@ -98,7 +96,6 @@ export function ProvidersTask({ machine, rows, missing, done, next }: ProvidersT
     );
 }
 
-/* One installed CLI: logged in and as whom, or why not and the login that fixes it. */
 function CliLoginRow({ row }: { row: CliRow }) {
     const { t } = useTranslation('onboarding');
     const { provider, canLogIn, loggedIn, loginAccount } = row;

@@ -6,7 +6,6 @@ export type RemoteProtocol = 'ssh' | 'https';
 // `git@host:owner/repo.git`, the short SSH form most hosts show.
 const SCP_LIKE = /^([A-Za-z0-9._-]+)@([A-Za-z0-9.-]+):(?!\/\/)(.+)$/;
 
-/* Which way a remote URL reaches its host; null for anything that is neither, such as a local path. */
 export function protocolOf(url: string): RemoteProtocol | null {
     if (/^https?:\/\//.test(url)) {
         return 'https';
@@ -17,7 +16,6 @@ export function protocolOf(url: string): RemoteProtocol | null {
     return null;
 }
 
-/* Host and path of a remote URL, whichever way it is written, without credentials or a port. */
 function hostAndPath(url: string): { host: string; path: string } | null {
     const scp = SCP_LIKE.exec(url);
     if (scp !== null) {
@@ -54,7 +52,6 @@ export function remoteUrlAs(url: string, protocol: RemoteProtocol): string | nul
     return protocol === 'https' ? `https://${parts.host}/${parts.path}` : `git@${parts.host}:${parts.path}`;
 }
 
-/* The folder name a clone takes by default: the last part of the path, without `.git`. */
 export function repositoryName(url: string): string {
     const path = hostAndPath(url)?.path ?? url;
     const last = path.replace(/\/+$/, '').split('/').at(-1) ?? '';
@@ -66,11 +63,8 @@ type CopySkip = 'link' | 'too-large';
 export interface CopyCandidate {
     path: string;
     size: number;
-    /* The permission bits the copy is made with. */
     mode: number;
-    /* Why it is never copied; null when it can be. */
     skip: CopySkip | null;
-    /* Checked when the list opens. */
     checked: boolean;
 }
 

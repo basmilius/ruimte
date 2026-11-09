@@ -4,7 +4,6 @@ import { PLAN_CLOSE_DELAY_MS, PlanPanelRules, type PlanClock, type PlanPanelStat
 import { seenNodes } from '@/state/attention';
 import { chatsInSight, type SightCanvas, type SightWorkspace } from '@/state/in-sight';
 
-/* Time moves only when a test says so. */
 class FakeClock implements PlanClock {
     private now = 0;
     private next = 1;

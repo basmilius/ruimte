@@ -40,7 +40,6 @@ let workspace: FakeWorkspace;
 let page: Mounted;
 let seq = 0;
 
-/* The composer of a view on screen, or null while its chat has not opened. */
 function composer(viewId: string): EditorView | null {
     const content = page.host.querySelector(`[data-split-cell][data-view-id="${viewId}"] .cm-content`);
     return content === null ? null : EditorView.findFromDOM(content as HTMLElement);
@@ -62,13 +61,11 @@ function button(label: string): Element | null {
     return page.host.querySelector(`[aria-label="${label}"]`);
 }
 
-/* Puts a view in front of the window's one cell, the way picking its tab does. */
 async function showView(viewId: string): Promise<void> {
     await act(async () => useDocument.getState().setActiveView(viewId));
     await until(() => composer(viewId) !== null);
 }
 
-/* What the machine says about a chat as it changes, the way its stream does. */
 function tell(chatId: string, patch: Partial<ChatInfo>): void {
     seq += 1;
     act(() => machine.emit('chat.event', { chatId, event: { type: 'info', info: chatInfoOf(chatId, patch) }, seq }));
@@ -139,20 +136,17 @@ describe('a chat view', () => {
     });
 });
 
-/* Puts a chat of the project in the draft the way a person does, from the `#` picker. */
 async function attachChat(viewId: string, title: string): Promise<void> {
     await type(viewId, `#${title.slice(0, 3)}`);
     await until(() => option(viewId, title) !== null);
     await clickOn(option(viewId, title));
 }
 
-/* A row of the picker, which names the chat. */
 function option(viewId: string, title: string): Element | null {
     const options = page.host.querySelectorAll(`[data-split-cell][data-view-id="${viewId}"] [role="option"]`);
     return Array.from(options).find((candidate) => candidate.textContent?.trim() === title) ?? null;
 }
 
-/* A chat in the text of a draft, drawn as a chip. */
 function chipOf(viewId: string, title: string): Element | null {
     const spans = page.host.querySelectorAll(`[data-split-cell][data-view-id="${viewId}"] .cm-content span`);
     return Array.from(spans).find((span) => span.className.includes('bg-text/8') && span.textContent === title) ?? null;
@@ -218,7 +212,6 @@ describe('a stashed prompt', () => {
 
 const STOPPED_TURN = { kind: 'turn', id: 'turn-1', turnId: 'turn-1', createdAt: 1, endedAt: 2, state: 'aborted', costUsd: 0 };
 
-/* What the machine's stream says about a turn that ended, and then about the chat. */
 function settle(chatId: string, items: object[], patch: Partial<ChatInfo> = {}): void {
     for (const item of items) {
         seq += 1;

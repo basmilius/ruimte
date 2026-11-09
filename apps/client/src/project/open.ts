@@ -25,12 +25,10 @@ import { enterWorkspace, leaveWorkspace, machineFor, showStart, type OpenRequest
 import { ensureMachine } from '@/workspace/reach';
 import { useWindow, windowWorkspace } from '@/workspace/window';
 
-/* Where the window is going. */
 export type SwitchPlan =
     | { kind: 'project'; endpointId: string; projectId: string }
     | { kind: 'folder'; endpointId: string; folder: string; createFolder: boolean };
 
-/* The project the window had open when a switch began, which is what going back opens again. */
 export interface Whereabouts {
     endpointId: string;
     projectId: string;
@@ -39,11 +37,9 @@ export interface Whereabouts {
 /* The pieces a test stands in for; every call site in the app passes none of them. */
 export interface SwitchDeps {
     ensure(endpointId: string, signal: AbortSignal): Promise<string>;
-    /* The project on screen, or null on the start screen. */
     current(): Whereabouts | null;
     leave(): Promise<void>;
     enter(endpointId: string, request: OpenRequest): Promise<void>;
-    /* The start screen, which lets go of the project the window had with the shell as well. */
     toStart(): void;
     /* Asks the shell for this window to show a project (`claimWindow`); false while another window has it. */
     claim(project: Whereabouts | null): Promise<boolean>;
@@ -169,7 +165,6 @@ function targetOf(plan: SwitchPlan): SwitchTarget {
     };
 }
 
-/* Every way into a project passes here, so the window can say what it is waiting on. */
 async function begin(plan: SwitchPlan): Promise<SwitchOutcome> {
     const stays = plan.kind === 'project' && isOpenHere(plan.endpointId, plan.projectId);
     if (!stays && !(await confirmLeavingConflict())) {
@@ -278,7 +273,6 @@ export async function closingProject(endpointId: string, summary: ProjectSummary
     return closing === null ? null : closingCount(closing, local);
 }
 
-/* Removes a project from its machine. The open one is closed first, so its sessions end with it. */
 export async function deleteProject(endpointId: string, projectId: string, removeFiles: boolean): Promise<void> {
     // Deleting takes the unsaved edits of an open conflict with it, which the person already agreed to.
     if (isOpenHere(endpointId, projectId)) {

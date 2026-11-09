@@ -10,7 +10,6 @@ import { useProjectList } from '@/state/project-list';
 interface MoveChatItemsProps {
     chatId: string;
     endpointId: string;
-    /* The chat runs a turn or waits on a person, which the move refuses. */
     working: boolean;
 }
 

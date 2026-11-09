@@ -55,7 +55,6 @@ import { sessionClientFor } from '@/workspace/connections';
 // A terminal loads the WebGL addon on its first context; prefetched, it is there by then.
 prefetcher.register(() => import('@xterm/addon-webgl'));
 
-/* What the placeholder for an offscreen terminal shows: the text of its last screen. */
 export function TerminalPlate({ id }: { id: string }) {
     useMountCount('terminal-plate');
     const ref = useRef<HTMLDivElement>(null);
@@ -76,7 +75,6 @@ export function TerminalPlate({ id }: { id: string }) {
     );
 }
 
-/* The body of a terminal, the same on a canvas inside a frame and filling a view of its own. */
 export function TerminalBody({ id, focused }: { id: string; focused: boolean }) {
     useMountCount('terminal');
     const { t } = useTranslation(['canvas', 'common']);
@@ -87,7 +85,6 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     const [generation, setGeneration] = useState(0);
     const builds = generation + useSessionRestarts(id);
     const [failure, setFailure] = useState<string | null>(null);
-    // Whether the terminal had a selection when its menu opened, which is what Copy goes on.
     const [selected, setSelected] = useState(false);
     const fileHover = useRef<TerminalFileLink | null>(null);
     const [menuLink, setMenuLink] = useState<TerminalFileLink | null>(null);

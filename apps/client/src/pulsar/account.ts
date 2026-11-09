@@ -34,13 +34,10 @@ interface AccountState {
     notice: string | null;
     /* What the address book can sign in with. GitHub until it says otherwise, so a slow answer never hides the only choice there was. */
     providers: ProviderId[];
-    /* The ways to sign in to this account, once asked for; null before that and when signed out. */
     identities: Identity[] | null;
-    /* The provider being added to the account while its login is open. */
     linking: ProviderId | null;
 }
 
-/* Who this client is signed in as on the address book. */
 export const usePulsarAccount = create<AccountState>(() => ({
     status: 'loading',
     account: null,
@@ -151,7 +148,6 @@ async function loadProviders(): Promise<void> {
     }
 }
 
-/* Reads who is signed in from the platform's keeper, without asking the address book. */
 export async function startPulsarAccount(given: PulsarPlatform | null = desktopPulsar() ?? webPulsar()): Promise<void> {
     platform = given;
     book = null;
@@ -225,7 +221,6 @@ export async function signInToPulsar(provider: ProviderId = 'github', options: {
     }
 }
 
-/* The ways to sign in to this account, and how the account is shown now that they may have changed. */
 export async function refreshPulsarIdentities(): Promise<void> {
     try {
         applyAccountResult(await withAccessToken((client, token) => client.account(token)));

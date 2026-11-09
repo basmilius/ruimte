@@ -6,7 +6,6 @@ export function openProjectAction(endpointId: string, projectId: string): void {
     void perform('project.switch', { endpointId, projectId }).catch(ignoreRefusal);
 }
 
-/* A click on a project row. Cmd-click (Ctrl-click off macOS) opens it in a window of its own. */
 export function openProjectClickAction(event: { metaKey: boolean; ctrlKey: boolean }, endpointId: string, projectId: string): void {
     if (wantsNewWindow(event)) {
         openInNewWindow(endpointId, projectId);

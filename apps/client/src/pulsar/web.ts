@@ -52,13 +52,11 @@ export interface LoginStorage {
     removeItem(key: string): void;
 }
 
-/* The redirect this page listens on, or null where the address book would refuse it. */
 export function webRedirectUriFor(origin: string): string | null {
     const uri = `${origin}${APP_REDIRECT_LOOPBACK_PATH}`;
     return isAppRedirectUri(uri) ? uri : null;
 }
 
-/* Writes down what the return needs and answers the start URL to leave for. */
 export async function beginWebLogin(
     storage: LoginStorage,
     options: { addressBookUrl: string; redirectUri: string; provider?: ProviderId; link?: string; confirm?: boolean; now?: number }

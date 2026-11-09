@@ -143,7 +143,6 @@ describe('a chat in Chats that suggests a project', () => {
         await until(() => dialog() !== null);
         await until(() => dialog()!.textContent!.includes('Where this chat worked'));
         expect(dialog()!.querySelector<HTMLInputElement>('#move-chat-name')!.value).toBe('Vinyl shelf');
-        // Nothing is made by looking.
         expect(machine.requests('chat.move')).toHaveLength(0);
         await until(() => !buttonIn(dialog(), 'Make project')!.disabled);
         await clickOn(buttonIn(dialog(), 'Make project'));

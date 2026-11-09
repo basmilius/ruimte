@@ -18,7 +18,6 @@ interface ArtifactFileProps {
     endpointId: string;
     reference: ArtifactFileRef;
     file: ArtifactFile;
-    /* What the frame of a page is named for a screen reader. */
     title: string;
     /* A version never changes, so its time pins the bytes the way a file's mtime does. */
     createdAt: number;

@@ -8,7 +8,6 @@ import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 
-/* Searching the chats of the project, and the sessions its CLIs left outside Ruimte to resume. */
 export function usePaletteChats(context: PaletteContext, enabled: boolean): PaletteModeView<ChatRow> {
     const { t } = useTranslation(['shell']);
     const { open, query, close } = context;

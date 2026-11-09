@@ -27,7 +27,6 @@ import { useEndpoints } from '@/state/endpoints';
 import { endpointKey } from '@/state/keys';
 import { useNodeHost } from '@/surface/nodes/node-host';
 
-/* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
 export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }) {
     const { t } = useTranslation('canvas');
     const state = useBrowserRow(id, (row) => row);
@@ -38,7 +37,6 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
     const native = isDesktop();
     const command = (action: 'back' | 'forward' | 'reload' | 'stop', ignoreCache?: boolean): void => drivePage(id, action, ignoreCache);
     const [draft, setDraft] = useState<string | null>(null);
-    // The field reads short until someone puts the keyboard in it, and whole while they edit.
     const [editing, setEditing] = useState(false);
     const field = useRef<HTMLInputElement>(null);
     const host = useNodeHost(id);

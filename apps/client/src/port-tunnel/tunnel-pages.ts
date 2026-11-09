@@ -17,7 +17,6 @@ interface TunnelPage {
 }
 
 interface TunnelPartitions {
-    /* The partition of each page that is ready, so a node redraws when its tunnel is. */
     byKey: Record<string, string>;
 }
 
@@ -47,7 +46,6 @@ class PortTunnelPages {
         );
     }
 
-    /* The grant that would carry this address, for a page of a machine other than this one. */
     grantFor(endpointId: string, url: string): PortGrant | null {
         if (endpointId === LOCAL_ENDPOINT_ID || !this.supported()) {
             return null;
@@ -56,7 +54,6 @@ class PortTunnelPages {
         return grantForUrl(usePortGrants.getState().byEndpoint[endpointId], url, currentProjectId());
     }
 
-    /* What the page of `key` needs for `url`: nothing, a tunnel that is being made, or the partition of a ready one. */
     routeFor(key: string, endpointId: string, url: string): TunnelRoute {
         const grant = this.grantFor(endpointId, url);
 
@@ -84,7 +81,6 @@ class PortTunnelPages {
         return this.pages.get(key)?.partition ?? null;
     }
 
-    /* Ends the tunnel of a page, for a node that went or an address that left the shared port. */
     release(key: string): void {
         this.preparing.delete(key);
 
@@ -156,7 +152,6 @@ class PortTunnelPages {
             .catch(() => this.preparing.delete(key));
     }
 
-    /* A grant that is stopped takes the tunnels made from it with it. */
     private watchGrants(): void {
         if (this.watching) {
             return;

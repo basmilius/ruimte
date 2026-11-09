@@ -19,7 +19,6 @@ type Load =
     | { status: 'ready'; result: ModelBenchmarksResult; receivedAt: number }
     | { status: 'failed'; reason: 'unavailable' | 'unreachable' };
 
-/* How long ago the address book last read the numbers, in the words of the interface. */
 function updatedLabel(fetchedAt: number, now: number): string {
     const past = Math.max(0, now - fetchedAt);
     const [unit, size] = past < HOUR ? (['minutes', MINUTE] as const) : past < DAY ? (['hours', HOUR] as const) : (['days', DAY] as const);

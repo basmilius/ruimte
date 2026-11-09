@@ -15,7 +15,6 @@ export const usePickedMachineState = create<PickedMachineState>((set) => ({
     pick: (id) => set({ id })
 }));
 
-/* The machine the per-machine sections show: the one picked, else the one this window works on, else the first listed. */
 export function usePickedMachine(): Endpoint | null {
     const listed = useListedMachines();
     const picked = usePickedMachineState((s) => s.id);

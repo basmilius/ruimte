@@ -19,7 +19,6 @@ function RegistryCatalog({ endpointId, onOpen }: { endpointId: string; onOpen(ki
     return <RegistryCatalogPage registry={registry} onOpen={onOpen} />;
 }
 
-/* The providers of the machine in scope, with setup steps drawn by Ruimte. */
 export function ProvidersPane() {
     const { t } = useTranslation('settings');
     const endpointId = useEndpointId();

@@ -12,7 +12,6 @@ export function useMachineEntries(): MachineEntry[] {
     return mergeMachines({ endpoints, accountMachines: status === 'signed-in' ? accountMachines : null, showLocal: hasLocalMachine() });
 }
 
-/* The same list for code outside a render. */
 export function liveMachineEntries(): MachineEntry[] {
     const account = usePulsarAccount.getState().status === 'signed-in' ? usePulsarMachines.getState().machines : null;
     return mergeMachines({ endpoints: useEndpoints.getState().endpoints, accountMachines: account, showLocal: hasLocalMachine() });

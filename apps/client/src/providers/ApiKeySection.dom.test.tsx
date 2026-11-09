@@ -86,14 +86,12 @@ async function enter(input: HTMLInputElement, text: string): Promise<void> {
     await act(async () => input.dispatchEvent(new FocusEvent('focusout', { bubbles: true })));
 }
 
-/* Claude Code, which the Claude API runs in. */
 function claudeCode(installed: boolean): ProviderInfo {
     const base = info(CLAUDE_API, installed);
 
     return { ...base, kind: 'claude', name: 'Claude Code', version: installed ? '2.1.320' : null, capabilities: { ...base.capabilities, terminal: true } };
 }
 
-/* Opens the provider on a machine that answers its two requests from one status a test may change. */
 async function open(provider: Provider, configured = false, claudeInstalled = true): Promise<void> {
     let status = { configured, models: configured ? 2 : 0, settings: { ...provider.defaults } };
     machine = new FakeMachine();
@@ -208,7 +206,6 @@ describe('The Claude API in Settings', () => {
         expect(everything()).not.toContain('Not installed');
         // Its own mark, not Claude's, whose label needs the even-odd rule to show.
         expect(document.querySelector('[role="dialog"] svg[aria-label="Claude API"] path')?.getAttribute('fill-rule')).toBe('evenodd');
-        // The key and what it brought each have a row of their own.
         const titled = (text: string) =>
             [...document.querySelectorAll('[role="dialog"] *')].filter((element) => element.children.length === 0 && element.textContent === text);
         expect(titled('API key')).toHaveLength(1);

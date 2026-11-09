@@ -22,7 +22,6 @@ import { useWindow, windowWorkspace, workspaceOf } from '@/workspace/window';
 const REFUSALS: readonly string[] = ['scratch-unavailable'];
 
 interface NewChatState {
-    /* The machines that turned a new chat down, for as long as this page runs. */
     refused: Record<string, true>;
 }
 
@@ -104,7 +103,6 @@ export async function newChatOn(endpointId: string, payload: ProjectNewChatPaylo
     }
 }
 
-/* The machines a person picks between where no machine is implied, in the order the Machines pane lists them. */
 function pickableMachines(): string[] {
     return liveMachineEntries().map((entry) => entry.endpoint?.id ?? entry.id);
 }

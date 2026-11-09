@@ -33,7 +33,6 @@ export class FakePortTransport implements PortTransport {
         return () => set.delete(handler as Handler);
     }
 
-    /* Answers every request of this type from now on with what the function returns. */
     reply(type: RequestType, responder: Responder): void {
         this.responders.set(type, responder);
     }

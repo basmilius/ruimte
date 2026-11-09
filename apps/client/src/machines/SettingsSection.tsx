@@ -17,7 +17,6 @@ type SettingsScope = 'computer' | 'machine';
 
 const TAG = 'inline-flex h-6 shrink-0 items-center gap-1.5 rounded-md bg-surface-hover px-2 text-xs text-text-muted';
 
-/* The computer in the words its owner uses for it. */
 function computerWords(): 'computerMac' | 'computerPc' | 'computer' {
     if (isApplePlatform()) {
         return 'computerMac';
@@ -35,14 +34,12 @@ function Tag({ icon, children }: { icon: LucideIcon; children: ReactNode }) {
     );
 }
 
-/* A section for one machine it was given, such as the machine this window works on. */
 function MachineName({ id }: { id: string }) {
     const label = useEndpoints((s) => s.endpoints.find((endpoint) => endpoint.id === id)?.label ?? null);
 
     return label === null ? null : <Tag icon={Server}>{label}</Tag>;
 }
 
-/* The machine every per-machine section shows, with a choice of the others once there are any. */
 function MachinePicker() {
     const { t } = useTranslation('settings');
     const listed = useListedMachines();
@@ -73,7 +70,6 @@ function MachinePicker() {
     );
 }
 
-/* The machine this window works on, for a section that is about it alone. */
 function WindowMachineName() {
     return <MachineName id={useEndpointId()} />;
 }
@@ -84,7 +80,6 @@ type SettingsSectionProps = Omit<SectionProps, 'tag'> & {
     machine?: 'picked';
 };
 
-/* The card of @adecore/ui with the tag that says where its settings apply. */
 export function SettingsSection({ scope, machine, ...props }: SettingsSectionProps) {
     const { t } = useTranslation('settings');
     const tag =

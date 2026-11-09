@@ -5,7 +5,6 @@ type SavedPreviewView = 'page' | 'markdown' | 'code' | 'image' | 'pdf';
 
 export interface SavedPreviewOf {
     view: SavedPreviewView;
-    /* The file of the version it draws; an image draws beside the other images of the version. */
     file: number;
 }
 

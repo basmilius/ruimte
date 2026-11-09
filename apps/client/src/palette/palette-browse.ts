@@ -3,7 +3,6 @@ import { nameOf, type MachineEntry } from '@/machines/machine-list';
 import { endsWithSeparator, lastSegment } from '@/paths/machine-path';
 import type { ConnectionState } from '@/transport-api/transport';
 
-/* What `fs.browse` answered, down to the two fields the presence rule reads. */
 export interface BrowseAnswer {
     entries: readonly { name: string }[];
     exists?: boolean;
@@ -69,9 +68,7 @@ export function typedPathOffer(path: string, platform: string | null, presence: 
 }
 
 interface BrowseStart {
-    /* Where the first listing is asked for, ready to be listed whole. */
     start: string;
-    /* Where a start that is not on this machine falls back to; a machine always has a home. */
     home: string;
 }
 
@@ -88,19 +85,15 @@ export function browseStart(configured: string, sep: string): BrowseStart {
     return { start: endsWithSeparator(trimmed) ? trimmed : `${trimmed}${sep}`, home: homePath };
 }
 
-/* What a machine's link is doing, in the terms a row of machines draws it. */
 type MachineLink =
     | { kind: 'open' }
     | { kind: 'connecting' }
     | { kind: 'failed'; reason: string }
-    /* No link yet, and the account is the way in. */
     | { kind: 'account' }
-    /* This machine, while nothing has asked for it yet. */
     | { kind: 'idle' }
     /* On the account without a broker, which nothing outside its own network can reach. */
     | { kind: 'network-only' };
 
-/* A wait for one machine that a person started by picking it: under way, or ended with a reason. */
 type LinkWait = { state: 'connecting' } | { state: 'failed'; reason: string };
 
 /*
@@ -151,7 +144,6 @@ export function linkHint(link: MachineLink): string | undefined {
     }
 }
 
-/* The colors the settings page paints a machine in. */
 export function linkDot(link: MachineLink): string {
     switch (link.kind) {
         case 'open':
@@ -194,12 +186,10 @@ export interface BrowseStep {
     link?: LinkWait;
 }
 
-/* The folders of one machine, behind a wait for its link when it is not open yet. */
 export function pickMachine(endpointId: string, open: boolean): BrowseStep {
     return open ? { endpointId, machines: false, path: '' } : { endpointId, machines: false, path: '', link: { state: 'connecting' } };
 }
 
-/* One machine is nothing to choose between, so browsing opens on its folders; more than one asks first. */
 export function openBrowse(activeId: string, machines: readonly { endpointId: string; open: boolean }[]): BrowseStep {
     const only = machines.length === 1 ? machines[0]! : null;
     return only ? pickMachine(only.endpointId, only.open) : { endpointId: activeId, machines: true, path: '' };
@@ -216,7 +206,6 @@ export function settleLink(step: BrowseStep | null, endpointId: string, failure:
     return failure === null ? { endpointId, machines: false, path: '' } : { ...step, link: { state: 'failed', reason: failure } };
 }
 
-/* Trying a failed machine again waits again, on the same step. */
 export function retryLink(step: BrowseStep | null): BrowseStep | null {
     return step?.link?.state === 'failed' ? { ...step, link: { state: 'connecting' } } : step;
 }
@@ -233,10 +222,6 @@ export function machinesStep(step: BrowseStep, query: string): BrowseStep {
 /* `folders` carries the path to go back to, which has to be listed before it is shown. */
 type BrowseBack = { to: 'palette' } | { to: 'machines' } | { to: 'folders'; path: string };
 
-/*
- * The machines step returns to the folders it was opened from, or leaves browsing when there are
- * none. A folders step goes to the machines when there is more than one, and otherwise leaves.
- */
 export function browseBack(step: BrowseStep, machineCount: number): BrowseBack {
     if (step.machines) {
         return step.path === '' ? { to: 'palette' } : { to: 'folders', path: step.path };
@@ -251,7 +236,6 @@ export interface PaletteSignal {
     browseAt: number;
 }
 
-/* Opening, a mode change and the browse command each start the palette over. */
 export function paletteStart(now: PaletteSignal, seen: PaletteSignal): { changed: boolean; restart: boolean; browse: boolean } {
     const changed = now.open !== seen.open || now.mode !== seen.mode || now.browseAt !== seen.browseAt;
     const restart = changed && now.open;

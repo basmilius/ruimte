@@ -8,7 +8,6 @@ export interface PlanPanelState {
     open: boolean;
 }
 
-/* The timer the close waits on, injected so a test decides when time passes. */
 export interface PlanClock {
     setTimeout(run: () => void, ms: number): unknown;
     clearTimeout(handle: unknown): void;
@@ -36,13 +35,11 @@ export class PlanPanelRules {
         this.io = io;
     }
 
-    /* The chats on screen now, as `chatsInSight` measured them. */
     sight(chatIds: ReadonlySet<string>): void {
         this.inSight = chatIds;
         this.settle();
     }
 
-    /* A new plan. Only a chat on screen takes the panel; true when it did. */
     created(chatId: string, planId: string): boolean {
         if (!this.inSight.has(chatId)) {
             return false;
@@ -51,7 +48,6 @@ export class PlanPanelRules {
         return true;
     }
 
-    /* A person pressed the pill, which opens the panel even when they closed it before. */
     pill(chatId: string, planId: string): void {
         this.anchorOn(chatId, planId);
     }

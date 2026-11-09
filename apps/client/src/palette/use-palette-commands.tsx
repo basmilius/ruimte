@@ -33,13 +33,11 @@ import { viewShortcut } from '@/surface/canvas/shortcuts';
 import { viewGlyphOf } from '@/surface/cell-view';
 import { useOpenEndpoints } from '@/transport/status';
 
-// What an empty palette shows of the two lists that have no natural end.
 const OPENING_RECENTS = 5;
 const OPENING_JUMPS = 8;
 
 const VIRTUAL_CATALOG_THRESHOLD = 200;
 
-/* The palette as Cmd+K opens it: the nodes, views, projects, actions, settings and files that match the field. */
 export function usePaletteCommands(context: PaletteContext, files: readonly Entry[], enabled: boolean): PaletteModeView<Entry> {
     const { t } = useTranslation(['shell']);
     const { open, query, close } = context;
@@ -72,7 +70,6 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
         }
         const pageOf = (id: string, url: string | undefined): string =>
             pageKeywords(url, currentEndpointId === null ? undefined : pages?.[endpointKey(currentEndpointId, id)]);
-        // Every view, not only the canvas on screen; a node elsewhere says where it lives.
         const jumps: Entry[] = views.flatMap((view) => {
             if (!isCanvasView(view)) {
                 return [];
@@ -182,7 +179,6 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
     })();
 
     const run = (entry: Entry, newWindow: boolean): void => {
-        // Only a command comes back among the recents; a jump, a file, a view, a project or a setting does not.
         if (entry.section === 'actions' || entry.section === 'recent') {
             setRecents(rememberRecent(entry.id));
             countCommand(entry.id, 'palette');

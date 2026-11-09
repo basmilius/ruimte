@@ -8,7 +8,6 @@ import { createRegistry } from './create-registry';
  */
 export interface ViewKindDefinition {
     readonly id: string;
-    /* The body of the view, or null when the view is not of this kind. */
     render(view: ProjectView, focused: boolean): ReactNode;
 }
 
@@ -25,7 +24,6 @@ export function viewKind<Own extends ProjectView>(definition: {
     };
 }
 
-/* The test for a view of one kind, to say what a definition owns. */
 export function viewOfKind<Kind extends ProjectView['kind']>(kind: Kind): (view: ProjectView) => view is Extract<ProjectView, { kind: Kind }> {
     return (view): view is Extract<ProjectView, { kind: Kind }> => view.kind === kind;
 }

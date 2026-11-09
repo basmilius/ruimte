@@ -35,7 +35,6 @@ export function useDevTunnelRows(endpointId: string, enabled: boolean): readonly
     return rows;
 }
 
-/* The address a visitor outside Ruimte uses for the port, or null while no running hostname points at it. */
 export function publicAddressOf(rows: readonly TunnelRow[], port: number): string | null {
     const row = rows.find((entry) => entry.port === port && entry.enabled);
 

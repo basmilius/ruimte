@@ -5,7 +5,6 @@ import { ForkPill } from '@/nodes/ForkPill';
 import { PlanPill } from '@/plan/PlanPill';
 import type { NodeHeaderProps } from '@/registry/node-kinds';
 
-/* What the header of a chat on the canvas says about the chat, and the computer it works on. */
 export function NodeChatPills({ id, chatId, renaming }: NodeHeaderProps) {
     if (renaming) {
         return null;

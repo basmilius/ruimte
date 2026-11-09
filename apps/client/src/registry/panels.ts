@@ -7,7 +7,6 @@ export type PanelGroup = 'project' | 'connected' | 'made';
 /* How the project's file keeps the panel that was open: beside `panel`, in a key an older client ignores. */
 type StoredPanelFlag = 'launchesPanel' | 'databasesPanel' | 'outputPanel';
 
-/* A panel of the side column. The feature that draws it registers it, and the frame lists what was registered. */
 export interface PanelDefinition {
     /* The kind, which is also the part of its words under `shell:panel.names.<id>`. */
     readonly id: string;

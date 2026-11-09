@@ -11,7 +11,6 @@ import { showMoveToast } from '@/state/show-toast';
 import { nodesOfView } from '@/state/view-nodes';
 import { watchPool } from '@/transport/pool-watch';
 
-/* What the watch reaches outside the event; a test hands in a fake of each. */
 export interface AgentProjectDeps {
     showing(endpointId: string, projectId: string): boolean;
     listed(endpointId: string, projectId: string): ProjectSummary | null;

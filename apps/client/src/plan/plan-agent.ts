@@ -3,7 +3,6 @@ import { chatHostOf, type ProjectNode, type ProjectView } from '@ruimte/contract
 import { agentName } from '@/plan/plan-view';
 import { useViewNodes, type NodesOfView } from '@/state/view-nodes';
 
-/* The provider of a chat as the project names it, for a chat this client has not attached yet. */
 function providerIn(views: readonly ProjectView[], nodesOf: NodesOfView<ProjectNode>, chatId: string): string | null {
     const host = chatHostOf(views, chatId);
     if (host !== null) {

@@ -1,7 +1,6 @@
 import type { PortTunnelToPage, PortTunnelToShell } from '@ruimte/desktop-bridge';
 import { PortStreamHub, type PortStreamClient } from './stream-client';
 
-/* As much of the desktop bridge as a tunnel's page uses. */
 interface TunnelShell {
     onPortTunnel(listener: (message: PortTunnelToPage) => void): () => void;
     portTunnelSend(message: PortTunnelToShell): void;
@@ -46,7 +45,6 @@ export class PortTunnelHost {
         });
     }
 
-    /* The tunnel ended: the shell closes its side, and every stream of the machine connection closes here. */
     dispose(reason: string): void {
         this.stop?.();
         this.stop = null;

@@ -51,7 +51,6 @@ export function offerViewUndo(document: DocumentStore, viewId: string, name: str
     });
 }
 
-/* What the undo key does while a deletion is on offer: the newest comes back first. False when there is none. */
 export function undoLatestDeletion(document: DocumentStore): boolean {
     const latest = document.getState().trashed.at(-1);
     return latest !== undefined && document.getState().restoreView(latest.view.id);

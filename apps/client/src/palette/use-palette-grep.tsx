@@ -8,7 +8,6 @@ import { GrepFileLabel, GrepItem, type GrepRow } from '@/palette/PaletteGrepResu
 import { PaletteSearchToggle } from '@/palette/PaletteSearchToggle';
 import { useUi } from '@/state/ui';
 
-/* Find in files: the lines of the project folder that match the field, with the three ways a match is read. */
 export function usePaletteGrep(
     context: PaletteContext,
     { enabled, folder, openFile }: { enabled: boolean; folder: string | null; openFile(path: string, line: number | null): void }

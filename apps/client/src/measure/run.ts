@@ -99,7 +99,6 @@ export async function buildMeasureScene(variant: MeasureVariant): Promise<void> 
     }
 }
 
-/* Copies what was measured since the scene opened or the last copy, and starts counting afresh. */
 export function copyMeasurements(): void {
     const json = JSON.stringify(take(), null, 2);
     console.info(json);

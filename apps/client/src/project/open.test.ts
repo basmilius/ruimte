@@ -16,7 +16,6 @@ function describeRequest(request: OpenRequest): string {
     return `folder:${request.folder}:${request.createFolder}`;
 }
 
-/* A window with a project on screen (or none), and every step the switch takes written down. */
 function spyDeps(start: Whereabouts | null, over: Partial<SwitchDeps> = {}): { deps: SwitchDeps; steps: string[]; here: () => Whereabouts | null } {
     const steps: string[] = [];
     let current = start;
@@ -43,7 +42,6 @@ function spyDeps(start: Whereabouts | null, over: Partial<SwitchDeps> = {}): { d
     return { deps, steps, here: () => current };
 }
 
-/* The project opener of a cold start, writing down what it was asked to open. */
 function opener(opened: string[]) {
     return async (endpointId: string, projectId: string): Promise<'done'> => {
         opened.push(`${endpointId}:${projectId}`);
@@ -53,7 +51,6 @@ function opener(opened: string[]) {
 
 const HERE: Whereabouts = { endpointId: 'local', projectId: 'p0' };
 
-/* Runs the steps of a plan the way the switch does, with a signal nobody aborts unless the test passes one. */
 function run(plan: SwitchPlan, deps: SwitchDeps, controller = new AbortController(), opening: () => void = () => undefined) {
     const handle = switchRun(plan, deps);
     return { handle, done: handle.steps({ signal: controller.signal, opening }) };
@@ -174,7 +171,6 @@ describe('opening a project', () => {
     });
 });
 
-/* The shell's claims written down beside the steps, granted unless the project is in `taken`. */
 function claiming(steps: string[], taken: string[] = []): Pick<SwitchDeps, 'claim'> {
     return {
         claim: async (project) => {

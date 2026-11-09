@@ -34,12 +34,10 @@ function readOrder(): string[] {
     return storedOrder.read() ?? [];
 }
 
-/* A line between the projects of "All open projects", with a heading on it once it has a label. */
 export interface SidebarSeparator {
     id: string;
     /* Empty for a bare line. */
     label: string;
-    /* A heading that hides the projects under it, up to the next separator. */
     folded: boolean;
 }
 
@@ -115,7 +113,6 @@ export function movableKeys(projects: readonly string[], places: SeparatorPlaces
     ];
 }
 
-/* The projects a folded heading hides, from the keys in the order they show. */
 export function foldedProjects(movable: readonly string[], separators: readonly SidebarSeparator[]): Set<string> {
     const folded = new Set(separators.filter((separator) => separator.folded && separator.label !== '').map((separator) => separatorKey(separator.id)));
     const hidden = new Set<string>();
@@ -139,19 +136,15 @@ export const useSidebarProjects = create<{
     separators: SidebarSeparator[];
     /* The separator whose label is being typed, which only the window that added or renamed it shows. */
     renamingSeparatorId: string | null;
-    /* The project whose New view menu opens once the window switched to it. */
     newViewFor: string | null;
     setOrder(order: string[]): void;
-    /* Moves a project or separator to `index` among the ones on screen, which `visible` names in their order. */
     move(visible: readonly string[], key: string, index: number): void;
-    /* A new separator at `index` among the ones on screen, with its label field open. */
     addSeparator(visible: readonly string[], index: number): void;
     foldSeparator(id: string, folded: boolean): void;
     renameSeparator(id: string, label: string): void;
     removeSeparator(id: string): void;
     setRenamingSeparator(id: string | null): void;
     askNewView(key: string | null): void;
-    /* Folds and orders the projects the way another window left them. */
     reload(): void;
 }>((set, get) => {
     const saveSeparators = (separators: SidebarSeparator[]): void => {

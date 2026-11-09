@@ -13,7 +13,6 @@ import { readResource, streamResource } from '@/transport/byte-transfer';
 export interface ArtifactFileRef {
     artifactId: string;
     versionId: string;
-    /* The file's place in the version's manifest. */
     file: number;
 }
 
@@ -41,7 +40,6 @@ export async function downloadArtifactFile(endpointId: string, ref: ArtifactFile
 
 class Cancelled extends Error {}
 
-/* Each piece goes to disk as it arrives, under one toast that counts and can stop it. */
 async function saveInPieces(stream: SaveFileStreamBridge, endpointId: string, ref: ArtifactFileRef, file: ArtifactFile, name: string): Promise<void> {
     const id = await stream.begin(name, file.mime);
     if (id === null) {

@@ -14,7 +14,6 @@ interface MissingProviderNoteProps {
     chatId?: string;
 }
 
-/* What a terminal or a chat says when its machine has no CLI of its kind. */
 export function MissingProviderNote({ endpointId, kind, chatId = '' }: MissingProviderNoteProps) {
     const { t } = useTranslation('canvas');
     // The fork dialog is the chat feature's, which the host hands to whatever shows a chat.

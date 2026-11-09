@@ -22,7 +22,6 @@ export const SECRET_ANSWER_FIELD = 'value';
 /* Decline is the one choice a secret card offers besides Save, and the one a suggestion's card sends to the machine. */
 export const SECRET_DECLINE = 'decline';
 
-/* The choice of a tunnel suggestion's Confirm, which makes the change on the machine. */
 export const TUNNEL_CONFIRM = 'confirm';
 
 export interface RuimtePrompt extends HostPrompt {
@@ -75,7 +74,6 @@ export function tunnelProposalPrompt(endpointId: string, chatId: string, proposa
     };
 }
 
-/* What a tunnel suggestion does, in the words its card is headed with. */
 export function tunnelProposalHeading(proposal: TunnelProposal): string {
     const words = { hostname: proposal.hostname, port: String(proposal.port ?? '') };
 
@@ -126,7 +124,6 @@ export function ruimtePayloadOf(subject: PromptSubject): unknown {
     return data.request ? JSON.stringify(data.request) : data.since;
 }
 
-/* The buttons of an approval to operate an app: Deny, Always allow, and Allow this time as the primary. */
 export function computerButtons(): ApprovalButtonSpec[] {
     const choose = (choiceId: ComputerApprovalChoice) => ({ kind: 'choose', choiceId }) as const;
     return [

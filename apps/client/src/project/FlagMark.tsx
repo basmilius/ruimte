@@ -21,7 +21,6 @@ export function FlagMark({ color }: { color: string | null | undefined }) {
     );
 }
 
-/* The same mark for an id of the project on screen, read off the document. */
 export function FlagMarkOf({ id }: { id: string }) {
     const color = useDocument((state) => flagOf(state.flags, id));
     return <FlagMark color={color} />;

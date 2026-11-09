@@ -31,7 +31,6 @@ let disconnect: () => void;
 let page: Mounted;
 let restarts: number;
 
-/* The shell of the desktop app, with the restart of the service a person put off. */
 function installShell(state: BackgroundServiceState | null): void {
     if (state === null) {
         removeDesktop();
@@ -112,7 +111,6 @@ describe('the screen over a workspace whose machine is this computer and was ref
         await act(async () => machine.lose(protocolRefusal('daemon-older')));
         await until(() => lostScreen() !== null);
         expect(button('Restart machine')).toBeNull();
-        // The sibling actions stay.
         expect(button('Open another project')).not.toBeNull();
 
         installShell(null);

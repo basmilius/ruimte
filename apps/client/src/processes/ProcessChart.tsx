@@ -13,7 +13,6 @@ interface ProcessChartProps {
     label: ReactNode;
     /* What a screen reader calls the chart, which only decorates the readout above it. */
     name: string;
-    /* What the chart says while nobody points at it: the value now. */
     headline: string;
     points: readonly ProcessPoint[];
     windowMs: number;

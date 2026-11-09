@@ -92,7 +92,6 @@ function startWatch(endpointId: string): MachineWatch {
     return { users: 0, queries, stop };
 }
 
-/* Holds the machine's watch, and a list when `payload` names one, until the returned function lets go. */
 export function holdArtifacts(endpointId: string, payload: ArtifactListPayload | null): () => void {
     let machine = watches.get(endpointId);
     if (machine === undefined) {
@@ -132,7 +131,6 @@ export function holdArtifacts(endpointId: string, payload: ArtifactListPayload |
     };
 }
 
-/* The list on screen while the caller is, or null while the machine does not keep Output. */
 export function useArtifactList(endpointId: string, payload: ArtifactListPayload, answers: boolean): ArtifactListRow | null {
     const queryKey = queryKeyOf(payload);
     const key = endpointKey(endpointId, queryKey);

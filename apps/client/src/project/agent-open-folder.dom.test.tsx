@@ -22,7 +22,6 @@ function onScreen(text: string): boolean {
     return document.body.textContent?.includes(text) === true;
 }
 
-/* An agent's `project_open` of a folder without a project, the way the machine passes it on to the clients with its project open. */
 function agentAsks(fromProjectId = 'project-atlas'): void {
     act(() => machine.emit('project.askOpen', { folder: '/work/fresh', fromProjectId, by: 'term-1' }));
 }

@@ -89,7 +89,6 @@ export function groupTitle(group: ProcessGroup, titles: ReadonlyMap<string, stri
     return title === undefined ? { title: i18next.t(`processes:group.${group.kind}`), known: group.nodeId === null } : { title, known: true };
 }
 
-/* Where a warning is drawn: under the row of its node, under the row that holds its process, or above the list. */
 export function alertPlacement(alert: ProcessAlert, groups: readonly ProcessGroup[]): string | null {
     const byNode = alert.nodeId === null ? undefined : groups.find((group) => group.nodeId === alert.nodeId);
     if (byNode !== undefined) {

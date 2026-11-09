@@ -17,7 +17,6 @@ export interface FixtureFile {
 interface MeasureScene {
     variant: MeasureVariant;
     content: ProjectContent;
-    /* How many of each kind the scene holds, counted where it is built. */
     nodes: Record<NodeKind, number>;
     files: FixtureFile[];
     /* The views of a three by three grid, column by column; null for a scene on one canvas. */
@@ -140,7 +139,6 @@ export function measureScene(variant: MeasureVariant): MeasureScene {
     return { variant, content: { name: NAMES[variant], color: '#5b8def', views: [canvas] }, files, grid: null, nodes: counts };
 }
 
-/* What a report says about the fixture: how many of each and how large the files are. */
 export function sceneFacts(scene: MeasureScene): {
     variant: MeasureVariant;
     nodes: Record<string, number>;

@@ -8,7 +8,6 @@ import { useMachineAnswers } from '@/transport/features';
 import { transportFor } from '@/transport/index';
 
 export interface AcpServer {
-    /* Null while the machine has not answered, or answers no `provider.server`. */
     server: AgentServerStatus | null;
     error: string | null;
     /* Only the app on the machine itself may install it, since that downloads a program and makes it runnable there. */
@@ -16,7 +15,6 @@ export interface AcpServer {
     install(): Promise<void>;
 }
 
-/* Where the chat server of a CLI that ships one apart (Antigravity's) stands on a machine, and its install. */
 export function useAcpServer(endpointId: string, kind: AgentKind): AcpServer {
     const answers = useMachineAnswers(endpointId, 'provider.server');
     const [server, setServer] = useState<AgentServerStatus | null>(null);

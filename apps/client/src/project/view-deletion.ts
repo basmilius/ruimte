@@ -22,19 +22,15 @@ function filesOfNodes(nodes: readonly ProjectNode[], folder: string | null): str
     );
 }
 
-/* The files a view shows: itself for a file view, its file nodes for a canvas. */
 export function filesOfView(view: ProjectView, folder: string | null): string[] {
     return isFileView(view) ? resolved([view.path], folder) : filesOfNodes(nodesOfView(view), folder);
 }
 
-/* What deleting a view reaches beyond the document: the drafts of its files and the agents on the machine. */
 export interface ViewDeletionMachine {
     folder(): string | null;
     isUnsaved(path: string): boolean;
-    /* Resolves whether the file is on disk as it was edited. */
     save(path: string): Promise<boolean>;
     working(node: StatusOf): boolean;
-    /* The agents elsewhere that end when these sessions do. */
     endedBy(nodeIds: readonly string[]): Promise<string[]>;
 }
 
@@ -49,7 +45,6 @@ export const liveViewDeletion: ViewDeletionMachine = {
 export interface ViewDeletionFacts {
     /* Absolute on the machine, the way a draft is keyed. */
     unsaved: string[];
-    /* The titles of the nodes in the view that are still working. */
     working: string[];
     /* The titles of the agents in other places that end with the view; null for one the document has no name for yet. */
     ending: (string | null)[];
@@ -59,7 +54,6 @@ function unsavedOf(files: readonly string[], machine: ViewDeletionMachine): stri
     return [...new Set(files)].filter((path) => machine.isUnsaved(path));
 }
 
-/* What a delete of these nodes, or of a view holding them, reaches beyond the document. */
 async function deletionFacts(
     nodes: readonly (StatusOf & { title: string })[],
     sessions: readonly string[],
@@ -97,7 +91,6 @@ export function nodeDeletionFacts(nodes: readonly ProjectNode[], views: readonly
     );
 }
 
-/* Saves what is unsaved among these files and resolves the ones that did not save. */
 async function saveFiles(files: readonly string[], machine: ViewDeletionMachine): Promise<string[]> {
     const unsaved = unsavedOf(files, machine);
     const saved = await Promise.all(unsaved.map((path) => machine.save(path)));

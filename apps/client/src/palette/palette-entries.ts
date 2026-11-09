@@ -18,7 +18,6 @@ export interface Entry extends Command {
     keywords?: string;
 }
 
-/* What the palette shares with the mode on screen: the field. */
 export interface PaletteContext {
     open: boolean;
     query: string;
@@ -40,21 +39,16 @@ export interface PaletteGroup<Row extends PaletteRow> {
     items: readonly Row[];
 }
 
-/* One mode of the palette as the body draws it around the one field every mode shares. */
 export interface PaletteModeView<Row extends PaletteRow = PaletteRow> {
     groups: readonly PaletteGroup<Row>[];
     virtualized?: boolean;
-    /* A row of `groups` as a `CommandPalette.Item` keyed by its id, with the row as its value. */
     item(row: Row, itemProps?: CommandPaletteVirtualItemProps): ReactNode;
     /* A key before Base UI's own, which clicks the highlighted row on Enter. */
     keyDown?(event: PaletteKeyEvent, highlighted: Row | undefined): void;
-    /* Backspace in an empty field. */
     back?(): void;
     leading?: ReactNode;
     trailing?: ReactNode;
-    /* What the list says while it has no rows. */
     empty?: ReactNode;
-    /* Read out as it changes, under the rows. */
     status?: ReactNode;
     footer?: ReactNode;
 }
@@ -65,7 +59,6 @@ export function matches(query: string, text: string): boolean {
     return score !== null && score !== 1;
 }
 
-/* Whether a row answers to the query, by what it shows and by what it only answers to. */
 export function entryMatches(query: string, entry: Pick<Entry, 'label' | 'hint' | 'keywords'>): boolean {
     return matches(query, [entry.label, entry.hint, entry.keywords].filter(Boolean).join(' '));
 }
@@ -75,7 +68,6 @@ export function pageKeywords(url: string | undefined, page: { url: string; title
     return [url, page?.url, page?.title].filter(Boolean).join(' ');
 }
 
-/* The rows of a list mode under the label of each section they fall in, in the order they come. */
 export function groupBySection(entries: readonly Entry[], label: (section: Entry['section']) => string): PaletteGroup<Entry>[] {
     const groups: { section: Entry['section']; items: Entry[] }[] = [];
     for (const entry of entries) {

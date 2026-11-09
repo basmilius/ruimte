@@ -5,10 +5,8 @@ import { MessageSquare, Terminal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { PaletteRow } from '@/palette/palette-entries';
 
-/* A hit in a chat of Ruimte, or a session a CLI started outside it. */
 export type ChatRow = PaletteRow & ({ hit: ChatSearchHit; session?: undefined } | { hit?: undefined; session: ChatExternalSession });
 
-/* The snippet with the match picked out. */
 function Snippet({ hit }: { hit: ChatSearchHit }) {
     const end = hit.matchStart + hit.matchLength;
     return (

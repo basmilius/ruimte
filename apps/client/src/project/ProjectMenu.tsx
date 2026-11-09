@@ -83,7 +83,6 @@ export function ProjectAddMenu({ model }: { model: ProjectMenuModel }) {
     );
 }
 
-/* The project segment of the toolbar's breadcrumb: projects to switch to, their actions, and opening a folder. */
 export function ProjectMenu() {
     const { t } = useTranslation('shell');
     const model = useProjectMenu();

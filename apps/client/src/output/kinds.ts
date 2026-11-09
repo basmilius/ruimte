@@ -18,7 +18,6 @@ export function kindIcon(kind: string): LucideIcon {
     return KIND_ICONS[drawnKind(kind)];
 }
 
-/* What the window's project calls a chat: a view of its own, a node on one of its canvases, or any chat of a design. */
 function chatNameIn(views: readonly ProjectView[], chatId: string): string | null {
     for (const view of views) {
         if (view.id === chatId) {
@@ -37,7 +36,6 @@ export function useChatName(chatId: string | undefined): string | null {
     return useDocument((s) => (chatId === undefined ? null : chatNameIn(s.views, chatId)));
 }
 
-/* Brings the chat on screen wherever the project keeps it. */
 export function showChat(chatId: string): void {
     if (useDocument.getState().views.some((view) => view.id === chatId)) {
         showView(chatId);

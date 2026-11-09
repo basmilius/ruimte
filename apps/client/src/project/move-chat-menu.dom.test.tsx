@@ -38,7 +38,6 @@ async function setChatStatus(status: 'idle' | 'running' | 'needs-you', patch: Pa
     });
 }
 
-/* The one row both ways out of Chats sit behind. */
 function moveRow(): HTMLElement | undefined {
     return ([...document.querySelectorAll('[role="menuitem"]')] as HTMLElement[]).find((item) => item.textContent?.includes('Move to project'));
 }

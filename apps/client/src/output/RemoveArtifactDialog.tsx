@@ -17,7 +17,6 @@ export interface RemoveArtifactRequest {
     artifact: Artifact;
     version: ArtifactVersion | null;
     versionCount: number;
-    /* What the artifact holds in all its versions. */
     totalBytes: number;
     open: boolean;
 }

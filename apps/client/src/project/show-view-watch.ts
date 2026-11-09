@@ -10,7 +10,6 @@ import { nodesOfView } from '@/state/view-nodes';
 import { watchPool } from '@/transport/pool-watch';
 import { windowWorkspace } from '@/workspace/window';
 
-/* The answer of the open project, on the cell the person was last in. */
 function showInWorkspace(payload: ProjectShowViewEvent): void {
     const state = useDocument.getState();
     const view = state.views.find((candidate) => candidate.id === payload.viewId);

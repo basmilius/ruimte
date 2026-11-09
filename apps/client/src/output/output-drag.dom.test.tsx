@@ -29,7 +29,6 @@ let machine: FakeMachine;
 let workspace: FakeWorkspace;
 let page: Mounted;
 
-/* What a browser hands the page for a drag: one transfer from the start of the gesture to its drop. */
 async function drag(from: Element, to: Element): Promise<void> {
     const dataTransfer = new DataTransfer();
     const fire = (target: Element, type: string): void => {

@@ -1,14 +1,12 @@
 import type { ComponentType } from 'react';
 import { createRegistry } from './create-registry';
 
-/* What a node body is told about where it is drawn. */
 export interface NodeBodyProps {
     id: string;
     /* The node is on screen (or held a moment after), so a body may run; off screen it draws its plate. */
     live: boolean;
     /* Zoomed in enough that a body reads as it is, or maximized; below that a node draws its plate. */
     renderBody: boolean;
-    /* The keyboard is in this node's content. */
     focused: boolean;
     /* The node is the one the canvas has its body focus on, whether or not the window has the keyboard. */
     active: boolean;
@@ -16,14 +14,11 @@ export interface NodeBodyProps {
     sessionLive: boolean;
 }
 
-/* What a piece of a node's header is told. */
 export interface NodeHeaderProps {
     id: string;
     /* The chat the node's pills speak for: the node itself, or the chat a design shows. */
     chatId: string;
-    /* Under this wide the header keeps to glyphs. */
     narrow: boolean;
-    /* The title is being edited, and the header keeps only what the field needs. */
     renaming: boolean;
 }
 
@@ -43,9 +38,7 @@ export interface NodeKindDefinition {
     readonly beforeStatus?: ComponentType<NodeHeaderProps>;
     /* At the end of the header, before the slots of extensions. */
     readonly toolbar?: ComponentType<NodeHeaderProps>;
-    /* A line under the header, drawn while the node is not folded. */
     readonly strip?: ComponentType<{ id: string }>;
-    /* Classes on the body, for a kind that reads at a size of its own. */
     readonly bodyClass?: string;
 }
 

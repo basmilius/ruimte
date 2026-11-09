@@ -10,7 +10,6 @@ import { transportFor } from '@/transport/index';
 
 const MACHINE_DEFAULT = '';
 
-/* The name a menu gives an account: its label, the CLI's name for an unnamed default one, else its id. */
 function nameOf(entry: AccountEntry, providerName: string): string {
     return entry.account.label ?? (entry.isDefault ? providerName : entry.id);
 }

@@ -5,7 +5,6 @@ import { Server } from 'lucide-react';
 import { projectIconGlyphOf } from '@/surface/project-icons';
 
 interface MachineGlyphProps {
-    /* What a person picked for this machine, or null while nobody has. */
     icon: ProjectIconChoice | null;
     size?: number;
     className?: string;

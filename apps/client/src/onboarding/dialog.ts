@@ -2,7 +2,6 @@ import { lazyDialog } from '@adecore/ui';
 import { createDialogState } from '@/registry/dialog-state';
 import type { DialogContribution } from '@/registry/dialogs';
 
-/* Where the onboarding stands while it is up: the welcome, or the list of tasks behind it. */
 type OnboardingStep = 'welcome' | 'hub';
 
 export const onboardingDialog = createDialogState<OnboardingStep>();

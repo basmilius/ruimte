@@ -13,7 +13,6 @@ type DateFilter = 'all' | 'today' | 'week' | 'month' | 'older';
 type SizeFilter = 'all' | '1mb' | '100mb' | '1gb';
 type DateGroup = 'today' | 'week' | 'earlier';
 
-/* What the panel narrows its list to. `all` lets every value through; `project` is a project id otherwise. */
 export interface OutputFilters {
     project: string;
     kind: KnownArtifactKind | 'all';
@@ -32,7 +31,6 @@ export const SIZES: readonly SizeFilter[] = ['all', '1mb', '100mb', '1gb'];
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SIZE_FLOOR: Record<SizeFilter, number> = { all: 0, '1mb': 1024 * 1024, '100mb': 100 * 1024 * 1024, '1gb': 1024 * 1024 * 1024 };
 
-/* The panel as it opens: the project in the window, everything else let through. */
 export function defaultFilters(projectId: string | null): OutputFilters {
     return { project: projectId ?? ALL, kind: ALL, source: ALL, routine: ALL, date: ALL, size: ALL };
 }
@@ -47,7 +45,6 @@ export function drawnKind(kind: string): KnownArtifactKind {
     return isKnownArtifactKind(kind) ? kind : 'export';
 }
 
-/* The local midnight that starts the day `now` is in. */
 function startOfDay(now: number): number {
     const day = new Date(now);
     day.setHours(0, 0, 0, 0);
@@ -92,7 +89,6 @@ export function dateGroupOf(at: number, now: number): DateGroup {
     return at >= today - 6 * DAY_MS ? 'week' : 'earlier';
 }
 
-/* Newest first, in runs of the same group, so a heading goes above each run. */
 export function groupByDate(artifacts: readonly ArtifactSummary[], now: number): { group: DateGroup; artifacts: ArtifactSummary[] }[] {
     const sorted = [...artifacts].sort((left, right) => right.latest.createdAt - left.latest.createdAt);
     const groups: { group: DateGroup; artifacts: ArtifactSummary[] }[] = [];
@@ -108,12 +104,10 @@ export function groupByDate(artifacts: readonly ArtifactSummary[], now: number):
     return groups;
 }
 
-/* The routines that made the latest version of something listed; empty until routines exist. */
 export function routinesOf(artifacts: readonly ArtifactSummary[]): string[] {
     return [...new Set(artifacts.flatMap((artifact) => (artifact.latest.provenance.routineId === undefined ? [] : [artifact.latest.provenance.routineId])))];
 }
 
-/* A version Compare can put beside another: one file of text. */
 export function comparable(version: ArtifactVersion): boolean {
     const file = version.files[0];
     return version.files.length === 1 && file !== undefined && isPlainTextMime(file.mime);
@@ -124,7 +118,6 @@ export function isPlainTextMime(mime: string): boolean {
     return mime.startsWith('text/') && mime !== 'text/html';
 }
 
-/* The name a copy starts with: a file's own name, or for several files a folder named after the artifact. */
 export function suggestedCopyName(artifact: Artifact, version: ArtifactVersion): string {
     if (version.files.length === 1) {
         const name = version.files[0]!.name;

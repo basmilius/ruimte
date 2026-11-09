@@ -41,7 +41,6 @@ interface ApiKeySectionProps<Settings extends RunSettings> {
     extraRows?(settings: Settings, change: (next: Partial<Settings>) => void): ReactNode;
     // False for a provider whose CLI cuts its own runs, so the rounds a plain API counts mean nothing there.
     readonly runRows?: boolean;
-    // Rows of the provider's own under the key, such as what else it needs on the machine.
     readonly children?: ReactNode;
 }
 
@@ -190,7 +189,6 @@ function ApiKeySection<Settings extends RunSettings>({
     );
 }
 
-/* How far a chat on a plain API goes alone; a chat in a CLI is cut by the CLI itself. */
 function RunRows({
     settings,
     words,

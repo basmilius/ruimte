@@ -3,7 +3,6 @@ export function basenameOf(path: string): string {
     return path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);
 }
 
-/* Whether a path sits inside another, on either kind of machine. */
 export function isUnderFolder(path: string, ancestor: string): boolean {
     return path.startsWith(`${ancestor}/`) || path.startsWith(`${ancestor}\\`);
 }

@@ -55,13 +55,11 @@ export function fileViewOf(file: Pick<ArtifactFile, 'name' | 'mime' | 'size'>): 
     return 'code';
 }
 
-/* The file a version opens on: the first one there is something to show of. */
 export function firstShownFile(version: ArtifactVersion): number {
     const index = version.files.findIndex((file) => fileViewOf(file) !== 'none');
     return index === -1 ? 0 : index;
 }
 
-/* The bytes of one file of Output, for the renderers the files panel draws a binary file with. */
 export function artifactSource(endpointId: string, reference: ArtifactFileRef): FileSource {
     return { kind: 'artifact', endpointId, ...reference };
 }

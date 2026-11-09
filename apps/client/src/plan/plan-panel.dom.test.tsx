@@ -23,7 +23,6 @@ let machine: FakeMachine;
 let workspace: FakeWorkspace;
 let page: Mounted;
 
-/* The chat's plan pill while it reads `counter`, the steps finished of all. */
 function pill(counter = '1/2'): HTMLElement | null {
     return ([...page.host.querySelectorAll('button')] as HTMLElement[]).find((button) => button.textContent === counter) ?? null;
 }

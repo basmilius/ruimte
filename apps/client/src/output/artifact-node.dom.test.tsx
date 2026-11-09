@@ -87,7 +87,6 @@ describe('an artifact node', () => {
 
         await clickOn(button(frame, 'Latest'));
         await until(() => versionItems().length > 0);
-        // Every version is offered, newest first, each with its number beside the time it was saved.
         expect(versionItems().map((item) => item.textContent?.split(',')[0])).toEqual(['Follow the latest', 'Version 2', 'Version 1']);
         await clickOn(versionItems().find((item) => item.textContent?.startsWith('Version 1,')) ?? null);
         await until(() => versionItems().length === 0 && button(frame, 'v1') !== null && (frame.textContent ?? '').includes('Two red'));

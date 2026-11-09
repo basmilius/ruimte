@@ -37,7 +37,6 @@ export function createDialogState<Request>(): DialogState<Request> {
     };
 }
 
-/* A dialog that needs no request: only whether it is up. */
 interface FlagState {
     useOpen(): boolean;
     isOpen(): boolean;

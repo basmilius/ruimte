@@ -76,7 +76,6 @@ export function designChatInFront(id: string): string {
     return found.design.id;
 }
 
-/* A node that lives on another canvas is reached by switching there first. */
 export function revealNode(id: string): void {
     leaveRoutines();
     const nodeId = designChatInFront(id);
@@ -115,7 +114,6 @@ export function revealForkWhenItLands(viewId: string, chatId: string): void {
             offCanvas();
             revealNode(chatId);
         } else if (viewOfNode(state.views, nodesOfView, chatId) !== null) {
-            // A node: its canvas reveals it, when it is on screen.
             offDocument();
         }
     });
@@ -157,7 +155,6 @@ export async function askAgentAboutDiagram(viewId: string): Promise<string | nul
     return chat;
 }
 
-/* The canvas a file lands on: the one on screen, else the one that was up last. */
 function canvasForFile(): string | null {
     const { views, activeViewId, lastCanvasViewId } = useDocument.getState();
     const active = views.find((view) => view.id === activeViewId);
@@ -185,7 +182,6 @@ export async function showFileOnCanvas(path: string, at?: Point): Promise<string
     return id;
 }
 
-/* Files as views of their own, in the list in the order given, the first right under `after` (null for the top). */
 export async function newFileViewsAfter(paths: readonly string[], after: string | null): Promise<void> {
     let previous = after;
     for (const path of paths) {
@@ -255,7 +251,6 @@ export async function setViewShared(viewId: string, shared: boolean): Promise<vo
     });
 }
 
-/* What a session view hands the other kind of view: which CLI, which session, and where it works. */
 export interface SessionHandoff {
     provider: AgentKind;
     resume: string;
@@ -306,7 +301,6 @@ export function stepView(delta: -1 | 1): void {
     }
 }
 
-/* Which nodes can leave a canvas for a view of their own: the ones that are a session, not a frame, and an artifact. */
 export function canOpenAsView(kind: string): boolean {
     return kind === 'chat' || kind === 'terminal' || kind === 'browser' || kind === 'device' || kind === 'artifact' || kind === 'design';
 }
@@ -353,7 +347,6 @@ export function askDeleteView(id: string): void {
     });
 }
 
-/* What a view is called and what it wears, in the one dialog that holds both. */
 export function askViewSettings(id: string): void {
     return viewDialog.set({ kind: 'settings', viewId: id });
 }

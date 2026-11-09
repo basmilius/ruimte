@@ -3,7 +3,6 @@ import { base64Of } from '@/base64';
 import { readPiece } from '@/transport-api/piece';
 import type { Transport } from '@/transport-api/transport';
 
-/* What a bundle moves over: a machine to read it from and a machine to write it to. */
 export type BundleSource = Pick<Transport, 'request' | 'readBytes'>;
 export type BundleTarget = Pick<Transport, 'request'>;
 
@@ -28,23 +27,18 @@ export async function moveBundle(from: BundleSource, to: BundleTarget, bundleId:
 }
 
 export interface Handoff {
-    /* The machine the files are on and the one that takes them. */
     from: BundleSource;
     to: BundleTarget;
-    /* What `git.bundle` is asked on `from`. */
     bundle: GitBundlePayload;
-    /* The project on `to` the bundle is taken into, and the name of the branch it gets. */
     projectId: string;
     branch: string;
     into: 'worktree' | 'remote-ref';
     /* How `to` names the machine the bundle came from. */
     machine: string;
-    /* Called once the size is known, before the first piece moves. */
     onSize?(size: number): void;
     onSent?(sent: number): void;
 }
 
-/* A checkout of one machine as a worktree (or a remote branch) of the other: bundle it, move it, take it in. */
 export async function handOff(handoff: Handoff): Promise<GitFetchBundleResult> {
     const made = await handoff.from.request('git.bundle', handoff.bundle);
     handoff.onSize?.(made.size);

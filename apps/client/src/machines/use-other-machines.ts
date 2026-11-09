@@ -3,7 +3,6 @@ import { useMachineEntries } from '@/machines/use-machine-entries';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useWorkspace } from '@/workspace/connections';
 
-/* The machines other than the one the project lives on, which a node can be put on. */
 export function useOtherMachines(): MachineEntry[] {
     const workspace = useWorkspace();
     const endpoints = useEndpoints((s) => s.endpoints);

@@ -18,7 +18,6 @@ import { submitOnEnter } from '@/surface/submit-on-enter';
 const MAX_BYTES = 256 * 1024;
 const ACCEPT = 'image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/heic,image/heif,.heic,.heif';
 
-/* A picked file without the data URL prefix that FileReader adds. */
 function readAsBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -32,7 +31,6 @@ function readAsBase64(file: File): Promise<string> {
     });
 }
 
-/* Everything the form works on, in one value the dialog can outlive its target with. */
 export interface ProjectSettingsSubject {
     project: ProjectSummary;
     endpointId: string;
@@ -47,7 +45,6 @@ export interface ProjectSettingsSubject {
 }
 
 interface ProjectSettingsDialogProps {
-    /* Null before the dialog is ever opened, and again once it has finished closing. */
     subject: ProjectSettingsSubject | null;
     open: boolean;
     onOpenChange(open: boolean): void;

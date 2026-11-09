@@ -20,7 +20,6 @@ const TARGET: ProjectSummary = {
 
 const PAYLOAD = { projectId: 'atlas', fromProjectId: 'home', by: 'chat-1' };
 
-/* A window on `shown`, which a successful open moves to the project it opened. */
 function fakeWindow(options: Partial<Pick<AgentProjectDeps, 'open' | 'listed'>> & { shown?: string; follow?: boolean } = {}) {
     let shown = options.shown ?? 'home';
     let asked = 0;

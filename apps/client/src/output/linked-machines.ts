@@ -6,7 +6,6 @@ import { useWorkspace } from '@/workspace/connections';
 
 const NO_LINKS: readonly RemoteLink[] = [];
 
-/* The other machines the window's project is linked to, each with the project there, as the window's machine keeps them. */
 export function useLinkedMachines(): readonly RemoteLink[] {
     const workspace = useWorkspace();
     const projectId = useProject((s) => s.current?.projectId ?? null);

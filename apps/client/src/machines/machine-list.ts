@@ -3,7 +3,6 @@ import i18next from 'i18next';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
 
-/* One machine in the Machines pane, however this client knows it: a row of its own, the account, or both. */
 export interface MachineEntry {
     /* The machine's own id, which is what a row of this client and the account list agree on. */
     id: string;
@@ -58,7 +57,6 @@ export function mergeMachines({ endpoints, accountMachines, showLocal }: MergeIn
     return entries;
 }
 
-/* How a machine is reached, in the words of its row: "This machine", "On your account" or both. */
 export function reachLabel(entry: MachineEntry): string {
     const parts: string[] = [];
     if (entry.local) {
@@ -73,12 +71,10 @@ export function reachLabel(entry: MachineEntry): string {
     return parts.map((part, index) => (index === 0 ? part : part.toLowerCase())).join(', ');
 }
 
-/* The name a row shows: what this client calls the machine, or what the account does for one it never opened. */
 export function nameOf(entry: MachineEntry): string {
     return entry.endpoint?.label ?? entry.machine?.name ?? entry.id;
 }
 
-/* What the Account pane shows: the account row, one machine by its id, or what this computer offers while its app runs no machine. */
 export type MachinePick = { kind: 'account' } | { kind: 'machine'; id: string } | { kind: 'this-computer' };
 
 /*

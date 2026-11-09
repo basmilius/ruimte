@@ -26,7 +26,6 @@ export async function requestSignalAccess(
     return { statement, label: clipText(label, 80) };
 }
 
-/* The same, asked of the account this client is signed in to. */
 export function machineAccess(machineId: string, key: ClientKey): Promise<SignalAccess> {
     return requestSignalAccess(machineId, key, currentClientLabel(), (payload) => withAccessToken((client, token) => client.requestStatement(token, payload)));
 }

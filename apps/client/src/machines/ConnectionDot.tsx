@@ -16,7 +16,6 @@ const COLOR: Record<TransportStatus, string> = {
     closed: 'bg-status-error'
 };
 
-/* One tick a second while a retry is waiting, which is what makes the countdown count. */
 function useCountdown(active: boolean): number {
     const [now, setNow] = useState(() => Date.now());
     useEffect(() => {
@@ -29,7 +28,6 @@ function useCountdown(active: boolean): number {
     return now;
 }
 
-/* One of the machines this client holds a socket for: whether it is up, and how far away it is. */
 function MachineRow({ endpoint }: { endpoint: Endpoint }) {
     const connection = useEndpointConnection(endpoint.id);
     const latency = useLatency(endpoint.id);
@@ -64,7 +62,6 @@ function ConnectionDetails({ connection }: { connection: ConnectionState }) {
         pingNow();
     }, []);
 
-    // Every machine with a link, so "is my other daemon still up" is answerable without opening settings.
     const machines = tooltipMachines(endpoints, connected);
 
     return (

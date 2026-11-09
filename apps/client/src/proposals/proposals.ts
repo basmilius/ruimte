@@ -25,7 +25,6 @@ export function proposalsOf(endpointId: string): readonly ProjectProposal[] {
     return useProposals.getState().proposals[endpointId] ?? NONE;
 }
 
-/* The suggestion of one chat, which is at most one. */
 export function useNodeProposals(endpointId: string, chatId: string): readonly ProjectProposal[] {
     const all = useProposals((s) => s.proposals[endpointId] ?? NONE);
     return all.some((proposal) => proposal.chatId === chatId) ? all.filter((proposal) => proposal.chatId === chatId) : NONE;

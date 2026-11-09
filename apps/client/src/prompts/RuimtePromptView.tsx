@@ -159,7 +159,6 @@ function ProposalCard({ proposal, props }: { proposal: ProjectProposal; props: P
     );
 }
 
-/* How a dev server is reached once a tunnel suggestion is confirmed, beyond its port: https and the `Host` header. */
 function originLine(proposal: TunnelProposal, t: TFunction<'prompts'>): string | null {
     const parts = [
         ...(proposal.origin?.https === true ? ['https'] : []),

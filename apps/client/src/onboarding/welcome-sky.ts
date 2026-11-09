@@ -1,4 +1,3 @@
-/* The eclipse behind the welcome, on the first-run screen and in the onboarding alike. */
 export const WELCOME_SKY = {
     glows: [380, 200],
     rings: [150, 190],

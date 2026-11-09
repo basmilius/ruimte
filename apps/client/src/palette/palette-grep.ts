@@ -18,10 +18,8 @@ export const DEFAULT_GREP_OPTIONS: GrepOptions = { caseSensitive: false, wholeWo
 
 interface GrepState {
     matches: readonly FsGrepMatch[];
-    /* How many files those matches come from, which the header says next to their count. */
     files: number;
     truncated: boolean;
-    /* What the daemon refused the query for, a broken regex above all. */
     failure: string | null;
     busy: boolean;
 }
@@ -57,7 +55,6 @@ export function grepState(answer: GrepAnswer, folder: string | null, query: stri
     return { matches: answer.matches, files: answer.files, truncated: answer.truncated, failure: answer.failure, busy: !current };
 }
 
-/* One file's hits under the name they share, in the order the search walked them. */
 interface GrepGroup {
     path: string;
     matches: FsGrepMatch[];

@@ -17,7 +17,6 @@ import { StatusCard } from '@/surface/StatusCard';
 import { useEndpointConnection } from '@/transport/status';
 import { useWindow } from '@/workspace/window';
 
-/* What is being opened, in the words a person picked it by. */
 function titleOf(target: SwitchTarget, machine: string): string {
     return target.summary?.name ?? target.name ?? (target.folder !== null ? basenameOf(target.folder) || target.folder : machine);
 }

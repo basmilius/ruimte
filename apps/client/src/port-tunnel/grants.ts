@@ -29,7 +29,6 @@ export const usePortGrants = create<GrantStore>((set) => ({
 
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
-/* The port a page asks for when its address is one of the loopback spellings over http, else null. */
 export function loopbackPort(url: string): number | null {
     const parsed = URL.parse(url);
 

@@ -17,13 +17,11 @@ const CHAT_SEARCH_DEBOUNCE_MS = 140;
 
 interface ChatSearchState {
     hits: readonly ChatSearchHit[];
-    /* The title of every chat with a hit, in the order the hits come. */
     chats: ChatSearchResult['chats'];
     searched: number;
     failed: ChatSearchResult['failed'];
     truncated: boolean;
     cancelled: boolean;
-    /* What the machine refused the search for. */
     failure: string | null;
     busy: boolean;
 }
@@ -59,7 +57,6 @@ export function chatSearchState(answer: ChatSearchAnswer, projectId: string | nu
     return { hits, chats, searched, failed, truncated, cancelled, failure, busy: answer.projectId !== projectId || answer.query !== trimmed };
 }
 
-/* One chat's hits under its title, in the order the search found them. */
 interface ChatHitGroup {
     chatId: string;
     title: string;
@@ -123,7 +120,6 @@ export function useChatSearch(projectId: string | null, query: string): ChatSear
     return chatSearchState(answer, projectId, query);
 }
 
-/* Shows the chat and lights up the message; a message the thread no longer holds says so. */
 export function openChatHit(endpointId: string, hit: ChatSearchHit): void {
     focusChat(hit.chatId);
     jumpToTimelineItem(endpointKey(endpointId, hit.chatId), hit.itemId, {
@@ -160,12 +156,10 @@ export function useExternalSessions(projectId: string | null): ExternalSessionsS
     return state !== null && state.projectId === projectId ? state.value : NO_EXTERNAL;
 }
 
-/* Sessions whose title mentions every word typed; nothing typed lists them all, newest first as the machine sent them. */
 export function externalMatching(sessions: readonly ChatExternalSession[], query: string): ChatExternalSession[] {
     return sessions.filter((session) => matches(query, `${session.title} ${session.provider}`));
 }
 
-/* A chat view that goes on with the session, in the account whose folder holds it. */
 export function resumeExternal(session: ChatExternalSession): Promise<unknown> {
     return perform('view.create', {
         kind: 'chat',

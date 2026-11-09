@@ -27,7 +27,6 @@ export function TerminalAfterTitle({ id, renaming }: NodeHeaderProps) {
     );
 }
 
-/* A terminal that a line makes readable to something else says so. */
 export function TerminalContextPill({ id, renaming }: NodeHeaderProps) {
     const { t } = useTranslation('canvas');
     const hasContext = useHasContextLinks(id);

@@ -7,7 +7,6 @@ export interface Registry<Item extends { readonly id: string }> {
     find(id: string): Item | undefined;
     /* The items as a render sees them: a feature that registers later redraws what read the list. */
     useAll(): readonly Item[];
-    /* Empties the registry, for a test that registers its own items. */
     clear(): void;
 }
 

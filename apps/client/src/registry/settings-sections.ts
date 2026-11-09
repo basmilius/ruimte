@@ -4,7 +4,6 @@ import { createRegistry } from './create-registry';
 
 /* A row the settings search can find. A pane draws only while it is open, so each row is named by its words here. */
 export interface SettingsSearchRow {
-    /* The `searchId` of the row it leads to. */
     readonly id: string;
     readonly section: string;
     /* Full i18n keys, namespace included. */
@@ -35,11 +34,9 @@ export interface SettingsSectionDefinition {
     readonly id: string;
     readonly slot: SettingsSlot;
     readonly icon: LucideIcon;
-    /* A list beside a detail that scrolls on its own, instead of one column of sections. */
     readonly split?: boolean;
     /* Read when a section is drawn, never at module level: the translations are not in yet while this file loads. */
     readonly label: () => string;
-    /* One line under the pane title that says what the pane is about. */
     readonly description: () => string;
     /* A chunk of its own, loaded when the pane is opened; the search never imports one. */
     readonly pane: ComponentType;

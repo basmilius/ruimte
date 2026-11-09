@@ -59,7 +59,6 @@ export function chartLabs(labs: readonly BenchmarkLab[], models: readonly ChartM
     return labs.filter((lab) => models.some((model) => model.lab.id === lab.id));
 }
 
-/* The ticks of a value axis, which the charts take as its ends and its step. */
 export interface Axis {
     ticks: number[];
 }

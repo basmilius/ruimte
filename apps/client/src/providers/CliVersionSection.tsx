@@ -23,7 +23,6 @@ function useVersionWords(version: CliVersion) {
     return { route, description: version.state === 'failed' || version.error ? (version.error ?? line) : line };
 }
 
-/* Under a CLI's detail: the version on the machine, how it was installed, and an update through that same route. */
 export function CliVersionSection({ provider, versions, version }: { provider: ProviderInfo; versions: CliVersionsState; version: CliVersion }) {
     const { t } = useTranslation('settings');
     const { route, description } = useVersionWords(version);

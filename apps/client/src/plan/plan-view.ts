@@ -7,9 +7,7 @@ export type PlanFilter = 'all' | 'open' | 'issues';
 
 export interface PlanViewOptions {
     filter: PlanFilter;
-    /* Folds every section and parent step whose steps are all done or skipped. */
     collapseDone: boolean;
-    /* The sections and parent steps a person folded. */
     collapsed: ReadonlySet<string>;
 }
 
@@ -24,7 +22,6 @@ export type PlanRow =
           /* Only for a step with sub-steps, which shows its count instead of a mark of its own. */
           progress: PlanProgress | null;
           collapsed: boolean;
-          /* A step under this one is active, so a folded parent still says where the work is. */
           activeBelow: boolean;
       };
 
@@ -42,7 +39,6 @@ function allDone(items: readonly PlanItem[]): boolean {
     return leaves.length > 0 && leaves.every((step) => step.state === 'done' || step.state === 'skipped');
 }
 
-/* The plan as the rows the panel draws, in document order, with folds and the filter applied. */
 export function planRows(plan: Pick<Plan, 'items'>, options: PlanViewOptions): PlanRow[] {
     const rows: PlanRow[] = [];
     const folded = (item: PlanSection | PlanStep, children: readonly PlanItem[]): boolean =>
@@ -95,7 +91,6 @@ export function planRows(plan: Pick<Plan, 'items'>, options: PlanViewOptions): P
     return rows;
 }
 
-/* Every section and parent step, what "Collapse all" folds. */
 export function foldableIds(plan: Pick<Plan, 'items'>): string[] {
     return allItems(plan.items)
         .filter((item) => item.type === 'section' || (item.type === 'step' && isParentStep(item)))
@@ -117,7 +112,6 @@ interface ActiveStep {
     title: string;
 }
 
-/* The steps an agent is on, in document order. */
 export function activeSteps(plan: Pick<Plan, 'items'>): ActiveStep[] {
     return leafSteps(plan.items)
         .filter((step) => step.state === 'active')
@@ -128,7 +122,6 @@ export function sameActiveSteps(left: readonly ActiveStep[], right: readonly Act
     return left.length === right.length && left.every((step, i) => step.id === right[i].id && step.title === right[i].title);
 }
 
-/* "Fix focus", or "Fix focus and 2 more". */
 export function activeStepsLabel(steps: readonly ActiveStep[]): string {
     if (steps.length === 0) {
         return '';
@@ -136,7 +129,6 @@ export function activeStepsLabel(steps: readonly ActiveStep[]): string {
     return steps.length === 1 ? steps[0].title : i18next.t('plan:active.more', { title: steps[0].title, count: steps.length - 1 });
 }
 
-/* The step a click on the active item goes to: the first, and on each next click the one after the last. */
 export function nextActiveTarget(steps: readonly ActiveStep[], last: string | null): string | null {
     if (steps.length === 0) {
         return null;
@@ -145,7 +137,6 @@ export function nextActiveTarget(steps: readonly ActiveStep[], last: string | nu
     return steps[(index + 1) % steps.length].id;
 }
 
-/* The sections and parent steps around an item, outermost first; null when the plan has no such item. */
 export function ancestorIds(plan: Pick<Plan, 'items'>, id: string): string[] | null {
     const walk = (items: readonly PlanItem[], path: string[]): string[] | null => {
         for (const item of items) {
@@ -185,7 +176,6 @@ export function stateLabel(kind: Plan['meta']['kind'], state: PlanStepState): st
     return i18next.t(`plan:state.${kind}.${state}`);
 }
 
-/* A click on the mark of a step in a steps plan: done, or back to open. */
 export function toggledState(state: PlanStepState): PlanStepState {
     return state === 'done' ? 'open' : 'done';
 }
@@ -193,7 +183,6 @@ export function toggledState(state: PlanStepState): PlanStepState {
 /* Product names, the same word in every language. */
 const AGENT_NAMES: Record<string, string> = { claude: 'Claude', codex: 'Codex', antigravity: 'Antigravity', copilot: 'Copilot', grok: 'Grok' };
 
-/* The short name of the agent a chat runs, as a person calls it. */
 export function agentName(provider: AgentKind | string | null | undefined): string {
     if (!provider) {
         return i18next.t('plan:agent.unknown');

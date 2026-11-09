@@ -1,5 +1,3 @@
-/* How a machine writes its paths, which a window on another platform has to follow when it browses that machine. */
-
 /* The daemon's separator, not this browser's: a Windows daemon answers in backslashes. */
 export function separatorFor(platform: string | null): string {
     return platform === 'win32' ? '\\' : '/';

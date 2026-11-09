@@ -6,7 +6,6 @@ import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { useMachineAnswers } from '@/transport/features';
 import { transportFor } from '@/transport/index';
 
-/* The provider list again, so a provider a person just installed, updated, removed or keyed shows at once. */
 export async function listProvidersAgain(endpointId: string): Promise<void> {
     const link = transportFor(endpointId);
     if (link) {
@@ -18,11 +17,9 @@ export async function listProvidersAgain(endpointId: string): Promise<void> {
 export interface RegistryCatalogState {
     /* False on a machine that answers no `provider.registry`, which then has no page to add a provider from. */
     answers: boolean;
-    /* Null while the machine has not answered yet. */
     catalog: RegistryCatalog | null;
     /* While a person's refresh is on its way; the first read shows as a catalog that is still null. */
     loading: boolean;
-    /* Why the machine did not answer at all. */
     error: string | null;
     /* Only the app on the machine itself may install, since that downloads a program and makes it runnable there. */
     local: boolean;
@@ -30,7 +27,6 @@ export interface RegistryCatalogState {
     install(id: string): Promise<RegistryAgent | null>;
 }
 
-/* The agents of the ACP registry a machine can run, and a person's Install of one. */
 export function useRegistryCatalog(endpointId: string): RegistryCatalogState {
     const answers = useMachineAnswers(endpointId, 'provider.registry');
     const [catalog, setCatalog] = useState<RegistryCatalog | null>(null);
@@ -110,11 +106,9 @@ export interface CliVersionsState {
     local: boolean;
     check(kind: AgentKind): Promise<void>;
     update(kind: AgentKind): Promise<void>;
-    /* Takes an agent a person installed from the registry off the machine. */
     remove(kind: AgentKind): Promise<void>;
 }
 
-/* The version of each CLI on a machine, how it was installed, and a person's update through that same route. */
 export function useCliVersions(endpointId: string): CliVersionsState {
     const answers = useMachineAnswers(endpointId, 'provider.versions');
     const [versions, setVersions] = useState<CliVersion[]>([]);

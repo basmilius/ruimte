@@ -13,9 +13,7 @@ type Requester = Pick<Transport, 'request'>;
  */
 export async function linkPeer(options: {
     machineId: string;
-    /* The machine this window works on, which is the one that will work in `machineId`. */
     self: Requester;
-    /* The broker the address book lists for that machine. */
     brokerUrl: string | null;
     request(payload: PeerAccessRequestPayload): Promise<PeerStatement>;
 }): Promise<void> {
@@ -34,7 +32,6 @@ export async function linkPeer(options: {
     await self.request('remote.connect', { machineId, statement, ...(options.brokerUrl === null ? {} : { brokerUrl: options.brokerUrl }) });
 }
 
-/* The same, asked of the account this client is signed in to. */
 export function linkPeerThroughAccount(machineId: string, self: Requester): Promise<void> {
     const brokerUrl = usePulsarMachines.getState().machines?.find((machine) => machine.id === machineId)?.brokerUrl ?? null;
     return linkPeer({ machineId, self, brokerUrl, request: (payload) => withAccessToken((client, token) => client.requestPeerStatement(token, payload)) });

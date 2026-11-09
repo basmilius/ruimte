@@ -11,7 +11,6 @@ export interface PortTransport {
 
 export interface PortStreamHandlers {
     data(bytes: Uint8Array): void;
-    /* Bytes the machine wrote to the service in all, which frees room for the next ones. */
     flushed(total: number): void;
     /* `reason` is null for a service that finished, else the sentence to tell a person. */
     end(reason: string | null): void;
@@ -75,7 +74,6 @@ export class PortStreamClient {
         this.pump();
     }
 
-    /* The bytes of the answer the page took in; the machine hears of them in steps. */
     consumed(bytes: number): void {
         this.consumedTotal += bytes;
 
@@ -189,7 +187,6 @@ export class PortStreamClient {
     }
 }
 
-/* The streams of one machine connection: it subscribes to the data and end events once and hands each to its stream. */
 export class PortStreamHub {
     readonly transport: PortTransport;
     private readonly streams = new Map<string, PortStreamClient>();
@@ -227,14 +224,12 @@ export class PortStreamHub {
         this.streams.delete(streamId);
     }
 
-    /* The link went: every stream ends for its page, and a page that asks again opens a new one. */
     abortAll(reason: string): void {
         for (const stream of [...this.streams.values()]) {
             stream.abort(reason);
         }
     }
 
-    /* The tunnel ended: the hub stops listening, and every stream ends. */
     dispose(reason: string): void {
         for (const stop of this.stops) {
             stop();

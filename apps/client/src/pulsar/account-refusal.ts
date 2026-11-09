@@ -1,6 +1,5 @@
 import i18next from 'i18next';
 
-/* The code a failure carries: a transport error of the machine, or an address book error. */
 export function errorCodeOf(error: unknown): string | null {
     return error instanceof Error && 'code' in error && typeof error.code === 'string' ? error.code : null;
 }

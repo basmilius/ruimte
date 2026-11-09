@@ -10,7 +10,6 @@ export interface SidebarMachineSnapshot {
     state: 'loading' | 'ready' | 'offline' | 'error';
 }
 
-/* What one request brings: the projects, or the standing status of every terminal or every chat. */
 type Part = 'projects' | 'sessions' | 'chats';
 
 const ALL_PARTS: readonly Part[] = ['projects', 'sessions', 'chats'];
@@ -143,7 +142,6 @@ export class SidebarWatch {
         }
     }
 
-    /* Everything again, as on a fresh link. */
     refresh = (): void => {
         this.queue(ALL_PARTS);
     };

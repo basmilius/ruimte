@@ -69,7 +69,6 @@ function current(): string | null {
     return id === null ? null : (document.getElementById(id)?.getAttribute('aria-label') ?? null);
 }
 
-/* Walks the chart with the keyboard to the point of `name`, the way a person does without a pointer. */
 async function moveTo(name: string, key: 'ArrowRight' | 'ArrowDown'): Promise<void> {
     for (let step = 0; step < 10 && !current()?.startsWith(name + ','); step++) {
         await pressKey(chart(), key);

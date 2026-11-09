@@ -15,7 +15,6 @@ import { machineTransport } from '@/transport';
 import { TransportError } from '@/transport-api/transport';
 import { useMachineAnswers } from '@/transport/features';
 
-/* The canvases of the window's project an artifact can be pinned to. */
 export function usePinCanvases() {
     const views = useDocument((s) => s.views);
     return views.filter((view) => isCanvasView(view) && view.hidden !== true);
@@ -51,7 +50,6 @@ const COPY_FAILURES: Readonly<Record<string, string>> = {
 
 interface MachineCopy {
     copying: boolean;
-    /* What the copy does, for a tooltip. */
     tip: string;
     copy(version: ArtifactVersion): void;
 }

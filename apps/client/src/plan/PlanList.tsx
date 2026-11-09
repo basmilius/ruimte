@@ -294,7 +294,6 @@ function PlanRowView({ row, context }: { row: PlanRow; context: StepContext }) {
     return <StepRow row={row} context={context} />;
 }
 
-/* The text of a plan that is not a step, behind the same menu as any text, with the plan as a whole under it. */
 function PlanTextMenu({ plan, className, children }: { plan: Plan; className: string; children: ReactNode }) {
     const { t } = useTranslation('plan');
     return (
@@ -406,7 +405,6 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
     );
 }
 
-/* What stands at the end of a step's row: the count of a parent, when a person set a step, and the lock of one only the agent sets. */
 function StepAside({
     row,
     context,

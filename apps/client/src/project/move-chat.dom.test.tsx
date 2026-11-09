@@ -81,7 +81,6 @@ function buttons(): HTMLButtonElement[] {
     return [...(dialog()?.querySelectorAll('button') ?? [])] as HTMLButtonElement[];
 }
 
-/* The labels of the footer, which holds Cancel and the action, or only Close when the chat cannot move. */
 function footerButtons(): string[] {
     const labels = buttons().map((entry) => entry.textContent?.trim() ?? '');
     return labels.filter((label) => !['Move into project', 'Leave in Chats'].includes(label));

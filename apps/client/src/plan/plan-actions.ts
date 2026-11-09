@@ -75,7 +75,6 @@ export const usePlanReveal = create<PlanReveal>((set, get) => ({
     }
 }));
 
-/* Opens what hides a step in the list, then asks the list to bring it into view. */
 export function revealPlanStep(planKey: string, plan: Pick<Plan, 'items'>, stepId: string): void {
     const prefs = usePlanViewPrefs.getState();
     const current = { filter: prefs.filter, collapseDone: prefs.collapseDone, collapsed: new Set(collapsedOf(prefs.collapsed, planKey)) };
@@ -96,7 +95,6 @@ export function collapsedOf(collapsed: PlanViewPrefs['collapsed'], planKey: stri
     return collapsed[planKey] ?? NO_IDS;
 }
 
-/* The keyboard and the eye to a chat: its cell when it stands in one, else the camera to its node. */
 export function focusChat(chatId: string): void {
     const { views, layout, setActiveView } = useDocument.getState();
     if (views.some((view) => isChatHostView(view) && view.id === chatId)) {

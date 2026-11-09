@@ -45,13 +45,11 @@ export function droppedArtifact(transfer: Pick<DataTransfer, 'types' | 'getData'
     }
 }
 
-/* Opens the artifact as a loose tab in the cell it was dropped on, or beside it, the way a dropped file opens. */
 export function dropArtifactTab(artifact: DraggedArtifact, at: CellAt, zone: SplitZone, index: number | null = null): boolean {
     const files = useFiles.getState();
     return files.dropTab(openArtifactTab(files, artifact.artifactId, artifact.title), useSettings.getState().filesTabLimit, at, zone, index);
 }
 
-/* The artifact as a view of the project, under `after` (null for the top, absent for last), without opening it. */
 export async function addArtifactToSidebar(artifact: DraggedArtifact, after?: string | null): Promise<string> {
     const id = useDocument.getState().addArtifactView(artifact.title || artifact.artifactId, { id: artifact.artifactId }, false);
     if (after !== undefined) {

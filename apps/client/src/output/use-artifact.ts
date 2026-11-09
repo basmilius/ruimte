@@ -12,7 +12,6 @@ type ArtifactState =
     | { status: 'gone' }
     | { status: 'unreachable' };
 
-/* One artifact with every version, read again whenever the machine says it changed. */
 export function useArtifact(endpointId: string, artifactId: string, answers: boolean): ArtifactState {
     const revision = useArtifactRevision(endpointId, artifactId);
     const [held, setHeld] = useState<{ key: string; state: ArtifactState } | null>(null);

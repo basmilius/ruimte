@@ -143,7 +143,6 @@ export function useProjectMenu() {
 
 export type ProjectMenuModel = ReturnType<typeof useProjectMenu>;
 
-/* The settings dialog of one row of the menu, or of the open project when the application menu asks for it. */
 function useProjectSettings(endpoints: readonly Endpoint[], isCurrent: (row: ProjectMenuRow) => boolean) {
     const rows = useProjectList((s) => s.projects);
     const current = useProject((s) => s.current);
@@ -163,7 +162,6 @@ function useProjectSettings(endpoints: readonly Endpoint[], isCurrent: (row: Pro
         setOpen(true);
     };
 
-    // The application menu asks for the settings of the project that is open.
     useEffect(
         () =>
             projectSettingsAsk.store.subscribe(() => {

@@ -46,7 +46,6 @@ import { ensureMachine } from '@/workspace/reach';
 
 const BROWSE_DEBOUNCE_MS = 60;
 
-/* What a machine with no link in the pool reads as. */
 const NO_LINK: ConnectionState = { status: 'closed', attempts: 0, retryAt: null, failure: null };
 
 interface BrowseAnswer {
@@ -179,7 +178,6 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
     const browsing = !blocked && browse !== null;
 
     useEffect(() => {
-        // An empty field is a step with nothing to list yet; the last listing stays under it.
         if (!browsing || machineStep || linkWait !== null || query.trim() === '') {
             return;
         }
@@ -192,7 +190,6 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
         const timer = window.setTimeout(
             () => {
                 void requestBrowse(browseEndpointId, query, cwdFor(browseEndpointId), transport).then((answer) => {
-                    // A later keystroke already asked again; this answer is stale.
                     if (mine !== generation.current) {
                         return;
                     }
@@ -334,7 +331,6 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
         setBrowse((step) => retryLink(step));
     };
 
-    /* What Enter does with the path in the field, after what the daemon says about it: there, not there, or a daemon too old to say. */
     const offer = browsing && !machineStep && query.trim() !== '' ? typedPathOffer(query, platform, folderPresence(query, listing?.result ?? null, sep)) : null;
 
     /* The main column says how the open goes from here, and why it failed, so the palette is out of the way at once. */
@@ -348,7 +344,6 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
             return [];
         }
         if (machineStep) {
-            // Typing on this step narrows the machines, the way typing narrows every other list here.
             return machines
                 .filter((row) => matches(query, row.label))
                 .map((row) => {
@@ -359,7 +354,6 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
                     return {
                         id: `machine-${row.endpointId}`,
                         label: row.label,
-                        // The icon a machine was given, the same one the settings page and every menu show.
                         icon: <MachineGlyph icon={iconOfEntry(row.entry, servers[row.endpointId]?.icon ?? null)} size={14} />,
                         trailing: (
                             <>
@@ -372,7 +366,6 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
                     };
                 });
         }
-        // A machine that is not open yet has no folders to show; its step says what it is waiting on.
         if (linkWait !== null) {
             return [];
         }
@@ -411,7 +404,6 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
         }
     };
 
-    /* A browse row steps somewhere and the palette stays open. */
     const run = (entry: Entry): void => {
         if (entry.browsePath === undefined) {
             entry.run();
@@ -437,7 +429,6 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
         keyDown: (event, entry) => {
             if (event.key === 'Tab') {
                 if (!machineStep && entry?.browsePath !== undefined) {
-                    // Completes the field to the folder under the highlight, without stepping into it.
                     event.preventDefault();
                     setQuery(entry.browsePath);
                 }
@@ -460,7 +451,6 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
             }
         },
         back: stepBack,
-        /* One step back; on the folders of a machine it names that machine. */
         leading: (
             <Tooltip label={backLabel} kbd={KEY_SHORTCUTS.backspace}>
                 <Button

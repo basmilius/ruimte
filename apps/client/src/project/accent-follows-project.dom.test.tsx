@@ -18,7 +18,6 @@ let machine: FakeMachine;
 let workspace: FakeWorkspace;
 let page: Mounted;
 
-/* What the palette's stylesheet says for one side: the accent and the two tokens that carry its contrast. */
 function sideRule(side: 'light' | 'dark'): string {
     const css = document.getElementById('ruimte-palette')?.textContent ?? '';
 
@@ -37,7 +36,6 @@ async function follow(on: boolean): Promise<void> {
     await act(async () => useSettings.getState().update({ accentFollowsProject: on }));
 }
 
-/* Picks a color in the project's settings, and waits for the accent it should bring; null where it brings none. */
 async function pick(name: string, color: string | null): Promise<void> {
     await act(async () => projectSettingsAsk.set(true));
     await until(() => swatch(name) !== null);

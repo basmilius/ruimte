@@ -14,7 +14,6 @@ export interface RemoteNodeSteps {
     linkHere(): Promise<void>;
     /* A worktree of the checkout on the other machine, when the person asked for one; its folder is where the node works. */
     makeWorktree(): Promise<string | null>;
-    /* Puts the node on the canvas and answers its id. */
     addNode(cwd: string | null): string | null;
     removeNode(nodeId: string): void;
     /* Writes the project, which refuses a node that cannot run there. */

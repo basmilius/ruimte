@@ -42,7 +42,6 @@ interface FakeStream {
     bytes: number;
     ended: boolean;
     aborted: boolean;
-    /* Holds the write after this many pieces until the test lets it go. */
     holdAfter: number | null;
     release(): void;
 }

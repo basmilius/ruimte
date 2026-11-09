@@ -8,7 +8,6 @@ export interface GrepRow extends PaletteRow {
     match: FsGrepMatch;
 }
 
-/* The highlight of a menu row, on a row that lays itself out. */
 const HIGHLIGHT = 'data-highlighted:bg-surface-active [:root[data-modality=pointer]_&]:data-highlighted:bg-surface-hover';
 
 interface LineProps {
@@ -18,7 +17,6 @@ interface LineProps {
     hit?: { column: number; length: number };
 }
 
-/* One line of the file as the list draws it: its number, then the source, with the hit picked out. */
 function GrepLine({ number, text, hit }: LineProps) {
     return (
         <div className="flex gap-3 font-mono text-code leading-(--text-code--line-height)">

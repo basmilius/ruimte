@@ -27,7 +27,6 @@ import { nodeProvider } from '@/state/sessions';
 import { Favicon } from '@/surface/Favicon';
 import { projectIconGlyphOf } from '@/surface/project-icons';
 
-/* The default mark for a view, when nobody picked an icon. */
 const VIEW_KIND_GLYPHS: Record<ProjectViewKind, LucideIcon> = {
     canvas: Frame,
     chat: MessageSquare,
@@ -48,11 +47,9 @@ const VIEW_KIND_GLYPHS: Record<ProjectViewKind, LucideIcon> = {
 interface ViewGlyphProps {
     id: string;
     kind: ProjectViewKind;
-    /* A picked icon, which outranks everything below it. */
     icon?: ProjectIconChoice | null;
     /* The CLI a chat or terminal view stores, whose mark it wears instead of its kind's. A chat without one wears its thread's. */
     provider?: AgentKind | null;
-    /* The file a file view reads, which wears the mark of its own name. */
     path?: string | null;
     size?: number;
     className?: string;

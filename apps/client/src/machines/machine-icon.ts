@@ -2,7 +2,6 @@ import { ProjectIconChoiceSchema, type ProjectIconChoice } from '@ruimte/contrac
 import { useServers } from '@/state/server';
 import type { MachineEntry } from './machine-list';
 
-/* The icon the machine answered with, else the one the account last heard, for a list that draws many. */
 export function iconOfEntry(entry: MachineEntry, answered: ProjectIconChoice | null): ProjectIconChoice | null {
     if (answered !== null) {
         return answered;
@@ -11,7 +10,6 @@ export function iconOfEntry(entry: MachineEntry, answered: ProjectIconChoice | n
     return recorded.success ? recorded.data : null;
 }
 
-/* The icon the machine says it has, or the one the account last heard for a machine never opened here. */
 export function useMachineIcon(entry: MachineEntry): ProjectIconChoice | null {
     const answered = useServers((s) => (entry.endpoint ? (s.byEndpoint[entry.endpoint.id]?.icon ?? null) : null));
     return iconOfEntry(entry, answered);

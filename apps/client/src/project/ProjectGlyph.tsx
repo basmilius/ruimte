@@ -23,7 +23,6 @@ interface ProjectGlyphProps {
     scratch?: boolean;
 }
 
-/* A project's icon at one size: what was picked, what the folder declares, or its initial. */
 export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, className, scratch = false }: ProjectGlyphProps) {
     const theme = useTheme((s) => s.resolved);
     const box = { width: size, height: size };

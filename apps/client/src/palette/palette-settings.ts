@@ -7,7 +7,6 @@ import { useUi } from '@/state/ui';
 /* Enough to find a setting by a loose word without burying the commands under the rows of one pane. */
 const SETTINGS_RESULTS = 6;
 
-/* What `matchScore` gives a text that starts with the query. */
 const PREFIX = 5;
 
 /* Rows go ahead of panes: Enter on a word that names a row should land on that row, not on the pane around it.
@@ -22,7 +21,6 @@ export function settingsEntries(results: readonly SearchResult[]): Command[] {
     }));
 }
 
-/* Whether the query is the start of some setting's label, which is when settings outrank the loose matches of files. */
 export function namesSetting(query: string, settings: readonly Command[]): boolean {
     return settings.some((setting) => matchScore(setting.label, query) === PREFIX);
 }
