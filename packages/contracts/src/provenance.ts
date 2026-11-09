@@ -1,6 +1,6 @@
+import { ChatIdSchema } from '@adecore/agent-contracts/chat';
 import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
-import { ChatIdSchema } from './chat.ts';
 
 export const PROVENANCE_LIMITS = {
     promptExcerpt: 400,

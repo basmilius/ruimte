@@ -1,9 +1,9 @@
 import { AgentKindSchema, TaskResultSchema, TaskStatusSchema } from '@adecore/agent-contracts';
+import { RuntimeModeSchema } from '@adecore/agent-contracts/model';
 import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { ARTIFACT_LIMITS, ArtifactIdSchema, ArtifactVersionIdSchema, ArtifactListResultSchema, ArtifactGetResultSchema } from './artifact.ts';
 import { GitBundlePutPayloadSchema, GitBundlePutResultSchema, GitBundleResultSchema } from './git.ts';
-import { RuntimeModeSchema } from './model.ts';
 import { ProjectEdgeSchema, ProjectNodeSchema } from './project.ts';
 
 /*

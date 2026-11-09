@@ -1,6 +1,6 @@
 import { SUGGESTED_TITLE_LIMIT } from '@adecore/agent-contracts/agent';
+import { clipText } from '@adecore/agent-contracts/text';
 import type { NodeTitleSource } from './project.ts';
-import { clipText } from './text.ts';
 
 /* Past this a title stops being a name and starts being the message it came from. */
 const TITLE_LIMIT = 48;

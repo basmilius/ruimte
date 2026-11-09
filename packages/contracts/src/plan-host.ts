@@ -1,6 +1,6 @@
+import { ChatIdSchema } from '@adecore/agent-contracts/chat';
 import { PlanIdSchema, PlanSchema, PlanPersonOpSchema } from '@adecore/plan/protocol';
 import { z } from 'zod';
-import { ChatIdSchema } from './chat.ts';
 
 export {
     PLAN_LIMITS,

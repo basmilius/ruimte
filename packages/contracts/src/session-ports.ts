@@ -1,5 +1,5 @@
+import { SessionIdSchema } from '@adecore/agent-contracts/ids';
 import { z } from 'zod';
-import { SessionIdSchema } from './ids.ts';
 
 export const SessionPortSchema = z.object({
     pid: z.number().int().positive(),

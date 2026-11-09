@@ -1,6 +1,6 @@
+import { RuntimeModeSchema } from '@adecore/agent-contracts/model';
 import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
-import { RuntimeModeSchema } from './model.ts';
 
 /* How far an external MCP client reaches: read what is there, work on canvases and agents, or also run the machine's own features. */
 export const EXTERNAL_TIERS = ['read', 'work', 'machine'] as const;

@@ -1,13 +1,13 @@
+import { RuntimeModeSchema } from '@adecore/agent-contracts/model';
 import { EmptySchema } from '@adecore/agent-contracts/protocol';
+import { ProviderAccountIdSchema } from '@adecore/agent-contracts/provider-accounts';
 import { DrawingFontSchema, DrawingStrokeStyleSchema, DrawingStrokeWidthSchema } from '@adecore/drawing/protocol';
 import { isRecord } from '@adecore/utils/record';
 import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
 import { DeviceReferenceSchema } from './device.ts';
 import { GitDiffScopeSchema } from './git.ts';
-import { RuntimeModeSchema } from './model.ts';
 import { NODE_ACCENT_NAMES } from './node-accents.ts';
-import { ProviderAccountIdSchema } from './provider-accounts.ts';
 
 export const ProjectIdSchema = z.string().min(1);
 

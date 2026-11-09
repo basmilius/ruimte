@@ -1,9 +1,9 @@
+import { SessionIdSchema } from '@adecore/agent-contracts/ids';
+import { RuntimeModeSchema } from '@adecore/agent-contracts/model';
 import { EmptySchema } from '@adecore/agent-contracts/protocol';
+import { ProviderAccountIdSchema } from '@adecore/agent-contracts/provider-accounts';
 import { z } from 'zod';
 import { AgentInfoSchema, AgentKindSchema } from './agent.ts';
-import { SessionIdSchema } from './ids.ts';
-import { RuntimeModeSchema } from './model.ts';
-import { ProviderAccountIdSchema } from './provider-accounts.ts';
 import { SessionPortsResultSchema } from './session-ports.ts';
 
 // An agent CLI to start in a fresh shell. The daemon owns the command line, so every client
