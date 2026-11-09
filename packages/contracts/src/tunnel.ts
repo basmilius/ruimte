@@ -135,7 +135,9 @@ export const TunnelRowSchema = z.object({
     /* Whether it is on again after the daemon restarts. */
     comeBack: z.boolean(),
     /* A dev server only; left out for the defaults. */
-    origin: TunnelOriginSchema.optional()
+    origin: TunnelOriginSchema.optional(),
+    /* Why a hostname meant on is not served, while Ruimte holds it or Cloudflare does not serve it. */
+    reason: z.string().min(1).max(500).optional()
 });
 export type TunnelRow = z.infer<typeof TunnelRowSchema>;
 

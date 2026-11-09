@@ -1957,7 +1957,7 @@ describe('what Cloudflare serves after a failure', () => {
         };
 
         f.cloudflare.writers.push(putBack, putBack);
-        await f.service.update(id, { enabled: false });
+        await expect(f.service.update(id, { enabled: false })).rejects.toMatchObject({ code: 'hostname-unsettled' });
         await f.service.idle();
 
         expect(hostnamesOf(f)).toEqual(['a.bmnw.nl', 'http_status:404']);
@@ -1993,7 +1993,7 @@ describe('what Cloudflare serves after a failure', () => {
         };
 
         f.cloudflare.writers.push(serving, serving);
-        await f.service.update(id, { enabled: false });
+        await expect(f.service.update(id, { enabled: false })).rejects.toMatchObject({ code: 'hostname-unsettled' });
         await f.service.idle();
 
         expect((await f.state()).rows).toMatchObject([{ enabled: true }]);
@@ -2227,7 +2227,7 @@ describe('what the person asked and what Cloudflare serves', () => {
         await f.service.update(a, { enabled: false });
         await f.service.idle();
         f.cloudflare.writers.push(prependWildcard, prependWildcard);
-        await f.service.update(b, { port: 3005 });
+        await expect(f.service.update(b, { port: 3005 })).rejects.toMatchObject({ code: 'hostname-unsettled' });
         await f.service.idle();
 
         expect(ourTunnel(f).ingress[0]).toEqual({ hostname: '*.bmnw.nl', service: 'http://localhost:9999' });
@@ -2257,13 +2257,40 @@ describe('what the person asked and what Cloudflare serves', () => {
         expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: true }]);
     });
 
-    test('keeps a hostname that comes back meant on when looking up its record fails at boot, and brings it up on Try again', async () => {
+    test.each([403, 429, 503])('keeps serving a hostname whose record stands when looking it up at boot answers %i', async (status) => {
         const f = await fixture();
 
         await readyTunnel(f);
         await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000, comeBack: true });
         await f.service.idle();
         await f.service.stop();
+        f.cloudflare.failing.set('GET /zones/zone-bmnw.nl/dns_records', status);
+
+        const booted = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
+
+        await booted.service.resume();
+        await booted.service.idle();
+
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' });
+        expect(tunnelStore(f.home).read()?.rows[0]).toMatchObject({ hostname: 'a.bmnw.nl', enabled: true });
+        expect(await booted.state()).toMatchObject({ stage: 'failed', rows: [{ hostname: 'a.bmnw.nl', enabled: true }] });
+        expect((await booted.state()).rows[0]?.reason).toBeUndefined();
+        expect(booted.runner.running).toBe(1);
+    });
+
+    test('holds a hostname without a record while looking it up fails at boot, says why on the row, and makes it once the network is back', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000, comeBack: true });
+        await f.service.idle();
+        await f.service.stop();
+
+        // A record deleted while the row stayed on, as a Remove that failed later and was turned back on leaves it.
+        const stored = tunnelStore(f.home).read()!;
+
+        tunnelStore(f.home).write({ ...stored, rows: stored.rows.map((row) => ({ ...row, recordId: null })) });
+        f.cloudflare.records.length = 0;
         f.cloudflare.failing.set('GET /zones/zone-bmnw.nl/dns_records', 503);
 
         const booted = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
@@ -2271,16 +2298,53 @@ describe('what the person asked and what Cloudflare serves', () => {
         await booted.service.resume();
         await booted.service.idle();
 
-        expect(tunnelStore(f.home).read()?.rows[0]).toMatchObject({ hostname: 'a.bmnw.nl', enabled: true });
-        expect(await booted.state()).toMatchObject({ stage: 'failed', rows: [{ hostname: 'a.bmnw.nl', enabled: true }] });
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http_status:404' });
+        expect((await booted.state()).rows[0]).toMatchObject({ enabled: true, reason: expect.stringContaining('a.bmnw.nl') });
+        expect(booted.runner.running).toBe(0);
+
+        f.cloudflare.failing.clear();
+        booted.service.networkBack();
+        await booted.service.idle();
+
+        expect(f.cloudflare.records).toMatchObject([{ name: 'a.bmnw.nl', comment: MARKER }]);
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' });
+        expect((await booted.state()).rows[0]?.reason).toBeUndefined();
+        expect(booted.runner.running).toBe(1);
+    });
+
+    test('keeps the reason of a hostname whose record Cloudflare refuses through the next job, until a Try again serves it', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000, comeBack: true });
+        await f.service.idle();
+        await f.service.stop();
+
+        const stored = tunnelStore(f.home).read()!;
+
+        tunnelStore(f.home).write({ ...stored, rows: stored.rows.map((row) => ({ ...row, recordId: null })) });
+        f.cloudflare.records.length = 0;
+        f.cloudflare.failing.set('POST /zones/zone-bmnw.nl/dns_records', 403);
+
+        const booted = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
+
+        await booted.service.resume();
+        await booted.service.idle();
+        await booted.service.setMcp(true);
+        await booted.service.idle();
+
+        expect(await booted.state()).toMatchObject({
+            stage: 'running',
+            rows: [{ enabled: true, reason: expect.stringContaining('API token may not do that') }]
+        });
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http_status:404' });
 
         f.cloudflare.failing.clear();
         await booted.service.retry();
         await booted.service.idle();
 
         expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' });
-        expect(await booted.state()).toMatchObject({ stage: 'running', rows: [{ hostname: 'a.bmnw.nl', enabled: true }] });
-        expect(booted.runner.running).toBe(1);
+        expect((await booted.state()).rows[0]?.reason).toBeUndefined();
     });
 
     test('keeps a hostname that comes back meant on when Cloudflare refuses the token at boot, and brings it up with a token it takes', async () => {
@@ -2367,7 +2431,7 @@ describe('what the person asked and what Cloudflare serves', () => {
         await f.service.update(a, { enabled: false });
         await f.service.idle();
         f.cloudflare.writers.push(prependEvery, prependEvery);
-        await f.service.update(b, { port: 3005 });
+        await expect(f.service.update(b, { port: 3005 })).rejects.toMatchObject({ code: 'hostname-unsettled' });
         await f.service.idle();
 
         expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: true }, { enabled: true }]);
@@ -2554,6 +2618,105 @@ describe('what the person asked and what Cloudflare serves', () => {
 
         expect(f.cloudflare.records.map((record) => record.name)).toEqual(['a.bmnw.nl']);
         expect(ourTunnel(f).ingress).toEqual([{ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' }, { service: 'http://localhost:9999' }]);
+    });
+
+    test('refuses an add whose serving rule another writer keeps taking away, and leaves the hostname off', async () => {
+        const f = await fixture();
+        const unserve = (tunnel: { ingress: Array<Record<string, unknown>> }): void => {
+            tunnel.ingress = tunnel.ingress.map((rule) => (rule.hostname === 'a.bmnw.nl' ? { hostname: 'a.bmnw.nl', service: 'http_status:404' } : rule));
+        };
+
+        await readyTunnel(f);
+        f.cloudflare.writers.push(() => undefined, unserve, unserve);
+
+        await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 })).rejects.toMatchObject({ code: 'hostname-unsettled' });
+
+        expect(tunnelStore(f.home).read()?.rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: false }]);
+        expect((await f.state()).stage).toBe('failed');
+    });
+
+    test('holds only the hostname whose port became Ruimte’s own, and still turns the other ones off and on', async () => {
+        const denied = [API_PORT, LISTENER_PORT];
+        const f = await fixture({ deniedPorts: () => denied });
+
+        await readyTunnel(f);
+
+        const a = await rowOn(f, 'a', 3000);
+        const b = await rowOn(f, 'b', 3001);
+
+        denied.push(3000);
+        await f.service.update(b, { enabled: false });
+        await f.service.idle();
+
+        expect(hostnamesOf(f)).toEqual(['a.bmnw.nl', 'b.bmnw.nl', 'http_status:404']);
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http_status:404' });
+        expect((await f.state()).rows).toMatchObject([
+            { id: a, enabled: true, reason: 'Port 3000 belongs to Ruimte itself, and a tunnel never points at it' },
+            { id: b, enabled: false }
+        ]);
+
+        await f.service.update(b, { enabled: true });
+        await f.service.idle();
+        await f.service.retry();
+        await f.service.idle();
+
+        expect(ourTunnel(f).ingress.slice(0, 2)).toEqual([
+            { hostname: 'b.bmnw.nl', service: 'http://127.0.0.1:3001' },
+            { hostname: 'a.bmnw.nl', service: 'http_status:404' }
+        ]);
+        expect(await f.state()).toMatchObject({ stage: 'failed', message: expect.stringContaining('Ruimte holds a.bmnw.nl off') });
+        expect(f.runner.running).toBe(1);
+
+        // Seed 1141 of the property test: a port that is free again leaves the row held until a write serves it, and it says so.
+        denied.pop();
+
+        expect((await f.state()).rows[0]?.reason).toBeDefined();
+
+        await f.service.retry();
+        await f.service.idle();
+
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' });
+        expect((await f.state()).rows[0]?.reason).toBeUndefined();
+    });
+
+    // Found by the property test as seed 21 (round 13): a status put before a rule of Ruimte's that serves went unseen.
+    test('writes once more when another writer puts a 404 for a wildcard before a hostname that is on', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const a = await rowOn(f, 'a', 3000);
+
+        f.cloudflare.writers.push((tunnel) => {
+            tunnel.ingress = [{ hostname: '*.bmnw.nl', service: 'http_status:404' }, ...tunnel.ingress];
+        });
+        await f.service.update(a, { port: 3005 });
+        await f.service.idle();
+
+        expect(ourTunnel(f).ingress.slice(0, 2)).toEqual([
+            { hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3005' },
+            { hostname: '*.bmnw.nl', service: 'http_status:404' }
+        ]);
+        expect((await f.state()).rows[0]?.reason).toBeUndefined();
+    });
+
+    // Found by the property test as seed 39 (round 13): the MCP lost its 404 from view while its listener was off.
+    test('says why the MCP hostname serves nothing when its listener turns on and the write fails', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'mcp', zone: f.bmnw.id, label: 'mcp' });
+        await f.service.idle();
+
+        expect((await f.state()).rows[0]).toMatchObject({ enabled: true });
+        expect((await f.state()).rows[0]?.reason).toBeUndefined();
+
+        f.cloudflare.failing.set(SAVE, 503);
+        await f.service.setMcp(true);
+        await f.service.idle();
+
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'mcp.bmnw.nl', service: 'http_status:404' });
+        expect((await f.state()).rows[0]).toMatchObject({ enabled: true, reason: expect.any(String) });
     });
 });
 
