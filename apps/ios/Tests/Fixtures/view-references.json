@@ -20,6 +20,14 @@
     { "id": "standalone", "kind": "chat", "name": "Release notes", "node": { "provider": "codex" } },
     { "id": "inline", "kind": "chat", "name": "Inline edit", "hidden": true, "node": { "provider": "claude" } },
     { "id": "sketch", "kind": "drawing", "name": "Sketch" },
+    {
+      "id": "landing",
+      "kind": "design",
+      "name": "Landing",
+      "path": "landing",
+      "node": { "provider": "claude" },
+      "chats": [{ "id": "landing-later", "name": "Second pass", "node": { "provider": "claude" } }]
+    },
     { "id": "line", "kind": "separator" }
   ],
   "referables": [
@@ -28,7 +36,15 @@
     { "id": "sketch", "name": "Sketch", "kind": "drawing", "group": "canvas" },
     { "id": "label", "name": "Next steps", "kind": "text", "group": "canvas" },
     { "id": "main", "name": "Planning", "kind": "canvas", "group": "views" },
-    { "id": "standalone", "name": "Release notes", "kind": "chat", "group": "views" }
+    { "id": "standalone", "name": "Release notes", "kind": "chat", "group": "views" },
+    { "id": "landing", "name": "Landing", "kind": "design", "group": "views" },
+    {
+      "id": "landing-later",
+      "name": "Second pass",
+      "kind": "chat",
+      "group": "views",
+      "trail": [{ "id": "landing", "name": "Landing", "kind": "design" }]
+    }
   ],
   "picks": [
     { "typed": "Compare #Res", "id": "research" },

@@ -15,6 +15,13 @@ import XCTest
             let kind: String
             let group: String
             let detail: String?
+            let trail: [Step]?
+        }
+
+        struct Step: Decodable {
+            let id: String
+            let name: String
+            let kind: String
         }
 
         struct Pick: Decodable {
@@ -58,6 +65,9 @@ import XCTest
         XCTAssertEqual(offered.map(\.kind), fixture.referables.map(\.kind))
         XCTAssertEqual(offered.map { $0.group == .canvas ? "canvas" : "views" }, fixture.referables.map(\.group))
         XCTAssertEqual(offered.map(\.detail), fixture.referables.map(\.detail))
+        XCTAssertEqual(
+            offered.map { $0.trail.map { "\($0.kind) \($0.id) \($0.name)" } },
+            fixture.referables.map { ($0.trail ?? []).map { "\($0.kind) \($0.id) \($0.name)" } })
     }
 
     func testAReferenceWearsTheMarkItsSidebarRowWears() throws {
