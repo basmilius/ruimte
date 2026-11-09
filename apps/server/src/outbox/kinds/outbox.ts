@@ -57,7 +57,8 @@ export const deliverMessageKind = defineOutboxKind(DeliverMessageWorkSchema, {
 /* Owed exactly because its target is gone, and it holds the lanes of the nodes it ends, so no start or resume of one runs beside it. */
 export const endChildrenKind = defineOutboxKind(EndChildrenWorkSchema, {
     outlivesTarget: true,
-    lanes: (entry) => [entry.target, ...entry.payload.nodeIds]
+    lanes: (entry) => [entry.target, ...entry.payload.nodeIds],
+    parked: { text: (entry, title, reason) => `The machine could not end the agents ${title} (${entry.target}) opened: ${reason}` }
 });
 
 /* A summary that was not delivered is said in its fork, by its own handler. */
@@ -70,7 +71,9 @@ const DeliverAnswerSchema = z.object({
 });
 
 /* A person's answer on a card the chat raised; one turn that wakes nobody, owed only through `OutboxLink.oweAnswer`. */
-export const deliverAnswerKind = defineOutboxKind(DeliverAnswerSchema);
+export const deliverAnswerKind = defineOutboxKind(DeliverAnswerSchema, {
+    parked: { text: (entry, title, reason) => `The machine could not hand ${title} (${entry.target}) the answer a person gave on its card: ${reason}` }
+});
 
 const DeliverLostWorkSchema = z.object({
     kind: z.literal('deliver-lost-work'),
@@ -79,4 +82,6 @@ const DeliverLostWorkSchema = z.object({
 });
 
 /* One turn that tells an idle chat what a restart took, owed only through `OutboxLink.oweLostWork`. */
-export const deliverLostWorkKind = defineOutboxKind(DeliverLostWorkSchema);
+export const deliverLostWorkKind = defineOutboxKind(DeliverLostWorkSchema, {
+    parked: { text: (entry, title, reason) => `The machine could not tell ${title} (${entry.target}) what a restart took: ${reason}` }
+});

@@ -8,5 +8,5 @@ const RunAfterSettleSchema = z.object({
 });
 
 export const runAfterSettleKind = defineOutboxKind(RunAfterSettleSchema, {
-    parked: { chat: 'target', text: (_entry, _title, reason) => `The machine could not run the launch task that follows this chat's turn: ${reason}` }
+    parked: { text: (entry, title, reason) => `The machine could not run the launch task that follows the turn of ${title} (${entry.target}): ${reason}` }
 });

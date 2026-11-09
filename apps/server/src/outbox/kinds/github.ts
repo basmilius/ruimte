@@ -8,5 +8,5 @@ const DeliverPrWatchSchema = z.object({
 });
 
 export const deliverPrWatchKind = defineOutboxKind(DeliverPrWatchSchema, {
-    parked: { chat: 'target', text: (_entry, _title, reason) => `The machine could not hand this chat the news of its pull request watch: ${reason}` }
+    parked: { text: (entry, title, reason) => `The machine could not hand ${title} (${entry.target}) the news of its pull request watch: ${reason}` }
 });
