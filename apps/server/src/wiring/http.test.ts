@@ -40,7 +40,7 @@ describe('answerDoorway', () => {
 
     test('refuses a tunnelled request before the routes see it', async () => {
         const handlers = {
-            fetch: () => new Response('routes'),
+            fetch: async () => new Response('routes'),
             websocket: {}
         } as unknown as Parameters<typeof answerDoorway>[0];
         const response = await answerDoorway(handlers, new Request('http://127.0.0.1:4210/fs/file', { headers: { 'Cf-Ray': 'x' } }), server);
@@ -52,5 +52,14 @@ describe('answerDoorway', () => {
         const response = await answerDoorway(null, new Request(`http://127.0.0.1:4210${MACHINE_HEALTH_PATH}`), server);
 
         expect(response?.status).toBe(503);
+    });
+
+    test('answers nothing once the routes took the request over as a socket, never the starting response', async () => {
+        const handlers = {
+            fetch: () => undefined,
+            websocket: {}
+        } as unknown as Parameters<typeof answerDoorway>[0];
+
+        expect(await answerDoorway(handlers, new Request('http://127.0.0.1:4210/ws'), server)).toBeUndefined();
     });
 });

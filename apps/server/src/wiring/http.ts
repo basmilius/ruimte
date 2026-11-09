@@ -317,7 +317,8 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
 type DoorwayServer = Server<SocketData>;
 
 interface DoorwayHandlers {
-    fetch(request: Request, server: DoorwayServer): Response | undefined | Promise<Response | undefined>;
+    /* Undefined once a socket took the request over, which is an answer of its own and never the starting one. */
+    fetch(request: Request, server: DoorwayServer): Promise<Response | undefined>;
     websocket: Required<Pick<WebSocketHandler<SocketData>, 'open' | 'drain' | 'message' | 'close'>>;
 }
 
@@ -357,7 +358,7 @@ export function answerDoorway(handlers: DoorwayHandlers | null, request: Request
         return tunnelled;
     }
 
-    return handlers?.fetch(request, server) ?? startingResponse(request);
+    return handlers === null ? startingResponse(request) : handlers.fetch(request, server);
 }
 
 export function listenFirst(config: ServerConfig): Doorway {
