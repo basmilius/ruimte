@@ -70,9 +70,7 @@ export function watchDrags(): () => void {
     const end = mark(false);
     // `dragenter` as well as `dragstart`: a drag out of the file manager begins outside this page.
     const starts = ['dragstart', 'dragenter'];
-    // A drag from outside that leaves the window again, or is cancelled over it, fires neither `dragend`
-    // nor `drop` here, and would leave every embedded page deaf to scrolling. The browser sends no
-    // pointer events while a drag lasts, so the first `pointermove` means it is over.
+    // A drag from outside that leaves again sends no `dragend` or `drop`; no pointer moves arrive during a drag.
     const ends = ['dragend', 'drop', 'pointermove'];
     for (const type of starts) {
         window.addEventListener(type, begin, true);
