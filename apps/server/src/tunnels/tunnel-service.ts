@@ -83,6 +83,13 @@ function mayCatch(rule: CloudflareIngressRule, hostname: string, held: boolean):
     return rule.hostname !== hostname || held;
 }
 
+/* Whether Ruimte's own rule for a hostname is there and no rule of someone else's that could catch it comes before it. */
+function comesFirst(ingress: readonly CloudflareIngressRule[], hostname: string, held: boolean): boolean {
+    const own = ingress.findIndex((rule) => rule.hostname === hostname && rule.path === undefined);
+
+    return own >= 0 && !ingress.slice(0, own).some((rule) => mayCatch(rule, hostname, held));
+}
+
 /* JSON with the keys of every object sorted, since Cloudflare need not send a rule's keys back in the order Ruimte wrote them. */
 function canonical(value: unknown): string {
     return JSON.stringify(value, (_key, inner: unknown) =>
@@ -136,6 +143,10 @@ function passing(e: unknown): boolean {
 }
 
 const NOT_SERVED = 'Cloudflare does not serve it as Ruimte wrote it. Try again to put its rule back.';
+
+function noRecordYet(hostname: string): string {
+    return `Ruimte has not made the DNS record of ${hostname} yet. Try again.`;
+}
 
 interface Lookup {
     looked: boolean;
@@ -252,7 +263,11 @@ export class TunnelService {
                           others: this.others
                       },
             rows: this.stored.rows.map((row) => this.shown(row)),
-            mcp: { enabled: this.stored.mcp.enabled, port: this.ports.listenerPort() },
+            mcp: {
+                enabled: this.stored.mcp.enabled,
+                port: this.ports.listenerPort(),
+                ...(this.listenerFailure === null ? {} : { failure: this.listenerFailure.slice(0, MAX_MESSAGE) })
+            },
             clients: this.ports.clients(),
             suggestedMcpLabel: this.stored.tunnel === null ? null : this.stored.mcp.label
         };
@@ -266,7 +281,7 @@ export class TunnelService {
         // The MCP the person turned off serves nothing by their own choice, which needs no reason.
         const quiet = !meantOn(row) || (row.kind === 'mcp' && !this.stored.mcp.enabled);
         const reason =
-            row.leaving === true ? this.unfinished(row) : quiet ? undefined : (this.portRefusal(row) ?? this.listenerRefusal(row) ?? this.reasons.get(row.id));
+            row.leaving === true ? this.unfinished(row) : quiet ? undefined : (this.portRefusal(row) ?? this.listenerRefusal(row) ?? this.noted(row));
 
         return {
             id: row.id,
@@ -335,9 +350,21 @@ export class TunnelService {
         return row.port === null ? 'A dev server needs a port' : deniedPortReason(row.port, this.ports.deniedPorts());
     }
 
+    /* What a job noted about a row, where a missing record says more than a rule that does not serve. */
+    private noted(row: StoredRow): string | undefined {
+        const reason = this.reasons.get(row.id);
+
+        return (reason === undefined || reason === NOT_SERVED ? this.recordRefusal(row) : null) ?? reason;
+    }
+
+    /* Why a row has no record of this machine, read from the stored row, so it says so after a restart too. */
+    private recordRefusal(row: StoredRow): string | null {
+        return row.recordId === null ? noRecordYet(row.hostname) : null;
+    }
+
     /* A row meant on that Ruimte holds with its 404 whatever the person asked: its record is missing, or its port is Ruimte's own. */
     private blocked(row: StoredRow): boolean {
-        return this.unrecorded.has(row.id) || this.portRefusal(row) !== null;
+        return this.unrecorded.has(row.id) || row.recordId === null || this.portRefusal(row) !== null;
     }
 
     private stageOf(): { stage: TunnelStage; message: string | null } {
@@ -355,10 +382,9 @@ export class TunnelService {
             return this.installFailed ? { stage: 'failed', message: this.failure } : { stage: 'not-installed', message: null };
         }
 
-        const failure = this.failure ?? this.listenerFailure;
-
-        if (failure !== null && this.busy === null) {
-            return { stage: 'failed', message: failure };
+        // A listener that did not start is said at the MCP switch and on its row, so it hides no step of the tunnel.
+        if (this.failure !== null && this.busy === null) {
+            return { stage: 'failed', message: this.failure };
         }
 
         if (this.busy === 'checking') {
@@ -440,12 +466,14 @@ export class TunnelService {
             })
             .catch(() => undefined)
             .then(() => {
-                const again = this.networkReturned && this.waitsForNetwork && this.token !== null;
+                const returned = this.networkReturned;
 
                 this.networkReturned = false;
 
-                if (again) {
+                if (returned && this.waitsForNetwork && this.token !== null) {
                     this.start('checking', () => this.refresh());
+                } else if (returned) {
+                    this.retryListener();
                 }
             });
     }
@@ -887,7 +915,19 @@ export class TunnelService {
             // Its 404 goes first, since an add whose write failed never landed it and a catch-all that serves would answer the record.
             if (change.enabled === true && tunnel !== null) {
                 this.refuseUnheld(await this.commit(this.stored.rows), tunnel.name, row.hostname);
-                await this.recordRow(this.api(), row, tunnel.id);
+
+                const lookup = { looked: false };
+
+                try {
+                    await this.recordRow(this.api(), row, tunnel.id, lookup);
+                } catch (e) {
+                    // A row already on stays on, held the way a bring-up holds it, so it says why after this job.
+                    if (meantOn(row)) {
+                        this.holdUnrecorded(row, e, lookup);
+                    }
+
+                    throw e;
+                }
             }
 
             const rows = this.stored.rows.map((candidate) => (candidate.id === id ? apply(candidate) : candidate));
@@ -1154,24 +1194,35 @@ export class TunnelService {
     /*
      * The network is back, which the daemon learns from the broker taking this machine again. A bring-up that failed
      * because Cloudflare could not be reached tries once more, so the MCP row that comes back on needs no Try again. One
-     * still running when the network comes back tries once more after it, if it then fails the same way.
+     * still running when the network comes back tries once more after it, if it then fails the same way. The listener
+     * the person turned on starts again whatever the token and Cloudflare say, since its port may be free by now.
      */
     networkBack(): void {
-        if (this.token === null) {
-            return;
-        }
-
         if (this.busy !== null) {
             this.networkReturned = true;
 
             return;
         }
 
-        if (!this.waitsForNetwork) {
+        if (this.waitsForNetwork && this.token !== null) {
+            this.start('checking', () => this.refresh());
+
             return;
         }
 
-        this.start('checking', () => this.refresh());
+        this.retryListener();
+    }
+
+    /* Starts the listener the person turned on once more, behind the job in flight, when it is not listening. */
+    private retryListener(): void {
+        if (this.stopped || !this.stored.mcp.enabled || this.ports.listenerPort() !== null) {
+            return;
+        }
+
+        this.pending = this.jobs
+            .run(() => this.ensureListener())
+            .catch(() => undefined)
+            .then(() => this.announce());
     }
 
     /* The daemon ends its child with it, after the work in flight, and starts nothing from then on. */
@@ -1181,6 +1232,8 @@ export class TunnelService {
     }
 
     private async refresh(): Promise<void> {
+        // First, since a network that is still down leaves the listener on loopback.
+        await this.ensureListener();
         this.zones = await this.api().zones();
         await this.bringUp();
     }
@@ -1264,11 +1317,12 @@ export class TunnelService {
     }
 
     /*
-     * A row that is on gets its record first, looked up by name, since a delete whose answer got lost may have taken it.
-     * One whose record is known to be missing and cannot be made stays meant on and is held with its 404 until a later
-     * try makes it; one whose record stood when Ruimte last saw it keeps serving through a failure that may pass. The
-     * other rows go on, and a failure is given back to be said once the rest is written, one that may pass first, so the
-     * network coming back tries again.
+     * A row that is on gets its record, looked up by name, since a delete whose answer got lost or the dashboard may have
+     * taken it. As on add, a record goes out only behind a 404 Cloudflare holds: a row whose record is missing or not
+     * proxied is held first, while the rows whose records stand keep serving, and its record is made only once that
+     * write held. One that cannot be made stays meant on and is held with its 404 until a later try; one whose record
+     * stood when Ruimte last saw it keeps serving through a lookup that fails. The other rows go on, and a failure is
+     * given back to be said once the rest is written, one that may pass first, so the network coming back tries again.
      */
     private async recordRowsComingBack(): Promise<unknown> {
         const tunnel = this.stored.tunnel;
@@ -1278,32 +1332,86 @@ export class TunnelService {
             return failed;
         }
 
+        const fail = (e: unknown): void => {
+            if (failed === null || (!passing(failed) && passing(e))) {
+                failed = e;
+            }
+        };
+
+        const api = this.api();
+        const due: StoredRow[] = [];
+
         for (const row of this.stored.rows.filter(meantOn)) {
-            const lookup = { looked: false };
-
             try {
-                await this.recordRow(this.api(), row, tunnel.id, lookup);
-            } catch (e) {
-                if (failed === null || (!passing(failed) && passing(e))) {
-                    failed = e;
-                }
+                const ours = await this.ourRecordNamed(api, row.zoneId, row.hostname, tunnel.id);
 
-                // Only a lookup that answered, or a record Ruimte refuses, tells its record is missing.
-                if (row.recordId !== null && !lookup.looked && !(e instanceof TunnelConfigError)) {
+                if (ours?.proxied === true) {
+                    this.keepRecord(row.id, ours.id);
+
                     continue;
                 }
 
-                this.unrecorded.add(row.id);
-                this.reasons.set(row.id, this.plain(e, `Making the DNS record of ${row.hostname} did not work`));
-
-                // Its rule may still serve until the 404 lands.
-                if (!this.serving.has(row.id)) {
-                    this.serving.set(row.id, {});
+                // Saved as gone before anything is written, so a restart whose lookup fails holds the row as well.
+                if (ours === undefined) {
+                    this.forgetRecord(row.id);
                 }
+
+                this.unrecorded.add(row.id);
+                this.reasons.set(row.id, noRecordYet(row.hostname));
+                due.push(row);
+            } catch (e) {
+                fail(e);
+                this.holdUnrecorded(row, e, { looked: false });
+            }
+        }
+
+        if (due.length === 0) {
+            return failed;
+        }
+
+        if (!(await this.commit(this.stored.rows))) {
+            const hostnames = due.map((row) => row.hostname).join(', ');
+
+            fail(
+                new TunnelConfigError(
+                    'hostname-unheld',
+                    `Another change to ${tunnel.name} kept taking away the 404 that holds ${hostnames}, so Ruimte has not made the DNS record yet. Try again.`
+                )
+            );
+
+            return failed;
+        }
+
+        for (const row of due) {
+            const lookup = { looked: false };
+
+            try {
+                await this.recordRow(api, row, tunnel.id, lookup);
+            } catch (e) {
+                fail(e);
+                this.holdUnrecorded(row, e, lookup);
             }
         }
 
         return failed;
+    }
+
+    /*
+     * Holds a row meant on whose record could not be made with its 404, and says why. Only a lookup that answered, or a
+     * record Ruimte refuses, tells its record is missing, so a row whose record stood keeps serving through the rest.
+     */
+    private holdUnrecorded(row: StoredRow, e: unknown, lookup: Lookup): void {
+        if (row.recordId !== null && !lookup.looked && !(e instanceof TunnelConfigError)) {
+            return;
+        }
+
+        this.unrecorded.add(row.id);
+        this.reasons.set(row.id, this.plain(e, `Making the DNS record of ${row.hostname} did not work`));
+
+        // Its rule may still serve until the 404 lands.
+        if (!this.serving.has(row.id)) {
+            this.serving.set(row.id, {});
+        }
     }
 
     /* What a request that changed a row leaves to the background: the child starts or stops, and the clients hear of it. */
@@ -1542,16 +1650,25 @@ export class TunnelService {
             throw e;
         }
 
-        this.unrecorded.delete(row.id);
+        this.keepRecord(row.id, record.id);
+    }
+
+    /* Saves the record a row leads to, which a later write may serve. */
+    private keepRecord(rowId: string, recordId: string): void {
+        this.unrecorded.delete(rowId);
 
         // Its rule is still the 404 until a write serves it.
-        if (this.reasons.has(row.id)) {
-            this.reasons.set(row.id, NOT_SERVED);
+        if (this.reasons.has(rowId)) {
+            this.reasons.set(rowId, NOT_SERVED);
+        }
+
+        if (!this.stored.rows.some((row) => row.id === rowId && row.recordId !== recordId)) {
+            return;
         }
 
         this.stored = {
             ...this.stored,
-            rows: this.stored.rows.map((candidate) => (candidate.id === row.id ? { ...candidate, recordId: record.id } : candidate))
+            rows: this.stored.rows.map((row) => (row.id === rowId ? { ...row, recordId } : row))
         };
         this.save();
     }
@@ -1662,8 +1779,10 @@ export class TunnelService {
         // A rule put before one of Ruimte's that serves can also answer its name with a status, which serves it no more.
         const leaks = held.some((row) => servedFor(after.ingress, row.hostname) !== null);
         const starved = serving.some((rule) => servedFor(after.ingress, rule.hostname) === null);
+        // A rule put before one of Ruimte's that could catch its name may serve it later, also one that answers 404 now.
+        const overtaken = rules.some((ours) => !comesFirst(after.ingress, ours.hostname, holding.has(ours.hostname)));
 
-        if (!leaks && !starved && canonical(after.ingress.filter(isOurs)) === canonical(ingress.filter(isOurs))) {
+        if (!leaks && !starved && !overtaken && canonical(after.ingress.filter(isOurs)) === canonical(ingress.filter(isOurs))) {
             return true;
         }
 

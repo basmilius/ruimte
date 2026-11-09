@@ -57,11 +57,13 @@ export function CredentialsSection({
         <SettingsSection
             title={t('tunnels.clients.title')}
             description={
-                address === null ? undefined : (
+                address !== null ? (
                     <>
                         {t('tunnels.clients.address')} <code className="font-mono select-all">{address}</code>
                     </>
-                )
+                ) : state.mcp.enabled && state.mcp.failure !== undefined ? (
+                    <span className="text-status-error">{t('tunnels.clients.notListening')}</span>
+                ) : undefined
             }
             action={
                 <div className="flex items-center gap-3">

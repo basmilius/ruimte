@@ -2762,7 +2762,7 @@ describe('what the person asked and what Cloudflare serves', () => {
         expect(ourTunnel(f).ingress).toContainEqual({ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' });
         expect(ourTunnel(f).ingress).toContainEqual({ hostname: 'mcp.bmnw.nl', service: 'http_status:404' });
         expect(booted.runner.running).toBe(1);
-        expect(held).toMatchObject({ stage: 'failed', message: expect.stringContaining('in use') });
+        expect(held).toMatchObject({ stage: 'running', mcp: { enabled: true, port: null, failure: expect.stringContaining('in use') } });
         expect(held.rows.find((row) => row.kind === 'mcp')).toMatchObject({ enabled: true, reason: expect.stringContaining('in use') });
 
         taken.value = false;
@@ -2785,7 +2785,11 @@ describe('what the person asked and what Cloudflare serves', () => {
         await f.service.setMcp(true);
         await f.service.idle();
 
-        expect(await f.state()).toMatchObject({ stage: 'failed', mcp: { enabled: true, port: null }, rows: [{ reason: expect.stringContaining('in use') }] });
+        expect(await f.state()).toMatchObject({
+            stage: 'running',
+            mcp: { enabled: true, port: null, failure: expect.stringContaining('in use') },
+            rows: [{ reason: expect.stringContaining('in use') }]
+        });
         expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'mcp.bmnw.nl', service: 'http_status:404' });
 
         await f.service.setMcp(false);
@@ -2804,7 +2808,7 @@ describe('what the person asked and what Cloudflare serves', () => {
 
         await f.service.setMcp(true);
 
-        expect(await f.state()).toMatchObject({ stage: 'failed', mcp: { enabled: true, port: null } });
+        expect(await f.state()).toMatchObject({ stage: 'no-token', mcp: { enabled: true, port: null, failure: expect.stringContaining('in use') } });
 
         taken.value = false;
         await f.service.setToken(FAKE_API_TOKEN);
@@ -2907,6 +2911,171 @@ describe('what the person asked and what Cloudflare serves', () => {
         expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http_status:404' });
         expect((await second.state()).rows[0]).toMatchObject({ enabled: true, reason: expect.stringContaining('a.bmnw.nl') });
         expect(second.runner.running).toBe(0);
+    });
+
+    // Council round 15: a bring-up made a missing record before the write that holds it, so a catch-all of the dashboard served it.
+    test('makes a missing record at boot only behind a 404 Cloudflare holds, while the hostname whose record stands keeps serving', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000, comeBack: true });
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'b', port: 3001, comeBack: true });
+        await f.service.idle();
+        await f.service.stop();
+
+        // The dashboard deletes the record and the rule of a, and makes the catch-all serve.
+        const tunnel = ourTunnel(f);
+
+        f.cloudflare.records.splice(
+            f.cloudflare.records.findIndex((record) => record.name === 'a.bmnw.nl'),
+            1
+        );
+        tunnel.ingress = [
+            ...tunnel.ingress.filter((rule) => typeof rule.hostname === 'string' && rule.hostname !== 'a.bmnw.nl'),
+            { service: 'http://localhost:9999' }
+        ];
+        f.cloudflare.failing.set(SAVE, 503);
+
+        const booted = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
+
+        await booted.service.resume();
+        await booted.service.idle();
+
+        expect(f.cloudflare.records.map((record) => record.name)).toEqual(['b.bmnw.nl']);
+        expect(ourTunnel(f).ingress).toContainEqual({ hostname: 'b.bmnw.nl', service: 'http://127.0.0.1:3001' });
+        expect((await booted.state()).rows.find((row) => row.hostname === 'a.bmnw.nl')).toMatchObject({ enabled: true, reason: expect.any(String) });
+
+        f.cloudflare.failing.clear();
+
+        const before = f.cloudflare.calls.length;
+
+        await booted.service.retry();
+        await booted.service.idle();
+
+        const created = f.cloudflare.calls.findIndex((call, i) => i >= before && call.method === 'POST' && call.path.includes('/dns_records'));
+        const holding = f.cloudflare.calls
+            .slice(before, created)
+            .filter((call) => call.method === 'PUT' && call.path.endsWith('/configurations'))
+            .at(-1)?.body as { config: { ingress: unknown[] } } | undefined;
+
+        expect(holding?.config.ingress).toContainEqual({ hostname: 'a.bmnw.nl', service: 'http_status:404' });
+        expect(holding?.config.ingress).toContainEqual({ hostname: 'b.bmnw.nl', service: 'http://127.0.0.1:3001' });
+        expect(ourTunnel(f).ingress).toContainEqual({ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' });
+        expect((await booted.state()).rows.every((row) => row.reason === undefined)).toBe(true);
+    });
+
+    // Found by the property test as seed 774 (round 15): a wildcard answering 404 put before the 404 of a new row let its record out behind it.
+    test('puts the 404 of a new hostname back before a wildcard another writer put in front of it, before it makes the record', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        f.cloudflare.writers.push((tunnel) => {
+            tunnel.ingress = [{ hostname: '*.bmnw.nl', service: 'http_status:404' }, ...tunnel.ingress];
+        });
+
+        const before = f.cloudflare.calls.length;
+
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 });
+        await f.service.idle();
+
+        const created = f.cloudflare.calls.findIndex((call, i) => i >= before && call.method === 'POST' && call.path.includes('/dns_records'));
+        const holding = f.cloudflare.calls
+            .slice(before, created)
+            .filter((call) => call.method === 'PUT' && call.path.endsWith('/configurations'))
+            .at(-1)?.body as { config: { ingress: unknown[] } } | undefined;
+
+        expect(holding?.config.ingress.slice(0, 2)).toEqual([
+            { hostname: 'a.bmnw.nl', service: 'http_status:404' },
+            { hostname: '*.bmnw.nl', service: 'http_status:404' }
+        ]);
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' });
+    });
+
+    // Found by the property test as seeds 20608 and 20618 (round 15): turning on a row that was on could not make its missing record and said nothing.
+    test('holds a hostname that is on and says why when turning it on again cannot make its missing record', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const id = await rowOn(f, 'a', 3000);
+
+        f.cloudflare.records.length = 0;
+        f.cloudflare.failing.set('POST /zones/zone-bmnw.nl/dns_records', 503);
+
+        await expect(f.service.update(id, { enabled: true, port: 3001 })).rejects.toBeInstanceOf(CloudflareError);
+        await f.service.idle();
+
+        expect((await f.state()).rows[0]).toMatchObject({ enabled: true, reason: expect.stringContaining('a.bmnw.nl') });
+    });
+
+    // Found by the property test as seed 33826 (round 15): after a restart, a job without a bring-up served a row that has no record, saying nothing.
+    test('holds a hostname that is on without a record after a restart, and says why from what was saved', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000, comeBack: true });
+        await f.service.idle();
+        await f.service.stop();
+        f.cloudflare.records.length = 0;
+        f.cloudflare.failing.set('POST /zones/zone-bmnw.nl/dns_records', 403);
+
+        const first = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
+
+        await first.service.resume();
+        await first.service.idle();
+        await first.service.stop();
+        f.cloudflare.failing.clear();
+        f.cloudflare.failing.set('GET /zones', 503);
+
+        const second = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
+
+        await second.service.resume();
+        await second.service.idle();
+        await second.service.setMcp(true);
+        await second.service.idle();
+
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http_status:404' });
+        expect((await second.state()).rows[0]).toMatchObject({ enabled: true, reason: 'Ruimte has not made the DNS record of a.bmnw.nl yet. Try again.' });
+        expect(second.runner.running).toBe(0);
+    });
+
+    // Council round 15: the network coming back left a listener alone unless a job had failed on the network.
+    test.each([
+        ['without a token', false],
+        ['with a tunnel that is up', true]
+    ])('starts the MCP listener again when the network comes back once its port is free, %s', async (_name, withTunnel) => {
+        const { taken, ports } = takenListener();
+        const f = await fixture(ports);
+
+        if (withTunnel) {
+            await readyTunnel(f);
+        }
+
+        await f.service.setMcp(true);
+        await f.service.idle();
+        taken.value = false;
+        f.service.networkBack();
+        await f.service.idle();
+
+        const state = await f.state();
+
+        expect(state.mcp).toEqual({ enabled: true, port: LISTENER_PORT });
+    });
+
+    // Council round 15: a listener whose port was taken failed the whole stage, which hid the choice of a tunnel.
+    test('offers to make a tunnel while the MCP listener cannot take its port, and says why at the MCP', async () => {
+        const { ports } = takenListener();
+        const f = await fixture(ports);
+
+        await f.service.setMcp(true);
+        await f.service.setToken(FAKE_API_TOKEN);
+
+        expect(await f.state()).toMatchObject({ stage: 'no-tunnel', mcp: { enabled: true, port: null, failure: expect.stringContaining('in use') } });
+
+        await f.service.setup();
+        await f.service.idle();
+
+        expect(await f.state()).toMatchObject({ stage: 'running', tunnel: { name: 'ruimte-bas-macbook-f7a7' } });
     });
 });
 

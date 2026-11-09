@@ -1122,6 +1122,7 @@
             "title": "External clients",
             "mcp": "External MCP",
             "address": "On this machine at",
+            "notListening": "Not running. Another app may be using its port.",
             "create": "New bearer",
             "client": "Client",
             "kind": "Kind",

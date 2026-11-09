@@ -1122,6 +1122,7 @@
             "title": "Externe clients",
             "mcp": "Externe MCP",
             "address": "Op deze machine op",
+            "notListening": "Draait niet. Misschien gebruikt een andere app de poort.",
             "create": "Nieuwe bearer",
             "client": "Client",
             "kind": "Soort",

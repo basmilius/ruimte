@@ -189,8 +189,12 @@ export const TunnelStateSchema = z.object({
         })
         .nullable(),
     rows: z.array(TunnelRowSchema).max(100),
-    /* Whether the external MCP listener is on, and where it listens on loopback. */
-    mcp: z.object({ enabled: z.boolean(), port: z.number().int().min(0).max(65535).nullable() }),
+    /* Whether the external MCP listener is on, where it listens on loopback, and why it did not start while it is on. */
+    mcp: z.object({
+        enabled: z.boolean(),
+        port: z.number().int().min(0).max(65535).nullable(),
+        failure: z.string().max(500).optional()
+    }),
     /* How many credentials were used lately, for the count the section shows. */
     clients: z.number().int().nonnegative(),
     /* A long random label for the MCP row, which the screen puts in front of the zone a person picks; null until there is a tunnel. */

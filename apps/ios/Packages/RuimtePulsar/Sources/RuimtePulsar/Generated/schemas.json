@@ -69865,6 +69865,10 @@
                 "type": "null"
               }
             ]
+          },
+          "failure": {
+            "type": "string",
+            "maxLength": 500
           }
         },
         "required": [
@@ -70238,6 +70242,10 @@
                 "type": "null"
               }
             ]
+          },
+          "failure": {
+            "type": "string",
+            "maxLength": 500
           }
         },
         "required": [
@@ -70577,6 +70585,10 @@
                 "type": "null"
               }
             ]
+          },
+          "failure": {
+            "type": "string",
+            "maxLength": 500
           }
         },
         "required": [
@@ -70907,6 +70919,10 @@
                 "type": "null"
               }
             ]
+          },
+          "failure": {
+            "type": "string",
+            "maxLength": 500
           }
         },
         "required": [
@@ -71243,6 +71259,10 @@
                 "type": "null"
               }
             ]
+          },
+          "failure": {
+            "type": "string",
+            "maxLength": 500
           }
         },
         "required": [
@@ -71638,6 +71658,10 @@
                 "type": "null"
               }
             ]
+          },
+          "failure": {
+            "type": "string",
+            "maxLength": 500
           }
         },
         "required": [
@@ -71968,6 +71992,10 @@
                 "type": "null"
               }
             ]
+          },
+          "failure": {
+            "type": "string",
+            "maxLength": 500
           }
         },
         "required": [
@@ -72350,6 +72378,10 @@
                 "type": "null"
               }
             ]
+          },
+          "failure": {
+            "type": "string",
+            "maxLength": 500
           }
         },
         "required": [
@@ -72721,6 +72753,10 @@
                 "type": "null"
               }
             ]
+          },
+          "failure": {
+            "type": "string",
+            "maxLength": 500
           }
         },
         "required": [
@@ -73060,6 +73096,10 @@
                 "type": "null"
               }
             ]
+          },
+          "failure": {
+            "type": "string",
+            "maxLength": 500
           }
         },
         "required": [
@@ -73390,6 +73430,10 @@
                 "type": "null"
               }
             ]
+          },
+          "failure": {
+            "type": "string",
+            "maxLength": 500
           }
         },
         "required": [
@@ -73727,6 +73771,10 @@
                 "type": "null"
               }
             ]
+          },
+          "failure": {
+            "type": "string",
+            "maxLength": 500
           }
         },
         "required": [

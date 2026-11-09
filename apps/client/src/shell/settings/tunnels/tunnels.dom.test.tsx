@@ -610,6 +610,17 @@ describe('the external MCP', () => {
         await until(() => everything().includes('http://127.0.0.1:4230/mcp'));
         expect(machine.requests('tunnel.setMcp')).toEqual([{ enabled: true }]);
     });
+
+    test('says at its switch that it is not running while its port is taken, and still offers to make a tunnel', async () => {
+        state = stateOf({
+            stage: 'no-tunnel',
+            tunnel: null,
+            mcp: { enabled: true, port: null, failure: 'The MCP listener did not start. Failed to start server. Is port 4230 in use?' }
+        });
+        await open();
+        await until(() => everything().includes('Not running. Another app may be using its port.'));
+        expect(buttonWithText('Use')).not.toBeNull();
+    });
 });
 
 describe('a bearer', () => {
