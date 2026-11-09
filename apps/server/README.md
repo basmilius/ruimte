@@ -534,7 +534,7 @@ File requests (`fs.read`, `fs.write`, `fs.create`, `fs.rename`, `fs.delete`, `fs
 
 ## Remote clients
 
-Where a request comes from never grants anything; behind a tunnel every visitor is loopback. A local process presents the local secret from `$RUIMTE_HOME/local.key` (`?token=` or `Authorization: Bearer`, compared in constant time) and is the owner (`isOwner` in `src/auth/access.ts`). The desktop app hands it to its page over the bridge; `ruimte login`, `logout`, `status` and `bun run smoke` read it from `RUIMTE_HOME`.
+Where a request comes from never grants anything; behind a tunnel every visitor is loopback. A local process presents the local secret from `$RUIMTE_HOME/local.key` (`?token=` or `Authorization: Bearer`, compared in constant time) and is the owner (`isOwner` in `src/auth/access.ts`). The desktop app hands it to its page over the bridge; `ruimte login`, `logout` and `status` read it from `RUIMTE_HOME`.
 
 Every other client comes in through the account, on an address book statement carried in the offer of a direct connection: a WebRTC DataChannel (`src/pulsar/peers.ts`) whose signals arrive over the broker (`src/pulsar/broker-relay.ts`) or the door on the local network, both through `SignalGate`. The handshake (`src/pulsar/channel-auth.ts`) binds the client's key to the DTLS fingerprints. The daemon then hands out a ticket for the HTTP routes, valid twelve hours from last use and kept in memory. Client keys sit in `auth.json`; `auth.sessions` lists them and `auth.revoke` cuts one off.
 
@@ -647,16 +647,6 @@ An agent Ruimte starts gets the daemon's MCP server: `/mcp` on the daemon's port
 - Copilot chat turns are logged to `usage/copilot`, a file per session; a Copilot terminal is not counted.
 - Prices come from LiteLLM's `model_prices_and_context_window.json`, refreshed every 24 hours into `usage/prices.json`, with a bundled fallback. An unpriced model shows as unknown, never free. The ECB euro rate comes from frankfurter.app on the same schedule into `usage/exchange-rate.json`. `--no-price-fetch` turns off both.
 - Plan limits come from the CLIs (`get_usage` over Claude Code's stream-json, `account/rateLimits/read` over Codex's app-server) every five minutes, backing off to an hour after a failure. That clock reads a CLI's default account, and another account only while a chat or terminal used it in the last day since the machine started, or while a client has a usage page open (`usage.subscribe`); the first page to open reads those at once. Cards count as no page. Agents read them with `provider_info`.
-
-## Smoke test
-
-With a daemon running:
-
-```sh
-bun run --cwd apps/server smoke            # or: smoke ws://host:port/ws
-```
-
-It creates a session, runs `uname`, prints the output and the screen a reattach would get, then kills the session.
 
 ## A remote daemon in Docker
 
