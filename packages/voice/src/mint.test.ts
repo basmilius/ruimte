@@ -17,7 +17,6 @@ function requestFor(preferences: LiveSessionPreferences, sdp = 'offer'): LiveSes
     return { language: preferences.language, voice: preferences.voice, tools: liveTools(preferences), sdp };
 }
 
-/* Mints a session against a fake OpenAI and hands back what it was sent. */
 async function mint(preferences: LiveSessionPreferences, runner: 'desktop' | 'phone' = 'desktop'): Promise<{ answer: unknown; request: LiveFetchInit }> {
     const calls: { url: string; init: LiveFetchInit }[] = [];
     const answer = await mintLiveSession(answering(200, ANSWER, calls), KEY, requestFor(preferences), runner);

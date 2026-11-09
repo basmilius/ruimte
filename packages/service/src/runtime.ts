@@ -28,7 +28,6 @@ export const BUILD_FILE = 'ruimte.build';
 
 type Environment = Record<string, string | undefined>;
 
-/* `$RUIMTE_HOME`, else `~/.ruimte`. */
 export function ruimteHome(env: Environment = process.env, userHome: string = homedir()): string {
     return env.RUIMTE_HOME ?? join(userHome, HOME_FOLDER_NAME);
 }

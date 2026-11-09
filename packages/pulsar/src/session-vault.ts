@@ -21,7 +21,6 @@ export interface SessionStore {
  * non-extractable `CryptoKey` in a page, a key encrypted with the OS keychain in the desktop shell.
  */
 export interface SessionSigner {
-    /* The raw public key in base64url, the shape `PublicKeySchema` checks. */
     publicKey: string;
 
     /*

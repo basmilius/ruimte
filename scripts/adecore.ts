@@ -43,7 +43,6 @@ export interface PackageStatus {
 }
 
 export interface Registry {
-    /** Whether the tarball of this version can be downloaded. */
     has(name: string, version: string): Promise<boolean>;
     pause(): Promise<void>;
 }

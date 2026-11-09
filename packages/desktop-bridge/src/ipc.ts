@@ -23,19 +23,16 @@ import type { OpenAiLivePreferences } from './voice.ts';
 
 interface Invoke<Args extends unknown[], Result> {
     readonly kind: 'invoke';
-    /* Type only. */
     readonly shape?: { args: Args; result: Result };
 }
 
 interface Send<Args extends unknown[]> {
     readonly kind: 'send';
-    /* Type only. */
     readonly shape?: { args: Args };
 }
 
 interface Push<Args extends unknown[]> {
     readonly kind: 'event';
-    /* Type only. */
     readonly shape?: { args: Args };
 }
 

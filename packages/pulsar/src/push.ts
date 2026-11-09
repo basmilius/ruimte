@@ -82,7 +82,6 @@ export const PUSH_CIPHERTEXT_MAX_CHARS = 3200;
 // AES-GCM appends its tag to the ciphertext.
 const PUSH_TAG_BYTES = 16;
 
-/* How many base64url characters a plaintext of that many bytes comes to once encrypted. */
 export function pushCiphertextChars(plaintextBytes: number): number {
     return Math.ceil(((plaintextBytes + PUSH_TAG_BYTES) * 4) / 3);
 }

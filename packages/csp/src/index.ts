@@ -35,10 +35,8 @@ function directivesString(directives: CspDirectives): string {
         .join('; ');
 }
 
-/* Where a window reads the files of an extension. */
 export const EXTENSION_FILES_PATH = '/__extensions/';
 
-/* The type a file of an extension is served as, by its extension, alike from the shell and from Station's cache. */
 export const EXTENSION_FILE_TYPES: Readonly<Record<string, string>> = {
     js: 'text/javascript; charset=utf-8',
     css: 'text/css; charset=utf-8',

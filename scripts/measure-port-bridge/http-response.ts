@@ -28,9 +28,7 @@ export class ResponseDecoder {
     feed(chunk: Uint8Array): void {
         this.buffer = this.buffer.length === 0 ? Buffer.from(chunk) : Buffer.concat([this.buffer, chunk]);
 
-        while (this.step()) {
-            // Each step consumes what it can.
-        }
+        while (this.step()) {}
     }
 
     /* The stream ended: a body that reads until then is complete. */

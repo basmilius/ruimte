@@ -17,7 +17,6 @@ export interface BrokerPeerEvents {
     relayed(frame: BrokerRelayed): void;
     /* The broker refused something: a relay (the frame carries its id) or the socket itself. */
     refused(frame: BrokerError | BrokerRateLimited): void;
-    /* The broker wrote a relay to the receiver's socket. */
     delivered?(id: string): void;
     /* The answer to `ice`, with the id it returned. */
     ice?(frame: BrokerIce): void;

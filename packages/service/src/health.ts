@@ -1,6 +1,5 @@
 import { HealthResultSchema, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
 
-/* What a daemon says about itself on `/health`. */
 export interface MachineHealth extends BuildIdentity {
     /* Whether launchd, systemd or the Task Scheduler started it; null for a daemon from before `/health` said so. */
     service: boolean | null;
