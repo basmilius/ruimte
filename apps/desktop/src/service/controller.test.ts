@@ -216,6 +216,54 @@ describe('start', () => {
         expect(controller.state().owner).toBe('external');
     });
 
+    test('attaches as external and reports it when a daemon is still wiring itself after the wait ran out', async () => {
+        const { controller, fake, events, reports, deps } = setup({ fake: fakeManager({ installed: true }) });
+        deps.probe = async () => ({ ...EXPECTED, starting: true });
+        deps.waitForHealth = async () => {
+            throw new Error('Timed out');
+        };
+        deps.verify = async () => true;
+        expect(await controller.start()).toBe(true);
+        expect(controller.state()).toMatchObject({ owner: 'external', failure: 'Timed out' });
+        expect(reports).toEqual([{ kind: 'service-fallback', step: 'start', reason: 'Timed out' }]);
+        expect(fake.calls).toEqual([]);
+        expect(events).toEqual([]);
+    });
+
+    test('starts the service when the daemon that was wiring itself crashed during boot', async () => {
+        const { controller, fake, events, reports, deps } = setup({ fake: fakeManager({ installed: true }) });
+        let crashed = false;
+        deps.probe = async () => (crashed ? null : { ...EXPECTED, starting: true });
+        deps.waitForHealth = async () => {
+            if (!crashed) {
+                crashed = true;
+                throw new Error('Timed out');
+            }
+        };
+        deps.verify = async () => true;
+        expect(await controller.start()).toBe(true);
+        expect(controller.state().owner).toBe('service');
+        expect(fake.calls).toEqual(['start']);
+        expect(events).toEqual([]);
+        expect(reports).toEqual([]);
+    });
+
+    test('spawns its own daemon when the one that was wiring itself crashed during boot and no service is used', async () => {
+        const { controller, events, deps } = setup({ support: 'dev' });
+        let crashed = false;
+        deps.probe = async () => (crashed ? null : { ...EXPECTED, starting: true });
+        deps.waitForHealth = async () => {
+            if (!crashed) {
+                crashed = true;
+                throw new Error('Timed out');
+            }
+        };
+        deps.verify = async () => true;
+        expect(await controller.start()).toBe(true);
+        expect(controller.state().owner).toBe('app');
+        expect(events).toEqual(['spawn']);
+    });
+
     test('a definition already on disk is not installed again, and one that changed is', async () => {
         const unchanged = setup({ fake: fakeManager({ installed: true, running: EXPECTED }) });
         await unchanged.controller.start();

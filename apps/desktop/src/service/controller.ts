@@ -258,12 +258,29 @@ export function createServiceController(deps: ServiceControllerDeps): ServiceCon
                 }
             }
             let probed = await deps.probe();
+            let outwaited = false;
+
             if (probed?.starting) {
                 // Its port is held by a Ruimte that is still wiring itself: starting a second daemon would fight it for the port.
-                await deps.waitForHealth(() => true);
+                let waitFailure: string | null = null;
+
+                try {
+                    await deps.waitForHealth(() => true);
+                } catch (e) {
+                    waitFailure = messageOf(e);
+                }
+
+                // A daemon that crashed while it booted answers nothing now, and starts the normal way.
                 probed = await deps.probe();
+
+                if (waitFailure !== null && probed?.starting) {
+                    outwaited = true;
+                    failure = waitFailure;
+                    deps.report?.({ kind: 'service-fallback', step: 'start', reason: waitFailure });
+                }
             }
-            const decision = decideStart(probed, deps.expected, managedService && failure === null);
+
+            const decision = outwaited ? 'attach-external' : decideStart(probed, deps.expected, managedService && failure === null);
             if (decision === 'attach') {
                 owner = 'service';
                 if (manager && definitionChanged) {
