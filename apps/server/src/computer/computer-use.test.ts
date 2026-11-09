@@ -705,7 +705,7 @@ describe('the person holding the Mac', () => {
         timers.advance(500);
         const refusal = await call;
         expect(refusal).toMatchObject({ code: 'taken-over' });
-        expect((refusal as { message: string }).message).toContain('which holds until they hand it back');
+        expect((refusal as { message: string }).message).toContain('a few seconds after they let go');
         expect(helper.acted.map((request) => request.command)).toEqual(['type']);
     });
 
@@ -728,10 +728,10 @@ describe('the person holding the Mac', () => {
 describe('the hold an agent asks for', () => {
     test('keeps the card up for that long instead of the default, and goes on as soon as the person answers', async () => {
         const { computer, helper, timers } = await computerSetup();
-        const call = computer.operate('chat-1', 'state', 'TextEdit', {}, 60_000);
+        const call = computer.operate('chat-1', 'state', 'TextEdit', {}, 30_000);
         await until(() => computer.pendingApprovals().length === 1);
-        expect(timers.waitingFor(60_000)).toBe(1);
-        timers.advance(45_000);
+        expect(timers.waitingFor(30_000)).toBe(1);
+        timers.advance(25_000);
         await computer.answer(computer.pendingApprovals()[0]!.requestId, 'once');
         await call;
         expect(helper.acted.map((request) => request.command)).toEqual(['state']);
@@ -814,7 +814,7 @@ describe('one agent at a time', () => {
         const refusal = await refusalOf(computer.operate('term-1', 'click', 'TextEdit', { element: 1 }));
         expect(refusal?.code).toBe('busy');
         expect(refusal?.message).toContain('Node chat-1');
-        expect(refusal?.message).toContain('wait 60');
+        expect(refusal?.message).toContain('wait 40');
         expect(helper.acted).toEqual([]);
         await computer.operate('chat-1', 'click', 'TextEdit', { element: 1 });
         expect(helper.acted.map((request) => request.command)).toEqual(['click']);

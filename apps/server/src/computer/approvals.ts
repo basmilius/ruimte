@@ -9,8 +9,15 @@ import { realTimers, type Timers } from '../timers.ts';
  */
 export const APPROVAL_WAIT_MS = 6_000;
 
-/* The longest hold `wait` asks for, under the two minutes some agent CLIs give a shell command by default. */
-export const MAX_HOLD_MS = 110_000;
+/*
+ * How long one tool call may take from start to answer. Agent CLIs end an MCP tool call after about a minute
+ * whatever the server allows (Codex's default, and every Claude chat that held longer), so a longer wait is
+ * a chain of calls that each answer in time.
+ */
+export const CALL_BUDGET_MS = 45_000;
+
+/* The longest hold `wait` asks for, leaving the rest of the budget for the action and the state after it. */
+export const MAX_HOLD_MS = 40_000;
 
 /* How long a card stands after the agent last asked: long enough to answer after a coffee, short enough that a card for an agent that gave up goes. */
 export const CARD_MS = 10 * 60_000;

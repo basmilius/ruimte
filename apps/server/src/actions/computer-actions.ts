@@ -172,7 +172,7 @@ async function act(
 }
 
 /* How long `wait` waits for its condition without timeout, in seconds. */
-const WAIT_TIMEOUT_S = 10;
+export const WAIT_TIMEOUT_S = 10;
 
 /* What `wait` holds out for: exactly one of a text that appears, a text that goes, or the value of an element. */
 function conditionOf({

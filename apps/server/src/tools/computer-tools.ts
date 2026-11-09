@@ -1,7 +1,7 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionOutput } from '@ruimte/actions';
 import { z } from 'zod';
-import { READ_MAX_CHARS } from '../actions/computer-actions.ts';
+import { READ_MAX_CHARS, WAIT_TIMEOUT_S } from '../actions/computer-actions.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
 import { field, requiredField, yesNo } from './host.ts';
 import { defineTool, defineToolkit, type ToolCall } from './tool.ts';
@@ -262,6 +262,17 @@ const computerWait = defineActionTool('computer', {
             ...(outcome.stateError === null ? [] : [`state\tnone\t${field(outcome.stateError)}`]),
             ...(outcome.state === null ? [] : stateLines(outcome.state, call))
         ];
+
+        const leftS = Math.floor((input.timeout ?? WAIT_TIMEOUT_S) - outcome.waited);
+
+        // A call answers within the budget an agent CLI gives it, so a longer wait goes on in the next call; that is no failure.
+        if (!outcome.met && leftS >= 1) {
+            return [
+                `waiting\t${field(outcome.app.name)}\t${field(outcome.condition)}\t${round(outcome.waited)}`,
+                `next\tcomputer_wait\tNot yet. Call computer_wait again with timeout ${leftS} for the rest of your wait`,
+                ...lines
+            ];
+        }
 
         if (!outcome.met) {
             throw new ToolRefusal(
