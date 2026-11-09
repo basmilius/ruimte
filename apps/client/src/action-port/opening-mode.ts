@@ -21,7 +21,6 @@ export function openChatInMode(endpointId: string, chatId: string, runtimeMode: 
     configureMode(chatId, info.runtimeMode, runtimeMode);
 }
 
-/* The mode a chat's body opens it in, when its maker asked for one. */
 export function peekOpeningMode(endpointId: string, chatId: string): RuntimeMode | undefined {
     return pending.get(endpointKey(endpointId, chatId));
 }

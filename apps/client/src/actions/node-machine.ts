@@ -17,7 +17,6 @@ export function chatClientOfNode(nodeId: string): ChatClient {
     return chats;
 }
 
-/* The sessions of the machine a node runs on, refused the same way. */
 export function sessionClientOfNode(nodeId: string): SessionClient {
     const sessions = sessionClientFor(endpointOfNodeId(nodeId));
     if (sessions === null) {

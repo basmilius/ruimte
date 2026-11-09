@@ -5,7 +5,6 @@ import type { EdgeLine } from '@/state/edge-lines';
 /* Every meaning a line can have on screen, the plain one included: a line nobody gave a role. */
 type LineRole = EdgeRole | 'plain';
 
-/* How one line is drawn: what it wears where it meets either node, and the stroke it runs in. */
 export interface EdgeLook {
     tail: MarkerShape;
     head: MarkerShape;

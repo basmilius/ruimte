@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { saveLayoutAction } from '@/action-port/person-actions';
 import { layoutDialog } from '@/canvas/dialogs';
 
-/* Names an arrangement of the canvas so it can be brought back later from the dock or the palette. */
 export function LayoutDialog() {
     const { t } = useTranslation(['shell', 'common']);
     const open = layoutDialog.useOpen();

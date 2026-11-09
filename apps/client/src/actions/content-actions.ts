@@ -173,7 +173,6 @@ function summaryOf(element: DrawingElement): ActionOutput<'drawing.read'>['eleme
     };
 }
 
-/* What a JSON document of a drawing or a diagram holds, or a refusal that says what is wrong with it. */
 function parsedDocument<Schema extends z.ZodType>(document: string, schema: Schema, what: string): z.output<Schema> {
     let json: unknown;
     try {

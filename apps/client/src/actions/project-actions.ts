@@ -52,11 +52,9 @@ export interface ProjectMachine {
     chooseIcon(project: ListedProject, icon: ProjectIconChoice | null): Promise<void>;
     uploadIcon(project: ListedProject, mime: string, base64: string): Promise<void>;
     useFolderIcon(project: ListedProject): Promise<void>;
-    /* Moves a chat of Chats into a project, and shows it there. */
     moveChat(endpointId: string, payload: ChatMovePayload): Promise<ChatMoveResult>;
 }
 
-/* Every project of the union this window knows, with the name of its machine. */
 export function listedProjects(): ListedProject[] {
     const current = useProject.getState();
     const endpoints = useEndpoints.getState().endpoints;

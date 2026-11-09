@@ -32,7 +32,6 @@ export class FakeSocket<Sent = string> {
     }
 }
 
-/* A fresh ed25519 key that signs the way a client key does. */
 export function newKey() {
     const pair = generateKeyPairSync('ed25519');
     const publicKey = (pair.publicKey.export({ format: 'jwk' }) as { x: string }).x;

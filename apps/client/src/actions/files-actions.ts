@@ -108,7 +108,6 @@ function resolvedPath(machine: FilesMachine, path: string, actor: ActionActorKin
     return projectPathOf(machine.folder(), path, actor);
 }
 
-/* The paths named, once each, without those inside a folder that is named too. */
 function outermostPaths(machine: FilesMachine, paths: readonly string[], actor: ActionActorKind): string[] {
     const absolutes = [...new Set(paths.map((path) => resolvedPath(machine, path, actor)))];
     return absolutes.filter((path) => !absolutes.some((other) => isPathBelow(other, path)));

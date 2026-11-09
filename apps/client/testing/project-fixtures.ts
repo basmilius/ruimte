@@ -37,7 +37,6 @@ export function idleChatInfo(chatId: string): ChatInfo {
     } as unknown as ChatInfo;
 }
 
-/* A canvas view with nothing on it. */
 export function emptyCanvas(id = 'main', name = 'Main'): ProjectCanvasView {
     return { kind: 'canvas', id, name, nodes: [], texts: [], edges: [], layouts: [] };
 }

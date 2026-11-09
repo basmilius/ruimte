@@ -20,7 +20,6 @@ declare module '@/commands/menu-context' {
         anyLocked: boolean;
         /* The maximize key acts on a node of the canvas with the focus (`maximizeTargetOf`), not on the cell. */
         nodeMaximizable: boolean;
-        /* A node fills that canvas for now. */
         nodeMaximized: boolean;
         nodeZoomable: boolean;
         cameraHistory: { back: boolean; forward: boolean };

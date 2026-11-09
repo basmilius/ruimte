@@ -7,7 +7,6 @@ function node(id: string, kind: CanvasNode['kind'], x: number): CanvasNode {
     return { id, kind, title: id === 'lead' ? 'Lead' : id, x, y: 0, w: 200, h: 100 };
 }
 
-/* A canvas holding these nodes, loaded the way a view opens. */
 function canvasWith(...nodes: CanvasNode[]) {
     const store = createCanvasStore();
     store.getState().loadView({ kind: 'canvas', id: 'view', name: 'Canvas', nodes, texts: [], edges: [], layouts: [] }, null);

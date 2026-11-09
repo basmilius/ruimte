@@ -149,7 +149,6 @@ export class PageSnapshots {
         return this.revealed(key);
     }
 
-    /* The page is gone; its picture goes with it. */
     forget(key: string): void {
         this.endLeaving(key);
         this.widths.delete(key);
@@ -167,7 +166,6 @@ export class PageSnapshots {
         });
     }
 
-    /* Forgets every page that is no longer among `keys`. */
     keep(keys: readonly string[]): void {
         const kept = new Set(keys);
         // A page that closed before it ever went far has a width and no entry.

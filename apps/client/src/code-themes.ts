@@ -5,10 +5,8 @@ const THEME_NAME = 'Ruimte';
 
 type CodeThemeMode = 'light' | 'dark';
 
-/* A Shiki theme with what a picker needs to list it filled in. */
 type CodeTheme = ThemeRegistration & { readonly name: string; readonly displayName: string; readonly type: CodeThemeMode };
 
-/* What a piece of code is, whatever the language; every scope below is drawn as one of these. */
 export type CodeRole =
     | 'foreground'
     | 'keyword'
@@ -451,7 +449,6 @@ function ownCodeTheme(id: string): CodeTheme | null {
     return CODE_THEMES.find((theme) => theme.name === id) ?? null;
 }
 
-/* What to hand Shiki for a theme id: our theme itself, or the id of a bundled one for Shiki to load. */
 export function shikiThemeOf(id: string): string | ThemeRegistration {
     return ownCodeTheme(id) ?? id;
 }

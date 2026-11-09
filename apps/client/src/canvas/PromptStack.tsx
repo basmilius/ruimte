@@ -134,7 +134,6 @@ function SnoozedMenu({
     );
 }
 
-/* The status of the node that asks, for the dot beside its title. */
 function useAskingStatus(prompt: CanvasPrompt) {
     const node = useCanvas((s) => s.nodes[prompt.sourceNodeId ?? prompt.subject.nodeId]);
     return useNodeStatus(node ?? { id: prompt.sourceNodeId ?? prompt.subject.nodeId, kind: prompt.surface });

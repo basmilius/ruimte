@@ -20,7 +20,6 @@ function cellName(state: DocumentState, viewId: string): string {
     return cellViewOf(state, viewId)?.name ?? (loose === undefined ? viewId : looseTabLabel(loose));
 }
 
-/* The cells of the grid column by column, each named by the view standing in it. */
 function cellsOf(state: DocumentState): ActionOutput<'workspace.inspect'>['cells'] {
     const layout = state.layout;
     if (layout === null) {
@@ -37,7 +36,6 @@ function cellsOf(state: DocumentState): ActionOutput<'workspace.inspect'>['cells
     );
 }
 
-/* The grid of cells the views stand in, and what the workspace has on screen. */
 export function layoutActions(document: StoreApi<DocumentState>): ActionHandlers<void> {
     return {
         'workspace.inspect': () => {

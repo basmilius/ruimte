@@ -1,4 +1,3 @@
-/* A `Storage` that keeps its entries in `values`, for a test that reads what a module wrote. */
 export function memoryStorage(): Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> & { values: Map<string, string> } {
     const values = new Map<string, string>();
 

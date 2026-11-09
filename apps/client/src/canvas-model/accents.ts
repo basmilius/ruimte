@@ -71,7 +71,6 @@ const PAPER_CLASSES: Record<NotePaper, string> = {
     neutral: 'bg-paper-neutral'
 };
 
-/* A note without a color is yellow. */
 export function notePaperClass(paper: NotePaper | null): string {
     return PAPER_CLASSES[paper ?? 'yellow'];
 }

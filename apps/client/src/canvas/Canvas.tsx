@@ -106,7 +106,6 @@ function linkTargetAt(state: CanvasState, from: string, clientX: number, clientY
     return id !== null && state.nodes[id]?.collapsed !== true && canLink(state.edges, from, id) ? id : null;
 }
 
-/* Hands the keyboard back to the page, so the node that had it stops answering keys. */
 function blurActive(): void {
     return (document.activeElement as HTMLElement | null)?.blur();
 }

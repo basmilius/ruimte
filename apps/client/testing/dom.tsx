@@ -91,7 +91,6 @@ function codeOf(key: string): string {
     return /^[0-9]$/.test(key) ? `Digit${key}` : key;
 }
 
-/* What a browser sends for a key, at the element that has the keyboard. */
 export async function pressKey(
     target: Element,
     key: string,
@@ -125,7 +124,6 @@ export async function openToolCall(host: Element, itemId: string): Promise<void>
     await until(() => row() !== null);
 }
 
-/* Opens the submenu behind the row that says `label` in a menu that is open, the way a click on its trigger does. */
 export async function openSubmenu(label: string): Promise<void> {
     const before = document.querySelectorAll('[role="menu"]').length;
     const trigger =

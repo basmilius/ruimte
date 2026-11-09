@@ -99,7 +99,6 @@ function runOutput(checkout: Checkout, result: GitActionResult): GitRun {
     };
 }
 
-/* Where a branch stands in words: which one, and the remote it goes to. */
 function branchOf(status: GitStatus): string {
     return status.branch ?? 'a detached HEAD';
 }
@@ -112,7 +111,6 @@ function changedFiles(status: GitStatus, staged: boolean): string[] {
     return status.files.filter((file) => (staged ? file.state === 'staged' : true)).map((file) => file.path);
 }
 
-/* A file list for a question: every name up to a handful, then how many more. */
 function filesLine(paths: readonly string[]): string {
     const shown = paths.slice(0, 8);
     const more = paths.length - shown.length;

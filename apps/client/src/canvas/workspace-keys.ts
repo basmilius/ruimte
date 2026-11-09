@@ -18,7 +18,6 @@ import { isTypingTarget } from '@/surface/canvas/typing-target';
 import { transportFor } from '@/transport/index';
 import { windowWorkspace } from '@/workspace/window';
 
-/* Escape steps out of a node's content, a text being edited or a link being aimed. */
 function escapeCanvas(canvas: CanvasState): void {
     if (canvas.lineTool !== null) {
         canvas.setLineTool(null);

@@ -60,7 +60,6 @@ export function preloadedWorkspaceModules(bundle: Record<string, BundleFile>): s
     return found;
 }
 
-/* Fails a build whose start screen would preload a workspace module, with the chunk and the module that brought it. */
 export function startChunkGuard(): Plugin {
     return {
         name: 'ruimte-start-chunk',

@@ -187,7 +187,6 @@ function addViewOf(
     }
 }
 
-/* The views of the project: shown, named, made, deleted, copied, moved, marked, shared and flagged. */
 export function viewActions(document: StoreApi<DocumentState>, reach: ViewReach): ActionHandlers<void> {
     const { providers, viewDeletion, copyViewContent, designFolders } = reach;
     return {

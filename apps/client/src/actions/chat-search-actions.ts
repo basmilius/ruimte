@@ -15,7 +15,6 @@ const LIVE_MACHINE: ChatSearchMachine = {
     projectId: () => useProject.getState().current?.projectId ?? null
 };
 
-/* A person's look through the chats of the open project, and through the CLI sessions started beside them. */
 export function chatSearchActions(overrides: Partial<ChatSearchMachine> = {}): ActionHandlers<void> {
     const machine: ChatSearchMachine = { ...LIVE_MACHINE, ...overrides };
 

@@ -45,7 +45,6 @@ function button(label: string): HTMLElement | null {
     return mounted.host.querySelector<HTMLElement>(`[data-ghost] button[aria-label="${label}"]`);
 }
 
-/* The first node of the canvas as the machine was asked to save it. */
 async function savedNode(): Promise<ProjectNode | undefined> {
     await until(() => Object.keys(liveCanvas('main')!.nodes).length === 1);
     await act(async () => windowWorkspace()!.connection.projects.flush());

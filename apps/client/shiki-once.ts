@@ -25,7 +25,6 @@ export function shikiModules(): ShikiModules {
     return { folders: { langs, themes }, version, wasm };
 }
 
-/* The modules of a folder a browser imports: every grammar or theme by itself, without the index that imports them all. */
 export function shippedFiles(names: readonly string[]): string[] {
     return names.filter((name) => name.endsWith('.mjs') && name !== 'index.mjs');
 }

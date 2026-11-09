@@ -39,7 +39,6 @@ test('a claim in another window ends the listener in this one, and a claim here 
     const release = claimMicrophone(() => stopped.push('voice'));
     expect(claims).toBe(1);
 
-    // Dictation started in the other window.
     claimedElsewhere!();
     expect(stopped).toEqual(['voice']);
     claimedElsewhere!();

@@ -72,7 +72,6 @@ export function toWorld(camera: Camera, screen: Point): Point {
     };
 }
 
-/* Zoom around a screen anchor so the world point under it stays put. */
 export function zoomAround(camera: Camera, nextZoom: number, anchor: Point): Camera {
     const zoom = clampZoom(nextZoom);
     const ratio = zoom / camera.zoom;

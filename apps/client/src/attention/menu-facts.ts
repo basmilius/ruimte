@@ -5,9 +5,7 @@ import { usePromptStacks } from '@/surface/canvas/prompt-stack';
 
 declare module '@/commands/menu-context' {
     interface MenuFacts {
-        /* The canvas in front has a stack of prompts to answer. */
         promptStack: boolean;
-        /* Something waits on a person. */
         somethingWaits: boolean;
     }
 }

@@ -13,7 +13,6 @@ export interface Viewport {
  */
 export type CameraRequest = { kind: 'fit' } | { kind: 'node'; id: string; fit?: boolean } | { kind: 'view'; view: ViewCamera };
 
-/* What every surface with a camera holds. A canvas, a drawing and a diagram hold exactly these. */
 export interface CameraFields {
     camera: Camera;
     viewport: Viewport;

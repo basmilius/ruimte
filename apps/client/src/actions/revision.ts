@@ -4,7 +4,6 @@ import { defaultDiagrams } from '@/state/diagram';
 import { defaultDrawings } from '@/state/drawing';
 import { useProject } from '@/state/project';
 
-/* What a store says of the file it holds: the rev it last saved or read, and whether it holds more than that. */
 interface Held {
     rev: number;
     dirty: boolean;

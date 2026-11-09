@@ -105,7 +105,6 @@ function goingWith(canvas: CanvasState, nodeIds: readonly string[]): ProjectNode
     return goingWithDelete(nodeIds, canvas.nodes, canvas.texts, canvas.lines).flatMap((id) => canvas.nodes[id] ?? []);
 }
 
-/* The nodes, texts, lines, groups, layouts, locks and history of a canvas on screen. */
 export function canvasActions(document: StoreApi<DocumentState>, reach: CanvasReach): ActionHandlers<void> {
     const { providers, viewDeletion } = reach;
     return {

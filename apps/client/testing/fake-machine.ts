@@ -80,7 +80,6 @@ export class FakeMachine implements PooledTransport {
         return this.connection.status;
     }
 
-    /* The socket going down and coming back, the way a reconnect looks to every client on it. */
     drop(): void {
         this.setStatus('closed');
     }
@@ -96,7 +95,6 @@ export class FakeMachine implements PooledTransport {
         this.setStatus('closed');
     }
 
-    /* How often the pool was asked to bring the link up again. */
     reconnects = 0;
 
     /* A machine that names only these requests, the way an older release does; every other request stays answerable but `machineAnswers` says no. */
@@ -109,7 +107,6 @@ export class FakeMachine implements PooledTransport {
         this.answers.set(type, answer as unknown as Answer<RequestType>);
     }
 
-    /* The requests of one type, in the order they came. */
     requests<T extends RequestType>(type: T): Array<RequestMap[T]['payload']> {
         return this.sent.filter((request) => request.type === type).map((request) => request.payload as RequestMap[T]['payload']);
     }
@@ -180,10 +177,6 @@ export class FakeMachine implements PooledTransport {
 const fakes = new Map<string, FakeMachine>();
 let door: { mockRestore(): void } | null = null;
 
-/*
- * Puts a fake behind a machine's row in the pool, the one door a socket opens through, so every
- * client of the page reaches it the way it reaches a daemon. The returned function lets it go again.
- */
 export function connectFakeMachine(machine: FakeMachine, endpointId: string = LOCAL_ENDPOINT_ID): () => void {
     const endpoint = endpointById(endpointId);
     if (endpoint === null) {

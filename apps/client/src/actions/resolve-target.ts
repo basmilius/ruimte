@@ -39,7 +39,6 @@ function current(target: Resolved['target'], found: Target[]): Resolved {
 
 const placed = { endpointId: null, machine: null };
 
-/* A chat of a design, which goes by its own name in the design it stands in. */
 function designChatTarget(view: ProjectDesignView, chat: ViewChat): Target {
     return { ...viewTarget(view), id: chat.id, name: chat.name, kind: 'chat', viewId: view.id, view: view.name };
 }
@@ -66,7 +65,6 @@ function nodeTarget(node: ProjectNode, view: ProjectView): Target {
     };
 }
 
-/* A chat a node holds as a target: a chat node itself, or one chat of a design node by its own id and name. */
 function nodeChatTarget(node: ProjectNode, chatId: string, view: ProjectView): Target {
     const chat = nodeChats(node).find((candidate) => candidate.id === chatId);
     return { ...nodeTarget(node, view), id: chatId, name: chat?.name ?? node.title, kind: 'chat' };

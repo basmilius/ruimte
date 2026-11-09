@@ -17,7 +17,6 @@ import { oldestWaitingFirst, useWaitingSince, waitDetailsOf } from '@/state/wait
 import { StatusDot } from '@/surface/StatusDot';
 import { waitAskLine } from './wait-ask';
 
-/* A count that walks through the nodes behind it, across views, one per click. */
 function Walker({ label, detail, count, ids, children }: { label: string; detail?: ReactNode; count: number; ids: string[]; children: ReactNode }) {
     const canvasStore = useCanvasStore();
     const next = (): void => {

@@ -49,7 +49,6 @@ const extensionResources = Object.fromEntries(
 
 const agentsWords = await AGENTS_LOCALES[FALLBACK_LANGUAGE]!();
 
-// Awaited, so the first test already has the words.
 await i18next.init({
     lng: FALLBACK_LANGUAGE,
     fallbackLng: FALLBACK_LANGUAGE,

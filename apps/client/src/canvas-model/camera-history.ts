@@ -35,7 +35,6 @@ function capped(stops: CameraStop[]): CameraStop[] {
     return stops.length > CAMERA_HISTORY_LIMIT ? stops.slice(stops.length - CAMERA_HISTORY_LIMIT) : stops;
 }
 
-/* Ends the open burst against where the camera is now. */
 export function settle(history: CameraHistory, current: Camera): CameraHistory {
     const burst = history.burst;
     if (burst === null) {
@@ -56,7 +55,6 @@ export function noteJump(history: CameraHistory, from: Camera, to: Camera, toNod
     return { ...settled, back: capped([...settled.back, { camera: from, nodeId: settled.at }]), forward: [], at: toNodeId, burst: null };
 }
 
-/* A pan or zoom is about to move the camera from `current`. */
 export function noteMove(history: CameraHistory, current: Camera, at: number): CameraHistory {
     if (history.burst !== null && at - history.burst.lastAt <= BURST_QUIET_MS) {
         return { ...history, burst: { ...history.burst, lastAt: at } };

@@ -32,14 +32,11 @@ type Drawn = 'nothing' | 'row' | 'group';
 interface ChainProps {
     target: AgentTarget;
     provider: ProviderInfo;
-    /* The CLIs after this one, in the order the menu lists them. */
     rest: ProviderInfo[];
     hint: string | null;
     onPick: PickAgent;
     drawn: Drawn;
-    /* The last CLI before this one that drew a row. */
     previous: AgentKind | undefined;
-    /* Whether a CLI before this one still waits for the accounts of the machine. */
     waiting: boolean;
 }
 

@@ -8,7 +8,6 @@ import { defaultNodeSize } from '@/state/node-size';
 // The room between a node and the browser opened beside it, the same step a duplicate takes.
 const BESIDE_PX = 32;
 
-/* The center of a browser opened beside a node: to its right, top edges aligned. */
 export function browserBeside(source: Pick<CanvasNode, 'x' | 'y' | 'w'>): { x: number; y: number } {
     const size = defaultNodeSize('browser');
     return { x: source.x + source.w + BESIDE_PX + size.w / 2, y: source.y + size.h / 2 };

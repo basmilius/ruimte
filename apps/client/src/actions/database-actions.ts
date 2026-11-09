@@ -11,7 +11,6 @@ const LIVE_MACHINE: DatabaseMachine = {
     transport: () => windowWorkspace()?.connection.transport ?? null
 };
 
-/* The database views of a person, through the machine of the project the window has open. */
 export function databaseActions(overrides: Partial<DatabaseMachine> = {}): ActionHandlers<void> {
     const machine: DatabaseMachine = { ...LIVE_MACHINE, ...overrides };
     return {

@@ -28,7 +28,6 @@ function floorOf(mode: 'light' | 'dark', role: CodeRole): number {
     return QUIET_ROLES[mode].includes(role) ? 3 : 4.5;
 }
 
-/* A token's value on one side, as a stylesheet declares it in hex. */
 async function tokenIn(path: string, mode: 'light' | 'dark', token: string): Promise<string | undefined> {
     const css = await Bun.file(path).text();
     return new RegExp(`\\[data-theme="${mode}"\\]\\s*\\{[^}]*?${token}:\\s*(#[0-9a-f]{6})`, 'i').exec(css)?.[1]?.toLowerCase();
@@ -76,7 +75,6 @@ describe('the colors of our code themes', () => {
     }
 });
 
-/* A line of code per language and the role a few words on it must come out in. */
 const SAMPLES: readonly { lang: string; code: string; expected: Readonly<Record<string, CodeRole>> }[] = [
     {
         lang: 'tsx',
