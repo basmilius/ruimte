@@ -3,9 +3,13 @@ import { keyOf as eventOf, settle } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { useToasts } from '@/state/toasts';
 import { keyOf } from '@/surface/shortcut-overrides';
+import { installWorkspaceRegistries } from '@/wiring/workspace-registries';
 import { FakeLanguageTransport, readOnlyFiles } from './fake-daemon';
 import { createEditorLanguage } from './ruimte-editor-language';
 import { RuimteProject } from './ruimte-project';
+
+// An editor is drawn only in a workspace, whose chunk installs this before it draws one (`App.tsx`).
+installWorkspaceRegistries();
 
 const uri = 'file:///work/app/src/a.ts';
 const otherUri = 'file:///work/app/src/b.ts';

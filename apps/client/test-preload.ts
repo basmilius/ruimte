@@ -18,7 +18,6 @@ import { useEndpoints } from './src/state/endpoints';
 import { FALLBACK_LANGUAGE } from './src/state/languages';
 import { useToasts } from './src/state/toasts';
 import { installClientHooks } from './src/wiring/client-hooks';
-import { installWorkspaceRegistries } from './src/wiring/workspace-registries';
 
 /*
  * The English words, in memory, before the first test runs, so a pure function that builds a label
@@ -65,8 +64,8 @@ await i18next.init({
     }
 });
 
+// The window's wiring, as `main.tsx` installs it; a workspace's comes only with a test that opens one.
 installClientHooks();
-installWorkspaceRegistries();
 
 // The formatters of @adecore/ui read the client's settings, which the tests set.
 connectFormat();

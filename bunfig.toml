@@ -9,12 +9,11 @@ pathIgnorePatterns = ["**/*.integration.test.ts", "**/*.dom.test.tsx", "**/docs/
 # No React Compiler here: a unit test renders once, to static markup, where its memoizing cannot
 # show, and Babel in every isolated test file made the run many times slower. The DOM run
 # (`dom.bunfig.toml`) tests the compiled client.
-# The unit run has the client's action registry from the start; the DOM run loads it as the app does,
-# so a test there sees an action that waits on its import.
+# Neither run has the client's action registry or the workspace's wiring from the start: a test that needs
+# them imports `apps/client/testing/client-actions.ts` or calls `installWorkspaceRegistries`, as the workspace's chunk does.
 # The last one makes every process start fail (`scripts/no-process-preload.ts`).
 preload = [
     "./apps/client/node_modules/@adecore/ui/src/testing/dedupe.ts",
     "./apps/client/test-preload.ts",
-    "./apps/client/testing/client-actions.ts",
     "./scripts/no-process-preload.ts"
 ]

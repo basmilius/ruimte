@@ -2,9 +2,13 @@ import { describe, expect, test } from 'bun:test';
 import { ManualTimers, settle } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { RUIMTE_EDITOR_KEYMAP } from '@/surface/editor-keymap';
+import { installWorkspaceRegistries } from '@/wiring/workspace-registries';
 import { FakeLanguageTransport } from './fake-daemon';
 import { createEditorLanguage } from './ruimte-editor-language';
 import { RuimteProject } from './ruimte-project';
+
+// An editor is drawn only in a workspace, whose chunk installs this before it draws one (`App.tsx`).
+installWorkspaceRegistries();
 
 describe('Adecore over the Ruimte language wire', () => {
     test('resolves and accepts a completion through the shared coordinator and keeps host shortcuts', async () => {

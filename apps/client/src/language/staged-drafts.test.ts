@@ -4,10 +4,14 @@ import { FakeEditorEngine } from '@adecore/editor/fake';
 import type { WorkspaceEdit } from '@adecore/lsp';
 import { TextDrafts, useTextDrafts, type DraftLink } from '@/state/text-drafts';
 import { useToasts } from '@/state/toasts';
+import { installWorkspaceRegistries } from '@/wiring/workspace-registries';
 import { FakeLanguageTransport } from './fake-daemon';
 import { draftFiles } from './project-files';
 import { createEditorLanguage } from './ruimte-editor-language';
 import { RuimteProject } from './ruimte-project';
+
+// An editor is drawn only in a workspace, whose chunk installs this before it draws one (`App.tsx`).
+installWorkspaceRegistries();
 
 const GREETING = '/work/app/src/greeting.ts';
 const MAIN = '/work/app/src/main.ts';

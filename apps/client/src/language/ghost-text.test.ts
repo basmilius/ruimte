@@ -5,9 +5,13 @@ import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { keyOf } from '@/surface/shortcut-overrides';
+import { installWorkspaceRegistries } from '@/wiring/workspace-registries';
 import { FakeLanguageTransport } from './fake-daemon';
 import { createEditorLanguage } from './ruimte-editor-language';
 import { RuimteProject } from './ruimte-project';
+
+// An editor is drawn only in a workspace, whose chunk installs this before it draws one (`App.tsx`).
+installWorkspaceRegistries();
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });

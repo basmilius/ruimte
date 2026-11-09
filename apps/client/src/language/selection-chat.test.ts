@@ -7,10 +7,14 @@ import { useChatChooser } from '@/language/chat-chooser';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { keyOf } from '@/surface/shortcut-overrides';
+import { installWorkspaceRegistries } from '@/wiring/workspace-registries';
 import { LANGUAGE_COMMANDS } from './command-table';
 import { FakeLanguageTransport } from './fake-daemon';
 import { createEditorLanguage } from './ruimte-editor-language';
 import { RuimteProject } from './ruimte-project';
+
+// An editor is drawn only in a workspace, whose chunk installs this before it draws one (`App.tsx`).
+installWorkspaceRegistries();
 
 const uri = 'file:///work/app/src/score.ts';
 const at = (line: number, character: number) => ({ line, character });

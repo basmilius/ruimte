@@ -8,14 +8,16 @@ import { App } from '@/App';
 import { CHAT_HOST } from '@/chat/host';
 import { configureClient } from '@/wiring/client-config';
 import { installClientHooks } from '@/wiring/client-hooks';
-import { installWorkspace } from '@/wiring/workspace';
 import { ChatScopeProvider } from '@/workspace/ChatScopeProvider';
 import { closedAfterTest, currentTest, waitTurn } from './test-scope';
 
-// Once for the process, before any chat store is read: the wiring `main.tsx` runs.
+/*
+ * Once for the process, before any chat store is read: the wiring `wireClient` installs before its start steps. A
+ * workspace's wiring comes only with the `WorkspaceShell` chunk, as in the app. The start steps stay out, since they
+ * open the machines and the last project a test opens itself.
+ */
 installClientHooks();
 configureClient();
-installWorkspace();
 
 /*
  * Lets what a fake machine answered and what React drew from it land. Bounded by turns of the event
