@@ -6,8 +6,8 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCliSession } from '@/chat/cli-session';
 import { CliTerminalDialog, CliTerminalFrame } from '@/chat/CliTerminalDialog';
-import type { LoginRequest } from '@/chat/dialogs';
-import { loginDialog } from '@/chat/dialogs';
+import type { LoginRequest } from '@/chat/dialog-state';
+import { loginDialog } from '@/chat/dialog-state';
 import { loginLanded } from '@/chat/login-landing';
 import { fireAndForget } from '@/transport-api/transport';
 

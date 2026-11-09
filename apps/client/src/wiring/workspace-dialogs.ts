@@ -1,7 +1,7 @@
-import { AGENT_WORKSPACE_DIALOGS } from '@/agents/dialogs';
+import { AGENT_WORKSPACE_DIALOGS } from '@/agents/workspace-dialogs';
 import { ATTENTION_DIALOGS } from '@/attention/dialogs';
 import { CANVAS_DIALOGS } from '@/canvas/dialogs';
-import { CHAT_WORKSPACE_DIALOGS } from '@/chat/dialogs';
+import { CHAT_WORKSPACE_DIALOGS } from '@/chat/workspace-dialogs';
 import { CONFLICT_DIALOGS } from '@/conflicts/dialog';
 import { DATABASE_DIALOGS } from '@/database/dialogs';
 import { DEVICE_DIALOGS } from '@/devices/dialogs';

@@ -5,7 +5,7 @@ import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
 import { LogIn, RefreshCw, Sparkles } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { loginDialog } from '@/chat/dialogs';
+import { loginDialog } from '@/chat/dialog-state';
 import { RowTile, TaskNote, TaskPane } from '@/onboarding/TaskPane';
 import { joinNames, type CliRow } from '@/onboarding/tasks';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';

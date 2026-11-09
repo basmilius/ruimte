@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
-import { providerCommandDialog } from '@/chat/dialogs';
+import { providerCommandDialog } from '@/chat/dialog-state';
 import { ProviderCommandDialog } from '@/chat/ProviderCommandDialog';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { mount, until, type Mounted } from '../../testing/dom';

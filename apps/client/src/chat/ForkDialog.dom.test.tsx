@@ -3,7 +3,7 @@ import { readDraft } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
 import type { ProjectCanvasView, ProjectNode, RemoteLink } from '@ruimte/contracts';
 import { act } from 'react';
-import { forkDialog } from '@/chat/dialogs';
+import { forkDialog } from '@/chat/dialog-state';
 import { remoteNodeDialog } from '@/machine-ui/dialogs';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
-import { loginDialog } from '@/chat/dialogs';
+import { loginDialog } from '@/chat/dialog-state';
 import { useUi } from '@/state/ui';
 import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';

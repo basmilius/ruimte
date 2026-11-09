@@ -1,6 +1,6 @@
 import { providerAccountsOf } from '@adecore/agents-react/state';
 import type { AgentKind } from '@ruimte/contracts';
-import { loginDialog } from '@/chat/dialogs';
+import { loginDialog } from '@/chat/dialog-state';
 
 /*
  * Runs the CLI's own login in the account's environment, in a dialog over whatever asked (the settings,

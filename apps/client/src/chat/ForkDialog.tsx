@@ -24,7 +24,7 @@ import { GitFork } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
-import { forkDialog } from '@/chat/dialogs';
+import { forkDialog } from '@/chat/dialog-state';
 import { chatForkRefusal, chatProviderGone } from '@/chat/fork-refusal';
 import { remoteNodeDialog } from '@/machine-ui/dialogs';
 import { iconOfEntry } from '@/machines/machine-icon';

@@ -8,7 +8,7 @@ import { perform } from '@/action-port/perform';
 import { PERSON_PROMPT_CLIENTS } from '@/action-port/person-actions';
 import { askBeforeStoppingSubagents, askBeforeStoppingTask } from '@/agents/end-children';
 import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel, type AccentId } from '@/canvas-model/accents';
-import { providerCommandDialog } from '@/chat/dialogs';
+import { providerCommandDialog } from '@/chat/dialog-state';
 import DiffSyntaxWorker from '@/chat/diff-syntax.worker?worker';
 import { searchFiles } from '@/chat/file-search';
 import { openLogin } from '@/chat/login';

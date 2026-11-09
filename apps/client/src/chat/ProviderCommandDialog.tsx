@@ -2,8 +2,8 @@ import { useProvidersStore } from '@adecore/agents-react/state';
 import { useTranslation } from 'react-i18next';
 import { useCliSession } from '@/chat/cli-session';
 import { CliTerminalDialog, CliTerminalFrame } from '@/chat/CliTerminalDialog';
-import type { ProviderCommandRequest } from '@/chat/dialogs';
-import { providerCommandDialog } from '@/chat/dialogs';
+import type { ProviderCommandRequest } from '@/chat/dialog-state';
+import { providerCommandDialog } from '@/chat/dialog-state';
 
 function closeCommand(): void {
     providerCommandDialog.set(null);
