@@ -6,7 +6,11 @@ import XCTest
 
 final class WireFixtureTests: XCTestCase {
     private func fixtures() throws -> JSONValue {
-        let url = try XCTUnwrap(Bundle.module.url(forResource: "wire", withExtension: "json", subdirectory: "Fixtures"))
+        // The one copy, which the Pulsar package's tests also read.
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("RuimtePulsar/Tests/RuimtePulsarTests/Fixtures/wire.json")
         return try JSONValue.decode(Data(contentsOf: url))
     }
 

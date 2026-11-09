@@ -2,6 +2,9 @@ import { createCipheriv, createPrivateKey, createPublicKey, diffieHellman, hkdfS
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { UsageProviderSchema } from '@adecore/agent-contracts';
+import * as chat from '@adecore/agent-contracts/chat';
+import * as envelope from '@adecore/agent-contracts/envelope';
+import { RuntimeModeSchema } from '@adecore/agent-contracts/model';
 import { PLAN_STATE_MARKERS } from '@adecore/plan';
 import * as plan from '@adecore/plan/protocol';
 import { z } from 'zod';
@@ -14,13 +17,10 @@ import { PULSAR_STATEMENT_PUBLIC_KEYS } from '../../pulsar/src/statement-key.ts'
 import * as agent from '../src/agent.ts';
 import { ARTIFACT_KINDS, ArtifactKindSchema } from '../src/artifact.ts';
 import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES, BYTES_REPLY_KIND, BYTES_REPLY_MAX_BYTES, CHAT_MODEL_MAX_BYTES } from '../src/bytes.ts';
-import * as chat from '../src/chat.ts';
 import * as liveness from '../src/direct-liveness.ts';
 import * as direct from '../src/direct.ts';
-import * as envelope from '../src/envelope.ts';
 import { REQUEST_SCHEMAS, EVENT_SCHEMAS } from '../src/index.ts';
 import { MachineUpdateStatusSchema } from '../src/machine-update.ts';
-import { RuntimeModeSchema } from '../src/model.ts';
 import { NODE_ACCENT_COLORS, NODE_ACCENT_NAMES } from '../src/node-accents.ts';
 import { PortEndReasonSchema, PortHostSchema, PortSharedBySchema } from '../src/port.ts';
 import {
@@ -30,8 +30,7 @@ import {
     PROJECT_ICON_NAMES,
     PROJECT_VIEW_KINDS,
     ProjectIconNameSchema,
-    ProjectViewSchema,
-    ProjectCanvasViewSchema
+    ProjectViewSchema
 } from '../src/project.ts';
 import { PROTOCOL_VERSION } from '../src/protocol.ts';
 import { PushNotifyKindSchema } from '../src/push.ts';
@@ -69,7 +68,6 @@ for (const module of [agent, task, plan, chat]) {
         }
     }
 }
-roots.ProjectCanvasDefaultsSchema = ProjectCanvasViewSchema.pick({ layouts: true });
 const schemas: Record<string, Schema> = {};
 function stampRefinements(zodSchema: object, jsonSchema: Schema, where: string): void {
     const refinements = refinementsOf(zodSchema, where);
@@ -838,12 +836,6 @@ const validationInputs: { schema: string; input: unknown }[] = [
         input: { id: 'machine-1', label: 'Mac', platform: 'darwin', version: '1.0', protocol: PROTOCOL_VERSION, reachability: 'public', authenticated: true }
     },
     { schema: 'request.endpoint.info.result', input: { id: 'machine-1' } },
-    ...[0, -1, 1].map((width) => ({
-        schema: 'ProjectCanvasDefaultsSchema',
-        input: { layouts: [{ name: 'Canvas', nodes: { node: { x: 0, y: 0, w: width, h: 1 } }, texts: {} }] }
-    })),
-    { schema: 'ProjectCanvasDefaultsSchema', input: {} },
-    { schema: 'ProjectCanvasDefaultsSchema', input: { layouts: null } },
     { schema: 'AccountSchema', input: { id: 'account', provider: 'github', login: null } },
     { schema: 'AccountSchema', input: { id: 'account', provider: 'github' } },
     { schema: 'ServerHelloResultSchema', input: { version: '1', platform: 'darwin', home: '/Users/bas' } },
@@ -1255,7 +1247,6 @@ outputs.set(
         2
     ) + '\n'
 );
-outputs.set('../RuimteTransport/Tests/RuimteTransportTests/Fixtures/wire.json', outputs.get('Tests/RuimtePulsarTests/Fixtures/wire.json')!);
 for (const [path, contents] of outputs) {
     const destination = resolve(root, path);
     if (process.argv.includes('--check')) {

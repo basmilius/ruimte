@@ -114,21 +114,6 @@ export type UsageCountPayload = z.infer<typeof UsageCountPayloadSchema>;
 export const UsageTimingPayloadSchema = z.object({ timing: z.enum(USAGE_CLIENT_TIMINGS), ms: z.number().int().min(0).max(USAGE_MAX_STARTUP_MS) });
 export type UsageTimingPayload = z.infer<typeof UsageTimingPayloadSchema>;
 
-// `POST /auth/pair`: a one-time pairing token from the daemon's printed URL, for a long-lived session token.
-export const PairPayloadSchema = z.object({
-    token: z.string().min(1),
-    // What the daemon should call this client in its session list.
-    label: z.string().min(1).max(80),
-    // The client's ed25519 public key, raw and base64url. A client that cannot sign leaves it off and is given a session token instead.
-    publicKey: z.string().optional()
-});
-
-export const PairResultSchema = z.object({
-    // Only for a client that registered no public key; a key holder signs for a ticket per connection instead.
-    sessionToken: z.string().min(1).optional(),
-    endpoint: EndpointInfoSchema
-});
-
 /*
  * The switches a person sets on a machine, one schema for both requests that change them. Every field
  * left out leaves the machine as it stands. `endpoint.settings` takes these alone.

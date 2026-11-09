@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { RuntimeModeSchema } from '@adecore/agent-contracts/model';
 import { PROJECT_ICON_GROUPS, PROJECT_ICON_KEYWORDS } from '../../../apps/client/src/surface/project-icons.ts';
 import { SIGNING_PURPOSES } from '../../pulsar/src/signing.ts';
 import { ARTIFACT_KINDS } from '../src/artifact.ts';
@@ -12,7 +13,6 @@ import {
     IOS_SIMULATOR_TOOLS
 } from '../src/device.ts';
 import { DRAWING_COLORS } from '../src/drawing-host.ts';
-import { RuntimeModeSchema } from '../src/model.ts';
 import { CANVAS_GRID, GROUP_HEADER, GROUP_PADDING } from '../src/node-defaults.ts';
 import { NodeKindSchema, PROJECT_VIEW_KINDS } from '../src/project.ts';
 import { PushNotifyKindSchema } from '../src/push.ts';

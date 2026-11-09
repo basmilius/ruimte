@@ -122,12 +122,6 @@ struct WireSchemaTests {
         }
     }
 
-    @Test func defaultsDecodeAndRoundTrip() throws {
-        let value = try JSONDecoder().decode(ProjectCanvasDefaults.self, from: Data("{}".utf8))
-        #expect(value.layouts.isEmpty)
-        #expect(try JSONValue.decode(JSONEncoder().encode(value)) == .object(["layouts": .array([])]))
-    }
-
     @Test func optionalNullableHasThreeStates() throws {
         let fixture = try wireFixture()
         let entries = try #require(fixture["validations"]?.arrayValue).filter {
