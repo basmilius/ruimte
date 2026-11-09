@@ -340,7 +340,7 @@ export class TunnelService {
                 this.announce();
 
                 try {
-                    await work();
+                    await this.childInLine(work);
                 } catch (e) {
                     this.waitsForNetwork = e instanceof CloudflareError && (e.code === 'unreachable' || e.code === 'rate-limited');
                     this.failure = this.plain(e, 'That did not work');
@@ -686,6 +686,8 @@ export class TunnelService {
             // A rule for the name that someone set in the dashboard is theirs, and taking the row would overwrite it.
             const { ingress } = await api.configuration(tunnel.account.id, tunnel.id);
 
+            this.observe(ingress);
+
             if (ingress.some((rule) => rule.hostname === hostname && rule.path === undefined)) {
                 throw new TunnelConfigError('hostname-on-tunnel', `${hostname} is on this tunnel already. Pick another name.`);
             }
@@ -709,6 +711,9 @@ export class TunnelService {
             // lost, and dropped again only when Cloudflare turned it down.
             this.stored = { ...this.stored, rows: [...this.stored.rows, row] };
             this.save();
+            // Once more with the row: a record left under the name (an unlink that could not reach the tunnel) may already
+            // lead to a rule that serves it.
+            this.observe(ingress);
 
             const landing: Landing = { sent: false, ruled: null };
 
@@ -788,7 +793,9 @@ export class TunnelService {
             const tunnel = this.stored.tunnel;
 
             // Looked up by name whatever the row says: its record may be refused on add, or gone after a delete whose answer got lost.
+            // Its 404 goes first, since an add whose write failed never landed it and a catch-all that serves would answer the record.
             if (change.enabled === true && tunnel !== null) {
+                await this.commit(this.stored.rows);
                 await this.recordRow(this.api(), row, tunnel.id);
             }
 
@@ -1196,9 +1203,8 @@ export class TunnelService {
     /*
      * Writes the rows to Cloudflare and saves them once it took them. The rows are the person's intent; what Cloudflare
      * serves after a write that failed, or that another writer undid twice, is only observed (`settle`) and never saved.
-     * A failure keeps the screen saying why, and a child stops only when no row is meant on or may be served. The rows
-     * of `gone` (ids of leaving rows whose record is deleted) get no rule and are dropped once that held. True once
-     * Cloudflare holds the rows as written. `landing` says whether a write went out and, after a failure, which
+     * A failure keeps the screen saying why. The rows of `gone` (ids of leaving rows whose record is deleted) get no rule
+     * and are dropped once that held. True once Cloudflare holds the rows as written. `landing` says whether a write went out and, after a failure, which
      * hostnames Cloudflare has a rule of Ruimte's for, or null when it could not be read.
      */
     private async commit(rows: readonly StoredRow[], gone: readonly string[] = [], landing: Landing = { sent: false, ruled: null }): Promise<boolean> {
@@ -1211,10 +1217,6 @@ export class TunnelService {
 
             if (landing.sent) {
                 landing.ruled = await this.settle(rows, gone).catch(() => null);
-            }
-
-            if (!this.isLive()) {
-                await this.stopChild().catch(() => undefined);
             }
 
             throw e;
@@ -1282,6 +1284,18 @@ export class TunnelService {
         );
         const left = this.stored.rows.filter((row) => gone.includes(row.id) && !ruled.has(row.hostname));
 
+        this.observe(ingress);
+
+        if (left.length > 0) {
+            this.stored = { ...this.stored, rows: this.stored.rows.filter((row) => !left.includes(row)) };
+            this.save();
+        }
+
+        return ruled;
+    }
+
+    /* Notes what Cloudflare serves for each row from an ingress Ruimte read, so the screen shows every read, whatever comes after it. */
+    private observe(ingress: readonly CloudflareIngressRule[]): void {
         this.serving.clear();
 
         for (const row of this.stored.rows) {
@@ -1293,13 +1307,6 @@ export class TunnelService {
         }
 
         this.unsure = false;
-
-        if (left.length > 0) {
-            this.stored = { ...this.stored, rows: this.stored.rows.filter((row) => !left.includes(row)) };
-            this.save();
-        }
-
-        return ruled;
     }
 
     private noteFailure(e: unknown, fallback: string): void {
@@ -1332,11 +1339,26 @@ export class TunnelService {
     /* Runs a change of the rows as a job. A failure tells the clients too, since what it saved before failing may differ from what they show. */
     private async changing<T>(work: () => Promise<T>): Promise<T> {
         try {
-            return await this.jobs.run(work);
+            return await this.jobs.run(() => this.childInLine(work));
         } catch (e) {
             this.announce();
 
             throw e;
+        }
+    }
+
+    /*
+     * Runs the work of a job, and then stops the child when no row is meant on or may be served any more, also when the
+     * work failed halfway (a Remove that held its 404 and then could not reach the record) or only read what Cloudflare serves.
+     */
+    private async childInLine<T>(work: () => Promise<T>): Promise<T> {
+        try {
+            return await work();
+        } finally {
+            // A child that would not stop was said already, and waiting on it again would hold up every job.
+            if (!this.isLive() && this.child !== null && !this.child.stopping) {
+                await this.stopChild().catch((e: unknown) => this.noteFailure(e, 'Stopping cloudflared did not work'));
+            }
         }
     }
 
@@ -1360,6 +1382,9 @@ export class TunnelService {
 
         const api = this.api();
         const current = await api.configuration(tunnel.account.id, tunnel.id);
+
+        this.observe(current.ingress);
+
         const managed = new Set(rows.map((row) => row.hostname));
         const isOurs = (rule: CloudflareIngressRule): boolean => typeof rule.hostname === 'string' && rule.path === undefined && managed.has(rule.hostname);
         const kept = current.ingress.filter((rule) => !isCatchAll(rule) && !isOurs(rule));

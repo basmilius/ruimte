@@ -2353,6 +2353,138 @@ describe('what the person asked and what Cloudflare serves', () => {
         expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: true }, { enabled: true }]);
         expect(tunnelStore(f.home).read()?.rows[0]).toMatchObject({ hostname: 'a.bmnw.nl', enabled: false });
     });
+
+    // Seed 1800 of the property test.
+    test('stops cloudflared when a Remove held its 404 and then could not look up the record', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const id = await rowOn(f, 'a', 3000);
+
+        expect(f.runner.running).toBe(1);
+
+        f.cloudflare.failing.set('GET /zones/zone-bmnw.nl/dns_records', 503);
+
+        await expect(f.service.remove(id)).rejects.toBeInstanceOf(CloudflareError);
+
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http_status:404' });
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: false }]);
+        expect(f.runner.running).toBe(0);
+    });
+
+    // Seed 7789 of the property test.
+    test('stops cloudflared once a read before a refused change shows that Cloudflare serves nothing any more', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const id = await rowOn(f, 'a', 3000);
+
+        // The write lands, its answer gets lost, and so does the read back.
+        f.cloudflare.lose(SAVE, 502);
+        f.cloudflare.writers.push(() => f.cloudflare.failing.set(`${READ}/${ourTunnel(f).id}/configurations`, 503));
+
+        await expect(f.service.update(id, { enabled: false })).rejects.toBeInstanceOf(CloudflareError);
+
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: true }]);
+        expect(f.runner.running).toBe(1);
+
+        f.cloudflare.failing.clear();
+
+        await expect(f.service.update(id, { port: API_PORT })).rejects.toMatchObject({ code: 'port-denied' });
+
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: false }]);
+        expect(f.runner.running).toBe(0);
+    });
+
+    // Seed 7442 of the property test.
+    test('shows a hostname on that the read before a refused write serves, when the read back fails', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const id = await rowOn(f, 'a', 3000);
+
+        await f.service.update(id, { enabled: false });
+        await f.service.idle();
+        prependWildcard(ourTunnel(f));
+        f.cloudflare.failing.set(SAVE, 403);
+        f.cloudflare.lose(`${READ}/${ourTunnel(f).id}/configurations`, 503, 1);
+        await f.service.setMcp(true);
+        await f.service.idle();
+
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: true }]);
+        expect(tunnelStore(f.home).read()?.rows[0]).toMatchObject({ hostname: 'a.bmnw.nl', enabled: false });
+    });
+
+    // Seed 787 of the property test.
+    test('shows a hostname on that the hostnames an add read before its refusal serve', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const id = await rowOn(f, 'a', 3000);
+
+        await f.service.update(id, { enabled: false });
+        await f.service.idle();
+        ourTunnel(f).ingress = [{ hostname: 'a.bmnw.nl', service: 'http://localhost:7000' }, { service: 'http_status:404' }];
+        f.cloudflare.record(f.bmnw, { name: 'taken.bmnw.nl' });
+
+        await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'taken', port: 3001 })).rejects.toMatchObject({ code: 'foreign-record' });
+
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: true }]);
+        expect(tunnelStore(f.home).read()?.rows[0]).toMatchObject({ hostname: 'a.bmnw.nl', enabled: false });
+    });
+
+    // Seed 15078 of the property test.
+    test('shows a hostname on whose record an unlink that could not reach the tunnel left, when its add fails after the read', async () => {
+        const f = await fixture();
+        const home = f.cloudflare.tunnel('acc-1', 'home', [{ service: 'http://localhost:8080' }]);
+
+        await f.service.setToken(FAKE_API_TOKEN);
+        await f.service.link(undefined, home.id);
+        await f.service.idle();
+        await rowOn(f, 'a', 3000);
+        f.cloudflare.failing.set(`${READ}/${home.id}`, 403);
+        await f.service.unlink();
+        f.cloudflare.failing.clear();
+
+        // The person cleans the rules up in the dashboard and leaves the record.
+        home.ingress = [{ service: 'http://localhost:8080' }];
+        await f.service.link(undefined, home.id);
+        await f.service.idle();
+        f.cloudflare.lose(`${READ}/${home.id}/configurations`, 503, 1);
+
+        await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 })).rejects.toBeInstanceOf(CloudflareError);
+
+        expect(f.cloudflare.records.map((record) => record.name)).toEqual(['a.bmnw.nl']);
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: true }]);
+    });
+
+    // Seed 3607 of the property test.
+    test('holds a hostname whose 404 never landed with one before it makes its record to turn it on', async () => {
+        const f = await fixture();
+        const home = f.cloudflare.tunnel('acc-1', 'home', [{ service: 'http://localhost:8080' }]);
+
+        await f.service.setToken(FAKE_API_TOKEN);
+        await f.service.link(undefined, home.id);
+        await f.service.idle();
+        f.cloudflare.lose(`${READ}/${home.id}/configurations`, 503, 1);
+
+        await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 })).rejects.toBeInstanceOf(CloudflareError);
+
+        const id = (await f.state()).rows[0]!.id;
+
+        expect(home.ingress).toEqual([{ service: 'http://localhost:8080' }]);
+
+        f.cloudflare.lose('POST /zones/zone-bmnw.nl/dns_records', 502);
+
+        await expect(f.service.update(id, { enabled: true })).rejects.toBeInstanceOf(CloudflareError);
+
+        expect(f.cloudflare.records.map((record) => record.name)).toEqual(['a.bmnw.nl']);
+        expect(home.ingress).toEqual([{ hostname: 'a.bmnw.nl', service: 'http_status:404' }, { service: 'http://localhost:8080' }]);
+    });
 });
 
 describe('what the section reads and offers', () => {
