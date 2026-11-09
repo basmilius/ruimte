@@ -93,6 +93,28 @@ struct SessionControlTests {
         #expect(control.mode == .running)
     }
 
+    @Test func aTakeOverGoesBackOnceThePersonLetsGo() {
+        var control = SessionControl()
+        control.begin(at: 0)
+        control.takeOver(at: 10)
+        control.personActed(at: 13)
+        let tooSoon = control.handBackIfQuiet(at: 17, holding: false)
+        let stillTheirs = control.handBackIfQuiet(at: 30, holding: true)
+        let handedBack = control.handBackIfQuiet(at: 30, holding: false)
+        #expect(!tooSoon && !stillTheirs && handedBack)
+        #expect(control.mode == .running)
+        #expect(control.refusal == nil)
+    }
+
+    @Test func aPauseNeverGoesBackOnItsOwn() {
+        var control = SessionControl()
+        control.begin(at: 0)
+        control.pause(at: 10)
+        let handedBack = control.handBackIfQuiet(at: 100, holding: false)
+        #expect(!handedBack)
+        #expect(control.mode == .paused)
+    }
+
     @Test func waitingOnThePersonIsNotTakingOver() {
         var control = SessionControl()
         control.begin(at: 0)

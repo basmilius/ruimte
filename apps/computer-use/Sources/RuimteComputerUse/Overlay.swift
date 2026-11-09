@@ -349,6 +349,21 @@ final class Overlay {
         render(animated: true)
     }
 
+    /// A take-over ends by itself once the person's mouse and keys rest, so a test they interrupted for a moment goes on.
+    /// Behind their work, the operated app in front stays theirs however long they rest in it.
+    private func handBackIfQuiet() {
+        guard control.mode == .takenOver else {
+            return
+        }
+        let idle = CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: CGEventType(rawValue: ~0)!)
+        control.personActed(at: now - idle)
+        let holding = background != nil && NSWorkspace.shared.frontmostApplication?.processIdentifier == operatedPid
+        if control.handBackIfQuiet(at: now, holding: holding) {
+            armIdleTimeout()
+            render(animated: true)
+        }
+    }
+
     func stop() {
         guard control.isActive else {
             return
@@ -485,6 +500,7 @@ final class Overlay {
         }
         // Once a second as well: the app can move its window to another Space without the person switching.
         followSpace()
+        handBackIfQuiet()
         let shown = control.shownState
         let time = SessionControl.clock(control.elapsed(at: now))
         let held = control.mode != .running

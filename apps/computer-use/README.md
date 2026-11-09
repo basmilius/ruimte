@@ -178,6 +178,7 @@ During a session the helper draws its own click-through cursor, which never appe
 - ⌥Space, the pause button or the menu pauses and resumes. ⌥⎋, the stop button or the menu stops. Both keys are registered only during a session and never reach the app in front. A key another app holds is logged, and the menu then shows no shortcut.
 - The person takes over with a click, or more than 12 points of mouse movement within half a second, inside the window the agent acts in. In the background, only bringing that app forward or clicking its window takes over. The helper marks its own events so they never count.
 - While paused or taken over, every command that reads or operates an app is refused with `paused` or `taken-over`, and a running action is cancelled.
+- A take-over ends by itself once the person's mouse and keys rested 5 seconds, unless, behind their work, the operated app is in front. A pause lasts until they resume.
 - A stop cancels what runs and ends the session. Later commands get `stopped` until the next `cu state` or a `clear-stop`, which the daemon sends once it told its agents.
 - `pause`, `resume` and `stop` on the socket are the same buttons. `doctor` answers with `session` (`active`, `mode`, `stopped`) without changing it.
 

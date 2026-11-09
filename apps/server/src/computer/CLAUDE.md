@@ -9,7 +9,7 @@
 - An app that runs shells refuses with `terminal` whatever was granted: a process up to three levels below it with a controlling terminal the app does not share, or a bundle id in `terminal-apps.ts`, remembered in `grants.json`. The Ruimte desktop app is never a terminal.
 - One agent operates the Mac at a time (`presence.ts`), until its turn ends, its node closes or it exits. Others get `busy`, or queue with `wait`.
 - Work stays behind the person's unless `front`; what needs the front refuses with `needs-front` and is never retried in front.
-- A pause or take-over makes calls wait within the same budget, then refuse with `paused` or `taken-over`. A cut-off action is never resent. A stop tells every agent that used computer use `stopped` once, drops every this-time grant, and then clears.
+- A pause or take-over makes calls wait within the same budget, then refuse with `paused` or `taken-over`. The helper hands a take-over back once the person rested 5 seconds (`SessionControl.handBackIfQuiet`), so a held call goes on. A cut-off action is never resent. A stop tells every agent that used computer use `stopped` once, drops every this-time grant, and then clears.
 - The tree an agent last saw lives in the daemon (`tree-diff.ts`) and goes with the node or when computer use is turned off.
 
 ## Product rules
