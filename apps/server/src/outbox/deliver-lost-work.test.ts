@@ -128,6 +128,25 @@ describe('background commands a restart took', () => {
         expect(wakes(daemon)).toEqual([]);
     });
 
+    test('owe a node that was ended nothing', async () => {
+        const first = await boot();
+        await first.chats.create({ chatId: CHAT, provider: 'claude', cwd: folder });
+        first.chats.get(CHAT)!.thread.patchInfo({ background: [WATCH] });
+        await first.chats.save(CHAT);
+        await first.lineage.put({ projectId, nodeId: CHAT, openedBy: LEAD, depth: 1, agent: true });
+        await first.lineage.markEnded([CHAT]);
+        await first.stop();
+        running = [];
+
+        const daemon = await boot();
+        daemon.worker.start();
+        await daemon.chats.recoverInterrupted();
+        await daemon.worker.settled();
+
+        expect(wakes(daemon)).toEqual([]);
+        expect(daemon.outbox.list()).toEqual([]);
+    });
+
     test('wait while the project is closed', async () => {
         await store.closeProject(projectId, 'client-1');
         const daemon = await restartWhileWatching();

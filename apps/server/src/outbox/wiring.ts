@@ -391,8 +391,13 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
             ),
             // A person's answer on a card the chat raised; like a task's result, it is hop 0 and its turn wakes nobody.
             'deliver-answer': unlessClosed((entry) => wakeWith(entry.target, entry.payload)),
-            // Background commands a restart took from an idle chat; the same hop 0 turn, lapsed once anything stepped in since.
+            // Background commands a restart took from an idle chat; the same hop 0 turn, lapsed once anything stepped in since
+            // or its node was ended, such as by stopping the agent that opened it.
             'deliver-lost-work': unlessClosed(async (entry) => {
+                if (lineage.endedAt(entry.target) !== null) {
+                    return;
+                }
+
                 const chat = await openChat(entry.target);
 
                 if (chat === null || !(chats.get(entry.target)?.owesRestartWake(entry.payload.noteId) ?? false)) {
