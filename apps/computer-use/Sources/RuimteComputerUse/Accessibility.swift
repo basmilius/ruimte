@@ -263,6 +263,9 @@ struct ElementInfo {
 struct HandleTable {
     private var buckets: [CFHashCode: [(element: AXUIElement, index: Int)]] = [:]
     private(set) var byIndex: [Int: AXUIElement] = [:]
+    private(set) var signatures: [Int: ElementSignature] = [:]
+    /// What the state before listed and this one did not reach, so a handle the agent read there still leads somewhere.
+    private(set) var retired: [Int: (element: AXUIElement, signature: ElementSignature?)] = [:]
     private(set) var nextIndex: Int
 
     init(startingAt nextIndex: Int = 0) {
@@ -282,12 +285,51 @@ struct HandleTable {
         for (index, element) in older.byIndex where byIndex[index] == nil && self.index(of: element) == nil {
             buckets[CFHash(element), default: []].append((element, index))
             byIndex[index] = element
+            signatures[index] = older.signatures[index]
+        }
+        for (index, entry) in older.retired where byIndex[index] == nil && retired[index] == nil {
+            retired[index] = entry
         }
         nextIndex = max(nextIndex, older.nextIndex)
     }
 
+    /// Keeps one state back of what this one did not reach; only one, so a long session does not hold every element it ever saw.
+    mutating func retire(_ older: HandleTable) {
+        for (index, element) in older.byIndex where byIndex[index] == nil && self.index(of: element) == nil {
+            retired[index] = (element, older.signatures[index])
+        }
+        nextIndex = max(nextIndex, older.nextIndex)
+    }
+
+    /// The element a handle leads to: in this state, or one state back while it still answers or has one look-alike here.
+    func element(_ index: Int) -> (element: AXUIElement?, lookup: HandleLookup?) {
+        if let element = byIndex[index] {
+            return (element, nil)
+        }
+        guard let old = retired[index] else {
+            return (nil, nil)
+        }
+        let lookup = HandleLookup.resolve(retired: old.signature, alive: AX.role(old.element) != nil, current: signatures)
+        switch lookup {
+        case .retired:
+            return (old.element, lookup)
+        case .moved(let to):
+            return (byIndex[to], lookup)
+        case .gone:
+            return (nil, lookup)
+        }
+    }
+
     /// Indices only grow, so an index from an older state never points at a different element.
-    mutating func register(_ element: AXUIElement, previous: HandleTable) -> Int {
+    mutating func register(_ element: AXUIElement, previous: HandleTable, signature: ElementSignature? = nil) -> Int {
+        let index = place(element, previous: previous)
+        if let signature {
+            signatures[index] = signature
+        }
+        return index
+    }
+
+    private mutating func place(_ element: AXUIElement, previous: HandleTable) -> Int {
         if let existing = index(of: element) {
             return existing
         }
@@ -405,7 +447,8 @@ struct TreeWalker {
         var childIndent = indent
         var childParentLabel = parentLabel
         if meaningful {
-            let index = handles.register(element, previous: previous)
+            let signature = ElementSignature(role: info.role, label: info.label, identifier: info.identifier)
+            let index = handles.register(element, previous: previous, signature: signature)
             lines.append(String(repeating: "  ", count: indent) + line(for: info, index: index))
             elements.append(ElementText(index: index, depth: indent, texts: [info.title, info.value, info.description, info.identifier].compactMap { $0 }))
             childIndent += 1

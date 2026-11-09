@@ -11,10 +11,15 @@ struct Snapshot {
     let captureProblem: String?
 
     func element(_ index: Int) throws -> AXUIElement {
-        guard let element = handles.byIndex[index] else {
-            throw AgentError("the last state has no element \(index); run `cu state` again")
+        let (element, lookup) = handles.element(index)
+        if let element {
+            return element
         }
-        return element
+        if case .gone(let signature) = lookup {
+            let named = signature.map { " (\($0.shown))" } ?? ""
+            throw AgentError("element \(index)\(named) is no longer in the window; run `cu state` again and take it from there")
+        }
+        throw AgentError("the last two states have no element \(index); run `cu state` again")
     }
 }
 
@@ -254,6 +259,8 @@ final class Agent {
         var handles = walker.handles
         if subtree != nil {
             handles.keep(previous)
+        } else {
+            handles.retire(previous)
         }
         var lines = walker.lines
         var truncation = walker.truncation

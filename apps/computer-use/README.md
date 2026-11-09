@@ -134,7 +134,7 @@ One line per meaningful element: controls, anything with a title, value or descr
     [36] Button "Save" id="OKButton" (679,469 81x26)
 ```
 
-- `[N]` is the handle for `--element`, stable for the same element and never reused until `instance` changes.
+- `[N]` is the handle for `--element`, stable for the same element and never reused until `instance` changes. A handle of the state before the last still works while its element answers, or, when the app made a new object for it, while the last state lists exactly one element with the same role, label and identifier.
 - Frames are screen points, top-left origin of the main display. A mouse event on an `offscreen` element is refused until `scroll --element` brings it in.
 - The tree stops at 500 elements and 60 levels by default (`truncated` says why). `--find T` reads up to 5000 elements and keeps matches with their ancestors. `--within N` lists only element `N`.
 - `screenshot.path` is a PNG of the window alone, at most 1280 px wide, without other apps or the overlay. Map a pixel with `screenX = origin.x + px / scale`.
