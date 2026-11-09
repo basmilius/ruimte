@@ -21,7 +21,6 @@ import { isThisMachine } from '@/state/local-machine';
 import { leaveRoutines, showRoutine } from '@/state/routines-stage';
 import { FileToolbarSlotProvider, fixedSlot } from '@/surface/panels/file-toolbar-slot';
 
-/* A routine opened inside Routines: its definition and runs on the left, the run picked on the right. */
 export function RoutineDetail({ endpointId, entry, runId, timeZone }: { endpointId: string; entry: RoutineEntry; runId: string | null; timeZone: string }) {
     const { t } = useTranslation('routines');
     const run = entry.runs.find((candidate) => candidate.runId === runId) ?? entry.runs.find((candidate) => candidate.state !== 'skipped') ?? null;

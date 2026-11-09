@@ -78,7 +78,6 @@ function RegionRow() {
     );
 }
 
-/* What the whole app does whatever it looks like: its language, how projects sit in a window, and how the sidebar and dock behave. */
 export function GeneralPane() {
     const { t } = useTranslation('settings');
     const projectNavigation = useSettings((s) => s.projectNavigation);

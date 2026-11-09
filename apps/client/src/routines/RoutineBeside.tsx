@@ -63,7 +63,6 @@ export function RoutineBeside({ id, z }: { id: string; z: number }) {
     const [picked, setPicked] = useState<string | null | undefined>(undefined);
     const [outputSize, setOutputSize] = useState<CardSize | null>(() => (viewId === null ? null : storedOutputSize(viewId, id).read()));
     const [runsWidth, setRunsWidth] = useState<number | null>(() => (viewId === null ? null : (storedRunsWidth(viewId, id).read()?.w ?? null)));
-    // What each run's header and thread measured while open, in memory, so a run opens again at its own height at once.
     const [openHeights, setOpenHeights] = useState<Readonly<Record<string, number>>>({});
     const runsHidden = useRunsHidden(viewId, id);
     // The version a person picked on the Output with the runs hidden, in memory; undefined follows the latest.
@@ -77,7 +76,6 @@ export function RoutineBeside({ id, z }: { id: string; z: number }) {
     }
     const timeZone = list.result.timeZone;
     const target = { projectId: entry.projectId, routineId: entry.routine.id };
-    // The color a person gave the node, which every card beside it wears as the node's own frame does.
     const accent = accentColor(nodeColorOf(node));
     const resizeOutput = ({ w, h }: Rect): void => {
         setOutputSize({ w, h });
@@ -171,7 +169,6 @@ export function RoutineBeside({ id, z }: { id: string; z: number }) {
     return <DerivedSet owner={id} z={z} cards={cards} lineDown={HEADER_MIDDLE} {...(accent === undefined ? {} : { stroke: accentShades(accent).line })} />;
 }
 
-/* What a run says beside its time: how long it took when it simply ran, and what became of it otherwise. */
 function RunMark({ run }: { run: RoutineRun }) {
     const { t } = useTranslation('routines');
     const look = lookOfRun(run);

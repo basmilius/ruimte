@@ -24,7 +24,6 @@ import { FileToolbarSlotProvider } from '@/surface/panels/file-toolbar-slot';
 import { setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
 import { SplitItems, ViewMenuItems } from '@/view-menu/ViewMenuItems';
 
-/* What a cell is: its tabs when it hosts them, or the glyph and the name of the view. */
 function CellTitle({ at, view, tabs, title }: { at: CellAt; view: CellView; tabs: readonly string[] | undefined; title: string | undefined }) {
     if (tabs !== undefined) {
         return <TabStrip at={at} ids={tabs} active={view.id} />;
@@ -60,11 +59,6 @@ function CellTitle({ at, view, tabs, title }: { at: CellAt; view: CellView; tabs
     );
 }
 
-/*
- * The bar of a cell: what the cell holds, the view's own controls, its menu and its close button. The bar
- * is ADE CORE's `PaneBar`; the cell supplies the words, the controls and what a drag carries. The bar of
- * the only cell joins the project in the top row.
- */
 export function CellToolbar({
     at,
     view,

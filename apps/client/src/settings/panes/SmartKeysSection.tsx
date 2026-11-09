@@ -17,7 +17,6 @@ const KEYS = [
     ['smartArrow', 'smartArrow']
 ] as const satisfies readonly (readonly [keyof EditorSmartKeys, string])[];
 
-/* What the editor does by itself as you type. */
 export function SmartKeysSection() {
     const { t } = useTranslation('settings');
     const smartKeys = useSettings((s) => s.smartKeys);

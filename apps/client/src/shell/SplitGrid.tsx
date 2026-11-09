@@ -56,7 +56,6 @@ function takesDrop(target: EventTarget | null, fromFileManager: boolean): string
     return null;
 }
 
-/* The box of an element in the grid's coordinates, which the drop preview is drawn in. */
 function boxInGrid(element: Element, grid: DOMRect): SplitRect {
     const box = element.getBoundingClientRect();
     return { x: Math.round(box.left - grid.left), y: Math.round(box.top - grid.top), width: Math.round(box.width), height: Math.round(box.height) };
@@ -97,7 +96,6 @@ type LiftedTabDrop = TabDrop & { lift: number };
 /* The gap between a cell's title and the tab that would stand after it, the same as the bar's own spacing. */
 const TITLE_GAP = 8;
 
-/* The cell's box, kept up to date for the parking layer: one observer per cell, cleared with it. */
 const observers = new Map<string, ResizeObserver>();
 
 function watchCell(viewId: string, element: HTMLElement | null): void {
@@ -126,7 +124,6 @@ function Cell({
     at: CellAt;
     viewId: string;
     focused: boolean;
-    /* Maximized: drawn over the whole grid, while its own place in the column stays held. */
     filling: boolean;
     /* Behind a maximized cell. Still mounted, so its session and its page keep running. */
     hidden: boolean;
@@ -191,7 +188,6 @@ function Cell({
         };
     };
 
-    /* The position among the tabs the drop leaves, which only a host has an order for. */
     const tabIndexFor = (gap: number, moving: string): number | null => {
         const layout = useDocument.getState().layout;
         const cell = layout === null ? null : cellAt(layout, at);
@@ -213,7 +209,6 @@ function Cell({
         if (layout === null) {
             return null;
         }
-        // A change dropped in the middle of a cell opens as a tab of it, whatever the cell holds.
         if (here === 'center' && carriesTabDrag(event.dataTransfer)) {
             return here;
         }
@@ -327,7 +322,6 @@ function Cell({
                 style={{ borderRadius: 'inherit' }}
                 data-maximized={filling ? '' : undefined}
                 className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
-                // A press anywhere in a cell is what moves the focus to it, the way it moves between panels.
                 onPointerDownCapture={() => useDocument.getState().focusCellAt(at)}
                 /* A press inside a <webview> never reaches this page, only the focus it takes does. The
                    preview of an HTML file is one, and Tab into anything in the cell counts the same. */
@@ -338,7 +332,6 @@ function Cell({
                     if (overBar(event)) {
                         const tab = tabDropFor(event);
                         if (tab !== null) {
-                            // Only a prevented dragover accepts the drop.
                             event.preventDefault();
                         }
                         event.dataTransfer.dropEffect = tab === null ? 'none' : usesPaths(event) ? dropEffectFor(event.dataTransfer.effectAllowed) : 'move';

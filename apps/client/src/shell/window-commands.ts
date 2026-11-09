@@ -38,7 +38,6 @@ function openSettings(patch: Parameters<ReturnType<typeof useUi.getState>['setSe
     return () => useUi.getState().setSettings(patch);
 }
 
-/* The project tab on screen when the window has that strip and it can move that way, else null. */
 function movableTab(step: 1 | -1): string | null {
     const { tabs } = useWindowTabs.getState();
     const key = tabs.active;

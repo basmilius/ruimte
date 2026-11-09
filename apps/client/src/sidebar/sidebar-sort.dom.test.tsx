@@ -42,7 +42,6 @@ function rowElements(): HTMLElement[] {
     return [...canvas.page.host.querySelectorAll<HTMLElement>('[data-sidebar-row^="node:main:"]')];
 }
 
-/* The titles of the node rows under the open canvas, top to bottom. */
 function rows(): string[] {
     return rowElements().map((row) => row.textContent?.trim().slice(0, 7) ?? '');
 }

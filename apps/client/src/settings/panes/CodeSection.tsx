@@ -68,7 +68,6 @@ export function CodeThemePreview({ theme, mode, label, code = PREVIEW_CODE }: Co
     );
 }
 
-/* How code reads in the file viewer, the editor and a chat: its colors under either theme of the app. */
 export function CodeSection() {
     const { t } = useTranslation('settings');
     const codeThemeLight = useSettings((s) => s.codeThemeLight);

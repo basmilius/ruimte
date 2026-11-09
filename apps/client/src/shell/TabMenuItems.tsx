@@ -11,7 +11,6 @@ import { useCurrentProjectKey, useViewPins } from '@/state/view-pins';
 import { RowKbd } from '@/surface/RowKbd';
 import { SplitItems } from '@/view-menu/ViewMenuItems';
 
-/* Whether a tab of a host is pinned, for a loose tab in the pool and for a view of the project in this client's pins. */
 function usePinnedOf(): (id: string) => boolean {
     const loose = useFiles((s) => s.tabs);
     const pins = useViewPins((s) => s.pins);

@@ -39,7 +39,6 @@ import { RoutinesScene } from '@/ui/EmptyScenes';
 
 const MINUTE_MS = 60_000;
 
-/* Routines as a sheet over the workspace: the week of the project's routines, or one routine opened inside it. */
 export function RoutinesStage() {
     const { t } = useTranslation('routines');
     const open = useRoutinesStage((s) => s.open);
@@ -97,7 +96,6 @@ function StageBody({ endpointId }: { endpointId: string }) {
     return <WeekStage endpointId={endpointId} result={result} projectId={projectId} projectName={projectName} />;
 }
 
-/* Where in Routines this is, what can be done here, and Close at the far right. */
 function StageHeader({ title, crumbs, children }: { title: string; crumbs?: React.ReactNode; children?: React.ReactNode }) {
     const { t } = useTranslation('routines');
     return (

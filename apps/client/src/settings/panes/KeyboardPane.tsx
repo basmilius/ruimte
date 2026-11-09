@@ -13,12 +13,10 @@ import { useUi } from '@/state/ui';
 import { isRebound, keyOf, rebind, removeOverride, removeOverrideOf, setShortcutRecording, useOverrides } from '@/surface/shortcut-overrides';
 
 interface Rebinding {
-    /* Every row of the pane, which the holder of a key is looked up in. */
     groups: readonly ShortcutGroup[];
     apple: boolean;
 }
 
-/* The keys as the rows show them, or the recorder of a row a person may rebind, with a way back to the default. */
 function RowControl({ row, groups, apple }: { row: ShortcutRow } & Rebinding) {
     const { t } = useTranslation('settings');
     const snapshot = useOverrides();
@@ -80,7 +78,6 @@ function GroupCard({ group, footer, groups, apple }: { group: ShortcutGroup; foo
     );
 }
 
-/* The shortcut categories beside the shortcuts of the one picked; a search looks through every category at once. */
 export function KeyboardPane() {
     const { t } = useTranslation('settings');
     const target = useUi((s) => s.settings.target);

@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { INTERFACE_FONT_SIZE_RANGE, INTERFACE_FONTS, useSettings } from '@/state/settings';
 
-/* The font and the size of the interface. */
 export function FontSection() {
     const { t } = useTranslation('settings');
     const interfaceFont = useSettings((s) => s.interfaceFont);

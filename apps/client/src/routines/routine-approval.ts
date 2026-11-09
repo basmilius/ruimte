@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { refreshRoutines } from '@/routines/routine-list';
 import { machineTransport } from '@/transport';
 
-/* A person's yes or no to a routine as it was shown, and where it came from, for the card beside the week and the banner over a routine. */
 export function useRoutineApproval(endpointId: string, entry: RoutineEntry) {
     const { t } = useTranslation('routines');
     const [busy, setBusy] = useState(false);

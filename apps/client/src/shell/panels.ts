@@ -6,7 +6,6 @@ import { panelHidden, type PanelKind } from '@/state/ui';
 
 export type { PanelGroup };
 
-/* A panel of the side column: a feature's (`registry/panels.ts`) or an extension's. */
 interface PanelEntry {
     readonly kind: string;
     readonly icon: LucideIcon;
@@ -57,7 +56,6 @@ export function closesFromRail(kind: PanelKind): boolean {
     return entriesOf(panelRegistry.all(), useContributions.getState().panels).some((entry) => entry.kind === kind && (entry.toolbar || entry.togglesElsewhere));
 }
 
-/* The panels with a button in the rail of a project, which the Chats project has fewer of. */
 export function useToolbarPanels(scratch: boolean): readonly PanelEntry[] {
     return usePanelEntries().filter((entry) => entry.toolbar && !panelHidden(entry.kind, scratch));
 }

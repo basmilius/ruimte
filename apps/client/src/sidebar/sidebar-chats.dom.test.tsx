@@ -28,7 +28,6 @@ let machine: FakeMachine;
 let workspace: FakeWorkspace;
 let page: Mounted;
 
-/* The project headings of the sidebar, top to bottom, by name. */
 function headings(): string[] {
     return [...page.host.querySelectorAll<HTMLElement>('[data-sidebar-row^="project:"]')].map((row) => row.getAttribute('aria-label')?.split(' · ')[0] ?? '');
 }

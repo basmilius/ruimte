@@ -11,12 +11,10 @@ function swatch(label: string, wheel = 'Palette'): HTMLElement | null {
     return document.querySelector<HTMLElement>(`[role="radiogroup"][aria-label="${wheel}"] [aria-label="${label}"]`);
 }
 
-/* The accent the app wears on the light side now, as the palette's stylesheet writes it. */
 function accentWorn(): string | undefined {
     return /\[data-theme='light'\]\[data-theme\] \{[^}]*--accent: (#[0-9a-f]{6});/.exec(document.getElementById('ruimte-palette')?.textContent ?? '')?.[1];
 }
 
-/* The colors the app wears now: the palette's stylesheet sets the grounds only for a palette other than the default. */
 function wearsTint(): boolean {
     return document.getElementById('ruimte-palette')?.textContent?.includes('--bg:') ?? false;
 }

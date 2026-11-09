@@ -7,7 +7,6 @@ import { RoutineForm } from '@/routines/RoutineForm';
 import { useEndpointId } from '@/state/current-endpoint';
 import { showRoutine } from '@/state/routines-stage';
 
-/* The routine form as a dialog of the workspace: New routine, Edit, the canvas menu, the palette and a chat's Repeat. */
 export function RoutineFormDialog() {
     const { t } = useTranslation('routines');
     const endpointId = useEndpointId();

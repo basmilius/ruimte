@@ -7,7 +7,6 @@ import { BREAK_STRETCHES } from '@/state/quiet-hours';
 import { useSettings } from '@/state/settings';
 import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
 
-/* A suggestion to take a break after a stretch of work, and the length of that stretch once it is on. */
 export function BreakReminderRows() {
     const { t } = useTranslation('settings');
     const on = useSettings((s) => s.breakReminderOn);

@@ -14,7 +14,6 @@ type EditorTab = 'general' | 'colors' | 'folding' | 'smartKeys' | 'templates' | 
 
 const TABS: readonly EditorTab[] = ['general', 'colors', 'folding', 'smartKeys', 'templates', 'ai', 'languageServers'];
 
-/* The tab that holds the row a search result names, by the prefix of its id. */
 function tabOfTarget(target: string | null): EditorTab | null {
     if (target === null) {
         return null;
@@ -40,7 +39,6 @@ function tabOfTarget(target: string | null): EditorTab | null {
     return target.startsWith('editor.servers') ? 'languageServers' : null;
 }
 
-/* The code editor, a tab per kind of setting. */
 export function EditorPane() {
     const { t } = useTranslation('settings');
     const { target } = useSettingsTarget();

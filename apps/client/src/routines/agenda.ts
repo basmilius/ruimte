@@ -200,7 +200,6 @@ export function pausedBand(entry: RoutineEntry, blocks: readonly AgendaBlock[], 
     return from > 6 ? null : { from, to: 6 };
 }
 
-/* The runs a pause skipped since it began. */
 export function skippedWhilePaused(entry: RoutineEntry): number {
     const since = entry.local.pausedAt;
     if (since === undefined) {
@@ -209,7 +208,6 @@ export function skippedWhilePaused(entry: RoutineEntry): number {
     return entry.runs.filter((run) => run.state === 'skipped' && run.skipped === 'paused' && run.due >= since).length;
 }
 
-/* Whether a routine waits on a person's approval here: held, and not already said no to as it stands. */
 export function awaitsApproval(entry: RoutineEntry): boolean {
     return entry.held !== undefined && !isDeclined(entry);
 }
@@ -218,14 +216,12 @@ export function awaitingApproval(entries: readonly RoutineEntry[]): RoutineEntry
     return entries.filter(awaitsApproval);
 }
 
-/* The runs that wait on a person now, newest first. */
 export function runsWaiting(entries: readonly RoutineEntry[]): Array<{ entry: RoutineEntry; run: RoutineRun }> {
     return entries
         .flatMap((entry) => entry.runs.filter((run) => run.state === 'needs-you').map((run) => ({ entry, run })))
         .sort((left, right) => right.run.at - left.run.at);
 }
 
-/* A short id a routine is named by in its files, out of its title, that none of the project's others has. */
 export function freshRoutineId(title: string, taken: ReadonlySet<string>): string {
     return freeSlug(title, 'routine', taken);
 }

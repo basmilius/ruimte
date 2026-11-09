@@ -10,7 +10,6 @@ import { FILES_TAB_LIMIT_RANGE, useSettings } from '@/state/settings';
 import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
 import { useEndpointConnection } from '@/transport/status';
 
-/* The two panels beside the canvas, what the Files panel shows and keeps open, and how the Git panel lists what changed. */
 export function FilesPane() {
     const { t } = useTranslation('settings');
     const filesTabLimit = useSettings((s) => s.filesTabLimit);

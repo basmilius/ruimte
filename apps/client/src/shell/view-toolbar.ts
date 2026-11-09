@@ -8,10 +8,8 @@ import { isLooseView, type CellView } from '@/surface/cell-view';
 import { useNodeHost, type NodeHost } from '@/surface/nodes/node-host';
 import { useSessionPortControl } from '@/terminal/session-port-controls';
 
-/* The kinds that put something in the toolbar; the bar draws its separators around that part. */
 export const KINDS_WITH_TOOLBAR = new Set<ProjectViewKind>(['browser', 'device', 'terminal', 'file', 'diagram', 'chat', 'artifact', 'design']);
 
-/* A view whose session is an AI chat, which shows its fork and its plans in the bar. */
 export function chatIdOf(view: CellView | null): string {
     return view?.kind === 'chat' || view?.kind === 'design' ? view.id : '';
 }
@@ -25,7 +23,6 @@ export function hostIdOf(view: CellView | null): string {
     return view !== null && view.kind !== 'canvas' && !isLooseView(view) ? view.id : '';
 }
 
-/* Whether a view has content for the bar, which is what the separators around it wait for. */
 export function useHasViewToolbar(view: CellView | null): boolean {
     const host = useNodeHost(hostIdOf(view));
     const dictationEnabled = useDictation((state) => state.model?.enabled === true);

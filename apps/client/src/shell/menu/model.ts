@@ -76,7 +76,6 @@ function quitRows(): MenuNode[] {
     return [shell('stop-machine-and-quit', t('stopAndQuit')), role('quit', t('quit'))];
 }
 
-/* The groups of every menu and submenu with a fixed place, top to bottom. */
 const LAYOUT: Record<MenuContainer, readonly MenuGroup[]> = {
     app: [
         { id: 'about' },
@@ -216,7 +215,6 @@ interface PlacedCommand {
 let placedFor = -1;
 let placed = new Map<string, PlacedCommand[]>();
 
-/* The table's rows per container and group, in their order; rebuilt when a feature registered more since. */
 function placedRows(): Map<string, PlacedCommand[]> {
     const ids = commandIds();
     if (placedFor === ids.length) {
@@ -255,7 +253,6 @@ function tableRow({ id, place }: PlacedCommand, context: MenuContext, command: M
     });
 }
 
-/* The rows of a menu or submenu, a line before every group but the first; `tidy` drops the lines empty groups leave. */
 function itemsOf(container: MenuContainer, context: MenuContext, command: MenuCommand): MenuNode[] {
     return LAYOUT[container].flatMap((group, index) => {
         if (group.when && !group.when(context)) {
@@ -278,7 +275,6 @@ function itemsOf(container: MenuContainer, context: MenuContext, command: MenuCo
 /* The kinds a cell shows with a menu of their own; a divider never has the focus and an unknown kind offers nothing. */
 const KIND_MENUS: readonly ProjectView['kind'][] = ['canvas', 'drawing', 'diagram', 'chat', 'terminal', 'browser', 'file'];
 
-/* The application menu for one moment: which view has the focus, what is selected, where it runs. */
 export function menuModel(context: MenuContext): MenuSpec {
     const { apple, workspace } = context;
     const desktop = context.host === 'desktop';

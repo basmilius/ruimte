@@ -27,7 +27,6 @@ export interface PickedRun {
     anchor: HTMLElement;
 }
 
-/* The card a block of the week opens: what the run did, and where to go from it. */
 export function RoutineRunPopover({
     endpointId,
     picked,
@@ -129,7 +128,6 @@ function RunCard({
     );
 }
 
-/* The first lines of the version the run delivered to Output, read the way the Output view reads it. */
 function RunResult({ endpointId, artifactId, versionId, fallback }: { endpointId: string; artifactId: string; versionId: string; fallback: string }) {
     const { t } = useTranslation('routines');
     const answers = useMachineAnswers(endpointId, 'artifact.get');

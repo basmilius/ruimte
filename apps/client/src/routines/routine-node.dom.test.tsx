@@ -121,7 +121,6 @@ describe('a routine node', () => {
         expect(looks(frame)).toEqual(['caught-up', 'waited', 'skipped', 'next']);
         expect(frame.textContent).toContain('Weekdays at');
         expect(frame.textContent).toContain('Mon 09:00');
-        // The newest run that ran is picked, and says what happened.
         expect(frame.textContent).toContain('after waiting for you');
         expect(frame.querySelector('[aria-pressed="true"]')?.getAttribute('data-look')).toBe('waited');
         expect(frame.textContent).not.toContain('v15');
@@ -370,7 +369,6 @@ describe('beside a routine node', () => {
         await clickOn(card('Morning summary · Wed, Oct 21')!.querySelector('button[aria-expanded="false"]'));
         await until(() => (card('Morning summary · Wed, Oct 21')?.textContent ?? '').includes('ran when the machine woke'));
         expect(card('Morning summary · Thu, Oct 22')?.querySelector('button[aria-expanded="false"]')).not.toBeNull();
-        // The Output follows the open run to the version it kept.
         await until(() => (card('Output')?.textContent ?? '').includes('v14'));
         expect(card('Output')!.textContent).not.toContain('saved no version');
         // The run column picks the version, so the card offers no picker of its own.
@@ -464,7 +462,6 @@ describe('beside a routine node', () => {
             await until(() => map()?.querySelector('[data-minimap-card="derived:node-1:output"]') != null);
             const rects = [...map()!.querySelectorAll<SVGRectElement>('[data-minimap-card]')];
             expect(rects.map((rect) => rect.getAttribute('data-minimap-card'))).toContain('derived:node-1:run:thu');
-            // The node and its cards read as one, in the node's color.
             expect(map()!.querySelector('[data-minimap-node="node-1"]')!.getAttribute('fill')).toBe('#009689');
             expect(rects.every((rect) => rect.getAttribute('fill') === '#009689')).toBe(true);
             // The Output reaches 984 + 440 to the right, past the view: the map still holds all of it.
@@ -502,7 +499,6 @@ describe('beside a routine node', () => {
         await clickOn(await showRuns());
         await until(() => card('Morning summary · Thu, Oct 22') === undefined);
         expect(cards().map((candidate) => candidate.getAttribute('aria-label'))).toEqual(['Output']);
-        // In the first column, top aligned with the node, at its own size.
         expect(card('Output')!.style.left).toBe('472px');
         expect(card('Output')!.style.top).toBe('0px');
         expect(card('Output')!.style.width).toBe('440px');
@@ -550,7 +546,6 @@ describe('beside a routine node', () => {
         });
         expect(card('Output')!.classList.contains('node-selected')).toBe(false);
         expect(card('Morning summary · Thu, Oct 22')!.classList.contains('node-selected')).toBe(true);
-        // A press in the node itself takes the focus away from the cards.
         await act(async () => {
             frameOf('node-1')!
                 .querySelector('[data-node-body]')!

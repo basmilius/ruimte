@@ -10,7 +10,6 @@ import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
 
 const CODE_SIZE_PREVIEW = ['export function greet(name: string): string {', '    return `Hello ${name}.`;', '}'].join('\n');
 
-/* How code is drawn and how the caret moves through it, in the editor and, where the words say so, in files and diffs. */
 export function EditorGeneralTab() {
     const { t } = useTranslation('settings');
     const font = useSettings((s) => s.font);

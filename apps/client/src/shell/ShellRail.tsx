@@ -22,10 +22,6 @@ import { VoiceButton } from '@/voice/VoiceButton';
 /* Below the window controls Linux draws over the top right, which stand as tall as the top row. */
 const OVERLAY_INSET_PX = 47;
 
-/*
- * The shell's tools, in one column at the window's right edge: the palette, the launches, the panels and
- * Routines, and at the foot the connection, Voice, Usage and Settings. A panel closes from its own button here.
- */
 export function ShellRail() {
     const { t } = useTranslation('shell');
     const paletteOpen = useUi((s) => s.paletteOpen);

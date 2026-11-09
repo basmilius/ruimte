@@ -6,7 +6,6 @@ import { SettingsSection } from '@/machines/SettingsSection';
 import { FOLDING_GROUPS } from '@/settings/folding-rows';
 import { FOLD_OUTLINES, useSettings } from '@/state/settings';
 
-/* When the arrow that folds shows in the gutter, and what folds by itself the first time a file opens. */
 export function EditorFoldingTab() {
     const { t } = useTranslation('settings');
     const folding = useSettings((s) => s.codeFolding);

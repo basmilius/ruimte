@@ -45,10 +45,6 @@ function todayIndex(week: AgendaWeek, now: number): number {
     return week.days.findIndex((day) => now >= day.start && now < day.end);
 }
 
-/*
- * The week: a row per routine under its project, with a block per run on the day it was due, the times
- * still to come outlined, and a line at now.
- */
 export function RoutineAgenda({ endpointId, groups, week, now, timeZone, empty = false }: AgendaProps) {
     const { t } = useTranslation('routines');
     const [picked, setPicked] = useState<PickedRun | null>(null);
@@ -130,7 +126,6 @@ export function RoutineAgenda({ endpointId, groups, week, now, timeZone, empty =
     );
 }
 
-/* The week as a list: the runs and coming times of every day that has any, in the order they come. */
 export function RoutineWeekList({ endpointId, groups, week, now, timeZone }: Omit<AgendaProps, 'empty'>) {
     const { t } = useTranslation('routines');
     const [picked, setPicked] = useState<PickedRun | null>(null);
@@ -197,7 +192,6 @@ export function RoutineWeekList({ endpointId, groups, week, now, timeZone }: Omi
     );
 }
 
-/* What the blocks mean, in the tooltip of the stage's info button. */
 export function AgendaLegend() {
     const { t } = useTranslation('routines');
     return (
@@ -363,7 +357,6 @@ function Block({
     );
 }
 
-/* A day's quiet runs in one chip, whose popover lists each as the block it would have been. */
 function FoldedRuns({
     item,
     entry,
@@ -420,7 +413,6 @@ function FoldedRuns({
     );
 }
 
-/* The rest of a day of a repeat within a day, as one outlined chip rather than a block per time. */
 function ComingChip({ item, entry, timeZone }: { item: Extract<CellItem, { kind: 'coming' }>; entry: RoutineEntry; timeZone: string }) {
     const { t } = useTranslation('routines');
     const look = item.blocks[0]!.look;

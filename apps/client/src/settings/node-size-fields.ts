@@ -6,7 +6,6 @@ type SideProblem = 'notWhole' | 'tooSmall' | 'tooLarge';
 
 type SideReading = { ok: true; value: number } | { ok: false; problem: SideProblem };
 
-/* What a person typed for one side of a default size, held to the bounds the machine accepts. */
 export function readNodeSide(text: string, side: NodeSide): SideReading {
     const trimmed = text.trim();
     if (!/^\d+$/.test(trimmed)) {

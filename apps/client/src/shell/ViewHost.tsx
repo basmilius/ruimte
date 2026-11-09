@@ -15,7 +15,6 @@ import { useFiles } from '@/state/files';
 import { isScratchProject, useProject } from '@/state/project';
 import { isLooseView, type CellView } from '@/surface/cell-view';
 
-/* A view the feature of its kind draws: the registry names the body, the host gives it the surface and the focus. */
 function StandaloneView({ view }: { view: ProjectView }) {
     const kinds = viewKindRegistry.useAll();
     // `bodyFocused` is one flag for the whole grid, so without the cell every chat and terminal would grab it.
@@ -36,7 +35,6 @@ function StandaloneView({ view }: { view: ProjectView }) {
 /* A loose view keeps its file controls in the cell toolbar and its editor in the stable view host. */
 function FilesSurface({ tabKey, ids }: { tabKey: string | null; ids: readonly string[] }) {
     const { t } = useTranslation('shell');
-    /* Set by what was opened by hand, in the files panel, the git panel or the palette. */
     const focusRequest = useFiles((s) => s.focusRequest);
     const handled = useRef<number | null>(null);
     const bodyRef = useRef<HTMLDivElement>(null);
@@ -101,7 +99,6 @@ function ChatsStart() {
     return failed ? <ProjectStartScreen /> : <div className="absolute inset-0 bg-surface" />;
 }
 
-/* The main column: the grid of cells of the open project. */
 export function ViewHost() {
     const { t } = useTranslation('shell');
     /* The layout answers this, not the list of views: a project whose only cell holds the files has

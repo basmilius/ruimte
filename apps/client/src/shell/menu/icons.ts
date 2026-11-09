@@ -31,7 +31,6 @@ import { commandSpec, isCommandId } from '@/commands/registry';
 /* What the web client draws in front of a row, so every label starts on the same line. The shell's native menu has none. */
 type MenuIcon = { icon: LucideIcon } | { agent: AgentKind };
 
-/* The menus and the submenus with a fixed place; a command's own icon is in the command table. */
 const MENU_ICONS: Partial<Record<string, LucideIcon>> = {
     file: File,
     edit: Pencil,

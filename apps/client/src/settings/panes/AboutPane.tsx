@@ -75,7 +75,6 @@ function detailsOf(server: ServerInfo | undefined): Detail[] {
     return rows;
 }
 
-/* Where the update stands, as an icon in the color of what it asks of you. */
 const STATUS_ICONS: Record<UpdateState['status'], { icon: LucideIcon; className: string }> = {
     unsupported: { icon: CircleCheck, className: 'text-text-faint' },
     idle: { icon: CircleCheck, className: 'text-status-idle' },
@@ -87,7 +86,6 @@ const STATUS_ICONS: Record<UpdateState['status'], { icon: LucideIcon; className:
     error: { icon: CircleAlert, className: 'text-status-error' }
 };
 
-/* The release date of the version on offer, once the shell's copy of the notes knows it. */
 function releasedOn(releases: readonly Release[] | undefined, version: string | undefined): string | null {
     const published = releases?.find((release) => release.version === version)?.publishedAt;
     const at = published ? new Date(published) : null;
@@ -102,7 +100,6 @@ function useShownVersion(): string | undefined {
     return isDesktop() && currentVersion ? currentVersion : (machineVersion ?? undefined);
 }
 
-/* The sky of the welcome over the top of About, with the title bar of the dialog floating over it. */
 export function AboutHero() {
     const { t } = useTranslation('settings');
     const version = useShownVersion();
@@ -141,7 +138,6 @@ export function AboutHero() {
 
 const UPDATE_TRACKS: readonly UpdateTrack[] = ['stable', 'prerelease'];
 
-/* Who Ruimte is, which versions this window runs, and the one update button there is. */
 export function AboutPane() {
     const { t } = useTranslation('settings');
     const endpointId = useFocusedMachine().endpointId;
@@ -268,7 +264,6 @@ interface UpdateStatusRowProps {
     notesVersion: string | null;
 }
 
-/* The first row of Updates: where the update stands, a link to what is new in it, and what to do next. */
 function UpdateStatusRow({ releases, notesVersion }: UpdateStatusRowProps) {
     const { t } = useTranslation('settings');
     const updates = useUpdates();
@@ -317,7 +312,6 @@ function UpdateStatusRow({ releases, notesVersion }: UpdateStatusRowProps) {
     );
 }
 
-/* The one thing worth doing in the state the app is in. */
 export function UpdateAction() {
     const { t } = useTranslation('settings');
     const status = useUpdates((s) => s.status);

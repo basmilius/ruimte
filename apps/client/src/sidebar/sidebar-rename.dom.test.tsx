@@ -51,7 +51,6 @@ let machine: FakeMachine;
 let workspace: FakeWorkspace;
 let page: Mounted;
 
-/* What a right-click does: the row takes the focus on the press, then the menu opens. */
 async function rightClick(target: HTMLElement): Promise<void> {
     await act(async () => {
         target.focus();
@@ -99,7 +98,6 @@ function separatorField(): HTMLInputElement | null {
     return page.host.querySelector<HTMLInputElement>('input[placeholder="Label (optional)"]');
 }
 
-/* A separator between the projects, as a person left it in an earlier session. */
 async function withSeparator(label: string): Promise<void> {
     const id = 'kept';
     await act(async () => {

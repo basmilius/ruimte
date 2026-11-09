@@ -26,7 +26,6 @@ function metaOf(definition: SettingsSectionDefinition): SettingsSectionMeta {
     return { id: definition.id, icon: definition.icon, ...(definition.split === undefined ? {} : { split: definition.split }) };
 }
 
-/* The section registered for a slot of the navigation, in the order they were registered. */
 function inSlot(slot: SettingsSlot): SettingsSectionMeta[] {
     return settingsSectionRegistry
         .all()
@@ -34,7 +33,6 @@ function inSlot(slot: SettingsSlot): SettingsSectionMeta[] {
         .map(metaOf);
 }
 
-/* At the foot of the navigation, under the groups: the app itself, then the account block. */
 export function aboutSection(): SettingsSectionMeta {
     return inSlot('footer')[0]!;
 }
@@ -43,11 +41,6 @@ export function accountSection(): SettingsSectionMeta {
     return inSlot('account')[0]!;
 }
 
-/*
- * The left navigation: what the whole app does and how it looks, the surfaces you work in, and the agents
- * with how their chats read, what they may do and what they cost, with the sections built-ins bring behind
- * the section they name.
- */
 export function settingsGroupsWith(contributed: readonly SettingsSectionContribution[]): readonly SettingsNavGroup[] {
     return NAV_GROUPS.map(({ slot, label }) => {
         const sections = inSlot(slot);
@@ -83,7 +76,6 @@ export function sectionLabel(id: SettingsSectionId): string {
     return settingsSectionRegistry.find(id)?.label() ?? i18next.t(`settings:sections.${id}.label`);
 }
 
-/* One line under the pane title that says what the pane is about. */
 export function sectionDescription(id: SettingsSectionId): string {
     const contributed = contributedSection(id);
     if (contributed !== undefined) {

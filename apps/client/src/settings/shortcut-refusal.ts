@@ -4,7 +4,6 @@ import type { ShortcutGroup } from '@/settings/shortcuts';
 import type { RowId } from '@/surface/shortcut-overrides';
 import { BROWSER_KEEPS } from '@/surface/shortcuts';
 
-/* Why a key cannot be a row's, for the Keyboard pane to put in words. */
 type ShortcutRefusal = { reason: 'modifier' } | { reason: 'browser' } | { reason: 'taken'; label: string };
 
 /* The key as the keyboard sends it, so Mod on macOS and Meta compare as the one key they are. */
@@ -15,7 +14,6 @@ function signature(key: Shortcut, apple: boolean): string {
     return [meta, ctrl, key.alt, key.shift, key.key].join('|');
 }
 
-/* Whether an extension binds the key too, which Ruimte's own listener answers first. */
 export function extensionUsesKey(extensionShortcuts: readonly string[], key: Shortcut, apple: boolean): boolean {
     const event = {
         key: key.key.toLowerCase(),
@@ -51,7 +49,6 @@ export function refusalOf(next: Shortcut, row: RowId, groups: readonly ShortcutG
 
     const own = groups.flatMap((group) => group.shortcuts).find((candidate) => candidate.id === row);
 
-    // The key the row has already is no change.
     if (own !== undefined && sameKey(own.keys, next, apple)) {
         return null;
     }

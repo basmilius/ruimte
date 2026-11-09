@@ -23,7 +23,6 @@ function entryOf(meta: SettingsSectionMeta, contributed: readonly SettingsSectio
     };
 }
 
-/* Ruimte's sections, search and account in the settings dialog of @adecore/ui. Opens on the section the caller asked for, or the last one. */
 export function SettingsDialog() {
     const open = useUi((s) => s.settings.open);
     const section = useUi((s) => s.settings.section);

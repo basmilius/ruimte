@@ -7,7 +7,6 @@ import { stepView, viewStepTarget } from '@/project/views';
 import { focusedCanvas, maximizeTargetOf } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 
-/* The cell with the focus as a host of tabs, with where the tab in front stands. */
 function hostOf() {
     const { layout } = useDocument.getState();
     const cell = layout === null ? null : cellAt(layout, layout.focus);

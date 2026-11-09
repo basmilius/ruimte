@@ -39,7 +39,6 @@ function mode(label: string): HTMLElement | null {
     return ([...(group?.querySelectorAll<HTMLElement>('[role="radio"]') ?? [])] as HTMLElement[]).find((radio) => radio.textContent === label) ?? null;
 }
 
-/* The picker beside the Automatic and Choose buttons, found by what it shows. */
 function pickerChip(name: string): HTMLButtonElement | null {
     const row = document.querySelector('[role="radiogroup"][aria-label="Text model"]')?.parentElement;
     const buttons = [...(row?.querySelectorAll('button:not([role="radio"])') ?? [])] as HTMLButtonElement[];

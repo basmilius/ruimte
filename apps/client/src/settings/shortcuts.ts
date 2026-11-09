@@ -16,7 +16,6 @@ export interface ShortcutRow {
     label: string;
 }
 
-/* The categories of the Keyboard pane, in the order it lists them. */
 export const KEYBOARD_AREAS = ['general', 'canvas', 'views', 'editor', 'navigation', 'code', 'terminal', 'launches', 'chat', 'drawing', 'browser'] as const;
 
 export type KeyboardArea = (typeof KEYBOARD_AREAS)[number];
@@ -187,12 +186,10 @@ export function shortcutGroups(apple: boolean, snapshot: OverrideSnapshot = over
     ];
 }
 
-/* The `searchId` of one row of the Keyboard pane, which the settings search leads to. */
 export function shortcutRowId(groupId: string, index: number): string {
     return `keyboard.${groupId}.${index}`;
 }
 
-/* The category a row id of `shortcutRowId` sits in, or null for an id of another pane. */
 export function shortcutGroupOf(rowId: string): string | null {
     const area = /^keyboard\.(\w+)\.\d+$/.exec(rowId)?.[1];
     return KEYBOARD_AREAS.find((candidate) => candidate === area) ?? null;

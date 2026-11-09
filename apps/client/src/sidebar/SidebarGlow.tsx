@@ -6,14 +6,12 @@ import { useSettings } from '@/state/settings';
    animates to zero, so nothing reflows on the way out, and the toolbar draws the glow this wide where it was. */
 export const SIDEBAR_WIDTH_PX = 248;
 
-/* The diameters and strengths of the rings at the top of the sidebar. */
 const GLOW_ORBITS = [
     { size: 130, alpha: 0.05 },
     { size: 230, alpha: 0.035 },
     { size: 340, alpha: 0.025 }
 ] as const;
 
-/* A part centered on the middle of the top edge, `size` pixels across. */
 function atTop(size: number): CSSProperties {
     return { width: size, height: size, margin: `-${size / 2}px 0 0 -${size / 2}px` };
 }

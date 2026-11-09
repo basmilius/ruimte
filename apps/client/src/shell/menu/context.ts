@@ -15,7 +15,6 @@ import { useUi } from '@/state/ui';
 import { nameOf } from '@/views/active-view';
 import { windowWorkspace } from '@/workspace/window';
 
-/* The focused cell as a host of tabs, which the Tab commands of the menu read. */
 function tabsOf(layout: SplitLayout | null): MenuContext['tabs'] {
     const cell = layout === null ? null : cellAt(layout, layout.focus);
     if (layout === null || cell === null || !isTabHost(cell)) {
@@ -33,7 +32,6 @@ function tabsOf(layout: SplitLayout | null): MenuContext['tabs'] {
 
 const DIRECTIONS: SplitDirection[] = ['left', 'right', 'up', 'down'];
 
-/* The moment the menu is built for: the window's own facts, and each feature's beside them. */
 export function menuContext(host: MenuHost): MenuContext {
     const documentState = useDocument.getState();
     const ui = useUi.getState();

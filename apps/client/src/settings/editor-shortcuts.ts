@@ -128,7 +128,6 @@ const AREA_OF_KEY: Record<KeymapId, EditorArea> = {
     acceptGhostWord: 'code'
 };
 
-/* The keys whose command row names its words otherwise. */
 const WORDS_OF_KEY: Partial<Record<KeymapId, string>> = {
     collapse: 'collapseRegion',
     expand: 'expandRegion',
@@ -149,7 +148,6 @@ export function isEditorCommand(id: string): boolean {
     return isCommandId(id) && WORD_KEYS.has(commandSpec(id).key);
 }
 
-/* The words a command row has for the key, and else the ones of this pane. */
 function labelOf(id: KeymapId): string {
     const key = WORDS_OF_KEY[id] ?? id;
     const found = [`shell:palette.commands.${key}`, `shell:menu.${key}`].find((path) => i18next.exists(path));
@@ -172,7 +170,6 @@ export function editorShortcutRows(apple: boolean, snapshot: OverrideSnapshot = 
     });
 }
 
-/* The category of a command row that is not an editor key, from its place in the menu. */
 export function commandArea(id: string): KeyboardArea {
     if (!isCommandId(id)) {
         return 'general';

@@ -50,14 +50,12 @@ function Section({ label, children }: { label: string; children: ReactNode }) {
     );
 }
 
-/* One machine, with the line of state the palette's machines step shows; picking it browses its folders. */
 function MachineRow({ entry }: { entry: MachineEntry }) {
     const endpointId = entry.endpoint?.id ?? entry.id;
     const connection = useEndpointConnection(endpointId);
     const icon = useMachineIcon(entry);
     const link = machineLink(entry, connection, null);
     const hint = linkHint(link);
-    /* No menu of its own: browsing its folders is the only thing this row does. */
     return (
         <button className={ROW} onClick={() => useUi.getState().openFolderBrowser(endpointId)}>
             <MachineGlyph icon={icon} size={16} className="shrink-0 text-text-muted" />
@@ -127,7 +125,6 @@ function RecentRowMenu({ row }: { row: ProjectMenuRow }) {
     );
 }
 
-/* The project the cold start could not open, on top of Recent with why, one click from trying again. */
 function FailedRow({ failure, row }: { failure: BootFailure; row: ProjectMenuRow | null }) {
     const { t } = useTranslation(['shell', 'common']);
     const machine = useEndpoints((s) => s.endpoints.find((endpoint) => endpoint.id === failure.endpointId)?.label ?? t('start.anotherMachine'));
@@ -176,7 +173,6 @@ function SignInCard({ description }: { description: string }) {
 
 const FOOTER_BUTTON = 'flex items-center gap-1.5 rounded-sm hover:text-text';
 
-/* The keys that work from here, and which Ruimte this is. */
 function Footer() {
     const { t } = useTranslation('shell');
     const currentVersion = useUpdates((s) => s.currentVersion);

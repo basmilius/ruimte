@@ -49,14 +49,11 @@ interface TabShellProps {
     label: string;
     hint: string;
     glyph: ReactNode;
-    /* Something to say after the name: the lines a diff changed. */
     detail?: ReactNode;
-    /* A file with changes nobody saved, or a table with edits nobody submitted. */
     unsavedLabel?: string;
     pinned?: boolean;
     /* Written beside the view payload for a drop that wants more of the tab, such as a file for a composer. */
     onDragData?: (transfer: DataTransfer) => void;
-    /* A mark that says the view needs the person, which must be seen from a tab in the background. */
     attention?: ReactNode;
     onDoubleClick?: () => void;
     onClose: () => void;
@@ -98,7 +95,6 @@ function TabShell({ id, label, hint, glyph, detail, unsavedLabel, pinned = false
     );
 }
 
-/* A loose tab pins on a double click and closes out of the pool. */
 function looseControls(key: string, pinned: boolean): Pick<TabShellProps, 'pinned' | 'onDoubleClick' | 'onClose'> {
     return { pinned, onDoubleClick: () => useFiles.getState().setPinned(key, !pinned), onClose: () => useFiles.getState().close(key) };
 }
@@ -158,7 +154,6 @@ function FileTabItem({ tab, tabKey, label }: { tab: FileTab; tabKey: string; lab
     );
 }
 
-/* The tab names the table; its tooltip says where that table is, as a file's says its path. */
 function DatabaseTabItem({ tab }: { tab: DatabaseTab }) {
     const { t } = useTranslation('databases');
     const connections = useDatabaseConnectionList();
@@ -213,7 +208,6 @@ function ViewAttention({ id }: { id: string }) {
     return <WaitingCount count={useWaitingCount(id)} />;
 }
 
-/* A view of the project as a tab: its mark and its name, its own menu, and a close that only takes it off the screen. */
 function ProjectTabItem({ view }: { view: ProjectView }) {
     const { t: td } = useTranslation('databases');
     const title = useBrowserDisplayTitle(view.id, view.name ?? '', 'titleSource' in view ? view.titleSource : undefined);
@@ -252,11 +246,6 @@ function StripTab({ id }: { id: string }) {
     return isLooseView(view) ? <LooseTabItem view={view} /> : <ProjectTabItem view={view} />;
 }
 
-/*
- * The views of a tab host as a strip of tabs, in the bar of its cell. A double-click pins a loose tab,
- * a right click offers the menu of what the tab holds, and a pinned tab shows the pin next to its close
- * button. The active tab is marked and kept in sight.
- */
 export function TabStrip({ at, ids, active }: { at: CellAt; ids: readonly string[]; active: string }) {
     const focused = useDocument((s) => s.layout !== null && isSameCell(s.layout.focus, at));
     return (

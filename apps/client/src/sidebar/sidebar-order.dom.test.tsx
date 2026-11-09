@@ -27,7 +27,6 @@ let machine: FakeMachine;
 let workspace: FakeWorkspace;
 let page: Mounted;
 
-/* The project headings of the sidebar, top to bottom, by name. */
 function headings(): string[] {
     return [...page.host.querySelectorAll<HTMLElement>('[data-sidebar-row^="project:"]')].map((row) => row.getAttribute('aria-label')?.split(' · ')[0] ?? '');
 }
@@ -44,12 +43,10 @@ function openContextMenu(target: HTMLElement): Promise<void> {
     });
 }
 
-/* The separators a person put between the projects, top to bottom, by what they read. */
 function separators(): string[] {
     return [...page.host.querySelectorAll<HTMLElement>('[data-sidebar-row^="separator:"]')].map((row) => row.getAttribute('aria-label') ?? '');
 }
 
-/* The sidebar rows top to bottom: project headings by name, separators by label. */
 function order(): string[] {
     return [...page.host.querySelectorAll<HTMLElement>('[data-sidebar-row^="project:"], [data-sidebar-row^="separator:"]')].map(
         (row) => row.getAttribute('aria-label')?.split(' · ')[0] ?? ''

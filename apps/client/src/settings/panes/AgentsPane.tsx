@@ -30,7 +30,6 @@ function runtimeModeItems(): SelectItem<RuntimeMode>[] {
     return RUNTIME_MODES.map((mode) => ({ value: mode, label: runtimeModeLabel(mode), description: runtimeModeHint(mode) }));
 }
 
-/* What new agents start with, what they may do on each machine, and what this computer lets them do while they work. How a chat reads is under Chats. */
 export function AgentsPane() {
     const { t } = useTranslation('settings');
 

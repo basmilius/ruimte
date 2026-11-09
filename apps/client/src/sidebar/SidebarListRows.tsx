@@ -72,7 +72,6 @@ function RowIcon({ id, kind, provider, className }: { id: string; kind: CanvasNo
     return <Icon icon={NODE_KIND_ICONS[kind]} size={14} className={className} />;
 }
 
-/* The whole text of a row that truncates it, on hover; a row with nothing more to say has no tooltip. */
 function MaybeTooltip({ label, children }: { label: string | null | undefined; children: ReactElement<Record<string, unknown>> }) {
     if (!label) {
         return children;
@@ -124,7 +123,6 @@ function RowStatus({ status, work }: { status: AgentStatus | null | undefined; w
     return status && status !== 'idle' ? <StatusDot status={status} plain /> : null;
 }
 
-/* A folded canvas still says one of its nodes has a warning, the way it says one needs you. */
 function ProcessWarningMark() {
     const { t } = useTranslation('shell');
     return (
@@ -139,7 +137,6 @@ function ProcessWarningMark() {
 /* What a "Needs you" row keeps at its right edge, and gives up to the snooze while the pointer is on it. */
 const SNOOZE_MARKS = 'flex shrink-0 items-center gap-2 group-hover/snooze:invisible group-has-[[data-popup-open]]/snooze:invisible';
 
-/* A "Needs you" row with the snooze in its corner, out of the Tab order since the list is one stop; the context menu has the same choices. */
 function SnoozableRow({ endpointId, nodeId, children }: { endpointId: string; nodeId: string; children: ReactNode }) {
     return (
         <div className="group/snooze relative">
@@ -161,7 +158,6 @@ export function NodeRow({ row, tabbable, snoozable }: RowProps & { row: SidebarN
     // The selection belongs to the canvas store, so the row pairs on the view that store holds, not
     // on the active one, which flips a tick before the canvas follows.
     const onScreen = useCanvas((s) => s.viewId === row.viewId);
-    // Only the canvas that is up has a selection, so a row of another view is never the current one.
     const selected = picked && onScreen;
     const [renaming, setRenaming] = useState(false);
     // The menu's Rename swaps this row for the field, which then has the keyboard.
@@ -270,11 +266,9 @@ interface ViewRowProps extends RowProps {
     row: SidebarViewRow;
     onToggle(): void;
     onDelete(): void;
-    /* A drag of a view, with the transfer to write the payload on; null when it ends. */
     onDrag(id: string | null, transfer?: DataTransfer): void;
 }
 
-/* All a row with nothing to open offers: a separator, and a view this version cannot draw. */
 function DeleteRowMenu({ onDelete }: { onDelete(): void }) {
     const { t } = useTranslation('common');
     return (
@@ -550,7 +544,6 @@ export function ProjectHeading({
 }: RowProps & {
     group: SidebarGroup;
     menu(row: ProjectMenuRow): ReactNode;
-    /* A transfer as a drag of the heading starts, null as it ends; absent for a project that stays where it is. */
     onDrag?(transfer: DataTransfer | null): void;
 }) {
     const { t } = useTranslation('shell');
@@ -621,7 +614,6 @@ export function ProjectSeparatorRow({
 }: RowProps & {
     separator: SidebarSeparator;
     moveItems: ReactNode;
-    /* A transfer as a drag starts, null as it ends. */
     onDrag(transfer: DataTransfer | null): void;
 }) {
     const { t } = useTranslation(['shell', 'common']);

@@ -112,12 +112,10 @@ function insertionIndex(list: HTMLElement, clientY: number, viewCount: number): 
     return gapIndex(rows, clientY, viewCount);
 }
 
-/* The plus under each open project of "All open projects"; with one project the footer has it. */
 function newViewIn(section: SidebarSection): boolean {
     return section.kind === 'views' && section.group !== undefined && !section.group.collapsed && section.group.state === 'ready';
 }
 
-/* Every row the arrows walk, the separators and the plus rows among them. */
 function sidebarRowOrder(sections: readonly SidebarSection[], separators: SeparatorPlaces, hidden: ReadonlySet<string>, empty: boolean): string[] {
     if (empty) {
         return [];
@@ -162,13 +160,10 @@ export function Sidebar({ brandMenu }: { brandMenu?: ReactNode }) {
     const inset = useTrafficLightInset();
     const listRef = useRef<HTMLDivElement>(null);
     const listHadFocus = useRef(false);
-    /* Which row the arrows move from, and the only row Tab reaches. */
     const [rovingId, setRovingId] = useState<string | null>(null);
     /* The row being dragged and the list it came out of, so no other list draws a gap for it. */
     const [dragging, setDragging] = useState<{ sectionId: string; viewId: string } | null>(null);
-    /* The gap the row would drop into, drawn as a line between two rows. */
     const [insertAt, setInsertAt] = useState<number | null>(null);
-    /* The project heading being dragged, and the project it would land before or after. */
     const [projectDrag, setProjectDrag] = useState<string | null>(null);
     const [projectInsert, setProjectInsert] = useState<{ key: string; after: boolean } | null>(null);
     /* Where the node rows stood when the pointer came in; a picked order moves nothing under it until it leaves. */
@@ -307,7 +302,6 @@ export function Sidebar({ brandMenu }: { brandMenu?: ReactNode }) {
         }
     };
 
-    /* A file dragged onto the list becomes a view of its own, in the gap it was let go of. */
     const dropFilesAt = (index: number, transfer: DataTransfer): void => {
         setInsertAt(null);
         const { views } = useDocument.getState();
@@ -361,7 +355,6 @@ export function Sidebar({ brandMenu }: { brandMenu?: ReactNode }) {
         useSidebarProjects.getState().move(movable, dragged, others.indexOf(key) + (after ? 1 : 0));
     };
 
-    /* Move up and Move down in a project's menu, the way a drag moves it, for whoever works without a mouse. */
     const moveItems = (key: string): ReactNode => {
         const index = movable.indexOf(key);
         return (
@@ -411,7 +404,6 @@ export function Sidebar({ brandMenu }: { brandMenu?: ReactNode }) {
         );
     };
 
-    /* The group of another project a row stands for, which then draws as a background row. */
     const ownerOf = (row: SidebarRow): SidebarGroup | undefined => {
         const target = row.target;
         return target ? groups.find((group) => group.endpointId === target.endpointId && group.summary.projectId === target.projectId) : undefined;

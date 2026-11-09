@@ -35,7 +35,6 @@ function CurrentProjectAttention() {
     return <WaitingCount count={useWaitingCount()} />;
 }
 
-/* The tab under a right-click, read off the element the press landed in. */
 function tabKeyOf(event: MouseEvent<HTMLElement>): string | null {
     const target = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-tab-key]') : null;
     return target?.dataset.tabKey ?? null;

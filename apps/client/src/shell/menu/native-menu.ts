@@ -29,7 +29,6 @@ import { useWindow } from '@/workspace/window';
 /* A chat streams word by word and a camera moves every frame; the menu only needs where things settled. */
 const SETTLE_MS = 100;
 
-/* Mounted once by the app: keeps the shell's native menu on what has the focus and runs its clicks. */
 export function useNativeMenu(): void {
     useEffect(() => {
         const bridge = desktop();

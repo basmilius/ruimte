@@ -8,7 +8,6 @@ import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
 
 const DAYS = [1, 2, 3, 4, 5, 6, 7];
 
-/* The hours in which this computer raises no alert: a switch, and the days and times once it is on. */
 export function QuietHoursRows() {
     const { t } = useTranslation('settings');
     const on = useSettings((s) => s.quietHoursOn);

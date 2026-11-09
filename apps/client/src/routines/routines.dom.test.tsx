@@ -90,7 +90,6 @@ function clock(): HTMLElement | null {
     return document.body.querySelector<HTMLElement>('nav[aria-label="Tools"] button[aria-label^="Routines"]');
 }
 
-/* The prompt of the routine form, an editor rather than a text field. */
 function promptEditor(form: ParentNode): EditorView {
     return EditorView.findFromDOM(form.querySelector<HTMLElement>('.cm-content')!)!;
 }
@@ -183,7 +182,6 @@ describe('Routines', () => {
         await until(() => card()?.textContent?.includes('Started') === true);
         expect(card()?.textContent).toContain('Atlas');
         expect(card()?.textContent).toContain('Done in 3 min');
-        // Only a routine with a node on a canvas offers the way there.
         expect(buttonWithText('Open on canvas', card()!)).toBeNull();
 
         await clickOn(buttonWithText('Run now', card()!));

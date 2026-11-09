@@ -34,7 +34,6 @@ function AccentMark({ className }: { className: string }) {
     return <span className={clsx('h-3 w-7 rounded-full bg-accent', className)} />;
 }
 
-/* The themes that enabled extensions bring, loaded again when what is installed changes. */
 function useExtensionThemes(): readonly ThemeChoice[] {
     const installed = useInstalledExtensions((state) => state.installed);
     const builtInThemes = useContributions((state) => state.builtInThemes);

@@ -162,7 +162,6 @@ function NodeSizeRow({ endpoint, kind, custom, connected, searchId }: NodeSizeRo
     );
 }
 
-/* The sizes of the machine picked in the section's tag, a row per kind a person can add to a canvas. */
 export function NodeSizeSection() {
     const { t } = useTranslation('settings');
     useFormatLocale();

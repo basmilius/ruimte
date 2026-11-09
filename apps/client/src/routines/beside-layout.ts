@@ -9,11 +9,9 @@ interface BesideSizes {
     runsWidth?: number | null;
     /* Each run's header and thread as last measured open, kept between the minimum and maximum; one not measured yet starts at the minimum. */
     openHeights?: Readonly<Record<string, number>>;
-    /* Only the Output, in the first column at the newest version, with its line from the node. */
     runsHidden?: boolean;
 }
 
-/* The run cards beside a routine node, the open one included; the rest wait behind the line under them. */
 const BESIDE_RUNS = 4;
 
 const OLDER_H = 28;

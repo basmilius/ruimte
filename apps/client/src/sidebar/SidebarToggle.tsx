@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { useUi } from '@/state/ui';
 import { useKeyOf } from '@/surface/shortcut-overrides';
 
-/* The toolbar keeps this control available when the sidebar is closed. */
 export function SidebarToggle() {
     const { t } = useTranslation('shell');
     const open = useUi((s) => s.sidebarOpen);

@@ -18,7 +18,6 @@ const ALL_ROWS = Object.keys(DEFAULT_KEYS) as (keyof typeof DEFAULT_KEYS)[];
 
 let page: Mounted;
 
-/* The window's own listener, which the pane's rows have to move. */
 function Listener() {
     useAppShortcuts();
 
@@ -39,7 +38,6 @@ async function record(name: string, key: string, modifiers: Parameters<typeof pr
     await pressKey(document.body, key, modifiers);
 }
 
-/* The accelerator the desktop menu gives a command, found at any depth. */
 function menuAccelerator(id: string): string | undefined {
     const find = (nodes: readonly Record<string, unknown>[]): string | undefined => {
         for (const node of nodes) {

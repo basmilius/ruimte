@@ -8,7 +8,6 @@ import { KEYBOARD_AREAS, shortcutGroups, type ShortcutGroup } from '@/settings/s
 
 const EDITOR_AREAS = ['editor', 'navigation', 'code'];
 
-/* The rows of the palette that carry a key, as the Keyboard pane is handed them. */
 const COMMAND_ROWS = commandIds()
     .filter((id) => commandSpec(id).palette !== false && commandSpec(id).shortcut !== undefined)
     .map((id) => ({

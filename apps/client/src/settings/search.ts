@@ -18,7 +18,6 @@ export interface SearchResult {
     section: SettingsSectionId;
     /* English words that also find this result without being shown; set only outside English. */
     english?: string;
-    /* The row to reveal, or null for a result that is the pane itself. */
     id: string | null;
     label: string;
     description: string;
@@ -54,7 +53,6 @@ function matches(terms: readonly string[], ...texts: string[]): boolean {
     return terms.every((term) => haystack.includes(term));
 }
 
-/* One result per shortcut, found by its label, its category and its keys as this platform prints them. */
 export function shortcutSearchRows(groups: readonly ShortcutGroup[], apple: boolean): SearchResult[] {
     return groups.flatMap((group) =>
         group.shortcuts.map((row, index) => ({
@@ -69,10 +67,6 @@ export function shortcutSearchRows(groups: readonly ShortcutGroup[], apple: bool
     );
 }
 
-/*
- * Every pane and row whose words hold each word of the query, panes first, in the order of the
- * navigation. `built` holds the rows whose words exist only at run time, like the shortcuts.
- */
 function sectionEnglish(id: SettingsSectionId): string {
     const contributed = useContributions.getState().settingsSections.find((section) => section.id === id);
 
@@ -81,6 +75,7 @@ function sectionEnglish(id: SettingsSectionId): string {
         : `${englishWords(contributed.labelKey)} ${englishWords(contributed.descriptionKey)}`;
 }
 
+/* `built` holds the rows whose words exist only at run time, like the shortcuts. */
 export function searchSettings(query: string, built: readonly SearchResult[] = []): SearchResult[] {
     const terms = fold(query).split(/\s+/).filter(Boolean);
     if (terms.length === 0) {

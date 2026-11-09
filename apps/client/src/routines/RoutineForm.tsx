@@ -32,7 +32,6 @@ const NEXT_SHOWN = 3;
 
 const NO_REFERABLES: Referables = { items: [], chatsOnly: false };
 
-/* The next few times an expression runs after `from`, so a person sees what the fields mean. */
 function nextTimes(expression: string, from: number, timeZone: string): number[] {
     const times: number[] = [];
     let cursor: number | null = from;
@@ -69,7 +68,6 @@ export function RoutineForm({
     const { t } = useTranslation('routines');
     const editing = request.editing?.routine;
     const allProjects = useProjectList((s) => s.projects);
-    // The project the form was opened from leads, the rest keep their order.
     const projects = allProjects
         .filter((row) => row.endpointId === endpointId)
         .sort((left, right) => Number(right.summary.projectId === request.projectId) - Number(left.summary.projectId === request.projectId));
