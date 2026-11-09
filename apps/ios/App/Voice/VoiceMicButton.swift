@@ -97,7 +97,6 @@ extension AppRuntime {
         machines.filter { voice.offers(machineID: $0.id, client: session(for: $0).rpc) }
     }
 
-    /// Whether a bar shows the mic: a machine offers Voice, or Voice runs in this scene.
     func showsVoice(in scene: VoiceScene?) -> Bool {
         guard let scene else { return false }
         return voice.isOwner(scene.id) || !voiceMachines.isEmpty

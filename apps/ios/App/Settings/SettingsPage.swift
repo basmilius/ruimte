@@ -146,7 +146,6 @@ private struct AccountCard: View {
     }
 }
 
-/// The account's picture in a circle of its own size, else its initial, else the person mark.
 struct AccountPicture: View {
     let account: Account?
     let size: CGFloat

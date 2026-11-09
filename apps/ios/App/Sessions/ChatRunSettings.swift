@@ -81,7 +81,6 @@ struct ChatContextUsage: Equatable {
     /// After a compaction whose CLI named no size: `used` is 0 until the next reply, not an empty context.
     let pending: Bool
 
-    /// The id of the model option that sets the window's size.
     static let windowOption = "contextWindow"
 
     init(_ usage: ChatInfoUsage) {
@@ -368,7 +367,6 @@ extension ChatModel {
     var runtimeMode: String { info?.runtimeMode ?? "supervised" }
     var canConfigure: Bool { connected && !loading && !configuring && !sending }
 
-    /// The model the chat runs on, with its own options.
     var selectedModel: ProviderModel? { models.first { $0.slug == selectedSlug } }
     var selectedSlug: String { info?.selection.model ?? "" }
     var selectedOptions: [String: JSONValue] { info?.selection.options ?? [:] }

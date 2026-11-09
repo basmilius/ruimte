@@ -40,7 +40,6 @@ import SwiftUI
         return found
     }
 
-    /// Follows the chats `wanted` names and lets go of the rest.
     func follow(_ wanted: [String: ChatPromptSource], client: any MachineRequesting, machineID: String) {
         sources = wanted
         for (id, model) in children where wanted[id] == nil {

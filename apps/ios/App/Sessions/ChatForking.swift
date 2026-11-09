@@ -35,7 +35,6 @@ struct ChatForkPoint: Equatable {
 /// index jumps to.
 struct ChatMessageMark: Identifiable, Equatable {
     enum Kind: Equatable { case person, wake }
-    /// The timeline entry the index scrolls to.
     let id: String
     let kind: Kind
     let text: String
@@ -70,7 +69,6 @@ enum ChatForking {
         return nil
     }
 
-    /// Why a fork cannot write a summary for its original right now, or nil when it can.
     static func summaryRefusal(info: ChatInfo?, originalPresent: Bool) -> String? {
         if !originalPresent { return String(localized: "Original no longer in this project") }
         if info?.activeTurnId != nil { return String(localized: "Wait for the turn to end") }
@@ -126,7 +124,6 @@ enum ChatForking {
         return nil
     }
 
-    /// Why a branch cannot be the fork's, or nil when it can.
     static func branchRefusal(_ branch: String, taken: [String]) -> String? {
         let name = branch.trimmingCharacters(in: .whitespaces)
         if name.isEmpty { return String(localized: "Name the branch") }
@@ -175,7 +172,6 @@ enum ChatForking {
         String(localized: "\(count) forks after this turn")
     }
 
-    /// The places the message index lists, in thread order.
     @MainActor static func marks(entries: [ChatTimelineEntry]) -> [ChatMessageMark] {
         entries.compactMap { entry in
             guard let item = entry.items.first?.item else { return nil }
@@ -212,7 +208,6 @@ enum ChatForking {
 /// Where the chats of a project stand and how to get there, for the rows of a timeline that lead to another chat.
 @MainActor
 struct ChatPlaces {
-    /// The name a chat goes by in the project, or nil when it is not in it.
     let title: (String) -> String?
     let shape: (String) -> ChatForkShape?
     /// Waits until a chat a machine just made is in the project, and answers whether it arrived.

@@ -7,7 +7,6 @@ import RuimtePulsar
 extension PlanStepState {
     /// The states a person picks from; active is the agent's word for where it works.
     static let personStates: [PlanStepState] = [.open, .done, .warning, .info, .failed, .skipped, .blocked]
-    /// The outcomes the mark of a test step offers.
     static let testOutcomes: [PlanStepState] = [.done, .warning, .info, .failed, .skipped, .blocked]
 
     /// Outcomes that close a step without a failure, as `isFinishedOutcome` in `@adecore/plan`.
@@ -86,7 +85,6 @@ struct PlanStep: Identifiable, Equatable, Sendable {
 
     var progress: PlanProgress { PlanProgress(leaves: leaves) }
 
-    /// A tap on the circle of a steps plan: done goes back to open, anything else becomes done.
     var toggled: PlanStepState { state == .done ? .open : .done }
 
     init(_ stored: StoredPlanStep) {
@@ -164,7 +162,6 @@ struct PlanProgress: Equatable, Sendable {
 
     func count(_ state: PlanStepState) -> Int { counts[state] ?? 0 }
 
-    /// Steps with an outcome.
     var finished: Int { count(.done) + count(.failed) + count(.skipped) + count(.warning) + count(.info) }
 
     var fraction: Double { total == 0 ? 0 : Double(finished) / Double(total) }

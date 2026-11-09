@@ -332,7 +332,6 @@ struct UiFallbackPart: View {
     }
 }
 
-/// An icon of 12 points beside its words, six apart and centered on the line.
 struct UiSmallIconLabel: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: 6) {
@@ -353,13 +352,11 @@ struct UiSkeleton: View {
     }
 }
 
-/// Lays its children out left to right and wraps to a next line where the width runs out.
 struct UiFlowLayout: Layout {
     var spacing: CGFloat = 6
     /// From this width on a child takes at most half the row less half the gap, so two long ones end on one edge.
     var halvesFrom: CGFloat?
 
-    /// The widest a child may be in a row of `width`.
     func itemWidth(_ width: CGFloat) -> CGFloat {
         guard let halvesFrom, width >= halvesFrom else { return width }
         return (width - spacing) / 2

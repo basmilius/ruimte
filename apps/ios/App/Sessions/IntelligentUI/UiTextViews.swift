@@ -25,7 +25,6 @@ enum UiToneStyle {
     }
 }
 
-/// The square a Summary and a Callout carry their icon in, 34 points on a side.
 private struct UiIconSquare: View {
     static let side: CGFloat = 34
 
@@ -275,7 +274,6 @@ struct UiStepView: View {
     }
 }
 
-/// Events in time order on one tile, a row each.
 struct UiTimelineView: View {
     let node: UiNode
     let context: UiRenderContext

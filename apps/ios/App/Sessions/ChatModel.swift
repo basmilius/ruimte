@@ -69,7 +69,6 @@ final class ChatModel {
     @ObservationIgnored var referenceSource = ChatReferenceSource()
     /// The other open projects a `#` may point at, while the machine lets agents reach them.
     var reachedProjects: [JSONValue] = []
-    /// What `#` offers in this chat now.
     var referables: [ChatReferable] { referenceSource.items() }
     /// A machine from before `viewReferences` drops `references`, so its `#` reaches chats only.
     var chatsOnly: Bool { !referenceSource.viewReferences() }
@@ -808,14 +807,12 @@ struct ChatSuggestion: Identifiable {
     let value: String
     let title: String
     let detail: String
-    /// What a `#` suggestion points at.
     var referable: ChatReferable?
     /// The heading of an `@` row below the files, `Models` or `Accounts`; nil for a file.
     var section: String? = nil
     /// The CLI whose mark a model or account row wears.
     var provider: String? = nil
 
-    /// The heading over the suggestions a sigil opens.
     static func heading(_ kind: String) -> String {
         switch kind {
         case "@": String(localized: "Files")

@@ -261,7 +261,6 @@ struct UiCompareView: View {
     }
 }
 
-/// An attachment of the chat as a picture, read through the chat's resources.
 enum UiPicture {
     case loading
     case image(UIImage)

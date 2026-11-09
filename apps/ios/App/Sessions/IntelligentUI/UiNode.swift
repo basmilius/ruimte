@@ -42,10 +42,8 @@ struct UiNode: Identifiable, Equatable {
     func bool(_ key: String) -> Bool? { props[key]?.boolValue }
     var tone: UiTone? { string("tone").flatMap(UiTone.init(rawValue:)) }
 
-    /// The current value of an input's binding, or nil for a node that is not bound.
     var boundValue: JSONValue? { bindings["value"]?["value"] }
 
-    /// What an input shows: its binding's value, else the value it was written with.
     var currentValue: JSONValue? { boundValue ?? props["value"] }
 
     /// Every `$text` below this node joined as written, such as the code of a CodeBlock.
@@ -57,7 +55,6 @@ struct UiNode: Identifiable, Equatable {
     /// The text written beside the children of a control, such as the label of a Select next to its Options.
     var ownLabel: String { Self.oneLine(children.filter(\.isText).map(\.text).joined()) }
 
-    /// The name a picture goes by: its `alt`, else its caption, else `fallback`.
     func altLabel(fallback: String) -> String {
         string("alt") ?? (label.isEmpty ? fallback : label)
     }
@@ -67,7 +64,6 @@ struct UiNode: Identifiable, Equatable {
             .trimmingCharacters(in: .whitespaces)
     }
 
-    /// Whether this node or anything below it could not be evaluated.
     var hasError: Bool { error != nil || children.contains { $0.hasError } }
 
     /// The label a Choice sends, or nil when it can never send: it failed, never closed, part of its label could not

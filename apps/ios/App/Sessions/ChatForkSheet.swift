@@ -9,7 +9,6 @@ struct ChatForkSheet: View {
     let originalTitle: String
     /// Whether the chat is a node or a view in the project; nil where this screen does not know the project.
     let origin: ChatForkShape?
-    /// The id of the chat the machine made.
     let forked: (String) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""

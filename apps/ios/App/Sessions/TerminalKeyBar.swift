@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// What the keys of the bar under a terminal send.
 enum TerminalKeys {
     static let escape = "\u{1b}"
     static let tab = "\t"

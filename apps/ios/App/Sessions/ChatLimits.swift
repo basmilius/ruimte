@@ -31,7 +31,6 @@ enum ChatLimits {
                 ?? resets.map { String(localized: "The limit resets at \($0).") })
     }
 
-    /// A time today as a clock, any other with its day.
     static func moment(_ milliseconds: Double, now: Date = .now) -> String {
         let date = Date(timeIntervalSince1970: milliseconds / 1000)
         return Format.isSameDay(date, now) ? Format.clock(date) : Format.weekdayClock(date)

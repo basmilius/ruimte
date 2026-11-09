@@ -2,14 +2,12 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
-/// What a call was asked to do, as the lines its opened row shows.
 struct ChatToolCallLines: Equatable {
     struct Argument: Equatable {
         let key: String
         let value: String
     }
 
-    /// The command of a shell call, whole.
     var command: String?
     var arguments: [Argument] = []
     /// An input that is not an object, as text.
@@ -60,7 +58,6 @@ enum ChatToolBody {
         return (code, String(output.dropFirst(firstLine.count + 1)))
     }
 
-    /// `text` cut at the limit, with a line that says how much is left out.
     static func clipped(_ text: String) -> String {
         guard text.count > outputLimit else { return text }
         let more = text.count - outputLimit
@@ -170,7 +167,6 @@ struct ChatToolBodyView: View {
     }
 }
 
-/// The requests behind the wholes a thread offers.
 enum ChatWholeReads {
     /// Only a machine that answers `chat.toolOutput` keeps an output apart, so on any other there is nothing to ask.
     @MainActor static func offersToolOutput(_ client: any MachineRequesting) -> Bool {
@@ -309,7 +305,6 @@ private struct ChatToolOutput: View {
     }
 }
 
-/// A shell command in the colors of the code theme.
 private struct ChatShellCommandText: View {
     let command: String
     @Environment(\.colorScheme) private var colorScheme

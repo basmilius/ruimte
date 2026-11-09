@@ -1,6 +1,5 @@
 import RuimteVoice
 
-/// One row of the Voice sheet's timeline.
 enum VoiceTimelineItem: Identifiable, Equatable {
     case line(VoiceUtterance)
     case action(VoiceActivityLine)

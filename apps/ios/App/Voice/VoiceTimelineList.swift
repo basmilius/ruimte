@@ -114,7 +114,6 @@ private struct VoiceActionRow: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// The label in the text color and its detail muted beside it.
     private var title: AttributedString {
         var label = AttributedString(action.label)
         label.foregroundColor = MobileStyle.text

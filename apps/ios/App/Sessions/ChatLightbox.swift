@@ -72,7 +72,6 @@ extension View {
     }
 }
 
-/// What a thumbnail hands the lightbox when it opens it.
 struct ChatLightboxStart: Identifiable {
     let images: [ChatLightboxImage]
     let index: Int

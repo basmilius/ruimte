@@ -99,7 +99,6 @@ struct ChatPreparePreview: Identifiable, Equatable {
     private(set) var busy = false
     var preview: ChatPreparePreview?
     var failure: String?
-    /// The terminal the command went to, once it is there.
     var prepared: String?
     @ObservationIgnored private var attachments: [MachineAttachment] = []
 

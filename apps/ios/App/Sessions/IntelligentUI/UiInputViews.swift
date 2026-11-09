@@ -1,7 +1,6 @@
 import RuimtePulsar
 import SwiftUI
 
-/// An input whose node has not closed yet stands at 60% and takes no touch.
 struct UiPending: ViewModifier {
     let complete: Bool
 
@@ -267,7 +266,6 @@ struct UiTextFieldView: View {
     }
 }
 
-/// A menu of the options of a Select, with the text beside them as its label above.
 struct UiSelectView: View {
     let node: UiNode
     let context: UiRenderContext

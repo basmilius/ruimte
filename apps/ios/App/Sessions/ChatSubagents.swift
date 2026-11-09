@@ -21,7 +21,6 @@ struct SubagentCrumb: Hashable, Identifiable {
     }
 }
 
-/// The list of a chat's sub-agents as its toolbar opens it.
 struct SubagentListRoute: Hashable, Identifiable {
     let chatID: String
     var id: String { chatID }
@@ -161,7 +160,6 @@ enum ChatSubagents {
         return task.isEmpty ? nil : task
     }
 
-    /// Whether the chat a task's agent works in waits on a person, as the task's own row reads it.
     @MainActor static func childWaiting(_ agent: ChatSubagentItem, attention: AttentionStore?) -> Bool {
         guard let id = agent.childId, let attention else { return false }
         return attention.needsYou(id) || attention.waits[id] != nil

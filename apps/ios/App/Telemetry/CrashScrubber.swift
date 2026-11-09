@@ -24,7 +24,6 @@ struct CrashScrubber: Sendable {
         literals = redactions.filter { $0.count >= Self.minRedaction }.sorted { $0.count > $1.count }
     }
 
-    /// A short label such as a tag or a type name, scrubbed and cut to `maxTag`.
     func scrubTag(_ text: String) -> String {
         Self.truncate(scrubText(text), Self.maxTag)
     }

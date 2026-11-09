@@ -16,7 +16,6 @@ enum ChatSavedPreview: Equatable {
     /// Past this a file read whole is read only when a person opens it, so a long thread never pulls megabytes.
     static let maxBytes: Double = 256 * 1024
 
-    /// The images of a version the thread shows at most.
     static let maxImages = 4
 
     /// The first file there is something to show of, by what the file is, or nil when the version stays a row. What
@@ -119,7 +118,6 @@ struct ChatSavedPreviewView: View {
     }
 }
 
-/// Folds or unfolds a preview, under it.
 private struct ChatSavedShowAll: View {
     @Binding var open: Bool
 

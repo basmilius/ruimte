@@ -156,7 +156,6 @@ struct ChatBookmarkMarker: View {
     }
 }
 
-/// Place, rename and remove in a message's long-press menu.
 struct ChatBookmarkButtons: View {
     let presentation: ChatPresentation
     let itemID: String

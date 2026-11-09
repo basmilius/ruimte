@@ -67,7 +67,6 @@ final class TerminalModel {
         self.sessionID = sessionID
     }
 
-    /// Whether the session takes keys now.
     var usable: Bool { connected && !loading && !exited }
 
     func start() {

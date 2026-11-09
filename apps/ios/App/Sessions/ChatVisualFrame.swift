@@ -222,7 +222,6 @@ struct ChatVisualFrame: UIViewRepresentable {
     @MainActor final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         var parent: ChatVisualFrame?
         var page: URL?
-        /// The theme the page was given last, by its address or by a message.
         var shownTheme: ChatVisualTheme?
         private var loaded = false
         private var shown = false

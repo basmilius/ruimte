@@ -107,7 +107,6 @@ final class VoiceCoordinator {
     static let linkScene = "voice"
 
     private(set) var phase = Phase.idle
-    /// The scene that holds Voice, while a session starts or runs.
     private(set) var owner: String?
     /// The scene the last session ran in, which shows how it ended.
     private(set) var lastScene: String?
@@ -116,7 +115,6 @@ final class VoiceCoordinator {
     private(set) var sessionID: String?
     private(set) var transcript = VoiceTranscript()
     private(set) var activity: [VoiceActivityLine] = []
-    /// The tokens of questions whose answer is on its way to the machine.
     private(set) var answering: Set<String> = []
     /// The last conversation of `lastScene` ended, and its timeline stays until the next start.
     private(set) var ended = false
@@ -128,7 +126,6 @@ final class VoiceCoordinator {
     private(set) var bands = VoiceWaveformBands.silent
     @ObservationIgnored private var personMeter = VoiceWaveformMeter()
     @ObservationIgnored private var voiceMeter = VoiceWaveformMeter()
-    /// Where the reply plays, as iOS names the route.
     private(set) var route: String?
     /// Per machine, whether it holds an OpenAI key for Voice, as `voice.keyStatus` last said.
     private(set) var keys: [String: Bool] = [:]
@@ -159,7 +156,6 @@ final class VoiceCoordinator {
     @ObservationIgnored private var subscriptions: [() -> Void] = []
     @ObservationIgnored private var cancelDeadline: (() -> Void)?
     @ObservationIgnored private var cancelSpeaking: (() -> Void)?
-    /// What the Live Activity shows now; nil while there is none.
     @ObservationIgnored private var shown: VoiceLiveContent?
     /// Per machine, the `voice.preferences` event this phone follows.
     @ObservationIgnored private var preferenceWatches: [String: () -> Void] = [:]
@@ -278,7 +274,6 @@ final class VoiceCoordinator {
 
     func isOwner(_ scene: String) -> Bool { owner == scene }
 
-    /// Voice runs, in a scene other than this one.
     func runsElsewhere(than scene: String) -> Bool { owner != nil && owner != scene }
 
     /// What a scene shows of the last session that ran in it.
@@ -379,13 +374,11 @@ final class VoiceCoordinator {
         }
     }
 
-    /// Stops the session `scene` started, or the start it has on its way.
     func stop(scene: String) {
         guard owner == scene else { return }
         end(nil, tellMachine: true)
     }
 
-    /// A scene that closes ends the session it owns.
     func sceneClosed(_ scene: String) { stop(scene: scene) }
 
     /// Turns the microphone off or on again; the session and the reply go on either way.
@@ -427,7 +420,6 @@ final class VoiceCoordinator {
         }
     }
 
-    /// The person's answer to an action that asked first.
     func confirm(scene: String, token: String, decision: String) async -> Bool {
         guard owner == scene, let sessionID, let client else { return false }
         let payload: JSONValue = .object([
@@ -678,7 +670,6 @@ final class VoiceCoordinator {
     }
 }
 
-/// An audio session that can say where the reply plays.
 @MainActor protocol AudioRouteNaming {
     var route: String? { get }
 }

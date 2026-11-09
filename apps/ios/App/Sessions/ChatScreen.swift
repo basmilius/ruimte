@@ -32,7 +32,6 @@ struct ChatScreen: View {
     @State private var showingBookmarks = false
     /// A rename asked for from the bookmark list, asked once the list has gone.
     @State private var renameAfterList: String?
-    /// The message whose bookmark is being named, with the name as typed.
     @State private var namingBookmark: String?
     @State private var bookmarkName = ""
     @Environment(\.horizontalSizeClass) private var sizeClass

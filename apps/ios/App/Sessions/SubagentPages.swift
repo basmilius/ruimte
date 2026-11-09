@@ -22,7 +22,6 @@ extension View {
         }
     }
 
-    /// An alert with OK that shows `failure` while it holds a message.
     func failureAlert(_ title: LocalizedStringKey, _ failure: Binding<String?>) -> some View {
         alert(title, isPresented: failure.isPresent()) {
             Button("OK") { failure.wrappedValue = nil }

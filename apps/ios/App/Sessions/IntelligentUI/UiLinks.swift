@@ -271,7 +271,6 @@ struct UiLinkChip: View {
     }
 }
 
-/// A link with children is a row: the chip and what the agent says about it.
 struct UiLinkRow: View {
     let node: UiNode
     let context: UiRenderContext

@@ -255,17 +255,14 @@ final class ChatPresentation {
     @ObservationIgnored var agentSources: ChatAgentSources?
     /// The catalog of the chat's own CLI, which names the models and efforts a selection switch moved between.
     @ObservationIgnored var chatModels: () -> [ProviderModel] = { [] }
-    /// The messages a person marked, by item id, as the machine last said.
     private(set) var bookmarks: [String: ChatBookmark] = [:]
     /// A row asked to place, name or take away a bookmark; the screen carries it out.
     var bookmarkRequest: ChatBookmarkRequest?
     var uiChoiceRequest: UiChoiceJump?
     var uiChoiceHighlight: UiChoiceJump?
-    /// The pages agents published in the chat, as the machine last said.
     private(set) var visuals: [ChatVisual] = []
     /// A card asked to open its visual large or to remove it; the screen carries it out.
     var visualRequest: ChatVisualRequest?
-    /// What the chat saved to Output, as the machine last said.
     private(set) var saved: [ChatSavedVersion] = []
     /// A card asked to open an item of Output; the screen pushes it.
     var outputRequest: ChatOutputOpen?
@@ -281,7 +278,6 @@ final class ChatPresentation {
     /// A quote asked to lead back to the reply it quotes; the screen carries it out, since that reply may be on a page
     /// this thread has not read yet.
     private(set) var quoteRequest: ChatQuoteJump?
-    /// The messages whose quoted reply is no longer in the thread.
     private(set) var goneQuotes: Set<String> = []
     /// The calls that wait on a person's answer to an approval of them, by tool use id.
     private(set) var awaitingApproval: Set<String> = []
