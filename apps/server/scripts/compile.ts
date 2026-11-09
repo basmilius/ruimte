@@ -138,13 +138,19 @@ if (values.os === 'mac') {
        the Linux build targets, so Speech to Text stays macOS only until that floor moves. A build
        without the helper reports the feature as unavailable. */
     const speechRoot = join(root, '../speech-bridge');
+    const speechBuilt = join(speechRoot, 'target', rustTarget, 'release', 'speech-bridge');
+    // CI restores a binary built from these exact sources (`cache-native-builds`), and cargo would only compile it again.
+    const speechBuild =
+        process.env.RUIMTE_RUST_CACHE_HIT === 'true' && existsSync(speechBuilt)
+            ? Promise.resolve(0)
+            : run([cargo, 'build', '--release', '--locked', '--target', rustTarget], speechRoot);
     builds.push(
-        run([cargo, 'build', '--release', '--locked', '--target', rustTarget], speechRoot).then(async (exitCode) => {
+        speechBuild.then(async (exitCode) => {
             if (exitCode !== 0) {
                 return exitCode;
             }
             const speechHelper = join(nativeDir, 'speech-bridge');
-            await copyFile(join(speechRoot, 'target', rustTarget, 'release', 'speech-bridge'), speechHelper);
+            await copyFile(speechBuilt, speechHelper);
             await chmod(speechHelper, 0o755);
             return 0;
         })

@@ -17,6 +17,8 @@ runs:
           } | shasum -a 256 | cut -d ' ' -f 1
         )
         echo "key=$toolchain" >> "$GITHUB_OUTPUT"
+        rust=$({ sw_vers -productVersion; rustc --version; cargo --version; } | shasum -a 256 | cut -d ' ' -f 1)
+        echo "rust=$rust" >> "$GITHUB_OUTPUT"
     - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
       with:
         shared-key: macos-release-${{ steps.toolchain.outputs.key }}
@@ -24,6 +26,17 @@ runs:
         workspaces: |
           apps/ios-device-bridge
           apps/speech-bridge
+    # rust-cache keeps only the dependencies, so the helpers themselves would compile again every run.
+    # Their binaries are reused only when their sources and toolchain match exactly. It comes after
+    # rust-cache, so its save runs before rust-cache cleans the target folders.
+    - name: Cache Rust release products
+      id: rust
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          apps/ios-device-bridge/target/*/release/ios-device-bridge
+          apps/speech-bridge/target/*/release/speech-bridge
+        key: rust-release-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.rust }}-${{ hashFiles('apps/ios-device-bridge/Cargo.toml', 'apps/ios-device-bridge/Cargo.lock', 'apps/ios-device-bridge/src/**', 'apps/speech-bridge/Cargo.toml', 'apps/speech-bridge/Cargo.lock', 'apps/speech-bridge/src/**') }}
     # Swift binaries are reused only when their sources and toolchain match exactly.
     - name: Cache Swift release products
       id: swift
@@ -32,8 +45,11 @@ runs:
         path: |
           apps/computer-use/.build
         key: swift-release-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.key }}-${{ hashFiles('apps/computer-use/Package.swift', 'apps/computer-use/Package.resolved', 'apps/computer-use/Sources/**', 'apps/computer-use/scripts/build.ts') }}
-    - name: Use matching Swift release products
+    - name: Use matching Swift and Rust release products
       shell: bash
       env:
         SWIFT_CACHE_HIT: ${{ steps.swift.outputs.cache-hit }}
-      run: echo "RUIMTE_SWIFT_CACHE_HIT=$SWIFT_CACHE_HIT" >> "$GITHUB_ENV"
+        RUST_CACHE_HIT: ${{ steps.rust.outputs.cache-hit }}
+      run: |
+        echo "RUIMTE_SWIFT_CACHE_HIT=$SWIFT_CACHE_HIT" >> "$GITHUB_ENV"
+        echo "RUIMTE_RUST_CACHE_HIT=$RUST_CACHE_HIT" >> "$GITHUB_ENV"

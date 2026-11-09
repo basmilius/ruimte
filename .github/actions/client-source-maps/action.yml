@@ -24,7 +24,7 @@ runs:
     - name: Debug ids and the upload
       if: inputs.token != ''
       continue-on-error: true
-      uses: basmilius/observatory-action@dae861d69a193baacbe35c29b9b99754f2938f10 # v1
+      uses: basmilius/observatory-action@683baa9a3c1e5e14235539ead23ffae56b85dfab # v1
       with:
         url: https://ingest.bmnw.nl
         token: ${{ inputs.token }}

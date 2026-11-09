@@ -95,24 +95,40 @@ jobs:
         env:
           RUIMTE_TELEMETRY: '1'
         run: bun run --cwd apps/client build
-      - uses: ./.github/actions/client-source-maps
+      # The debug ids go in before the artifact, which the mac build waits for, and the upload of the
+      # maps after it. Its maps ride along in the artifact; electron-builder's filter keeps them out
+      # of every build.
+      - name: Debug ids
+        continue-on-error: true
+        uses: basmilius/observatory-action@683baa9a3c1e5e14235539ead23ffae56b85dfab # v1
         with:
-          dist: apps/client/dist
-          release: ruimte@${{ env.RUIMTE_VERSION }}
-          token: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
+          url: https://ingest.bmnw.nl
+          version: ruimte@${{ env.RUIMTE_VERSION }}
+          sourcemaps: apps/client/dist
+          inject: 'true'
+          upload: 'false'
+          deploy: 'false'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: client
           path: apps/client/dist
           if-no-files-found: error
           retention-days: 7
+      - uses: ./.github/actions/client-source-maps
+        with:
+          dist: apps/client/dist
+          release: ruimte@${{ env.RUIMTE_VERSION }}
+          token: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
 
-  # The platform builds upload to the draft (`--publish always`), so they write.
+  # The platform builds upload to the draft (`--publish always`), so they write. Mac is the longest
+  # build, so it starts beside the client job and waits for its artifact only where electron-builder
+  # needs it; listing that artifact while the run goes on takes `actions: read`.
   mac:
-    needs: [draft, client]
+    needs: draft
     runs-on: macos-latest
     permissions:
       contents: write
+      actions: read
     steps:
       # Without them the build goes out unsigned or unnotarized, which Squirrel refuses as an update
       # and Gatekeeper blocks as a download, so a missing one stops the release here and the draft
@@ -140,10 +156,6 @@ jobs:
       - uses: ./.github/actions/install
       - name: Version from the tag
         run: echo "RUIMTE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: client
-          path: apps/client/dist
       - name: Compile the daemon
         env:
           RUIMTE_TELEMETRY: '1'
@@ -167,6 +179,42 @@ jobs:
           umask 077
           printf '%s' "$APPLE_API_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
           echo "APPLE_API_KEY=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+      - name: Build the main process
+        working-directory: apps/desktop
+        env:
+          RUIMTE_TELEMETRY: '1'
+        run: bun run build:main
+      # The artifacts API lists an artifact as soon as it is uploaded, while the run still goes. A client
+      # job that ends without one fails this at once; the artifact is asked once more after its end, so
+      # an upload that landed just before it is not missed.
+      - name: Wait for the client
+        timeout-minutes: 20
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          uploaded() {
+            count=$(gh api "repos/$GH_REPO/actions/runs/$GITHUB_RUN_ID/artifacts?name=client" --jq .total_count 2>/dev/null || echo 0)
+            [ "${count:-0}" -gt 0 ]
+          }
+          while true; do
+            if uploaded; then
+              exit 0
+            fi
+            state=$(gh api "repos/$GH_REPO/actions/runs/$GITHUB_RUN_ID/jobs?per_page=100" --jq '.jobs[] | select(.name == "client") | .status' 2>/dev/null || true)
+            if [ "$state" = completed ]; then
+              if uploaded; then
+                exit 0
+              fi
+              echo "::error::The client job ended without uploading the client"
+              exit 1
+            fi
+            sleep 5
+          done
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: client
+          path: apps/client/dist
       - name: Build and upload
         working-directory: apps/desktop
         env:
@@ -179,7 +227,6 @@ jobs:
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           RUIMTE_TELEMETRY: '1'
         run: |
-          bun run build:main
           bun x electron-builder --mac --arm64 --publish always \
             -c.extraMetadata.version="$RUIMTE_VERSION" -c.mac.notarize=true
       - name: Shred the key
@@ -311,7 +358,7 @@ jobs:
         run: echo "::warning::OBSERVATORY_UPLOAD_TOKEN is empty; no deploy reported"
       - name: Report the deploy
         if: env.OBSERVATORY_UPLOAD_TOKEN != ''
-        uses: basmilius/observatory-action@dae861d69a193baacbe35c29b9b99754f2938f10 # v1
+        uses: basmilius/observatory-action@683baa9a3c1e5e14235539ead23ffae56b85dfab # v1
         with:
           url: https://ingest.bmnw.nl
           token: ${{ env.OBSERVATORY_UPLOAD_TOKEN }}
