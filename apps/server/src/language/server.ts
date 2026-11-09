@@ -948,7 +948,8 @@ export class LanguageServer {
             return;
         }
 
-        const context = await this.launchContext();
+        // The hold is read after the last await of the start, so one a person set while it read its configuration is what it spawns with.
+        const context: LaunchContext = { ...(await this.launchContext()), buildHeld: this.options.buildHeld?.() === true };
         this.context = context;
         try {
             for (const profile of this.options.profile.components.filter((candidate) => candidate.sidecar !== true)) {
@@ -995,7 +996,6 @@ export class LanguageServer {
             projectFolder: folder,
             typescriptLib: ownTypescript ? await resolveTypescriptLib(folder, installDirectory, exists) : pinnedTypescriptLib(installDirectory),
             native: this.options.native?.() ?? null,
-            buildHeld: this.options.buildHeld?.() === true,
             sql: this.readsSettings()
                 ? await (this.options.sqlSettings?.() ?? Promise.resolve(null)).catch((error: unknown) => {
                       this.log.push('host', `Could not work out the SQL settings of the project: ${errorText(error)}`);
