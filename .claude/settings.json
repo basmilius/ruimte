@@ -1,27 +1,51 @@
 {
     "permissions": {
         "allow": [
-            "Bash(bun install)",
             "Bash(bun test *)",
+            "Bash(bun --config=dom.bunfig.toml test *)",
+            "Bash(bun --config=integration.bunfig.toml test *)",
             "Bash(bun run check)",
             "Bash(bun run check:types)",
+            "Bash(bun run check:generated)",
             "Bash(bun run lint)",
             "Bash(bun run test)",
             "Bash(bun run test:dom)",
             "Bash(bun run test:integration)",
             "Bash(bun run test:package)",
+            "Bash(bun run test:terminal)",
             "Bash(bun run format)",
             "Bash(bun run format:check)",
             "Bash(bun run build)",
+            "Bash(bun run generate:extension-runtimes)",
+            "Bash(bun run --cwd packages/contracts generate:swift)",
             "Bash(bun run adecore:status *)",
-            "Bash(bun run adecore:npm)",
+            "Bash(bun run adecore:check)",
+            "Bash(bun run adecore:bump *)",
+            "Bash(gh run list *)",
+            "Bash(gh run view *)",
+            "Bash(gh run watch *)",
+            "Bash(gh release edit *)",
+            "Bash(git tag -a v*)",
+            "Bash(git push origin v*)",
+            "Bash(git worktree list *)"
+        ],
+        "ask": [
+            "Bash(bun install)",
             "Bash(bun run adecore:link)",
-            "Bash(bun run adecore:bump *)"
+            "Bash(bun run adecore:npm)"
         ],
         "deny": [
+            "Bash(git stash)",
             "Bash(git stash *)",
             "Bash(git reset --hard *)",
-            "Bash(git clean *)"
+            "Bash(git clean *)",
+            "Bash(git restore *)",
+            "Bash(git checkout -- *)",
+            "Bash(git branch -D *)",
+            "Bash(git push --force*)",
+            "Bash(git push -f *)",
+            "Bash(git push * --force*)",
+            "Bash(git push * -f)"
         ]
     }
 }
