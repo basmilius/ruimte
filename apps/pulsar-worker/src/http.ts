@@ -23,7 +23,6 @@ export function clientIp(request: Request): string {
     return request.headers.get('cf-connecting-ip') ?? 'unknown';
 }
 
-// A parsed body, or the response that says why there is none.
 export async function readBody<T>(request: Request, schema: z.ZodType<T>, maxBytes = MAX_BODY_BYTES): Promise<{ value: T } | { response: Response }> {
     const text = await request.text();
     if (text.length > maxBytes) {

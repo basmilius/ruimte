@@ -28,7 +28,6 @@ final class AgentDirectory {
         }
     }
 
-    /// Puts the shared directory back to empty, for a test that taught it.
     func reset() {
         names = [:]
         forks = [:]

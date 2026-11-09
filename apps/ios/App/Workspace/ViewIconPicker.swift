@@ -34,7 +34,6 @@ struct ViewIconPicker: View {
 struct IconChoiceGrid: View {
     let selected: String?
     let resetTitle: String
-    /// Nil is the way back to the default.
     let pick: (String?) -> Void
     @State private var query = ""
 

@@ -1,7 +1,6 @@
 import RuimtePulsar
 import SwiftUI
 
-/// What View settings writes into a view.
 enum ViewSettings {
     /// An address as a person types it, with `https://` when it names no scheme; nil for anything that is no web
     /// address.
@@ -33,7 +32,6 @@ enum ViewSettings {
     }
 }
 
-/// A view's name and mark, and what a browser shows, as the desktop's view settings hold them.
 struct ViewSettingsSheet: View {
     let workspace: MobileWorkspace
     let item: ProjectItem

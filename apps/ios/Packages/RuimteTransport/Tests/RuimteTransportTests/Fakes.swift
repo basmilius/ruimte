@@ -48,7 +48,6 @@ import RuimtePulsar
     }
 }
 
-/// Every link a pool opened through `open`, in order.
 @MainActor final class FakeLinks {
     private(set) var all: [FakeLink] = []
     var last: FakeLink { all[all.count - 1] }

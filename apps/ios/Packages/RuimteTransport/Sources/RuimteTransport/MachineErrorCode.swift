@@ -44,7 +44,6 @@ public enum MachineErrorCode: String, Sendable {
 }
 
 extension MachineClientError {
-    /// The code a machine sent, when it is one the app knows.
     public var code: MachineErrorCode? {
         guard case .server(let code, _) = self else { return nil }
         return MachineErrorCode(rawValue: code)
@@ -52,6 +51,5 @@ extension MachineClientError {
 }
 
 extension Error {
-    /// The known code of a machine's refusal; nil for any other failure.
     public var machineCode: MachineErrorCode? { (self as? MachineClientError)?.code }
 }

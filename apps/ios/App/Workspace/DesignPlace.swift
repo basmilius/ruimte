@@ -39,7 +39,6 @@ struct DesignPlace: Equatable {
         chats = [own] + later
     }
 
-    /// Every design of the project: its views and the nodes on its canvases.
     static func all(in views: [JSONValue]) -> [DesignPlace] {
         views.flatMap { view -> [DesignPlace] in
             if view.text("kind") == "canvas" {
@@ -78,7 +77,6 @@ struct DesignPlace: Equatable {
         chats.first { $0.id == picked } ?? chats[chats.count - 1]
     }
 
-    /// The item `ensureSession` starts a chat of the design from.
     static func sessionItem(_ chat: Chat) -> JSONValue {
         .object(["id": .string(chat.id), "kind": .string("chat"), "node": chat.node])
     }
@@ -86,7 +84,6 @@ struct DesignPlace: Equatable {
 
 /// Making a design and reading its pages, after `apps/client/src/design`.
 enum DesignFiles {
-    /// The two places design folders live, relative to the project folder.
     static let folders = [".ruimte/private/designs", ".ruimte/designs"]
     static let pageMaxBytes = 16 * 1024 * 1024
     static let assetMaxBytes = 10 * 1024 * 1024
@@ -109,7 +106,6 @@ enum DesignFiles {
         var found = false
         var problem: String?
 
-        /// The listing after a read of the design folder: the entries it listed, or the error that stopped it.
         func after(_ outcome: Result<[FsEntry], Error>) -> Listing {
             switch outcome {
             case .success(let entries):
@@ -122,7 +118,6 @@ enum DesignFiles {
         }
     }
 
-    /// A page as a person names it: its file without the extension.
     static func pageName(_ file: String) -> String {
         file.replacingOccurrences(of: #"\.html?$"#, with: "", options: [.regularExpression, .caseInsensitive])
     }
@@ -133,7 +128,6 @@ enum DesignFiles {
         changed == folder || changed.hasPrefix(folder + "/") || (!found && folder.hasPrefix(changed + "/"))
     }
 
-    /// A folder name a person reads back in a path: the name in lowercase words joined by dashes.
     static func slug(_ name: String) -> String {
         let plain = name.folding(options: [.diacriticInsensitive, .widthInsensitive], locale: nil).lowercased()
         let slug = plain.replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
@@ -152,7 +146,6 @@ enum DesignFiles {
         return "\(base)-\(number)"
     }
 
-    /// "Design", then "Design 2", over every design of the project.
     static func freeName(_ views: [JSONValue]) -> String {
         let taken = Set(DesignPlace.all(in: views).map(\.name))
         var name = "Design"
@@ -164,7 +157,6 @@ enum DesignFiles {
         return name
     }
 
-    /// A new design view, its chat on `agent`, keeping its pages in `path`.
     static func view(agent: String, name: String, path: String) -> JSONValue {
         .object([
             "id": .string("design-" + UUID().uuidString), "kind": .string("design"), "name": .string(name),
@@ -172,7 +164,6 @@ enum DesignFiles {
         ])
     }
 
-    /// A further chat of a design, named after its CLI and its place among the design's chats.
     static func chat(agent: (kind: String, name: String), count: Int) -> JSONValue {
         .object([
             "id": .string("chat-" + UUID().uuidString), "name": .string("\(agent.name) \(count + 1)"),
@@ -180,7 +171,6 @@ enum DesignFiles {
         ])
     }
 
-    /// The design with `chat` added after its later chats, wherever it stands.
     static func adding(_ chat: JSONValue, to design: DesignPlace, in document: JSONValue) -> JSONValue {
         let views = document.list("views").map { view -> JSONValue in
             if design.canvasID == nil {
@@ -289,17 +279,14 @@ enum DesignFiles {
         return found
     }
 
-    /// A byte of `\w`.
     private static func isWordByte(_ byte: UInt8) -> Bool {
         (byte >= 48 && byte <= 57) || (byte >= 65 && byte <= 90) || (byte >= 97 && byte <= 122) || byte == 95
     }
 
-    /// A byte a file name may hold in a page's text: one of `[\w%./-]`.
     private static func isNameByte(_ byte: UInt8) -> Bool {
         isWordByte(byte) || byte == 37 || byte == 46 || byte == 47 || byte == 45
     }
 
-    /// Whether the bytes at `at` spell `letters` (lowercase) in either case.
     private static func spells(_ bytes: [UInt8], at: Int, _ letters: StaticString) -> Bool {
         let wanted = UnsafeBufferPointer(start: letters.utf8Start, count: letters.utf8CodeUnitCount)
         return wanted.indices.allSatisfy { bytes[at + $0] | 0x20 == wanted[$0] }
@@ -350,7 +337,6 @@ enum DesignFiles {
             self.left = left
         }
 
-        /// Takes `bytes` from the room, or none when they do not fit.
         func take(_ bytes: Int) -> Bool {
             guard bytes <= left else { return false }
             left -= bytes
@@ -449,13 +435,11 @@ enum DesignFiles {
         return atHeadStart(html, framedPagesElement("{\(entries)}", from: from))
     }
 
-    /// The script that shows the files a page's script names while it runs, as it stands in the page.
     private static func runtimeAssetsElement(from: String) -> String {
         let script = DesignScripts.runtimeAssets.replacingOccurrences(of: DesignScripts.fromToken, with: inlineJSON(from))
         return "<script data-ruimte-assets>\(script)</script>"
     }
 
-    /// The page with what shows the files its script names while it runs, first in its head.
     private static func withRuntimeAssets(_ html: String, from: String) -> String {
         atHeadStart(html, runtimeAssetsElement(from: from))
     }
@@ -470,7 +454,6 @@ enum DesignFiles {
         runtimeAssetsElement(from: from).utf8.count
     }
 
-    /// What one page adds to the script that frames pages when it names `url` as `path`.
     private static func framedEntryWeight(_ path: String, _ url: String) -> Int {
         inlineJSON(path).utf8.count + inlineJSON(url).utf8.count + 2
     }

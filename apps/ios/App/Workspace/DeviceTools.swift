@@ -138,7 +138,6 @@ final class DeviceToolsModel {
         }
     }
 
-    /// Sends the text on this phone's clipboard to the device's.
     func sendClipboard() async {
         guard let text = UIPasteboard.general.string else { return }
         await clipboard(["text": .string(text)])
@@ -203,7 +202,6 @@ extension DeviceSettings {
         }
     }
 
-    /// A switch by the name the tools sheet and the wire give it.
     func toggle(_ key: String) -> Bool? {
         switch key {
         case "reduceMotion": reduceMotion

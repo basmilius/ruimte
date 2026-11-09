@@ -5,7 +5,6 @@ import RuimteShared
 import RuimteTransport
 import SwiftUI
 
-/// How a machine is reached, as the heading over its projects says it.
 enum MachineLinkState: Equatable {
     case connected(relayed: Bool)
     /// Not answered yet, and no try to reach it failed.
@@ -28,7 +27,6 @@ enum MachineLinkState: Equatable {
 struct ProjectActivity: Equatable {
     /// The views that stand in the list, dividers left out.
     var views = 0
-    /// Of those, the chats, which is what the Chats project counts.
     var chats = 0
     /// Nodes waiting on a person that nobody snoozed.
     var needsYou = 0
@@ -47,7 +45,6 @@ struct ProjectActivity: Equatable {
     }
 }
 
-/// The branch a project's folder is on and what changed in it, from `git.status`.
 struct ProjectGitLine: Equatable {
     /// Nil on a detached head.
     let branch: String?
@@ -57,13 +54,11 @@ struct ProjectGitLine: Equatable {
 
     var branchName: String { branch ?? String(localized: "Detached", comment: "Git, a checkout that is on no branch") }
 
-    /// The lines added and removed, as in "+126 −4"; nil while no line changed.
     var diff: String? {
         guard added + deleted > 0 else { return nil }
         return "+\(Format.number(Double(added))) \u{2212}\(Format.number(Double(deleted)))"
     }
 
-    /// Nil while nothing changed.
     var changedText: String? {
         changed == 0 ? nil : String(localized: "\(changed) changed", comment: "Files changed in a git checkout")
     }
@@ -118,7 +113,6 @@ struct ProjectMachineGroup: Identifiable {
     var id: String { machine.id }
 }
 
-/// The open projects of every machine grouped under their machine, as the iPhone's Projects tab lists them.
 enum ProjectOverview {
     static func activity(views: [ProjectSidebarView], attention: NowAttention, snoozed: Set<String>) -> ProjectActivity {
         var activity = ProjectActivity()

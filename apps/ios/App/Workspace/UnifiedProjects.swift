@@ -4,17 +4,14 @@ import RuimtePulsar
 import RuimteTransport
 
 extension ProjectSummary {
-    /// The machine's Chats project, which holds the chats outside any project.
     var isChats: Bool { scratch == true }
 
-    /// A project row for a project that has not been listed yet, which reads as its initial.
     static func placeholder(projectID: String, name: String = "", color: String = "") -> ProjectSummary {
         ProjectSummary(
             projectId: projectID, name: name, color: color, folder: "", lastOpenedAt: 0, available: true,
             icon: .initial(ProjectInitialIcon(value: "")), nameSource: .folder)
     }
 
-    /// The row as it reads once a page knows the project's own name and color.
     func naming(_ name: String, color: String) -> ProjectSummary {
         ProjectSummary(
             projectId: projectId, name: name, color: color, folder: folder, lastOpenedAt: lastOpenedAt,
@@ -23,7 +20,6 @@ extension ProjectSummary {
 }
 
 extension ProjectIcon {
-    /// The word the wire uses for this kind of mark.
     var kind: String {
         switch self {
         case .lucide(let icon): icon.kind
@@ -32,7 +28,6 @@ extension ProjectIcon {
         }
     }
 
-    /// The symbol, the letter, or the image's own name, whichever mark this is.
     var value: String {
         switch self {
         case .lucide(let icon): icon.value
@@ -58,7 +53,6 @@ struct UnifiedProjectRow: Identifiable {
             || machine.name.localizedCaseInsensitiveContains(search)
     }
 
-    /// The project on its machine's shared session, ready to open.
     @MainActor func workspace(_ runtime: AppRuntime) -> MobileWorkspace {
         MobileWorkspace(session: runtime.session(for: machine), projectID: id.projectID, summary: summary)
     }

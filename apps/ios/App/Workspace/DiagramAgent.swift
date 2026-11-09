@@ -4,7 +4,6 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
-/// The diagram a chat is asked about, and where in its project a new chat for it goes.
 struct DiagramAgentTarget {
     let workspace: MobileWorkspace
     /// The diagram's view, or its node on a canvas.
@@ -12,7 +11,6 @@ struct DiagramAgentTarget {
     let title: String
 }
 
-/// Who draws: a new chat with one of the machine's agents, or a chat the project already has.
 enum DiagramAgentChoice: Hashable {
     case new(provider: String)
     case chat(id: String)
@@ -31,12 +29,10 @@ enum DiagramAgentPrompt {
             + "Read what it holds now in .ruimte/diagrams/\(diagramID).json first. " + request
     }
 
-    /// Chats of the project an agent could take the question in: chat views first, then chat nodes on its canvases.
     static func chats(in views: [ProjectItem]) -> [ProjectItem] {
         views.filter { $0.kind == "chat" } + views.flatMap(\.nodes).filter { $0.kind == "chat" }
     }
 
-    /// Where a new chat view goes: right after the diagram's own view, or after the canvas that holds its node.
     static func insertion(after item: ProjectItem, in views: [ProjectItem]) -> Int {
         let index = views.firstIndex { view in
             view.id == item.id || view.nodes.contains { $0.id == item.id }
@@ -137,7 +133,6 @@ final class DiagramAgentModel {
     }
 }
 
-/// Picks who draws: a new chat per installed agent, or a chat of the project.
 struct DiagramAgentPicker: View {
     @Bindable var model: DiagramAgentModel
 
@@ -181,7 +176,6 @@ struct DiagramAgentPicker: View {
     }
 }
 
-/// "Change with an agent": what should change, and who does it.
 struct DiagramAgentSheet: View {
     @Bindable var model: DiagramAgentModel
     let sent: (String) -> Void

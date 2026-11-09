@@ -108,7 +108,6 @@ public struct LanDoorPeer {
     }
 }
 
-/// One attempt's socket at one address of a machine's door.
 @MainActor final class LanDoorSignaling: SignalingPath {
     private var peer: LanDoorPeer
     private let socket: any SignalSocket

@@ -8,7 +8,6 @@ func parityFixtures() throws -> [JSONValue] {
     return try #require(JSONValue.decode(Data(contentsOf: url)).arrayValue)
 }
 
-/// The block of the parity fixture called `name`.
 func parityBlock(_ name: String) throws -> JSONValue {
     try #require(parityFixtures().first { $0["name"] == .string(name) }?["request"]?["block"])
 }

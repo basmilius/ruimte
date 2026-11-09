@@ -14,9 +14,7 @@ const REVOKE_URL = 'https://appleid.apple.com/auth/revoke';
 const CLIENT_SECRET_LIFETIME_S = 60 * 60;
 // Apple rotates its signing keys rarely; a key id this isolate has not seen fetches the set again, at most once a minute.
 const KEYS_LIFETIME_MS = 60 * 60_000;
-// The least time between two fetches for a key id the set does not hold.
 const UNKNOWN_KID_REFETCH_MS = 60_000;
-// Room for a clock between Apple and the Worker that is a little off.
 const CLOCK_SKEW_S = 60;
 
 let signingKey: { secret: string; key: Promise<CryptoKey> } | null = null;

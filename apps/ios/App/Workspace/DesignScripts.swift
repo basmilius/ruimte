@@ -7,7 +7,6 @@ enum DesignScripts {
     static let pagesToken = "%PAGES%"
     static let fromToken = "%FROM%"
 
-    /// Sets a frame to a page of the folder as that page standing on its own.
     static let framedPages = #"""
 (function () {
     var pages = %PAGES%, from = %FROM%;
@@ -42,7 +41,6 @@ enum DesignScripts {
 })();
 """#
 
-    /// Shows the files a page's script names while it runs.
     static let runtimeAssets = #"""
 (function () {
     var host = window.ruimteHost;

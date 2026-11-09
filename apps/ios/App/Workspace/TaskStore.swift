@@ -57,7 +57,6 @@ final class TaskStore {
         tasks.values.filter { $0.childId == childID }.max { $0.createdAt < $1.createdAt }
     }
 
-    /// The nodes that gave another agent a task that has not settled yet.
     var parentsWithOpenTasks: Set<String> {
         Set(tasks.values.filter { $0.status == .open }.map(\.parentId))
     }

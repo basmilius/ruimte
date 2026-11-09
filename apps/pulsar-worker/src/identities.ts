@@ -21,7 +21,6 @@ const LINK_REQUEST_LIFETIME_MS = 5 * 60_000;
 // The app trades the code the moment the redirect lands, as with a login code.
 const LINK_CODE_LIFETIME_MS = 60_000;
 
-// What a person calls the identity in a sentence: a GitHub account, an Apple ID.
 function identityNoun(provider: ProviderId): string {
     return provider === 'apple' ? 'Apple ID' : `${PROVIDER_NAMES[provider]} account`;
 }

@@ -73,7 +73,6 @@ private actor FakeSessionAPI: SessionAPI {
     }
 }
 
-/// A store and a device key of its own over `api`.
 private struct VaultHarness {
     var api = FakeSessionAPI()
     let store = MemorySessionStore()

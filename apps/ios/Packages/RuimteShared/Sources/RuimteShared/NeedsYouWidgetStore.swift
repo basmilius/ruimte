@@ -1,6 +1,5 @@
 import Foundation
 
-/// A node waiting on a person, as the needs-you widgets list it.
 public struct NeedsYouWidgetItem: Codable, Sendable, Equatable, Identifiable {
     public let machineID: String
     public let projectID: String
@@ -27,7 +26,6 @@ public struct NeedsYouWidgetItem: Codable, Sendable, Equatable, Identifiable {
         self.detail = detail
     }
 
-    /// The address the app opens the node at.
     public var url: URL? { WidgetDefaults.nodeURL(machineID: machineID, nodeID: nodeID, target: target) }
 }
 
@@ -48,11 +46,9 @@ public struct NeedsYouWidgetSnapshot: Codable, Sendable, Equatable {
     /// Whether two snapshots say the same, whenever each was taken.
     public func says(_ other: NeedsYouWidgetSnapshot) -> Bool { items == other.items && working == other.working }
 
-    /// Where a tap on the count lands: Now.
     public static let nowURL = URL(string: "ruimte://now")!
 }
 
-/// The needs-you widgets' side of the app group.
 public enum NeedsYouWidgetStore {
     public static let countKind = "app.ruimte.needs-you.count"
     public static let listKind = "app.ruimte.needs-you.list"

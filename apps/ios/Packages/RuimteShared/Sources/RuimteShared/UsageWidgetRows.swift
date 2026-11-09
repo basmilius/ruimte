@@ -1,6 +1,5 @@
 import Foundation
 
-/// One bar or ring of a usage widget.
 public struct UsageWidgetRow: Sendable, Equatable, Identifiable {
     public let id: String
     public let provider: String

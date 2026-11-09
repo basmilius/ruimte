@@ -15,7 +15,6 @@ enum WidgetDefaults {
         defaults?.set(data, forKey: key)
     }
 
-    /// The address the app opens a node or a view at.
     static func nodeURL(machineID: String, nodeID: String, target: String) -> URL? {
         var url = URLComponents()
         url.scheme = "ruimte"

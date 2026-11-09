@@ -869,7 +869,6 @@ private final class CanvasSurface: UIView {
             }
         }
     }
-    /// A group is a frame with its title in a chip on the band at its top.
     private func drawGroup(_ group: StoredNode, viewport: CGRect) {
         let frame = nodeRect(group)
         guard frame.intersects(viewport) else { return }

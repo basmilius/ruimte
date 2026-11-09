@@ -49,7 +49,6 @@ final class MobileWorkspace {
     @ObservationIgnored private var cameraTask: Task<Void, Never>?
     @ObservationIgnored private var pendingCameras: [String: JSONValue] = [:]
     var views: [JSONValue] { document.list("views") }
-    /// A view by id, read through the generated types.
     func storedView(_ id: String) -> StoredView? { storedViews.first { $0.id == id } }
     /// A view by id; an empty object when it is gone, so a page that outlives its view reads nothing.
     func view(_ id: String) -> JSONValue { views.first { $0.stableID == id } ?? .object([:]) }
@@ -60,7 +59,6 @@ final class MobileWorkspace {
     /// The machine's Chats project, which holds the chats outside any project; its folder is the machine's own.
     var isScratch: Bool { summary?.isChats == true }
     var client: any MachineRequesting { session.rpc }
-    /// What a person calls each view and node, by id, for a list that names sessions by their node.
     var nodeTitles: [String: String] {
         var titles: [String: String] = [:]
         for view in storedViews {
@@ -296,10 +294,8 @@ final class MobileWorkspace {
         await edit { $0.setting("views", .array(self.views.map { $0.stableID == id ? change($0) : $0 })) }
     }
 
-    /// The views in the project's order, as the lists read them.
     var items: [ProjectItem] { storedViews.map(ProjectItem.init) }
 
-    /// A view, or a node on any canvas, by id.
     func item(_ id: String) -> ProjectItem? {
         let items = items
         return items.first { $0.id == id } ?? items.lazy.flatMap(\.nodes).first { $0.id == id }
@@ -310,7 +306,6 @@ final class MobileWorkspace {
         views.first { $0.stableID == id } ?? views.lazy.flatMap { $0.list("nodes") }.first { $0.stableID == id }
     }
 
-    /// Whether a router can show the item: a view or node the project holds, and not a divider of its list.
     func canOpen(_ id: String) -> Bool {
         item(id).map { !$0.isDivider } ?? false
     }

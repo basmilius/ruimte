@@ -35,7 +35,6 @@ public enum UiGeneratedImage: Equatable, Sendable {
             transparent: tool.input["transparentBackground"]?.boolValue == true)
     }
 
-    /// The text without its outer whitespace, nil when nothing is left.
     private static func trimmed(_ text: String?) -> String? {
         guard let text = text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return nil }
         return text

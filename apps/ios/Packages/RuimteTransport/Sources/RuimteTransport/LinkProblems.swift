@@ -4,7 +4,6 @@ import Synchronization
 public enum LinkProblem: Equatable, Sendable {
     /// A link that was open closed without this phone letting it go.
     case dropped
-    /// A read got no answer in time.
     case timeout(request: String)
     /// The machine runs another wire version than this app.
     case refused(mismatch: ProtocolMismatch)

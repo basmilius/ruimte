@@ -13,15 +13,12 @@ struct ProjectKind: Sendable {
     /// The mark of a reference chip to a view of this kind, where the desktop's `REFERENCE_ICONS` differs from the
     /// mark of its list row.
     let referenceIcon: String?
-    /// A row that divides the list rather than stands in it.
     let isDivider: Bool
     /// Its page has nothing to show until the project opened, and for a terminal until its session exists.
     let waitsForSession: Bool
     /// A node of this kind is something that runs, which a canvas lists under it and opens as a view of its own.
     let runs: Bool
-    /// A node of this kind has the edits a phone makes to a canvas.
     let editsOnCanvas: Bool
-    /// A `#` may point at it.
     let isReferable: Bool
 
     init(
@@ -40,7 +37,6 @@ struct ProjectKind: Sendable {
         self.isReferable = isReferable
     }
 
-    /// What a person reads for the kind where a view or node has no name of its own.
     var label: String { String(localized: name) }
 }
 
@@ -66,15 +62,12 @@ enum ProjectKinds {
         ProjectKind("routine", icon: "calendar-clock", name: "Routine"),
     ]
 
-    /// The kinds New view offers on the start screen's grid.
     static let newView = ["terminal", "canvas", "browser", "file", "drawing", "diagram"]
-    /// The kinds Add view offers in a project, and Add node on a canvas.
     static let addView = ["chat", "terminal", "canvas", "browser", "file", "drawing", "diagram", "separator", "subheader"]
     static let addNode = ["chat", "terminal", "browser", "file", "note", "group"]
 
     private static let byKind = Dictionary(uniqueKeysWithValues: all.map { ($0.kind, $0) })
 
-    /// The row of a kind, or nil for one this version does not know.
     static func row(_ kind: String) -> ProjectKind? { byKind[kind] }
 
     /// The label of a kind; a newer machine's kind reads as its own name.

@@ -7,9 +7,7 @@ enum NewViewResult: Equatable {
     case view(String)
     /// A view that asks for what it shows, its address, before it opens.
     case ask(JSONValue)
-    /// A heading, which asks for its words.
     case heading(JSONValue)
-    /// A file view starts from the file, picked in the project's files.
     case file
 }
 
@@ -25,7 +23,6 @@ enum NewViewFactory {
         }
     }
 
-    /// "Canvas", then "Canvas 2", until a name is free.
     static func freeName(_ views: [JSONValue], base: String) -> String {
         let taken = Set(views.compactMap { $0["name"]?.stringValue })
         guard taken.contains(base) else { return base }
@@ -58,7 +55,6 @@ enum NewViewFactory {
         return .object(item)
     }
 
-    /// What the page does with a view once it is made.
     static func result(for item: JSONValue) -> NewViewResult? {
         switch item.text("kind") {
         case "separator": nil

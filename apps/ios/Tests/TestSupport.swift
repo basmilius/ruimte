@@ -25,7 +25,6 @@ extension UIWindow {
         return window
     }
 
-    /// Takes the window down and lets go of what it showed.
     func close() {
         isHidden = true
         rootViewController = nil
@@ -41,7 +40,6 @@ extension UIWindow {
 }
 
 extension UIView {
-    /// The first view of `type` in this view's tree, itself included.
     func descendant<T: UIView>(of type: T.Type) -> T? {
         if let match = self as? T { return match }
         return subviews.lazy.compactMap { $0.descendant(of: type) }.first
@@ -108,7 +106,6 @@ extension XCTestCase {
         self.answers = answers
     }
 
-    /// The types of the requests sent so far, in order.
     var requests: [WireRequest] { sent.map(\.type) }
 
     func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {

@@ -26,7 +26,6 @@ import Testing
         return frame
     }
 
-    /// Starts `read` on a connected client and waits until it sent its request.
     private func started<Value: Sendable>(_ read: @escaping @MainActor (MachineClient) async throws -> Value)
         async throws -> (client: MachineClient, task: Task<Value, any Error>, id: String, binary: Bool?)
     {

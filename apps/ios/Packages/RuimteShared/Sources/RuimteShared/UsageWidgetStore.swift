@@ -103,7 +103,6 @@ public struct UsageWidgetSnapshot: Codable, Sendable, Equatable {
 public enum UsageWidgetStore {
     public static let kind = "app.ruimte.usage"
 
-    /// The widget kind of one provider's widget, or of the widget over every provider for nil.
     public static func kind(provider: String?) -> String { provider.map { "\(kind).\($0)" } ?? kind }
     private static let machinesKey = "usage-widget.machines"
     private static let snapshotsKey = "usage-widget.snapshots"

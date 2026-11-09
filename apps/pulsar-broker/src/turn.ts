@@ -66,7 +66,6 @@ export function sharedSecretTurn(options: SharedSecretTurnOptions): TurnProvider
 
 export interface CloudflareTurnOptions {
     keyId: string;
-    /* A file holding the key's API token. */
     tokenFile: string;
     ttlSeconds: number;
     fetch?: typeof fetch;

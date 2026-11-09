@@ -46,7 +46,6 @@ public struct LiveWatch: Sendable {
     }
 }
 
-/// An event a live resource listens to, and what it does with it.
 public struct LiveEvent {
     fileprivate let install: @MainActor (LiveResource) -> [() -> Void]
 
@@ -65,7 +64,6 @@ public struct LiveEvent {
         }
     }
 
-    /// Hands the validated payload over as it is.
     public static func apply(_ event: WireEvent, raw handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
         -> LiveEvent
     {
@@ -87,7 +85,6 @@ public struct LiveEvent {
         }
     }
 
-    /// Hands over the raw payload of an event that failed validation.
     public static func rejected(_ event: WireEvent, _ handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
         -> LiveEvent
     {
@@ -171,7 +168,6 @@ public struct LiveEvent {
         if let lease { Task { await lease.release() } }
     }
 
-    /// Ends the resource and waits for the machine to be told the watch is let go.
     public func stopAndRelease() async {
         await end()?.release()
     }

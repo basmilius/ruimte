@@ -250,7 +250,6 @@ import XCTest
         script + String(repeating: "x ", count: (bytes - script.utf8.count) / 2)
     }
 
-    /// What the script that shows the files of a page weighs, taken from the page it is added to.
     private func runtimeWeight() async throws -> Int {
         let page = try await Folder(pages: ["index.html": Self.script]).page("index.html")
         return page.utf8.count - Self.script.utf8.count

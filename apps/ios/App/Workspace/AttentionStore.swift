@@ -16,7 +16,6 @@ struct SessionReading: Equatable {
 
     var status: AgentStatus? {
         let recorded = AgentStatus(rawValue: agent?.status ?? "") ?? .idle
-        // A live agent knows better than the shell what is going on.
         if agent?.live == true {
             return recorded
         }
@@ -37,7 +36,6 @@ extension AgentStatus {
     static func of(_ status: String) -> AgentStatus { AgentStatus(rawValue: status) ?? .idle }
 }
 
-/// The CLI a chat runs and the model it runs on, as its info last said.
 struct ChatAgentIdentity: Equatable {
     let provider: String
     let model: String
@@ -49,8 +47,6 @@ struct ChatWait: Equatable {
     let requests: [ChatInfoRequestsItem]
 }
 
-/// What a chat has going beside its turn, as its info last said: the messages queued for its next turn and the
-/// commands its CLI runs in the background.
 struct ChatActivity: Hashable {
     struct Background: Hashable {
         let description: String
@@ -76,13 +72,10 @@ extension ChatActivity {
 final class AttentionStore {
     private(set) var statuses: [String: AgentStatus] = [:]
     private(set) var unseen = Set<String>()
-    /// What each chat waits on a person for, from `ChatInfo.requests`, by chat id; absent while nothing waits.
     private(set) var waits: [String: ChatWait] = [:]
     /// Chats between turns whose CLI still runs sub-agents or a workflow in the background (`ChatInfo.delegating`).
     private(set) var delegating = Set<String>()
-    /// What each chat runs, by chat id, so a task's row can name the agent working on it.
     private(set) var agents: [String: ChatAgentIdentity] = [:]
-    /// What each chat has going beside its turn, by chat id; absent while it has nothing.
     private(set) var activity: [String: ChatActivity] = [:]
     /// When a session last stopped running, in epoch milliseconds: the moment this client saw it stop, or when the
     /// machine says its turn ended while nobody looked.

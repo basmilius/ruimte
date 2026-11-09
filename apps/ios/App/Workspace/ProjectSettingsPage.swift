@@ -34,7 +34,6 @@ enum ProjectSettingsLogic {
 
     static func sameColor(_ lhs: String, _ rhs: String) -> Bool { lhs.lowercased() == rhs.lowercased() }
 
-    /// The name to send, or nil when there is nothing to rename: empty, or what it already is.
     static func rename(_ typed: String, current: String) -> String? {
         let name = typed.trimmingCharacters(in: .whitespacesAndNewlines)
         return name.isEmpty || name == current ? nil : name

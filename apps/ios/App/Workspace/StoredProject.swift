@@ -46,7 +46,6 @@ extension StoredView: Identifiable {
         }
     }
 
-    /// The word the wire uses for this kind of view.
     var kind: String {
         switch self {
         case .canvas: "canvas"
@@ -84,7 +83,6 @@ extension StoredView: Identifiable {
         }
     }
 
-    /// The rows that divide the list rather than stand in it.
     var isDivider: Bool {
         switch self {
         case .separator, .subheader: true
@@ -97,18 +95,15 @@ extension StoredView: Identifiable {
         return nil
     }
 
-    /// The device a device view shows.
     var deviceReference: StoredDeviceViewDevice? {
         if case .device(let view) = self { return view.device }
         return nil
     }
 
-    /// The nodes of a canvas; every other view has none.
     var nodes: [StoredNode] { canvas?.nodes ?? [] }
 }
 
 extension JSONValue {
-    /// One view of a project document, or nil for a shape the generated types do not read.
     var storedView: StoredView? { try? decoded(as: StoredView.self) }
 }
 
@@ -126,18 +121,13 @@ struct ProjectItem: Identifiable, Hashable {
     }
 
     let id: String
-    /// The word the wire uses for its kind.
     let kind: String
     let isView: Bool
-    /// What a person called it: a view's name, a node's title.
     let name: String
-    /// The symbol a person picked for a view.
     let icon: String?
-    /// The CLI of a chat or terminal.
     let provider: String?
     let url: String?
     let path: String?
-    /// The text of a note.
     let body: String?
     /// The drawing or diagram a node stands for, when it is not the node itself.
     let viewId: String?
@@ -146,7 +136,6 @@ struct ProjectItem: Identifiable, Hashable {
     let hidden: Bool
     let drawnBy: String?
     let empty: Bool
-    /// The nodes of a canvas.
     let nodes: [ProjectItem]
 
     init(_ view: StoredView) {
@@ -294,11 +283,9 @@ struct ProjectItem: Identifiable, Hashable {
 
     var isDivider: Bool { ProjectKinds.isDivider(kind) }
 
-    /// What the row is called, or its kind when nothing was.
     var title: String { name.isEmpty ? ProjectKinds.label(kind) : name }
 }
 
 extension JSONValue {
-    /// A view of the document as the lists read it, or nil for a shape the generated types do not read.
     var projectItem: ProjectItem? { storedView.map(ProjectItem.init) }
 }

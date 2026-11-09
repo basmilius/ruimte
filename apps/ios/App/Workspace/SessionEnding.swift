@@ -7,7 +7,6 @@ import RuimteTransport
 /// with `session.kill`, so its shell and whatever runs in it end. The agents they opened go with them. A turn only stops
 /// with `chat.cancel`, and the chat stays.
 enum SessionEnding {
-    /// The nodes that go with a view or a node: the item itself, or the nodes of that kind on a canvas.
     static func sessions(in item: ProjectItem, kind: String) -> [String] {
         if item.kind == kind { return [item.id] }
         return item.nodes.filter { $0.kind == kind }.map(\.id)
@@ -37,7 +36,6 @@ enum SessionEnding {
         var warning: String?
     }
 
-    /// The question before a delete that takes sessions along, with the agents they opened counted.
     @MainActor static func question(for item: ProjectItem, client: any MachineRequesting) async -> Question {
         let chats = chats(in: item)
         let terminals = terminals(in: item)

@@ -33,7 +33,6 @@ final class PlanStore {
         unseen.removeAll()
     }
 
-    /// Newest first.
     func plans(for chatID: String) -> [PlanDocument] { PlanDocument.newestFirst(plans[chatID] ?? []) }
 
     func markSeen(_ chatID: String) { unseen.remove(chatID) }

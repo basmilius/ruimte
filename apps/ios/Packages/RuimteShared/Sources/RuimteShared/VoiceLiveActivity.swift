@@ -43,7 +43,6 @@ public struct VoiceLiveAttributes: Codable, Hashable, Sendable {
         self.machine = machine
     }
 
-    /// Opens the Voice sheet of the app.
     public static let url = URL(string: "ruimte://voice")!
 }
 

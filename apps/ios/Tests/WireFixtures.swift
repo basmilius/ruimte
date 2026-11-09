@@ -82,11 +82,9 @@ enum GitWire {
             "upstream": .null, "ahead": .number(0), "behind": .number(0), "base": .null, "mergeBase": .null,
             "files": .array([]), "truncated": .bool(false), "live": .bool(true),
         ]
-        // A fixture that does not decode is a broken test, not a case to cover.
         return try! JSONValue.object(defaults.merging(fields) { _, given in given }).decoded(as: GitStatus.self)
     }
 
-    /// One repository of a folder as `git.repos` lists it.
     static func repo(path: String, label: String, name: String? = nil, kind: GitRepoKind = .nested) -> JSONValue {
         var fields: [String: JSONValue] = [
             "path": .string(path), "label": .string(label), "kind": .string(kind.rawValue),
@@ -95,12 +93,10 @@ enum GitWire {
         return .object(fields)
     }
 
-    /// What `git.repos` answers.
     static func repos(_ repos: [JSONValue], truncated: Bool = false) -> JSONValue {
         .object(["repos": .array(repos), "truncated": .bool(truncated)])
     }
 
-    /// The status as the machine writes it, for a fake machine to answer with.
     static func json(_ status: GitStatus?) -> JSONValue {
         guard let status, let data = try? JSONEncoder().encode(status) else { return .object([:]) }
         return (try? JSONValue.decode(data)) ?? .object([:])
@@ -125,7 +121,6 @@ enum EndpointWire {
         return .object(defaults.merging(fields) { _, given in given })
     }
 
-    /// A fixture that does not decode is a broken test, not a case to cover.
     static func decoded(_ info: JSONValue) -> EndpointInfo { try! info.decoded(as: EndpointInfo.self) }
 }
 
@@ -183,7 +178,6 @@ enum ProcessWire {
         ])
     }
 
-    /// What `processes.subscribe` answers.
     static func subscribed(supported: Bool = true, sample: JSONValue = .null) -> JSONValue {
         .object([
             "supported": .bool(supported), "fineIntervalMs": .number(2000), "coarseIntervalMs": .number(300_000),
@@ -193,7 +187,6 @@ enum ProcessWire {
 }
 
 extension JSONValue {
-    // A fixture that does not decode is a broken test, not a case to cover.
     var processGroup: ProcessGroup { try! decoded(as: ProcessGroup.self) }
     var processSample: ProcessSample { try! decoded(as: ProcessSample.self) }
     var processAlert: ProcessAlert { try! decoded(as: ProcessAlert.self) }
@@ -253,7 +246,6 @@ enum LaunchWire {
 }
 
 extension JSONValue {
-    // A fixture that does not decode is a broken test, not a case to cover.
     var launchEntry: LaunchEntry { try! LaunchEntry(raw: self) }
     var launchStatus: LaunchStatus { try! decoded(as: LaunchStatus.self) }
     var launchBook: LaunchBook { try! decoded(as: LaunchBook.self) }
@@ -304,7 +296,6 @@ enum WorktreeWire {
 }
 
 extension JSONValue {
-    // A fixture that does not decode is a broken test, not a case to cover.
     var worktree: GitWorktree { try! decoded(as: Worktree.self) }
     var worktreeRemoved: WorktreeRemoveResult { try! decoded(as: WorktreeRemoveResult.self) }
 }
@@ -366,7 +357,6 @@ enum RoutineWire {
 }
 
 extension JSONValue {
-    // A fixture that does not decode is a broken test, not a case to cover.
     var routineEntry: RoutineEntry { try! decoded(as: RoutineEntry.self) }
     var routineSchedule: RoutineSchedule { try! decoded(as: RoutineSchedule.self) }
 }
@@ -414,7 +404,6 @@ enum OutputWire {
 }
 
 extension JSONValue {
-    // A fixture that does not decode is a broken test, not a case to cover.
     var outputVersion: OutputVersion { try! decoded(as: ArtifactVersion.self) }
     var outputItem: OutputItem { try! decoded(as: ArtifactSummary.self) }
     var outputProvenance: OutputProvenance { try! decoded(as: ArtifactProvenance.self) }
@@ -433,7 +422,6 @@ enum TaskWire {
             "settledAt": settled.map(JSONValue.number) ?? .null, "wake": .string("none"),
         ]
         if let paused { fields["paused"] = paused }
-        // A fixture that does not decode is a broken test, not a case to cover.
         return try! JSONValue.object(fields).decoded(as: AgentTask.self)
     }
 }
@@ -441,7 +429,6 @@ enum TaskWire {
 extension JSONValue {
     /// A device as `device.list` writes it. A fixture that does not decode is a broken test, not a case to cover.
     var deviceInfo: DeviceInfo { try! decoded(as: DeviceInfo.self) }
-    /// The device a device view names.
     var deviceReference: StoredDeviceViewDevice { try! decoded(as: StoredDeviceViewDevice.self) }
 }
 
@@ -466,7 +453,6 @@ enum AccountsWire {
 }
 
 extension JSONValue {
-    /// A fixture that does not decode is a broken test, not a case to cover.
     var accountsSnapshot: AccountsSnapshot { try! decoded(as: AccountsSnapshot.self) }
     var accountStatus: AccountStatus { try! decoded(as: AccountStatus.self) }
     var usageLimits: UsageLimits { try! decoded(as: UsageLimits.self) }
@@ -575,7 +561,6 @@ enum ProviderWire {
 }
 
 extension JSONValue {
-    /// A fixture that does not decode is a broken test, not a case to cover.
     var providerInfo: ProviderInfo { try! decoded(as: ProviderInfo.self) }
     var providerModel: ProviderModel { try! decoded(as: ProviderModel.self) }
 }
@@ -618,7 +603,6 @@ enum ProjectRowWire {
 }
 
 extension JSONValue {
-    /// A fixture that does not decode is a broken test, not a case to cover.
     var projectSummary: ProjectSummary { try! decoded(as: ProjectSummary.self) }
     var sidebarEntry: ProjectSidebarEntry { try! decoded(as: ProjectSidebarEntry.self) }
 }
@@ -627,7 +611,6 @@ extension ProjectWire {
     /// A view as the lists read it. A fixture that does not decode is a broken test, not a case to cover.
     static func item(_ fields: JSONValue) -> ProjectItem { ProjectItem(try! view(fields).decoded(as: StoredView.self)) }
 
-    /// A node on a canvas as the lists read it.
     static func nodeItem(_ fields: JSONValue) -> ProjectItem {
         ProjectItem(try! node(fields).decoded(as: StoredNode.self))
     }

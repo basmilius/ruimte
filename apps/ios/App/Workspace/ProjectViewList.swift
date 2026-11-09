@@ -3,7 +3,6 @@ import Observation
 import RuimtePulsar
 import RuimteTransport
 
-/// What a row of a project's list wears beside its name, the marks the desktop's sidebar rows carry.
 struct ProjectRowMarks: Equatable {
     /// The heaviest status of what the row holds: a canvas speaks for its nodes.
     var status: AgentStatus?
@@ -22,7 +21,6 @@ struct ProjectRowMarks: Equatable {
     var working: Bool { !needsYou && (status == .running || delegating) }
 }
 
-/// Everything the marks of one project's rows are read from.
 struct ProjectMarkSources {
     var statuses: [String: AgentStatus] = [:]
     var unseen: Set<String> = []
@@ -105,7 +103,6 @@ enum ProjectListLogic {
     /// The CLI a chat runs: on a view it sits in its node, on a canvas node on the node itself.
     static func provider(of item: ProjectItem) -> String { item.provider ?? "" }
 
-    /// The chats of the project, views and nodes, which are the rows that can carry a draft.
     static func chatIDs(_ views: [ProjectItem]) -> [String] {
         views.flatMap { [$0] + nodes(of: $0) }.filter { $0.kind == "chat" }.map(\.id)
     }
@@ -126,7 +123,6 @@ final class ProjectListState {
         if expanded.contains(id) { expanded.remove(id) } else { expanded.insert(id) }
     }
 
-    /// Reads which chats hold a draft on this phone; the composer writes one as it is typed.
     func readDrafts(machineID: String, chatIDs: [String]) {
         drafts = Set(
             chatIDs.filter { id in

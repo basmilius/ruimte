@@ -16,7 +16,6 @@ private struct DoorMachine {
     let id = "studio"
     let key = DeviceKey()
 
-    /// A client's peer for this machine, which greets it with a fixed nonce.
     func peer(signer: DeviceKey = DeviceKey()) -> LanDoorPeer {
         LanDoorPeer(machineID: id, machineKey: key.publicKey, signer: signer, nonce: String(repeating: "n", count: 43))
     }

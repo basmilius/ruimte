@@ -7,7 +7,6 @@ struct WorkspacePage: View {
     /// The router the page stands in: on an iPad the list opens views beside it instead of over it.
     let navigator: any ProjectNavigator
     var settingsLink: SettingsLink?
-    /// The branch line under the title on an iPhone.
     var gitLines: ProjectGitLines?
     /// What the iPhone's card for a machine that does not answer opens its diagnostics with.
     var runtime: AppRuntime?
@@ -448,7 +447,6 @@ struct WorkspacePage: View {
         openView(id)
     }
 
-    /// What New view made, once its sheet is gone: open the view, ask a heading for its words, or pick a file.
     private func afterNewView() {
         guard let made = newView else { return }
         newView = nil
@@ -464,7 +462,6 @@ struct WorkspacePage: View {
         }
     }
 
-    /// A kind of view a command from Search asked for, made once the project is there.
     private func makePendingKind() async {
         guard workspace.ready, let kind = navigation.pendingKind else { return }
         navigation.pendingKind = nil
@@ -477,7 +474,6 @@ struct WorkspacePage: View {
         workspace.items.filter { WorkspaceViewSections.isListed($0, selectedID: navigation.selectedViewID) }
     }
 
-    /// Opens the view a project was opened for, once the machine's copy of the project holds it.
     private func openPendingView() async {
         guard workspace.ready, let id = navigation.pendingViewID else { return }
         navigation.pendingViewID = nil
@@ -493,7 +489,6 @@ struct WorkspacePage: View {
         isSidebar ? .constant(false) : binding
     }
 
-    /// A sheet a command asked for before the project was there, or while it already was.
     private func showPendingSheet() {
         guard workspace.ready, let sheet = navigation.pendingSheet else { return }
         navigation.pendingSheet = nil
@@ -558,7 +553,6 @@ struct WorkspacePage: View {
     }
 }
 
-/// A page in a sheet of its own, with the close button the sheets of the project share.
 struct ClosablePage<Page: View>: View {
     @Binding var isPresented: Bool
     @ViewBuilder let page: Page
@@ -581,7 +575,6 @@ private struct PhoneSubtitle: ViewModifier {
     }
 }
 
-/// Where Project settings leads once it is gone: to the launches, or out of a project that was closed.
 private enum AfterProjectSettings {
     case launches, leave
 }
@@ -598,7 +591,6 @@ func newCanvas() -> JSONValue {
     ])
 }
 
-/// A node for a canvas, placed right of the nodes it already has.
 func newCanvasNode(kind: String, title: String, after nodes: [JSONValue], extra: [String: JSONValue] = [:]) -> JSONValue
 {
     let right = nodes.map { $0.number("x") + $0.number("w") }.max() ?? -40
@@ -611,7 +603,6 @@ func newCanvasNode(kind: String, title: String, after nodes: [JSONValue], extra:
     return .object(node)
 }
 
-/// A project on its way open, or why it did not open with a way to try again.
 struct WorkspaceOpeningStatus: View {
     let workspace: MobileWorkspace
     let failure: String
@@ -646,7 +637,6 @@ struct ProjectItemPage: View {
     let item: ProjectItem
     /// Opened outside the project's list, from Now, Search or a notification, so the title names the project.
     var showsProject = false
-    /// The project's name until the project behind a view opened outside its list has opened.
     var projectName: String?
     @State private var ready = false
     @State private var problem: String?
@@ -798,7 +788,6 @@ struct ProjectItemPage: View {
         }
     }
 
-    /// The canvas a node stands on, as the document holds it.
     private var canvasHolding: JSONValue {
         workspace.views.first { $0.list("nodes").contains { $0.stableID == item.id } } ?? .object([:])
     }
@@ -1009,7 +998,6 @@ struct OpenMobileWorkspaceAction: Equatable {
         self.action = action
     }
 
-    /// Opens a project, and with `view` that view of it once the project is there.
     func callAsFunction(_ workspace: MobileWorkspace, view: String? = nil) {
         action(workspace, view)
     }

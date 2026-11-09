@@ -97,7 +97,6 @@ import XCTest
         for handler in Array(connection.values) { handler(false) }
     }
 
-    /// Subscriptions still standing, events and the connection together.
     var listeners: Int { handlers.values.reduce(0) { $0 + $1.count } + connection.count }
 }
 
@@ -107,7 +106,6 @@ import XCTest
     var answer: String?
     var closed = false
     var offers = 0
-    /// What `samples()` reads.
     var reading = VoiceSamples.silent
 
     func offer() async throws -> String {
@@ -132,7 +130,6 @@ import XCTest
     func end(_ content: VoiceLiveContent) { ended.append(content) }
 }
 
-/// Whether the coordinator holds the machine links open, in the order it asked.
 @MainActor final class LinkHolds {
     var holds: [Bool] = []
 }

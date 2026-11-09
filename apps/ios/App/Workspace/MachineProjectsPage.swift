@@ -28,7 +28,6 @@ final class MachineProjectList {
     var listed: [ProjectSummary] { projects.filter { !$0.isChats } }
     var chats: ProjectSummary? { projects.first(where: \.isChats) }
 
-    /// Reads the list on every link and again whenever the machine says it changed.
     func follow() { live.start() }
 
     func unfollow() { live.stop() }
@@ -49,7 +48,6 @@ final class MachineProjectList {
     }
 }
 
-/// A machine's chats and projects, pushed from its page.
 struct MachineProjectsPage: View {
     @Bindable var session: SharedMachineSession
     let list: MachineProjectList
@@ -148,7 +146,6 @@ private struct MachineProjectsHeading: View {
     }
 }
 
-/// Opens a folder on the machine as a project, and the project once it is there.
 struct OpenFolderSheet: View {
     let session: SharedMachineSession
     @State private var projectName = ""

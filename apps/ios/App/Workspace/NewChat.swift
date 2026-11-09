@@ -10,7 +10,6 @@ struct NewChatPlace: Equatable {
     let viewID: String
 }
 
-/// The machine a new chat is being started on, as a sheet presents it.
 struct NewChatTarget: Identifiable, Equatable {
     let machineID: String
     var id: String { machineID }
@@ -22,7 +21,6 @@ struct NewChatTarget: Identifiable, Equatable {
 final class NewChatModel {
     let client: any MachineRequesting
     let machineID: String
-    /// The installed CLIs that open as a chat; nil until the machine answered.
     private(set) var agents: [ProviderInfo]?
     private(set) var accounts: ProviderAccountList?
     private(set) var providers: [ProviderInfo]?
@@ -30,7 +28,6 @@ final class NewChatModel {
     private(set) var accountsProblem: String?
     private(set) var choices: [String: String] = [:]
     @ObservationIgnored private var reads = 0
-    /// The CLI a chat is being made for.
     private(set) var starting: String?
     var problem: String?
     @ObservationIgnored private let preferences: ChatPreferences
@@ -175,7 +172,6 @@ enum NewChat {
         return .object(values)
     }
 
-    /// The refusal a machine gives that a person can do something about, in their own words.
     static func message(for error: Error) -> String {
         if error.machineCode == .scratchUnavailable {
             return String(
@@ -186,11 +182,9 @@ enum NewChat {
         return error.localizedDescription
     }
 
-    /// The Chats project of a machine among its projects, which the lists show apart from the projects.
     static func isChats(_ summary: ProjectSummary) -> Bool { summary.isChats }
 }
 
-/// Picks the agent for a chat outside any project, the way an empty canvas offers its agents, and opens the chat.
 struct NewChatSheet: View {
     let session: SharedMachineSession
     let opened: (NewChatPlace) -> Void
@@ -289,10 +283,8 @@ struct NewChatSheet: View {
     }
 }
 
-/// "New chat" in a list of projects: one button for one machine, a menu of the machines for several.
 struct NewChatRow: View {
     let machines: [Machine]
-    /// A capsule beside Recently closed, as the iPhone's Projects tab draws it, instead of a row of the sidebar.
     var capsule = false
     let start: (Machine) -> Void
 
@@ -343,7 +335,6 @@ private struct NewChatRowStyle: ViewModifier {
     }
 }
 
-/// The label of one of the two equal capsules under the projects.
 struct ProjectsCapsuleLabel: View {
     let title: String
     let icon: String

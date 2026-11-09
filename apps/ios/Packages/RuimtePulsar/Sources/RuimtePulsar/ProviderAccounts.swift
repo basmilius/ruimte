@@ -38,7 +38,6 @@ public struct ProviderAccountEntry: Sendable, Equatable, Identifiable {
     public func name(provider: String) -> String { label ?? (isDefault ? provider : id) }
 }
 
-/// The accounts of every CLI on one machine.
 public struct ProviderAccountList: Sendable, Equatable {
     public let entries: [ProviderAccountEntry]
 
@@ -75,7 +74,6 @@ public struct ProviderAccountList: Sendable, Equatable {
         entries = kinds.flatMap { kind in Self.ordered(parsed.filter { $0.kind == kind }) }
     }
 
-    /// The accounts of one CLI in the machine's order.
     public func accounts(of kind: String) -> [ProviderAccountEntry] {
         Self.ordered(entries.filter { $0.kind == kind })
     }

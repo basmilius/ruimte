@@ -36,7 +36,6 @@ enum BrowserLoopback {
         return isLoopback(host: host)
     }
 
-    /// The sentence to show instead of loading `url`, or nil when the address may load.
     static func refusal(for url: URL) -> String? {
         guard isLoopback(url) else { return nil }
         return String(localized: "This address is on the project's machine, which this browser cannot open yet.")

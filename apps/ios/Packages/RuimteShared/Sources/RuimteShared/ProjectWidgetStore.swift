@@ -20,7 +20,6 @@ public struct ProjectWidgetView: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
-/// An open project with its views, as Now last read it.
 public struct ProjectWidgetProject: Codable, Sendable, Equatable, Identifiable {
     public let machineID: String
     public let projectID: String
@@ -57,7 +56,6 @@ public struct ProjectWidgetSnapshot: Codable, Sendable, Equatable {
     public func says(_ other: ProjectWidgetSnapshot) -> Bool { projects == other.projects }
 }
 
-/// The project widget's side of the app group.
 public enum ProjectWidgetStore {
     public static let kind = "app.ruimte.project"
     private static let snapshotKey = "project-widget.snapshot"

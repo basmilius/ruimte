@@ -12,7 +12,6 @@ enum AgentCatalog {
         return providers
     }
 
-    /// Installed CLIs that open as a chat.
     nonisolated static func installedChats(_ providers: [ProviderInfo]) -> [ProviderInfo] {
         providers.filter { $0.installed && $0.capabilities.chat }
     }

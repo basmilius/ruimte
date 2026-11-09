@@ -1,13 +1,11 @@
 import Foundation
 import RuimtePulsar
 
-/// A decision taken from a notification's actions.
 public enum NotificationDecision: String, Sendable {
     case allow
     case allowAlways = "allow-always"
     case deny
 
-    /// The action a notification category offers for it.
     public var actionIdentifier: String { "ruimte.\(rawValue)" }
 
     public init?(actionIdentifier: String) {

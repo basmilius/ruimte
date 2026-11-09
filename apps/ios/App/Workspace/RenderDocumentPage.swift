@@ -10,7 +10,6 @@ struct RenderDocumentPage: View {
     let kind: String
     /// The diagram's project, for asking an agent to change it; nil where there is no project to start a chat in.
     var agent: DiagramAgentTarget?
-    /// Opens the chat a question went to.
     var openChat: (String) -> Void = { _ in }
     @State private var work = RemotePageState()
     @State private var generation = 0
@@ -297,7 +296,6 @@ class SceneSurface: UIView {
         accessibilityTraits = .image
         drawing.setNeedsDisplay()
     }
-    /// The whole scene as a picture on the page's own surface color, at most 4096 pixels a side.
     func image() -> UIImage {
         let format = UIGraphicsImageRendererFormat()
         format.scale = max(0.05, min(3, 4096 / max(1, max(bounds.width, bounds.height))))
@@ -308,7 +306,6 @@ class SceneSurface: UIView {
             drawScene(renderer.cgContext, from: .zero)
         }
     }
-    /// Draws the scene with `origin` of the surface at the context's top left.
     private func drawScene(_ context: CGContext, from origin: CGPoint) {
         context.translateBy(
             x: 32 - (scene["bounds"]?.number("x") ?? 0) - origin.x,

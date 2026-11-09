@@ -22,7 +22,6 @@ final class PortFixtureTests: XCTestCase {
         try XCTUnwrap(value[key]?.stringValue, key)
     }
 
-    /// A string, or nil where the TypeScript answer is null.
     private func optionalString(_ value: JSONValue, _ key: String) -> String? { value[key]?.stringValue }
 
     func testNodeTitleCutsAPromptAsTheDesktopDoes() throws {

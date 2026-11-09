@@ -239,7 +239,6 @@ final class FilePreviewTests: XCTestCase {
         }
     }
 
-    /// Opens the page for `machine` and waits until `ready` holds or `frames` pass, then keeps a picture of it.
     @MainActor private func open(
         _ machine: FileMachine, name: String, frames: Int = 300, ready: @escaping (UIView) -> Bool
     ) async throws -> Bool {

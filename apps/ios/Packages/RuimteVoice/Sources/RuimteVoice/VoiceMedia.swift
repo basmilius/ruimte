@@ -1,6 +1,5 @@
 import Foundation
 
-/// What the media peer tells the session it carries.
 public enum VoiceMediaEvent: Sendable, Equatable {
     case caption(LiveCaption)
     /// The service said the session started, so the model hears the microphone.
@@ -32,7 +31,6 @@ public enum MicrophonePermission: Sendable, Equatable {
     case granted
 }
 
-/// What happened to the app's audio while a session held it.
 public enum VoiceAudioChange: Sendable, Equatable {
     /// A call, a timer or Siri took the audio. Voice ends, since the machine cannot pause a session.
     case interrupted
@@ -56,7 +54,6 @@ public enum VoiceAudioFailure: Error, Sendable, Equatable {
 @MainActor public protocol VoiceAudio: AnyObject {
     var permission: MicrophonePermission { get }
     var onChange: (@MainActor (VoiceAudioChange) -> Void)? { get set }
-    /// The scene that holds the audio, or nil.
     var owner: String? { get }
     func requestPermission() async -> Bool
     /// Puts the session in voice chat and starts the microphone and the speaker for `owner`.

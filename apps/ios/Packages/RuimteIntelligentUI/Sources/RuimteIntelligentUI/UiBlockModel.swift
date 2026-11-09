@@ -262,7 +262,6 @@ public final class UiBlockModel {
         if allFresh, queriedValues == values { queryInputsDirty = false }
     }
 
-    /// The props of every evaluated node that reads live data, by node id.
     private func liveProps() -> [String: (type: String, props: JSONValue)] {
         let bound = nodeQueries
         var props: [String: (type: String, props: JSONValue)] = [:]

@@ -39,7 +39,6 @@ struct CanvasStatus: Equatable {
 
     var isEmpty: Bool { needsYou.isEmpty && working == 0 }
 
-    /// The node a tap on the count opens: the one after the node opened last, so repeated taps visit them all.
     func next(after id: String?) -> String? {
         guard !needsYou.isEmpty else { return nil }
         guard let id, let index = needsYou.firstIndex(of: id) else { return needsYou.first }
@@ -185,7 +184,6 @@ enum CanvasEditing {
 
     // MARK: Context links
 
-    /// Whether a line may run from one node to another: never to itself and never twice the same way.
     static func canLink(_ edges: [JSONValue], from: String, to: String) -> Bool {
         from != to && !edges.contains { $0.text("from") == from && $0.text("to") == to }
     }

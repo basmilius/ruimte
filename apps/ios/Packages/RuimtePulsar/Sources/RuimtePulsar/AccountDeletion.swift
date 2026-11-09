@@ -7,7 +7,6 @@ public enum AccountDeletionConfirmation {
         account.displayName.present ?? account.login ?? WireConstants.accountDeleteWord
     }
 
-    /// Whether the account has neither a name nor a login, so the fixed word stands in.
     public static func asksForWord(_ account: Account) -> Bool {
         account.displayName.present == nil && account.login == nil
     }

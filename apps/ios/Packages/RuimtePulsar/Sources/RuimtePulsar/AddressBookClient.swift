@@ -20,7 +20,6 @@ public protocol SessionAPI: Sendable {
     func endSession(accessToken: String) async throws
 }
 
-/// The account as the address book holds it now, and deleting it.
 public protocol AccountAPI: Sendable {
     func account(accessToken: String) async throws -> AccountResult
     func deleteAccount(accessToken: String, payload: AccountDeletePayload) async throws

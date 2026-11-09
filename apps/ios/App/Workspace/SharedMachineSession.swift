@@ -200,7 +200,6 @@ final class SharedMachineSession {
         return model.connected && !model.loading && model.info != nil && model.error == nil
     }
 
-    /// Lets go of a chat that ended on the machine, so nothing here attaches to it again.
     func forgetChat(_ id: String) { removeChat(id) }
 
     private func discardIdleChats(except retainedID: String? = nil) {

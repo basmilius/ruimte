@@ -13,7 +13,6 @@ final class MachineIconState {
     /// `endpoint.info`; without it a `#` reaches chats only.
     private(set) var viewReferences = false
     @ObservationIgnored private let client: any MachineRequesting
-    // Counts the events and links that make a read in flight stale.
     @ObservationIgnored private var revision = 0
     @ObservationIgnored private var connected = false
     @ObservationIgnored private lazy var live = LiveResource(
@@ -53,7 +52,6 @@ final class MachineIconState {
         apply(info)
     }
 
-    /// An answer to `endpoint.info`, where an absent switch is off.
     private func apply(_ info: EndpointInfo) {
         resumeAtReset = info.resumeAtReset ?? false
         viewReferences = info.viewReferences == true

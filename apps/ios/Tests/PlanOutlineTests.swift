@@ -342,7 +342,6 @@ final class PlanOutlineTests: XCTestCase {
 
 @MainActor
 final class PlanActivityHoldTests: XCTestCase {
-    /// Runs nothing on its own; a test fires what is due.
     @MainActor private final class ManualScheduler {
         var pending: [(id: Int, delay: Duration, action: @MainActor () -> Void)] = []
         private var next = 0

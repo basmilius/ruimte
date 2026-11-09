@@ -18,7 +18,6 @@ enum JSText {
         return String(scalars)
     }
 
-    /// Each run of whitespace as one space, and none at either end.
     static func collapsed(_ text: String) -> String {
         var result = String.UnicodeScalarView()
         var gap = false

@@ -16,7 +16,6 @@ import XCTest
             ].merging(extra) { _, extra in extra })
     }
 
-    /// A turn that ended: what the person asked, a call that folds away and the answer that closed it.
     private var settledTurn: [JSONValue] {
         [
             item("u1", "user", at: 1000, ["text": .string("Show me")]),
@@ -26,7 +25,6 @@ import XCTest
         ]
     }
 
-    /// A turn still running: a call, a word between calls and a call that runs.
     private var runningTurn: [JSONValue] {
         [
             item("u2", "user", turn: "t2", at: 3000, ["text": .string("And now")]),

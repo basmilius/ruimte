@@ -32,7 +32,6 @@ extension ProviderAccountList {
         continueTargets(kind, current: current, limits: limits).first
     }
 
-    /// Every account with room, in the order the continuation picker offers them.
     public func continueTargets(_ kind: String, current: String?, limits: UsageLimits?) -> [ProviderAccountEntry] {
         let roomy = others(kind, current: current).compactMap { account -> (ProviderAccountEntry, Double)? in
             guard let entry = Self.limitsEntry(limits, account: account.id), Self.hasRoom(entry) else { return nil }
@@ -60,7 +59,6 @@ extension ProviderAccountList {
             && entry.windows.allSatisfy { $0.used < 1 }
     }
 
-    /// Whether the machine said why it could not read the entry's numbers.
     public static func isUnavailable(_ entry: UsageLimitsProvider) -> Bool { entry.unavailable != nil }
 
     /// What a turn of this account would run into first: its session window, else its fullest one.

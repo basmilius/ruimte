@@ -13,7 +13,6 @@ struct PhoneProjectList: View {
     let act: (ProjectRowAction, ProjectItem) -> Void
     /// The rows above the views in the iPad's sidebar: the project's name.
     var header: AnyView?
-    /// The row whose view the iPad shows beside the sidebar.
     var highlightedID: String?
 
     var body: some View {
@@ -210,7 +209,6 @@ struct ProjectRowMarksView: View {
     }
 }
 
-/// What a long press on a row offers: what the view is, how to get another one, its session, and the delete.
 private struct ProjectRowMenu: View {
     let item: ProjectItem
     let isView: Bool

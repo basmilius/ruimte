@@ -62,7 +62,6 @@ final class LocalizationTests: XCTestCase {
         entry["shouldTranslate"] as? Bool != false && entry["extractionState"] as? String != "stale"
     }
 
-    /// Every Dutch text of an entry, one per plural form; empty when Dutch is missing or unfinished.
     private static func dutch(_ entry: [String: Any]) -> [String] {
         let localizations = entry["localizations"] as? [String: Any]
         guard let dutch = localizations?["nl"] as? [String: Any] else {

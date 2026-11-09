@@ -5,7 +5,6 @@ import RuimteTransport
 import SwiftUI
 import UIKit
 
-/// What a device view shows, from finding the device a project names to its screen.
 enum DeviceViewPhase: Equatable {
     case noReference
     case finding
@@ -71,7 +70,6 @@ enum DeviceView {
         device.state == .shutdown && device.capabilities.boot
     }
 
-    /// What a refusal of `device.open` means for the page.
     static func phase(forOpenError error: Error) -> DeviceViewPhase {
         if case MachineClientError.server(_, let message) = error {
             switch error.machineCode {
@@ -93,7 +91,6 @@ enum DeviceView {
             y: min(1, max(0, (point.y - screen.minY) / screen.height)))
     }
 
-    /// The rectangle a picture of this size takes when it fits inside `bounds`, centered.
     static func fitted(_ size: CGSize, in bounds: CGRect) -> CGRect {
         guard size.width > 0, size.height > 0 else { return .zero }
         let scale = min(bounds.width / size.width, bounds.height / size.height)

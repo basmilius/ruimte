@@ -233,7 +233,6 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         held = []
     }
 
-    /// The requests the machine names in `endpoint.info`, which `linkOpened` follows.
     public func setFeatures(_ features: [String]) {
         self.features = Set(features)
     }
