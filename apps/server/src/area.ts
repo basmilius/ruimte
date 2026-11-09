@@ -29,12 +29,23 @@ export interface ClientEnd {
  */
 export type StopPhase = 'halt' | 'drain' | 'end' | 'last';
 
-interface StopStep {
-    phase: StopPhase;
+interface StopStepBase {
     /* Names the step in the log when it fails; a step that fails never keeps the next from running. */
     label: string;
+}
+
+/* `undefined | void` is the one return type TypeScript does not widen to accept a promise, so a `halt` step that returns one fails to compile. */
+interface HaltStep extends StopStepBase {
+    phase: 'halt';
+    run(): undefined | void;
+}
+
+interface LaterStep extends StopStepBase {
+    phase: Exclude<StopPhase, 'halt'>;
     run(): void | Promise<void>;
 }
+
+export type StopStep = HaltStep | LaterStep;
 
 /*
  * One wire area as the daemon knows it: the requests it answers, the event sources every client of
@@ -58,4 +69,28 @@ export interface Area {
 
 export function stopSteps(areas: readonly Area[], phase: StopPhase): StopStep[] {
     return areas.flatMap((area) => (area.stop ?? []).filter((step) => step.phase === phase));
+}
+
+/*
+ * Runs every step of the areas, `halt` first and without an await in between, so each one has run
+ * when the first await yields to a reload. A step that fails is logged and never keeps the next from running.
+ */
+export async function runStop(areas: readonly Area[], report: (label: string, e: unknown) => void): Promise<void> {
+    for (const step of stopSteps(areas, 'halt')) {
+        try {
+            step.run();
+        } catch (e) {
+            report(step.label, e);
+        }
+    }
+
+    for (const phase of ['drain', 'end', 'last'] as const) {
+        for (const step of stopSteps(areas, phase)) {
+            try {
+                await step.run();
+            } catch (e) {
+                report(step.label, e);
+            }
+        }
+    }
 }

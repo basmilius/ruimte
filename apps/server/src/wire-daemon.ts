@@ -1,6 +1,6 @@
 import { createServerActions } from './actions/server-actions.ts';
 import { AGENT_FEATURES, AGENT_TOOLKITS } from './agent-features/list.ts';
-import { stopSteps, type Area, type StopPhase } from './area.ts';
+import { runStop, type Area } from './area.ts';
 import { dropEmptyMark } from './chat/scratch-project.ts';
 import { ConnectedClients } from './clients/connected-clients.ts';
 import { Dispatcher } from './dispatcher.ts';
@@ -46,8 +46,6 @@ import { wireTunnels } from './wiring/tunnels.ts';
 import { wireUsageStats } from './wiring/usage-stats.ts';
 import { wireUsage } from './wiring/usage.ts';
 import { wireVoice } from './wiring/voice.ts';
-
-const STOP_PHASES: readonly StopPhase[] = ['halt', 'drain', 'end', 'last'];
 
 interface WireInput {
     runtime: DaemonRuntime;
@@ -412,16 +410,6 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
             // Puts back what a daemon before this one left, and only then decides for the lid.
             void power.closedLid.start();
         },
-        stop: async () => {
-            for (const phase of STOP_PHASES) {
-                for (const step of stopSteps(areas, phase)) {
-                    try {
-                        await step.run();
-                    } catch (e) {
-                        console.error(`${step.label} on shutdown failed:`, errorText(e));
-                    }
-                }
-            }
-        }
+        stop: () => runStop(areas, (label, e) => console.error(`${label} on shutdown failed:`, errorText(e)))
     };
 }
