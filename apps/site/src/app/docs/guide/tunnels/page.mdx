@@ -52,6 +52,8 @@ Some local sites only answer to their own name. Open **Advanced** in the dialog 
 
 Each hostname has a switch. Its menu has **Copy address**, **Open**, **On after restart** and **Remove**, and for a dev server **Edit**, which changes its port and **Advanced** settings. The hostname itself stays; to change it, remove the row and add a new one. A dev server stays off after a restart unless you turn on **On after restart**, because its port may hold something else by then.
 
+A hostname that is on but gets no traffic says **Not reachable** under its name. Point at it to see why, such as a DNS record Cloudflare would not make or a port Ruimte now uses itself. Fix that, then click **Try again**. The other hostnames keep working meanwhile.
+
 ## Connect a bot to the MCP
 
 1. Under **External clients**, turn on **External MCP**. Ruimte listens on this machine only, at the address shown under the heading. A bot on the same computer uses it without a tunnel.

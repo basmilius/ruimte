@@ -1089,7 +1089,8 @@
             "open": "Openen",
             "comeBack": "Aan na herstart",
             "edit": "Bewerken",
-            "remove": "Verwijderen"
+            "remove": "Verwijderen",
+            "unreachable": "Niet bereikbaar"
         },
         "add": {
             "title": "Hostnaam toevoegen",

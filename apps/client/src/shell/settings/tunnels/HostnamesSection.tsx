@@ -1,6 +1,6 @@
-import { Button, copyText, Icon, IconButton, Menu, Switch, Table } from '@adecore/ui';
+import { Button, copyText, Icon, IconButton, Menu, Switch, Table, Tooltip } from '@adecore/ui';
 import type { TunnelOtherRule, TunnelRow, TunnelState } from '@ruimte/contracts';
-import { Copy, ExternalLink, MoreHorizontal, Pencil, Trash } from 'lucide-react';
+import { Copy, ExternalLink, MoreHorizontal, Pencil, Trash, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { openInSystemBrowser } from '@/desktop/bridge';
@@ -96,7 +96,19 @@ function HostnameRow({ row, change, onEdit }: { row: TunnelRow; change: TunnelCh
 
     return (
         <Table.Row>
-            <Table.Cell>{row.hostname}</Table.Cell>
+            <Table.Cell>
+                <div className="flex min-w-0 flex-col">
+                    <span>{row.hostname}</span>
+                    {row.reason !== undefined && (
+                        <Tooltip label={row.reason}>
+                            <span className="flex items-center gap-1 text-xs text-status-needs-you">
+                                <Icon icon={TriangleAlert} size={12} className="shrink-0" />
+                                {t('tunnels.hostnames.unreachable')}
+                            </span>
+                        </Tooltip>
+                    )}
+                </div>
+            </Table.Cell>
             {row.kind === 'mcp' ? (
                 <Table.Cell>{t('tunnels.hostnames.mcp')}</Table.Cell>
             ) : (

@@ -166,7 +166,9 @@ function TunnelLine({ state, endpointId, change, onUnlink }: { state: TunnelStat
             }
             control={
                 <>
-                    {state.stage === 'failed' && <Button onClick={() => void change('tunnel.retry')}>{t('tunnels.retry')}</Button>}
+                    {(state.stage === 'failed' || (state.stage === 'running' && state.rows.some((row) => row.reason !== undefined))) && (
+                        <Button onClick={() => void change('tunnel.retry')}>{t('tunnels.retry')}</Button>
+                    )}
                     {tunnel !== null && <Button onClick={onUnlink}>{t('tunnels.unlink.action')}</Button>}
                 </>
             }

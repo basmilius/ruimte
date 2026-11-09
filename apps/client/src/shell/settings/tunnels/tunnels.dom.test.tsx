@@ -556,6 +556,19 @@ describe('the hostnames', () => {
         expect(buttonWithText('Add hostname')).not.toBeNull();
     });
 
+    test('marks a hostname that is on but not reachable in its own row, and offers Try again', async () => {
+        state = stateOf({
+            rows: [
+                { id: 'a', kind: 'dev', hostname: 'shop.example.com', port: 3000, enabled: true, comeBack: false },
+                { id: 'b', kind: 'dev', hostname: 'blog.example.com', port: 4210, enabled: true, comeBack: false, reason: 'Port 4210 belongs to Ruimte itself' }
+            ]
+        });
+        await open();
+        await until(() => cells().includes('blog.example.comNot reachable'));
+        expect(cells()).toContain('shop.example.com');
+        expect(buttonWithText('Try again')).not.toBeNull();
+    });
+
     test('offers no hostnames before there is a tunnel and a token', async () => {
         state = stateOf({ stage: 'no-tunnel', tunnel: null });
         await open();

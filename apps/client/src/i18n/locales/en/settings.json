@@ -1089,7 +1089,8 @@
             "open": "Open",
             "comeBack": "On after restart",
             "edit": "Edit",
-            "remove": "Remove"
+            "remove": "Remove",
+            "unreachable": "Not reachable"
         },
         "add": {
             "title": "Add hostname",
