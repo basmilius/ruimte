@@ -125,7 +125,7 @@ struct LookTests {
 struct MenuBarTests {
     @Test func theArrowFollowsTheMenuBarsColor() {
         #expect(MenuBarLook.arrow.isTemplate)
-        #expect(MenuBarLook.arrow.size == NSSize(width: 14, height: 14))
+        #expect(MenuBarLook.arrow.size.height == 14)
     }
 
     @Test func theHeadWidensForALongTitleAndKeepsItsTileAtTheTop() {

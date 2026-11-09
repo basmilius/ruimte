@@ -86,7 +86,7 @@ public final class StatusMenu: NSObject, NSMenuDelegate {
         if needs, let cell = button.cell as? NSButtonCell {
             let rect = cell.imageRect(forBounds: button.bounds)
             let size = MenuBarLook.dot
-            dot.frame = CGRect(x: rect.midX - size / 2, y: rect.midY - size / 2, width: size, height: size)
+            dot.frame = CGRect(x: rect.minX + MenuBarLook.dotLead, y: rect.midY - size / 2, width: size, height: size)
             dot.pulse(!NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
         }
         head.update(title: content.title, line: "\(content.step) · \(content.time)", state: content.state)
@@ -143,28 +143,36 @@ public enum MenuBarLook {
     public static let tile: CGFloat = 28
     public static let tileRadius: CGFloat = 8
     public static let tileMark: CGFloat = 16
+    /// The button puts its image against the edge of its highlight; these keep the mark off the rounded end.
+    static let markLead: CGFloat = 3
+    static let markTrail: CGFloat = 1
+    /// The dot sits in the rounded end and a little further from the words than the arrow.
+    static let dotLead: CGFloat = 4
+    static let dotTrail: CGFloat = 5
 
     /// The arrow as a template image, so it takes the color of the menu bar.
     public static let arrow: NSImage = {
-        let image = form(.arrow, size: mark, color: .black)
+        let image = form(.arrow, size: mark, color: .black, lead: markLead, trail: markTrail)
         image.isTemplate = true
         return image
     }()
 
     /// Holds the dot's place in the button; the dot itself is a view that pulses.
-    static let placeholder = NSImage(size: NSSize(width: dot, height: dot), flipped: false) { _ in true }
+    static let placeholder = NSImage(size: NSSize(width: dotLead + dot + dotTrail, height: dot), flipped: false) { _ in true }
 
     /// A darker amber on a light menu bar, as the design has it, so the words stay legible.
     public static func needsText(dark: Bool) -> NSColor {
         NSColor(cgColor: dark ? OverlayStyle.color(.needs) : .hex(0xB45309)) ?? .systemOrange
     }
 
-    /// A form of the cursor filled with one color, in a square of `size` points as its 24-point box.
-    public static func form(_ form: PhantomForm, size: CGFloat, color: NSColor) -> NSImage {
-        NSImage(size: NSSize(width: size, height: size), flipped: true) { _ in
+    /// A form of the cursor filled with one color, in a square of `size` points as its 24-point box, with room
+    /// beside it.
+    public static func form(_ form: PhantomForm, size: CGFloat, color: NSColor, lead: CGFloat = 0, trail: CGFloat = 0) -> NSImage {
+        NSImage(size: NSSize(width: lead + size + trail, height: size), flipped: true) { _ in
             guard let context = NSGraphicsContext.current?.cgContext else {
                 return false
             }
+            context.translateBy(x: lead, y: 0)
             context.scaleBy(x: size / OverlayStyle.Cursor.box, y: size / OverlayStyle.Cursor.box)
             context.addPath(form.path)
             context.setFillColor(color.cgColor)
