@@ -14,6 +14,7 @@ import { useCanvasStore } from '@/state/canvas';
 import { useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
+import { useTasks } from '@/state/tasks';
 import { oldestWaitingFirst, useWaitingSince, waitDetailsOf } from '@/state/waiting';
 import { waitAskLine } from './wait-ask';
 
@@ -96,10 +97,11 @@ export function StatusSummary() {
     const chats = useChats((s) => s.statusByKey);
     const unseen = useAttention((s) => s.unseen);
     const snoozes = useSnoozes((s) => s.byKey);
+    const tasks = useTasks((s) => s.byEndpoint);
     const since = useWaitingSince((state) => state.byKey);
     const nodes = useProjectNodes();
 
-    const groups = groupAttention(nodes, sessions, chats, endpointId, unseen, snoozes);
+    const groups = groupAttention(nodes, sessions, chats, endpointId, unseen, snoozes, tasks);
     const waiting = new Set(groups.needsYou);
     const waitingIds = oldestWaitingFirst(
         nodes.filter((node) => waiting.has(node.id)),

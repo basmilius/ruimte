@@ -32,12 +32,9 @@ export function childWaitOf(
 
     for (const task of openChildTasks(tasks, parentId)) {
         const key = endpointKey(endpointOfNode(task, endpointId), task.childId);
-        const chat = chats[key]?.info;
-        const requests = chat?.requests ?? [];
-        const needsYou = chat === undefined ? sessionStatus(sessions[key]) === 'needs-you' : chat.status === 'needs-you' || requests.length > 0;
 
-        if (needsYou) {
-            const since = waitDate(requests, undefined, sessions[key]?.agent?.updatedAt);
+        if (childNeedsYou(key, sessions, chats)) {
+            const since = waitDate(chats[key]?.info.requests ?? [], undefined, sessions[key]?.agent?.updatedAt);
 
             if (waiting === null || since < waiting.since) {
                 waiting = { kind: 'needs-you', task, since };
@@ -52,4 +49,27 @@ export function childWaitOf(
     }
 
     return waiting ?? paused;
+}
+
+/*
+ * Whether this node waits on a person through a child agent that no count holds of its own, such as a
+ * hidden agent, which stands in no view. A child among `counted` already counts where it stands.
+ */
+export function waitsThroughChild(
+    parentId: string,
+    tasks: TasksById | undefined,
+    sessions: SessionsByKey,
+    chats: ChatStatuses,
+    endpointId: string,
+    counted: ReadonlySet<string>
+): boolean {
+    return openChildTasks(tasks, parentId).some(
+        (task) => !counted.has(task.childId) && childNeedsYou(endpointKey(endpointOfNode(task, endpointId), task.childId), sessions, chats)
+    );
+}
+
+function childNeedsYou(key: string, sessions: SessionsByKey, chats: ChatStatuses): boolean {
+    const chat = chats[key]?.info;
+
+    return chat === undefined ? sessionStatus(sessions[key]) === 'needs-you' : chat.status === 'needs-you' || (chat.requests ?? []).length > 0;
 }

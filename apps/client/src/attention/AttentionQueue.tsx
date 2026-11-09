@@ -17,6 +17,7 @@ import { endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { nodeProvider, nodeStatus, useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
+import { useTasks } from '@/state/tasks';
 import { compareWaits, useWaitingSince, waitDetailsOf } from '@/state/waiting';
 import { chatScopeOf } from '@/transport/chat-scope';
 import { closeAttentionQueue, useAttentionQueue } from './queue';
@@ -60,6 +61,7 @@ function QueueBody({
     const chats = useChats((state) => state.statusByKey);
     const unseen = useAttention((state) => state.unseen);
     const snoozes = useSnoozes((state) => state.byKey);
+    const tasks = useTasks((state) => state.byEndpoint);
     const since = useWaitingSince((state) => state.byKey);
     const [selected, setSelected] = useState<string | null>(null);
     const [answered, setAnswered] = useState<string | null>(null);
@@ -76,7 +78,7 @@ function QueueBody({
     const restoreRow = useRef<string | null>(null);
     const previous = useRef<{ id: string | null; wide: boolean }>({ id: null, wide });
 
-    const groups = groupAttention(nodes, sessions, chats, endpointId, unseen, snoozes);
+    const groups = groupAttention(nodes, sessions, chats, endpointId, unseen, snoozes, tasks);
     const waiting = new Set(groups.needsYou);
     const finished = new Set(groups.finished);
     const details = new Map(nodes.map((node) => [node.id, waitDetailsOf(node, sessions, chats, since, endpointId)]));
