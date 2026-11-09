@@ -1,7 +1,6 @@
 import { isInFloatingLayer } from '@adecore/ui';
 import { isCanvasView, isDiagramView, isDrawingView } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { ArrowRight, LayoutDashboard, Trash } from 'lucide-react';
 import {
     arrangeGroupAction,
     createNodeAction,
@@ -19,7 +18,6 @@ import { layoutDialog } from '@/canvas/dialogs';
 import { isNotePreviewLocked, setNotePreviewLocked } from '@/canvas/note-previews';
 import { focusedChatTextSize, resetChatTextSize } from '@/chat/text-size';
 import { defineBehaviors, type Command, type CommandBehavior, type KeyPress } from '@/commands/behavior';
-import type { GeneratedCommands } from '@/commands/generated';
 import { keyboardOnCanvas, keyFree, onStandaloneView } from '@/commands/key-context';
 import type { CommandMoment } from '@/commands/moment';
 import type { SplitDirection } from '@/layout/split';
@@ -311,9 +309,3 @@ export function layoutPaletteRows(moment: CommandMoment): Command[] {
         }
     ]);
 }
-
-export const CANVAS_GENERATED: readonly GeneratedCommands[] = [
-    { prefix: 'view-move-', usage: 'viewMove', palette: true, icon: ArrowRight },
-    { prefix: 'layout-apply-', usage: 'layoutApply', palette: true, icon: LayoutDashboard },
-    { prefix: 'layout-delete-', usage: 'layoutDelete', palette: true, icon: Trash }
-];

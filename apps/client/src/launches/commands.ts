@@ -1,13 +1,10 @@
 import { isInFloatingLayer } from '@adecore/ui';
 import i18next from 'i18next';
-import { ListChecks, Rocket } from 'lucide-react';
 import { defineBehaviors, takeKey, type Command } from '@/commands/behavior';
-import type { GeneratedCommands } from '@/commands/generated';
 import type { CommandMoment } from '@/commands/moment';
 import {
     afterSettleCandidates,
     chooseAfterSettle,
-    chooseLaunch,
     chosenLaunchId,
     runChosenLaunch,
     showLaunchOutput,
@@ -16,7 +13,6 @@ import {
     stopChosenLaunch,
     stopLaunch
 } from '@/launches/actions';
-import { AFTER_SETTLE_PREFIX, LAUNCH_CHOOSE_PREFIX } from '@/launches/menu-extras';
 import { launchViews } from '@/launches/model';
 import { useLaunches } from '@/launches/state';
 import { endpointKey } from '@/state/keys';
@@ -126,11 +122,3 @@ export function afterSettlePaletteRows(moment: CommandMoment): Command[] {
               ]
     );
 }
-
-export const LAUNCH_GENERATED: readonly GeneratedCommands[] = [
-    { prefix: 'launch-start-', usage: 'launchStart', palette: true },
-    { prefix: 'launch-restart-', usage: 'launchRestart', palette: true },
-    { prefix: 'launch-stop-', usage: 'launchStopListed', palette: true },
-    { prefix: LAUNCH_CHOOSE_PREFIX, usage: 'launchChoose', palette: false, icon: Rocket, run: chooseLaunch },
-    { prefix: AFTER_SETTLE_PREFIX, usage: 'launchAfterSettle', palette: true, icon: ListChecks, run: (taskId) => void chooseAfterSettle(taskId) }
-];

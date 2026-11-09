@@ -1,13 +1,10 @@
 import { sendFromComposer, stepEffortFromComposer, stepTimelineMessage } from '@adecore/agents-react/chat';
 import { isInFloatingLayer } from '@adecore/ui';
-import { Folder } from 'lucide-react';
 import { focusedChatComposerKey, focusedChatId, keyboardChatKey } from '@/chat/focused-chat';
-import { CHAT_MOVE_PREFIX } from '@/chat/menu-extras';
 import { openForkDialog } from '@/chat/open-fork';
 import { restartChatSession } from '@/chat/restart-session';
 import { focusedChatTextSize, stepChatTextSize } from '@/chat/text-size';
 import { defineBehaviors, type CommandBehavior, type KeyHandler } from '@/commands/behavior';
-import type { GeneratedCommands } from '@/commands/generated';
 import { moveChatDialog } from '@/project/dialogs';
 import { endpointKey } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
@@ -126,20 +123,5 @@ export const CHAT_KEY_HANDLERS: readonly KeyHandler[] = [
         }
 
         return false;
-    }
-];
-
-export const CHAT_GENERATED: readonly GeneratedCommands[] = [
-    {
-        prefix: CHAT_MOVE_PREFIX,
-        usage: 'chatMoveProject',
-        palette: false,
-        icon: Folder,
-        run: (projectId) => {
-            const facts = activeViewFacts();
-            if (facts !== null && facts.offers.moveToProject && !facts.working) {
-                moveChatDialog.set({ chatId: facts.view.id, mode: 'pick', projectId });
-            }
-        }
     }
 ];

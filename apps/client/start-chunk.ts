@@ -10,7 +10,9 @@ const ADECORE = String.raw`(?:@adecore|adecore/packages)`;
  * without imports that the wire contracts name editor assist rules from.
  */
 export const WORKSPACE_MODULES: readonly RegExp[] = [
-    /\/src\/shell\/(?:WorkspaceShell\.tsx|commands\.ts)$/,
+    /\/src\/shell\/WorkspaceShell\.tsx$/,
+    // What a workspace's commands do; the window has only their table rows and generated kinds (`wiring/commands.ts`).
+    /\/src\/(?:agents|attention|canvas|chat|database|devices|diagram|drawing|files|find|git|github|launches|measure|output|processes|routines|terminal|views|worktrees)\/commands\.ts$/,
     /\/src\/actions\/(?:client-actions|canvas-actions|developer-actions|layout-actions|view-actions)\.ts$/,
     new RegExp(`${ADECORE}/(?:editor-core|merge|database)/`),
     new RegExp(`${ADECORE}/lsp/src/(?!language-ids\\.ts$)`),

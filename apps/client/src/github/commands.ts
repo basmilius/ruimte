@@ -1,16 +1,13 @@
 import i18next from 'i18next';
 import { defineBehaviors, type Command } from '@/commands/behavior';
-import type { GeneratedCommands } from '@/commands/generated';
 import { CommandMoment } from '@/commands/moment';
 import { issueStartDialog, pullRequestDialog } from '@/github/dialogs';
+import { PR_SHOW_IN_PREFIX } from '@/github/menu-extras';
 import { prReposOfCurrent } from '@/github/pr-repos';
 import { hasPrWatch, stopPrWatch } from '@/github/pr-watch-actions';
 import { shownChatOfNode } from '@/state/design-chat';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { shownFolderOf, useProject } from '@/state/project';
-
-/* The row that shows the pull request of one repository of a folder that holds several. */
-export const PR_SHOW_IN_PREFIX = 'pr-show-in-';
 
 function selectedChat(moment: CommandMoment): { endpointId: string; chatId: string } | null {
     const { selected } = moment;
@@ -62,5 +59,3 @@ export function githubPaletteRows(moment: CommandMoment): Command[] {
         run: () => pullRequestDialog.set({ cwd: repo.path })
     }));
 }
-
-export const GITHUB_GENERATED: readonly GeneratedCommands[] = [{ prefix: PR_SHOW_IN_PREFIX, usage: 'prShowIn', palette: true }];

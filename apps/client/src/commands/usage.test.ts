@@ -3,7 +3,7 @@ import { USAGE_DESKTOP_COMMANDS, USAGE_DESKTOP_PANELS, USAGE_DESKTOP_SETTINGS_SE
 import { CHAT_MOVE_PREFIX } from '@/chat/menu-extras';
 import { commandIds, commandSpec } from '@/commands/registry';
 import { commandUsageName } from '@/commands/usage';
-import { PR_SHOW_IN_PREFIX } from '@/github/commands';
+import { PR_SHOW_IN_PREFIX } from '@/github/menu-extras';
 import { AFTER_SETTLE_PREFIX, LAUNCH_CHOOSE_PREFIX } from '@/launches/menu-extras';
 import { panelRegistry } from '@/registry/panels';
 import { allSettingsSections } from '@/settings/sections';

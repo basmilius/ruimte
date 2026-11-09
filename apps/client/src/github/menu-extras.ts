@@ -1,6 +1,8 @@
 import { t } from '@/commands/menu-builders';
 import type { MenuExtra } from '@/commands/menu-extras';
-import { PR_SHOW_IN_PREFIX } from '@/github/commands';
+
+/* The row that shows the pull request of one repository of a folder that holds several. */
+export const PR_SHOW_IN_PREFIX = 'pr-show-in-';
 
 export const GITHUB_MENU_EXTRAS: readonly MenuExtra[] = [
     {

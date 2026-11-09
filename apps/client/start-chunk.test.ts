@@ -19,9 +19,16 @@ describe('what the start screen preloads', () => {
         const bundle = {
             'assets/index.js': chunk({ [`${APP}/main.tsx`]: 100 }, ['assets/menu.js'], true),
             'assets/menu.js': chunk({ [`${APP}/shell/menu/actions.ts`]: 50 }, ['assets/commands.js']),
-            'assets/commands.js': chunk({ [`${APP}/shell/commands.ts`]: 80, [`${NPM}/editor/src/index.ts`]: 10 })
+            'assets/commands.js': chunk({ [`${APP}/chat/commands.ts`]: 80, [`${NPM}/editor/src/index.ts`]: 10 })
         };
-        expect(preloadedWorkspaceModules(bundle)).toEqual([`assets/commands.js: ${APP}/shell/commands.ts`, `assets/commands.js: ${NPM}/editor/src/index.ts`]);
+        expect(preloadedWorkspaceModules(bundle)).toEqual([`assets/commands.js: ${APP}/chat/commands.ts`, `assets/commands.js: ${NPM}/editor/src/index.ts`]);
+    });
+
+    test("a feature's generated rows are allowed where what its commands do is not", () => {
+        const bundle = {
+            'assets/index.js': chunk({ [`${APP}/chat/generated-commands.ts`]: 40, [`${APP}/views/commands.ts`]: 60 }, [], true)
+        };
+        expect(preloadedWorkspaceModules(bundle)).toEqual([`assets/index.js: ${APP}/views/commands.ts`]);
     });
 
     test('a workspace module behind a dynamic import is not preloaded', () => {

@@ -1,10 +1,8 @@
 import { isInFloatingLayer } from '@adecore/ui';
 import { isSessionView, isCanvasView } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { Layers } from 'lucide-react';
 import { createViewAction, duplicateViewAction, placeViewOnCanvasAction, toggleFlagAction } from '@/action-port/person-actions';
 import { defineBehaviors, takeKey, type CommandBehavior, type KeyHandler } from '@/commands/behavior';
-import type { GeneratedCommands } from '@/commands/generated';
 import { viewDialog } from '@/project/dialogs';
 import { askDeleteView, askViewSettings, newSubheaderView, openSessionInKind, setViewShared, showView, viewAtIndex } from '@/project/views';
 import { currentEndpointId } from '@/state/current-endpoint';
@@ -14,7 +12,6 @@ import { VIEW_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { transportFor } from '@/transport';
 import { fireAndForget } from '@/transport-api/transport';
 import { withActiveView } from '@/views/active-view';
-import { GO_VIEW_PREFIX } from '@/views/menu-extras';
 
 function creating(kind: Parameters<typeof createViewAction>[0]): CommandBehavior {
     return { run: () => void createViewAction(kind), offered: (moment) => moment.inWorkspace };
@@ -123,20 +120,5 @@ export const VIEW_KEY_HANDLERS: readonly KeyHandler[] = [
         }
 
         return true;
-    }
-];
-
-export const VIEW_GENERATED: readonly GeneratedCommands[] = [
-    {
-        prefix: GO_VIEW_PREFIX,
-        usage: 'goView',
-        palette: false,
-        icon: Layers,
-        run: (rest) => {
-            const view = viewAtIndex(Number(rest));
-            if (view) {
-                showView(view.id);
-            }
-        }
     }
 ];
