@@ -4,7 +4,6 @@ import { splitLines } from '@adecore/merge';
 import type { ChatToolItem } from '@ruimte/contracts';
 import type { WriteSignature } from './runs.ts';
 
-/* A file a finished tool call wrote, and what the call says about the lines. */
 interface ToolWrite {
     path: string;
     signature: WriteSignature;

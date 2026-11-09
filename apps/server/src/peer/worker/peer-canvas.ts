@@ -5,7 +5,6 @@ import { NODE_SIZE, isCanvasView, type PeerNode, type ProjectCanvasView, type Pr
 const COLUMNS = 3;
 const GAP = 40;
 
-/* A node of another machine as this machine's canvas keeps it, at the place its order gives it. */
 export function nodeOf(node: PeerNode, index: number): ProjectNode {
     const { w, h } = NODE_SIZE[node.kind];
     return { ...node, x: (index % COLUMNS) * (w + GAP), y: Math.floor(index / COLUMNS) * (h + GAP), w, h };
@@ -21,7 +20,6 @@ export function sameCanvas(held: ProjectView, next: ProjectCanvasView): boolean 
     return isDeepStrictEqual(stripHidden(held as ProjectCanvasView), next);
 }
 
-/* The canvas as the other machine's nodes left it, without the flag laid over it. */
 export function stripHidden(canvas: ProjectCanvasView): ProjectCanvasView {
     const { hidden: _hidden, ...rest } = canvas;
     return rest;

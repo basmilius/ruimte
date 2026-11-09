@@ -352,7 +352,6 @@ export class ProvenanceService {
         return base !== null && !sameLines(base, checkpoint);
     }
 
-    /* Whether the file on disk is exactly what the commit holds. */
     private async matchesCommit(top: string, commit: string, file: string): Promise<boolean> {
         const [working, committed] = await Promise.all([readLines(join(top, file)), linesInTree(top, commit, file)]);
         return working !== null && committed !== null && sameLines(working.lines, committed);

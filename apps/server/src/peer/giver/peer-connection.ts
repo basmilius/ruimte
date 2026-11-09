@@ -22,7 +22,6 @@ export interface SignalLine {
     close(): void;
 }
 
-/* An open link to another machine: requests to it, and word when it is gone. */
 export interface PeerLink {
     request<T>(type: string, payload: unknown): Promise<T>;
     /* Every frame that is not the reply to a request, as the machine wrote it. */

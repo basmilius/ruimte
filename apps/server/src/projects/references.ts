@@ -178,7 +178,6 @@ export function resolveReferences(ids: readonly string[] | undefined, lookup: (i
     return references;
 }
 
-/* A tool call as a reference line names it: the tool, then its arguments the way its result rows write them. */
 function command(tool: string, args: string): string {
     return `\`${tool} ${args}\``;
 }

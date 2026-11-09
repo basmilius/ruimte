@@ -52,7 +52,6 @@ interface Setup {
     /* Starts a turn the way the chat does: its tree is taken before the agent writes. */
     startTurn(turnId: string, prompt?: string): Promise<void>;
     tool(turnId: string, name: string, input: Record<string, unknown>, extra?: Partial<ChatToolItem>): void;
-    /* An Edit tool call on score.ts. */
     edit(turnId: string, oldString: string, newString: string): void;
     endTurn(turnId: string, settled?: boolean): Promise<void>;
     write(name: string, text: string): Promise<void>;

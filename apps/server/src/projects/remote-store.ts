@@ -62,7 +62,6 @@ export class RemoteStore {
         return this.keep(projectId, { ...nodes });
     }
 
-    /* Drops every binding whose id is gone from the document. */
     async prune(projectId: string, alive: ReadonlySet<string>): Promise<void> {
         const file = this.files.get(projectId);
         if (file === undefined) {
@@ -115,7 +114,6 @@ export class RemoteStore {
         return true;
     }
 
-    /* Whether a node of the project runs on that machine. */
     usesMachine(projectId: string, machineId: string): boolean {
         return Object.values(this.nodesOf(projectId)).includes(machineId);
     }
@@ -125,7 +123,6 @@ export class RemoteStore {
         return this.files.all().some((file) => file.links.some((link) => isLinkTo(link, machineId)) || Object.values(file.nodes).includes(machineId));
     }
 
-    /* The project is gone, and its bindings with it. */
     forget(projectId: string): Promise<void> {
         return this.files.remove(projectId);
     }

@@ -68,7 +68,6 @@ export function unusableReason(snapshot: ProviderAccounts, limits: UsageLimitsSn
     return spent ? 'at its usage limit' : null;
 }
 
-/* What a chat says when its start passed over the project's default account. */
 export function passedOverNote(took: string, passed: string, reason: AccountUnusable): string {
     return `Started on ${took}: ${passed} is ${reason}.`;
 }

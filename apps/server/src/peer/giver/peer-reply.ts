@@ -7,7 +7,6 @@ interface ResultSchemas {
     [type: string]: { result: z.ZodType } | undefined;
 }
 
-// The parts of a schema's definition that decide which keys it names.
 interface Def {
     type: string;
     shape?: Record<string, z.core.$ZodType>;

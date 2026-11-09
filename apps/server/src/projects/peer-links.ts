@@ -29,7 +29,6 @@ const PeerFileSchema = z.looseObject({
     links: z.array(LinkSchema).default([]),
     // Per project, the ids of the nodes the other machine's window placed, which are the only ones its window may rewrite or remove.
     placed: z.record(z.string(), z.array(z.string())).optional(),
-    // Per node, where its task runs here.
     tasks: z.record(z.string(), TaskRecordSchema).optional()
 });
 
@@ -45,7 +44,6 @@ function folderKey(cwd: string): string {
 /* What a link is until a person says otherwise: an agent from the other machine asks before it acts. */
 const DEFAULT_CEILING: RuntimeMode = 'supervised';
 
-/* The canvas this machine keeps for the nodes of one other machine in a project. */
 export function peerCanvasId(machineId: string): string {
     return `peer-${machineId}`;
 }
@@ -118,7 +116,6 @@ export class PeerLinks {
         return this.list().find((link) => link.machineId === machineId && link.projectId === projectId) ?? null;
     }
 
-    /* The canvases of this project that other machines' nodes live on. */
     canvasIdsOf(projectId: string): Set<string> {
         return new Set(
             this.files
@@ -128,7 +125,6 @@ export class PeerLinks {
         );
     }
 
-    /* The ids of the nodes that machine's window placed in a project. */
     placedOf(machineId: string, projectId: string): ReadonlySet<string> {
         return new Set(this.files.get(machineId)?.placed?.[projectId] ?? []);
     }
@@ -146,7 +142,6 @@ export class PeerLinks {
         return this.files.get(machineId)?.tasks?.[nodeId] ?? null;
     }
 
-    /* Every task of that machine that has a record, by node. */
     taskRecordsOf(machineId: string): Array<[string, PeerTaskRecord]> {
         return Object.entries(this.files.get(machineId)?.tasks ?? {});
     }
@@ -230,7 +225,6 @@ export class PeerLinks {
         return true;
     }
 
-    /* Every link of a project that is gone goes with it. */
     async forgetProject(projectId: string): Promise<void> {
         for (const file of this.files.all().filter((candidate) => candidate.links.some((link) => link.projectId === projectId))) {
             await this.unbind(file.machineId, projectId);

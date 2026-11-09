@@ -29,7 +29,6 @@ afterEach(async () => {
     await rm(dir, { recursive: true, force: true });
 });
 
-/* Reads the first lines a process prints, as many as asked for. */
 async function firstLines(stream: ReadableStream<Uint8Array>, count: number): Promise<string[]> {
     const decoder = new TextDecoder();
     let text = '';

@@ -40,7 +40,6 @@ import { DEFAULT_RUNTIME_MODE } from '../../providers/launch.ts';
 import { peerLane } from '../giver/connect-peer.ts';
 import { idTakenOutside, nodeOf, sameCanvas, stripHidden } from './peer-canvas.ts';
 
-/* What a machine that works here is given of this one: its tasks, bundles and holds, each judged by the link a person made. */
 export interface PeerTasksDeps {
     links: Pick<
         PeerLinks,
@@ -56,7 +55,6 @@ export interface PeerTasksDeps {
     stopNode(nodeId: string, reason: string): Promise<void>;
     installed(): Promise<AgentKind[]>;
     providers: { get(kind: AgentKind): ChatProvider };
-    /* Whether a chat or a terminal with this id exists here already. */
     exists(nodeId: string): boolean;
     /* The git of this machine, asked for when a task needs it: it is wired after the outbox that owes these tasks. */
     git(): { bundles: BundleStore; checkpoints: Pick<CheckpointService, 'take' | 'head'>; worktrees: Worktrees };
@@ -96,7 +94,6 @@ export class PeerTasks {
         this.deps = deps;
     }
 
-    /* The tasks of this machine that still run here, which the limit per machine counts. */
     openCount(machineId: string): number {
         return this.deps.tasks.all().filter((task) => task.status === 'open' && this.peerOfTask(task) === machineId).length;
     }
@@ -360,7 +357,6 @@ export class PeerTasks {
         }
     }
 
-    /* Where the task of a node stands, with its result and work once it settled. */
     async result(machineId: string, clientId: string, payload: PeerResultPayload): Promise<PeerResultResult> {
         const task = this.taskOf(machineId, payload.nodeId);
         if (task === undefined) {
@@ -392,7 +388,6 @@ export class PeerTasks {
         }
     }
 
-    /* The result bundle offered to that machine for this node, if one is still there. */
     private async discardOffered(machineId: string, nodeId: string): Promise<void> {
         const offered = [...this.offered].find(([, who]) => who.machineId === machineId && who.nodeId === nodeId);
         if (offered !== undefined) {
@@ -478,7 +473,6 @@ export class PeerTasks {
         return { size, offset: payload.offset, data };
     }
 
-    /* Lets go of the project the machine held. */
     close(clientId: string, projectId: string): void {
         this.holding.delete(`${clientId}\t${projectId}`);
         this.deps.projects.letGo(clientId, projectId);
@@ -530,7 +524,6 @@ export class PeerTasks {
         }
     }
 
-    /* The nodes of the tasks that machine still has open in a project. */
     openNodesOf(machineId: string, projectId: string): string[] {
         return this.deps.tasks
             .all()
@@ -613,7 +606,6 @@ export class PeerTasks {
         return this.deps.links.canvasIdsOf(projectId);
     }
 
-    /* Whether this task was given by another machine, so its parent is no chat here. */
     isPeerTask(task: Task): boolean {
         return this.peerOfTask(task) !== null;
     }

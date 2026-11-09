@@ -3,7 +3,6 @@ import type { ClientConnection } from '../wire.ts';
 import { PortGrants, portsStore } from './port-grants.ts';
 import type { PortConnect, PortSocket, PortSocketHandlers, PortTimers } from './port-streams.ts';
 
-/* A service on loopback that a test drives by hand. */
 export class FakeService implements PortSocket {
     readonly written: Uint8Array[] = [];
     readonly handlers: PortSocketHandlers;
@@ -73,7 +72,6 @@ export class FakeNetwork {
     };
 }
 
-/* Timers a test fires itself. */
 export class FakeTimers implements PortTimers {
     private readonly waiting = new Map<number, { ms: number; fire: () => void }>();
     private next = 1;

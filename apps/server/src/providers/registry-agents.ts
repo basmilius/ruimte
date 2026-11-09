@@ -33,7 +33,6 @@ const InstalledSchema = z.object({
     sha256: z.string().nullable()
 });
 
-/* An agent a person installed from the registry, as `installed.json` keeps it. */
 type InstalledAgent = z.infer<typeof InstalledSchema>;
 
 /* Runs a package manager; the default spawns it, a test answers from memory. */
@@ -44,7 +43,6 @@ const INSTALL_TIMEOUT_MS = 10 * 60_000;
 const runInstall: InstallRun = (command, options) =>
     runProcess(command, { ...options, timeoutMs: INSTALL_TIMEOUT_MS, timeoutMessage: `${basename(command[0] ?? '')} did not finish in time` });
 
-/* What a registry agent's provider is told to the registry that offers it. */
 interface OfferedProviders {
     add(provider: ChatProvider): void;
     remove(kind: AgentKind): void;
@@ -58,7 +56,6 @@ interface RegistryAgentsOptions {
     providers: OfferedProviders;
     download?: FileDownload;
     run?: InstallRun;
-    // Where an executable on the PATH is, null for none.
     which?: (command: string) => string | null;
     platform?: NodeJS.Platform;
 }
@@ -98,7 +95,6 @@ export function npmBin(name: string, bin: unknown): string | null {
     return names.length === 1 ? names[0]! : names.includes(unscoped) ? unscoped : null;
 }
 
-/* How the archive at an address is packed, by its file name. */
 function packingOf(url: string): 'zip' | 'tar.gz' | 'tar' | 'bare' {
     const name = new URL(url).pathname.toLowerCase();
     if (name.endsWith('.zip')) {
@@ -162,7 +158,6 @@ export class RegistryAgents {
         return [...this.agents.values()];
     }
 
-    /* The line that starts an installed agent, absolute. */
     launch(agent: InstalledAgent): string[] {
         return [join(this.folderOf(agent.id), folderOf(agent.version), agent.command), ...agent.args];
     }

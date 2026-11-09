@@ -15,7 +15,6 @@ function setting(patch: Partial<KeepAwakeSetting> = {}): KeepAwakeSetting {
     return { mode: 'always', onBattery: false, display: false, ...patch };
 }
 
-/* A chat at rest, with what a test says about it laid over. */
 function chat(patch: Partial<ChatInfo> = {}): KeepAwakeWork['chats'][number] {
     return { status: 'idle', activeTurnId: null, ...patch };
 }

@@ -129,7 +129,6 @@ async function jailedFile(folder: string, candidate: string): Promise<StampedFil
     }
 }
 
-/* The bytes of a candidate with its sniffed MIME, or null when it is missing, too big or not an image. */
 async function readImage(folder: string, candidate: string): Promise<ImageFile | null> {
     const file = await jailedFile(folder, candidate);
     if (!file || file.size === 0 || file.size > ICON_MAX_BYTES) {
@@ -179,7 +178,6 @@ export async function servedIcon(folder: string, icon: DerivedIcon, theme: 'ligh
     return file === null ? null : { path: file.path, mime: file.mime };
 }
 
-/* The `href` of the first `<link rel="icon">` in an HTML head, or null. */
 export function faviconHref(html: string): string | null {
     for (const tag of html.match(/<link\b[^>]*>/gi) ?? []) {
         const rel = tag.match(/\brel\s*=\s*["']?([^"'>\s]+)/i)?.[1]?.toLowerCase();

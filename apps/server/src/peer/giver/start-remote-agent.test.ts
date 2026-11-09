@@ -442,7 +442,6 @@ describe('agent --machine', () => {
         expect(daemon.outbox.list()).toEqual([]);
     });
 
-    /* Holds `peer.taskStart` until the test says how it ends, and answers when it went out. */
     function holdStart(): { asked: Promise<void>; end: ReturnType<typeof Promise.withResolvers<unknown>> } {
         const asked = Promise.withResolvers<void>();
         const end = Promise.withResolvers<unknown>();

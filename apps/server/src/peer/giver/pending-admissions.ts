@@ -13,7 +13,6 @@ export class PendingAdmissions {
         this.now = now;
     }
 
-    /* A newer statement replaces an older one for the same machine. */
     hold(statement: PeerStatement): void {
         this.statements.set(statement.machineId, statement);
     }

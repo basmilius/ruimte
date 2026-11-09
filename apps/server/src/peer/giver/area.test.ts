@@ -32,7 +32,6 @@ const MACHINE_KEY = 'A'.repeat(43);
 const addressBook = generateKeyPair();
 const NOW = Date.UTC(2026, 9, 1);
 
-// What the address book signs for machine a to work in machine b, with the fields a test wants changed.
 function statementFor(patch: Record<string, unknown> = {}, signer = addressBook): Record<string, unknown> {
     const issuedAt = NOW;
     const fields = {

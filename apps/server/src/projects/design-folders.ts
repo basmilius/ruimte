@@ -16,7 +16,6 @@ async function exists(path: string): Promise<boolean> {
     return (await lstat(path).catch(() => null)) !== null;
 }
 
-/* A document as far as where its designs go: its views, and which of them are shared. */
 export interface DesignSides {
     views: readonly ProjectView[];
     shared: readonly string[];
@@ -79,7 +78,6 @@ function movableOf({ views }: DesignSides): DesignPlace[] {
     return designPlaces(views).filter((design) => !design.path.includes('/'));
 }
 
-/* The designs of `after` whose folder is on another side than in `before`. */
 function movesOf(before: DesignSides, after: DesignSides): DesignMove[] {
     const was = new Map(movableOf(before).map((design) => [design.id, designFolderOf(design, isSharedDesign(design, before.shared))]));
 

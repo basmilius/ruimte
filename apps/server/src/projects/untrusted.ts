@@ -7,7 +7,6 @@ import { openerOf } from '../opener.ts';
 
 interface UntrustedFoldersDeps {
     lineage: Pick<AgentLineageStore, 'peerOf' | 'startedBy' | 'forkedFrom'>;
-    /* The folders made from work another machine sent. */
     folders(): readonly string[];
     /* Where a chat or a terminal started, for the node that is one; null for none. */
     cwdOf(nodeId: string): string | null;
@@ -53,7 +52,6 @@ export class UntrustedFolders {
         return false;
     }
 
-    /* Whether this path lies inside a folder made from another machine's work. */
     inFolder(path: string): boolean {
         const folders = this.deps.folders();
         if (folders.length === 0) {

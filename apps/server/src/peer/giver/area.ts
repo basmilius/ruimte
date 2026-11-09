@@ -10,11 +10,9 @@ import type { PeerMachines } from './peer-machines.ts';
 import type { PendingAdmissions } from './pending-admissions.ts';
 import type { RemoteConnections } from './remote-connections.ts';
 
-/* What the link to other machines needs from this one. */
 export interface RemoteDeps {
     remote: RemoteStore;
     projects: Pick<ProjectStore, 'known'>;
-    /* Tells every client how the links to other machines stand. */
     status: EventSource;
     machineId: string;
     machinePublicKey: string;
@@ -22,7 +20,6 @@ export interface RemoteDeps {
     pending: PendingAdmissions;
     machines: Pick<PeerMachines, 'put' | 'remove'>;
     connections: Pick<RemoteConnections, 'connectWithStatement' | 'close'>;
-    /* The keys the address book signs with. */
     trustedKeys: readonly string[];
     accountBinding(): Promise<AccountBinding | null | undefined>;
     /* Ends the reconnects owed to a machine that is unlinked. */

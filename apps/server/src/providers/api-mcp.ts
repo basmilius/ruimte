@@ -138,7 +138,6 @@ export interface ApiMcpConnection {
     close(): Promise<void>;
 }
 
-/* How long a tool call may take and how large an HTTP answer may be. */
 export interface ApiMcpLimits {
     callTimeoutMs: number;
     responseBytes: number;

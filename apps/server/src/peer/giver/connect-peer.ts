@@ -4,7 +4,6 @@ import { RemoteLinkError, RemoteRefusal, refusalWords, type RemoteConnections } 
 // The wait after the first failed attempt, like the first poll of a PR-watch; each failure after it doubles the wait up to the cap.
 export const RECONNECT_START_MS = 60_000;
 export const RECONNECT_MAX_MS = 600_000;
-// A link that cannot be made in this long is given up on.
 export const RECONNECT_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 
 /* The project an entry for a machine is filed under: a reconnect belongs to no project, and no project has this id. */
@@ -20,7 +19,6 @@ interface ConnectPeerDeps {
     /* The targets of the work owed to a machine: a task given to it, its result, a stop. */
     owedTargets(machineId: string): string[];
     enqueue(projectId: string, target: string, work: OutboxWork, notBefore?: number): Promise<void>;
-    /* Looks again at whatever waited on this target. */
     wake(target: string): void;
     /* Fails the work still owed to a machine that stayed out of reach for the whole window, or that refused this one (`refusal` says why). */
     giveUp(machineId: string, refusal?: string): Promise<void>;
@@ -38,7 +36,6 @@ interface ConnectPeerDeps {
  */
 export class ConnectPeer {
     private readonly deps: ConnectPeerDeps;
-    // Machines whose attempt is running, and those whose link was lost meanwhile and so need a new entry once it ends.
     private readonly running = new Set<string>();
     // When the machine stopped answering while work was owed, which the 7 days count from; a link that opens starts the count over.
     private readonly firstOwed = new Map<string, number>();

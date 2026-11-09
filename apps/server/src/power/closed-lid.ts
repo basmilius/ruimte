@@ -23,14 +23,12 @@ export interface ClosedLidSetting extends KeepAwakeSetting {
     lidClosed: boolean;
 }
 
-/* What the power source stream last said. */
 export interface PowerState {
     adapter: boolean;
     /* Charge of the internal battery in percent; null on a Mac without one. */
     percent: number | null;
 }
 
-/* Only a Mac turns sleep off this way. */
 function closedLidAvailable(platform: NodeJS.Platform): boolean {
     return platform === 'darwin';
 }
@@ -133,7 +131,6 @@ export function adminCommand(script: string, prompt: string): string[] {
     ];
 }
 
-/* The dialog's answer when the person pressed Cancel. */
 export function adminCancelled(stderr: string): boolean {
     return stderr.includes('(-128)');
 }
@@ -220,7 +217,6 @@ export interface ClosedLidSystem {
     startWatchdog(): Dismissable;
     /* Streams power readings; null once the stream ended without being stopped. */
     watchPower(listener: (power: PowerState | null) => void): Stoppable;
-    /* Runs a script as root after macOS's own administrator dialog. */
     runAsAdmin(script: string, prompt: string): Promise<AdminResult>;
     /* Says that this home turned sleep off, kept until it is on again, so a start after a crash or a power cut knows. */
     marker: {
@@ -277,7 +273,6 @@ export class ClosedLid {
         return this.rule && !this.refused;
     }
 
-    /* Whether sleep is off right now on this daemon's word. */
     get holding(): boolean {
         return this.held !== null;
     }

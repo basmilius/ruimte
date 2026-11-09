@@ -38,7 +38,6 @@ interface Side {
     bundles: BundleStore;
 }
 
-/* The link A holds to B, while it is open. */
 class InProcessLink implements PeerLink {
     readonly requests: string[] = [];
     /* The link goes on the first request of this type, after B handled it (its answer is lost) or before. */

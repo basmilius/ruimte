@@ -24,7 +24,6 @@ function proc(pid: number, ppid: number, cpuNs: number, overrides: Partial<RawPr
     };
 }
 
-/* A machine whose clock and CPU move only when the test says so. */
 class FakeSampler implements ProcessSampler {
     at = 1_800_000_000_000;
     awake = 0;

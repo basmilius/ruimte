@@ -15,7 +15,6 @@ const FileRecordSchema = z.object({
     runs: z.array(ProvenanceRunSchema)
 });
 
-/* The name a file's record has in its project's folder. */
 function recordNameOf(path: string): string {
     return `${createHash('sha1').update(path).digest('hex').slice(0, 20)}.json`;
 }
@@ -61,7 +60,6 @@ export class ProvenanceStore {
         await rm(join(this.dirOf(projectId), name), { force: true });
     }
 
-    /* Every record of a project, with the folder that held them. */
     async removeProject(projectId: string): Promise<void> {
         await rm(this.dirOf(projectId), { recursive: true, force: true });
     }

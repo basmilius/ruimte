@@ -1,6 +1,5 @@
 import { CodedError } from '@adecore/agents';
 
-/* The daemon id of the machine a node runs on, or null when it runs here. */
 export type MachineOfNode = (nodeId: string) => string | null;
 
 /*

@@ -40,7 +40,6 @@ export function refusalWords(refusal: MachineRefusal): string {
     return REFUSAL_WORDS[refusal];
 }
 
-/* Opens a link to one machine; rejects with the reason it could not. */
 export interface PeerDialer {
     dial(machine: PeerMachine, statement: PeerStatement | null): Promise<PeerLink>;
 }
@@ -49,7 +48,6 @@ interface BrokerDialerOptions {
     signer: PeerSigner;
     /* The broker this machine uses itself, for a machine whose own broker is not known. */
     defaultBroker(): string | null;
-    /* What the other machine calls this one. */
     label(): string;
     timeoutMs?: number;
 }
@@ -79,7 +77,6 @@ interface RemoteConnectionsOptions {
     pending: Pick<PendingAdmissions, 'peek' | 'release'>;
     dialer: PeerDialer;
     status: RemoteStatus;
-    /* How many pieces of work wait on the link to that machine. */
     owed(machineId: string): number;
     /* The nodes whose task that machine has not been asked to start yet; `except` is an entry that is done and about to go. */
     unstarted(machineId: string, except?: string): string[];
@@ -111,7 +108,6 @@ export class RemoteConnections {
         return this.options.machines.get(machineId) !== null;
     }
 
-    /* The open link to a machine, or null while there is none. */
     link(machineId: string): PeerLink | null {
         return this.links.get(machineId) ?? null;
     }
@@ -176,7 +172,6 @@ export class RemoteConnections {
         this.publish(machineId, this.links.has(machineId) ? 'open' : null);
     }
 
-    /* A reconnect is due at `nextAttemptAt`. */
     waiting(machineId: string, nextAttemptAt: number): void {
         this.options.status.set({ ...this.standing(machineId, 'waiting'), nextAttemptAt });
     }

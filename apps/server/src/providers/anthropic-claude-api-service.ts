@@ -139,7 +139,6 @@ export function defaultModelOf(models: AnthropicModel[]): string {
     return (newest(active.filter((model) => model.line === 'sonnet')) ?? newest(active) ?? models[0])?.id ?? '';
 }
 
-/* The Claude API of this machine: its key, the models it offers and how far a chat may go alone. */
 export class AnthropicClaudeApiService extends KeyedApiService<ClaudeApiSettings, AnthropicModel> {
     private readonly claude: ClaudeModels | null;
 

@@ -25,7 +25,6 @@ interface PortGrantsOptions {
     deniedPorts(): readonly number[];
     random(bytes: number): string;
     now(): number;
-    /* Tells every client the list moved. */
     changed(): void;
 }
 

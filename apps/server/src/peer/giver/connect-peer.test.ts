@@ -11,7 +11,6 @@ import { RemoteRefusal } from './remote-connections.ts';
 
 const MACHINE = 'machine-b';
 
-/* The link to a machine as the reconnect sees it: it is down until a test brings it up. */
 class FakeConnections {
     up = false;
     refuse = false;

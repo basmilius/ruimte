@@ -23,7 +23,6 @@ export function leadContent(): ProjectContent {
     };
 }
 
-/** A real broker in a process of its own, on a free port. */
 export async function startBroker(): Promise<{ broker: Subprocess; port: number; url: string }> {
     const port = await freePort();
     const broker = Bun.spawn(['bun', join(import.meta.dir, '..', '..', '..', '..', 'pulsar-broker', 'src', 'main.ts'), '--port', String(port)], {

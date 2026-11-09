@@ -99,7 +99,6 @@ async function pull(name: string): Promise<void> {
     await writeFile(path, JSON.stringify(pulled, null, 2));
 }
 
-/* A change that adds a note to the first canvas, making one when the project has none. */
 function addNote(id: string) {
     return (current: ProjectContent) => {
         const [first, ...rest] = current.views;

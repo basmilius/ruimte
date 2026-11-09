@@ -29,7 +29,6 @@ function drawn(...elements: DrawingElement[]): DrawingContent {
     return { elements };
 }
 
-/* A project with one canvas and the drawing views the test asks for. */
 function content(...drawingIds: string[]): ProjectContent {
     return {
         name: 'repo',

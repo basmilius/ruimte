@@ -83,7 +83,6 @@ function catalogStoreOf(context: ProviderContext, kind: AgentKind) {
     return context.home === undefined ? undefined : acpCatalogStore(context.home, kind);
 }
 
-/* The kinds the table offers, in menu order. */
 export function tableKinds(): AgentKind[] {
     return ROWS.map((row) => row.kind);
 }
@@ -93,7 +92,6 @@ export function offersKind(kind: string): boolean {
     return ROWS.some((row) => row.kind === kind);
 }
 
-/* The kinds whose model catalog the address book keeps. */
 export function modelFeedKinds(): AgentKind[] {
     return ROWS.filter((row) => row.modelFeed === true).map((row) => row.kind);
 }

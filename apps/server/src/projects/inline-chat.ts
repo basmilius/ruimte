@@ -18,7 +18,6 @@ class InlineChatError extends CodedError<'project-not-found' | 'inline-path-outs
 export interface InlineChatHost {
     /* Makes the chat the view stands for, which no client has opened. */
     start(payload: ChatCreatePayload): Promise<unknown>;
-    /* Ends the chat's CLI and removes its record. */
     end(chatId: string): Promise<void>;
     /* The checkouts of the repository the folder is in, the folder's own first. */
     worktreePaths(folder: string): Promise<string[]>;

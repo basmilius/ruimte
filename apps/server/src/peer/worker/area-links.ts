@@ -9,7 +9,6 @@ import { peerCanvasId, type PeerLinks } from '../../projects/peer-links.ts';
 import type { ProjectStore } from '../../projects/project-store.ts';
 import { idTakenOutside, nodeOf, sameCanvas, stripHidden } from './peer-canvas.ts';
 
-/* What the requests of another machine's links reach of this one. */
 export interface PeerLinksDeps {
     links: PeerLinks;
     /* The tasks of a machine that its link ends with: they are told to it when the link goes. */

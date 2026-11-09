@@ -29,7 +29,6 @@ export interface RemoteTasksDeps {
     refresh?: (machineId: string, except?: string) => void;
     tasks: Pick<TaskStore, 'get' | 'all' | 'ofProject'>;
     coordinator: Pick<TaskCoordinator, 'settleFromElsewhere'>;
-    /* Whether a project still places the node. */
     placed(nodeId: string): boolean;
     /* The git of this machine, asked for when a checkout is sent: it is wired after the outbox. */
     git(): { bundles: BundleStore; checkpoints: Pick<CheckpointService, 'take' | 'head'>; worktrees: Pick<Worktrees, 'addFresh' | 'claim'> };
@@ -40,7 +39,6 @@ export interface RemoteTasksDeps {
     untrustFolder(path: string, branch: string): Promise<void>;
     outbox: Pick<OutboxStore, 'ofKind' | 'ofKinds' | 'has' | 'remove' | 'update'>;
     enqueue(projectId: string, target: string, work: OutboxWork): Promise<void>;
-    /* Looks again at whatever waits on this target. */
     wake(target: string): void;
     now(): number;
     log?: (line: string) => void;
@@ -76,7 +74,6 @@ export class RemoteTasks {
         this.deps = deps;
     }
 
-    /* Sends the checkout when there is one and asks the machine to start the task. */
     readonly start = async (entry: StartRemoteAgentEntry): Promise<'wait' | undefined> => {
         const { deps } = this;
         const { machineId, taskId } = entry.payload;
@@ -206,7 +203,6 @@ export class RemoteTasks {
         return this.deps.outbox.has(entryId);
     }
 
-    /* Owes a stop until the machine heard it, unless one is owed already. */
     private async oweStopTo(projectId: string, machineId: string, nodeId: string): Promise<void> {
         if (this.deps.outbox.ofKind('stop-remote-agent').some((entry) => entry.payload.nodeId === nodeId && entry.payload.once !== true)) {
             return;
@@ -464,7 +460,6 @@ export class RemoteTasks {
         deps.refresh?.(machineId);
     }
 
-    /* Tells the machine to end an agent of this one, until it heard. */
     readonly stop = async (entry: StopRemoteAgentEntry): Promise<'wait' | undefined> => {
         const { deps } = this;
         const { machineId, nodeId, once } = entry.payload;

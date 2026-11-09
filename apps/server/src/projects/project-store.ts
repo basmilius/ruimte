@@ -114,7 +114,6 @@ function identityChanged(entry: RegistryEntry, content: ProjectContent): boolean
  * interface rather than the class so the files do not import each other.
  */
 export interface ProjectViewFiles {
-    /* Which views own its files. */
     readonly noun: 'drawing' | 'diagram';
     /* Deletes every file whose view is not in `keep`. The project need not be open, so its file's path comes along. */
     removeOrphans(projectId: string, documentPath: string, keep: Set<string>): Promise<void>;
@@ -163,7 +162,6 @@ interface ProjectBindings {
     started(nodeId: string): Promise<boolean>;
 }
 
-/* What a change hands back: the whole new content, and whatever the caller wants to answer with. */
 export interface ProjectMutation<T> {
     /* Null when nothing changed, which is what a dry run leaves behind: it runs every check under
        the same lock a write takes, so what it answers is what the write would have done. */
@@ -182,7 +180,6 @@ export interface ProjectMutation<T> {
     landed?: () => Promise<void>;
 }
 
-/* What a change reads of the document besides its content. */
 interface MutationContext {
     overlayFields: readonly string[];
 }
@@ -224,7 +221,6 @@ type SessionEnder = (kind: 'terminal' | 'chat', nodeId: string, closing?: boolea
 /* Told what a person's save changed, with the views as they were before it and as it wrote them. */
 type SaveListener = (folder: string, before: readonly ProjectView[], after: readonly ProjectView[]) => Promise<void>;
 
-/* What the store tells or asks of the services beside it, every one handed over when the store is made. */
 export interface ProjectLinks {
     tracked: TrackedProbe;
     /* The store knows which sessions a project holds; the managers know how to stop one. */

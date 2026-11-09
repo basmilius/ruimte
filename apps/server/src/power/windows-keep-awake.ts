@@ -20,7 +20,6 @@ export interface WindowsPower {
     /* Returns 0 when Windows refused the state. */
     setExecutionState(flags: number): number;
     onAdapter(): boolean;
-    /* Calls back on every change of the power source until the returned function is called. */
     watchPowerSource(changed: () => void): () => void;
 }
 

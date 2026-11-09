@@ -25,7 +25,6 @@ function isPlanFileName(name: string): boolean {
 }
 
 interface PlanStoreOptions {
-    /* The clock `at` and `createdAt` are read from; a test hands in its own. */
     now?: () => number;
     /* Mints the ids of plans and of items that come without one. */
     mintId?: () => string;

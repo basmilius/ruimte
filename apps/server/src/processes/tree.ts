@@ -10,7 +10,6 @@ const FAMILY_WORDS: Partial<Record<(typeof AI_FAMILIES)[number], string>> = { an
 // A whole word of the path or name: `~/.local/share/claude/versions/2.1.269`, `Claude.app`, `codex-aarch64`.
 const FAMILY_PATTERNS = AI_FAMILIES.map((family) => [family, new RegExp(`(^|[/\\s._@-])(${FAMILY_WORDS[family] ?? family})([/\\s._-]|$)`, 'i')] as const);
 
-/* Which AI the process itself is, from its path, its name and the script a runtime was given. */
 export function ownFamilyOf(name: string, path: string | null, args: readonly string[] | null = null): string | null {
     // A native CLI names itself in its path; one on node or bun names itself in the script it runs.
     let haystack = `${path ?? ''} ${name}`;

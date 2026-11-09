@@ -35,7 +35,6 @@ function graph(nodes: DiagramNode[], edges: [string, string][] = []): DiagramCon
     };
 }
 
-/* A project with one canvas, one drawing and the diagram views the test asks for. */
 function content(...diagramIds: string[]): ProjectContent {
     return {
         name: 'repo',

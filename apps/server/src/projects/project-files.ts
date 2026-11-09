@@ -307,7 +307,6 @@ export function inPersonalOrder<T extends { id: string }>(entries: readonly T[],
         .map(({ entry }) => entry);
 }
 
-/* Reads `.ruimte/project.json` on any version there has been. */
 export function readSharedFile(path: string): Promise<JsonDocumentRead<SharedFileRead>> {
     return readJsonDocument(path, parseSharedFile);
 }
@@ -373,7 +372,6 @@ function serializeView(view: unknown, indent: string): string {
     return `${indent}{\n${fields.join(',\n')}\n${indent}}`;
 }
 
-/* A nested object pretty-printed, indented to sit one level into the file. */
 function nested(value: unknown): string {
     return JSON.stringify(value, null, 2).split('\n').join(`\n${INDENT}`);
 }
