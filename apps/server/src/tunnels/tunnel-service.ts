@@ -1121,11 +1121,7 @@ export class TunnelService {
         this.binary = await this.ports.installer.locate();
 
         if (this.stored.tunnel !== null && this.token !== null) {
-            this.start('starting', async () => {
-                await this.settleIfUnsure();
-                await this.commit(this.stored.rows);
-                await this.reconcileChild();
-            });
+            this.start('starting', () => this.serveListener());
         } else {
             this.announce();
         }
@@ -1213,7 +1209,10 @@ export class TunnelService {
         this.retryListener();
     }
 
-    /* Starts the listener the person turned on once more, behind the job in flight, when it is not listening. */
+    /*
+     * Starts the listener the person turned on once more, behind the job in flight, when it is not listening. Once it
+     * listens, its hostname still holds Ruimte's 404 and the child may be off, so the tunnel follows as on turning it on.
+     */
     private retryListener(): void {
         if (this.stopped || !this.stored.mcp.enabled || this.ports.listenerPort() !== null) {
             return;
@@ -1222,7 +1221,20 @@ export class TunnelService {
         this.pending = this.jobs
             .run(() => this.ensureListener())
             .catch(() => undefined)
-            .then(() => this.announce());
+            .then(() => {
+                if (this.ports.listenerPort() !== null && this.stored.tunnel !== null && this.token !== null) {
+                    this.start('starting', () => this.serveListener());
+                } else {
+                    this.announce();
+                }
+            });
+    }
+
+    /* Brings the tunnel in line once the listener changed, so the MCP row serves or holds its 404 to match. */
+    private async serveListener(): Promise<void> {
+        await this.settleIfUnsure();
+        await this.commit(this.stored.rows);
+        await this.reconcileChild();
     }
 
     /* The daemon ends its child with it, after the work in flight, and starts nothing from then on. */

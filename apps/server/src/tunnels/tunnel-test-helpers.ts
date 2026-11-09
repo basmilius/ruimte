@@ -142,6 +142,11 @@ export class FakeCloudflare {
         this.losses.push({ key, status, skip });
     }
 
+    /* How many lost answers still wait for their request. */
+    get waitingLosses(): number {
+        return this.losses.length;
+    }
+
     /* Drops every failure, lost answer, writer and hidden zone still waiting. */
     heal(): void {
         this.failing.clear();

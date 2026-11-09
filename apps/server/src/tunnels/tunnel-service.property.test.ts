@@ -121,6 +121,10 @@ interface Ground {
     deletedOutside: Set<string>;
     /* The step drew a fault other than a failed DNS read or one that may pass (a 5xx, a 429, a lost answer). */
     harsh: boolean;
+    /* The step drew a fault of Cloudflare's (a refusal, a lost answer, a writer, a zone the token loses, the tunnel deleted). */
+    faulted: boolean;
+    /* Lost answers still waiting once the step's faults were drawn, so one that fires during the step shows. */
+    losses: number;
     /* The run draws its steps from `FOCUSED`, with more faults. */
     focused: boolean;
     log: string[];
@@ -412,6 +416,8 @@ function writerOf(world: World): Writer {
 function injectFaults(world: World): void {
     const { next, cloudflare } = world;
     const tunnelId = world.disk.value?.tunnel?.id ?? 'none';
+    // Every fault drawn below logs a line.
+    const logged = world.log.length;
     const keys = [
         `PUT /accounts/acc-1/cfd_tunnel/${tunnelId}/configurations`,
         `GET /accounts/acc-1/cfd_tunnel/${tunnelId}/configurations`,
@@ -475,6 +481,8 @@ function injectFaults(world: World): void {
         world.harsh = true;
     }
 
+    world.faulted = world.log.length > logged;
+    world.losses = cloudflare.waitingLosses;
     world.portTaken = next() < 0.15;
 
     if (world.portTaken) {
@@ -667,6 +675,42 @@ function checkListener(world: World): void {
     }
 }
 
+/*
+ * Invariant 11: after Try again, or the network coming back while the listener was down, with no fault, a token Cloudflare
+ * takes, a tunnel and the listener's port free, the MCP row meant on with its record is served by Ruimte's own rule, and
+ * the child runs unless something else runs the tunnel.
+ */
+function checkMcpServed(world: World): void {
+    const tunnel = tunnelOf(world);
+    const token = world.tokens.read();
+
+    // A lost answer an earlier step drew may fire during this one.
+    const faulted = world.faulted || world.cloudflare.waitingLosses !== world.losses;
+
+    if (faulted || world.portTaken || tunnel === undefined || world.disk.value?.tunnel?.leaving === true) {
+        return;
+    }
+
+    if (world.disk.value?.mcp.enabled !== true || token === null || token !== world.cloudflare.acceptedToken) {
+        return;
+    }
+
+    const row = rowsOf(world).find((candidate) => candidate.kind === 'mcp' && meantOn(candidate));
+    const recorded = world.cloudflare.records.some((record) => record.id === row?.recordId && record.name === row.hostname && record.comment === MARKER);
+
+    if (row === undefined || !recorded) {
+        return;
+    }
+
+    if (ownRule(tunnel, row.hostname)?.service !== `http://127.0.0.1:${LISTENER_PORT}`) {
+        world.problems.push(`left the MCP hostname ${row.hostname} unserved with its listener up`);
+    }
+
+    if (tunnel.connections === 0 && world.runner.running === 0) {
+        world.problems.push(`runs no cloudflared while the MCP hostname ${row.hostname} is on with its listener up`);
+    }
+}
+
 /* Invariant 4: what a finished Remove or unlink took off is gone from Cloudflare, as far as Ruimte knows it. */
 function checkGone(world: World, tunnelId: string, hostnames: readonly string[]): void {
     // A tunnel deleted in the dashboard took its rules along.
@@ -826,7 +870,8 @@ const FOCUSED: ReadonlyArray<readonly [number, number]> = [
     [0, 7],
     [13, 13.6],
     [7, 11],
-    [11, 12.5]
+    [11, 12.5],
+    [16, 17]
 ];
 
 function focusedDraw(world: World): number {
@@ -873,7 +918,8 @@ async function step(world: World): Promise<void> {
         }
     } else if (draw < 7) {
         const host = pick(next, HOSTS);
-        const kind = next() < 0.2 ? 'mcp' : 'dev';
+        // A focused run adds the MCP row more often, so a restart that takes its listener down meets it.
+        const kind = next() < (world.focused ? 0.5 : 0.2) ? 'mcp' : 'dev';
         const port = pick(next, PORTS);
         const hostname = `${host.label}.${host.zone}`;
 
@@ -975,11 +1021,19 @@ async function step(world: World): Promise<void> {
         await attempt(world, () => service.retry());
         await service.idle();
         checkListener(world);
+        checkMcpServed(world);
     } else if (draw < 17) {
+        // Only a listener that was down calls for a bring-up; with it up, the network back finishes only what waited for it.
+        const listenerDown = !world.listener.on;
+
         world.log.push('network back');
         service.networkBack();
         await service.idle();
         checkListener(world);
+
+        if (listenerDown) {
+            checkMcpServed(world);
+        }
     } else if (draw < 18.5) {
         world.log.push('restart');
         restart = true;
@@ -1084,6 +1138,8 @@ async function sequence(seed: number): Promise<string[]> {
         portTaken: false,
         deletedOutside: new Set(),
         harsh: false,
+        faulted: false,
+        losses: 0,
         // Every third seed, so the default run reaches a restart followed by jobs without a bring-up often.
         focused: seed % 3 === 2,
         log: [],

@@ -3040,16 +3040,9 @@ describe('what the person asked and what Cloudflare serves', () => {
     });
 
     // Council round 15: the network coming back left a listener alone unless a job had failed on the network.
-    test.each([
-        ['without a token', false],
-        ['with a tunnel that is up', true]
-    ])('starts the MCP listener again when the network comes back once its port is free, %s', async (_name, withTunnel) => {
+    test('starts the MCP listener again when the network comes back once its port is free, without a token', async () => {
         const { taken, ports } = takenListener();
         const f = await fixture(ports);
-
-        if (withTunnel) {
-            await readyTunnel(f);
-        }
 
         await f.service.setMcp(true);
         await f.service.idle();
@@ -3057,9 +3050,31 @@ describe('what the person asked and what Cloudflare serves', () => {
         f.service.networkBack();
         await f.service.idle();
 
+        expect((await f.state()).mcp).toEqual({ enabled: true, port: LISTENER_PORT });
+    });
+
+    // Council round 16: the listener came back while its hostname kept Ruimte's 404 and the child stayed off.
+    test('serves the MCP hostname and runs the tunnel when the network comes back once the port of its listener is free', async () => {
+        const { taken, ports } = takenListener();
+        const f = await fixture(ports);
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'mcp', zone: f.bmnw.id, label: 'mcp' });
+        await f.service.setMcp(true);
+        await f.service.idle();
+
+        expect(f.runner.running).toBe(0);
+
+        taken.value = false;
+        f.service.networkBack();
+        await f.service.idle();
+
         const state = await f.state();
 
         expect(state.mcp).toEqual({ enabled: true, port: LISTENER_PORT });
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'mcp.bmnw.nl', service: `http://127.0.0.1:${LISTENER_PORT}` });
+        expect(state.rows[0]?.reason).toBeUndefined();
+        expect(f.runner.running).toBe(1);
     });
 
     // Council round 15: a listener whose port was taken failed the whole stage, which hid the choice of a tunnel.
