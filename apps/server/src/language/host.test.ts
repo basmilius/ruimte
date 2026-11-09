@@ -80,6 +80,8 @@ function rig(
         /* The main checkout and the worktrees made for agents' nodes, as the register would say. */
         agentWorktrees?: { main: string; paths: string[] };
         worktreeBuild?: WorktreeBuildChoices;
+        /* Answers whether a path exists in place of `files` and `folders`, such as one that holds a start up. */
+        exists?: (path: string) => Promise<boolean>;
     } = {}
 ): Rig {
     const spawner = options.spawner ?? fakeSpawner();
@@ -159,7 +161,7 @@ function rig(
             path: join(root, 'custom.json'),
             resolve: (command) => (['nimlsp', 'taplo'].includes(command) ? `/bin/${command}` : null)
         }),
-        exists: async (path) => (options.files ?? []).includes(path) || (options.folders ?? []).includes(path),
+        exists: options.exists ?? (async (path) => (options.files ?? []).includes(path) || (options.folders ?? []).includes(path)),
         isFolder: async (path) => (options.folders ?? []).includes(path),
         readText: async (path) => (path === join(WORK, 'package.json') ? (options.packageJson ?? null) : (options.texts?.[path] ?? null)),
         ...(options.sqlSettings === undefined ? {} : { sqlSettings: options.sqlSettings }),
@@ -196,6 +198,7 @@ async function installed(
         programs?: string[];
         agentWorktrees?: { main: string; paths: string[] };
         worktreeBuild?: WorktreeBuildChoices;
+        exists?: (path: string) => Promise<boolean>;
     } = {}
 ): Promise<Rig> {
     const choices = new LanguageChoices({ path: join(root, 'choices.json') });
@@ -2694,6 +2697,43 @@ describe('every kind that builds the code it reads', () => {
                 expect(spawner.of(kind).length > 0).toBe(works);
             }
         );
+    });
+
+    // Council round 18: turning building off while the first start read its configuration left the kind running without documents.
+    describe.each(BUILDING_KINDS.filter((entry) => !entry.works))('$kind', ({ kind, languageId, path, program }) => {
+        it('does not start when a person turns building off while its first start reads its configuration', async () => {
+            const reading = Promise.withResolvers<void>();
+            const gate = Promise.withResolvers<boolean>();
+            const executable = join(root, 'bin', program);
+            await mkdir(dirname(executable), { recursive: true });
+            await writeFile(executable, '');
+            const choices = new WorktreeBuildChoices({ path: join(root, 'worktree-build.json') });
+            await choices.set(MAIN, true);
+            const { host, spawner } = await installed([kind], {
+                programs: [executable],
+                agentWorktrees: { main: MAIN, paths: [WORK] },
+                worktreeBuild: choices,
+                exists: async (candidate) => {
+                    if (candidate !== join(WORK, 'node_modules', 'typescript', 'lib', 'tsserver.js')) {
+                        return false;
+                    }
+
+                    reading.resolve();
+
+                    return gate.promise;
+                }
+            });
+
+            expect((await open(host, path, '', 'client-1', languageId)).servers).toEqual([kind]);
+
+            await reading.promise;
+            await host.setWorktreeBuild('p1', false);
+            gate.resolve(false);
+            await settle();
+
+            expect(spawner.of(kind)).toHaveLength(0);
+            expect((await host.status('p1')).find((status) => status.server === kind)).toMatchObject({ state: 'stopped', buildHeld: true });
+        });
     });
 });
 

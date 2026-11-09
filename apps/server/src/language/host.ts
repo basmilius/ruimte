@@ -556,13 +556,18 @@ export class LanguageHost {
         }
         for (const [kind, server] of [...project.servers]) {
             const build = buildCodeOf(kind);
-            const applied = server.appliedBuildHeld;
-            if (build === undefined || server.state === 'stopped' || applied === null || applied === project.buildHeld) {
+            if (build === undefined || server.state === 'stopped') {
                 continue;
             }
+
+            // Whatever it started with: a first start still on its way has no hold yet, and stopping it ends that start too.
             if (project.buildHeld && build.off === undefined) {
                 await server.stop();
-            } else {
+                continue;
+            }
+
+            const applied = server.appliedBuildHeld;
+            if (applied !== null && applied !== project.buildHeld) {
                 void server.restart().catch(() => undefined);
             }
         }

@@ -950,6 +950,16 @@ export class LanguageServer {
 
         // The hold is read after the last await of the start, so one a person set while it read its configuration is what it spawns with.
         const context: LaunchContext = { ...(await this.launchContext()), buildHeld: this.options.buildHeld?.() === true };
+        const build = this.options.profile.runsBuildCode;
+
+        // A kind that cannot turn building off does not start under the hold, as when it was kept off at open.
+        if (context.buildHeld && build !== undefined && build.off === undefined) {
+            this.phase = 'stopped';
+            this.notify();
+
+            return;
+        }
+
         this.context = context;
         try {
             for (const profile of this.options.profile.components.filter((candidate) => candidate.sidecar !== true)) {

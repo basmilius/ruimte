@@ -985,6 +985,37 @@ describe('the hold on build code', () => {
         expect(process!.spec.env).toMatchObject({ RUSTC_WRAPPER: '', RUSTC_WORKSPACE_WRAPPER: '' });
         expect(server.appliedBuildHeld).toBe(true);
     });
+
+    // Council round 18: a kind that cannot turn building off spawned anyway when the hold came while its first start read its configuration.
+    it.each([
+        ['swift', 'swift', '/work/Sources/App/main.swift', 'sourcekit-lsp'],
+        ['zig', 'zig', '/work/src/main.zig', 'zls']
+    ] as const)('does not start %s when a person set the hold while the first start still read its configuration', async (kind, languageId, path, program) => {
+        const reading = Promise.withResolvers<void>();
+        const gate = Promise.withResolvers<null>();
+        const profile = KIND_PROFILES[kind];
+        let held = false;
+        const { server, spawner } = rig(kind, fakeSpawner(), {
+            profile: { ...profile, components: profile.components.map((component) => ({ ...component, settings: () => ({}) })) },
+            native: () => ({ executable: `/home/bin/${program}` }),
+            buildHeld: () => held,
+            sqlSettings: () => {
+                reading.resolve();
+
+                return gate.promise;
+            }
+        });
+
+        server.attach(document(path, languageId, ''));
+        await reading.promise;
+        held = true;
+        gate.resolve(null);
+        await server.ensureStarted();
+        await settle();
+
+        expect(spawner.processes).toHaveLength(0);
+        expect(server.state).toBe('stopped');
+    });
 });
 
 describe('the features a server answers beyond the first ones', () => {
