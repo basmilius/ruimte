@@ -4,6 +4,7 @@ import type { EndpointIdentity } from '../endpoint-id.ts';
 import { errorText } from '../error-text.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { LimitContext } from '../push/limit-alert.ts';
+import { pushNodeTitle } from '../push/node-title.ts';
 import { PushService } from '../push/service.ts';
 import type { SnoozeStore } from '../push/snoozes.ts';
 import type { AgentsBundle } from './agents.ts';
@@ -43,7 +44,15 @@ export function wirePush(
         auth,
         attentionPath: join(home, 'push-attention.json'),
         identity,
-        titleFor: (nodeId) => projects.index.titleFor(nodeId),
+        titleFor: (nodeId) =>
+            pushNodeTitle(
+                {
+                    titleFor: (id) => projects.index.titleFor(id),
+                    shows: (id) => projects.index.shows(id),
+                    openedBy: (id) => projects.hiddenAgents.get(id)?.openedBy
+                },
+                nodeId
+            ),
         projectOf: (nodeId) => projects.index.locate(nodeId)?.projectId ?? null,
         shows: (nodeId) => projects.index.shows(nodeId),
         targetOf: (nodeId) => (chats.get(nodeId) ? 'chat' : 'terminal'),
