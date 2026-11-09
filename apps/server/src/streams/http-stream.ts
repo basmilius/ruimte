@@ -15,7 +15,7 @@ export async function handleLiveStreamRequest(
     remoteAddress: string,
     options: AccessOptions,
     hub: LiveStreamHub,
-    streamingAllowed: () => boolean = () => true
+    streamingAllowed: () => boolean
 ): Promise<Response> {
     const origin = request.headers.get('origin');
     const headers = corsHeaders(origin);

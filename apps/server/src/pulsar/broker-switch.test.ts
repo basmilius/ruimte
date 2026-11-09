@@ -13,9 +13,8 @@ class RecordingRelay implements Relay {
         this.url = url;
     }
 
-    async publish(): Promise<string | null> {
+    async publish(): Promise<void> {
         this.published = true;
-        return null;
     }
 
     async stop(): Promise<void> {

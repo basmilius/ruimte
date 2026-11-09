@@ -90,9 +90,8 @@ export class BrokerRelay implements Relay {
     }
 
     /* The broker gives no address of its own; a client finds this machine by its key. */
-    async publish(): Promise<string | null> {
+    async publish(): Promise<void> {
         this.connect();
-        return null;
     }
 
     /* The servers for a direct connection, as werift reads them; none once the credentials expired. */
