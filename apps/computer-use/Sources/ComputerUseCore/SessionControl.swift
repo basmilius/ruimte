@@ -189,6 +189,6 @@ public struct SessionControl: Sendable {
         if hours > 0 {
             return String(format: "%d:%02d:%02d", hours, minutes, rest)
         }
-        return String(format: "%02d:%02d", minutes, rest)
+        return String(format: "%d:%02d", minutes, rest)
     }
 }

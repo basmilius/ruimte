@@ -1,5 +1,5 @@
+import AppKit
 import ComputerUseCore
-import CoreGraphics
 import Foundation
 import Phantom
 import Testing
@@ -118,6 +118,24 @@ struct LookTests {
         #expect(PhantomLook.of(.error).mark == .alert)
         #expect(PhantomLook.of(.drag).form == .hand)
         #expect(PhantomLook.of(.type).form == .beam)
+    }
+}
+
+@MainActor
+struct MenuBarTests {
+    @Test func theArrowFollowsTheMenuBarsColor() {
+        #expect(MenuBarLook.arrow.isTemplate)
+        #expect(MenuBarLook.arrow.size == NSSize(width: 14, height: 14))
+    }
+
+    @Test func theHeadWidensForALongTitleAndKeepsItsTileAtTheTop() {
+        let head = MenuHeadView()
+        head.update(title: "Ruimte is using Mail", line: "Reading the inbox · 2:14", state: .think)
+        let narrow = head.frame.size
+        #expect(narrow.width == 260)
+        head.update(title: "Ruimte is using Microsoft Outlook in the background, all afternoon", line: "Ready · 2:15", state: .idle)
+        #expect(head.frame.width > narrow.width)
+        #expect(head.frame.height == narrow.height)
     }
 }
 

@@ -169,9 +169,9 @@ struct SessionControlTests {
     }
 
     @Test func formatsTheClock() {
-        #expect(SessionControl.clock(134) == "02:14")
+        #expect(SessionControl.clock(134) == "2:14")
         #expect(SessionControl.clock(3725) == "1:02:05")
-        #expect(SessionControl.clock(-4) == "00:00")
+        #expect(SessionControl.clock(-4) == "0:00")
     }
 }
 

@@ -91,12 +91,6 @@ public enum OverlayStyle {
         }
     }
 
-    public enum MenuBar {
-        public static let mark = CGSize(width: 18, height: 16)
-        public static let markScale: CGFloat = 0.55
-        public static let markHotspot = CGPoint(x: 3, y: 2)
-    }
-
     public enum Motion {
         /// The system's smooth curve.
         public static let smooth = Easing.cubic(0.32, 0.72, 0, 1)

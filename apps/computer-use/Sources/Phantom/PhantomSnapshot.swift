@@ -39,20 +39,6 @@ public enum PhantomSnapshot {
         }
     }
 
-    /// The cursor alone on a transparent ground, the size of the menu bar mark.
-    public static func mark(_ state: PhantomState, scale: CGFloat) -> CGImage? {
-        let style = OverlayStyle.MenuBar.self
-        return render(size: style.mark, scale: scale) { stage in
-            let cursor = PhantomCursor()
-            var scene = PhantomScene()
-            scene.effects = false
-            cursor.show(PhantomLook.markState(state), scene: scene, motion: FrozenMotion(time: 0, reduceMotion: true), animated: false)
-            cursor.layer.position = style.markHotspot
-            cursor.layer.transform = CATransform3DMakeScale(style.markScale, style.markScale, 1)
-            stage.addSublayer(cursor.layer)
-        }
-    }
-
     /// A row of the forms large, then every state in the order of the design.
     public static func sheet(options: Options) -> CGImage? {
         let caption: CGFloat = 30

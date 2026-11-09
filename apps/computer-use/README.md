@@ -192,7 +192,10 @@ During a session the helper draws its own click-through cursor, which never appe
 ```sh
 cu render sheet --theme both --scale all --out /tmp/phantom   # the forms and every state
 cu render scroll --direction up --at 0.6 --scale 3            # one state at one moment
+cu preview                                                    # a window with every state live, the travel, and the menu bar item
 ```
+
+The menu bar item (`StatusMenu.swift`) shows a template arrow and the time, or, while the agent waits for the person, a pulsing amber dot and the step with the time. Its menu opens with a head of the cursor on a graphite tile, the title, the step and the time.
 
 ## Known limitations
 

@@ -38,6 +38,8 @@ Development only, drawn in this process without the agent:
   render sheet|<state>                  PNGs of the overlay: every state, or one state
       [--theme light|dark|both] [--scale 1|2|3|all] [--at SECONDS] [--working dots|arc]
       [--direction up|down|left|right] [--reduce-motion] [--out DIR]
+  preview                               a window with every state live, the travel between buttons,
+                                        and the menu bar item with its menu
 
 Every command takes --home <dir>: the RUIMTE_HOME whose local.key it presents and whose
 socket it uses. Without it, RUIMTE_HOME, else ~/.ruimte-dev for the dev app and ~/.ruimte otherwise.
@@ -455,6 +457,11 @@ if arguments.flags.contains("help") {
 if command == "render" {
     render(arguments)
     exit(0)
+}
+if command == "preview" {
+    MainActor.assumeIsolated {
+        Preview.run()
+    }
 }
 
 let reply = send(makeRequest(command, arguments), home: resolveHome(arguments))

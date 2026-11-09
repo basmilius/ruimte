@@ -91,7 +91,7 @@ public struct PhantomLook: Sendable {
         }
     }
 
-    /// The mini cursor of the menu bar shows what the agent is, not each action it takes.
+    /// The cursor in the menu's head shows what the agent is, not each action it takes.
     public static func markState(_ state: PhantomState) -> PhantomState {
         switch state {
         case .move, .hover, .click, .drag, .type, .scroll, .look, .error:

@@ -155,11 +155,14 @@ final class Overlay {
             hotkeys.register()
             installMouseMonitor()
             installActivationObserver()
-            tick = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            let tick = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
                 MainActor.assumeIsolated {
                     self?.refreshChrome()
                 }
             }
+            // Common modes, so the time in the open menu goes on while it tracks.
+            RunLoop.main.add(tick, forMode: .common)
+            self.tick = tick
         }
         armIdleTimeout()
         refreshChrome()
@@ -475,7 +478,16 @@ final class Overlay {
         let time = SessionControl.clock(control.elapsed(at: now))
         let held = control.mode != .running
         let stepLine = held ? config.step(for: shown, target: nil) : step
-        menu.show(StatusMenu.Content(title: config.menuTitle(background: background), state: shown, mode: control.mode, time: time, step: stepLine, keys: hotkeys.registered), config: config)
+        let keys = hotkeys.registered
+        menu.show(StatusMenu.Content(
+            title: config.menuTitle(background: background),
+            state: shown,
+            mode: control.mode,
+            time: time,
+            step: stepLine,
+            pauseKey: keys.contains(.togglePause),
+            stopKey: keys.contains(.stop)
+        ), config: config)
     }
 
     private func armIdleTimeout() {
