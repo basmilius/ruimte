@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
 import { tempHomes } from './temp-home-test-helpers.ts';
@@ -79,6 +79,55 @@ describe('wireDaemon', () => {
             await wired.bundles.stores.notices.put({ projectId: 'p', targetId: 'chat-1', from: 'chat-2', fromTitle: 'Other', text: 'hi' });
             expect(wired.bundles.stores.notices.waiting('chat-1')[0]?.createdAt).toBe(clock.now());
         } finally {
+            await wired.stop();
+        }
+    });
+
+    test('writes the chats before the first await of a stop', async () => {
+        const home = join(await homeOf(), 'home');
+        const wired = await wireDaemon({
+            runtime: testRuntime(home),
+            launcher: 'standalone',
+            seams: testSeams({ home, clock: new ManualClock() }),
+            shutdown: async () => undefined
+        });
+        const persist = spyOn(wired.bundles.agents.chats, 'persistAllSync');
+
+        try {
+            const stopping = wired.stop();
+
+            expect(persist).toHaveBeenCalledTimes(1);
+
+            await stopping;
+        } finally {
+            persist.mockRestore();
+        }
+    });
+
+    test('recovers the tasks once, however often the work is recovered', async () => {
+        const home = join(await homeOf(), 'home');
+        const wired = await wireDaemon({
+            runtime: testRuntime(home),
+            launcher: 'standalone',
+            seams: testSeams({ home, clock: new ManualClock() }),
+            shutdown: async () => undefined
+        });
+        const recover = spyOn(wired.bundles.work.tasks, 'recover');
+        const peerRecover = spyOn(wired.bundles.work.peerTasks, 'recover');
+        const startChildren = spyOn(wired.bundles.work.endChildren, 'start');
+
+        try {
+            await wired.recoverWork();
+            await wired.recoverWork();
+
+            expect(recover).toHaveBeenCalledTimes(1);
+            expect(peerRecover).toHaveBeenCalledTimes(1);
+            expect(startChildren).toHaveBeenCalledTimes(1);
+        } finally {
+            recover.mockRestore();
+            peerRecover.mockRestore();
+            startChildren.mockRestore();
+            await wired.bundles.agents.sessions.killAllSettled();
             await wired.stop();
         }
     });

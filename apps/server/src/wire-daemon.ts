@@ -335,15 +335,34 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
         ports
     };
 
+    // `recoverWork` and `start` both pick the tasks up, and a test calls the first before the second: the work runs once.
+    let recovery: Promise<void> | null = null;
+    let childrenStarted = false;
+    const recoverTasks = (): Promise<void> => {
+        recovery ??= (async () => {
+            await work.tasks.recover();
+            await work.peerTasks.recover();
+        })();
+
+        return recovery;
+    };
+    const startEndChildren = (): void => {
+        if (childrenStarted) {
+            return;
+        }
+
+        childrenStarted = true;
+        work.endChildren.start();
+    };
+
     return {
         runtime,
         bundles,
         areas,
         dispatcher,
         recoverWork: async () => {
-            await work.tasks.recover();
-            await work.peerTasks.recover();
-            work.endChildren.start();
+            await recoverTasks();
+            startEndChildren();
         },
         start: async ({ port, requestStop, serve }) => {
             servedPort = port;
@@ -391,12 +410,11 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
             providers.accounts.start();
             processes.processes.start();
 
-            await work.tasks.recover();
-            await work.peerTasks.recover();
+            await recoverTasks();
             // Before the outbox works, so a routine whose time passed while the machine was off runs once now.
             await routines.routines.start().catch((e: unknown) => console.error('Scheduling routines failed:', errorText(e)));
             work.worker.start();
-            work.endChildren.start();
+            startEndChildren();
             maintenance.start();
             // Beside the daemon answering: a turn a restart interrupted is taken up again without waiting for a client.
             void chats.recoverInterrupted().catch((e) => console.error('Resuming interrupted turns failed:', errorText(e)));
