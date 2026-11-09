@@ -496,6 +496,9 @@ final class Agent {
     func act(_ app: NSRunningApplication, _ request: Request, at point: CGPoint?, as action: ActionLook, reportPoint: Bool = true, _ body: () async throws -> [String: Any]) async throws -> [String: Any] {
         try checkStopped()
         begin(app, request, near: point, window: keyWindowFrame(app))
+        if request.front != true {
+            overlay.keepPersonInFront(for: 3)
+        }
         defer {
             overlay.finishAction()
         }

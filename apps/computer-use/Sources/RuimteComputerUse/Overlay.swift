@@ -79,6 +79,9 @@ final class Overlay {
     private var background: String?
     /// Until when the operated app coming to the front is its own launch and not the person.
     private var activationGrace: TimeInterval = 0
+    /// The app the person had in front when the agent began an action behind it, and until when it goes back there.
+    private var personsApp: NSRunningApplication?
+    private var keepFrontUntil: TimeInterval?
     private var mouseMonitor: Any?
     private var activationObserver: NSObjectProtocol?
     private var tick: Timer?
@@ -209,6 +212,29 @@ final class Overlay {
     /// The app is about to come up by the agent's own doing, which is not the person bringing it forward.
     func expectActivation(for duration: TimeInterval) {
         activationGrace = now + duration
+    }
+
+    /// While the agent works behind the person's work, the operated app activating itself puts the person's app back.
+    func keepPersonInFront(for duration: TimeInterval) {
+        guard let front = NSWorkspace.shared.frontmostApplication, front.processIdentifier != operatedPid, front.processIdentifier != getpid() else {
+            return
+        }
+        personsApp = front
+        keepFrontUntil = now + duration
+    }
+
+    /// Puts the person's app back when the operated app came forward by itself; false leaves the activation to the take-over rule.
+    private func undoActivation() -> Bool {
+        let sinceMouseDown = CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: .leftMouseDown)
+        let sinceKey = min(
+            CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: .keyDown),
+            CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: .flagsChanged)
+        )
+        guard ActivationUndo.shouldUndo(now: now, keepUntil: keepFrontUntil, sinceMouseDown: sinceMouseDown, sinceKey: sinceKey), let personsApp, !personsApp.isTerminated else {
+            return false
+        }
+        personsApp.activate()
+        return true
     }
 
     /// Moves the cursor to the target, showing `state` on the way; the real pointer stays put.
@@ -439,7 +465,13 @@ final class Overlay {
         activationObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] notification in
             let pid = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.processIdentifier
             MainActor.assumeIsolated {
-                guard let self, let pid, self.background != nil, pid == self.operatedPid, self.now > self.activationGrace, self.control.acceptsTakeover else {
+                guard let self, let pid, self.background != nil, pid == self.operatedPid else {
+                    return
+                }
+                if self.undoActivation() {
+                    return
+                }
+                guard self.now > self.activationGrace, self.control.acceptsTakeover else {
                     return
                 }
                 self.takeOver()

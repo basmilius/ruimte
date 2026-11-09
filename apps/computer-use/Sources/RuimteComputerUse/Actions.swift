@@ -474,11 +474,16 @@ extension Agent {
             let configuration = NSWorkspace.OpenConfiguration()
             configuration.activates = !behind
             overlay.expectActivation(for: 10)
+            if behind {
+                overlay.keepPersonInFront(for: 10)
+            }
             do {
                 app = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
             } catch {
                 throw AgentError("could not launch \(url.path): \(error.localizedDescription)")
             }
+            // Many apps activate themselves once they finished launching, whatever the configuration asked.
+            overlay.operating(in: nil, pid: app.processIdentifier)
             launched = true
         }
         let appElement = AXUIElementCreateApplication(app.processIdentifier)
