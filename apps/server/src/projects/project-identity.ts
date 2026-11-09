@@ -60,6 +60,21 @@ const ICON_CANDIDATES = [
 
 const HTML_CANDIDATE = 'index.html';
 
+const ICON_INPUTS: ReadonlySet<string> = new Set([...ICON_CANDIDATES, ...ICON_CANDIDATES.map(darkVariantOf), HTML_CANDIDATE]);
+
+/*
+ * Whether a file, by its path in the project folder with `/` between the parts, is one an icon is derived from.
+ * A favicon `index.html` names elsewhere is not among them, so a change there shows once the cache lets go of it.
+ */
+export function isIconInput(path: string): boolean {
+    return ICON_INPUTS.has(path);
+}
+
+/* The folders under the project folder that hold an icon input, besides the folder itself, each after its parent. */
+export const ICON_INPUT_FOLDERS: readonly string[] = [
+    ...new Set(ICON_CANDIDATES.filter((candidate) => candidate.includes('/')).map((candidate) => candidate.slice(0, candidate.lastIndexOf('/'))))
+];
+
 export interface DerivedIcon {
     // Relative to the folder, so it reads as "from .idea/icon.svg" without leaking the path.
     from: string;

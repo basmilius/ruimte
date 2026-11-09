@@ -71,7 +71,7 @@ import {
     PROJECT_FILE,
     WATCH_SETTLE_MS
 } from './project-files.ts';
-import { ProjectFolderWatch } from './project-folder-watch.ts';
+import { ProjectFolderWatch, type FolderChange } from './project-folder-watch.ts';
 import { ProjectHolds } from './project-holds.ts';
 import { readIdeaName } from './project-identity.ts';
 import { placesOf, ProjectIndex, type IndexedPlace } from './project-index.ts';
@@ -308,7 +308,7 @@ export class ProjectStore {
         this.scratchFolder = scratchFolderOf(home);
         this.registry = new ProjectRegistry(home);
         this.registry.onUpdate(() => void this.watchFolders());
-        this.folderWatch = new ProjectFolderWatch(seams, (projectId) => this.heardOutside(projectId));
+        this.folderWatch = new ProjectFolderWatch(seams, (projectId, change) => void this.heardOutside(projectId, change));
         this.machineHome = overlays.machineHome;
         this.summaries = new ProjectSummaries(this.scratchFolder);
         this.links = links;
@@ -442,9 +442,17 @@ export class ProjectStore {
     }
 
     /* A project a client holds has its own watcher, which tells the clients itself. */
-    private heardOutside(projectId: string): void {
+    private async heardOutside(projectId: string, change: FolderChange): Promise<void> {
         if (this.open.has(projectId)) {
             return;
+        }
+        if (change === 'icon') {
+            // The list a client asks for next reads the folder again, not the icon the cache still holds.
+            const entry = (await this.registry.load()).find((candidate) => candidate.projectId === projectId);
+            if (entry === undefined) {
+                return;
+            }
+            this.summaries.invalidate(entry.folder);
         }
         for (const clientId of this.listWatchers) {
             this.sinks.to(clientId, { event: 'project.listChanged', payload: { projectId } });

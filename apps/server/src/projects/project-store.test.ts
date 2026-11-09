@@ -424,6 +424,27 @@ describe('ProjectStore', () => {
         expect((await store.list())[0]!.icon).toEqual({ kind: 'lucide', value: 'rocket' });
     });
 
+    test('an icon put in the folder of a project no client holds shows in the next list, and watchers hear of it', async () => {
+        const opened = await store.openProject({ folder });
+        const { projectId } = opened.summary;
+        store.release(projectId);
+        store.watchList('c1');
+        const shared = join(folder, '.ruimte');
+        while (fake.openOn(shared).length === 0) {
+            await new Promise((resolve) => setImmediate(resolve));
+        }
+        expect((await store.list())[0]!.icon).toEqual({ kind: 'initial', value: 'R' });
+
+        await writeFile(join(shared, 'icon.png'), PNG);
+        fake.on(shared).emit('icon.png');
+        await fake.settle();
+        while (!changed.some((event) => event.event === 'project.listChanged')) {
+            await new Promise((resolve) => setImmediate(resolve));
+        }
+
+        expect((await store.list())[0]!.icon).toMatchObject({ kind: 'image', value: '.ruimte/icon.png' });
+    });
+
     test('a first open seeds the name from .idea/.name and writes it into the canvas', async () => {
         await mkdir(join(folder, '.idea'), { recursive: true });
         await writeFile(join(folder, '.idea', '.name'), 'Ruimte Daemon\n');

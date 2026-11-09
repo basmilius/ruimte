@@ -5,7 +5,7 @@ import { ProjectFolderWatch } from './project-folder-watch.ts';
 function setup() {
     const watch = new FakeWatch();
     const heard: string[] = [];
-    const folders = new ProjectFolderWatch(watch, (projectId) => void heard.push(projectId));
+    const folders = new ProjectFolderWatch(watch, (projectId, change) => void heard.push(change === 'files' ? projectId : `${projectId} icon`));
 
     return { watch, heard, folders };
 }
@@ -306,7 +306,7 @@ describe('ProjectFolderWatch', () => {
                     return watch.watch(path, options, listener);
                 }
             },
-            (projectId) => void heard.push(projectId)
+            (projectId, change) => void heard.push(`${projectId} ${change}`)
         );
         folders.sync(new Map([['one', '/work/one']]));
         folders.sync(new Map([['one', '/work/one']]));
@@ -320,7 +320,8 @@ describe('ProjectFolderWatch', () => {
         expect(watch.openOn('/work/one')).toHaveLength(1);
         expect(watch.openOn('/work/one/.ruimte')).toHaveLength(1);
         expect(watch.openOn('/work/one/.ruimte/private')).toHaveLength(1);
-        expect(heard).toEqual(['one']);
+        expect(watch.openOn('/work/one/public')).toHaveLength(1);
+        expect(heard).toEqual(['one files', 'one icon']);
 
         folders.sync(new Map([['one', '/work/one']]));
         expect(watch.openOn('/work/one')).toHaveLength(1);
@@ -328,6 +329,58 @@ describe('ProjectFolderWatch', () => {
         watch.on('/work/one/.ruimte').emit('project.json');
         await watch.settle();
 
-        expect(heard).toEqual(['one', 'one']);
+        expect(heard).toEqual(['one files', 'one icon', 'one files']);
+    });
+
+    test('tells that the icon may have changed for the files an icon is derived from, and for no other', async () => {
+        const { watch, heard, folders } = setup();
+        folders.sync(new Map([['one', '/work/one']]));
+        watch.on('/work/one/.ruimte').emit('icon.png');
+        await watch.settle();
+        watch.on('/work/one').emit('favicon.ico');
+        await watch.settle();
+        watch.on('/work/one/src/app').emit('icon_dark.svg');
+        await watch.settle();
+        watch.on('/work/one/public').emit('robots.txt');
+        watch.on('/work/one/.ruimte/private').emit('icon.png');
+        watch.on('/work/one').emit('package.json');
+        await watch.settle();
+
+        expect(heard).toEqual(['one icon', 'one icon', 'one icon']);
+    });
+
+    test('watches a folder an icon may live in that is made after the watch began', async () => {
+        const watch = new FakeWatch();
+        const heard: string[] = [];
+        let assetsMade = false;
+        const folders = new ProjectFolderWatch(
+            {
+                schedule: watch.schedule,
+                watch: (path, options, listener) => {
+                    if (path.endsWith('/assets') && !assetsMade) {
+                        throw new Error('ENOENT');
+                    }
+
+                    return watch.watch(path, options, listener);
+                }
+            },
+            (projectId, change) => void heard.push(`${projectId} ${change}`)
+        );
+        folders.sync(new Map([['one', '/work/one']]));
+
+        expect(watch.openOn('/work/one/assets')).toHaveLength(0);
+
+        assetsMade = true;
+        watch.on('/work/one').emit('assets', 'rename');
+        await watch.settle();
+        watch.on('/work/one/assets').emit('logo.svg');
+        await watch.settle();
+
+        expect(watch.openOn('/work/one/assets')).toHaveLength(1);
+        expect(heard).toEqual(['one icon', 'one icon']);
+
+        folders.close();
+
+        expect(watch.openOn('/work/one/assets')).toHaveLength(0);
     });
 });
