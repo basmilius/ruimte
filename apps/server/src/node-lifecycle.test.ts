@@ -45,12 +45,13 @@ test('a listener that throws stops the rest and the error reaches the caller', (
     expect(heard).toEqual([]);
 });
 
-test('the nodes a project still places reach the listeners with the project', async () => {
+test('the nodes a project still places reach every leaving listener before any placed one, whichever subscribed first', async () => {
     const lifecycle = new NodeLifecycle();
-    const seen: Array<[string, string[]]> = [];
-    lifecycle.on('placed', (projectId, ids) => void seen.push([projectId, [...ids]]));
+    const seen: string[] = [];
+    lifecycle.on('placed', (projectId, ids) => void seen.push(`placed ${projectId} ${[...ids].join(',')}`));
+    lifecycle.on('leaving', (projectId, ids) => void seen.push(`leaving ${projectId} ${[...ids].join(',')}`));
 
-    await lifecycle.emit('placed', 'project-1', new Set(['a', 'b']));
+    await lifecycle.places('project-1', new Set(['a', 'b']));
 
-    expect(seen).toEqual([['project-1', ['a', 'b']]]);
+    expect(seen).toEqual(['leaving project-1 a,b', 'placed project-1 a,b']);
 });

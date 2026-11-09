@@ -159,7 +159,7 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
     worker.handle('start-remote-agent', remoteTasks.start);
     worker.handle('stop-remote-agent', remoteTasks.stop);
     worker.handle('take-remote-result', remoteTasks.take);
-    lifecycle.on('placed', (projectId, ids) => remoteTasks.places(projectId, ids));
+    lifecycle.on('leaving', (projectId, ids) => remoteTasks.places(projectId, ids));
     const peerTasks = new PeerTasks({
         links: projects.peers,
         projects,
@@ -201,7 +201,7 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
     lifecycle.on('placed', (projectId, ids) => activity.places(projectId, ids));
     lifecycle.on('placed', (projectId, ids) => afterSettleStore.places(projectId, ids));
     projects.index.onPlaces = (projectId, ids) => {
-        void lifecycle.emit('placed', projectId, ids).catch((e: unknown) => console.error('A node leaving its project was not taken in:', errorText(e)));
+        void lifecycle.places(projectId, ids).catch((e: unknown) => console.error('A node leaving its project was not taken in:', errorText(e)));
     };
     return {
         worker,

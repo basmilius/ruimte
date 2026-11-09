@@ -228,7 +228,7 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
         log: observers.log
     });
     lifecycle.on('closed', (nodeId) => endChildren.owe(nodeId).then(() => undefined));
-    lifecycle.on('placed', (projectId, ids) => endChildren.places(projectId, ids));
+    lifecycle.on('leaving', (projectId, ids) => endChildren.places(projectId, ids));
 
     const summaries = wireSummaries({
         chats: chatManager,

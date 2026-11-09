@@ -593,6 +593,28 @@ describe('agent --machine', () => {
         expect(daemon.outbox.list()).toEqual([]);
     });
 
+    test('an agent that runs there is stopped there when its node is deleted, before the prune takes its task', async () => {
+        open = fakeLink();
+        const [line] = await give();
+        const nodeId = line!.split('\t')[0]!;
+        await daemon.worker.settled();
+        expect(daemon.outbox.list().map((entry) => entry.kind)).toEqual(['take-remote-result']);
+
+        open = null;
+        const opened = await store.openProject({ folder });
+        const { rev, ...content } = opened.document;
+        const views = content.views.map((view) => (view.kind === 'canvas' ? { ...view, nodes: view.nodes.filter((node) => node.id !== nodeId) } : view));
+        await store.save(projectId, rev, { ...content, views });
+        await daemon.until(() => daemon.outbox.list().some((entry) => entry.kind === 'stop-remote-agent'));
+        await daemon.worker.settled();
+        expect(daemon.outbox.list().map((entry) => entry.kind)).toEqual(['stop-remote-agent']);
+
+        open = fakeLink();
+        daemon.worker.wake(`peer:${MACHINE}`);
+        await daemon.worker.settled();
+        expect(requests.at(-1)).toEqual({ type: 'peer.taskStop', payload: { nodeId } });
+    });
+
     test('a team binds and starts every role on the machine with a task in its batch', async () => {
         open = fakeLink();
         const roles = [

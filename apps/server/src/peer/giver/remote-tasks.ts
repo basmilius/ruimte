@@ -522,7 +522,7 @@ export class RemoteTasks {
         }
     }
 
-    /* For the `placed` event of the node lifecycle: a node that ran an agent on another machine and is gone ends that agent as well. */
+    /* For the `leaving` event of the node lifecycle, before a prune takes the task: a node that ran an agent on another machine and is gone ends that agent as well. */
     places(projectId: string, ids: ReadonlySet<string>): void {
         for (const task of this.deps.tasks.ofProject(projectId)) {
             if (task.machine !== undefined && task.status === 'open' && !ids.has(task.childId)) {
