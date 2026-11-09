@@ -104,13 +104,13 @@ function EdgeLabel({
 
 /* Where a line meets a node: it stops a gap short and leaves its marker in the gap behind, rimmed in
    its own color, so nothing is ever drawn against a node's border. An outline is filled with the
-   canvas, so the line ends inside it instead of running through it. */
+   canvas, so the line ends inside it instead of running through it; an arrow and a point are solid. */
 function EdgeMarker({ shape, at, side, stroke }: { shape: MarkerShape; at: Point; side: Side; stroke: string }) {
     const path = markerPath(shape, at, SIDE_NORMAL[side]);
     if (path === '') {
         return null;
     }
-    const fill = shape === 'chevron' ? 'none' : shape === 'arrow' ? stroke : 'var(--canvas-bg)';
+    const fill = shape === 'chevron' ? 'none' : shape === 'arrow' || shape === 'point' ? stroke : 'var(--canvas-bg)';
     return <path d={path} fill={fill} stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />;
 }
 

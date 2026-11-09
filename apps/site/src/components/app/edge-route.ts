@@ -69,12 +69,14 @@ export function routeBetween(from: Rect, to: Rect): Route {
 }
 
 /** A marker's path at an end, in `marker-path.ts`'s terms: `b` along the normal, `s` across it. */
-export function markerPath(kind: 'dot' | 'chevron' | 'arrow', at: Point, along: Point): string {
+export function markerPath(kind: 'dot' | 'point' | 'chevron' | 'arrow', at: Point, along: Point): string {
     const perp: Point = [-along[1], along[0]];
     const c = (b: number, s: number): string => `${at[0] + along[0] * b + perp[0] * s} ${at[1] + along[1] * b + perp[1] * s}`;
     switch (kind) {
         case 'dot':
             return `M ${c(-5, 0)} A 5 5 0 1 0 ${c(5, 0)} A 5 5 0 1 0 ${c(-5, 0)} Z`;
+        case 'point':
+            return `M ${c(-2, 0)} A 2 2 0 1 0 ${c(2, 0)} A 2 2 0 1 0 ${c(-2, 0)} Z`;
         case 'chevron':
             return `M ${c(6, 6)} L ${c(0, 0)} L ${c(6, -6)}`;
         case 'arrow':
