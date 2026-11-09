@@ -157,7 +157,7 @@ export function ChatBody({
     );
 
     return (
-        <div className="chat-reading-scope h-full min-h-0" data-chat-text-size={textSize}>
+        <div className="chat-reading-scope h-full min-h-0" data-chat-body={id} data-chat-text-size={textSize}>
             <div className="chat-reading-content relative flex h-full flex-col bg-surface" data-surface="chat">
                 <ConnectionNotice status={status} />
                 {status === 'open' && !failure && <MissingProviderNote endpointId={endpointId} kind={info?.provider ?? nodeHost?.provider} chatId={id} />}

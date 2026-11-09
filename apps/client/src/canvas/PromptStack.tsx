@@ -46,7 +46,8 @@ function idOf(prompt: CanvasPrompt): string {
 
 /* Whether a prompt is the one a request to bring `nodeId` to the front means. */
 function asks(prompt: CanvasPrompt, nodeId: string): boolean {
-    return (prompt.sourceNodeId ?? prompt.subject.nodeId) === nodeId || prompt.ownerId === nodeId;
+    // A child's card stands under its parent's node, and comes to the front for either.
+    return prompt.sourceNodeId === nodeId || prompt.subject.nodeId === nodeId || prompt.ownerId === nodeId;
 }
 
 /* The machine a prompt's owner runs on, which is where its snooze is kept. */
