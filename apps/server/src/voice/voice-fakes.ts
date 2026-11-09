@@ -5,7 +5,6 @@ import { LiveError, type OpenAiLive } from './openai-live.ts';
 import { LiveSideband, type LiveSocket, type SidebandHandlers } from './sideband.ts';
 import type { VoiceChatEvent, VoiceFollowChats } from './voice-follower.ts';
 
-/* A clock a test moves by hand, so every deadline runs without waiting. */
 export class FakeClock implements VoiceClock {
     #now = 1_000_000;
     #timers: { at: number; run: () => void; cancelled: boolean }[] = [];

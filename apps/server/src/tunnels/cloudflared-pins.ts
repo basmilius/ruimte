@@ -6,7 +6,6 @@
 const CLOUDFLARED_VERSION = '2026.10.7';
 
 interface CloudflaredAsset {
-    /* The file name on the release page. */
     readonly name: string;
     readonly sha256: string;
     /* A macOS build ships in a tarball that holds the binary. */
@@ -41,7 +40,6 @@ const ASSETS: Readonly<Record<string, CloudflaredAsset>> = {
     }
 };
 
-/* The build for a platform, or null where Cloudflare ships none. */
 export function cloudflaredAsset(platform: string, arch: string): CloudflaredAsset | null {
     return ASSETS[`${platform}-${arch}`] ?? null;
 }

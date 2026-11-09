@@ -121,7 +121,6 @@ interface MetadataResponse {
 }
 
 export interface MetadataPorts {
-    /* Every address the name leads to. */
     resolve(hostname: string): Promise<string[]>;
     /*
      * Reads the document from exactly this address, and from no other: the connection is made to `address` while the name stays the

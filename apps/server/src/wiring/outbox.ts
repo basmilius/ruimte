@@ -44,7 +44,6 @@ interface OutboxLinkOptions {
  */
 export class OutboxLink {
     readonly worker: OutboxWorker<OutboxWork>;
-    /* What the chat manager reports an interrupted run to. */
     readonly onInterruptedRun: ReturnType<typeof oweResume>;
     private readonly observers: Pick<WiringObservers, 'enqueued'>;
     private readonly outbox: OutboxStore;
@@ -121,7 +120,6 @@ interface OutboxWiringDeps {
     chatManager: ChatManager;
     sessions: SessionManager;
     lifecycle: NodeLifecycle;
-    /* Raises attention on a node. */
     alert(target: 'chat' | 'terminal', nodeId: string, title: string, body: string): void;
     now(): number;
     observers: Pick<WiringObservers, 'dropped' | 'failed' | 'log'>;

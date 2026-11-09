@@ -10,7 +10,6 @@ export interface DaemonRuntime {
     sourceDir: string;
     /* The `/context` route an agent's session is told about; the MCP endpoint sits beside it (`mcpUrlOf`). */
     contextUrl: string;
-    /* Where a CLI's hooks POST to. */
     hookUrl: string;
 }
 

@@ -88,7 +88,6 @@ function serves(rule: Rule | undefined): boolean {
     return rule !== undefined && !String(rule.service).startsWith('http_status:');
 }
 
-/* The paths of `PATHS` a request for the hostname reaches an origin on. */
 function servedPaths(ingress: readonly Rule[], hostname: string): string[] {
     return PATHS.filter((path) => serves(ruleFor(ingress, hostname, path)));
 }
@@ -412,7 +411,6 @@ function writerOf(world: World): Writer {
     };
 }
 
-/* Faults for one step: refusals and failures by path, lost answers, writers right after a PUT, a zone the token loses and the tunnel deleted. */
 function injectFaults(world: World): void {
     const { next, cloudflare } = world;
     const tunnelId = world.disk.value?.tunnel?.id ?? 'none';
@@ -881,7 +879,6 @@ function focusedDraw(world: World): number {
     return from + world.next() * (to - from);
 }
 
-/* Draws one step and runs it with its faults, then checks the invariants. */
 async function step(world: World): Promise<void> {
     const { next, service } = world;
     const before = intents(world);

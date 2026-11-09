@@ -38,7 +38,6 @@ function sameHash(one: string, other: string): boolean {
 }
 
 const StoredCredentialSchema = CredentialSchema.extend({
-    /* A bearer's hash. */
     secretHash: z.string().nullable(),
     oauth: z
         .object({
@@ -58,7 +57,6 @@ interface CredentialStoreOptions {
     /* `$RUIMTE_HOME`; the file is `tunnels/credentials.json`, 0600 in a 0700 folder. Absent keeps nothing, for a test. */
     home?: string;
     now(): number;
-    /* Random bytes, as base64url text. */
     random(bytes: number): string;
 
     /* Called when a credential is used for the first time, or again after a minute without use, so settings can refresh what they show. */
@@ -73,7 +71,6 @@ export interface ActiveClient {
 
 type CredentialRefusal = 'unknown' | 'expired' | 'wrong-door';
 
-/* What a request that presented a token is, or why it is nothing. */
 export type CredentialCheck = { ok: true; credential: Credential; client: string } | { ok: false; reason: CredentialRefusal };
 
 /* The name a person reads for a client: a bearer's label, or the host of an OAuth client's address, never the unverified name it gave. */
@@ -182,7 +179,6 @@ export class CredentialStore {
         return stored === undefined ? null : publicCredential(stored);
     }
 
-    /* How many credentials were used lately. */
     recentlyUsed(): number {
         const since = this.options.now() - RECENT_USE_MS;
 
@@ -237,7 +233,6 @@ export class CredentialStore {
         return { credential: publicCredential(record), secret };
     }
 
-    /* The credential an approved OAuth client holds from then on, with its first access and refresh token. */
     async createOAuth(input: {
         label: string;
         clientId: string;

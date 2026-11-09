@@ -18,7 +18,6 @@ import { openAiLive } from '../voice/openai-live.ts';
 import type { DaemonRuntime } from './runtime.ts';
 import type { DaemonSeams } from './seams.ts';
 
-/* The real values of every seam: real processes, the system clock, the machine's own git and accounts. */
 export function productionSeams(runtime: DaemonRuntime): DaemonSeams {
     const failed = (what: string, error: unknown): void => console.error(`${what}:`, errorText(error));
 

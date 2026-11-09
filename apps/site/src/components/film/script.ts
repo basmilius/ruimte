@@ -24,7 +24,6 @@ export interface Child {
     readonly task: string;
     readonly tool: string;
     readonly rect: Rect;
-    /** The step its task settles on. */
     readonly doneAt: number;
 }
 

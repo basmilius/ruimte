@@ -19,7 +19,6 @@ interface AgentVisualDeps {
     renderer?: VisualRenderer;
 }
 
-/* `enabled` is the machine's switch that lets an agent show a new visual. */
 export interface VisualHost {
     enabled(): boolean;
     writeSource?(chatId: string, name: string, html: string): Promise<string>;

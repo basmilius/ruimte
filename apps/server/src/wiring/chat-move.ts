@@ -36,7 +36,6 @@ export interface ChatMoveWiring {
     proposals: Pick<ProjectProposals, 'stands' | 'moved' | 'pauseHold'>;
 }
 
-/* Whether the chat is a chat view of the Chats project. */
 export function chatIsInChats(store: Pick<ProjectStore, 'index' | 'scratchFolder'>, chatId: string): boolean {
     const place = store.index.locate(chatId);
     return (
@@ -99,7 +98,6 @@ async function loadedInfo(chats: ChatCore, chatId: string): Promise<ChatInfo> {
     return session.info;
 }
 
-/* The chat steps a move and its repair share. */
 function sharedChatSteps(chats: ChatCore) {
     return {
         load: (chatId: string) => loadedInfo(chats, chatId),

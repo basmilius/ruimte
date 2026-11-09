@@ -45,7 +45,6 @@ interface AccountsInput {
     ownsSettings: NonNullable<ProviderAccountsOptions['ownsSettings']>;
 }
 
-/* What the wiring of the git services is built from. */
 interface WorktreesInput {
     home: string;
     agents: WorktreeAgents;
@@ -69,10 +68,8 @@ interface ProjectStoreInput {
 export interface DaemonSeams {
     clock: Clock;
     random(): number;
-    /* The environment every terminal and chat CLI starts from. */
     env: Record<string, string | undefined>;
     pty: PtyAdapter;
-    /* Starts the process of a chat's CLI. */
     chatSpawn: SpawnChatProcess;
     providers: {
         /* How a CLI is found and asked for its version; null leaves it to each provider. */
@@ -93,19 +90,16 @@ export interface DaemonSeams {
         repositoryOf(directory: string): Promise<string | null>;
     };
     projectStore(input: ProjectStoreInput): ProjectStore;
-    /* Names a chat by asking a one-shot CLI. */
     nameChat: typeof suggestChatTitle;
     usage: {
         /* How the plan of a CLI's account is read; null starts the CLI and asks it. */
         probe: UsageMonitorOptions['probe'] | null;
     };
     language: {
-        /* Runs a command of a language server's toolchain. */
         run: RunCommand;
         /* Where a toolchain's program may be. */
         findProgram(program: string): string[];
     };
-    /* Starts the child that renders a visual. */
     visualLauncher: RenderLauncher;
     voiceLive: OpenAiLive;
     machine: {
@@ -118,7 +112,6 @@ export interface DaemonSeams {
         connections(real: RemoteConnections): Pick<RemoteConnections, 'link'>;
         reconnect(real: ConnectPeer): Pick<ConnectPeer, 'owe'>;
     };
-    /* Tells a machine that works here its task settled. */
     peerNotify(real: (machineId: string, nodeId: string) => void): (machineId: string, nodeId: string) => void;
     observers: WiringObservers;
 }

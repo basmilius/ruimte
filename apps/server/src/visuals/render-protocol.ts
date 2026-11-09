@@ -56,7 +56,6 @@ const RenderProxyNoticeSchema = z.object({ proxyPort: z.number().int().min(1).ma
 
 type RenderLine = { kind: 'proxy'; port: number } | { kind: 'answer'; answer: RenderAnswer };
 
-/* What one line of the child's stdout is, or null for a line that is neither. */
 export function classifyRenderLine(line: string): RenderLine | null {
     let json: unknown;
 

@@ -59,7 +59,6 @@ interface VoiceToolExecutorOptions<Context> {
     observer?: VoiceToolObserver;
 }
 
-/* A question this session asked, by the call that asked it and where the project stood then. */
 interface PendingConfirmation {
     callId: string;
     name: ActionName;
@@ -96,7 +95,6 @@ function offeredActions(tools: readonly VoiceToolDefinition[]): Map<string, Read
     return offered;
 }
 
-/* A counted gate: at most `size` of what it runs go at once. */
 class Gate {
     readonly #size: number;
     #running = 0;

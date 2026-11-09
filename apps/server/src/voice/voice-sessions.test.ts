@@ -88,7 +88,6 @@ function functionCall(callId: string, args: Record<string, unknown>, tool = 'com
     };
 }
 
-/* The output the daemon sent for a call. */
 function outputOf(attach: { socket: { sentOf(type: string): LiveEvent[] } }, callId: string): Record<string, unknown> {
     const sent = attach.socket.sentOf('response.item.create').find((event) => (event.item as { call_id?: string }).call_id === callId);
     return JSON.parse(String((sent!.item as { output: string }).output)) as Record<string, unknown>;

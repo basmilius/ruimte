@@ -20,7 +20,6 @@ function num(value: unknown): number | null {
     return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-/* The answer of `/usage` as the windows of the usage page. */
 export function readNanoGptUsage(response: unknown): ProbeResult {
     if (!isRecord(response)) {
         return { unavailable: { reason: 'failed', message: 'NanoGPT returned no readable usage' } };

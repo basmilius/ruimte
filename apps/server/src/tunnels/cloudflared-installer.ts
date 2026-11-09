@@ -7,11 +7,9 @@ class CloudflaredInstallError extends Error {}
 export interface InstallerPorts {
     platform: string;
     arch: string;
-    /* The `cloudflared` on the path, or null. */
     onPath(): string | null;
     exists(path: string): Promise<boolean>;
     download(url: string): Promise<Uint8Array>;
-    /* Unpacks the tarball of a macOS build into `folder`. */
     extract(archive: string, folder: string): Promise<void>;
     sha256(bytes: Uint8Array): string;
 }
@@ -33,7 +31,6 @@ export class CloudflaredInstaller {
         return join(this.folder, this.ports.platform === 'win32' ? 'cloudflared.exe' : 'cloudflared');
     }
 
-    /* The binary to run: the one on the path, else the one this installer put in its own folder. */
     async locate(): Promise<string | null> {
         const found = this.ports.onPath();
 

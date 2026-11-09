@@ -16,7 +16,6 @@ type CloudflareErrorCode = 'token-refused' | 'no-permission' | 'not-found' | 'co
 
 /* A failure in the words of a person: what Ruimte was doing and why Cloudflare would not. Never holds the token. */
 export class CloudflareError extends CodedError<CloudflareErrorCode> {
-    /* The status Cloudflare answered with, or null when no answer came. */
     readonly status: number | null;
 
     constructor(code: CloudflareErrorCode, message: string, status: number | null = null) {

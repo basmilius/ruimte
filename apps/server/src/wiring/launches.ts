@@ -20,7 +20,6 @@ export interface LaunchesBundle {
     store: LaunchStore;
     runner: LaunchRunner;
     secrets: SecretService;
-    /* The launches as an agent's tool reaches them. */
     agentHost: LaunchHost;
     /* The one launch a person chose to run after a worktree chat settles. */
     afterSettle: AfterSettleLaunches;

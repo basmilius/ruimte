@@ -7,7 +7,6 @@ import { VISUAL_MEASURE_WIDTHS } from '@ruimte/contracts';
 import type { RenderAnswer } from './render-protocol.ts';
 import { previewVisual, renderCommand, VisualRenderer, type RenderJob, type RenderProcess } from './renderer.ts';
 
-/* Timers that run only when a test moves the clock. */
 class ManualTimers {
     time = 0;
     private timers: { at: number; run: () => void }[] = [];

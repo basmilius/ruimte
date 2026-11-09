@@ -7,7 +7,6 @@ import { installUsageCounter } from '../stats/usage-stats.ts';
 import { stopTelemetry, telemetryBuild, type Launcher } from '../telemetry/reporter.ts';
 import { VERSION } from '../version.ts';
 
-/* The anonymous usage counts of this machine: what sends them, and what follows the switch. */
 export interface UsageStatsBundle {
     // Sends the finished days; asked beside the model catalogs, at the start and on `provider.list`.
     flush(): void;

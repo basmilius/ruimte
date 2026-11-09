@@ -1,4 +1,3 @@
-/* A `cloudflared` the daemon started: its output line by line, and how it ended. */
 export interface CloudflaredProcess {
     /* The exit code; resolves once, also after `stop`. */
     readonly exited: Promise<number>;
@@ -35,7 +34,6 @@ async function readLines(stream: ReadableStream<Uint8Array> | null, onLine: (lin
     }
 }
 
-/* Runs the real binary with the person's own environment. */
 export const spawnRunner: CloudflaredRunner = {
     start(binary, args, onLine, env) {
         const child = Bun.spawn([binary, ...args], { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ...env } });

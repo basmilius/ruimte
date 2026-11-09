@@ -22,7 +22,6 @@ export class FakeCloudflared implements CloudflaredRunner {
         this.answers.set(key, answer);
     }
 
-    /* Ends the child the way a crash does. */
     crash(code = 1): void {
         this.ends.splice(0).forEach((end) => end(code));
     }
@@ -48,13 +47,11 @@ export class FakeCloudflared implements CloudflaredRunner {
         return { exited, stop: () => end(0) };
     }
 
-    /* The calls whose arguments include these words. */
     called(...words: string[]): string[][] {
         return this.calls.filter((call) => words.every((word) => call.includes(word)));
     }
 }
 
-/* A token store in memory, which is how a test runs the service without a disk. */
 export class MemoryTokenStore implements CloudflareTokenStore {
     private token: string | null;
 
@@ -142,7 +139,6 @@ export class FakeCloudflare {
         this.losses.push({ key, status, skip });
     }
 
-    /* How many lost answers still wait for their request. */
     get waitingLosses(): number {
         return this.losses.length;
     }

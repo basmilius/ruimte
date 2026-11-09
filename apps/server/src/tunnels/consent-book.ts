@@ -3,9 +3,7 @@ import type { ConsentRequest, ExternalGrant } from '@ruimte/contracts';
 import { sameSecret } from '../auth/local-secret.ts';
 import { defaultGrant, mergedGrant } from './credential-store.ts';
 
-/* How long a client waits for a person on this machine before the request is nothing. */
 const CONSENT_TIMEOUT_MS = 5 * 60_000;
-/* How long an authorization code lives once approved. */
 const AUTHORIZATION_CODE_MS = 60_000;
 /* Every cap counts requests that wait for a person, so none of them lets one party fill the window with strangers. */
 const MAX_PENDING = 20;
@@ -39,7 +37,6 @@ type ConsentPoll =
 export interface ConsentBookOptions {
     now(): number;
     random(bytes: number): string;
-    /* A number below `limit`, evenly spread. */
     pick(limit: number): number;
     changed(): void;
 }
@@ -152,7 +149,6 @@ export class ConsentBook {
         return true;
     }
 
-    /* What the waiting page asks: still pending, or the outcome. */
     poll(id: string): ConsentPoll {
         this.sweep();
 

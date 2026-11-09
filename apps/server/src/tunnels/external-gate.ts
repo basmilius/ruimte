@@ -8,7 +8,6 @@ const FAILURE_WINDOW_MS = 60_000;
 const FAILURES_PER_WINDOW = 20;
 const MAX_TRACKED_SOURCES = 1000;
 
-/* Whether the request carries a header only Cloudflare's edge sets. */
 function hasTunnelHeaders(headers: Headers): boolean {
     return TUNNEL_HEADERS.some((name) => headers.has(name));
 }
@@ -74,7 +73,6 @@ export class FailureLimiter {
     }
 
     fail(source: string): void {
-        // A flood from many sources shares one bucket instead of growing the map.
         const bucket = this.bucketOf(source);
 
         this.failures.set(bucket, [...this.recent(bucket), this.now()]);

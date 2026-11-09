@@ -36,7 +36,6 @@ export const VOICE_CLOCK_MS = 60_000;
 /* A burst of changes to the project gives one new context, not one per write. */
 export const VOICE_CONTEXT_DEBOUNCE_MS = 250;
 
-/* What a session needs of the daemon, so a test hands in fakes for every part. */
 export interface VoiceSessionDeps {
     live: OpenAiLive;
     /* The key from `$RUIMTE_HOME/voice`, read at every start; null when none is set. */
@@ -300,7 +299,6 @@ export class VoiceSession {
         return this.#end('closed');
     }
 
-    /* The person's answer from the phone to an action that asked first. */
     async confirm(token: string, approved: boolean): Promise<boolean> {
         if (this.#phase !== 'active' || this.#executor === null) {
             return false;
@@ -488,7 +486,6 @@ export class VoiceSession {
         });
     }
 
-    /* A step of a chat the session follows, in the phone's timeline. */
     #followed(entry: VoiceFollowActivity): void {
         if (this.#phase !== 'active') {
             return;

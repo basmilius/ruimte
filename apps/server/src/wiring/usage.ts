@@ -10,7 +10,6 @@ import type { AgentsBundle } from './agents.ts';
 import type { ProvidersBundle } from './providers.ts';
 import type { DaemonSeams } from './seams.ts';
 
-/* What the agents of this machine spent, and what their plans have left. */
 export interface UsageBundle {
     usage: UsageService;
     limits: UsageMonitor;

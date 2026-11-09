@@ -22,7 +22,6 @@ interface ExternalListenerDeps {
     serve(request: Request, credential: Credential, client: string): Promise<Response>;
     fetchMetadata(clientId: string): Promise<ClientMetadata>;
     now(): number;
-    /* The port the listener answers on now. */
     port(): number | null;
 }
 
