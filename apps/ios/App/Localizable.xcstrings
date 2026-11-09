@@ -20762,6 +20762,17 @@
         }
       }
     },
+    "Sub-agent waiting" : {
+      "comment" : "A child agent waits on a person or on a limit",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sub-agent wacht"
+          }
+        }
+      }
+    },
     "Background task finished: %@" : {
       "localizations" : {
         "nl" : {

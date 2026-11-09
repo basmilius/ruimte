@@ -39,6 +39,15 @@ struct WindowStackTests {
         #expect(WindowStack.isCovered(frame, by: [CGRect(x: 0, y: 0, width: 100, height: 99.5)]))
         #expect(!WindowStack.isCovered(frame, by: [CGRect(x: 0, y: 0, width: 100, height: 90)]))
     }
+
+    @Test func anAppShowsOnThisSpaceOnlyWithANormalWindowOnScreen() {
+        let panel = StackedWindow(id: 1, pid: 20, layer: 25, frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        let clear = StackedWindow(id: 2, pid: 20, layer: 0, frame: CGRect(x: 0, y: 0, width: 100, height: 100), alpha: 0)
+        let other = StackedWindow(id: 3, pid: 30, layer: 0, frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        let normal = StackedWindow(id: 4, pid: 20, layer: 0, frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        #expect(!WindowStack.showsApp(20, in: [panel, clear, other]))
+        #expect(WindowStack.showsApp(20, in: [other, normal]))
+    }
 }
 
 struct ValueMatchTests {
@@ -73,13 +82,12 @@ struct BackgroundWordsTests {
         #expect(error.message.hasPrefix("A drag needs the real pointer, and so the app in front. Call again with front"))
     }
 
-    @Test func theBarNamesTheAppInTheBackground() throws {
+    @Test func theMenuNamesTheAppInTheBackground() throws {
         let config = OverlayConfig()
-        #expect(config.title(background: nil) == "Ruimte is using your computer")
-        #expect(config.title(background: "Notes") == "Ruimte is working in Notes in the background")
+        #expect(config.menuTitle(background: nil) == "Ruimte is using this Mac")
         #expect(config.menuTitle(background: "Notes") == "Ruimte is using Notes in the background")
-        let dutch = try JSONDecoder().decode(OverlayConfig.self, from: Data(#"{"backgroundTitle": "Ruimte werkt op de achtergrond in {app}"}"#.utf8))
-        #expect(dutch.title(background: "Notities") == "Ruimte werkt op de achtergrond in Notities")
+        let dutch = try JSONDecoder().decode(OverlayConfig.self, from: Data(#"{"backgroundMenuTitle": "Ruimte gebruikt {app} op de achtergrond"}"#.utf8))
+        #expect(dutch.menuTitle(background: "Notities") == "Ruimte gebruikt Notities op de achtergrond")
     }
 }
 

@@ -340,6 +340,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         nameChat: (provider, input) =>
             textModels.title(input, async () => seams.nameChat(providers.providers, provider, { ...input, cwd: await oneShot.cwdFor(input.cwd) })),
         onInterruptedRun: outboxLink.onInterruptedRun,
+        lostWork: (chatId, lost) => outboxLink.oweLostWork(chatId, lost, tasks.openFor(chatId) !== undefined),
         facts: {
             projectAccount,
             depthOf: (chatId) => lineage.depthOf(chatId),

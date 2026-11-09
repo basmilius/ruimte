@@ -20,8 +20,8 @@ import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
+import { useTasks } from '@/state/tasks';
 import { PROMPT_STACK_ATTRIBUTE } from '@/surface/canvas/prompt-stack';
-import { useTasks } from '@/tasks/tasks';
 
 function boxOf(element: Element | null | undefined, layer: DOMRect, ledge: boolean): Obstacle | null {
     if (element === null || element === undefined) {

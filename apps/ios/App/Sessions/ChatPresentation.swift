@@ -247,6 +247,8 @@ final class ChatPresentation {
     var forkRequest: ChatForkRequest?
     /// A row asked to open another chat of the project (a summary's fork); the screen pushes it.
     var openRequest: String?
+    /// A note asked for the card of an agent this chat opened outside every view; the screen brings it to the front.
+    var promptRequest: String?
     /// The forks this device knows of per turn, for the line under the turn.
     private(set) var forks: [String: [String]] = [:]
     var places: ChatPlaces?

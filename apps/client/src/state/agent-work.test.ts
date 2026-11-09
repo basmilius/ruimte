@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatState } from '@adecore/agents-react/state';
-import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
+import type { AgentInfo, AgentStatus, Task } from '@ruimte/contracts';
 import { agentsWorking, nodeWork, nodeWorking } from '@/state/agent-work';
 import type { SessionState, StatusOf } from '@/state/sessions';
 import { chatInfoOf } from '../../testing/chat-info';
@@ -84,6 +84,35 @@ describe('which node the working agent is in', () => {
         expect(nodeWork(thread, {}, { 'local:c1': chat('idle', true) }, 'local')).toBe('delegating');
         expect(nodeWork(thread, {}, { 'local:c1': chat('needs-you', true) }, 'local')).toBeNull();
         expect(nodeWorking(thread, {}, { 'local:c1': chat('idle', true) }, 'local')).toBe(true);
+    });
+
+    test('a chat between turns works through a command it left running, unless it waits on a person', () => {
+        const background = [{ id: 'b1', kind: 'shell' as const, description: 'Dev server', command: 'bun dev', startedAt: 1 }];
+
+        expect(nodeWork(thread, {}, { 'local:c1': { info: chatInfoOf('c1', { status: 'idle', background }) } }, 'local')).toBe('delegating');
+        expect(nodeWork(thread, {}, { 'local:c1': { info: chatInfoOf('c1', { status: 'needs-you', background }) } }, 'local')).toBeNull();
+        expect(agentsWorking({}, { 'local:c1': { info: chatInfoOf('c1', { status: 'idle', background }) } })).toBe(false);
+    });
+
+    test('a chat between turns works through a child agent whose task is open', () => {
+        const task: Task = {
+            id: 'k1',
+            projectId: 'p1',
+            parentId: 'c1',
+            childId: 'c2',
+            title: 'Review',
+            prompt: '',
+            status: 'open',
+            result: null,
+            createdAt: 1,
+            settledAt: null,
+            wake: 'pending'
+        };
+        const chats = { 'local:c1': chat('idle') };
+
+        expect(nodeWork(thread, {}, chats, 'local', { k1: task })).toBe('delegating');
+        expect(nodeWork(thread, {}, chats, 'local', { k1: { ...task, status: 'done' } })).toBeNull();
+        expect(nodeWork(thread, {}, chats, 'local')).toBeNull();
     });
 
     test('a node that is no agent never works, whatever status it carries', () => {

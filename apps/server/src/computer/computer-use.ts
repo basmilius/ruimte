@@ -18,7 +18,7 @@ import type { NodeLifecycle } from '../node-lifecycle.ts';
 import { PERSON_HOLD_CODES, personHoldOfCode, type PersonHoldCode } from '../person-hold.ts';
 import { realTimers, type Timers } from '../timers.ts';
 import type { SessionEvent, SessionSink } from '../wire.ts';
-import { APPROVAL_WAIT_MS, ComputerApprovals, MAX_HOLD_MS, type AppRef, type CallerInfo } from './approvals.ts';
+import { APPROVAL_WAIT_MS, CALL_BUDGET_MS, ComputerApprovals, MAX_HOLD_MS, type AppRef, type CallerInfo } from './approvals.ts';
 import {
     ActionResultSchema,
     AppsResultSchema,
@@ -59,9 +59,9 @@ export const RUIMTE_BUNDLE_IDS: ReadonlySet<string> = new Set(['app.ruimte.deskt
 
 /* The person holds the Mac. Nothing the agent does changes that, so the words steer it away from trying. */
 const HELD_WORDS: Record<PersonHoldCode, string> = {
-    paused: 'The person paused the session. Call computer_state again with wait 60, which holds until they resume, and act only after it: they may have changed the window. Do not try to reach the app another way meanwhile',
+    paused: 'The person paused the session. Call computer_state again with wait 40, which holds until they resume, and act only after it: they may have changed the window. Do not try to reach the app another way meanwhile',
     'taken-over':
-        'The person took over the Mac. Call computer_state again with wait 60, which holds until they hand it back, and act only after it: they may have changed the window. Do not try to reach the app another way meanwhile'
+        'The person took over the Mac. It comes back to you a few seconds after they let go: call computer_state again with wait 40, which holds until then, and go on from that state, since they may have changed the window. Do not try to reach the app another way meanwhile'
 };
 
 const STOPPED_WORDS = 'The person stopped you; ask them before you operate an app again, and once they agree start with computer_state';
@@ -70,7 +70,7 @@ const STOPPED_WORDS = 'The person stopped you; ask them before you operate an ap
 function busyRefusal(nodeTitle: string | null): ComputerRefusal {
     return new ComputerRefusal(
         'busy',
-        `Another agent operates this Mac now${nodeTitle === null ? '' : `, from "${nodeTitle}"`}; call again with wait 60, which holds until it is free, or go on with work that needs no app`
+        `Another agent operates this Mac now${nodeTitle === null ? '' : `, from "${nodeTitle}"`}; call again with wait 40, which holds until it is free, or go on with work that needs no app`
     );
 }
 
@@ -243,6 +243,16 @@ const ANSWER_SCHEMAS: Record<AppCommand, typeof StateResultSchema | typeof ReadR
 
 /* The fields of a helper request an agent's call fills, besides the command and the app. */
 export type OperateInput = Omit<HelperRequest, 'command' | 'app' | 'secret' | 'prompt' | 'state' | 'label' | 'step' | 'ends'>;
+
+/* What a call keeps of its budget for the state `wait` answers with once it stops reading. */
+const WAIT_STATE_MS = 5_000;
+
+/* How many seconds `wait` may read within what is left of its call's budget; the agent calls again for the rest. */
+export function waitSliceS(askedS: number, startedMs: number, nowMs: number): number {
+    const leftS = Math.floor((startedMs + CALL_BUDGET_MS - WAIT_STATE_MS - nowMs) / 1000);
+
+    return Math.max(1, Math.min(askedS, leftS));
+}
 
 /*
  * Computer use on this machine: the setting, the helper app, and the rules an agent's call passes
@@ -563,7 +573,8 @@ export class ComputerUse {
 
     private async operateNow(callerId: string, command: AppCommand, query: string, input: OperateInput, holdMs: number, waits: boolean): Promise<HelperAnswer> {
         // One budget for the line, the card and the person's pause together, so a held call still ends inside the CLI's own limit.
-        const deadline = this.now() + holdMs;
+        const started = this.now();
+        const deadline = started + holdMs;
         await this.ready();
         this.callers.add(callerId);
         this.refuseOnceIfStopped(callerId);
@@ -590,14 +601,19 @@ export class ComputerUse {
         if (outcome === 'waiting') {
             throw new ComputerRefusal(
                 'awaiting-approval',
-                `A card asking the person to let you operate ${app.name} is up in Ruimte; tell them, then call again with wait 60, which holds until they answer`
+                `A card asking the person to let you operate ${app.name} is up in Ruimte; tell them, then call again with wait 40, which holds until they answer`
             );
         }
         if (outcome === 'declined') {
             throw declinedRefusal(app.name);
         }
         await this.holdWhileHeld(deadline);
-        const request: HelperRequest = { ...input, command, app: pid === null ? app.bundleId : String(pid) };
+        const request: HelperRequest = {
+            ...input,
+            ...(command === 'wait' && input.timeout !== undefined ? { timeout: waitSliceS(input.timeout, started, this.now()) } : {}),
+            command,
+            app: pid === null ? app.bundleId : String(pid)
+        };
         const result = await this.act<HelperAnswer>(callerId, deadline, () => this.helper.request(request, ANSWER_SCHEMAS[command]));
         // An app that did not run until now is checked once it does, before its tree or anything else of it goes back.
         if (command === 'open' && pid === null && result.app?.bundleId !== undefined) {

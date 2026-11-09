@@ -412,11 +412,11 @@ extension JSONValue {
 /// `task.*` records as a machine writes them, with the fields the schema requires.
 enum TaskWire {
     static func task(
-        _ id: String = "t1", project: String = "p", child: String = "c", created: Double = 0, status: String = "open",
-        settled: Double? = nil, paused: JSONValue? = nil
+        _ id: String = "t1", project: String = "p", parent: String = "parent", child: String = "c", created: Double = 0,
+        status: String = "open", settled: Double? = nil, paused: JSONValue? = nil
     ) -> AgentTask {
         var fields: [String: JSONValue] = [
-            "id": .string(id), "projectId": .string(project), "parentId": .string("parent"),
+            "id": .string(id), "projectId": .string(project), "parentId": .string(parent),
             "childId": .string(child), "title": .string("Task \(id)"), "prompt": .string("Do it."),
             "status": .string(status), "result": .null, "createdAt": .number(created),
             "settledAt": settled.map(JSONValue.number) ?? .null, "wake": .string("none"),

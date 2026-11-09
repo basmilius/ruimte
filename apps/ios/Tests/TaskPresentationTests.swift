@@ -70,6 +70,19 @@ final class TaskPresentationTests: XCTestCase {
         XCTAssertEqual(Set(store.tasks.keys), ["only", "other"])
         XCTAssertEqual(store.childTask("c")?.status, .cancelled)
     }
+
+    @MainActor func testAParentWaitsThroughAnOpenChildThatNeedsYouOrIsPaused() {
+        let store = TaskStore(client: TaskListMachine())
+        store.put(TaskWire.task("ask", project: "p", parent: "lead", child: "asks", created: 2, status: "open"))
+        store.put(TaskWire.task("works", project: "p", parent: "lead", child: "works", created: 1, status: "open"))
+        store.put(TaskWire.task("settled", project: "p", parent: "other", child: "asks", created: 1, status: "done"))
+        store.put(
+            TaskWire.task(
+                "limit", project: "p", parent: "third", child: "limited", created: 1, status: "open",
+                paused: .object(["kind": .string("usage")])))
+        XCTAssertEqual(store.waitingChildren { $0 == "asks" }, ["lead": "asks", "third": "limited"])
+        XCTAssertEqual(store.waitingChildren { _ in false }, ["third": "limited"])
+    }
 }
 
 @MainActor private final class TaskListMachine: MachineRequesting {

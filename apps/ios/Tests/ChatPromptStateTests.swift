@@ -142,6 +142,18 @@ final class ChatPromptStateTests: XCTestCase {
         XCTAssertNil(state.active)
     }
 
+    @MainActor func testANoteOfAWaitingChildBringsItsRequestToTheFront() {
+        let state = ChatPromptState()
+        let own = request("own")
+        let child = ChatPromptSubject(chatID: "child", item: request("r1"), source: nil)
+        state.update([own], others: [child])
+        XCTAssertEqual(state.activeID, "own")
+        state.show(chatID: "elsewhere")
+        XCTAssertEqual(state.activeID, "own")
+        state.show(chatID: "child")
+        XCTAssertEqual(state.activeID, "child/r1")
+    }
+
     @MainActor func testARequestOfAnotherChatStandsOnlyWhileThatChatStillWaitsOnIt() {
         let item = request("r1")
         func info(_ status: String, requests: [String]?) -> ChatInfo {

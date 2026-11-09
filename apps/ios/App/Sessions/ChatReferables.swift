@@ -67,7 +67,7 @@ enum ChatReferables {
         }
         let taken = Set([chatID] + onCanvas.map(\.id))
         guard let canvas else { return standing(views: views, chatID: chatID, taken: taken) }
-        let items = onCanvas + views.compactMap(viewReferable).filter { !taken.contains($0.id) }
+        let items = onCanvas + views.flatMap(viewReferables).filter { !taken.contains($0.id) }
         return items.enumerated().map { index, item in
             let twin = items.enumerated().contains { other, candidate in
                 other != index && candidate.kind == item.kind && candidate.name.lowercased() == item.name.lowercased()
@@ -84,7 +84,7 @@ enum ChatReferables {
     private static func standing(views: [StoredView], chatID: String, taken: Set<String>) -> [ChatReferable] {
         let viewIDs = Set(views.map(\.id))
         return views.flatMap { view -> [ChatReferable] in
-            let own = viewReferable(view).map { [$0] } ?? []
+            let own = viewReferables(view)
             guard !chatID.isEmpty, view.canvas != nil, !unlisted(view) else { return own }
             let step = ChatReferenceStep(id: view.id, name: view.name, kind: "canvas")
             let nodes = view.nodes.compactMap { node -> ChatReferable? in
@@ -288,6 +288,19 @@ enum ChatReferables {
         guard ProjectKinds.isReferable(view.kind), !unlisted(view) else { return nil }
         return ChatReferable(
             id: view.id, name: view.name, kind: view.kind, group: .views, icon: WorkspaceViewIcon.name(for: view))
+    }
+
+    /// A view, and the later chats of a design, which are no views of their own and are reached through it.
+    private static func viewReferables(_ view: StoredView) -> [ChatReferable] {
+        guard let own = viewReferable(view) else { return [] }
+        guard case .design(let design) = view else { return [own] }
+        let trail = [ChatReferenceStep(id: own.id, name: own.name, kind: "design")]
+        let later = (design.chats ?? []).compactMap { chat -> ChatReferable? in
+            guard let id = chat["id"]?.stringValue, let name = chat["name"]?.stringValue, !id.isEmpty, !name.isEmpty
+            else { return nil }
+            return ChatReferable(id: id, name: name, kind: "chat", group: .views, trail: trail)
+        }
+        return [own] + later
     }
 
     /// A chat nobody wrote in yet or an extension draws, or a view that is shown nowhere (an inline chat, another

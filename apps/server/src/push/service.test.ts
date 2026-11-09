@@ -309,6 +309,24 @@ describe('offline push delivery', () => {
         expect(pushes.length).toBe(1);
     });
 
+    test('an approval goes by the title the project gives its node before any status named it', async () => {
+        service = new PushService({
+            auth,
+            identity: { id: 'machine', sign: (text) => signMessage(machine.privateKey, text) },
+            now: () => NOW,
+            send: async (push) => {
+                pushes.push(push);
+                return 204;
+            },
+            titleFor: (nodeId) => (nodeId === 'reviewer' ? 'Reviewer in Lead' : null)
+        });
+        service.consume(approvalFrame('reviewer', 'request'));
+        service.consume(approvalFrame('other', 'request'));
+        await service.settled();
+
+        expect(pushes.map((push) => (decrypt(push) as { title: string }).title)).toEqual(['Reviewer in Lead', 'Agent needs permission']);
+    });
+
     test('a long approval is cut between two characters, so the phone still reads its choices', async () => {
         // The emoji takes the 500th and 501st unit.
         const description = `${'x'.repeat(499)}😀 and more`;

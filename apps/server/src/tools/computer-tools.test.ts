@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { MAX_KEY_COMBOS, MAX_TYPED_LENGTH } from '@ruimte/actions';
 import { READ_MAX_CHARS } from '../actions/computer-actions.ts';
 import type { CanvasHost } from '../canvas/host.ts';
+import { MAX_HOLD_MS } from '../computer/approvals.ts';
 import { computerSetup, SAMPLE_STATE, until, type ComputerSetup } from '../computer/computer-test-helpers.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
@@ -138,8 +139,11 @@ describe('computer tools', () => {
         const setup = await computerSetup();
         expect(await run(setup, 'computer_act', { action: 'type', app: 'TextEdit', text: 'hi', direction: 'down' })).toEqual([
             'refused\tbad-arguments\tcomputer_act type takes no direction',
-            'fields\taction\tapp\tstate\twait\tmax_depth\tmax_elements\tmax_text\tno_screenshot\tfront\ttext'
+            'fields\taction\tapp\tstate\twait\tmax_depth\tmax_elements\tmax_text\tno_screenshot\tfront\telement\ttext'
         ]);
+        await approved(setup);
+        await run(setup, 'computer_act', { action: 'type', app: 'TextEdit', element: 2, text: 'hi' });
+        expect(setup.helper.acted.at(-1)).toMatchObject({ command: 'type', element: 2, text: 'hi' });
         expect((await run(setup, 'computer_menu', { app: 'TextEdit', item: ['File', 'Save'] }))[0]).toStartWith(
             'refused\tbad-arguments\tcomputer_menu takes at most one item'
         );
@@ -165,7 +169,7 @@ describe('computer tools', () => {
         const setup = await computerSetup();
         const call = run(setup, 'computer_state', { app: 'TextEdit', wait: 60 });
         await until(() => setup.computer.pendingApprovals().length === 1);
-        expect(setup.timers.waitingFor(60_000)).toBe(1);
+        expect(setup.timers.waitingFor(MAX_HOLD_MS)).toBe(1);
         await setup.computer.answer(setup.computer.pendingApprovals()[0]!.requestId, 'once');
         expect(await call).toContain('elements\t2');
         expect((await run(setup, 'computer_act', { action: 'click', app: 'TextEdit', element: 1, wait: 111 }))[0]).toStartWith(
@@ -249,8 +253,8 @@ describe('computer tools', () => {
         await approved(setup);
         expect(await run(setup, 'computer_wait', { app: 'TextEdit', text: 'Saved' })).toEqual(['done\twait\tTextEdit\t"Saved" to appear\t1.5', ...UNCHANGED]);
         expect(setup.helper.acted.at(-1)).toMatchObject({ command: 'wait', text: 'Saved', timeout: 10 });
-        await run(setup, 'computer_wait', { app: 'TextEdit', element: 1, value: 'done', timeout: 60 });
-        expect(setup.helper.acted.at(-1)).toMatchObject({ command: 'wait', element: 1, value: 'done', timeout: 60 });
+        await run(setup, 'computer_wait', { app: 'TextEdit', element: 1, value: 'done', timeout: 20 });
+        expect(setup.helper.acted.at(-1)).toMatchObject({ command: 'wait', element: 1, value: 'done', timeout: 20 });
         setup.helper.waitMet = false;
         const late = await run(setup, 'computer_wait', { app: 'TextEdit', gone: 'Exporting', timeout: 3 });
         expect(late[0]).toStartWith('refused\ttimeout\tWaited 3 s for "Exporting" to go, and it did not happen.');
@@ -261,6 +265,18 @@ describe('computer tools', () => {
         expect((await run(setup, 'computer_wait', { app: 'TextEdit', text: 'a', timeout: 111 }))[0]).toStartWith(
             'refused\tbad-arguments\ttimeout is between 1 and 110'
         );
+    });
+
+    test('a wait longer than one call reads for what the call has left and answers how to go on, without an error', async () => {
+        const setup = await computerSetup();
+        await approved(setup);
+        setup.helper.waitMet = false;
+        const first = await run(setup, 'computer_wait', { app: 'TextEdit', text: 'Saved', timeout: 90 });
+        expect(setup.helper.acted.at(-1)).toMatchObject({ command: 'wait', timeout: 40 });
+        expect(first.slice(0, 2)).toEqual([
+            'waiting\tTextEdit\t"Saved" to appear\t40',
+            'next\tcomputer_wait\tNot yet. Call computer_wait again with timeout 50 for the rest of your wait'
+        ]);
     });
 
     test("drag maps both ends onto the helper, refuses a mix, and passes on the helper's check of the start", async () => {

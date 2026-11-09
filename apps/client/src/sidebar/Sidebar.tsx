@@ -44,6 +44,7 @@ import { SidebarToggle } from '@/sidebar/SidebarToggle';
 import { nodeWork } from '@/state/agent-work';
 import { isUnseen, useAttention } from '@/state/attention';
 import { useEndpointId } from '@/state/current-endpoint';
+import { childWaitOf } from '@/state/delegation';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
 import { isDatabaseTab, isPromotableTab, useFiles } from '@/state/files';
@@ -54,6 +55,7 @@ import { isScratchProject, useProject } from '@/state/project';
 import { nodeProvider, nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
+import { childTask, useTasks } from '@/state/tasks';
 import { useUi } from '@/state/ui';
 import { useWaitingSince, waitDetailsOf } from '@/state/waiting';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/surface/canvas/drop';
@@ -85,7 +87,6 @@ import {
     setDragging as setDraggedView,
     VIEW_DRAG_TYPE
 } from '@/surface/view-drag';
-import { childTask, useTasks } from '@/tasks/tasks';
 import { Brand } from '@/ui/Brand';
 import { NewViewItems } from '@/views/NewViewMenu';
 import { NeedsYouCard } from '../attention/NeedsYouCard';
@@ -188,7 +189,8 @@ export function Sidebar({ brandMenu }: { brandMenu?: ReactNode }) {
                     provider: nodeProvider(node, chats, endpointId) ?? null,
                     status: nodeStatus(node, sessions, chats, endpointId) ?? null,
                     wait: waitDetailsOf(node, sessions, chats, waitingSince, endpointId),
-                    work: nodeWork(node, sessions, chats, endpointId),
+                    work: nodeWork(node, sessions, chats, endpointId, tasks[machine]),
+                    childWait: childWaitOf(node.id, tasks[machine], sessions, chats, machine),
                     draft: (node.kind === 'chat' || node.kind === 'design') && drafts.includes(node.id),
                     alert: (warnings[machine] ?? []).some((alert) => alert.nodeId === node.id),
                     finished: isUnseen(unseen, machine, node.id),

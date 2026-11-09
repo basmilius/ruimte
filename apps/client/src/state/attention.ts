@@ -5,12 +5,14 @@ import { desktop } from '@/desktop/bridge';
 import { nodeWorking } from '@/state/agent-work';
 import { subscribeCanvases } from '@/state/canvas';
 import { subscribeChatStatuses } from '@/state/chats';
+import { waitsThroughChild } from '@/state/delegation';
 import { useDocument } from '@/state/document';
 import { nodesInSight, seenNodes } from '@/state/in-sight';
 import { endpointKey, endpointOfNode } from '@/state/keys';
 import { seePushNotifications, subscribePushAttention, unreadOnMachine } from '@/state/push-attention';
 import { nodeStatus, useSessions, type SessionsByKey, type StatusOf } from '@/state/sessions';
 import { snoozeOf, useSnoozes, type Snoozes } from '@/state/snooze';
+import { useTasks, type TasksById } from '@/state/tasks';
 import { nodeRefsOfView, projectNodes, useViewNodes } from '@/state/view-nodes';
 import { currentEndpointId, useEndpointId } from './current-endpoint';
 
@@ -73,12 +75,17 @@ export function groupAttention(
     chats: ChatStatuses,
     endpointId: string,
     unseen: Readonly<Record<string, true>>,
-    snoozes: Snoozes
+    snoozes: Snoozes,
+    tasks: Readonly<Record<string, TasksById>> = {}
 ): AttentionGroups {
     const groups: AttentionGroups = { needsYou: [], snoozed: [], working: [], finished: [] };
+    const counted = new Set(nodes.map((node) => node.id));
     for (const node of nodes) {
         const machine = endpointOfNode(node, endpointId);
-        if (nodeStatus(node, sessions, chats, endpointId) === 'needs-you') {
+        // A hidden child agent stands in no view, so its parent waits on the person in its place.
+        const waits =
+            nodeStatus(node, sessions, chats, endpointId) === 'needs-you' || waitsThroughChild(node.id, tasks[machine], sessions, chats, machine, counted);
+        if (waits) {
             if (snoozeOf(snoozes, machine, node.id) !== null) {
                 groups.snoozed.push(node.id);
             } else {
@@ -102,12 +109,13 @@ export function useWaitingCount(viewId?: string): number {
     const sessions = useSessions((state) => state.byKey);
     const chats = useChats((state) => state.statusByKey);
     const snoozes = useSnoozes((state) => state.byKey);
+    const tasks = useTasks((state) => state.byEndpoint);
 
     return useViewNodes((views) => {
         const view = views.find((entry) => entry.id === viewId);
         const nodes = viewId === undefined ? projectNodes() : view === undefined ? [] : nodeRefsOfView(view);
 
-        return groupAttention(nodes, sessions, chats, endpointId, {}, snoozes).needsYou.length;
+        return groupAttention(nodes, sessions, chats, endpointId, {}, snoozes, tasks).needsYou.length;
     });
 }
 
@@ -207,7 +215,15 @@ export function startAttentionWatch(): () => void {
         const machines = new Set([endpointId, ...machineOfNode.values()]);
         const sessions = useSessions.getState().byKey;
         const chats = useChats.getState().statusByKey;
-        const groups = groupAttention(nodes, sessions, chats, endpointId, useAttention.getState().unseen, useSnoozes.getState().byKey);
+        const groups = groupAttention(
+            nodes,
+            sessions,
+            chats,
+            endpointId,
+            useAttention.getState().unseen,
+            useSnoozes.getState().byKey,
+            useTasks.getState().byEndpoint
+        );
         const visible = seenNodes(document.hasFocus(), nodesInSight());
         const visibleOn = new Map<string, Set<string>>();
         for (const nodeId of visible) {
@@ -263,6 +279,7 @@ export function startAttentionWatch(): () => void {
     const offDocument = useDocument.subscribe(schedule);
     const offPushAttention = subscribePushAttention(pass);
     const offSnoozes = useSnoozes.subscribe(pass);
+    const offTasks = useTasks.subscribe(pass);
     window.addEventListener('focus', pass);
     window.addEventListener('blur', pass);
     pass();
@@ -273,6 +290,7 @@ export function startAttentionWatch(): () => void {
         offDocument();
         offPushAttention();
         offSnoozes();
+        offTasks();
         window.removeEventListener('focus', pass);
         window.removeEventListener('blur', pass);
     };

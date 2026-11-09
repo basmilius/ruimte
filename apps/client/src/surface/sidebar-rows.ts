@@ -2,6 +2,7 @@ import type { AgentKind, AgentStatus, CanvasNodeKind, NodeTitleSource, ProjectIc
 import i18next from 'i18next';
 import type { NodeSort, NodeSortThen } from '@/canvas-model/node-sort';
 import type { AgentWork } from '@/state/agent-work';
+import type { ChildWait } from '@/state/delegation';
 import { compareWaits, type WaitDetails } from '@/state/waiting';
 import { sortNodes } from './sidebar-node-sort';
 import type { SidebarTarget } from './sidebar-target';
@@ -17,6 +18,8 @@ export interface SidebarNode {
     wait?: WaitDetails;
     /* What its agent works on, which `running` alone does not say of a terminal. Unknown for another project's rows. */
     work?: AgentWork | null;
+    /* A child agent it delegated to that waits on a person or on a limit. */
+    childWait?: ChildWait | null;
     /* A chat with something typed and never sent. */
     draft: boolean;
     /* The machine warns about the processes of this node. */
@@ -195,6 +198,7 @@ export function withChats(own: SidebarNode, chats: SidebarNode[]): SidebarNode {
         status,
         work,
         wait: (awake[0] ?? waiting[0])?.wait,
+        childWait: chats.find((chat) => chat.childWait)?.childWait ?? null,
         draft: chats.some((chat) => chat.draft),
         alert: chats.some((chat) => chat.alert),
         finished: work === null && status !== 'needs-you' && chats.some((chat) => chat.finished),

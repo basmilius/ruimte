@@ -1,7 +1,9 @@
 import type { ChatState, ChatStatuses } from '@adecore/agents-react/state';
 import { chatActivity } from '@ruimte/contracts';
+import { openChildTasks } from '@/state/delegation';
 import { endpointKey, endpointOfNode } from '@/state/keys';
 import type { SessionState, SessionsByKey, StatusOf } from '@/state/sessions';
+import type { TasksById } from '@/state/tasks';
 
 /*
  * Whether a session has an agent in the middle of a turn. Not `nodeStatus`, which calls every attached
@@ -22,18 +24,33 @@ function chatDelegating(chat: Pick<ChatState, 'info'> | undefined): boolean {
     return chat !== undefined && chatActivity(chat.info) === 'delegating';
 }
 
+/*
+ * The same, widened by what a node shows: a command or monitor left running, and a child agent it gave a
+ * task still open. Not for staying awake, since a dev server in the background never ends.
+ */
+function chatWaitsOnWork(chat: Pick<ChatState, 'info'> | undefined, openChildren: number): boolean {
+    if (chat?.info.status !== 'idle') {
+        return false;
+    }
+
+    const activity = chatActivity(chat.info);
+
+    return activity === 'delegating' || activity === 'background' || openChildren > 0;
+}
+
 export function agentsWorking(sessions: SessionsByKey, chats: ChatStatuses): boolean {
     return Object.values(sessions).some(sessionWorking) || Object.values(chats).some((chat) => chatWorking(chat) || chatDelegating(chat));
 }
 
-/* A turn of the node's own agent, or only the subagents it left running, which a node draws in gray. */
+/* A turn of the node's own agent, or only the work it left running in the background, which a node draws in gray. */
 export type AgentWork = 'turn' | 'delegating';
 
 /*
  * What the agent in this node is working on, if anything. Only a terminal and a chat can say,
- * since everything else on a canvas carries a status no CLI ever reported.
+ * since everything else on a canvas carries a status no CLI ever reported. `tasks` are those of the
+ * node's machine; without them a child agent it delegated to does not count.
  */
-export function nodeWork(node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): AgentWork | null {
+export function nodeWork(node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, endpointId: string, tasks?: TasksById): AgentWork | null {
     const machine = endpointOfNode(node, endpointId);
     if (node.kind === 'terminal') {
         return sessionWorking(sessions[endpointKey(machine, node.id)]) ? 'turn' : null;
@@ -46,7 +63,7 @@ export function nodeWork(node: StatusOf, sessions: SessionsByKey, chats: ChatSta
     if (chatWorking(chat)) {
         return 'turn';
     }
-    return chatDelegating(chat) ? 'delegating' : null;
+    return chatWaitsOnWork(chat, openChildTasks(tasks, node.id).length) ? 'delegating' : null;
 }
 
 export function nodeWorking(node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): boolean {

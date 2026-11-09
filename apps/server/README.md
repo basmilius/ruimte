@@ -226,7 +226,7 @@ $RUIMTE_HOME/
   computer-use/                    0700, shared with the computer use helper
     settings.json                  whether computer use is on, and the language it speaks
     grants.json                    apps let in for always, and apps seen running shells
-    overlay.json                   the words of the helper's cursor, session bar and menu
+    overlay.json                   the words of the helper's menu bar item and its menu
     agent.sock, screenshots/       the helper's own (apps/computer-use/README.md); captures swept after an hour
   browser/                         the profile of the pages the daemon runs for clients without a browser
   screenshots/                     pngs `browser_shot` and `device_shot` wrote, swept after a day

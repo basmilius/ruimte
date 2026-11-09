@@ -66,8 +66,22 @@ public enum UnixSocket {
         var data = Data()
         var buffer = [UInt8](repeating: 0, count: 64 * 1024)
         while true {
-            guard setTimeout(descriptor, SO_RCVTIMEO, until: deadline) else {
+            // poll, not SO_RCVTIMEO: macOS refuses that option on a socket whose writing half `cu` already shut down.
+            let left = ContinuousClock.now.duration(to: deadline)
+            guard left > .zero else {
                 return .timedOut
+            }
+            var watched = pollfd(fd: descriptor, events: Int16(POLLIN), revents: 0)
+            let milliseconds = Int32(clamping: max(1, left.components.seconds * 1_000 + left.components.attoseconds / 1_000_000_000_000_000))
+            let ready = poll(&watched, 1, milliseconds)
+            if ready == 0 {
+                return .timedOut
+            }
+            if ready < 0 {
+                if errno == EINTR {
+                    continue
+                }
+                return .failed
             }
             let count = read(descriptor, &buffer, buffer.count)
             if count > 0 {

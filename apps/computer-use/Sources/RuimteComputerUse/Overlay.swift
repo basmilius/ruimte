@@ -40,15 +40,11 @@ struct ActionLook {
     var state: PhantomState
     /// What the action is aimed at, for the step line of the menu.
     var target: String?
-    /// The text of `type`, the name on the card of `drag`.
-    var text: String?
     var direction = ScrollDirection.down
-    /// The global frame `look` puts its viewfinder around.
-    var frame: CGRect?
 }
 
-/// The visible session: the phantom cursor, the session bar, the menu bar item, the hot keys, and noticing the
-/// person's own hand on the mouse. It also holds the person's control over the session, which the agent obeys.
+/// The visible session: the phantom cursor, the menu bar item, the hot keys, and noticing the person's own hand on
+/// the mouse. It also holds the person's control over the session, which the agent obeys.
 @MainActor
 final class Overlay {
     /// A session nobody sends a command to for this long ends on its own, unless it waits for the person.
@@ -68,26 +64,24 @@ final class Overlay {
     /// Screen-local, y down; nil until the cursor first goes somewhere.
     private var cursorPoint: CGPoint?
     private var look = ActionLook(state: .idle)
-    private var presenceLabel: String?
     private var step = ""
-    private var thinkTurn = -1
     private var takeover = TakeoverDetector()
     /// The key window of the app the agent last acted in, global and y down: where the person's movement takes over.
     private var operatedFrame: CGRect?
     private var operatedPid: pid_t?
-    /// The app the agent works in behind the person's work, named on the bar; nil while it works in front.
+    /// The app the agent works in behind the person's work, named in the menu; nil while it works in front.
     private var background: String?
     /// Until when the operated app coming to the front is its own launch and not the person.
     private var activationGrace: TimeInterval = 0
+    /// The app the person had in front when the agent began an action behind it, and until when it goes back there.
+    private var personsApp: NSRunningApplication?
+    private var keepFrontUntil: TimeInterval?
     private var mouseMonitor: Any?
     private var activationObserver: NSObjectProtocol?
     private var tick: Timer?
     private var holdTask: Task<Void, Never>?
     private var idleTask: Task<Void, Never>?
     private var endTask: Task<Void, Never>?
-    private lazy var bar = SessionBar { [weak self] button in
-        self?.barButton(button)
-    }
     private let menu = StatusMenu()
     private lazy var hotkeys = Hotkeys { [weak self] action in
         switch action {
@@ -112,11 +106,9 @@ final class Overlay {
         menu.onStop = { [weak self] in
             self?.stop()
         }
-        DistributedNotificationCenter.default().addObserver(forName: Notification.Name("AppleInterfaceThemeChangedNotification"), object: nil, queue: .main) { [weak self] _ in
-            // The appearance of the app follows a moment after the notification.
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(150))
-                self?.render(animated: false)
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.followSpace()
             }
         }
     }
@@ -125,16 +117,8 @@ final class Overlay {
         ProcessInfo.processInfo.systemUptime
     }
 
-    private var theme: PhantomTheme {
-        PhantomTheme.current(NSApp.effectiveAppearance)
-    }
-
     private var reduceMotion: Bool {
         NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-    }
-
-    private var accent: CGColor? {
-        config.accentComponents.map { CGColor(srgbRed: $0.red, green: $0.green, blue: $0.blue, alpha: 1) }
     }
 
     var refusal: AgentError? {
@@ -171,11 +155,14 @@ final class Overlay {
             hotkeys.register()
             installMouseMonitor()
             installActivationObserver()
-            tick = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            let tick = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
                 MainActor.assumeIsolated {
                     self?.refreshChrome()
                 }
             }
+            // Common modes, so the time in the open menu goes on while it tracks.
+            RunLoop.main.add(tick, forMode: .common)
+            self.tick = tick
         }
         armIdleTimeout()
         refreshChrome()
@@ -185,11 +172,48 @@ final class Overlay {
     func operating(in frame: CGRect?, pid: pid_t) {
         operatedFrame = frame
         operatedPid = pid
+        followSpace()
+    }
+
+    /// The overlay is on every Space, but the cursor shows only on the one where the app the agent works in has a window,
+    /// so a person on another Space does not see it point at their own work.
+    private func followSpace() {
+        let hidden = operatedPid.map { !WindowStack.showsApp($0, in: WindowCapture.onScreenStack()) } ?? false
+        guard stage.isHidden != hidden else {
+            return
+        }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        stage.isHidden = hidden
+        CATransaction.commit()
     }
 
     /// The app is about to come up by the agent's own doing, which is not the person bringing it forward.
     func expectActivation(for duration: TimeInterval) {
         activationGrace = now + duration
+    }
+
+    /// While the agent works behind the person's work, the operated app activating itself puts the person's app back.
+    func keepPersonInFront(for duration: TimeInterval) {
+        guard let front = NSWorkspace.shared.frontmostApplication, front.processIdentifier != operatedPid, front.processIdentifier != getpid() else {
+            return
+        }
+        personsApp = front
+        keepFrontUntil = now + duration
+    }
+
+    /// Puts the person's app back when the operated app came forward by itself; false leaves the activation to the take-over rule.
+    private func undoActivation() -> Bool {
+        let sinceMouseDown = CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: .leftMouseDown)
+        let sinceKey = min(
+            CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: .keyDown),
+            CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: .flagsChanged)
+        )
+        guard ActivationUndo.shouldUndo(now: now, keepUntil: keepFrontUntil, sinceMouseDown: sinceMouseDown, sinceKey: sinceKey), let personsApp, !personsApp.isTerminated else {
+            return false
+        }
+        personsApp.activate()
+        return true
     }
 
     /// Moves the cursor to the target, showing `state` on the way; the real pointer stays put.
@@ -205,27 +229,27 @@ final class Overlay {
             ?? cursorPoint
             ?? (bounds.contains(pointer) ? pointer : CGPoint(x: target.x + 120, y: target.y + 90))
         cursorPoint = target
-        show(ActionLook(state: state, target: look.target, text: look.text))
-        let timing = OverlayStyle.Motion.move
+        show(ActionLook(state: state, target: look.target))
+        let distance = hypot(target.x - start.x, target.y - start.y)
+        let duration = PhantomTravel.duration(distance: distance)
         let motion = LiveMotion(reduceMotion: reduceMotion)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         cursor.layer.isHidden = false
         cursor.layer.position = start
-        motion.run(Track(keyPath: "position", duration: timing.duration) { time in
-            let progress = timing.easing.progress(CGFloat(time / timing.duration))
-            return NSValue(point: CGPoint(x: start.x + (target.x - start.x) * progress, y: start.y + (target.y - start.y) * progress))
+        motion.run(Track(keyPath: "position", duration: duration) { time in
+            let progress = PhantomTravel.easing.progress(CGFloat(time / duration))
+            return NSValue(point: PhantomTravel.point(from: start, to: target, progress: progress))
         }, on: cursor.layer)
         CATransaction.commit()
-        if motion.moves && hypot(target.x - start.x, target.y - start.y) > 1 {
-            try await Task.sleep(for: .seconds(timing.duration))
+        if motion.moves && distance > 1 {
+            try await Task.sleep(for: .seconds(duration))
         }
     }
 
     func show(_ action: ActionLook) {
         holdTask?.cancel()
         look = action
-        presenceLabel = nil
         control.show(action.state)
         step = config.step(for: action.state, target: action.target)
         render(animated: true)
@@ -234,7 +258,7 @@ final class Overlay {
     /// The moment of a click: the press and the ring, again for each click.
     func press(target: String?) {
         if control.agentState == .click {
-            cursor.replayClick(scene: scene(for: .click), motion: LiveMotion(reduceMotion: reduceMotion))
+            cursor.replayClick(scene: scene, motion: LiveMotion(reduceMotion: reduceMotion))
         } else {
             show(ActionLook(state: .click, target: target ?? look.target))
         }
@@ -244,10 +268,7 @@ final class Overlay {
     func finishAction() {
         armIdleTimeout()
         holdTask?.cancel()
-        var hold = OverlayStyle.Motion.actionHold
-        if look.state == .type, let text = look.text {
-            hold += OverlayStyle.Motion.typedLetter * Double(min(text.count, OverlayStyle.Label.maxTypedCharacters))
-        }
+        let hold = OverlayStyle.Motion.actionHold
         holdTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(hold))
             guard !Task.isCancelled, let self, self.control.isActive, self.control.agentState.isAction else {
@@ -261,7 +282,7 @@ final class Overlay {
     }
 
     /// What the agent is when it is not acting: set by the daemon, which knows.
-    func presence(_ name: String?, label: String?, step stepText: String?, ends: Bool) throws -> [String: Any] {
+    func presence(_ name: String?, step stepText: String?, ends: Bool) throws -> [String: Any] {
         guard let request = PresenceRequest(name) else {
             throw AgentError("presence takes one of \(PresenceRequest.names.joined(separator: ", "))")
         }
@@ -285,17 +306,13 @@ final class Overlay {
         config = OverlayConfig.load(from: configPath)
         holdTask?.cancel()
         armIdleTimeout()
-        if state == .think && control.agentState != .think {
-            thinkTurn += 1
-        }
         look = ActionLook(state: state)
-        presenceLabel = label.flatMap { $0.isEmpty ? nil : $0 }
         control.show(state)
         step = stepText.flatMap { $0.isEmpty ? nil : $0 } ?? config.step(for: state, target: nil)
         render(animated: true)
         if settles {
             endTask?.cancel()
-            let linger = state == .done ? OverlayStyle.Motion.doneFadeDelay + OverlayStyle.Motion.doneFade.duration : Self.endingLinger
+            let linger = state == .done ? OverlayStyle.Motion.doneFade : Self.endingLinger
             endTask = Task { [weak self] in
                 try? await Task.sleep(for: .seconds(linger))
                 guard !Task.isCancelled, let self, self.control.agentState == state else {
@@ -330,6 +347,21 @@ final class Overlay {
         render(animated: true)
     }
 
+    /// A take-over ends by itself once the person's mouse and keys rest, so a test they interrupted for a moment goes on.
+    /// Behind their work, the operated app in front stays theirs however long they rest in it.
+    private func handBackIfQuiet() {
+        guard control.mode == .takenOver else {
+            return
+        }
+        let idle = CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: CGEventType(rawValue: ~0)!)
+        control.personActed(at: now - idle)
+        let holding = background != nil && NSWorkspace.shared.frontmostApplication?.processIdentifier == operatedPid
+        if control.handBackIfQuiet(at: now, holding: holding) {
+            armIdleTimeout()
+            render(animated: true)
+        }
+    }
+
     func stop() {
         guard control.isActive else {
             return
@@ -339,7 +371,7 @@ final class Overlay {
         endSession()
     }
 
-    /// What the session bar's buttons do, for a person who presses them in Ruimte instead.
+    /// What the menu's items do, for a person who presses them in Ruimte instead.
     func press(_ action: SessionAction) -> [String: Any] {
         if action.applies(to: control) {
             switch action {
@@ -350,15 +382,6 @@ final class Overlay {
             }
         }
         return ["session": control.summary]
-    }
-
-    private func barButton(_ button: SessionBarLayer.Button) {
-        switch button {
-        case .pause:
-            togglePause()
-        case .stop:
-            stop()
-        }
     }
 
     /// Only the person's own input: the helper's events carry the marker, and the grace after them covers what
@@ -405,7 +428,13 @@ final class Overlay {
         activationObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] notification in
             let pid = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.processIdentifier
             MainActor.assumeIsolated {
-                guard let self, let pid, self.background != nil, pid == self.operatedPid, self.now > self.activationGrace, self.control.acceptsTakeover else {
+                guard let self, let pid, self.background != nil, pid == self.operatedPid else {
+                    return
+                }
+                if self.undoActivation() {
+                    return
+                }
+                guard self.now > self.activationGrace, self.control.acceptsTakeover else {
                     return
                 }
                 self.takeOver()
@@ -420,31 +449,9 @@ final class Overlay {
         return CGPoint(x: cursorPoint.x + screen.frame.minX, y: cursorPoint.y + (Geometry.primaryHeight - screen.frame.maxY))
     }
 
-    private func labelText(for state: PhantomState) -> String? {
-        switch state {
-        case .type, .drag:
-            return look.text
-        case .think, .waiting, .permission, .error, .done:
-            return presenceLabel
-        default:
-            return nil
-        }
-    }
-
-    private func scene(for state: PhantomState) -> PhantomScene {
+    private var scene: PhantomScene {
         var scene = PhantomScene()
-        scene.theme = theme
-        scene.accent = accent
-        scene.label = labelText(for: state)
         scene.scrollDirection = look.direction
-        scene.dots = DotMotion.rotating(max(thinkTurn, 0))
-        if let screen, let point = cursorPoint {
-            scene.room = CGRect(origin: CGPoint(x: -point.x, y: -point.y), size: screen.frame.size)
-            if let frame = look.frame {
-                let origin = Geometry.local(frame.origin, on: screen)
-                scene.viewfinder = CGRect(x: origin.x - point.x, y: origin.y - point.y, width: frame.width, height: frame.height)
-            }
-        }
         return scene
     }
 
@@ -455,21 +462,32 @@ final class Overlay {
         let state = control.shownState
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        cursor.show(state, scene: scene(for: state), motion: LiveMotion(reduceMotion: reduceMotion), animated: animated && !cursor.layer.isHidden)
+        cursor.show(state, scene: scene, motion: LiveMotion(reduceMotion: reduceMotion), animated: animated && !cursor.layer.isHidden)
         CATransaction.commit()
         refreshChrome()
     }
 
     private func refreshChrome() {
-        guard control.isActive, let screen else {
+        guard control.isActive, screen != nil else {
             return
         }
+        // Once a second as well: the app can move its window to another Space without the person switching.
+        followSpace()
+        handBackIfQuiet()
         let shown = control.shownState
         let time = SessionControl.clock(control.elapsed(at: now))
         let held = control.mode != .running
-        bar.show(on: screen, SessionBarLayer.Content(title: config.title(background: background), state: shown, held: held, time: time, theme: theme), accent: accent, reduceMotion: reduceMotion)
         let stepLine = held ? config.step(for: shown, target: nil) : step
-        menu.show(StatusMenu.Content(title: config.menuTitle(background: background), state: shown, mode: control.mode, time: time, step: stepLine, keys: hotkeys.registered), config: config, accent: accent)
+        let keys = hotkeys.registered
+        menu.show(StatusMenu.Content(
+            title: config.menuTitle(background: background),
+            state: shown,
+            mode: control.mode,
+            time: time,
+            step: stepLine,
+            pauseKey: keys.contains(.togglePause),
+            stopKey: keys.contains(.stop)
+        ), config: config)
     }
 
     private func armIdleTimeout() {
@@ -503,10 +521,9 @@ final class Overlay {
         activationObserver = nil
         background = nil
         operatedPid = nil
-        bar.hide()
+        followSpace()
         menu.hide()
         look = ActionLook(state: .idle)
-        presenceLabel = nil
         cursorPoint = nil
         guard let window else {
             return

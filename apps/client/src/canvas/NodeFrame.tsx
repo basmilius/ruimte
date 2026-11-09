@@ -10,6 +10,7 @@ import { memo, useRef, useState, type CSSProperties, type ReactNode } from 'reac
 import { useTranslation } from 'react-i18next';
 import { renameNodeAction } from '@/action-port/person-actions';
 import { UnseenMark } from '@/attention/UnseenMark';
+import { ChildWaitLabel } from '@/attention/WaitLabel';
 import { WorkingMark } from '@/attention/WorkingMark';
 import { useBrowserDisplayTitle } from '@/browser/title';
 import { accentColor, accentHeaderStyle, accentShades, notePaperClass } from '@/canvas-model/accents';
@@ -24,6 +25,7 @@ import { useUntakenTask, useWaitingMachines } from '@/canvas/remote-wait';
 import { RemoteNodeOffline } from '@/canvas/RemoteNodeOffline';
 import { useHiddenNeedsYou } from '@/canvas/use-group-waits';
 import { useShownChatOfNode } from '@/chat/focused-chat';
+import { useWaitingOn } from '@/chat/waiting-on';
 import { markPeerLapsed, usePeerLapse } from '@/clients/project/peer-lapse';
 import { linkToPeer } from '@/clients/project/peer-linker';
 import { useGroupWorktrees, useWorktreeOf } from '@/controllers/worktrees';
@@ -42,12 +44,13 @@ import { nodeKindRegistry } from '@/registry/node-kinds';
 import type { AgentWork } from '@/state/agent-work';
 import { useUnseen } from '@/state/attention';
 import { GROUP_HEADER_PX, isNodeActive, maximizedNodeOf, useCanvas, useCanvasCamera, useCanvasStore, type AgentStatus } from '@/state/canvas';
-import { useNodeStatus, useNodeWork } from '@/state/chats';
+import { useChildWait, useNodeStatus, useNodeWork } from '@/state/chats';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useCellHasFocus } from '@/state/document';
 import { useEndpointIdOfMachine } from '@/state/endpoints';
 import { useEndpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
+import { useChildTask } from '@/state/tasks';
 import { useToasts } from '@/state/toasts';
 import { KindIcon } from '@/surface/canvas/KindIcon';
 import { NODE_KIND_ICONS } from '@/surface/canvas/node-icons';
@@ -59,7 +62,6 @@ import { SnoozeMenuItems } from '@/surface/Snooze';
 import { StatusDot } from '@/surface/StatusDot';
 import { showsTaskMark } from '@/tasks/task-mark';
 import { TaskMark } from '@/tasks/TaskMark';
-import { useChildTask } from '@/tasks/tasks';
 import { useWorkspace } from '@/workspace/connections';
 import { NodeMachineScope } from '@/workspace/node-machine';
 import { workFolderOf } from '@/worktree-rules/worktree-rows';
@@ -76,10 +78,10 @@ const STATUS_MARK: Partial<Record<AgentStatus, { icon: LucideIcon; className: st
 const GROUP_FRAME = 'border-dashed bg-[color-mix(in_srgb,var(--group-accent,var(--text-faint))_7%,transparent)]';
 const GROUP_FRAME_HOVER = 'border-dashed bg-[color-mix(in_srgb,var(--group-accent,var(--text-faint))_10%,transparent)]';
 
-function StatusMark({ status, work }: { status: AgentStatus; work: AgentWork | null }) {
+function StatusMark({ status, work, chatId, endpointId }: { status: AgentStatus; work: AgentWork | null; chatId?: string; endpointId?: string }) {
     const { t } = useTranslation('canvas');
     if (status === 'running' || status === 'idle') {
-        return work === null ? null : <WorkingMark delegating={work === 'delegating'} />;
+        return work === null ? null : <WorkingMark delegating={work === 'delegating'} chatId={chatId} endpointId={endpointId} />;
     }
     const mark = STATUS_MARK[status];
     if (mark === undefined) {
@@ -92,6 +94,15 @@ function StatusMark({ status, work }: { status: AgentStatus; work: AgentWork | n
             </span>
         </Tooltip>
     );
+}
+
+/* What a chat waits on, muted beside its mark, so a canvas tells why a chat is quiet without opening it. */
+function WaitingOnLine({ chatId, endpointId }: { chatId: string; endpointId: string }) {
+    const waitingOn = useWaitingOn(chatId, endpointId);
+    if (waitingOn === null) {
+        return null;
+    }
+    return <span className="max-w-60 min-w-0 shrink truncate text-xs text-text-muted">{waitingOn}</span>;
 }
 
 function WorktreePill({ worktree }: { worktree: { path: string; branch: string } }) {
@@ -302,6 +313,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     const toolbarSlot = fixedSlot(fileControls);
     const status = useNodeStatus(node);
     const work = useNodeWork(node);
+    const childWait = useChildWait(node);
     const endpointId = useEndpointId();
     const workspaceId = useWorkspace()?.connection.endpointId;
     const nodeEndpointId = useEndpointOfNode(node, '');
@@ -491,7 +503,10 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                     )}
                     {isGroup && node.worktree && <WorktreePill worktree={node.worktree} />}
                     {kind?.beforeStatus && <kind.beforeStatus {...headerProps} />}
-                    {status && !renaming && <StatusMark status={status} work={work} />}
+                    {/* The child's own label already says that it waits, so the line only speaks without one. */}
+                    {isChat && !childWait && !renaming && <WaitingOnLine chatId={chatId} endpointId={nodeEndpointId} />}
+                    {childWait && !renaming && <ChildWaitLabel wait={childWait} />}
+                    {status && !renaming && <StatusMark status={status} work={work} chatId={isChat ? chatId : undefined} endpointId={nodeEndpointId} />}
                     {task && !renaming && showsTaskMark(task, work, unseen) && <TaskMark task={task} />}
                     {/* Looking clears it, so this is for a canvas zoomed out and a window beside another app. */}
                     {unseen && !renaming && <UnseenMark />}

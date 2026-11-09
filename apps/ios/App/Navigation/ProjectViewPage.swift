@@ -76,7 +76,11 @@ struct NotificationRoutePage: View {
         }
         .task {
             guard !searched, target == nil else { return }
-            let found = await now.locate(machineID: destination.machineID, itemID: destination.nodeID)
+            let machineID = destination.machineID
+            let tasks = runtime.session(machineID: machineID)?.tasks
+            let found = await destination.answeredAt(
+                parentOf: { tasks?.childTask($0)?.parentId },
+                locate: { await now.locate(machineID: machineID, itemID: $0) })
             if let found, let open {
                 open(found)
             } else {

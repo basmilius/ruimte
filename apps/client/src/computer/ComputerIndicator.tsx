@@ -42,7 +42,7 @@ function press(endpointId: string, action: ComputerControlAction): void {
     });
 }
 
-/* In the header of the chat or terminal whose agent operates the Mac right now; a click offers the session bar's buttons. */
+/* In the header of the chat or terminal whose agent operates the Mac right now; a click offers what the menu bar item on the Mac offers. */
 export function ComputerIndicator({ nodeId }: { nodeId: string }) {
     const { t } = useTranslation('computer');
     const endpointId = useEndpointId();

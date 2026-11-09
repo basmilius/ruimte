@@ -93,8 +93,19 @@ public struct Track {
 
     /// Scalar keyframes as CSS writes them: offsets 0...1, and the easing applies to every stretch between two.
     public static func keyframes(_ keyPath: String, duration: Double, _ frames: [(CGFloat, CGFloat)], easing: Easing = .ease, repeats: Bool = false, delay: Double = 0) -> Track {
-        Track(keyPath: keyPath, duration: duration, delay: delay, repeats: repeats, discrete: { if case .steps = easing { return true }; return false }()) { time in
-            NSNumber(value: Double(interpolate(frames, at: CGFloat(time / duration), easing: easing)))
+        keyframes(keyPath, duration: duration, frames.map { ($0.0, $0.1, easing) }, repeats: repeats, delay: delay)
+    }
+
+    /// Keyframes with the easing of the stretch that starts at each, as a CSS keyframe's `animation-timing-function` sets it.
+    public static func keyframes(_ keyPath: String, duration: Double, _ frames: [(CGFloat, CGFloat, Easing)], repeats: Bool = false, delay: Double = 0) -> Track {
+        let discrete = frames.contains { frame in
+            if case .steps = frame.2 {
+                return true
+            }
+            return false
+        }
+        return Track(keyPath: keyPath, duration: duration, delay: delay, repeats: repeats, discrete: discrete) { time in
+            NSNumber(value: Double(interpolate(frames, at: CGFloat(time / duration))))
         }
     }
 
@@ -102,7 +113,7 @@ public struct Track {
         keyframes(keyPath, duration: duration, [(0, from), (1, to)], easing: easing, delay: delay)
     }
 
-    static func interpolate(_ frames: [(CGFloat, CGFloat)], at offset: CGFloat, easing: Easing) -> CGFloat {
+    static func interpolate(_ frames: [(CGFloat, CGFloat, Easing)], at offset: CGFloat) -> CGFloat {
         guard let first = frames.first, let last = frames.last else {
             return 0
         }
@@ -113,8 +124,8 @@ public struct Track {
             return last.1
         }
         for index in 0..<(frames.count - 1) {
-            let (startOffset, startValue) = frames[index]
-            let (endOffset, endValue) = frames[index + 1]
+            let (startOffset, startValue, easing) = frames[index]
+            let (endOffset, endValue, _) = frames[index + 1]
             if offset >= startOffset && offset <= endOffset {
                 let span = endOffset - startOffset
                 let local = span > 0 ? (offset - startOffset) / span : 1
@@ -147,8 +158,8 @@ public protocol MotionHost {
     /// False drops every loop and one-shot and makes every transition instant.
     var moves: Bool { get }
     func run(_ track: Track, on layer: CALayer)
-    /// Fades a layer that leaves and takes it out.
-    func retire(_ layer: CALayer, fade: Double)
+    /// Plays the way a layer leaves and then takes it out.
+    func retire(_ layer: CALayer, tracks: [Track])
 }
 
 public extension MotionHost {
@@ -186,23 +197,20 @@ public struct LiveMotion: MotionHost {
         CATransaction.commit()
     }
 
-    public func retire(_ layer: CALayer, fade: Double) {
-        guard moves, fade > 0 else {
+    public func retire(_ layer: CALayer, tracks: [Track]) {
+        guard moves, !tracks.isEmpty else {
             layer.removeFromSuperlayer()
             return
         }
-        let from = layer.presentation()?.opacity ?? layer.opacity
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         CATransaction.setCompletionBlock {
             layer.removeFromSuperlayer()
         }
-        layer.opacity = 0
-        let animation = CABasicAnimation(keyPath: "opacity")
-        animation.fromValue = from
-        animation.toValue = 0
-        animation.duration = fade
-        layer.add(animation, forKey: "retire")
+        for track in tracks {
+            layer.setValue(track.finalValue, forKeyPath: track.keyPath)
+            layer.add(track.animation(), forKey: track.keyPath)
+        }
         CATransaction.commit()
     }
 }
@@ -228,7 +236,45 @@ public struct FrozenMotion: MotionHost {
         }
     }
 
-    public func retire(_ layer: CALayer, fade: Double) {
+    public func retire(_ layer: CALayer, tracks: [Track]) {
         layer.removeFromSuperlayer()
+    }
+}
+
+/// How the cursor travels to its target (9a): a quadratic curve that bows up the screen as a wrist arcs, and takes
+/// longer the further it goes, after Fitts. Points are y down.
+public enum PhantomTravel {
+    public static let easing = Easing.cubic(0.45, 0, 0.2, 1)
+    /// How far the control point sits off the middle of the line, as a share of the distance.
+    public static let bow: CGFloat = 0.18
+
+    /// In seconds: about 0.45 s across a button, 1 s across the screen.
+    public static func duration(distance: CGFloat) -> Double {
+        min(1, max(0.42, (360 + 150 * log2(1 + Double(distance) / 30)) / 1000))
+    }
+
+    public static func control(from start: CGPoint, to end: CGPoint) -> CGPoint {
+        let dx = end.x - start.x
+        let dy = end.y - start.y
+        let distance = hypot(dx, dy)
+        let middle = CGPoint(x: start.x + dx / 2, y: start.y + dy / 2)
+        guard distance > 0 else {
+            return middle
+        }
+        var perpendicular = CGPoint(x: -dy / distance, y: dx / distance)
+        if perpendicular.y > 0 {
+            perpendicular = CGPoint(x: -perpendicular.x, y: -perpendicular.y)
+        }
+        return CGPoint(x: middle.x + perpendicular.x * distance * bow, y: middle.y + perpendicular.y * distance * bow)
+    }
+
+    /// The point on the curve at `progress`, already eased.
+    public static func point(from start: CGPoint, to end: CGPoint, progress: CGFloat) -> CGPoint {
+        let control = control(from: start, to: end)
+        let inverse = 1 - progress
+        return CGPoint(
+            x: inverse * inverse * start.x + 2 * inverse * progress * control.x + progress * progress * end.x,
+            y: inverse * inverse * start.y + 2 * inverse * progress * control.y + progress * progress * end.y
+        )
     }
 }

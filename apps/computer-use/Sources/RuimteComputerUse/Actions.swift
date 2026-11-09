@@ -57,6 +57,22 @@ extension Agent {
         return capture.screenPoint(pixelX: pixelX, pixelY: pixelY)
     }
 
+    /// What a single click at a screen point presses behind the person's work: the smallest element of the last state
+    /// around the point that takes the action. The state, not a hit test, since an app behind others answers one with
+    /// its menu bar, and a window of another app over the point does not count.
+    func pressTarget(at point: CGPoint, in snapshot: Snapshot, action: String) throws -> (element: AXUIElement, index: Int) {
+        let around = snapshot.handles.frames
+            .filter { $0.value.contains(point) && $0.value.width >= 1 && $0.value.height >= 1 }
+            .sorted { $0.value.width * $0.value.height < $1.value.width * $1.value.height }
+        for (index, _) in around {
+            guard let element = snapshot.handles.byIndex[index], AX.actions(element).contains(action) else {
+                continue
+            }
+            return (element, index)
+        }
+        throw AgentError.needsFront("No element of the last state at that pixel takes \(action), so the click needs the real pointer, and so the app in front")
+    }
+
     /// What the menu's step line names: the element's label, or the app.
     func targetName(_ element: AXUIElement?, _ app: NSRunningApplication) -> String {
         (AX.summary(element)["label"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? Targets.name(app)
@@ -99,6 +115,7 @@ extension Agent {
                     guard result == .success else {
                         throw AgentError.needsFront("\(Targets.name(app)) did not let element \(index) take the focus (AXError \(result.rawValue)), so clicking it needs the real pointer, and so the app in front")
                     }
+                    await Self.settleFocus(on: element, role: AX.role(element))
                     return ["method": "AXFocused", "element": index, "target": target]
                 }
             }
@@ -112,9 +129,18 @@ extension Agent {
                 if let axAction, pressable {
                     // Read before acting: a button that closes its sheet takes its window and label with it.
                     let target = AX.summary(element)
+                    let role = AX.role(element)
+                    let toggleBefore = Self.number(of: element, role: role)
                     self.overlay.press(target: nil)
                     let result = AXUIElementPerformAction(element, axAction as CFString)
+                    if result != .success, result != .cannotComplete, toggleBefore != nil {
+                        try? await Task.sleep(for: .milliseconds(150))
+                        if ToggleCheck.pressed(role: role, before: toggleBefore, now: Self.number(of: element, role: role)) {
+                            return ["method": axAction, "element": index, "target": target, "note": "the app answered the press with an error, but its value shows it took"]
+                        }
+                    }
                     if result == .success || result == .cannotComplete {
+                        await Self.settleFocus(on: element, role: role)
                         var answer: [String: Any] = ["method": axAction, "element": index, "target": target]
                         // A press that opens a modal returns only once the modal closes, so the call times out after it worked.
                         if result == .cannotComplete {
@@ -136,10 +162,26 @@ extension Agent {
                 return ["method": "mouse", "button": buttonName, "element": index, "count": count, "target": target]
             }
         }
-        if behind {
-            throw AgentError.needsFront("A click by pixel needs the real pointer, and so the app in front")
-        }
         let point = try screenPoint(snapshot, request)
+        if behind {
+            let axAction = right ? kAXShowMenuAction : kAXPressAction
+            guard count == 1 else {
+                throw AgentError.needsFront("A double click needs the real pointer, and so the app in front")
+            }
+            guard snapshot.frame.contains(point) else {
+                throw AgentError("the pixel is outside the window of the last state; run `cu state` again")
+            }
+            let (element, index) = try pressTarget(at: point, in: snapshot, action: axAction)
+            return try await act(app, request, at: point, as: ActionLook(state: .click, target: targetName(element, app))) {
+                let target = AX.summary(element)
+                self.overlay.press(target: nil)
+                let result = AXUIElementPerformAction(element, axAction as CFString)
+                guard result == .success || result == .cannotComplete else {
+                    throw AgentError.needsFront("\(Targets.name(app)) refused \(axAction) at that pixel (AXError \(result.rawValue)), so it needs a click with the real pointer, and so the app in front")
+                }
+                return ["method": axAction, "button": buttonName, "element": index, "target": target]
+            }
+        }
         return try await act(app, request, at: point, as: ActionLook(state: .click, target: Targets.name(app))) {
             let hit = try await self.prepareMouse(app, at: point, window: snapshot.window, expecting: nil, index: nil)
             let target = AX.summary(hit)
@@ -237,10 +279,11 @@ extension Agent {
         }
         let name = targetName(grabbed, app)
         let index = request.element
-        return try await act(app, request, at: start, as: ActionLook(state: .drag, target: name, text: name)) {
+        return try await act(app, request, at: start, as: ActionLook(state: .drag, target: name)) {
             let hit = try await self.prepareMouse(app, at: start, window: snapshot.window, expecting: grabbed, index: index)
             let target = AX.summary(hit)
-            let duration = OverlayStyle.Motion.move.duration
+            // The real pointer takes as long as the cursor's arc, so both arrive together.
+            let duration = PhantomTravel.duration(distance: hypot(end.x - start.x, end.y - start.y))
             Task {
                 try? await self.overlay.glide(to: end, showing: .drag)
             }
@@ -269,17 +312,41 @@ extension Agent {
         focusedElement(app).flatMap(AX.frame)?.center
     }
 
+    /// Puts the focus on the element `type` or `key` names, before anything is typed, so a refusal sends no key.
+    private func focus(_ app: NSRunningApplication, _ request: Request) async throws {
+        guard let index = request.element else {
+            return
+        }
+        let snapshot = try snapshot(for: app)
+        let element = try snapshot.element(index)
+        // A web page behind the person's work may answer the focus with success and keep the keys where they were, and
+        // keys that land in another element cannot be taken back. set-value fills such a field without keys (Electron, 2026-11-09).
+        if request.front != true, snapshot.handles.webIndices.contains(index) {
+            throw AgentError("element \(index) is in a web page, where focusing it behind the person's work may leave the keys elsewhere; set-value fills a field there, or type without element into the field that has the focus")
+        }
+        let result = AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+        guard result == .success else {
+            throw AgentError("element \(index) does not take the focus (AXError \(result.rawValue)); click it first, then type without element")
+        }
+        await Self.settleFocus(on: element, role: AX.role(element))
+        try await Task.sleep(for: .milliseconds(80))
+    }
+
     func type(_ app: NSRunningApplication, _ request: Request) async throws -> [String: Any] {
         guard let text = request.text, !text.isEmpty else {
             throw AgentError("type needs text")
         }
         try TypingLimit.check(text: text)
+        try await focus(app, request)
         let window = snapshots[app.processIdentifier]?.window
-        let look = ActionLook(state: .type, target: targetName(focusedElement(app), app), text: text)
+        let look = ActionLook(state: .type, target: targetName(focusedElement(app), app))
         if request.front != true {
             let keys = try keyTarget(app)
             return try await act(app, request, at: focusPoint(app), as: look, reportPoint: false) {
                 let target = AX.summary(keys.focused ?? keys.window)
+                if let field = keys.focused, await Self.insert(text, into: field) {
+                    return ["typed": text.count, "method": "AXSelectedText", "target": target]
+                }
                 var answer: [String: Any] = ["typed": text.count, "method": "keys to the app", "target": target]
                 answer["note"] = try await self.typeBehind(text, app: app, keys)
                 return answer
@@ -301,10 +368,11 @@ extension Agent {
             throw AgentError("key needs at least one combo")
         }
         let window = snapshots[app.processIdentifier]?.window
-        let look = ActionLook(state: .type, target: targetName(focusedElement(app), app), text: combos.map(\.name).joined(separator: " "))
+        let look = ActionLook(state: .type, target: targetName(focusedElement(app), app))
         if request.front != true, let edit = combos.first(where: \.editsFocusedText) {
             throw AgentError.needsFront("\(edit.name) edits the focused text through the key window, which an app behind the person's work does not have, so it does nothing there; set-value replaces a text in the background")
         }
+        try await focus(app, request)
         let keys = request.front == true ? nil : try keyTarget(app)
         return try await act(app, request, at: focusPoint(app), as: look, reportPoint: false) {
             var answer: [String: Any] = ["pressed": combos.map(\.name)]
@@ -316,10 +384,23 @@ extension Agent {
                 try await Targets.activate(app, window: window)
                 answer["target"] = AX.summary(self.focusedElement(app))
             }
+            var pressedItems: [String] = []
             for combo in combos {
                 try self.checkStopped()
-                await SyntheticInput.press(combo, to: keys == nil ? nil : app.processIdentifier)
+                if keys != nil, let item = Self.menuItem(for: combo, in: app) {
+                    let result = AXUIElementPerformAction(item, kAXPressAction as CFString)
+                    guard result == .success || result == .cannotComplete else {
+                        throw AgentError("\(combo.name) is \"\(Menus.path(of: item).path)\" in the menu, which \(Targets.name(app)) refused (AXError \(result.rawValue)); it may be disabled behind the person's work, so it may need front")
+                    }
+                    pressedItems.append(Menus.path(of: item).path)
+                } else {
+                    await SyntheticInput.press(combo, to: keys == nil ? nil : app.processIdentifier)
+                }
                 try await Task.sleep(for: .milliseconds(60))
+            }
+            if !pressedItems.isEmpty {
+                answer["menu"] = pressedItems
+                answer["note"] = "a key with cmd behind the person's work reaches no menu shortcut, so its menu item was pressed instead; one for the window or the text in focus, such as save, does nothing there, so if the state shows no change, it needs front"
             }
             return answer
         }
@@ -345,7 +426,7 @@ extension Agent {
         } else {
             newValue = text as CFString
         }
-        return try await act(app, request, at: visibleCenter(of: element, frame: frame), as: ActionLook(state: .type, target: targetName(element, app), text: text)) {
+        return try await act(app, request, at: visibleCenter(of: element, frame: frame), as: ActionLook(state: .type, target: targetName(element, app))) {
             let target = AX.summary(element)
             let result = AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, newValue)
             guard result == .success else {
@@ -394,11 +475,16 @@ extension Agent {
             let configuration = NSWorkspace.OpenConfiguration()
             configuration.activates = !behind
             overlay.expectActivation(for: 10)
+            if behind {
+                overlay.keepPersonInFront(for: 10)
+            }
             do {
                 app = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
             } catch {
                 throw AgentError("could not launch \(url.path): \(error.localizedDescription)")
             }
+            // Many apps activate themselves once they finished launching, whatever the configuration asked.
+            overlay.operating(in: nil, pid: app.processIdentifier)
             launched = true
         }
         let appElement = AXUIElementCreateApplication(app.processIdentifier)
@@ -531,6 +617,55 @@ extension Agent {
 
     /// One character at a time to the app's process, with its window made main first, since some apps take keys behind
     /// the person's work only there. Returns the note for an answer when the focused value did not change.
+    /// The value of a checkbox or radio button as a number, to tell afterwards whether a press took.
+    private static func number(of element: AXUIElement, role: String?) -> Double? {
+        guard let role, ToggleCheck.roles.contains(role) else {
+            return nil
+        }
+        return (AX.attribute(element, kAXValueAttribute) as? NSNumber)?.doubleValue
+    }
+
+    /// A text field in a web page takes the focus a moment after the press, so typing right after it would go nowhere.
+    private static func settleFocus(on element: AXUIElement, role: String?) async {
+        guard role == kAXTextFieldRole || role == kAXTextAreaRole,
+              AX.ancestors(of: element, limit: 40).contains(where: { AX.role($0) == "AXWebArea" }) else {
+            return
+        }
+        for _ in 0..<16 where AX.attribute(element, kAXFocusedAttribute) as? Bool != true {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
+    /// The menu item a combo with cmd stands for, which keys posted to an app behind the person's work never reach.
+    private static func menuItem(for combo: KeyCombo, in app: NSRunningApplication) -> AXUIElement? {
+        guard let shortcut = MenuShortcut.canonical(combo.name) else {
+            return nil
+        }
+        return Menus.item(withShortcut: shortcut, in: AXUIElementCreateApplication(app.processIdentifier))
+    }
+
+    /// Writes the text at the insertion point of a native field in one go, so no key event exists that could reach
+    /// another app. False when the field does not take it, or took it without the text showing in its value;
+    /// then the keys go as before, and nothing was typed twice.
+    private static func insert(_ text: String, into field: AXUIElement) async -> Bool {
+        let insideWebArea = ([field] + AX.ancestors(of: field, limit: 40)).contains { AX.role($0) == "AXWebArea" }
+        guard TextInsertion.fits(text, role: AX.role(field), insideWebArea: insideWebArea, settable: AX.isSettable(field, kAXSelectedTextAttribute)) else {
+            return false
+        }
+        // A value that cannot be read cannot show whether the write landed, and keys after a write that did would type twice.
+        guard let before = AX.attribute(field, kAXValueAttribute) as? String,
+              AXUIElementSetAttributeValue(field, kAXSelectedTextAttribute as CFString, text as CFString) == .success else {
+            return false
+        }
+        for _ in 0..<5 {
+            try? await Task.sleep(for: .milliseconds(60))
+            if TextInsertion.landed(before: before, after: AX.attribute(field, kAXValueAttribute) as? String) {
+                return true
+            }
+        }
+        return false
+    }
+
     private func typeBehind(_ text: String, app: NSRunningApplication, _ keys: KeyTarget) async throws -> String? {
         let pid = app.processIdentifier
         let valueNow = { keys.aim.flatMap { AX.describe(AX.attribute($0, kAXValueAttribute)) } }

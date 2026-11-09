@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { renameNodeAction, renameViewAction } from '@/action-port/person-actions';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { WaitingCount } from '@/attention/WaitingCount';
-import { WaitLabel } from '@/attention/WaitLabel';
+import { ChildWaitLabel, WaitLabel } from '@/attention/WaitLabel';
 import { WorkingMark } from '@/attention/WorkingMark';
 import { useBrowserDisplayTitle } from '@/browser/title';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
@@ -115,10 +115,20 @@ function RenameField({ value, placeholder, onDone }: { value: string; placeholde
 
 /* A row at rest carries no dot. A green one on every idle chat read as news that never went away,
    while a turn that ended unseen has its own mark. */
-function RowStatus({ status, work }: { status: AgentStatus | null | undefined; work: AgentWork | null | undefined }) {
+function RowStatus({
+    status,
+    work,
+    chatId,
+    endpointId
+}: {
+    status: AgentStatus | null | undefined;
+    work: AgentWork | null | undefined;
+    chatId?: string;
+    endpointId?: string;
+}) {
     // Another project's rows cannot tell a working agent from a shell at its prompt, so they keep the dot.
     if ((status === 'running' || status === 'idle') && work !== undefined) {
-        return work === null ? null : <WorkingMark plain delegating={work === 'delegating'} />;
+        return work === null ? null : <WorkingMark plain delegating={work === 'delegating'} chatId={chatId} endpointId={endpointId} />;
     }
     return status && status !== 'idle' ? <StatusDot status={status} plain /> : null;
 }
@@ -224,10 +234,16 @@ export function NodeRow({ row, tabbable, snoozable }: RowProps & { row: SidebarN
                     {node.alert && <ProcessWarningMark />}
                     <SlotRow place="sidebarRow" context={{ node: nodeInfoOf(node.id) }} />
                     {node.snoozedUntil && <SnoozedMark until={node.snoozedUntil} />}
+                    {node.childWait && node.status !== 'needs-you' && <ChildWaitLabel wait={node.childWait} />}
                     {snoozable && node.status === 'needs-you' ? (
                         <WaitLabel detail={node.wait} snoozed={Boolean(node.snoozedUntil)} />
                     ) : (
-                        <RowStatus status={node.status} work={node.work} />
+                        <RowStatus
+                            status={node.status}
+                            work={node.work}
+                            chatId={node.kind === 'chat' || node.kind === 'design' ? node.id : undefined}
+                            endpointId={endpointId}
+                        />
                     )}
                 </span>
             </ContextMenu.Trigger>
@@ -411,6 +427,9 @@ export function ViewRow({ row, tabbable, onToggle, onDrag }: ViewRowProps) {
     const unsaved = useUnsavedStoredPath(view.kind === 'file' ? view.path : null, row.target);
     const { active } = row;
     const [renaming, setRenaming] = useState(false);
+    // An open canvas lists its nodes under it, each with its own; a folded one speaks for them.
+    const childWait = view.self ? view.self.childWait : row.expanded === true ? null : view.nodes.find((node) => node.childWait)?.childWait;
+
     if (renaming) {
         return (
             <ListRow variant="inset" className={ROW}>
@@ -507,6 +526,7 @@ export function ViewRow({ row, tabbable, onToggle, onDrag }: ViewRowProps) {
                 {(view.self ? view.self.alert : view.nodes.some((node) => node.alert)) && <ProcessWarningMark />}
                 {view.self?.finished && <UnseenMark />}
                 {view.self?.snoozedUntil && <SnoozedMark until={view.self.snoozedUntil} />}
+                {childWait && row.status !== 'needs-you' && <ChildWaitLabel wait={childWait} />}
                 {view.self?.wait && row.status === 'needs-you' ? (
                     <WaitLabel detail={view.self.wait} snoozed={Boolean(view.self.snoozedUntil)} />
                 ) : (

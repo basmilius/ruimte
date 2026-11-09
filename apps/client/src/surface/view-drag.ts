@@ -70,7 +70,8 @@ export function watchDrags(): () => void {
     const forget = (): void => setDragging(null);
     // `dragenter` as well as `dragstart`: a drag out of the file manager begins outside this page.
     const starts = ['dragstart', 'dragenter'];
-    const ends = ['dragend', 'drop'];
+    // A drag from outside that leaves again sends no `dragend` or `drop`; no pointer moves arrive during a drag.
+    const ends = ['dragend', 'drop', 'pointermove'];
     for (const type of starts) {
         window.addEventListener(type, begin, true);
     }

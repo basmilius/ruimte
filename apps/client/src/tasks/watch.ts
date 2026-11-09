@@ -1,5 +1,5 @@
 import { useProjectList } from '@/state/project-list';
-import { useTasks } from '@/tasks/tasks';
+import { useTasks } from '@/state/tasks';
 import { fireAndForget } from '@/transport-api/transport';
 import { watchPool } from '@/transport/pool-watch';
 

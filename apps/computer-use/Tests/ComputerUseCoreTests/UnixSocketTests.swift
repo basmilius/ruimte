@@ -31,6 +31,15 @@ struct UnixSocketTests {
         #expect(UnixSocket.readAll(pair.server, maxBytes: 5, until: .now + .seconds(5)) == .complete(Data("hello".utf8)))
     }
 
+    @Test func readsTheAnswerAfterItsOwnHalfClose() {
+        let pair = SocketPair()
+        UnixSocket.writeAll(pair.client, Data("request".utf8))
+        shutdown(pair.client, SHUT_WR)
+        UnixSocket.writeAll(pair.server, Data("answer".utf8))
+        shutdown(pair.server, SHUT_WR)
+        #expect(UnixSocket.readAll(pair.client, maxBytes: 64, until: .now + .seconds(5)) == .complete(Data("answer".utf8)))
+    }
+
     @Test func refusesARequestPastItsLimitBeforeItEnds() {
         let pair = SocketPair()
         UnixSocket.writeAll(pair.client, Data(count: 6))

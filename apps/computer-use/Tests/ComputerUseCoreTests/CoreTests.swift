@@ -37,17 +37,15 @@ struct CaptureResultTests {
 struct OverlayConfigTests {
     @Test func defaultsAreEnglish() {
         let config = OverlayConfig()
-        #expect(config.title == "Ruimte is using your computer")
         #expect(config.menuTitle == "Ruimte is using this Mac")
         #expect(OverlayConfig.load(from: "/nonexistent/overlay.json") == config)
     }
 
     @Test func readsTranslatedWordsAndKeepsDefaultsForTheRest() throws {
-        let data = Data(#"{"title": "Ruimte gebruikt je computer", "pause": ""}"#.utf8)
+        let data = Data(#"{"menuTitle": "Ruimte gebruikt deze Mac", "pause": ""}"#.utf8)
         let config = try JSONDecoder().decode(OverlayConfig.self, from: data)
-        #expect(config.title == "Ruimte gebruikt je computer")
+        #expect(config.menuTitle == "Ruimte gebruikt deze Mac")
         #expect(config.pause == "Pause")
-        #expect(config.accentComponents == nil)
     }
 
     @Test func fillsTheTargetIntoASteps() {
@@ -55,14 +53,6 @@ struct OverlayConfigTests {
         #expect(config.step(for: .click, target: "Export") == "Clicking Export")
         #expect(config.step(for: .click, target: nil) == "Clicking")
         #expect(config.step(for: .think, target: "Export") == "Deciding what to do next")
-    }
-
-    @Test func parsesAccent() {
-        #expect(RGB(hex: "#FF8000") == RGB(red: 1, green: 128.0 / 255, blue: 0))
-        #expect(RGB(hex: "00ff00") == RGB(red: 0, green: 1, blue: 0))
-        #expect(RGB(hex: "#fff") == nil)
-        #expect(RGB(hex: "#GG0000") == nil)
-        #expect(RGB(hex: "+12345") == nil)
     }
 }
 
@@ -91,6 +81,28 @@ struct SessionControlTests {
         #expect(!control.acceptsTakeover)
         control.togglePause(at: 6)
         #expect(control.mode == .running)
+    }
+
+    @Test func aTakeOverGoesBackOnceThePersonLetsGo() {
+        var control = SessionControl()
+        control.begin(at: 0)
+        control.takeOver(at: 10)
+        control.personActed(at: 13)
+        let tooSoon = control.handBackIfQuiet(at: 17, holding: false)
+        let stillTheirs = control.handBackIfQuiet(at: 30, holding: true)
+        let handedBack = control.handBackIfQuiet(at: 30, holding: false)
+        #expect(!tooSoon && !stillTheirs && handedBack)
+        #expect(control.mode == .running)
+        #expect(control.refusal == nil)
+    }
+
+    @Test func aPauseNeverGoesBackOnItsOwn() {
+        var control = SessionControl()
+        control.begin(at: 0)
+        control.pause(at: 10)
+        let handedBack = control.handBackIfQuiet(at: 100, holding: false)
+        #expect(!handedBack)
+        #expect(control.mode == .paused)
     }
 
     @Test func waitingOnThePersonIsNotTakingOver() {
@@ -157,9 +169,9 @@ struct SessionControlTests {
     }
 
     @Test func formatsTheClock() {
-        #expect(SessionControl.clock(134) == "02:14")
+        #expect(SessionControl.clock(134) == "2:14")
         #expect(SessionControl.clock(3725) == "1:02:05")
-        #expect(SessionControl.clock(-4) == "00:00")
+        #expect(SessionControl.clock(-4) == "0:00")
     }
 }
 

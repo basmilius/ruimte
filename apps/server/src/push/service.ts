@@ -329,7 +329,7 @@ export class PushService {
             kind: 'approval',
             target: 'chat',
             nodeId: chatId,
-            title: this.nodes.get(chatId)?.title ?? 'Agent needs permission',
+            title: this.titleOf(chatId, this.nodes.get(chatId)?.title ?? 'Agent needs permission'),
             body: clipText(item.description ?? item.toolName, BODY_MAX),
             requestId: item.requestId,
             choices: [

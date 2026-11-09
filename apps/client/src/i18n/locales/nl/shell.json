@@ -1394,7 +1394,15 @@
         "backToList": "Terug naar lijst",
         "underMinute": "< {{minute}} min",
         "openToAnswer": "Open de sessie om te antwoorden.",
-        "previewUnavailable": "Dit verzoek kan hier niet worden getoond."
+        "previewUnavailable": "Dit verzoek kan hier niet worden getoond.",
+        "child": {
+            "agent": "sub-agent",
+            "paused": "gepauzeerd",
+            "pausedUntil": "gepauzeerd tot {{time}}",
+            "needsYou": "{{title}} heeft je nodig",
+            "pausedUsage": "{{title}} gepauzeerd op een verbruikslimiet",
+            "pausedOverload": "{{title}} gepauzeerd, het model is druk"
+        }
     },
     "extensions": {
         "failed": "Deze extensie kon niet worden getoond",

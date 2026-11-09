@@ -61,6 +61,17 @@ final class TaskStore {
         Set(tasks.values.filter { $0.status == .open }.map(\.parentId))
     }
 
+    /// By parent id, the child of an open task that waits on a person or stopped on a limit, the oldest task first.
+    /// Read from the child's own state; the parent's status stays as its machine reports it.
+    func waitingChildren(waits: (String) -> Bool) -> [String: String] {
+        let open = tasks.values.filter { $0.status == .open }.sorted { $0.createdAt < $1.createdAt }
+        var result: [String: String] = [:]
+        for task in open where result[task.parentId] == nil {
+            if waits(task.childId) || task.paused != nil { result[task.parentId] = task.childId }
+        }
+        return result
+    }
+
     private func askAll() async {
         let asks = projects.keys.map { projectID in Task { await ask(projectID) } }
         for ask in asks { await ask.value }

@@ -1,7 +1,9 @@
 import type { OutsideReference } from '@adecore/agents-react';
 import { REFERENCE_ICONS, type Referable, type ReferableKind, type Referables } from '@adecore/agents-react/chat';
 import {
+    designNodeChats,
     isCanvasView,
+    isDesignView,
     isDividerView,
     isExternalActor,
     isUnlistedView,
@@ -84,6 +86,17 @@ function viewReferable(view: ProjectView, draws?: (extensionId: string) => boole
     return { id: view.id, name: view.name, kind: view.kind as ReferableKind, group: 'views' };
 }
 
+// A later chat of a design is no view of its own, so it is reached through the design it works on.
+function laterDesignChats(view: ProjectView): Referable[] {
+    if (!isDesignView(view)) {
+        return [];
+    }
+
+    const trail = [{ id: view.id, name: view.name, kind: 'design' as const }];
+
+    return designNodeChats(view).map((chat) => ({ id: chat.id, name: chat.name, kind: 'chat' as const, group: 'views' as const, trail }));
+}
+
 /*
  * What a message of `chatId` may point at with `#`: the nodes and texts of the canvas it is a node of,
  * then the views in sidebar order, never the chat itself. Two of one name and kind are told apart by
@@ -128,7 +141,7 @@ export function projectReferables(
     const offered = views.flatMap((view) => {
         const own = viewReferable(view, draws);
 
-        return own === null ? nodesUnder(view) : [own, ...nodesUnder(view)];
+        return own === null ? nodesUnder(view) : [own, ...laterDesignChats(view), ...nodesUnder(view)];
     });
     // A node showing a drawing or a diagram has the id of that view, which is offered once, as a view.
     const viewIds = new Set(views.map((view) => view.id));

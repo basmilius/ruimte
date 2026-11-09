@@ -1,17 +1,16 @@
 /*
- * What the helper's cursor, session bar and menu bar item say, in the languages the interface has,
- * written to `overlay.json` (`OverlayConfig.swift` holds the keys and the English it falls back to).
- * `presence` holds the labels the daemon sends itself, since only it knows the app a card is about.
+ * What the helper's menu bar item and its menu say, in the languages the interface has, written to
+ * `overlay.json` (`OverlayConfig.swift` holds the keys and the English it falls back to). The cursor
+ * itself carries no words. `presence` holds the labels the daemon sends itself, since only it knows
+ * the app a card is about.
  */
 interface OverlayWords {
-    title: string;
     menuTitle: string;
     pause: string;
     resume: string;
     takeOver: string;
     stop: string;
     // While the agent works behind the person's work; `{app}` is the app it works in.
-    backgroundTitle: string;
     backgroundMenuTitle: string;
     // `{target}` is the element or app an action is aimed at; the helper drops it when there is none.
     steps: Record<string, string>;
@@ -23,13 +22,11 @@ export interface PresenceWords {
 }
 
 const ENGLISH: OverlayWords = {
-    title: 'Ruimte is using your computer',
     menuTitle: 'Ruimte is using this Mac',
     pause: 'Pause',
     resume: 'Resume',
     takeOver: 'Take over',
     stop: 'Stop session',
-    backgroundTitle: 'Ruimte is working in {app} in the background',
     backgroundMenuTitle: 'Ruimte is using {app} in the background',
     steps: {
         idle: 'Ready',
@@ -52,13 +49,11 @@ const ENGLISH: OverlayWords = {
 };
 
 const DUTCH: OverlayWords = {
-    title: 'Ruimte bedient je computer',
     menuTitle: 'Ruimte bedient deze Mac',
     pause: 'Pauzeren',
     resume: 'Hervatten',
     takeOver: 'Overnemen',
     stop: 'Sessie stoppen',
-    backgroundTitle: 'Ruimte werkt op de achtergrond in {app}',
     backgroundMenuTitle: 'Ruimte gebruikt {app} op de achtergrond',
     steps: {
         idle: 'Gereed',

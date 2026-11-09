@@ -1,7 +1,8 @@
 import { Icon, Pill, Tooltip, useNow } from '@adecore/ui';
-import { formatAgo, formatDuration, formatElapsedShort, formatNumber, useFormatLocale } from '@adecore/ui/format';
-import { Hand, Hourglass, MessageCircleQuestion } from 'lucide-react';
+import { formatAgo, formatDuration, formatElapsedShort, formatMoment, formatNumber, useFormatLocale } from '@adecore/ui/format';
+import { CirclePause, Hand, Hourglass, MessageCircleQuestion } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { ChildWait } from '@/state/delegation';
 import type { WaitDetails } from '@/state/waiting';
 
 const LONG_WAIT_MS = 10 * 60_000;
@@ -38,6 +39,36 @@ export function WaitAge({ since, quiet = false }: { since: number; quiet?: boole
         >
             {shown}
         </time>
+    );
+}
+
+/* On a parent, the child agent it delegated to that waits on a person or on a limit. The parent's own status stays as it is. */
+export function ChildWaitLabel({ wait }: { wait: ChildWait }) {
+    const { t } = useTranslation('shell');
+    useFormatLocale();
+
+    if (wait.kind === 'needs-you') {
+        return (
+            <Tooltip label={t('attention.child.needsYou', { title: wait.task.title })}>
+                <span className="inline-flex shrink-0">
+                    <Pill size="sm" tone="needsYou" icon={<Icon icon={Hourglass} size={12} />}>
+                        {t('attention.child.agent')}
+                        {Number.isFinite(wait.since) && wait.since > 0 && ' · '}
+                        <WaitAge since={wait.since} />
+                    </Pill>
+                </span>
+            </Tooltip>
+        );
+    }
+
+    return (
+        <Tooltip label={t(wait.limit === 'usage' ? 'attention.child.pausedUsage' : 'attention.child.pausedOverload', { title: wait.task.title })}>
+            <span className="inline-flex shrink-0">
+                <Pill size="sm" tone="muted" className="tabular-nums" icon={<Icon icon={CirclePause} size={12} />}>
+                    {wait.until === null ? t('attention.child.paused') : t('attention.child.pausedUntil', { time: formatMoment(wait.until) })}
+                </Pill>
+            </span>
+        </Tooltip>
     );
 }
 

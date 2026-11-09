@@ -214,7 +214,7 @@ export class FakeHelper implements HelperTransport {
         this.session = { active: false, mode: 'running', stopped: true };
     }
 
-    /* What the buttons of the session bar do: nothing without a session, and a pause while paused is no resume. */
+    /* What the items of the menu bar item do: nothing without a session, and a pause while paused is no resume. */
     private press(action: 'pause' | 'resume' | 'stop'): void {
         if (!this.session.active) {
             return;

@@ -10,6 +10,7 @@ export type EndChildrenEntry = OutboxEntryOfKind<'end-children'>;
 export type DeliverSummaryEntry = OutboxEntryOfKind<'deliver-summary'>;
 export type DeliverPrWatchEntry = OutboxEntryOfKind<'deliver-pr-watch'>;
 export type DeliverAnswerEntry = OutboxEntryOfKind<'deliver-answer'>;
+export type DeliverLostWorkEntry = OutboxEntryOfKind<'deliver-lost-work'>;
 export type RunAfterSettleEntry = OutboxEntryOfKind<'run-after-settle'>;
 export type ConnectPeerEntry = OutboxEntryOfKind<'connect-peer'>;
 export type StartRemoteAgentEntry = OutboxEntryOfKind<'start-remote-agent'>;

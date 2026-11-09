@@ -37,6 +37,23 @@ final class PhoneRouterTests: XCTestCase {
         XCTAssertEqual(router.path, [])
     }
 
+    @MainActor func testANotificationOfAHiddenAgentOpensTheFirstShownChatAboveIt() async {
+        let parents = ["checker": "reviewer", "reviewer": "chat", "loop-a": "loop-b", "loop-b": "loop-a"]
+        let shown = ["chat": target]
+        func place(_ nodeID: String) async -> ProjectViewTarget? {
+            await NotificationDestination(machineID: "mac", nodeID: nodeID, target: "chat").answeredAt(
+                parentOf: { parents[$0] }, locate: { shown[$0] })
+        }
+        let own = await place("chat")
+        let hidden = await place("checker")
+        let loop = await place("loop-a")
+        let orphan = await place("gone")
+        XCTAssertEqual(own, target)
+        XCTAssertEqual(hidden, target)
+        XCTAssertNil(loop)
+        XCTAssertNil(orphan)
+    }
+
     @MainActor func testARunOpensOverItsRoutineAndARoutineReplacesWhatWasPushed() {
         let router = PhoneRouter()
         let routine = ScheduledRoute.routine(RoutineTarget(machineID: "mac", projectID: "app", routineID: "deps"))

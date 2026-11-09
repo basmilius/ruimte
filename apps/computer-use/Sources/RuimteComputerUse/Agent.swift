@@ -5,16 +5,22 @@ import Phantom
 
 struct Snapshot {
     let window: AXUIElement
+    let frame: CGRect
     let handles: HandleTable
     let capture: CaptureResult?
     /// Why there is no capture, phrased for a click by --x/--y.
     let captureProblem: String?
 
     func element(_ index: Int) throws -> AXUIElement {
-        guard let element = handles.byIndex[index] else {
-            throw AgentError("the last state has no element \(index); run `cu state` again")
+        let (element, lookup) = handles.element(index)
+        if let element {
+            return element
         }
-        return element
+        if case .gone(let signature) = lookup {
+            let named = signature.map { " (\($0.shown))" } ?? ""
+            throw AgentError("element \(index)\(named) is no longer in the window; run `cu state` again and take it from there")
+        }
+        throw AgentError("the last two states have no element \(index); run `cu state` again")
     }
 }
 
@@ -113,7 +119,7 @@ final class Agent {
             }
             return Response.success(["stopped": true])
         case "presence":
-            return await respond { try self.overlay.presence(request.state, label: request.label, step: request.step, ends: request.ends == true) }
+            return await respond { try self.overlay.presence(request.state, step: request.step, ends: request.ends == true) }
         case "clear-stop":
             // The daemon tells the stopped agent itself, so another agent it serves is not refused for that stop.
             overlay.clearStop()
@@ -229,7 +235,11 @@ final class Agent {
         let appElement = AXUIElementCreateApplication(pid)
         var mode = await prepareChromium(app, appElement)
         guard let keyWindow = AX.keyWindow(of: appElement) else {
-            throw AgentError("\(Targets.name(app)) has no window that accessibility can see (no window open, or it is minimized)")
+            // macOS lets accessibility see only the windows on the Space the person looks at.
+            if Targets.hasWindowElsewhere(pid) {
+                throw AgentError("the window of \(Targets.name(app)) is on another Space or minimized, where accessibility cannot see it; ask the person to bring it to the Space they are on")
+            }
+            throw AgentError("\(Targets.name(app)) has no window open that accessibility can see")
         }
         // A sheet is its own AX element and its own window on screen; the tree and the picture start at its parent.
         let root = AX.container(of: keyWindow).window ?? keyWindow
@@ -254,6 +264,8 @@ final class Agent {
         var handles = walker.handles
         if subtree != nil {
             handles.keep(previous)
+        } else {
+            handles.retire(previous)
         }
         var lines = walker.lines
         var truncation = walker.truncation
@@ -276,7 +288,12 @@ final class Agent {
         var captureProblem: String?
         if request.screenshot == false {
             screenshot["error"] = "skipped (no_screenshot)"
-            captureProblem = "the last state was taken with no_screenshot, so there is no screenshot to map x/y from; run `cu state \(Targets.name(app))` without it"
+            // Pixels the agent reads off its last picture still map while the window has not moved or changed size.
+            if let earlier = snapshots[pid], earlier.capture != nil, earlier.frame == rootFrame {
+                capture = earlier.capture
+            } else {
+                captureProblem = "the window moved or changed size since the last screenshot, and this state was taken with no_screenshot; run `cu state \(Targets.name(app))` without it"
+            }
         } else if !CGPreflightScreenCaptureAccess() {
             screenshot["error"] = "Screen Recording is not granted to \(Permissions.appName); run `cu doctor`"
             captureProblem = "the last state has no screenshot because Screen Recording is not granted; run `cu doctor`"
@@ -297,7 +314,7 @@ final class Agent {
                 captureProblem = "the last state has no screenshot (\(message))"
             }
         }
-        snapshots[pid] = Snapshot(window: root, handles: handles, capture: capture, captureProblem: captureProblem)
+        snapshots[pid] = Snapshot(window: root, frame: rootFrame, handles: handles, capture: capture, captureProblem: captureProblem)
 
         var window: [String: Any] = [
             "title": VisibleText.clean(AX.string(root, kAXTitleAttribute)) ?? "",
@@ -458,20 +475,20 @@ final class Agent {
     }
 
     /// Starts or keeps the session for a call on the app: `point` picks the screen, and the person's hand in
-    /// `window` takes over. Behind the person's work, which is unless the call asked for the front, the bar names the app.
+    /// `window` takes over. Behind the person's work, which is unless the call asked for the front, the menu names the app.
     func begin(_ app: NSRunningApplication, _ request: Request, near point: CGPoint?, window: CGRect?) {
         overlay.begin(near: point, background: request.front == true ? nil : Targets.name(app))
         overlay.operating(in: window, pid: app.processIdentifier)
     }
 
-    /// A `state` shows as looking: in front the viewfinder goes around the window the agent captures.
+    /// A `state` shows as looking.
     private func look(_ app: NSRunningApplication, _ request: Request) async throws -> [String: Any] {
         let frame = keyWindowFrame(app)
         begin(app, request, near: frame?.center, window: frame)
         defer {
             overlay.finishAction()
         }
-        overlay.show(ActionLook(state: .look, target: Targets.name(app), frame: frame))
+        overlay.show(ActionLook(state: .look, target: Targets.name(app)))
         return try await buildState(app, request)
     }
 
@@ -479,6 +496,9 @@ final class Agent {
     func act(_ app: NSRunningApplication, _ request: Request, at point: CGPoint?, as action: ActionLook, reportPoint: Bool = true, _ body: () async throws -> [String: Any]) async throws -> [String: Any] {
         try checkStopped()
         begin(app, request, near: point, window: keyWindowFrame(app))
+        if request.front != true {
+            overlay.keepPersonInFront(for: 3)
+        }
         defer {
             overlay.finishAction()
         }

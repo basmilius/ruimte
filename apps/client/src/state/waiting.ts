@@ -6,6 +6,7 @@ import { endpointKey, endpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSessions, type SessionsByKey, type StatusOf } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
+import { useTasks } from '@/state/tasks';
 import { projectNodes, subscribeViewNodes } from '@/state/view-nodes';
 import { currentEndpointId } from './current-endpoint';
 import { waitDate } from './waiting-date';
@@ -174,7 +175,15 @@ export function projectWaiting(): Waiting[] {
     const endpointId = currentEndpointId();
     const sessions = useSessions.getState().byKey;
     const chats = useChats.getState().statusByKey;
-    const { needsYou } = groupAttention(nodes, sessions, chats, endpointId, useAttention.getState().unseen, useSnoozes.getState().byKey);
+    const { needsYou } = groupAttention(
+        nodes,
+        sessions,
+        chats,
+        endpointId,
+        useAttention.getState().unseen,
+        useSnoozes.getState().byKey,
+        useTasks.getState().byEndpoint
+    );
     const ids = new Set(needsYou);
     return oldestWaitingFirst(
         nodes.filter((node) => ids.has(node.id)),

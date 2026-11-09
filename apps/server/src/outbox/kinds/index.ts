@@ -2,7 +2,16 @@ import { z } from 'zod';
 import type { OutboxKind, OutboxParkedNote } from '../kind.ts';
 import { deliverPrWatchKind } from './github.ts';
 import { runAfterSettleKind } from './launches.ts';
-import { deliverAnswerKind, deliverMessageKind, deliverSummaryKind, endChildrenKind, resumeLimitKind, resumeRunKind, startAgentKind } from './outbox.ts';
+import {
+    deliverAnswerKind,
+    deliverLostWorkKind,
+    deliverMessageKind,
+    deliverSummaryKind,
+    endChildrenKind,
+    resumeLimitKind,
+    resumeRunKind,
+    startAgentKind
+} from './outbox.ts';
 import { connectPeerKind, startRemoteAgentKind, stopRemoteAgentKind, takeRemoteResultKind } from './peer-giver.ts';
 import { deliverRemoteResultKind } from './peer-worker.ts';
 import { routineRunKind } from './routines.ts';
@@ -27,6 +36,7 @@ export const OUTBOX_KINDS = [
     deliverWaitingKind,
     deliverPrWatchKind,
     deliverAnswerKind,
+    deliverLostWorkKind,
     runAfterSettleKind,
     connectPeerKind,
     deliverRemoteResultKind,

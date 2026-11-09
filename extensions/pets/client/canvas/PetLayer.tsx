@@ -20,7 +20,7 @@ import { maximizedNodeOf, useCanvas, useCanvasStore } from '@/state/canvas';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
-import { useTasks } from '@/tasks/tasks';
+import { useTasks } from '@/state/tasks';
 
 const visitor = createVisitor({
     setTimeout: (run, ms) => window.setTimeout(run, ms),

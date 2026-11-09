@@ -25,6 +25,12 @@ public enum WindowStack {
         windows.first { $0.pid != ignoring && $0.alpha > 0 && $0.frame.contains(point) }?.pid
     }
 
+    /// Whether the app the agent works in has a normal window on the Space the person looks at. Only on-screen windows
+    /// are listed, so a window on another Space is missing; the phantom cursor then has nothing to point at there.
+    public static func showsApp(_ pid: Int32, in windows: [StackedWindow]) -> Bool {
+        windows.contains { $0.pid == pid && $0.layer == 0 && $0.alpha > 0 }
+    }
+
     /// Whether other apps' normal windows in front of the window hide all of it. Only the normal layer counts:
     /// panels and overlays above it are often transparent where they seem to cover.
     public static func isCovered(_ id: UInt32, in windows: [StackedWindow]) -> Bool {

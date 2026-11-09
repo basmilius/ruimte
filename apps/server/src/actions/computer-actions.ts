@@ -172,7 +172,7 @@ async function act(
 }
 
 /* How long `wait` waits for its condition without timeout, in seconds. */
-const WAIT_TIMEOUT_S = 10;
+export const WAIT_TIMEOUT_S = 10;
 
 /* What `wait` holds out for: exactly one of a text that appears, a text that goes, or the value of an element. */
 function conditionOf({
@@ -297,10 +297,10 @@ export const computerActions: ActionHandlers<ServerActionContext> = {
         return { output: (await act(context, actor.id, 'drag', input, { ...from, ...end })).outcome };
     },
     'computer.type': async (input, { actor, context }) => ({
-        output: (await act(context, actor.id, 'type', input, { text: input.text })).outcome
+        output: (await act(context, actor.id, 'type', input, { text: input.text, ...(given(input.element) ? { element: input.element } : {}) })).outcome
     }),
     'computer.key': async (input, { actor, context }) => ({
-        output: (await act(context, actor.id, 'key', input, { combos: input.combos })).outcome
+        output: (await act(context, actor.id, 'key', input, { combos: input.combos, ...(given(input.element) ? { element: input.element } : {}) })).outcome
     }),
     'computer.setValue': async (input, { actor, context }) => ({
         output: (await act(context, actor.id, 'set-value', input, { element: input.element, value: input.value })).outcome

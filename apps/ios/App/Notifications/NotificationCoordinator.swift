@@ -135,6 +135,21 @@ struct NotificationDestination: Identifiable, Hashable {
 
     /// A notification about the machine itself, or one without a node, opens on Now rather than in a project.
     var opensMachine: Bool { target == "machine" || nodeID.isEmpty }
+
+    /// Where the node is answered: its own place in a project, or for an agent another agent opened outside every
+    /// view, the first chat above it a project shows, whose composer holds its requests. Nil when none is found.
+    @MainActor func answeredAt(
+        parentOf: (String) -> String?, locate: (String) async -> ProjectViewTarget?
+    ) async -> ProjectViewTarget? {
+        var id = nodeID
+        var seen = Set<String>()
+        while seen.insert(id).inserted {
+            if let target = await locate(id) { return target }
+            guard let parent = parentOf(id), !parent.isEmpty else { return nil }
+            id = parent
+        }
+        return nil
+    }
 }
 
 @MainActor @Observable final class NotificationCoordinator: NSObject {

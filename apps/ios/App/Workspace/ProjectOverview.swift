@@ -121,7 +121,9 @@ enum ProjectOverview {
             if view.kind == .chat { activity.chats += 1 }
             for id in [view.id] + view.nodes.map(\.id) where !id.isEmpty {
                 let status = attention.statuses[id]
-                if status == .needsYou && !snoozed.contains(id) { activity.needsYou += 1 }
+                // A child that waits by its own status is counted as itself, so its parent is not counted again.
+                let childWaits = attention.waitingChildren[id].map { attention.statuses[$0] != .needsYou } ?? false
+                if (status == .needsYou || childWaits) && !snoozed.contains(id) { activity.needsYou += 1 }
                 if status == .running || attention.delegating.contains(id) { activity.working += 1 }
             }
         }

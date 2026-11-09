@@ -546,12 +546,18 @@
         transform: rotate(270deg) translateX(-100%);
     }
 
-    /* Every page the app embeds steps out of the pointer's way while anything is dragged; otherwise
-       its own document absorbs the event before the cell underneath can see the drag arrive. The
-       attribute is set in `shell/view-drag.ts` for as long as the drag lasts. */
+    /* Every page the app embeds steps out of the pointer's way while anything is dragged or a popup
+       is open; otherwise its own document absorbs the press before the client sees it, so a drag
+       never arrives at the cell underneath and an open menu never hears the press outside it. The
+       drag attribute is set in `shell/view-drag.ts`, the popup one by ADE CORE's popup layer. The
+       parking layer writes `pointer-events` inline on `.browser-host`, which only `!important`
+       beats; the popup rule targets the pages themselves, so the host keeps taking the press. */
     body[data-dragging] .browser-host,
     body[data-dragging] .file-preview-page,
     body[data-dragging] iframe {
+        pointer-events: none !important;
+    }
+    :root[data-popup-open] :is(webview, iframe) {
         pointer-events: none;
     }
 

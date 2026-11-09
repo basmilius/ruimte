@@ -1,7 +1,7 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionOutput } from '@ruimte/actions';
 import { z } from 'zod';
-import { READ_MAX_CHARS } from '../actions/computer-actions.ts';
+import { READ_MAX_CHARS, WAIT_TIMEOUT_S } from '../actions/computer-actions.ts';
 import { field, requiredField, yesNo } from '../canvas/host.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
 import { defineTool, defineToolkit, type ToolCall } from './tool.ts';
@@ -16,8 +16,8 @@ type Act = (typeof ACTS)[number];
 /* What each action of `computer_act` takes besides the fields every action shares. */
 const ACT_FIELDS: Readonly<Record<Act, readonly string[]>> = {
     click: ['element', 'x', 'y', 'count', 'button'],
-    type: ['text'],
-    key: ['combo'],
+    type: ['element', 'text'],
+    key: ['element', 'combo'],
     'set-value': ['element', 'value'],
     scroll: ['element', 'x', 'y', 'direction', 'pages'],
     drag: ['from', 'from_x', 'from_y', 'to', 'to_x', 'to_y']
@@ -263,6 +263,17 @@ const computerWait = defineActionTool('computer', {
             ...(outcome.state === null ? [] : stateLines(outcome.state, call))
         ];
 
+        const leftS = Math.floor((input.timeout ?? WAIT_TIMEOUT_S) - outcome.waited);
+
+        // A call answers within the budget an agent CLI gives it, so a longer wait goes on in the next call; that is no failure.
+        if (!outcome.met && leftS >= 1) {
+            return [
+                `waiting\t${field(outcome.app.name)}\t${field(outcome.condition)}\t${round(outcome.waited)}`,
+                `next\tcomputer_wait\tNot yet. Call computer_wait again with timeout ${leftS} for the rest of your wait`,
+                ...lines
+            ];
+        }
+
         if (!outcome.met) {
             throw new ToolRefusal(
                 'timeout',
@@ -332,7 +343,7 @@ const computerAct = defineTool('computer', {
                     throw new ToolRefusal('bad-arguments', 'computer_act type needs text, the text to type');
                 }
 
-                return outcomeLines('type', await runAction(call, 'computer.type', { app, text: input.text, ...after }), call);
+                return outcomeLines('type', await runAction(call, 'computer.type', { app, text: input.text, element: input.element ?? null, ...after }), call);
             }
 
             case 'key': {
@@ -340,7 +351,7 @@ const computerAct = defineTool('computer', {
                     throw new ToolRefusal('bad-arguments', 'computer_act key needs combo, at least one key combo such as cmd+n');
                 }
 
-                return outcomeLines('key', await runAction(call, 'computer.key', { app, combos: input.combo, ...after }), call);
+                return outcomeLines('key', await runAction(call, 'computer.key', { app, combos: input.combo, element: input.element ?? null, ...after }), call);
             }
 
             case 'set-value': {

@@ -71,3 +71,12 @@ const DeliverAnswerSchema = z.object({
 
 /* A person's answer on a card the chat raised; one turn that wakes nobody, owed only through `OutboxLink.oweAnswer`. */
 export const deliverAnswerKind = defineOutboxKind(DeliverAnswerSchema);
+
+const DeliverLostWorkSchema = z.object({
+    kind: z.literal('deliver-lost-work'),
+    // The target is an idle chat whose background commands a restart took; `noteId` is the note in its thread that says what was lost.
+    payload: z.object({ noteId: z.string().min(1) })
+});
+
+/* One turn that tells an idle chat what a restart took, owed only through `OutboxLink.oweLostWork`. */
+export const deliverLostWorkKind = defineOutboxKind(DeliverLostWorkSchema);

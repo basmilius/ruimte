@@ -225,6 +225,26 @@ describe('the counts', () => {
         const groups = groupAttention(nodes, { 'local:t1': session(agent('needs-you')) }, {}, 'local', {}, { 'Xk3p:t1': 2_000 });
         expect(groups.needsYou).toEqual(['t1']);
     });
+
+    test('a hidden child agent that waits on a person counts on its parent, and a child in sight only on itself', () => {
+        const open = {
+            projectId: 'p1',
+            parentId: 'c1',
+            title: 'Review',
+            prompt: '',
+            status: 'open',
+            result: null,
+            createdAt: 1,
+            settledAt: null,
+            wake: 'pending'
+        } as const;
+        const tasks = { local: { k1: { ...open, id: 'k1', childId: 'hidden' }, k2: { ...open, id: 'k2', childId: 't1' } } };
+        const parent = groupAttention(nodes, {}, { 'local:hidden': chat('needs-you') }, 'local', {}, {}, tasks);
+        const shown = groupAttention(nodes, { 'local:t1': session(agent('needs-you')) }, {}, 'local', {}, {}, tasks);
+
+        expect(parent.needsYou).toEqual(['c1']);
+        expect(shown.needsYou).toEqual(['t1']);
+    });
 });
 
 test('compact project counts use current statuses, count a session once and keep snoozes on their own machine', () => {

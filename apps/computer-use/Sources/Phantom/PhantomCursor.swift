@@ -4,41 +4,12 @@ import QuartzCore
 
 /// Everything a state needs besides the state itself.
 public struct PhantomScene {
-    public var theme = PhantomTheme.light
-    /// Replaces the accent of the theme, from `overlay.json`.
-    public var accent: CGColor?
-    /// The words of the label: the typed text for `type`, the name on the card for `drag`. Nil shows no label.
-    public var label: String?
     public var scrollDirection = ScrollDirection.down
-    /// What `look` frames, from the hotspot, y down. Nil puts the viewfinder where the design has it.
-    public var viewfinder: CGRect?
-    public var dots = DotMotion.wave
     public var working = WorkingStyle.dots
-    /// The calm motion of the design: loops a half slower, morphs and moves without overshoot.
-    public var calm = false
-    /// False leaves out rings, halos and everything else around the form, for the mini cursors.
+    /// False leaves out the ring and the marks, for the mini cursor of the menu bar.
     public var effects = true
-    /// The screen around the hotspot, y down, so the label flips at its edge.
-    public var room: CGRect?
 
     public init() {}
-
-    /// The scene of a mini cursor, which draws nothing around its form.
-    static func mark(theme: PhantomTheme, accent: CGColor?) -> PhantomScene {
-        var scene = PhantomScene()
-        scene.theme = theme
-        scene.accent = accent
-        scene.effects = false
-        return scene
-    }
-
-    var loops: Double {
-        calm ? OverlayStyle.Motion.calmLoops : 1
-    }
-
-    var morph: Timing {
-        calm ? OverlayStyle.Motion.calmMorph : OverlayStyle.Motion.morph
-    }
 }
 
 /// The phantom cursor as a layer tree, in a geometry-flipped superlayer so its numbers are the design's, y down.
@@ -47,37 +18,41 @@ public struct PhantomScene {
 public final class PhantomCursor {
     public let layer = CALayer()
     public private(set) var state: PhantomState?
-    private let effects = CALayer()
+    private let rings = Layers.cursorBox()
+    /// Carries the figure and its marks, so the drift of dragging takes both.
+    private let drift = CALayer()
     private let figure = Layers.cursorBox()
     private let pose = Layers.cursorBox()
     private let beat = Layers.cursorBox()
-    private let turn = Layers.cursorBox()
     private let rim = CAShapeLayer()
     private let fill = CAShapeLayer()
-    private var glyph: CALayer?
-    private var label: CALayer?
+    private let marks = Layers.cursorBox()
+    private var glyph: (layer: CALayer, key: String)?
+    private var mark: (layer: CALayer, key: String)?
 
     public init() {
         layer.anchorPoint = .zero
         layer.bounds = .zero
-        effects.anchorPoint = .zero
+        rings.position = .zero
+        drift.anchorPoint = .zero
+        drift.bounds = .zero
         figure.position = .zero
-        figure.shadowColor = CGColor(gray: 0, alpha: 1)
-        figure.shadowOpacity = Float(OverlayStyle.Cursor.shadow.alpha)
-        figure.shadowRadius = OverlayStyle.Cursor.shadow.blur / 2
-        figure.shadowOffset = CGSize(width: 0, height: OverlayStyle.Cursor.shadow.y)
+        marks.position = .zero
+        Layers.shadow(figure, OverlayStyle.Cursor.shadow)
+        Layers.shadow(marks, OverlayStyle.Mark.shadow)
         for shape in [rim, fill] {
             shape.frame = CGRect(x: 0, y: 0, width: OverlayStyle.Cursor.box, height: OverlayStyle.Cursor.box)
             shape.lineJoin = .round
-            shape.path = PhantomForm.arrow.path.cgPath
-            turn.addSublayer(shape)
+            shape.path = PhantomForm.arrow.outline.cgPath
+            beat.addSublayer(shape)
         }
         rim.fillColor = nil
-        beat.addSublayer(turn)
         pose.addSublayer(beat)
         figure.addSublayer(pose)
-        layer.addSublayer(effects)
-        layer.addSublayer(figure)
+        drift.addSublayer(figure)
+        drift.addSublayer(marks)
+        layer.addSublayer(rings)
+        layer.addSublayer(drift)
     }
 
     /// Shows a state. `animated` morphs from the state before; without it the state stands as it would after its transitions.
@@ -87,15 +62,16 @@ public final class PhantomCursor {
         defer {
             CATransaction.commit()
         }
-        let (look, palette, color) = Self.paint(state, scene: scene)
+        let look = PhantomLook.of(state, working: scene.working)
         let transition = animated && self.state != nil && motion.moves
 
-        applyForm(look, transition: transition, scene: scene, motion: motion)
-        applyPaint(look, color: color, palette: palette, transition: transition, motion: motion)
-        applyShapeMotion(look, scene: scene, transition: transition, motion: motion)
-        applyGlyph(look, scene: scene, transition: transition, motion: motion)
-        applyEffects(look, color: color, palette: palette, scene: scene, motion: motion)
-        applyLabel(look, color: color, palette: palette, scene: scene, motion: motion)
+        applyForm(look, transition: transition, motion: motion)
+        applyPaint(look, transition: transition, motion: motion)
+        applyPose(look, transition: transition, motion: motion)
+        applyBeat(look, motion: motion)
+        applyGlyph(look, transition: transition, motion: motion)
+        applyRing(look, scene: scene, motion: motion)
+        applyMark(look, scene: scene, transition: transition, motion: motion)
         self.state = state
     }
 
@@ -104,27 +80,19 @@ public final class PhantomCursor {
         guard let state, state == .click || state == .tap else {
             return
         }
-        let (look, palette, color) = Self.paint(state, scene: scene)
-        applyShapeMotion(look, scene: scene, transition: false, motion: motion)
-        applyEffects(look, color: color, palette: palette, scene: scene, motion: motion)
-    }
-
-    /// The look of a state and its color: the scene's accent replaces the theme's.
-    private static func paint(_ state: PhantomState, scene: PhantomScene) -> (PhantomLook, PhantomPalette, CGColor) {
         let look = PhantomLook.of(state, working: scene.working)
-        let palette = OverlayStyle.palette(scene.theme)
-        let color = look.tone == .accent ? (scene.accent ?? palette.accent) : palette.color(look.tone)
-        return (look, palette, color)
+        applyBeat(look, motion: motion)
+        applyRing(look, scene: scene, motion: motion)
     }
 
-    private func applyForm(_ look: PhantomLook, transition: Bool, scene: PhantomScene, motion: MotionHost) {
-        let target = look.form.path
+    private func applyForm(_ look: PhantomLook, transition: Bool, motion: MotionHost) {
+        let target = look.form.outline
+        let current = (fill.presentation()?.path).flatMap(PhantomOutline.init(cgPath:)) ?? fill.path.flatMap(PhantomOutline.init(cgPath:))
         for shape in [rim, fill] {
-            let current = (shape.presentation()?.path).flatMap(PhantomPath.init(cgPath:)) ?? shape.path.flatMap(PhantomPath.init(cgPath:))
             if transition, let current, current != target {
-                let timing = scene.morph
+                let timing = OverlayStyle.Motion.morph
                 motion.run(Track(keyPath: "path", duration: timing.duration) { time in
-                    PhantomPath.interpolate(current, target, timing.easing.progress(CGFloat(time / timing.duration))).cgPath
+                    PhantomOutline.interpolate(current, target, timing.easing.progress(CGFloat(time / timing.duration))).cgPath
                 }, on: shape)
             } else {
                 shape.removeAnimation(forKey: "path")
@@ -133,14 +101,13 @@ public final class PhantomCursor {
         }
     }
 
-    private func applyPaint(_ look: PhantomLook, color: CGColor, palette: PhantomPalette, transition: Bool, motion: MotionHost) {
-        let style = OverlayStyle.Cursor.self
-        let white = CGColor(gray: 1, alpha: 1)
+    private func applyPaint(_ look: PhantomLook, transition: Bool, motion: MotionHost) {
+        let ink = OverlayStyle.Ink.self
         let timing = OverlayStyle.Motion.color
         let colors: [(CAShapeLayer, String, CGColor)] = [
-            (rim, "strokeColor", look.ghost ? Layers.withAlpha(white, style.ghostRimOpacity) : white),
-            (fill, "fillColor", look.ghost ? Layers.withAlpha(palette.surface, style.ghostFillOpacity) : Layers.withAlpha(color, look.fillOpacity)),
-            (fill, "strokeColor", color),
+            (rim, "strokeColor", look.ghost ? ink.ghostRim : ink.white),
+            (fill, "fillColor", look.ghost ? ink.ghostFill : Layers.withAlpha(ink.fill, look.fillOpacity)),
+            (fill, "strokeColor", look.ghost ? ink.ghostStroke : ink.fill),
         ]
         for (shape, keyPath, target) in colors {
             let current = shape.presentation()?.value(forKeyPath: keyPath) ?? shape.value(forKeyPath: keyPath)
@@ -154,10 +121,7 @@ public final class PhantomCursor {
                 shape.setValue(target, forKeyPath: keyPath)
             }
         }
-        let widths: [(CAShapeLayer, CGFloat)] = [
-            (rim, look.ghost ? style.ghostRimWidth : style.rimWidth),
-            (fill, look.ghost ? style.ghostStrokeWidth : style.strokeWidth),
-        ]
+        let widths: [(CAShapeLayer, CGFloat)] = [(rim, look.rimWidth), (fill, OverlayStyle.Cursor.strokeWidth)]
         for (shape, target) in widths {
             let current = shape.presentation()?.lineWidth ?? shape.lineWidth
             if transition && abs(current - target) > 0.001 {
@@ -169,333 +133,299 @@ public final class PhantomCursor {
         }
     }
 
-    private func applyShapeMotion(_ look: PhantomLook, scene: PhantomScene, transition: Bool, motion: MotionHost) {
-        let timing = OverlayStyle.Motion.self
-        let currentScale = (pose.presentation()?.value(forKeyPath: "transform.scale") as? NSNumber).map { CGFloat($0.doubleValue) } ?? 1
-        if transition && abs(currentScale - look.scale) > 0.001 {
-            motion.run(.transition("transform.scale", from: currentScale, to: look.scale, duration: timing.pose.duration, easing: timing.pose.easing), on: pose)
+    private func applyPose(_ look: PhantomLook, transition: Bool, motion: MotionHost) {
+        let timing = OverlayStyle.Motion.pose
+        let current = (pose.presentation()?.value(forKeyPath: "transform.scale") as? NSNumber).map { CGFloat($0.doubleValue) } ?? 1
+        if transition && abs(current - look.scale) > 0.001 {
+            motion.run(.transition("transform.scale", from: current, to: look.scale, duration: timing.duration, easing: timing.easing), on: pose)
         } else {
             pose.removeAllAnimations()
             pose.transform = CATransform3DMakeScale(look.scale, look.scale, 1)
         }
+    }
 
-        for layer in [beat, turn, figure] {
+    private func applyBeat(_ look: PhantomLook, motion: MotionHost) {
+        let timing = OverlayStyle.Motion.self
+        for layer in [beat, drift] {
             layer.removeAllAnimations()
+            layer.transform = CATransform3DIdentity
         }
-        beat.transform = CATransform3DIdentity
-        turn.transform = CATransform3DIdentity
-        figure.opacity = 1
-        let loops = scene.loops
-        switch look.motion {
-        case .breathe:
-            motion.play(.keyframes("transform.scale", duration: timing.breathe * loops, [(0, 1), (0.5, 1.07), (1, 1)], easing: .easeInOut, repeats: true), on: beat)
+        drift.opacity = 1
+        switch look.beat {
         case .press:
-            let total = timing.pressDown + 2 * timing.pressSpring
-            motion.play(.keyframes("transform.scale", duration: total, [
-                (0, 1),
-                (CGFloat(timing.pressDown / total), timing.pressScale),
-                (CGFloat((timing.pressDown + timing.pressSpring) / total), timing.pressOvershoot),
-                (1, 1),
-            ]), on: beat)
-        case .shake:
-            let frames: [CGFloat] = [0, 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 1]
-            let shifts: [CGFloat] = [0, -4, 4, -3, 2, 0, 0, 0]
-            let angles: [CGFloat] = [0, -8, 6, -4, 2, 0, 0, 0]
-            motion.play(.keyframes("transform.translation.x", duration: timing.shake * loops, Array(zip(frames, shifts)), repeats: true), on: beat)
-            motion.play(.keyframes("transform.rotation.z", duration: timing.shake * loops, Array(zip(frames, angles.map { $0 * .pi / 180 })), repeats: true), on: turn)
-        case .sway:
-            let duration = scene.calm ? 2.4 : timing.sway
-            motion.play(.keyframes("transform.rotation.z", duration: duration, [(0, -12 * .pi / 180), (0.5, 9 * .pi / 180), (1, -12 * .pi / 180)], easing: .easeInOut, repeats: true), on: turn)
+            motion.play(.keyframes("transform.scale", duration: timing.press, [(0, 1), (0.35, timing.pressScale), (1, 1)], easing: timing.smooth), on: beat)
+        case .nudge:
+            motion.play(.keyframes("transform.translation.x", duration: timing.nudge, [(0, 0), (0.25, -1.2), (0.55, 1.2), (0.8, -0.5), (1, 0)], easing: .easeOut), on: beat)
+        case .typing:
+            let step = timing.typingStep
+            motion.play(.keyframes("transform.translation.x", duration: timing.typing, [(0, 0), (0.2, step), (0.4, 2 * step), (0.6, 3 * step), (0.85, 3 * step), (1, 0)], easing: .steps(1), repeats: true), on: beat)
+        case .fade:
+            // The drift layer holds the cursor and its disc, so both fade together.
+            motion.play(.keyframes("opacity", duration: timing.doneFade, [(0, 1), (0.7, 1), (1, 0)]), on: drift)
         case nil:
             break
         }
-        if look.fades {
-            let delay = timing.doneFadeDelay
-            let fade = timing.doneFade
-            motion.play(Track(keyPath: "opacity", duration: delay + fade.duration) { time in
-                NSNumber(value: Double(time < delay ? 1 : 1 - fade.easing.progress(CGFloat((time - delay) / fade.duration))))
-            }, on: figure)
+        guard look.drift else {
+            return
+        }
+        // `alternate`: out on the curve, and back on the same curve run backwards.
+        let leg = timing.drift
+        let reach = timing.driftReach
+        for (keyPath, distance) in [("transform.translation.x", reach.x), ("transform.translation.y", reach.y)] {
+            motion.play(Track(keyPath: keyPath, duration: 2 * leg, repeats: true) { time in
+                let along = time < leg ? time / leg : (2 * leg - time) / leg
+                return NSNumber(value: Double(distance * timing.smooth.progress(CGFloat(along))))
+            }, on: drift)
         }
     }
 
-    private func applyGlyph(_ look: PhantomLook, scene: PhantomScene, transition: Bool, motion: MotionHost) {
+    private func applyGlyph(_ look: PhantomLook, transition: Bool, motion: MotionHost) {
+        let key = look.glyph.map { "\($0)-\(look.tone?.rawValue ?? "white")" }
+        if transition, let glyph, glyph.key == key {
+            return
+        }
         if let glyph {
-            motion.retire(glyph, fade: transition ? OverlayStyle.Motion.glyphIn.duration : 0)
+            let fade = OverlayStyle.Motion.glyphIn
+            let from = CGFloat(glyph.layer.presentation()?.opacity ?? glyph.layer.opacity)
+            motion.retire(glyph.layer, tracks: transition ? [.transition("opacity", from: from, to: 0, duration: fade.duration, easing: fade.easing)] : [])
             self.glyph = nil
         }
-        guard let kind = look.glyph else {
+        guard let kind = look.glyph, let key else {
             return
         }
         let glyph = Layers.plain(CGRect(x: 0, y: 0, width: OverlayStyle.Cursor.box, height: OverlayStyle.Cursor.box))
-        let white = CGColor(gray: 1, alpha: 1)
-        let loops = scene.loops
+        let timing = OverlayStyle.Motion.self
         switch kind {
-        case .question:
-            glyph.addSublayer(Self.questionMark(color: white))
-        case .check:
-            let pop = Layers.plain(glyph.bounds)
-            pop.anchorPoint = CGPoint(x: 12.5 / OverlayStyle.Cursor.box, y: 12.5 / OverlayStyle.Cursor.box)
-            pop.position = CGPoint(x: 12.5, y: 12.5)
-            let check = CAShapeLayer()
-            check.frame = glyph.bounds
+        case .handLines:
+            let lines = CAShapeLayer()
+            lines.frame = glyph.bounds
+            lines.path = PhantomGeometry.handLines
+            lines.fillColor = nil
+            lines.strokeColor = Layers.withAlpha(OverlayStyle.Ink.white, OverlayStyle.Cursor.handLineOpacity)
+            lines.lineWidth = OverlayStyle.Cursor.handLine
+            lines.lineCap = .round
+            glyph.addSublayer(lines)
+        }
+        beat.addSublayer(glyph)
+        self.glyph = (glyph, key)
+        if transition {
+            let appear = timing.glyphIn
+            motion.run(.transition("opacity", from: 0, to: 1, duration: appear.duration, easing: appear.easing, delay: timing.glyphInDelay), on: glyph)
+        }
+    }
+
+    private func applyRing(_ look: PhantomLook, scene: PhantomScene, motion: MotionHost) {
+        rings.sublayers?.forEach { $0.removeFromSuperlayer() }
+        guard scene.effects, let radius = look.ring else {
+            return
+        }
+        let timing = OverlayStyle.Motion.self
+        let ring = Layers.circle(center: OverlayStyle.Cursor.hotspot, diameter: 2 * radius)
+        ring.fillColor = nil
+        ring.strokeColor = OverlayStyle.Ink.white
+        ring.lineWidth = OverlayStyle.Cursor.ringLine
+        ring.opacity = 0
+        Layers.shadow(ring, OverlayStyle.Mark.shadow)
+        rings.addSublayer(ring)
+        motion.play(.keyframes("transform.scale", duration: timing.ring, [(0, timing.ringScale), (1, 1)], easing: timing.smooth), on: ring)
+        motion.play(.keyframes("opacity", duration: timing.ring, [(0, 0), (0.18, 0.9), (1, 0)], easing: timing.smooth), on: ring)
+    }
+
+    private func applyMark(_ look: PhantomLook, scene: PhantomScene, transition: Bool, motion: MotionHost) {
+        let kind = scene.effects ? look.mark : nil
+        let key = kind.map { "\($0)-\(scene.scrollDirection.rawValue)" }
+        if transition, let mark, mark.key == key {
+            return
+        }
+        if let mark {
+            let timing = OverlayStyle.Motion.markOut
+            let layer = mark.layer
+            let scale = (layer.presentation()?.value(forKeyPath: "transform.scale") as? NSNumber).map { CGFloat($0.doubleValue) } ?? 1
+            let opacity = CGFloat(layer.presentation()?.opacity ?? layer.opacity)
+            motion.retire(layer, tracks: transition ? [
+                .transition("transform.scale", from: scale, to: OverlayStyle.Motion.markOutScale, duration: timing.duration, easing: timing.easing),
+                .transition("opacity", from: opacity, to: 0, duration: timing.duration, easing: timing.easing),
+            ] : [])
+            self.mark = nil
+        }
+        guard let kind, let key else {
+            return
+        }
+        let timing = OverlayStyle.Motion.self
+        let layer: CALayer
+        switch kind {
+        case .look:
+            layer = Self.lookMark()
+            motion.play(.transition("transform.scale", from: timing.focusInScale, to: 1, duration: timing.focusIn, easing: timing.smooth), on: layer)
+            motion.play(.transition("opacity", from: 0, to: 1, duration: timing.focusIn, easing: timing.smooth), on: layer)
+        case .scroll:
+            layer = Self.scrollMark(scene.scrollDirection, motion: motion)
+        case .disc(let sign):
+            layer = Self.discMark(sign, motion: motion)
+        }
+        if kind != .look {
+            motion.play(.transition("transform.scale", from: timing.markInScale, to: 1, duration: timing.markIn, easing: timing.smooth), on: layer)
+            motion.play(.transition("opacity", from: 0, to: 1, duration: timing.markIn, easing: timing.smooth), on: layer)
+        }
+        marks.addSublayer(layer)
+        mark = (layer, key)
+    }
+
+    /// Four corners, each an arm, a rounded bend and an arm; they focus around their own middle.
+    private static func lookMark() -> CALayer {
+        let style = OverlayStyle.Mark.self
+        let frame = style.place(style.lookFrame, radius: style.lookRadius)
+        let layer = Layers.cursorBox(around: CGPoint(x: frame.midX, y: frame.midY))
+        let arm = style.lookArm
+        let bend = style.lookBend
+        let path = CGMutablePath()
+        let (left, top, right, bottom) = (frame.minX, frame.minY, frame.maxX, frame.maxY)
+        path.move(to: CGPoint(x: left, y: top + arm))
+        path.addLine(to: CGPoint(x: left, y: top + bend))
+        path.addQuadCurve(to: CGPoint(x: left + bend, y: top), control: CGPoint(x: left, y: top))
+        path.addLine(to: CGPoint(x: left + arm, y: top))
+        path.move(to: CGPoint(x: right - arm, y: top))
+        path.addLine(to: CGPoint(x: right - bend, y: top))
+        path.addQuadCurve(to: CGPoint(x: right, y: top + bend), control: CGPoint(x: right, y: top))
+        path.addLine(to: CGPoint(x: right, y: top + arm))
+        path.move(to: CGPoint(x: right, y: bottom - arm))
+        path.addLine(to: CGPoint(x: right, y: bottom - bend))
+        path.addQuadCurve(to: CGPoint(x: right - bend, y: bottom), control: CGPoint(x: right, y: bottom))
+        path.addLine(to: CGPoint(x: right - arm, y: bottom))
+        path.move(to: CGPoint(x: left + arm, y: bottom))
+        path.addLine(to: CGPoint(x: left + bend, y: bottom))
+        path.addQuadCurve(to: CGPoint(x: left, y: bottom - bend), control: CGPoint(x: left, y: bottom))
+        path.addLine(to: CGPoint(x: left, y: bottom - arm))
+        let corners = CAShapeLayer()
+        corners.frame = layer.bounds
+        corners.path = path
+        corners.fillColor = nil
+        corners.strokeColor = OverlayStyle.Ink.white
+        corners.lineWidth = style.lookLine
+        corners.lineCap = .round
+        corners.lineJoin = .round
+        layer.addSublayer(corners)
+        return layer
+    }
+
+    /// The wheel stands for up and down and lies down for left and right; its dot runs out, lands, fades and rests.
+    private static func scrollMark(_ direction: ScrollDirection, motion: MotionHost) -> CALayer {
+        let style = OverlayStyle.Mark.self
+        let size = direction.isVertical ? style.wheel : CGSize(width: style.wheel.height, height: style.wheel.width)
+        let radius = min(size.width, size.height) / 2
+        let frame = style.place(size, radius: radius)
+        let layer = Layers.cursorBox(around: style.notch)
+        let wheel = CAShapeLayer()
+        wheel.frame = layer.bounds
+        wheel.path = CGPath(roundedRect: frame, cornerWidth: radius, cornerHeight: radius, transform: nil)
+        wheel.fillColor = OverlayStyle.Ink.white
+        layer.addSublayer(wheel)
+        let travel = style.wheelTravel * CGFloat(direction.sign)
+        let start = direction.isVertical
+            ? CGPoint(x: frame.midX, y: frame.midY - travel / 2)
+            : CGPoint(x: frame.midX - travel / 2, y: frame.midY)
+        let dot = Layers.circle(center: start, diameter: 2 * style.wheelDot)
+        dot.fillColor = Layers.withAlpha(OverlayStyle.Ink.fill, style.wheelDotOpacity)
+        layer.addSublayer(dot)
+        let timing = OverlayStyle.Motion.self
+        let keyPath = direction.isVertical ? "transform.translation.y" : "transform.translation.x"
+        motion.play(.keyframes(keyPath, duration: timing.wheel, [(0, 0, timing.smooth), (0.6, travel, .linear), (1, travel, .linear)], repeats: true), on: dot)
+        motion.play(.keyframes("opacity", duration: timing.wheel, [(0, 0, timing.smooth), (0.14, 1, .ease), (0.6, 1, .cubic(0.42, 0, 1, 1)), (0.74, 0, .linear), (1, 0, .linear)], repeats: true), on: dot)
+        return layer
+    }
+
+    /// A disc as the alert of the design, with the sign of its state in it.
+    private static func discMark(_ sign: PhantomDisc, motion: MotionHost) -> CALayer {
+        let style = OverlayStyle.Mark.self
+        let timing = OverlayStyle.Motion.self
+        let radius = style.discRadius
+        let frame = style.place(CGSize(width: 2 * radius, height: 2 * radius), radius: radius)
+        let center = CGPoint(x: frame.midX, y: frame.midY)
+        let mark = Layers.cursorBox(around: style.notch)
+        let disc = Layers.circle(center: center, diameter: 2 * radius)
+        let white = OverlayStyle.Ink.white
+        mark.addSublayer(disc)
+        // The signs are drawn for a disc of radius 6 and grow with it.
+        let layer = Layers.cursorBox(around: center)
+        layer.transform = CATransform3DMakeScale(radius / 6, radius / 6, 1)
+        mark.addSublayer(layer)
+        let shape = CAShapeLayer()
+        shape.frame = layer.bounds
+        shape.fillColor = white
+        layer.addSublayer(shape)
+        switch sign {
+        case .dots:
+            disc.fillColor = OverlayStyle.color(.working)
+            for (index, offset) in [-2.6, 0, 2.6].enumerated() {
+                let dot = Layers.circle(center: CGPoint(x: center.x + offset, y: center.y), diameter: 1.9)
+                dot.fillColor = white
+                layer.addSublayer(dot)
+                let delay = Double(index) * timing.waveStagger
+                motion.play(.keyframes("transform.translation.y", duration: timing.wave, [(0, 0), (0.3, -1), (0.6, 0), (1, 0)], easing: .easeInOut, repeats: true, delay: delay), on: dot)
+                motion.play(.keyframes("opacity", duration: timing.wave, [(0, 0.55), (0.3, 1), (0.6, 0.55), (1, 0.55)], easing: .easeInOut, repeats: true, delay: delay), on: dot)
+            }
+        case .arc:
+            disc.fillColor = OverlayStyle.color(.working)
+            let arc = Layers.circle(center: center, diameter: 6)
+            arc.fillColor = nil
+            arc.strokeColor = white
+            arc.lineWidth = 1.5
+            arc.lineCap = .round
+            arc.lineDashPattern = [10, 30]
+            layer.addSublayer(arc)
+            motion.play(.keyframes("transform.rotation.z", duration: timing.arc, [(0, 0), (1, 2 * .pi)], easing: .linear, repeats: true), on: arc)
+        case .waiting:
+            disc.fillColor = OverlayStyle.color(.needs)
+            let dot = Layers.circle(center: center, diameter: 4)
+            dot.fillColor = white
+            layer.addSublayer(dot)
+            motion.play(.keyframes("opacity", duration: timing.pulse, [(0, 1), (0.5, 0.35), (1, 1)], easing: .easeInOut, repeats: true), on: dot)
+        case .permission:
+            disc.fillColor = OverlayStyle.color(.needs)
+            shape.path = questionMark(center: center)
+        case .alert:
+            disc.fillColor = OverlayStyle.color(.error)
             let path = CGMutablePath()
-            path.move(to: CGPoint(x: 9.1, y: 12.8))
-            path.addLine(to: CGPoint(x: 11.5, y: 15.2))
-            path.addLine(to: CGPoint(x: 16.1, y: 10.2))
+            path.addRoundedRect(in: CGRect(x: center.x - 0.75, y: center.y - 3.5, width: 1.5, height: 4.5), cornerWidth: 0.75, cornerHeight: 0.75)
+            path.addEllipse(in: CGRect(x: center.x - 0.9, y: center.y + 2.6 - 0.9, width: 1.8, height: 1.8))
+            shape.path = path
+        case .paused:
+            disc.fillColor = OverlayStyle.color(.paused)
+            let path = CGMutablePath()
+            for x in [center.x - 2.1, center.x + 0.5] {
+                path.addRoundedRect(in: CGRect(x: x, y: center.y - 2.25, width: 1.6, height: 4.5), cornerWidth: 0.5, cornerHeight: 0.5)
+            }
+            shape.path = path
+        case .done:
+            disc.fillColor = OverlayStyle.color(.done)
+            let check = CAShapeLayer()
+            check.frame = layer.bounds
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: center.x - 2.7, y: center.y + 0.25))
+            path.addLine(to: CGPoint(x: center.x - 0.8, y: center.y + 2.15))
+            path.addLine(to: CGPoint(x: center.x + 2.9, y: center.y - 1.85))
             check.path = path
             check.fillColor = nil
             check.strokeColor = white
-            check.lineWidth = 2
+            check.lineWidth = 1.6
             check.lineCap = .round
             check.lineJoin = .round
-            pop.addSublayer(check)
-            glyph.addSublayer(pop)
-            // A dash of 12 over a check of 10.18 drawn from an offset of 12: the check shows once the offset is under 1.82.
-            let length = hypot(2.4, 2.4) + hypot(4.6, 5.0)
-            let draw = OverlayStyle.Motion.draw
-            motion.run(Track(keyPath: "strokeEnd", duration: draw.duration, delay: OverlayStyle.Motion.drawDelay) { time in
-                NSNumber(value: Double(min(1, 12 * draw.easing.progress(CGFloat(time / draw.duration)) / length)))
-            }, on: check)
-            let popTiming = OverlayStyle.Motion.pop
-            motion.play(.keyframes("transform.scale", duration: popTiming.duration, [(0, 0), (0.6, 1.25), (1, 1)], easing: popTiming.easing, delay: OverlayStyle.Motion.glyphInDelay), on: pop)
-        case .dots:
-            glyph.addSublayer(Self.dots(scene.dots, motion: motion, loops: scene.calm ? 1.4 : 1))
-        case .arc:
-            let arc = Layers.circle(center: CGPoint(x: 12.5, y: 12.5), diameter: 6.6)
-            arc.fillColor = nil
-            arc.strokeColor = white
-            arc.lineWidth = 1.8
-            arc.lineCap = .round
-            arc.lineDashPattern = [11, 30]
-            glyph.addSublayer(arc)
-            motion.play(.keyframes("transform.rotation.z", duration: OverlayStyle.Motion.arc, [(0, 0), (1, 2 * .pi)], easing: .linear, repeats: true), on: arc)
-        case .pause:
-            for x in [8.6, 11.2] {
-                let bar = CAShapeLayer()
-                bar.path = CGPath(roundedRect: CGRect(x: x, y: 8.5, width: 1.6, height: 4), cornerWidth: 0.5, cornerHeight: 0.5, transform: nil)
-                bar.fillColor = white
-                glyph.addSublayer(bar)
-            }
-        case .pulse:
-            let dot = Layers.circle(center: CGPoint(x: 12.5, y: 12.5), diameter: 4)
-            dot.fillColor = white
-            glyph.addSublayer(dot)
-            motion.play(.keyframes("opacity", duration: OverlayStyle.Motion.pulse * loops, [(0, 1), (0.5, 0.4), (1, 1)], easing: .easeInOut, repeats: true), on: dot)
+            layer.addSublayer(check)
+            let draw = timing.draw
+            motion.run(.transition("strokeEnd", from: 0, to: 1, duration: draw.duration, easing: draw.easing, delay: timing.drawDelay), on: check)
         }
-        turn.addSublayer(glyph)
-        self.glyph = glyph
-        let appear = OverlayStyle.Motion.glyphIn
-        if transition {
-            motion.run(.transition("opacity", from: 0, to: 1, duration: appear.duration, easing: appear.easing, delay: OverlayStyle.Motion.glyphInDelay), on: glyph)
-        }
+        return mark
     }
 
-    private func applyEffects(_ look: PhantomLook, color: CGColor, palette: PhantomPalette, scene: PhantomScene, motion: MotionHost) {
-        effects.sublayers?.forEach { $0.removeFromSuperlayer() }
-        guard scene.effects, let effect = look.effect else {
-            return
-        }
-        let style = OverlayStyle.Cursor.self
-        let timing = OverlayStyle.Motion.self
-        let loops = scene.loops
-        let center = style.dropCenter
-        switch effect {
-        case .ring(let size):
-            let ring = Layers.ring(center: .zero, diameter: size, lineWidth: 2, color: color)
-            ring.opacity = 0
-            effects.addSublayer(ring)
-            let peak = CGFloat(0.078 / timing.ring)
-            motion.play(.keyframes("transform.scale", duration: timing.ring, [(0, 0.3), (1, 1)], easing: .easeOut), on: ring)
-            motion.play(.keyframes("opacity", duration: timing.ring, [(0, 0), (peak, 0.9), (1, 0)], easing: .easeOut), on: ring)
-        case .halo:
-            for index in 0..<2 {
-                let halo = Layers.circle(center: center, diameter: style.halo)
-                halo.fillColor = color
-                halo.opacity = 0
-                effects.addSublayer(halo)
-                let delay = Double(index) * timing.haloStagger * loops
-                motion.play(.keyframes("transform.scale", duration: timing.halo * loops, [(0, 0.5), (1, 1.6)], easing: .easeOut, repeats: true, delay: delay), on: halo)
-                motion.play(.keyframes("opacity", duration: timing.halo * loops, [(0, 0.55), (1, 0)], easing: .easeOut, repeats: true, delay: delay), on: halo)
-            }
-        case .hoverRing:
-            let ring = Layers.circle(center: center, diameter: style.hoverRing)
-            ring.fillColor = color
-            ring.opacity = Float(style.hoverRingOpacity)
-            effects.addSublayer(ring)
-        case .viewfinder:
-            effects.addSublayer(viewfinder(frame: scene.viewfinder ?? style.viewfinder, color: color, motion: motion, loops: loops))
-        case .chevrons:
-            effects.addSublayer(chevrons(direction: scene.scrollDirection, color: color, motion: motion, loops: loops))
-        case .card:
-            if let name = scene.label, !name.isEmpty {
-                effects.addSublayer(card(name: name, color: color, palette: palette, motion: motion, loops: loops))
-            }
-        }
-    }
-
-    private func applyLabel(_ look: PhantomLook, color: CGColor, palette: PhantomPalette, scene: PhantomScene, motion: MotionHost) {
-        label?.removeFromSuperlayer()
-        label = nil
-        guard let kind = look.label, let text = scene.label, !text.isEmpty else {
-            return
-        }
-        let built = PhantomLabel.make(kind: kind, text: text, color: color, palette: palette, motion: motion)
-        let placement = LabelPlacement.place(size: built.size, room: scene.room)
-        let pill = built.layer
-        // Grows out of the corner nearest the cursor.
-        pill.anchorPoint = CGPoint(x: placement.flippedLeft ? 1 : 0, y: placement.flippedUp ? 1 : 0)
-        pill.position = CGPoint(x: placement.origin.x + (placement.flippedLeft ? built.size.width : 0), y: placement.origin.y + (placement.flippedUp ? built.size.height : 0))
-        layer.addSublayer(pill)
-        label = pill
-        let appear = OverlayStyle.Motion.label
-        motion.play(.transition("opacity", from: 0, to: 1, duration: appear.duration, easing: appear.easing), on: pill)
-        motion.play(.transition("transform.scale", from: OverlayStyle.Motion.labelScale, to: 1, duration: appear.duration, easing: appear.easing), on: pill)
-    }
-
-    private static func questionMark(color: CGColor) -> CALayer {
-        let font = NSFont.systemFont(ofSize: 10, weight: .bold)
+    /// A bold question mark centered in the disc; glyph outlines are y up.
+    private static func questionMark(center: CGPoint) -> CGPath? {
+        let font = NSFont.systemFont(ofSize: 9, weight: .bold)
         var glyph = CGGlyph()
         var character: UniChar = 0x3F
         CTFontGetGlyphsForCharacters(font, &character, &glyph, 1)
         var advance = CGSize.zero
         CTFontGetAdvancesForGlyphs(font, .horizontal, &glyph, &advance, 1)
-        // Glyph outlines are y up; the text sits on the baseline at 16.1 and centers on 12.5.
-        var transform = CGAffineTransform(translationX: 12.5 - advance.width / 2, y: 16.1).scaledBy(x: 1, y: -1)
-        let shape = CAShapeLayer()
-        shape.frame = CGRect(x: 0, y: 0, width: OverlayStyle.Cursor.box, height: OverlayStyle.Cursor.box)
-        shape.path = CTFontCreatePathForGlyph(font, glyph, &transform)
-        shape.fillColor = color
-        return shape
-    }
-
-    private static func dots(_ kind: DotMotion, motion: MotionHost, loops: Double) -> CALayer {
-        let group = Layers.plain(CGRect(x: 0, y: 0, width: OverlayStyle.Cursor.box, height: OverlayStyle.Cursor.box))
-        let make = { (center: CGPoint) -> CAShapeLayer in
-            let dot = Layers.circle(center: center, diameter: 2.7)
-            dot.fillColor = CGColor(gray: 1, alpha: 1)
-            group.addSublayer(dot)
-            return dot
-        }
-        let xs: [CGFloat] = [9.3, 12.5, 15.7]
-        switch kind {
-        case .orbit:
-            let middle = CGPoint(x: 12.5, y: 12.8)
-            for (index, degrees) in [0.0, 120.0, 240.0].enumerated() {
-                let radians = degrees * .pi / 180
-                let dot = make(CGPoint(x: middle.x + cos(radians) * 3, y: middle.y + sin(radians) * 3))
-                dot.opacity = Float(1 - Double(index) * 0.25)
-            }
-            group.anchorPoint = CGPoint(x: middle.x / OverlayStyle.Cursor.box, y: middle.y / OverlayStyle.Cursor.box)
-            group.position = middle
-            motion.play(.keyframes("transform.rotation.z", duration: 1.4 * loops, [(0, 0), (1, 2 * .pi)], easing: .cubic(0.5, 0.1, 0.5, 0.9), repeats: true), on: group)
-        case .gather:
-            let easing = Easing.cubic(0.34, 1.56, 0.64, 1)
-            let offsets: [CGFloat] = [0, 0.15, 0.45, 0.6, 1]
-            let dots = xs.map { make(CGPoint(x: $0, y: 12.8)) }
-            motion.play(.keyframes("transform.translation.x", duration: 1.6 * loops, Array(zip(offsets, [0, 0, 3.2, 3.2, 0])), easing: easing, repeats: true), on: dots[0])
-            motion.play(.keyframes("transform.scale", duration: 1.6 * loops, Array(zip(offsets, [1, 1, 1.5, 1.5, 1])), easing: easing, repeats: true), on: dots[1])
-            motion.play(.keyframes("transform.translation.x", duration: 1.6 * loops, Array(zip(offsets, [0, 0, -3.2, -3.2, 0])), easing: easing, repeats: true), on: dots[2])
-        case .wave:
-            for (index, x) in xs.enumerated() {
-                let dot = make(CGPoint(x: x, y: 12.8))
-                let delay = Double(index) * 0.15 * loops
-                motion.play(.keyframes("transform.translation.y", duration: 1.1 * loops, [(0, 0), (0.3, -1.6), (0.6, 0), (1, 0)], easing: .easeInOut, repeats: true, delay: delay), on: dot)
-                motion.play(.keyframes("opacity", duration: 1.1 * loops, [(0, 0.55), (0.3, 1), (0.6, 0.55), (1, 0.55)], easing: .easeInOut, repeats: true, delay: delay), on: dot)
-            }
-        case .fade:
-            for (index, x) in xs.enumerated() {
-                let dot = make(CGPoint(x: x, y: 12.8))
-                motion.play(.keyframes("opacity", duration: 1.2 * loops, [(0, 0.3), (0.4, 1), (1, 0.3)], easing: .easeInOut, repeats: true, delay: Double(index) * 0.2 * loops), on: dot)
-            }
-        case .grow:
-            for (index, x) in xs.enumerated() {
-                let dot = make(CGPoint(x: x, y: 12.8))
-                motion.play(.keyframes("transform.scale", duration: 1.2 * loops, [(0, 0.55), (0.45, 1.25), (1, 0.55)], easing: .easeInOut, repeats: true, delay: Double(index) * 0.18 * loops), on: dot)
-            }
-        }
-        return group
-    }
-
-    private func viewfinder(frame: CGRect, color: CGColor, motion: MotionHost, loops: Double) -> CALayer {
-        let style = OverlayStyle.Cursor.self
-        let finder = Layers.plain(frame)
-        let flash = Layers.plain(finder.bounds)
-        flash.backgroundColor = CGColor(gray: 1, alpha: 1)
-        flash.cornerRadius = 6
-        flash.opacity = 0
-        finder.addSublayer(flash)
-        let corner = style.viewfinderCorner
-        let line = style.viewfinderLine
-        let inset = line / 2
-        let radius: CGFloat = 3 - inset
-        let bracket = CGMutablePath()
-        bracket.move(to: CGPoint(x: inset, y: corner))
-        bracket.addArc(tangent1End: CGPoint(x: inset, y: inset), tangent2End: CGPoint(x: corner, y: inset), radius: radius)
-        bracket.addLine(to: CGPoint(x: corner, y: inset))
-        let placements: [(CGPoint, CGFloat)] = [
-            (CGPoint(x: 0, y: 0), 0),
-            (CGPoint(x: frame.width, y: 0), .pi / 2),
-            (CGPoint(x: frame.width, y: frame.height), .pi),
-            (CGPoint(x: 0, y: frame.height), -.pi / 2),
-        ]
-        for (origin, angle) in placements {
-            let shape = CAShapeLayer()
-            var transform = CGAffineTransform(translationX: origin.x, y: origin.y).rotated(by: angle)
-            shape.path = bracket.copy(using: &transform)
-            shape.fillColor = nil
-            shape.strokeColor = color
-            shape.lineWidth = line
-            finder.addSublayer(shape)
-        }
-        let duration = OverlayStyle.Motion.view * loops
-        motion.play(.keyframes("opacity", duration: duration, [(0, 0), (0.18, 1), (0.8, 1), (1, 0)], easing: .easeOut, repeats: true), on: finder)
-        motion.play(.keyframes("transform.scale", duration: duration, [(0, 1.18), (0.18, 1), (1, 1)], easing: .easeOut, repeats: true), on: finder)
-        motion.play(.keyframes("opacity", duration: duration, [(0, 0), (0.55, 0), (0.6, 0.5), (0.75, 0), (1, 0)], easing: .linear, repeats: true), on: flash)
-        return finder
-    }
-
-    private func chevrons(direction: ScrollDirection, color: CGColor, motion: MotionHost, loops: Double) -> CALayer {
-        let group = Layers.plain(CGRect(x: 0, y: 24, width: 14, height: 17))
-        let angles: [ScrollDirection: CGFloat] = [.down: 0, .up: .pi, .left: .pi / 2, .right: -.pi / 2]
-        group.setValue(angles[direction] ?? 0, forKeyPath: "transform.rotation.z")
-        for (index, top) in [CGFloat(0), 8].enumerated() {
-            let chevron = CAShapeLayer()
-            chevron.frame = CGRect(x: 0, y: top, width: 14, height: 9)
-            let path = CGMutablePath()
-            path.addLines(between: [CGPoint(x: 2, y: 2), CGPoint(x: 7, y: 7), CGPoint(x: 12, y: 2)])
-            chevron.path = path
-            chevron.fillColor = nil
-            chevron.strokeColor = color
-            chevron.lineWidth = 2.4
-            chevron.lineCap = .round
-            chevron.lineJoin = .round
-            chevron.opacity = 0
-            group.addSublayer(chevron)
-            let delay = Double(index) * OverlayStyle.Motion.scrollStagger * loops
-            let duration = OverlayStyle.Motion.scroll * loops
-            motion.play(.keyframes("transform.translation.y", duration: duration, [(0, -4), (1, 4)], easing: .easeInOut, repeats: true, delay: delay), on: chevron)
-            motion.play(.keyframes("opacity", duration: duration, [(0, 0), (0.5, 1), (1, 0)], easing: .easeInOut, repeats: true, delay: delay), on: chevron)
-            if !motion.moves {
-                chevron.opacity = 1
-            }
-        }
-        return group
-    }
-
-    private func card(name: String, color: CGColor, palette: PhantomPalette, motion: MotionHost, loops: Double) -> CALayer {
-        let font = Layers.font(size: 14)
-        let width = 6 + 18 + 8 + Layers.textWidth(name, font: font) + 10 + 2
-        let height: CGFloat = 34
-        let surface = Layers.surface(size: CGSize(width: width, height: height), radius: 8, fill: palette.raised, border: palette.border, shadow: palette.floatShadow)
-        let card = surface.root
-        card.anchorPoint = .zero
-        card.position = CGPoint(x: 14, y: 16)
-        let icon = Layers.plain(CGRect(x: 7, y: (height - 22) / 2, width: 18, height: 22))
-        icon.cornerRadius = 3
-        icon.backgroundColor = Layers.withAlpha(color, 0.18)
-        card.addSublayer(icon)
-        card.addSublayer(Layers.text(name, font: font, color: palette.text, origin: CGPoint(x: 7 + 18 + 8, y: (height - 20) / 2), lineHeight: 20))
-        motion.play(.keyframes("transform.rotation.z", duration: OverlayStyle.Motion.drag * loops, [(0, -5 * .pi / 180), (0.5, 3 * .pi / 180), (1, -5 * .pi / 180)], easing: .easeInOut, repeats: true), on: card)
-        return card
+        var transform = CGAffineTransform(translationX: center.x - advance.width / 2, y: center.y + 3.25).scaledBy(x: 1, y: -1)
+        return CTFontCreatePathForGlyph(font, glyph, &transform)
     }
 }

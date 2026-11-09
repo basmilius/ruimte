@@ -106,6 +106,33 @@ public struct SessionControl: Sendable {
 
     public mutating func takeOver(at now: TimeInterval) {
         hold(.takenOver, at: now)
+        lastPersonInput = now
+    }
+
+    /// How long the person's hand rests before a take-over goes back to the agent. A pause stays until they resume.
+    public static let handBackAfter: TimeInterval = 5
+
+    /// When the person last used the mouse or keys while they held the Mac by taking over.
+    public private(set) var lastPersonInput: TimeInterval?
+
+    public mutating func personActed(at now: TimeInterval) {
+        if mode == .takenOver {
+            lastPersonInput = max(lastPersonInput ?? now, now)
+        }
+    }
+
+    /// Gives a take-over back once the person let go for `handBackAfter`, and says whether it did. `holding` is true
+    /// while they still work in the operated app in front, which keeps the Mac theirs however long they rest.
+    public mutating func handBackIfQuiet(at now: TimeInterval, holding: Bool) -> Bool {
+        guard isActive, mode == .takenOver, !holding else {
+            return false
+        }
+        guard now - (lastPersonInput ?? now) >= Self.handBackAfter else {
+            return false
+        }
+        lastPersonInput = nil
+        resume(at: now)
+        return true
     }
 
     public mutating func resume(at now: TimeInterval) {
@@ -162,6 +189,6 @@ public struct SessionControl: Sendable {
         if hours > 0 {
             return String(format: "%d:%02d:%02d", hours, minutes, rest)
         }
-        return String(format: "%02d:%02d", minutes, rest)
+        return String(format: "%d:%02d", minutes, rest)
     }
 }

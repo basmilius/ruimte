@@ -9,8 +9,8 @@ import { PhantomCursor, type PhantomMode } from '../film/PhantomCursor.tsx';
 import { EASE, usePlayback, useTimeline } from '../film/playback.ts';
 import { Stage } from '../film/Stage.tsx';
 
-// look, click, type, add, added, paused (held)
-const STEPS = [1700, 1300, 2100, 1100, 1400, 2800] as const;
+// look, click, type, add, added, paused (held, with the menu open)
+const STEPS = [1700, 1300, 2100, 1100, 1400, 3200] as const;
 
 const DAYS = ['Mon 21', 'Tue 22', 'Wed 23', 'Thu 24', 'Fri 25'] as const;
 
@@ -18,17 +18,15 @@ interface Pose {
     readonly x: number;
     readonly y: number;
     readonly mode: PhantomMode;
-    readonly label?: string;
-    readonly typed?: boolean;
 }
 
 const POSES: readonly Pose[] = [
-    { x: 420, y: 298, mode: 'think', label: 'Looking at Calendar' },
-    { x: 766, y: 84, mode: 'click', label: 'New event' },
-    { x: 630, y: 154, mode: 'move', label: 'Design review', typed: true },
-    { x: 706, y: 236, mode: 'click', label: 'Add' },
-    { x: 560, y: 328, mode: 'move' },
-    { x: 560, y: 328, mode: 'paused', label: 'Paused' }
+    { x: 420, y: 318, mode: 'look' },
+    { x: 766, y: 104, mode: 'click' },
+    { x: 630, y: 174, mode: 'type' },
+    { x: 706, y: 256, mode: 'click' },
+    { x: 560, y: 348, mode: 'move' },
+    { x: 560, y: 348, mode: 'paused' }
 ];
 
 export function ComputerUseVignette() {
@@ -36,7 +34,7 @@ export function ComputerUseVignette() {
         <Stage
             width={900}
             height={600}
-            label="An agent works in a calendar app with a cursor of its own, adds a design review on Thursday, and pauses when the person presses Option Space."
+            label="An agent works in a calendar app with a cursor of its own and adds a design review on Thursday. The person presses Option Space to pause it, and Ruimte's menu in the menu bar offers Resume."
         >
             <ComputerUse />
         </Stage>
@@ -48,7 +46,8 @@ function ComputerUse() {
     const { playing } = usePlayback();
     const [seconds, setSeconds] = useState(12);
     const paused = step >= 5;
-    const pose = POSES[step];
+    const pose = POSES[step]!;
+    const time = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
     useEffect(() => {
         if (!playing || paused) {
@@ -60,9 +59,9 @@ function ComputerUse() {
 
     return (
         <div className="absolute inset-0">
-            <SessionBar paused={paused} time={`00:${String(seconds % 60).padStart(2, '0')}`} />
+            <MenuBar time={time} open={paused} />
 
-            <div className="absolute top-[64px] left-[70px] flex h-[510px] w-[760px] flex-col overflow-hidden rounded-[12px] border border-white/10 bg-[#1e1e22] shadow-[0_30px_80px_-10px_rgb(0_0_0/0.7)]">
+            <div className="absolute top-[84px] left-[70px] flex h-[490px] w-[760px] flex-col overflow-hidden rounded-[12px] border border-white/10 bg-[#1e1e22] shadow-[0_30px_80px_-10px_rgb(0_0_0/0.7)]">
                 <div className="flex h-12 shrink-0 items-center gap-3 border-b border-white/10 px-4">
                     <TrafficLights />
                     <span className="ml-2 text-[15px] font-semibold text-white">September 2026</span>
@@ -119,7 +118,7 @@ function ComputerUse() {
                 </AnimatePresence>
             </div>
 
-            <PhantomCursor x={pose.x} y={pose.y} mode={pose.mode} label={pose.label} typed={pose.typed} />
+            <PhantomCursor x={pose.x} y={pose.y} mode={pose.mode} />
         </div>
     );
 }
@@ -136,42 +135,64 @@ function Event({ top, title, time, color }: { readonly top: number; readonly tit
     );
 }
 
-/** The quiet bar at the top of the screen (`SessionBarLayer.swift`): the agent's mark, the title, the time, pause and stop. */
-function SessionBar({ paused, time }: { readonly paused: boolean; readonly time: string }) {
+/** The Mac's menu bar with Ruimte's item (`StatusMenu.swift`): the arrow and the time, and its menu while the agent is paused. */
+function MenuBar({ time, open }: { readonly time: string; readonly open: boolean }) {
     return (
-        <div className="absolute top-2 left-1/2 flex h-9 -translate-x-1/2 items-center gap-2 rounded-[10px] border border-border bg-surface-raised pr-1 pl-2.5 text-[14px] shadow-float">
-            <svg width={14} height={14} viewBox="0 0 24 24" aria-hidden>
-                <path
-                    d={PHANTOM_ARROW}
-                    fill={paused ? PHANTOM_COLORS.muted : PHANTOM_COLORS.accent}
-                    stroke="#ffffff"
-                    strokeWidth={3}
-                    strokeLinejoin="round"
-                    paintOrder="stroke"
-                    transform="translate(-2 -1) scale(1.1)"
-                />
-            </svg>
-            <span className="text-text">Ruimte is using Calendar in the background</span>
-            <span className="min-w-[38px] text-text-faint tabular-nums">{time}</span>
-            <span className="flex gap-0.5">
-                <span className="grid size-7 place-items-center rounded-lg text-text-muted">
-                    <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                        {paused ? (
-                            <path d="M7 2.66 L21.94 12 L7 21.34 Z" />
-                        ) : (
-                            <>
-                                <rect x={6} y={4} width={4} height={16} rx={1.5} />
-                                <rect x={14} y={4} width={4} height={16} rx={1.5} />
-                            </>
-                        )}
+        <div className="absolute inset-x-0 top-0 z-40 flex h-7 items-center gap-5 bg-black/35 px-4 text-[13px] text-white/90 backdrop-blur">
+            <span className="font-semibold">Calendar</span>
+            <span>File</span>
+            <span>Edit</span>
+            <span>View</span>
+            <span className="grow" />
+            <span className="relative">
+                <span className={`flex items-center gap-1.5 rounded-md px-2 py-0.5 tabular-nums ${open ? 'bg-white/20' : ''}`}>
+                    <svg width={10} height={14} viewBox="4 0 17 24" aria-hidden>
+                        <path d={PHANTOM_ARROW} fill="currentColor" />
                     </svg>
+                    {time}
                 </span>
-                <span className="grid size-7 place-items-center rounded-lg text-text-muted">
-                    <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                        <rect x={5} y={5} width={14} height={14} rx={2.5} />
-                    </svg>
-                </span>
+                <AnimatePresence>{open && <Menu key="menu" time={time} />}</AnimatePresence>
             </span>
+            <span className="tabular-nums">Thu 14:02</span>
+        </div>
+    );
+}
+
+function Menu({ time }: { readonly time: string }) {
+    return (
+        <motion.div
+            className="absolute top-8 right-0 w-[300px] rounded-xl border border-white/10 bg-[#2a2a2f]/95 p-[5px] text-[13px] text-white shadow-[0_12px_32px_-8px_rgb(0_0_0/0.6)]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, delay: 0.4 }}
+        >
+            <div className="flex items-start gap-2.5 px-[9px] pt-2 pb-2.5">
+                <span className="grid size-7 shrink-0 place-items-center rounded-lg ring-1 ring-white/10" style={{ background: PHANTOM_COLORS.ink }}>
+                    <svg width={16} height={16} viewBox="0 0 24 24" aria-hidden>
+                        <path d={PHANTOM_ARROW} fill="#ffffff" />
+                    </svg>
+                </span>
+                <span>
+                    <span className="block font-semibold">Ruimte is using Calendar in the background</span>
+                    <span className="text-white/55 tabular-nums">Paused · {time}</span>
+                </span>
+            </div>
+            <MenuItem shortcut="⌥Space">Resume</MenuItem>
+            <MenuItem>Take over</MenuItem>
+            <div className="mx-[9px] my-[5px] h-px bg-white/10" />
+            <MenuItem shortcut="⌥Esc" danger>
+                Stop session
+            </MenuItem>
+        </motion.div>
+    );
+}
+
+function MenuItem({ children, shortcut, danger = false }: { readonly children: string; readonly shortcut?: string; readonly danger?: boolean }) {
+    return (
+        <div className={`flex justify-between rounded-md px-[9px] py-1 ${danger ? 'text-[#ff6961]' : ''}`}>
+            <span>{children}</span>
+            {shortcut && <span className="text-white/45">{shortcut}</span>}
         </div>
     );
 }

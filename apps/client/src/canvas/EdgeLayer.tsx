@@ -13,9 +13,9 @@ import { useEndpointId } from '@/state/current-endpoint';
 import type { EdgeLine } from '@/state/edge-lines';
 import { useEndpoints } from '@/state/endpoints';
 import { endpointOfNodeIn } from '@/state/keys';
+import { edgeTask, taskEdgeLabel, useTasks } from '@/state/tasks';
 import { routeDraft, SIDE_NORMAL, type EdgeRoute, type Obstacle, type Side } from '@/surface/canvas/edge-route';
 import { lineRoutes } from '@/surface/canvas/line-routes';
-import { edgeTask, taskEdgeLabel, useTasks } from '@/tasks/tasks';
 
 function EdgeLabel({
     ids,

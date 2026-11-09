@@ -63,7 +63,7 @@ export class ComputerPresence {
     private readonly atHelper = new Map<string, number>();
     private cards: ComputerApproval[] = [];
     private ending: PresenceShow | null = null;
-    // The session bar and its stop key go with an end, so one that comes while the helper still acts waits for its answer.
+    // The menu bar item and its stop key go with an end, so one that comes while the helper still acts waits for its answer.
     private endAfterCall: PresenceShow | null = null;
     private sent: PresenceShow | null = null;
     private sending = false;

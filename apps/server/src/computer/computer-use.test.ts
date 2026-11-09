@@ -40,8 +40,9 @@ describe('computer use', () => {
         };
         const dutch = await read('nl-NL');
         const english = await read('en');
-        expect(dutch).toMatchObject({ title: 'Ruimte bedient je computer', pause: 'Pauzeren', stop: 'Sessie stoppen' });
-        expect(english).toMatchObject({ title: 'Ruimte is using your computer', menuTitle: 'Ruimte is using this Mac', takeOver: 'Take over' });
+        expect(dutch).toMatchObject({ menuTitle: 'Ruimte bedient deze Mac', pause: 'Pauzeren', stop: 'Sessie stoppen' });
+        expect(english).toMatchObject({ menuTitle: 'Ruimte is using this Mac', takeOver: 'Take over' });
+        expect(english).not.toHaveProperty('title');
         // Every step with a target in one language has it in the other.
         for (const [state, step] of Object.entries(english.steps as Record<string, string>)) {
             expect((dutch.steps as Record<string, string>)[state]!.includes('{target}')).toBe(step.includes('{target}'));
@@ -50,12 +51,12 @@ describe('computer use', () => {
 
     test('speaks a language a client switched to from then on, only while it is on', async () => {
         const { computer, home } = await computerSetup();
-        const overlay = async (): Promise<{ title: string }> => JSON.parse(await readFile(join(home, 'computer-use', 'overlay.json'), 'utf8'));
+        const overlay = async (): Promise<{ menuTitle: string }> => JSON.parse(await readFile(join(home, 'computer-use', 'overlay.json'), 'utf8'));
         await computer.setLanguage('nl');
-        expect((await overlay()).title).toBe('Ruimte bedient je computer');
+        expect((await overlay()).menuTitle).toBe('Ruimte bedient deze Mac');
         await computer.setEnabled(false, undefined);
         await computer.setLanguage('en');
-        expect((await overlay()).title).toBe('Ruimte bedient je computer');
+        expect((await overlay()).menuTitle).toBe('Ruimte bedient deze Mac');
     });
 
     test('turning it off quits the helper and takes every card down', async () => {
@@ -705,7 +706,7 @@ describe('the person holding the Mac', () => {
         timers.advance(500);
         const refusal = await call;
         expect(refusal).toMatchObject({ code: 'taken-over' });
-        expect((refusal as { message: string }).message).toContain('which holds until they hand it back');
+        expect((refusal as { message: string }).message).toContain('a few seconds after they let go');
         expect(helper.acted.map((request) => request.command)).toEqual(['type']);
     });
 
@@ -728,10 +729,10 @@ describe('the person holding the Mac', () => {
 describe('the hold an agent asks for', () => {
     test('keeps the card up for that long instead of the default, and goes on as soon as the person answers', async () => {
         const { computer, helper, timers } = await computerSetup();
-        const call = computer.operate('chat-1', 'state', 'TextEdit', {}, 60_000);
+        const call = computer.operate('chat-1', 'state', 'TextEdit', {}, 30_000);
         await until(() => computer.pendingApprovals().length === 1);
-        expect(timers.waitingFor(60_000)).toBe(1);
-        timers.advance(45_000);
+        expect(timers.waitingFor(30_000)).toBe(1);
+        timers.advance(25_000);
         await computer.answer(computer.pendingApprovals()[0]!.requestId, 'once');
         await call;
         expect(helper.acted.map((request) => request.command)).toEqual(['state']);
@@ -814,7 +815,7 @@ describe('one agent at a time', () => {
         const refusal = await refusalOf(computer.operate('term-1', 'click', 'TextEdit', { element: 1 }));
         expect(refusal?.code).toBe('busy');
         expect(refusal?.message).toContain('Node chat-1');
-        expect(refusal?.message).toContain('wait 60');
+        expect(refusal?.message).toContain('wait 40');
         expect(helper.acted).toEqual([]);
         await computer.operate('chat-1', 'click', 'TextEdit', { element: 1 });
         expect(helper.acted.map((request) => request.command)).toEqual(['click']);
@@ -1091,7 +1092,7 @@ describe('asking macOS for a grant', () => {
 });
 
 describe("the person's buttons in Ruimte", () => {
-    test('pause and resume the session the way the session bar does', async () => {
+    test('pause and resume the session the way the menu bar item does', async () => {
         const setup = await computerSetup();
         const { computer, helper } = setup;
         await letIn(setup);

@@ -1,4 +1,4 @@
-import { chatOpener, limitResumeAt, type ChatCore } from '@adecore/agents/chat';
+import { chatOpener, limitResumeAt, type ChatCore, type LostWork } from '@adecore/agents/chat';
 import {
     deliverMessageHandler,
     OutboxWorker,
@@ -18,6 +18,7 @@ import { MESSAGE_WORDS } from '../context/notices.ts';
 import type { NodeLifecycle } from '../node-lifecycle.ts';
 import { openerOf } from '../opener.ts';
 import { deliverAnswerHandler } from '../outbox/deliver-answer.ts';
+import { deliverLostWorkHandler } from '../outbox/deliver-lost-work.ts';
 import { wireEndChildren, type EndChildrenWiring } from '../outbox/end-children.ts';
 import { OUTBOX_KIND_NAMES, outboxRetries } from '../outbox/kinds/index.ts';
 import type { OutboxStore, OutboxWork } from '../outbox/outbox.ts';
@@ -82,6 +83,25 @@ export class OutboxLink {
             return;
         }
         await this.enqueue(projectId, chatId, { kind: 'deliver-answer', payload: answer });
+    }
+
+    /*
+     * Owes an idle chat the turn that tells it which background commands a restart took, once per note. A
+     * chat that lost only subagents or workflows, a task's child (whose parent hears through `background-limit`)
+     * and a chat no project holds are owed nothing.
+     */
+    async oweLostWork(chatId: string, lost: LostWork, taskChild: boolean): Promise<void> {
+        const projectId = this.projectOf(chatId);
+
+        if (projectId === null || taskChild || lost.resumed || lost.commands.length === 0) {
+            return;
+        }
+
+        if (this.outbox.ofKind('deliver-lost-work').some((entry) => entry.target === chatId && entry.payload.noteId === lost.noteId)) {
+            return;
+        }
+
+        await this.enqueue(projectId, chatId, { kind: 'deliver-lost-work', payload: { noteId: lost.noteId } });
     }
 
     /* Owes the resume of a limited turn at `at`, in place of whatever this chat owed before; a chat no project holds is owed nothing. */
@@ -307,6 +327,16 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
     worker.handle('deliver-summary', summaries.handler);
     worker.handle('deliver-waiting', taskWiring.deliverWaiting);
     worker.handle('deliver-answer', unlessClosed(deliverAnswerHandler({ openChat })));
+    worker.handle(
+        'deliver-lost-work',
+        unlessClosed(
+            deliverLostWorkHandler({
+                openChat,
+                endedAt: (chatId) => lineage.endedAt(chatId),
+                owesWake: (chatId, noteId) => chats.get(chatId)?.owesRestartWake(noteId) ?? false
+            })
+        )
+    );
 
     // A node deleted before anyone ran it takes its prompt with it, and a node that is gone frees the count its opener is held to.
     lifecycle.on('placed', (projectId, ids) => {
