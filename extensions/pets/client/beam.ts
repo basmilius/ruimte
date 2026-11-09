@@ -1,6 +1,5 @@
 import { BEAM_LIGHT } from '@extensions/pets/client/sprite-colors';
 
-/* How long a pet takes to come or to go. */
 export const BEAM_MS = 650;
 
 /* How far a pixel may stray from its place while it beams, in cells: across the width, and up or down. */
@@ -20,7 +19,6 @@ export type BeamSetting = BeamStyle | 'random';
 
 export const BEAM_SETTINGS: readonly BeamSetting[] = [...BEAM_STYLES, 'random'];
 
-/* A cell of the figure, in cells of its paint. */
 export interface BeamCell {
     x: number;
     y: number;

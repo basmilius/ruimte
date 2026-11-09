@@ -11,13 +11,11 @@ import type * as Server from '../../../../packages/extension/server';
 export const ID = 'poc.contract';
 
 export interface ServerWorld {
-    /* The project a chat starts in. */
     project: string;
     /* A method of `server/`, answered as the client reads it. */
     call(method: string, ...args: unknown[]): Promise<Server.Result<unknown>>;
     /* A machine event, as the machine hands it on. */
     fire(name: string, payload: object): void;
-    /* An agent's call of a tool, by the id the extension gave it. */
     tool(id: string, input: object, caller: string): Promise<string>;
     logs(): Promise<string[]>;
     /* What `emit` said, as a client hears it. */

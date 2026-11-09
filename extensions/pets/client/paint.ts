@@ -16,7 +16,6 @@ import {
     type PetPose
 } from '@extensions/pets/client/pixel';
 
-/* A built-in figure, or a strip a person added. */
 export type PetLook = { kind: 'drawn'; sprite: DrawnSprite } | { kind: 'sheet'; sprite: CustomPetSprite };
 
 /* Backing pixels a cell takes, twice the world's, so a pet stays sharp at twice the zoom. */

@@ -66,7 +66,6 @@ function StripRows({ children }: { children: ReactNode }) {
     );
 }
 
-/* One state: its preview, what it plays, and a button for its file that says which state it is for. */
 function StripRow({
     pose,
     strip,

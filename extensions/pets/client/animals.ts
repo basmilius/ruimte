@@ -11,7 +11,6 @@ function foxParts(pose: AnimalPose, frame: number): Parts {
         silhouette.push(cell(1, 8, 3, 4, FOX.body), cell(2, 11, 3, 2, FOX.body), cell(1, 7, 2, 2, FOX.cream));
         silhouette.push(cell(4, 10, 9, 4, FOX.body));
         [5, 11].forEach((leg, i) => {
-            // Walking, one leg is up and then the other.
             const lift = pose === 'walk' && i === frame % 2 ? 1 : 0;
             silhouette.push(cell(leg, 14, 2, 3 - lift, FOX.body));
             details.push(cell(leg, 16 - lift, 2, 1, FOX.sock));
@@ -34,7 +33,6 @@ function foxParts(pose: AnimalPose, frame: number): Parts {
         parts.props.push(...snore(19, frame));
         return parts;
     }
-    // Sitting up, to type or to wait, its tail swishing while it waits.
     const tail = pose === 'wait' && frame % 4 >= 2 ? 1 : 0;
     silhouette.push(cell(2, 12 - tail, 4, 3, FOX.body), cell(1, 11 - tail, 2, 2, FOX.cream));
     silhouette.push(cell(5, 10, 7, 7, FOX.body), cell(10, 8, 4, 7, FOX.body));
@@ -78,7 +76,6 @@ function frogParts(pose: AnimalPose, frame: number): Parts {
     if (pose === 'fallen') {
         details.push(cell(11, 3, 1, 1, FROG.ink), cell(12, 4, 1, 1, FROG.ink), cell(15, 3, 1, 1, FROG.ink), cell(16, 4, 1, 1, FROG.ink));
     } else if (pose === 'wait') {
-        // Looking up at you, one hand raised.
         details.push(cell(12, 3, 1, 1, FROG.ink), cell(16, 3, 1, 1, FROG.ink));
         silhouette.push(cell(16, 10 - (frame % 2), 2, 1, FROG.body));
     } else if (pose === 'work') {

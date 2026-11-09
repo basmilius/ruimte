@@ -13,7 +13,6 @@ export interface WriteCase<Name extends ActionName> {
     input: ActionInput<Name>;
     /* Inputs the schema refuses, by what is wrong with them. */
     refused: Record<string, unknown>;
-    /* Every field or union member kept for some actors, by field name. */
     restricted?: Record<string, RestrictedValue>;
     /* Set when the catalog promises a confirmation before it runs. */
     confirms?: true;

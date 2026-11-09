@@ -10,7 +10,6 @@ function titles(items: TestMenuItem[]): string[] {
     return items.map((item) => (item === 'separator' ? '-' : item.title));
 }
 
-/* Presses the row of a menu that says `title`. */
 async function press(items: TestMenuItem[], title: string) {
     const item = items.find((each) => each !== 'separator' && each.title === title);
 

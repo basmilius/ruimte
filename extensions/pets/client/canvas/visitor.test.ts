@@ -2,7 +2,6 @@ import { describe, expect, test } from 'bun:test';
 import { createVisitor, VISIT_GAP_MS, visitDelay, visitSpot, type VisitClock } from '@extensions/pets/client/canvas/visitor';
 import type { CanvasNode } from '@/state/canvas';
 
-/* A clock a test turns by hand: timers wait until `advance` passes their time. */
 function fakeClock(random: () => number = () => 0.5) {
     let now = 0;
     let next = 1;

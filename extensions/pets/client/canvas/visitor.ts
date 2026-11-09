@@ -6,7 +6,6 @@ import type { CanvasNode } from '@/state/canvas';
 /* How long after the last visit, or after a canvas opened, a pet may drop by: somewhere in this window. */
 export const VISIT_GAP_MS = { min: 20 * 60_000, max: 60 * 60_000 } as const;
 
-/* How long a visitor stays before it goes again. */
 export const VISIT_MS = 4_000;
 
 export interface VisitClock {

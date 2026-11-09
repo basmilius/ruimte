@@ -72,7 +72,6 @@ const JUMP = [0, 2, 3, JUMP_ROWS, 3, 2, 0, 0] as const;
 
 export interface PetFrame {
     pose: PetPose;
-    /* The frame of the pose's own animation. */
     frame: number;
     /* Cells above its node. */
     lift: number;
@@ -118,7 +117,6 @@ export function bubbleCell(lift: number, beside: boolean): { x: number; y: numbe
     return beside ? { x: BUBBLE_BESIDE, y: spriteTop + 2 } : { x: BUBBLE_ABOVE, y: spriteTop - BUBBLE_ROWS };
 }
 
-/* The built-in packs, as the settings name them. */
 export const PET_SETS: readonly PetSet[] = PET_PACKS.map((pack) => pack.id);
 
 export type PetSet = PetPackId;
@@ -154,7 +152,6 @@ export function builtInSprite(set: PetSet, agent: AgentKind | undefined, nodeId:
     return best;
 }
 
-/* A set pets come from: a built-in pack, one figure of the catalog given to a CLI, or a figure a person added. */
 export type PetChoice = { kind: 'built-in'; set: PetSet } | { kind: 'figure'; id: string } | { kind: 'custom'; id: string };
 
 /*
@@ -171,7 +168,6 @@ export function petPoolOf(setting: readonly string[], customIds: readonly string
     return pool.length > 0 ? pool : [{ kind: 'built-in', set: 'buddies' }];
 }
 
-/* What the setting holds for a set. */
 export function petChoiceKey(choice: PetChoice): string {
     if (choice.kind === 'built-in') {
         return choice.set;
@@ -180,7 +176,6 @@ export function petChoiceKey(choice: PetChoice): string {
     return `${choice.kind === 'custom' ? CUSTOM_PET_PREFIX : FIGURE_PET_PREFIX}${choice.id}`;
 }
 
-/* The set a key the settings hold names, while it is still there: a built-in pack, a figure of the catalog, or a figure a person kept. */
 export function petChoiceOfKey(key: string, customIds: readonly string[]): PetChoice | null {
     const set = PET_SETS.find((each) => each === key);
 

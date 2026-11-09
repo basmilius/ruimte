@@ -47,7 +47,6 @@ export function visitorPlace(node: Pick<CanvasNode, 'x' | 'y'>): { x: number; y:
  */
 export const PET_HIT_HEIGHT = (SPRITE_ROWS - 3 + JUMP_ROWS) * WORLD_CELL;
 
-/* How far below the top of a pet's paint its press box begins. */
 export const PET_HIT_TOP = PET_HEIGHT - FEET - PET_HIT_HEIGHT;
 
 /* What a press on a figure standing here lands on: from its node's top edge up, wherever it is in a jump. */
@@ -59,7 +58,6 @@ export function petHitBox(node: Pick<CanvasNode, 'x' | 'y' | 'w'>): Rect {
     return hitBoxAt(petPlace(node));
 }
 
-/* What a node's pet's bubble covers on the canvas at a lift. */
 export function petBubbleBox(node: Pick<CanvasNode, 'x' | 'y' | 'w'>, lift: number, beside: boolean): Rect {
     const place = petPlace(node);
     const at = bubbleCell(lift, beside);

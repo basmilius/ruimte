@@ -30,7 +30,6 @@ const AGENTS: readonly StatusOf[] = [
     { id: 'agent', kind: 'terminal' }
 ];
 
-/* The pets of the nodes that have an agent in them. */
 function petsOf(nodes: readonly StatusOf[], sessions: SessionsByKey, chats: ChatStatuses, snoozes: Snoozes) {
     return nodes.flatMap((node) => {
         const pet = petOf(node, sessions, chats, 'local', snoozes);

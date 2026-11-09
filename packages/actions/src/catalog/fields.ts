@@ -339,7 +339,6 @@ export const gitRunOutput = z.object({
     path: z.string(),
     // One line of what happened, in the words a person would use.
     summary: z.string(),
-    // Everything git wrote.
     output: z.string(),
     commit: z.object({ hash: z.string(), subject: z.string() }).nullable(),
     // The pull request a create-pr opened.

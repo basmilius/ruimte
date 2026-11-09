@@ -6,7 +6,6 @@ import { createElement, useState } from 'react';
 import { clientContract, NAME, SEED, type WorldSeed } from '../contract/client';
 import type { ContractServer } from '../server';
 
-/* The pieces of the seed, then what the run does after them. */
 async function* streamOf(pieces: string[], end: WorldSeed['streamEnd'], signal: AbortSignal): AsyncGenerator<string> {
     yield* pieces;
 

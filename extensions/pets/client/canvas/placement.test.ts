@@ -96,7 +96,6 @@ describe('where a press on a pet lands', () => {
         // At the top of a jump the figure's third row, the first a body fills, is where the box begins.
         const jumpTop = petPlace(node).y + (BUBBLE_ROWS + JUMP_ROWS - JUMP_ROWS + 2) * 2;
         expect(box.y).toBe(jumpTop);
-        // The bubble sits in the rows above it.
         expect(box.y).toBeGreaterThanOrEqual(petPlace(node).y + (BUBBLE_ROWS - 1) * 2);
     });
 

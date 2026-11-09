@@ -55,15 +55,12 @@ export interface ClientWorld {
     /* React of the world's own, so a component of a scenario draws with the copy that draws it. */
     createElement(type: unknown, props?: object | null, ...children: unknown[]): unknown;
     render(component: () => unknown): Promise<ContractScreen>;
-    /* Draws the node of this type of the extension's own, as the canvas does for the node with this id. */
     renderNode(type: string, nodeId: string): Promise<ContractScreen>;
-    /* The connection to the machine dropping and coming back. */
     reconnect(): Promise<void>;
     /* Another window of the same computer writing a key of this extension's storage or a setting. */
     fromOtherWindow(write: { storage: string; value: Client.Json } | { setting: string; value: boolean | string }): Promise<void>;
     /* `server/` writing a key of the machine's storage, or deleting it without a value. */
     fromServer(write: { storage: string; value?: Client.Json }): Promise<void>;
-    /* A file of the project changing on the machine. */
     fileChanged(path: string): Promise<void>;
     /* Where each chat `agents.start` started went, in order. */
     started(): ('canvas' | 'view')[];
@@ -73,13 +70,11 @@ export interface ClientWorld {
     streamAsked(): Promise<void>;
     /* Lets a run held by `streamStart` start. */
     letStreamStart(): void;
-    /* The ids of the nodes on the canvas in front. */
     nodes(): string[];
     /* The title an action shows with at a place, or null where it does not show. */
     slot(action: string, place: Client.SlotName, extra: object): string | null;
     /* Presses an action at a place as a person would: a throw is `failed`, which a person is shown. */
     run(action: string, place: Client.SlotName, extra: object): Promise<Result<void>>;
-    /* Selects nodes as a person does. */
     select(ids: string[]): void;
     notes(): { title: string; text: string }[];
     links(): { from: string; to: string }[];

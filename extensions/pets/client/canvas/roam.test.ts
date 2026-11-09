@@ -5,7 +5,6 @@ const WIDTH = 1200;
 const DOCK: Obstacle = { left: 400, right: 800, bottom: 16, top: 60, ledge: true };
 const MINIMAP: Obstacle = { left: 980, right: 1184, bottom: 16, top: 160, ledge: false };
 
-/* A random that runs through the same numbers every time. */
 function seeded(seed: number): () => number {
     let state = seed;
     return () => {

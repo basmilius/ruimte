@@ -30,7 +30,6 @@ afterEach(() => {
     usePetSettings.getState().update({ pets: false, petsInViews: true });
 });
 
-/* A workspace with these views, the first of them in front, drawn as a person sees it. */
 async function openViews(views: ProjectView[]): Promise<{ workspace: FakeWorkspace; page: Mounted }> {
     const workspace = await openFakeWorkspace(machine, { views } as never, { activeViewId: views[0].id, views: {} });
     const page = mount();
@@ -64,7 +63,6 @@ describe('a terminal in a view of its own', () => {
         await act(async () => machine.emit('session.status', { sessionId: SHELL.id, agent: agent('needs-you') }));
         await until(() => viewPet(SHELL.id)?.getAttribute('aria-label') === 'Tests needs you');
 
-        // Turned off, it beams out first, a picture that takes no press.
         await act(async () => usePetSettings.getState().update({ petsInViews: false }));
         await until(() => viewPet(SHELL.id) === null);
         expect(document.querySelector('[data-cell-bar] [data-pet-leaving]')).not.toBeNull();

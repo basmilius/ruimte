@@ -21,7 +21,6 @@ function followMotion(onChange: () => void): () => void {
     return () => query.removeEventListener('change', onChange);
 }
 
-/* Whether a person asked for reduced motion, read again when they change it, so the figures stop or move at once. */
 export function usePrefersStill(): boolean {
     return useSyncExternalStore(followMotion, prefersStill, () => false);
 }

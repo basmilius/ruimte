@@ -53,7 +53,6 @@ export interface DrawnSprite {
 export const SPRITE_COLUMNS = 26;
 export const SPRITE_ROWS = 18;
 
-/* The rows over a pet that its bubble takes, and the rows it may rise into when it jumps. */
 export const BUBBLE_ROWS = 9;
 export const JUMP_ROWS = 4;
 
@@ -132,7 +131,6 @@ export function bowColors(accent: string): BowColors | null {
     };
 }
 
-/* A cross for an eye that gave up. */
 export function crossEye(x: number, y: number, color: string): Cell[] {
     return [
         cell(x - 1, y - 1, 1, 1, color),
@@ -143,7 +141,6 @@ export function crossEye(x: number, y: number, color: string): Cell[] {
     ];
 }
 
-/* A laptop seen from the side, with code popping out of its screen. */
 export function laptop(left: number, frame: number): Cell[] {
     const cells = [
         outlined(left, 14, 7, 2, PROPS.key),
@@ -158,7 +155,6 @@ export function laptop(left: number, frame: number): Cell[] {
     return cells;
 }
 
-/* Two letters z rising beside a sleeper. */
 export function snore(left: number, frame: number): Cell[] {
     const rise = frame % 2;
     const color = PROPS.sleep;
@@ -173,7 +169,6 @@ export function snore(left: number, frame: number): Cell[] {
     ];
 }
 
-/* A small grey cloud over a pet that stopped. */
 export function cloud(frame: number): Cell[] {
     const drift = frame % 2;
     return [
@@ -202,7 +197,6 @@ export interface PaintTarget {
     fillRect(x: number, y: number, w: number, h: number): void;
 }
 
-/* Paints parts at a cell offset, `size` pixels a cell, with the bow in `bow`'s tones when there is one. */
 export function paintParts(
     target: PaintTarget,
     sprite: Pick<DrawnSprite, 'outline'>,

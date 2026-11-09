@@ -8,7 +8,6 @@ const TerminalViewPet = lazyNamed(() => import('@extensions/pets/client/ViewPet'
 
 function noop(): void {}
 
-/* Whether a chat or a terminal in a view of its own has its pet: Pets is on, and so is In views of their own. */
 function useViewPets(): boolean {
     return usePetSettings((s) => s.pets && s.petsInViews);
 }
@@ -34,7 +33,6 @@ export function ChatViewPetMount({ id, title }: { id: string; title: string | un
     );
 }
 
-/* The pet in a terminal view's toolbar. */
 export function TerminalViewPetMount({ id, title, onPress }: { id: string; title: string | undefined; onPress?: () => void }) {
     const { t } = useTranslation('pets');
     const on = useViewPets();

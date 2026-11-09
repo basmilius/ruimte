@@ -19,7 +19,6 @@ import { SettingsSection } from '@/machines/SettingsSection';
 
 const PETS_PLACES: readonly PetsPlace[] = ['nodes', 'screen'];
 
-/* A row of the figures table: what the set looks like, its name, and a switch that puts it among the pets. */
 function FigureRow({
     choice,
     name,
