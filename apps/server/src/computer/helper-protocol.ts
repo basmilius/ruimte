@@ -85,7 +85,7 @@ export const DoctorResultSchema = z.object({
     accessibility: z.object({ granted: z.boolean() }),
     screenRecording: z.object({ granted: z.boolean() }),
     ready: z.boolean(),
-    // Absent from a helper older than the session bar.
+    // Absent from a helper older than session control.
     session: HelperSessionSchema.optional(),
     // The grants macOS showed its own dialog for on this request.
     asked: z.array(z.string()).optional()

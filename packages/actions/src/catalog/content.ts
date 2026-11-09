@@ -501,10 +501,10 @@ export const CONTENT_ACTIONS = {
     },
     'computer.control': {
         title: "Pause, resume or stop an agent's computer use",
-        description: 'What the session bar on the Mac offers: pause the agent that operates an app, let it go on, or stop it.',
+        description: "Pause the agent that operates an app on the Mac, let it go on, or stop it, as from Ruimte's menu bar item there.",
         effect: 'external',
         domain: 'machine',
-        // The person's own hand on the session bar; an agent never lets itself go on.
+        // The person's own hand on the menu bar item; an agent never lets itself go on.
         actors: PERSON,
         input: z.object({ endpointId: givenMachine, action: ComputerControlActionSchema }),
         output: z.object({ endpointId: z.string(), action: ComputerControlActionSchema })

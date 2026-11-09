@@ -3,10 +3,10 @@ import i18next from 'i18next';
 import { useComputer } from '@/state/computer';
 
 interface IndicatorLook {
-    // The accent while the agent acts, muted while the person holds the Mac: the phantom cursor's own two tones.
+    // The accent while the agent acts, muted while the person holds the Mac.
     tone: 'accent' | 'muted';
     label: string;
-    // What a click offers: the buttons of the session bar.
+    // What a click offers: the items of the menu bar item on the Mac.
     actions: readonly ComputerControlAction[];
 }
 

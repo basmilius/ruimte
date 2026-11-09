@@ -58,7 +58,7 @@ export const ComputerRequestGrantResultSchema = ComputerUseStatusSchema.extend({
 });
 export type ComputerRequestGrantResult = z.infer<typeof ComputerRequestGrantResultSchema>;
 
-/* The buttons of the helper's session bar, pressed by a person on the node whose agent holds the Mac. */
+/* The items of the helper's menu bar item, pressed by a person on the node whose agent holds the Mac. */
 export const ComputerControlActionSchema = z.enum(['pause', 'resume', 'stop']);
 export type ComputerControlAction = z.infer<typeof ComputerControlActionSchema>;
 
