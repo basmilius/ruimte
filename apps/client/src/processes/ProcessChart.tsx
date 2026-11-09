@@ -1,6 +1,6 @@
-import { formatClock } from '@adecore/agents-react/usage';
 import { createChart, type ChartX } from '@adecore/charts';
 import { SectionLabel } from '@adecore/ui';
+import { formatClock } from '@adecore/ui/format';
 import type { ProcessPoint } from '@ruimte/contracts';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';

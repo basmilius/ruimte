@@ -1,8 +1,8 @@
 import { dayOf, useUsageStore } from '@adecore/agents-react/state';
-import { evenPace } from '@adecore/agents-react/usage';
 import { localTimeZone } from '@adecore/ui/format';
 import { ActionRefusal, type ActionHandlers, type ActionOutput } from '@ruimte/actions';
 import {
+    evenPace,
     totalTokensOf,
     type ComputerUseStatus,
     type DeviceOperated,

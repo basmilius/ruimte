@@ -1,9 +1,8 @@
 import { useChatHost } from '@adecore/agents-react';
 import { pageKey, answerPrompt, promptCreatedAt, useFocusAfterAnswer, usePromptSession, PROMPT_SURFACE, PromptView } from '@adecore/agents-react/prompts';
 import { useProviders } from '@adecore/agents-react/state';
-import { formatClock } from '@adecore/agents-react/usage';
 import { ButtonGroup, ErrorBoundary, Icon, IconButton, Menu, Pill, Tooltip, isApplePlatform } from '@adecore/ui';
-import { formatMoment } from '@adecore/ui/format';
+import { formatClock, formatMoment } from '@adecore/ui/format';
 import clsx from 'clsx';
 import { AlarmClock, AlarmClockOff, ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
