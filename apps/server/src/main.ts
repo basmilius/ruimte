@@ -1,6 +1,6 @@
 // werift's @peculiar/x509 imports this before tsyringe, but a compiled bundle runs tsyringe first and the daemon dies on start.
 import 'reflect-metadata';
-import { probeHealth } from '@ruimte/service/health';
+import { settledHealth } from '@ruimte/service/health';
 import { portTaken, startMachine } from './cli/start.ts';
 import { forgetInheritedSession, parseServerArgs } from './config.ts';
 import { errorText } from './error-text.ts';
@@ -140,7 +140,8 @@ process.off('unhandledRejection', crash);
 try {
     const refused = await startMachine(config, {
         portTaken,
-        askRunningMachine: (port) => probeHealth(port),
+        // A machine that is still wiring itself holds the port too; it is waited for, so it is never called another program.
+        askRunningMachine: (port) => settledHealth(port),
         start: async () => {
             // A terminal shows the greeting as it is; a log file needs the time of every line.
             if (!process.stdout.isTTY) {

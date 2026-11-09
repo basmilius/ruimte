@@ -99,7 +99,7 @@ npx ruimte voice key set|clear|status     # the OpenAI key of Voice run by the d
 npx ruimte --version
 ```
 
-A bare `ruimte` at a terminal prints its address and the commands; under the service or the desktop app it logs one `listening on` line. It tries the port before reading its home, so a second start leaves no trace. A taken port exits 1, naming the Ruimte that holds it when that answers `/health`.
+A bare `ruimte` at a terminal prints its address and the commands; under the service or the desktop app it logs one `listening on` line. It tries the port before reading its home, so a second start leaves no trace. A taken port exits 1, naming the Ruimte that holds it when that answers `/health`. A daemon holds its port before it has wired itself and answers `/health` with status 503 and `starting: true` meanwhile; a second `ruimte` and the desktop app wait for it to finish instead of calling it another program or starting a second daemon.
 
 `ruimte login` puts the machine on a Pulsar account. Run it as the user and with the `RUIMTE_HOME` of the daemon (and `--port` when it is not `4210`). It prints `https://station.ruimte.app/link?code=BCDF-GHJK`, the code and the machine's key fingerprint. A person opens the page, signs in, checks name and fingerprint and presses "Add to my account"; the daemon then signs a registration and the command exits 0. A denied, expired or withdrawn code exits 1, and Ctrl+C withdraws the code and exits 130. A machine on another account refuses (see "One account per machine").
 

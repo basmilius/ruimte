@@ -40,6 +40,12 @@ describe('startMachine', () => {
         expect(lines[0]).toStartWith('A Ruimte machine is already running on port 4210 (version 0.4.0, as the background service).');
     });
 
+    test('a taken port held by a machine that is starting is no other program', async () => {
+        const { deps, lines } = fakes({ taken: true, running: { version: '0.4.0', service: null, starting: true } });
+        expect(await startMachine(address, deps)).toBe(1);
+        expect(lines[0]).toStartWith('A Ruimte machine is already starting on port 4210');
+    });
+
     test('a port taken in between is caught at the listen', async () => {
         const inUse = Object.assign(new Error('Failed to start server. Is port 4210 in use?'), { code: 'EADDRINUSE' });
         const { deps, calls, lines } = fakes({ start: () => Promise.reject(inUse) });

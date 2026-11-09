@@ -16,7 +16,7 @@ import { askDaemonWork, proveDaemon, stopDaemonGently, type DaemonPort } from '.
 import { electron } from '../electron';
 import { askLoginShellPath, fileLoginPathCache, loadLoginPath } from '../login-path';
 import { removeOwnDefinition, secretFor, tildeHome } from '../machine-mode';
-import { createServiceController, type ServiceController } from '../service/controller';
+import { createServiceController, type ProbedDaemon, type ServiceController } from '../service/controller';
 import { keepRunningSetting, serviceSupport } from '../service/settings';
 import { createSecretGate } from '../startup';
 import type { DaemonStartupDiagnostics } from '../telemetry';
@@ -162,7 +162,7 @@ export function createMachine(options: MachineOptions): Machine {
         });
     };
 
-    const probeDaemon = (): Promise<BuildIdentity | null> => probeHealth(port);
+    const probeDaemon = (): Promise<ProbedDaemon | null> => probeHealth(port);
 
     const waitForDaemon = (accept: (health: BuildIdentity) => boolean, within?: number): Promise<void> => waitForHealth(port, accept, { within });
 

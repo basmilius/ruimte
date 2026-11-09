@@ -28,7 +28,12 @@ export const HealthResultSchema = z.object({
     /* The id `apps/server/scripts/compile.ts` stamps into the binary; absent in a checkout. */
     build: z.string().min(1).nullish(),
     /* Whether launchd or systemd started this daemon. */
-    service: z.boolean().optional()
+    service: z.boolean().optional(),
+    /*
+     * True while the daemon holds the port and wires itself, when it answers this path with status 503
+     * and nothing else yet. It is this machine, so a reader waits for it instead of taking the port for another program.
+     */
+    starting: z.boolean().optional()
 });
 export type HealthResult = z.infer<typeof HealthResultSchema>;
 

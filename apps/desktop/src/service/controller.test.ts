@@ -187,6 +187,35 @@ describe('start', () => {
         expect(events).toEqual([]);
     });
 
+    test('waits for the service that still wires itself and starts no second daemon beside it', async () => {
+        const { controller, fake, events, deps } = setup({ fake: fakeManager({ installed: true }) });
+        let starting = true;
+        deps.probe = async () => ({ ...EXPECTED, starting });
+        deps.verify = async () => !starting;
+        deps.waitForHealth = async () => {
+            events.push('wait');
+            starting = false;
+        };
+        expect(await controller.start()).toBe(true);
+        expect(events).toEqual(['wait']);
+        expect(fake.calls).toEqual([]);
+        expect(controller.state().owner).toBe('service');
+    });
+
+    test('waits for a daemon the app did not start, that still wires itself, before it asks it for the proof', async () => {
+        const { controller, events, deps } = setup({ support: 'unsupported' });
+        let starting = true;
+        deps.probe = async () => ({ ...EXPECTED, starting });
+        deps.verify = async () => !starting;
+        deps.waitForHealth = async () => {
+            events.push('wait');
+            starting = false;
+        };
+        expect(await controller.start()).toBe(true);
+        expect(events).toEqual(['wait']);
+        expect(controller.state().owner).toBe('external');
+    });
+
     test('a definition already on disk is not installed again, and one that changed is', async () => {
         const unchanged = setup({ fake: fakeManager({ installed: true, running: EXPECTED }) });
         await unchanged.controller.start();

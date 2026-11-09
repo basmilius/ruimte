@@ -27,6 +27,13 @@ describe('portInUseMessage', () => {
         expect(message).not.toContain('service status');
     });
 
+    test('a machine that is still starting is not another program', () => {
+        const message = portInUseMessage(4290, { version: '0.4.0', service: null, starting: true });
+        expect(message).toStartWith('A Ruimte machine is already starting on port 4290 (version 0.4.0)');
+        expect(message).toContain('`ruimte status --port 4290`');
+        expect(message).not.toContain('another program');
+    });
+
     test('another port rides along with every command', () => {
         const message = portInUseMessage(4290, { version: '0.4.0', service: true });
         expect(message).toContain('`ruimte service status --port 4290`');

@@ -322,6 +322,19 @@ interface DoorwayHandlers {
 }
 
 /*
+ * What the port answers while the daemon wires itself. The health path says this is a Ruimte machine
+ * that is starting, so a second `ruimte` or the desktop app waits for it instead of taking the port
+ * for another program; every other path is plain `503`.
+ */
+export function startingResponse(request: Request): Response {
+    if (request.method === 'GET' && new URL(request.url).pathname === MACHINE_HEALTH_PATH) {
+        return Response.json({ ok: true, version: VERSION, build: BUILD, starting: true } satisfies HealthResult, { status: 503 });
+    }
+
+    return new Response('The machine is starting', { status: 503 });
+}
+
+/*
  * The daemon's port, held from the first moment of boot, so that every URL an agent or a hook is
  * told is known before anything is wired. It answers `503` until `answer` hands it the routes, and
  * a socket cannot upgrade before then.
@@ -339,7 +352,7 @@ export function listenFirst(config: ServerConfig): Doorway {
         hostname: config.host,
         port: config.port,
         maxRequestBodySize: MAX_MCP_BODY_BYTES,
-        fetch: (request, server) => handlers?.fetch(request, server) ?? new Response('The machine is starting', { status: 503 }),
+        fetch: (request, server) => handlers?.fetch(request, server) ?? startingResponse(request),
         websocket: {
             backpressureLimit: SOCKET_BACKPRESSURE_LIMIT,
             closeOnBackpressureLimit: true,

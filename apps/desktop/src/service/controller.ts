@@ -5,6 +5,10 @@ import type { ShellProblem } from '../telemetry';
 import { serviceOwnership } from './ownership';
 import type { KeepRunningSetting } from './settings';
 
+export interface ProbedDaemon extends BuildIdentity {
+    starting?: boolean;
+}
+
 export interface ServiceControllerDeps {
     support: ServiceSupport;
     /* Null wherever `support` is not `supported`, so nothing below can reach a service manager there. */
@@ -19,8 +23,8 @@ export interface ServiceControllerDeps {
     /* The home this installation gives its daemon; a definition with another home is not the app's to touch. */
     ruimteHome: string;
     expected: BuildIdentity;
-    /* One ask of `/health`; null when nothing answers. */
-    probe(): Promise<BuildIdentity | null>;
+    /* One ask of `/health`; null when nothing answers. `starting` is a daemon that holds the port and has not finished wiring itself. */
+    probe(): Promise<ProbedDaemon | null>;
     /* One ask of `/machine/work` with the local secret; null when the daemon cannot say or did not prove it holds the secret. */
     work(): Promise<MachineWork | null>;
     /* Whether what answers the port proves it holds the local secret, which an earlier build cannot. */
@@ -253,7 +257,13 @@ export function createServiceController(deps: ServiceControllerDeps): ServiceCon
                     deps.report?.({ kind: 'service-fallback', step: 'install', reason: failure });
                 }
             }
-            const decision = decideStart(await deps.probe(), deps.expected, managedService && failure === null);
+            let probed = await deps.probe();
+            if (probed?.starting) {
+                // Its port is held by a Ruimte that is still wiring itself: starting a second daemon would fight it for the port.
+                await deps.waitForHealth(() => true);
+                probed = await deps.probe();
+            }
+            const decision = decideStart(probed, deps.expected, managedService && failure === null);
             if (decision === 'attach') {
                 owner = 'service';
                 if (manager && definitionChanged) {
@@ -378,7 +388,7 @@ export function createServiceController(deps: ServiceControllerDeps): ServiceCon
                 return state();
             }
             const health = await deps.probe();
-            if (health !== null && sameBuild(health, deps.expected)) {
+            if (health !== null && !health.starting && sameBuild(health, deps.expected)) {
                 pendingRestart = null;
                 return state();
             }
