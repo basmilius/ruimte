@@ -11,7 +11,8 @@ import { FAKE_API_TOKEN, FakeCloudflare, FakeCloudflared, MemoryTokenStore, type
  * Seeded runs of what a person, Cloudflare and another writer can do to Tunnels, one step at a time, with faults drawn per
  * step. After every step the invariants of `CLAUDE.md` are checked against what the fake Cloudflare holds and what Ruimte
  * last read of it, and every run ends at rest: a Try again without faults, after which Cloudflare serves exactly what the
- * person meant. What Cloudflare serves is judged by a matcher of this file's own. A failure names its seed;
+ * person meant. What Cloudflare serves is judged by a matcher of this file's own. The ports Ruimte listens on change
+ * between steps, as when it starts listening on a dev server's port. A failure names its seed;
  * `RUIMTE_SEED=<seed>` runs that one alone, and `RUIMTE_SEQUENCES=<count>` searches more.
  */
 const SEQUENCES = Number(process.env.RUIMTE_SEQUENCES ?? 320);
@@ -111,6 +112,10 @@ interface Ground {
     abandoned: Set<string>;
     /* Calls to Cloudflare until the tunnel is deleted in the dashboard, or null. */
     vanishIn: number | null;
+    /* The ports Ruimte listens on now, which a step may change, as when Ruimte starts listening on a dev server's port. */
+    denied: number[];
+    /* The step drew a fault other than a failed DNS read or one that may pass (a 5xx, a 429, a lost answer). */
+    harsh: boolean;
     log: string[];
     problems: string[];
 }
@@ -239,7 +244,7 @@ function boot(world: Ground): Pick<World, 'service' | 'runner'> {
         cloudflare: watchedFetch(world),
         machineName: () => 'Bas MacBook',
         machineId: () => 'machine-1',
-        deniedPorts: () => DENIED,
+        deniedPorts: () => world.denied,
         setListener: async (enabled) => {
             world.listener.on = enabled;
 
@@ -372,6 +377,10 @@ function injectFaults(world: World): void {
 
         cloudflare.failing.set(key, status);
         world.log.push(`  fail ${key} ${status}`);
+
+        if (!(key.startsWith('GET /zones/') || status === 429 || status >= 500)) {
+            world.harsh = true;
+        }
     }
 
     if (next() < 0.25) {
@@ -391,6 +400,7 @@ function injectFaults(world: World): void {
         }
 
         world.log.push(`  ${count} writers`);
+        world.harsh = true;
     }
 
     if (next() < 0.1) {
@@ -403,6 +413,7 @@ function injectFaults(world: World): void {
     if (next() < 0.03 && world.disk.value?.tunnel != null) {
         world.vanishIn = 1 + Math.floor(next() * 8);
         world.log.push(`  tunnel deleted after ${world.vanishIn} calls`);
+        world.harsh = true;
     }
 }
 
@@ -480,7 +491,55 @@ function checkIntent(
     }
 }
 
-/* Invariants 1 and 5, on what the screen shows after the step settled. */
+/* Whether a dev row points at a port Ruimte listens on now, which Ruimte holds with its 404 by design. */
+function deniedRow(world: Ground, row: Pick<StoredRow, 'kind' | 'port'>): boolean {
+    return row.kind === 'dev' && world.denied.includes(row.port ?? 0);
+}
+
+/* What Ruimte's own rule for a hostname is on the tunnel in Cloudflare, or undefined without one. */
+function ownRule(tunnel: FakeTunnel, hostname: string): Rule | undefined {
+    return tunnel.ingress.find((rule) => rule.hostname === hostname && rule.path === undefined);
+}
+
+/* Rows meant on, with a record, that Ruimte's own rule serves now: what a step whose faults may pass must leave serving. */
+function healthyRows(world: World): Set<string> {
+    const tunnel = tunnelOf(world);
+
+    if (tunnel === undefined) {
+        return new Set();
+    }
+
+    return new Set(
+        rowsOf(world)
+            .filter(
+                (row) => meantOn(row) && (row.kind === 'dev' || world.listener.on) && hasOurRecord(world, row.hostname) && serves(ownRule(tunnel, row.hostname))
+            )
+            .map((row) => row.id)
+    );
+}
+
+/* Invariant 7: a failed DNS read or a fault that may pass never takes a healthy row off the air. */
+function checkAvailable(world: World, healthy: ReadonlySet<string>): void {
+    const tunnel = tunnelOf(world);
+
+    if (tunnel === undefined) {
+        return;
+    }
+
+    for (const row of rowsOf(world)) {
+        if (!healthy.has(row.id) || !meantOn(row) || deniedRow(world, row) || (row.kind === 'mcp' && !world.listener.on)) {
+            continue;
+        }
+
+        const rule = ownRule(tunnel, row.hostname);
+
+        if (rule !== undefined && !serves(rule)) {
+            world.problems.push(`held ${row.hostname} on a 404 after a step whose faults were only DNS reads or ones that may pass`);
+        }
+    }
+}
+
+/* Invariants 1, 5 and 8, on what the screen shows after the step settled. */
 async function checkState(world: World): Promise<void> {
     const state: TunnelState = await world.service.state();
     const parsed = TunnelStateSchema.safeParse(state);
@@ -496,9 +555,23 @@ async function checkState(world: World): Promise<void> {
     if (known !== undefined) {
         for (const row of state.rows) {
             const paths = servedPaths(known, row.hostname);
+            const stored = rowsOf(world).find((candidate) => candidate.id === row.id);
+            const serviceable = row.kind === 'dev' || world.listener.on;
 
             if (!row.enabled && hasOurRecord(world, row.hostname) && paths.length > 0) {
                 world.problems.push(`shows ${row.hostname} off while the ingress Ruimte last read serves it at ${paths.join(' ')}`);
+            }
+
+            // A row the person sees on that serves nothing says why, after the job that found it ended.
+            if (
+                row.enabled &&
+                stored !== undefined &&
+                meantOn(stored) &&
+                serviceable &&
+                (paths.length === 0 || !hasOurRecord(world, row.hostname)) &&
+                row.reason === undefined
+            ) {
+                world.problems.push(`shows ${row.hostname} on without a reason while Cloudflare does not serve it`);
             }
         }
     }
@@ -542,6 +615,10 @@ function checkGone(world: World, tunnelId: string, hostnames: readonly string[])
 function serviceOf(world: World, row: StoredRow): string | null {
     if (row.kind === 'mcp') {
         return world.listener.on ? `http://127.0.0.1:${LISTENER_PORT}` : null;
+    }
+
+    if (deniedRow(world, row)) {
+        return null;
     }
 
     return `${row.origin?.https === true ? 'https' : 'http'}://127.0.0.1:${row.port}`;
@@ -622,7 +699,7 @@ function checkConverged(world: World, state: TunnelState): void {
     }
 
     // Invariant 5 the other way: with something live and no other runner, the child runs.
-    const live = state.rows.some((row) => row.enabled && (row.kind === 'dev' || world.listener.on));
+    const live = state.rows.some((row) => row.enabled && (row.kind === 'dev' ? !deniedRow(world, row) : world.listener.on));
 
     if (tunnel !== undefined && live && tunnel.connections === 0 && world.runner.running === 0) {
         world.problems.push('runs no cloudflared while a row is on and nothing else runs the tunnel');
@@ -668,11 +745,19 @@ async function step(world: World): Promise<void> {
     const row = rows.length === 0 ? undefined : pick(next, rows);
     const kept = world.tokens.read();
     // A person whose token is gone or refused soon pastes one, or most runs would end without a tunnel to judge.
-    const draw = (kept === null || kept !== world.cloudflare.acceptedToken) && next() < 0.3 ? 19 : next() * 22;
+    const draw = (kept === null || kept !== world.cloudflare.acceptedToken) && next() < 0.3 ? 19 : next() * 23;
+    const healthy = healthyRows(world);
+    // A port of Ruimte's refuses only the row that names it.
+    const refusedForPort = (failed: unknown, port: number | null): void => {
+        if (failed instanceof TunnelConfigError && failed.code === 'port-denied' && !world.denied.includes(port ?? 0)) {
+            world.problems.push(`refused a step with port-denied, while its own port ${String(port)} is free`);
+        }
+    };
     let targets: 'all' | ReadonlySet<string> = new Set();
     let restart = false;
 
     world.turningOn.clear();
+    world.harsh = false;
     injectFaults(world);
 
     if (world.disk.value?.tunnel == null && draw < 8) {
@@ -705,6 +790,10 @@ async function step(world: World): Promise<void> {
                 .map((candidate) => candidate.id)
         );
 
+        if (kind === 'dev') {
+            refusedForPort(failed, port);
+        }
+
         const refusedBy = failed instanceof TunnelConfigError ? failed.code : null;
         const leftBy = refusedBy === 'hostname-on-tunnel' ? !world.writerHosts.has(hostname) : refusedBy === 'other-machine';
 
@@ -729,7 +818,12 @@ async function step(world: World): Promise<void> {
         }
 
         targets = new Set([row.id]);
-        await attempt(world, () => service.update(row.id, update));
+
+        const failed = await attempt(world, () => service.update(row.id, update));
+
+        if (row.kind === 'dev') {
+            refusedForPort(failed, update.port ?? row.port);
+        }
     } else if (draw < 12.5 && row !== undefined) {
         const tunnelId = world.disk.value?.tunnel?.id ?? '';
 
@@ -798,10 +892,16 @@ async function step(world: World): Promise<void> {
         const writer = writerOf(world);
 
         world.log.push('dashboard edit');
+        world.harsh = true;
 
         if (tunnel !== undefined) {
             writer(tunnel);
         }
+    } else if (draw < 22) {
+        const port = pick(next, PORTS.slice(0, 3));
+
+        world.denied = world.denied.includes(port) ? world.denied.filter((candidate) => candidate !== port) : [...world.denied, port];
+        world.log.push(`deny list ${world.denied.join(' ')}`);
     } else {
         const tunnel = tunnelOf(world);
 
@@ -819,6 +919,11 @@ async function step(world: World): Promise<void> {
     world.vanishIn = null;
     world.turningOn.clear();
     checkIntent(world, before, tunnelBefore, targets, restart);
+
+    if (!world.harsh) {
+        checkAvailable(world, healthy);
+    }
+
     await checkState(world);
 }
 
@@ -843,6 +948,8 @@ async function sequence(seed: number): Promise<string[]> {
         writerHosts: new Set(),
         abandoned: new Set(),
         vanishIn: null,
+        denied: [...DENIED],
+        harsh: false,
         log: [],
         problems: []
     };
