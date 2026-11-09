@@ -1,5 +1,5 @@
 import { mkdir, readFile, rename, rm } from 'node:fs/promises';
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { settled, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
 import type { Serializer } from '@adecore/utils/async';
 import { isNotFound } from '@adecore/utils/errors';
@@ -211,6 +211,54 @@ export function watchDirectories(seams: WatchSeams, dirs: readonly string[], hea
             }
         })
         .filter((watcher) => watcher !== null);
+}
+
+/*
+ * Watches a chain of folders, each the parent of the next. A watcher on a folder that was removed never hears
+ * again, and a folder that is not there yet has none, so whenever a folder hears the name of the next one (or no
+ * name), the watch starts again from that next folder down. `heard` gets the depth of the folder that heard.
+ */
+export function watchFolderChain(seams: WatchSeams, folders: readonly string[], heard: (depth: number, filename: string | null) => void): { close(): void } {
+    const watchers: (DirectoryWatcher | null)[] = folders.map(() => null);
+    let closed = false;
+
+    const arm = (from: number): void => {
+        for (let depth = from; depth < folders.length; depth++) {
+            watchers[depth]?.close();
+            watchers[depth] = watchOne(depth);
+        }
+    };
+
+    const watchOne = (depth: number): DirectoryWatcher | null => {
+        const next = folders[depth + 1];
+        const [watcher] = watchDirectories(seams, [folders[depth]!], (filename) => {
+            if (closed) {
+                return;
+            }
+
+            if (next !== undefined && (filename === null || filename === basename(next))) {
+                arm(depth + 1);
+            }
+
+            heard(depth, filename);
+        });
+
+        return watcher ?? null;
+    };
+
+    arm(0);
+
+    return {
+        close: () => {
+            closed = true;
+
+            for (const watcher of watchers) {
+                watcher?.close();
+            }
+
+            watchers.fill(null);
+        }
+    };
 }
 
 /* A store of a shared and a private file in `.ruimte` that takes in an edit it did not write itself. */
