@@ -366,10 +366,23 @@ extension Agent {
                 try await Targets.activate(app, window: window)
                 answer["target"] = AX.summary(self.focusedElement(app))
             }
+            var pressedItems: [String] = []
             for combo in combos {
                 try self.checkStopped()
-                await SyntheticInput.press(combo, to: keys == nil ? nil : app.processIdentifier)
+                if keys != nil, let item = Self.menuItem(for: combo, in: app) {
+                    let result = AXUIElementPerformAction(item, kAXPressAction as CFString)
+                    guard result == .success || result == .cannotComplete else {
+                        throw AgentError("\(combo.name) is \"\(Menus.path(of: item).path)\" in the menu, which \(Targets.name(app)) refused (AXError \(result.rawValue)); it may be disabled behind the person's work, so it may need front")
+                    }
+                    pressedItems.append(Menus.path(of: item).path)
+                } else {
+                    await SyntheticInput.press(combo, to: keys == nil ? nil : app.processIdentifier)
+                }
                 try await Task.sleep(for: .milliseconds(60))
+            }
+            if !pressedItems.isEmpty {
+                answer["menu"] = pressedItems
+                answer["note"] = "a key with cmd behind the person's work reaches no menu shortcut, so its menu item was pressed instead; one for the window or the text in focus, such as save, does nothing there, so if the state shows no change, it needs front"
             }
             return answer
         }
@@ -581,6 +594,14 @@ extension Agent {
 
     /// One character at a time to the app's process, with its window made main first, since some apps take keys behind
     /// the person's work only there. Returns the note for an answer when the focused value did not change.
+    /// The menu item a combo with cmd stands for, which keys posted to an app behind the person's work never reach.
+    private static func menuItem(for combo: KeyCombo, in app: NSRunningApplication) -> AXUIElement? {
+        guard let shortcut = MenuShortcut.canonical(combo.name) else {
+            return nil
+        }
+        return Menus.item(withShortcut: shortcut, in: AXUIElementCreateApplication(app.processIdentifier))
+    }
+
     /// Writes the text at the insertion point of a native field in one go, so no key event exists that could reach
     /// another app. False when the field does not take it, or took it without the text showing in its value;
     /// then the keys go as before, and nothing was typed twice.

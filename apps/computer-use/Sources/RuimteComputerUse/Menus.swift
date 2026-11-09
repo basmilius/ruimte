@@ -162,6 +162,30 @@ enum Menus {
         return found
     }
 
+    /// The menu item whose shortcut is `shortcut` (as `MenuShortcut.canonical` writes it), outside the system menu.
+    static func item(withShortcut shortcut: String, in appElement: AXUIElement) -> AXUIElement? {
+        guard let bar = AX.element(appElement, kAXMenuBarAttribute) else {
+            return nil
+        }
+        var visited = 0
+        var menus = AX.children(bar).dropFirst().compactMap { ItemInfo.read($0)?.submenu }
+        while let menu = menus.popLast(), visited < maxItems {
+            for item in AX.children(menu) {
+                visited += 1
+                guard let info = ItemInfo.read(item) else {
+                    continue
+                }
+                if info.shortcut == shortcut {
+                    return item
+                }
+                if let submenu = info.submenu {
+                    menus.append(submenu)
+                }
+            }
+        }
+        return nil
+    }
+
     /// The item's shortcut as a key combo, such as `cmd+shift+s`; nil when it has none.
     static func shortcut(of item: AXUIElement) -> String? {
         ItemInfo.read(item)?.shortcut
