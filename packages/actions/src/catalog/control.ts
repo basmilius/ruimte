@@ -241,6 +241,7 @@ export const CONTROL_ACTIONS = {
                 .min(1)
                 .max(MAX_TYPED_LENGTH, `At most ${MAX_TYPED_LENGTH} characters at a time; type the rest in another call`)
                 .describe(`The text to type, at most ${MAX_TYPED_LENGTH} characters`),
+            element: computerElement.nullish().describe('An element of the last state to focus first'),
             ...computerThenState
         }),
         output: computerOutcome
@@ -258,6 +259,7 @@ export const CONTROL_ACTIONS = {
                 .min(1)
                 .max(MAX_KEY_COMBOS, `At most ${MAX_KEY_COMBOS} key combinations at a time; press the rest in another call`)
                 .describe(`Key combinations such as cmd+n, return, escape, shift+tab, at most ${MAX_KEY_COMBOS}`),
+            element: computerElement.nullish().describe('An element of the last state to focus first'),
             ...computerThenState
         }),
         output: computerOutcome

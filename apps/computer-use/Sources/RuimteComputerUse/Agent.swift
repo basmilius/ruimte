@@ -5,6 +5,7 @@ import Phantom
 
 struct Snapshot {
     let window: AXUIElement
+    let frame: CGRect
     let handles: HandleTable
     let capture: CaptureResult?
     /// Why there is no capture, phrased for a click by --x/--y.
@@ -283,7 +284,12 @@ final class Agent {
         var captureProblem: String?
         if request.screenshot == false {
             screenshot["error"] = "skipped (no_screenshot)"
-            captureProblem = "the last state was taken with no_screenshot, so there is no screenshot to map x/y from; run `cu state \(Targets.name(app))` without it"
+            // Pixels the agent reads off its last picture still map while the window has not moved or changed size.
+            if let earlier = snapshots[pid], earlier.capture != nil, earlier.frame == rootFrame {
+                capture = earlier.capture
+            } else {
+                captureProblem = "the window moved or changed size since the last screenshot, and this state was taken with no_screenshot; run `cu state \(Targets.name(app))` without it"
+            }
         } else if !CGPreflightScreenCaptureAccess() {
             screenshot["error"] = "Screen Recording is not granted to \(Permissions.appName); run `cu doctor`"
             captureProblem = "the last state has no screenshot because Screen Recording is not granted; run `cu doctor`"
@@ -304,7 +310,7 @@ final class Agent {
                 captureProblem = "the last state has no screenshot (\(message))"
             }
         }
-        snapshots[pid] = Snapshot(window: root, handles: handles, capture: capture, captureProblem: captureProblem)
+        snapshots[pid] = Snapshot(window: root, frame: rootFrame, handles: handles, capture: capture, captureProblem: captureProblem)
 
         var window: [String: Any] = [
             "title": VisibleText.clean(AX.string(root, kAXTitleAttribute)) ?? "",

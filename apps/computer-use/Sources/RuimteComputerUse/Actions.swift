@@ -269,11 +269,25 @@ extension Agent {
         focusedElement(app).flatMap(AX.frame)?.center
     }
 
+    /// Puts the focus on the element `type` or `key` names, before anything is typed, so a refusal sends no key.
+    private func focus(_ app: NSRunningApplication, _ request: Request) async throws {
+        guard let index = request.element else {
+            return
+        }
+        let element = try snapshot(for: app).element(index)
+        let result = AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+        guard result == .success else {
+            throw AgentError("element \(index) does not take the focus (AXError \(result.rawValue)); click it first, then type without element")
+        }
+        try await Task.sleep(for: .milliseconds(80))
+    }
+
     func type(_ app: NSRunningApplication, _ request: Request) async throws -> [String: Any] {
         guard let text = request.text, !text.isEmpty else {
             throw AgentError("type needs text")
         }
         try TypingLimit.check(text: text)
+        try await focus(app, request)
         let window = snapshots[app.processIdentifier]?.window
         let look = ActionLook(state: .type, target: targetName(focusedElement(app), app), text: text)
         if request.front != true {
@@ -305,6 +319,7 @@ extension Agent {
         if request.front != true, let edit = combos.first(where: \.editsFocusedText) {
             throw AgentError.needsFront("\(edit.name) edits the focused text through the key window, which an app behind the person's work does not have, so it does nothing there; set-value replaces a text in the background")
         }
+        try await focus(app, request)
         let keys = request.front == true ? nil : try keyTarget(app)
         return try await act(app, request, at: focusPoint(app), as: look, reportPoint: false) {
             var answer: [String: Any] = ["pressed": combos.map(\.name)]

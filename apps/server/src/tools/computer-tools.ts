@@ -16,8 +16,8 @@ type Act = (typeof ACTS)[number];
 /* What each action of `computer_act` takes besides the fields every action shares. */
 const ACT_FIELDS: Readonly<Record<Act, readonly string[]>> = {
     click: ['element', 'x', 'y', 'count', 'button'],
-    type: ['text'],
-    key: ['combo'],
+    type: ['element', 'text'],
+    key: ['element', 'combo'],
     'set-value': ['element', 'value'],
     scroll: ['element', 'x', 'y', 'direction', 'pages'],
     drag: ['from', 'from_x', 'from_y', 'to', 'to_x', 'to_y']
@@ -343,7 +343,7 @@ const computerAct = defineTool('computer', {
                     throw new ToolRefusal('bad-arguments', 'computer_act type needs text, the text to type');
                 }
 
-                return outcomeLines('type', await runAction(call, 'computer.type', { app, text: input.text, ...after }), call);
+                return outcomeLines('type', await runAction(call, 'computer.type', { app, text: input.text, element: input.element ?? null, ...after }), call);
             }
 
             case 'key': {
@@ -351,7 +351,7 @@ const computerAct = defineTool('computer', {
                     throw new ToolRefusal('bad-arguments', 'computer_act key needs combo, at least one key combo such as cmd+n');
                 }
 
-                return outcomeLines('key', await runAction(call, 'computer.key', { app, combos: input.combo, ...after }), call);
+                return outcomeLines('key', await runAction(call, 'computer.key', { app, combos: input.combo, element: input.element ?? null, ...after }), call);
             }
 
             case 'set-value': {

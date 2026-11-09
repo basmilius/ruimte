@@ -139,8 +139,11 @@ describe('computer tools', () => {
         const setup = await computerSetup();
         expect(await run(setup, 'computer_act', { action: 'type', app: 'TextEdit', text: 'hi', direction: 'down' })).toEqual([
             'refused\tbad-arguments\tcomputer_act type takes no direction',
-            'fields\taction\tapp\tstate\twait\tmax_depth\tmax_elements\tmax_text\tno_screenshot\tfront\ttext'
+            'fields\taction\tapp\tstate\twait\tmax_depth\tmax_elements\tmax_text\tno_screenshot\tfront\telement\ttext'
         ]);
+        await approved(setup);
+        await run(setup, 'computer_act', { action: 'type', app: 'TextEdit', element: 2, text: 'hi' });
+        expect(setup.helper.acted.at(-1)).toMatchObject({ command: 'type', element: 2, text: 'hi' });
         expect((await run(setup, 'computer_menu', { app: 'TextEdit', item: ['File', 'Save'] }))[0]).toStartWith(
             'refused\tbad-arguments\tcomputer_menu takes at most one item'
         );
