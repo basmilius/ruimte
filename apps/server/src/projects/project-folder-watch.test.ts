@@ -153,6 +153,33 @@ describe('ProjectFolderWatch', () => {
         expect(watch.openOn('/work/one/.ruimte/private')).toHaveLength(0);
     });
 
+    test('tells that the project changed when the private folder was removed and not made again', async () => {
+        const watch = new FakeWatch();
+        const heard: string[] = [];
+        let privateExists = true;
+        const folders = new ProjectFolderWatch(
+            {
+                schedule: watch.schedule,
+                watch: (path, options, listener) => {
+                    if (path.endsWith('/private') && !privateExists) {
+                        throw new Error('ENOENT');
+                    }
+
+                    return watch.watch(path, options, listener);
+                }
+            },
+            (projectId) => void heard.push(projectId)
+        );
+        folders.sync(new Map([['one', '/work/one']]));
+
+        privateExists = false;
+        watch.on('/work/one/.ruimte').emit('private', 'rename');
+        await watch.settle();
+
+        expect(watch.openOn('/work/one/.ruimte/private')).toHaveLength(0);
+        expect(heard).toEqual(['one']);
+    });
+
     test('replaces a private watcher that died when the folder was removed and made in one go', () => {
         const { watch, folders } = setup();
         folders.sync(new Map([['one', '/work/one']]));
