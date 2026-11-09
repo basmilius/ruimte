@@ -77,3 +77,16 @@ test('a node of a CLI this machine no longer offers opens its shell, types nothi
     expect(harness.adapter.forSession('terminal-gemini').input).toEqual([]);
     expect(await harness.manager.get('terminal-gemini')!.plainText()).toContain('gemini is not available on this machine');
 });
+
+test('a terminal node of a CLI this machine offers only as a chat opens its shell, types nothing and says why', async () => {
+    const info = await harness.manager.create({
+        sessionId: 'terminal-api',
+        cols: 80,
+        rows: 24,
+        cwd: harness.home,
+        agent: { kind: 'nanogpt', runtimeMode: 'supervised' }
+    });
+    expect(info.exited).toBe(false);
+    expect(harness.adapter.forSession('terminal-api').input).toEqual([]);
+    expect(await harness.manager.get('terminal-api')!.plainText()).toContain('nanogpt is not available on this machine');
+});

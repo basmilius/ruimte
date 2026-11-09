@@ -330,8 +330,8 @@ export class SessionManager {
             : await this.agents?.readRecord(options.sessionId);
         const restoredAgent: AgentInfo | undefined = restored?.agent;
         const ranUnder = restoredAgent?.kind === options.agent?.kind ? restored?.account : undefined;
-        // A node of a CLI this daemon does not offer keeps its shell, and its stored kind, and is told why nothing started.
-        const unoffered = options.agent !== undefined && !this.providers.kinds().includes(options.agent.kind) ? options.agent.kind : null;
+        // A node of a CLI this daemon does not offer in a terminal (an agent from the ACP registry, a chat-only provider) keeps its shell, and its stored kind, and is told why nothing started.
+        const unoffered = options.agent !== undefined && !this.offersTerminal(options.agent.kind) ? options.agent.kind : null;
         const launch = unoffered === null ? this.startingLaunch(options.sessionId, options.agent, restoredAgent !== undefined, ranUnder) : undefined;
         // On the shell and not on the typed line, so a resume and whatever a person types there run under the same account.
         const env = launch ? launchEnv(this.accounts, launch.kind, launch.account, this.env) : this.env;
@@ -408,6 +408,10 @@ export class SessionManager {
      * account its CLI ran under here before, so a resume finds its transcript; only a first start takes
      * the person's pick for new agents of this CLI, and else the CLI's default account.
      */
+    private offersTerminal(kind: AgentKind): boolean {
+        return this.providers.kinds().includes(kind) && this.providers.get(kind).capabilities.terminal;
+    }
+
     private startingLaunch(sessionId: string, requested: AgentLaunch | undefined, ranBefore: boolean, ranUnder: string | undefined): AgentLaunch | undefined {
         const launch = this.withinCeiling(sessionId, requested);
         if (launch === undefined) {
