@@ -346,13 +346,27 @@ interface Doorway {
     answer(input: HttpInput): void;
 }
 
+/*
+ * The API is never a tunnel target, also not while it starts: a request Cloudflare's edge forwarded carries
+ * these headers, and they only ever refuse, before the routes or the starting answer say anything.
+ */
+export function answerDoorway(handlers: DoorwayHandlers | null, request: Request, server: DoorwayServer): Response | undefined | Promise<Response | undefined> {
+    const tunnelled = refuseTunnelled(request);
+
+    if (tunnelled !== null) {
+        return tunnelled;
+    }
+
+    return handlers?.fetch(request, server) ?? startingResponse(request);
+}
+
 export function listenFirst(config: ServerConfig): Doorway {
     let handlers: DoorwayHandlers | null = null;
     const server = Bun.serve<SocketData>({
         hostname: config.host,
         port: config.port,
         maxRequestBodySize: MAX_MCP_BODY_BYTES,
-        fetch: (request, server) => handlers?.fetch(request, server) ?? startingResponse(request),
+        fetch: (request, server) => answerDoorway(handlers, request, server),
         websocket: {
             backpressureLimit: SOCKET_BACKPRESSURE_LIMIT,
             closeOnBackpressureLimit: true,
@@ -379,13 +393,6 @@ function daemonHandlers(input: HttpInput): DoorwayHandlers {
     const routes = daemonRoutes(input);
     return {
         async fetch(request, server) {
-            // The API is never a tunnel target. A request Cloudflare's edge forwarded carries these headers, and they only ever refuse.
-            const tunnelled = refuseTunnelled(request);
-
-            if (tunnelled !== null) {
-                return tunnelled;
-            }
-
             const cors = crossOriginHeaders(request);
             if (cors !== null && request.method === 'OPTIONS') {
                 return new Response(null, { status: 204, headers: preflightHeaders(cors) });
