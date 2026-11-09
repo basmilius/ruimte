@@ -18,6 +18,29 @@ function poly(corners: readonly Point[]): Outline {
     return { start: corners[0]!, segments: [...corners.slice(1), corners[0]!].map((corner) => [corner] as const) };
 }
 
+/* A polygon whose corners bend over `cut` along both sides, as `PhantomGeometry.rounded` draws the arrow. */
+function rounded(corners: readonly Point[], cut: number): Outline {
+    const toward = (from: Point, to: Point, distance: number): Point => {
+        const length = Math.hypot(to[0] - from[0], to[1] - from[1]);
+        return [from[0] + ((to[0] - from[0]) * distance) / length, from[1] + ((to[1] - from[1]) * distance) / length];
+    };
+    const mix = (from: Point, to: Point, t: number): Point => [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t];
+    const segments: Segment[] = [];
+    let start: Point = corners[0]!;
+    corners.forEach((corner, i) => {
+        const entry = toward(corner, corners[(i + corners.length - 1) % corners.length]!, cut);
+        const exit = toward(corner, corners[(i + 1) % corners.length]!, cut);
+        if (i === 0) {
+            start = entry;
+        } else {
+            segments.push([entry]);
+        }
+        segments.push([mix(entry, corner, 0.55), mix(exit, corner, 0.55), exit]);
+    });
+    segments.push([start]);
+    return { start, segments };
+}
+
 /* A fine polyline of the outline that ends where it starts. */
 function flatten(outline: Outline): Point[] {
     const steps = 64;
@@ -81,12 +104,15 @@ function sample(outline: Outline): string {
 }
 
 export const PHANTOM_ARROW = sample(
-    poly([
-        [4, 3.5],
-        [20.5, 10.5],
-        [13.5, 13.5],
-        [10.5, 20.5]
-    ])
+    rounded(
+        [
+            [4, 3.5],
+            [20.5, 10.5],
+            [13.5, 13.5],
+            [10.5, 20.5]
+        ],
+        1.4
+    )
 );
 
 /** The text cursor of typing, 16 tall and centered on the hotspot. */
@@ -106,9 +132,6 @@ export const PHANTOM_BEAM = sample(
         [0.9, -3.5]
     ])
 );
-
-/** The arrow as the menu bar item draws it, without sampling. */
-export const PHANTOM_ARROW_PLAIN = 'M4 3.5 L20.5 10.5 L13.5 13.5 L10.5 20.5 Z';
 
 /** Graphite with a white rim on every ground; color sits only in the signs. */
 export const PHANTOM_COLORS = {

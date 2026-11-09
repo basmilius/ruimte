@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { TrafficLights, Typed } from '../app/primitives.tsx';
-import { PHANTOM_ARROW_PLAIN, PHANTOM_COLORS } from '../film/phantom.ts';
+import { PHANTOM_ARROW, PHANTOM_COLORS } from '../film/phantom.ts';
 import { PhantomCursor, type PhantomMode } from '../film/PhantomCursor.tsx';
 import { EASE, usePlayback, useTimeline } from '../film/playback.ts';
 import { Stage } from '../film/Stage.tsx';
@@ -147,7 +147,7 @@ function MenuBar({ time, open }: { readonly time: string; readonly open: boolean
             <span className="relative">
                 <span className={`flex items-center gap-1.5 rounded-md px-2 py-0.5 tabular-nums ${open ? 'bg-white/20' : ''}`}>
                     <svg width={10} height={14} viewBox="4 0 17 24" aria-hidden>
-                        <path d={PHANTOM_ARROW_PLAIN} fill="currentColor" />
+                        <path d={PHANTOM_ARROW} fill="currentColor" />
                     </svg>
                     {time}
                 </span>
@@ -170,7 +170,7 @@ function Menu({ time }: { readonly time: string }) {
             <div className="flex items-start gap-2.5 px-[9px] pt-2 pb-2.5">
                 <span className="grid size-7 shrink-0 place-items-center rounded-lg ring-1 ring-white/10" style={{ background: PHANTOM_COLORS.ink }}>
                     <svg width={16} height={16} viewBox="0 0 24 24" aria-hidden>
-                        <path d={PHANTOM_ARROW_PLAIN} fill="#ffffff" />
+                        <path d={PHANTOM_ARROW} fill="#ffffff" />
                     </svg>
                 </span>
                 <span>

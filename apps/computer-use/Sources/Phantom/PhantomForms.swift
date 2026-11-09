@@ -187,7 +187,7 @@ public enum PhantomForm: String, CaseIterable, Sendable {
     public var path: CGPath {
         switch self {
         case .arrow:
-            return PhantomGeometry.poly([CGPoint(x: 4, y: 3.5), CGPoint(x: 20.5, y: 10.5), CGPoint(x: 13.5, y: 13.5), CGPoint(x: 10.5, y: 20.5)]).cgPath
+            return PhantomGeometry.rounded([CGPoint(x: 4, y: 3.5), CGPoint(x: 20.5, y: 10.5), CGPoint(x: 13.5, y: 13.5), CGPoint(x: 10.5, y: 20.5)], cut: PhantomGeometry.arrowCut)
         case .finger:
             return PhantomGeometry.oval(center: CGPoint(x: 4, y: 3.5), radiusX: 10, radiusY: 10).cgPath
         case .hand:
@@ -277,6 +277,33 @@ public enum PhantomGeometry {
 
     public static func poly(_ corners: [CGPoint]) -> PhantomPath {
         PhantomPath(start: round(corners[0]), segments: corners.indices.map { line(corners[$0], corners[($0 + 1) % corners.count]) })
+    }
+
+    /// How far along each side a corner of the arrow starts to bend: rounder than the design, by Bas's choice (2026-11-09).
+    static let arrowCut: CGFloat = 1.4
+
+    /// A polygon whose corners bend over `cut` along both sides, each bend a cubic with its handles 55 percent of
+    /// the way to the corner, close to a quarter circle.
+    static func rounded(_ corners: [CGPoint], cut: CGFloat) -> CGPath {
+        let toward = { (from: CGPoint, to: CGPoint, distance: CGFloat) -> CGPoint in
+            let length = hypot(to.x - from.x, to.y - from.y)
+            return CGPoint(x: from.x + (to.x - from.x) * distance / length, y: from.y + (to.y - from.y) * distance / length)
+        }
+        let mix = { (from: CGPoint, to: CGPoint, t: CGFloat) in CGPoint(x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t) }
+        let path = CGMutablePath()
+        for index in corners.indices {
+            let corner = corners[index]
+            let entry = toward(corner, corners[(index + corners.count - 1) % corners.count], cut)
+            let exit = toward(corner, corners[(index + 1) % corners.count], cut)
+            if index == 0 {
+                path.move(to: entry)
+            } else {
+                path.addLine(to: entry)
+            }
+            path.addCurve(to: exit, control1: mix(entry, corner, 0.55), control2: mix(exit, corner, 0.55))
+        }
+        path.closeSubpath()
+        return path
     }
 
     /// An ellipse from four quarter arcs, starting at the upper left.

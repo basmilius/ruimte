@@ -30,10 +30,9 @@ struct OutlineTests {
         #expect(gaps.max()! - gaps.min()! < 0.05)
     }
 
-    @Test func theArrowStartsAtItsTip() {
+    @Test func theArrowStartsAtItsRoundedTip() {
         let tip = PhantomForm.arrow.outline.points[0]
-        #expect(abs(tip.x - 4) < 0.001)
-        #expect(abs(tip.y - 3.5) < 0.001)
+        #expect(hypot(tip.x - 4, tip.y - 3.5) < 1)
     }
 
     @Test func theHandAndTheBeamCenterOnTheHotspot() {
