@@ -100,12 +100,10 @@ export function countTurn(provider: string, model?: string | null, mode?: string
     }
 }
 
-/* A turn that stopped on a usage limit of its provider. */
 export function countLimit(provider: string): void {
     countUsage(`limits.${usageProviderOf(provider)}`);
 }
 
-/* The time from a turn's start to its first words, per provider. */
 export function recordFirstToken(provider: string, ms: number): void {
     recordTiming(`firstTokenMs.${usageProviderOf(provider)}`, ms);
 }

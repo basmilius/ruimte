@@ -134,7 +134,6 @@ describe('AddressLimiter', () => {
             expect(limiter.admit('192.168.1.30')).toBe(true);
         }
         expect(limiter.admit('192.168.1.30')).toBe(false);
-        // Another address is counted on its own.
         expect(limiter.admit('192.168.1.31')).toBe(true);
         limiter.release('192.168.1.30');
         expect(limiter.admit('192.168.1.30')).toBe(true);

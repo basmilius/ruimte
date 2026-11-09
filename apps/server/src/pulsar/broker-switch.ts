@@ -13,7 +13,6 @@ interface BrokerSwitchOptions {
     log?: Pick<Console, 'log'>;
 }
 
-/* What a client is told about this machine's broker. */
 interface BrokerDescription {
     brokerUrl: string | null;
     /* True when a flag or the environment decides, so a client's setting is kept but changes nothing. */

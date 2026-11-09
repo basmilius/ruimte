@@ -9,7 +9,6 @@ import { defineTool, type Tool, type ToolCall } from './tool.ts';
 
 type ApprovalKind = 'chat' | 'command' | 'launch' | 'routine' | 'mode';
 
-/* One thing that waits for a person, in a project. */
 interface ApprovalItem {
     kind: ApprovalKind;
     projectId: string;

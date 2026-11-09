@@ -167,7 +167,6 @@ export interface SessionManagerOptions {
 export interface CommandGate {
     /* May settle later, while an approval from before the cwd was bound moves to this cwd on disk. */
     approved(sessionId: string, command: string, cwd: string): boolean | Promise<boolean>;
-    /* Writes down that a person let this node type this command in this folder. */
     approve(sessionId: string, command: string, cwd: string): Promise<void>;
 }
 
@@ -271,7 +270,6 @@ export class SessionManager {
         this.personShell = options.personShell ?? (() => defaultShell(this.env, this.platform));
     }
 
-    /* The session a hook or context token belongs to. */
     sessionIdForToken(token: string): string | null {
         return this.tokens.get(token) ?? null;
     }
@@ -525,7 +523,6 @@ export class SessionManager {
         return `& '${bash.replaceAll("'", "''")}' -l '${script.replaceAll("'", "''")}'`;
     }
 
-    /* A hook POST from a CLI inside one of the shells; the token says which one. */
     async applyHook(kind: AgentKind, token: string, body: unknown): Promise<HookResult> {
         const sessionId = this.tokens.get(token);
         const session = sessionId === undefined ? undefined : this.sessions.get(sessionId);
@@ -585,7 +582,6 @@ export class SessionManager {
         return 'applied';
     }
 
-    /* Types the CLI's resume command into the shell of a session whose agent is known but not running. */
     async resumeAgent(sessionId: string): Promise<void> {
         const session = this.require(sessionId);
         const { kind } = this.resumableAgent(session);
@@ -611,7 +607,6 @@ export class SessionManager {
         session.write(`${line}\n`);
     }
 
-    /* The agent of a running session that a resume may start again. */
     private resumableAgent(session: Session): AgentInfo {
         if (session.exited) {
             throw new SessionError('session-exited', `Session ${session.id} has ended`);
@@ -746,7 +741,6 @@ export class SessionManager {
         session.kill();
     }
 
-    /* A signal to the shell of a session that still runs; a session that ended takes none. */
     signal(sessionId: string, signal: 'SIGINT' | 'SIGTERM' | 'SIGKILL'): void {
         const session = this.sessions.get(sessionId);
         if (!session || session.exited) {
@@ -832,7 +826,6 @@ export class SessionManager {
         }
     }
 
-    /* The note about the tools a CLI of this session starts with. */
     private noteFor(sessionId: string): string {
         return toolsNote({
             depth: this.depthOf(sessionId),
@@ -1123,7 +1116,6 @@ export class SessionManager {
         this.broadcast({ event: 'session.list-changed', payload: {} });
     }
 
-    /* Every client watching sessions, and the parts of the daemon that observe them beside. */
     private broadcast(event: SessionEvent): void {
         this.sinks.emit(event);
         for (const observer of this.observers) {

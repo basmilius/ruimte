@@ -35,7 +35,6 @@ export function workOf(facts: WorkFacts): MachineWork {
     return { terminals, agents };
 }
 
-/* A child count over one reading of the process table. */
 export function childCounter(processes: readonly { pid: number; ppid: number; path?: string | null }[]): (pid: number) => number {
     const byPid = new Map(processes.map((entry) => [entry.pid, entry]));
     // Git for Windows's `bin\bash.exe` only starts `usr\bin\bash.exe`, the real shell, so that one is not work and what it runs counts for the launcher.

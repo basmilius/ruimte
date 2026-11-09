@@ -7,7 +7,6 @@ interface ParkedNoteDeps {
     madeBy(nodeId: string): string | null;
     titleFor(nodeId: string): string | null;
     note(chatId: string, text: string): Promise<void>;
-    /* Raises attention on a node, for a person who has to step in. */
     alert(nodeId: string, body: string): void;
 }
 

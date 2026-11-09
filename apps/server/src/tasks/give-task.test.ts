@@ -61,7 +61,6 @@ async function boot(): Promise<Daemon> {
     return daemon;
 }
 
-/* The turns naming this task id, which is how a turn says what it is for. */
 function turnsFor(daemon: Daemon, chatId: string, taskId: string): ChatTurnItem[] {
     return turnsOf(daemon, chatId).filter((turn) => (turn.taskIds ?? []).includes(taskId));
 }

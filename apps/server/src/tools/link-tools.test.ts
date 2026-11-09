@@ -180,7 +180,6 @@ describe('link delete', () => {
         expect(lines).toEqual([`deleted\t${edge}\t${note}\t${other}\tplan`]);
         // What node new drew from the caller into each of them stays; only the line this named went.
         expect(await edgeIds()).toHaveLength(2);
-        // Both ends stay.
         expect((await fx.canvasOnDisk()).nodes.map((node) => node.id)).toContain(note);
     });
 
@@ -242,7 +241,6 @@ describe('link delete', () => {
         const note = await newNode('note');
         const mine = await madeId(fx.invoke('link_new', { to: note }));
         expect((await fx.invoke('link_delete', { edge_id: ['nope'] })).lines.slice(1)).toEqual([`edge\t${mine}\tterm-1\t${note}\t`]);
-        // A node id is not a line id.
         expect((await fx.invoke('link_delete', { edge_id: [note] })).lines[0]).toBe(`refused\tunknown-edge\t${note} is not a line on main`);
     });
 

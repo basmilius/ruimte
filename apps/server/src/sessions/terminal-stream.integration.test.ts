@@ -385,7 +385,6 @@ async function replay(segment: Pick<Segment, 'screen' | 'output'>): Promise<numb
     return lines.filter((line) => /^\d+$/.test(line)).map(Number);
 }
 
-/* Every place a run of numbers skips or repeats one. */
 function breaksIn(numbers: number[]): string[] {
     const found: string[] = [];
     for (let i = 1; i < numbers.length; i++) {

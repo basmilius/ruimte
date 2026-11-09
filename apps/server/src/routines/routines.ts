@@ -49,7 +49,6 @@ export interface AgentRunStart {
     brief?: string;
 }
 
-/* The project folder a command runs in, and what it printed when it ended. */
 export interface CommandResult {
     exitCode: number;
     output: Uint8Array;
@@ -70,7 +69,6 @@ interface RoutineDeps {
     agents: {
         start(start: AgentRunStart): Promise<void>;
         info(chatId: string): ChatInfo | undefined;
-        /* Whether a start of this chat is still owed. */
         starting(chatId: string): boolean;
         /* Opens a turn in a chat a person already has; false while it is in one, or gone. */
         continueIn(chatId: string, message: RunMessage, routine: AgentRoutine): Promise<boolean>;
@@ -527,7 +525,6 @@ export class Routines {
         return this.deps.approvals.has(folder, approvalKey(stored.routine.id), digestOf(stored.routine));
     }
 
-    /* Whether the newest run that started still runs or waits on a person. */
     private busy(projectId: string, routineId: string): boolean {
         const latest = this.deps.runs.of(projectId, routineId).find((run) => run.state !== 'skipped');
         return latest !== undefined && LIVE.has(this.liveState(latest).state);

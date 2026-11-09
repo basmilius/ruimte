@@ -64,7 +64,6 @@ class FakePty implements PtyProcess {
         this.exitCallback = callback;
     }
 
-    /* Output as if the program in the PTY printed it. */
     emit(text: string): void {
         this.emitBytes(encoder.encode(text));
     }

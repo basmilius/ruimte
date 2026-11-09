@@ -63,7 +63,6 @@ export class SecretService {
         return this.requests.decline(requestId);
     }
 
-    /* A chat that stops takes its cards down. */
     observe(event: SessionEvent): void {
         if (event.event !== 'chat.event') {
             return;
@@ -74,7 +73,6 @@ export class SecretService {
         }
     }
 
-    /* A turn that ends or a node that closes takes its cards down. */
     follow(lifecycle: NodeLifecycle): void {
         lifecycle.on('turnEnded', (chatId) => this.requests.turnEnded(chatId));
         lifecycle.on('closed', (nodeId) => this.nodeClosed(nodeId));

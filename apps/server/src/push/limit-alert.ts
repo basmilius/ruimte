@@ -2,7 +2,6 @@ import type { UsageWindow } from '@ruimte/contracts';
 
 const MINUTE_MS = 60_000;
 
-/* What the push of a chat stopped on its plan's usage limit says about the account and its plan. */
 export interface LimitContext {
     providerName: string;
     accountLabel: string;

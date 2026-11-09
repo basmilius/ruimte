@@ -51,7 +51,6 @@ function typed(sessionId: string): string {
     return harness.adapter.forSession(sessionId).typed;
 }
 
-/* A request as a client sends it, answered by the handlers the daemon registers. */
 async function request(type: string, payload: unknown): Promise<ServerFrame> {
     const dispatcher = new Dispatcher();
     sessionArea(sessionDepsWith(harness.manager)).handlers?.(dispatcher);

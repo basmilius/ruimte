@@ -297,7 +297,6 @@ function startMeters(active: Sentry): void {
     meter = window;
 }
 
-/* Starts reporting for the serving daemon (`daemonClientOptions`). */
 export async function startTelemetry(current: TelemetrySettings): Promise<void> {
     const loaded = await import('@sentry/bun');
     const redactions = (): string[] => [...secrets, ...projectRedactions];
@@ -452,7 +451,6 @@ export async function stopTelemetry(): Promise<void> {
     await sentry?.close(FLUSH_MS);
 }
 
-/* The last lines of a process's stderr, kept for a report of its exit. */
 export class StderrTail {
     private readonly lines: string[] = [];
     private readonly size: number;

@@ -39,7 +39,6 @@ export interface IceTarget {
     credential?: string;
 }
 
-/* Every URL of the servers as one target each; a URL this cannot read is left out. */
 export function iceTargets(servers: readonly IceServer[]): IceTarget[] {
     return servers.flatMap((server) =>
         (Array.isArray(server.urls) ? server.urls : [server.urls]).flatMap((url) => {
@@ -76,7 +75,6 @@ export function parseIceUrl(url: string): IceTarget | null {
     return { kind, transport, host, port, url: url.trim() };
 }
 
-/* One request and its answer over one transport; a probe is a short conversation over a single exchanger. */
 export interface StunExchange {
     ask(request: Uint8Array, transactionId: Uint8Array): Promise<StunMessage>;
     close(): void;

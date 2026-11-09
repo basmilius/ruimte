@@ -35,7 +35,6 @@ export function approvalOf(entry: RoutineEntry): string {
     return entry.held === undefined ? 'declined' : 'held';
 }
 
-/* A run's state, with why it was skipped after a colon. */
 export function runStateOf(run: RoutineRun): string {
     return run.skipped === undefined ? run.state : `${run.state}:${run.skipped}`;
 }

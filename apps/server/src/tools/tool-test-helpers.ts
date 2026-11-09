@@ -9,7 +9,6 @@ import { runTool, type ToolCaller } from './tool.ts';
 export interface ToolAnswer {
     refused: boolean;
     lines: string[];
-    /* The pngs the tool handed back as image content. */
     images: string[];
 }
 

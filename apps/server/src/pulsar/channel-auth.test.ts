@@ -8,7 +8,6 @@ const SECRET = 'the-local-secret';
 const DAEMON_ID = 'daemon-1';
 const BINDING = 'binding';
 
-/* A channel that records what the daemon sends and whether it turned deflate on, and hands the proof in. */
 function fakeChannel(): { channel: DirectChannel; sent: string[]; compressionAtSend: boolean[]; deflating: () => boolean; answer(frame: object): void } {
     const sent: string[] = [];
     const compressionAtSend: boolean[] = [];

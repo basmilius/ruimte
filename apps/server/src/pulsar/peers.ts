@@ -18,7 +18,6 @@ interface DirectPeersOptions {
     hostAddresses: string[];
     /* The handshake on a channel that just opened; null refuses it. */
     authenticate(channel: DirectChannel, binding: string, remoteAddress: string | null): Promise<ClientAccess | null>;
-    /* A channel that passed the handshake, for the connection opener. */
     open(channel: DirectChannel, access: ClientAccess): void;
     attemptTimeoutMs?: number;
     log?: Pick<Console, 'log' | 'warn'>;

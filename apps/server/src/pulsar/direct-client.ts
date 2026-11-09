@@ -60,7 +60,6 @@ interface Pending {
  */
 export class DirectClient {
     readonly connectionId = randomBytes(12).toString('base64url');
-    /* How long the channel took to open and to pass the handshake, once it has. */
     readonly timings = { channelOpenMs: 0, authenticatedMs: 0 };
     private readonly options: DirectClientOptions;
     private readonly peer: RTCPeerConnection;

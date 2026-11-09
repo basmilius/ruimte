@@ -27,7 +27,6 @@ export interface ToolCaller extends AgentCall {
     uploads?: ArtifactUploads;
 }
 
-/* What a tool runs with, which `runTool` gives it. */
 export interface ToolCall extends ToolCaller {
     /* Hands back a png this call wrote, which goes back as image content; a path in the answer's text never does. */
     image(path: string): void;
@@ -83,7 +82,6 @@ export const TAIL_INPUT = z
     .positive('tail needs a positive whole number')
     .optional();
 
-/* A required text field of `tool`, trimmed and capped at `max` characters. */
 export function textInput(tool: string, name: string, max: number, what: string): z.ZodString {
     const needs = `${tool} needs ${name}, ${what}`;
 

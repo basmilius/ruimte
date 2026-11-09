@@ -142,7 +142,6 @@ export function box(id: string, x: number, y: number, extra: Partial<ProjectNode
     };
 }
 
-/* The revision on the last line of a list. */
 export function revisionOf(lines: string[]): number {
     return Number(lines.at(-1)!.split('\t')[1]);
 }
@@ -425,7 +424,6 @@ export class CanvasFixture {
         return { rev, changed };
     }
 
-    /* The column of `view_list` at this index, per view id. */
     async viewListColumn(index: number, token = 'term'): Promise<Record<string, string>> {
         return Object.fromEntries(
             (await this.invoke('view_list', {}, token)).lines

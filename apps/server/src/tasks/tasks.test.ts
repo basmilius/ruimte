@@ -169,7 +169,6 @@ describe('a task wakes the chat that gave it', () => {
         expect(daemon.outbox.list().map((entry) => entry.kind)).toEqual(['wake-parent', 'wake-parent', 'wake-parent']);
         expect(wakeTurns(daemon)).toEqual([]);
 
-        // The lead ends its turn.
         daemon.chats.cancel('chat-lead');
         await untilWoken(daemon);
         await daemon.worker.settled();

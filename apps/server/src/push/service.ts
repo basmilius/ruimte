@@ -58,11 +58,9 @@ interface PushServiceOptions {
     schedule?: (delayMs: number, run: () => void) => () => void;
     limitContext?: (chatId: string) => LimitContext | null;
 
-    /* The clock the end of quiet hours waits on. */
     clock?: Clock;
 }
 
-/* What shapes one delivery besides the alert itself. */
 interface Delivery {
     /* Someone asked for this alert (`alert` tool), so quiet hours do not hold it. */
     asked?: boolean;
@@ -80,7 +78,6 @@ interface ChatLimit {
     account: string;
 }
 
-/* What the push side reads of `SnoozeStore`. */
 interface Snoozes {
     isSnoozed(nodeId: string): boolean;
     noteStatus(nodeId: string, needsYou: boolean): void;
@@ -173,7 +170,6 @@ export class PushService {
     private machineStartedAt = 0;
     private readonly machineActivityStates = new Map<string, string>();
     private readonly pending = new Set<Promise<void>>();
-    /* The clients a person is at, by client id, with the end of each report's lease. */
     private readonly presentClients = new Map<string, number>();
     private held: HeldAlert[] = [];
     private cancelRelease: (() => void) | null = null;
@@ -422,7 +418,6 @@ export class PushService {
         return this.options.snoozes?.isSnoozed(nodeId) ?? false;
     }
 
-    /* The hours a device is quiet in right now, else null. */
     private quietHoursOf(subscription: PushSubscribePayload): QuietHours | null {
         const hours = subscription.quietHours;
 
@@ -472,7 +467,6 @@ export class PushService {
         }
     }
 
-    /* Whether a node still exists and still asks for a person. */
     private waiting(nodeId: string): boolean {
         return this.activityNodes().find((node) => node.nodeId === nodeId)?.status === 'needs-you';
     }

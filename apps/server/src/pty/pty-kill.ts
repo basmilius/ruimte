@@ -6,7 +6,6 @@ export interface PtyKillTarget {
     signal(signal: NodeJS.Signals): void;
 }
 
-/** Starts a command and leaves it running; `exited` settles when it ends. */
 export type KillSpawner = (argv: string[]) => { readonly exited: Promise<unknown> };
 
 export interface PtyKill {

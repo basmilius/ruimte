@@ -9,7 +9,6 @@ type GateOutcome = 'passed' | 'refused' | 'dropped';
 interface SignalGateOptions {
     /* The daemon's own key from `endpoint.json`, which every signal for this machine is signed to. */
     publicKey: string;
-    /* Whether a client key is one this machine already let in. */
     isPaired(publicKey: string): Promise<boolean>;
     /* What an offer from a key the machine does not know gets for the statement it carries (`StatementGate`); without it no statement is taken. */
     admitStatement?(publicKey: string, access: SignalOfferAccess): Promise<StatementVerdict>;

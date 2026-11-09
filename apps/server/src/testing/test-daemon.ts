@@ -248,12 +248,10 @@ export async function releasedProject(
     return { root, home, folder, store, projectId };
 }
 
-/* Everything in the thread of a chat, in order. */
 export function itemsOf(daemon: Pick<TestDaemon, 'chats'>, chatId: string): ChatItem[] {
     return daemon.chats.get(chatId)?.thread.list() ?? [];
 }
 
-/* The turns in the thread of a chat. */
 export function turnsOf(daemon: Pick<TestDaemon, 'chats'>, chatId: string): ChatTurnItem[] {
     return itemsOf(daemon, chatId).filter((item): item is ChatTurnItem => item.kind === 'turn');
 }
