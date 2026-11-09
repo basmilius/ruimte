@@ -1,12 +1,22 @@
 import { definitionRunsProgram, type ServiceManager } from '@adecore/service';
 import { isIdle, type BuildIdentity, type MachineWork } from '@ruimte/contracts';
 import type { DaemonCrash, DaemonOwner, PendingRestart, ServiceSupport, ShellServiceState } from '@ruimte/desktop-bridge';
+import type { MachineHealth } from '@ruimte/service/health';
 import type { ShellProblem } from '../telemetry';
 import { serviceOwnership } from './ownership';
 import type { KeepRunningSetting } from './settings';
 
 /* What answers the port: nothing, a Ruimte daemon that holds it and has not finished wiring itself, or one that is ready. */
 export type ProbedPort = { kind: 'free' } | { kind: 'starting' } | { kind: 'ready'; build: BuildIdentity };
+
+/* The port as the daemon's `/health` tells it, or free when nothing answered. */
+export function probedPortOf(health: MachineHealth | null): ProbedPort {
+    if (health === null) {
+        return { kind: 'free' };
+    }
+
+    return health.starting ? { kind: 'starting' } : { kind: 'ready', build: { version: health.version, build: health.build } };
+}
 
 export interface ServiceControllerDeps {
     support: ServiceSupport;

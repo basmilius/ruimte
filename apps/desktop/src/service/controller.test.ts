@@ -7,7 +7,7 @@ import type { BuildIdentity, MachineWork } from '@ruimte/contracts';
 import type { ServiceSupport, ShellServiceState } from '@ruimte/desktop-bridge';
 import { daemonServiceSpec } from '@ruimte/service/host';
 import type { ShellProblem } from '../telemetry';
-import { createServiceController, type ProbedPort, type ServiceControllerDeps } from './controller';
+import { createServiceController, probedPortOf, type ProbedPort, type ServiceControllerDeps } from './controller';
 import { keepRunningSetting, serviceSupport, type KeepRunningSetting } from './settings';
 
 const EXPECTED: BuildIdentity = { version: '0.1.0', build: 'new' };
@@ -179,6 +179,16 @@ function setup(options: {
     };
     return { controller: createServiceController(deps), fake, events, deps, machine, clock, published, reports, crash, advance };
 }
+
+describe('the port as its health tells it', () => {
+    test('is free without an answer, starting while the daemon wires itself, and ready with the build it runs once it is up', () => {
+        const health = { version: '1.2.3', build: 'abc', service: true, starting: false };
+
+        expect(probedPortOf(null)).toEqual({ kind: 'free' });
+        expect(probedPortOf({ ...health, starting: true })).toEqual({ kind: 'starting' });
+        expect(probedPortOf(health)).toEqual({ kind: 'ready', build: { version: '1.2.3', build: 'abc' } });
+    });
+});
 
 describe('start', () => {
     test.each([
