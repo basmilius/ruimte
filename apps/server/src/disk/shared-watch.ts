@@ -71,7 +71,6 @@ export class SharedWatch implements WatchSeams {
         return handle;
     }
 
-    /* Told the directories every burst touched, whoever watched them. */
     onBurst(listener: (paths: readonly string[]) => void): () => void {
         this.burstListeners.add(listener);
         return () => {

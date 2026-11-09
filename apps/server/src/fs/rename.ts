@@ -33,7 +33,6 @@ async function realSource(path: string): Promise<string> {
     return real;
 }
 
-/* The real place the folder of a new path will have: the deepest folder that exists along it, with the names below it that do not yet. */
 async function realTarget(path: string): Promise<string> {
     const { at, missing } = await deepestEntry(dirname(path), (place) => lstat(place).catch(() => null), path);
     const base = await realOrNull(at);
@@ -98,7 +97,6 @@ async function throughSpareName(source: string, target: string, move: Rename): P
     }
 }
 
-/* The device of the deepest folder that exists along `path`, which is where a move to it lands. */
 async function deviceOfPlace(path: string): Promise<number> {
     return (await deepestEntry(dirname(path), (place) => stat(place).catch(() => null), path)).entry.dev;
 }
@@ -107,7 +105,6 @@ function trashReplaced(path: string, original: string): Promise<void> {
     return trashPath(path, undefined, undefined, undefined, original);
 }
 
-/* A move that passed every check; `run` makes it. */
 interface RenamePlan {
     run(): Promise<void>;
 }

@@ -236,7 +236,6 @@ export async function readStatus(cwd: string, now: number = Date.now()): Promise
     return root === null ? noRepository() : await readStatusAt(root, LEAVE_NOTHING_OUT, now);
 }
 
-// Read from here by a caller outside this folder.
 export { repositoryRoot };
 
 /* What a folder outside any repository reads as. */
@@ -244,7 +243,6 @@ export function noRepository(): GitStatus {
     return { ...EMPTY, files: [] };
 }
 
-/* `readStatus` for a root `repositoryRoot` already found. */
 export async function readStatusAt(root: string, leftOut: LeftOut = LEAVE_NOTHING_OUT, now: number = Date.now()): Promise<GitStatus> {
     const porcelain = await readGit(['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all', ...leavingOut(await leftOut(root))], root);
     if (porcelain === null) {

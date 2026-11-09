@@ -27,7 +27,6 @@ function assertLazy(surface: Lazy, what: string): void {
     }
 }
 
-/* Reads the host again whenever it changes, so a hook draws what it holds now. */
 function useHost(host: TestHost): void {
     react().useSyncExternalStore(
         (listener) => host.subscribe(listener),

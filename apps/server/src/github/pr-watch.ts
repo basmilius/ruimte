@@ -42,7 +42,6 @@ interface PrWatchOptions {
     gh: GhRunner;
     /* Where the size of a pull request comes from; one of its own over `gh` without it. */
     splits?: PrSplits;
-    /* Puts a wake in the outbox. */
     enqueue(projectId: string, chatId: string, work: OutboxWork): Promise<void>;
     entries(): OutboxEntry[];
     removeEntry(id: string): Promise<void>;

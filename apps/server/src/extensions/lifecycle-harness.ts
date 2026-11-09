@@ -18,7 +18,6 @@ export interface Hold {
     release(): void;
 }
 
-/* Every step that waits for the test, in the order they arrived. */
 class Gates {
     readonly held: Hold[] = [];
     // Labels that pass at once, for the steps a test does not mean to order.
@@ -43,7 +42,6 @@ class Gates {
         });
     }
 
-    /* The first held step of this label, and subject when given, once it arrives. */
     async next(label: string, subject?: string): Promise<Hold> {
         for (let turn = 0; turn < MAX_IDLE_TURNS; turn++) {
             const hold = this.held.find((each) => each.label === label && (subject === undefined || each.subject === subject));
@@ -167,7 +165,6 @@ class FileMap extends Map<string, string> {
     }
 }
 
-/* The host and everything around it, each in memory and behind a gate. */
 export class GatedHost {
     readonly gates = new Gates();
     readonly host: ExtensionHost;

@@ -29,7 +29,6 @@ function tarNumber(header: Uint8Array, start: number, length: number): number {
     return text === '' ? 0 : Number.parseInt(text, 8);
 }
 
-/* The `path` record of a PAX extended header, which holds the names that do not fit a ustar header. */
 function paxPath(data: Uint8Array): string | null {
     const text = UTF8.decode(data);
     for (const record of text.split('\n')) {
@@ -92,7 +91,6 @@ interface ZipRecord {
     mode: number;
 }
 
-/* Where the end-of-directory record starts in `bytes`, the tail of a zip; throws when there is none. */
 function endRecordIn(bytes: Uint8Array): DataView {
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     for (let end = bytes.length - 22; end >= 0; end--) {
@@ -103,7 +101,6 @@ function endRecordIn(bytes: Uint8Array): DataView {
     throw new Error('The archive is not a zip file');
 }
 
-/* The records of a central directory, folders included. */
 function* zipRecords(directory: Uint8Array, count: number): Generator<ZipRecord> {
     const view = new DataView(directory.buffer, directory.byteOffset, directory.byteLength);
     let cursor = 0;
@@ -165,12 +162,10 @@ export function isSingleFileFormat(format: string): format is SingleFileFormat {
     return format === 'raw' || format === 'gz';
 }
 
-/* The one file of a single-file release, saved under `name` and runnable. */
 export function readSingleFile(bytes: Uint8Array, format: SingleFileFormat, name: string): ArchiveEntry[] {
     return [{ path: name, data: format === 'gz' ? gunzipSync(bytes) : bytes, mode: 0o755 }];
 }
 
-/* A file is executable for everyone or for nobody, whatever else the archive's mode says. */
 function executableMode(mode: number): number {
     return mode & 0o111 ? 0o755 : 0o644;
 }
@@ -178,7 +173,6 @@ function executableMode(mode: number): number {
 interface ExtractOptions {
     /* Leading folders to drop from every path, such as the one GitHub wraps a commit in. */
     strip?: number;
-    /* Whether a file, by its path after the strip, is written. */
     keep?: (path: string) => boolean;
 }
 

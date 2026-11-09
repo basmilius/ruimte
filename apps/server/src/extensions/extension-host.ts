@@ -49,7 +49,6 @@ const ProtocolMessageSchema = z.discriminatedUnion('type', [
 ]);
 type ProtocolMessage = z.infer<typeof ProtocolMessageSchema>;
 
-/* A line of the process's stdout as a message, or null for anything else its code wrote there. */
 function protocolMessage(line: string): ProtocolMessage | null {
     let value: unknown;
 

@@ -158,7 +158,6 @@ const MACHINE_ACTIONS: { [Name in Exclude<ExtensionActionName, 'artifact.publish
     'device.launch': entry('device.launch', { input: (input) => ({ ...node(input), app: input.app }), output: ({ nodeId }) => ({ node: { id: nodeId } }) })
 };
 
-/* What an action answered, or the refusal an extension reads when it did not run. */
 export function outputOf<Action extends ActionName>(result: ActionResult<Action>): ActionOutput<Action> {
     if (result.status === 'failed') {
         throw asExtensionRefusal(new CodedError(result.error.code, result.error.message));
@@ -196,7 +195,6 @@ async function publishOf(input: ExtensionActionInput<'artifact.publish'>, publis
     return { artifact: artifactOf(artifact), version: { id: version.versionId, number: version.number }, existing: result.existing };
 }
 
-/* An action an extension names, with an input of its own shape, translated to the machine's action and back. */
 export async function runMachineAction(name: string, input: unknown, execute: ExecuteAction, publish: PublishFiles): Promise<unknown> {
     if (!isExtensionActionName(name)) {
         throw new ExtensionRefusal('not-found', `An extension cannot ask for ${name}`);

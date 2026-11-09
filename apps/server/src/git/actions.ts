@@ -44,7 +44,6 @@ export class Job {
 interface StepOptions {
     /* The executable to run; only the pull request step is not git itself. */
     command?: string;
-    /* Milliseconds a step that talks to a remote may take before the daemon ends it. */
     timeout?: number;
 }
 
@@ -369,13 +368,11 @@ async function checkoutArgs(top: string, ref: string): Promise<string[]> {
     return ['checkout', '--end-of-options', ref];
 }
 
-/* Whether the branch and its upstream have each gained commits the other lacks. */
 async function diverged(cwd: string): Promise<boolean> {
     const counts = (await git(['rev-list', '--left-right', '--count', '@{upstream}...HEAD'], cwd))?.trim().split(/\s+/);
     return Number.parseInt(counts?.[0] ?? '', 10) > 0 && Number.parseInt(counts?.[1] ?? '', 10) > 0;
 }
 
-/* Whether the working tree holds anything a checkout would have to carry over or lose. */
 export async function isDirty(cwd: string): Promise<boolean> {
     const { code, stdout } = await runGit(['status', '--porcelain'], cwd, { env: READ_ONLY_GIT });
     return code === 0 && stdout.trim() !== '';

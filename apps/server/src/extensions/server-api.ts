@@ -19,7 +19,6 @@ interface ServerClock {
     every(ms: number, run: () => Promise<void>): void;
 }
 
-/* What `server/` says to the daemon without waiting for an answer. */
 export type ServerMessage =
     | { type: 'tool'; name: string; description: string; parameters: unknown }
     | { type: 'subscribe'; name: string }
@@ -46,11 +45,8 @@ export class MissingHandler extends Error {}
 
 export interface ServerCore {
     server: typeof PublicServer;
-    /* An agent's call of a tool `defineAgentTool` named. */
     runTool(name: string, input: unknown, context: { caller: string }): unknown;
-    /* What `defineNodeContext` reads of a node, or nothing for a type without a reader. */
     readNodeContext(nodeType: string, data: unknown): unknown;
-    /* Hands a machine event to the listeners of `onEvent`. */
     deliver(name: string, payload: unknown): void;
 }
 
@@ -80,7 +76,6 @@ export function ownValue(values: Readonly<Record<string, unknown>>, key: string)
     return Object.hasOwn(values, key) ? values[key] : undefined;
 }
 
-/* A method of the default export of `server/index.ts`, as the client calls it. */
 export function callHandler(handlers: Readonly<Record<string, unknown>>, method: string, args: unknown[]): unknown {
     const handler = Object.hasOwn(handlers, method) ? handlers[method] : undefined;
 
@@ -102,7 +97,6 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
         machine: {
             platform: options.platform,
             dataFolder: options.dataFolder,
-            // An action of the machine in a project, within what the manifest asks for.
             run: <Name extends PublicServer.MachineActionName>(project: Ref, action: Name, input: PublicServer.MachineInput<Name>) =>
                 typed<PublicServer.MachineOutput<Name>>('action', [project.id, action, input ?? {}])
         },

@@ -18,7 +18,6 @@ function sharedOn(platform: NodeJS.Platform): SharedWatch {
     return watch;
 }
 
-/* What a listener heard, as `filename` per event. */
 function heard(): { names: Array<string | null>; listener: (event: string, filename: string | null) => void } {
     const names: Array<string | null> = [];
     return { names, listener: (_event, filename) => names.push(filename) };

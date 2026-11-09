@@ -18,7 +18,6 @@ function block(label: string, lines: readonly string[]): string {
 
 interface ResolvePrompt {
     prompt: string;
-    /* The blocks the prompt asks about, by index. */
     asked: number[];
     /* The conflicts left out because they would not fit; those stay with the person. */
     skipped: number[];

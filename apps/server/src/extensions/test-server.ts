@@ -126,7 +126,6 @@ interface Scheduled {
     run(): Promise<void>;
 }
 
-/* One machine of a test: what `server/` was given, and what it did with it. */
 class TestMachine {
     readonly id: string;
     readonly storage: Record<string, Json>;

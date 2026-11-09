@@ -24,7 +24,6 @@ function holdsOpenFolder(home: string, folder: string): boolean {
     return folder === homeFolder(home, 'chats') || openHomeFolders(home).some((open) => isBelow(folder, open));
 }
 
-/* Every entry under `folder` that is the machine's state, as high up as the open folders allow. */
 async function machineStateUnder(home: string, folder: string): Promise<string[]> {
     const entries = await readdir(folder, { withFileTypes: true }).catch(() => []);
     const found = await Promise.all(
@@ -46,7 +45,6 @@ export interface MachineHomePolicy {
 
 export const NO_MACHINE_HOME: MachineHomePolicy = { homes: [] };
 
-/* Whether an absolute, resolved path is the machine's own state under either name of the home. */
 export function isMachineStatePath(policy: MachineHomePolicy, path: string): boolean {
     return policy.homes.some((home) => isMachineState(home, path));
 }

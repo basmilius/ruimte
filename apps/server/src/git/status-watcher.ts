@@ -33,7 +33,6 @@ interface RootWatch {
     /* The working tree, and the common git directory when it lies outside it. */
     dirs: string[];
     watchers: DirectoryWatcher[];
-    /* The paths that moved since the last flush, absolute. */
     touched: Set<string>;
     settle: Settled;
     /* What was last published, so an unchanged status is not sent again. */
@@ -44,7 +43,6 @@ interface RootWatch {
     spelled: Map<string, string>;
 }
 
-/* A path under `root` as a folder that spells the root `spelled` names it. */
 function respell(path: string, root: string, spelled: string): string {
     return spelled === root || !isWithin(root, path) ? path : spelled + path.slice(root.length);
 }
@@ -73,7 +71,6 @@ export class GitStatusWatcher {
     private readonly flights = new Map<string, Flight>();
     /* Repository roots whose last run was too slow to watch, with the moment it was. */
     private readonly degraded = new Map<string, number>();
-    /* Repository roots too big to watch, as last counted. */
     private readonly tooBig = new Set<string>();
     private readonly platform: NodeJS.Platform;
     private readonly seams: WatchSeams;

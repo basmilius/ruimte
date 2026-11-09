@@ -64,7 +64,6 @@ async function declaredName(path: string): Promise<string | undefined> {
     return (await readIdeaName(path)) ?? undefined;
 }
 
-/* The folder's own repository first, then the rest by the name a person reads. */
 function inOrder(repos: readonly GitRepo[]): GitRepo[] {
     return [...repos].sort((left, right) => {
         if ((left.kind === 'root') !== (right.kind === 'root')) {

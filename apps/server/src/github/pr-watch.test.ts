@@ -121,7 +121,6 @@ function open(closedProjects?: ReadonlySet<string>, paused?: (projectId: string)
     return store;
 }
 
-/* The text of the wake at `index`. */
 function wakeText(index = 0): string {
     return (wakes[index]!.work as { payload: { text: string } }).payload.text;
 }

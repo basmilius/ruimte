@@ -59,7 +59,6 @@ async function stagedInput(top: string): Promise<{ nameStatus: string; patch: st
     return null;
 }
 
-/* A commit message for what is staged, written by the machine's own agent CLI. */
 export async function suggestMessage(cwd: string, registry: ProviderRegistry, options: OneShotOptions = {}): Promise<GitSuggestMessageResult> {
     const top = await toplevel(cwd);
     const input = await stagedInput(top);

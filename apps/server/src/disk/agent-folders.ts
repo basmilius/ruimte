@@ -16,12 +16,10 @@ import { chatAttachmentsFolder, chatVisualsFolder, CHAT_VISUALS_SUFFIX, computer
  *   a client reads the open folders of the home and no more of it (`MachineHome`).
  */
 
-/* The pictures the machine took for an agent or a person: its shots, those of computer use and a person's captures of a device. */
 export function shotFolders(home: string): string[] {
     return [homeFolder(home, 'screenshots'), computerUseScreenshots(home), homeFolder(home, 'deviceCaptures')];
 }
 
-/* What one chat owns under the home: the files attached to it and its visuals. */
 export function chatFolders(home: string, chatId: string): string[] {
     return [chatAttachmentsFolder(home, chatId), chatVisualsFolder(home, chatId)];
 }

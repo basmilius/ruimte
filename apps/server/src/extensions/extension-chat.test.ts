@@ -301,7 +301,6 @@ describe('an extension starts a chat', () => {
     });
 });
 
-/* `target` with one method in place of its own, the rest of it as it is. */
 function withMethod<Target extends object>(target: Target, name: keyof Target, method: unknown): Target {
     return new Proxy(target, {
         get: (object, property, receiver) => (property === name ? method : Reflect.get(object, property, receiver))

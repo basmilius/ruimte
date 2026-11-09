@@ -76,7 +76,6 @@ function workSentence(branch: string, work: WorktreeWork, target: string | null)
     return `${branch} holds ${parts[0]}, ${parts[1]} and ${parts[2]}${operation}`;
 }
 
-/* The first of base, base-2, base-3 that is not taken yet. */
 export function freeBranch(base: string, taken: ReadonlySet<string>): string {
     if (!taken.has(base)) {
         return base;
@@ -165,7 +164,6 @@ export class Worktrees {
         }
     }
 
-    /* The register of a repository, by its main checkout. */
     registerOf(main: string): WorktreeRegister {
         return new WorktreeRegister(join(this.root, folderKey(main)));
     }

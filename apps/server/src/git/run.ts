@@ -121,7 +121,6 @@ export async function runGit(args: string[], cwd: string, options: GitOptions = 
     return { ...result, stdout: new TextDecoder().decode(result.stdout) };
 }
 
-/* The output of a git that succeeded, or null for every other outcome. */
 export async function git(args: string[], cwd: string, env?: Record<string, string>): Promise<string | null> {
     const { code, stdout } = await runGit(args, cwd, { env });
     return code === 0 ? stdout : null;
@@ -130,7 +129,6 @@ export async function git(args: string[], cwd: string, env?: Record<string, stri
 // A status read is a question, not a change: without this git refreshes the index and takes its lock, which fails a commit running beside it.
 export const READ_ONLY_GIT = { GIT_OPTIONAL_LOCKS: '0' };
 
-/* `git` for a read that must not take `index.lock`. */
 export function readGit(args: string[], cwd: string): Promise<string | null> {
     return git(args, cwd, READ_ONLY_GIT);
 }

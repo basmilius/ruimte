@@ -52,7 +52,6 @@ export function resolveBrowsePath(partialPath: string, cwd: string | undefined, 
     return isAbsolute(trimmed) ? resolve(trimmed) : resolve(cwd ?? home, trimmed);
 }
 
-/* The directory a browse reads and the prefix its names must start with. */
 export function browseTarget(partialPath: string, cwd: string | undefined, options: BrowseOptions = {}): { parentPath: string; prefix: string } {
     const trimmed = partialPath.trim();
     const target = resolveBrowsePath(trimmed, cwd, options);

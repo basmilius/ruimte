@@ -98,7 +98,6 @@ async function filesEndingIn(payload: FsLocatePayload, list: NonNullable<LocateD
     );
 }
 
-/* The paths that are open, in their order, up to the most an answer carries. */
 async function firstOpen(paths: Iterable<string>, open: (path: string) => Promise<boolean>): Promise<string[]> {
     const matches: string[] = [];
     for (const path of paths) {

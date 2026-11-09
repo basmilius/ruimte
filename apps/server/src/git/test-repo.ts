@@ -19,7 +19,6 @@ const TEST_GIT_CONFIG = {
 /* For a test of git alone, where no agent works in any worktree. */
 export const NO_WORKTREE_AGENTS: WorktreeAgents = { in: () => [], stop: async () => undefined };
 
-/* Runs git in a test repository and answers what it wrote to stdout; a failure throws with its stderr. */
 export async function gitIn(cwd: string, args: string[]): Promise<string> {
     const proc = Bun.spawn(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ...IDENTITY, ...TEST_GIT_CONFIG } });
     const [stdout, stderr, code] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
@@ -51,9 +50,7 @@ export async function initRepo(repo: string, files: Record<string, string>): Pro
 export interface RepoSnapshots {
     /* The one folder every test of the file works in, for the tests of a file run one after the other. */
     readonly root: string;
-    /* Remembers what the root holds now under this name. */
     take(name: string): Promise<void>;
-    /* Puts the root back to what it held at `take`. */
     restore(name: string): Promise<void>;
     dispose(): Promise<void>;
 }

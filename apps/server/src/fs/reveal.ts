@@ -22,7 +22,6 @@ export function revealCommand(path: string, isDirectory: boolean, platform: Node
     }
 }
 
-/* Shows a path in Finder, Explorer or the desktop's file manager, detached from the daemon. */
 export async function revealInFileManager(path: string, platform: NodeJS.Platform = process.platform): Promise<void> {
     let isDirectory: boolean;
     try {

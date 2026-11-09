@@ -16,7 +16,6 @@ export function isRemoteUrl(url: string): boolean {
 
 interface CloneJob {
     hold(kill: () => void): void;
-    /* Whether a cancel came in, so a failure reads as one. */
     readonly canceled: boolean;
 }
 

@@ -60,7 +60,6 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 const DOOR_PORT = PORT + 10;
 const REPO = '/work/atlas';
 const HOME = '/root/.ruimte';
-// What the machine calls a client the suite let in on a statement.
 const CLIENT_LABEL = 'Bench laptop';
 // A broker of the suite's own on this machine, which the test container dials (`compose.yml`).
 const BROKER_PORT = 4420;
@@ -76,9 +75,7 @@ interface Pending {
     reject(reason: Error): void;
 }
 
-/* The client side of the wire, small enough to be obviously right: one socket, ids and events. */
 class RemoteClient {
-    /* Whether the daemon on the other end went away, which is the whole point of the pool's tests. */
     closed = false;
     private readonly socket: WebSocket;
     private readonly pending = new Map<string, Pending>();
@@ -131,7 +128,6 @@ class RemoteClient {
         return reply;
     }
 
-    /* Everything the daemon wrote on `session.output` since the last read. */
     takeOutput(): string {
         return this.output.splice(0).join('');
     }
@@ -273,7 +269,6 @@ function statementFor(machine: Machine, clientPublicKey: string, overrides: Part
     };
 }
 
-/* A peer statement for another machine of the account to work in the container. */
 function peerStatementFor(machine: Machine, peerPublicKey: string, overrides: Partial<PeerStatement> = {}): PeerStatement {
     const key = statementKey();
     const issuedAt = Date.now();
@@ -446,7 +441,6 @@ interface OfferOptions {
     statement?: AccessStatement;
     // Offered in place of a client statement, by a machine of the account that works here.
     peer?: PeerStatement;
-    // Pings a quiet channel the way the app does.
     ping?: { idleMs?: number; timeoutMs?: number };
     // Tells the sessions of two keys apart in `auth.sessions`; they share CLIENT_LABEL otherwise.
     label?: string;
@@ -506,7 +500,6 @@ async function remoteSocket(key?: KeyPair): Promise<LetIn & { client: RemoteClie
     return { ...letIn, client: await RemoteClient.connect(letIn.ticket) };
 }
 
-/* Everything the sessions of a channel wrote so far, as the frames arrive. */
 function outputOf(channel: DirectClient): () => string {
     let output = '';
     channel.onFrame((raw) => {
@@ -661,7 +654,6 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         ];
         const script = `const codes = []; for (const [path, method] of ${JSON.stringify(doors)}) { codes.push((await fetch('http://127.0.0.1:${PORT}' + path, { method })).status); } console.log(codes.join(','));`;
         expect(await inContainer(['bun', '-e', script])).toBe('401,403,401,401,401');
-        // A wrong secret is no secret either.
         const guessed = `console.log((await fetch('http://127.0.0.1:${PORT}/machine/status', { headers: { authorization: 'Bearer guessed' } })).status);`;
         expect(await inContainer(['bun', '-e', guessed])).toBe('403');
     });

@@ -220,7 +220,6 @@ export interface DiffOptions {
     commit?: string;
     /* Worktree scope only: the index against HEAD instead of the working tree against the index. */
     staged: boolean;
-    /* Leaves changes that are whitespace alone out of the diff, counts included. */
     ignoreWhitespace: boolean;
 }
 
@@ -399,7 +398,6 @@ export async function diffFile(cwd: string, path: string, options: DiffOptions, 
 // The tree of a repository with nothing in it: what the first commit is diffed against.
 const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
-/* A commit's parent, or the empty tree for the first commit, which has none to compare with. */
 async function parentOf(top: string, commit: string): Promise<string> {
     return (await verifyRev(`${commit}^`, top)) ?? EMPTY_TREE;
 }
@@ -436,7 +434,6 @@ export async function diffCommits(top: string, from: string, to: string, leftOut
     return filesResult(diff);
 }
 
-/* A tree diff as the answer for many files at once, the counts summed over its files. */
 function filesResult(diff: ChatCheckpointDiff | null): GitDiffResult {
     const files: GitDiffFile[] = (diff?.files ?? []).map((file) => ({
         path: file.path,

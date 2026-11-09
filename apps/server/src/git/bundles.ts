@@ -86,7 +86,6 @@ export class BundleStore {
         return join(this.incoming, `${this.checked(id)}.bundle`);
     }
 
-    /* The file of a bundle this machine wrote, or null when it is gone. */
     async made(id: string): Promise<string | null> {
         if (!BundleStore.isId(id)) {
             return null;
@@ -102,7 +101,6 @@ export class BundleStore {
         return path;
     }
 
-    /* How many bundles a client holds that nobody read to the end yet. */
     heldBy(clientId: string): number {
         return [...this.madeFor.values()].filter((held) => held.clientId === clientId).length;
     }

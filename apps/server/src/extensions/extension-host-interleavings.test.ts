@@ -58,7 +58,6 @@ function pick<Value>(next: () => number, values: readonly Value[]): Value {
     return values[Math.floor(next() * values.length)] as Value;
 }
 
-/* Starts one operation without waiting for it, and keeps it until it settles. */
 function launch(run: Run, label: string, operation: () => Promise<unknown>): void {
     const promise = operation().catch(() => undefined);
 
@@ -134,7 +133,6 @@ function operate(run: Run, next: () => number, step: number, clients: Map<string
     }
 }
 
-/* Lets go of held steps in the seed's order until every operation settled. */
 async function settle(run: Run, next: () => number): Promise<void> {
     const { gates } = run.gated;
 

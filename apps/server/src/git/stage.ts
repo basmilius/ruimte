@@ -17,7 +17,6 @@ export async function stagePaths(cwd: string, paths: readonly string[]): Promise
     await gitOrThrow(['add', '--', ...literal(paths)], top);
 }
 
-/* Takes them back out again, leaving the working tree alone. */
 export async function unstagePaths(cwd: string, paths: readonly string[]): Promise<void> {
     const top = await toplevel(cwd);
     // A repository without a commit has no HEAD to restore from, so the index is emptied instead.

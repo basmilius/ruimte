@@ -70,7 +70,6 @@ const BY_NAME: Record<string, string> = {
     makefile: 'make'
 };
 
-/* The highlighter id for a file name, or undefined when nothing here recognizes it. */
 export function languageOf(name: string): string | undefined {
     const lower = name.toLowerCase();
     const dot = lower.lastIndexOf('.');

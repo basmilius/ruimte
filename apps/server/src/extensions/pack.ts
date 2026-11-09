@@ -268,7 +268,6 @@ async function buildInto(root: string, manifest: ExtensionManifest, outdir: stri
     checkIcon(outdir);
 }
 
-/* Each theme the manifest names, its thumbnail and its stylesheet, as paths inside the project. */
 function declaredFiles(root: string, manifest: ExtensionManifest): string[] {
     return (manifest.themes ?? []).flatMap((path) => {
         if (!isSafePackPath(path) || !existsSync(join(root, path))) {

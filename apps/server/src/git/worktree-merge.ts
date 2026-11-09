@@ -7,10 +7,8 @@ import { GitError, git, readGit, runGit, streamGit, verifyRev } from './run.ts';
 import { resolveBase } from './status.ts';
 import type { Worktrees } from './worktrees.ts';
 
-/* One agent whose folder is inside a worktree. */
 export interface WorktreeAgent {
     nodeId: string;
-    /* In a turn right now. */
     working: boolean;
     /* A CLI or shell is running for it, in a turn or not. */
     live: boolean;

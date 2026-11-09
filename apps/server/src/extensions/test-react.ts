@@ -25,7 +25,6 @@ export interface ReactDomClient {
 
 let nodeContext: { Provider: unknown } | null = null;
 
-/* A module the project depends on, resolved from the folder the test runs in. */
 export function fromProject<Module>(name: string): Module {
     try {
         return createRequire(join(process.cwd(), 'package.json'))(name) as Module;

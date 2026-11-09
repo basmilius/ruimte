@@ -7,7 +7,6 @@ export function sha256(data: string | Uint8Array): string {
     return new Bun.CryptoHasher('sha256').update(data).digest('hex');
 }
 
-/* Hashes a file without holding it in memory. */
 export async function sha256Of(path: string): Promise<string> {
     return (await digestStream(Bun.file(path).stream())).sha256;
 }
