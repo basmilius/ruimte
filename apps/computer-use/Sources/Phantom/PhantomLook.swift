@@ -18,14 +18,14 @@ public enum PhantomMark: Hashable, Sendable {
     case look
     /// A white wheel with a dot that runs the way it scrolls.
     case scroll
-    /// A disc with a sign in it: white for working, in its tone for the rest.
+    /// A disc in the tone of its state, with a white sign in it.
     case disc(PhantomDisc)
 }
 
 public enum PhantomDisc: String, Sendable {
-    /// White, with dark dots that wave.
+    /// Ruimte's blue, with white dots that wave.
     case dots
-    /// White, with a dark arc that turns.
+    /// Ruimte's blue, with a white arc that turns.
     case arc
     /// Amber, with a white dot that pulses.
     case waiting
@@ -84,7 +84,7 @@ public struct PhantomLook: Sendable {
         case .look:
             return PhantomLook(form: .arrow, mark: .look)
         case .think:
-            return PhantomLook(form: .arrow, mark: .disc(working == .arc ? .arc : .dots))
+            return PhantomLook(form: .arrow, tone: .working, mark: .disc(working == .arc ? .arc : .dots))
         case .waiting:
             return PhantomLook(form: .arrow, tone: .needs, mark: .disc(.waiting))
         case .permission:

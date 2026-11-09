@@ -344,7 +344,6 @@ public final class PhantomCursor {
         let mark = Layers.cursorBox(around: style.notch)
         let disc = Layers.circle(center: center, diameter: 2 * radius)
         let white = OverlayStyle.Ink.white
-        let ink = OverlayStyle.Ink.fill
         mark.addSublayer(disc)
         // The signs are drawn for a disc of radius 6 and grow with it.
         let layer = Layers.cursorBox(around: center)
@@ -356,20 +355,20 @@ public final class PhantomCursor {
         layer.addSublayer(shape)
         switch sign {
         case .dots:
-            disc.fillColor = white
+            disc.fillColor = OverlayStyle.color(.working)
             for (index, offset) in [-2.6, 0, 2.6].enumerated() {
                 let dot = Layers.circle(center: CGPoint(x: center.x + offset, y: center.y), diameter: 1.9)
-                dot.fillColor = ink
+                dot.fillColor = white
                 layer.addSublayer(dot)
                 let delay = Double(index) * timing.waveStagger
                 motion.play(.keyframes("transform.translation.y", duration: timing.wave, [(0, 0), (0.3, -1), (0.6, 0), (1, 0)], easing: .easeInOut, repeats: true, delay: delay), on: dot)
                 motion.play(.keyframes("opacity", duration: timing.wave, [(0, 0.55), (0.3, 1), (0.6, 0.55), (1, 0.55)], easing: .easeInOut, repeats: true, delay: delay), on: dot)
             }
         case .arc:
-            disc.fillColor = white
+            disc.fillColor = OverlayStyle.color(.working)
             let arc = Layers.circle(center: center, diameter: 6)
             arc.fillColor = nil
-            arc.strokeColor = ink
+            arc.strokeColor = white
             arc.lineWidth = 1.5
             arc.lineCap = .round
             arc.lineDashPattern = [10, 30]

@@ -37,6 +37,8 @@ public enum OverlayStyle {
             return .hex(0x30A46C)
         case .paused:
             return .hex(0x8E8E93)
+        case .working:
+            return .hex(0x155DFC)
         }
     }
 
@@ -147,9 +149,10 @@ public enum PhantomTheme: String, CaseIterable, Sendable {
     case dark
 }
 
-/// The colors of the signs: needs you (waiting and permission), error, done and paused. Paused is gray, not blue,
-/// so it never reads as the old accent or as a call for the person.
+/// The colors of the signs: Ruimte's blue while it thinks, needs you (waiting and permission), error, done and
+/// paused. Paused is gray, so it never reads as working or as a call for the person.
 public enum PhantomTone: String, Sendable {
+    case working
     case needs
     case error
     case done
