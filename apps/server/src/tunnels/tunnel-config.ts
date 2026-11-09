@@ -244,6 +244,36 @@ export function servedBy(rule: Record<string, unknown>): { port?: number; origin
     return { port: Number(loopback[2]), ...(Object.keys(origin).length === 0 ? {} : { origin }) };
 }
 
+/* Whether a rule takes a request for the root path of a hostname, matched the way `cloudflared` matches its ingress. */
+function takesRoot(rule: Record<string, unknown>, hostname: string): boolean {
+    const ruleHost = typeof rule.hostname === 'string' && rule.hostname !== '' ? rule.hostname : null;
+
+    if (ruleHost !== null && ruleHost !== hostname && !(ruleHost.startsWith('*.') && hostname.endsWith(ruleHost.slice(1)))) {
+        return false;
+    }
+
+    if (typeof rule.path !== 'string' || rule.path === '') {
+        return true;
+    }
+
+    try {
+        return new RegExp(rule.path).test('/');
+    } catch {
+        // Cloudflare would not have taken a path that is no regular expression, so it is no proof the rule takes nothing.
+        return true;
+    }
+}
+
+/*
+ * What Cloudflare may serve for a hostname from this ingress, as `servedBy` reads it, or null when it serves nothing: the
+ * first rule that takes its root path decides, and only a status answers without reaching an origin.
+ */
+export function servedFor(ingress: readonly Record<string, unknown>[], hostname: string): { port?: number; origin?: TunnelOrigin } | null {
+    const first = ingress.find((rule) => takesRoot(rule, hostname));
+
+    return first === undefined ? null : servedBy(first);
+}
+
 /* The catch-all every ingress ends in, which answers 404 for any other hostname. */
 export const CATCH_ALL = { service: 'http_status:404' } as const;
 

@@ -1,5 +1,5 @@
 import { cancellableTimeout, Serializer } from '@adecore/utils/async';
-import type { TunnelExisting, TunnelNamed, TunnelOrigin, TunnelOtherRule, TunnelRowKind, TunnelStage, TunnelState } from '@ruimte/contracts';
+import type { TunnelExisting, TunnelNamed, TunnelOrigin, TunnelOtherRule, TunnelRow, TunnelRowKind, TunnelStage, TunnelState } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 import type { JsonFileStore } from '../json-file-store.ts';
 import {
@@ -25,6 +25,7 @@ import {
     machineMarkOf,
     normalizedOrigin,
     servedBy,
+    servedFor,
     TunnelConfigError,
     tunnelNameOf
 } from './tunnel-config.ts';
@@ -124,6 +125,12 @@ export interface TunnelPorts {
 }
 
 type Busy = 'installing' | 'checking' | 'starting' | null;
+type Served = NonNullable<ReturnType<typeof servedBy>>;
+
+/* What the person asked of a row: on, and not on its way out. */
+function meantOn(row: StoredRow): boolean {
+    return row.enabled && row.leaving !== true;
+}
 
 interface Landing {
     sent: boolean;
@@ -160,15 +167,25 @@ export class TunnelService {
     private runsElsewhere = false;
     /* The rules on the tunnel that are not Ruimte's, from the last time Ruimte read its configuration. */
     private others: TunnelOtherRule[] = [];
-    /* Rows that do not come back after a restart; each is saved off only once Cloudflare took it off. */
-    private readonly offAfterRestart = new Set<string>();
-    /* A write may have landed while Cloudflare could not be read back, so Ruimte reads what it serves before the next change. */
-    private unsure = false;
+    /*
+     * Rows Cloudflare may serve whatever their intent says, as Ruimte last saw it, with the port and origin of a rule it
+     * could read. Only an observation: it never goes into the stored rows, and a write that held clears it.
+     */
+    private readonly serving = new Map<string, Served>();
+    /* Ruimte does not know what Cloudflare serves (a boot, or a write that may have landed unread), so it reads that before the next change. */
+    private unsure: boolean;
 
     constructor(ports: TunnelPorts) {
         this.ports = ports;
         this.stored = ports.store.read() ?? EMPTY_TUNNELS;
         this.token = ports.tokens.read();
+
+        // Nothing of what Cloudflare served before the restart is known, so every row may serve until Ruimte read it.
+        for (const row of this.stored.rows) {
+            this.serving.set(row.id, {});
+        }
+
+        this.unsure = this.stored.tunnel !== null && this.stored.rows.length > 0;
     }
 
     /* Resolves once the work a request started has ended, with any work that work started in turn. */
@@ -219,18 +236,27 @@ export class TunnelService {
                           runner: this.child !== null ? 'ruimte' : this.runsElsewhere ? 'other' : null,
                           others: this.others
                       },
-            rows: this.stored.rows.map((row) => ({
-                id: row.id,
-                kind: row.kind,
-                hostname: row.hostname,
-                port: row.port,
-                enabled: row.enabled,
-                comeBack: row.comeBack,
-                ...(row.origin === undefined ? {} : { origin: row.origin })
-            })),
+            rows: this.stored.rows.map((row) => this.shown(row)),
             mcp: { enabled: this.stored.mcp.enabled, port: this.ports.listenerPort() },
             clients: this.ports.clients(),
             suggestedMcpLabel: this.stored.tunnel === null ? null : this.stored.mcp.label
+        };
+    }
+
+    /* A row on while it is meant on or Cloudflare may serve it, with the port and origin Cloudflare serves where Ruimte read them. */
+    private shown(row: StoredRow): TunnelRow {
+        const served = this.serving.get(row.id);
+        const read = row.kind === 'dev' && served?.port !== undefined ? served : null;
+        const origin = read === null ? row.origin : read.origin;
+
+        return {
+            id: row.id,
+            kind: row.kind,
+            hostname: row.hostname,
+            port: read?.port ?? row.port,
+            enabled: meantOn(row) || served !== undefined,
+            comeBack: row.comeBack,
+            ...(origin === undefined ? {} : { origin })
         };
     }
 
@@ -533,55 +559,69 @@ export class TunnelService {
                 return;
             }
 
-            const reached = this.token !== null && (this.zones.length === 0 || this.accounts().some((account) => account.id === tunnel.account.id));
-            const api = reached ? this.api() : null;
-            const found = api === null ? undefined : await api.tunnel(tunnel.account.id, tunnel.id).catch((e: unknown) => this.unlessRefused(e));
-
-            // A token that cannot reach the tunnel's account cannot take anything off it, and the person still needs a way out.
-            if (api === null || found === undefined) {
-                await this.stopChild();
-                this.forget();
-                this.failure = `Ruimte forgot ${tunnel.name}, but its hostnames and DNS records stay in Cloudflare.`;
-
-                return;
-            }
-
-            if (found !== null) {
-                await this.commit(this.stored.rows.map((row) => ({ ...row, enabled: false })));
-            }
-
-            await this.stopChild();
-
-            // The rows stay until their rules are off as well, so a retry still knows which 404s are Ruimte's.
-            for (const row of this.stored.rows) {
-                await this.deleteRecordOf(api, row, tunnel.id);
-            }
-
-            // Another writer may put a rule of Ruimte's back, and only the rows still know it is Ruimte's to take off.
-            if (
-                found !== null &&
-                !(await this.commit(
-                    [],
-                    this.stored.rows.map((row) => row.hostname)
-                ))
-            ) {
-                const left = this.stored.rows.map((row) => row.hostname).join(', ');
-                const incomplete = new TunnelConfigError(
-                    'unlink-incomplete',
-                    `Another change to ${tunnel.name} put back the rules of ${left}, so Ruimte kept the tunnel. Try again to take them off.`
-                );
-
-                this.noteFailure(incomplete, incomplete.message);
-
-                throw incomplete;
-            }
-
-            this.forget();
-            this.failure = null;
+            // Saved before anything is deleted, so Try again finishes the unlink instead of bringing the tunnel up.
+            this.stored = { ...this.stored, tunnel: { ...tunnel, leaving: true } };
+            this.intend(this.stored.rows.map((row) => ({ ...row, enabled: false, leaving: true })));
+            await this.leave();
         });
         this.announce();
 
         return this.describe();
+    }
+
+    /* The work of an unlink, from the start or from where one that failed stopped. */
+    private async leave(): Promise<void> {
+        const tunnel = this.stored.tunnel;
+
+        if (tunnel === null) {
+            return;
+        }
+
+        const reached = this.token !== null && (this.zones.length === 0 || this.accounts().some((account) => account.id === tunnel.account.id));
+        const api = reached ? this.api() : null;
+        const found = api === null ? undefined : await api.tunnel(tunnel.account.id, tunnel.id).catch((e: unknown) => this.unlessRefused(e));
+
+        // A token that cannot reach the tunnel's account cannot take anything off it, and the person still needs a way out.
+        if (api === null || found === undefined) {
+            await this.stopChild();
+            this.forget();
+            this.failure = `Ruimte forgot ${tunnel.name}, but its hostnames and DNS records stay in Cloudflare.`;
+
+            return;
+        }
+
+        if (found !== null) {
+            await this.commit(this.stored.rows);
+        }
+
+        await this.stopChild();
+
+        // The rows stay until their rules are off as well, so a retry still knows which 404s are Ruimte's.
+        for (const row of this.stored.rows) {
+            await this.deleteRecordOf(api, row, tunnel.id);
+        }
+
+        // Another writer may put a rule of Ruimte's back, and only the rows still know it is Ruimte's to take off.
+        if (
+            found !== null &&
+            !(await this.commit(
+                this.stored.rows,
+                this.stored.rows.map((row) => row.id)
+            ))
+        ) {
+            const left = this.stored.rows.map((row) => row.hostname).join(', ');
+            const incomplete = new TunnelConfigError(
+                'unlink-incomplete',
+                `Another change to ${tunnel.name} put back the rules of ${left}, so Ruimte has not finished unlinking it. Try again to take them off and finish.`
+            );
+
+            this.noteFailure(incomplete, incomplete.message);
+
+            throw incomplete;
+        }
+
+        this.forget();
+        this.failure = null;
     }
 
     /*
@@ -595,6 +635,8 @@ export class TunnelService {
             if (tunnel === null) {
                 throw new TunnelConfigError('no-tunnel', 'Set up a tunnel first');
             }
+
+            this.refuseWhileUnlinking();
 
             const api = this.api();
 
@@ -699,19 +741,23 @@ export class TunnelService {
         const origin = normalizedOrigin(typedOrigin);
         const retargets = change.port !== undefined || change.origin !== undefined;
 
-        // An origin sent replaces the one the row had, so a setting left out goes back to Cloudflare's default.
+        // An origin sent replaces the one the row had, so a setting left out goes back to Cloudflare's default. Turning a
+        // row on that Remove left halfway keeps it after all.
         const apply = (candidate: StoredRow): StoredRow => {
-            if (typedOrigin === undefined) {
-                return { ...candidate, ...flags };
-            }
+            const { origin: previous, leaving, ...rest } = candidate;
+            const kept = typedOrigin === undefined ? previous : origin;
 
-            const { origin: _replaced, ...rest } = candidate;
-
-            return origin === undefined ? { ...rest, ...flags } : { ...rest, ...flags, origin };
+            return {
+                ...rest,
+                ...flags,
+                ...(kept === undefined ? {} : { origin: kept }),
+                ...(leaving === true && change.enabled !== true ? { leaving } : {})
+            };
         };
 
         // Decided on the row as the job finds it, since a change queued before this one may have turned it on.
         const touchesIngress = await this.changing(async () => {
+            this.refuseWhileUnlinking();
             await this.settleIfUnsure();
 
             const row = this.stored.rows.find((candidate) => candidate.id === id);
@@ -742,25 +788,29 @@ export class TunnelService {
 
             const tunnel = this.stored.tunnel;
 
-            // A row whose record was refused on add held its name with a 404 only; it serves once the record is there.
-            if (change.enabled === true && row.recordId === null && tunnel !== null) {
+            // Looked up by name whatever the row says: its record may be refused on add, or gone after a delete whose answer got lost.
+            if (change.enabled === true && tunnel !== null) {
                 await this.recordRow(this.api(), row, tunnel.id);
             }
 
             const rows = this.stored.rows.map((candidate) => (candidate.id === id ? apply(candidate) : candidate));
 
-            if (change.enabled !== undefined) {
-                this.offAfterRestart.delete(id);
-            }
-
-            if (touches) {
-                await this.commit(rows);
-            } else {
+            if (!touches) {
                 this.stored = { ...this.stored, rows };
                 this.save();
+
+                return false;
             }
 
-            return touches;
+            // Off is the person's intent before Cloudflare took it; on and a new port wait for Cloudflare, so Try again never
+            // publishes a change that failed.
+            if (rows.some((candidate) => candidate.id === id && !meantOn(candidate))) {
+                this.intend(rows);
+            }
+
+            await this.commit(rows);
+
+            return true;
         });
 
         if (touchesIngress) {
@@ -772,11 +822,36 @@ export class TunnelService {
         return this.describe();
     }
 
+    private refuseWhileUnlinking(): void {
+        const tunnel = this.stored.tunnel;
+
+        if (tunnel?.leaving === true) {
+            throw new TunnelConfigError('unlinking', `Ruimte has not finished unlinking ${tunnel.name}. Try again to finish.`);
+        }
+    }
+
+    /*
+     * Saves what the person asked of the rows. A row that goes off or leaves is saved so before Cloudflare took it, so no
+     * later write serves it again; what showed on stays on screen as what Cloudflare may serve until a write held.
+     */
+    private intend(rows: StoredRow[]): void {
+        for (const row of this.stored.rows) {
+            const next = rows.find((candidate) => candidate.id === row.id);
+
+            if (meantOn(row) && next !== undefined && !meantOn(next) && !this.serving.has(row.id)) {
+                this.serving.set(row.id, {});
+            }
+        }
+
+        this.stored = { ...this.stored, rows };
+        this.save();
+    }
+
     /* Forgets the tunnel and its rows here; nothing in Cloudflare changes. */
     private forget(): void {
         this.runsElsewhere = false;
         this.others = [];
-        this.offAfterRestart.clear();
+        this.serving.clear();
         this.unsure = false;
         this.stored = { ...this.stored, tunnel: null, rows: [] };
         this.save();
@@ -808,18 +883,35 @@ export class TunnelService {
             const api = this.api();
 
             await this.settleIfUnsure();
-            await this.commit(this.stored.rows.map((candidate) => (candidate.id === id ? { ...candidate, enabled: false } : candidate)));
-            await this.deleteRecordOf(api, row, tunnel.id);
-
-            // The 404 held the name while its record stood; with the record gone the rule goes too.
-            await this.commit(
-                this.stored.rows.filter((candidate) => candidate.id !== id),
-                [row.hostname]
-            );
+            this.intend(this.stored.rows.map((candidate) => (candidate.id === id ? { ...candidate, enabled: false, leaving: true } : candidate)));
+            await this.finishLeaving(api, tunnel.id);
         });
         await this.followUp();
 
         return this.describe();
+    }
+
+    /*
+     * Takes every leaving row off: its 404 first, so nothing catches the name while the record stands, then the record,
+     * and then the rule. A row is dropped once Cloudflare holds neither.
+     */
+    private async finishLeaving(api: CloudflareApi, tunnelId: string): Promise<void> {
+        const leaving = this.stored.rows.filter((row) => row.leaving === true);
+
+        if (leaving.length === 0) {
+            return;
+        }
+
+        await this.commit(this.stored.rows);
+
+        for (const row of leaving) {
+            await this.deleteRecordOf(api, row, tunnelId);
+        }
+
+        await this.commit(
+            this.stored.rows,
+            leaving.map((row) => row.id)
+        );
     }
 
     /* The external listener on or off. Its own switch, apart from any hostname: it also answers on loopback. */
@@ -882,10 +974,8 @@ export class TunnelService {
      * the rows that are on. Such a row shows on until Cloudflare took it off, since Cloudflare serves it until then.
      */
     async resume(): Promise<void> {
-        for (const row of this.stored.rows) {
-            if (row.enabled && !row.comeBack) {
-                this.offAfterRestart.add(row.id);
-            }
+        if (this.stored.rows.some((row) => row.enabled && !row.comeBack)) {
+            this.intend(this.stored.rows.map((row) => (row.comeBack ? row : { ...row, enabled: false })));
         }
 
         if (this.stored.mcp.enabled) {
@@ -970,10 +1060,25 @@ export class TunnelService {
         );
     }
 
-    /* Checks the tunnel, writes the hostnames to Cloudflare and starts or stops the child to match. */
+    /*
+     * Checks the tunnel, writes the hostnames to Cloudflare and starts or stops the child to match. An unlink or Remove
+     * that stopped halfway is finished first, and an unlink brings nothing up.
+     */
     private async bringUp(): Promise<void> {
         await this.checkTunnel();
         await this.settleIfUnsure();
+
+        const tunnel = this.stored.tunnel;
+
+        if (tunnel?.leaving === true) {
+            await this.leave();
+
+            return;
+        }
+
+        if (tunnel !== null) {
+            await this.finishLeaving(this.api(), tunnel.id);
+        }
 
         const refused = await this.recordRowsComingBack();
 
@@ -985,7 +1090,10 @@ export class TunnelService {
         }
     }
 
-    /* A row that comes back on without a record gets one first; one whose record fails stays off, and the first failure is said. */
+    /*
+     * A row that is on gets its record first, looked up by name, since a delete whose answer got lost may have taken it.
+     * One whose record fails goes off, and the first failure is said.
+     */
     private async recordRowsComingBack(): Promise<unknown> {
         const tunnel = this.stored.tunnel;
         let refused: unknown = null;
@@ -994,9 +1102,7 @@ export class TunnelService {
             return refused;
         }
 
-        const comingBack = this.stored.rows.filter((candidate) => candidate.enabled && candidate.recordId === null && !this.offAfterRestart.has(candidate.id));
-
-        for (const row of comingBack) {
+        for (const row of this.stored.rows.filter(meantOn)) {
             try {
                 await this.recordRow(this.api(), row, tunnel.id);
             } catch (e) {
@@ -1032,12 +1138,16 @@ export class TunnelService {
         return record.type === 'CNAME' && record.content === target && record.comment === this.recordComment();
     }
 
-    /* Creates the proxied CNAME to the tunnel, or updates the one Ruimte made earlier. */
+    /* Creates the proxied CNAME to the tunnel, or proxies the one Ruimte made earlier where it is not. */
     private async routeHostname(api: CloudflareApi, zoneId: string, hostname: string, tunnelId: string): Promise<CloudflareRecord> {
         const input = { name: hostname, content: this.targetOf(tunnelId), comment: this.recordComment() };
         const ours = await this.ourRecordNamed(api, zoneId, hostname, tunnelId);
 
-        return ours === undefined ? api.createRecord(zoneId, input) : api.updateRecord(zoneId, ours.id, input);
+        if (ours === undefined) {
+            return api.createRecord(zoneId, input);
+        }
+
+        return ours.proxied === true ? ours : api.updateRecord(zoneId, ours.id, input);
     }
 
     /* The record Ruimte made under the name earlier, if any. Any other record under the name refuses it. */
@@ -1083,23 +1193,23 @@ export class TunnelService {
     }
 
     /*
-     * Writes the rows to Cloudflare and saves them once it took them, so a row never shows off while Cloudflare may serve
-     * it. After a write that failed, or that another writer undid twice, every row takes what Cloudflare serves for it
-     * instead (`settle`). A failure keeps the screen saying why, and a child stops only when no row it shows on is left.
-     * True once Cloudflare holds the rows as written. `landing` says whether a write went out and, after a failure,
-     * which hostnames Cloudflare has a rule of Ruimte's for, or null when it could not be read.
+     * Writes the rows to Cloudflare and saves them once it took them. The rows are the person's intent; what Cloudflare
+     * serves after a write that failed, or that another writer undid twice, is only observed (`settle`) and never saved.
+     * A failure keeps the screen saying why, and a child stops only when no row is meant on or may be served. The rows
+     * of `gone` (ids of leaving rows whose record is deleted) get no rule and are dropped once that held. True once
+     * Cloudflare holds the rows as written. `landing` says whether a write went out and, after a failure, which
+     * hostnames Cloudflare has a rule of Ruimte's for, or null when it could not be read.
      */
     private async commit(rows: readonly StoredRow[], gone: readonly string[] = [], landing: Landing = { sent: false, ruled: null }): Promise<boolean> {
-        const written = rows.map((row) => (this.offAfterRestart.has(row.id) ? { ...row, enabled: false } : row));
         let held: boolean;
 
         try {
-            held = await this.syncIngress(written, gone, landing);
+            held = await this.syncIngress(rows, gone, landing);
         } catch (e) {
             this.noteFailure(e, 'Saving the hostnames did not work');
 
             if (landing.sent) {
-                landing.ruled = await this.settle(written, gone).catch(() => null);
+                landing.ruled = await this.settle(rows, gone).catch(() => null);
             }
 
             if (!this.isLive()) {
@@ -1110,7 +1220,7 @@ export class TunnelService {
         }
 
         if (!held) {
-            await this.settle(written, gone).catch((e: unknown) => {
+            await this.settle(rows, gone).catch((e: unknown) => {
                 this.noteFailure(e, 'Reading the hostnames back did not work');
 
                 throw e;
@@ -1119,11 +1229,9 @@ export class TunnelService {
             return false;
         }
 
-        for (const row of written) {
-            this.offAfterRestart.delete(row.id);
-        }
-
-        this.stored = { ...this.stored, rows: written };
+        this.serving.clear();
+        this.unsure = false;
+        this.stored = { ...this.stored, rows: rows.filter((row) => !gone.includes(row.id)) };
         this.save();
 
         return true;
@@ -1140,11 +1248,10 @@ export class TunnelService {
     }
 
     /*
-     * Reads what Cloudflare serves and takes it as the state of every row: a rule that serves is on, with its port and
-     * origin, a 404 is off. A row without a rule of its own shows on, since what catches its hostname may serve it, and
-     * the next write gives it its 404 again; a row in `gone` that `attempted` left out is gone once its rule is. The MCP
-     * row's 404 while the listener is off keeps its switch. When Cloudflare cannot be read either, a row that `attempted`
-     * turned on shows on as well, until a later read. Gives the hostnames that have a rule of Ruimte's.
+     * Reads what Cloudflare serves for each row, the way Cloudflare picks the rule, and keeps that as an observation
+     * beside the intent. A row in `gone` whose rule is gone too has left. When Cloudflare cannot be read, a row that
+     * `attempted` would have turned on may be served as well, until a later read. Gives the hostnames that have a rule
+     * of Ruimte's.
      */
     private async settle(attempted: readonly StoredRow[] = [], gone: readonly string[] = []): Promise<ReadonlySet<string>> {
         const tunnel = this.stored.tunnel;
@@ -1159,48 +1266,37 @@ export class TunnelService {
             ({ ingress } = await this.api().configuration(tunnel.account.id, tunnel.id));
         } catch (e) {
             this.unsure = true;
-            this.stored = {
-                ...this.stored,
-                rows: this.stored.rows.map((row) =>
-                    attempted.some((candidate) => candidate.id === row.id && candidate.enabled) ? { ...row, enabled: true } : row
-                )
-            };
-            this.save();
+
+            for (const row of attempted) {
+                if (meantOn(row) && !this.serving.has(row.id)) {
+                    this.serving.set(row.id, {});
+                }
+            }
 
             throw e;
         }
 
-        const listenerPort = this.stored.mcp.enabled ? this.ports.listenerPort() : null;
         const ruled = new Set(
             this.stored.rows.filter((row) => ingress.some((rule) => rule.hostname === row.hostname && rule.path === undefined)).map((row) => row.hostname)
         );
-        const isGone = (row: StoredRow): boolean =>
-            !ruled.has(row.hostname) && gone.includes(row.hostname) && !attempted.some((candidate) => candidate.id === row.id);
-        const settled = (row: StoredRow): StoredRow => {
-            const rule = ingress.find((candidate) => candidate.hostname === row.hostname && candidate.path === undefined);
+        const left = this.stored.rows.filter((row) => gone.includes(row.id) && !ruled.has(row.hostname));
 
-            if (rule === undefined) {
-                return { ...row, enabled: true };
+        this.serving.clear();
+
+        for (const row of this.stored.rows) {
+            const served = servedFor(ingress, row.hostname);
+
+            if (served !== null) {
+                this.serving.set(row.id, row.kind === 'mcp' ? {} : served);
             }
-
-            const served = servedBy(rule);
-
-            if (served === null) {
-                return row.kind === 'mcp' && listenerPort === null ? row : { ...row, enabled: false };
-            }
-
-            if (row.kind === 'mcp' || served.port === undefined) {
-                return { ...row, enabled: true };
-            }
-
-            const { origin: _replaced, ...rest } = row;
-
-            return { ...rest, enabled: true, port: served.port, ...(served.origin === undefined ? {} : { origin: served.origin }) };
-        };
+        }
 
         this.unsure = false;
-        this.stored = { ...this.stored, rows: this.stored.rows.filter((row) => !isGone(row)).map(settled) };
-        this.save();
+
+        if (left.length > 0) {
+            this.stored = { ...this.stored, rows: this.stored.rows.filter((row) => !left.includes(row)) };
+            this.save();
+        }
 
         return ruled;
     }
@@ -1244,14 +1340,15 @@ export class TunnelService {
     }
 
     /*
-     * Writes the hostnames of the rows that are on into the tunnel's ingress in Cloudflare. Ruimte owns only the rule
-     * without a path for each hostname of a row, on or off; every other rule stays as it was and where it was, and so
-     * does a catch-all someone set in the dashboard. Cloudflare takes the first rule that matches, so a rule of Ruimte's
-     * goes before the first other rule that could catch its hostname (a wildcard, or a path on any host). A hostname of a
-     * row that serves nothing always gets a 404 of its own, since its proxied record stays. The hostnames in `gone` are
-     * Ruimte's but get no rule, for a row whose record is deleted already.
-     * A write is read back, and written once more when another writer changed a rule of Ruimte's in between; false when
-     * that one did not hold either. `attempt.sent` says whether a write went out, which may have landed on a failure.
+     * Writes the rows into the tunnel's ingress in Cloudflare as the person meant them. Ruimte owns only the rule without
+     * a path for each hostname of a row, on or off; every other rule stays as it was and where it was, and so does a
+     * catch-all someone set in the dashboard. Cloudflare takes the first rule that matches, so a rule of Ruimte's goes
+     * before the first other rule that could catch its hostname (a wildcard, or a path on any host). A row that is off or
+     * leaving always gets a 404 of its own, since its proxied record stays; the rows of `gone` get no rule, their record
+     * being deleted already.
+     * A write is read back, and written once more when another writer changed a rule of Ruimte's in between or put a rule
+     * before a 404 of Ruimte's that serves the name; false when that one did not hold either. `attempt.sent` says
+     * whether a write went out, which may have landed on a failure.
      */
     private async syncIngress(rows: readonly StoredRow[], gone: readonly string[], attempt: { sent: boolean }, again = true): Promise<boolean> {
         const tunnel = this.stored.tunnel;
@@ -1262,22 +1359,23 @@ export class TunnelService {
 
         const api = this.api();
         const current = await api.configuration(tunnel.account.id, tunnel.id);
-        const managed = new Set([...rows.map((row) => row.hostname), ...gone]);
+        const managed = new Set(rows.map((row) => row.hostname));
         const isOurs = (rule: CloudflareIngressRule): boolean => typeof rule.hostname === 'string' && rule.path === undefined && managed.has(rule.hostname);
         const kept = current.ingress.filter((rule) => !isCatchAll(rule) && !isOurs(rule));
 
         this.others = kept.slice(0, MAX_OTHER_RULES).map(otherRuleOf);
         const catchAll = current.ingress.find((rule) => isCatchAll(rule)) ?? CATCH_ALL;
         const serving = ingressRules({
-            rows,
+            rows: rows.filter(meantOn),
             listenerPort: this.stored.mcp.enabled ? this.ports.listenerPort() : null,
             denied: this.ports.deniedPorts()
         });
         const served = new Set(serving.map((rule) => rule.hostname));
+        const held = rows.filter((row) => !served.has(row.hostname) && !gone.includes(row.id));
 
         // A 404 of its own also where the catch-all answers 404, since another writer may make that one serve, and only
         // a rule of Ruimte's is read back.
-        const rules: IngressRule[] = [...serving, ...rows.filter((row) => !served.has(row.hostname)).map((row) => ({ hostname: row.hostname, ...CATCH_ALL }))];
+        const rules: IngressRule[] = [...serving, ...held.map((row) => ({ hostname: row.hostname, ...CATCH_ALL }))];
 
         // Without a rule of Ruimte's before or after, a tunnel Ruimte did not make gets no write, also when it lacks a catch-all.
         if (!tunnel.created && rules.length === 0 && !current.ingress.some(isOurs)) {
@@ -1304,18 +1402,24 @@ export class TunnelService {
         // Cloudflare took the write, so a read back that fails leaves nothing to doubt.
         const after = await api.configuration(tunnel.account.id, tunnel.id).catch(() => null);
 
-        if (after === null || canonical(after.ingress.filter(isOurs)) === canonical(ingress.filter(isOurs))) {
+        if (after === null) {
+            return true;
+        }
+
+        const leaks = held.some((row) => servedFor(after.ingress, row.hostname) !== null);
+
+        if (!leaks && canonical(after.ingress.filter(isOurs)) === canonical(ingress.filter(isOurs))) {
             return true;
         }
 
         return again && this.syncIngress(rows, gone, attempt, false);
     }
 
-    /* Whether a row shows on that Cloudflare may serve, which is what the child runs for. */
+    /* Whether a row is meant on or Cloudflare may serve it, which is what the child runs for. */
     private isLive(): boolean {
         const listenerPort = this.stored.mcp.enabled ? this.ports.listenerPort() : null;
 
-        return this.stored.rows.some((row) => row.enabled && (row.kind === 'dev' || listenerPort !== null));
+        return this.stored.rows.some((row) => (meantOn(row) || this.serving.has(row.id)) && (row.kind === 'dev' || listenerPort !== null));
     }
 
     /*
