@@ -117,10 +117,20 @@ function RenameField({ value, placeholder, onDone }: { value: string; placeholde
 
 /* A row at rest carries no dot. A green one on every idle chat read as news that never went away,
    while a turn that ended unseen has its own mark. */
-function RowStatus({ status, work }: { status: AgentStatus | null | undefined; work: AgentWork | null | undefined }) {
+function RowStatus({
+    status,
+    work,
+    chatId,
+    endpointId
+}: {
+    status: AgentStatus | null | undefined;
+    work: AgentWork | null | undefined;
+    chatId?: string;
+    endpointId?: string;
+}) {
     // Another project's rows cannot tell a working agent from a shell at its prompt, so they keep the dot.
     if ((status === 'running' || status === 'idle') && work !== undefined) {
-        return work === null ? null : <WorkingMark plain delegating={work === 'delegating'} />;
+        return work === null ? null : <WorkingMark plain delegating={work === 'delegating'} chatId={chatId} endpointId={endpointId} />;
     }
     return status && status !== 'idle' ? <StatusDot status={status} plain /> : null;
 }
@@ -233,7 +243,12 @@ export function NodeRow({ row, tabbable, snoozable }: RowProps & { row: SidebarN
                     {snoozable && node.status === 'needs-you' ? (
                         <WaitLabel detail={node.wait} snoozed={Boolean(node.snoozedUntil)} />
                     ) : (
-                        <RowStatus status={node.status} work={node.work} />
+                        <RowStatus
+                            status={node.status}
+                            work={node.work}
+                            chatId={node.kind === 'chat' || node.kind === 'design' ? node.id : undefined}
+                            endpointId={endpointId}
+                        />
                     )}
                 </span>
             </ContextMenu.Trigger>

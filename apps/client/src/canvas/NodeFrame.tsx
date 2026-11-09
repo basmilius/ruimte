@@ -47,6 +47,7 @@ import { RemoteNodeOffline } from '@/canvas/RemoteNodeOffline';
 import { useHiddenNeedsYou } from '@/canvas/use-group-waits';
 import { useShownChatOfNode } from '@/chat/focused-chat';
 import { ForkPill } from '@/chat/ForkPill';
+import { useWaitingOn } from '@/chat/waiting-on';
 import { ComputerIndicator } from '@/computer/ComputerIndicator';
 import { useHasContextLinks } from '@/context/sources';
 import { openInSystemBrowser } from '@/desktop/bridge';
@@ -136,10 +137,10 @@ export function StatusDot({ status, className, plain = false }: { status: AgentS
     return <Tooltip label={label}>{dot}</Tooltip>;
 }
 
-function StatusMark({ status, work }: { status: AgentStatus; work: AgentWork | null }) {
+function StatusMark({ status, work, chatId, endpointId }: { status: AgentStatus; work: AgentWork | null; chatId?: string; endpointId?: string }) {
     const { t } = useTranslation('canvas');
     if (status === 'running' || status === 'idle') {
-        return work === null ? null : <WorkingMark delegating={work === 'delegating'} />;
+        return work === null ? null : <WorkingMark delegating={work === 'delegating'} chatId={chatId} endpointId={endpointId} />;
     }
     const mark = STATUS_MARK[status];
     if (mark === undefined) {
@@ -152,6 +153,15 @@ function StatusMark({ status, work }: { status: AgentStatus; work: AgentWork | n
             </span>
         </Tooltip>
     );
+}
+
+/* What a chat waits on, muted beside its mark, so a canvas tells why a chat is quiet without opening it. */
+function WaitingOnLine({ chatId, endpointId }: { chatId: string; endpointId: string }) {
+    const waitingOn = useWaitingOn(chatId, endpointId);
+    if (waitingOn === null) {
+        return null;
+    }
+    return <span className="max-w-60 min-w-0 shrink truncate text-xs text-text-muted">{waitingOn}</span>;
 }
 
 function WorktreePill({ worktree }: { worktree: { path: string; branch: string } }) {
@@ -587,8 +597,10 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                             <Pill icon={<Icon icon={Link2} size={12} />}>{t('node.context.pill')}</Pill>
                         </Tooltip>
                     )}
+                    {/* The child's own label already says that it waits, so the line only speaks without one. */}
+                    {isChat && !childWait && !renaming && <WaitingOnLine chatId={chatId} endpointId={nodeEndpointId} />}
                     {childWait && !renaming && <ChildWaitLabel wait={childWait} />}
-                    {status && !renaming && <StatusMark status={status} work={work} />}
+                    {status && !renaming && <StatusMark status={status} work={work} chatId={isChat ? chatId : undefined} endpointId={nodeEndpointId} />}
                     {task && !renaming && showsTaskMark(task, work, unseen) && <TaskMark task={task} />}
                     {/* Looking clears it, so this is for a canvas zoomed out and a window beside another app. */}
                     {unseen && !renaming && <UnseenMark />}
