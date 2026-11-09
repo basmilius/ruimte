@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ProposalAnswer, ProposalAsk } from '../projects/project-proposals.ts';
-import type { CanvasHost } from './host.ts';
+import { ANSWER_WAKES_NOTE, type CanvasHost } from './host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 let asks: ProposalAsk[];
@@ -9,7 +9,7 @@ let host: CanvasHost;
 
 beforeEach(() => {
     asks = [];
-    answer = { proposalId: 'prop-1', outcome: 'declined' };
+    answer = { proposalId: 'prop-1', outcome: 'waiting' };
     host = {
         projects: {
             locate: (id: string) => ({ projectId: 'chats', folder: '/home/.ruimte/scratch', canvasId: null, id }),
@@ -33,16 +33,13 @@ async function call(name: string, input: Record<string, unknown>, caller = 'chat
 const PROPOSE = { name: 'Vinyl shelf', reason: 'The notes became a codebase' };
 
 describe('project_propose', () => {
-    test('suggests a project and prints only what became of the card', async () => {
-        expect(await call('project_propose', { ...PROPOSE, folder: '/work/vinyl-shelf' })).toEqual(['proposal\tprop-1\tdeclined']);
+    test('suggests a project and says the answer wakes the chat', async () => {
+        expect(await call('project_propose', { ...PROPOSE, folder: '/work/vinyl-shelf' })).toEqual(['proposal\tprop-1\twaiting', ANSWER_WAKES_NOTE]);
         expect(asks).toEqual([{ chatId: 'chat-1', name: 'Vinyl shelf', folder: '/work/vinyl-shelf', reason: 'The notes became a codebase' }]);
     });
 
-    test('prints every outcome', async () => {
-        for (const outcome of ['declined', 'waiting'] as const) {
-            answer = { proposalId: 'prop-1', outcome };
-            expect((await call('project_propose', PROPOSE))[0]).toBe(`proposal\tprop-1\t${outcome}`);
-        }
+    test('leaves the folder to the person when the agent names none', async () => {
+        await call('project_propose', PROPOSE);
 
         expect(asks.at(-1)).not.toHaveProperty('folder');
     });

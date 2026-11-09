@@ -565,6 +565,9 @@ export function canvasLines(content: ProjectContent): string[] {
 export const OPENING_OFF_CANVAS =
     'A node opens on a canvas; name which one with view (view_list lists them). A line only joins two nodes of one canvas, so the edge column shows -';
 
+/* What a suggestion that waits on its card says: the call ends now, and the person's answer comes back as a turn. */
+export const ANSWER_WAKES_NOTE = 'note\tThe person answers on the card, and Ruimte wakes your chat with the outcome once your turn has ended';
+
 /* The canvas an id names, refused with the canvases there are when it names none. */
 export function canvasNamed(content: ProjectContent, viewId: string): ProjectCanvasView {
     const named = content.views.find((candidate) => candidate.id === viewId);

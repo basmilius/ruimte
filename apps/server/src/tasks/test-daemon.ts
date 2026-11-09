@@ -82,6 +82,8 @@ export interface TestDaemon {
     lineage: AgentLineageStore;
     prompts: PendingPromptStore;
     outbox: OutboxStore;
+    /* What the daemon's own services owe the outbox through, as the cards' answers do. */
+    link: OutboxLink;
     prWatches: PrWatchStore;
     worker: OutboxWorker<OutboxWork>;
     sessions: SessionManager;
@@ -501,6 +503,7 @@ export async function bootTestDaemon({
         lineage,
         prompts,
         outbox,
+        link: outboxLink,
         worker,
         sessions,
         chats,

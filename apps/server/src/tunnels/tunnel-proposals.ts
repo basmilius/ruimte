@@ -62,6 +62,8 @@ interface TunnelProposalsOptions {
     tunnels: ProposalTunnels;
     chats: ProposalChats;
     publish(proposals: TunnelProposal[]): void;
+    /* Owes the chat a turn with a person's confirm or decline (`deliver-answer`); absent in a test that only reads outcomes. */
+    answered?(chatId: string, wake: { text: string; label: string }): void;
     now?: () => number;
     timers?: Timers;
     cardMs?: number;
@@ -74,6 +76,41 @@ interface Pending {
     seen: string | null;
     confirming: boolean;
     cancelExpiry: () => void;
+}
+
+/* The change as the agent asked it, in the words of the card. */
+function changeWords(proposal: Pick<TunnelProposal, 'action' | 'hostname' | 'port' | 'origin'>): string {
+    const { hostname } = proposal;
+    const target = `port ${proposal.port ?? '-'}${proposal.origin?.https === true ? ' over HTTPS' : ''}`;
+
+    switch (proposal.action) {
+        case 'add':
+            return `add ${hostname} → ${target}`;
+        case 'edit':
+            return `point ${hostname} at ${target}`;
+        case 'on':
+            return `turn on ${hostname}`;
+        case 'off':
+            return `turn off ${hostname}`;
+        case 'remove':
+            return `remove ${hostname}`;
+    }
+}
+
+/* The turn that tells the chat how the person answered its card. */
+export function answerWake(
+    proposal: Pick<TunnelProposal, 'action' | 'hostname' | 'port' | 'origin'>,
+    outcome: 'confirmed' | 'declined'
+): { text: string; label: string } {
+    const words = changeWords(proposal);
+
+    if (outcome === 'declined') {
+        return { text: `Declined: ${words}. Nothing changed.`, label: 'Tunnel: declined' };
+    }
+
+    const serves = proposal.action === 'off' || proposal.action === 'remove' ? '' : ' tunnel_list shows whether it is reachable.';
+
+    return { text: `Confirmed: ${words}. Ruimte made the change.${serves}`, label: 'Tunnel: confirmed' };
 }
 
 function keyOf(chatId: string, hostname: string): string {
@@ -97,13 +134,15 @@ function fingerprintOf(row: Readonly<StoredRow> | undefined): string | null {
  * The cards in which an agent suggests a change to a hostname of Ruimte's, one per chat and hostname: a second
  * suggestion for the same hostname joins the card that stands. Nothing changes here until a person confirms, and a
  * confirm runs the change the screen makes, with its checks, so only that confirm changes what the person asked of a
- * row. A card for a row that changed since goes stale and refuses. The call never waits for the person: what became
- * of a card reaches the agent with its next suggestion of the same change, once, and in the list of its chat.
+ * row. A card for a row that changed since goes stale and refuses. The call never waits for the person: a confirm or
+ * a decline wakes the chat with the outcome, and a card that went stale or expired reaches the agent with its next
+ * suggestion of the same change, once. Every outcome stays in the list of its chat.
  */
 export class TunnelProposals {
     private readonly tunnels: ProposalTunnels;
     private readonly chats: ProposalChats;
     private readonly publishList: (proposals: TunnelProposal[]) => void;
+    private readonly answered: (chatId: string, wake: { text: string; label: string }) => void;
     private readonly now: () => number;
     private readonly timers: Timers;
     private readonly cardMs: number;
@@ -116,6 +155,7 @@ export class TunnelProposals {
         this.tunnels = options.tunnels;
         this.chats = options.chats;
         this.publishList = options.publish;
+        this.answered = options.answered ?? (() => undefined);
         this.now = options.now ?? Date.now;
         this.timers = options.timers ?? realTimers;
         this.cardMs = options.cardMs ?? TUNNEL_PROPOSAL_CARD_MS;
@@ -366,7 +406,14 @@ export class TunnelProposals {
         }
 
         this.close(pending);
-        this.unheard.set(key, { answer: { proposalId, outcome }, change: JSON.stringify(pending.change) });
+
+        // A person's answer wakes the chat; an outcome nobody gave waits for the agent's next suggestion.
+        if (outcome === 'confirmed' || outcome === 'declined') {
+            this.answered(chatId, answerWake(pending.proposal, outcome));
+        } else {
+            this.unheard.set(key, { answer: { proposalId, outcome }, change: JSON.stringify(pending.change) });
+        }
+
         this.settled.set(chatId, [{ proposalId, outcome, action, hostname }, ...(this.settled.get(chatId) ?? [])].slice(0, MAX_OUTCOMES_PER_CHAT));
         this.publish();
     }

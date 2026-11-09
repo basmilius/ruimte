@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { TunnelConfigError } from '../tunnels/tunnel-config.ts';
 import type { TunnelChange, TunnelProposalAsk } from '../tunnels/tunnel-proposals.ts';
 import type { StoredRow } from '../tunnels/tunnel-store.ts';
-import { field, orNote, type TunnelAgentHost } from './host.ts';
+import { ANSWER_WAKES_NOTE, field, orNote, type TunnelAgentHost } from './host.ts';
 import { defineTool, type ToolCall } from './tool.ts';
 
 function tunnelsOf(call: ToolCall): TunnelAgentHost {
@@ -205,12 +205,12 @@ function rowAsk(
 
 /*
  * Only a card: nothing reaches Cloudflare until a person confirms it in the chat, and the confirm is the change the
- * person makes under Tunnels in Settings. The call does not wait; tunnel_list or the next suggestion for the hostname
- * says what became of it.
+ * person makes under Tunnels in Settings. The call does not wait: the person's answer wakes the chat, and tunnel_list
+ * or the next suggestion for the hostname says what became of a card nobody answered.
  */
 const tunnelPropose = defineTool('browser', {
     name: 'tunnel_propose',
-    description: 'Suggests a change to a tunnel hostname in a card; nothing changes until the person confirms.',
+    description: 'Suggests a change to a tunnel hostname in a card; nothing changes until the person confirms, and their answer wakes you.',
     audience: 'chat',
     input: z.object({
         action: z.enum(TUNNEL_PROPOSAL_ACTIONS, { error: `action takes ${TUNNEL_PROPOSAL_ACTIONS.join(', ')}` }),
@@ -253,7 +253,7 @@ const tunnelPropose = defineTool('browser', {
         try {
             const answer = tunnels.propose({ ...ask, chatId: call.caller, ...(input.reason ? { reason: input.reason } : {}) });
 
-            return [`proposal\t${answer.proposalId}\t${answer.outcome}`];
+            return [`proposal\t${answer.proposalId}\t${answer.outcome}`, ...(answer.outcome === 'waiting' ? [ANSWER_WAKES_NOTE] : [])];
         } catch (e) {
             if (e instanceof TunnelConfigError) {
                 throw new ToolRefusal(e.code, e.message);

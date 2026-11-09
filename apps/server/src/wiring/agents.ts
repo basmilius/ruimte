@@ -16,6 +16,7 @@ import { openedChildSource } from '../context/opened-child.ts';
 import { referenced } from '../context/references.ts';
 import { hasDatabaseConnections } from '../database/connection-store.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
+import { errorText } from '../error-text.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { readLog } from '../git/log.ts';
 import { OutboxStore } from '../outbox/outbox.ts';
@@ -184,7 +185,9 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         cwdFor: (folder) => oneShot.cwdFor(folder)
     });
     const proposals = new ProjectProposals({
-        chats: { hold: (chatId, key) => void chats.holdForPerson(chatId, key), release: (chatId, key) => chats.releaseHold(chatId, key) }
+        chats: { hold: (chatId, key) => void chats.holdForPerson(chatId, key), release: (chatId, key) => chats.releaseHold(chatId, key) },
+        answered: (chatId, wake) =>
+            void outboxLink.oweAnswer(chatId, wake).catch((e: unknown) => console.error(`Owing the answer of a card failed: ${errorText(e)}`))
     });
     const messagesFor = (targetId: string): string[] => notices.take(targetId).map(renderNotice);
     // One reader for chats and terminals, so a transcript both look at is only read on from where either stopped.

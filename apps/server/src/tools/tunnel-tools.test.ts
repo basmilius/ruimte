@@ -6,7 +6,7 @@ import { TunnelProposals } from '../tunnels/tunnel-proposals.ts';
 import { TunnelService } from '../tunnels/tunnel-service.ts';
 import { tunnelStore } from '../tunnels/tunnel-store.ts';
 import { FakeCloudflare, FakeCloudflared, FAKE_API_TOKEN, MemoryTokenStore } from '../tunnels/tunnel-test-helpers.ts';
-import type { CanvasHost, TunnelAgentHost } from './host.ts';
+import { ANSWER_WAKES_NOTE, type CanvasHost, type TunnelAgentHost } from './host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 import { TOOLKITS } from './toolkits.ts';
 
@@ -21,6 +21,7 @@ let proposals: TunnelProposals;
 let published: TunnelProposal[][];
 let holds: Array<{ chatId: string; key: string; held: boolean }>;
 let expire: Array<() => void>;
+let woken: Array<{ chatId: string; text: string; label: string }>;
 let host: CanvasHost;
 
 beforeEach(async () => {
@@ -33,6 +34,7 @@ beforeEach(async () => {
     published = [];
     holds = [];
     expire = [];
+    woken = [];
     service = new TunnelService({
         store: tunnelStore(home),
         installer: { locate: async () => '/usr/bin/cloudflared', install: async () => '/usr/bin/cloudflared', impossible: () => null },
@@ -58,6 +60,7 @@ beforeEach(async () => {
             release: (chatId, key) => holds.push({ chatId, key, held: false })
         },
         publish: (list) => published.push(list),
+        answered: (chatId, wake) => woken.push({ chatId, ...wake }),
         timers: {
             set: (run) => {
                 expire.push(run);
@@ -138,7 +141,8 @@ describe('tunnel_propose', () => {
         const before = writes();
 
         expect(await call('tunnel_propose', { action: 'add', hostname: 'Vite.bmnw.nl', port: 5173, protocol: 'https', host_header: 'vite.test' })).toEqual([
-            `proposal\t${cardId()}\twaiting`
+            `proposal\t${cardId()}\twaiting`,
+            ANSWER_WAKES_NOTE
         ]);
         expect(proposals.list()).toMatchObject([
             { chatId: CHAT, action: 'add', kind: 'dev', hostname: 'vite.bmnw.nl', port: 5173, origin: { https: true, hostHeader: 'vite.test' }, stale: false }
@@ -147,9 +151,10 @@ describe('tunnel_propose', () => {
         expect(holds).toEqual([{ chatId: CHAT, key: `tunnel-proposal:${cardId()}`, held: true }]);
         expect(writes()).toBe(before);
         expect((await service.state()).rows).toEqual([]);
+        expect(woken).toEqual([]);
     });
 
-    test('a confirm makes the change the screen makes, and the agent hears it once with its next suggestion and in its list', async () => {
+    test('a confirm makes the change the screen makes, wakes the chat once with the outcome and stays in its list', async () => {
         await call('tunnel_propose', { action: 'add', hostname: 'vite.bmnw.nl', port: 5173 });
 
         const id = cardId();
@@ -162,8 +167,31 @@ describe('tunnel_propose', () => {
         expect(proposals.list()).toEqual([]);
         expect(holds.at(-1)).toEqual({ chatId: CHAT, key: `tunnel-proposal:${id}`, held: false });
         expect(await call('tunnel_list')).toContain(`proposal\t${id}\tadd\tvite.bmnw.nl\tconfirmed`);
-        expect(await call('tunnel_propose', { action: 'add', hostname: 'vite.bmnw.nl', port: 5173 })).toEqual([`proposal\t${id}\tconfirmed`]);
         expect(await proposals.confirm(id)).toBe(false);
+        expect(proposals.decline(id)).toBe(false);
+        expect(woken).toEqual([
+            {
+                chatId: CHAT,
+                text: 'Confirmed: add vite.bmnw.nl → port 5173. Ruimte made the change. tunnel_list shows whether it is reachable.',
+                label: 'Tunnel: confirmed'
+            }
+        ]);
+    });
+
+    test('a confirm Cloudflare refuses wakes nobody and leaves the card, which a decline then answers', async () => {
+        await addRow('app', 5173);
+        await call('tunnel_propose', { action: 'edit', hostname: 'app.bmnw.nl', port: 3000 });
+
+        const id = cardId();
+
+        cloudflare.failing.set('PUT /accounts/acc-1/cfd_tunnel', 500);
+
+        await expect(proposals.confirm(id)).rejects.toThrow();
+        await service.idle();
+        expect(cardId()).toBe(id);
+        expect(woken).toEqual([]);
+        expect(proposals.decline(id)).toBe(true);
+        expect(woken).toEqual([{ chatId: CHAT, text: 'Declined: point app.bmnw.nl at port 3000. Nothing changed.', label: 'Tunnel: declined' }]);
     });
 
     test('on, off, edit and remove each wait for the confirm, which applies them as Settings would', async () => {
@@ -198,7 +226,7 @@ describe('tunnel_propose', () => {
         expect(row()).toBeUndefined();
     });
 
-    test('a decline changes nothing and the agent hears it', async () => {
+    test('a decline changes nothing and wakes the chat once', async () => {
         const rowId = await addRow('app', 5173);
         const before = writes();
 
@@ -210,6 +238,8 @@ describe('tunnel_propose', () => {
         expect(writes()).toBe(before);
         expect(service.rowsAsMeant().map((row) => row.id)).toEqual([rowId]);
         expect(await call('tunnel_list')).toContain(`proposal\t${id}\tremove\tapp.bmnw.nl\tdeclined`);
+        expect(proposals.decline(id)).toBe(false);
+        expect(woken).toEqual([{ chatId: CHAT, text: 'Declined: remove app.bmnw.nl. Nothing changed.', label: 'Tunnel: declined' }]);
     });
 
     test('a card whose row changed since goes stale, refuses the confirm and changes nothing', async () => {
@@ -227,6 +257,8 @@ describe('tunnel_propose', () => {
         expect(service.rowsAsMeant()[0]).toMatchObject({ enabled: true, port: 3000 });
         expect(proposals.decline(id)).toBe(true);
         expect(await call('tunnel_list')).toContain(`proposal\t${id}\toff\tapp.bmnw.nl\tstale`);
+        expect(woken).toEqual([]);
+        expect(await call('tunnel_propose', { action: 'off', hostname: 'app.bmnw.nl' })).toEqual([`proposal\t${id}\tstale`]);
     });
 
     test('a card that nobody answers expires and the agent hears that', async () => {
@@ -238,6 +270,7 @@ describe('tunnel_propose', () => {
 
         expect(proposals.list()).toEqual([]);
         expect(await call('tunnel_list')).toContain(`proposal\t${id}\tadd\tvite.bmnw.nl\texpired`);
+        expect(woken).toEqual([]);
     });
 
     test('refuses what the screen refuses, before any card', async () => {

@@ -81,6 +81,17 @@ export class OutboxLink {
         this.require().wake(chatId);
     }
 
+    /* Owes the chat the turn that tells it how a person answered its card; a chat no project holds is owed nothing. */
+    async oweAnswer(chatId: string, answer: { text: string; label: string }): Promise<void> {
+        const projectId = this.projectOf(chatId);
+
+        if (projectId === null) {
+            return;
+        }
+
+        await this.enqueue(projectId, chatId, { kind: 'deliver-answer', payload: answer });
+    }
+
     /* Owes the resume of a limited turn at `at`, in place of whatever this chat owed before; a chat no project holds is owed nothing. */
     async oweLimitResume(chatId: string, turnId: string, at: number): Promise<void> {
         const projectId = this.projectOf(chatId);
@@ -297,6 +308,21 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
             return 'wait';
         };
 
+    /* Opens a turn for news written when it happened; a chat in a turn, or on its way to another folder, keeps it until it is free. */
+    const wakeWith = async (chatId: string, wake: { text: string; label: string }): Promise<OutboxOutcome> => {
+        const chat = await openChat(chatId);
+
+        if (chat === null) {
+            return;
+        }
+
+        if (chat.relocating?.() === true) {
+            return 'wait';
+        }
+
+        return chat.wake({ ...wake, taskIds: [] }) ? undefined : 'wait';
+    };
+
     const wakeParent = unlessClosed(taskWiring.wakeParent);
     const runParked = resumeRunParked(chats);
     const worker = new OutboxWorker({
@@ -338,20 +364,11 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
             'deliver-summary': summaries.handler,
             'deliver-waiting': taskWiring.deliverWaiting,
             // A watch that ended takes its wake along; a chat in a turn keeps it until the turn ends.
-            'deliver-pr-watch': unlessClosed(async (entry) => {
-                if (!prWatches.has(entry.payload.watchId)) {
-                    return;
-                }
-                const chat = await openChat(entry.target);
-                if (chat === null) {
-                    return;
-                }
-                // A chat on its way to another folder takes no turn until it is there.
-                if (chat.relocating?.() === true) {
-                    return 'wait';
-                }
-                return chat.wake({ text: entry.payload.text, label: entry.payload.label, taskIds: [] }) ? undefined : 'wait';
-            }),
+            'deliver-pr-watch': unlessClosed(async (entry) =>
+                prWatches.has(entry.payload.watchId) ? wakeWith(entry.target, { text: entry.payload.text, label: entry.payload.label }) : undefined
+            ),
+            // A person's answer on a card the chat raised; like a task's result, it is hop 0 and its turn wakes nobody.
+            'deliver-answer': unlessClosed((entry) => wakeWith(entry.target, entry.payload)),
             'run-after-settle': (entry) => deps.runAfterSettle?.(entry) ?? Promise.resolve(),
             'connect-peer': (entry) => deps.connectPeer?.(entry) ?? Promise.resolve(),
             'routine-run': (entry) => deps.runRoutine?.(entry) ?? Promise.resolve(),

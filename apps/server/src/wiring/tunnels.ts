@@ -2,6 +2,7 @@ import { randomBytes, randomInt } from 'node:crypto';
 import { callerFolders } from '../agents/caller-folders.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import type { ServerConfig } from '../config.ts';
+import { errorText } from '../error-text.ts';
 import { deniedRuimtePorts } from '../ports/reserved-ports.ts';
 import { shotFolders } from '../shots.ts';
 import type { CanvasHost } from '../tools/host.ts';
@@ -148,7 +149,9 @@ export async function wireTunnels(input: TunnelsInput): Promise<TunnelsBundle> {
     const cards = new TunnelProposals({
         tunnels: service,
         chats: { hold: (chatId, key) => void agents.chats.holdForPerson(chatId, key), release: (chatId, key) => agents.chats.releaseHold(chatId, key) },
-        publish: (list) => sinks.emit({ event: 'tunnel.proposals', payload: { proposals: list } })
+        publish: (list) => sinks.emit({ event: 'tunnel.proposals', payload: { proposals: list } }),
+        answered: (chatId, wake) =>
+            void agents.outboxLink.oweAnswer(chatId, wake).catch((e: unknown) => console.error(`Owing the answer of a card failed: ${errorText(e)}`))
     });
 
     proposals = cards;

@@ -47,6 +47,12 @@ const DeliverPrWatchSchema = z.object({
     payload: z.object({ watchId: z.string().min(1), key: z.string().min(1), text: z.string(), label: z.string() })
 });
 
+const DeliverAnswerSchema = z.object({
+    kind: z.literal('deliver-answer'),
+    // The target is the chat whose card a person answered; the text and label say what they answered, written when they did.
+    payload: z.object({ text: z.string(), label: z.string() })
+});
+
 const RunAfterSettleSchema = z.object({
     kind: z.literal('run-after-settle'),
     // The target is the chat that settled in `worktree`; `launchId` is the task its project ran after it then.
@@ -122,6 +128,7 @@ const OutboxWorkSchema = z.discriminatedUnion('kind', [
     DeliverSummarySchema,
     DeliverWaitingWorkSchema,
     DeliverPrWatchSchema,
+    DeliverAnswerSchema,
     RunAfterSettleSchema,
     ConnectPeerSchema,
     DeliverRemoteResultSchema,

@@ -2828,7 +2828,7 @@
         },
         {
             "name": "project_propose",
-            "description": "Suggests in a card that this chat becomes a project.",
+            "description": "Suggests in a card that this chat becomes a project; the answer wakes you.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -3322,7 +3322,7 @@
         },
         {
             "name": "tunnel_propose",
-            "description": "Suggests a change to a tunnel hostname in a card; nothing changes until the person confirms.",
+            "description": "Suggests a change to a tunnel hostname in a card; nothing changes until the person confirms, and their answer wakes you.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
