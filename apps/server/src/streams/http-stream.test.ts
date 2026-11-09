@@ -37,14 +37,14 @@ describe('the live stream route', () => {
     test('refuses missing credentials and answers allowed preflights', async () => {
         const hub = new LiveStreamHub();
         const url = new URL(`http://127.0.0.1:4210${LIVE_STREAM_PATH}/missing`);
-        expect((await handleLiveStreamRequest(new Request(url), url, '127.0.0.1', OPTIONS, hub)).status).toBe(401);
+        expect((await handleLiveStreamRequest(new Request(url), url, '127.0.0.1', OPTIONS, hub, () => true)).status).toBe(401);
 
         const preflight = new Request(url, { method: 'OPTIONS', headers: { origin: 'http://localhost:4212' } });
         const response = await handleLiveStreamRequest(preflight, url, '127.0.0.1', OPTIONS, hub, () => true);
         expect(response.status).toBe(204);
         expect(response.headers.get('access-control-allow-headers')).toBe('authorization');
         const foreign = new Request(url, { method: 'OPTIONS', headers: { origin: 'https://client.example' } });
-        expect((await handleLiveStreamRequest(foreign, url, '127.0.0.1', OPTIONS, hub)).status).toBe(403);
+        expect((await handleLiveStreamRequest(foreign, url, '127.0.0.1', OPTIONS, hub, () => true)).status).toBe(403);
     });
 
     test('announces an HEVC source without changing its bounded frame envelope', async () => {
