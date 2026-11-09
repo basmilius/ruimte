@@ -54,6 +54,14 @@ Each hostname has a switch. Its menu has **Copy address**, **Open**, **On after 
 
 A hostname that is on but gets no traffic says **Not reachable** under its name, with the reason on the line below. It may be a DNS record Cloudflare would not make, a port Ruimte now uses itself, or a port another app took from the MCP. Point at a long reason, or tab to it, to read all of it. Fix the cause, then click **Try again**. The other hostnames keep working meanwhile. A hostname whose removal did not finish says so the same way, and **Try again** finishes it.
 
+## What an agent can do
+
+An agent reads the hostnames of the tunnel: where each one points, whether it is on and whether it is reachable. It also reads the names of your domains. It never sees the API token.
+
+An agent in an AI chat can suggest adding a dev server, turning a hostname on or off, changing a dev server's port, **HTTPS** or **Host header**, or removing a dev server's hostname. The suggestion is a card in the chat, such as "Add shop.example.com → port 5173". Nothing changes until you click **Confirm**, and **Decline** leaves everything as it was. Confirm makes the same change as Settings, so it can take a few seconds. If Cloudflare refuses, the card says why.
+
+If the hostname changed after the agent asked, the card says so and only **Decline** is left. An agent cannot touch the hostnames under **Already on this tunnel**, and of the MCP's hostname it only suggests turning it on or off. A bot you connect from outside gets none of this.
+
 ## Connect a bot to the MCP
 
 1. Under **External clients**, turn on **External MCP**. Ruimte listens on this machine only, at the address shown under the heading. A bot on the same computer uses it without a tunnel.
