@@ -85,6 +85,8 @@ export interface AgentStartHost {
     installedAgents(): Promise<AgentKind[]>;
     /* The provider of a kind, one this machine does not offer included (it starts nothing). */
     provider(kind: AgentKind): ChatProvider;
+    /* The kinds this machine's registry knows, installed or not: the CLIs it ships and the agents a person added from the ACP registry. */
+    offeredKinds(): AgentKind[];
     /* Holds the first prompt of a node against its id until the session or the chat for it is made; a chat hears `brief` beside it. */
     holdPrompt(projectId: string, nodeId: string, prompt: string, brief?: string): Promise<void>;
     /* Owes the start of an agent node's chat or terminal, which the daemon makes whether or not a client shows the node. */

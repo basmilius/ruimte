@@ -165,6 +165,24 @@ export function readsOf(ids: readonly string[] | null): string[] {
     return reads;
 }
 
+/*
+ * A kind this machine's registry does not know is refused before anything else is judged, also for a start on
+ * another machine, in the words the tool's input check used: `cli` for one agent, the role's index for a team.
+ */
+export function requireOfferedKind(starts: Pick<AgentStartHost, 'offeredKinds'>, kind: AgentKind, role?: number): void {
+    const offered = starts.offeredKinds();
+
+    if (offered.includes(kind)) {
+        return;
+    }
+
+    if (role === undefined) {
+        throw new ToolRefusal('bad-arguments', `cli needs a CLI: ${offered.join(', ')}`);
+    }
+
+    throw new ToolRefusal('bad-roles', `role ${role} (provider): provider needs a CLI: ${offered.join(', ')}`);
+}
+
 export function requireInstalled(starts: Pick<AgentStartHost, 'provider'>, installed: readonly AgentKind[], kind: AgentKind, role?: string): void {
     if (installed.includes(kind)) {
         return;

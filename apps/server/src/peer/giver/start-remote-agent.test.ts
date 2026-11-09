@@ -127,6 +127,19 @@ describe('agent --machine', () => {
         });
     });
 
+    test('refuses a CLI this machine does not know before the other machine is asked', async () => {
+        const [single] = await give({ cli: 'kimi' });
+        expect(single).toStartWith('refused\tbad-arguments\tcli needs a CLI: ');
+        const [team] = await invokeTool(daemon, 'chat-lead', 'agent_team', {
+            label: 'Crew',
+            task: true,
+            machine: 'Studio',
+            roles: JSON.stringify([{ title: 'Role', prompt: 'Do it', provider: 'kimi' }])
+        });
+        expect(team).toStartWith('refused\tbad-roles\trole 0 (provider): provider needs a CLI: ');
+        expect(daemon.tasks.all()).toHaveLength(0);
+    });
+
     test('a task is not given to an agent that runs on another machine', async () => {
         const [line] = await give();
         const nodeId = line!.split('\t')[0]!;

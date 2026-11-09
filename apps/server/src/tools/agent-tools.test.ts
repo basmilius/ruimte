@@ -654,9 +654,9 @@ describe('team', () => {
         expect((await fx.onDisk()).rev).toBe(1);
     });
 
-    test('a role that names a kind this machine does not offer is refused where the machine is asked', async () => {
+    test('a role that names a kind this machine does not know is refused by its index before anything is judged', async () => {
         expect((await fx.invoke('agent_team', args([{ title: 'Lexer', prompt: 'go', provider: 'kimi' }]))).lines[0]).toBe(
-            'refused\tcli-not-installed\trole 0 (kimi): kimi is not installed on this machine'
+            `refused\tbad-roles\trole 0 (provider): provider needs a CLI: ${AGENT_KINDS.join(', ')}`
         );
     });
 

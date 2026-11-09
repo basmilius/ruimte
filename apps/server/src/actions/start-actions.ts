@@ -16,7 +16,7 @@ import {
     type ProjectNode,
     type RuntimeMode
 } from '@ruimte/contracts';
-import { agentNode, groupLines, grownGroup, namedAccount, readsOf, requireInstalled, startPrompt, terminalMode } from '../canvas/agents.ts';
+import { agentNode, groupLines, grownGroup, namedAccount, readsOf, requireInstalled, requireOfferedKind, startPrompt, terminalMode } from '../canvas/agents.ts';
 import { depthForOpening } from '../canvas/depth.ts';
 import { NEW_NODE, OPENING_OFF_CANVAS, canvasFor, canvasLines, field, newNode, type AgentStartHost, type ProjectHost, type AgentCall } from '../canvas/host.ts';
 import { modeForOpening } from '../canvas/mode.ts';
@@ -258,9 +258,11 @@ const startAgentNow: StartHandler = async (input, call) => {
     const kind = input.provider;
     const boundedBy = boundedOpener(call.actor);
     const bounded = boundedBy !== null;
+    // Voice and an extension hear their own words for a CLI without a chat first, as they did when the kind was checked by the tool's input.
     if (boundedBy !== null) {
         refuseBoundedStart(host.starts, boundedBy, input);
     }
+    requireOfferedKind(host.starts, kind);
     await refuseCrossingStart(context, caller.caller, { viewId: input.viewId, machine: input.machine, task: input.task != null });
     const readIds = readsOf(input.reads ?? null);
     const offCanvas = input.viewId == null && place.canvasId === null;
@@ -601,6 +603,7 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
     const { host, place } = context;
     const caller = agentCallOf(call);
     const { roles } = input;
+    roles.forEach((role, index) => requireOfferedKind(host.starts, role.provider, index));
     await refuseCrossingStart(context, caller.caller, { viewId: input.viewId, machine: input.machine, task: input.task });
     const selections = roles.map((role, index): ModelSelection | undefined => {
         try {

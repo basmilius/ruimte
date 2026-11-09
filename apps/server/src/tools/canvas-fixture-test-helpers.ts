@@ -533,6 +533,7 @@ const PARTS: readonly HostSource<CanvasFixture>[] = [
                 preferredSelection: (kind) => fixture.knobs.preferredSelections[kind],
                 installedAgents: async () => fixture.knobs.installed,
                 provider: (kind) => fixture.knobs.providers[kind] ?? FIXTURE_PROVIDERS.get(kind),
+                offeredKinds: () => [...new Set([...FIXTURE_PROVIDERS.kinds(), ...Object.keys(fixture.knobs.providers), ...fixture.knobs.installed])],
                 holdPrompt: async (projectId, nodeId, prompt, brief) => {
                     fixture.held.push({ projectId, nodeId, prompt, ...(brief === undefined ? {} : { brief }) });
                 },

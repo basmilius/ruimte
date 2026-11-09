@@ -75,7 +75,7 @@ export function startAgentWork(start: AgentStart, deps: NodeModeDeps): OutboxWor
 
 interface AgentStartHostDeps {
     installed(): Promise<AgentKind[]>;
-    providers: { get(kind: AgentKind): ChatProvider };
+    providers: { get(kind: AgentKind): ChatProvider; kinds(): AgentKind[] };
     prompts: Pick<PendingPromptStore, 'put'>;
     enqueue(projectId: string, nodeId: string, work: OutboxWork): Promise<void>;
     chats: Pick<ChatCore, 'get' | 'composerPreferences'>;
@@ -97,6 +97,7 @@ export function agentStartHost(deps: AgentStartHostDeps): AgentStartHost {
     return {
         installedAgents: () => deps.installed(),
         provider: (kind) => deps.providers.get(kind),
+        offeredKinds: () => deps.providers.kinds(),
         holdPrompt: (projectId, nodeId, prompt, brief) => deps.prompts.put(projectId, nodeId, prompt, { brief }),
         startAgent: (start) => deps.enqueue(start.projectId, start.nodeId, startAgentWork(start, modes)),
         modeOf: nodeMode(modes),
