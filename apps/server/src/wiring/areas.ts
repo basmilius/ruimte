@@ -13,7 +13,7 @@ import { chatSearchArea } from '../handlers/chat-search.ts';
 import { chatArea } from '../handlers/chat.ts';
 import { clientArea } from '../handlers/client.ts';
 import { computerArea } from '../handlers/computer.ts';
-import { databaseArea } from '../handlers/database.ts';
+import { databaseArea, databaseConnectionsLifecycle } from '../handlers/database.ts';
 import { deviceArea } from '../handlers/device.ts';
 import { diagramArea } from '../handlers/diagram.ts';
 import { directArea } from '../handlers/direct.ts';
@@ -76,7 +76,7 @@ import { maintenanceLifecycle } from './maintenance.ts';
 import { networkLifecycle } from './network.ts';
 import { powerLifecycle } from './power.ts';
 import { processesLifecycle } from './processes.ts';
-import { statsLifecycle } from './usage-stats.ts';
+import { errorReportsLifecycle, usageCountsLifecycle } from './usage-stats.ts';
 
 /*
  * Every area of the daemon, in one list: what each answers, which events every client hears from it,
@@ -125,6 +125,7 @@ export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
         gitArea(gitDeps(input)),
         agentWorkLifecycle(work),
         agentsLifecycle(agents),
+        usageCountsLifecycle(stats),
         usageArea({ usage: usage.usage, limits: usage.limits }),
         accountsArea({ accounts: providers.accounts }),
         processesArea({ monitor: processes.processes }),
@@ -149,6 +150,7 @@ export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
         drawingArea({ store: projects.drawings }),
         diagramArea({ store: projects.diagrams }),
         launchesArea({ store: launches.store, runner: launches.runner }),
+        databaseConnectionsLifecycle(databases.connections),
         templateArea({ store: templates.store }),
         databaseArea({ service: databases.service, connections: databases.connections, agents: databases.agents, sql: databases.sqlAnalysis }),
         languageArea({ host: language.host }),
@@ -160,7 +162,7 @@ export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
         chatArea(chatDeps(input)),
         computerArea({ computer }),
         sessionArea(sessionDeps(input)),
-        statsLifecycle(stats),
+        errorReportsLifecycle(),
         directArea({ peers: network.peers }),
         reachArea({ reach: network.reach }),
         networkLifecycle(network)

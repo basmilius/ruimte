@@ -46,13 +46,18 @@ export async function wireUsageStats(home: string, identity: EndpointIdentity, a
     };
 }
 
-/* Last of the areas that hold something, so what they counted and failed on while stopping is still written and sent. */
-export function statsLifecycle({ stop }: UsageStatsBundle): Area {
+/* Written in the last phase, before the plan limits as main did, so what was counted while stopping is in. */
+export function usageCountsLifecycle({ stop }: UsageStatsBundle): Area {
     return {
-        name: 'usage counts and error reports',
-        stop: [
-            { phase: 'last', label: 'Writing the usage counts', run: () => stop() },
-            { phase: 'last', label: 'Sending error reports', run: () => stopTelemetry() }
-        ]
+        name: 'usage counts',
+        stop: [{ phase: 'last', label: 'Writing the usage counts', run: () => stop() }]
+    };
+}
+
+/* Last of the areas that hold something, so what failed while stopping is still sent. */
+export function errorReportsLifecycle(): Area {
+    return {
+        name: 'error reports',
+        stop: [{ phase: 'last', label: 'Sending error reports', run: () => stopTelemetry() }]
     };
 }

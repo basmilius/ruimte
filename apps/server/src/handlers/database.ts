@@ -23,10 +23,17 @@ export function databaseArea(deps: DatabaseDeps): Area {
         handlers: (dispatcher) => registerRequests(dispatcher, deps),
         closed: (clientId) => service.release(clientId),
         stop: [
-            { phase: 'end', label: 'Closing database connections', run: () => connections.closeAll() },
             { phase: 'end', label: 'Closing database agents', run: () => agents.close() },
             { phase: 'end', label: 'Stopping the database helper', run: () => service.dispose() }
         ]
+    };
+}
+
+/* The saved connections close before the templates, and the database agents after them, in main's order. */
+export function databaseConnectionsLifecycle(connections: Pick<DatabaseConnectionStore, 'closeAll'>): Area {
+    return {
+        name: 'database connections',
+        stop: [{ phase: 'end', label: 'Closing database connections', run: () => connections.closeAll() }]
     };
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, spyOn, test } from 'bun:test';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
+import { runStop } from './area.ts';
 import { tempHomes } from './temp-home-test-helpers.ts';
 import { testRuntime, testSeams } from './testing/test-seams.ts';
 import { wireDaemon } from './wire-daemon.ts';
@@ -208,6 +209,36 @@ describe('wireDaemon', () => {
             for (const spy of spies) {
                 spy.mockRestore();
             }
+            await wired.stop();
+        }
+    });
+
+    test('stops in main order: the database connections, then the templates, then the database agents; the usage counts, then the plan limits, then the error reports', async () => {
+        const home = join(await homeOf(), 'home');
+        const wired = await wireDaemon({
+            runtime: testRuntime(home),
+            launcher: 'standalone',
+            seams: testSeams({ home, clock: new ManualClock() }),
+            shutdown: async () => undefined
+        });
+        const ran: string[] = [];
+        const recorded = wired.areas.map((area) => ({ ...area, stop: area.stop?.map((step) => ({ ...step, run: () => void ran.push(step.label) })) }));
+
+        try {
+            await runStop(recorded, () => undefined);
+
+            const watched = [
+                'Closing database connections',
+                'Closing templates',
+                'Closing database agents',
+                'Stopping the database helper',
+                'Writing the usage counts',
+                'Writing the plan limits',
+                'Sending error reports',
+                'Closing direct channels'
+            ];
+            expect(ran.filter((label) => watched.includes(label))).toEqual(watched);
+        } finally {
             await wired.stop();
         }
     });
