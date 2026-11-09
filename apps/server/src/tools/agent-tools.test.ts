@@ -12,6 +12,7 @@ import { MAX_TITLE_LENGTH, NEW_NODE, type CanvasHost } from '../canvas/host.ts';
 import { MAX_LINKS } from '../canvas/links.ts';
 import { PLACEMENT_GAP, TEAM_COLUMNS } from '../canvas/placement.ts';
 import { projectReach } from '../canvas/reach.ts';
+import { createAntigravityProvider } from '../providers/acp-providers.ts';
 import { MAX_ROLES, ROLES_SHAPE } from './agent-tools.ts';
 import { canvasFixture, type CanvasFixture, content, madeId, TOKENS } from './canvas-fixture-test-helpers.ts';
 
@@ -180,6 +181,17 @@ describe('agent', () => {
         expect([plain.status, asked.status]).toEqual([200, 200]);
         expect([plain.lines[0]!.split('\t')[1], asked.lines[0]!.split('\t')[1]]).toEqual(['chat', 'terminal']);
         expect(fx.started.map((start) => start.node)).toEqual(['chat', 'terminal']);
+    });
+
+    test('Antigravity without its chat server here still opens as a chat, alone and in a team', async () => {
+        fx.knobs.providers = { antigravity: createAntigravityProvider({ launch: () => null }) };
+        const alone = await fx.invoke('agent_start', { cli: 'antigravity' });
+        const team = await fx.invoke('agent_team', {
+            label: 'Crew',
+            roles: JSON.stringify([{ title: 'Docs', prompt: 'write the docs', provider: 'antigravity' }])
+        });
+        expect([alone.lines[0]!.split('\t')[1], team.lines[1]!.split('\t')[1]]).toEqual(['chat', 'chat']);
+        expect(fx.started.map((start) => start.node)).toEqual(['chat', 'chat']);
     });
 
     test('a CLI that is not installed is refused with the ones that are', async () => {

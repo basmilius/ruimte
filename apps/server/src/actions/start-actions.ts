@@ -36,13 +36,14 @@ import { errorText } from '../error-text.ts';
 import type { WorktreeWant } from '../git/worktree-host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { untrustedStartProblem } from '../projects/untrusted.ts';
+import { opensAsChat } from '../providers/table.ts';
 import { agentCallOf, type ServerActionContext } from './context.ts';
 import { operationIdOf } from './operation-actions.ts';
 
 type TeamRole = { provider: AgentKind; terminal: boolean };
 
 function kindOf(starts: Pick<AgentStartHost, 'provider'>, role: TeamRole): 'chat' | 'terminal' {
-    return !role.terminal && starts.provider(role.provider).capabilities.chat ? 'chat' : 'terminal';
+    return !role.terminal && opensAsChat(starts.provider(role.provider)) ? 'chat' : 'terminal';
 }
 
 /*
@@ -145,7 +146,7 @@ function refuseBoundedStart(starts: Pick<AgentStartHost, 'provider'>, opener: Bo
     }
     const provider = starts.provider(input.provider);
 
-    if (!provider.capabilities.chat) {
+    if (!opensAsChat(provider)) {
         throw new ToolRefusal('voice-chat-only', `${provider.name} has no AI Chat, and ${inline} starts only AI Chats`);
     }
     if (input.mode != null && input.mode !== BOUNDED_CEILING) {
@@ -283,7 +284,7 @@ const startAgentNow: StartHandler = async (input, call) => {
     // A bounded opener is no node, so the daemon knows no mode of its own; what it starts is held to supervised, whatever the host says.
     const ceiling = bounded ? BOUNDED_CEILING : modeForOpening(caller, input.mode ?? undefined);
     const provider = host.starts.provider(kind);
-    const chat = !input.terminal && provider.capabilities.chat;
+    const chat = !input.terminal && opensAsChat(provider);
     const selection = selectionForOpening(provider, chat, input.model ?? undefined, input.effort ?? undefined, host.starts.preferredSelection(kind));
     if (input.branch != null && !input.worktree) {
         throw new ToolRefusal('branch-needs-worktree', 'branch names the branch of a worktree; add worktree');

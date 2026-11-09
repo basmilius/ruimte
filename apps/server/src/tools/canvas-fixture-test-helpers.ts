@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AgentLineageStore, TaskStore, type Notice } from '@adecore/agents/coordination';
+import type { ChatProvider } from '@adecore/agents/providers';
 import {
     nodeSizeOf,
     type AgentKind,
@@ -62,6 +63,8 @@ export interface Knobs {
     nodeSizes: NodeSizes;
     installed: AgentKind[];
     preferredSelections: Partial<Record<AgentKind, ModelSelection>>;
+    /* The provider of a kind as this machine has it, in place of the shipped one. */
+    providers: Partial<Record<AgentKind, ChatProvider>>;
     modes: Record<string, RuntimeMode>;
     worktrees: string[];
 }
@@ -216,6 +219,7 @@ export class CanvasFixture {
             nodeSizes: {},
             installed: ['claude', 'codex', 'antigravity', 'copilot'],
             preferredSelections: {},
+            providers: {},
             modes: {},
             worktrees: []
         } satisfies Knobs);
@@ -528,7 +532,7 @@ const PARTS: readonly HostSource<CanvasFixture>[] = [
                 terminalModePreference: () => fixture.knobs.terminalPreference,
                 preferredSelection: (kind) => fixture.knobs.preferredSelections[kind],
                 installedAgents: async () => fixture.knobs.installed,
-                provider: (kind) => FIXTURE_PROVIDERS.get(kind),
+                provider: (kind) => fixture.knobs.providers[kind] ?? FIXTURE_PROVIDERS.get(kind),
                 holdPrompt: async (projectId, nodeId, prompt, brief) => {
                     fixture.held.push({ projectId, nodeId, prompt, ...(brief === undefined ? {} : { brief }) });
                 },

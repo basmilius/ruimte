@@ -7,6 +7,7 @@ import { requireInstalled } from '../canvas/agents.ts';
 import { externalActorTitle } from '../canvas/external-caller.ts';
 import { field, orNote } from '../canvas/host.ts';
 import { selectionForOpening } from '../canvas/model.ts';
+import { opensAsChat } from '../providers/table.ts';
 import type { RoutineAgentHost } from '../routines/agent-host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 import { launchHostOf, named } from './launch-actions.ts';
@@ -97,7 +98,7 @@ async function routineFrom(context: ServerActionContext, caller: string, id: str
         if (input.provider !== undefined || agent === null) {
             requireInstalled(host.starts, await host.starts.installedAgents(), provider);
             const cli = host.starts.provider(provider);
-            if (!cli.capabilities.chat) {
+            if (!opensAsChat(cli)) {
                 throw new ToolRefusal('agent-needs-chat', `${cli.name} has no chat, and a routine runs its agent as a chat`);
             }
         }

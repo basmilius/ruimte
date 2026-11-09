@@ -171,3 +171,11 @@ export function shippedProviders(): readonly ChatProvider[] {
 
     return shipped;
 }
+
+/*
+ * Whether an agent of this CLI opens as a chat: what the CLI can do, not whether this machine has its chat's server
+ * now. A chat whose server is missing still opens as one, and says how to install it.
+ */
+export function opensAsChat(provider: ChatProvider): boolean {
+    return (shippedProviders().find((shipped) => shipped.kind === provider.kind) ?? provider).capabilities.chat;
+}
