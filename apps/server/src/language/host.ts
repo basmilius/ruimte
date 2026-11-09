@@ -545,9 +545,10 @@ export class LanguageHost {
     }
 
     /*
-     * The hold on build code changed for a project: its documents take the kinds they have now, and a server whose own
-     * start depends on it starts again. Each server is judged by the hold it started with, never by `project.buildHeld`,
-     * which any status read moves as soon as the choice changed in memory.
+     * The hold on build code changed for a project: its documents take the kinds they have now. A kind that cannot turn
+     * building off stops under `project.buildHeld`, also while its first start is on its way. Any other server is judged
+     * by the hold it started with, since any status read moves `project.buildHeld` as soon as the choice changed in
+     * memory, and starts again when that differs.
      */
     private async applyBuildHold(project: ProjectLanguage): Promise<void> {
         await this.refreshStanding(project);

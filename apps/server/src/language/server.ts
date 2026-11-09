@@ -290,6 +290,7 @@ export class LanguageServer {
     private children = 0;
     private readyAt: number | null = null;
     private startPromise: Promise<void> | undefined;
+    private cancelledStart: Promise<void> | undefined;
     private sidecarPromise: Promise<Component | null> | undefined;
     /* Why a sidecar did not start or ended, which keeps it from starting again until the kind does. */
     private sidecarFailure: string | undefined;
@@ -458,18 +459,29 @@ export class LanguageServer {
 
     /*
      * Starts the processes when a document waits for them and the kind is installed; nothing happens
-     * otherwise, and a crashed kind stays crashed. Callers share the start that is under way.
+     * otherwise, and a crashed kind stays crashed. Callers share the start that is under way, unless a stop cancelled
+     * it: that one ends without a spawn, so a caller after the stop starts again once it settled.
      */
     ensureStarted(): Promise<void> {
-        this.startPromise ??= this.begin().finally(() => {
-            this.startPromise = undefined;
+        const previous = this.startPromise;
+
+        if (previous !== undefined && previous !== this.cancelledStart) {
+            return previous;
+        }
+
+        const generation = this.generation;
+        const promise = (previous === undefined ? this.begin(generation) : previous.catch(() => undefined).then(() => this.begin(generation))).finally(() => {
+            if (this.startPromise === promise) {
+                this.startPromise = undefined;
+            }
         });
-        return this.startPromise;
+        this.startPromise = promise;
+
+        return promise;
     }
 
-    private async begin(): Promise<void> {
-        const generation = this.generation;
-        if (this.phase !== 'stopped' || this.documents.size === 0 || !(await this.options.isInstalled())) {
+    private async begin(generation: number): Promise<void> {
+        if (generation !== this.generation || this.phase !== 'stopped' || this.documents.size === 0 || !(await this.options.isInstalled())) {
             return;
         }
         // A stop that came while the install was looked up wins.
@@ -911,6 +923,7 @@ export class LanguageServer {
     /* Ends the processes and leaves the documents attached, for a restart or for the project going. */
     async stop(): Promise<void> {
         this.generation++;
+        this.cancelledStart = this.startPromise;
         this.sidecarPromise = undefined;
         const components = this.components;
         this.components = [];

@@ -2735,6 +2735,47 @@ describe('every kind that builds the code it reads', () => {
             expect((await host.status('p1')).find((status) => status.server === kind)).toMatchObject({ state: 'stopped', buildHeld: true });
         });
     });
+
+    // Council round 19: turning building off and on again while the first start read its configuration left the document without a server.
+    describe.each(BUILDING_KINDS)('$kind', ({ kind, languageId, path, program, manifest }) => {
+        it('starts once when a person turns building off and on again while its first start reads its configuration', async () => {
+            const reading = Promise.withResolvers<void>();
+            const gate = Promise.withResolvers<boolean>();
+            const executable = join(root, 'bin', program);
+            await mkdir(dirname(executable), { recursive: true });
+            await writeFile(executable, '');
+            const choices = new WorktreeBuildChoices({ path: join(root, 'worktree-build.json') });
+            await choices.set(MAIN, true);
+            const { host, spawner } = await installed([kind], {
+                programs: [executable],
+                agentWorktrees: { main: MAIN, paths: [WORK] },
+                worktreeBuild: choices,
+                exists: async (candidate) => {
+                    if (manifest !== null && candidate === join(WORK, manifest)) {
+                        return true;
+                    }
+
+                    if (candidate !== join(WORK, 'node_modules', 'typescript', 'lib', 'tsserver.js')) {
+                        return false;
+                    }
+
+                    reading.resolve();
+
+                    return gate.promise;
+                }
+            });
+
+            expect((await open(host, path, '', 'client-1', languageId)).servers).toEqual([kind]);
+
+            await reading.promise;
+            await host.setWorktreeBuild('p1', false);
+            await host.setWorktreeBuild('p1', true);
+            gate.resolve(false);
+            await until(host, async () => (await host.status('p1')).find((status) => status.server === kind)?.state === 'ready');
+
+            expect(spawner.of(kind)).toHaveLength(1);
+        });
+    });
 });
 
 describe('build code in the worktree of an agent', () => {
