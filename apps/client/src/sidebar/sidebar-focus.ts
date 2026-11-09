@@ -8,11 +8,13 @@ import { sidebarProjectKey } from '../project/sidebar-projects';
  */
 export function focusViewRow(viewId: string): void {
     const { current, currentEndpointId } = useProject.getState();
-    const local = document.querySelector<HTMLElement>(`[data-sidebar-row="${CSS.escape(`view:${viewId}`)}"]`);
     const key = current && currentEndpointId ? sidebarProjectKey(currentEndpointId, current.projectId) : null;
-    const combined = key
-        ? (document.querySelector<HTMLElement>(`[data-sidebar-row="${CSS.escape(`${key}:view:${viewId}`)}"]`) ??
-          document.querySelector<HTMLElement>(`[data-sidebar-row="${CSS.escape(`project:${key}`)}"]`))
-        : null;
-    (local ?? combined)?.focus();
+    // Compared by value: a project key holds brackets and quotes, which an escaped selector does not survive everywhere.
+    const rows = [...document.querySelectorAll<HTMLElement>('[data-sidebar-row]')];
+    const rowOf = (id: string): HTMLElement | undefined => rows.find((row) => row.dataset.sidebarRow === id);
+    const wanted = [`view:${viewId}`, ...(key === null ? [] : [`${key}:view:${viewId}`, `project:${key}`])];
+    wanted
+        .map(rowOf)
+        .find((row) => row !== undefined)
+        ?.focus();
 }

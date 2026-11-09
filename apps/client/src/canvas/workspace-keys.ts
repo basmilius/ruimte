@@ -6,7 +6,7 @@ import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { cancelCanvasGesture } from '@/canvas/gesture-cancel';
 import { pointerInWorld } from '@/canvas/pointer';
 import type { KeyHandler } from '@/commands/behavior';
-import { keyboardOnCanvas } from '@/commands/key-context';
+import { keyboardOnCanvas, onStandaloneView } from '@/commands/key-context';
 import { isPlainEscape, type WorkspaceKeys } from '@/commands/workspace-keys';
 import { focusedCanvas, type CanvasState } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
@@ -95,9 +95,14 @@ export function canvasKeys(): WorkspaceKeys {
                 return false;
             }
             // An open popup or dialog owns Escape. It closes itself, and the node it belongs to stays focused.
-            if (!isInFloatingLayer(event.target)) {
-                escapeCanvas(focusedCanvas().getState());
+            if (isInFloatingLayer(event.target)) {
+                return true;
             }
+            // A view of its own has no canvas to step out to; leaving it is the sidebar's (`sidebar/workspace-keys.ts`), whichever listens first.
+            if (onStandaloneView()) {
+                return false;
+            }
+            escapeCanvas(focusedCanvas().getState());
 
             return true;
         },
