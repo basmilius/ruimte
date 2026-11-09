@@ -16,7 +16,7 @@ import { FAKE_API_TOKEN, FakeCloudflare, FakeCloudflared, MemoryTokenStore, type
  * dashboard may delete the record of a row that is on. A failure names its seed;
  * `RUIMTE_SEED=<seed>` runs that one alone, and `RUIMTE_SEQUENCES=<count>` searches more.
  */
-const SEQUENCES = Number(process.env.RUIMTE_SEQUENCES ?? 320);
+const SEQUENCES = Number(process.env.RUIMTE_SEQUENCES ?? 1200);
 const BATCH = 40;
 const STEPS = 30;
 const SERVING = 'http://localhost:8080';
@@ -121,6 +121,8 @@ interface Ground {
     deletedOutside: Set<string>;
     /* The step drew a fault other than a failed DNS read or one that may pass (a 5xx, a 429, a lost answer). */
     harsh: boolean;
+    /* The run draws its steps from `FOCUSED`, with more faults. */
+    focused: boolean;
     log: string[];
     problems: string[];
 }
@@ -193,12 +195,52 @@ function checkWrite(world: Ground, tunnelId: string, ingress: readonly Rule[]): 
     }
 }
 
+/*
+ * Invariant 9: a DNS record of Ruimte's goes out (made, or proxied again) only while the first rule Cloudflare takes for
+ * its hostname on every path, as Ruimte last read it, is Ruimte's own rule for that row: its 404 or its serving rule,
+ * never a rule of someone else's or nothing. A person's rule with a path on the hostname itself may come first only
+ * while Ruimte's rule serves.
+ */
+function checkPublication(world: Ground, hostname: string): void {
+    const tunnelId = world.disk.value?.tunnel?.id;
+    const known = tunnelId === undefined ? undefined : world.known.get(tunnelId);
+
+    if (!(world.disk.value?.rows ?? []).some((row) => row.hostname === hostname)) {
+        world.problems.push(`published a record of ${hostname} without a row`);
+
+        return;
+    }
+
+    if (known === undefined) {
+        world.problems.push(`published a record of ${hostname} without having read the tunnel`);
+
+        return;
+    }
+
+    const own = known.find((rule) => rule.hostname === hostname && (rule.path === undefined || rule.path === ''));
+
+    for (const path of PATHS) {
+        const rule = ruleFor(known, hostname, path);
+        const persons = rule !== undefined && rule.hostname === hostname && rule !== own && serves(own);
+
+        if (own === undefined || (rule !== own && !persons)) {
+            world.problems.push(`published a record of ${hostname} while ${String(rule?.hostname ?? rule?.service ?? 'nothing')} takes ${path}`);
+
+            return;
+        }
+    }
+}
+
 function watchedFetch(current: Ground): CloudflareFetch {
     return async (url, init) => {
         const path = new URL(url).pathname;
         const method = init.method ?? 'GET';
         const config = /\/cfd_tunnel\/([^/]+)\/configurations$/.exec(path);
-        const body = typeof init.body === 'string' ? (JSON.parse(init.body) as { config?: { ingress?: Rule[] } }) : undefined;
+        const body = typeof init.body === 'string' ? (JSON.parse(init.body) as { config?: { ingress?: Rule[] }; name?: string }) : undefined;
+
+        if (/\/dns_records(\/[^/]+)?$/.test(path) && (method === 'POST' || method === 'PUT') && body?.name !== undefined) {
+            checkPublication(current, body.name);
+        }
 
         if (current.vanishIn !== null && (current.vanishIn -= 1) <= 0) {
             const gone = tunnelOf(current);
@@ -384,7 +426,10 @@ function injectFaults(world: World): void {
         'GET /zones'
     ];
 
-    if (next() < 0.25) {
+    // A focused run fails more, so a restart's bring-up often leaves a row without its record.
+    const odds = world.focused ? 0.45 : 0.25;
+
+    if (next() < odds) {
         const key = pick(next, keys);
         // A 404 says the tunnel or the record is gone, which Cloudflare never answers for one that stands.
         const status = pick(next, key.includes('dns_records') && !key.startsWith('DELETE') ? [401, 403, 404, 429, 500, 503] : [401, 403, 429, 500, 503]);
@@ -397,7 +442,7 @@ function injectFaults(world: World): void {
         }
     }
 
-    if (next() < 0.25) {
+    if (next() < odds) {
         const key = pick(next, keys);
         const status = pick(next, [null, 502, 503]);
         const skip = Math.floor(next() * 3);
@@ -615,6 +660,13 @@ async function checkState(world: World): Promise<void> {
     }
 }
 
+/* Invariant 10: Try again or the network coming back starts the listener the person turned on while its port is free. */
+function checkListener(world: World): void {
+    if (world.disk.value?.mcp.enabled === true && !world.portTaken && !world.listener.on) {
+        world.problems.push('left the MCP listener down after a retry while its port is free');
+    }
+}
+
 /* Invariant 4: what a finished Remove or unlink took off is gone from Cloudflare, as far as Ruimte knows it. */
 function checkGone(world: World, tunnelId: string, hostnames: readonly string[]): void {
     // A tunnel deleted in the dashboard took its rules along.
@@ -760,6 +812,30 @@ function rowsOf(world: World): StoredRow[] {
     return world.disk.value?.rows ?? [];
 }
 
+/*
+ * The draws of a focused run: restarts and records deleted in the dashboard, then jobs that bring nothing up (the MCP
+ * switch, add, update, Remove), since a restart forgets every reason Ruimte kept in memory.
+ */
+const FOCUSED: ReadonlyArray<readonly [number, number]> = [
+    [17, 18.5],
+    [17, 18.5],
+    [17, 18.5],
+    [22, 23],
+    [22, 23],
+    [0, 7],
+    [0, 7],
+    [13, 13.6],
+    [7, 11],
+    [11, 12.5]
+];
+
+function focusedDraw(world: World): number {
+    // Without a row, an update or Remove would fall through to an unlink, which ends the run's tunnel.
+    const [from, to] = pick(world.next, rowsOf(world).length === 0 ? FOCUSED.slice(5, 6) : FOCUSED);
+
+    return from + world.next() * (to - from);
+}
+
 /* Draws one step and runs it with its faults, then checks the invariants. */
 async function step(world: World): Promise<void> {
     const { next, service } = world;
@@ -770,7 +846,7 @@ async function step(world: World): Promise<void> {
     const row = rows.length === 0 ? undefined : pick(next, rows);
     const kept = world.tokens.read();
     // A person whose token is gone or refused soon pastes one, or most runs would end without a tunnel to judge.
-    const draw = (kept === null || kept !== world.cloudflare.acceptedToken) && next() < 0.3 ? 19 : next() * 24;
+    const draw = (kept === null || kept !== world.cloudflare.acceptedToken) && next() < 0.3 ? 19 : world.focused ? focusedDraw(world) : next() * 24;
     const healthy = healthyRows(world);
     // A port of Ruimte's refuses only the row that names it.
     const refusedForPort = (failed: unknown, port: number | null): void => {
@@ -806,7 +882,13 @@ async function step(world: World): Promise<void> {
 
         const ids = new Set(before.keys());
         const failed = await attempt(world, () =>
-            service.add({ kind, zone: zoneIdOf(world, host.zone), label: host.label, ...(kind === 'dev' ? { port } : {}), comeBack: next() < 0.5 })
+            service.add({
+                kind,
+                zone: zoneIdOf(world, host.zone),
+                label: host.label,
+                ...(kind === 'dev' ? { port } : {}),
+                comeBack: world.focused || next() < 0.5
+            })
         );
 
         targets = new Set(
@@ -891,9 +973,13 @@ async function step(world: World): Promise<void> {
     } else if (draw < 16) {
         world.log.push('retry');
         await attempt(world, () => service.retry());
+        await service.idle();
+        checkListener(world);
     } else if (draw < 17) {
         world.log.push('network back');
         service.networkBack();
+        await service.idle();
+        checkListener(world);
     } else if (draw < 18.5) {
         world.log.push('restart');
         restart = true;
@@ -998,6 +1084,8 @@ async function sequence(seed: number): Promise<string[]> {
         portTaken: false,
         deletedOutside: new Set(),
         harsh: false,
+        // Every third seed, so the default run reaches a restart followed by jobs without a bring-up often.
+        focused: seed % 3 === 2,
         log: [],
         problems: []
     };
