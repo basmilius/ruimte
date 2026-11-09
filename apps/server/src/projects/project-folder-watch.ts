@@ -82,14 +82,18 @@ export class ProjectFolderWatch {
             if (watched === undefined) {
                 this.watch(projectId, folder);
             } else if (watched.chain.retry()) {
-                // A folder that was missing when the watch began is there now, with whatever it holds.
-                for (const top of ICON_CHAINS.keys()) {
-                    watchIconFolder(this.seams, watched.icons, top);
-                }
-                watched.settle.nudge();
-                watched.icons.settle.nudge();
+                this.returned(watched.icons, watched.settle);
             }
         }
+    }
+
+    /* A project folder that was missing is there now, with whatever it holds. */
+    private returned(icons: IconWatch, settle: Settled): void {
+        for (const top of ICON_CHAINS.keys()) {
+            watchIconFolder(this.seams, icons, top);
+        }
+        settle.nudge();
+        icons.settle.nudge();
     }
 
     close(): void {
@@ -104,21 +108,26 @@ export class ProjectFolderWatch {
         // The folder each depth of the chain holds, whose coming or going takes the files under it along.
         const below = [PROJECT_DIR, PRIVATE_DIR];
 
-        const chain = watchFolderChain(this.seams, [folder, join(folder, PROJECT_DIR), join(folder, PROJECT_DIR, PRIVATE_DIR)], (depth, filename) => {
-            if (filename === null || filename === below[depth] || (depth > 0 && filename === PROJECT_FILE)) {
-                settle.nudge();
-            }
+        const chain = watchFolderChain(
+            this.seams,
+            [folder, join(folder, PROJECT_DIR), join(folder, PROJECT_DIR, PRIVATE_DIR)],
+            (depth, filename) => {
+                if (filename === null || filename === below[depth] || (depth > 0 && filename === PROJECT_FILE)) {
+                    settle.nudge();
+                }
 
-            if (filename === null) {
-                icons.settle.nudge();
-            } else if (depth === 0 && ICON_CHAINS.has(filename)) {
-                // A folder an icon may live in came or went, so it is watched anew.
-                watchIconFolder(this.seams, icons, filename);
-                icons.settle.nudge();
-            } else if ((depth === 0 && isIconInput(filename)) || (depth === 1 && isIconInput(`${PROJECT_DIR}/${filename}`))) {
-                icons.settle.nudge();
-            }
-        });
+                if (filename === null) {
+                    icons.settle.nudge();
+                } else if (depth === 0 && ICON_CHAINS.has(filename)) {
+                    // A folder an icon may live in came or went, so it is watched anew.
+                    watchIconFolder(this.seams, icons, filename);
+                    icons.settle.nudge();
+                } else if ((depth === 0 && isIconInput(filename)) || (depth === 1 && isIconInput(`${PROJECT_DIR}/${filename}`))) {
+                    icons.settle.nudge();
+                }
+            },
+            () => this.returned(icons, settle)
+        );
 
         for (const top of ICON_CHAINS.keys()) {
             watchIconFolder(this.seams, icons, top);

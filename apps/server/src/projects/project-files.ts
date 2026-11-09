@@ -223,9 +223,19 @@ export interface FolderChain {
  * Watches a chain of folders, each the parent of the next. A watcher on a folder that was removed never hears
  * again, and a folder that is not there yet has none, so whenever a folder hears the name of the next one (or no
  * name), the watch starts again from that next folder down. `heard` gets the depth of the folder that heard.
+ *
+ * With `returned`, the nearest folder above the first one that is there is watched too: it hears the first folder
+ * go, which lets go of the watcher that died with it, and come back, which arms the chain again and calls `returned`.
  */
-export function watchFolderChain(seams: WatchSeams, folders: readonly string[], heard: (depth: number, filename: string | null) => void): FolderChain {
+export function watchFolderChain(
+    seams: WatchSeams,
+    folders: readonly string[],
+    heard: (depth: number, filename: string | null) => void,
+    returned?: () => void
+): FolderChain {
     const watchers: (DirectoryWatcher | null)[] = folders.map(() => null);
+    const root = folders[0]!;
+    let anchor: { folder: string; watcher: DirectoryWatcher } | null = null;
     let closed = false;
 
     const arm = (from: number): void => {
@@ -249,15 +259,80 @@ export function watchFolderChain(seams: WatchSeams, folders: readonly string[], 
             heard(depth, filename);
         });
 
+        // An error is how a watcher whose folder went away ends, so it keeps no place a retry would take for a live one.
+        watcher?.on('error', () => {
+            if (watchers[depth] === watcher) {
+                watchers[depth] = null;
+            }
+        });
+
         return watcher ?? null;
     };
 
+    // The name of the folder on the way from `folder` down to the first one, which is what `folder` hears come or go.
+    const towardRoot = (folder: string): string => {
+        let below = root;
+
+        while (dirname(below) !== folder && dirname(below) !== below) {
+            below = dirname(below);
+        }
+
+        return basename(below);
+    };
+
+    const anchorAt = (): void => {
+        anchor?.watcher.close();
+        anchor = null;
+
+        for (let folder = dirname(root); ; folder = dirname(folder)) {
+            const toward = towardRoot(folder);
+            const [watcher] = watchDirectories(seams, [folder], (filename) => {
+                // No name says nothing of the first folder while it is watched, and the parent of a project hears its siblings too.
+                if (!closed && (filename === toward || (filename === null && watchers[0] === null))) {
+                    rootMoved(folder);
+                }
+            });
+
+            if (watcher !== undefined) {
+                anchor = { folder, watcher };
+
+                return;
+            }
+
+            if (dirname(folder) === folder) {
+                return;
+            }
+        }
+    };
+
+    const rootMoved = (heardIn: string): void => {
+        if (heardIn !== dirname(root)) {
+            anchorAt();
+        }
+
+        const missing = watchers[0] === null;
+
+        arm(0);
+
+        if (missing && watchers[0] !== null) {
+            returned?.();
+        }
+    };
+
     arm(0);
+
+    if (returned !== undefined) {
+        anchorAt();
+    }
 
     return {
         retry: () => {
             if (closed || watchers[0] !== null) {
                 return false;
+            }
+
+            if (returned !== undefined && anchor?.folder !== dirname(root)) {
+                anchorAt();
             }
 
             arm(0);
@@ -266,6 +341,8 @@ export function watchFolderChain(seams: WatchSeams, folders: readonly string[], 
         },
         close: () => {
             closed = true;
+            anchor?.watcher.close();
+            anchor = null;
 
             for (const watcher of watchers) {
                 watcher?.close();

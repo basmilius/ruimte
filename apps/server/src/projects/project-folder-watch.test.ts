@@ -332,6 +332,53 @@ describe('ProjectFolderWatch', () => {
         expect(heard).toEqual(['one files', 'one icon', 'one files']);
     });
 
+    test('lets go of a project folder that was removed and watches it again once its parent hears it come back', async () => {
+        const watch = new FakeWatch();
+        const heard: string[] = [];
+        let folderThere = true;
+        const folders = new ProjectFolderWatch(
+            {
+                schedule: watch.schedule,
+                watch: (path, options, listener) => {
+                    if (path.startsWith('/work/one') && !folderThere) {
+                        throw new Error('ENOENT');
+                    }
+
+                    return watch.watch(path, options, listener);
+                }
+            },
+            (projectId, change) => void heard.push(`${projectId} ${change}`)
+        );
+        folders.sync(new Map([['one', '/work/one']]));
+        const [dead] = watch.openOn('/work/one');
+
+        folderThere = false;
+        watch.on('/work').emit('one', 'rename');
+
+        expect(dead?.closed).toBe(true);
+        expect(watch.openOn('/work/one')).toHaveLength(0);
+        expect(heard).toEqual([]);
+
+        folderThere = true;
+        watch.on('/work').emit('one', 'rename');
+        await watch.settle();
+
+        expect(watch.openOn('/work/one')).toHaveLength(1);
+        expect(watch.openOn('/work/one/.ruimte')).toHaveLength(1);
+        expect(watch.openOn('/work/one/.ruimte/private')).toHaveLength(1);
+        expect(watch.openOn('/work/one/public')).toHaveLength(1);
+        expect(heard).toEqual(['one files', 'one icon']);
+
+        watch.on('/work').emit('two', 'rename');
+        await watch.settle();
+
+        expect(heard).toEqual(['one files', 'one icon']);
+
+        folders.close();
+
+        expect(watch.openOn('/work')).toHaveLength(0);
+    });
+
     test('tells that the icon may have changed for the files an icon is derived from, and for no other', async () => {
         const { watch, heard, folders } = setup();
         folders.sync(new Map([['one', '/work/one']]));
