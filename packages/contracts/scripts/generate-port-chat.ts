@@ -391,7 +391,6 @@ add('a running turn with a pending approval', [turn('t1', 'running'), user('u1')
     activeTurnId: 't1'
 });
 
-// Seeded threads, to reach orders nobody wrote down.
 const random = seeded(4242);
 const pick = <T>(list: readonly T[]): T => list[Math.floor(random() * list.length)]!;
 let serial = 0;
@@ -523,7 +522,6 @@ const timeline = timelineCases.map((entry) => {
     };
 });
 
-// The tool table and the sentences of a run of calls.
 const catalogModule = await adecore<{
     TOOL_CATALOG: Record<
         string,
@@ -540,7 +538,6 @@ const iconModule = await adecore<{ toolIcon(name: string): { props: { icon: { di
 
 const kebab = (name: string): string => name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 
-// The wire name of every tool the catalog knows, and the names it does not.
 const catalogNames = Object.keys(catalogModule.TOOL_CATALOG);
 const otherNames = ['ImageGeneration', 'Change', 'mcp__server__tool', 'mcp__ruimte__view_list', 'Unknown', ''];
 
@@ -606,7 +603,6 @@ const toolSummaries = summaryInputs.map(([name, input]) => ({
     isPath: toolsModule.toolSummaryIsPath(name, input)
 }));
 
-// Runs of calls, as the thread groups them and as a folded turn counts them.
 const groupNames = [...catalogNames, 'ImageGeneration', 'Change', 'mcp__server__tool', 'Unknown'];
 const groupRuns: ChatItem[][] = [];
 let groupId = 0;
@@ -674,7 +670,6 @@ const sentences = groupRuns.map((run) => ({
     turn: timelineLogic.summarizeTurn(run)
 }));
 
-// The files a call changes.
 const editInputs: [string, unknown][] = [
     ['Edit', { file_path: 'a.ts', old_string: 'one\ntwo', new_string: 'three' }],
     ['Edit', { file_path: 'a.ts', old_string: '', new_string: 'added\nlines\n' }],
@@ -716,7 +711,6 @@ const editInputs: [string, unknown][] = [
 
 const fileEdits = editInputs.map(([name, input]) => ({ name, input, edit: toolFileEdit(name, input) }));
 
-// The simple commands of a shell line.
 const { shellCommands } = await adecore<{
     shellCommands(source: string): { words: { text: string }[]; program: { index: number; name: string } | null; heredocs: unknown[]; redirects: unknown[] }[];
 }>(`${chatLogic}/embedded-code.js`);
@@ -803,7 +797,6 @@ const shells = shellLines.map((source) => ({
     }))
 }));
 
-// Sub-agents.
 const { summaryWordOf, badgeCountOf, progressOf, statusWordOf, subagentTitle } = await adecore<{
     summaryWordOf(words: string[]): string;
     badgeCountOf(words: string[]): number;
@@ -901,7 +894,6 @@ const flyouts = flyoutThreads.map((items) => {
     return { items: parsed, active: activeSubagents(parsed).map((entry) => entry.id) };
 });
 
-// Workflows.
 const { workflowPhases, workflowAgentTime, workflowAgentPreview, workflowCounts, workflowDescription } = await adecore<{
     workflowPhases(workflow: unknown, running: boolean): { key: string; title: string | null; agents: { agent: { index: number }; state: string }[] }[];
     workflowAgentTime(view: unknown): string | null;

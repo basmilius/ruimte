@@ -640,7 +640,6 @@ function typedMembers(union: string, tag: string): Map<string, Schema> {
     const schema = typed.find(([name]) => name === union)![1];
     return new Map((schema.oneOf ?? schema.anyOf).map((member: Schema) => [member.properties[tag].const, member]));
 }
-// The members of a union are named after their tag: `ChatUserItem`, `ChatDeltaEvent`.
 for (const [union, tag, suffix] of [
     ['ChatItem', 'kind', 'Item'],
     ['ChatEvent', 'type', 'Event']
@@ -649,12 +648,9 @@ for (const [union, tag, suffix] of [
         names.set(canonical(member), `Chat${pascal(value)}${suffix}`);
     }
 }
-// `StoredCanvasView`, `StoredUnknownView`.
 for (const [value, member] of typedMembers('StoredView', 'kind')) {
     names.set(canonical(member), `Stored${pascal(value)}View`);
 }
-// `AgentRoutine`, `RoutineWeeklySchedule`.
-// `FsTextRead`, `FsBinaryRead`, `FsTooLargeRead`.
 for (const [value, member] of typedMembers('FsReadResult', 'kind')) {
     names.set(canonical(member), `Fs${pascal(value)}Read`);
 }
@@ -680,11 +676,9 @@ names.set(canonical(endpointInfo.agentIntegrations), 'EndpointAgentIntegrations'
 names.set(canonical(typed.find(([name]) => name === 'ProcessSample')![1].properties.scope), 'ProcessScope');
 // A launch and a suggestion for one both say where an import read it from.
 names.set(canonical(typed.find(([name]) => name === 'LaunchConfig')![1].properties.origin), 'LaunchOrigin');
-// `ProviderSelectOption`, `ProviderBooleanOption`.
 for (const [value, member] of typedMembers('ProviderModelOption', 'type')) {
     names.set(canonical(member), `Provider${pascal(value)}Option`);
 }
-// `ProjectImageIcon`, `ProjectInitialIcon`; the lucide icon is the one every mark shares.
 for (const [value, member] of typedMembers('ProjectIcon', 'kind')) {
     if (value !== 'lucide') {
         names.set(canonical(member), `Project${pascal(value)}Icon`);

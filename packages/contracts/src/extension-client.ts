@@ -102,7 +102,6 @@ export const EXTENSION_CALLS_WITHOUT_PERMISSION: readonly string[] = [
     'log.error'
 ];
 
-/* The permission a call of the client API needs, or null for one that needs none. */
 export function extensionCallPermission(call: string): string | null {
     return Object.hasOwn(EXTENSION_CLIENT_PERMISSIONS, call) ? (EXTENSION_CLIENT_PERMISSIONS[call] ?? null) : null;
 }

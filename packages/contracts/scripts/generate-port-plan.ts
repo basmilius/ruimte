@@ -156,7 +156,6 @@ plan(
 );
 plan('steps', [{ type: 'step', id: 'a', title: '日本語 \u{1f600} café', description: 'café\r\nwindows', note: 'tab\there' }], { title: 'Ångström' });
 
-// Seeded plans, to reach combinations nobody wrote by hand.
 const random = seeded(77);
 const pick = <T>(list: readonly T[]): T => list[Math.floor(random() * list.length)]!;
 const lines = [

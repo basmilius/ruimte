@@ -100,7 +100,6 @@ type ValueOf<Spec> = Spec extends { schema: infer Schema extends z.ZodType; defa
         : z.infer<Schema>
     : never;
 
-/* What the machine holds for each setting. */
 export type MachineSettingValues = { readonly [Key in MachineSettingKey]: ValueOf<Rows[Key]> };
 
 type ReplyOf<Spec> = Spec extends { nullable: true; schema: infer Schema extends z.ZodType }
@@ -128,7 +127,6 @@ export function settingDefault<Key extends MachineSettingKey>(key: Key): Machine
     return MACHINE_SETTINGS[key].default as MachineSettingValues[Key];
 }
 
-/* Whether a client that is not the owner may not set it. */
 export function isOwnerOnlySetting(key: MachineSettingKey): key is OwnerOnlyKey {
     return 'ownerOnly' in MACHINE_SETTINGS[key];
 }

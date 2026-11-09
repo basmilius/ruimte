@@ -73,7 +73,6 @@ export function changeKindOf(path: string): ChangeKind {
     return 'code';
 }
 
-/* Sums the lines of each file into the kind its path is. */
 export function splitChanges(files: Iterable<{ readonly path: string; readonly added: number; readonly deleted: number }>): ChangeSplit {
     const split: ChangeSplit = {
         code: { added: 0, deleted: 0 },

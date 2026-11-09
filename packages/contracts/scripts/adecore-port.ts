@@ -17,7 +17,6 @@ export function adecoreEntry(name: string): string {
     return dirname(fromClient.resolve(name));
 }
 
-/** A small seeded generator, so a fixture is the same on every run. */
 export function seeded(seed: number): () => number {
     let state = seed >>> 0;
 
@@ -45,7 +44,6 @@ export function adecoreDependency<T>(name: string, of: string): Promise<T> {
     return import(Bun.resolveSync(name, dirname(fromClient.resolve(of)))) as Promise<T>;
 }
 
-/** The folder a package of ADE CORE sits in, from its manifest. */
 export function adecorePackageRoot(name: string): string {
     let folder = dirname(fromClient.resolve(name));
 
