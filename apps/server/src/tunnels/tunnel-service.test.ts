@@ -2718,6 +2718,196 @@ describe('what the person asked and what Cloudflare serves', () => {
         expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'mcp.bmnw.nl', service: 'http_status:404' });
         expect((await f.state()).rows[0]).toMatchObject({ enabled: true, reason: expect.any(String) });
     });
+
+    /* A listener whose port something else holds while `taken` is set, as Bun refuses a port in use. */
+    function takenListener(): { taken: { value: boolean }; ports: Partial<TunnelPorts> } {
+        const taken = { value: true };
+        const listener = { on: false };
+
+        return {
+            taken,
+            ports: {
+                setListener: async (enabled) => {
+                    if (enabled && taken.value) {
+                        throw new Error(`Failed to start server. Is port ${LISTENER_PORT} in use?`);
+                    }
+
+                    listener.on = enabled;
+
+                    return enabled ? LISTENER_PORT : null;
+                },
+                listenerPort: () => (listener.on ? LISTENER_PORT : null)
+            }
+        };
+    }
+
+    test('brings the other hostnames up when the port of the MCP listener is taken at boot, says why on the MCP row, and starts it on Try again', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.setMcp(true);
+        await f.service.add({ kind: 'mcp', zone: f.bmnw.id, label: 'mcp' });
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000, comeBack: true });
+        await f.service.idle();
+        await f.service.stop();
+
+        const { taken, ports } = takenListener();
+        const booted = await fixture(ports, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
+
+        await booted.service.resume();
+        await booted.service.idle();
+
+        const held = await booted.state();
+
+        expect(ourTunnel(f).ingress).toContainEqual({ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' });
+        expect(ourTunnel(f).ingress).toContainEqual({ hostname: 'mcp.bmnw.nl', service: 'http_status:404' });
+        expect(booted.runner.running).toBe(1);
+        expect(held).toMatchObject({ stage: 'failed', message: expect.stringContaining('in use') });
+        expect(held.rows.find((row) => row.kind === 'mcp')).toMatchObject({ enabled: true, reason: expect.stringContaining('in use') });
+
+        taken.value = false;
+        await booted.service.retry();
+        await booted.service.idle();
+
+        const started = await booted.state();
+
+        expect(ourTunnel(f).ingress).toContainEqual({ hostname: 'mcp.bmnw.nl', service: `http://127.0.0.1:${LISTENER_PORT}` });
+        expect(started.stage).toBe('running');
+        expect(started.rows.find((row) => row.kind === 'mcp')?.reason).toBeUndefined();
+    });
+
+    test('says why when the MCP listener cannot take its port on turning it on, and drops the reason once the person turns it off', async () => {
+        const { ports } = takenListener();
+        const f = await fixture(ports);
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'mcp', zone: f.bmnw.id, label: 'mcp' });
+        await f.service.setMcp(true);
+        await f.service.idle();
+
+        expect(await f.state()).toMatchObject({ stage: 'failed', mcp: { enabled: true, port: null }, rows: [{ reason: expect.stringContaining('in use') }] });
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'mcp.bmnw.nl', service: 'http_status:404' });
+
+        await f.service.setMcp(false);
+        await f.service.idle();
+
+        const off = await f.state();
+
+        expect(off.stage).toBe('running');
+        expect(off.rows[0]?.reason).toBeUndefined();
+    });
+
+    // Found by the property test as seed 10477 (round 14): a new token on a machine without a tunnel left the listener down.
+    test('starts the MCP listener whose port was taken once a token is pasted, also without a tunnel', async () => {
+        const { taken, ports } = takenListener();
+        const f = await fixture(ports);
+
+        await f.service.setMcp(true);
+
+        expect(await f.state()).toMatchObject({ stage: 'failed', mcp: { enabled: true, port: null } });
+
+        taken.value = false;
+        await f.service.setToken(FAKE_API_TOKEN);
+
+        expect(await f.state()).toMatchObject({ stage: 'no-tunnel', mcp: { enabled: true, port: LISTENER_PORT } });
+    });
+
+    // Found by the property test as seed 10680 (round 14): a Remove ran on a tunnel whose unlink had not finished.
+    test('refuses a Remove while an unlink is unfinished, and every row of it says so', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const id = await rowOn(f, 'a', 3000);
+
+        f.cloudflare.failing.set('DELETE /zones/zone-bmnw.nl/dns_records', 500);
+
+        await expect(f.service.unlink()).rejects.toBeInstanceOf(CloudflareError);
+        await expect(f.service.remove(id)).rejects.toMatchObject({ code: 'unlinking' });
+
+        expect((await f.state()).rows).toMatchObject([{ id, reason: expect.stringContaining('not finished unlinking') }]);
+    });
+
+    // Found by the property test as seed 14041 (round 14): a row a Remove left leaving said nothing after a restart.
+    test('says a Remove is unfinished on its row after a restart', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const id = await rowOn(f, 'a', 3000);
+
+        f.cloudflare.failing.set('DELETE /zones/zone-bmnw.nl/dns_records', 500);
+
+        await expect(f.service.remove(id)).rejects.toBeInstanceOf(CloudflareError);
+        await f.service.stop();
+        f.cloudflare.failing.set('GET /zones', 503);
+
+        const booted = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
+
+        await booted.service.resume();
+        await booted.service.idle();
+
+        expect((await booted.state()).rows).toMatchObject([{ id, reason: expect.stringContaining('not finished removing a.bmnw.nl') }]);
+    });
+
+    test('refuses a Remove whose rule another writer kept putting back, says so on the row, and finishes it on Try again', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const id = await rowOn(f, 'a', 3000);
+        const stale = [...ourTunnel(f).ingress];
+        const putBack = (tunnel: { ingress: Array<Record<string, unknown>> }): void => {
+            tunnel.ingress = stale;
+        };
+
+        f.cloudflare.writers.push(() => undefined, putBack, putBack);
+
+        await expect(f.service.remove(id)).rejects.toMatchObject({ code: 'remove-incomplete' });
+
+        expect((await f.state()).rows).toMatchObject([{ id, reason: expect.stringContaining('Try again to finish') }]);
+
+        await f.service.retry();
+        await f.service.idle();
+
+        expect(ourTunnel(f).ingress).toEqual([{ service: 'http_status:404' }]);
+        expect(f.cloudflare.records).toEqual([]);
+        expect((await f.state()).rows).toEqual([]);
+    });
+
+    test('forgets the record a lookup found missing before making it, so a restart whose lookup fails holds the hostname and says why', async () => {
+        const f = await fixture();
+
+        await f.service.setToken(FAKE_API_TOKEN);
+        await f.service.setup();
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000, comeBack: true });
+        await f.service.idle();
+        await f.service.stop();
+
+        // Deleted in the dashboard, and Cloudflare refuses a new one at the first boot.
+        f.cloudflare.records.length = 0;
+        f.cloudflare.failing.set('POST /zones/zone-bmnw.nl/dns_records', 403);
+
+        const first = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
+
+        await first.service.resume();
+        await first.service.idle();
+        await first.service.stop();
+
+        expect(tunnelStore(f.home).read()?.rows[0]).toMatchObject({ hostname: 'a.bmnw.nl', enabled: true, recordId: null });
+
+        f.cloudflare.failing.clear();
+        f.cloudflare.failing.set('GET /zones/zone-bmnw.nl/dns_records', 503);
+
+        const second = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
+
+        await second.service.resume();
+        await second.service.idle();
+
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http_status:404' });
+        expect((await second.state()).rows[0]).toMatchObject({ enabled: true, reason: expect.stringContaining('a.bmnw.nl') });
+        expect(second.runner.running).toBe(0);
+    });
 });
 
 describe('what the section reads and offers', () => {

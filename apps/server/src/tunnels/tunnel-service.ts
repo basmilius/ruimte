@@ -187,6 +187,8 @@ export class TunnelService {
     private readonly unrecorded = new Set<string>();
     /* Why a row meant on is not served, kept until a write serves it, so the row says it after the job that found it ended. Never saved. */
     private readonly reasons = new Map<string, string>();
+    /* Why the listener the person turned on is not listening (its port taken, say), until it starts. Never saved. */
+    private listenerFailure: string | null = null;
 
     constructor(ports: TunnelPorts) {
         this.ports = ports;
@@ -261,9 +263,10 @@ export class TunnelService {
         const served = this.serving.get(row.id);
         const read = row.kind === 'dev' && served?.port !== undefined ? served : null;
         const origin = read === null ? row.origin : read.origin;
-        // The MCP with its listener off serves nothing by the person's own choice, which needs no reason.
-        const quiet = !meantOn(row) || (row.kind === 'mcp' && !this.listening());
-        const reason = quiet ? undefined : (this.portRefusal(row) ?? this.reasons.get(row.id));
+        // The MCP the person turned off serves nothing by their own choice, which needs no reason.
+        const quiet = !meantOn(row) || (row.kind === 'mcp' && !this.stored.mcp.enabled);
+        const reason =
+            row.leaving === true ? this.unfinished(row) : quiet ? undefined : (this.portRefusal(row) ?? this.listenerRefusal(row) ?? this.reasons.get(row.id));
 
         return {
             id: row.id,
@@ -279,6 +282,48 @@ export class TunnelService {
 
     private listening(): boolean {
         return this.stored.mcp.enabled && this.ports.listenerPort() !== null;
+    }
+
+    /* A row stays leaving only between the steps of a Remove or unlink, or after one that did not finish, also before a restart. */
+    private unfinished(row: StoredRow): string {
+        const tunnel = this.stored.tunnel;
+
+        return tunnel?.leaving === true
+            ? `Ruimte has not finished unlinking ${tunnel.name}. Try again to finish.`
+            : `Ruimte has not finished removing ${row.hostname}. Try again to finish.`;
+    }
+
+    /* Why the MCP row serves nothing while the person has the MCP on: its listener did not start. */
+    private listenerRefusal(row: StoredRow): string | null {
+        if (row.kind !== 'mcp' || this.ports.listenerPort() !== null) {
+            return null;
+        }
+
+        return this.listenerFailure ?? 'The MCP listener is not running. Try again to start it.';
+    }
+
+    /*
+     * Starts the listener the person turned on when it is not listening, at boot or after its port was taken. A failure
+     * is kept for the screen and holds up nothing else, so the other rows still come up.
+     */
+    private async ensureListener(): Promise<void> {
+        if (!this.stored.mcp.enabled || this.ports.listenerPort() !== null) {
+            this.listenerFailure = null;
+
+            return;
+        }
+
+        try {
+            const port = await this.ports.setListener(true);
+
+            this.listenerFailure = port === null ? 'The MCP listener did not start. Try again.' : null;
+        } catch (e) {
+            this.listenerFailure = `The MCP listener did not start. ${this.plain(e, 'Its port may be in use.')}`;
+        }
+
+        if (this.listenerFailure !== null) {
+            this.ports.log(`Tunnels: ${this.listenerFailure}`);
+        }
     }
 
     /* Why a dev row may not point at its port, which changes when the ports Ruimte listens on do. */
@@ -310,8 +355,10 @@ export class TunnelService {
             return this.installFailed ? { stage: 'failed', message: this.failure } : { stage: 'not-installed', message: null };
         }
 
-        if (this.failure !== null && this.busy === null) {
-            return { stage: 'failed', message: this.failure };
+        const failure = this.failure ?? this.listenerFailure;
+
+        if (failure !== null && this.busy === null) {
+            return { stage: 'failed', message: failure };
         }
 
         if (this.busy === 'checking') {
@@ -453,6 +500,8 @@ export class TunnelService {
             this.token = token;
             this.zones = zones;
             this.failure = null;
+            // A bring-up, also without a tunnel to bring up.
+            await this.ensureListener();
         });
         this.binary = await this.ports.installer.locate();
 
@@ -962,6 +1011,8 @@ export class TunnelService {
                 return;
             }
 
+            this.refuseWhileUnlinking();
+
             const api = this.api();
 
             await this.settleIfUnsure();
@@ -975,7 +1026,8 @@ export class TunnelService {
 
     /*
      * Takes every leaving row off: its 404 first, so nothing catches the name while the record stands, then the record,
-     * and then the rule. A row is dropped once Cloudflare holds neither.
+     * and then the rule. A row is dropped once Cloudflare holds neither; one that is not stays leaving, which its row
+     * says, until a Try again finishes it.
      */
     private async finishLeaving(api: CloudflareApi, tunnelId: string): Promise<void> {
         const leaving = this.stored.rows.filter((row) => row.leaving === true);
@@ -994,6 +1046,23 @@ export class TunnelService {
             this.stored.rows,
             leaving.map((row) => row.id)
         );
+
+        // A write another writer kept undoing may still have dropped a row whose rule the read back found gone.
+        const left = this.stored.rows.filter((row) => row.leaving === true);
+
+        if (left.length === 0) {
+            return;
+        }
+
+        const hostnames = left.map((row) => row.hostname).join(', ');
+        const incomplete = new TunnelConfigError(
+            'remove-incomplete',
+            `Another change to ${this.stored.tunnel?.name ?? 'the tunnel'} kept putting back the rule of ${hostnames}, so Ruimte has not finished removing ${hostnames}. Try again to finish.`
+        );
+
+        this.noteFailure(incomplete, incomplete.message);
+
+        throw incomplete;
     }
 
     /* The external listener on or off. Its own switch, apart from any hostname: it also answers on loopback. */
@@ -1001,7 +1070,13 @@ export class TunnelService {
         await this.jobs.run(async () => {
             this.stored = { ...this.stored, mcp: { ...this.stored.mcp, enabled } };
             this.save();
-            await this.ports.setListener(enabled);
+
+            if (enabled) {
+                await this.ensureListener();
+            } else {
+                this.listenerFailure = null;
+                await this.ports.setListener(false);
+            }
         });
         this.binary = await this.ports.installer.locate();
 
@@ -1023,12 +1098,19 @@ export class TunnelService {
         this.failure = null;
         this.installFailed = false;
 
+        if (this.binary === null || this.token === null) {
+            await this.ensureListener();
+        }
+
         if (this.binary === null) {
             return this.install();
         }
 
         if (this.token !== null) {
             this.start('checking', async () => {
+                // First, since a token Cloudflare refuses or a network that is down leaves the listener on loopback.
+                await this.ensureListener();
+
                 const api = this.api();
 
                 await api.verifyToken();
@@ -1060,10 +1142,8 @@ export class TunnelService {
             this.intend(this.stored.rows.map((row) => (row.comeBack ? row : { ...row, enabled: false })));
         }
 
-        if (this.stored.mcp.enabled) {
-            await this.ports.setListener(true);
-        }
-
+        // Before Cloudflare is reached, so the listener answers on loopback while the network is down.
+        await this.ensureListener();
         this.binary = await this.ports.installer.locate();
 
         if (this.token !== null) {
@@ -1147,6 +1227,7 @@ export class TunnelService {
      * that stopped halfway is finished first, and an unlink brings nothing up.
      */
     private async bringUp(): Promise<void> {
+        await this.ensureListener();
         await this.checkTunnel();
         await this.settleIfUnsure();
 
@@ -1158,17 +1239,21 @@ export class TunnelService {
             return;
         }
 
-        if (tunnel !== null) {
-            await this.finishLeaving(this.api(), tunnel.id);
-        }
-
+        // A Remove that still does not finish holds up no other row; its row says why.
+        const unfinished =
+            tunnel === null
+                ? null
+                : await this.finishLeaving(this.api(), tunnel.id).then(
+                      () => null,
+                      (e: unknown) => e
+                  );
         const failed = await this.recordRowsComingBack();
 
         await this.commit(this.stored.rows);
         await this.reconcileChild();
 
-        if (failed !== null) {
-            throw failed;
+        if (failed !== null || unfinished !== null) {
+            throw failed ?? unfinished;
         }
 
         const denied = this.stored.rows.find((row) => meantOn(row) && this.portRefusal(row) !== null);
@@ -1242,17 +1327,32 @@ export class TunnelService {
     }
 
     /* Creates the proxied CNAME to the tunnel, or proxies the one Ruimte made earlier where it is not. `lookup.looked` says the records under the name were read. */
-    private async routeHostname(api: CloudflareApi, zoneId: string, hostname: string, tunnelId: string, lookup: Lookup): Promise<CloudflareRecord> {
-        const input = { name: hostname, content: this.targetOf(tunnelId), comment: this.recordComment() };
-        const ours = await this.ourRecordNamed(api, zoneId, hostname, tunnelId);
+    private async routeHostname(api: CloudflareApi, row: StoredRow, tunnelId: string, lookup: Lookup): Promise<CloudflareRecord> {
+        const input = { name: row.hostname, content: this.targetOf(tunnelId), comment: this.recordComment() };
+        const ours = await this.ourRecordNamed(api, row.zoneId, row.hostname, tunnelId);
 
         lookup.looked = true;
 
-        if (ours === undefined) {
-            return api.createRecord(zoneId, input);
+        if (ours !== undefined) {
+            return ours.proxied === true ? ours : api.updateRecord(row.zoneId, ours.id, input);
         }
 
-        return ours.proxied === true ? ours : api.updateRecord(zoneId, ours.id, input);
+        // Saved as gone before the create, so a restart whose lookup fails does not take the old id for a record that stands.
+        this.forgetRecord(row.id);
+
+        return api.createRecord(row.zoneId, input);
+    }
+
+    private forgetRecord(rowId: string): void {
+        if (!this.stored.rows.some((row) => row.id === rowId && row.recordId !== null)) {
+            return;
+        }
+
+        this.stored = {
+            ...this.stored,
+            rows: this.stored.rows.map((row) => (row.id === rowId ? { ...row, recordId: null } : row))
+        };
+        this.save();
     }
 
     /* The record Ruimte made under the name earlier, if any. Any other record under the name refuses it. */
@@ -1288,11 +1388,7 @@ export class TunnelService {
             await api.deleteRecord(row.zoneId, record.id, row.hostname);
         }
 
-        this.stored = {
-            ...this.stored,
-            rows: this.stored.rows.map((candidate) => (candidate.id === row.id ? { ...candidate, recordId: null } : candidate))
-        };
-        this.save();
+        this.forgetRecord(row.id);
     }
 
     /*
@@ -1439,7 +1535,7 @@ export class TunnelService {
         let record: CloudflareRecord;
 
         try {
-            record = await this.routeHostname(api, row.zoneId, row.hostname, tunnelId, lookup);
+            record = await this.routeHostname(api, row, tunnelId, lookup);
         } catch (e) {
             this.noteFailure(e, `Making the DNS record of ${row.hostname} did not work`);
 
