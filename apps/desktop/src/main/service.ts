@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path';
 import { serviceDefinition as definitionFor, type ServiceManager } from '@adecore/service';
 import type { BuildIdentity } from '@ruimte/contracts';
 import type { BackgroundServiceState, MachineMode, MachineStopPreview, ServiceSupport } from '@ruimte/desktop-bridge';
-import { probeHealth, waitForHealth } from '@ruimte/service/health';
+import { probeHealth, settledHealth, waitForHealth, type MachineHealth } from '@ruimte/service/health';
 import { localKeyPath } from '@ruimte/service/home';
 import { commandLineServiceProgram, daemonServiceSpec, platformServiceManager, serviceLogFile } from '@ruimte/service/host';
 import { BUILD_FILE } from '@ruimte/service/runtime';
@@ -16,7 +16,7 @@ import { askDaemonWork, proveDaemon, stopDaemonGently, type DaemonPort } from '.
 import { electron } from '../electron';
 import { askLoginShellPath, fileLoginPathCache, loadLoginPath } from '../login-path';
 import { removeOwnDefinition, secretFor, tildeHome } from '../machine-mode';
-import { createServiceController, type ProbedDaemon, type ServiceController } from '../service/controller';
+import { createServiceController, type ProbedPort, type ServiceController } from '../service/controller';
 import { keepRunningSetting, serviceSupport } from '../service/settings';
 import { createSecretGate } from '../startup';
 import type { DaemonStartupDiagnostics } from '../telemetry';
@@ -88,6 +88,14 @@ function bundledBuild(): string | null {
     } catch {
         return null;
     }
+}
+
+function portOf(health: MachineHealth | null): ProbedPort {
+    if (health === null) {
+        return { kind: 'free' };
+    }
+
+    return health.starting ? { kind: 'starting' } : { kind: 'ready', build: { version: health.version, build: health.build } };
 }
 
 export function createMachine(options: MachineOptions): Machine {
@@ -162,7 +170,9 @@ export function createMachine(options: MachineOptions): Machine {
         });
     };
 
-    const probeDaemon = (): Promise<ProbedDaemon | null> => probeHealth(port);
+    const probeDaemon = async (): Promise<ProbedPort> => portOf(await probeHealth(port));
+
+    const settleDaemon = async (): Promise<ProbedPort> => portOf(await settledHealth(port));
 
     const waitForDaemon = (accept: (health: BuildIdentity) => boolean, within?: number): Promise<void> => waitForHealth(port, accept, { within });
 
@@ -225,6 +235,7 @@ export function createMachine(options: MachineOptions): Machine {
         ruimteHome,
         expected: { version: app.getVersion(), build: bundledBuild() },
         probe: probeDaemon,
+        settle: settleDaemon,
         work: () => askDaemonWork(daemonPort),
         verify: () => proveDaemon(daemonPort),
         askRestart: askRestartUnproven,

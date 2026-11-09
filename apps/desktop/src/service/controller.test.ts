@@ -7,7 +7,7 @@ import type { BuildIdentity, MachineWork } from '@ruimte/contracts';
 import type { ServiceSupport, ShellServiceState } from '@ruimte/desktop-bridge';
 import { daemonServiceSpec } from '@ruimte/service/host';
 import type { ShellProblem } from '../telemetry';
-import { createServiceController, type ServiceControllerDeps } from './controller';
+import { createServiceController, type ProbedPort, type ServiceControllerDeps } from './controller';
 import { keepRunningSetting, serviceSupport, type KeepRunningSetting } from './settings';
 
 const EXPECTED: BuildIdentity = { version: '0.1.0', build: 'new' };
@@ -114,6 +114,13 @@ function setup(options: {
     const published: ShellServiceState[] = [];
     const reports: ShellProblem[] = [];
     const behindPort = (): BuildIdentity | null => fake.service.running ?? child ?? options.answering ?? null;
+
+    const port = (): ProbedPort => {
+        const build = behindPort();
+
+        return build === null ? { kind: 'free' } : { kind: 'ready', build };
+    };
+
     const deps: ServiceControllerDeps = {
         support: options.support ?? 'supported',
         manager: fake.manager,
@@ -125,7 +132,8 @@ function setup(options: {
         commandLineProgram: COMMAND_LINE_PROGRAM,
         ruimteHome: HOME,
         expected: EXPECTED,
-        probe: async () => behindPort(),
+        probe: async () => port(),
+        settle: async () => port(),
         work: async () => machine.work,
         verify: async () => {
             const health = behindPort();
@@ -187,41 +195,9 @@ describe('start', () => {
         expect(events).toEqual([]);
     });
 
-    test('waits for the service that still wires itself and starts no second daemon beside it', async () => {
-        const { controller, fake, events, deps } = setup({ fake: fakeManager({ installed: true }) });
-        let starting = true;
-        deps.probe = async () => ({ ...EXPECTED, starting });
-        deps.verify = async () => !starting;
-        deps.waitForHealth = async () => {
-            events.push('wait');
-            starting = false;
-        };
-        expect(await controller.start()).toBe(true);
-        expect(events).toEqual(['wait']);
-        expect(fake.calls).toEqual([]);
-        expect(controller.state().owner).toBe('service');
-    });
-
-    test('waits for a daemon the app did not start, that still wires itself, before it asks it for the proof', async () => {
-        const { controller, events, deps } = setup({ support: 'dev' });
-        let starting = true;
-        deps.probe = async () => ({ ...EXPECTED, starting });
-        deps.verify = async () => !starting;
-        deps.waitForHealth = async () => {
-            events.push('wait');
-            starting = false;
-        };
-        expect(await controller.start()).toBe(true);
-        expect(events).toEqual(['wait']);
-        expect(controller.state().owner).toBe('external');
-    });
-
     test('says the machine is still starting when a daemon is still wiring itself after the wait ran out', async () => {
         const { controller, fake, events, reports, deps } = setup({ fake: fakeManager({ installed: true }) });
-        deps.probe = async () => ({ ...EXPECTED, starting: true });
-        deps.waitForHealth = async () => {
-            throw new Error('Timed out');
-        };
+        deps.settle = async () => ({ kind: 'starting' });
         // A booting daemon answers every request but /health with 503, so it cannot show the proof.
         deps.verify = async () => false;
         await expect(controller.start()).rejects.toThrow('This machine is still starting. Open Ruimte again in a moment.');
@@ -231,38 +207,18 @@ describe('start', () => {
         expect(events).toEqual([]);
     });
 
-    test('starts the service when the daemon that was wiring itself crashed during boot', async () => {
-        const { controller, fake, events, reports, deps } = setup({ fake: fakeManager({ installed: true }) });
-        let crashed = false;
-        deps.probe = async () => (crashed ? null : { ...EXPECTED, starting: true });
+    test('a service that did not come up in time but answers once the wait settles is used as it runs, and no daemon is spawned beside it', async () => {
+        const { controller, fake, events, deps } = setup({ fake: fakeManager({ installed: true }) });
+        const answers: ProbedPort[] = [{ kind: 'free' }, { kind: 'ready', build: EXPECTED }];
+        deps.settle = async () => answers.shift() ?? { kind: 'free' };
         deps.waitForHealth = async () => {
-            if (!crashed) {
-                crashed = true;
-                throw new Error('Timed out');
-            }
+            throw new Error('The background service did not come up');
         };
         deps.verify = async () => true;
         expect(await controller.start()).toBe(true);
-        expect(controller.state().owner).toBe('service');
-        expect(fake.calls).toEqual(['start']);
+        expect(fake.calls).toEqual(['start', 'stop']);
         expect(events).toEqual([]);
-        expect(reports).toEqual([]);
-    });
-
-    test('spawns its own daemon when the one that was wiring itself crashed during boot and no service is used', async () => {
-        const { controller, events, deps } = setup({ support: 'dev' });
-        let crashed = false;
-        deps.probe = async () => (crashed ? null : { ...EXPECTED, starting: true });
-        deps.waitForHealth = async () => {
-            if (!crashed) {
-                crashed = true;
-                throw new Error('Timed out');
-            }
-        };
-        deps.verify = async () => true;
-        expect(await controller.start()).toBe(true);
-        expect(controller.state().owner).toBe('app');
-        expect(events).toEqual(['spawn']);
+        expect(controller.state().owner).toBe('external');
     });
 
     test('a definition already on disk is not installed again, and one that changed is', async () => {
@@ -857,4 +813,152 @@ describe('keepRunningSetting', () => {
         expect(keepRunningSetting(path, 'dev').read()).toBe(false);
         expect(keepRunningSetting(path, 'windows').read()).toBe(false);
     });
+});
+
+describe('start, whatever answers the port and whatever throws', () => {
+    /* What answers the port, in the order the controller asks: `old` is a ready daemon of an earlier build. */
+    type Answer = 'free' | 'starting' | 'ready' | 'old';
+    type Thrower = 'nothing' | 'prepare' | 'install' | 'settle' | 'start' | 'restart' | 'waitForHealth' | 'verify' | 'work' | 'askRestart' | 'spawnDaemon';
+    type Service = 'none' | 'on' | 'off' | 'off, installed';
+
+    const OLD: BuildIdentity = { version: '0.0.9', build: 'old' };
+    const STILL_STARTING = 'This machine is still starting. Open Ruimte again in a moment.';
+    const UNPROVEN = 'Something else answers where this machine should be';
+
+    const SEQUENCES: readonly (readonly Answer[])[] = [
+        ['free'],
+        ['starting'],
+        ['ready'],
+        ['old'],
+        ['free', 'ready'],
+        ['free', 'starting'],
+        ['free', 'free'],
+        ['old', 'starting'],
+        ['old', 'free']
+    ];
+
+    const SERVICES: readonly Service[] = ['none', 'on', 'off', 'off, installed'];
+    const THROWERS: readonly Thrower[] = [
+        'nothing',
+        'prepare',
+        'install',
+        'settle',
+        'start',
+        'restart',
+        'waitForHealth',
+        'verify',
+        'work',
+        'askRestart',
+        'spawnDaemon'
+    ];
+
+    const portOf = (answer: Answer): ProbedPort => {
+        switch (answer) {
+            case 'free':
+                return { kind: 'free' };
+            case 'starting':
+                return { kind: 'starting' };
+            case 'ready':
+                return { kind: 'ready', build: EXPECTED };
+            case 'old':
+                return { kind: 'ready', build: OLD };
+        }
+    };
+
+    for (const sequence of SEQUENCES) {
+        for (const service of SERVICES) {
+            for (const thrower of THROWERS) {
+                for (const proves of [true, false]) {
+                    test(`${sequence.join(' then ')}, service ${service}, ${thrower} throws, ${proves ? 'proves' : 'cannot prove'}`, async () => {
+                        const fake = fakeManager({ installed: service === 'off, installed' });
+                        const { controller, deps } = setup({ support: service === 'none' ? 'dev' : 'supported', keepRunning: service === 'on', fake });
+                        const answers = [...sequence];
+                        // The last answer the controller had of the port, and of the proof.
+                        const seen = { port: null as Answer | null, proof: null as boolean | null };
+                        const spawnedWhile: (Answer | null)[] = [];
+
+                        const fail = (name: Thrower): void => {
+                            if (thrower === name) {
+                                throw new Error(name);
+                            }
+                        };
+
+                        const answer = (): ProbedPort => {
+                            const next = answers.length > 1 ? answers.shift()! : answers[0]!;
+                            seen.port = next;
+
+                            return portOf(next);
+                        };
+
+                        const { install, start, restart } = fake.manager;
+                        fake.manager.install = (definition) => {
+                            fail('install');
+
+                            return install(definition);
+                        };
+                        fake.manager.start = () => {
+                            fail('start');
+                            start();
+                        };
+                        fake.manager.restart = async () => {
+                            fail('restart');
+                            await restart();
+                        };
+                        deps.prepare = () => fail('prepare');
+                        deps.settle = async () => {
+                            fail('settle');
+
+                            return answer();
+                        };
+                        deps.probe = async () => answer();
+                        // A wait that ends well saw this build ready on the port.
+                        deps.waitForHealth = async () => {
+                            fail('waitForHealth');
+                            seen.port = 'ready';
+                        };
+                        deps.verify = async () => {
+                            fail('verify');
+                            seen.proof = (seen.port === 'ready' || seen.port === 'old') && proves;
+
+                            return seen.proof;
+                        };
+                        deps.work = async () => {
+                            fail('work');
+
+                            return { terminals: 0, agents: 0 };
+                        };
+                        deps.askRestart = async () => {
+                            fail('askRestart');
+
+                            return true;
+                        };
+                        deps.spawnDaemon = () => {
+                            spawnedWhile.push(seen.port);
+                            fail('spawnDaemon');
+                        };
+
+                        let error: string | null = null;
+
+                        try {
+                            await controller.start();
+                        } catch (e) {
+                            error = (e as Error).message;
+                        }
+
+                        if (service === 'off' || service === 'off, installed') {
+                            expect(fake.service.definition).toBeNull();
+                        }
+
+                        expect(spawnedWhile.every((answered) => answered === 'free')).toBe(true);
+                        expect(error === STILL_STARTING).toBe(seen.port === 'starting');
+                        expect(!error?.startsWith(UNPROVEN) || ((seen.port === 'ready' || seen.port === 'old') && seen.proof === false)).toBe(true);
+
+                        if (seen.port === 'starting') {
+                            expect(controller.state().owner).toBeNull();
+                        }
+                    });
+                }
+            }
+        }
+    }
 });

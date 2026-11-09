@@ -5,9 +5,8 @@ import type { ShellProblem } from '../telemetry';
 import { serviceOwnership } from './ownership';
 import type { KeepRunningSetting } from './settings';
 
-export interface ProbedDaemon extends BuildIdentity {
-    starting?: boolean;
-}
+/* What answers the port: nothing, a Ruimte daemon that holds it and has not finished wiring itself, or one that is ready. */
+export type ProbedPort = { kind: 'free' } | { kind: 'starting' } | { kind: 'ready'; build: BuildIdentity };
 
 export interface ServiceControllerDeps {
     support: ServiceSupport;
@@ -23,8 +22,10 @@ export interface ServiceControllerDeps {
     /* The home this installation gives its daemon; a definition with another home is not the app's to touch. */
     ruimteHome: string;
     expected: BuildIdentity;
-    /* One ask of `/health`; null when nothing answers. `starting` is a daemon that holds the port and has not finished wiring itself. */
-    probe(): Promise<ProbedDaemon | null>;
+    /* One ask of `/health`. */
+    probe(): Promise<ProbedPort>;
+    /* Asks `/health` again while a daemon is starting, until it is ready, gone or the time ran out; `starting` only in the last case. */
+    settle(): Promise<ProbedPort>;
     /* One ask of `/machine/work` with the local secret; null when the daemon cannot say or did not prove it holds the secret. */
     work(): Promise<MachineWork | null>;
     /* Whether what answers the port proves it holds the local secret, which an earlier build cannot. */
@@ -88,7 +89,14 @@ const RESPAWNS = 5;
 const STAYED_UP_MS = 60_000;
 const FIRST_PAUSE_MS = 1000;
 
-type StartDecision = 'attach' | 'attach-external' | 'restart-service' | 'start-service' | 'spawn';
+/* What a start does with what answers the port. A decision that needs the service carries it, so none reaches it without one. */
+type StartDecision =
+    | { kind: 'still-starting' }
+    | { kind: 'spawn' }
+    | { kind: 'attach-external' }
+    | { kind: 'attach'; service: ServiceManager }
+    | { kind: 'start-service'; service: ServiceManager }
+    | { kind: 'restart-service'; service: ServiceManager };
 
 /* Build ids distinguish compiles of the same version; an unstamped daemon cannot match a stamped bundle. */
 function sameBuild(running: BuildIdentity, expected: BuildIdentity): boolean {
@@ -100,14 +108,21 @@ function decideRestart(work: MachineWork | null): 'restart' | 'ask' {
     return work !== null && isIdle(work) ? 'restart' : 'ask';
 }
 
-function decideStart(health: BuildIdentity | null, expected: BuildIdentity, serviceOn: boolean): StartDecision {
-    if (health === null) {
-        return serviceOn ? 'start-service' : 'spawn';
+/* `service` is null when the start uses no service of the app's. */
+function decideStart(port: ProbedPort, expected: BuildIdentity, service: ServiceManager | null): StartDecision {
+    switch (port.kind) {
+        case 'free':
+            return service === null ? { kind: 'spawn' } : { kind: 'start-service', service };
+        case 'starting':
+            // A Ruimte that still wires itself holds the port: a second daemon would fight it, and it cannot show the proof yet.
+            return { kind: 'still-starting' };
+        case 'ready':
+            if (service === null) {
+                return { kind: 'attach-external' };
+            }
+
+            return sameBuild(port.build, expected) ? { kind: 'attach', service } : { kind: 'restart-service', service };
     }
-    if (!serviceOn) {
-        return 'attach-external';
-    }
-    return sameBuild(health, expected) ? 'attach' : 'restart-service';
 }
 
 export function createServiceController(deps: ServiceControllerDeps): ServiceController {
@@ -202,11 +217,19 @@ export function createServiceController(deps: ServiceControllerDeps): ServiceCon
         } catch {
             // Stopping a service that never started has nothing to report.
         }
-        if (await deps.probe()) {
-            owner = 'external';
-            return;
+        // Settled, so a service still booting when it was stopped is waited out, not taken for a stranger that cannot prove itself.
+        const port = await deps.settle();
+        switch (port.kind) {
+            case 'free':
+                await spawn();
+                return;
+            case 'starting':
+                owner = null;
+                throw new Error(STILL_STARTING);
+            case 'ready':
+                owner = 'external';
+                return;
         }
-        await spawn();
     };
 
     const runService = async (service: ServiceManager, what: 'start' | 'restart', step: () => void | Promise<void>): Promise<void> => {
@@ -238,84 +261,96 @@ export function createServiceController(deps: ServiceControllerDeps): ServiceCon
         }
     };
 
+    /*
+     * Installs the app's definition when it differs, and returns whether that changed it. A service of the command line or another
+     * installation is used as it is, the way that command leaves the app's alone. A failure is kept and reported, and the
+     * start goes on without the service.
+     */
+    const installDefinition = (service: ServiceManager | null): boolean => {
+        if (service === null) {
+            return false;
+        }
+        try {
+            deps.prepare();
+            const definition = deps.definition();
+            // Use the service even with background use off, so turning it on needs no daemon restart.
+            return onDisk() !== definition && service.install(definition);
+        } catch (e) {
+            failure = messageOf(e);
+            deps.report?.({ kind: 'service-fallback', step: 'install', reason: failure });
+            return false;
+        }
+    };
+
+    /* Carries a decision out; false when the person chose to quit instead. */
+    const carryOut = async (decision: StartDecision, definitionChanged: boolean): Promise<boolean> => {
+        switch (decision.kind) {
+            case 'still-starting':
+                owner = null;
+                // It answers nothing but /health yet, so the proof would fail and read as a stranger on the port. The caller reports the throw.
+                throw new Error(STILL_STARTING);
+            case 'spawn':
+                await spawn();
+                return true;
+            case 'attach-external':
+                owner = 'external';
+                return true;
+            case 'attach':
+                owner = 'service';
+                if (definitionChanged) {
+                    await applyDefinition(decision.service);
+                }
+                return true;
+            case 'start-service': {
+                const { service } = decision;
+                await runService(service, 'start', () => service.start());
+                return true;
+            }
+            case 'restart-service': {
+                const { service } = decision;
+                if (!(await deps.verify())) {
+                    // A build from before the proof cannot show it is ours, and nothing is sent to it or loaded from it until it restarted.
+                    if (!(await deps.askRestart())) {
+                        return false;
+                    }
+                    await runService(service, 'restart', () => service.restart());
+                    return true;
+                }
+                const work = await deps.work();
+                if (decideRestart(work) === 'restart') {
+                    await runService(service, 'restart', () => service.restart());
+                    return true;
+                }
+                // The old daemon keeps the port for now: a restart would end what runs on it without a word.
+                owner = 'service';
+                pendingRestart = { work: work === null ? null : work.terminals + work.agents, answered: false };
+                return true;
+            }
+            default:
+                return decision satisfies never;
+        }
+    };
+
     return {
         state,
         async start() {
             failure = null;
             staleDefinition = false;
-            const managedService = managed();
-            let definitionChanged = false;
-            // A service of the command line or another installation is used as it is, the way that command leaves the app's alone.
-            if (manager && managedService) {
-                try {
-                    deps.prepare();
-                    const definition = deps.definition();
-                    // Use the service even with background use off, so turning it on needs no daemon restart.
-                    if (onDisk() !== definition) {
-                        definitionChanged = manager.install(definition);
-                    }
-                } catch (e) {
-                    failure = messageOf(e);
-                    deps.report?.({ kind: 'service-fallback', step: 'install', reason: failure });
+            const service = manager !== null && managed() ? manager : null;
+            const definitionChanged = installDefinition(service);
+            // From here every way out, a throw included, takes the definition away again while background use is off.
+            try {
+                const decision = decideStart(await deps.settle(), deps.expected, failure === null ? service : null);
+                if (!(await carryOut(decision, definitionChanged))) {
+                    return false;
                 }
-            }
-            let probed = await deps.probe();
-
-            if (probed?.starting) {
-                // Its port is held by a Ruimte that is still wiring itself: starting a second daemon would fight it for the port.
-                let waitFailed = false;
-
-                try {
-                    await deps.waitForHealth(() => true);
-                } catch {
-                    waitFailed = true;
-                }
-
-                // A daemon that crashed while it booted answers nothing now, and starts the normal way.
-                probed = await deps.probe();
-
-                if (waitFailed && probed?.starting) {
-                    // It answers nothing but /health yet, so the proof would fail and read as a stranger on the port. The caller reports the throw.
-                    throw new Error(STILL_STARTING);
-                }
-            }
-
-            const decision = decideStart(probed, deps.expected, managedService && failure === null);
-            if (decision === 'attach') {
-                owner = 'service';
-                if (manager && definitionChanged) {
-                    await applyDefinition(manager);
-                }
-            } else if (decision === 'attach-external') {
-                owner = 'external';
-            } else if (decision === 'spawn' || !manager) {
-                await spawn();
-            } else if (decision === 'restart-service') {
                 if (!(await deps.verify())) {
-                    // A build from before the proof cannot show it is ours, and nothing is sent to it or loaded from it until it restarted.
-                    if (!(await deps.askRestart())) {
-                        uninstallWhenOff();
-                        return false;
-                    }
-                    await runService(manager, 'restart', () => manager.restart());
-                } else {
-                    const work = await deps.work();
-                    if (decideRestart(work) === 'restart') {
-                        await runService(manager, 'restart', () => manager.restart());
-                    } else {
-                        // The old daemon keeps the port for now: a restart would end what runs on it without a word.
-                        owner = 'service';
-                        pendingRestart = { work: work === null ? null : work.terminals + work.agents, answered: false };
-                    }
+                    throw new Error(UNPROVEN);
                 }
-            } else {
-                await runService(manager, 'start', () => manager.start());
+                return true;
+            } finally {
+                uninstallWhenOff();
             }
-            uninstallWhenOff();
-            if (!(await deps.verify())) {
-                throw new Error(UNPROVEN);
-            }
-            return true;
         },
         setKeepRunning(next) {
             if (!manager || foreign()) {
@@ -404,8 +439,8 @@ export function createServiceController(deps: ServiceControllerDeps): ServiceCon
             if (pendingRestart === null) {
                 return state();
             }
-            const health = await deps.probe();
-            if (health !== null && !health.starting && sameBuild(health, deps.expected)) {
+            const port = await deps.probe();
+            if (port.kind === 'ready' && sameBuild(port.build, deps.expected)) {
                 pendingRestart = null;
                 return state();
             }

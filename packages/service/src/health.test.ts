@@ -149,6 +149,26 @@ describe('settledHealth', () => {
         expect(asked).toBe(1);
     });
 
+    test('stops at once when the daemon that was starting crashed and answers nothing', async () => {
+        const { now, sleep } = clock();
+        let asked = 0;
+        const health = await settledHealth(4210, {
+            now,
+            sleep,
+            fetch: async () => {
+                asked += 1;
+
+                if (asked > 1) {
+                    throw new Error('Connection refused');
+                }
+
+                return Response.json({ ok: true, version: '1', starting: true }, { status: 503 });
+            }
+        });
+        expect(health).toBeNull();
+        expect(asked).toBe(2);
+    });
+
     test('gives the last answer, still starting, when the time is up', async () => {
         const { now, sleep } = clock();
         const health = await settledHealth(4210, {
