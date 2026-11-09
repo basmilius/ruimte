@@ -224,6 +224,7 @@ export class ChatManager {
                 opening: (payload) => ({ ...payload, ...facts.openingAgent(payload.chatId) }),
                 runtimeModeFor: (chatId, mode) => this.runtimeModeFor(chatId, mode),
                 openingAccount: (chatId, kind, named) => this.openingAccountOf(chatId, kind, named),
+                openingNotes: (session, stored) => this.openingNotes(session, stored),
                 opened: (session, stored) => this.opened(session, stored),
                 recordExtras: (chatId) => {
                     const digest = this.instructed.get(chatId);
@@ -466,19 +467,20 @@ export class ChatManager {
         return chosen.account;
     }
 
+    private openingNotes(session: ChatSession, stored: ChatRecord | null): void {
+        const passed = this.passedOver.get(session.id);
+        this.passedOver.delete(session.id);
+        if (stored !== null || passed === undefined) {
+            return;
+        }
+        const { provider, account } = session.info;
+        session.addNote('info', passedOverNote(this.core.accountLabel(provider, account), this.core.accountLabel(provider, passed.account), passed.reason));
+    }
+
     private async opened(session: ChatSession, stored: ChatRecord | null): Promise<void> {
         const chatId = session.id;
-        const passed = this.passedOver.get(chatId);
-        this.passedOver.delete(chatId);
         if (stored === null) {
             countChatStarted(session.info.provider);
-            if (passed) {
-                const { provider, account } = session.info;
-                session.addNote(
-                    'info',
-                    passedOverNote(this.core.accountLabel(provider, account), this.core.accountLabel(provider, passed.account), passed.reason)
-                );
-            }
         }
         const digest = stored?.extras.instructions;
         if (typeof digest === 'string') {
