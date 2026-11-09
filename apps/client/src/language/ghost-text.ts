@@ -4,7 +4,7 @@ import { messageOf } from '@adecore/ui';
 import { cleanGhost, ghostPrompt } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createElement } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import { type EditorAssistClient } from '@/editor-assist/client';
 import { promptFileName } from '@/editor-assist/prompt-file';
 import { useSettings } from '@/state/settings';
@@ -24,6 +24,17 @@ function samePosition(one: EditorPosition, other: EditorPosition): boolean {
     return one.line === other.line && one.character === other.character;
 }
 
+/* Fills the element after a line with the hint, returning what takes it away again. */
+export type GhostHintMount = (container: HTMLElement, phase: 'progress' | 'ready') => () => void;
+
+function mountGhostHint(container: HTMLElement, phase: 'progress' | 'ready'): () => void {
+    const root = createRoot(container);
+    root.render(createElement(GhostHint, { phase }));
+
+    // The editor may take the element away while React renders, which a synchronous unmount refuses.
+    return () => queueMicrotask(() => root.unmount());
+}
+
 /*
  * Ghost text on request: Option+\ asks the model on the machine for a continuation at the caret. The editor's
  * inline completion draws it after the caret, where Tab takes all of it, Option+] a word of it and anything else
@@ -33,15 +44,15 @@ export class GhostTextFeature implements InlineSuggestionSource {
     readonly automatic = false;
     private readonly language: EditorLanguage;
     private readonly client: EditorAssistClient;
+    private readonly mountHint: GhostHintMount;
     private requesting: AbortSignal | null = null;
-    private hints: Root[] = [];
 
-    constructor(language: EditorLanguage, client: EditorAssistClient) {
+    constructor(language: EditorLanguage, client: EditorAssistClient, mountHint: GhostHintMount = mountGhostHint) {
         this.language = language;
         this.client = client;
+        this.mountHint = mountHint;
         // Ahead of the language servers' suggestions, which a person's own key asks for only when this is off.
         language.onDispose(language.inlineCompletion.addSource(this, 100));
-        language.onDispose(() => this.unmountHints());
     }
 
     get active(): boolean {
@@ -128,10 +139,6 @@ export class GhostTextFeature implements InlineSuggestionSource {
         }
     }
 
-    cleared(): void {
-        this.unmountHints();
-    }
-
     private around(position: EditorPosition): { before: string; after: string; restOfLine: string } {
         const { editor } = this.language;
         const last = Number.MAX_SAFE_INTEGER;
@@ -149,19 +156,6 @@ export class GhostTextFeature implements InlineSuggestionSource {
 
     private finishProgress(): void {
         this.language.editor.setLineActions([], PROGRESS_OWNER);
-        this.unmountHints();
-    }
-
-    private mountHint(container: HTMLElement, phase: 'progress' | 'ready'): void {
-        const root = createRoot(container);
-        root.render(createElement(GhostHint, { phase }));
-        this.hints.push(root);
-    }
-
-    private unmountHints(): void {
-        for (const root of this.hints.splice(0)) {
-            queueMicrotask(() => root.unmount());
-        }
     }
 
     private tell(title: string): void {

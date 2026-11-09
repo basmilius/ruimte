@@ -23,11 +23,22 @@ async function setup(options: { available?: boolean; text?: string; caret?: { li
     const project = new RuimteProject(transport, 'p1', '/work/app');
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: options.text ?? TEXT, theme: 'light' });
     const timers = new ManualTimers();
-    const language = createEditorLanguage(project, editor, uri, 'typescript', timers);
+    // The hints that are mounted now; a unit test has no DOM for React to render into.
+    const hints: string[] = [];
+
+    const ghostHint = (_container: HTMLElement, phase: 'progress' | 'ready') => {
+        hints.push(phase);
+
+        return () => {
+            hints.splice(hints.indexOf(phase), 1);
+        };
+    };
+
+    const language = createEditorLanguage(project, editor, uri, 'typescript', timers, { ghostHint });
     await language.document.ready;
     editor.moveCaret(options.caret ?? at(1, 4));
     const suggest = (): boolean => editor.press(eventOf(keyOf('suggestInline')!));
-    return { transport, model, editor, language, project, timers, suggest };
+    return { transport, model, editor, language, project, timers, suggest, hints };
 }
 
 async function suggested({ model, language }: Pick<Awaited<ReturnType<typeof setup>>, 'model' | 'language'>, answer: string) {
@@ -86,15 +97,19 @@ describe('ghost text on request', () => {
         expect(editor.getCaret()).toEqual(at(2, 13));
     });
 
-    test('Option+] takes a word and keeps the rest as the suggestion after it', async () => {
-        const { model, editor, language } = await setup();
+    test('Option+] takes a word and keeps the rest as the suggestion after it, with its hint', async () => {
+        const { model, editor, language, hints } = await setup();
         await suggested({ model, language }, 'return pool[0];');
         expect(editor.press(eventOf(keyOf('acceptGhostWord')!))).toBe(true);
         expect(editor.getText()).toContain('\n    return\n');
         expect(editor.ghost).toMatchObject({ position: at(1, 10), text: ' pool[0];' });
+        expect(hints).toEqual(['ready']);
         editor.press(eventOf(keyOf('acceptGhostWord')!));
         expect(editor.getText()).toContain('\n    return pool\n');
         expect(editor.ghost?.text).toBe('[0];');
+        expect(hints).toEqual(['ready']);
+        editor.press(key('Escape'));
+        expect(hints).toEqual([]);
     });
 
     test('Escape, an edit and a move of the caret all put it away', async () => {

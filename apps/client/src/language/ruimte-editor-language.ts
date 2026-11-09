@@ -2,7 +2,7 @@ import type { Editor } from '@adecore/editor';
 import { EditorLanguage as SharedEditorLanguage, realTimers, type EditorLanguageOptions, type Timers } from '@adecore/editor-react';
 import { editorAssistClientFor } from '@/editor-assist/client';
 import { ExplainFeature } from './explain';
-import { GhostTextFeature } from './ghost-text';
+import { GhostTextFeature, type GhostHintMount } from './ghost-text';
 import type { RuimteProject } from './ruimte-project';
 import { SelectionChatFeature } from './selection-chat';
 
@@ -38,7 +38,7 @@ export function createEditorLanguage(
     uri: string,
     languageId: string,
     timers: Timers = realTimers,
-    options: EditorLanguageOptions = {}
+    { ghostHint, ...options }: EditorLanguageOptions & { readonly ghostHint?: GhostHintMount } = {}
 ): EditorLanguage {
     const language = new SharedEditorLanguage(project.language, editor, uri, languageId, timers, {
         ...options,
@@ -49,7 +49,7 @@ export function createEditorLanguage(
             return {
                 project,
                 explain: new ExplainFeature(language, editorAssistClientFor(project.transport)),
-                ghost: new GhostTextFeature(language, editorAssistClientFor(project.transport)),
+                ghost: new GhostTextFeature(language, editorAssistClientFor(project.transport), ghostHint),
                 selectionChat: new SelectionChatFeature(language),
                 inlineEdit: makeInlineEdit(language)
             };
