@@ -384,7 +384,7 @@ A path to install or add is a file on the machine, never an upload; one that is 
 
 ## Providers and models
 
-Each agent CLI is one `ChatProvider` (`@adecore/agents`). The daemon's list is `src/providers/registry.ts`, ordered by `src/providers/kinds.ts`: Claude Code, Codex, Antigravity, GitHub Copilot, Grok, NanoGPT and the Claude API. `provider.list` answers per CLI whether it is installed, its version, models, resume template, capabilities and install instructions. Detection is cached a minute; `provider.detect` clears it (at most every ten seconds), which a client asks on window focus and when the Providers pane or an agent menu opens.
+Each agent CLI is one `ChatProvider` (`@adecore/agents`). The daemon's list is `src/providers/registry.ts`, built from the table in `src/providers/table.ts`, which sets the order: Claude Code, Codex, Antigravity, GitHub Copilot, Grok, NanoGPT and the Claude API. `provider.list` answers per CLI whether it is installed, its version, models, resume template, capabilities and install instructions. Detection is cached a minute; `provider.detect` clears it (at most every ten seconds), which a client asks on window focus and when the Providers pane or an agent menu opens.
 
 A kind is an open word on the wire (`AgentKindSchema`, lowercase, at most 32 characters), so an older client draws an unknown kind with a neutral mark. A kind this daemon does not offer starts nothing and is not counted in usage.
 
