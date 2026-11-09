@@ -67,16 +67,18 @@ export interface Area {
     stop?: readonly StopStep[];
 }
 
-export function stopSteps(areas: readonly Area[], phase: StopPhase): StopStep[] {
-    return areas.flatMap((area) => (area.stop ?? []).filter((step) => step.phase === phase));
-}
-
 /*
  * Runs every step of the areas, `halt` first and without an await in between, so each one has run
  * when the first await yields to a reload. A step that fails is logged and never keeps the next from running.
  */
 export async function runStop(areas: readonly Area[], report: (label: string, e: unknown) => void): Promise<void> {
-    for (const step of stopSteps(areas, 'halt')) {
+    const steps = areas.flatMap((area) => area.stop ?? []);
+
+    for (const step of steps) {
+        if (step.phase !== 'halt') {
+            continue;
+        }
+
         try {
             step.run();
         } catch (e) {
@@ -85,7 +87,11 @@ export async function runStop(areas: readonly Area[], report: (label: string, e:
     }
 
     for (const phase of ['drain', 'end', 'last'] as const) {
-        for (const step of stopSteps(areas, phase)) {
+        for (const step of steps) {
+            if (step.phase !== phase) {
+                continue;
+            }
+
             try {
                 await step.run();
             } catch (e) {
