@@ -349,7 +349,6 @@ function toastOf(
     return base;
 }
 
-/* Moves the person's own changes in the target checkout into a stash they asked for, named so it is found again. */
 async function stashTarget(transport: Transport, folder: string, worktree: Worktree): Promise<void> {
     const [status, list] = await Promise.all([transport.request('git.status', { cwd: folder }), transport.request('git.worktree-list', { repo: folder })]);
     const cwd = targetCheckout(folder, status.branch, list.worktrees, worktree.from?.branch);
@@ -359,7 +358,6 @@ async function stashTarget(transport: Transport, folder: string, worktree: Workt
     await perform('git.stash', { repository: cwd, message: `Before merging ${worktree.branch}`, run: nextActionId() });
 }
 
-/* One worktree merged as the person set it up in the dialog, by the branch the catalog names a worktree with. */
 async function mergeAsPerson({ worktree, payload }: MergeRun, actionId: string): Promise<WorktreeMergeResult> {
     const merged = await perform('worktree.merge', {
         branch: worktree.branch,

@@ -16,7 +16,6 @@ interface ProxyListenerOptions {
 }
 
 export interface ProxyListener {
-    /* Where the proxy listens on loopback. */
     readonly port: number;
     /* The password of the proxy login, which only the shell's login handler for this tunnel's session ever answers with. */
     readonly secret: string;

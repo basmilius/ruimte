@@ -347,7 +347,6 @@ export class ClientExtensions {
     }
 }
 
-/* The page installs, links and switches its extensions; the shell keeps them and serves their files. */
 export function installExtensions(ipc: DesktopIpc, extensions: ClientExtensions): void {
     ipc.handle('extensions:list', () => extensions.list());
     ipc.handle('extensions:install', (_event, pack: Uint8Array, options?: { fromStore?: unknown }) => extensions.install(pack, options?.fromStore === true));

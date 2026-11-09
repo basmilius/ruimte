@@ -22,7 +22,6 @@ function dictationId(id: unknown): string {
     return id;
 }
 
-/* Speech to Text and the microphone the windows share. */
 export function installSpeech(ipc: DesktopIpc, options: SpeechOptions): void {
     const speechHelper = speechHelperPath(app.isPackaged, join(process.resourcesPath, 'bin', 'ruimte'), options.repoRoot);
     const speechModel = new SpeechModel(

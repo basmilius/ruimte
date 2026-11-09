@@ -7,7 +7,6 @@ function targetOf(worktree: Worktree): string {
     return worktree.from?.branch ?? i18next.t('panels:worktree.baseBranch');
 }
 
-/* Clauses into one sentence, with "and" before the last one. */
 function joinClauses(parts: readonly string[]): string {
     if (parts.length <= 1) {
         return parts[0] ?? '';
@@ -147,7 +146,6 @@ export function workBadgesLabel(worktree: Worktree, work: WorktreeWork): string 
     return joinClauses([...heldClauses(worktree, work), ...lagging]);
 }
 
-/* The worktree a folder sits in, if any: the node's own cwd is the worktree or somewhere under it. */
 export function worktreeOfPath(worktrees: readonly Worktree[], path: string | undefined | null): Worktree | null {
     if (!path) {
         return null;
@@ -203,7 +201,6 @@ export function nodesInWorktree<T extends NodeLike>(nodes: readonly T[], worktre
     );
 }
 
-/* The nodes working in a worktree as a row names them, a node without a title by its kind. */
 export function nodeNames(nodes: readonly NodeLike[]): string {
     return nodes.map((node) => node.title || node.kind).join(', ');
 }

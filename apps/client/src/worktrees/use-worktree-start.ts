@@ -47,7 +47,6 @@ export interface WorktreeStart {
     provider: AgentKind | null;
     selection: ModelSelection | null;
     pickProvider(provider: AgentKind, selection: ModelSelection): void;
-    /* Everything the fields need is filled in and valid. */
     ready: boolean;
 }
 

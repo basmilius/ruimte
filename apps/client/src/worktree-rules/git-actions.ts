@@ -138,7 +138,6 @@ export function amendTarget(checkouts: readonly CommitCandidate[]): CommitCandid
     return only?.status != null ? only : null;
 }
 
-/* The title of the toast while an action runs: where it is, in the words a person would use. */
 export function phaseLabel(phase: GitActionPhase): string {
     return i18next.t(`panels:git.phase.${phase}`);
 }
@@ -149,7 +148,6 @@ export function actionTitle(kind: GitActionKind): string {
     return i18next.t(`panels:git.action.${kind}`, { defaultValue: i18next.t('panels:git.action.working') });
 }
 
-/* The first line is the subject and the rest is the body, the way git itself reads a message. */
 export function splitMessage(message: string): { subject: string; body: string } {
     const [subject = '', ...rest] = message.split('\n');
     return { subject: subject.trim(), body: rest.join('\n').trim() };

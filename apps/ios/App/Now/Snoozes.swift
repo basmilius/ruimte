@@ -118,7 +118,6 @@ struct SnoozeBook: Codable, Equatable {
         if outbox[node] == change { outbox[node] = nil }
     }
 
-    /// Every snooze the machine holds.
     mutating func receive(_ snoozes: [String: Double]) {
         listed = snoozes
     }
@@ -178,7 +177,6 @@ final class MachineSnoozes {
 
     isolated deinit { stop() }
 
-    /// Each node's snooze that still stands, by node id.
     var standing: [String: Date] {
         book.standing(at: Self.milliseconds(clock())).mapValues { Date(timeIntervalSince1970: $0 / 1000) }
     }

@@ -70,14 +70,11 @@ export interface Workspace {
     connection: Connection;
 }
 
-/* What one payload of `project.open` asks for: a project by id, a folder, or a new project by name. */
 export type OpenRequest = { projectId: string } | { folder: string; createFolder: boolean };
 
 const stores = defaultWorkspaceStores;
 const machines = new Map<string, Machine>();
-/* The hold each workspace connection keeps on its machine's link for as long as it lives. */
 const connectionHolds = new WeakMap<Connection, () => void>();
-/* The copy of its remote nodes each workspace keeps on the machines they run on, for as long as the connection lives. */
 const connectionMirrors = new WeakMap<Connection, RemoteMirror>();
 /* Connections whose clients are gone; the window may still show one while a switch replaces it. */
 const disposed = new WeakSet<Connection>();
@@ -329,13 +326,11 @@ interface ProjectOn {
     projectId: string;
 }
 
-/* The project the stores hold, by the machine it is on. */
 function projectInStores(): ProjectOn | null {
     const { current, currentEndpointId } = stores.project.getState();
     return current && currentEndpointId ? { endpointId: currentEndpointId, projectId: current.projectId } : null;
 }
 
-/* The daemon lets go of a project this window will not show, unless it is the very project `kept` names. */
 function releaseUnless(connection: Connection, projectId: string, kept: ProjectOn | null): void {
     if (kept?.endpointId === connection.endpointId && kept.projectId === projectId) {
         return;
@@ -346,7 +341,6 @@ function releaseUnless(connection: Connection, projectId: string, kept: ProjectO
 /* Thrown out of an open that a later one overtook, before the stores take its project. */
 class Overtaken extends Error {}
 
-/* How many opens this window started, and which of them is on screen. */
 let opens = 0;
 let shownOpen = 0;
 
@@ -438,7 +432,6 @@ export function remoteMirror(): RemoteMirror | null {
     return workspace ? (connectionMirrors.get(workspace.connection) ?? null) : null;
 }
 
-/* The workspace on screen as React reads it, and null on the start screen. */
 export function useWorkspace(): Workspace | null {
     return useWindow((s) => workspaceOf(s.content));
 }
@@ -483,7 +476,6 @@ export const projectClient = workspaceClient((connection) => connection.projects
 export const drawingClient = workspaceClient((connection) => connection.drawings);
 export const diagramClient = workspaceClient((connection) => connection.diagrams);
 
-/* The session client of one machine, for a node that names the daemon it runs on. */
 export function sessionClientFor(endpointId: string): SessionClient | null {
     return machineFor(endpointId)?.sessions ?? null;
 }

@@ -6,7 +6,6 @@ interface Batch {
     url: string;
 }
 
-/* Counts the requests a tunnel's session refused per page and reports them in steps rather than one by one. */
 export class RefusedBatch {
     private readonly report: (guestId: number, url: string, count: number) => void;
     private readonly after: (ms: number, fire: () => void) => void;

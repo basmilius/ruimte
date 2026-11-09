@@ -32,7 +32,6 @@ const CONFIRMATIONS: Record<LocalLeave, string> = {
     failed: 'machines:account.confirmation.deletedLeaveFailed'
 };
 
-/* Deletes the account, signs this app out and takes this computer's machine off it, then says how that went. */
 export async function deleteAccountHere(confirmation: string, leave: (accountId: string) => Promise<LocalLeave> = leaveThisComputer): Promise<void> {
     const accountId = usePulsarAccount.getState().account?.id ?? null;
     await deletePulsarAccount(confirmation);

@@ -13,7 +13,6 @@ interface UpdatesOptions {
     machine: Pick<Machine, 'controller' | 'stopsOnQuit'>;
     /* Asks the person whether the quit may end what it ends; true when nothing needs asking. */
     askBeforeQuit(stopsMachine: boolean): Promise<boolean>;
-    /* Marks the quit that follows as asked already, or takes that back. */
     confirmQuit(confirmed: boolean): void;
 }
 

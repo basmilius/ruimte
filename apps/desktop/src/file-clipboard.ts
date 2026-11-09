@@ -13,7 +13,6 @@ export function osClipboardFormat(format: string): string {
     return `electron application/osclipboard;format="${format}"`;
 }
 
-/* The paths a page asked to copy, or null when it sent anything but a list of absolute paths. */
 export function copyablePaths(paths: unknown): string[] | null {
     if (!Array.isArray(paths) || paths.length === 0) {
         return null;
@@ -77,7 +76,6 @@ export function windowsCopyInput(paths: readonly string[]): Buffer {
     return Buffer.from(paths.map((path) => win32.normalize(path)).join('\0'), 'utf8');
 }
 
-/* Resolves whether the clipboard took the files. */
 export function copyFilesOnWindows(paths: readonly string[]): Promise<boolean> {
     const [program, ...args] = windowsCopyCommand();
     return new Promise((resolve) => {

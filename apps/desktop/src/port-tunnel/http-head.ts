@@ -216,7 +216,6 @@ export function parseAuthority(text: string): Authority | null {
     return { host: match[1]!.toLowerCase(), port, text: text.toLowerCase() };
 }
 
-/* `http://authority/path?query` split into its authority and the origin-form target, or null for anything else. */
 export function parseAbsoluteTarget(target: string): { authority: Authority; path: string } | null {
     // After the authority comes a path or a query and nothing else, so `host:80@elsewhere` is no authority of ours.
     const match = /^http:\/\/([^/?#\s@]+)((?:[/?][\x21-\x7e]*)?)$/i.exec(target);
@@ -250,7 +249,6 @@ export function forwardedHead(head: RequestHead, authority: Authority, path: str
     return Buffer.from(`${lines.join('\r\n')}\r\n\r\n`, 'latin1');
 }
 
-/* The status code of a response head, or null when the bytes do not start one. */
 export function statusOfResponse(bytes: Buffer): number | null {
     const match = /^HTTP\/1\.[01] (\d{3})[ \r]/.exec(bytes.subarray(0, 32).toString('latin1'));
 

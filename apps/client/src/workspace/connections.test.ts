@@ -70,7 +70,6 @@ function answer(refuse: { open: boolean }) {
     };
 }
 
-/* Counts what is subscribed and not yet let go of, by wrapping the method that hands out the unsubscribe. */
 function countLive<T extends object, K extends keyof T>(target: T, method: K) {
     let live = 0;
     let taken = 0;

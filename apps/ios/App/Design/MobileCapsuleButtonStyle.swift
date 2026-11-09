@@ -81,7 +81,6 @@ extension ButtonStyle where Self == MobileCapsuleButtonStyle {
     static var mobileCapsuleSmallProminent: MobileCapsuleButtonStyle {
         MobileCapsuleButtonStyle(prominent: true, size: .small)
     }
-    /// The full-width action at the bottom of a page.
     static var mobileCapsuleLarge: MobileCapsuleButtonStyle { MobileCapsuleButtonStyle(prominent: true, size: .large) }
 }
 

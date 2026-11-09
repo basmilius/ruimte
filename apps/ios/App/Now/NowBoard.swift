@@ -8,7 +8,6 @@ struct ProjectViewTarget: Hashable, Identifiable {
     let projectID: String
     /// The row in the project's list: the view itself, or the canvas a node stands on.
     let viewID: String
-    /// What opens, which is the view or the node.
     let itemID: String
     var id: String { "\(machineID):\(projectID):\(itemID)" }
 }
@@ -44,7 +43,6 @@ struct NowMachineInput {
     /// be read.
     let projects: [ProjectSidebarEntry]
     var attention = NowAttention()
-    /// The snoozes that stand, by node id.
     var snoozes: [String: Date] = [:]
     /// The CLIs whose denial carries a message to the agent (`denyReason` in `provider.list`).
     var denyReason: Set<String> = []

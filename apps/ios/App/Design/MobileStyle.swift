@@ -79,7 +79,6 @@ enum MobileStyle {
         }
     }
 
-    /// White over a dark ground and black over a light one, each at its own alpha.
     private static func translucent(dark: CGFloat, light: CGFloat) -> UIColor {
         UIColor { traits in
             traits.userInterfaceStyle == .dark ? UIColor(white: 1, alpha: dark) : UIColor(white: 0, alpha: light)

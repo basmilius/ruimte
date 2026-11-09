@@ -13,7 +13,6 @@ interface QuitFacts {
     machine: MachineWork | null;
 }
 
-/* The options of Electron's message box. */
 interface QuitQuestion {
     type: 'question';
     buttons: string[];

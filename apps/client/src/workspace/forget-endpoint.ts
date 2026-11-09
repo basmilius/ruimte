@@ -30,7 +30,6 @@ export async function forgetEndpoint(id: string): Promise<void> {
     forgetEndpointState(id);
 }
 
-/* Everything this client kept about a machine it no longer knows. */
 function forgetEndpointState(id: string): void {
     useProjectList.getState().forgetProjects(id);
     forgetCachedList(id);

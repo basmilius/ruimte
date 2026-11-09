@@ -20,9 +20,7 @@ interface MenuOptions {
 interface AppMenu {
     /* What stands until the page sends its own menu, and again after a reload or a crash. */
     setStatic(): void;
-    /* The menu of the window in front. */
     applyOf(window: Electron.BrowserWindow): void;
-    /* The window's page is gone, and its menu with it. */
     forget(windowId: number): void;
 }
 

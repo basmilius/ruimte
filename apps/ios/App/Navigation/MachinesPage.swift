@@ -63,7 +63,6 @@ struct MachinesPage: View {
         top: MobileSpacing.small, leading: MobileSpacing.margin, bottom: MobileSpacing.small,
         trailing: MobileSpacing.margin)
 
-    /// The legend shows once some row has limits to read.
     private var showsLegend: Bool {
         runtime.machines.contains { machine in
             let session = runtime.session(for: machine)
@@ -219,7 +218,6 @@ struct PadMachinesPage: View {
         }
     }
 
-    /// The machine picked, or the first one until a person picks.
     private var shownID: String? {
         if let selectedID, runtime.machines.contains(where: { $0.id == selectedID }) { return selectedID }
         return runtime.machines.first?.id

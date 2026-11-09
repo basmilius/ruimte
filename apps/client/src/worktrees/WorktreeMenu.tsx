@@ -170,12 +170,10 @@ export function WorktreeRows({ worktrees, nodes, current, repo, busy, actions, o
 interface WorktreeBarProps {
     /* The repository the worktree was made from while the project holds several, else the word for a worktree. */
     label: string;
-    /* The nodes working in it, by their titles. */
     names: string;
     tooltip: string;
     /* True while the selection put the panel here, which the row marks. */
     following?: boolean;
-    /* What sits at the end of the row. */
     children?: ReactNode;
 }
 

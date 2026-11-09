@@ -320,7 +320,6 @@ function batchBytes(days: readonly UsageDesktopDay[]): number {
     return new TextEncoder().encode(JSON.stringify({ days })).byteLength;
 }
 
-/* An answer of the ingest other than 2xx. */
 export class UsageSendError extends Error {
     readonly status: number;
 

@@ -40,7 +40,6 @@ enum PaletteRanking {
         .map(\.2)
     }
 
-    /// The ranges of a name the query's words cover, for the palette to mark.
     static func highlights(_ query: String, in text: String) -> [Range<String.Index>] {
         words(query).compactMap { text.range(of: $0, options: .caseInsensitive) }
     }

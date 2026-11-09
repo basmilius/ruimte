@@ -8,7 +8,6 @@ export async function inspectWorktrees(transport: Transport, folder: string, pat
     return paths.map((path) => answer.worktrees.find((entry) => entry.path === path)).filter((entry) => entry !== undefined);
 }
 
-/* The nodes as a sentence names them. */
 export function nodeNames(nodes: readonly Pick<WorktreeNode, 'title' | 'kind'>[]): string {
     return nodes.map((node) => node.title || node.kind).join(', ');
 }

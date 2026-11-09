@@ -1,7 +1,6 @@
 import { writeFileSync } from 'node:fs';
 
 interface SmokeOptions {
-    /* The app's own address, which the browser node is pointed at. */
     appUrl: string;
     /* Where to write the title bar instead of driving a browser node. */
     capturePath: string | null;
@@ -24,7 +23,6 @@ async function captureTitleBar(window: Electron.BrowserWindow, target: string, o
     console.log(`smoke: wrote ${target} at ${scaleFactor}x`);
 }
 
-/* Adds a browser node through the client's own keyboard path, points it at the app and waits for the page. */
 export async function runSmoke(window: Electron.BrowserWindow, options: SmokeOptions): Promise<void> {
     const page = window.webContents;
     console.log('smoke: window loaded');

@@ -54,7 +54,6 @@ const quickLookBridge = {
     closeFilePreview: () => send('quick-look:close')
 } satisfies Pick<DesktopBridge, 'previewFile' | 'closeFilePreview'>;
 
-/* What the client may ask the shell for, checked against the type the client reads it through. */
 const bridge = {
     extensions: {
         list: () => invoke('extensions:list'),

@@ -4,7 +4,6 @@ import { useServers } from '@/state/server';
 import { watchPool } from '@/transport/pool-watch';
 import { adoptMachineName } from '@/workspace/server-info';
 
-// Follow the pool's live sockets so machine identity changes propagate across clients without polling.
 export function startEndpointWatch(): () => void {
     return watchPool((link, endpointId) => ({
         subscriptions: [

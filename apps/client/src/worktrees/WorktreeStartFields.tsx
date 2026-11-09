@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { submitOnEnter } from '@/surface/submit-on-enter';
 import type { WorktreeStart } from '@/worktrees/use-worktree-start';
 
-/* The branch name, the base with the commit it names, and the model, for a dialog that starts a chat in a worktree. */
 export function WorktreeStartFields({ start, idPrefix, onSubmit }: { start: WorktreeStart; idPrefix: string; onSubmit(): void }) {
     const { t } = useTranslation('shell');
     const providers = useProviders((s) => s.providers);

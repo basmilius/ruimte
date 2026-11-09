@@ -24,7 +24,6 @@ export function isSystemSettingsPane(url: string): boolean {
     return SYSTEM_SETTINGS_PANES.has(url);
 }
 
-/* The part of a frame the guards read, up through its parents. */
 interface FrameInPage {
     readonly url: string;
     readonly parent: FrameInPage | null;
@@ -38,12 +37,10 @@ function isVisualHost(url: string, isAppUrl: (url: string) => boolean): boolean 
     return isAppUrl(url) && URL.parse(url)?.pathname === VISUAL_HOST_PATH;
 }
 
-/* A page an extension draws in a frame of its own, from its own files. */
 function isExtensionFrame(url: string, isAppUrl: (url: string) => boolean): boolean {
     return isAppUrl(url) && (URL.parse(url)?.pathname ?? '').startsWith(EXTENSION_FILES_PATH);
 }
 
-/* Whether the frame sits inside a visual: below a frame of the app's page that shows the sandbox host page. */
 function insideVisual(frame: FrameInPage | null, isAppUrl: (url: string) => boolean): boolean {
     const chain: FrameInPage[] = [];
     for (let at = frame; at !== null; at = at.parent) {
@@ -92,7 +89,6 @@ interface AppPermissionAsk {
     readonly mediaTypes: readonly string[];
 }
 
-/* What the default session grants, refusing anything the app's page does not use and every subframe. */
 export function allowAppPermission(ask: AppPermissionAsk): boolean {
     if (!ask.appMainFrame) {
         return false;

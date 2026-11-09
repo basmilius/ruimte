@@ -97,7 +97,6 @@ export function openDialogPlan(request: OpenPathRequest, home: string, allFiles:
     }
 }
 
-/* The filter a native dialog lists last, in the language of the interface. */
 export function allFilesLabel(language: string | undefined): string {
     return language?.startsWith('nl') === true ? 'Alle bestanden' : 'All files';
 }

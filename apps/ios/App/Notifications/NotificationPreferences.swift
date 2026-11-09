@@ -101,7 +101,6 @@ struct NotificationPreferences: Equatable, Codable, Sendable {
     /// Nil until a person looks at it, which reads as off.
     var quietHours: QuietHours?
 
-    /// The hours as the page edits them.
     var quiet: QuietHours {
         get { quietHours ?? QuietHours() }
         set { quietHours = newValue }

@@ -5,7 +5,6 @@ export interface StartupDeps {
     startMachine(): Promise<boolean>;
     /* Moves what the page kept under its old origin; the answer closes the window that did it. */
     moveStorage(): Promise<() => void>;
-    /* The windows of the last session, or one on the start screen. */
     restoreWindows(): void;
     startUpdater(): void;
     /* From here on the page may have the local secret, and a pending restart is watched. */

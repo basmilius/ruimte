@@ -9,7 +9,6 @@ enum ProjectPlacement {
 /// over the list; `PadRouter` shows it in the content beside the list.
 @MainActor protocol ProjectNavigator: AnyObject {
     var placement: ProjectPlacement { get }
-    /// The view the list marks as the one shown.
     var highlightedViewID: String? { get }
     /// Shows a view or a node of the project, once the project holds it.
     func open(view id: String, in navigation: WorkspaceNavigation, animation: Animation?)

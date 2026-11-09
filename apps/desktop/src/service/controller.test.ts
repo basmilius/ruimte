@@ -156,12 +156,10 @@ function setup(options: {
         publish: (state) => void published.push(state),
         report: (problem) => void reports.push(problem)
     };
-    /* The app's own daemon ends by itself, as a crash does. */
     const crash = (): void => {
         child = null;
         onChildExit?.();
     };
-    /* Moves the clock on and runs what came due, awaiting what a run started. */
     const advance = async (ms: number): Promise<void> => {
         clock.now += ms;
         const due = clock.timers.filter((timer) => timer.at <= clock.now);

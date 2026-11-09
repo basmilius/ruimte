@@ -10,7 +10,6 @@ interface PowerFacts {
 /* What a client from before the request asked for with its `true`: the system only, on any power source. */
 export const LEGACY_KEEP_AWAKE: KeepAwakeRequest = { onBattery: true, display: false };
 
-/* A request as it came over IPC. Anything that is not one asks for nothing. */
 export function keepAwakeRequestFrom(value: unknown): KeepAwakeRequest | null {
     if (typeof value !== 'object' || value === null) {
         return null;

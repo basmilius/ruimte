@@ -30,7 +30,6 @@ function end(endpointId: string, id: string, kind: CanvasNodeKind, exit: NodeExi
     void fireAndForget('client.kill', client?.kill(id));
 }
 
-/* Ends the daemon session of every node this client takes out of the document. */
 export function startSessionLifecycle(): () => void {
     return watchNodes(end);
 }

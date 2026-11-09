@@ -11,7 +11,6 @@ const { BrowserWindow, Menu, session, shell, webContents } = electron;
 const LOCAL_SCHEMES = ['file:', 'data:', 'blob:', 'about:'];
 
 interface GuestsOptions {
-    /* The app window a guest page sits in, or null for a guest of no window of ours. */
     windowOf(contents: Electron.WebContents): Electron.BrowserWindow | null;
 }
 
@@ -64,13 +63,11 @@ export function routePreviewLinks(contents: Electron.WebContents): void {
     });
 }
 
-/* The pages of browser and preview nodes: their context menu, their inspector and a picture of them. */
 export function installGuests(ipc: DesktopIpc, options: GuestsOptions): Guests {
     const devtoolsWindows = new Map<number, Electron.BrowserWindow>();
     // The frame each guest's last right-click landed in, so copy and select all act where the person pointed.
     const menuFrames = new WeakMap<Electron.WebContents, Electron.WebFrameMain>();
 
-    /* Opens the inspector for a guest page, on the element under `at` when a point comes with it. */
     const devTools = (id: number, at?: { x: number; y: number }): void => {
         const guest = webContents.fromId(id);
         if (!guest) {

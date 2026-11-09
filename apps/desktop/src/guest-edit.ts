@@ -12,7 +12,6 @@ const COMMANDS: Record<GuestEdit, string> = {
     'select-all': 'selectAll'
 };
 
-/* The frame a right-click landed in while it is still in its page, else the page's main frame. */
 export function editFrameOf(clicked: ScriptFrame | undefined, main: ScriptFrame): ScriptFrame {
     return clicked && !clicked.isDestroyed() && !clicked.detached ? clicked : main;
 }

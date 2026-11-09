@@ -23,7 +23,6 @@ interface WindowChannels {
     takeOpening(): Opening;
 }
 
-/* Keeps a window that tears off at `at`, as big as `size`, on the work area of the display it lands on, its top fully. */
 function onScreen(at: { x: number; y: number }, size: { width: number; height: number }): { x: number; y: number } {
     const area = screen.getDisplayNearestPoint(at).workArea;
     return {
@@ -32,7 +31,6 @@ function onScreen(at: { x: number; y: number }, size: { width: number; height: n
     };
 }
 
-/* A window per project: which project it holds, its tabs, tearing one off and its theme. */
 export function installWindows(ipc: DesktopIpc, options: WindowChannelOptions): WindowChannels {
     const { windows, theme } = options;
     let openingView: string | null = null;

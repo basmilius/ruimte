@@ -81,7 +81,6 @@ final class PadRouter {
         if detail == .project { detail = .now }
     }
 
-    /// Shows a view of the project in the sidebar in the content.
     func show(view id: String) {
         guard let project else { return }
         closeSubagentPane()

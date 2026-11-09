@@ -46,7 +46,6 @@ import SwiftUI
         }
     }
 
-    /// One action, refused while another is still running.
     func perform(_ operation: () async throws -> Void) async {
         guard !busy else { return }
         busy = true

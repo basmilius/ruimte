@@ -14,7 +14,6 @@ function diskFiles(ruimteHome: string): QuickLookFiles {
     };
 }
 
-/* Quick Look on a file of the project a window shows, for a shell on macOS with a machine of its own. */
 export function installQuickLook(ipc: DesktopIpc, options: { ruimteHome: string; keyOf: (window: Electron.BrowserWindow) => string | null }): void {
     const files = diskFiles(options.ruimteHome);
     // Stepping through files asks again before a check is done, so only the last ask of a window opens anything.

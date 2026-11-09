@@ -87,7 +87,6 @@ export function hasInstallTraces(exists: (name: string) => boolean): boolean {
     return INSTALL_TRACES.some(exists);
 }
 
-/* Without a machine the local secret stays shut, even when a daemon answers on the port. */
 export async function secretFor(mode: MachineMode, read: () => Promise<string | null>): Promise<string | null> {
     return mode === 'local' ? read() : null;
 }

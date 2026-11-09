@@ -24,7 +24,6 @@ export function inSafeMode(url: string, safeMode: boolean): string {
 interface SafeModeOptions {
     /* The command line this start ran with, Electron's own path first. */
     argv: readonly string[];
-    /* Quits and starts the app again with these arguments. */
     relaunch(args: string[]): void;
     /* The question a quit asks while work runs; a native dialog, so it works on a page an extension broke. */
     askBeforeQuit(): Promise<boolean>;

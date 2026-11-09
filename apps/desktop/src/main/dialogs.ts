@@ -21,7 +21,6 @@ function openedPath(result: Electron.OpenDialogReturnValue): string | null {
     return result.canceled ? null : (result.filePaths[0] ?? null);
 }
 
-/* The save dialog for a file the page names, filtered to its extension; null when the person cancels. */
 async function askSavePath(window: Electron.BrowserWindow, suggestedName: string, mime: string): Promise<string | null> {
     const extension = suggestedName.split('.').pop() ?? '';
 
@@ -33,7 +32,6 @@ async function askSavePath(window: Electron.BrowserWindow, suggestedName: string
     );
 }
 
-/* The native dialogs, the system's own apps and the clipboard, for files a page names. */
 export function installDialogs(ipc: DesktopIpc, language: () => string | undefined): void {
     ipc.handle('dialog:pick-folder', async (event, initialPath?: string) => {
         const window = ipc.senderWindow(event);

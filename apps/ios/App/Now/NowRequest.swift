@@ -212,7 +212,6 @@ final class NowAnswers {
         }
     }
 
-    /// Forgets what belongs to requests the machines no longer hold.
     func keep(_ live: Set<String>) {
         answered.formIntersection(live)
         drafts = drafts.filter { live.contains($0.key) }

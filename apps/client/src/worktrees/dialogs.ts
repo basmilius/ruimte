@@ -14,16 +14,12 @@ export interface WorktreeMergeRequest {
     remove?: boolean;
 }
 
-/* The group a worktree is being bound to, while its dialog is up. */
 export const worktreeBindDialog = createDialogState<string>();
 
-/* The worktrees a person is removing, one or a group's all, by the project folder whose repository holds them, while the question is up. */
 export const worktreeRemovalDialog = createDialogState<{ folder: string; paths: string[] }>();
 
-/* The worktrees a person is merging, one or a group's all, while the merge dialog is up. */
 export const worktreeMergeDialog = createDialogState<WorktreeMergeRequest>();
 
-/* The dialog that starts a chat in a worktree made for it. */
 export const newWorktreeChatDialog = createFlagState();
 
 const NewWorktreeChatDialog = lazyDialog(
@@ -40,7 +36,6 @@ export const WORKTREE_DIALOGS: readonly DialogContribution[] = [
     { id: 'worktree-new-chat', surface: 'dialog', component: NewWorktreeChatDialog }
 ];
 
-/* The checkout whose unmerged files are being resolved, and the file the overlay opens on. */
 interface ConflictRequest {
     cwd: string;
     path?: string;

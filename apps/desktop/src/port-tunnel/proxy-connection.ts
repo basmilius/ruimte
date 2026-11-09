@@ -113,7 +113,6 @@ export class ProxyConnection {
         this.run();
     }
 
-    /* The page went away. */
     closed(): void {
         this.over = true;
         this.stopDeadline();
@@ -285,7 +284,6 @@ export class ProxyConnection {
         return authority;
     }
 
-    /* Runs `then` with the stream to the machine, opening it first when this connection has none. */
     private withStream(then: () => void): void {
         if (this.stream !== null) {
             then();

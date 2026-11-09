@@ -27,7 +27,6 @@ export interface ServiceControllerDeps {
     verify(): Promise<boolean>;
     /* Asks the person before an earlier build that cannot prove itself is restarted; false means quit instead. */
     askRestart(): Promise<boolean>;
-    /* Resolves once `/health` answers and `accept` takes the answer, rejects when it never does. */
     waitForHealth(accept: (health: BuildIdentity) => boolean): Promise<void>;
     /* Starts the app's own daemon; `onExit` runs once it ended, whoever ended it. */
     spawnDaemon(onExit: () => void): void;
@@ -51,7 +50,6 @@ export interface ServiceController {
     start(): Promise<boolean>;
     /* The running service stays in place, so toggling background use does not end its sessions. */
     setKeepRunning(keepRunning: boolean): ShellServiceState;
-    /* Whether the agents outlive this quit, for the question asked before it. */
     survivesQuit(stopMachine: boolean): boolean;
     /* What quitting does to the daemon. `stopMachine` ends the service too, until the next start. */
     quit(stopMachine: boolean): void;
@@ -65,7 +63,6 @@ export interface ServiceController {
      * new build or a changed definition once nothing runs, the build only after "When idle".
      */
     refresh(): Promise<ShellServiceState>;
-    /* Whether `refresh` still has something to settle. */
     unsettled(): boolean;
 }
 

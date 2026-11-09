@@ -12,7 +12,6 @@ interface AgentActivities {
     drop(windowId: number): void;
 }
 
-/* What the agents in each window are doing, for the dock badge and the quit question. */
 export function installAgentActivity(ipc: DesktopIpc): AgentActivities {
     // By window id. The shell counts nothing itself, so the badge and the quit dialog agree with the toolbar.
     const activities = new Map<number, AgentActivity>();

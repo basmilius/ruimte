@@ -1,7 +1,6 @@
 import SwiftUI
 import UIKit
 
-/// What kind of device a layout choice is made for.
 enum MobileDevice {
     static var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 

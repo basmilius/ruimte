@@ -69,7 +69,6 @@ export function editableMenuTemplate(
         { role: 'copy', enabled: flags.canCopy },
         { role: 'paste', enabled: flags.canPaste }
     );
-    // Only a rich field has a style to drop.
     if (flags.canEditRichly) {
         template.push({ role: 'pasteAndMatchStyle', enabled: flags.canPaste });
     }
@@ -89,7 +88,6 @@ export function editableMenuTemplate(
     return template;
 }
 
-/* What the client draws its own menu from: where the click landed and nothing more. */
 export function contextMenuPayload(webContentsId: number, guest: GuestKind, params: Electron.ContextMenuParams, external = true) {
     return {
         webContentsId,

@@ -9,7 +9,6 @@ import {
     type MachineWork
 } from '@ruimte/contracts';
 
-/* The port the app's daemon is on, and what the shell needs to ask it. */
 export interface DaemonPort {
     port: number;
     /* The local secret of the home the daemon runs with; null before the daemon wrote it. */

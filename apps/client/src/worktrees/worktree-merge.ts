@@ -11,7 +11,6 @@ export function mergeStrategyLabel(value: WorktreeMergeStrategy): string {
     return i18next.t(`panels:worktree.merge.strategy.${value}.label`);
 }
 
-/* The one line under the picker that says what the strategy does. */
 export function mergeStrategyLine(value: WorktreeMergeStrategy): string {
     return i18next.t(`panels:worktree.merge.strategy.${value}.line`);
 }
