@@ -1,7 +1,6 @@
 import Foundation
 import RuimtePulsar
 
-/// A variable of a launch while it is edited; a key being typed is not a key yet.
 struct LaunchEnvRow: Equatable, Identifiable {
     var id: Int
     var key: String
@@ -21,7 +20,6 @@ struct LaunchDraft: Equatable, Identifiable {
     var shared = false
     var env: [LaunchEnvRow] = []
     var fresh: Bool
-    /// Where an import read it from.
     var origin: LaunchOrigin?
     var hasOverlay = false
     /// What the machine sent besides the fields above, which a save returns as it came: the overlay of this machine
@@ -105,7 +103,6 @@ enum LaunchEditing {
         return .object(object)
     }
 
-    /// What a save sends: every launch tidied, and each new one named after itself.
     static func saved(_ drafts: [LaunchDraft]) -> [JSONValue] {
         var taken = Set(drafts.filter { !$0.fresh }.map(\.id))
         var rename: [String: String] = [:]
@@ -150,7 +147,6 @@ enum LaunchEditing {
         [""] + repos.filter { $0.kind != .root && !$0.label.hasPrefix("/") && !$0.label.hasPrefix("..") }.map(\.label)
     }
 
-    /// A launch's folder as the checkout it is in and the path below that.
     static func splitFolder(_ cwd: String, roots: [String]) -> (root: String, sub: String) {
         var folder = cwd.trimmingCharacters(in: .whitespaces)
         if folder.hasPrefix("./") {
@@ -180,7 +176,6 @@ enum LaunchEditing {
                 == (offered.command ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// The file and name an imported launch came from, as the desktop records it.
     private static func origin(_ suggestion: LaunchSuggestion) -> LaunchOrigin {
         LaunchOrigin(source: suggestion.source.rawValue, path: suggestion.path, name: suggestion.launch.name)
     }
@@ -189,7 +184,6 @@ enum LaunchEditing {
         launch.config.origin == origin(suggestion)
     }
 
-    /// What the project offers that is not a launch yet.
     static func newSuggestions(_ suggestions: [LaunchSuggestion], existing: [LaunchEntry]) -> [LaunchSuggestion] {
         suggestions.filter { suggestion in !existing.contains { sameRun($0, suggestion) || hasOrigin($0, suggestion) } }
     }
@@ -205,7 +199,6 @@ enum LaunchEditing {
         suggestion.source == .runXml || suggestion.source == .vscodeLaunch
     }
 
-    /// A launch an import adds, as a save sends it.
     struct ImportedLaunch: Equatable {
         let id: String
         let entry: JSONValue
@@ -234,7 +227,6 @@ enum LaunchEditing {
         return String(path[..<slash])
     }
 
-    /// Where a suggestion came from, as the import writes it beside the name.
     static func source(_ suggestion: LaunchSuggestion) -> String {
         if readsAsRunConfiguration(suggestion) { return suggestion.detail }
         let folder = directory(suggestion.path)

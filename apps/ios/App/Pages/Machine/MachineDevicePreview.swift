@@ -10,7 +10,6 @@ import UIKit
 @MainActor @Observable
 final class MachineDevicePreview {
     private(set) var image: UIImage?
-    /// Why there is no picture, once the machine said so.
     private(set) var unavailable: String?
     @ObservationIgnored private let client: any MachineRequesting
     @ObservationIgnored private let device: MachineDevice

@@ -221,7 +221,6 @@ struct GitCommitPage: View {
     }
 }
 
-/// The lines a change adds and takes away, green and red as every diff draws them.
 struct GitLineCounts: View {
     let file: GitStatusFile
 

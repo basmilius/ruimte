@@ -27,7 +27,6 @@ extension Worktree: Identifiable {
     var base: String? { fromBranch ?? fromCommit }
 }
 
-/// How a worktree's branch lands on the branch it was made from, in the order the sheet offers them.
 enum GitMergeStrategy: String, CaseIterable, Identifiable {
     case squash, merge, rebase
 
@@ -75,7 +74,6 @@ struct GitWorktreeMergeRequest: Equatable {
     }
 }
 
-/// How a merge ended when it did not simply go through.
 enum GitWorktreeMergeOutcome: Equatable {
     /// The merge waits in `cwd`, the checkout that has the target branch out, for a person to resolve or abort it.
     case conflict(cwd: String, files: [String], summary: String)
@@ -98,7 +96,6 @@ struct GitWorktreeRemoval: Identifiable, Equatable {
 }
 
 enum GitWorktreeText {
-    /// Clauses into one sentence, with "and" before the last one.
     static func join(_ parts: [String]) -> String {
         guard parts.count > 1 else { return parts.first ?? "" }
         let rest = parts.dropLast().joined(separator: ", ")
@@ -245,7 +242,6 @@ enum GitWorktreeText {
     }
 }
 
-/// The worktrees of one repository and everything done to them from the phone.
 @MainActor @Observable final class GitWorktreesState {
     let repo: String
     private(set) var worktrees: [GitWorktree] = []
@@ -256,7 +252,6 @@ enum GitWorktreeText {
     var progress: String?
     var outcome: GitWorktreeMergeOutcome?
     private(set) var mergeAction: String?
-    /// The questions on screen: a new worktree's branch, the merge sheet, the removal and taking a merge back.
     var creating = false
     var merging: GitWorktree?
     var removal: GitWorktreeRemoval?
@@ -416,7 +411,6 @@ enum GitWorktreeText {
         _ = try? await client.request(.gitCancel, payload: .object(["actionId": .string(mergeAction)]))
     }
 
-    /// Takes back a merge that stopped on a conflict, in the checkout it waits in.
     func abortMerge(client: any MachineRequesting, cwd: String) async {
         guard !busy else { return }
         busy = true

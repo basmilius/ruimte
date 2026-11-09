@@ -2,7 +2,6 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
-/// What a conflict page is pointed at: a checkout, and one file of it for a file page.
 struct GitConflictTarget: Hashable, Identifiable {
     let cwd: String
     let path: String
@@ -98,8 +97,6 @@ struct GitConflictsPage: View {
     }
 }
 
-/// What is going on in a conflict session right now: the agent at work, a step git is on, what went wrong
-/// and what went through.
 struct GitConflictStatusRows: View {
     let client: any MachineRequesting
     let session: GitConflictSession
@@ -166,7 +163,6 @@ struct GitAbortConfirmation: ViewModifier {
     }
 }
 
-/// One stretch, or the whole file when `block` is nil, being edited by hand.
 private struct GitBlockEdit: Identifiable {
     let block: Int?
     let text: String
@@ -315,7 +311,6 @@ struct GitConflictFilePage: View {
     }
 }
 
-/// A stretch that merged by itself, folded to one line; it opens to show what it holds and can be edited.
 private struct GitMergedBlockView: View {
     let kind: MergeBlockKind
     let lines: [String]
@@ -340,7 +335,6 @@ private struct GitMergedBlockView: View {
     }
 }
 
-/// One conflict: what it stands at, the two sides it came from, and a button for each answer.
 private struct GitConflictBlockView: View {
     let block: MergeBlock
     let number: Int
@@ -440,7 +434,6 @@ private struct GitLinesView: View {
     }
 }
 
-/// One stretch written by hand, starting from what it stands at now.
 private struct GitBlockEditSheet: View {
     let title: String
     let initial: String

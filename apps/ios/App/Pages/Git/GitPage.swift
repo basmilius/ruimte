@@ -127,7 +127,6 @@ struct GitPage: View {
         .presentationDetents([.medium, .large], selection: $detent)
     }
 
-    /// Where the project stands, and the way to its worktrees and its repositories.
     private var pill: some View {
         Menu {
             let worktrees = projectWorktrees.worktrees.filter { !$0.isMissing }
@@ -258,7 +257,6 @@ struct GitAheadBehind: View {
     }
 }
 
-/// One group of changes, with what stages or unstages the whole of it.
 struct GitGroupHeader: View {
     let group: String
     let count: Int
@@ -288,7 +286,6 @@ struct GitGroupHeader: View {
     }
 }
 
-/// The repository a stretch of a group belongs to, drawn only while the folder holds more than one.
 struct GitRepoHeaderRow: View {
     let checkout: GitCheckout
     let count: Int
@@ -312,8 +309,6 @@ struct GitRepoHeaderRow: View {
     }
 }
 
-/// A checkout that stopped halfway: what waits in it, the way to its conflicts, and finishing or taking
-/// the operation back without opening them.
 struct GitHaltedRows: View {
     let client: any MachineRequesting
     let repositories: GitRepositories

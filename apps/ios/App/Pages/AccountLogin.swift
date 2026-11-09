@@ -106,7 +106,6 @@ import SwiftUI
         }
     }
 
-    /// Another attempt in a session of its own; the one before ends first.
     func retry() async {
         await end()
         sessionID = Self.newSessionID()

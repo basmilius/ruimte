@@ -11,7 +11,6 @@ import SwiftUI
     let path: String
     var title: String
     var body = ""
-    /// Files and lines the branch changes over its base, once read.
     private(set) var stats: (files: Int, added: Int, deleted: Int)?
     private(set) var url: URL?
 

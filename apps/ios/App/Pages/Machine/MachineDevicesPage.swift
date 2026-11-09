@@ -2,9 +2,7 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
-/// The device view of a project that shows a device, or the one to add for it.
 enum DeviceViews {
-    /// The view of `views` that already shows the device, by the reference a project file keeps.
     static func existing(in views: [StoredView], device: MachineDevice) -> String? {
         views.first { view in
             guard case .device(let shown) = view else { return false }
@@ -65,7 +63,6 @@ struct MachineDevicesPage: View {
         .refreshable { await devices.load() }
     }
 
-    /// An iPad has the room for the devices as a grid, each running one with its live picture.
     private var wide: Bool { MobileDevice.isWide(sizeClass) }
 
     private var grid: some View {
@@ -189,7 +186,6 @@ struct MachineDevicesPage: View {
         }
     }
 
-    /// Puts the device in a project as a view, or finds the one it has, and opens it there.
     private func open(_ device: MachineDevice, in project: ProjectSummary) async {
         opening = device.id
         defer { opening = nil }
@@ -218,7 +214,6 @@ struct MachineDevicesPage: View {
     }
 }
 
-/// A device that runs: its picture, read-only, beside its name, Open as view and Shut down.
 private struct RunningDeviceCard: View {
     let device: MachineDevice
     let busy: Bool

@@ -4,7 +4,6 @@ import RuimtePulsar
 import RuimteShared
 import RuimteTransport
 
-/// When a machine keeps itself from sleeping, as `endpoint.info` names it.
 extension KeepAwakeMode {
     var label: String {
         switch self {
@@ -33,7 +32,6 @@ struct MachineClosedLid: Equatable, Sendable {
     var ruleInstalled: Bool
 }
 
-/// What a restart of the app on a machine would end, from `endpoint.installUpdate`.
 extension MachineWork {
     var idle: Bool { terminals == 0 && agents == 0 }
 
@@ -56,7 +54,6 @@ extension EndpointUpdate {
 
     private var named: String { version.map { "Ruimte \($0)" } ?? String(localized: "A new version of Ruimte") }
 
-    /// The line over a machine's page, nil when there is nothing to tell.
     var headline: String? {
         switch status {
         case "available": String(localized: "\(named) is available on this machine.")
@@ -74,7 +71,6 @@ extension EndpointUpdate {
         }
     }
 
-    /// What installing does from here; nil when it cannot happen from a phone.
     var action: String? {
         guard installable, app else { return nil }
         return status == "ready"
@@ -82,12 +78,10 @@ extension EndpointUpdate {
             : String(localized: "Update", comment: "Button that installs an update")
     }
 
-    /// Said under the headline when the app is not there to install it.
     var note: String? {
         installable && !app ? String(localized: "Open Ruimte on the machine to install it there.") : nil
     }
 
-    /// What the person reads before the restart: what installs and what that ends on the machine right now.
     static func restartQuestion(update: EndpointUpdate?, work: MachineWork, machine: String) -> String {
         let named = update?.version.map { "Ruimte \($0)" } ?? String(localized: "The update")
         let installs =
@@ -104,12 +98,9 @@ extension EndpointUpdate {
     }
 }
 
-/// Where installing an update stands, from the first question to the restart.
 enum MachineInstallStep: Equatable, Sendable {
     case idle
-    /// Asking the machine what a restart would end.
     case asking
-    /// Waiting for the person, with what ends.
     case confirming(MachineWork)
     case installing
     /// The app was asked to install; the machine goes away and comes back on the new version.
@@ -123,17 +114,14 @@ enum MachineInstallStep: Equatable, Sendable {
 final class MachineEndpoint {
     private(set) var info: EndpointInfo?
     private(set) var update: EndpointUpdate?
-    /// Nil on a machine that cannot hold a block on sleep.
     private(set) var keepAwake: MachineKeepAwake?
     /// Nil where the machine does not offer keep awake with the lid closed, which only a Mac does.
     private(set) var closedLid: MachineClosedLid?
-    /// The last round trip in milliseconds, nil while unmeasured or after a failed one.
     private(set) var latency: Int?
     private(set) var lastConnected: Date?
     private(set) var install = MachineInstallStep.idle
     private(set) var savingKeepAwake = false
     private(set) var savingLanDoor = false
-    /// Why the last action failed, until the next one.
     var problem: String?
     @ObservationIgnored private let client: any MachineRequesting
     @ObservationIgnored private let machineID: String
@@ -177,7 +165,6 @@ final class MachineEndpoint {
     var version: String? { info?.version }
     var label: String? { info?.label }
     var icon: MachineIcon? { info?.icon.present }
-    /// Whether this machine hands out browser and device pictures.
     var streamingAllowed: Bool { info?.streamingAllowed ?? true }
     /// Whether a person keeps the door on the local network open, which it is unless the machine says otherwise; nil
     /// while nothing was read.
@@ -202,7 +189,6 @@ final class MachineEndpoint {
         connected = false
     }
 
-    /// Reads `endpoint.info` again; the page calls it on a pull, the connection on every link.
     func refresh() async {
         generation += 1
         let operation = generation
@@ -242,7 +228,6 @@ final class MachineEndpoint {
     /// Absent reads as on, as `EndpointInfoSchema` has it.
     static func usageStats(in info: EndpointInfo) -> Bool { info.usageStats ?? true }
 
-    /// The info with fields replaced, for what the machine only says in part or what is shown before it answers.
     private static func patched(_ info: EndpointInfo, with changes: [String: JSONValue]) -> EndpointInfo? {
         guard var fields = (try? JSONValue(encoding: info))?.objectValue else { return nil }
         for (key, change) in changes { fields[key] = change }
@@ -269,7 +254,6 @@ final class MachineEndpoint {
         return MachineClosedLid(ruleInstalled: info.keepAwakeLidRule == true)
     }
 
-    /// Times `server.ping` every interval for as long as the calling task runs, which is as long as a page shows it.
     func followLatency(every interval: Duration = .seconds(10)) async {
         while !Task.isCancelled {
             await measureLatency()
@@ -298,7 +282,6 @@ final class MachineEndpoint {
         return .string(label)
     }
 
-    /// The icon a write sends back, so changing a switch leaves it as it stands.
     private var currentIcon: JSONValue {
         guard let icon, let value = try? JSONValue(encoding: icon) else { return .null }
         return value
@@ -363,7 +346,6 @@ final class MachineEndpoint {
         apply(answer)
     }
 
-    /// The first ask, which only learns what a restart would end.
     func askToInstall() async {
         guard install != .asking, install != .installing else { return }
         install = .asking
@@ -381,7 +363,6 @@ final class MachineEndpoint {
         if case .confirming = install { install = .idle }
     }
 
-    /// The second ask, after the person saw what ends.
     func confirmInstall() async {
         guard case .confirming = install else { return }
         install = .installing
@@ -414,7 +395,6 @@ extension LinkRoute {
     }
 }
 
-/// How a machine is reached, in the line under its name.
 enum MachineReach {
     static func line(
         connected: Bool, connecting: Bool, route: LinkRoute?, latency: Int?, problem: String?, lastSeen: Date?
@@ -436,7 +416,6 @@ enum MachineReach {
     }
 }
 
-/// One account of a CLI on a machine's card: its five hour window above its week, or why it has no numbers.
 struct MachineLimitLine: Identifiable, Equatable {
     struct Bar: Equatable {
         let label: String
@@ -447,14 +426,12 @@ struct MachineLimitLine: Identifiable, Equatable {
         /// The session window a person hits within a day and the week the account has; either is nil when the CLI
         /// reports none.
         case bars(session: Bar?, week: Bar?)
-        /// What the machine says about an account it cannot read, in place of numbers that may be old.
         case status(String)
     }
 
     let kind: String
     let accountID: String
     let name: String
-    /// Whether the CLI has more than one account on the card, which is when a row wears the account's dot.
     let named: Bool
     let color: String?
     let content: Content
@@ -471,7 +448,6 @@ struct MachineLimits: Equatable {
     /// States in which an account's numbers no longer say anything, so the state stands in their place.
     private static let quiet: Set<String> = ["signed-out", "failed", "folder-missing", "unavailable"]
 
-    /// What the card of a machine shows: the reading of this connection, or the saved snapshot before there is one.
     @MainActor static func card(_ recorder: UsageWidgetRecorder, now: Date = .now) -> MachineLimits {
         if let limits = recorder.limits {
             return of(limits: limits, accounts: recorder.accounts, now: now)

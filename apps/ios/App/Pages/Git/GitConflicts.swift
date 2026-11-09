@@ -51,7 +51,6 @@ struct GitConflictFile: Equatable, Sendable {
     }
 }
 
-/// What a person, or an agent on their behalf, made of one stretch.
 struct GitBlockAnswer: Equatable {
     var lines: [String]
     /// A proposal stays a proposal until it is written, and reads as one so a person checks it first.
@@ -73,7 +72,6 @@ struct GitConflictDraft: Equatable {
         file.blocks.indices.flatMap { lines(of: $0, in: file) }
     }
 
-    /// The merged file as it goes to disk, in the file's own line endings.
     func content(of file: GitConflictFile) -> String {
         let merged = lines(in: file)
         // The desktop editor holds an empty file and a single empty line as the same text.
@@ -275,7 +273,6 @@ enum GitConflictModel {
         return draft(path).open(in: file).count
     }
 
-    /// The text files whose every conflict is answered, which are ready to be written.
     var ready: [String] { entries.map(\.path).filter { openCount($0) == 0 } }
 
     func load(client: any MachineRequesting) async {
@@ -297,7 +294,6 @@ enum GitConflictModel {
         loaded = true
     }
 
-    /// Reads a file once; a file already read keeps what was made of it.
     func open(client: any MachineRequesting, path: String) async {
         guard files[path] == nil else { return }
         do {
@@ -321,7 +317,6 @@ enum GitConflictModel {
         drafts[path, default: GitConflictDraft()].answers[block] = nil
     }
 
-    /// Every open conflict of the file that needs no choice, closed in one go.
     func wand(_ path: String) {
         guard let file = files[path] else { return }
         var draft = draft(path)

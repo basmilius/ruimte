@@ -66,7 +66,6 @@ enum ThreeWayMerge {
         return lines.joined(separator: shape.eol) + (shape.finalNewline ? shape.eol : "")
     }
 
-    /// Where `other` differs from `base`, in line stretches, in the order they appear.
     static func diffLines(_ base: [String], _ other: [String]) -> [MergeChange] {
         var table: [[UInt8]: Int] = [:]
         return diff(intern(base, &table), intern(other, &table))
@@ -277,7 +276,6 @@ enum ThreeWayMerge {
         return blocks
     }
 
-    /// How far a change moves everything after it.
     private static func delta(_ change: MergeChange) -> Int {
         change.otherEnd - change.otherStart - (change.baseEnd - change.baseStart)
     }

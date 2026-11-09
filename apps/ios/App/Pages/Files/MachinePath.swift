@@ -26,7 +26,6 @@ struct MachinePath: Equatable, Sendable {
 
     var separator: String { style == .windows ? "\\" : "/" }
 
-    /// An example of a folder in the machine's style, for a field that asks for one.
     var example: String { style == .windows ? "C:\\Projects" : "~/projects" }
 
     /// The last segment, or the root itself for a root.

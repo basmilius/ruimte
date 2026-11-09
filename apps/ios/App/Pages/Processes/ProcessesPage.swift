@@ -80,7 +80,6 @@ struct ProcessesPage: View {
         }
     }
 
-    /// The tiles and warnings over a table of every process, sorted by any column, with the signals in a row's menu.
     private var table: some View {
         VStack(spacing: 12) {
             scopePicker
@@ -246,7 +245,6 @@ struct ProcessesPage: View {
         }
     }
 
-    /// A project's name over its groups, with the names of the columns above the first.
     private func sectionHeading(_ section: ProcessSection, first: Bool) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: MobileSpacing.small) {
             Label(section.title, lucideIcon: section.id.isEmpty ? "server" : "folder")
@@ -365,7 +363,6 @@ struct ProcessesPage: View {
         .padding(.vertical, MobileSpacing.small)
     }
 
-    /// The two columns of a row; a process that keeps a core busy reads amber.
     private func numbers(cpu: Double?, memory: Double?) -> some View {
         HStack(spacing: 0) {
             Text(ProcessesText.percent(cpu)).frame(width: 44, alignment: .trailing)
@@ -400,7 +397,6 @@ struct ProcessesPage: View {
     }
 }
 
-/// A tile of the machine as a line and the share of Ruimte as the area under it.
 private struct ProcessChart: View {
     let label: String
     let headline: String

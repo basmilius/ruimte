@@ -51,10 +51,8 @@ import SwiftUI
         return known.contains(root) ? known : known + [root]
     }
 
-    /// The other services and tasks a group can start.
     var candidates: [LaunchDraft] { drafts.filter { $0.kind != .group && $0.id != draftID } }
 
-    /// What keeps the save from going out, shown once a save was tried.
     var problem: (id: String, problem: LaunchDraftProblem)? { LaunchEditing.problem(drafts) }
 
     func moveFolder() {
@@ -69,7 +67,6 @@ import SwiftUI
 
     func removeVariable(_ id: Int) { draft.env.removeAll { $0.id == id } }
 
-    /// Whether the save landed, so the sheet can close.
     func save() async -> Bool {
         tried = true
         guard problem == nil, !busy else { return false }

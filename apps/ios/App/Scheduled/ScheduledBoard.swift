@@ -57,7 +57,6 @@ extension RoutineSchedule {
         }
     }
 
-    /// "Mon, Thu" for ISO weekdays, in the order the routine lists them.
     private static func dayNames(_ days: [Int], in locale: FormatLocale) -> String {
         var calendar = Calendar(identifier: .gregorian)
         calendar.locale = locale.language
@@ -96,7 +95,6 @@ extension RoutineRun: Identifiable {
     public var id: String { runId }
     var dueDate: Date { Date(timeIntervalSince1970: Double(due) / 1000) }
     var limitUntilDate: Date? { limitUntil.map { Date(timeIntervalSince1970: Double($0) / 1000) } }
-    /// Why it failed, when the machine said.
     var failure: String? { error.flatMap { $0.isEmpty ? nil : $0 } }
     var version: Int? { versionNumber.map { Int($0) } }
 
@@ -185,14 +183,12 @@ extension RoutineEntry {
     var isHeld: Bool { pausedAt != nil || !approved }
 }
 
-/// A routine on one machine.
 struct RoutineTarget: Hashable {
     let machineID: String
     let projectID: String
     let routineID: String
 }
 
-/// A run of a routine opened as its chat.
 struct RoutineRunTarget: Hashable {
     let machineID: String
     let chatID: String
@@ -205,7 +201,6 @@ enum ScheduledRoute: Hashable {
     case run(RoutineRunTarget)
 }
 
-/// What one machine answered of its routines.
 struct ScheduledMachineInput: Equatable {
     let machineID: String
     let machineName: String
@@ -241,9 +236,7 @@ struct ScheduledBoard: Equatable {
     var overnight: [ScheduledItem] = []
     var later: [ScheduledItem] = []
     var held: [ScheduledItem] = []
-    /// Machines reached on this link that do not know routines yet.
     var outdated: [String] = []
-    /// Whether any machine answered routines at all.
     var answered = false
 
     var isEmpty: Bool { needsYou.isEmpty && today.isEmpty && overnight.isEmpty && later.isEmpty && held.isEmpty }

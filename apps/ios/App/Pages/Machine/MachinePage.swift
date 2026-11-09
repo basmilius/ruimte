@@ -328,7 +328,6 @@ struct MachinePage: View {
         .disabled(endpoint.savingKeepAwake || !closedLid.ruleInstalled)
     }
 
-    /// Changes one part of keep awake and sends the rest as the machine has it now.
     private func changeKeepAwake(_ change: (inout MachineKeepAwake) -> Void) {
         guard var next = endpoint.keepAwake else { return }
         change(&next)
@@ -357,7 +356,6 @@ struct MachinePageRow: ViewModifier {
     }
 }
 
-/// A setting's name with what it does under it, as the desktop's settings rows read.
 struct MachineSettingLabel: View {
     let title: String
     var detail: String?
@@ -374,7 +372,6 @@ struct MachineSettingLabel: View {
     }
 }
 
-/// What went wrong on the link to the machine, with Reconnect while it is away.
 struct MachineProblemRow: View {
     let problem: String
     var reconnect: (() -> Void)?
@@ -395,8 +392,6 @@ struct MachineProblemRow: View {
     }
 }
 
-/// A row that opens a page of the machine: its mark, its name, a value and the chevron, and the limits of its
-/// accounts under the name where it has them.
 struct MachineLinkLabel: View {
     let title: String
     let icon: String
@@ -427,7 +422,6 @@ struct MachineLinkLabel: View {
     }
 }
 
-/// The limits of a machine, an account to a row, and a line when the machine could not say which accounts it has.
 struct MachineLimitList: View {
     let limits: MachineLimits
 
@@ -549,7 +543,6 @@ struct MachineLimitRow: View {
     }
 }
 
-/// Says once, above the machines, which bar is which.
 struct MachineLimitLegend: View {
     var body: some View {
         HStack(spacing: 8) {
@@ -567,7 +560,6 @@ struct MachineLimitLegend: View {
     }
 }
 
-/// The update of the machine's app: what is there, and Restart where a phone may install it.
 struct MachineUpdateBanner: View {
     let update: EndpointUpdate
     let install: MachineInstallStep

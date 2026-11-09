@@ -57,7 +57,6 @@ final class ScheduledModel {
     func feed(_ machineID: String) -> ScheduledFeed? { feeds[machineID] }
 }
 
-/// One machine's routines.
 @MainActor @Observable
 final class ScheduledFeed: MachineFeed {
     let session: SharedMachineSession

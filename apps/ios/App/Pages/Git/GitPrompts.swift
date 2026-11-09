@@ -77,7 +77,6 @@ enum GitPrompt: Identifiable {
     }
 }
 
-/// The one sheet every typed git action uses, so a name and a message are asked for the same way.
 struct GitPromptSheet: View {
     let pending: GitPrompt
     let onConfirm: (String) -> Void

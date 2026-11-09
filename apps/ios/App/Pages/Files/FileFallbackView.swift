@@ -10,7 +10,6 @@ struct FileFallbackView: View {
     let path: String
     let mime: String
     let size: Double?
-    /// Why the app's own view does not show it.
     let reason: String
     @State private var file: URL?
     @State private var downloadedKey: String?

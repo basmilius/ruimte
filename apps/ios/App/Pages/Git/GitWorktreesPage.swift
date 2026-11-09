@@ -66,7 +66,6 @@ struct GitWorktreesPage: View {
     }
 }
 
-/// What the worktrees of a repository are doing right now: a merge at work, what went wrong, what went through.
 struct GitWorktreeStatusRows: View {
     let client: any MachineRequesting
     let state: GitWorktreesState
@@ -86,8 +85,6 @@ struct GitWorktreeStatusRows: View {
     }
 }
 
-/// One worktree: its branch, where it came from and what it holds, who works in it, and merging it back or
-/// removing it with the questions of `GitWorktreeText`.
 struct GitWorktreeRow: View {
     let client: any MachineRequesting
     let state: GitWorktreesState
@@ -156,8 +153,6 @@ struct GitWorktreeRow: View {
     }
 }
 
-/// How a worktree merge ended when it did not simply go through: conflicts to resolve or take back, or a
-/// refusal with the one thing a person can do about it.
 struct GitWorktreeOutcomeSection: View {
     let client: any MachineRequesting
     let repositories: GitRepositories
@@ -220,7 +215,6 @@ struct GitWorktreeOutcomeSection: View {
     }
 }
 
-/// The questions of the worktree actions, put on a page once.
 struct GitWorktreeDialogs: ViewModifier {
     let client: any MachineRequesting
     @Bindable var state: GitWorktreesState

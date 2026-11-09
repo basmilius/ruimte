@@ -127,7 +127,6 @@ struct ScheduledSections: View {
         group(String(localized: "Paused", comment: "Routines that do not run: paused, or not approved yet"), \.held)
     }
 
-    /// The groups below Needs you, top to bottom. The first one shown sits at the top of the page.
     private static var groups: [KeyPath<ScheduledBoard, [ScheduledItem]>] { [\.today, \.overnight, \.later, \.held] }
 
     @ViewBuilder private func card(_ wait: ScheduledWait) -> some View {

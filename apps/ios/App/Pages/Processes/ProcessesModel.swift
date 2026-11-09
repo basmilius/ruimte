@@ -23,9 +23,7 @@ extension ProcessGroup: Identifiable {
 
 extension ProcessAlert: Identifiable {}
 
-/// The groups of one project, or of none.
 struct ProcessSection: Equatable, Identifiable {
-    /// The project's id; empty for the groups of no project.
     let id: String
     let title: String
     var groups: [ProcessGroup]
@@ -35,9 +33,7 @@ struct ProcessSection: Equatable, Identifiable {
 /// numbers sort below every reading.
 struct ProcessTableRow: Equatable, Identifiable {
     let process: ProcessRow
-    /// The node, launch or task the process runs under.
     let owner: String
-    /// The project of that owner, or Machine tasks.
     let place: String
     let kind: ProcessGroupKind
 
@@ -48,7 +44,6 @@ struct ProcessTableRow: Equatable, Identifiable {
     var memory: Double { process.memory ?? -1 }
     var disk: Double { (process.diskRead ?? 0) + (process.diskWrite ?? 0) }
 
-    /// Every process of every group, each named after its group and that group's project, in the sample's order.
     static func rows(_ groups: [ProcessGroup], titles: [String: String], projectNames: [String: String])
         -> [ProcessTableRow]
     {
@@ -63,7 +58,6 @@ struct ProcessTableRow: Equatable, Identifiable {
     }
 }
 
-/// The process a signal goes to, by the pid and start time the row showed.
 struct ProcessTarget: Equatable, Identifiable {
     var pid: Int
     var startTime: Double
@@ -97,7 +91,6 @@ enum ProcessSignal: String {
     case kill = "SIGKILL"
 }
 
-/// The words and numbers of the processes page, as the desktop panel writes them.
 enum ProcessesText {
     /// A number that could not be read is shown as nothing rather than as zero, which is what it is not.
     static let unreadable = "-"
@@ -122,7 +115,6 @@ enum ProcessesText {
         read == nil && write == nil ? nil : (read ?? 0) + (write ?? 0)
     }
 
-    /// The warning in one sentence a person reads without knowing what a hook is.
     @MainActor static func alert(_ alert: ProcessAlert, now: Double) -> String {
         let name = alert.name ?? String(localized: "A process")
         let duration = Format.elapsedShort(milliseconds: now - alert.since)
@@ -173,7 +165,6 @@ enum ProcessesText {
         return (kindName(group.kind), group.nodeId == nil)
     }
 
-    /// Where a warning is drawn: under the group of its node, under the group that holds its process, or above the list.
     static func placement(_ alert: ProcessAlert, groups: [ProcessGroup]) -> String? {
         if let node = alert.nodeId, let group = groups.first(where: { $0.nodeId == node }) { return group.id }
         guard let pid = alert.pid else { return nil }
@@ -246,7 +237,6 @@ enum ProcessesText {
             Task { await subscribe() }
         }
     }
-    /// Nil until the machine answered; false on a platform without a sampler.
     private(set) var supported: Bool?
     private(set) var fine: [ProcessPoint] = []
     private(set) var coarse: [ProcessPoint] = []

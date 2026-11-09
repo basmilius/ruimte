@@ -12,7 +12,6 @@ struct FileGrepHit: Identifiable, Equatable {
 
     var id: String { "\(line):\(column)" }
 
-    /// The line around the hit, cut where the hit starts and ends.
     var parts: (before: String, match: String, after: String) {
         let utf16 = text.utf16
         let start = utf16.index(utf16.startIndex, offsetBy: min(column, utf16.count), limitedBy: utf16.endIndex)
@@ -26,7 +25,6 @@ struct FileGrepHit: Identifiable, Equatable {
     }
 }
 
-/// The hits of one file, which is how the results read.
 struct FileGrepGroup: Identifiable, Equatable {
     let path: String
     let hits: [FileGrepHit]
@@ -34,7 +32,6 @@ struct FileGrepGroup: Identifiable, Equatable {
     var id: String { path }
 }
 
-/// Find in files: a text search through the files under a folder, as the desktop palette's find-in-files mode.
 @MainActor @Observable final class FileGrepModel {
     let cwd: String
     var query = ""

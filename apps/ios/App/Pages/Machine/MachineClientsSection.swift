@@ -4,7 +4,6 @@ import RuimteShared
 import RuimteTransport
 import SwiftUI
 
-/// One client connected to a machine now, from `client.list`, as it told of itself.
 struct ConnectedMachineClient: Identifiable, Equatable {
     let id: String
     /// `local`, `account`, `machine` or `mcp`; a newer kind reads as an unknown app.
@@ -64,7 +63,6 @@ struct ConnectedMachineClient: Identifiable, Equatable {
         }
     }
 
-    /// The fields that tell two connections apart beyond their id and time.
     fileprivate var groupKey: [String?] {
         access == "mcp" ? [id] : [access, label, client, version, os, osVersion, device, reachability]
     }
@@ -173,7 +171,6 @@ final class MachineClients {
     }
 }
 
-/// The desktop's Connected now, above the clients with access: the iPhone's sheet and the iPad's both show it.
 struct MachineClientsSection: View {
     @State private var model: MachineClients
 

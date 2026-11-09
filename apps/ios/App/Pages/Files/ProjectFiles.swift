@@ -27,7 +27,6 @@ import RuimteTransport
             comment: "%1$@ is a file path, %2$@ the chat title")
     }
 
-    /// The file as a view of the project, opened; a file that already has one opens that one.
     func openAsView(_ path: String) async {
         let stored = FilesMention.relative(folder: folder, path: path) ?? path
         if let existing = workspace.views.first(where: { $0.text("kind") == "file" && $0.text("path") == stored }) {
@@ -113,7 +112,6 @@ struct GitFileMarks: Equatable {
         return directory && directories.contains(path) ? "M" : nil
     }
 
-    /// One letter per state, as a person reads them: new, deleted, renamed, conflicted, or changed.
     static func letter(state: String, status: String) -> String {
         if state == "conflicted" { return "!" }
         switch status.first {
@@ -142,7 +140,6 @@ struct GitFileMarks: Equatable {
     }
 }
 
-/// How a line of a file differs from the last commit.
 enum FileLineChange: Equatable {
     case added, modified
     /// Lines were taken away just above this one.
@@ -197,12 +194,10 @@ enum FileLineChanges {
     }
 }
 
-/// The changed lines of one file against the last commit, read from the checkout it is in.
 @MainActor @Observable final class FileChangeMarksModel {
     private(set) var marks: [Int: FileLineChange] = [:]
     /// A file git has never seen, whose every line is new.
     private(set) var untracked = false
-    /// The diff of this file a person can open, nil when it has none.
     private(set) var diff: GitDiffTarget?
 
     var isEmpty: Bool { marks.isEmpty && !untracked }

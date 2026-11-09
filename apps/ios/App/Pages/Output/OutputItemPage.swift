@@ -13,7 +13,6 @@ struct OutputItemPage: View {
     @State private var model: OutputItemModel
     @State private var showingOrigin = false
     private let context: OutputContext
-    /// What the page says until the machine answered.
     private let title: String
 
     init(context: OutputContext, artifactID: String, title: String, pinned: String? = nil) {
@@ -334,7 +333,6 @@ private struct OutputSharedFile: Transferable {
     }
 }
 
-/// Where a version came from, as the machine recorded it, and its files.
 private struct OutputOriginPage: View {
     let model: OutputItemModel
     let version: OutputVersion

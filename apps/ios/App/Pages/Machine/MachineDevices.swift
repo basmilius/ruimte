@@ -3,7 +3,6 @@ import Observation
 import RuimtePulsar
 import RuimteTransport
 
-/// A simulator, an emulator or a phone on a machine, from `device.list`.
 struct MachineDevice: Identifiable, Equatable, Sendable {
     let deviceID: String
     let backendID: String
@@ -50,7 +49,6 @@ struct MachineDevice: Identifiable, Equatable, Sendable {
         ])
     }
 
-    /// A simulator or emulator that runs, the kind the desktop groups apart.
     var active: Bool { kind == .simulator && state == .booted }
     var booted: Bool { state == .booted }
 
@@ -125,14 +123,12 @@ struct MachineDeviceGroup: Identifiable, Equatable, Sendable {
 @MainActor @Observable
 final class MachineDevices {
     private(set) var devices: [MachineDevice] = []
-    /// One line per kind of device the machine could not look for.
     private(set) var notes: [String] = []
     private(set) var loaded = false
     private(set) var loading = false
     /// The machine turned browser and device streaming off, which closes every device request.
     private(set) var streamingOff = false
     private(set) var problem: String?
-    /// Per device id, the action on its way.
     private(set) var changing: [String: WireRequest] = [:]
     @ObservationIgnored let client: any MachineRequesting
     @ObservationIgnored private let platform: () -> String?
@@ -178,7 +174,6 @@ final class MachineDevices {
         }
     }
 
-    /// Keeps the list current for as long as the calling task runs.
     func watch() async { await live.run() }
 
     func boot(_ device: MachineDevice) async { await control(device, action: .deviceBoot) }

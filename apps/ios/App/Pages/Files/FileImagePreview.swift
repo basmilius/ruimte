@@ -37,7 +37,6 @@ struct FileImage: Sendable {
     }
 }
 
-/// A picture that fits the page and zooms with a pinch or a double tap, the way Photos does.
 struct FileImageView: UIViewRepresentable {
     let image: UIImage
     let name: String
@@ -59,7 +58,6 @@ struct FileImageView: UIViewRepresentable {
     }
 }
 
-/// Lets the drag that carries a picture start only vertically and at rest, beside the paging of the pages around it.
 private final class RestingDragDelegate: NSObject, UIGestureRecognizerDelegate {
     weak var view: ZoomingImageView?
 
@@ -183,7 +181,6 @@ final class ZoomingImageView: UIScrollView, UIScrollViewDelegate {
     }
 }
 
-/// The line under a preview with what the file is, as the desktop viewer writes it under its own.
 struct FileFooter: View {
     let items: [String]
 

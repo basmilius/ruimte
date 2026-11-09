@@ -92,7 +92,6 @@ struct GitChangesList: View {
         }
     }
 
-    /// Every checkout that stopped halfway says so until it is finished or taken back.
     @ViewBuilder private var waiting: some View {
         if let halted {
             GitHaltedCard(client: client, repositories: repositories, checkout: halted, named: repositories.named)
@@ -264,7 +263,6 @@ struct GitHaltedCard: View {
     }
 }
 
-/// The words for a checkout that waits on a person.
 enum GitHaltedText {
     static func title(_ checkout: GitCheckout, named: Bool) -> String {
         let what =

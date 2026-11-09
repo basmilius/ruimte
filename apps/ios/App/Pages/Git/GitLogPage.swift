@@ -132,7 +132,6 @@ struct GitHistoryRows: View {
     }
 }
 
-/// The history of one repository of the folder, from that repository's own page.
 struct GitLogPage: View {
     let client: any MachineRequesting
     let repositories: GitRepositories
@@ -157,7 +156,6 @@ struct GitLogPage: View {
     }
 }
 
-/// How long ago a commit was written, short enough for the end of a row.
 func gitRelativeTime(_ at: Double, now: Date = Date()) -> String {
     let date = Date(timeIntervalSince1970: at)
     let seconds = max(0, now.timeIntervalSince(date))

@@ -2,7 +2,6 @@ import Foundation
 import RuimtePulsar
 import UniformTypeIdentifiers
 
-/// What the app knows about a file from its name or its mime alone, before any byte of it arrives.
 enum FileKinds {
     private static let codeExtensions: Set<String> = [
         "astro", "c", "cc", "cjs", "cpp", "cs", "css", "cts", "dart", "ex", "exs", "go", "graphql", "h", "hpp", "htm",
@@ -60,7 +59,6 @@ enum FileKinds {
         mime.hasPrefix("image/") || mime.hasPrefix("video/") || mime.hasPrefix("audio/") || mime == "application/pdf"
     }
 
-    /// Whether the app may hold the file in memory whole, which a picture, a PDF and Quick Look all need.
     static func fitsInMemory(size: Double?) -> Bool {
         (size ?? .infinity) <= WireConstants.bytesReadMaxBytes
     }

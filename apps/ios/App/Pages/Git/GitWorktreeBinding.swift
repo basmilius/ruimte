@@ -36,12 +36,10 @@ enum GitWorktreeOccupants {
     }
 }
 
-/// A group of a canvas, which is what a worktree is bound to.
 struct GitBindableGroup: Identifiable, Equatable {
     let viewID: String
     let id: String
     let title: String
-    /// The worktree it is bound to now.
     let worktree: (path: String, branch: String)?
 
     static func == (lhs: GitBindableGroup, rhs: GitBindableGroup) -> Bool {
@@ -64,7 +62,6 @@ enum GitWorktreeBinding {
         }
     }
 
-    /// A group's title as a branch name git accepts, the way the desktop proposes one.
     static func branchName(fromTitle title: String) -> String {
         var name = ""
         var gap = false
@@ -91,7 +88,6 @@ enum GitWorktreeBinding {
         return name.isEmpty ? "work" : name
     }
 
-    /// The document with the group bound to the worktree, or unbound with nil.
     static func bind(_ document: JSONValue, viewID: String, groupID: String, worktree: (path: String, branch: String)?)
         -> JSONValue
     {
@@ -109,7 +105,6 @@ enum GitWorktreeBinding {
     }
 }
 
-/// The sheet that binds a group to a worktree: which group, and the branch its checkout is on.
 @MainActor @Observable final class GitWorktreeBindModel {
     let workspace: MobileWorkspace
     var groupKey: String?

@@ -13,7 +13,6 @@ struct MachineFilesPage: View {
     let path: String
     /// The project these files are in, which adds mentions, views of their own and deleting; nil on a machine's files.
     var project: FilesProject?
-    /// The project's repositories, for the git status each row carries.
     var marks: GitRepositories?
     @State private var state = RemotePageState()
     @State private var listing: FsListResult?
@@ -350,7 +349,6 @@ struct FileContentPage: View {
         file?.isText == true && !(isHTML && !showSource && initialLine == nil)
     }
 
-    /// The file's own menu: edit it, give it a view, mention it, and delete it.
     private func fileMenu(_ project: FilesProject) -> some View {
         Menu {
             if canEdit, let value = file {
@@ -377,7 +375,6 @@ struct FileContentPage: View {
         }
     }
 
-    /// The bar under a file: mention it in a chat, its diff against the last commit, and copying it.
     private func actionBar(_ project: FilesProject) -> some View {
         VStack(spacing: 6) {
             if let note {
@@ -559,7 +556,6 @@ private extension FsReadResult {
         }
     }
 
-    /// A reading of a file too large to send has none.
     var mtime: Double? {
         switch self {
         case .text(let read): read.mtime
@@ -571,7 +567,6 @@ private extension FsReadResult {
 
 private let largeTextMaxBytes: Double = 8 * 1024 * 1024
 
-/// The `fs.watch` that a folder's `fs.changed` events come under.
 func fsWatch(path: String) -> LiveWatch {
     .area(.fsWatch, payload: .object(["path": .string(path)]))
 }
@@ -582,7 +577,6 @@ func fsWatch(path: String) -> LiveWatch {
     var image: FileImage?
     var pdf: PDFDocument?
     var svg: Data?
-    /// Why a file whose bytes arrived still has no view of its own.
     var unreadable: String?
     /// The version on screen, as mtime and size, so a change elsewhere in the folder does not read the file again.
     var version: String?

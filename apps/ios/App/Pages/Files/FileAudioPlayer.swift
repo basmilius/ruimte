@@ -1,7 +1,6 @@
 import AVFoundation
 import SwiftUI
 
-/// What a sound file says about itself, read once the asset loads.
 struct FileAudioInfo: Equatable {
     var title: String?
     var artist: String?

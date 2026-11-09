@@ -185,18 +185,15 @@ struct GitDivergedRow: View {
     }
 }
 
-/// The branches and stashes of one repository, and whether this machine can open a pull request at all.
 @MainActor @Observable final class GitRefsState {
     private(set) var refs: [GitRef] = []
     private(set) var stashes: [GitStash] = []
     private(set) var capabilities = false
-    /// The subject of the last commit, which is what a pull request opens with.
     private(set) var lastSubject = ""
     private(set) var loading = false
 
     var branches: [GitRef] { refs.filter { $0.kind == .local } }
 
-    /// Forgets what was read, for a page that now points at another repository.
     func clear() {
         refs = []
         stashes = []
@@ -226,7 +223,6 @@ struct GitDivergedRow: View {
     }
 }
 
-/// One stash to pop, for a repository that holds more than one.
 struct GitStashSheet: View {
     let stashes: [GitStash]
     @Binding var isPresented: Bool

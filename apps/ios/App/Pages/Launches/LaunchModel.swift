@@ -24,7 +24,6 @@ struct LaunchEntry: Equatable, Identifiable {
     var command: String? { config.command }
     var url: String? { config.url }
     var env: [String: String] { config.env ?? [:] }
-    /// The launch ids a group starts, in order.
     var members: [String] { config.launches ?? [] }
     var autostart: Bool { config.autostart ?? false }
     var shared: Bool { config.shared }
@@ -40,7 +39,6 @@ struct LaunchEntry: Equatable, Identifiable {
 extension LaunchStatus {
     var live: Bool { state != .exited }
     var exit: Int? { exitCode.map { Int($0) } }
-    /// The port it waits on, or listens on once running.
     var listening: Int? { port.map { Int($0) } }
 }
 
@@ -58,7 +56,6 @@ extension LaunchState {
 /// The launches file as `launches.read` answers it, each launch kept whole beside its typed reading.
 struct LaunchBook: Equatable {
     var rev = 0
-    /// In the order of the menu.
     var launches: [LaunchEntry] = []
     /// The launches a person on this machine approved as they stand now; a group is approved when all it starts is.
     var approved: Set<String> = []
@@ -81,7 +78,6 @@ extension LaunchBook: Decodable {
     }
 }
 
-/// `launches.changed`: one project's launches file changed.
 struct LaunchesChanged: Decodable {
     let projectId: String
     let document: LaunchBook
@@ -108,7 +104,6 @@ enum LaunchPhase: String, Equatable {
 struct LaunchView: Equatable {
     var launch: LaunchEntry
     var phase: LaunchPhase
-    /// A process of it runs, or is being stopped.
     var live: Bool
     /// Its own status; a group has none and reads its members'.
     var status: LaunchStatus?
@@ -130,7 +125,6 @@ extension LaunchHeld: Identifiable {
     public var id: String { launchId }
 }
 
-/// A start that came back with a question for the person who asked.
 enum LaunchAsk: Equatable, Identifiable {
     case held(launchID: String, restart: Bool, held: [LaunchHeld], replace: Bool)
     case busy(launchID: String, restart: Bool, holder: String, port: Int, approve: Bool)
@@ -240,7 +234,6 @@ enum LaunchLogic {
         return sections
     }
 
-    /// An address as a person reads it in a row: the host and port, without the scheme.
     static func shortAddress(_ url: String) -> String {
         var text = url
         if let range = text.range(of: "^[a-zA-Z][a-zA-Z0-9+.-]*://", options: .regularExpression) {

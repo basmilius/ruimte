@@ -2,7 +2,6 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
-/// What a person can be asked to confirm before it runs, and what the sheet for it says.
 enum GitConfirmation: Identifiable {
     case discard(cwd: String, path: String)
     case forcePush(cwd: String)
@@ -135,7 +134,6 @@ extension GitRepositories {
         return failed.isEmpty
     }
 
-    /// Moves paths of one repository in or out of its index.
     func stage(client: any MachineRequesting, cwd: String, paths: [String], staged: Bool) async {
         guard !busy, !paths.isEmpty else { return }
         busy = true

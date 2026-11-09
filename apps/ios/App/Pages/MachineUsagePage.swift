@@ -4,7 +4,6 @@ import RuimteShared
 import RuimteTransport
 import SwiftUI
 
-/// A machine the usage page can switch to from its title.
 struct UsageMachine: Identifiable {
     let id: String
     let name: String
@@ -109,7 +108,6 @@ struct MachineUsagePage: View {
         metric == .tokens ? Format.tokens(value) : money.string(amount: value)
     }
 
-    /// A chart value in what the page counts in: tokens, or money in the page's currency.
     private func value(_ amount: UsageAmount) -> Double {
         metric == .tokens ? amount.tokens.total : money.amount(usd: amount.costUsd)
     }
@@ -414,7 +412,6 @@ struct MachineUsagePage: View {
     }
 }
 
-/// A plan window, amber once it comes close to its limit.
 struct LimitBar: View {
     let label: String
     let used: Double
@@ -449,7 +446,6 @@ struct LimitBar: View {
     }
 }
 
-/// A thin bar of a share, on the faint track every bar of the page shares.
 struct ShareBar: View {
     let fraction: Double
     let color: Color
@@ -467,7 +463,6 @@ struct ShareBar: View {
     }
 }
 
-/// A group of the usage page, straight on the page with its content on the page's margin.
 struct UsageCard: ViewModifier {
     func body(content: Content) -> some View {
         content.mobileCard(padding: 0).padding(.vertical, MobileSpacing.small)
@@ -492,7 +487,6 @@ private struct UsageMachineMenu: ViewModifier {
     }
 }
 
-/// A signed-out account a person asked to log in to.
 private struct UsageLogin: Identifiable {
     let kind: String
     let accountID: String

@@ -8,16 +8,13 @@ import SwiftUI
 /// repository with submodules has one per module, and an ordinary project has exactly one.
 @MainActor @Observable final class GitRepositories {
     private(set) var checkouts: [GitCheckout] = []
-    /// Set when the folder holds more repositories than the list carries.
     private(set) var truncated = false
     /// True until the first list of repositories has landed, which is the only spinner this page shows.
     private(set) var loading = true
     var problem: String?
-    /// The code the machine gave `problem` with, when the last action was refused.
     var refusal: MachineErrorCode?
     /// An action a person started; what it came from stays disabled until it settles.
     var busy = false
-    /// The last line git wrote while an action runs, which is where a slow push says where it is.
     var progress: String?
     /// Which repository a run over several of them is on, as "backend (2/9)".
     var step: String?
@@ -48,7 +45,6 @@ import SwiftUI
         Task { await withTaskCancellationShield { for lease in held.values { await lease.release() } } }
     }
 
-    /// Reads which repositories the folder holds, then takes a watch and a first status on each.
     func reload(client: any MachineRequesting, folder: String) async {
         do {
             let answer = try await client.request(.gitRepos, payload: .object(["folder": .string(folder)]))
@@ -68,7 +64,6 @@ import SwiftUI
         await refreshAll(client: client)
     }
 
-    /// One watch per repository, and none for a repository that is no longer in the list.
     private func watchAll(client: any MachineRequesting) async {
         let wanted = Set(checkouts.map(\.path))
         for (path, lease) in leases where !wanted.contains(path) {

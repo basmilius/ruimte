@@ -26,7 +26,6 @@ struct OutputContext {
         chatName = { _ in nil }
     }
 
-    /// What the project calls a chat: a view of its own, or a node on one of its canvases. Empty for one without a name.
     static func chatName(_ views: [StoredView], chatID: String) -> String? {
         for view in views {
             if view.id == chatID { return view.name }
@@ -130,7 +129,6 @@ struct OutputPage: View {
     }
 }
 
-/// The mark of a kind at the start of a row.
 struct OutputKindGlyph: View {
     let kind: String
 

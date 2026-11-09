@@ -4,7 +4,6 @@ import RuimteShared
 import RuimteTransport
 import SwiftUI
 
-/// A client with access to a machine, from `auth.sessions`.
 struct MachineClientAccess: Identifiable, Equatable {
     let id: String
     let label: String
@@ -43,7 +42,6 @@ struct MachineClientAccess: Identifiable, Equatable {
             : String(localized: "Paired with a link \(since) · last seen \(seen)", comment: "%1$@ is a date, %2$@ a relative time")
     }
 
-    /// What revoking this one means, which differs per way in.
     var revokeMessage: String {
         if current {
             return String(
@@ -80,7 +78,6 @@ final class MachineAccess {
         }
     }
 
-    /// Answers whether the machine took the revocation.
     func revoke(_ access: MachineClientAccess) async -> Bool {
         var revoked = false
         await state.perform {

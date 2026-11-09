@@ -35,7 +35,6 @@ enum UsagePeriod: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// What the page counts in: the money of a currency, or tokens.
 enum UsageMetric: String, CaseIterable, Identifiable, Sendable {
     case euro, dollar, tokens
 
@@ -134,7 +133,6 @@ struct UsageReport: Equatable, Sendable {
 
     let hourly: Bool
     let slots: [Slot]
-    /// Every CLI that did anything, dearest first.
     let providers: [ProviderTotal]
     let total: UsageAmount
     let cacheSavingsUsd: Double
@@ -197,10 +195,8 @@ struct UsageReport: Equatable, Sendable {
         }
     }
 
-    /// The CLIs that did anything, in the order the chart stacks them.
     var stacked: [String] { providers.map(\.provider).sorted() }
 
-    /// The rows of a breakdown, biggest first in what the page counts.
     func rows(_ breakdown: UsageBreakdown, metric: UsageMetric) -> [Row] {
         switch breakdown {
         case .models: models.sorted { $0.value(metric) > $1.value(metric) }
@@ -209,7 +205,6 @@ struct UsageReport: Equatable, Sendable {
         }
     }
 
-    /// A row's part of the period, nil where the total says nothing.
     func share(_ row: Row, metric: UsageMetric) -> Double? {
         let whole = total.value(metric)
         guard whole > 0, metric == .tokens || row.costUsd != nil else { return nil }
@@ -248,7 +243,6 @@ struct UsageReport: Equatable, Sendable {
         return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
     }
 
-    /// Enough of the tail of a folder to tell two checkouts apart, without the home folder.
     static func shortPath(_ path: String) -> String {
         let parts = path.split(separator: "/")
         return parts.count <= 3 ? path : "…/" + parts.suffix(3).joined(separator: "/")

@@ -3,9 +3,7 @@ import Observation
 import RuimtePulsar
 import RuimteTransport
 
-/// Why a save of the launches did not land.
 enum LaunchSaveFailure: Error, Equatable {
-    /// The launches changed elsewhere since they were read; start over from the latest.
     case conflict
     case failed(String)
 }
@@ -27,7 +25,6 @@ enum LaunchesText {
     let client: any MachineRequesting
     let projectID: String
     let folder: String
-    /// Nil until the machine answered.
     private(set) var document: LaunchBook?
     /// By launch id: what ran since the machine started.
     private(set) var statuses: [String: LaunchStatus] = [:]
@@ -125,7 +122,6 @@ enum LaunchesText {
         }
     }
 
-    /// The press on a launch's play button: a start, or a restart while what it runs still runs.
     func press(_ launch: LaunchEntry) async {
         await run(launch.id, restart: LaunchLogic.runs(launch, statuses: statuses))
     }
@@ -142,7 +138,6 @@ enum LaunchesText {
         }
     }
 
-    /// Every launch of the project that runs; a group stops through its members.
     func stopAll() async {
         for status in statuses.values where status.live { await stop(status.launchId) }
     }
@@ -177,7 +172,6 @@ enum LaunchesText {
         }
     }
 
-    /// What the machine finds in the project to import; nil when it could not look.
     func detect() async -> [LaunchSuggestion]? {
         guard
             let result = try? await client.request(

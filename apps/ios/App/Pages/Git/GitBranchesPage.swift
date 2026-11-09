@@ -20,7 +20,6 @@ import SwiftUI
 
     var checkout: GitCheckout? { repositories.checkout(path) }
 
-    /// Points the actions at another repository of the folder.
     func point(at path: String) {
         guard path != self.path else { return }
         self.path = path
@@ -165,7 +164,6 @@ struct GitBranchRow: View {
     }
 }
 
-/// The questions and the typed prompts of the branch actions, put on a page once.
 struct GitBranchDialogs: ViewModifier {
     let client: any MachineRequesting
     @Bindable var actions: GitBranchActions
@@ -200,7 +198,6 @@ struct GitBranchDialogs: ViewModifier {
     }
 }
 
-/// Every branch of one repository, the remote ones too, with a search over them.
 struct GitBranchesPage: View {
     let client: any MachineRequesting
     let actions: GitBranchActions

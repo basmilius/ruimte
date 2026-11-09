@@ -9,11 +9,9 @@ typealias OutputFile = ArtifactFile
 
 extension ArtifactFile {
     var bytes: Double { Double(size) }
-    /// What Share and Quick Look need on the phone first, whole.
     var readable: Bool { bytes <= WireConstants.bytesReadMaxBytes }
     var isImage: Bool { mime.hasPrefix("image/") }
     var isText: Bool { mime.hasPrefix("text/") && mime != "text/html" }
-    /// The last part of the label, for a file on the phone and a title.
     var shortName: String { name.split(separator: "/").last.map(String.init) ?? name }
 }
 
@@ -36,7 +34,6 @@ extension ArtifactVersion: Identifiable {
     }
 }
 
-/// A row of the list: an item with its latest version.
 typealias OutputItem = ArtifactSummary
 
 extension ArtifactSummary: Identifiable {
@@ -69,7 +66,6 @@ enum OutputKind {
     }
 }
 
-/// The list's headings: newest first, in runs of Today, This week and Earlier.
 struct OutputGroup: Equatable, Identifiable {
     enum Period: Equatable { case today, week, earlier }
     let period: Period
@@ -112,7 +108,6 @@ enum OutputMachine {
         (client as? MachineFeatures)?.answers(.artifactList) == true
     }
 
-    /// A failure that says the link is gone rather than that the machine refused.
     static func unreachable(_ error: any Error) -> Bool {
         switch error as? MachineClientError {
         case .disconnected?, .timeout?: true
@@ -152,11 +147,9 @@ enum OutputMachine {
     }
 }
 
-/// What the machine keeps of one project's Output, live while a page shows it.
 @MainActor @Observable final class ProjectOutput {
     let client: any MachineRequesting
     let projectID: String
-    /// Nil until the machine answered.
     private(set) var items: [OutputItem]?
     private(set) var reachable = true
     private(set) var problem: String?
@@ -206,10 +199,8 @@ enum OutputMachine {
     let artifactID: String
     private(set) var title: String?
     private(set) var kind = "export"
-    /// Newest first.
     private(set) var versions: [OutputVersion] = []
     private(set) var chatPresent = false
-    /// The item is no longer in Output.
     private(set) var gone = false
     private(set) var reachable = true
     private(set) var problem: String?
@@ -227,7 +218,6 @@ enum OutputMachine {
     var loaded: Bool { !versions.isEmpty }
     var latest: OutputVersion? { versions.first }
 
-    /// The version on screen; nil once the one picked was removed.
     var version: OutputVersion? {
         guard let selectedID else { return latest }
         return versions.first { $0.id == selectedID }
@@ -282,7 +272,6 @@ enum OutputMachine {
         }
     }
 
-    /// The bytes of one file of a version, read by the item's id, the version's id and the file's place.
     func read(_ version: OutputVersion, file index: Int) async throws -> Data {
         let file = version.files[index]
         let resource: JSONValue = .object([
