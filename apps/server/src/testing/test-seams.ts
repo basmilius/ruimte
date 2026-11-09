@@ -169,10 +169,16 @@ export function testSeams(choices: TestSeamChoices, overrides: Partial<DaemonSea
         accounts: ({ home: accountsHome, providers }) =>
             new ProviderAccountsService({
                 home: accountsHome,
-                // Every CLI is signed in without being asked.
+                // A CLI that can say who is signed in says so without being started; one that cannot stays a login nothing checks, as in the app.
                 providers: {
                     list: () => providers.list(),
-                    get: (kind) => ({ ...providers.get(kind), askAccount: async () => ({ signedIn: true, email: null, plan: null, organization: null }) }),
+                    get: (kind) => {
+                        const provider = providers.get(kind);
+
+                        return provider.askAccount === undefined
+                            ? provider
+                            : { ...provider, askAccount: async () => ({ signedIn: true, email: null, plan: null, organization: null }) };
+                    },
                     enabled: (kind) => providers.enabled?.(kind) ?? true,
                     kinds: () => providers.kinds()
                 },
