@@ -290,6 +290,7 @@ export const START_SCREEN_MODULES: readonly string[] = [
     'settings/sections.ts',
     'shared-storage.ts',
     'shell/StartScreen.tsx',
+    'shell/ToastLayer.tsx',
     'shell/Toasts.tsx',
     'shell/app-shortcuts.ts',
     'shell/command-usage.ts',

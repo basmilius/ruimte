@@ -4,7 +4,6 @@ import { useEffect, type ReactNode } from 'react';
 import { loadClientActionsWithWorkspace } from '@/action-port/client-action-loader';
 import { startMachineUpdate } from '@/controllers/machine-update';
 import { desktop, machineMode } from '@/desktop/bridge';
-import { HostDialogs, HostOverlays } from '@/extensions/host/host-dialogs';
 import '@/extensions/built-in';
 import { startExtensions } from '@/extensions/watch';
 import { useProjectSwitch } from '@/project/open';
@@ -14,7 +13,6 @@ import { allSettingsSections } from '@/settings/sections';
 import { useAppShortcuts } from '@/shell/app-shortcuts';
 import { useNativeMenu } from '@/shell/menu/native-menu';
 import { StartScreen } from '@/shell/StartScreen';
-import { Toasts } from '@/shell/Toasts';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useUi, type SettingsSectionId } from '@/state/ui';
@@ -118,11 +116,6 @@ export function App() {
                 parked browser pages as well, which is why everything below carries a boundary of its own. */}
                 <ErrorBoundary label={i18next.t('common:state.error')} className="fixed inset-0 bg-bg" reload>
                     <WindowContent />
-                    <Floating surface="toasts">
-                        <Toasts />
-                        <HostDialogs />
-                        <HostOverlays />
-                    </Floating>
                     {dialogs.map((dialog) =>
                         dialog.surface === null ? (
                             <dialog.component key={dialog.id} />

@@ -15,7 +15,9 @@ const ProviderCommandDialog = lazyDialog(
     (state) => state.request !== null
 );
 
-export const CHAT_WINDOW_DIALOGS: readonly DialogContribution[] = [
-    { id: 'login', surface: 'login', component: LoginDialog },
+/* Two lists, since the window mounts the consent dialog between them. */
+export const LOGIN_DIALOGS: readonly DialogContribution[] = [{ id: 'login', surface: 'login', component: LoginDialog }];
+
+export const PROVIDER_COMMAND_DIALOGS: readonly DialogContribution[] = [
     { id: 'provider-command', surface: 'providerCommand', component: ProviderCommandDialog }
 ];
