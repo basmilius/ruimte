@@ -15,6 +15,9 @@ const DAY_MS = 24 * 3_600_000;
 /* How long the switch a search result jumped to stays lit, as long as a settings row does. */
 const TARGET_MS = 1600;
 
+/* The stages in which no Cloudflare row offers Try again, so the MCP switch offers its own. */
+const LISTENER_ONLY_STAGES = new Set<TunnelState['stage']>(['not-installed', 'cannot-install', 'no-token', 'no-tunnel']);
+
 const COLUMNS = [
     { width: 'minmax(0,2fr)' },
     { width: 'auto', hideBelow: 'sm' },
@@ -65,9 +68,9 @@ export function CredentialsSection({
                 ) : state.mcp.enabled && state.mcp.failure !== undefined ? (
                     <span className="flex flex-wrap items-center gap-2">
                         <span className="text-status-error">{t('tunnels.clients.notListening')}</span>
-                        {/* Without a tunnel the Cloudflare rows offer no Try again, and the machine starts the listener without a token. */}
-                        {(state.stage === 'no-token' || state.stage === 'no-tunnel') && (
-                            <Button size="sm" variant="ghost" onClick={() => void change('tunnel.retry')}>
+                        {/* The switch on again starts only the listener, where the machine's Try again would install cloudflared first. */}
+                        {LISTENER_ONLY_STAGES.has(state.stage) && (
+                            <Button size="sm" variant="ghost" onClick={() => void change('tunnel.setMcp', { enabled: true })}>
                                 {t('tunnels.retry')}
                             </Button>
                         )}

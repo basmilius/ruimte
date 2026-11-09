@@ -622,20 +622,27 @@ describe('the external MCP', () => {
         expect(buttonWithText('Use')).not.toBeNull();
     });
 
-    // Council round 16: without a tunnel, nothing offered Try again for a listener whose port had come free.
+    // Council rounds 16 and 17: no Cloudflare row offered Try again here, and the machine's Try again would install cloudflared.
     test.each([
+        ['before cloudflared is installed', () => bareState({ stage: 'not-installed' })],
+        [
+            'where cloudflared cannot be installed',
+            () => bareState({ stage: 'cannot-install', message: 'Install cloudflared yourself and put it on your path.' })
+        ],
         ['without a token', bareState],
         ['without a tunnel', () => stateOf({ stage: 'no-tunnel', tunnel: null })]
-    ])('offers Try again at its switch while it is not running, %s', async (_name, base) => {
+    ])('starts only the listener again from its switch while it is not running, %s', async (_name, base) => {
         const failed = { enabled: true, port: null, failure: 'The MCP listener did not start. Failed to start server. Is port 4230 in use?' };
 
         state = { ...base(), mcp: failed };
-        machine.answer('tunnel.retry', () => (state = { ...base(), mcp: { enabled: true, port: 4230 } }));
+        machine.answer('tunnel.setMcp', ({ enabled }) => (state = { ...base(), mcp: { enabled, port: 4230 } }));
         await open();
         await until(() => everything().includes('Not running. Another app may be using its port.'));
         await clickOn(buttonWithText('Try again'));
         await until(() => everything().includes('http://127.0.0.1:4230/mcp'));
-        expect(machine.requests('tunnel.retry')).toHaveLength(1);
+        expect(machine.requests('tunnel.setMcp')).toEqual([{ enabled: true }]);
+        expect(machine.requests('tunnel.retry')).toEqual([]);
+        expect(machine.requests('tunnel.install')).toEqual([]);
     });
 });
 
