@@ -10,7 +10,6 @@ export const effortFlag = z.string().trim().min(1, 'effort needs a reasoning eff
 /* The refusals of `selectionForOpening` that are about the effort and not the model, so a team names the field. */
 export const EFFORT_REFUSALS: ReadonlySet<string> = new Set(['effort-needs-chat', 'no-effort', 'unknown-choice']);
 
-/* The effort choices of a model and its default; null for a model without the option. */
 function effortOf(provider: ChatProvider, slug: string): { choices: string[]; defaultChoice: string } | null {
     const option = provider.catalog
         .list()

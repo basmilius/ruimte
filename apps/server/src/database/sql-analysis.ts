@@ -114,15 +114,12 @@ interface SqlAnalysisOptions {
     connections: { connectionsOf(projectId: string): Promise<DatabaseConnection[]> };
     snapshots: SchemaSnapshots;
     access: { levelOf(projectId: string, connection: DatabaseConnection): Promise<DatabaseAgentAccess> };
-    /* The language servers, which read the settings this makes. */
     listeners: SqlListeners;
     /* Where a snapshot taken in the background that failed is told; the console by default. */
     warn?: (line: string) => void;
 }
 
-/* What the language servers have to hear of the project's SQL. */
 interface SqlListeners {
-    /* The settings of the project changed. */
     sqlChanged(projectId: string): Promise<void>;
     /* A snapshot file was written; a server that watches it reads it again. */
     outsideFilesChanged(changes: readonly FileChange[]): Promise<void>;
@@ -236,7 +233,6 @@ export class SqlAnalysis {
         await this.changed(projectId);
     }
 
-    /* The settings of the project's servers as the choices, the connections and the snapshots stand. */
     async settingsOf(projectId: string): Promise<ProjectSqlSettings | null> {
         const folder = this.options.projects.folderOf(projectId);
         if (folder === null) {

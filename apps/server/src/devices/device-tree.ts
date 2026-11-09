@@ -90,7 +90,6 @@ export function findElements(elements: readonly DeviceElement[], text: string): 
     return { elements: elements.filter((element) => kept.has(element.handle)), matches };
 }
 
-/* The pixel a tap on an element lands on: the middle of its frame. */
 export function centerOf(element: Pick<DeviceElement, 'frame'>): { x: number; y: number } {
     return {
         x: element.frame.x + element.frame.width / 2,

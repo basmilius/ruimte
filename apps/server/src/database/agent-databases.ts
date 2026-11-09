@@ -18,7 +18,6 @@ const AGENT_DATABASE_LIMIT_MS = 120_000;
 /* The longest text or binary value a row prints whole; a longer one prints its start and its length. */
 const AGENT_CELL_LIMIT = 256;
 
-/* How many rows `execute` prints of a statement that reads. */
 const EXECUTE_ROW_LIMIT = 100;
 
 class DatabaseAgentError extends CodedError {}
@@ -65,7 +64,6 @@ interface AgentExecution {
     inTransaction: boolean;
 }
 
-/* What the agents reach a project's databases through, the tools' side of `AgentDatabases`. */
 export type DatabaseAgentHost = Pick<AgentDatabases, 'list' | 'tables' | 'describe' | 'query' | 'execute' | 'tableOf'>;
 
 interface AgentDatabasesOptions {
@@ -157,7 +155,6 @@ export class AgentDatabases {
         return this.sinks.subscribe(clientId, sink);
     }
 
-    /* What a client of the project reads in its connections dialog. */
     async accessFor(projectId: string, clientId: string): Promise<{ access: Record<string, DatabaseAgentAccess> }> {
         this.requireHolder(projectId, clientId);
         return { access: await this.levels(projectId) };
@@ -189,7 +186,6 @@ export class AgentDatabases {
         return { access: levels };
     }
 
-    /* What agents may do with a connection as it points now. */
     async levelOf(projectId: string, connection: DatabaseConnection): Promise<DatabaseAgentAccess> {
         return this.options.access.levelOf(projectId, connection.id, await this.destinationOf(connection));
     }

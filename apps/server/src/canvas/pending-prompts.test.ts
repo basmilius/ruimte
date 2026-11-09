@@ -32,6 +32,5 @@ test('a node that left the project takes its prompt with it, and the rest stays'
     await store.pruneLeftNodes('p1', new Set(['terminal-b']));
     expect(await store.take('terminal-a')).toBeNull();
     expect(await store.take('terminal-b')).toEqual({ prompt: 'b' });
-    // Another project's prompts are none of this project's business.
     expect(await store.take('terminal-c')).toEqual({ prompt: 'c' });
 });

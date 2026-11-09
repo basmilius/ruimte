@@ -120,7 +120,6 @@ test('a chat of a design hears once, at its next prompt, that the folder of its 
     expect(notes).toEqual([
         'Ruimte: the pages of your design now live in `/repo/.ruimte/designs/onboarding`. Read and write them there from now on, never in `/repo/.ruimte/private/designs/onboarding`.'
     ]);
-    // The fake echoes its prompt, so the reply shows what the CLI was given.
     const replies = recorder.ofKind('assistant').map((item) => item.text);
     expect(replies[1]).toBe(`echo: ${notes[0]}\n\nsecond`);
     expect(replies[2]).toBe('echo: third');
@@ -155,7 +154,6 @@ test('a chat attached with @ and a view with # go to the CLI as the commands tha
     await recorder.untilIdle();
 
     expect(recorder.ofKind('user')[0]).toMatchObject({ text: 'carry on from #Sketch', chats: ['chat-earlier'], references: ['sketch'] });
-    // The fake echoes its prompt, so the reply shows what the CLI was given.
     expect(recorder.ofKind('assistant')[0]?.text).toBe(`echo: ${referenceNote([known['chat-earlier']!, known.sketch!])}\n\ncarry on from #Sketch`);
     // Nothing in the thread repeats it: the row draws the chip.
     expect(recorder.ofKind('note')).toEqual([]);

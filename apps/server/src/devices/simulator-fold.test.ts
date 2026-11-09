@@ -14,7 +14,6 @@ function helperAnswering(answers: Partial<Record<DeviceHelperCall['method'], boo
     };
 }
 
-/* A monitor whose SpringBoard reports the test makes. */
 function reporting(): { factory: PanelMonitorFactory; report: (panel: FoldPanel) => void; stops: () => number } {
     let onPanel: (panel: FoldPanel) => void = () => undefined;
     let stops = 0;

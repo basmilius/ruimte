@@ -40,7 +40,6 @@ export async function makeChatFixture() {
     const manager = makeManager();
     const recorder = new ChatRecorder();
     manager.core.subscribe('c1', recorder.sink());
-    // A restart: the old manager goes, a new one reads the same store and the first client listens again.
     async function remake(current: ChatManager, extra: Parameters<typeof makeManager>[0] = {}): Promise<ChatManager> {
         await retire(current);
         const next = makeManager(extra);

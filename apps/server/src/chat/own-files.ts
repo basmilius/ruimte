@@ -10,7 +10,6 @@ import { errorText } from '../error-text.ts';
 import { ChatError } from './errors.ts';
 
 interface MovedOwnFiles {
-    /* The top-level names that arrived in the target. */
     moved: string[];
     /* Puts every name back, last first; a second call does nothing. */
     undo(): Promise<void>;

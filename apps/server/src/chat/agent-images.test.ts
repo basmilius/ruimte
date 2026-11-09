@@ -12,7 +12,6 @@ import { leadAndShellProject } from './lead-chat-test-helpers.ts';
 
 const MIB = 1024 * 1024;
 
-/* Just enough of a PNG for its bytes to read as one. */
 const PNG = Buffer.concat([Buffer.from('\x89PNG\r\n\x1a\n', 'latin1'), Buffer.from([0, 0, 0, 13]), Buffer.from('IHDR'), Buffer.alloc(17)]);
 
 /* A binary STL of `triangles` empty triangles, whose size is what tells it from any other binary. */
@@ -72,7 +71,6 @@ async function bootWithChat(): Promise<TestDaemon> {
 
 let written = 0;
 
-/* What chat_attach answers for these bytes, written to a file of their own in the project folder first. */
 async function attach(daemon: TestDaemon, caller: string, bytes: Uint8Array, name = 'shot.png'): Promise<string[]> {
     const place = join(folder, 'attach', String(written++));
     await mkdir(place, { recursive: true });
@@ -235,7 +233,6 @@ describe('finding an agent image', () => {
         expect(await daemon.chatManager.findAttachment('chat-lead', linked)).toBeNull();
         await fork('chat-lead', 'chat-fork-2');
         expect(await readdir(join(home, 'attachments', 'chat-fork-2'))).toEqual([basename((await daemon.chatManager.findAttachment('chat-lead', id!))!.path)]);
-        // Nothing to copy leaves no folder behind.
         await fork('chat-without-images', 'chat-empty');
         expect(await stat(join(home, 'attachments', 'chat-empty')).catch(() => null)).toBeNull();
     });

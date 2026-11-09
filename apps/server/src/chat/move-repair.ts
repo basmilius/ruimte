@@ -28,7 +28,6 @@ export interface MoveRepairDeps {
     ownFolder(chatId: string): string;
     chats: {
         deliverNote(chatId: string, delivery: { noteId: string; note: string; preamble: string }): Promise<boolean>;
-        /* The record's info, loaded from disk when nobody has it; throws `chat-not-found` for a chat with no record. */
         load(chatId: string): Promise<ChatInfo>;
         relocate(chatId: string, cwd: string, during: () => Promise<void>): Promise<ChatInfo>;
         claudeProjectsDirOf(info: Pick<ChatInfo, 'account' | 'provider'>): string;

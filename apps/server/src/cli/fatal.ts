@@ -1,9 +1,6 @@
 import type { MachineHealth } from '@ruimte/service/health';
 import { portFlag } from '../config.ts';
 
-/* What a person reads when a machine cannot start because its port is taken. */
-
-/** Whether an error is the listen call finding its port taken. */
 export function isAddressInUse(error: unknown): boolean {
     return typeof error === 'object' && error !== null && (error as { code?: unknown }).code === 'EADDRINUSE';
 }

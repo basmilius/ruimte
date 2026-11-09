@@ -66,7 +66,6 @@ function readDump(xml: string): Dump | null {
     return { rotation, nodes: top };
 }
 
-/* `android.widget.Button` reads as `Button`. */
 function roleOf(className: string): string {
     return className.slice(className.lastIndexOf('.') + 1) || 'View';
 }

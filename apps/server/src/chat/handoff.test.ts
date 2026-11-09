@@ -14,7 +14,6 @@ const meta: HandoffMeta = {
     worktree: null
 };
 
-/* Six turns, each a question and an answer of `size` characters. */
 function sixTurns(size: number): ChatItem[] {
     return Array.from({ length: 6 }, (_, index): ChatItem[] => {
         const turnId = `turn-${index + 1}`;

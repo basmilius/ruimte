@@ -146,7 +146,6 @@ async function create(values: {
     console.log(`Created ${folder}\n\nNext: cd ${basename(folder)} && bun run dev`);
 }
 
-/* What `bun install` said when it failed in a new project, or null when it did not. */
 export function installFailure(folder: string, run: typeof spawnSync = spawnSync): string | null {
     const runtime = bunRuntime();
     const result = run(runtime.command, [...runtime.args, 'install'], { cwd: folder, env: { ...process.env, ...runtime.env }, encoding: 'utf8' });

@@ -366,7 +366,6 @@ export class ScrcpySource implements DeviceSource {
     }
 }
 
-/* The host of a real device: adb for one serial and a loopback socket. */
 export function adbScrcpyHost(adb: string, serial: string): ScrcpyHost {
     return {
         adb: (arguments_) => runCommand([adb, '-s', serial, ...arguments_]),

@@ -83,7 +83,6 @@ export interface ChatForkDeps {
     /* The chat as it stands, loaded or on disk; null when this machine has no such chat. */
     source(chatId: string): Promise<{ info: ChatInfo; items: ChatItem[] } | null>;
     installed(): Promise<AgentKind[]>;
-    /* What a kind says about itself, as the registry knows it: its name and how its conversation is forked. */
     provider(kind: AgentKind): ChatProvider;
     /* Whether the chat is on its way to another folder, which a copy of its conversation would race. */
     relocating?(chatId: string): boolean;
@@ -99,11 +98,8 @@ export interface ChatForkDeps {
     recordFork(record: { projectId: string; nodeId: string; openedBy: string; depth: number; ceiling?: RuntimeMode }): Promise<void>;
     /* Keeps the fork of a hidden agent hidden as well, belonging to the agent that forked it. */
     hideFork?(agent: HiddenAgent): Promise<void>;
-    /* Writes the cut transcript under the new session id and answers how to take it back. */
     forkClaude(input: { source: ChatInfo; at: TranscriptCutPoint; newSessionId: string; cwd: string }): Promise<{ undo(): Promise<void> }>;
-    /* Forks the thread in Codex into the fork's folder and answers the new thread's id. */
     forkCodex(input: { source: ChatInfo; at: ThreadCutPoint; cwd: string }): Promise<string>;
-    /* The local branches of the repository a folder is in, or null outside one. */
     branchesOf(folder: string): Promise<string[] | null>;
     /* A worktree on a new branch for the fork, with the folder in it that matches the original's, and how to take it back. */
     addWorktree(input: {
@@ -113,7 +109,6 @@ export interface ChatForkDeps {
         nodeId: string;
     }): Promise<{ worktree: Worktree; cwd: string; undo(): Promise<void> }>;
     treeExists(cwd: string, tree: string): Promise<boolean>;
-    /* The tree of a folder as it is now, or null when git cannot take one. */
     takeTree(cwd: string): Promise<string | null>;
     restoreTree(cwd: string, tree: string): Promise<void>;
     writeRecord(chatId: string, info: ChatInfo, items: ChatItem[], preambles: string[]): Promise<void>;
@@ -124,7 +119,6 @@ export interface ChatForkDeps {
     now(): number;
     /* The accounts a fork may go on under; without them only a CLI's default account. */
     accounts?: {
-        /* Throws for an account a CLI of this kind cannot start under on this machine. */
         require(kind: AgentKind, account: string | undefined): void;
         /* Where a start the chat makes goes, given the account it names: its project's choice, else the order of the accounts. Throws for one its project turned off. */
         opening?(chatId: string, kind: AgentKind, named: string | undefined): string | undefined;
@@ -218,7 +212,6 @@ function nameOf(deps: Pick<ChatForkDeps, 'provider'>, kind: AgentKind): string {
     return deps.provider(kind).name;
 }
 
-/* Whether a CLI keeps a conversation that can be forked and gone on with in a fork. */
 function forkable(deps: Pick<ChatForkDeps, 'provider'>, kind: AgentKind): boolean {
     return deps.provider(kind).capabilities.fork === true;
 }
@@ -293,7 +286,6 @@ export async function readHandoff(deps: ChatForkDeps, payload: ChatHandoffPayloa
     });
 }
 
-/* Steps taken back in reverse when a later one is refused. */
 class UndoSteps {
     private readonly steps: Array<() => Promise<void>> = [];
 
@@ -307,7 +299,6 @@ class UndoSteps {
         }
     }
 
-    /* Runs `work`, and takes every step back before its error goes on. */
     async guard<T>(work: () => Promise<T>, refusal: (error: unknown) => unknown = (error) => error): Promise<T> {
         try {
             return await work();
@@ -484,7 +475,6 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
     );
 }
 
-/* An agent's fork of a chat it opened, after the turn it names or the last one that finished. */
 export async function forkForAgent(deps: ChatForkDeps, input: AgentForkInput, opener: ForkOpener): Promise<ChatForkResult & { title: string }> {
     const source = await deps.source(input.chatId);
     if (source === null) {
@@ -802,7 +792,6 @@ function forkCanvas(content: ProjectContent, place: IndexedPlace, payload: ChatF
     return canvas;
 }
 
-/* The daemon's pieces a fork is made of. */
 export function chatForkDeps(wiring: {
     chats: ChatManager;
     host: {

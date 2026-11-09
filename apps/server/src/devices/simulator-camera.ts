@@ -7,7 +7,6 @@ import { DeviceError } from './device-error.ts';
 import { isVideo, requireMedia } from './device-paths.ts';
 import { besideDaemon, serveSimFolder } from './serve-sim.ts';
 
-/* A running camera helper, as far as this daemon needs it. */
 interface CameraHelperProcess {
     kill(): void;
 }
@@ -17,9 +16,7 @@ export interface CameraHost {
     /* The helper and the library a simulator app loads; null when this build carries neither. */
     readonly files: { helper: string; injector: string } | null;
     spawn(helper: string, arguments_: string[]): CameraHelperProcess;
-    /* Resolves once the helper listens on `socket`, false when it never did. */
     listening(socket: string): Promise<boolean>;
-    /* Sends one command line over the helper's socket; false when the helper refused it. */
     send(socket: string, command: Record<string, string>): Promise<boolean>;
 }
 
@@ -109,7 +106,6 @@ export class SimulatorCamera {
         this.feeds.delete(deviceId);
     }
 
-    /* Ends every feed, for a daemon that stops. */
     stopAll(): void {
         for (const deviceId of [...this.feeds.keys()]) {
             this.stop(deviceId);

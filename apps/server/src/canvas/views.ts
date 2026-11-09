@@ -92,7 +92,6 @@ export function iconChoice(value: string): ProjectIconChoice {
     throw new ToolRefusal('unknown-icon', `${value} is not one of the ${PROJECT_ICON_NAMES.length} Lucide names a view picks from`, ICON_NAME_LINES);
 }
 
-/* The view an id names, refused with the list when it names none: the views are a closed set. */
 export function viewNamed(content: ProjectContent, id: string, flag: string): ProjectView {
     const view = content.views.find((candidate) => candidate.id === id);
     if (!view || isHiddenCanvasView(view)) {
@@ -104,12 +103,10 @@ export function viewNamed(content: ProjectContent, id: string, flag: string): Pr
     return view;
 }
 
-/* A path stays inside the project folder as a stored one, and stays absolute when it points out. */
 export function storedFilePath(folder: string, path: string): string {
     return isWithin(folder, path) ? storedPathOf(folder, path) : path;
 }
 
-/* What a database view shows, as the daemon resolved it from the flags. */
 export interface TableParts {
     connectionId: string;
     schema: string;

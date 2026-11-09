@@ -14,10 +14,8 @@ export interface MoveInfoDeps {
     home: string;
     ruimteHome: string;
     refusal(chatId: string): ChatMoveRefusal | null;
-    /* The chat's folder and thread, stored or loaded; null when the machine has no such chat. */
     thread(chatId: string): Promise<{ cwd: string; items: readonly ChatItem[] } | null>;
     ownFolder(chatId: string): string;
-    /* The chat views of the Chats project. */
     chatsInChats(): Promise<string[]>;
     /* The registry's projects without Chats. */
     projects(): Promise<Array<{ projectId: string; name: string; folder: string; available: boolean }>>;
@@ -36,12 +34,10 @@ export async function ownFileNames(folder: string): Promise<string[]> {
     }
 }
 
-/* The folder a target stands for, or null when it names a project the registry does not have. */
 export function targetFolder(target: ChatMoveTarget, projects: ReadonlyArray<{ projectId: string; folder: string }>): string | null {
     return 'projectId' in target ? (projects.find((project) => project.projectId === target.projectId)?.folder ?? null) : resolve(target.folder);
 }
 
-/* The names among `names` (as `ownFileNames` lists them) that are already in the target folder. */
 export async function ownFileConflicts(names: readonly string[], folder: string | null, limit = MAX_NAMES): Promise<string[]> {
     const taken: string[] = [];
     if (folder === null) {

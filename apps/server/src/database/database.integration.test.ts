@@ -24,7 +24,6 @@ function call(service: DatabaseService, owner: string, method: string, params: R
     return service.handle({ id: `r${nextId++}`, method, params }, owner, local);
 }
 
-/* The result of a request that has to succeed, or the error it answered in the failure. */
 async function ok<T>(response: Promise<DatabaseResponse>): Promise<T> {
     const answered = await response;
     if (!answered.ok) {
@@ -49,7 +48,6 @@ async function agentDatabases(service: DatabaseService, home: string, connection
     return { agents };
 }
 
-/* The code an agent's call is refused with, or null when it went through. */
 async function refusedWith(work: Promise<unknown>): Promise<string | null> {
     try {
         await work;

@@ -39,7 +39,6 @@ export function taskFirstPrompt(prompt: string, chat: boolean): FirstPrompt {
     return { prompt, brief: CHAT_TASK_BRIEF };
 }
 
-/* What kind of node or view the caller is in its project, or null when neither names it. */
 export function callerKind(content: ProjectContent, caller: string): string | null {
     for (const view of content.views) {
         if (view.id === caller) {
@@ -75,7 +74,6 @@ function firstLine(text: string): string {
     return field(text.split('\n').find((line) => line.trim() !== '') ?? '').slice(0, 200);
 }
 
-/* One row of `task_list`, from the side of the node that asks. */
 export function taskLine(task: Task, nodeId: string): string {
     const gave = task.parentId === nodeId;
     return [

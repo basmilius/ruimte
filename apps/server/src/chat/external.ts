@@ -13,7 +13,6 @@ import {
 import { ChatSearchError, chatsOfViews } from './project-search.ts';
 
 export interface ExternalChatSessionsDeps {
-    /* Whether this client has the project open. */
     holds(clientId: string, projectId: string): Promise<boolean>;
     folderOf(projectId: string): string | null;
     /* Where each CLI keeps its transcripts, per account folder. */

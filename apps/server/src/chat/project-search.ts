@@ -19,7 +19,6 @@ interface SearchableChat {
 }
 
 export interface ProjectChatSearchDeps {
-    /* Whether this client has the project open. */
     holds(clientId: string, projectId: string): Promise<boolean>;
     chatsOf(projectId: string): SearchableChat[];
     /* The thread of a chat the daemon runs now; null when no session of it is loaded. */

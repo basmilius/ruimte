@@ -374,7 +374,6 @@ export class AndroidBackend implements DeviceBackend {
         return current;
     }
 
-    /* Starts a stopped emulator, with `extra` after the usual arguments. */
     private async start(deviceId: string, extra: readonly string[]): Promise<DeviceInfo> {
         const sdk = this.sdk();
         if (sdk.emulator === null) {
@@ -717,7 +716,6 @@ export class AndroidBackend implements DeviceBackend {
         return this.located;
     }
 
-    /* The first console port no emulator of this backend holds or is starting on. */
     private freeEmulatorPort(): number {
         const used = new Set([...this.avdNames.keys(), ...[...this.booting.values()].map((booting) => booting.serial)]);
         let port = FIRST_EMULATOR_PORT;
@@ -956,7 +954,6 @@ export class AndroidBackend implements DeviceBackend {
         return (await this.adbOn(serial, ['shell', script])).stdout;
     }
 
-    /* adb for one device by its serial. */
     private adbOn(serial: string, arguments_: string[]): Promise<CommandResult> {
         return this.adb(this.sdk(), ['-s', serial, ...arguments_]);
     }

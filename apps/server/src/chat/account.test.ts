@@ -89,7 +89,6 @@ function say(chatId: string, text: string): Promise<void> {
     return sayAndSettle(daemon, chatId, text);
 }
 
-/* Has the lead chat start an agent and answers its node id. */
 async function openAgent(input: Record<string, unknown>): Promise<string> {
     const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', input);
     return line!.split('\t')[0]!;

@@ -34,7 +34,6 @@ export const REQUIRED_FIELD: Partial<Record<NodeNewKind, KindField>> = {
     routine: 'routine'
 };
 
-/* What the title falls back to without `title`, in the order `run` picks it. */
 function untitled(kind: NodeNewKind): string {
     if (kind === 'drawing' || kind === 'diagram') {
         return `the name of the ${kind} view`;

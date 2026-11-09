@@ -4,7 +4,6 @@ import { z } from 'zod';
 /* Where and how a task runs on another machine; the target of its outbox entry is the node here that stands for the agent. */
 export const StartRemoteAgentPayloadSchema = z.object({
     machineId: z.string().min(1),
-    // The project there that the link names.
     remoteProjectId: z.string().min(1),
     taskId: z.string().min(1),
     node: z.enum(['chat', 'terminal']),

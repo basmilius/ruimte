@@ -52,7 +52,6 @@ export function idList(raw: string, flag: string): string[] {
     return ids;
 }
 
-/* The nodes those ids name on this canvas, refused with what this tool takes when one of them names none. */
 export function nodesNamed(
     content: Pick<ProjectContent, 'views'>,
     canvas: ProjectCanvasView,

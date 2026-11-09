@@ -13,7 +13,6 @@ export interface ExternalCaller {
 
 export { externalActorId, isExternalActor };
 
-/* How a person reads an external client wherever it acted, such as the sender of a message. */
 export function externalActorTitle(caller: ExternalCaller): string {
     return `MCP · ${caller.label}`;
 }

@@ -44,7 +44,6 @@ export function continueOnWake(kind: ChatTurnLimit['kind'], account: string, for
     };
 }
 
-/* What the original of a fork that went on after its limited turn says under that turn. */
 export function continuedInForkNote(account: string): string {
     return `Continued under the account '${account}' in a fork`;
 }

@@ -4,7 +4,6 @@ import { DeviceError } from './device-error.ts';
 import { FoldPanelMonitor, PANEL_SIZES, panelOfAngle, POSE_DEGREES, type FoldPanel } from './fold-panel.ts';
 import type { DeviceHelperCall } from './helper-protocol.ts';
 
-/* The part of the native helper a fold goes through. */
 interface FoldHelper {
     call(call: DeviceHelperCall): Promise<boolean | undefined>;
 }

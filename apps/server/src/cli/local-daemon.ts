@@ -44,7 +44,6 @@ export function askLocalDaemon(
     }).catch(() => null);
 }
 
-/* What a command tells a person whose daemon is not running. */
 export function startFirst(port: number): string {
     const flag = portFlag(port);
     return `Start it with \`ruimte service install${flag}\`, or with \`ruimte${flag}\` in another terminal.`;

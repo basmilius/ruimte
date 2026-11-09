@@ -281,7 +281,6 @@ export class DatabaseConnectionStore {
         }
     }
 
-    /* Finishes a save that was cut off between its two files. */
     private async recover(folder: string): Promise<void> {
         try {
             await recoverPaired(pendingPathIn(folder), { root: folder, paths: [sharedPathIn(folder), privatePathIn(folder)] }, this.io);
@@ -453,7 +452,6 @@ function documentOf(state: LoadedConnections): DatabaseConnections {
     return { rev: state.rev, connections: all.sort((a, b) => rankOf(a.id) - rankOf(b.id)) };
 }
 
-/* The first rule a list of connections breaks, or null. */
 export function problemIn(folder: string, connections: readonly DatabaseConnection[]): DatabaseConnectionError | null {
     const ids = new Set<string>();
     for (const connection of connections) {

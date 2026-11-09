@@ -13,7 +13,6 @@ import { git, toplevel } from '../git/run.ts';
 import { UiSourceAccessSchema, type UiSourceAccess } from './ui-access.ts';
 import type { UiSourceHosts } from './ui-sources.ts';
 
-/* The real path of the repository a directory is in; null outside one. */
 async function repositoryOf(directory: string): Promise<string | null> {
     try {
         return await realpath(await toplevel(directory));

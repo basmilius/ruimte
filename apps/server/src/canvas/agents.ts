@@ -157,7 +157,6 @@ export function grownGroup(group: ProjectNode, placement: ReturnType<typeof plac
     };
 }
 
-/* The nodes a new agent reads from its first turn, held to the count one call may link at once. */
 export function readsOf(ids: readonly string[] | null): string[] {
     const reads = [...new Set(ids ?? [])];
     if (reads.length > MAX_LINKS) {
@@ -166,7 +165,6 @@ export function readsOf(ids: readonly string[] | null): string[] {
     return reads;
 }
 
-/* Refuses a CLI this machine does not have; `role` names the role of a team it belongs to. */
 export function requireInstalled(starts: Pick<AgentStartHost, 'provider'>, installed: readonly AgentKind[], kind: AgentKind, role?: string): void {
     if (installed.includes(kind)) {
         return;

@@ -60,7 +60,6 @@ function turnsIn(chatId: string): ChatTurnItem[] {
     return turnsOf(daemon.chats.get(chatId)?.thread.list() ?? []);
 }
 
-/* Sends and waits until the turn settled with the tree of where it left the files. */
 function say(chatId: string, text: string): Promise<void> {
     return sayAndSettle(daemon, chatId, text, (turn) => turn.checkpointAfter !== undefined);
 }
@@ -115,7 +114,6 @@ test('a fork after turn 1 in a worktree holds the files after turn 1, with the i
     expect(existsSync(join(path, 'second.txt'))).toBe(false);
     expect(await gitIn(path, ['diff', '--cached', '--name-only'])).toBe('');
     expect(await gitIn(path, ['status', '--porcelain'])).toBe('?? .ruimte/\n?? first.txt\n');
-    // The person's checkout keeps both files.
     expect(existsSync(join(folder, 'second.txt'))).toBe(true);
 
     const record = (await new ChatStore(home).read(nodeId))!;

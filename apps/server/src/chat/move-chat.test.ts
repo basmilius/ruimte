@@ -47,7 +47,6 @@ describe('moving a chat from Chats into a project', () => {
         proposals: NO_PROPOSALS
     });
 
-    /* The deps as the daemon wires them, with one piece replaced by a test. */
     const deps = (override: (base: MoveChatDeps) => Partial<MoveChatDeps> = () => ({})): MoveChatDeps => {
         const base = chatMoveDeps(wiring()).move;
         return { ...base, ...override(base) };

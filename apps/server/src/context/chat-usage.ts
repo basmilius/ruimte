@@ -46,7 +46,6 @@ function cacheText(cache: ChatReadUsage['cache']): string {
         : `prompt cache warm for ${spanText(cache.expiresInMs)} more (until ${cache.expiresAt}${lifetime})`;
 }
 
-/* The one line a chat read starts with, above the plans and the thread. */
 export function chatUsageLine(usage: ChatReadUsage): string {
     // Right after a compaction without a size, 0 would read as an empty context.
     const context =

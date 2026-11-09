@@ -342,6 +342,5 @@ test('a turn carries its checkpoint and the diff of what it changed', async () =
     const turn = recorder.ofKind('turn')[0];
     expect(turn?.checkpoint).toBe(tree);
     expect(turn?.checkpointDiff).toEqual(diff);
-    // turnDiff answers with the same diff already carried on the turn.
     expect(await manager.core.turnDiff('chat-diff', turn!.id)).toEqual(diff);
 });

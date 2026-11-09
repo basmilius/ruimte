@@ -53,7 +53,6 @@ export interface MoveChatDeps {
         overlayFieldsOf(projectId: string): Promise<string[]>;
         summary(projectId: string): Promise<ProjectSummary>;
     };
-    /* Starts a repository in a folder. */
     initGit(folder: string): Promise<void>;
     chats: {
         /* The chat's record, loaded from disk when nobody has it; throws `chat-not-found` for an id with no chat. */
@@ -108,7 +107,6 @@ export async function fileTranscript(
     return move({ projectsDir, sessionId: info.agentSessionId, fromCwd: info.cwd, toCwd: folder });
 }
 
-/* A catch handler that runs `undo` and lets the failure through. */
 function failWith(undo: () => void): (e: unknown) => never {
     return (e) => {
         undo();

@@ -100,7 +100,6 @@ const IOS_SIMULATOR_TOOLS: DeviceTool[] = [
     'addMedia'
 ];
 
-/* The status bar of a marketing shot. */
 const CLEAN_STATUS_BAR = [
     '--time',
     '9:41',
@@ -207,7 +206,6 @@ function axHelperPath(): string | null {
     return serveSimFile('serve-sim-ax-settings', 'simax');
 }
 
-/* The settings the accessibility helper reports, or none for an answer it cannot read. */
 function axSettingsOf(output: string | undefined): Record<string, string> {
     if (!output) {
         return {};

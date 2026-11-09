@@ -96,9 +96,7 @@ export interface DeviceBackend {
      * `keyboard` holds a session and answers its keys, for a backend that types through them.
      */
     type?(deviceId: string, text: string, keyboard: () => Promise<DeviceKeyboard>): Promise<void>;
-    /* The accessibility tree of what the device shows now; absent on a backend that cannot read one. */
     tree?(deviceId: string): Promise<DeviceTree>;
-    /* Ends whatever `tree` keeps running for this device. */
     closeTree?(deviceId: string): void;
     /* A phone's own battery; null for a device without one of its own, such as a simulator. */
     power?(deviceId: string): Promise<DevicePower | null>;
@@ -144,7 +142,6 @@ export class DeviceManager {
         return (await this.survey()).devices;
     }
 
-    /* Every device the backends found, and why the others found nothing. */
     async survey(): Promise<{ devices: DeviceInfo[]; unavailable: DeviceUnavailable[] }> {
         const backends = [...this.backends.values()];
         const results = await Promise.allSettled(backends.map((backend) => backend.list()));
@@ -411,7 +408,6 @@ export class DeviceManager {
         await this.guarded(() => paste(text));
     }
 
-    /* The session of a device this client or holder has open. */
     private openFor(backendId: string, deviceId: string, clientId: string): DeviceSession {
         const session = this.sessions.get(sessionKey(backendId, deviceId));
         if (!session || !session.clients.has(clientId)) {

@@ -16,7 +16,6 @@ const NEW_CHAT_NAME = 'New chat';
 /* Whether a person wrote in a chat yet, as its thread says; a chat this daemon has no thread of never had a message. */
 type ChatWritten = (chatId: string) => Promise<boolean>;
 
-/* Whether a folder sits inside a git checkout. */
 type CheckoutProbe = (folder: string) => Promise<boolean>;
 
 async function insideGitCheckout(folder: string): Promise<boolean> {

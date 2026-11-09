@@ -27,7 +27,6 @@ function fittingName(name: string): string {
     return fitting.join('') || 'attachment';
 }
 
-/* The id, the name (absent when the file carries none) and the extension of a file of the folder, or null when it is no agent attachment. */
 function parsed(file: string): { id: string; name: string | null; extension: string } | null {
     const dot = file.lastIndexOf('.');
     const extension = file.slice(dot + 1);
@@ -84,7 +83,6 @@ export class AgentImages implements ChatSidecar {
         return { id, name, mime: upload.mime, size: upload.bytes.byteLength, path };
     }
 
-    /* The file behind an id, or null when the id is no agent attachment of this chat. */
     async find(chatId: string, id: string): Promise<ChatAttachment | null> {
         if (!ID.test(id)) {
             return null;

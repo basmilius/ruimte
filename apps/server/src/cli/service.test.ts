@@ -47,7 +47,6 @@ function planOf(facts: ServiceFacts) {
     return plan;
 }
 
-/* A manager over an in-memory file, recording the steps it was asked to take. */
 function fakeManager(files: ServiceFiles, linger?: boolean): ServiceManager & { steps: string[] } {
     const steps: string[] = [];
     const path = '/fake/app.ruimte.daemon.plist';

@@ -80,7 +80,6 @@ async function notify(daemon: TestDaemon, from: string, to: string, text: string
     return invokeTool(daemon, from, 'notify', { id: to, text });
 }
 
-/* The line notify prints, which every answer ends with the same way. */
 function notified(id: string, at: string, detail: string, title: string): string {
     return `notified\t${id}\t${at}\t${detail}; ${NO_REPLY_NOTICE}\t${title}`;
 }

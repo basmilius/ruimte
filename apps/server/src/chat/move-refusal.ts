@@ -1,7 +1,6 @@
 import type { ChatMoveRefusal, Task } from '@ruimte/contracts';
 
 export interface MoveRefusalDeps {
-    /* Whether the chat is a chat view of the Chats project. */
     inChats(chatId: string): boolean;
     /* A turn runs, or the chat waits on a person. A chat nobody loaded since a restart does neither. */
     working(chatId: string): boolean;

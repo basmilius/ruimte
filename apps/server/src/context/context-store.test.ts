@@ -35,7 +35,6 @@ function toolsOf(context: ContextStore): (name: string, input?: Record<string, u
     };
 }
 
-/* A store whose readers answer nothing, but for those a test hands it. */
 function storeWith(readers: Partial<ConstructorParameters<typeof ContextStore>[0]>): ContextStore {
     return new ContextStore({
         sources: () => [],

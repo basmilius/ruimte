@@ -74,7 +74,6 @@ beforeEach(() => {
     );
 });
 
-/* The last process started, once the reader has asked it for a tree. */
 async function asked(): Promise<FakeChild> {
     await flush();
     return children.at(-1)!;

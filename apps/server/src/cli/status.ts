@@ -2,9 +2,7 @@ import { commandIo, homeSecret, otherHome, startFirst, tooOld, type LocalDaemonO
 import { readMachineStatus, statusLines } from './machine-status.ts';
 
 interface StatusOptions extends LocalDaemonOptions {
-    /* The answer as JSON, for a script or an agent. */
     json?: boolean;
-    /* Check how other devices reach the machine before answering, instead of the last check. */
     check?: boolean;
 }
 

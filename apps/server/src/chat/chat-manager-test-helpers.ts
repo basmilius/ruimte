@@ -34,7 +34,6 @@ export function quietFacts(overrides: Partial<ChatFacts> = {}): ChatFacts {
 
 export type TestChatOptions = Omit<ConstructorParameters<typeof ChatManager>[0], 'facts'> & Partial<ChatFacts>;
 
-/* A chat manager whose facts are quiet except for the ones a test names beside the core's options. */
 export function testChatManager(options: TestChatOptions): ChatManager {
     const factKeys = new Set(Object.keys(quietFacts()));
     const facts: Record<string, unknown> = {};

@@ -20,7 +20,6 @@ export function actionPaths(action: DeviceAction): string[] {
     }
 }
 
-/* Refuses a path whose extension is not one of `allowed`, naming what this device takes instead. */
 export function requireExtension(path: string, allowed: readonly string[], takes: string): void {
     const extension = extname(path.replace(/\/+$/, '')).toLowerCase();
     if (!allowed.includes(extension)) {

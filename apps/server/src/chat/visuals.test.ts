@@ -62,7 +62,6 @@ async function bootWithChat(options: Parameters<typeof boot>[0] = {}): Promise<T
     return daemon;
 }
 
-/* The events the client the test daemon answers requests for hears, once it attached to a chat. */
 function listen(daemon: TestDaemon): SessionEvent[] {
     const events: SessionEvent[] = [];
     daemon.chats.subscribe('client-1', (event) => events.push(event as SessionEvent));

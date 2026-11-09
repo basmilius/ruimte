@@ -113,7 +113,6 @@ export class RecordingBackend implements DeviceBackend {
     /* The devices it was asked to start, each of which then runs. */
     readonly boots: string[] = [];
     clipboard = '';
-    /* The files of the recordings it began, and whether each was stopped. */
     readonly recordings: Array<{ file: string; stopped: boolean }> = [];
 
     constructor(info: DeviceInfo = SIMULATOR) {
@@ -272,12 +271,10 @@ export class FakeRecorder {
         return new DeviceRecordings(this.launch, this.timer);
     }
 
-    /* The recorder of the `index`th recording stopping by itself. */
     finish(index: number): void {
         this.exits[index]?.(0);
     }
 
-    /* Every limit of this length that is still set passes now. */
     pass(ms: number): void {
         for (const entry of this.timers.filter((candidate) => candidate.ms === ms && !candidate.cancelled)) {
             entry.cancelled = true;

@@ -68,7 +68,6 @@ const RESULT_FILE_RULE: InsideRule = { flag: 'resultFile', badCode: 'bad-result-
 const FILE_RULE: InsideRule = { flag: 'the path', badCode: 'bad-path', outsideCode: 'path-outside-project' };
 const DEVICE_PATH_RULE: InsideRule = { flag: 'path', badCode: 'device-path-refused', outsideCode: 'device-path-refused' };
 
-/* Where a shell or an agent may start: a directory inside the project folder or a worktree of it. */
 export async function checkCwd(folder: string, cwd: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> {
     const { resolved, real } = await checkInsideProject(folder, CWD_RULE, cwd, worktreePaths);
     if (!(await stat(real)).isDirectory()) {
@@ -149,12 +148,10 @@ export async function checkDevicePath(
     return real;
 }
 
-/* The prompt a caller put in a file, under the same folder rule a cwd follows. */
 export function readPromptFile(folder: string, path: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> {
     return readInsideFile(PROMPT_FILE_RULE, folder, path, worktreePaths);
 }
 
-/* The result of a task a child put in a file, under the same rule. */
 export function readResultFile(folder: string, path: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> {
     return readInsideFile(RESULT_FILE_RULE, folder, path, worktreePaths);
 }

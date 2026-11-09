@@ -212,7 +212,6 @@ export class DeviceDriver {
         lifecycle.on('closed', (caller) => this.nodeClosed(caller));
     }
 
-    /* The terminal or chat behind `caller` ended, so the devices it claimed are free for another agent. */
     nodeClosed(caller: string): void {
         this.claims.release(caller);
     }
@@ -496,7 +495,6 @@ export class DeviceDriver {
         this.manager.closeTree(reading.device.backendId, reading.device.deviceId);
     }
 
-    /* A pixel of the last shot as the share of the screen the device takes, refused when there is no shot to count it in. */
     private normalized(device: DeviceInfo, at: Pixel): { x: number; y: number } {
         const size = this.screen(device);
         if (size === null) {
@@ -510,7 +508,6 @@ export class DeviceDriver {
         return { x: at.x / size.width, y: at.y / size.height };
     }
 
-    /* Holds the device for this caller, runs the gesture on it, and keeps the hold for a while after. */
     private async operate(
         caller: string,
         device: DeviceInfo,

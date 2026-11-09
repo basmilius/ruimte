@@ -25,7 +25,6 @@ export function ownViewOf(content: Pick<ProjectContent, 'views'>, id: string): O
     return chatHostOf(content.views, id)?.view ?? null;
 }
 
-/* What the refusal says the id is: the view itself, or a chat that view holds. */
 function ownViewSentence(view: OwnView, id: string): string {
     return id === view.id
         ? `${view.id} is a ${view.kind} that is a view of its own`

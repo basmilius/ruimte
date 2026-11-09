@@ -43,7 +43,6 @@ export class BackendEventLog {
     }
 }
 
-/* The calls a service counted this month, one parsed line each. */
 export async function usageLines(directory: string): Promise<unknown[]> {
     const [file] = await readdir(directory);
     return (await readFile(join(directory, file!), 'utf8'))
@@ -102,12 +101,10 @@ export class ChatRecorder {
         });
     }
 
-    /* Whether the CLI runs and waits for a prompt, with no turn open. */
     get idle(): boolean {
         return this.info?.status === 'idle' && this.info.running && this.info.activeTurnId === null;
     }
 
-    /* Whether the CLI went away and the chat says so. */
     get crashed(): boolean {
         return this.info?.running === false && this.info.status === 'error';
     }
@@ -152,7 +149,6 @@ export class RecordingStore extends ChatStore {
     private waiters: Array<{ chatId: string; check(record: ChatRecord): boolean; resolve(): void }> = [];
     private held: { chatId: string; gate: Promise<void>; entered(): void; landed(): void } | null = null;
 
-    /* Keeps the next write of a chat from reaching the disk until released: a write that is still out. */
     holdNextWrite(chatId: string): { entered: Promise<void>; release(): void; landed: Promise<void> } {
         let release: () => void = () => undefined;
         const gate = new Promise<void>((resolve) => {
@@ -199,7 +195,6 @@ export class RecordingStore extends ChatStore {
         return size;
     }
 
-    /* Resolves once the last finished write of the chat holds what `check` looks for. */
     written(chatId: string, check: (record: ChatRecord) => boolean): Promise<void> {
         const latest = this.latest.get(chatId);
         if (latest && check(latest)) {

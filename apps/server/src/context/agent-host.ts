@@ -2,14 +2,12 @@ import type { ActionOutput } from '@ruimte/actions';
 import type { ContextSource } from '@ruimte/contracts';
 import type { Reference } from '../projects/references.ts';
 
-/* The usage a read of a chat starts with, in the fields `context.read` answers. */
 export type ChatReadUsage = NonNullable<ActionOutput<'context.read'>['usage']>;
 
 /* A source as text, and for a chat the usage its first line says in words. */
 export interface ContextReading {
     text: string;
     usage?: ChatReadUsage;
-    /* The png a read in form image wrote. */
     image?: string;
 }
 

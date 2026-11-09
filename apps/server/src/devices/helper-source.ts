@@ -173,7 +173,6 @@ export class DeviceHelperSource implements LiveFrameSource {
         this.send({ type: 'keys', usages: [...usages] }, 'Open the device stream before sending input');
     }
 
-    /* Asks the running helper to do something beside input; answers what a yes-or-no call said. */
     call(call: DeviceHelperCall): Promise<boolean | undefined> {
         if (this.process === null || !this.ready) {
             return Promise.reject(new DeviceHelperFailure('device-not-streaming', 'Open the device stream before using this tool'));

@@ -14,7 +14,6 @@ let reads: string[];
 let hosts: UiSourceHosts;
 const info = (): ChatInfo => ({ chatId: 'writer', cwd: folder }) as ChatInfo;
 
-/* A status of a folder in no repository, with what a test sets. */
 function statusOf(overrides: Partial<GitStatus> = {}): GitStatus {
     return {
         repo: false,

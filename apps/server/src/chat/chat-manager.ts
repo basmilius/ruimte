@@ -110,7 +110,6 @@ interface ChatManagerOptions extends Omit<ChatCoreOptions, 'hooks' | 'uiFenceLan
     plans?: ChatPlans;
 }
 
-/* The environment every CLI of a chat starts in: the daemon's own, without a terminal's hook variables. */
 function chatEnvOf(env: Record<string, string | undefined>): Record<string, string> {
     const chat: Record<string, string> = {};
     for (const [key, value] of Object.entries(env)) {
@@ -252,7 +251,6 @@ export class ChatManager {
         return (await this.core.findAttachment(chatId, id)) ?? this.agentImages.find(chatId, id);
     }
 
-    /* Makes an image an agent has of its own an attachment of its chat; the bytes are checked by the caller. */
     attachAgentImage(chatId: string, upload: { name: string; mime: string; bytes: Uint8Array }): Promise<ChatAttachment> {
         return this.agentImages.save(chatId, upload);
     }
@@ -265,7 +263,6 @@ export class ChatManager {
         return this.core.require(chatId).wake({ ...wake, taskIds: [] });
     }
 
-    /* Loads a chat nobody holds from its record; false when it has none. */
     private async loadStored(chatId: string): Promise<boolean> {
         await this.core.loaded(chatId);
         if (this.core.get(chatId)) {
@@ -366,7 +363,6 @@ export class ChatManager {
         });
     }
 
-    /* Opens the first turn of a fork that goes on after the limited turn of its original. */
     async continueInFork(forkId: string, limit: ChatTurnLimit['kind']): Promise<void> {
         const info = await this.core.create({ chatId: forkId });
         this.core.require(forkId).wake({ ...continueOnWake(limit, this.core.accountLabel(info.provider, info.account), true), taskIds: [] });

@@ -23,7 +23,6 @@ import { realOrNull } from '../disk/real-path.ts';
 import { UiSourceAccessSchema } from './ui-access.ts';
 import { resolveUiProjectLink } from './ui-links.ts';
 
-/* A launch as the `launch.status` source reads it. */
 interface UiLaunch {
     launchId: string;
     name: string;

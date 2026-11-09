@@ -29,7 +29,6 @@ export class DeviceClaims {
         this.holders.set(key, caller);
     }
 
-    /* Every device `caller` held is free again, for a terminal or a chat that ended. */
     release(caller: string): void {
         for (const [key, holder] of [...this.holders]) {
             if (holder === caller) {

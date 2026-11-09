@@ -9,7 +9,6 @@ interface RemoteTarget {
     remoteProjectId: string;
 }
 
-/* The machines a project is linked to, as the lines a refusal prints under it. */
 function machineLines(machines: ReturnType<NonNullable<CanvasHost['remote']>['machines']>): string[] {
     return machines.length === 0
         ? ['note\tNo machine is linked to this project; a person links one from a node menu']
@@ -51,7 +50,6 @@ interface RemoteStartInput {
     hidden: boolean;
 }
 
-/* What `machine` cannot be combined with, said before anything is made. */
 export function refuseRemoteStart(input: RemoteStartInput): void {
     if (input.cwd !== null) {
         throw new ToolRefusal(

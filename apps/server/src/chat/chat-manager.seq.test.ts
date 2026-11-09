@@ -19,7 +19,6 @@ let managers: ChatManager[];
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
-/* One run of the daemon's chats over the same home, with every event it numbered. */
 function boot(extra: Partial<TestChatOptions> = {}) {
     const manager = testChatManager({
         ...OPEN_BOUNDS,

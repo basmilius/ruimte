@@ -4,12 +4,10 @@ import { errorText } from '../error-text.ts';
 import type { WorktreeWant } from '../git/worktree-host.ts';
 import { type AgentCall } from './host.ts';
 
-/* A branch name out of a title: lower case, only what every ref takes, and never empty. */
 export function branchSlug(title: string): string {
     return slugOf(title, 'agent');
 }
 
-/* Refuses a project that is not in a git repository, before anything is made for it. */
 export async function requireRepository(call: AgentCall, folder: string): Promise<void> {
     if ((await call.host.checkouts.branches(folder)) === null) {
         throw new ToolRefusal('not-a-repository', `worktree needs a git repository, and ${folder} is not in one`);

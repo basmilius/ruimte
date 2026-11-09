@@ -57,7 +57,6 @@ function waitingCount(waiting: number): string {
     return waiting === 1 ? '1 waiting' : `${waiting} waiting`;
 }
 
-/* What the sender reads about a message that went to a chat. */
 function chatDelivered({ outcome, waiting }: ChatDelivery): NoticeDelivery {
     const count = waitingCount(waiting);
     switch (outcome) {

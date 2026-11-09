@@ -11,7 +11,6 @@ interface Fake {
     simctl: Array<{ arguments_: string[]; env: Record<string, string> }>;
     /* `hang` takes the command and never answers, as a stuck helper does. */
     answer: { send: boolean | 'hang'; listening: boolean };
-    /* The timers set, which a test runs itself. */
     timers: Array<() => void>;
 }
 

@@ -33,7 +33,6 @@ export interface NoticeDelivery {
     detail: string;
     /* Whether the receiving chat is owed a turn on this message; the daemon's outbox is what opens it. */
     wake: boolean;
-    /* Whether the message may join the turn the chat is running. */
     inTurn?: boolean;
 }
 
@@ -49,7 +48,6 @@ export interface CanvasHost {
     /* What a retried `agent_start` with the same `request_id` answers with; absent, a request id is ignored. */
     startClaims?: StartClaims;
     lineage: LineageHost;
-    /* What starting an agent node takes. */
     starts: AgentStartHost;
     checkouts: CheckoutHost;
     machine: MachineHost;
@@ -82,7 +80,6 @@ type LineageHost = Pick<AgentLineageStore, 'depthOf' | 'madeBy' | 'put'>;
    and `nodeSize` is the size a person on the machine gave new nodes of a kind. */
 export type MachineHost = Pick<EndpointIdentity, 'agentsDeleteAnyView' | 'nodeSize'>;
 
-/* What starting an agent node takes. */
 export interface AgentStartHost {
     /* The agent CLIs this machine has; a tool that starts one refuses the rest by name. */
     installedAgents(): Promise<AgentKind[]>;
@@ -106,10 +103,8 @@ export interface AgentStartHost {
     openedCount(callerId: string): number;
 }
 
-/* What one node says to another, or to a person. */
 export interface MessageHost {
     alert(nodeId: string, text: string): void;
-    /* Puts a message in front of another node's agent, and says whether it landed or is waiting. */
     notify(notice: Omit<Notice, 'createdAt'>): Promise<NoticeDelivery>;
 }
 
@@ -118,7 +113,6 @@ export function referencedBy(host: { context?: { referenced?(targetId: string): 
     return referencesDirectly(host.context?.referenced?.(caller) ?? [], id);
 }
 
-/* The other machines an agent may give work to, and the owing of that work. */
 interface RemoteAgentHost {
     /* The machines a project is linked to; `ready` is whether this machine holds the link that lets it work in them. */
     machines(projectId: string): Array<{ machineId: string; label: string; remoteProjectId: string; ready: boolean }>;
@@ -161,7 +155,6 @@ export interface AgentCall {
     external?: ExternalCaller;
 }
 
-/* The snooze on a node as the actions hand it on: an ISO time, or null for none. */
 export function snoozedAt(host: Pick<CanvasHost, 'snoozes'>, nodeId: string): string | null {
     const until = host.snoozes?.until(nodeId) ?? null;
     return until === null ? null : new Date(until).toISOString();
@@ -223,7 +216,6 @@ export const OPENING_OFF_CANVAS =
 /* What a suggestion that waits on its card says: the call ends now, and the person's answer comes back as a turn. */
 export const ANSWER_WAKES_NOTE = 'note\tThe person answers on the card, and Ruimte wakes your chat with the outcome once your turn has ended';
 
-/* The canvas an id names, refused with the canvases there are when it names none. */
 export function canvasNamed(content: ProjectContent, viewId: string): ProjectCanvasView {
     const named = content.views.find((candidate) => candidate.id === viewId);
     // The canvas of another machine's nodes is that machine's to draw, so it answers as one that does not exist.

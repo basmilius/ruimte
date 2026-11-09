@@ -57,7 +57,6 @@ export async function sayAndSettle(daemon: TestDaemon, chatId: string, text: str
     });
 }
 
-/* The transcript Claude Code would have written for the turns of `chat-lead`, keyed on the uuids they ended on. */
 export async function writeLeadTranscript(
     daemon: TestDaemon,
     folder: string,

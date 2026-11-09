@@ -104,7 +104,6 @@ export interface ServiceDeps {
     copyBinaries(from: string, to: string): void;
     removeBinaries(dir: string): string[];
     health(port: number): Promise<BuildIdentity | null>;
-    /* The build id beside the binary in a folder, null when there is none. */
     readBuild(dir: string): string | null;
     user: string;
     out(line: string): void;
