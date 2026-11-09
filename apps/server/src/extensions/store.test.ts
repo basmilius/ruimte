@@ -54,6 +54,21 @@ describe('ExtensionStore', () => {
         expect(await idsIn(store)).toEqual([]);
     });
 
+    test('refuses an install or a link of another API version, naming this machine, and keeps nothing of it', async () => {
+        const store = new ExtensionStore(join(root, 'other-api'));
+        const manifest = JSON.stringify({ id: 'acme.future', name: 'Future', version: '0.1.0', api: EXTENSION_API_VERSION + 1 });
+        const folder = join(root, 'projects', 'acme.future');
+        mkdirSync(folder, { recursive: true });
+        writeFileSync(join(folder, 'manifest.json'), manifest);
+        const refusal = { code: 'pack-api', message: `acme.future needs API ${EXTENSION_API_VERSION + 1}; this machine has ${EXTENSION_API_VERSION}` };
+
+        await expect(
+            store.install(gzipSync(JSON.stringify({ files: { 'manifest.json': Buffer.from(manifest).toString('base64') } })).toString('base64'))
+        ).rejects.toMatchObject(refusal);
+        await expect(store.link(folder)).rejects.toMatchObject(refusal);
+        expect(await idsIn(store)).toEqual([]);
+    });
+
     // On a file system that ignores case the later file would land on the manifest that was checked.
     test('refuses a pack that names one file twice in another case, and keeps nothing of it', async () => {
         const store = new ExtensionStore(join(root, 'case-clash'));

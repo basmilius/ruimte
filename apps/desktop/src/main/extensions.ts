@@ -14,6 +14,7 @@ import {
     extensionManifestProblem,
     isSafePackPath,
     readExtensionPack,
+    type ApiRefusal,
     type ExtensionManifest
 } from '@ruimte/contracts';
 import { EXTENSION_FILE_TYPES, EXTENSION_FILES_PATH, extensionFrameCsp } from '@ruimte/csp';
@@ -35,8 +36,11 @@ export function hostsOf(manifest: Pick<ExtensionManifest, 'permissions'>): strin
     });
 }
 
+/* The shell names the extension to a person, who updates Ruimte rather than reads API numbers. */
+const OTHER_RUIMTE: ApiRefusal = (manifest) => `${manifest.name} needs a different version of Ruimte`;
+
 function refuseManifest(manifest: ExtensionManifest): void {
-    const problem = extensionManifestProblem(manifest);
+    const problem = extensionManifestProblem(manifest, { refusesApi: OTHER_RUIMTE });
 
     if (problem !== null) {
         throw new Error(problem.message);
@@ -158,7 +162,7 @@ export class ClientExtensions {
 
     async install(pack: Uint8Array, fromStore = false): Promise<InstalledClientExtension> {
         const bytes = Buffer.from(pack);
-        const parsed = readExtensionPack(bytes, (packed) => gunzipSync(packed, { maxOutputLength: EXTENSION_PACK_MAX_UNPACKED_BYTES }));
+        const parsed = readExtensionPack(bytes, (packed) => gunzipSync(packed, { maxOutputLength: EXTENSION_PACK_MAX_UNPACKED_BYTES }), OTHER_RUIMTE);
 
         if (!parsed.ok) {
             throw new Error(parsed.message);

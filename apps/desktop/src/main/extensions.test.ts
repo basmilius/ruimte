@@ -3,7 +3,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, sy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
-import { EXTENSION_PACK_MAX_UNPACKED_BYTES } from '@ruimte/contracts';
+import { EXTENSION_API_VERSION, EXTENSION_PACK_MAX_UNPACKED_BYTES } from '@ruimte/contracts';
 import { ClientExtensions, hostsOf } from './extensions';
 
 const ORIGIN = 'ruimte://app';
@@ -50,6 +50,16 @@ describe('the client extensions of the shell', () => {
         expect(await (await store.answer(`${loaded}client/index.js`, ORIGIN)).text()).toBe('export {};');
         expect(await (await store.answer(`${loaded}client/chunks/shared.js`, ORIGIN)).text()).toBe('export const shared = 1;');
         expect((await store.answer(`${base.slice(0, -1)}~/client/index.js`, ORIGIN)).status).toBe(404);
+    });
+
+    test('refuse a pack of another API version by the name a person knows it by', async () => {
+        const store = extensions();
+        const manifest = JSON.stringify({ id: 'acme.builds', name: 'Builds', version: '1.0.0', api: EXTENSION_API_VERSION + 1 });
+
+        await expect(store.install(gzipSync(JSON.stringify({ files: { 'manifest.json': base64(manifest) } })))).rejects.toThrow(
+            'Builds needs a different version of Ruimte'
+        );
+        expect(await store.list()).toEqual([]);
     });
 
     test('refuse a pack that asks for a permission this Ruimte does not know, or a net: that is no host', async () => {

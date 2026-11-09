@@ -83,5 +83,6 @@ test('a manifest names itself in what it is refused for', () => {
     const manifest = { id: 'acme.pack', name: 'Pack', version: '0.1.0', api: EXTENSION_API_VERSION + 1 };
 
     expect(extensionManifestProblem(manifest)?.message).toBe(`acme.pack needs API ${EXTENSION_API_VERSION + 1}; this Ruimte has ${EXTENSION_API_VERSION}`);
-    expect(extensionManifestProblem({ ...manifest, api: EXTENSION_API_VERSION }, 'manifest.json')).toBeNull();
+    expect(extensionManifestProblem(manifest, { refusesApi: (refused) => `${refused.name} is too new` })?.message).toBe('Pack is too new');
+    expect(extensionManifestProblem({ ...manifest, api: EXTENSION_API_VERSION }, { subject: 'manifest.json' })).toBeNull();
 });

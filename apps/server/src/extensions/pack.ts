@@ -4,6 +4,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpat
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import {
+    EXTENSION_API_VERSION,
     EXTENSION_ICON_PATH,
     ExtensionManifestSchema,
     extensionManifestProblem,
@@ -49,7 +50,10 @@ export function readManifest(folder: string): ExtensionManifest {
         throw new ExtensionBuildError(`manifest.json: ${parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')}`);
     }
 
-    const problem = extensionManifestProblem(parsed.data, 'manifest.json');
+    const problem = extensionManifestProblem(parsed.data, {
+        subject: 'manifest.json',
+        refusesApi: (manifest) => `manifest.json asks for API ${manifest.api}; this Ruimte has ${EXTENSION_API_VERSION}`
+    });
 
     if (problem !== null) {
         throw new ExtensionBuildError(problem.message);

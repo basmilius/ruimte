@@ -7,14 +7,18 @@ import { Serializer } from '@adecore/utils/async';
 import { isNotFound } from '@adecore/utils/errors';
 import { writeAtomic } from '@adecore/utils/fs';
 import {
+    EXTENSION_API_VERSION,
     EXTENSION_PACK_MAX_UNPACKED_BYTES,
     ExtensionManifestSchema,
     extensionManifestProblem,
     readExtensionPack,
+    type ApiRefusal,
     type ExtensionManifest
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';
+
+const THIS_MACHINE: ApiRefusal = (manifest) => `${manifest.id} needs API ${manifest.api}; this machine has ${EXTENSION_API_VERSION}`;
 
 class ExtensionPackError extends Error {
     readonly code: 'pack-unreadable' | 'pack-manifest' | 'pack-api' | 'pack-path' | 'extension-unknown' | 'store-damaged';
@@ -316,7 +320,7 @@ export class ExtensionStore {
             throw new ExtensionPackError('pack-manifest', `No valid manifest.json in ${folder}`);
         }
 
-        const problem = extensionManifestProblem(manifest);
+        const problem = extensionManifestProblem(manifest, { refusesApi: THIS_MACHINE });
 
         if (problem !== null) {
             throw new ExtensionPackError(problem.code, problem.message);
@@ -374,7 +378,7 @@ export class ExtensionStore {
 }
 
 function readPack(bytes: Buffer): { manifest: ExtensionManifest; files: Readonly<Record<string, string>> } {
-    const reading = readExtensionPack(bytes, (packed) => gunzipSync(packed, { maxOutputLength: EXTENSION_PACK_MAX_UNPACKED_BYTES }));
+    const reading = readExtensionPack(bytes, (packed) => gunzipSync(packed, { maxOutputLength: EXTENSION_PACK_MAX_UNPACKED_BYTES }), THIS_MACHINE);
 
     if (!reading.ok) {
         throw new ExtensionPackError(reading.code, reading.message);
