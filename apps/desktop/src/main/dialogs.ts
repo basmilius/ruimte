@@ -2,12 +2,13 @@ import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { isWebLink } from '@adecore/shell';
 import { allFilesLabel, openDialogPlan, parseOpenPathRequest, parseSavePathRequest } from '../database-bridge';
 import { electron } from '../electron';
 import { copyablePaths, copyFilesOnWindows, fileClipboard, osClipboardFormat } from '../file-clipboard';
 import { openImageCopy } from '../open-image';
 import { SaveStreams } from '../save-streams';
-import { isSystemSettingsPane, isWebLink } from '../web-guards';
+import { isSystemSettingsPane } from '../web-guards';
 import type { DesktopIpc } from './ipc';
 
 const { app, clipboard, ClipboardItem, dialog, shell } = electron;

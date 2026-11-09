@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { Socket } from 'node:net';
 import { join, resolve } from 'node:path';
-import { createAppIpc, createPageKeys, createTheme, createWindows, type WindowOrigin, createWindowState, fileStorage } from '@adecore/shell';
+import { createAppIpc, createPageKeys, createTheme, createWindows, type WindowOrigin, createWindowState, fileStorage, isExternalLink } from '@adecore/shell';
 import { DEFAULT_PORT, DEV_PORT, devRuimteHome, ruimteHome as installedRuimteHome } from '@ruimte/service/runtime';
 import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
 import { windowUrl } from './app-windows';
@@ -37,7 +37,7 @@ import { quitQuestion } from './quit-question';
 import { runSmoke } from './smoke';
 import { installSocketTypeOfServiceGuard } from './socket-tos-guard';
 import { startApp } from './startup';
-import { allowAppPermission, appSubframeNavigation, isExternalLink } from './web-guards';
+import { allowAppPermission, appSubframeNavigation } from './web-guards';
 
 const { app, BrowserWindow, dialog, ipcMain, nativeTheme, powerMonitor, protocol, screen, session, shell, webContents } = electron;
 

@@ -7,8 +7,6 @@ import { EXTENSION_FILES_PATH, VISUAL_HOST_PATH } from '@ruimte/csp';
  * site on the web, so each rule here is a security boundary.
  */
 
-export { isExternalLink, isWebLink } from '@adecore/shell';
-
 // The partitions a `<webview>` may name: a browser node's (`apps/client/src/browser/registry.ts`), a sealed preview's and a tunnel's that the shell made.
 export const BROWSER_PARTITION = 'persist:ruimte';
 export const PREVIEW_PARTITION = 'preview';

@@ -1,9 +1,9 @@
-import { createGestureGate } from '@adecore/shell';
+import { createGestureGate, isExternalLink } from '@adecore/shell';
 import { electron } from '../electron';
 import { editFrameOf, runGuestEdit } from '../guest-edit';
 import { contextMenuPayload, editableMenuTemplate, guestActionAllowed, type BrowserContextAction, type GuestKind } from '../guest-menu';
 import { isTunnelSession } from '../port-tunnel/tunnel-sessions';
-import { BROWSER_PARTITION, isExternalLink, PREVIEW_PARTITION } from '../web-guards';
+import { BROWSER_PARTITION, PREVIEW_PARTITION } from '../web-guards';
 import type { DesktopIpc } from './ipc';
 
 const { BrowserWindow, Menu, session, shell, webContents } = electron;
