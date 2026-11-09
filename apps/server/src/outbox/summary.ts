@@ -54,7 +54,6 @@ interface SummarizeDeps {
     source(chatId: string): Promise<{ info: ChatInfo; items: ChatItem[] } | null>;
     locate(id: string): IndexedPlace | null;
     titleFor(id: string): string | null;
-    /* Whether the fork is on its way to another folder. */
     relocating?(chatId: string): boolean;
     /* Opens the turn in the fork, loading it when nobody has; null while a turn is in the way. */
     openTurn(chatId: string, wake: { text: string; label: string; note: string; summaryFor: string }): Promise<string | null>;
@@ -257,7 +256,6 @@ export interface SummaryWiring {
     summarize(chatId: string): Promise<ChatSummarizeResult>;
 }
 
-/* The summaries of the daemon in one place. */
 export function wireSummaries(wiring: {
     chats: ChatManager;
     projects: Pick<ProjectHost, 'locate' | 'mutate'>;

@@ -33,7 +33,6 @@ export class UnsavedRemoval extends Error {
 const StoredServerSchema = CustomLanguageServerSchema.omit({ held: true }).extend({ approval: z.string().min(1) });
 type StoredServer = z.infer<typeof StoredServerSchema>;
 
-/* The path of an executable on this machine: the command itself when it is one, else where PATH has it. */
 type ResolveCommand = (command: string) => string | null;
 
 export const resolveCommandOnPath: ResolveCommand = (command) => {
@@ -162,7 +161,6 @@ export class CustomLanguageServers {
             .map((server) => server.id);
     }
 
-    /* Whether there was such a server. */
     async remove(id: string): Promise<boolean> {
         this.assertWritable();
 
@@ -193,7 +191,6 @@ export class CustomLanguageServers {
         }
     }
 
-    /* The extensions that own a server on the list. */
     owners(): string[] {
         return [...new Set(this.active().flatMap((server) => server.extension ?? []))];
     }

@@ -235,7 +235,6 @@ describe('auth handlers', () => {
         });
         expect(keepAwakeChanges).toBe(1);
 
-        // The same checks as beside a name: the closed-lid rule, and a folder for worktrees only from the owner.
         expect(await ask(paired, 'endpoint.settings', { keepAwakeLidClosed: true })).toMatchObject({ ok: false, error: { code: 'closed-lid-no-rule' } });
         expect(await ask(paired, 'endpoint.settings', { worktreeRoot: join(home, 'checkouts') })).toMatchObject({ ok: false, error: { code: 'owner-only' } });
         expect(identity.worktreeRoot).toBeNull();
@@ -471,7 +470,6 @@ describe('auth handlers', () => {
             }
         ]);
 
-        // A client that connects after the rename is told the same thing without asking for it.
         const info = await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.info');
         expect(info).toMatchObject({ ok: true, result: { label: 'The one under the desk' } });
     });
@@ -661,7 +659,6 @@ describe('auth handlers', () => {
         });
         expect(plain).toMatchObject({ ok: false });
         expect(identity.broker).toEqual({ mode: 'custom', url: 'wss://mine.example.com' });
-        // A rename leaves the broker where it stands.
         expect(await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Studio', icon: null })).toMatchObject({
             ok: true,
             result: { broker: { mode: 'custom' } }
@@ -746,7 +743,6 @@ describe('auth handlers', () => {
             expect(result.peerPublicKey).not.toBe(identity.publicKey);
             expect(verifySignature(result.peerPublicKey, message, result.peerSignature)).toBe(true);
             expect(verifySignature(identity.publicKey, message, result.machineSignature)).toBe(true);
-            // Each signature belongs to its own key and its own request.
             expect(verifySignature(identity.publicKey, message, result.peerSignature)).toBe(false);
             expect(verifySignature(result.peerPublicKey, message, result.machineSignature)).toBe(false);
             expect(

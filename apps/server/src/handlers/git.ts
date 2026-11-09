@@ -73,7 +73,6 @@ const GIT_ACTION_COUNTERS: Readonly<Partial<Record<GitActionKind, readonly Usage
     sync: ['git.pulls', 'git.pushes']
 };
 
-/* Streams an action's progress to the client that asked, under the action id it chose. */
 function progressTo(client: ClientConnection, cwd: string, actionId: string) {
     return (phase: GitActionPhase, line: string): void => {
         sendEvent(client, 'git.progress', { cwd, actionId, phase, line });
@@ -340,7 +339,6 @@ function registerRequests(dispatcher: Dispatcher, deps: GitDeps): void {
 
     dispatcher.register('git.capabilities', () => readCapabilities(providers, Date.now(), textModels.choice()?.provider));
 
-    /* Progress streams while the git runs; the reply lands after. */
     dispatcher.register(
         'git.action',
         async (payload, client) => {

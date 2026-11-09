@@ -35,7 +35,6 @@ interface AgentServer {
     message?: string;
 }
 
-/* What every answer says besides itself: which file, whether its text is an editor's, and the servers that answered. */
 interface AgentAnswerHead {
     path: string;
     unsaved: boolean;
@@ -109,7 +108,6 @@ interface AgentSqlFile {
     installed: boolean;
 }
 
-/* Where an agent's call stands: the project and its folder. */
 interface AgentLanguagePlace {
     projectId: string;
     folder: string;
@@ -281,7 +279,6 @@ function kindOfProcess(process: string): string {
 interface AgentLanguageOptions {
     host: Pick<LanguageHost, 'forAgent' | 'programOf' | 'cachedWorkspaceProblems'>;
     sql: { fileContext(projectId: string, path: string): Promise<SqlFileContext> };
-    /* The text of a file on disk, or null when it cannot be read. */
     readText?: (path: string) => Promise<string | null>;
 }
 
@@ -364,7 +361,6 @@ export class AgentLanguage {
         return this.hierarchy(place, caller, path, at, 'typeHierarchy/subtypes');
     }
 
-    /* Which connection, database and snapshot a `.sql` file is read against, and the command that checks it from a shell. */
     async sqlFile(place: AgentLanguagePlace, path: string): Promise<AgentSqlFile> {
         const stored = storedPathOf(place.folder, path);
         if (!isSql(path)) {
@@ -536,7 +532,6 @@ export class AgentLanguage {
         });
     }
 
-    /* Opens the file for the call, checks that a server can answer and that the agent may see what it says, and runs `work`. */
     private async ask<T>(
         place: AgentLanguagePlace,
         caller: string,
@@ -612,7 +607,6 @@ export class AgentLanguage {
     }
 }
 
-/* Whether the connection a file is read against was turned off for agents. */
 function isWithheld(access: string, choice: SqlChoice): boolean {
     return access === 'off' && choice.source !== 'none' && choice.source !== 'unbound';
 }

@@ -32,7 +32,6 @@ export interface CacheEntry {
 
 /* The owner manifest a PHP server of format 1 writes beside its caches. */
 export interface CacheOwner {
-    /* The name of the manifest file in the cache folder. */
     manifest: string;
     kind: 'project' | 'stubs';
     path: string;
@@ -41,7 +40,6 @@ export interface CacheOwner {
     lastUsedMs: number;
 }
 
-/* A root seen missing: when it first was, when it last was, and how many passes saw it. */
 interface Sighting {
     firstMs: number;
     lastMs: number;

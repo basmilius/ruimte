@@ -19,7 +19,6 @@ export async function eventually<T>(what: string, run: () => Promise<T> | T, acc
     throw new Error(`${what} never happened (last: ${last instanceof Error ? last.message : JSON.stringify(last)?.slice(0, 400)})`);
 }
 
-/* Where `needle` starts in `text`, moved on by `offset` characters. */
 export function positionOf(text: string, needle: string, offset = 0): Position {
     const before = text.slice(0, text.indexOf(needle) + offset).split('\n');
     return { line: before.length - 1, character: before.at(-1)!.length };

@@ -115,7 +115,6 @@ export function toolchainPath(kind: ToolchainKind = 'rust'): string {
     return [process.env.PATH ?? '', ...TOOLCHAINS[kind].folders()].join(delimiter);
 }
 
-/* Where a program of a toolchain may be: on the PATH, else in the folders of its toolchain. */
 export function toolchainCandidates(program: string): string[] {
     const onPath = Bun.which(program, { PATH: process.env.PATH ?? '' });
     const folders =

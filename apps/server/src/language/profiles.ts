@@ -4,7 +4,6 @@ import { matchesFilePattern, type LanguageServerId, type LanguageServerKind } fr
 import { nativeStorageOf, nativeStubsOf } from './native.ts';
 import { toolchainPath } from './toolchain.ts';
 
-/* What a component needs to know about where it runs. */
 export interface LaunchContext {
     /* `$RUIMTE_HOME/language-servers/<kind>`, with the pinned packages in its `node_modules`. */
     installDirectory: string;
@@ -23,7 +22,6 @@ export interface LaunchContext {
     buildHeld?: boolean;
 }
 
-/* The settings of the project's SQL as each server that reads it takes them. */
 export interface ProjectSqlSettings {
     /* `sqlLanguageServer` of the SQL server. */
     sql: Record<string, unknown>;
@@ -110,7 +108,6 @@ const SIDECAR_SDK_PACKAGE = 'typescript-6';
 /* `sql` names no dialect; the others name the one the SQL server reads a document in when its settings do not. */
 const SQL_LANGUAGES = ['sql', 'mysql', 'mariadb', 'postgres', 'sqlite'] as const;
 
-/* The server's `logVerbosity` that keeps warnings and errors only. */
 const LOG_VERBOSITY_WARNING = 4;
 
 const TYPESCRIPT_PREFERENCES = {
@@ -673,7 +670,6 @@ export function documentLanguageId(languageId: string, storedPath: string): stri
     return GO_FILES[storedPath.slice(storedPath.lastIndexOf('/') + 1)] ?? lspDocumentLanguageId(languageId, storedPath);
 }
 
-/* Whether a process serves a document, by its language or by its path. */
 export function componentServes(component: ComponentProfile, languageId: string, storedPath: string): boolean {
     return component.languages.includes(lspLanguageId(languageId)) || servesPath(component, storedPath) || servesAlongside(component, storedPath);
 }
@@ -750,7 +746,6 @@ export function alongsideKindsForPath(storedPath: string): Array<[CatalogKind, {
 /* What a project says about itself, as far as an addition needs to know. */
 export interface ProjectFacts {
     folder: string;
-    /* The text of the `package.json` in the folder, or null without one. */
     packageJson: string | null;
     exists(path: string): Promise<boolean>;
     /* The files of a name in the folder and the folders below it, `depth` folders down (`manifests.ts`). */
@@ -759,7 +754,6 @@ export interface ProjectFacts {
 
 const DEPENDENCY_FIELDS = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
 
-/* Whether a parsed `package.json` names a package that matches, in any kind of dependency. */
 function dependsOn(manifest: Record<string, unknown>, pattern: RegExp): boolean {
     return DEPENDENCY_FIELDS.some((field) => {
         const dependencies = manifest[field];
@@ -820,7 +814,6 @@ export function pinnedTypescriptLib(installDirectory: string, sdkPackage = 'type
     return join(installDirectory, 'node_modules', sdkPackage, 'lib');
 }
 
-/* What the lookup of a project's own TypeScript reads from the file system. */
 interface NativeLookupFiles {
     exists(path: string): Promise<boolean>;
     readText(path: string): Promise<string | null>;

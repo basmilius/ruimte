@@ -233,7 +233,6 @@ async function boot(): Promise<Daemon> {
     return daemon;
 }
 
-/* A team the lead chat opens with `agent_team`. */
 async function openTeam(daemon: Daemon, extra: Record<string, unknown> = {}): Promise<string[]> {
     const { refused, lines } = await toolAnswer('agent_team', { label: 'Crew', roles: JSON.stringify(TEAM), ...extra }, toolCall('chat-lead', daemon.host));
     expect(refused).toBe(false);
@@ -382,7 +381,6 @@ describe('a team the daemon starts on its own', () => {
         });
         expect(daemon.adapter.spawned).toEqual([]);
 
-        // Pointed back inside, the same node starts.
         await link(join(folder, 'w'), join(folder, 'inside'));
         await daemon.chats.core.create({ chatId: docs!, provider: 'claude', cwd: join(folder, 'w') });
         expect(daemon.chats.core.get(docs!)).toBeDefined();

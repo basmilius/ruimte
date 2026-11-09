@@ -2,7 +2,6 @@ import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import type { Area, EventSource } from '../area.ts';
 import { bestEffort } from '../best-effort.ts';
 
-// However many clients come back at once, the CLIs are probed again at most this often.
 export const PROVIDER_DETECT_INTERVAL_MS = 10_000;
 
 interface DetectableProviders {
@@ -14,7 +13,6 @@ interface DetectableProviders {
 interface ProviderDetectDeps {
     providers: DetectableProviders;
     accounts: { refresh(): Promise<unknown> };
-    /* What tells every client the list of providers changed. */
     feed: EventSource;
     now(): number;
 }

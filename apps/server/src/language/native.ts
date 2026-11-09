@@ -22,10 +22,8 @@ export function isNativeKind(kind: LanguageServerKind): kind is NativeKind {
     return (NATIVE_KINDS as readonly string[]).includes(kind);
 }
 
-/* How a release ships: an archive, or the program itself as one file. */
 type ReleaseFormat = ArchiveFormat | SingleFileFormat;
 
-/* One download of a release: the archive for a platform and architecture. */
 export interface NativeAsset {
     url: string;
     /* Lowercase hex. The archive has to match before anything is unpacked. */
@@ -86,7 +84,6 @@ export const NATIVE_RELEASES: Partial<Record<NativeKind, NativeRelease>> = Objec
     ).filter(([, release]) => release !== undefined)
 );
 
-/* The native sources selected by the daemon host. */
 interface NativeCheckout {
     folder: string;
     version: string;
@@ -98,7 +95,6 @@ interface NativeSpec {
     program: string;
     /* What a person reads a failed build is for. */
     title: string;
-    /* Whether an install brings the standard library stubs beside the program. */
     stubs: boolean;
     /* Where a development daemon builds the server from; absent for a server of someone else's, which only a pinned release supplies. */
     source?: {
@@ -244,14 +240,12 @@ export function sqlLanguageServerCheckout(compiled: boolean, sourcePath?: string
     return nativeCheckout('sql-native', compiled, sourcePath, ruimteRoot);
 }
 
-/* What an install of a native kind does, and what it ends up running. */
 export interface NativePlan {
     /* A checkout builds the server it holds; a release downloads the pinned one. */
     source: 'dev' | 'release';
     version: string;
     /* The stubs an install fetches beside the program; absent for a kind that reads none. */
     stubsCommit?: string;
-    /* The file the kind runs once installed. */
     executable: string;
     /* The build of the release for this machine; absent when the release has none, and for a checkout. */
     asset?: NativeAsset;

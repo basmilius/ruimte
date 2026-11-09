@@ -61,7 +61,6 @@ export const NO_LANGUAGE_SERVERS: Pick<LanguageHost, 'renameFiles' | 'createFile
     saved: async () => undefined
 };
 
-/** Sends one request as `client` and returns the first frame the dispatcher answers with. */
 export async function askOnce(dispatcher: Dispatcher, client: { id: string; access?: ClientAccess }, type: string, payload: unknown): Promise<ServerFrame> {
     const frames: ServerFrame[] = [];
     await dispatcher.handle({ ...client, send: (frame) => frames.push(frame) }, JSON.stringify({ id: 'request', type, payload }));

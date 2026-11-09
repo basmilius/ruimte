@@ -59,14 +59,12 @@ async function boot(): Promise<TestDaemon> {
     return daemon;
 }
 
-/* The lead in the middle of a turn, as it is while it calls the tools. */
 async function leadWorking(daemon: TestDaemon): Promise<void> {
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     await daemon.chats.send('chat-lead', 'slow');
     await daemon.until(() => daemon.chats.get('chat-lead')?.info.agentSessionId !== null);
 }
 
-/* A chat child that is still working on its task, and a terminal child whose shell runs. */
 async function twoRunningChildren(daemon: TestDaemon): Promise<{ chat: string; terminal: string }> {
     const [chatLine] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', task: 'Slow', prompt: 'slow' });
     const [terminalLine] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', terminal: true, task: 'Shell', prompt: 'work' });
@@ -112,7 +110,6 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
         // What the confirmation counts before anything happens.
         expect(await daemon.request('agent.children', { nodeId: 'chat-lead' })).toMatchObject({ ok: true, result: { nodeIds: [chat, terminal] } });
 
-        // A client deletes the node. The document loses it and the watcher kills its chat.
         await store.mutate(projectId, withoutNode('chat-lead'));
         expect(await daemon.request('chat.kill', { chatId: 'chat-lead' })).toMatchObject({ ok: true });
         await daemon.worker.settled();
@@ -153,7 +150,6 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
             ['cancelled', 'none', ENDED_REASON],
             ['cancelled', 'none', ENDED_REASON]
         ]);
-        // The lead ends its own turn; nothing it gave wakes it.
         await stopLeadTurn(daemon);
         expect(turnsOf(daemon, 'chat-lead').filter((turn) => turn.taskIds !== undefined)).toEqual([]);
         expect(daemon.alerts).toEqual([]);
@@ -416,7 +412,6 @@ describe('stopping one task from the list of the chat that gave it', () => {
         expect(daemon.chats.get('chat-lead')?.thread.get(`task-${task.id}`)).toMatchObject({ status: 'failed' });
         expect(daemon.sessions.get(terminal)?.exited).toBe(false);
 
-        // The lead ends its turn and is woken about nothing. The stopped task never wakes anyone.
         await stopLeadTurn(daemon);
         expect(turnsOf(daemon, 'chat-lead').filter((turn) => turn.taskIds !== undefined)).toEqual([]);
     });

@@ -1,7 +1,6 @@
 import type { OutboxEntryOf } from '@adecore/agents/coordination';
 import type { z } from 'zod';
 
-/* The schema of one kind of owed work: a literal `kind` and the payload that kind carries. */
 type OutboxKindSchema = z.ZodObject<{ kind: z.ZodLiteral<string>; payload: z.ZodType }>;
 
 type OutboxEntryOfSchema<Schema extends OutboxKindSchema> = OutboxEntryOf<z.infer<Schema>>;

@@ -117,7 +117,6 @@ const AGENT_PUSH_MS = 3_000;
 export interface AgentDocument {
     storedPath: string;
     absolutePath: string;
-    /* The text the servers see. */
     text: string;
     /* Whether a client holds the file open with text that differs from what is on disk. */
     unsaved: boolean;
@@ -147,7 +146,6 @@ function catalogKindOf(kind: LanguageServerKind): CatalogKind {
 
 const HELD_MESSAGE = 'Its command was changed outside Ruimte. Open it and save it again to start it.';
 
-/* Whether a server of a person's own runs for the project: for every project, or for the folders it names. */
 function runsFor(server: CustomLanguageServer, folder: string): boolean {
     return server.projects === undefined || server.projects.includes(folder);
 }
@@ -168,7 +166,6 @@ interface LanguageHostOptions {
     clock?: LanguageClock;
     exists?: (path: string) => Promise<boolean>;
     isFolder?: (path: string) => Promise<boolean>;
-    /* The text of a file, or null when it cannot be read. */
     readText?: (path: string) => Promise<string | null>;
     now?: () => number;
     /* What the project's file watching reaches the platform and the clock through; the system's by default. */
@@ -185,7 +182,6 @@ interface LanguageHostOptions {
     worktreeBuild?: WorktreeBuildChoices;
     /* Native servers use a selected standalone checkout or the pinned release. */
     native?: NativePolicy;
-    /* How an install downloads a release or the stubs. */
     download?: Download;
     /* How the revision of a checkout a native kind builds from is read; git by default. */
     checkoutRevision?: CheckoutRevision;
@@ -200,7 +196,6 @@ export interface PhpCache {
     keptStubs: string[];
     liveFolders(): string[];
     liveStubsDirs(): string[];
-    /* Whether any PHP server runs or is starting, in any project. */
     anyLive(): boolean;
     hold<T>(work: () => Promise<T>): Promise<T>;
 }
@@ -256,7 +251,6 @@ interface PendingMessage {
     settle(item: MessageActionItem | null): void;
 }
 
-/* How long a client has to say whether it made an edit. */
 const EDIT_ANSWER_MS = 30_000;
 
 async function readTextOrNull(path: string): Promise<string | null> {
@@ -288,7 +282,6 @@ export interface FileMove {
     create(path: string, text: string): Promise<void>;
     /* Moves a file or folder a server's edit moves; `overwrite` replaces a file that is there. */
     rename(from: string, to: string, overwrite: boolean): Promise<void>;
-    /* Deletes a file or folder a server's edit deletes. */
     delete(path: string): Promise<void>;
 }
 
@@ -468,7 +461,6 @@ export class LanguageHost {
         };
     }
 
-    /* The program a native kind runs on this machine, or null while it is not installed. */
     programOf(kind: CatalogKind): string | null {
         return this.installer.launchOf(kind)?.executable ?? null;
     }
@@ -867,7 +859,6 @@ export class LanguageHost {
         }
     }
 
-    /* A client says whether it made an edit a server asked for. */
     answerEdit(clientId: string, payload: LanguageEditAnswerPayload): void {
         const pending = this.edits.get(payload.editId);
         if (pending && pending.clientId === clientId && pending.projectId === payload.projectId) {
@@ -1016,7 +1007,6 @@ export class LanguageHost {
         }
     }
 
-    /* The daemon is going down. */
     async close(): Promise<void> {
         await Promise.all([...this.projects.keys()].map((projectId) => this.end(projectId)));
     }
@@ -1150,7 +1140,6 @@ export class LanguageHost {
         return { held: roots.some((root) => isWithin(root, real)), allowed: false };
     }
 
-    /* Reads again where the project folder stands against the build rule. */
     private async refreshStanding(project: ProjectLanguage): Promise<{ held: boolean; allowed: boolean }> {
         const standing = await this.standingOf(project.folder, project.folder);
 
@@ -1784,7 +1773,6 @@ export class LanguageHost {
         return document !== undefined && document.clients.size > 0 ? document : undefined;
     }
 
-    /* Whether a client holds the file at the path, or a file inside it when it is a folder. */
     private holdsUnder(project: ProjectLanguage, path: string): boolean {
         return [...project.documents.values()].some(
             (document) => document.clients.size > 0 && (document.absolutePath === path || isPathBelow(path, document.absolutePath))

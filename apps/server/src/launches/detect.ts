@@ -124,7 +124,6 @@ export function kindOfScript(name: string): LaunchConfigKind {
     return SERVICE_NAME.test(name) ? 'service' : 'task';
 }
 
-/* Where the paths of one launch are read from and what they point at. */
 class PathScope {
     /* A path in the launch points outside the project, so it cannot travel with it. */
     outside = false;
@@ -154,7 +153,6 @@ class PathScope {
         return portable(relative(this.cwd, absolute)) || '.';
     }
 
-    /* Every macro path inside a line of arguments, rewritten the same way. */
     line(value: string): string {
         return value
             .replace(/\$(PROJECT_DIR|USER_HOME)\$([^\s"'=]*)/g, (whole) => this.path(whole))

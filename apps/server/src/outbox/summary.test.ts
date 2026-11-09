@@ -55,7 +55,6 @@ describe('a fork summarizing for its original', () => {
         return nodeId;
     };
 
-    /* Asks for the summary and waits until the fork's turn for it ended. */
     const summarize = async (forkId: string): Promise<ChatTurnItem> => {
         const answer = await daemon.request('chat.summarize', { chatId: forkId });
         expect(answer).toMatchObject({ ok: true });

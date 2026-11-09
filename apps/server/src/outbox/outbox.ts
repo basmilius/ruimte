@@ -40,17 +40,14 @@ export class OutboxStore extends BaseOutboxStore<OutboxWork> {
         return this.list().filter((entry): entry is OutboxEntryOfKind<K> => entry.kind === kind);
     }
 
-    /* Everything owed to a target, whatever its kind, oldest first. */
     ofTarget(target: string): OutboxEntry[] {
         return this.list().filter((entry) => entry.target === target);
     }
 
-    /* What is owed of any of these kinds, oldest first. */
     ofKinds<K extends OutboxWork['kind']>(...kinds: readonly K[]): OutboxEntryOfKind<K>[] {
         return this.list().filter((entry): entry is OutboxEntryOfKind<K> => (kinds as readonly string[]).includes(entry.kind));
     }
 
-    /* The oldest entry of a kind owed to a target, if any. */
     owed<K extends OutboxWork['kind']>(kind: K, target: string): OutboxEntryOfKind<K> | undefined {
         return this.ofKind(kind).find((entry) => entry.target === target);
     }

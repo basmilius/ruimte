@@ -56,7 +56,6 @@ class StreamStop {
 class AgentStreams {
     private readonly runs = new Map<string, StreamStop>();
 
-    /* Refused while the client has a run under that id. */
     claim(clientId: string, runId: string): StreamStop {
         const key = AgentStreams.keyOf(clientId, runId);
 

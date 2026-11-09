@@ -33,7 +33,6 @@ class FakeChannel implements ClientChannel {
         this.closeListeners.push(listener);
     }
 
-    /* The socket going, the way the server's `close` handler reports it. */
     drop(): void {
         for (const listener of this.closeListeners) {
             listener();
@@ -66,7 +65,6 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-/* Two clients of one daemon. A socket and, beside it, a channel that got in the way a direct connection does. */
 function twoClients(inline: InlineChatHost = NO_INLINE_CHATS) {
     const dispatcher = new Dispatcher();
     const area = projectArea({ store, scratch: OUTSIDE_CHECKOUT, inline, reachOpenProjects: () => false });
@@ -112,7 +110,6 @@ function canvas(id: string, name: string): ProjectCanvasView {
     return { kind: 'canvas', id, name, nodes: [], texts: [], edges: [], layouts: [] };
 }
 
-/* Both clients open the same project with two views; what comes back is the rev and content they start from. */
 async function openOnBoth(clients: ReturnType<typeof twoClients>) {
     const opened = await request<{ summary: { projectId: string }; document: ProjectDocument }>(clients.a, 'project.open', { folder });
     const projectId = opened.summary.projectId;

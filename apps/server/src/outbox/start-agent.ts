@@ -74,7 +74,6 @@ export function startAgentWork(start: AgentStart, deps: NodeModeDeps): OutboxWor
 }
 
 interface AgentStartHostDeps {
-    /* The agent CLIs installed on this machine. */
     installed(): Promise<AgentKind[]>;
     providers: { get(kind: AgentKind): ChatProvider };
     prompts: Pick<PendingPromptStore, 'put'>;
@@ -84,7 +83,6 @@ interface AgentStartHostDeps {
     lineage: Pick<AgentLineageStore, 'ceilingOf'>;
     /* The agent nodes a caller holds open, which caps one caller in a loop. */
     openedCount(callerId: string): number;
-    /* The accounts of a CLI a project turned off. */
     accountsOff?(projectId: string, kind: AgentKind): readonly string[];
 }
 

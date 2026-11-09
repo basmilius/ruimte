@@ -14,7 +14,6 @@ interface TunnelsDeps {
     listener: Pick<ExternalListener, 'stop'>;
     /* What every client hears: the tunnel state or the consent waiting for a person moved. */
     changes: EventSource;
-    /* Tells every client the credentials or the clients moved. */
     changed(): void;
 }
 

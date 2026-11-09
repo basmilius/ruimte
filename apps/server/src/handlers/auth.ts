@@ -37,9 +37,7 @@ export interface AuthDeps {
     version: string;
     // Revoking must take effect now, not at the next connection, so the daemon drops that session's sockets here.
     disconnect(sessionId: string): void;
-    // Whether this machine can hold a block on sleep.
     keepAwake: { available: boolean };
-    // The closed-lid mode of a Mac: whether it is offered, whether its rule is installed, and installing or removing that.
     closedLid: {
         available: boolean;
         rule(): Promise<boolean>;

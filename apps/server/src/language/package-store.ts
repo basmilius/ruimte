@@ -477,7 +477,6 @@ async function describeTree(folder: string): Promise<Map<string, string>> {
     return found;
 }
 
-/* Whether two trees hold the same paths, types, modes, link targets and bytes. */
 async function sameTree(left: string, right: string): Promise<boolean> {
     const [first, second] = await Promise.all([describeTree(left), describeTree(right)]);
 

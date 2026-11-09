@@ -8,7 +8,6 @@ import type { ActiveClient } from '../tunnels/credential-store.ts';
 interface ClientDeps {
     connected: ConnectedClients;
     auth: Pick<AuthStore, 'list'>;
-    /* The external MCP clients that made a request lately. */
     external(): ActiveClient[];
 }
 

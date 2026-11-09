@@ -20,7 +20,6 @@ beforeEach(async () => {
 
 const runtime = { command: '/ruimte', args: [], env: { BUN_BE_BUN: '1' } };
 
-/* The folder of the install a kind runs, as its `current.json` names it. */
 async function currentFolder(kind: CatalogKind): Promise<string> {
     const { current } = JSON.parse(await readFile(join(root, kind, 'current.json'), 'utf8')) as { current: string };
     return current === 'legacy' ? join(root, kind) : join(root, kind, 'versions', current);
@@ -40,7 +39,6 @@ function installing(kind: CatalogKind, calls: { cwd: string; args: string[]; env
     };
 }
 
-/* The set an install links to. */
 async function setOf(folder: string): Promise<string> {
     const { packages } = JSON.parse(await readFile(join(folder, 'installed.json'), 'utf8')) as { packages: string };
     return packages;

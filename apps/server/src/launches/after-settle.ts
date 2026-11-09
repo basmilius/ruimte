@@ -77,14 +77,12 @@ export interface AfterSettleDeps {
     chats: Pick<ChatCore, 'get' | 'isLoading' | 'deliverNote'>;
     launches: Pick<LaunchStore, 'inWorktree'>;
     runner: Pick<LaunchRunner, 'startIn'>;
-    /* The project that places a chat node; null for none. */
     projectOf(chatId: string): string | null;
     /* Whether another machine gave this chat its task, which never starts a command of this machine's project on its own. */
     isPeerChat(chatId: string): boolean;
     folderOf(projectId: string): string | null;
     /* The worktrees of the repository the folder is in, without the main checkout and without one that is gone. */
     worktreesOf(folder: string): Promise<string[]>;
-    /* The top of the repository the folder is in. */
     repoRootOf(folder: string): Promise<string>;
     ofKind(kind: 'run-after-settle'): readonly RunAfterSettleEntry[];
     enqueue(projectId: string, target: string, work: OutboxWork): Promise<void>;

@@ -452,7 +452,6 @@ export class LaunchStore {
         });
     }
 
-    /* Every launch of a project as it would run here, in the order of the menu. */
     resolveAll(projectId: string): Promise<ResolvedLaunch[]> {
         return this.writes.run(async () => this.resolvedAll(projectId, await this.load(projectId)));
     }
@@ -603,7 +602,6 @@ export class LaunchStore {
     }
 }
 
-/* The variables of every launch that refer to a secret. */
 function secretSlotsOf(launches: readonly ResolvedLaunch[]): { launchId: string; variable: string }[] {
     return launches.flatMap((resolved) =>
         Object.entries(resolved.env)
@@ -655,7 +653,6 @@ function takePrivate(state: LoadedLaunches, read: JsonDocumentRead<LaunchesPriva
     state.privateRest = restOf(read.document, PRIVATE_KEYS);
 }
 
-/* The launches of both files in the order of the menu. */
 function ordered(state: LoadedLaunches): LaunchConfig[] {
     return inPersonalOrder([...launchesOf(state.shared), ...launchesOf(state.private)], state.order);
 }

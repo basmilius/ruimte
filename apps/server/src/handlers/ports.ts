@@ -7,7 +7,6 @@ import type { PortStreams } from '../ports/port-streams.ts';
 interface PortsDeps {
     grants: PortGrants;
     streams: PortStreams;
-    /* What every client hears: the list of shared ports moved. */
     changes: EventSource;
 }
 

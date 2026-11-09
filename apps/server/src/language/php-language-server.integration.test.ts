@@ -219,7 +219,6 @@ describe.skipIf(!hasCargo || checkout === null)('the standalone PHP server in Ru
 
         const cacheNames = async (): Promise<string[]> => (await readdir(cacheFolder()).catch(() => [])).filter((name) => !name.includes('.tmp'));
 
-        /* Opens main.php on a stopped project and times the first answer that needs the index. */
         async function firstHover(): Promise<number> {
             const text = FILES['main.php']!;
             const started = performance.now();

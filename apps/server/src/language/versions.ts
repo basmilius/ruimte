@@ -2,7 +2,6 @@ import type { NativeKind } from './native.ts';
 import type { CatalogKind } from './profiles.ts';
 import type { ToolchainKind } from './toolchain.ts';
 
-/* A kind installed as npm packages, which is every kind but the native ones and the ones a toolchain brings. */
 export type NpmKind = Exclude<CatalogKind, NativeKind | ToolchainKind>;
 
 /*
@@ -68,7 +67,6 @@ const LANGUAGE_KIND_MAIN_PACKAGE: Record<NpmKind, LanguagePackage> = {
     tailwind: '@tailwindcss/language-server'
 };
 
-/* The npm packages of a kind with their exact versions, as its `package.json` lists them. */
 export function pinnedVersionsOf(kind: NpmKind): Record<string, string> {
     return Object.fromEntries(
         LANGUAGE_KIND_PACKAGES[kind].map((name) => [

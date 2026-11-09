@@ -114,7 +114,6 @@ function registerRequests(dispatcher: Dispatcher, { watcher, boundaryOf, machine
             const boundary = await narrowTo(await boundaryOf(client.id), payload.within);
             const written = await writeTextFile(payload.path, payload.text, payload.expectedMtime, boundary);
 
-            // The reply never waits on the servers.
             void bestEffort('language.saved', language.saved(payload.path, payload.text));
 
             return written;
