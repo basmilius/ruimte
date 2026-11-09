@@ -96,6 +96,8 @@
             "template_new",
             "tool_list",
             "tool_run",
+            "tunnel_list",
+            "tunnel_propose",
             "ui_catalog",
             "view_delete",
             "view_diagram",
@@ -185,6 +187,7 @@
             "template_new",
             "tool_list",
             "tool_run",
+            "tunnel_list",
             "view_delete",
             "view_diagram",
             "view_drawing",
@@ -3304,6 +3307,66 @@
                 "destructiveHint": false
             },
             "audience": "everyone"
+        },
+        {
+            "name": "tunnel_list",
+            "description": "Lists the public hostnames of this machine's tunnel, its domains and your suggestions.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {}
+            },
+            "annotations": {
+                "readOnlyHint": true
+            },
+            "audience": "everyone"
+        },
+        {
+            "name": "tunnel_propose",
+            "description": "Suggests a change to a tunnel hostname in a card; nothing changes until the person confirms.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": [
+                            "add",
+                            "on",
+                            "off",
+                            "edit",
+                            "remove"
+                        ]
+                    },
+                    "hostname": {
+                        "type": "string"
+                    },
+                    "port": {
+                        "type": "integer",
+                        "description": "The dev server port, for add and edit"
+                    },
+                    "protocol": {
+                        "type": "string",
+                        "enum": [
+                            "http",
+                            "https"
+                        ]
+                    },
+                    "host_header": {
+                        "type": "string",
+                        "description": "Empty clears it"
+                    },
+                    "reason": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "action",
+                    "hostname"
+                ]
+            },
+            "annotations": {
+                "destructiveHint": false
+            },
+            "audience": "chat"
         },
         {
             "name": "ui_catalog",

@@ -514,6 +514,9 @@ import {
     TunnelLinkPayloadSchema,
     TunnelListPayloadSchema,
     TunnelListResultSchema,
+    TunnelProposalAnswerPayloadSchema,
+    TunnelProposalAnswerResultSchema,
+    TunnelProposalsSchema,
     TunnelRemovePayloadSchema,
     TunnelSetMcpPayloadSchema,
     TunnelSetTokenPayloadSchema,
@@ -1001,6 +1004,10 @@ export const REQUEST_SCHEMAS = {
     'tunnel.remove': { payload: TunnelRemovePayloadSchema, result: TunnelStateSchema },
     'tunnel.retry': { payload: EmptySchema, result: TunnelStateSchema },
     'tunnel.setMcp': { payload: TunnelSetMcpPayloadSchema, result: TunnelStateSchema },
+    // The cards in which an agent suggests a change to a hostname. Any client reads and declines one; only the local secret confirms, which is the change the screen makes.
+    'tunnel.proposals': { payload: EmptySchema, result: TunnelProposalsSchema },
+    'tunnel.proposalConfirm': { payload: TunnelProposalAnswerPayloadSchema, result: TunnelProposalAnswerResultSchema },
+    'tunnel.proposalDecline': { payload: TunnelProposalAnswerPayloadSchema, result: TunnelProposalAnswerResultSchema },
     // A development port shared through the machine connection. Any client of the account reads the grants and opens streams; sharing and revoking are the local secret's, or an agent's while the machine allows it.
     'port.list': { payload: EmptySchema, result: PortListResultSchema },
     'port.share': { payload: PortSharePayloadSchema, result: PortShareResultSchema },
@@ -1087,6 +1094,8 @@ export const EVENT_SCHEMAS = {
     'peer.changed': EmptySchema,
     // Tunnels or the external MCP changed, or a credential was used after a minute of quiet; every client reloads what it shows.
     'tunnel.changed': EmptySchema,
+    // Every card of an agent's tunnel suggestion, to every client, whenever the list or a card's staleness changes.
+    'tunnel.proposals': TunnelProposalsSchema,
     // A client connected, left or told of itself, or an external MCP client became active; only to the clients that asked with `client.watch`.
     'client.changed': EmptySchema,
     'consent.changed': EmptySchema,

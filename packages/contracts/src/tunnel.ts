@@ -158,7 +158,7 @@ export const TunnelOtherRuleSchema = z.object({
 });
 export type TunnelOtherRule = z.infer<typeof TunnelOtherRuleSchema>;
 
-/* The state every client may read; no tool and no client let in changes a tunnel. The API token is never in it. */
+/* The state every client may read; no client let in changes a tunnel, and an agent only proposes. The API token is never in it. */
 export const TunnelStateSchema = z.object({
     stage: TunnelStageSchema,
     /* What to install, or the sentence that says what went wrong; null otherwise. */
@@ -251,3 +251,38 @@ export const TunnelUpdatePayloadSchema = z.object({
 export const TunnelRemovePayloadSchema = z.object({ id: TunnelRowSchema.shape.id });
 
 export const TunnelSetMcpPayloadSchema = z.object({ enabled: z.boolean() });
+
+export const TUNNEL_PROPOSAL_ACTIONS = ['add', 'on', 'off', 'edit', 'remove'] as const;
+export const TunnelProposalActionSchema = z.enum(TUNNEL_PROPOSAL_ACTIONS);
+export type TunnelProposalAction = z.infer<typeof TunnelProposalActionSchema>;
+
+export const TUNNEL_PROPOSAL_LIMITS = { reason: 600 } as const;
+
+/* An agent suggesting a change to a hostname of Ruimte's, as the card in its chat shows it. Nothing changes until a person confirms. */
+export const TunnelProposalSchema = z.object({
+    proposalId: z.string().min(1).max(64),
+    // The chat that suggests, by the id of its node or view.
+    chatId: z.string().min(1),
+    action: TunnelProposalActionSchema,
+    kind: TunnelRowKindSchema,
+    hostname: TunnelRowSchema.shape.hostname,
+    // The port the hostname points at once confirmed; null for the MCP.
+    port: TunnelRowSchema.shape.port,
+    // A dev server's origin settings once confirmed; left out for the defaults.
+    origin: TunnelOriginSchema.optional(),
+    reason: z.string().max(TUNNEL_PROPOSAL_LIMITS.reason).optional(),
+    // The hostname changed since the agent asked, so a confirm would apply something else; the card can only be declined.
+    stale: z.boolean(),
+    createdAt: z.number(),
+    // When the card goes if nobody answers.
+    expiresAt: z.number()
+});
+export type TunnelProposal = z.infer<typeof TunnelProposalSchema>;
+
+// Every card of the machine at once, so a client that arrives late and one that missed a settle agree.
+export const TunnelProposalsSchema = z.object({ proposals: z.array(TunnelProposalSchema).max(100) });
+
+export const TunnelProposalAnswerPayloadSchema = z.object({ proposalId: TunnelProposalSchema.shape.proposalId });
+
+// False when the card was gone already: another client was first, the chat stopped or it expired.
+export const TunnelProposalAnswerResultSchema = z.object({ accepted: z.boolean() });

@@ -33,6 +33,9 @@ import {
     type UsageLimitsSnapshot,
     type RuntimeMode,
     type ModelSelection,
+    type TunnelNamed,
+    type TunnelProposal,
+    type TunnelState,
     type VisualAppearance,
     type VisualHeight,
     type VisualLayout,
@@ -66,6 +69,8 @@ import type { ProjectMutation, ProjectStore } from '../projects/project-store.ts
 import type { SnoozeStore } from '../push/snoozes.ts';
 import type { SecretAsk, SecretOutcome } from '../secrets/secret-requests.ts';
 import type { TemplateStore } from '../templates/template-store.ts';
+import type { TunnelProposalAnswer, TunnelProposalAsk, TunnelProposalSettled } from '../tunnels/tunnel-proposals.ts';
+import type { StoredRow } from '../tunnels/tunnel-store.ts';
 import type { VisualPreview } from '../visuals/renderer.ts';
 import type { ReachHost } from './reach.ts';
 
@@ -134,6 +139,8 @@ export interface CanvasHost {
     devices?: DeviceDriveHost;
     /* Sharing a development port with the person's other devices; absent on a host without ports. */
     ports?: PortShareHost;
+    /* This machine's tunnel as an agent reads it, and the cards in which it suggests a change; absent on a host without tunnels. */
+    tunnels?: TunnelAgentHost;
     /* What a person linked into a session, which `list` and `read` answer with. */
     context?: ContextHost;
     /* The launches of a project, as an agent may see and run them; absent on a host that runs none. */
@@ -241,6 +248,19 @@ export interface PortShareHost {
     share(projectId: string, port: number, host: PortHost): PortGrant;
     /* Whether a share of an agent in this project with this port was there to stop. */
     stop(projectId: string, port: number, host: PortHost): boolean;
+}
+
+/*
+ * This machine's tunnel as an agent reaches it: it reads the state every client reads, and changes nothing itself. A
+ * suggestion only raises a card, refused with a `TunnelConfigError` the way the screen refuses the change.
+ */
+export interface TunnelAgentHost {
+    state(): Promise<TunnelState>;
+    rowsAsMeant(): readonly StoredRow[];
+    /* The zone of the tunnel's account a hostname is in; null for none the token reaches there. */
+    zoneOf(hostname: string): TunnelNamed | null;
+    propose(ask: TunnelProposalAsk): TunnelProposalAnswer;
+    of(chatId: string): { standing: TunnelProposal[]; settled: readonly TunnelProposalSettled[] };
 }
 
 /* What starting an agent node takes. */

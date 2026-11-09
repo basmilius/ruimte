@@ -73813,6 +73813,169 @@
       "suggestedMcpLabel"
     ]
   },
+  "request.tunnel.proposals.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.tunnel.proposals.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "proposals": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "proposalId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "chatId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "action": {
+              "type": "string",
+              "x-open-enum": [
+                "add",
+                "on",
+                "off",
+                "edit",
+                "remove"
+              ]
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "mcp",
+                "dev"
+              ]
+            },
+            "hostname": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "port": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "origin": {
+              "type": "object",
+              "properties": {
+                "https": {
+                  "type": "boolean"
+                },
+                "hostHeader": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 259
+                },
+                "noTlsVerify": {
+                  "type": "boolean"
+                },
+                "serverName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              }
+            },
+            "reason": {
+              "type": "string",
+              "maxLength": 600
+            },
+            "stale": {
+              "type": "boolean"
+            },
+            "createdAt": {
+              "type": "number"
+            },
+            "expiresAt": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "proposalId",
+            "chatId",
+            "action",
+            "kind",
+            "hostname",
+            "port",
+            "stale",
+            "createdAt",
+            "expiresAt"
+          ]
+        }
+      }
+    },
+    "required": [
+      "proposals"
+    ]
+  },
+  "request.tunnel.proposalConfirm.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "proposalId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      }
+    },
+    "required": [
+      "proposalId"
+    ]
+  },
+  "request.tunnel.proposalConfirm.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "accepted": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "accepted"
+    ]
+  },
+  "request.tunnel.proposalDecline.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "proposalId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      }
+    },
+    "required": [
+      "proposalId"
+    ]
+  },
+  "request.tunnel.proposalDecline.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "accepted": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "accepted"
+    ]
+  },
   "request.port.list.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -82087,6 +82250,112 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
+  },
+  "event.tunnel.proposals": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "proposals": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "proposalId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "chatId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "action": {
+              "type": "string",
+              "x-open-enum": [
+                "add",
+                "on",
+                "off",
+                "edit",
+                "remove"
+              ]
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "mcp",
+                "dev"
+              ]
+            },
+            "hostname": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "port": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "origin": {
+              "type": "object",
+              "properties": {
+                "https": {
+                  "type": "boolean"
+                },
+                "hostHeader": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 259
+                },
+                "noTlsVerify": {
+                  "type": "boolean"
+                },
+                "serverName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              }
+            },
+            "reason": {
+              "type": "string",
+              "maxLength": 600
+            },
+            "stale": {
+              "type": "boolean"
+            },
+            "createdAt": {
+              "type": "number"
+            },
+            "expiresAt": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "proposalId",
+            "chatId",
+            "action",
+            "kind",
+            "hostname",
+            "port",
+            "stale",
+            "createdAt",
+            "expiresAt"
+          ]
+        }
+      }
+    },
+    "required": [
+      "proposals"
+    ]
   },
   "event.client.changed": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

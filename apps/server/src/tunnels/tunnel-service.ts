@@ -129,6 +129,22 @@ export interface TunnelPorts {
     stopWaitMs?: number;
 }
 
+export interface AddInput {
+    kind: TunnelRowKind;
+    zone: string;
+    label: string;
+    port?: number;
+    comeBack?: boolean;
+    origin?: TunnelOrigin;
+}
+
+export interface UpdateInput {
+    enabled?: boolean;
+    comeBack?: boolean;
+    port?: number;
+    origin?: TunnelOrigin;
+}
+
 type Busy = 'installing' | 'checking' | 'starting' | null;
 type Served = NonNullable<ReturnType<typeof servedBy>>;
 
@@ -739,11 +755,111 @@ export class TunnelService {
         this.failure = null;
     }
 
+    /* What `add` would put on the tunnel, refused the way `add` refuses it before Cloudflare is asked anything. */
+    private addable(input: AddInput, accountId: string): { zone: CloudflareZone; hostname: string; port: number | null; origin: TunnelOrigin | undefined } {
+        const zone = this.zones.find((candidate) => candidate.id === input.zone && candidate.account.id === accountId);
+
+        if (zone === undefined) {
+            throw new TunnelConfigError('unknown-zone', 'That domain is not on the Cloudflare account of this tunnel. Pick one from the list.');
+        }
+
+        const others = this.zones
+            .filter((candidate) => candidate.id !== zone.id && candidate.account.id === zone.account.id)
+            .map((candidate) => candidate.name);
+        const hostname = hostnameInZone(input.label, zone.name, others);
+
+        if (this.stored.rows.some((row) => row.hostname === hostname)) {
+            throw new TunnelConfigError('hostname-taken', `${hostname} is on this tunnel already`);
+        }
+
+        if (input.kind === 'mcp') {
+            if (this.stored.rows.some((row) => row.kind === 'mcp')) {
+                throw new TunnelConfigError('mcp-exists', 'The MCP already has a hostname. Remove that one first');
+            }
+
+            if (input.origin !== undefined) {
+                throw new TunnelConfigError('mcp-fixed', 'The MCP always points at Ruimte itself');
+            }
+
+            return { zone, hostname, port: null, origin: undefined };
+        }
+
+        const origin = normalizedOrigin(input.origin);
+
+        if (input.port === undefined) {
+            throw new TunnelConfigError('port-required', 'A dev server needs a port');
+        }
+
+        const reason = deniedPortReason(input.port, this.ports.deniedPorts());
+
+        if (reason !== null) {
+            throw new TunnelConfigError('port-denied', reason);
+        }
+
+        return { zone, hostname, port: input.port, origin };
+    }
+
+    /*
+     * Checks an agent's proposal to add a hostname as `add` would, against the rules Ruimte last read, and answers the
+     * hostname it names. Nothing is written and Cloudflare is not asked; the person's confirm runs `add` itself.
+     */
+    checkAdd(input: AddInput): string {
+        const tunnel = this.stored.tunnel;
+
+        if (tunnel === null) {
+            throw new TunnelConfigError('no-tunnel', 'Set up a tunnel first');
+        }
+
+        this.refuseWhileUnlinking();
+        this.requireToken();
+
+        const { hostname } = this.addable(input, tunnel.account.id);
+
+        if (this.others.some((rule) => rule.hostname === hostname)) {
+            throw new TunnelConfigError('hostname-on-tunnel', `${hostname} is on this tunnel already. Pick another name.`);
+        }
+
+        return hostname;
+    }
+
+    /* Checks an agent's proposal to change a row as `update` or `remove` would before Cloudflare is asked anything. Nothing is written. */
+    checkChange(id: string, change: UpdateInput | 'remove'): void {
+        this.refuseWhileUnlinking();
+
+        const row = this.stored.rows.find((candidate) => candidate.id === id);
+
+        if (row === undefined) {
+            throw new TunnelConfigError('unknown-row', 'That hostname is not on this tunnel');
+        }
+
+        this.requireToken();
+
+        if (change !== 'remove') {
+            this.updatable(row, change);
+        }
+    }
+
+    /* The rows as the person last asked for them, apart from what Cloudflare serves. */
+    rowsAsMeant(): readonly StoredRow[] {
+        return this.stored.rows;
+    }
+
+    /* The zone a hostname is in: the longest zone of the tunnel's account it ends in, or null for none. */
+    zoneOf(hostname: string): TunnelNamed | null {
+        const accountId = this.stored.tunnel?.account.id;
+        const name = hostname.trim().toLowerCase().replace(/\.$/, '');
+        const fits = this.zones
+            .filter((zone) => zone.account.id === accountId && (name === zone.name || name.endsWith(`.${zone.name}`)))
+            .sort((left, right) => right.name.length - left.name.length);
+
+        return fits[0] === undefined ? null : { id: fits[0].id, name: fits[0].name };
+    }
+
     /*
      * Puts a hostname on the tunnel: a 404 rule first, then the DNS record, then the rule that serves it. A name that has a
      * record Ruimte did not make is refused before anything is written.
      */
-    async add(input: { kind: TunnelRowKind; zone: string; label: string; port?: number; comeBack?: boolean; origin?: TunnelOrigin }): Promise<TunnelState> {
+    async add(input: AddInput): Promise<TunnelState> {
         await this.changing(async () => {
             const tunnel = this.stored.tunnel;
 
@@ -757,47 +873,7 @@ export class TunnelService {
 
             await this.settleIfUnsure();
 
-            const zone = this.zones.find((candidate) => candidate.id === input.zone && candidate.account.id === tunnel.account.id);
-
-            if (zone === undefined) {
-                throw new TunnelConfigError('unknown-zone', 'That domain is not on the Cloudflare account of this tunnel. Pick one from the list.');
-            }
-
-            const others = this.zones
-                .filter((candidate) => candidate.id !== zone.id && candidate.account.id === zone.account.id)
-                .map((candidate) => candidate.name);
-            const hostname = hostnameInZone(input.label, zone.name, others);
-
-            if (this.stored.rows.some((row) => row.hostname === hostname)) {
-                throw new TunnelConfigError('hostname-taken', `${hostname} is on this tunnel already`);
-            }
-
-            let port: number | null = null;
-            let origin: TunnelOrigin | undefined;
-
-            if (input.kind === 'mcp') {
-                if (this.stored.rows.some((row) => row.kind === 'mcp')) {
-                    throw new TunnelConfigError('mcp-exists', 'The MCP already has a hostname. Remove that one first');
-                }
-
-                if (input.origin !== undefined) {
-                    throw new TunnelConfigError('mcp-fixed', 'The MCP always points at Ruimte itself');
-                }
-            } else {
-                origin = normalizedOrigin(input.origin);
-
-                if (input.port === undefined) {
-                    throw new TunnelConfigError('port-required', 'A dev server needs a port');
-                }
-
-                const reason = deniedPortReason(input.port, this.ports.deniedPorts());
-
-                if (reason !== null) {
-                    throw new TunnelConfigError('port-denied', reason);
-                }
-
-                port = input.port;
-            }
+            const { zone, hostname, port, origin } = this.addable(input, tunnel.account.id);
 
             // A rule for the name that someone set in the dashboard is theirs, and taking the row would overwrite it.
             const { ingress } = await api.configuration(tunnel.account.id, tunnel.id);
@@ -861,8 +937,27 @@ export class TunnelService {
         return this.describe();
     }
 
+    /* Refuses a change `update` cannot make to this row, before Cloudflare is asked anything. */
+    private updatable(row: StoredRow, change: UpdateInput): void {
+        if ((change.port !== undefined || change.origin !== undefined) && row.kind === 'mcp') {
+            throw new TunnelConfigError('mcp-fixed', 'The MCP always points at Ruimte itself');
+        }
+
+        normalizedOrigin(change.origin);
+
+        const port = change.port ?? row.port;
+
+        if (row.kind === 'dev' && (change.enabled === true || change.port !== undefined)) {
+            const reason = port === null ? 'A dev server needs a port' : deniedPortReason(port, this.ports.deniedPorts());
+
+            if (reason !== null) {
+                throw new TunnelConfigError('port-denied', reason);
+            }
+        }
+    }
+
     /* A new port or new origin settings of a row that is on reach Cloudflare first, like a switch does. */
-    async update(id: string, change: { enabled?: boolean; comeBack?: boolean; port?: number; origin?: TunnelOrigin }): Promise<TunnelState> {
+    async update(id: string, change: UpdateInput): Promise<TunnelState> {
         const { origin: typedOrigin, ...flags } = change;
         const origin = normalizedOrigin(typedOrigin);
         const retargets = change.port !== undefined || change.origin !== undefined;
@@ -892,19 +987,7 @@ export class TunnelService {
                 throw new TunnelConfigError('unknown-row', 'That hostname is not on this tunnel');
             }
 
-            if (retargets && row.kind === 'mcp') {
-                throw new TunnelConfigError('mcp-fixed', 'The MCP always points at Ruimte itself');
-            }
-
-            const port = change.port ?? row.port;
-
-            if (row.kind === 'dev' && (change.enabled === true || change.port !== undefined)) {
-                const reason = port === null ? 'A dev server needs a port' : deniedPortReason(port, this.ports.deniedPorts());
-
-                if (reason !== null) {
-                    throw new TunnelConfigError('port-denied', reason);
-                }
-            }
+            this.updatable(row, change);
 
             const touches = change.enabled !== undefined || (retargets && (change.enabled ?? row.enabled));
 

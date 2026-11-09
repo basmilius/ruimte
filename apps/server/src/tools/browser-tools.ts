@@ -5,6 +5,7 @@ import { defineActionTool, runAction } from './action-tool.ts';
 import { field, yesNo } from './host.ts';
 import { portShare } from './port-tools.ts';
 import { defineTool, defineToolkit, VIEW_INPUT } from './tool.ts';
+import { tunnelTools } from './tunnel-tools.ts';
 
 const NEEDS_ID = 'id needs the id of a browser node';
 
@@ -115,4 +116,4 @@ const browserShot = defineActionTool('browser', {
     }
 });
 
-export const browserToolkit = defineToolkit('browser', [browserState, browserGo, browserHistory, browserShot, portShare]);
+export const browserToolkit = defineToolkit('browser', [browserState, browserGo, browserHistory, browserShot, portShare, ...tunnelTools]);

@@ -228,6 +228,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     chats.observe((event) => extensions.forwardEvent(event.event, event.payload));
     sessions.observe((event) => extensions.forwardEvent(event.event, event.payload));
     chats.observe((event) => agents.proposals.observe(event));
+    chats.observe((event) => tunnels.proposals.observe(event));
     chats.observe((event) => launches.afterSettle.chatEvent(event));
     chats.observe((event) => {
         if (event.event === 'chat.event' && event.payload.event.type === 'item' && event.payload.event.item.kind === 'user') {
@@ -264,6 +265,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     registerTemplateHandlers(dispatcher, templates.store);
     registerTunnelHandlers(dispatcher, {
         service: tunnels.service,
+        proposals: tunnels.proposals,
         credentials: tunnels.credentials,
         consent: tunnels.consent,
         changed: () => {

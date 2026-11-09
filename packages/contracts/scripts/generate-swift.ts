@@ -37,6 +37,7 @@ import { PROTOCOL_VERSION } from '../src/protocol.ts';
 import { PushNotifyKindSchema } from '../src/push.ts';
 import * as server from '../src/server.ts';
 import * as task from '../src/task.ts';
+import { TunnelProposalActionSchema } from '../src/tunnel.ts';
 import { VoiceActivityKindSchema, VoiceActivityStatusSchema, VoicePhaseSchema } from '../src/voice.ts';
 
 type Schema = Record<string, any>;
@@ -278,7 +279,8 @@ const openVocabularies: ReadonlyMap<unknown, readonly string[]> = new Map<unknow
     [VoiceActivityStatusSchema, VoiceActivityStatusSchema.options],
     [PortHostSchema, PortHostSchema.options],
     [PortSharedBySchema, PortSharedBySchema.options],
-    [PortEndReasonSchema, PortEndReasonSchema.options]
+    [PortEndReasonSchema, PortEndReasonSchema.options],
+    [TunnelProposalActionSchema, TunnelProposalActionSchema.options]
 ]);
 // Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.
 const apiRoots: Record<string, z.ZodType> = {};

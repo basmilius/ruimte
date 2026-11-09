@@ -16,6 +16,7 @@ import { ConsentBook } from '../tunnels/consent-book.ts';
 import { CredentialStore } from '../tunnels/credential-store.ts';
 import { FailureLimiter } from '../tunnels/external-gate.ts';
 import { externalHandler, ExternalListener } from '../tunnels/external-listener.ts';
+import { TunnelProposals } from '../tunnels/tunnel-proposals.ts';
 import { TunnelService } from '../tunnels/tunnel-service.ts';
 import { tunnelsFolder, tunnelStore } from '../tunnels/tunnel-store.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
@@ -29,6 +30,8 @@ import type { RoutinesBundle } from './routines.ts';
 /* Tunnels, the credentials of external MCP clients and the listener they reach. */
 export interface TunnelsBundle {
     service: TunnelService;
+    /* The cards in which an agent suggests a change to a hostname, which only a person's confirm makes. */
+    proposals: TunnelProposals;
     credentials: CredentialStore;
     consent: ConsentBook;
     listener: ExternalListener;
@@ -58,7 +61,12 @@ interface TunnelsInput {
 export async function wireTunnels(input: TunnelsInput): Promise<TunnelsBundle> {
     const { config, canvasHost, agents, projects, processes, artifacts, stores, launches, routines, machineId, later } = input;
     const sinks = new ClientSinks();
-    const changed = (): void => sinks.emit({ event: 'tunnel.changed', payload: {} });
+    let proposals: TunnelProposals | null = null;
+    const changed = (): void => {
+        sinks.emit({ event: 'tunnel.changed', payload: {} });
+        // A row that moved may leave a card standing for something else.
+        proposals?.refresh();
+    };
     const consentChanged = (): void => sinks.emit({ event: 'consent.changed', payload: {} });
     const credentials = new CredentialStore({
         home: config.home,
@@ -137,6 +145,20 @@ export async function wireTunnels(input: TunnelsInput): Promise<TunnelsBundle> {
         random: (bytes) => randomBytes(bytes).toString('hex'),
         log: (line) => console.log(line)
     });
+    const cards = new TunnelProposals({
+        tunnels: service,
+        chats: { hold: (chatId, key) => void agents.chats.holdForPerson(chatId, key), release: (chatId, key) => agents.chats.releaseHold(chatId, key) },
+        publish: (list) => sinks.emit({ event: 'tunnel.proposals', payload: { proposals: list } })
+    });
 
-    return { service, credentials, consent, listener, sinks, deniedPorts };
+    proposals = cards;
+    canvasHost.tunnels = {
+        state: () => service.state(),
+        rowsAsMeant: () => service.rowsAsMeant(),
+        zoneOf: (hostname) => service.zoneOf(hostname),
+        propose: (ask) => cards.ask(ask),
+        of: (chatId) => cards.of(chatId)
+    };
+
+    return { service, proposals: cards, credentials, consent, listener, sinks, deniedPorts };
 }
