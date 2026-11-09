@@ -67,53 +67,64 @@ export const LAUNCH_BEHAVIORS = defineBehaviors({
     }
 });
 
-/* One row per launch that says what a press does to it now, so a launch that runs offers its restart and its stop; and the tasks that may run after a worktree chat settles. */
+function paletteLaunches(moment: CommandMoment): ReturnType<typeof launchesOfProject> {
+    return !moment.inWorkspace || moment.scratch ? null : launchesOfProject();
+}
+
+/* One row per launch that says what a press does to it now, so a launch that runs offers its restart and its stop. */
 export function launchPaletteRows(moment: CommandMoment): Command[] {
-    const found = launchesOfProject();
-    if (!moment.inWorkspace || moment.scratch || found === null) {
+    const found = paletteLaunches(moment);
+    if (found === null) {
         return [];
     }
     const { key, document } = found;
     const views = launchViews(document, useLaunches.getState().statuses[key] ?? {});
+
+    return document.launches.flatMap((launch): Command[] =>
+        views.get(launch.id)?.live === true
+            ? [
+                  {
+                      id: `launch-restart-${launch.id}`,
+                      label: i18next.t('launches:palette.restart', { name: launch.name }),
+                      run: () => void startLaunch(launch.id, { restart: true })
+                  },
+                  {
+                      id: `launch-stop-${launch.id}`,
+                      label: i18next.t('launches:palette.stop', { name: launch.name }),
+                      run: () => void stopLaunch(launch.id)
+                  }
+              ]
+            : [
+                  {
+                      id: `launch-start-${launch.id}`,
+                      label: i18next.t('launches:palette.start', { name: launch.name }),
+                      run: () => void startLaunch(launch.id)
+                  }
+              ]
+    );
+}
+
+/* The tasks that may run after a worktree chat settles; the chosen one comes back only while it waits on approval again. */
+export function afterSettlePaletteRows(moment: CommandMoment): Command[] {
+    const document = paletteLaunches(moment)?.document;
+    if (document === undefined) {
+        return [];
+    }
     const chosen = document.afterSettle;
 
-    return [
-        ...document.launches.flatMap((launch): Command[] =>
-            views.get(launch.id)?.live === true
-                ? [
-                      {
-                          id: `launch-restart-${launch.id}`,
-                          label: i18next.t('launches:palette.restart', { name: launch.name }),
-                          run: () => void startLaunch(launch.id, { restart: true })
-                      },
-                      {
-                          id: `launch-stop-${launch.id}`,
-                          label: i18next.t('launches:palette.stop', { name: launch.name }),
-                          run: () => void stopLaunch(launch.id)
-                      }
-                  ]
-                : [
-                      {
-                          id: `launch-start-${launch.id}`,
-                          label: i18next.t('launches:palette.start', { name: launch.name }),
-                          run: () => void startLaunch(launch.id)
-                      }
-                  ]
-        ),
-        ...afterSettleCandidates(document).flatMap((launch): Command[] =>
-            chosen?.launchId === launch.id && chosen.approved
-                ? []
-                : [
-                      {
-                          id: `launch-after-settle-${launch.id}`,
-                          label: i18next.t(chosen?.launchId === launch.id ? 'launches:palette.afterSettleApprove' : 'launches:palette.afterSettle', {
-                              name: launch.name
-                          }),
-                          run: () => void chooseAfterSettle(launch.id)
-                      }
-                  ]
-        )
-    ];
+    return afterSettleCandidates(document).flatMap((launch): Command[] =>
+        chosen?.launchId === launch.id && chosen.approved
+            ? []
+            : [
+                  {
+                      id: `launch-after-settle-${launch.id}`,
+                      label: i18next.t(chosen?.launchId === launch.id ? 'launches:palette.afterSettleApprove' : 'launches:palette.afterSettle', {
+                          name: launch.name
+                      }),
+                      run: () => void chooseAfterSettle(launch.id)
+                  }
+              ]
+    );
 }
 
 export const LAUNCH_GENERATED: readonly GeneratedCommands[] = [

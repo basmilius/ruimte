@@ -1,7 +1,7 @@
 import { agentPaletteRows } from '@/agents/commands';
 import { ATTENTION_BEHAVIORS } from '@/attention/commands';
 import { BROWSER_KEY_HANDLERS } from '@/browser/browser-keys';
-import { CANVAS_BEHAVIORS, canvasPaletteRows } from '@/canvas/commands';
+import { CANVAS_BEHAVIORS, layoutPaletteRows, nodeMovePaletteRows } from '@/canvas/commands';
 import { CANVAS_KEY_HANDLERS, canvasKeys, gapKeys } from '@/canvas/workspace-keys';
 import { CHAT_BEHAVIORS, CHAT_KEY_HANDLERS } from '@/chat/commands';
 import { chatKeys } from '@/chat/workspace-keys';
@@ -19,7 +19,7 @@ import { GIT_BEHAVIORS } from '@/git/commands';
 import { GITHUB_BEHAVIORS, githubPaletteRows } from '@/github/commands';
 import { languagePaletteRows } from '@/language/commands';
 import { PROBLEMS_BEHAVIORS } from '@/language/problems-commands';
-import { LAUNCH_BEHAVIORS, launchPaletteRows } from '@/launches/commands';
+import { afterSettlePaletteRows, LAUNCH_BEHAVIORS, launchPaletteRows } from '@/launches/commands';
 import { MEASURE_BEHAVIORS } from '@/measure/commands';
 import { OUTPUT_BEHAVIORS } from '@/output/commands';
 import { PROCESS_BEHAVIORS } from '@/processes/commands';
@@ -71,7 +71,15 @@ export function installWorkspaceCommands(replacing: boolean = import.meta.hot !=
         registerBehaviors(table, replacing);
     }
 
-    registerPaletteRows(agentPaletteRows, canvasPaletteRows, githubPaletteRows, languagePaletteRows, launchPaletteRows);
+    registerPaletteRows({
+        'pull-requests': githubPaletteRows,
+        language: languagePaletteRows,
+        agents: agentPaletteRows,
+        'node-moves': nodeMovePaletteRows,
+        layouts: layoutPaletteRows,
+        launches: launchPaletteRows,
+        'after-settle': afterSettlePaletteRows
+    });
     registerKeyHandlers(...VIEW_KEY_HANDLERS, ...BROWSER_KEY_HANDLERS, ...CHAT_KEY_HANDLERS);
     registerCanvasKeyHandlers(...CANVAS_KEY_HANDLERS);
     // Held and released keys in the order they must hear a press: the voice and dictation keys before Escape steps out of anything.

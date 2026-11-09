@@ -485,3 +485,63 @@ describe('the command catalog stays current while its query changes', () => {
         await until(() => page.host.textContent?.includes('Beta file content') === true);
     });
 });
+
+describe('the order of the actions', () => {
+    const actions = (): string[] => {
+        const group = [...document.querySelectorAll('[role="group"]')].find((candidate) => {
+            const id = candidate.getAttribute('aria-labelledby');
+
+            return id !== null && document.getElementById(id)?.textContent === 'Actions';
+        });
+
+        return [...(group?.querySelectorAll<HTMLElement>('[role="option"]') ?? [])].map((row) => row.textContent ?? '');
+    };
+    const startingWith = (prefixes: readonly string[]): string[] =>
+        actions().flatMap((label) => prefixes.filter((prefix) => label.startsWith(prefix)).slice(0, 1));
+
+    beforeEach(async () => {
+        workspace = await openFakeWorkspace(
+            new FakeMachine(),
+            { views: [{ kind: 'canvas', id: 'main', name: 'Main', nodes: [], texts: [], edges: [], layouts: [] }] },
+            { activeViewId: 'main', views: {} }
+        );
+        await openPalette(
+            () => useUi.getState().setPaletteOpen(true),
+            () => actions().length > 0
+        );
+    });
+
+    test('an empty palette offers its few actions in the order main gave them', () => {
+        expect(startingWith(['Open folder as project', 'Find in files', 'New canvas view', 'New terminal', 'New chat', 'Usage', 'Settings'])).toEqual([
+            'Open folder as project',
+            'Find in files',
+            'New canvas view',
+            'New terminal',
+            'New chat',
+            'Usage',
+            'Settings'
+        ]);
+    });
+
+    test('a query keeps the hand order of the rows it finds', async () => {
+        const panels = [
+            'Toggle sidebar',
+            'Toggle output panel',
+            'Toggle files panel',
+            'Toggle databases panel',
+            'Toggle git panel',
+            'Toggle problems panel',
+            'Toggle processes panel'
+        ];
+
+        await type('toggle');
+        await until(() => actions().some((label) => label.startsWith('Toggle processes panel')));
+
+        expect(startingWith(panels)).toEqual(panels);
+
+        await type('zoom');
+        await until(() => actions().some((label) => label.startsWith('Zoom to 100%')));
+
+        expect(startingWith(['Zoom to fit', 'Zoom to selection', 'Zoom to 100%'])).toEqual(['Zoom to fit', 'Zoom to selection', 'Zoom to 100%']);
+    });
+});

@@ -273,26 +273,32 @@ export const CANVAS_BEHAVIORS = defineBehaviors({
 
 /*
  * Moving a node to another view is one command per target: the palette has no second step, and a project
- * rarely has enough views for that to grow long. The saved layouts are applied or deleted the same way.
+ * rarely has enough views for that to grow long.
  */
-export function canvasPaletteRows(moment: CommandMoment): Command[] {
+export function nodeMovePaletteRows(moment: CommandMoment): Command[] {
+    const { selected } = moment;
+    if (!moment.onCanvas || selected === undefined || selected.kind === 'group') {
+        return [];
+    }
+    const { views, activeViewId } = moment.document;
+
+    return views
+        .filter((view) => isCanvasView(view) && view.id !== activeViewId)
+        .map((view) => ({
+            id: `view-move-${view.id}`,
+            label: i18next.t('shell:palette.moveNodeTo', { view: view.name }),
+            hint: selected.title,
+            run: () => moveNodeToViewAction(selected.id, view.id)
+        }));
+}
+
+/* The saved layouts, each applied or deleted by a row of its own. */
+export function layoutPaletteRows(moment: CommandMoment): Command[] {
     if (!moment.onCanvas) {
         return [];
     }
-    const { selected } = moment;
-    const { views, activeViewId } = moment.document;
-    const moves: Command[] =
-        selected === undefined || selected.kind === 'group'
-            ? []
-            : views
-                  .filter((view) => isCanvasView(view) && view.id !== activeViewId)
-                  .map((view) => ({
-                      id: `view-move-${view.id}`,
-                      label: i18next.t('shell:palette.moveNodeTo', { view: view.name }),
-                      hint: selected.title,
-                      run: () => moveNodeToViewAction(selected.id, view.id)
-                  }));
-    const layouts = moment.canvas.layouts.flatMap((layout): Command[] => [
+
+    return moment.canvas.layouts.flatMap((layout): Command[] => [
         {
             id: `layout-apply-${layout.name}`,
             label: i18next.t('shell:palette.applyLayout', { name: layout.name }),
@@ -304,8 +310,6 @@ export function canvasPaletteRows(moment: CommandMoment): Command[] {
             run: () => deleteLayoutAction(layout.name)
         }
     ]);
-
-    return [...moves, ...layouts];
 }
 
 export const CANVAS_GENERATED: readonly GeneratedCommands[] = [
