@@ -1,11 +1,11 @@
 import { join } from 'node:path';
 import { settled, type Settled, type WatchSeams } from '@adecore/agents';
 import { PRIVATE_DIR, PROJECT_DIR } from '@ruimte/contracts';
-import { PROJECT_FILE, WATCH_SETTLE_MS, watchFolderChain } from './project-files.ts';
+import { PROJECT_FILE, WATCH_SETTLE_MS, watchFolderChain, type FolderChain } from './project-files.ts';
 
 interface Watched {
     folder: string;
-    chain: { close(): void };
+    chain: FolderChain;
     settle: Settled;
 }
 
@@ -32,8 +32,12 @@ export class ProjectFolderWatch {
         }
 
         for (const [projectId, folder] of folders) {
-            if (!this.watched.has(projectId)) {
+            const watched = this.watched.get(projectId);
+            if (watched === undefined) {
                 this.watch(projectId, folder);
+            } else if (watched.chain.retry()) {
+                // A folder that was missing when the watch began is there now, with whatever it holds.
+                watched.settle.nudge();
             }
         }
     }

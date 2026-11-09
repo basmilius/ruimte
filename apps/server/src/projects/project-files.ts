@@ -213,12 +213,18 @@ export function watchDirectories(seams: WatchSeams, dirs: readonly string[], hea
         .filter((watcher) => watcher !== null);
 }
 
+export interface FolderChain {
+    /* Starts the whole chain again when its first folder has no watcher, as one that was missing; true when it has one now. */
+    retry(): boolean;
+    close(): void;
+}
+
 /*
  * Watches a chain of folders, each the parent of the next. A watcher on a folder that was removed never hears
  * again, and a folder that is not there yet has none, so whenever a folder hears the name of the next one (or no
  * name), the watch starts again from that next folder down. `heard` gets the depth of the folder that heard.
  */
-export function watchFolderChain(seams: WatchSeams, folders: readonly string[], heard: (depth: number, filename: string | null) => void): { close(): void } {
+export function watchFolderChain(seams: WatchSeams, folders: readonly string[], heard: (depth: number, filename: string | null) => void): FolderChain {
     const watchers: (DirectoryWatcher | null)[] = folders.map(() => null);
     let closed = false;
 
@@ -249,6 +255,15 @@ export function watchFolderChain(seams: WatchSeams, folders: readonly string[], 
     arm(0);
 
     return {
+        retry: () => {
+            if (closed || watchers[0] !== null) {
+                return false;
+            }
+
+            arm(0);
+
+            return watchers[0] !== null;
+        },
         close: () => {
             closed = true;
 

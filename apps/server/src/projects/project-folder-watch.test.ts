@@ -290,4 +290,44 @@ describe('ProjectFolderWatch', () => {
         expect(watch.openOn('/work/one/.ruimte/private')).toHaveLength(1);
         expect(watch.openOn('/work/one/.ruimte/private')[0]).not.toBe(dead);
     });
+
+    test('watches a project folder that was missing when the watch began once the list is given again', async () => {
+        const watch = new FakeWatch();
+        const heard: string[] = [];
+        let folderThere = false;
+        const folders = new ProjectFolderWatch(
+            {
+                schedule: watch.schedule,
+                watch: (path, options, listener) => {
+                    if (!folderThere) {
+                        throw new Error('ENOENT');
+                    }
+
+                    return watch.watch(path, options, listener);
+                }
+            },
+            (projectId) => void heard.push(projectId)
+        );
+        folders.sync(new Map([['one', '/work/one']]));
+        folders.sync(new Map([['one', '/work/one']]));
+
+        expect(watch.openOn('/work/one')).toHaveLength(0);
+
+        folderThere = true;
+        folders.sync(new Map([['one', '/work/one']]));
+        await watch.settle();
+
+        expect(watch.openOn('/work/one')).toHaveLength(1);
+        expect(watch.openOn('/work/one/.ruimte')).toHaveLength(1);
+        expect(watch.openOn('/work/one/.ruimte/private')).toHaveLength(1);
+        expect(heard).toEqual(['one']);
+
+        folders.sync(new Map([['one', '/work/one']]));
+        expect(watch.openOn('/work/one')).toHaveLength(1);
+
+        watch.on('/work/one/.ruimte').emit('project.json');
+        await watch.settle();
+
+        expect(heard).toEqual(['one', 'one']);
+    });
 });
