@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { settled, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
-import { PROJECT_DIR } from '@ruimte/contracts';
+import { PRIVATE_DIR, PROJECT_DIR } from '@ruimte/contracts';
 import { PROJECT_FILE, WATCH_SETTLE_MS, watchDirectories } from './project-files.ts';
 
 interface Watched {
@@ -10,8 +10,8 @@ interface Watched {
 }
 
 /*
- * Hears the shared file of every project it is given change from outside the daemon. A project a client
- * holds has a watcher of its own, so this is for the others, whose edit no client would hear of.
+ * Hears the shared and the private file of every project it is given change from outside the daemon. A
+ * project a client holds has a watcher of its own, so this is for the others, whose edit no client would hear of.
  */
 export class ProjectFolderWatch {
     private readonly seams: WatchSeams;
@@ -46,11 +46,35 @@ export class ProjectFolderWatch {
 
     private watch(projectId: string, folder: string): void {
         const settle = settled(this.seams, WATCH_SETTLE_MS, () => this.changed(projectId));
-        const watchers = watchDirectories(this.seams, [join(folder, PROJECT_DIR)], (filename) => {
-            if (filename === null || filename === PROJECT_FILE) {
-                settle.nudge();
-            }
-        });
+        const watchers: DirectoryWatcher[] = [];
+        const hearsFile = (filename: string | null): boolean => filename === null || filename === PROJECT_FILE;
+        const watchPrivate = (): boolean => {
+            const found = watchDirectories(this.seams, [join(folder, PROJECT_DIR, PRIVATE_DIR)], (filename) => {
+                if (hearsFile(filename)) {
+                    settle.nudge();
+                }
+            });
+            watchers.push(...found);
+
+            return found.length > 0;
+        };
+        // The private folder is made on a person's first private save, which may come after this watch began.
+        let privateWatched = watchPrivate();
+
+        watchers.push(
+            ...watchDirectories(this.seams, [join(folder, PROJECT_DIR)], (filename) => {
+                if (filename === PRIVATE_DIR && !privateWatched) {
+                    privateWatched = watchPrivate();
+
+                    // The file may be in the folder already by the time it is watched.
+                    if (privateWatched) {
+                        settle.nudge();
+                    }
+                } else if (hearsFile(filename)) {
+                    settle.nudge();
+                }
+            })
+        );
 
         this.watched.set(projectId, { folder, watchers, settle });
     }
