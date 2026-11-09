@@ -264,6 +264,8 @@ struct HandleTable {
     private var buckets: [CFHashCode: [(element: AXUIElement, index: Int)]] = [:]
     private(set) var byIndex: [Int: AXUIElement] = [:]
     private(set) var signatures: [Int: ElementSignature] = [:]
+    /// Where each element was when the state read it, for a click by pixel behind the person's work.
+    private(set) var frames: [Int: CGRect] = [:]
     /// What the state before listed and this one did not reach, so a handle the agent read there still leads somewhere.
     private(set) var retired: [Int: (element: AXUIElement, signature: ElementSignature?)] = [:]
     private(set) var nextIndex: Int
@@ -286,6 +288,7 @@ struct HandleTable {
             buckets[CFHash(element), default: []].append((element, index))
             byIndex[index] = element
             signatures[index] = older.signatures[index]
+            frames[index] = older.frames[index]
         }
         for (index, entry) in older.retired where byIndex[index] == nil && retired[index] == nil {
             retired[index] = entry
@@ -321,10 +324,13 @@ struct HandleTable {
     }
 
     /// Indices only grow, so an index from an older state never points at a different element.
-    mutating func register(_ element: AXUIElement, previous: HandleTable, signature: ElementSignature? = nil) -> Int {
+    mutating func register(_ element: AXUIElement, previous: HandleTable, signature: ElementSignature? = nil, frame: CGRect? = nil) -> Int {
         let index = place(element, previous: previous)
         if let signature {
             signatures[index] = signature
+        }
+        if let frame {
+            frames[index] = frame
         }
         return index
     }
@@ -448,7 +454,7 @@ struct TreeWalker {
         var childParentLabel = parentLabel
         if meaningful {
             let signature = ElementSignature(role: info.role, label: info.label, identifier: info.identifier)
-            let index = handles.register(element, previous: previous, signature: signature)
+            let index = handles.register(element, previous: previous, signature: signature, frame: info.frame)
             lines.append(String(repeating: "  ", count: indent) + line(for: info, index: index))
             elements.append(ElementText(index: index, depth: indent, texts: [info.title, info.value, info.description, info.identifier].compactMap { $0 }))
             childIndent += 1

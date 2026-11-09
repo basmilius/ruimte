@@ -57,6 +57,22 @@ extension Agent {
         return capture.screenPoint(pixelX: pixelX, pixelY: pixelY)
     }
 
+    /// What a single click at a screen point presses behind the person's work: the smallest element of the last state
+    /// around the point that takes the action. The state, not a hit test, since an app behind others answers one with
+    /// its menu bar, and a window of another app over the point does not count.
+    func pressTarget(at point: CGPoint, in snapshot: Snapshot, action: String) throws -> (element: AXUIElement, index: Int) {
+        let around = snapshot.handles.frames
+            .filter { $0.value.contains(point) && $0.value.width >= 1 && $0.value.height >= 1 }
+            .sorted { $0.value.width * $0.value.height < $1.value.width * $1.value.height }
+        for (index, _) in around {
+            guard let element = snapshot.handles.byIndex[index], AX.actions(element).contains(action) else {
+                continue
+            }
+            return (element, index)
+        }
+        throw AgentError.needsFront("No element of the last state at that pixel takes \(action), so the click needs the real pointer, and so the app in front")
+    }
+
     /// What the menu's step line names: the element's label, or the app.
     func targetName(_ element: AXUIElement?, _ app: NSRunningApplication) -> String {
         (AX.summary(element)["label"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? Targets.name(app)
@@ -136,10 +152,26 @@ extension Agent {
                 return ["method": "mouse", "button": buttonName, "element": index, "count": count, "target": target]
             }
         }
-        if behind {
-            throw AgentError.needsFront("A click by pixel needs the real pointer, and so the app in front")
-        }
         let point = try screenPoint(snapshot, request)
+        if behind {
+            let axAction = right ? kAXShowMenuAction : kAXPressAction
+            guard count == 1 else {
+                throw AgentError.needsFront("A double click needs the real pointer, and so the app in front")
+            }
+            guard snapshot.frame.contains(point) else {
+                throw AgentError("the pixel is outside the window of the last state; run `cu state` again")
+            }
+            let (element, index) = try pressTarget(at: point, in: snapshot, action: axAction)
+            return try await act(app, request, at: point, as: ActionLook(state: .click, target: targetName(element, app))) {
+                let target = AX.summary(element)
+                self.overlay.press(target: nil)
+                let result = AXUIElementPerformAction(element, axAction as CFString)
+                guard result == .success || result == .cannotComplete else {
+                    throw AgentError.needsFront("\(Targets.name(app)) refused \(axAction) at that pixel (AXError \(result.rawValue)), so it needs a click with the real pointer, and so the app in front")
+                }
+                return ["method": axAction, "button": buttonName, "element": index, "target": target]
+            }
+        }
         return try await act(app, request, at: point, as: ActionLook(state: .click, target: Targets.name(app))) {
             let hit = try await self.prepareMouse(app, at: point, window: snapshot.window, expecting: nil, index: nil)
             let target = AX.summary(hit)
