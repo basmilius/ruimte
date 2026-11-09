@@ -276,7 +276,6 @@ export const CHAT_HOST: ChatHostLayer = {
         return endpointId === currentEndpointId() ? accounts : null;
     },
     // A chat on screen belongs to the project the window shows, and the Chats project shows none of its folders.
-    useHidesFolder: () => useProject((s) => isScratchProject(s.current)),
     // A chat of the Chats project is a conversation of its own, so it opens the way one does.
     useWelcome: () => useProject((s) => isScratchProject(s.current)),
     commandLooks: RUIMTE_COMMAND_LOOKS,
