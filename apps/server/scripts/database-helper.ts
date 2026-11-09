@@ -12,7 +12,6 @@ function escapeForPattern(text: string): string {
     return text.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
 }
 
-/* The version and integrity `bun.lock` pins for a package, or null when it pins none. */
 export function pinnedIn(lock: string, name: string): PinnedPackage | null {
     const escaped = escapeForPattern(name);
     const match = new RegExp(`"${escaped}": \\["${escaped}@([^"]+)", "[^"]*", \\{[^}]*\\}, "(sha512-[^"]+)"\\]`).exec(lock);

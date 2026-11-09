@@ -156,7 +156,6 @@ export class EndpointIdentity extends SettingReaders {
         return this.ports().describe();
     }
 
-    /* The settings only the owner of the machine is told. */
     ownerSettings(): Partial<EndpointInfo> {
         return settingFields(this.values, 'owner');
     }

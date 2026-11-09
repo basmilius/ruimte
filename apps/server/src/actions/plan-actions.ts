@@ -29,7 +29,6 @@ function plansOrNote(plans: readonly Plan[]): string[] {
     return orNote(plans.map(planRow), 'This chat has no plan; plan_new makes one');
 }
 
-/* A refusal of the store, with what the agent can do next beside it. */
 async function refused(host: CanvasHost, chatId: string, refusal: PlanRefusal): Promise<ToolRefusal> {
     switch (refusal.code) {
         case 'plan-not-found':

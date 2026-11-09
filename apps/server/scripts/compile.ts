@@ -223,7 +223,6 @@ async function sourceMap(): Promise<number> {
     }
 }
 
-/* Runs one build step and settles with its exit code. */
 async function run(command: string[], cwd: string, stdout: 'inherit' | 'ignore' = 'inherit'): Promise<number> {
     const child = Bun.spawn(command, { cwd, stdio: ['ignore', stdout, 'inherit'] });
     return await child.exited;

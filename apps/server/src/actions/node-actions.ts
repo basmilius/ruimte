@@ -113,7 +113,6 @@ function writableLines(canvas: ProjectCanvasView, call: AgentCall, chatView: boo
     });
 }
 
-/* The text as a line of its own under what is there, and nothing but the text on a note still empty. */
 function withLine(body: string, text: string): string {
     if (body === '') {
         return text;

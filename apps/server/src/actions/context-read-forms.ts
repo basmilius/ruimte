@@ -105,7 +105,6 @@ export async function readReference(context: ServerActionContext, caller: string
     return form === 'image' ? image(context, caller, canvas.name, canvasSvg(canvas)) : { text: renderCanvas(canvas) };
 }
 
-/* A drawing or a diagram the caller may read, as its elements or as a picture. */
 export async function readInForm(context: ServerActionContext, caller: string, source: ContextSource, form: ReadForm): Promise<ContextReading> {
     const { host, place } = context;
     if (source.kind === 'drawing') {

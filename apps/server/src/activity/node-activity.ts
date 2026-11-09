@@ -40,7 +40,6 @@ function isActivity(status: AgentStatus, previous: AgentStatus | undefined): boo
  */
 export class NodeActivityStore {
     private readonly entries = new Map<string, NodeActivity>();
-    /* The last status seen per node since the daemon started. */
     private readonly statuses = new Map<string, AgentStatus>();
     private readonly sinks = new ClientSinks();
     private readonly file: JsonFileStore<{ activity: NodeActivity[] }>;

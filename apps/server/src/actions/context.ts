@@ -105,7 +105,6 @@ export function hostService<Key extends keyof CanvasHost>(context: ServerActionC
     return service;
 }
 
-/* The kind of node the caller is, or null when it is no node of this project. */
 async function callerNodeKind({ host, place, origin }: ServerActionContext, caller: string): Promise<string | null> {
     return callerKind(await host.projects.read((origin ?? place).projectId), caller) ?? host.hiddenAgents?.get(caller)?.node.kind ?? null;
 }

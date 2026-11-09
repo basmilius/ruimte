@@ -54,7 +54,6 @@ interface OutputGateOptions {
     share?: OutputShare;
 }
 
-/* Only output is gated. */
 function outputOf(frame: ServerFrame): SessionOutputEvent | null {
     return 'event' in frame && frame.event === 'session.output' ? (frame.payload as SessionOutputEvent) : null;
 }

@@ -196,12 +196,12 @@ function withoutStarted(content: ProjectContent, id: string): ProjectContent {
     return { ...content, views };
 }
 
-/* Whether the project still holds `written` with every field the start set, so a person's change since is never what goes. */
 /* A key set to undefined is not stored, so both sides drop it before they are compared. */
 function asStored(value: unknown): unknown {
     return JSON.parse(JSON.stringify(value));
 }
 
+/* Whether the project still holds `written` with every field the start set, so a person's change since is never what goes. */
 function stillWritten(content: ProjectContent, written: ProjectNode | ProjectChatView): boolean {
     const found = content.views.flatMap((view): readonly object[] =>
         view.id === written.id ? [view] : isCanvasView(view) ? view.nodes.filter((node) => node.id === written.id) : []

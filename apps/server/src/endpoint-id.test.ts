@@ -197,7 +197,6 @@ describe('readOrCreateEndpointIdentity', () => {
         expect(identity.lanDoor).toBe(true);
         await identity.setIdentity(null, null, { lanDoor: false });
         expect(applied).toEqual([false]);
-        // A rename is not the switch, so the door is left alone.
         await identity.setIdentity('Studio', null);
         expect(applied).toEqual([false]);
         expect((await readOrCreateEndpointIdentity(home)).lanDoor).toBe(false);
@@ -352,7 +351,6 @@ describe('readOrCreateEndpointIdentity', () => {
         expect(events.at(-1)).toMatchObject({ payload: { broker: { mode: 'off' }, brokerUrl: null, brokerFixed: false } });
         expect((await readOrCreateEndpointIdentity(home, 'the-hostname')).broker).toEqual({ mode: 'off' });
 
-        // A rename does not touch the relay.
         await identity.setIdentity('Studio', null);
         expect(applied).toEqual(['off']);
 

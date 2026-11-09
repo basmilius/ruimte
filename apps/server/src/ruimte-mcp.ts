@@ -30,7 +30,6 @@ export function mcpUrlOf(contextUrl: string): string {
     return new URL(MCP_PATH, contextUrl).href;
 }
 
-/* Ruimte's server as a CLI takes it on its line, with the token in the variable named. */
 export function ruimteCliMcp(contextUrl: string, tokenVariable: string): CliMcpServer {
     return { name: MCP_SERVER, url: mcpUrlOf(contextUrl), tokenVariable };
 }

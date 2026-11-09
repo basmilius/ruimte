@@ -251,7 +251,6 @@ export class ArtifactStore {
         }
     }
 
-    /* Copies a file from elsewhere on the machine into staging as the next file. */
     async stageCopy(stagingId: string, index: number, from: string): Promise<void> {
         try {
             await this.fs.copyIn(from, this.stagedFile(stagingId, index));

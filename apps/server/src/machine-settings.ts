@@ -43,7 +43,6 @@ export interface SettingPorts {
     lanDoorChanged(): void;
 }
 
-/* What a request is checked against. */
 export interface SettingContext {
     /* The client presented the local secret. */
     owner: boolean;
@@ -181,7 +180,6 @@ export function settingFields(values: MachineSettingValues, audience: 'everyone'
     return Object.fromEntries(keys.map((key) => [key, values[key]])) as Partial<EndpointInfo>;
 }
 
-/* Refuses what the client may not set or what does not hold, and returns what to keep. */
 export async function prepareSettings(request: EndpointSettings, context: SettingContext): Promise<SettingPatch> {
     const asked = SETTABLE_SETTING_KEYS.filter((key) => request[key as keyof EndpointSettings] !== undefined);
     for (const key of asked) {

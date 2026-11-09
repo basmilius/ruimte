@@ -48,7 +48,6 @@ function optionLabel(option: unknown): string | null {
     return typeof option === 'object' && option !== null ? asString((option as Record<string, unknown>).label) : null;
 }
 
-/* The questions of an asking tool as text: each question with its options under it as bullets. */
 function questionsText(questions: unknown): string {
     if (!Array.isArray(questions)) {
         return '';

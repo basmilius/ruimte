@@ -11,7 +11,6 @@ import { VISUAL_LIMITS } from '@ruimte/contracts';
 
 const MIB = 1024 * 1024;
 
-/* The most one image may take on disk. */
 export const VISUAL_IMAGE_BYTES = 10 * MIB;
 
 const IMAGE_EXTENSIONS: ReadonlySet<string> = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'svg', 'bmp', 'ico']);

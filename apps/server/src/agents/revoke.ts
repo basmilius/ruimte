@@ -29,7 +29,6 @@ export interface LedgerEntry {
 
 interface HooksRemoval {
     config: Record<string, unknown>;
-    // Ruimte hooks taken out.
     removed: number;
     // Hooks that carry Ruimte's marker but are not what Ruimte writes: a person changed them, so they stay.
     keptEdited: number;

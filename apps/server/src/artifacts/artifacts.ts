@@ -56,7 +56,6 @@ interface ArtifactReading {
 /* What the service needs to know of a project: its name and its folder; null for a project this machine does not know. */
 interface ArtifactProjects {
     known(): Promise<Array<{ projectId: string; name: string; folder: string }>>;
-    /* The project a node, view or chat is in. */
     projectOf(id: string): string | null;
 }
 

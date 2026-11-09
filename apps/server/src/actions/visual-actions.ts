@@ -55,7 +55,6 @@ async function visualChat(context: ServerActionContext, caller: string): Promise
     return { visuals, chatId };
 }
 
-/* Passes on what the store refuses a page with, for the agent to change. */
 async function storeRefusalsAsTool<Result>(work: () => Promise<Result>): Promise<Result> {
     try {
         return await work();

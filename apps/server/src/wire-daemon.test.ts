@@ -50,7 +50,6 @@ describe('wireDaemon', () => {
                 'work'
             ]);
 
-            // A terminal runs on the pty of the seams.
             await wired.bundles.agents.sessions.create({ sessionId: 'term-1', cols: 80, rows: 24, cwd: home });
             expect(seams.fakes.adapter.spawned).toHaveLength(1);
 

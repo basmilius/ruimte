@@ -2,7 +2,6 @@ import { Database } from 'bun:sqlite';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-/* An in-memory database with every migration applied, the schema the Worker's D1 has. */
 export function migratedDatabase(): Database {
     const database = new Database(':memory:');
     database.exec('PRAGMA foreign_keys = ON');
