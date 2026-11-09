@@ -26,7 +26,7 @@ export const GITHUB_BEHAVIORS = defineBehaviors({
                 pullRequestDialog.set({ cwd: folder });
             }
         },
-        offered: (moment) => moment.folder !== null && prReposOfCurrent().length <= 1
+        offered: (moment) => moment.folder !== null && moment.prRepos.length <= 1
     },
     'pr-watch-stop': {
         run: () => {
@@ -48,7 +48,7 @@ export const GITHUB_BEHAVIORS = defineBehaviors({
 });
 
 export function githubPaletteRows(moment: CommandMoment): Command[] {
-    const repos = prReposOfCurrent();
+    const repos = moment.prRepos;
     if (moment.folder === null || repos.length <= 1) {
         return [];
     }

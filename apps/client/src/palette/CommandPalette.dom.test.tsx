@@ -545,3 +545,47 @@ describe('the order of the actions', () => {
         expect(startingWith(['Zoom to fit', 'Zoom to selection', 'Zoom to 100%'])).toEqual(['Zoom to fit', 'Zoom to selection', 'Zoom to 100%']);
     });
 });
+
+describe('the command palette in a folder with several repositories', () => {
+    test('offers a pull request row per repository once the read that opening it started comes back', async () => {
+        const machine = new FakeMachine();
+        const pending: (() => void)[] = [];
+        const repos = {
+            repos: [
+                { path: '/work/atlas/api', label: 'api', kind: 'nested' as const },
+                { path: '/work/atlas/web', label: 'web', kind: 'nested' as const }
+            ],
+            truncated: false
+        };
+        machine.answer('git.repos', () => new Promise((resolve) => pending.push(() => resolve(repos))));
+        machine.answer('git.status', () => ({
+            repo: true,
+            root: null,
+            branch: 'main',
+            detached: false,
+            upstream: null,
+            ahead: 0,
+            behind: 0,
+            base: null,
+            mergeBase: null,
+            files: [],
+            truncated: false,
+            live: true
+        }));
+        workspace = await openFakeWorkspace(
+            machine,
+            { views: [{ kind: 'canvas', id: 'main', name: 'Main', nodes: [], texts: [], edges: [], layouts: [] }] },
+            { activeViewId: 'main', views: {} }
+        );
+        await openPalette(
+            () => useUi.getState().setPaletteOpen(true),
+            () => rows().length > 0
+        );
+        await type('pull request');
+        await until(() => labels().includes('Show pull request'));
+        await act(async () => pending.splice(0).forEach((answer) => answer()));
+        await until(() => labels().includes('Show pull request · api'));
+
+        expect(labels().filter((label) => label.startsWith('Show pull request'))).toEqual(['Show pull request · api', 'Show pull request · web']);
+    });
+});

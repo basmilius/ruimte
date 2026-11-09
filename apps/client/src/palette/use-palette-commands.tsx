@@ -44,8 +44,8 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
     const nodesByView = useViewNodes((all, nodesOf) => new Map(all.map((view) => [view.id, nodesOf(view)])), shallow);
     const views = useDocument((s) => s.views);
     const activeViewId = useDocument((s) => s.activeViewId);
-    // The command rows read it with appCommands(); the list only needs to redraw when it moves.
-    useCurrentPrRepos();
+    // Handed to the rows, so the compiled catalog is built again when the read the palette started comes back.
+    const prRepos = useCurrentPrRepos();
     // The same for what extensions add, so a command that came or went while the palette is open shows at once.
     const extensionCommands = useContributions((s) => s.commands);
     const extensionActions = useContributions((s) => s.slotEntries);
@@ -122,7 +122,7 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
                     inNewWindow: () => openInNewWindow(endpointId, summary.projectId)
                 };
             });
-        const commands = appCommands({ commands: extensionCommands, slotEntries: extensionActions });
+        const commands = appCommands({ commands: extensionCommands, slotEntries: extensionActions }, { prRepos });
         return { jumps, viewSwitches, switches, commands };
     })();
 

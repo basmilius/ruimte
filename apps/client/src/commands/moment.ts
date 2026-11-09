@@ -1,17 +1,33 @@
 import { isCanvasView, isDiagramView, isDrawingView, type ProjectView } from '@ruimte/contracts';
+import { prReposOfCurrent, type PrRepo } from '@/github/pr-repos';
 import { focusedCanvas, type CanvasNode, type CanvasState } from '@/state/canvas';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument, type DocumentState } from '@/state/document';
 import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
 import { windowWorkspace } from '@/workspace/window';
 
+/* Facts a component already read in render, handed in so its memo of the rows moves when they do. */
+export interface MomentFacts {
+    readonly prRepos?: readonly PrRepo[];
+}
+
 /*
  * What the window stands on right now, read the first time a command asks and then kept for the one
  * palette build or key press. The facts a command needs of its own feature it reads from its own stores.
  */
 export class CommandMoment {
+    private readonly facts: MomentFacts;
     private canvasState: CanvasState | null = null;
     private documentState: DocumentState | null = null;
+
+    constructor(facts: MomentFacts = {}) {
+        this.facts = facts;
+    }
+
+    /* The repositories of the project folder with a branch out, which a pull request row needs. */
+    get prRepos(): readonly PrRepo[] {
+        return this.facts.prRepos ?? prReposOfCurrent();
+    }
 
     /* The start screen is outside every project, so only the commands about the window are offered there. */
     get inWorkspace(): boolean {
