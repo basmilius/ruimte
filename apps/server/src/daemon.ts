@@ -2,7 +2,7 @@ import { greetingLines } from './cli/greeting.ts';
 import type { ServerConfig } from './config.ts';
 import { guardWeriftTurn } from './pulsar/turn-guard.ts';
 import { armShutdownDeadline } from './shutdown-deadline.ts';
-import { noteMoment, noteShutdown, reportFatal, rememberSecret, watchProjects, type Launcher } from './telemetry/reporter.ts';
+import { noteMoment, noteShutdown, reportFatal, type Launcher } from './telemetry/reporter.ts';
 import { COMPILED as compiled, VERSION } from './version.ts';
 import { wireDaemon } from './wire-daemon.ts';
 import { listenFirst } from './wiring/http.ts';
@@ -20,9 +20,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     guardWeriftTurn(process, console, (code, error) => void reportFatal(error).finally(() => process.exit(code)));
 
     const wired = await wireDaemon({ runtime, launcher, seams: productionSeams(runtime), shutdown: (reason) => shutdown(reason) });
-    const { machine, projects, agents, network } = wired.bundles;
-    rememberSecret(machine.access.localSecret);
-    watchProjects(projects.store);
+    const { agents, network } = wired.bundles;
 
     let shuttingDown = false;
     async function shutdown(reason: string): Promise<void> {

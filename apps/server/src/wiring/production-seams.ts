@@ -13,6 +13,7 @@ import { ProjectStore } from '../projects/project-store.ts';
 import { repositoryOf } from '../provenance/file-versions.ts';
 import { RUIMTE_ACCOUNTS_HOST } from '../providers/accounts-host.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
+import { rememberSecret, watchProjects } from '../telemetry/reporter.ts';
 import { childLauncher, renderCommand } from '../visuals/renderer.ts';
 import { openAiLive } from '../voice/openai-live.ts';
 import type { DaemonRuntime } from './runtime.ts';
@@ -53,6 +54,7 @@ export function productionSeams(runtime: DaemonRuntime): DaemonSeams {
             alerted: () => undefined,
             log: (line) => console.error(line),
             limits: () => undefined
-        }
+        },
+        redactions: { secret: rememberSecret, projects: watchProjects }
     };
 }

@@ -194,6 +194,7 @@ export function testSeams(choices: TestSeamChoices, overrides: Partial<DaemonSea
             log: () => undefined,
             limits: () => undefined
         },
+        redactions: { secret: () => undefined, projects: () => undefined },
         ...overrides
     };
 

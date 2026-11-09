@@ -31,7 +31,7 @@ export interface TelemetrySettings {
     readonly ruimteHome: string;
 }
 
-interface ProjectSource {
+export interface ProjectSource {
     known(): Promise<ReadonlyArray<{ name: string; folder: string }>>;
 }
 

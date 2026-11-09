@@ -83,6 +83,41 @@ describe('wireDaemon', () => {
         }
     });
 
+    test('tells a fatal report what to leave out as soon as it is known, before the wiring that could crash after it', async () => {
+        const home = join(await homeOf(), 'home');
+        const told: string[] = [];
+        const base = testSeams({ home, clock: new ManualClock() });
+        const seams = testSeams(
+            { home, clock: new ManualClock() },
+            {
+                accounts: (input) => {
+                    told.push('providers');
+
+                    return base.accounts(input);
+                },
+                git: {
+                    ...base.git,
+                    worktrees: (input) => {
+                        told.push('git');
+
+                        return base.git.worktrees(input);
+                    }
+                },
+                redactions: {
+                    secret: (secret) => void told.push(`secret ${secret.length > 0}`),
+                    projects: (source) => void told.push(`projects ${typeof source.known}`)
+                }
+            }
+        );
+        const wired = await wireDaemon({ runtime: testRuntime(home), launcher: 'standalone', seams, shutdown: async () => undefined });
+
+        try {
+            expect(told.slice(0, 4)).toEqual(['secret true', 'providers', 'projects function', 'git']);
+        } finally {
+            await wired.stop();
+        }
+    });
+
     test('writes the chats before the first await of a stop', async () => {
         const home = join(await homeOf(), 'home');
         const wired = await wireDaemon({

@@ -91,6 +91,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     const machineModel = seams.machine.model();
     const machine = provide('machine', await wireMachine(config, later));
     const { identity } = machine;
+    seams.redactions.secret(machine.access.localSecret);
     const stores = provide('stores', await loadAgentStores(home, seams.clock));
     const computer = provide('computer', createComputer(runtime, stores.computerStore, stores.lifecycle, later));
     const stats = provide('stats', await wireUsageStats(home, identity, machine.auth, launcher));
@@ -98,6 +99,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     const agents = provide('agents', await wireAgents({ runtime, identity, stores, providers, computer, machineHome: machine.machineHome, seams, later }));
     const projects = provide('projects', await wireProjects({ home, machineId: identity.id, machineHome: machine.machineHome, stores, agents, seams, later }));
     const templates = provide('templates', wireTemplates(home, projects));
+    seams.redactions.projects(projects.store);
     const artifacts = provide(
         'artifacts',
         await wireArtifacts({ home, machineId: identity.id, machineHome: machine.machineHome, stores, agents, projects, later })

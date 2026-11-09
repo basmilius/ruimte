@@ -15,6 +15,7 @@ import type { RemoteConnections } from '../peer/giver/remote-connections.ts';
 import type { ProjectOverlays } from '../projects/overlays.ts';
 import type { ProjectLinks, ProjectStore } from '../projects/project-store.ts';
 import type { PtyAdapter } from '../pty/pty.ts';
+import type { ProjectSource } from '../telemetry/reporter.ts';
 import type { RenderLauncher } from '../visuals/renderer.ts';
 import type { OpenAiLive } from '../voice/openai-live.ts';
 
@@ -114,4 +115,9 @@ export interface DaemonSeams {
     };
     peerNotify(real: (machineId: string, nodeId: string) => void): (machineId: string, nodeId: string) => void;
     observers: WiringObservers;
+    /* What a fatal report leaves out, told as soon as each is known, so a crash later in the wiring is redacted too. */
+    redactions: {
+        secret(secret: string): void;
+        projects(source: ProjectSource): void;
+    };
 }
