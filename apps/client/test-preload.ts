@@ -18,7 +18,6 @@ import { useEndpoints } from './src/state/endpoints';
 import { FALLBACK_LANGUAGE } from './src/state/languages';
 import { useToasts } from './src/state/toasts';
 import { installClientHooks } from './src/wiring/client-hooks';
-import './testing/client-actions';
 import { installWorkspaceRegistries } from './src/wiring/workspace-registries';
 
 /*

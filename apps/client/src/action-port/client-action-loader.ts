@@ -8,9 +8,25 @@ let loaded: ActionRegistry<void> | null = null;
 let importer: ImportRegistry | null = null;
 const failures = new Set<() => void>();
 
-/* Handed over by `wiring/client-hooks.ts`: the start screen runs no action, so the registry loads with the first one. */
+/* Handed over by `wiring/client-hooks.ts`: the start screen runs no action, so the registry loads with the workspace or the first action. */
 export function provideClientActionLoader(importRegistry: ImportRegistry): void {
     importer = importRegistry;
+}
+
+/*
+ * Loads the registry beside the workspace's chunk (`App.tsx`), so the first action of a window that starts in
+ * a project runs in the turn it is asked. A failed load fails the chunk, as it would when the registry was in it.
+ */
+export async function loadClientActionsWithWorkspace(): Promise<void> {
+    if (loaded !== null) {
+        return;
+    }
+
+    if (importer === null) {
+        throw new Error('No action registry is installed: run installClientHooks (wiring/client-hooks.ts) before the workspace loads.');
+    }
+
+    registerClientActionRegistry(await importer());
 }
 
 /* A registry built up front, as the tests do, never goes through a load. */

@@ -10,7 +10,6 @@ import { configureClient } from '@/wiring/client-config';
 import { installClientHooks } from '@/wiring/client-hooks';
 import { installWorkspace } from '@/wiring/workspace';
 import { ChatScopeProvider } from '@/workspace/ChatScopeProvider';
-import './client-actions';
 import { closedAfterTest, currentTest, waitTurn } from './test-scope';
 
 // Once for the process, before any chat store is read: the wiring `main.tsx` runs.

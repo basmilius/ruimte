@@ -1,6 +1,7 @@
 import { ErrorBoundary, ShortcutHints, UIProvider, lazyNamed, prefetcher, LazyBoundary } from '@adecore/ui';
 import i18next from 'i18next';
 import { useEffect, type ReactNode } from 'react';
+import { loadClientActionsWithWorkspace } from '@/action-port/client-action-loader';
 import { startMachineUpdate } from '@/controllers/machine-update';
 import { desktop, machineMode } from '@/desktop/bridge';
 import { HostDialogs, HostOverlays } from '@/extensions/host/host-dialogs';
@@ -25,7 +26,7 @@ import { ChatScopeProvider } from '@/workspace/ChatScopeProvider';
 import { useWindow } from '@/workspace/window';
 
 const WorkspaceShell = lazyNamed(async () => {
-    const { installWorkspace } = await import('@/wiring/workspace');
+    const [{ installWorkspace }] = await Promise.all([import('@/wiring/workspace'), loadClientActionsWithWorkspace()]);
     installWorkspace();
 
     return import('@/shell/WorkspaceShell');
