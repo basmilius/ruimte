@@ -12,7 +12,8 @@ import { FAKE_API_TOKEN, FakeCloudflare, FakeCloudflared, MemoryTokenStore, type
  * step. After every step the invariants of `CLAUDE.md` are checked against what the fake Cloudflare holds and what Ruimte
  * last read of it, and every run ends at rest: a Try again without faults, after which Cloudflare serves exactly what the
  * person meant. What Cloudflare serves is judged by a matcher of this file's own. The ports Ruimte listens on change
- * between steps, as when it starts listening on a dev server's port. A failure names its seed;
+ * between steps, as when it starts listening on a dev server's port, another app may hold the listener's port, and the
+ * dashboard may delete the record of a row that is on. A failure names its seed;
  * `RUIMTE_SEED=<seed>` runs that one alone, and `RUIMTE_SEQUENCES=<count>` searches more.
  */
 const SEQUENCES = Number(process.env.RUIMTE_SEQUENCES ?? 320);
@@ -114,6 +115,10 @@ interface Ground {
     vanishIn: number | null;
     /* The ports Ruimte listens on now, which a step may change, as when Ruimte starts listening on a dev server's port. */
     denied: number[];
+    /* Something else holds the listener's port this step, so starting the listener fails as Bun does on a port in use. */
+    portTaken: boolean;
+    /* Hostnames whose record was deleted in the dashboard while their row was on, until Ruimte looked the name up. */
+    deletedOutside: Set<string>;
     /* The step drew a fault other than a failed DNS read or one that may pass (a 5xx, a 429, a lost answer). */
     harsh: boolean;
     log: string[];
@@ -214,6 +219,11 @@ function watchedFetch(current: Ground): CloudflareFetch {
         }
 
         const response = await current.cloudflare.fetch(url, init);
+        const looked = new URL(url).searchParams.get('name');
+
+        if (method === 'GET' && path.endsWith('/dns_records') && looked !== null && response.ok) {
+            current.deletedOutside.delete(looked);
+        }
 
         if (config !== null && response.ok) {
             const ingress =
@@ -246,6 +256,10 @@ function boot(world: Ground): Pick<World, 'service' | 'runner'> {
         machineId: () => 'machine-1',
         deniedPorts: () => world.denied,
         setListener: async (enabled) => {
+            if (enabled && world.portTaken) {
+                throw new Error(`Failed to start server. Is port ${LISTENER_PORT} in use?`);
+            }
+
             world.listener.on = enabled;
 
             return enabled ? LISTENER_PORT : null;
@@ -415,6 +429,12 @@ function injectFaults(world: World): void {
         world.log.push(`  tunnel deleted after ${world.vanishIn} calls`);
         world.harsh = true;
     }
+
+    world.portTaken = next() < 0.15;
+
+    if (world.portTaken) {
+        world.log.push('  listener port taken');
+    }
 }
 
 interface Intent {
@@ -501,7 +521,10 @@ function ownRule(tunnel: FakeTunnel, hostname: string): Rule | undefined {
     return tunnel.ingress.find((rule) => rule.hostname === hostname && rule.path === undefined);
 }
 
-/* Rows meant on, with a record, that Ruimte's own rule serves now: what a step whose faults may pass must leave serving. */
+/*
+ * Rows meant on, with a record Ruimte knows by its id, that Ruimte's own rule serves now: what a step whose faults may
+ * pass must leave serving. A record made by a create whose answer got lost is one Ruimte holds the row off for by design.
+ */
 function healthyRows(world: World): Set<string> {
     const tunnel = tunnelOf(world);
 
@@ -509,11 +532,12 @@ function healthyRows(world: World): Set<string> {
         return new Set();
     }
 
+    const known = (row: StoredRow): boolean =>
+        world.cloudflare.records.some((record) => record.id === row.recordId && record.name === row.hostname && record.comment === MARKER);
+
     return new Set(
         rowsOf(world)
-            .filter(
-                (row) => meantOn(row) && (row.kind === 'dev' || world.listener.on) && hasOurRecord(world, row.hostname) && serves(ownRule(tunnel, row.hostname))
-            )
+            .filter((row) => meantOn(row) && (row.kind === 'dev' || world.listener.on) && known(row) && serves(ownRule(tunnel, row.hostname)))
             .map((row) => row.id)
     );
 }
@@ -556,21 +580,17 @@ async function checkState(world: World): Promise<void> {
         for (const row of state.rows) {
             const paths = servedPaths(known, row.hostname);
             const stored = rowsOf(world).find((candidate) => candidate.id === row.id);
-            const serviceable = row.kind === 'dev' || world.listener.on;
+            // The MCP the person has on counts also while its listener did not start, which the row has to say.
+            const meant = row.kind === 'dev' || world.disk.value?.mcp.enabled === true;
+            // A record deleted in the dashboard is unknown to Ruimte until it looks the name up again.
+            const unrecorded = !hasOurRecord(world, row.hostname) && !world.deletedOutside.has(row.hostname);
 
             if (!row.enabled && hasOurRecord(world, row.hostname) && paths.length > 0) {
                 world.problems.push(`shows ${row.hostname} off while the ingress Ruimte last read serves it at ${paths.join(' ')}`);
             }
 
             // A row the person sees on that serves nothing says why, after the job that found it ended.
-            if (
-                row.enabled &&
-                stored !== undefined &&
-                meantOn(stored) &&
-                serviceable &&
-                (paths.length === 0 || !hasOurRecord(world, row.hostname)) &&
-                row.reason === undefined
-            ) {
+            if (row.enabled && stored !== undefined && meantOn(stored) && meant && (paths.length === 0 || unrecorded) && row.reason === undefined) {
                 world.problems.push(`shows ${row.hostname} on without a reason while Cloudflare does not serve it`);
             }
         }
@@ -644,6 +664,10 @@ function checkConverged(world: World, state: TunnelState): void {
         world.problems.push('has not finished unlinking');
     }
 
+    if (stored?.mcp.enabled === true && !world.listener.on) {
+        world.problems.push('has the MCP on without its listener once its port is free');
+    }
+
     for (const row of rows) {
         if (row.leaving === true) {
             world.problems.push(`still has ${row.hostname} leaving`);
@@ -710,6 +734,7 @@ function checkConverged(world: World, state: TunnelState): void {
 async function rest(world: World): Promise<void> {
     world.cloudflare.heal();
     world.vanishIn = null;
+    world.portTaken = false;
 
     const token = world.tokens.read();
 
@@ -745,7 +770,7 @@ async function step(world: World): Promise<void> {
     const row = rows.length === 0 ? undefined : pick(next, rows);
     const kept = world.tokens.read();
     // A person whose token is gone or refused soon pastes one, or most runs would end without a tunnel to judge.
-    const draw = (kept === null || kept !== world.cloudflare.acceptedToken) && next() < 0.3 ? 19 : next() * 23;
+    const draw = (kept === null || kept !== world.cloudflare.acceptedToken) && next() < 0.3 ? 19 : next() * 24;
     const healthy = healthyRows(world);
     // A port of Ruimte's refuses only the row that names it.
     const refusedForPort = (failed: unknown, port: number | null): void => {
@@ -831,9 +856,15 @@ async function step(world: World): Promise<void> {
         targets = new Set([row.id]);
 
         const failed = await attempt(world, () => service.remove(row.id));
+        const left = rowsOf(world).find((candidate) => candidate.id === row.id);
 
-        if (failed === null && !rowsOf(world).some((candidate) => candidate.id === row.id)) {
+        // A Remove that resolved took the row off whole; one that failed halfway says so on the row.
+        if (failed === null && left !== undefined) {
+            world.problems.push(`a Remove of ${row.hostname} resolved while its row stays`);
+        } else if (failed === null) {
             checkGone(world, tunnelId, [row.hostname]);
+        } else if (left?.leaving === true && (await service.state()).rows.find((candidate) => candidate.id === row.id)?.reason === undefined) {
+            world.problems.push(`a Remove of ${row.hostname} failed and left its row without a reason`);
         }
     } else if (draw < 13 && world.disk.value?.tunnel != null) {
         const tunnelId = world.disk.value.tunnel.id;
@@ -873,6 +904,8 @@ async function step(world: World): Promise<void> {
         }
 
         world.known.clear();
+        // The listener ends with the daemon, and the next one starts it again.
+        world.listener.on = false;
         Object.assign(world, boot(world));
         await attempt(world, () => world.service.resume());
     } else if (draw < 18.8) {
@@ -902,6 +935,19 @@ async function step(world: World): Promise<void> {
 
         world.denied = world.denied.includes(port) ? world.denied.filter((candidate) => candidate !== port) : [...world.denied, port];
         world.log.push(`deny list ${world.denied.join(' ')}`);
+    } else if (draw < 23) {
+        const on = rowsOf(world).filter((candidate) => meantOn(candidate) && hasOurRecord(world, candidate.hostname));
+        const chosen = on.length === 0 ? undefined : pick(next, on);
+
+        world.log.push(`dashboard deletes the record of ${chosen?.hostname ?? 'nothing'}`);
+        world.harsh = true;
+
+        if (chosen !== undefined) {
+            const records = world.cloudflare.records;
+
+            records.splice(0, records.length, ...records.filter((record) => !(record.name === chosen.hostname && record.comment === MARKER)));
+            world.deletedOutside.add(chosen.hostname);
+        }
     } else {
         const tunnel = tunnelOf(world);
 
@@ -949,6 +995,8 @@ async function sequence(seed: number): Promise<string[]> {
         abandoned: new Set(),
         vanishIn: null,
         denied: [...DENIED],
+        portTaken: false,
+        deletedOutside: new Set(),
         harsh: false,
         log: [],
         problems: []
