@@ -1,5 +1,6 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { Serializer } from '@adecore/utils/async';
 import { isNotFound } from '@adecore/utils/errors';
 import { writeAtomic } from '@adecore/utils/fs';
 
@@ -13,10 +14,13 @@ export const BUILD_HELD_MESSAGE = 'Build scripts and macros are off in this work
  */
 export class WorktreeBuildChoices {
     private readonly path: string;
+    private readonly write: (path: string, text: string) => Promise<void>;
+    private readonly writes = new Serializer();
     private repositories = new Set<string>();
 
-    constructor(options: { path: string }) {
+    constructor(options: { path: string; write?: (path: string, text: string) => Promise<void> }) {
         this.path = options.path;
+        this.write = options.write ?? writeChoices;
     }
 
     async load(): Promise<void> {
@@ -37,17 +41,24 @@ export class WorktreeBuildChoices {
         return this.repositories.has(main);
     }
 
+    /* Every repository shares the one file, so each change and its save wait for the one before, and no older set lands last. */
     async set(main: string, on: boolean): Promise<void> {
-        const next = new Set(this.repositories);
+        await this.writes.run(async () => {
+            const next = new Set(this.repositories);
 
-        if (on) {
-            next.add(main);
-        } else {
-            next.delete(main);
-        }
+            if (on) {
+                next.add(main);
+            } else {
+                next.delete(main);
+            }
 
-        this.repositories = next;
-        await mkdir(dirname(this.path), { recursive: true });
-        await writeAtomic(this.path, `${JSON.stringify({ on: [...next].sort() }, null, 2)}\n`);
+            this.repositories = next;
+            await this.write(this.path, `${JSON.stringify({ on: [...next].sort() }, null, 2)}\n`);
+        });
     }
+}
+
+async function writeChoices(path: string, text: string): Promise<void> {
+    await mkdir(dirname(path), { recursive: true });
+    await writeAtomic(path, text);
 }
