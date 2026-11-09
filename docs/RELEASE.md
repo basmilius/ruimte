@@ -10,7 +10,7 @@ Tag with `git tag -a v<version> -F <notes-file> --cleanup=verbatim`. Without tha
 
 The `gate` job reads the `ci.yml` run of the tagged commit on main and stops the release unless it passed, so tag only after CI is green. Only the native checks (`native.yml`: Rust, Swift, computer use) run again on the tag, all of them, since that CI run skipped those whose paths did not change. `publish` publishes the draft once they and every build pass: as a prerelease for a tag with a `-`, otherwise as Latest unless a newer version already is. It runs one release at a time (`concurrency: release-publish`), so two tags cannot set Latest out of order. It never tries the built daemon. The workflow's token reads only; `draft`, the platform builds and `publish` ask for `contents: write` themselves.
 
-The `client` job builds the page once, and every platform build takes it as an artifact. The mac build is the longest, so it starts beside `client`: it compiles the daemon and the main process first and waits for the artifact only before electron-builder, failing at once when `client` ends without one.
+The `client` job builds the page once, and every platform build takes it as an artifact. The platform builds start beside `client`: each compiles the daemon and the main process first and waits for the artifact only before electron-builder (`.github/actions/client-artifact`), failing at once when `client` ends without one.
 
 - The app shows the notes in About and the update toast. Empty notes read "No notes for this version." until filled in.
 - A draft's tag already appears in `releases.atom`.
