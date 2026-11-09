@@ -1,8 +1,19 @@
 import { describe, expect, test } from 'bun:test';
 import { applyEvent, type ChatState } from '@adecore/agents-react/state';
 import type { ChatInfo, ChatItem } from '@ruimte/contracts';
-import { FollowedTurn } from '@ruimte/voice';
-import { chatCompletion, followedState } from '@/voice/chat-follow-up';
+import { chatTurnProgress, FollowedTurn, type VoiceChatCompletion } from '@ruimte/voice';
+import { followedState } from '@/voice/chat-follow-up';
+
+/* How the controller reads a followed turn: what this window holds of the chat, through the shared progress of `@ruimte/voice`. */
+function chatCompletion(chat: ChatState | undefined, turnId: string): VoiceChatCompletion | null {
+    if (!chat) {
+        return null;
+    }
+
+    const progress = chatTurnProgress(followedState(chat, turnId), turnId);
+
+    return progress.kind === 'settled' ? progress.completion : null;
+}
 
 function state(items: ChatItem[]): ChatState {
     const byId = Object.fromEntries(items.map((item) => [item.id, item]));
