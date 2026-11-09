@@ -235,7 +235,11 @@ final class Agent {
         let appElement = AXUIElementCreateApplication(pid)
         var mode = await prepareChromium(app, appElement)
         guard let keyWindow = AX.keyWindow(of: appElement) else {
-            throw AgentError("\(Targets.name(app)) has no window that accessibility can see (no window open, or it is minimized)")
+            // macOS lets accessibility see only the windows on the Space the person looks at.
+            if Targets.hasWindowElsewhere(pid) {
+                throw AgentError("the window of \(Targets.name(app)) is on another Space or minimized, where accessibility cannot see it; ask the person to bring it to the Space they are on")
+            }
+            throw AgentError("\(Targets.name(app)) has no window open that accessibility can see")
         }
         // A sheet is its own AX element and its own window on screen; the tree and the picture start at its parent.
         let root = AX.container(of: keyWindow).window ?? keyWindow

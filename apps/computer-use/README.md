@@ -196,7 +196,7 @@ A render cannot draw glass.
 ## Known limitations
 
 - `cmd+z` on AZERTY or Dvorak presses the US-position key, since keys are ANSI key codes. `type` is unaffected.
-- Only the key window is read, with its sheet and open menus. A window on another Space cannot be read or captured; a minimized one gives its last frame.
+- Only the key window is read, with its sheet and open menus. A window on another Space cannot be read or captured, since accessibility sees only the Space the person looks at; the refusal says so, and the person brings it over. Reaching it anyway takes private SkyLight calls, which in a trial (2026-11-09) also brought the app forward, so the helper does not use them. A minimized window gives its last frame.
 - The screenshot composes the app's windows in stacking order, so another window of the same app can show behind the key window.
 - Autocorrect and smart substitutions in the target app still apply.
 - Some apps report an `AXPress` as done without acting. Click on coordinates then.
