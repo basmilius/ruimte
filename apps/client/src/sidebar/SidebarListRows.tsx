@@ -333,7 +333,7 @@ export function SeparatorRow({ row, tabbable, onDelete, onDrag }: Omit<ViewRowPr
 export function SubheaderRow({ row, tabbable, onDelete, onDrag }: Omit<ViewRowProps, 'onToggle'>) {
     const { t } = useTranslation(['shell', 'common']);
     const { view } = row;
-    const renaming = renamingView.useRequest((request) => request) === view.id;
+    const renaming = renamingView.useViewId() === view.id;
     const rename = (on: boolean): void => renamingView.set(on ? view.id : null);
     if (renaming) {
         return (

@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { isApplePlatform } from '@adecore/ui';
 import type { DrawingDocument, ProjectView } from '@ruimte/contracts';
 import { act } from 'react';
+import { renamingView } from '@/project/dialogs';
+import { liveDrawing } from '@/state/drawing';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
@@ -28,6 +30,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+    renamingView.set(null);
     await page.unmount();
     workspace.close();
 });
@@ -53,6 +56,14 @@ describe('a drawing view', () => {
         });
         await until(() => machine.requests('drawing.save').length > 0);
         expect(machine.requests('drawing.save')[0]).toEqual({ projectId: 'project-atlas', viewId: SKETCH.id, baseRev: 3, content: { elements: [] } });
+    });
+
+    test('a rename that hangs in the sidebar leaves the tool keys to the drawing', async () => {
+        await until(() => page.host.querySelector('canvas') !== null && liveDrawing(SKETCH.id) !== null);
+        await act(async () => renamingView.set('heading-1'));
+        await pressKey(document.body, 'r');
+
+        expect(liveDrawing(SKETCH.id)?.tool).toBe('rect');
     });
 
     test('a change the machine announces is drawn in place of what was there', async () => {

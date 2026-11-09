@@ -1,4 +1,5 @@
 import { lazyDialog } from '@adecore/ui';
+import { create } from 'zustand';
 import { useAgentCloseAsk, useAgentFolderAsk } from '@/project/agent-asks';
 import { createDialogState, createFlagState } from '@/registry/dialog-state';
 import type { DialogContribution } from '@/registry/dialogs';
@@ -55,5 +56,14 @@ type ViewDialog =
 
 export const viewDialog = createDialogState<ViewDialog>();
 
-/* The sidebar row the caret is in, which is how a new heading opens. */
-export const renamingView = createDialogState<string>();
+const renamingStore = create<{ viewId: string | null }>(() => ({ viewId: null }));
+
+/*
+ * The sidebar row the caret is in, which is how a new heading opens. No dialog: a rename in the sidebar leaves
+ * the drawing keys and every other key that waits on a dialog (`anyDialogOpen`) alone, as it always did.
+ */
+export const renamingView = {
+    useViewId: (): string | null => renamingStore((state) => state.viewId),
+    get: (): string | null => renamingStore.getState().viewId,
+    set: (viewId: string | null): void => renamingStore.setState({ viewId })
+};
