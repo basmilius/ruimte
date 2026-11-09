@@ -1062,6 +1062,7 @@
             "idle": "Not running",
             "use": "Use",
             "loadFailed": "Could not list your tunnels.",
+            "listing": "Listing your tunnels",
             "runner": {
                 "ruimte": "Runs on this computer",
                 "other": "Runs outside Ruimte",
@@ -1083,7 +1084,7 @@
             "others": "Already on this tunnel",
             "empty": "No hostnames yet",
             "mcp": "Ruimte MCP",
-            "on": "{{hostname}} on",
+            "busy": "Changing {{hostname}}",
             "more": "More for {{hostname}}",
             "copy": "Copy address",
             "open": "Open",

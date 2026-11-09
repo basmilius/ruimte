@@ -341,7 +341,8 @@ describe('the hostnames', () => {
         expect(cells()).toContain('Ruimte MCP');
         expect(cells()).toContain('localhost:3000');
         expect(everything()).toContain('Cloudflare can read all traffic through a tunnel.');
-        expect(document.querySelector('[role="switch"][aria-label="shop.example.com on"]')).not.toBeNull();
+        // Named by the hostname alone, so a switch that is off never says it is on.
+        expect(document.querySelector('[role="switch"][aria-label="shop.example.com"]')).not.toBeNull();
     });
 
     test('says when there are no hostnames yet', async () => {
@@ -367,7 +368,7 @@ describe('the hostnames', () => {
         expect(cells()).toContain('localhost:3000');
         expect(cells()).toContain('shop.bmnw.nl/admin');
         expect(cells()).toContain('10.0.0.5:8443');
-        expect(document.querySelector('[aria-label="More for nas.bmnw.nl"], [aria-label="nas.bmnw.nl on"]')).toBeNull();
+        expect(document.querySelector('[aria-label="More for nas.bmnw.nl"], [role="switch"][aria-label="nas.bmnw.nl"]')).toBeNull();
     });
 
     test('adds a dev server in the dialog: a port from the list first, then another port on the other domain', async () => {
@@ -598,6 +599,25 @@ describe('the hostnames', () => {
         await until(() => dialog() === null);
     });
 
+    test('shows a hostname busy while its removal is on its way, with its controls held', async () => {
+        let answer: (next: TunnelState) => void = () => undefined;
+
+        state = stateOf({ rows: [{ id: 'b', kind: 'dev', hostname: 'shop.bmnw.nl', port: 3000, enabled: false, comeBack: false }] });
+        machine.answer('tunnel.remove', () => new Promise<TunnelState>((resolve) => (answer = resolve)));
+        await open();
+        await until(() => document.querySelector('button[aria-label="More for shop.bmnw.nl"]') !== null);
+        await clickOn(document.querySelector('button[aria-label="More for shop.bmnw.nl"]'));
+        await until(() => menuItem('Remove') !== null);
+        await clickOn(menuItem('Remove'));
+        await until(() => document.querySelector('[aria-label="Changing shop.bmnw.nl"]') !== null);
+        expect(document.querySelector<HTMLButtonElement>('button[aria-label="More for shop.bmnw.nl"]')?.disabled).toBe(true);
+        expect(document.querySelector('[role="switch"][aria-label="shop.bmnw.nl"]')?.hasAttribute('data-disabled')).toBe(true);
+
+        await act(async () => answer((state = stateOf())));
+        await until(() => everything().includes('No hostnames yet'));
+        expect(document.querySelector('[aria-label="Changing shop.bmnw.nl"]')).toBeNull();
+    });
+
     test('finds a domain by typing when the account has many', async () => {
         const zones = Array.from({ length: 12 }, (_, index) => ({ id: `zone-${index}`, name: `site-${index}.nl` }));
 
@@ -613,6 +633,13 @@ describe('the hostnames', () => {
         await until(() => document.querySelectorAll('[role="option"]').length === 1);
         await clickOn(menuItem('.passly.dev', 'option'));
         await until(() => document.querySelector('[aria-label="Domain"]')?.textContent?.includes('.passly.dev') === true);
+    });
+
+    test('shows the table loading while Cloudflare is asked, instead of saying there are no hostnames', async () => {
+        state = stateOf({ stage: 'checking' });
+        await open();
+        await until(() => document.querySelector('[role="rowgroup"][aria-busy="true"][aria-label="Loading"]') !== null);
+        expect(everything()).not.toContain('No hostnames yet');
     });
 
     test('removes a hostname from its menu', async () => {

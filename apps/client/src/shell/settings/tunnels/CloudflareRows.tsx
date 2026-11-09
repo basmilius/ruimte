@@ -1,4 +1,4 @@
-import { Button, Input, messageOf, Select } from '@adecore/ui';
+import { Button, Input, messageOf, Select, Spinner } from '@adecore/ui';
 import { ConfirmDialog, SettingsRow } from '@adecore/ui/settings';
 import type { TunnelExisting, TunnelState } from '@ruimte/contracts';
 import clsx from 'clsx';
@@ -48,6 +48,15 @@ function InstallRow({ state, change }: { state: TunnelState; change: TunnelChang
 function TokenRow({ state, change }: { state: TunnelState; change: TunnelChange }) {
     const { t } = useTranslation('settings');
     const [token, setToken] = useState('');
+    // Cloudflare takes a while to check a token, and the field is empty again by then.
+    const [checking, setChecking] = useState(false);
+
+    const check = async (): Promise<void> => {
+        setChecking(true);
+        setToken('');
+        await change('tunnel.setToken', { token: token.trim() });
+        setChecking(false);
+    };
 
     if (state.hasToken) {
         return (
@@ -76,17 +85,12 @@ function TokenRow({ state, change }: { state: TunnelState; change: TunnelChange 
                         aria-label={t('tunnels.token.label')}
                         placeholder={t('tunnels.token.placeholder')}
                         value={token}
+                        disabled={checking}
                         onChange={(e) => setToken(e.target.value)}
                     />
                     <Button onClick={() => openInSystemBrowser(CLOUDFLARE_TOKEN_URL)}>{t('tunnels.token.make')}</Button>
-                    <Button
-                        variant="primary"
-                        disabled={token.trim().length < 10}
-                        onClick={() => {
-                            void change('tunnel.setToken', { token: token.trim() });
-                            setToken('');
-                        }}
-                    >
+                    <Button variant="primary" disabled={checking || token.trim().length < 10} onClick={() => void check()}>
+                        {checking && <Spinner size={14} />}
                         {t('tunnels.token.check')}
                     </Button>
                 </>
@@ -135,7 +139,7 @@ function TunnelLine({ state, endpointId, change, onUnlink }: { state: TunnelStat
     const { tunnel } = state;
 
     if (state.stage === 'checking') {
-        return <SettingsRow label={t('tunnels.tunnel.label')} description={t('tunnels.stage.checking')} />;
+        return <SettingsRow label={t('tunnels.tunnel.label')} description={t('tunnels.stage.checking')} control={<Spinner size={12} />} />;
     }
 
     if (state.stage === 'no-tunnel' || (tunnel === null && state.stage !== 'failed')) {
@@ -187,6 +191,7 @@ function PickTunnel({ state, endpointId, change }: { state: TunnelState; endpoin
     const [tunnels, setTunnels] = useState<TunnelExisting[]>([]);
     const [chosen, setChosen] = useState(NEW_TUNNEL);
     const [failure, setFailure] = useState<string | null>(null);
+    const [listing, setListing] = useState(false);
     const account = picked ?? state.account?.id ?? null;
     // A second press while the first one works would make or pick a tunnel the first one no longer needs.
     const starting = state.stage === 'starting';
@@ -195,15 +200,26 @@ function PickTunnel({ state, endpointId, change }: { state: TunnelState; endpoin
         setTunnels([]);
         setChosen(NEW_TUNNEL);
         setFailure(null);
+        setListing(false);
 
-        if (account === null) {
+        const transport = transportFor(endpointId);
+
+        if (account === null || !transport) {
             return;
         }
 
-        transportFor(endpointId)
-            ?.request('tunnel.list', { account })
-            .then((found) => setTunnels(found.tunnels.filter((tunnel) => tunnel.usable)))
-            .catch((e: unknown) => setFailure(messageOf(e, t('tunnels.tunnel.loadFailed'))));
+        let current = true;
+
+        setListing(true);
+        transport
+            .request('tunnel.list', { account })
+            .then((found) => current && setTunnels(found.tunnels.filter((tunnel) => tunnel.usable)))
+            .catch((e: unknown) => current && setFailure(messageOf(e, t('tunnels.tunnel.loadFailed'))))
+            .finally(() => current && setListing(false));
+
+        return () => {
+            current = false;
+        };
         // oxlint-disable-next-line react-hooks/exhaustive-deps
     }, [endpointId, account]);
 
@@ -232,6 +248,7 @@ function PickTunnel({ state, endpointId, change }: { state: TunnelState; endpoin
                             onValueChange={setPicked}
                         />
                     )}
+                    {listing && <Spinner size={12} label={t('tunnels.tunnel.listing')} />}
                     <Select<string>
                         label={t('tunnels.tunnel.pick')}
                         variant="outlined"

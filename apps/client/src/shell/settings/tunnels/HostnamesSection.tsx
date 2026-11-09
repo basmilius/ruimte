@@ -1,4 +1,4 @@
-import { Button, copyText, Icon, IconButton, Menu, Switch, Table, Tooltip } from '@adecore/ui';
+import { Button, copyText, Icon, IconButton, Menu, Spinner, Switch, Table, Tooltip } from '@adecore/ui';
 import type { TunnelOtherRule, TunnelRow, TunnelState } from '@ruimte/contracts';
 import { Copy, ExternalLink, MoreHorizontal, Pencil, Trash, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
@@ -39,7 +39,30 @@ export function HostnamesSection({
     const { t } = useTranslation('settings');
     // The row stays after the dialog closes, so an edit keeps its fields through the closing transition.
     const [dialog, setDialog] = useState<{ open: boolean; row: TunnelRow | null }>({ open: false, row: null });
+    // The rows with a change on its way to Cloudflare, which takes seconds.
+    const [busy, setBusy] = useState<ReadonlySet<string>>(() => new Set());
     const others = state.tunnel?.others ?? [];
+    // Before Cloudflare answered, the rules of someone else are unknown, so the table waits instead of saying it is empty.
+    const checking = state.stage === 'checking' && others.length === 0;
+    const editing = dialog.row;
+
+    const busyWhile = async <T,>(id: string, work: () => Promise<T>): Promise<T> => {
+        setBusy((current) => new Set(current).add(id));
+
+        try {
+            return await work();
+        } finally {
+            setBusy((current) => {
+                const next = new Set(current);
+
+                next.delete(id);
+
+                return next;
+            });
+        }
+    };
+
+    const attemptRow: typeof attempt = (type, payload) => (editing === null ? attempt(type, payload) : busyWhile(editing.id, () => attempt(type, payload)));
 
     return (
         <SettingsSection
@@ -59,14 +82,21 @@ export function HostnamesSection({
                     <Table.Column>{t('tunnels.hostnames.target')}</Table.Column>
                     <Table.Column />
                 </Table.Head>
-                {state.rows.length === 0 && others.length === 0 && <Table.Empty>{t('tunnels.hostnames.empty')}</Table.Empty>}
+                {state.rows.length === 0 && others.length === 0 && !checking && <Table.Empty>{t('tunnels.hostnames.empty')}</Table.Empty>}
                 {state.rows.length > 0 && (
                     <Table.Group label={t('tunnels.hostnames.ruimte')}>
                         {state.rows.map((row) => (
-                            <HostnameRow key={row.id} row={row} change={change} onEdit={() => setDialog({ open: true, row })} />
+                            <HostnameRow
+                                key={row.id}
+                                row={row}
+                                busy={busy.has(row.id)}
+                                change={(type, payload) => busyWhile(row.id, () => change(type, payload))}
+                                onEdit={() => setDialog({ open: true, row })}
+                            />
                         ))}
                     </Table.Group>
                 )}
+                {checking && <Table.Loading rows={2} />}
                 {others.length > 0 && (
                     <Table.Group label={t('tunnels.hostnames.others')}>
                         {others.map((rule) => (
@@ -84,18 +114,18 @@ export function HostnamesSection({
                 row={dialog.row}
                 state={state}
                 endpointId={endpointId}
-                attempt={attempt}
+                attempt={attemptRow}
                 onOpenChange={(open) => setDialog({ ...dialog, open })}
             />
         </SettingsSection>
     );
 }
 
-function HostnameRow({ row, change, onEdit }: { row: TunnelRow; change: TunnelChange; onEdit: () => void }) {
+function HostnameRow({ row, busy, change, onEdit }: { row: TunnelRow; busy: boolean; change: TunnelChange; onEdit: () => void }) {
     const { t } = useTranslation('settings');
 
     return (
-        <Table.Row>
+        <Table.Row aria-busy={busy || undefined}>
             <Table.Cell>
                 <div className="flex min-w-0 flex-col">
                     <span>{row.hostname}</span>
@@ -124,13 +154,22 @@ function HostnameRow({ row, change, onEdit }: { row: TunnelRow; change: TunnelCh
                 <Table.Cell mono>{targetOf(`localhost:${row.port ?? 0}`, row.origin?.hostHeader)}</Table.Cell>
             )}
             <Table.Cell>
+                {busy && <Spinner size={14} label={t('tunnels.hostnames.busy', { hostname: row.hostname })} />}
+                {/* Named by its hostname alone: whether it is on is the switch's own state. */}
                 <Switch
                     checked={row.enabled}
-                    label={t('tunnels.hostnames.on', { hostname: row.hostname })}
+                    label={row.hostname}
+                    disabled={busy}
                     onCheckedChange={(enabled) => void change('tunnel.update', { id: row.id, enabled })}
                 />
                 <Menu.Root>
-                    <IconButton icon={MoreHorizontal} size="sm" label={t('tunnels.hostnames.more', { hostname: row.hostname })} render={<Menu.Trigger />} />
+                    <IconButton
+                        icon={MoreHorizontal}
+                        size="sm"
+                        label={t('tunnels.hostnames.more', { hostname: row.hostname })}
+                        disabled={busy}
+                        render={<Menu.Trigger />}
+                    />
                     <Menu.Popup align="end">
                         <Menu.Item onClick={() => void copyText(addressOf(row))}>
                             <Icon icon={Copy} size={14} /> {t('tunnels.hostnames.copy')}

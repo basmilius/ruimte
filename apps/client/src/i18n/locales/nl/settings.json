@@ -1062,6 +1062,7 @@
             "idle": "Draait niet",
             "use": "Gebruiken",
             "loadFailed": "Kon je tunnels niet ophalen.",
+            "listing": "Je tunnels worden opgehaald",
             "runner": {
                 "ruimte": "Draait op deze computer",
                 "other": "Draait buiten Ruimte",
@@ -1083,7 +1084,7 @@
             "others": "Al op deze tunnel",
             "empty": "Nog geen hostnamen",
             "mcp": "Ruimte MCP",
-            "on": "{{hostname}} aan",
+            "busy": "{{hostname}} wordt aangepast",
             "more": "Meer voor {{hostname}}",
             "copy": "Adres kopiëren",
             "open": "Openen",

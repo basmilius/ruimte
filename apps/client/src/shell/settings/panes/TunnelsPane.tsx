@@ -1,4 +1,4 @@
-import { ErrorBoundary, FormError } from '@adecore/ui';
+import { ErrorBoundary, FormError, Spinner } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import type { TunnelState } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
@@ -44,13 +44,14 @@ function TunnelsOf({ endpoint }: { endpoint: Endpoint }) {
             : !manages
               ? t('tunnels.elsewhere')
               : null;
+    const loading = tunnels.open && tunnels.answers && state === null;
     // Also while a stage failed: a refused change or a crashed child says so in the tunnel's line, and the hostnames stay.
     const linked = state !== null && state.tunnel !== null && state.hasToken;
 
     return (
         <>
             <SettingsSection title={t('tunnels.cloudflare')} scope="machine" machine="picked">
-                {waiting !== null && <SettingsRow label={waiting} />}
+                {waiting !== null && <SettingsRow label={waiting} leading={loading ? <Spinner size={12} /> : undefined} />}
                 {state !== null && manages && <CloudflareRows state={state} endpointId={endpoint.id} change={tunnels.change} />}
                 {state !== null && !manages && tunnels.answers && <ReadOnlyRows state={state} />}
             </SettingsSection>
