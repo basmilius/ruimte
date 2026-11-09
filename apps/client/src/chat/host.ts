@@ -108,7 +108,6 @@ const AGENT_MARKS: Partial<Record<AgentKind, AgentMark>> = {
     }
 };
 
-/* The stores every chat view shares, set up before the first render. */
 export function configureChat(): void {
     configureChatStorage({ namespace: 'ruimte' });
 }

@@ -27,7 +27,6 @@ export function createWorkspaceKeys(): WorkspaceKeys[] {
     return factories.map((make) => make());
 }
 
-/* An Escape that no modifier changes, outside a composition. */
 export function isPlainEscape(event: KeyboardEvent): boolean {
     return event.key === 'Escape' && !event.metaKey && !event.ctrlKey && !event.altKey && !event.isComposing;
 }

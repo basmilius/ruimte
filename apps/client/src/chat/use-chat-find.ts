@@ -23,7 +23,6 @@ interface ChatFind {
     invalid: boolean;
     step(direction: 1 | -1): void;
     reveal: FindReveal | null;
-    /* The row each hit is shown at, in the order of the hits. */
     hitRows: readonly number[];
     currentRow: number | null;
 }
@@ -256,7 +255,6 @@ function useChatFind(options: TimelineFindOptions): ChatFind {
     };
 }
 
-/* The find of a thread as the chat draws it: whether it is open, the bar over the thread, and where its hits are. */
 export function useTimelineFind(options: TimelineFindOptions): TimelineFind {
     const chatFind = useChatFind(options);
     return {

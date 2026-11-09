@@ -11,7 +11,6 @@ export interface PaletteOptions {
     shortcut?: Shortcut | null;
 }
 
-/* A row of the palette. */
 export interface Command {
     id: string;
     label: string;
@@ -106,7 +105,6 @@ export function rawCanvasKeyHandlers(): readonly KeyHandler[] {
     return canvasKeyHandlers;
 }
 
-/* Takes the key: the page default is dropped and the command runs. */
 export function takeKey(press: KeyPress, run: () => void): true {
     press.event.preventDefault();
     run();

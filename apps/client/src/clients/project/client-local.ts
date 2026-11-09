@@ -87,7 +87,6 @@ export function withoutClientBrowserState(local: ProjectLocal): ProjectLocal {
     return { ...local, panels };
 }
 
-/* What this client last had of one project on one machine, or null when it never saw it. */
 export function readClientLocal(storage: ClientLocalStorage | null, endpointId: string, projectId: string): ProjectLocal | null {
     return readRows(storage)[endpointKey(endpointId, projectId)]?.local ?? null;
 }

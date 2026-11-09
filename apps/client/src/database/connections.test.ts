@@ -85,7 +85,6 @@ function machine(initial: DatabaseConnections) {
         transport,
         saves,
         handed,
-        /* Another client set what agents may do. */
         accessElsewhere(next: Record<string, DatabaseAgentAccess>) {
             access = next;
             for (const handler of accessChanged) {
@@ -93,7 +92,6 @@ function machine(initial: DatabaseConnections) {
             }
         },
         document: () => document,
-        /* Another client saved. */
         elsewhere(next: DatabaseConnection[]) {
             document = { rev: document.rev + 1, connections: next };
             for (const handler of changed) {

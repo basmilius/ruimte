@@ -48,7 +48,6 @@ async function openChat(): Promise<void> {
     await until(() => page.host.textContent?.includes('Done reading.') === true);
 }
 
-/* The context group of the run settings menu, as a person opens it from the model pill. */
 async function contextGroup(): Promise<string> {
     const trigger = [...page.host.querySelectorAll<HTMLElement>('button[aria-haspopup="menu"]')].find((button) => button.querySelector('svg circle') !== null);
     await clickOn(trigger ?? null);

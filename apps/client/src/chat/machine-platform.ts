@@ -7,7 +7,6 @@ export function machinePlatform(platform: string | null): ProviderPlatform | nul
     return parsed.success ? parsed.data : null;
 }
 
-/* The system of a machine from its hello, null until it said one. */
 export function useMachinePlatform(endpointId: string): ProviderPlatform | null {
     return machinePlatform(useServers((s) => s.byEndpoint[endpointId]?.platform ?? null));
 }

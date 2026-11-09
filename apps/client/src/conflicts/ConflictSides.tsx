@@ -9,7 +9,6 @@ interface SideProps {
     onTake(): void;
 }
 
-/* One side of the conflict on screen: what that side holds, and the button that makes it the answer. */
 function Side({ label, lines, onTake }: SideProps) {
     const { t } = useTranslation('conflicts');
     return (

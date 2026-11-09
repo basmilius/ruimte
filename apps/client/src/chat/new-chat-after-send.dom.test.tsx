@@ -17,7 +17,6 @@ let machine: FakeMachine;
 let workspace: FakeWorkspace;
 let page: Mounted;
 
-/* The mode each chat runs in on the machine, as it was created and configured. */
 const modes = new Map<string, RuntimeMode>();
 
 afterEach(async () => {

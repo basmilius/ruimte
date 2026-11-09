@@ -19,7 +19,6 @@ export interface ConflictFile {
     whole: boolean;
 }
 
-/* The three versions git handed back, as the file the overlay draws. */
 export function fileOf(answer: GitConflictResult): ConflictFile {
     const whole = answer.kind !== 'text' || answer.ours === null || answer.theirs === null;
     const blocks = whole ? [] : splitBlocks(splitLines(answer.base ?? ''), splitLines(answer.ours ?? ''), splitLines(answer.theirs ?? ''));
@@ -99,7 +98,6 @@ interface DraftText {
     sliceString(from: number, to: number): string;
 }
 
-/* The edit that puts `lines` in place of a span of the merged file. */
 export function replacementOf(
     doc: DraftText,
     span: { readonly from: number; readonly to: number },
@@ -164,7 +162,6 @@ export function usableBlocks(file: ConflictFile, answers: readonly GitResolveBlo
         .map((answer) => ({ index: answer.index, lines: answer.lines }));
 }
 
-/* What a person made of one stretch of a draft, as lines. */
 function spanLines(text: string, span: LiveSpan): string[] {
     let slice = text.slice(span.from, span.to);
     // An answer put into an empty stretch at the end of the file carries the break before it.

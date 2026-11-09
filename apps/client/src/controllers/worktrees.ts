@@ -12,7 +12,6 @@ import { useOptionalConnection } from '@/workspace/context';
 import { worktreeOfPath } from '@/worktree-rules/worktree-rows';
 
 interface WorktreesStore {
-    /* The worktrees of a project folder's repository, per machine and folder. */
     rows: Record<string, readonly Worktree[]>;
     put(key: string, worktrees: readonly Worktree[]): void;
 }
@@ -170,7 +169,6 @@ export function useWorktreeOf(cwd: string | undefined): Worktree | null {
     return wanted ? worktreeOfPath(worktrees, cwd) : null;
 }
 
-/* A node of the project as the worktree list names it. */
 export interface WorktreeNode {
     id: string;
     kind: CanvasNodeKind;

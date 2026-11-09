@@ -3,7 +3,6 @@ import { designNodeChats, isChatHostView, isHiddenChatView, viewChats, type Proj
 import { useProjectSource } from '@/project/project-source';
 import type { NodesOfView } from '@/state/view-nodes';
 
-/* Every chat of the project under the name it has right now, node or view, in sidebar order. */
 export function projectChats(views: readonly ProjectView[], nodesOf: NodesOfView<Pick<ProjectNode, 'id' | 'kind' | 'title' | 'chats'>>): ProjectChat[] {
     return views.flatMap((view): ProjectChat[] => {
         if (isChatHostView(view)) {

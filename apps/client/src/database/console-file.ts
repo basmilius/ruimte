@@ -39,7 +39,6 @@ export function consoleFilesOf(folder: string, entries: readonly { path: string;
     return files;
 }
 
-/* Whether a `.sql` file can run as a console in its tab. */
 export function isSqlPath(path: string): boolean {
     return extensionOf(path) === 'sql';
 }

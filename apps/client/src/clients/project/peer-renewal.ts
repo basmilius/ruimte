@@ -7,7 +7,6 @@ export const RENEW_WITHIN_MS = 7 * 24 * 60 * 60 * 1000;
 type Requester = Pick<Transport, 'request'>;
 
 interface PeerRenewalHost {
-    /* This machine as the others know it. */
     selfId(): string;
     /* The machine worked in, null while the window has no connection to it. */
     transportOf(machineId: string): Requester | null;

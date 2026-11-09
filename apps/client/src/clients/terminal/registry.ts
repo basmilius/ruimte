@@ -21,7 +21,6 @@ const lastScreens = new Map<string, LastScreen>();
 /* Live terminals whose node left the document; the node leaves before React unmounts it, so its unmount must not keep a screen. */
 const forgotten = new WeakSet<Terminal>();
 
-/* The last `limit` lines of the buffer, leaving out the empty rows under the last one written. */
 function screenLines(term: Terminal, limit = Infinity): string[] {
     const buffer = term.buffer.active;
     const lineAt = (index: number): string => buffer.getLine(index)?.translateToString(true) ?? '';

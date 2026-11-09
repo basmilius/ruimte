@@ -11,11 +11,8 @@ export type WorkflowBesideCard =
     | { kind: 'agent'; key: 'agent'; from: string; rect: Rect };
 
 interface WorkflowBesideView {
-    /* Every phase's key, in the order the workflow shows them. */
     phases: readonly string[];
-    /* The one phase that is open, or none. */
     openPhase: string | null;
-    /* The phase of the agent whose conversation is open, or null with none open. */
     agentPhase: string | null;
 }
 

@@ -16,7 +16,6 @@ import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-worksp
 import { gitIdentity, idleChatInfo, projectSummary } from '../../testing/project-fixtures';
 
 const REMOTE = 'machine-b';
-// The chat runs on the other machine, which holds its conversation.
 const LEAD: ProjectNode = { id: 'chat-lead', kind: 'chat', title: 'Lexer', machine: REMOTE, x: 0, y: 0, w: 560, h: 640, provider: 'claude' };
 const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [LEAD], texts: [], edges: [], layouts: [] };
 

@@ -131,7 +131,6 @@ interface ProjectClientOptions {
     beforeLeave?: () => Promise<void>;
     /* Runs in the tick the opened project reaches the stores, so the window shows it with nothing in between. A throw stops the open before the stores take it. */
     onLoad?: (summary: ProjectSummary) => void;
-    /* Drops what this client cached for the views of a project it is putting away. */
     forgetSessions?: (endpointId: string, views: readonly ProjectView[]) => void;
     /* Runs once the project is open on the daemon again after the link came back, so the drawings on screen can follow. */
     afterResume?: () => Promise<void>;
@@ -393,7 +392,6 @@ export class ProjectClient {
         await this.writeIconFile(null);
     }
 
-    /* Takes what is on disk, or keeps the screen and writes it over the file's newer rev. */
     async resolveConflict(choice: 'theirs' | 'mine'): Promise<void> {
         const { conflict, current } = this.sink.getState();
         if (!conflict || !current) {
@@ -474,7 +472,6 @@ export class ProjectClient {
         }
     }
 
-    /* What the daemon's file holds at `document.rev`, which the next merge measures against. */
     private setBase(document: ProjectDocument): void {
         this.base = contentOf(document);
         this.baseRev = document.rev;
@@ -635,7 +632,6 @@ export class ProjectClient {
         }
     }
 
-    /* What this client would remember about the project right now: the panels, and every view's camera. */
     private localOfScreen(): ProjectLocal {
         return { ...this.documents.getState().exportLocal(), panels: this.panels.export() };
     }

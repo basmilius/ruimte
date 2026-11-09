@@ -77,7 +77,6 @@ function PhaseDot({ state }: { state: WorkflowPhaseStateKind }) {
     return <span aria-hidden className={clsx('size-2 shrink-0 rounded-full', PHASE_DOT[state])} />;
 }
 
-/* How long a phase's agents were at work, counting on while one is. */
 function PhaseTime({ phase }: { phase: WorkflowPhaseView }) {
     const time = workflowPhaseTime(phase);
     if (time === null) {
@@ -140,7 +139,6 @@ export function WorkflowBeside({ id, z }: { id: string; z: number }) {
         focusAfterClose.current = null;
         const cardId = derivedCardId(id, phaseCardKey(target.phase));
         const card = document.querySelector(`[data-derived-card="${CSS.escape(cardId)}"]`);
-        // The agent's own line when its phase is open, or else the phase itself.
         const line = card?.querySelector<HTMLElement>(`[data-workflow-agent="${target.index}"]`) ?? card?.querySelector<HTMLElement>('button');
         if (line) {
             canvasStore.getState().focusCard(cardId);

@@ -37,7 +37,6 @@ export function workflowCandidates(row: {
 
 interface ShownWorkflow {
     candidate: WorkflowCandidate;
-    /* Its place among the ones a person can switch between, and how many there are. */
     index: number;
     count: number;
     shown: readonly WorkflowCandidate[];

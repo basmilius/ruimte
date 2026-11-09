@@ -94,12 +94,10 @@ function boundLists(): Record<'window' | 'workspace', [string, Shortcut][]> {
     return { window: bound.window.keys, workspace: bound.workspace.keys };
 }
 
-/* The rows one listener binds, each with its key. */
 export function boundCommands(listener: 'window' | 'workspace'): readonly [string, Shortcut][] {
     return boundLists()[listener];
 }
 
-/* The command a keystroke is for one listener, or null for a key that is none of its. */
 export function commandForKey(listener: 'window' | 'workspace', e: KeyLike, apple: boolean): string | null {
     return boundLists()[listener].find(([, shortcut]) => matchesShortcut(shortcut, e, apple))?.[0] ?? null;
 }

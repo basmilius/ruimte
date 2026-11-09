@@ -88,13 +88,11 @@ export const useBrowser = create<BrowserStore>((set) => ({
     }
 }));
 
-/* What one browser node shows, on the machine in scope. */
 export function useBrowserRow<T>(nodeId: string, select: (row: BrowserState | undefined) => T): T {
     const endpointId = useEndpointId();
     return useBrowser((s) => select(s.byKey[endpointKey(endpointId, nodeId)]));
 }
 
-/* What this client keeps of the pages, one icon per node of this endpoint, only the ones there are. */
 export function faviconsOfProject(byKey: Record<string, BrowserState>, endpointId: string): Record<string, string> {
     const favicons: Record<string, string> = {};
     for (const [key, state] of Object.entries(byKey)) {
@@ -220,7 +218,6 @@ class BrowserRegistry {
         return this.owners.get(key);
     }
 
-    /* The element for a node, made on first use with the given page. */
     ensure(key: string, initialUrl: string, owner?: string): WebviewElement | null {
         const boundOwner = owner ?? this.owners.get(key);
         if (this.owners.has(key) && boundOwner !== this.owners.get(key)) {

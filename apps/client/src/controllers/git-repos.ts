@@ -95,7 +95,6 @@ const DEAD_READ_MS = 10_000;
 /* The share of the time a slow checkout may spend in `git status` while nothing else asks for it. */
 const DEAD_READ_SHARE = 0.05;
 
-/* When the next clock read of a checkout the daemon does not watch is due, after a read that took `readMs`. */
 export function deadReadDelay(readMs: number): number {
     return Math.max(DEAD_READ_MS, Math.round(readMs / DEAD_READ_SHARE));
 }
@@ -139,14 +138,12 @@ export function withoutNestedRepos(status: GitStatus | null, root: string, other
     return files.length === status.files.length ? status : { ...status, files };
 }
 
-/* Every checkout of a list without the repositories that stand inside another one of it. */
 export function withoutNestedCheckouts(checkouts: readonly GitCheckout[]): GitCheckout[] {
     const roots = checkouts.map((checkout) => checkout.path);
 
     return checkouts.map((checkout) => ({ ...checkout, status: withoutNestedRepos(checkout.status, checkout.path, roots) }));
 }
 
-/* The project folder as the only repository. */
 export function soleRepo(folder: string): GitRepo[] {
     return [{ path: folder, label: basenameOf(folder), kind: 'root' }];
 }
@@ -271,7 +268,6 @@ interface GitCheckouts {
     checkouts: readonly GitCheckout[];
     /* Draws a status the panel expects until the next real one lands. */
     assume(cwd: string, next: (status: GitStatus) => GitStatus): void;
-    /* Reads the status of one checkout, or of every one of them. */
     refresh(cwd?: string): Promise<void>;
 }
 

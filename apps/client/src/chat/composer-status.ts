@@ -19,7 +19,6 @@ interface OtherRepo {
 }
 
 interface WhereInput {
-    /* The checkout the CLI works in now. */
     status: GitStatus | null;
     others: readonly OtherRepo[];
     /* The machine's name, set only when the chat runs on another machine than this one. */

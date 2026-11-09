@@ -31,7 +31,6 @@ interface DevicesState {
     endedRecordings: Record<string, true>;
     markRecording(key: string, startedAt: number | null): void;
     markRecordingEnded(key: string): void;
-    /* The device a person asked to erase, while the question is up. */
     erasing: EraseRequest | null;
     askErase(request: EraseRequest | null): void;
     /* The groups of the devices panel a person folded away, on every machine alike. */
@@ -103,7 +102,6 @@ export function recordingKey(endpointId: string, device: Pick<DeviceInfo, 'backe
     return `${endpointId}|${device.backendId}:${device.deviceId}`;
 }
 
-/* When the recording of this device began, or null while none runs. */
 export function useRecordingSince(endpointId: string, device: Pick<DeviceInfo, 'backendId' | 'deviceId'>): number | null {
     return useDevices((state) => state.recordings[recordingKey(endpointId, device)] ?? null);
 }

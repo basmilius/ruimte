@@ -147,7 +147,6 @@ type HitPlace = { kind: 'row'; index: number } | { kind: 'group'; id: string } |
 interface RowIndex {
     /* The row an item is drawn in, or the closed run of tool calls it is in. */
     rows: Map<string, number>;
-    /* The fold of each settled turn. */
     folds: Map<string, number>;
 }
 

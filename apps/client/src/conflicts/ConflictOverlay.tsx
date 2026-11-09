@@ -279,7 +279,6 @@ export function ConflictOverlay() {
         setOpen((previous) => Object.fromEntries(Object.entries(previous).filter(([key]) => key !== path)));
     };
 
-    /* The files whose conflicts are all answered, written in one go. */
     const save = async (paths: readonly string[]): Promise<void> => {
         setBusy(true);
         try {
@@ -359,7 +358,6 @@ export function ConflictOverlay() {
             <Dialog.Popup
                 className="flex h-[760px] w-[min(1180px,94vw)] flex-col overflow-hidden p-0"
                 onKeyDown={(event) => {
-                    // Walking the conflicts from the keyboard, with a modifier, while the caret is in the file.
                     if (event.altKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
                         event.preventDefault();
                         go(event.key === 'ArrowDown' ? 1 : -1);

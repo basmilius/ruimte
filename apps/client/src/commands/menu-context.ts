@@ -23,13 +23,11 @@ export interface MenuContext extends MenuFacts {
     folder: boolean;
     /* The project is the machine's Chats project, which has no panels for a folder and no launches. */
     scratch: boolean;
-    /* The kind of the view in the focused cell. */
     view: ProjectView['kind'] | null;
     cells: number;
     /* The focused cell as a host of tabs: how many, which one is in front, and whether the tab in front has room to leave for a cell of its own. */
     tabs: { hosted: boolean; count: number; index: number; splitOff: boolean };
     split: { right: boolean; down: boolean };
-    /* A cell fills the grid for now. */
     maximized: boolean;
     /* Columns stand right of the focused cell. */
     closesRight: boolean;
@@ -37,7 +35,6 @@ export interface MenuContext extends MenuFacts {
     cellNeighbors: Record<SplitDirection, boolean>;
     /* There is a view to step to. */
     viewsSteppable: boolean;
-    /* The open panel, or null while none is. */
     panel: PanelKind | null;
     sidebar: boolean;
     /* The openable views in sidebar order; the first nine have a shortcut. */

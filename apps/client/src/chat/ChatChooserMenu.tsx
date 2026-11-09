@@ -62,7 +62,6 @@ function ChooserMenu({ offer, x, y }: { offer: SelectionOffer; x: number; y: num
             onOpenChange={(open) => {
                 if (!open) {
                     useChatChooser.getState().close();
-                    // A pick brings its chat into focus; a dismissal gives the keyboard back to the text.
                     if (!picked.current) {
                         offer.returnFocus?.();
                     }

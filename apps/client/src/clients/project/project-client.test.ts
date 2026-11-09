@@ -31,7 +31,6 @@ import { sessionNodesOf } from './project-sessions';
 
 type Call = { type: RequestType; payload: unknown };
 
-/* The canvas a workspace is editing, which with a project open is the editor of its active view. */
 function canvasOf(stores: WorkspaceStores): StoreApi<CanvasState> {
     const active = stores.document.getState().activeViewId;
     return (active === null ? null : stores.canvases.peek(active)) ?? stores.canvases.blank;
@@ -88,7 +87,6 @@ class FakeTransport implements Transport {
     holdSave: Promise<void> | null = null;
     holdList: Promise<void> | null = null;
     saveError: TransportError | null = null;
-    /* Keeps the next saves on the wire until the returned function lets them go. */
     holdSaves(): () => void {
         let resolve!: () => void;
         this.holdSave = new Promise<void>((done) => {
@@ -168,7 +166,6 @@ class FakeTransport implements Transport {
         return this.calls.filter((call) => call.type === type);
     }
 
-    /* The link dropping or coming back, the way the pool's transport reports it. */
     setStatus(status: TransportStatus): void {
         this.status = status;
         for (const handler of this.statusHandlers) {

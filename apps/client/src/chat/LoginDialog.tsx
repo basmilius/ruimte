@@ -18,7 +18,6 @@ function closeLogin(): void {
     loginDialog.set(null);
 }
 
-/* The CLI's own login in a terminal of its own, which the onboarding and the settings both open. */
 export function LoginDialog() {
     const request = loginDialog.useRequest((request) => request);
 

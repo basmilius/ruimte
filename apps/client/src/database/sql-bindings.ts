@@ -26,7 +26,6 @@ interface SqlBindingsDeps {
     notify(title: string, description: string): void;
 }
 
-/* The snapshot a choice reads, when the machine took one. */
 export function snapshotOf(snapshots: readonly SqlSnapshotInfo[], connectionId: string, database: string | null): SqlSnapshotInfo | null {
     return snapshots.find((snapshot) => snapshot.connectionId === connectionId && snapshot.database === database) ?? null;
 }

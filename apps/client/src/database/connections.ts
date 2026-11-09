@@ -36,7 +36,6 @@ interface DatabaseConnectionsState {
     /* The machine and the project these are of (`endpointKey`); null while nothing asked for any. */
     key: string | null;
     status: ConnectionsStatus;
-    /* Why the list could not be read. */
     error: string | null;
     rev: number;
     /* As the machine last answered. */
@@ -51,7 +50,6 @@ interface DatabaseConnectionsState {
     agentAccess: Record<string, DatabaseAgentAccess>;
 }
 
-/* The project the connections are of, on the machine that keeps them. */
 export interface ConnectionsTarget {
     endpointId: string;
     projectId: string;

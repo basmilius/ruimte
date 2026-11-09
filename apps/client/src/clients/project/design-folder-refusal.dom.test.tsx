@@ -61,7 +61,6 @@ afterEach(async () => {
     restoreLayout();
 });
 
-/* Saves what is on screen, refused or not, and answers the payload of the last save. */
 async function saved(): Promise<ProjectSavePayload> {
     await act(async () =>
         windowWorkspace()!

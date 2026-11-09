@@ -105,7 +105,6 @@ function describeContextCall(args: readonly string[]): CommandLookMatch {
     };
 }
 
-/* The verb a tool of the MCP server was: its own, or its first word's. */
 function verbOfTool(tool: string): string {
     const toolkit = tool.split('_')[0]!;
     if (Object.hasOwn(TOOL_VERBS, tool)) {
@@ -239,7 +238,6 @@ export function sentByNotify(call: CommandLookCall): CommandLookSent | null {
     return sentMessage({ ...words, text: words.text === '-' ? call.heredoc : unescapeText(words.text) }, call);
 }
 
-/* The message to `id`, once there is text and the call says how it went. */
 function sentMessage(
     words: { id: string; text: string | null; project: string | null },
     call: Pick<CommandLookCall, 'state' | 'output'>

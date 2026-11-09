@@ -62,7 +62,6 @@ export class CommandMoment {
         return view !== null && isDiagramView(view);
     }
 
-    /* The one selected node of the canvas with the focus. */
     get selected(): CanvasNode | undefined {
         const { selection, nodes } = this.canvas;
 

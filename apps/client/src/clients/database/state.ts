@@ -11,7 +11,6 @@ interface DatabasePanelStore {
     /* What the explorer has selected, which is where a new console runs when no tab says. */
     selection: ExplorerSelection | null;
     dialog: ConnectionsDialog;
-    /* A project that opens starts from nothing selected and the dialog closed. */
     reset(): void;
     setSelection(selection: ExplorerSelection | null): void;
     openConnections(selected?: string | null): void;

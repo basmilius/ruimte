@@ -19,7 +19,6 @@ export interface LoginRequest {
     endpointId: string;
     kind: AgentKind;
     accountId: string;
-    /* What a person calls the account. */
     name: string;
 }
 
@@ -30,7 +29,6 @@ export interface ProviderCommandRequest {
     command: string;
 }
 
-/* The chat and the turn a fork goes on after, while its dialog is up. */
 export const forkDialog = createDialogState<ForkRequest>();
 export const loginDialog = createDialogState<LoginRequest>();
 export const providerCommandDialog = createDialogState<ProviderCommandRequest>();

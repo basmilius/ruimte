@@ -29,7 +29,6 @@ export function readCachedList(endpointId: string, storage?: KeyValueStorage | n
 }
 
 export function writeCachedList(endpointId: string, summaries: ProjectSummary[], storage?: KeyValueStorage | null): void {
-    // The ones that were opened most recently are the ones worth remembering when the list is long.
     const kept = [...summaries].sort((a, b) => b.lastOpenedAt - a.lastOpenedAt).slice(0, CACHE_LIMIT);
     cachedList(endpointId).write(kept, storage);
 }
@@ -38,13 +37,11 @@ export function forgetCachedList(endpointId: string, storage?: KeyValueStorage |
     cachedList(endpointId).remove(storage);
 }
 
-/* One machine's answer into the union, and into the list it is remembered by. */
 export function foldList(endpointId: string, summaries: ProjectSummary[]): void {
     useProjectList.getState().setProjects(endpointId, summaries);
     writeCachedList(endpointId, summaries);
 }
 
-/* One project of one machine into the union, and into the list it is remembered by. */
 function foldSummary(endpointId: string, summary: ProjectSummary): void {
     useProjectList.getState().patchProject(endpointId, summary);
     const projects = useProjectList
@@ -80,7 +77,6 @@ async function refreshAllLists(): Promise<void> {
     await Promise.all(open.map((endpointId) => listProjects(endpointId).catch(() => [])));
 }
 
-/* Fills the union from what each machine last answered, for the frame before any of them does. */
 export function primeCachedLists(storage?: KeyValueStorage | null): void {
     const state = useProjectList.getState();
     for (const endpoint of useEndpoints.getState().endpoints) {
@@ -131,7 +127,6 @@ function projectRows(rows: ProjectRow[], endpoints: Endpoint[], connected: reado
     return knownRows(rows, endpoints, connected).filter((row) => row.summary.scratch !== true);
 }
 
-/* The Chats project of every machine that has one, in the order of the machines. */
 export function chatsProjects(rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRow[] {
     const order = endpoints.map((endpoint) => endpoint.id);
     return knownRows(rows, endpoints, connected)
@@ -147,7 +142,6 @@ export function menuProjects(rows: ProjectRow[], endpoints: Endpoint[], connecte
     };
 }
 
-/* The last time a project was touched, either when it opened or, if later, when it closed. */
 function touchedAt(summary: ProjectSummary): number {
     return Math.max(summary.lastOpenedAt, summary.closedAt ?? 0);
 }

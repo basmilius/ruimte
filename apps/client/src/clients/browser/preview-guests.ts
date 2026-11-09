@@ -3,7 +3,6 @@ interface GuestElement extends HTMLElement {
     getWebContentsId?(): number;
 }
 
-/* The id the shell knows a guest's page by, or null while the guest is not attached yet. */
 export function webContentsIdOf(element: HTMLElement): number | null {
     try {
         return (element as GuestElement).getWebContentsId?.() ?? null;

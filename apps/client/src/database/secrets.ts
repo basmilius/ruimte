@@ -129,7 +129,6 @@ export function withPasswords(connections: readonly DatabaseConnection[], passwo
     });
 }
 
-/* The servers whose saved password stays out, by id, and why. */
 export function withheldPasswords(
     connections: readonly DatabaseConnection[],
     passwords: Readonly<Record<string, BoundPassword>>

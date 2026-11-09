@@ -31,7 +31,6 @@ function localInfo(): ServerInfo {
     return serverInfoOf(LOCAL_ENDPOINT_ID);
 }
 
-/* The setting as the machine holds it. */
 export function keepAwakeChoice(info: ServerInfo = localInfo()): KeepAwakeSettings {
     return { keepAwake: info.keepAwake, keepAwakeOnBattery: info.keepAwakeOnBattery, keepAwakeDisplay: info.keepAwakeDisplay };
 }
@@ -81,7 +80,6 @@ function showSaveFailed(e: unknown): void {
     });
 }
 
-/* Sets keep awake on this computer's machine. */
 export function setKeepAwake(patch: Partial<KeepAwakeSettings>): void {
     void saveOnMachine(patch).catch(showSaveFailed);
 }

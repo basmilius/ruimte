@@ -74,9 +74,7 @@ export interface RemoteMirrorHost {
     selfId(): string;
     views(): readonly ProjectView[];
     nodesOf: NodesOfView<CanvasNode>;
-    /* A change of the document or of a canvas on screen. */
     subscribe(listener: () => void): () => void;
-    /* The links of this project to checkouts on other machines. */
     links(projectId: string): Promise<RemoteLink[]>;
     transportOf(machineId: string): Requester | null;
     /* A machine now shows nodes of this window; its right to work in this one may need renewing. */
@@ -175,7 +173,6 @@ export class RemoteMirror {
         this.resend(machine);
     }
 
-    /* Settled once what is queued has been sent. */
     async settled(): Promise<void> {
         do {
             // After the microtask that starts the queued send, which was queued before this turn.
@@ -193,7 +190,6 @@ export class RemoteMirror {
         this.sent.clear();
     }
 
-    /* The project there ends this machine's nodes and is let go of. */
     private async letGo(transport: Requester, projectId: string): Promise<void> {
         await fireAndForget('peer.placeNodes', transport.request('peer.placeNodes', { machineId: this.host.selfId(), projectId, nodes: [], edges: [] }));
         await fireAndForget('project.release', transport.request('project.release', { projectId }));

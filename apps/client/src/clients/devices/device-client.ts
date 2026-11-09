@@ -188,7 +188,6 @@ export class DeviceClient {
         }
     }
 
-    /* The machine said something changed: the list is read again, and so is every battery on screen. */
     private changed(): void {
         if (this.watchers > 0) {
             fireAndForget('refresh', this.refresh(true));
