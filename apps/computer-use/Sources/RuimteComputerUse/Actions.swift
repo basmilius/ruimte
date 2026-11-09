@@ -326,6 +326,9 @@ extension Agent {
             let keys = try keyTarget(app)
             return try await act(app, request, at: focusPoint(app), as: look, reportPoint: false) {
                 let target = AX.summary(keys.focused ?? keys.window)
+                if let field = keys.focused, await Self.insert(text, into: field) {
+                    return ["typed": text.count, "method": "AXSelectedText", "target": target]
+                }
                 var answer: [String: Any] = ["typed": text.count, "method": "keys to the app", "target": target]
                 answer["note"] = try await self.typeBehind(text, app: app, keys)
                 return answer
@@ -578,6 +581,28 @@ extension Agent {
 
     /// One character at a time to the app's process, with its window made main first, since some apps take keys behind
     /// the person's work only there. Returns the note for an answer when the focused value did not change.
+    /// Writes the text at the insertion point of a native field in one go, so no key event exists that could reach
+    /// another app. False when the field does not take it, or took it without the text showing in its value;
+    /// then the keys go as before, and nothing was typed twice.
+    private static func insert(_ text: String, into field: AXUIElement) async -> Bool {
+        let insideWebArea = ([field] + AX.ancestors(of: field, limit: 40)).contains { AX.role($0) == "AXWebArea" }
+        guard TextInsertion.fits(text, role: AX.role(field), insideWebArea: insideWebArea, settable: AX.isSettable(field, kAXSelectedTextAttribute)) else {
+            return false
+        }
+        // A value that cannot be read cannot show whether the write landed, and keys after a write that did would type twice.
+        guard let before = AX.attribute(field, kAXValueAttribute) as? String,
+              AXUIElementSetAttributeValue(field, kAXSelectedTextAttribute as CFString, text as CFString) == .success else {
+            return false
+        }
+        for _ in 0..<5 {
+            try? await Task.sleep(for: .milliseconds(60))
+            if TextInsertion.landed(before: before, after: AX.attribute(field, kAXValueAttribute) as? String) {
+                return true
+            }
+        }
+        return false
+    }
+
     private func typeBehind(_ text: String, app: NSRunningApplication, _ keys: KeyTarget) async throws -> String? {
         let pid = app.processIdentifier
         let valueNow = { keys.aim.flatMap { AX.describe(AX.attribute($0, kAXValueAttribute)) } }

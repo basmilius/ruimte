@@ -145,7 +145,7 @@ One line per meaningful element: controls, anything with a title, value or descr
 Without `--front`, a command never activates the app, moves the real pointer or posts to the system event stream. The app in front keeps the focus and the person's keys.
 
 - `click --element` uses `AXPress`, `AXFocused` for a field without a press, or `AXShowMenu` for `--button right`.
-- `type` and `key` refocus the element (`KeyAim.swift`), raise its window with `AXMain`, and post keys to the app's process (`CGEvent.postToPid`), one character every 40 ms. `note` says when the focused value did not change.
+- `type` and `key` refocus the element (`KeyAim.swift`), raise its window with `AXMain`, and post keys to the app's process (`CGEvent.postToPid`), one character every 40 ms. `note` says when the focused value did not change. A native text field outside a web area gets text without a newline or tab in one write of `AXSelectedText` instead (`method` says which), once its value shows the write landed.
 - `scroll --element` uses page actions or the scroll bar's value, and in Chromium `AXScrollToVisible` (about half a page per step).
 - `open` starts an app without activating it. The read commands and `menu` work as in front.
 
