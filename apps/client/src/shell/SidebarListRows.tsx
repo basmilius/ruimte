@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { renameNodeAction, renameViewAction } from '@/actions/client-actions';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { WaitingCount } from '@/attention/WaitingCount';
-import { WaitLabel } from '@/attention/WaitLabel';
+import { ChildWaitLabel, WaitLabel } from '@/attention/WaitLabel';
 import { WorkingMark } from '@/attention/WorkingMark';
 import { Favicon } from '@/browser/Favicon';
 import { useBrowserDisplayTitle } from '@/browser/title';
@@ -229,6 +229,7 @@ export function NodeRow({ row, tabbable, snoozable }: RowProps & { row: SidebarN
                     {node.alert && <ProcessWarningMark />}
                     <SlotRow place="sidebarRow" context={{ node: nodeInfoOf(node.id) }} />
                     {node.snoozedUntil && <SnoozedMark until={node.snoozedUntil} />}
+                    {node.childWait && node.status !== 'needs-you' && <ChildWaitLabel wait={node.childWait} />}
                     {snoozable && node.status === 'needs-you' ? (
                         <WaitLabel detail={node.wait} snoozed={Boolean(node.snoozedUntil)} />
                     ) : (
@@ -418,6 +419,9 @@ export function ViewRow({ row, tabbable, onToggle, onDrag }: ViewRowProps) {
     const unsaved = useUnsavedStoredPath(view.kind === 'file' ? view.path : null, row.target);
     const { active } = row;
     const [renaming, setRenaming] = useState(false);
+    // An open canvas lists its nodes under it, each with its own; a folded one speaks for them.
+    const childWait = view.self ? view.self.childWait : row.expanded === true ? null : view.nodes.find((node) => node.childWait)?.childWait;
+
     if (renaming) {
         return (
             <ListRow variant="inset" className={ROW}>
@@ -514,6 +518,7 @@ export function ViewRow({ row, tabbable, onToggle, onDrag }: ViewRowProps) {
                 {(view.self ? view.self.alert : view.nodes.some((node) => node.alert)) && <ProcessWarningMark />}
                 {view.self?.finished && <UnseenMark />}
                 {view.self?.snoozedUntil && <SnoozedMark until={view.self.snoozedUntil} />}
+                {childWait && row.status !== 'needs-you' && <ChildWaitLabel wait={childWait} />}
                 {view.self?.wait && row.status === 'needs-you' ? (
                     <WaitLabel detail={view.self.wait} snoozed={Boolean(view.self.snoozedUntil)} />
                 ) : (

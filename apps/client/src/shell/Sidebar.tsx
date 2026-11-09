@@ -59,6 +59,7 @@ import { useInstantWidth } from '@/shell/useInstantWidth';
 import { draggedViewId, dragging as draggedView, draggingWholeCell, PROJECT_DRAG_TYPE, setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { nodeWork } from '@/state/agent-work';
 import { isUnseen, useAttention } from '@/state/attention';
+import { childWaitOf } from '@/state/delegation';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
 import { isDatabaseTab, isPromotableTab, useFiles } from '@/state/files';
@@ -179,7 +180,8 @@ export function Sidebar() {
                     provider: nodeProvider(node, chats, endpointId) ?? null,
                     status: nodeStatus(node, sessions, chats, endpointId) ?? null,
                     wait: waitDetailsOf(node, sessions, chats, waitingSince, endpointId),
-                    work: nodeWork(node, sessions, chats, endpointId),
+                    work: nodeWork(node, sessions, chats, endpointId, tasks[machine]),
+                    childWait: childWaitOf(node.id, tasks[machine], sessions, chats, machine),
                     draft: (node.kind === 'chat' || node.kind === 'design') && drafts.includes(node.id),
                     alert: (warnings[machine] ?? []).some((alert) => alert.nodeId === node.id),
                     finished: isUnseen(unseen, machine, node.id),

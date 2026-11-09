@@ -42,7 +42,7 @@
         "idle": "Inactief",
         "error": "Fout",
         "exited": "Sessie beëindigd",
-        "delegating": "Sub-agents bezig"
+        "delegating": "Bezig op de achtergrond"
     },
     "node": {
         "failed": "Kon deze node niet tonen",

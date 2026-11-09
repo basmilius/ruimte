@@ -42,7 +42,7 @@
         "idle": "Idle",
         "error": "Error",
         "exited": "Session ended",
-        "delegating": "Sub-agents working"
+        "delegating": "Working in the background"
     },
     "node": {
         "failed": "Could not show this node",

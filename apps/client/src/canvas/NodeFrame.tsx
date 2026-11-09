@@ -24,6 +24,7 @@ import { memo, useRef, useState, type CSSProperties, type ReactNode } from 'reac
 import { useTranslation } from 'react-i18next';
 import { renameNodeAction } from '@/actions/client-actions';
 import { UnseenMark } from '@/attention/UnseenMark';
+import { ChildWaitLabel } from '@/attention/WaitLabel';
 import { WorkingMark } from '@/attention/WorkingMark';
 import { Favicon } from '@/browser/Favicon';
 import { useBrowserDisplayTitle } from '@/browser/title';
@@ -76,7 +77,7 @@ import { useMachineEntry } from '@/shell/use-machine-entry';
 import type { AgentWork } from '@/state/agent-work';
 import { useUnseen } from '@/state/attention';
 import { GROUP_HEADER_PX, isNodeActive, maximizedNodeOf, useCanvas, useCanvasCamera, useCanvasStore, type AgentStatus } from '@/state/canvas';
-import { useNodeStatus, useNodeWork } from '@/state/chats';
+import { useChildWait, useNodeStatus, useNodeWork } from '@/state/chats';
 import { useCellHasFocus } from '@/state/document';
 import { useEndpointIdOfMachine } from '@/state/endpoints';
 import { useEndpointId, useEndpointOfNode } from '@/state/keys';
@@ -383,6 +384,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     const toolbarSlot = fixedSlot(fileControls);
     const status = useNodeStatus(node);
     const work = useNodeWork(node);
+    const childWait = useChildWait(node);
     const endpointId = useEndpointId();
     const workspaceId = useWorkspace()?.connection.endpointId;
     const nodeEndpointId = useEndpointOfNode(node, '');
@@ -585,6 +587,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                             <Pill icon={<Icon icon={Link2} size={12} />}>{t('node.context.pill')}</Pill>
                         </Tooltip>
                     )}
+                    {childWait && !renaming && <ChildWaitLabel wait={childWait} />}
                     {status && !renaming && <StatusMark status={status} work={work} />}
                     {task && !renaming && showsTaskMark(task, work, unseen) && <TaskMark task={task} />}
                     {/* Looking clears it, so this is for a canvas zoomed out and a window beside another app. */}

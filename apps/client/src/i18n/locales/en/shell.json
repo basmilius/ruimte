@@ -1396,7 +1396,15 @@
         "backToList": "Back to list",
         "underMinute": "< {{minute}} min",
         "openToAnswer": "Open the session to answer.",
-        "previewUnavailable": "This request cannot be previewed here."
+        "previewUnavailable": "This request cannot be previewed here.",
+        "child": {
+            "agent": "sub-agent",
+            "paused": "paused",
+            "pausedUntil": "paused until {{time}}",
+            "needsYou": "{{title}} needs you",
+            "pausedUsage": "{{title}} paused on a usage limit",
+            "pausedOverload": "{{title}} paused, the model is busy"
+        }
     },
     "extensions": {
         "failed": "This extension could not be shown",

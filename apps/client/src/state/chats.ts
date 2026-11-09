@@ -1,8 +1,10 @@
 import { chatSink, useChats, type ChatsById, type ChatSink, type ChatStatuses } from '@adecore/agents-react/state';
 import type { AgentStatus } from '@ruimte/contracts';
 import { nodeWork, type AgentWork } from '@/state/agent-work';
+import { childWaitOf, openChildTasks, type ChildWait } from '@/state/delegation';
 import { endpointKey, useEndpointId, useEndpointOfNode } from '@/state/keys';
 import { nodeStatus, useSessions, type SessionsByKey, type StatusOf } from '@/state/sessions';
+import { useTasks } from '@/state/tasks';
 
 /* The sink of one daemon's chat client: it hands over node ids, this puts them under its machine. */
 export function chatSinkFor(endpointId: string): ChatSink {
@@ -66,5 +68,23 @@ export function useNodeStatus(node: StatusOf): AgentStatus | undefined {
 
 /* What the agent in this node works on. A terminal's status cannot say, since it reads running while a shell sits at its prompt. */
 export function useNodeWork(node: StatusOf): AgentWork | null {
-    return nodeWork(node, ...useNodeRows(node));
+    const [sessions, chats, endpointId] = useNodeRows(node);
+    const machine = useEndpointOfNode(node, endpointId);
+    const tasks = useTasks((s) => s.byEndpoint[machine]);
+
+    return nodeWork(node, sessions, chats, endpointId, tasks);
 }
+
+/* The child agent of this node that waits on a person or on a limit. Only a node with an open task reads every chat. */
+export function useChildWait(node: StatusOf): ChildWait | null {
+    const endpointId = useEndpointId();
+    const machine = useEndpointOfNode(node, endpointId);
+    const tasks = useTasks((s) => s.byEndpoint[machine]);
+    const delegates = (node.kind === 'chat' || node.kind === 'design') && openChildTasks(tasks, node.id).length > 0;
+    const sessions = useSessions((s) => (delegates ? s.byKey : NO_ROWS));
+    const chats = useChats((s) => (delegates ? s.statusByKey : NO_ROWS));
+
+    return delegates ? childWaitOf(node.id, tasks, sessions, chats, machine) : null;
+}
+
+const NO_ROWS = {};
