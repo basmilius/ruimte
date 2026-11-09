@@ -1433,6 +1433,47 @@ describe('an existing tunnel', () => {
         expect((await f.state()).tunnel).toMatchObject({ runner: 'ruimte' });
     });
 
+    test('never says Starting while it changes a hostname of a tunnel that something else runs', async () => {
+        const f = await fixture();
+        const picked = office(f, { connections: 1 });
+
+        await linked(f, picked);
+
+        const added = await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+
+        expect(added).toMatchObject({ stage: 'running', tunnel: { runner: 'other' } });
+
+        await f.service.idle();
+
+        const row = (await f.state()).rows[0]!;
+        const switched = await f.service.update(row.id, { enabled: false });
+        const removed = await f.service.remove(row.id);
+
+        expect(switched.stage).toBe('running');
+        expect(removed.stage).toBe('running');
+
+        await f.service.idle();
+
+        expect(f.runner.calls).toEqual([]);
+    });
+
+    test('says Starting while it starts its own cloudflared for the first hostname, and not for a change after that', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const added = await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000 });
+
+        expect(added.stage).toBe('starting');
+
+        await f.service.idle();
+
+        const row = (await f.state()).rows[0]!;
+        const changed = await f.service.update(row.id, { port: 3001 });
+
+        expect(changed.stage).toBe('running');
+    });
+
     test('unlinks by taking off only what Ruimte added, and never deletes the tunnel at Cloudflare', async () => {
         const f = await fixture();
         const picked = office(f);

@@ -399,7 +399,10 @@ export class TunnelService {
             return { stage: this.busy === 'starting' ? 'starting' : 'no-tunnel', message: null };
         }
 
-        return { stage: this.busy === 'starting' ? 'starting' : 'running', message: null };
+        // A job on a tunnel that already runs, Ruimte's child or something else, changes what it serves and starts nothing.
+        const runs = this.child !== null || this.runsElsewhere;
+
+        return { stage: this.busy === 'starting' && !runs ? 'starting' : 'running', message: null };
     }
 
     private save(): void {
