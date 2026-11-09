@@ -24,6 +24,19 @@
         "review": "Review…",
         "decline": "Decline"
     },
+    "tunnelProposal": {
+        "add": "Add {{hostname}} → port {{port}}",
+        "on": "Turn on {{hostname}} → port {{port}}",
+        "onMcp": "Turn on {{hostname}} → Ruimte MCP",
+        "off": "Turn off {{hostname}}",
+        "edit": "Point {{hostname}} → port {{port}}",
+        "remove": "Remove {{hostname}}",
+        "hostHeader": "Host header {{header}}",
+        "stale": "{{hostname}} changed since the agent asked. Decline this and ask again.",
+        "confirm": "Confirm",
+        "confirming": "Confirming…",
+        "decline": "Decline"
+    },
     "waiting": {
         "heading": "Waiting for you in its terminal",
         "approval": "Approval requested by {{tool}}",

@@ -13,6 +13,7 @@ import { proposalsOf, useProposals } from '@/state/proposals';
 import { secretRequestsOf, useSecrets } from '@/state/secrets';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
+import { tunnelProposalsOf, useTunnelProposals } from '@/state/tunnel-proposals';
 import { useWaitingSince } from '@/state/waiting';
 import { chatScopeOf } from '@/transport/chat-scope';
 
@@ -49,6 +50,7 @@ export function useCanvasPrompts(): StackPrompts {
                 computer: machines.flatMap(computerApprovalsOf),
                 secrets: machines.flatMap(secretRequestsOf),
                 proposals: machines.flatMap(proposalsOf),
+                tunnelProposals: machines.flatMap(tunnelProposalsOf),
                 waitingSince: useWaitingSince.getState().byKey,
                 snoozes: useSnoozes.getState().byKey
             });
@@ -100,6 +102,7 @@ export function useCanvasPrompts(): StackPrompts {
             useComputer.subscribe(update),
             useSecrets.subscribe(update),
             useProposals.subscribe(update),
+            useTunnelProposals.subscribe(update),
             useSnoozes.subscribe(update)
         ];
         return () => {

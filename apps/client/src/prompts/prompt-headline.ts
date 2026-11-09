@@ -1,7 +1,7 @@
 import { toolSummary } from '@adecore/agents-react/chat';
 import type { PromptSubject } from '@adecore/agents-react/prompts';
 import i18next from 'i18next';
-import { isRuimtePrompt } from '@/prompts/ruimte-prompts';
+import { isRuimtePrompt, tunnelProposalHeading } from '@/prompts/ruimte-prompts';
 
 /*
  * What a prompt asks, as one line for the folded stack: the words its card is headed with, so the
@@ -27,6 +27,9 @@ export function promptHeadline(subject: PromptSubject): string {
     }
     if (data.kind === 'project-proposal') {
         return i18next.t('prompts:projectProposal.title');
+    }
+    if (data.kind === 'tunnel-proposal') {
+        return tunnelProposalHeading(data.proposal);
     }
     if (data.request?.title) {
         return data.request.title;

@@ -8,9 +8,10 @@ import {
     type ChatQuestionItem,
     type ComputerApproval,
     type ProjectProposal,
-    type SecretRequest
+    type SecretRequest,
+    type TunnelProposal
 } from '@ruimte/contracts';
-import { computerPrompt, proposalPrompt, ruimtePayloadOf, secretPrompt, waitingPrompt } from '@/prompts/ruimte-prompts';
+import { computerPrompt, proposalPrompt, ruimtePayloadOf, secretPrompt, tunnelProposalPrompt, waitingPrompt } from '@/prompts/ruimte-prompts';
 import type { CanvasNode } from '@/state/canvas';
 import { endpointKey, endpointOfNode } from '@/state/keys';
 import { nodeStatus, type SessionsByKey } from '@/state/sessions';
@@ -41,6 +42,8 @@ export interface CanvasPromptsInput {
     secrets?: readonly SecretRequest[];
     /* The suggestions of agents in Chats to become a project, the same way; each belongs to the chat that suggests. */
     proposals?: readonly ProjectProposal[];
+    /* The suggestions of agents to change a hostname of a machine's tunnel, the same way. */
+    tunnelProposals?: readonly TunnelProposal[];
     /* When each waiting terminal was first seen waiting, by session key, as the previous call returned it. */
     waitingSince: ReadonlyMap<string, number>;
     /* The snoozes that stand; a prompt whose owner is snoozed goes to `snoozed`, out of the stack. */
@@ -69,6 +72,7 @@ export function canvasPrompts({
     computer,
     secrets = [],
     proposals = [],
+    tunnelProposals = [],
     waitingSince,
     snoozes = {}
 }: CanvasPromptsInput): CanvasPrompts {
@@ -117,6 +121,11 @@ export function canvasPrompts({
             for (const proposal of proposals) {
                 if (proposal.chatId === node.id) {
                     add(node, { kind: 'host', nodeId: node.id, prompt: proposalPrompt(machine, node.id, proposal) }, provider, 'chat');
+                }
+            }
+            for (const proposal of tunnelProposals) {
+                if (proposal.chatId === node.id) {
+                    add(node, { kind: 'host', nodeId: node.id, prompt: tunnelProposalPrompt(machine, node.id, proposal) }, provider, 'chat');
                 }
             }
             for (const item of standingRequestsOf(chats[key])) {

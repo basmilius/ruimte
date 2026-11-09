@@ -23,15 +23,16 @@ import { DictationTextarea } from '@/dictation/DictationTextarea';
 import { dictationPreview, dictationRange } from '@/dictation/editor';
 import { saveToOutputActions } from '@/output/save';
 import { useOutputThreadCards } from '@/output/thread-cards';
-import { answerRuimtePrompt, computerPrompt, isRuimtePrompt, proposalPrompt, secretPrompt } from '@/prompts/ruimte-prompts';
+import { answerRuimtePrompt, computerPrompt, isRuimtePrompt, proposalPrompt, secretPrompt, tunnelProposalPrompt } from '@/prompts/ruimte-prompts';
 import { RuimtePromptView } from '@/prompts/RuimtePromptView';
-import { proposalAnswers } from '@/proposals/answer';
+import { proposalAnswers, tunnelProposalAnswers } from '@/proposals/answer';
 import { secretAnswers } from '@/secrets/answer';
 import { openFileLink, parseFileRef, resolveFileRef, type FileRef } from '@/shell/panels/file-links';
 import { useNodeComputerApprovals } from '@/state/computer';
 import { useNodeProposals } from '@/state/proposals';
 import { useNodeSecretRequests } from '@/state/secrets';
 import { useToasts } from '@/state/toasts';
+import { useNodeTunnelProposals } from '@/state/tunnel-proposals';
 import { isComposerShortcut } from '@/terminal/keymap';
 
 /*
@@ -75,18 +76,20 @@ export const WORKSPACE_CHAT_HOST: Partial<ChatHost> = {
             const requests = useNodeComputerApprovals(endpointId, chatId);
             const secrets = useNodeSecretRequests(endpointId, chatId);
             const proposals = useNodeProposals(endpointId, chatId);
+            const tunnels = useNodeTunnelProposals(endpointId, chatId);
             // Kept by hand: the React Compiler leaves a hook in an object literal as written.
             return useMemo(
                 () => [
                     ...requests.map((request) => computerPrompt(chatId, request)),
                     ...secrets.map((request) => secretPrompt(endpointId, chatId, request)),
-                    ...proposals.map((proposal) => proposalPrompt(endpointId, chatId, proposal))
+                    ...proposals.map((proposal) => proposalPrompt(endpointId, chatId, proposal)),
+                    ...tunnels.map((proposal) => tunnelProposalPrompt(endpointId, chatId, proposal))
                 ],
-                [requests, secrets, proposals, endpointId, chatId]
+                [requests, secrets, proposals, tunnels, endpointId, chatId]
             );
         },
         render: (prompt, props) => (isRuimtePrompt(prompt) ? createElement(RuimtePromptView, { prompt, props }) : null),
-        answer: (prompt, action) => answerRuimtePrompt(prompt, action, answerComputerAsPerson, secretAnswers, proposalAnswers)
+        answer: (prompt, action) => answerRuimtePrompt(prompt, action, answerComputerAsPerson, secretAnswers, proposalAnswers, tunnelProposalAnswers)
     },
     openNewChat: (endpointId, chatId) => void openNewChatAfterSend(endpointId, chatId),
     useReferableChats: useProjectChats,

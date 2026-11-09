@@ -1,11 +1,13 @@
 import type { PromptViewProps } from '@adecore/agents-react/prompts';
 import { ApprovalActions, PromptPrimary, PromptCard } from '@adecore/agents-react/prompts';
-import { Button, Input, ScrollArea } from '@adecore/ui';
-import type { ProjectProposal, SecretRequest } from '@ruimte/contracts';
+import { Button, Icon, Input, ScrollArea, Spinner } from '@adecore/ui';
+import type { ProjectProposal, SecretRequest, TunnelProposal } from '@ruimte/contracts';
+import type { TFunction } from 'i18next';
+import { TriangleAlert } from 'lucide-react';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isRuimteApp } from '@/computer/ruimte-app';
-import { computerButtons, SECRET_ANSWER_FIELD, SECRET_DECLINE, type RuimtePrompt } from '@/prompts/ruimte-prompts';
+import { computerButtons, SECRET_ANSWER_FIELD, SECRET_DECLINE, TUNNEL_CONFIRM, tunnelProposalHeading, type RuimtePrompt } from '@/prompts/ruimte-prompts';
 import { useUi } from '@/state/ui';
 
 /* A card of Ruimte's own, drawn the way a chat draws its prompts: a waiting terminal, the machine asking to let an agent into an app, or an agent asking for a launch's secret. */
@@ -51,6 +53,10 @@ export function RuimtePromptView({ prompt, props }: { prompt: RuimtePrompt; prop
 
     if (data.kind === 'project-proposal') {
         return <ProposalCard proposal={data.proposal} props={props} />;
+    }
+
+    if (data.kind === 'tunnel-proposal') {
+        return <TunnelProposalCard proposal={data.proposal} props={props} />;
     }
 
     const { request } = data;
@@ -153,11 +159,57 @@ function ProposalCard({ proposal, props }: { proposal: ProjectProposal; props: P
     );
 }
 
+/* How a dev server is reached once a tunnel suggestion is confirmed, beyond its port: https and the `Host` header. */
+function originLine(proposal: TunnelProposal, t: TFunction<'prompts'>): string | null {
+    const parts = [
+        ...(proposal.origin?.https === true ? ['https'] : []),
+        ...(proposal.origin?.hostHeader === undefined ? [] : [t('tunnelProposal.hostHeader', { header: proposal.origin.hostHeader })])
+    ];
+
+    return parts.length === 0 ? null : parts.join(' · ');
+}
+
+/*
+ * An agent suggests a change to a hostname of the machine's tunnel. Confirm makes the change Settings would make, and
+ * Cloudflare takes seconds to answer; a card whose hostname changed since can only be declined.
+ */
+function TunnelProposalCard({ proposal, props }: { proposal: TunnelProposal; props: PromptViewProps }) {
+    const { t } = useTranslation('prompts');
+    const { onAction, sending } = props;
+    const origin = proposal.kind === 'dev' && proposal.action !== 'off' && proposal.action !== 'remove' ? originLine(proposal, t) : null;
+    // Settings warns before a dev server goes public, so a card that would make one public warns the same way.
+    const exposes = proposal.kind === 'dev' && (proposal.action === 'add' || proposal.action === 'on');
+
+    return (
+        <QuestionCard
+            props={props}
+            heading={tunnelProposalHeading(proposal)}
+            decline={t('tunnelProposal.decline')}
+            primary={{
+                label: sending ? t('tunnelProposal.confirming') : t('tunnelProposal.confirm'),
+                disabled: proposal.stale,
+                busy: sending,
+                onClick: () => onAction({ kind: 'choose', choiceId: TUNNEL_CONFIRM })
+            }}
+        >
+            {origin !== null && <p className="break-all font-mono text-xs text-text-muted select-text">{origin}</p>}
+            {proposal.reason !== undefined && <p className="whitespace-pre-wrap break-words text-sm text-text-muted">{proposal.reason}</p>}
+            {exposes && !proposal.stale && (
+                <p className="flex items-center gap-2 text-xs text-status-needs-you">
+                    <Icon icon={TriangleAlert} size={14} className="shrink-0" />
+                    {t('settings:tunnels.add.devWarning')}
+                </p>
+            )}
+            {proposal.stale && <p className="text-xs text-status-needs-you">{t('tunnelProposal.stale', { hostname: proposal.hostname })}</p>}
+        </QuestionCard>
+    );
+}
+
 interface QuestionCardProps {
     props: PromptViewProps;
     heading: string;
     decline: string;
-    primary: { label: string; disabled: boolean; onClick(): void };
+    primary: { label: string; disabled: boolean; busy?: boolean; onClick(): void };
     children: ReactNode;
 }
 
@@ -181,6 +233,7 @@ function QuestionCard({ props, heading, decline, primary, children }: QuestionCa
                     </Button>
                     <span className="grow" />
                     <PromptPrimary disabled={locked || primary.disabled} onClick={primary.onClick}>
+                        {primary.busy === true && <Spinner size={14} />}
                         {primary.label}
                     </PromptPrimary>
                 </>

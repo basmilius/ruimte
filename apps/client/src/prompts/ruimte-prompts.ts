@@ -1,18 +1,19 @@
 import type { PromptAction, ApprovalButtonSpec, HostPrompt, PromptSubject } from '@adecore/agents-react/prompts';
-import type { AgentRequest, ComputerApproval, ComputerApprovalChoice, ProjectProposal, SecretRequest } from '@ruimte/contracts';
+import type { AgentRequest, ComputerApproval, ComputerApprovalChoice, ProjectProposal, SecretRequest, TunnelProposal } from '@ruimte/contracts';
 import i18next from 'i18next';
-import type { ProposalAnswers } from '@/proposals/answer';
+import type { ProposalAnswers, TunnelProposalAnswers } from '@/proposals/answer';
 import type { SecretAnswers } from '@/secrets/answer';
 
 /*
  * What Ruimte asks beside a chat's own prompts. The machine asks, and not the CLI, for an agent to
- * operate an app, for a launch's secret and about an agent's suggestion to make its chat a project.
- * A terminal whose TUI waits is answered only in that TUI.
+ * operate an app, for a launch's secret and about an agent's suggestion to make its chat a project
+ * or to change a hostname of the machine's tunnel. A terminal whose TUI waits is answered only in that TUI.
  */
 type RuimtePromptData =
     | { kind: 'computer-approval'; request: ComputerApproval }
     | { kind: 'secret-request'; endpointId: string; request: SecretRequest }
     | { kind: 'project-proposal'; endpointId: string; proposal: ProjectProposal }
+    | { kind: 'tunnel-proposal'; endpointId: string; proposal: TunnelProposal }
     | { kind: 'terminal-waiting'; since: number; request?: AgentRequest };
 
 /* The field of a secret card's answer; the value travels in it only from the card to the machine. */
@@ -20,6 +21,9 @@ export const SECRET_ANSWER_FIELD = 'value';
 
 /* Decline is the one choice a secret card offers besides Save, and the one a suggestion's card sends to the machine. */
 export const SECRET_DECLINE = 'decline';
+
+/* The choice of a tunnel suggestion's Confirm, which makes the change on the machine. */
+export const TUNNEL_CONFIRM = 'confirm';
 
 export interface RuimtePrompt extends HostPrompt {
     data: RuimtePromptData;
@@ -61,6 +65,27 @@ export function proposalPrompt(endpointId: string, chatId: string, proposal: Pro
     };
 }
 
+export function tunnelProposalPrompt(endpointId: string, chatId: string, proposal: TunnelProposal): RuimtePrompt {
+    return {
+        id: `tunnel-proposal:${chatId}:${proposal.proposalId}`,
+        createdAt: proposal.createdAt,
+        blocking: true,
+        asks: 'question',
+        data: { kind: 'tunnel-proposal', endpointId, proposal }
+    };
+}
+
+/* What a tunnel suggestion does, in the words its card is headed with. */
+export function tunnelProposalHeading(proposal: TunnelProposal): string {
+    const words = { hostname: proposal.hostname, port: String(proposal.port ?? '') };
+
+    if (proposal.kind === 'mcp' && proposal.action === 'on') {
+        return i18next.t('prompts:tunnelProposal.onMcp', words);
+    }
+
+    return i18next.t(`prompts:tunnelProposal.${proposal.action}`, words);
+}
+
 export function waitingPrompt(nodeId: string, since: number, request?: AgentRequest): RuimtePrompt {
     return {
         id: `waiting:${nodeId}${request ? `:${request.id}` : ''}`,
@@ -71,7 +96,13 @@ export function waitingPrompt(nodeId: string, since: number, request?: AgentRequ
     };
 }
 
-const RUIMTE_KINDS: ReadonlySet<unknown> = new Set<RuimtePromptData['kind']>(['computer-approval', 'secret-request', 'project-proposal', 'terminal-waiting']);
+const RUIMTE_KINDS: ReadonlySet<unknown> = new Set<RuimtePromptData['kind']>([
+    'computer-approval',
+    'secret-request',
+    'project-proposal',
+    'tunnel-proposal',
+    'terminal-waiting'
+]);
 
 export function isRuimtePrompt(prompt: HostPrompt): prompt is RuimtePrompt {
     return RUIMTE_KINDS.has((prompt.data as Partial<RuimtePromptData> | null)?.kind);
@@ -89,7 +120,7 @@ export function ruimtePayloadOf(subject: PromptSubject): unknown {
     if (data.kind === 'computer-approval' || data.kind === 'secret-request') {
         return data.request;
     }
-    if (data.kind === 'project-proposal') {
+    if (data.kind === 'project-proposal' || data.kind === 'tunnel-proposal') {
         return data.proposal;
     }
     return data.request ? JSON.stringify(data.request) : data.since;
@@ -114,7 +145,8 @@ export async function answerRuimtePrompt(
     action: PromptAction,
     answerComputer: (requestId: string, choice: ComputerApprovalChoice) => Promise<boolean>,
     secrets: SecretAnswers,
-    proposals?: ProposalAnswers
+    proposals?: ProposalAnswers,
+    tunnels?: TunnelProposalAnswers
 ): Promise<void> {
     if (!isRuimtePrompt(prompt) || prompt.data.kind === 'terminal-waiting') {
         throw new Error(i18next.t('prompts:error.terminalOnly'));
@@ -122,7 +154,15 @@ export async function answerRuimtePrompt(
     const { data } = prompt;
     const declined = action.kind === 'choose' && action.choiceId === SECRET_DECLINE;
     let accepted = false;
-    if (data.kind === 'project-proposal') {
+    if (data.kind === 'tunnel-proposal') {
+        const { endpointId, proposal } = data;
+        if (tunnels !== undefined && declined) {
+            accepted = await tunnels.decline(endpointId, proposal.proposalId);
+        } else if (tunnels !== undefined && action.kind === 'choose' && action.choiceId === TUNNEL_CONFIRM) {
+            // A refusal of the machine or Cloudflare throws its own sentence, which the card shows.
+            accepted = await tunnels.confirm(endpointId, proposal.proposalId);
+        }
+    } else if (data.kind === 'project-proposal') {
         // Review opens the dialog from the card itself; only a no reaches the machine from here.
         accepted = declined && proposals !== undefined && (await proposals.decline(data.endpointId, data.proposal.proposalId));
     } else if (data.kind === 'secret-request') {
