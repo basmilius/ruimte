@@ -57,6 +57,8 @@ export interface SessionMachine {
     /* The lines of a terminal this window has drawn, oldest first; null for one it never drew. */
     screen(terminalId: string): string[] | null;
     providers(): readonly ProviderInfo[];
+    /* Whether the machine named its CLIs yet; until it did, no CLI is known to fork. */
+    providersLoaded(): boolean;
     providerFixed(chatId: string): boolean;
     /* False when nobody here has the chat open, since only an open chat can be registered again. */
     retarget(chatId: string, provider: AgentKind, selection: ModelSelection): Promise<boolean>;
@@ -87,6 +89,7 @@ const LIVE_MACHINE: SessionMachine = {
     terminal: (terminalId) => useSessions.getState().byKey[endpointKey(endpointOfNodeId(terminalId), terminalId)] ?? null,
     screen: (terminalId) => screenOf(endpointOfNodeId(terminalId), terminalId),
     providers: () => providersOf(currentEndpointId()).providers,
+    providersLoaded: () => providersOf(currentEndpointId()).loaded,
     providerFixed: (chatId) => readNodeHost(chatId)?.providerFixed === true,
     retarget: async (chatId, provider, selection) => {
         const chats = chatClientOfNode(chatId);
@@ -504,7 +507,7 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
                 throw new ActionRefusal('no-turn', `“${chat}” has no finished turn to fork after that this window knows of. Open it and try again.`);
             }
             if (call.actor.kind !== 'person') {
-                const refusal = forkRefusal(row?.info ?? null, row?.structure[turn], providersOf(currentEndpointId()));
+                const refusal = forkRefusal(row?.info ?? null, row?.structure[turn], { providers: machine.providers(), loaded: machine.providersLoaded() });
                 if (refusal !== null) {
                     throw new ActionRefusal('cannot-fork', refusal);
                 }
