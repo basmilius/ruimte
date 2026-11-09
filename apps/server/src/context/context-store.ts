@@ -40,7 +40,8 @@ export class SubagentUnreadable extends ContextRefusal {
 }
 
 interface ContextReaders {
-    extensionNode?(extension: string, type: string, data: unknown): Promise<string | null>;
+    /* What an extension's own node says. Required, so no store is made that reads every extension node as empty. */
+    extensionNode(extension: string, type: string, data: unknown): Promise<string | null>;
     /* What the agent under this id may read, derived from the project documents the daemon knows. */
     sources(targetId: string): ContextSource[];
     /* The views, nodes and chats a person pointed at in a message of this chat. Readable like a line, but
@@ -110,11 +111,6 @@ export class ContextStore {
      * One source as text. `tail` is counted here rather than in the CLI, since only this side knows
      * what a line of each kind is, and the wire then carries fifteen lines instead of two thousand.
      */
-    /* Set once the extensions are up, which is after the agents. */
-    useExtensionNodes(read: NonNullable<ContextReaders['extensionNode']>): void {
-        this.readers.extensionNode = read;
-    }
-
     async read(targetId: string, sourceId: string, tail: number | null = null, subagent: string | null = null): Promise<string | null> {
         const source = this.sourceFor(targetId, sourceId);
         return source ? ((await this.reading(targetId, source, tail, subagent))?.text ?? null) : null;
@@ -177,9 +173,7 @@ export class ContextStore {
                 if (!source.extension) {
                     return null;
                 }
-                return asReading(
-                    lastLines((await this.readers.extensionNode?.(source.extension.id, source.extension.type, source.extension.data)) ?? '', tail)
-                );
+                return asReading(lastLines((await this.readers.extensionNode(source.extension.id, source.extension.type, source.extension.data)) ?? '', tail));
             }
             case 'routine': {
                 const text = source.routine ? ((await this.readers.routineReport?.(targetId, source.routine, projectId).catch(() => null)) ?? null) : null;

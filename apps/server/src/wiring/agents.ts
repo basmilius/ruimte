@@ -45,6 +45,7 @@ import type { AgentWorkBundle } from './agent-work.ts';
 import type { ArtifactsBundle } from './artifacts.ts';
 import type { DatabasesBundle } from './databases.ts';
 import type { DevicesBundle } from './devices.ts';
+import type { ExtensionsBundle } from './extensions.ts';
 import type { GitBundle } from './git.ts';
 import type { LaunchesBundle } from './launches.ts';
 import { OutboxLink } from './outbox.ts';
@@ -131,6 +132,7 @@ interface AgentsLater {
     work(): AgentWorkBundle;
     artifacts(): ArtifactsBundle;
     routines(): RoutinesBundle;
+    extensions(): ExtensionsBundle;
 }
 
 interface AgentsInput {
@@ -266,6 +268,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         chatItems: async (chatId) => chats.get(chatId)?.thread.list() ?? (await chats.readChat(chatId))?.items ?? null,
         chatInfo: async (chatId) => chats.get(chatId)?.info ?? (await chats.readChat(chatId))?.info ?? null,
         now: () => clock.now(),
+        extensionNode: (extension, type, data) => later.extensions().nodeText(extension, type, data),
         browserPage: (browserId) => later.devices().browserDriver.read(browserId),
         devices: () => later.devices().devices.list(),
         chatPlans: (chatId) => plans.read(chatId),

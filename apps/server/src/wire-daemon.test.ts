@@ -104,6 +104,32 @@ describe('wireDaemon', () => {
         }
     });
 
+    test('reads an extension node to an agent from the extension that draws it', async () => {
+        const home = join(await homeOf(), 'home');
+        const wired = await wireDaemon({
+            runtime: testRuntime(home),
+            launcher: 'standalone',
+            seams: testSeams({ home, clock: new ManualClock() }),
+            shutdown: async () => undefined
+        });
+        const nodeContext = spyOn(wired.bundles.extensions.host, 'nodeContext').mockResolvedValue([{ text: 'Lap 3 of 10' }, { text: 'Leader: Ada' }]);
+
+        try {
+            const reading = await wired.bundles.agents.context.answerSource(
+                'chat-1',
+                { id: 'race', kind: 'extension', title: 'Race', extension: { id: 'racing', type: 'board', data: { lap: 3 } } },
+                null,
+                null
+            );
+
+            expect(reading.text).toBe('Lap 3 of 10\nLeader: Ada');
+            expect(nodeContext).toHaveBeenCalledWith('racing', 'board', { lap: 3 });
+        } finally {
+            nodeContext.mockRestore();
+            await wired.stop();
+        }
+    });
+
     test('recovers the tasks once, however often the work is recovered', async () => {
         const home = join(await homeOf(), 'home');
         const wired = await wireDaemon({

@@ -38,6 +38,7 @@ function toolsOf(context: ContextStore): (name: string, input?: Record<string, u
 function storeWith(readers: Partial<ConstructorParameters<typeof ContextStore>[0]>): ContextStore {
     return new ContextStore({
         sources: () => [],
+        extensionNode: async () => null,
         terminalText: async () => null,
         chatItems: () => null,
         drawingElements: async () => null,
@@ -116,6 +117,7 @@ const phone: DeviceInfo = {
 
 const store = new ContextStore({
     sources: (targetId) => linked.get(targetId) ?? [],
+    extensionNode: async () => null,
     terminalText: async (id) => (id === 'term' ? `${Array.from({ length: 2500 }, (_, i) => `line ${i}`).join('\n')}` : null),
     chatItems: (id) => (id === 'chat' ? items : null),
     browserPage: async (id) => {

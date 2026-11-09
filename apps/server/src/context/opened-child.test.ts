@@ -53,6 +53,7 @@ beforeEach(async () => {
     // The daemon's own wiring, over a real lineage and index.
     store = new ContextStore({
         sources: () => [],
+        extensionNode: async () => null,
         opened: (targetId, sourceId) =>
             openedChildSource(targetId, sourceId, { startedBy: (id) => lineage.startedBy(id), agentSource: (id) => index.agentSource(id) }),
         drawingElements: async () => null,

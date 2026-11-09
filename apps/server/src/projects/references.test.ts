@@ -154,6 +154,7 @@ describe('reading what a message referenced', () => {
     ]);
     const store = new ContextStore({
         sources: () => [],
+        extensionNode: async () => null,
         referenced: (targetId) => referenced(threads.get(targetId) ?? [], lookupFor(targetId)),
         terminalText: async () => null,
         chatItems: (id) => threads.get(id) ?? null,
