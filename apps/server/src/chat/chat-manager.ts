@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ChatCore, type ChatCoreOptions, type CodexProcessSpec, claudeProjectSlug, limitedTurn } from '@adecore/agents/chat';
-import type { ChatReferences, ChatSession, PromptNotes, ResumeWords, ChatRecord, ChatRecordExtras } from '@adecore/agents/chat';
+import type { ChatReferences, ChatSession, LostWork, PromptNotes, ResumeWords, ChatRecord, ChatRecordExtras } from '@adecore/agents/chat';
 import { cliMcpArgs, storedAccount, narrowerMode, type AccountUnusable } from '@adecore/agents/providers';
 import type {
     AgentKind,
@@ -65,6 +65,8 @@ export interface ChatPlans {
 }
 
 interface ChatManagerOptions extends ChatCoreOptions {
+    // Background work a restart took from a chat that no resumed turn tells; the outbox owes it a wake.
+    lostWork?: (chatId: string, lost: LostWork) => Promise<void>;
     // Where an agent reads its linked context, with Ruimte's MCP server beside it.
     contextUrl?: string;
     // How deep a chat sits in a chain of agents; an unknown chat is one a person opened.
@@ -331,7 +333,8 @@ export class ChatManager extends ChatCore {
                 broadcasted: (chatId, event) => this.broadcasted(chatId, event),
                 endedAt: (chatId) => this.ended(chatId),
                 unownedReason: () => 'no project holds this chat any more',
-                resumeWords: (chatId) => this.resumeWords(chatId)
+                resumeWords: (chatId) => this.resumeWords(chatId),
+                lostWork: (chatId, lost) => options.lostWork?.(chatId, lost) ?? Promise.resolve()
             }
         });
         this.contextUrl = options.contextUrl ?? null;

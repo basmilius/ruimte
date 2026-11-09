@@ -1,4 +1,4 @@
-import { chatOpener, limitResumeAt } from '@adecore/agents/chat';
+import { chatOpener, limitResumeAt, type LostWork } from '@adecore/agents/chat';
 import {
     deliverMessageHandler,
     OutboxWorker,
@@ -36,6 +36,9 @@ import type {
     TakeRemoteResultEntry
 } from './outbox.ts';
 import { startAgentHandler } from './start-agent.ts';
+
+// The note in front of it says what was lost; the prompt only lets the agent go on from there.
+const LOST_WORK_WAKE = { text: 'Go on after the machine restarted.', label: 'Machine restarted' };
 
 interface OutboxLinkOptions {
     outbox: OutboxStore;
@@ -90,6 +93,25 @@ export class OutboxLink {
         }
 
         await this.enqueue(projectId, chatId, { kind: 'deliver-answer', payload: answer });
+    }
+
+    /*
+     * Owes an idle chat the turn that tells it which background commands a restart took, once per note. A
+     * chat that lost only subagents or workflows, a task's child (whose parent hears through `background-limit`)
+     * and a chat no project holds are owed nothing.
+     */
+    async oweLostWork(chatId: string, lost: LostWork, taskChild: boolean): Promise<void> {
+        const projectId = this.projectOf(chatId);
+
+        if (projectId === null || taskChild || lost.resumed || lost.commands.length === 0) {
+            return;
+        }
+
+        if (this.outbox.list().some((entry) => entry.kind === 'deliver-lost-work' && entry.target === chatId && entry.payload.noteId === lost.noteId)) {
+            return;
+        }
+
+        await this.enqueue(projectId, chatId, { kind: 'deliver-lost-work', payload: { noteId: lost.noteId } });
     }
 
     /* Owes the resume of a limited turn at `at`, in place of whatever this chat owed before; a chat no project holds is owed nothing. */
@@ -369,6 +391,16 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
             ),
             // A person's answer on a card the chat raised; like a task's result, it is hop 0 and its turn wakes nobody.
             'deliver-answer': unlessClosed((entry) => wakeWith(entry.target, entry.payload)),
+            // Background commands a restart took from an idle chat; the same hop 0 turn, lapsed once anything stepped in since.
+            'deliver-lost-work': unlessClosed(async (entry) => {
+                const chat = await openChat(entry.target);
+
+                if (chat === null || !(chats.get(entry.target)?.owesRestartWake(entry.payload.noteId) ?? false)) {
+                    return;
+                }
+
+                return wakeWith(entry.target, LOST_WORK_WAKE);
+            }),
             'run-after-settle': (entry) => deps.runAfterSettle?.(entry) ?? Promise.resolve(),
             'connect-peer': (entry) => deps.connectPeer?.(entry) ?? Promise.resolve(),
             'routine-run': (entry) => deps.runRoutine?.(entry) ?? Promise.resolve(),

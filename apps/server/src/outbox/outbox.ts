@@ -53,6 +53,12 @@ const DeliverAnswerSchema = z.object({
     payload: z.object({ text: z.string(), label: z.string() })
 });
 
+const DeliverLostWorkSchema = z.object({
+    kind: z.literal('deliver-lost-work'),
+    // The target is an idle chat whose background commands a restart took; `noteId` is the note in its thread that says what was lost.
+    payload: z.object({ noteId: z.string().min(1) })
+});
+
 const RunAfterSettleSchema = z.object({
     kind: z.literal('run-after-settle'),
     // The target is the chat that settled in `worktree`; `launchId` is the task its project ran after it then.
@@ -129,6 +135,7 @@ const OutboxWorkSchema = z.discriminatedUnion('kind', [
     DeliverWaitingWorkSchema,
     DeliverPrWatchSchema,
     DeliverAnswerSchema,
+    DeliverLostWorkSchema,
     RunAfterSettleSchema,
     ConnectPeerSchema,
     DeliverRemoteResultSchema,

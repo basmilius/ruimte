@@ -338,6 +338,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         nameChat: (provider, input) =>
             textModels.title(input, async () => suggestChatTitle(providers.providers, provider, { ...input, cwd: await oneShot.cwdFor(input.cwd) })),
         onInterruptedRun: outboxLink.onInterruptedRun,
+        lostWork: (chatId, lost) => outboxLink.oweLostWork(chatId, lost, tasks.openFor(chatId) !== undefined),
         taskRows: (chatId) => tasks.ofParent(chatId),
         dropWakes: (chatId) => tasks.dropWake(chatId),
         endChildren: (chatId) => later.work().endChildren.stopNode(chatId, 'a person cleared this chat'),

@@ -20,6 +20,7 @@ export function refusingHandlers(own: Partial<OutboxHandlers<OutboxWork>>): Outb
         'deliver-waiting': refuse,
         'deliver-pr-watch': refuse,
         'deliver-answer': refuse,
+        'deliver-lost-work': refuse,
         'run-after-settle': refuse,
         'connect-peer': refuse,
         'deliver-remote-result': refuse,

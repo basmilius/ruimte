@@ -259,6 +259,7 @@ export async function bootTestDaemon({
         firstPrompt: (id) => prompts.take(id),
         openingAgent: agentChatOpening(outbox, (provider) => chats.composerPreferences.for(provider)),
         onInterruptedRun: outboxLink.onInterruptedRun,
+        lostWork: (chatId, lost) => outboxLink.oweLostWork(chatId, lost, tasks.openFor(chatId) !== undefined),
         standalone: (id) => store.index.locate(id)?.canvasId === null,
         messageNotes: (chatId) => new NoticeNotes(notices, chatId, MESSAGE_WORDS),
         taskRows: (chatId) => tasks.ofParent(chatId),
