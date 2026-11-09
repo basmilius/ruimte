@@ -193,29 +193,8 @@ public final class PhantomCursor {
             return
         }
         let glyph = Layers.plain(CGRect(x: 0, y: 0, width: OverlayStyle.Cursor.box, height: OverlayStyle.Cursor.box))
-        let color = look.tone.map(OverlayStyle.color) ?? OverlayStyle.Ink.white
         let timing = OverlayStyle.Motion.self
         switch kind {
-        case .check:
-            let check = CAShapeLayer()
-            check.frame = glyph.bounds
-            let path = CGMutablePath()
-            path.move(to: CGPoint(x: 9.1, y: 12.8))
-            path.addLine(to: CGPoint(x: 11.5, y: 15.2))
-            path.addLine(to: CGPoint(x: 16.1, y: 10.2))
-            check.path = path
-            check.fillColor = nil
-            check.strokeColor = color
-            check.lineWidth = 2
-            check.lineCap = .round
-            check.lineJoin = .round
-            glyph.addSublayer(check)
-            // A dash of 12 over a check of 10.18 drawn from an offset of 12: the check shows once the offset is under 1.82.
-            let length = hypot(2.4, 2.4) + hypot(4.6, 5.0)
-            let draw = timing.draw
-            motion.run(Track(keyPath: "strokeEnd", duration: draw.duration, delay: timing.drawDelay) { time in
-                NSNumber(value: Double(min(1, 12 * draw.easing.progress(CGFloat(time / draw.duration)) / length)))
-            }, on: check)
         case .handLines:
             let lines = CAShapeLayer()
             lines.frame = glyph.bounds
@@ -413,6 +392,23 @@ public final class PhantomCursor {
                 path.addRoundedRect(in: CGRect(x: x, y: center.y - 2.25, width: 1.6, height: 4.5), cornerWidth: 0.5, cornerHeight: 0.5)
             }
             shape.path = path
+        case .done:
+            disc.fillColor = OverlayStyle.color(.done)
+            let check = CAShapeLayer()
+            check.frame = layer.bounds
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: center.x - 2.7, y: center.y + 0.25))
+            path.addLine(to: CGPoint(x: center.x - 0.8, y: center.y + 2.15))
+            path.addLine(to: CGPoint(x: center.x + 2.9, y: center.y - 1.85))
+            check.path = path
+            check.fillColor = nil
+            check.strokeColor = white
+            check.lineWidth = 1.6
+            check.lineCap = .round
+            check.lineJoin = .round
+            layer.addSublayer(check)
+            let draw = timing.draw
+            motion.run(.transition("strokeEnd", from: 0, to: 1, duration: draw.duration, easing: draw.easing, delay: timing.drawDelay), on: check)
         }
         return layer
     }

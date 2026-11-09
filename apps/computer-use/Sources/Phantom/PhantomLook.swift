@@ -9,7 +9,6 @@ public enum WorkingStyle: String, CaseIterable, Sendable {
 
 /// What sits inside the form.
 public enum PhantomGlyph: Sendable {
-    case check
     case handLines
 }
 
@@ -36,6 +35,8 @@ public enum PhantomDisc: String, Sendable {
     case alert
     /// Gray, with two white bars.
     case paused
+    /// Green, with a white check that draws itself.
+    case done
 }
 
 /// How the form itself moves.
@@ -91,7 +92,7 @@ public struct PhantomLook: Sendable {
         case .error:
             return PhantomLook(form: .arrow, tone: .error, mark: .disc(.alert), beat: .nudge)
         case .done:
-            return PhantomLook(form: .dot, tone: .done, glyph: .check, beat: .fade)
+            return PhantomLook(form: .arrow, tone: .done, mark: .disc(.done), beat: .fade)
         case .takeover:
             return PhantomLook(form: .arrow, ghost: true, scale: style.takeoverScale, rimWidth: style.rimWidth * style.ghostRimScale)
         case .paused:

@@ -62,7 +62,7 @@ public enum PhantomSnapshot {
                 plate.masksToBounds = true
                 var large = options
                 large.time = 0
-                let pointed = form == .arrow || form == .dot
+                let pointed = form == .arrow
                 let hotspot = pointed ? CGPoint(x: frame.width / 2 - 30, y: 30) : CGPoint(x: frame.width / 2, y: frame.height / 2)
                 let cursor = cursor(state(wearing: form), at: hotspot, options: large, effects: false)
                 cursor.transform = CATransform3DMakeScale(4, 4, 1)

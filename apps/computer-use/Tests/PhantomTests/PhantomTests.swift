@@ -21,7 +21,7 @@ struct OutlineTests {
     }
 
     @Test func pointsAreSpreadEvenlyAlongTheOutline() {
-        let points = PhantomForm.dot.outline.points
+        let points = PhantomForm.finger.outline.points
         let gaps = points.indices.map { index in
             let next = points[(index + 1) % points.count]
             return hypot(next.x - points[index].x, next.y - points[index].y)

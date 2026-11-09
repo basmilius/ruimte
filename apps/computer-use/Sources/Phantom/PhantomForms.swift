@@ -147,7 +147,7 @@ public struct CubicSegment: Equatable, Sendable {
     public var end: CGPoint
 }
 
-/// A closed outline of cubic segments, as the design writes the arrow, the drops and the finger.
+/// A closed outline of cubic segments, as the design writes the arrow and the finger.
 public struct PhantomPath: Equatable, Sendable {
     public var start: CGPoint
     public var segments: [CubicSegment]
@@ -170,7 +170,6 @@ public struct PhantomPath: Equatable, Sendable {
 
 public enum PhantomForm: String, CaseIterable, Sendable {
     case arrow
-    case dot
     case finger
     /// The closed hand of dragging, with the middle of its palm on the hotspot as the system's grab cursor.
     case hand
@@ -189,8 +188,6 @@ public enum PhantomForm: String, CaseIterable, Sendable {
         switch self {
         case .arrow:
             return PhantomGeometry.poly([CGPoint(x: 4, y: 3.5), CGPoint(x: 20.5, y: 10.5), CGPoint(x: 13.5, y: 13.5), CGPoint(x: 10.5, y: 20.5)]).cgPath
-        case .dot:
-            return PhantomGeometry.tear(tip: CGPoint(x: 4, y: 3.5), center: CGPoint(x: 12.5, y: 12.5), radius: 7).cgPath
         case .finger:
             return PhantomGeometry.oval(center: CGPoint(x: 4, y: 3.5), radiusX: 10, radiusY: 10).cgPath
         case .hand:
@@ -280,32 +277,6 @@ public enum PhantomGeometry {
 
     public static func poly(_ corners: [CGPoint]) -> PhantomPath {
         PhantomPath(start: round(corners[0]), segments: corners.indices.map { line(corners[$0], corners[($0 + 1) % corners.count]) })
-    }
-
-    /// A drop: the tip, the two tangent points on the circle and the far side of it.
-    public static func tear(tip: CGPoint, center: CGPoint, radius: CGFloat) -> PhantomPath {
-        let phi = atan2(tip.y - center.y, tip.x - center.x)
-        let opening = acos(radius / hypot(tip.x - center.x, tip.y - center.y))
-        let onCircle = { (angle: CGFloat) in CGPoint(x: center.x + radius * cos(angle), y: center.y + radius * sin(angle)) }
-        let arc = { (from: CGFloat, to: CGFloat) -> CubicSegment in
-            let handle = 4 / 3 * tan((to - from) / 4) * radius
-            let start = onCircle(from)
-            let end = onCircle(to)
-            return CubicSegment(
-                control1: round(CGPoint(x: start.x - handle * sin(from), y: start.y + handle * cos(from))),
-                control2: round(CGPoint(x: end.x + handle * sin(to), y: end.y - handle * cos(to))),
-                end: round(end)
-            )
-        }
-        let first = phi + opening
-        let middle = phi + .pi
-        let last = phi + 2 * .pi - opening
-        return PhantomPath(start: round(tip), segments: [
-            line(tip, onCircle(first)),
-            arc(first, middle),
-            arc(middle, last),
-            line(onCircle(last), tip),
-        ])
     }
 
     /// An ellipse from four quarter arcs, starting at the upper left.
