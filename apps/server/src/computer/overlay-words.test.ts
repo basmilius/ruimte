@@ -35,11 +35,17 @@ describe('the words of the overlay', () => {
         for (const [key, value] of Object.entries(english.steps)) {
             expect(source).toContain(`"${key}": "${value}"`);
         }
-        expect(source).toContain(`public var title = "${english.title}"`);
+        expect(source).toContain(`public var menuTitle = "${english.menuTitle}"`);
+        expect(source).toContain(`public var backgroundMenuTitle = "${english.backgroundMenuTitle}"`);
     });
 
     test('fall back to English without a language or for one without words of its own', () => {
-        expect(overlayWords(undefined).title).toBe('Ruimte is using your computer');
-        expect(overlayWords('fr').title).toBe('Ruimte is using your computer');
+        expect(overlayWords(undefined).menuTitle).toBe('Ruimte is using this Mac');
+        expect(overlayWords('fr').menuTitle).toBe('Ruimte is using this Mac');
+    });
+
+    test('name the app the agent works in behind the person, in both languages', () => {
+        expect(overlayWords('en').backgroundMenuTitle).toContain('{app}');
+        expect(overlayWords('nl').backgroundMenuTitle).toContain('{app}');
     });
 });

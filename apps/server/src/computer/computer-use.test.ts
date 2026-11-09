@@ -40,8 +40,9 @@ describe('computer use', () => {
         };
         const dutch = await read('nl-NL');
         const english = await read('en');
-        expect(dutch).toMatchObject({ title: 'Ruimte bedient je computer', pause: 'Pauzeren', stop: 'Sessie stoppen' });
-        expect(english).toMatchObject({ title: 'Ruimte is using your computer', menuTitle: 'Ruimte is using this Mac', takeOver: 'Take over' });
+        expect(dutch).toMatchObject({ menuTitle: 'Ruimte bedient deze Mac', pause: 'Pauzeren', stop: 'Sessie stoppen' });
+        expect(english).toMatchObject({ menuTitle: 'Ruimte is using this Mac', takeOver: 'Take over' });
+        expect(english).not.toHaveProperty('title');
         // Every step with a target in one language has it in the other.
         for (const [state, step] of Object.entries(english.steps as Record<string, string>)) {
             expect((dutch.steps as Record<string, string>)[state]!.includes('{target}')).toBe(step.includes('{target}'));
@@ -50,12 +51,12 @@ describe('computer use', () => {
 
     test('speaks a language a client switched to from then on, only while it is on', async () => {
         const { computer, home } = await computerSetup();
-        const overlay = async (): Promise<{ title: string }> => JSON.parse(await readFile(join(home, 'computer-use', 'overlay.json'), 'utf8'));
+        const overlay = async (): Promise<{ menuTitle: string }> => JSON.parse(await readFile(join(home, 'computer-use', 'overlay.json'), 'utf8'));
         await computer.setLanguage('nl');
-        expect((await overlay()).title).toBe('Ruimte bedient je computer');
+        expect((await overlay()).menuTitle).toBe('Ruimte bedient deze Mac');
         await computer.setEnabled(false, undefined);
         await computer.setLanguage('en');
-        expect((await overlay()).title).toBe('Ruimte bedient je computer');
+        expect((await overlay()).menuTitle).toBe('Ruimte bedient deze Mac');
     });
 
     test('turning it off quits the helper and takes every card down', async () => {
@@ -1091,7 +1092,7 @@ describe('asking macOS for a grant', () => {
 });
 
 describe("the person's buttons in Ruimte", () => {
-    test('pause and resume the session the way the session bar does', async () => {
+    test('pause and resume the session the way the menu bar item does', async () => {
         const setup = await computerSetup();
         const { computer, helper } = setup;
         await letIn(setup);
