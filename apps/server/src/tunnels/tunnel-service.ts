@@ -1092,7 +1092,8 @@ export class TunnelService {
     /*
      * A row that is on gets its record first, looked up by name, since a delete whose answer got lost may have taken it.
      * One whose record is refused goes off, as an intent, and the first refusal is said. Any other failure leaves the
-     * intent as it is, so the network coming back or Try again tries the record again.
+     * intent as it is, so the network coming back or Try again tries the record again. A refused token is no refusal of
+     * the row: a person replaces the token, and the row should still be on then.
      */
     private async recordRowsComingBack(): Promise<unknown> {
         const tunnel = this.stored.tunnel;
@@ -1106,7 +1107,9 @@ export class TunnelService {
             try {
                 await this.recordRow(this.api(), row, tunnel.id);
             } catch (e) {
-                if (!(e instanceof TunnelConfigError || (e instanceof CloudflareError && e.refused))) {
+                const ofRow = e instanceof TunnelConfigError || (e instanceof CloudflareError && e.refused && e.code !== 'token-refused');
+
+                if (!ofRow) {
                     throw e;
                 }
 

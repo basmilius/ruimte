@@ -2244,6 +2244,31 @@ describe('what the person asked and what Cloudflare serves', () => {
         expect(booted.runner.running).toBe(1);
     });
 
+    test('keeps a hostname that comes back meant on when Cloudflare refuses the token at boot, and brings it up with a token it takes', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000, comeBack: true });
+        await f.service.idle();
+        await f.service.stop();
+        f.cloudflare.failing.set('GET /zones/zone-bmnw.nl/dns_records', 401);
+
+        const booted = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
+
+        await booted.service.resume();
+        await booted.service.idle();
+
+        expect(tunnelStore(f.home).read()?.rows[0]).toMatchObject({ hostname: 'a.bmnw.nl', enabled: true });
+        expect(await booted.state()).toMatchObject({ stage: 'failed', rows: [{ hostname: 'a.bmnw.nl', enabled: true }] });
+
+        f.cloudflare.failing.clear();
+        await booted.service.setToken(FAKE_API_TOKEN);
+        await booted.service.idle();
+
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' });
+        expect(await booted.state()).toMatchObject({ stage: 'running', rows: [{ hostname: 'a.bmnw.nl', enabled: true }] });
+    });
+
     test('shows a hostname on whose record Cloudflare refuses on Try again while its hostnames cannot be read', async () => {
         const f = await fixture();
 
