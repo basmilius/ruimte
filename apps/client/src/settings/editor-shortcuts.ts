@@ -1,7 +1,6 @@
 import { KEYMAP_IDS, type KeymapId } from '@adecore/editor/keymap';
 import i18next from 'i18next';
 import { commandSpec, isCommandId, menuPlacesOf } from '@/commands/registry';
-import { RENDERED_DOC_COMMENTS } from '@/features';
 import type { KeyboardArea, ShortcutRow } from '@/settings/shortcuts';
 import { shortcutFor } from '@/surface/editor-keymap';
 import { overridesSnapshot, type OverrideSnapshot } from '@/surface/shortcut-overrides';
@@ -157,8 +156,8 @@ function labelOf(id: KeymapId): string {
     return i18next.t(found ?? `settings:shortcuts.editor.${id}`);
 }
 
-/* Keys the Canvas category already lists under the same words, since one key does both. */
-const LISTED_WITH_CANVAS: readonly KeymapId[] = ['undo', 'redo'];
+/* Keys the Canvas category already lists under the same words, since one key does both, and the key of the rendered documentation Ruimte does not offer. */
+const NOT_LISTED: readonly KeymapId[] = ['undo', 'redo', 'toggleRenderedDocs'];
 
 /* The editor's keymap as this platform resolves it, with the category of each key; keys the platform leaves unbound are left out. */
 export function editorShortcutRows(apple: boolean, snapshot: OverrideSnapshot = overridesSnapshot()): { area: EditorArea; row: ShortcutRow }[] {
@@ -166,7 +165,7 @@ export function editorShortcutRows(apple: boolean, snapshot: OverrideSnapshot = 
         // A platform without a chord for the key has nothing to rebind either. The default is the asked platform's, not the host's.
         const fallback = shortcutFor(id, apple);
         const keys = fallback === undefined ? undefined : (snapshot.keys.get(id) ?? fallback);
-        if (keys === undefined || LISTED_WITH_CANVAS.includes(id) || (id === 'toggleRenderedDocs' && !RENDERED_DOC_COMMENTS)) {
+        if (keys === undefined || NOT_LISTED.includes(id)) {
             return [];
         }
         return [{ area: AREA_OF_KEY[id], row: { id, keys, label: labelOf(id) } }];

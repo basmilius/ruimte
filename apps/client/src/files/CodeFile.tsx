@@ -27,7 +27,6 @@ import { useEditorScope } from '@/files/use-editor-scope';
 import { useFileEditing } from '@/files/use-file-editing';
 import { useGitBase } from '@/files/use-git-base';
 import { useGitBlame } from '@/files/use-git-blame';
-import { useRenderedDocs } from '@/files/use-rendered-docs';
 import { FindBar } from '@/find/FindBar';
 import { editorSeed, useEditorFind } from '@/find/use-editor-find';
 import { useFind } from '@/find/use-find';
@@ -306,10 +305,9 @@ export function CodeFile({ path, read, toolbarExtra, onEditor, frame }: CodeFile
         return editor === null || element === null ? undefined : registerFocusedEditor(editor, element);
     }, [editor]);
     const editorLanguage = useEditorLanguage(editor, path, plain ? undefined : read.language);
-    // What a server gives (code vision, rendered docs, the status) waits for a document one serves.
+    // What a server gives (code vision, the status) waits for a document one serves.
     const servedLanguage = editorLanguage?.served === true ? editorLanguage : null;
     useCodeVision(servedLanguage);
-    useRenderedDocs(servedLanguage);
     useGitBlame(servedLanguage, path, read.text);
     useEffect(() => {
         const element = surface.current;

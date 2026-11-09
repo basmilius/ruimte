@@ -1,7 +1,6 @@
 import { Segmented, Select, Stepper, Switch } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
-import { RENDERED_DOC_COMMENTS } from '@/features';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { CodeThemePreview } from '@/settings/panes/CodeSection';
 import { useCodeTheme } from '@/state/code-theme';
@@ -121,11 +120,6 @@ export function EditorGeneralTab() {
                 />
                 <SettingSwitchRow id="editor.general.saving.ensureFinalNewline" setting="codeEnsureFinalNewline" />
             </SettingsSection>
-            {RENDERED_DOC_COMMENTS && (
-                <SettingsSection title={t('editor.general.documentation.title')}>
-                    <SettingSwitchRow id="editor.general.documentation.render" setting="codeRenderDocs" />
-                </SettingsSection>
-            )}
             <SettingsSection title={t('editor.general.codeVision.title')}>
                 <SettingSwitchRow id="editor.general.codeVision.usages" setting="codeVisionUsages" />
                 <SettingSwitchRow id="editor.general.codeVision.authors" setting="codeVisionAuthors" />

@@ -24,10 +24,6 @@ describe('searching the settings', () => {
         expect(searchSettings('whitespace changes')[0]).toMatchObject({ section: 'files', id: 'files.git.whitespace', label: 'Show whitespace changes' });
     });
 
-    test('leaves out the setting to render documentation comments while that feature is off', () => {
-        expect(searchSettings('render documentation').map((result) => result.id)).not.toContain('editor.general.documentation.render');
-    });
-
     test('finds a fold setting by its words', () => {
         expect(searchSettings('documentation comments').map((result) => result.id)).toContain('editor.folding.general.docComments');
         expect(searchSettings('attribution')[0]).toMatchObject({ section: 'editor', id: 'editor.ai.attribution' });

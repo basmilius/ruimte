@@ -32,7 +32,6 @@ const RUNNERS: Record<LanguageCommandId, (language: EditorLanguage) => void> = {
     'inline-edit': (language) => language.app.inlineEdit.start(),
     'show-inline-edit': (language) => void language.app.inlineEdit.show(),
     explain: (language) => void language.app.explain.explainHere(),
-    'toggle-rendered-docs': (language) => void language.renderedDocs.toggle(),
     'suggest-inline': (language) => void language.app.ghost.request(),
     'type-hierarchy': (language) => void language.callHierarchy.open(undefined, 'supertypes'),
     'last-edit-location': (language) => void language.history.lastEdit(),

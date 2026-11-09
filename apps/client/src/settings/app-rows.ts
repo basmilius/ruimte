@@ -1,6 +1,5 @@
 import { sortHasGroups } from '@/canvas-model/node-sort';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
-import { RENDERED_DOC_COMMENTS } from '@/features';
 import { settingsRow as row, type SettingsSearchRow } from '@/registry/settings-sections';
 import { FOLDING_GROUPS } from '@/settings/folding-rows';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
@@ -38,7 +37,6 @@ export const APP_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
     row('editor.general.navigation.camelHumps'),
     row('editor.general.saving.trailingWhitespace'),
     row('editor.general.saving.ensureFinalNewline'),
-    row('editor.general.documentation.render', () => RENDERED_DOC_COMMENTS),
     row('editor.general.codeVision.usages'),
     row('editor.general.codeVision.authors'),
     row('editor.folding.outline'),

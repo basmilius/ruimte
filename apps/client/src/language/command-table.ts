@@ -7,7 +7,6 @@ import {
     ArrowUp,
     AtSign,
     Blocks,
-    BookOpen,
     BookmarkPlus,
     Braces,
     Brackets,
@@ -39,7 +38,6 @@ import {
     WandSparkles,
     type LucideIcon
 } from 'lucide-react';
-import { RENDERED_DOC_COMMENTS } from '@/features';
 
 /*
  * The commands that act on the editor with the keyboard in it: the id the menu and the palette share, the
@@ -72,7 +70,6 @@ const TABLE = {
     'inline-edit': { icon: Sparkles, menu: 'code', key: 'inlineEdit', keymap: 'inlineEdit' },
     'show-inline-edit': { icon: ScanSearch, menu: 'code', key: 'showInlineEdit' },
     explain: { icon: Cpu, menu: 'code', key: 'explain' },
-    'toggle-rendered-docs': { icon: BookOpen, menu: 'code', key: 'toggleRenderedDocs', keymap: 'toggleRenderedDocs' },
     'suggest-inline': { icon: WandSparkles, menu: 'code', key: 'suggestInline', keymap: 'suggestInline' },
     'go-to-symbol': { icon: AtSign, menu: 'go', key: 'goToSymbol', keymap: 'goToSymbol' },
     'go-to-definition': { icon: LocateFixed, menu: 'go', key: 'goToDefinition', keymap: 'goToDefinition' },
@@ -107,9 +104,4 @@ export type LanguageCommandId = keyof typeof TABLE;
 
 export const LANGUAGE_COMMANDS: Record<LanguageCommandId, LanguageCommandSpec> = TABLE;
 
-/* The commands a person is offered; the toggle for rendered documentation waits for its feature. */
-export function offeredLanguageCommands(renderedDocs: boolean): LanguageCommandId[] {
-    return (Object.keys(LANGUAGE_COMMANDS) as LanguageCommandId[]).filter((id) => renderedDocs || id !== 'toggle-rendered-docs');
-}
-
-export const LANGUAGE_COMMAND_IDS = offeredLanguageCommands(RENDERED_DOC_COMMENTS);
+export const LANGUAGE_COMMAND_IDS = Object.keys(LANGUAGE_COMMANDS) as LanguageCommandId[];

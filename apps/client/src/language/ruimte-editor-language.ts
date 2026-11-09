@@ -41,7 +41,7 @@ export function createEditorLanguage(
     timers: Timers = realTimers,
     options: EditorLanguageOptions = {}
 ): EditorLanguage {
-    return new SharedEditorLanguage(project.language, editor, uri, languageId, timers, {
+    const language = new SharedEditorLanguage(project.language, editor, uri, languageId, timers, {
         ...options,
         features: (language) => {
             if (makeInlineEdit === null) {
@@ -56,4 +56,8 @@ export function createEditorLanguage(
             };
         }
     });
+    // Ruimte does not offer the formatted view of documentation comments yet, and the feature starts on.
+    language.renderedDocs.configure({ renderDocComments: false, enabled: false });
+
+    return language;
 }

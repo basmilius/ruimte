@@ -214,8 +214,6 @@ export interface Settings {
     codeWhitespace: boolean;
     /* Whether the editor pins the lines that open the scopes around the top line while scrolling. */
     codeStickyScroll: boolean;
-    /* Whether documentation comments are drawn as formatted text in place of their lines. */
-    codeRenderDocs: boolean;
     /* Whether the editor says above a declaration how many times it is used. */
     codeVisionUsages: boolean;
     /* Whether the editor says above a declaration who wrote it, by git. */
@@ -369,7 +367,6 @@ const DEFAULT_SETTINGS: Settings = {
     codeIndentGuides: true,
     codeWhitespace: false,
     codeStickyScroll: true,
-    codeRenderDocs: false,
     codeVisionUsages: true,
     codeVisionAuthors: true,
     codeFolding: { ...DEFAULT_CODE_FOLDING },
@@ -481,7 +478,6 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         codeIndentGuides: stored.codeIndentGuides !== false,
         codeWhitespace: stored.codeWhitespace === true,
         codeStickyScroll: stored.codeStickyScroll !== false,
-        codeRenderDocs: stored.codeRenderDocs === true,
         codeVisionUsages: stored.codeVisionUsages !== false,
         codeVisionAuthors: stored.codeVisionAuthors !== false,
         codeFolding: codeFoldingFrom(stored.codeFolding),
