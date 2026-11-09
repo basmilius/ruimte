@@ -258,32 +258,28 @@ export function takesHost(rule: Record<string, unknown>, hostname: string): bool
     return ruleHost.startsWith('*.') && hostname.endsWith(ruleHost.slice(1));
 }
 
-/* Whether a rule takes a request for the root path of a hostname, matched the way `cloudflared` matches its ingress. */
-export function takesRoot(rule: Record<string, unknown>, hostname: string): boolean {
-    if (!takesHost(rule, hostname)) {
-        return false;
-    }
-
-    if (typeof rule.path !== 'string' || rule.path === '') {
-        return true;
-    }
-
-    try {
-        return new RegExp(rule.path).test('/');
-    } catch {
-        // Cloudflare would not have taken a path that is no regular expression, so it is no proof the rule takes nothing.
-        return true;
-    }
-}
-
 /*
- * What Cloudflare may serve for a hostname from this ingress, as `servedBy` reads it, or null when it serves nothing: the
- * first rule that takes its root path decides, and only a status answers without reaching an origin.
+ * What Cloudflare may serve for a hostname on any path from this ingress, as `servedBy` reads it, or null when it serves
+ * nothing. Rules count in order up to the first one without a path, which takes every request left; a rule with a path
+ * that serves counts whatever its path matches, and a status with a path stops nothing. The rule without a path tells
+ * the port and origin when it serves.
  */
 export function servedFor(ingress: readonly Record<string, unknown>[], hostname: string): { port?: number; origin?: TunnelOrigin } | null {
-    const first = ingress.find((rule) => takesRoot(rule, hostname));
+    let byPath: ReturnType<typeof servedBy> = null;
 
-    return first === undefined ? null : servedBy(first);
+    for (const rule of ingress) {
+        if (!takesHost(rule, hostname)) {
+            continue;
+        }
+
+        if (typeof rule.path !== 'string' || rule.path === '') {
+            return servedBy(rule) ?? byPath;
+        }
+
+        byPath ??= servedBy(rule);
+    }
+
+    return byPath;
 }
 
 /* The catch-all every ingress ends in, which answers 404 for any other hostname. */

@@ -569,28 +569,48 @@ describe('a row', () => {
         expect(f.cloudflare.records).toHaveLength(0);
     });
 
-    test('leaves the rules of the dashboard on a hostname of its own with a path, and the catch-all it set, holding the name with a 404 once off', async () => {
+    test('refuses a hostname the dashboard has a rule with a path for, and writes nothing', async () => {
         const f = await fixture();
 
         await readyTunnel(f);
-        ourTunnel(f).ingress = [{ hostname: 'a.bmnw.nl', path: '/api', service: 'http://localhost:9000' }, { service: 'http_status:503' }];
+        ourTunnel(f).ingress = [{ hostname: 'a.bmnw.nl', path: '^/api', service: 'http://localhost:9000' }, { service: 'http_status:503' }];
+
+        const before = f.cloudflare.calls.length;
+
+        await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 })).rejects.toMatchObject({ code: 'hostname-on-tunnel' });
+
+        expect(f.cloudflare.calls.slice(before).filter((call) => call.method !== 'GET')).toEqual([]);
+        expect(f.cloudflare.records).toEqual([]);
+    });
+
+    test('keeps serving a path the dashboard puts on its hostname while on, and holds every path with a 404 before it once off', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
         await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 });
         await f.service.idle();
 
-        expect(ourTunnel(f).ingress).toEqual([
-            { hostname: 'a.bmnw.nl', path: '/api', service: 'http://localhost:9000' },
-            { hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' },
-            { service: 'http_status:503' }
-        ]);
+        const id = (await f.state()).rows[0]!.id;
 
-        await f.service.update((await f.state()).rows[0]!.id, { enabled: false });
+        ourTunnel(f).ingress = [{ hostname: 'a.bmnw.nl', path: '^/api', service: 'http://localhost:9000' }, ...ourTunnel(f).ingress];
+        await f.service.update(id, { port: 3001 });
         await f.service.idle();
 
         expect(ourTunnel(f).ingress).toEqual([
-            { hostname: 'a.bmnw.nl', path: '/api', service: 'http://localhost:9000' },
-            { hostname: 'a.bmnw.nl', service: 'http_status:404' },
-            { service: 'http_status:503' }
+            { hostname: 'a.bmnw.nl', path: '^/api', service: 'http://localhost:9000' },
+            { hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3001' },
+            { service: 'http_status:404' }
         ]);
+
+        await f.service.update(id, { enabled: false });
+        await f.service.idle();
+
+        expect(ourTunnel(f).ingress).toEqual([
+            { hostname: 'a.bmnw.nl', service: 'http_status:404' },
+            { hostname: 'a.bmnw.nl', path: '^/api', service: 'http://localhost:9000' },
+            { service: 'http_status:404' }
+        ]);
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: false }]);
     });
 });
 
@@ -823,7 +843,7 @@ describe('removal', () => {
 describe('an existing tunnel', () => {
     const OFFICE_INGRESS = [
         { hostname: 'nas.bmnw.nl', service: 'http://nas:80' },
-        { hostname: 'shop.bmnw.nl', path: '/admin', service: 'http://localhost:9000' },
+        { hostname: 'wiki.bmnw.nl', path: '/admin', service: 'http://localhost:9000' },
         { service: 'http_status:503' }
     ];
 
@@ -860,7 +880,7 @@ describe('an existing tunnel', () => {
                 runner: 'other',
                 others: [
                     { hostname: 'nas.bmnw.nl', path: null, service: 'http://nas:80' },
-                    { hostname: 'shop.bmnw.nl', path: '/admin', service: 'http://localhost:9000' }
+                    { hostname: 'wiki.bmnw.nl', path: '/admin', service: 'http://localhost:9000' }
                 ]
             },
             rows: []
@@ -1213,11 +1233,15 @@ describe('an existing tunnel', () => {
         expect(f.runner.running).toBe(1);
     });
 
-    test('makes the missing record of a hostname that comes back on after a restart, and keeps it off while Cloudflare refuses the record', async () => {
+    test('keeps a hostname that comes back meant on while Cloudflare refuses its record, held with its 404, and still brings up the other rows', async () => {
         const f = await fixture();
         const picked = f.cloudflare.tunnel('acc-1', 'home', [{ service: 'http://localhost:8080' }]);
 
         await linked(f, picked);
+        await f.service.add({ kind: 'dev', zone: f.passly.id, label: 'blog', port: 3001, comeBack: true });
+        await f.service.idle();
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'old', port: 3002 });
+        await f.service.idle();
         f.cloudflare.failing.set('POST /zones/zone-bmnw.nl/dns_records', 403);
 
         await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'shop', port: 3000, comeBack: true })).rejects.toBeInstanceOf(CloudflareError);
@@ -1227,31 +1251,46 @@ describe('an existing tunnel', () => {
         // An older Ruimte turned the row on without its record.
         const stored = tunnelStore(f.home).read()!;
 
-        tunnelStore(f.home).write({ ...stored, rows: stored.rows.map((row) => ({ ...row, enabled: true })) });
+        tunnelStore(f.home).write({ ...stored, rows: stored.rows.map((row) => (row.hostname === 'shop.bmnw.nl' ? { ...row, enabled: true } : row)) });
 
-        const refused = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
+        const booted = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
 
-        await refused.service.resume();
-        await refused.service.idle();
+        await booted.service.resume();
+        await booted.service.idle();
 
-        expect(f.cloudflare.records).toEqual([]);
-        expect(picked.ingress).toEqual([{ hostname: 'shop.bmnw.nl', service: 'http_status:404' }, { service: 'http://localhost:8080' }]);
-        expect(await refused.state()).toMatchObject({ stage: 'failed', rows: [{ hostname: 'shop.bmnw.nl', enabled: false }] });
-        expect(refused.runner.running).toBe(0);
+        expect(
+            tunnelStore(f.home)
+                .read()
+                ?.rows.map((row) => [row.hostname, row.enabled])
+        ).toEqual([
+            ['blog.passly.dev', true],
+            ['old.bmnw.nl', false],
+            ['shop.bmnw.nl', true]
+        ]);
+        expect(f.cloudflare.records.map((record) => record.name)).toEqual(['blog.passly.dev', 'old.bmnw.nl']);
+        expect(picked.ingress).toEqual([
+            { hostname: 'blog.passly.dev', service: 'http://127.0.0.1:3001' },
+            { hostname: 'old.bmnw.nl', service: 'http_status:404' },
+            { hostname: 'shop.bmnw.nl', service: 'http_status:404' },
+            { service: 'http://localhost:8080' }
+        ]);
+        expect(await booted.state()).toMatchObject({
+            stage: 'failed',
+            rows: [
+                { hostname: 'blog.passly.dev', enabled: true },
+                { hostname: 'old.bmnw.nl', enabled: false },
+                { hostname: 'shop.bmnw.nl', enabled: true }
+            ]
+        });
+        expect(booted.runner.running).toBe(1);
 
-        await refused.service.stop();
-        tunnelStore(f.home).write({ ...stored, rows: stored.rows.map((row) => ({ ...row, enabled: true })) });
         f.cloudflare.failing.clear();
+        await booted.service.retry();
+        await booted.service.idle();
 
-        const again = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
-
-        await again.service.resume();
-        await again.service.idle();
-
-        expect(f.cloudflare.records.map((record) => [record.name, record.comment])).toEqual([['shop.bmnw.nl', MARKER]]);
-        expect(picked.ingress).toEqual([{ hostname: 'shop.bmnw.nl', service: 'http://127.0.0.1:3000' }, { service: 'http://localhost:8080' }]);
-        expect(await again.state()).toMatchObject({ stage: 'running', rows: [{ hostname: 'shop.bmnw.nl', enabled: true }] });
-        expect(again.runner.running).toBe(1);
+        expect(f.cloudflare.records.filter((record) => record.name === 'shop.bmnw.nl').map((record) => record.comment)).toEqual([MARKER]);
+        expect(picked.ingress).toContainEqual({ hostname: 'shop.bmnw.nl', service: 'http://127.0.0.1:3000' });
+        expect(await booted.state()).toMatchObject({ stage: 'running' });
     });
 
     test('writes the origin settings into its own rule only, and lists the host header of a rule of the dashboard', async () => {
@@ -1296,7 +1335,7 @@ describe('an existing tunnel', () => {
     test('puts its rule before a wildcard of the dashboard that would catch its hostname, keeping the order of the rest', async () => {
         const f = await fixture();
         const picked = f.cloudflare.tunnel('acc-1', 'office', [
-            { hostname: 'shop.bmnw.nl', path: '/admin', service: 'http://localhost:9000' },
+            { hostname: 'wiki.bmnw.nl', path: '/admin', service: 'http://localhost:9000' },
             { hostname: 'nas.passly.dev', service: 'http://nas:80' },
             { hostname: '*.bmnw.nl', service: 'http://proxy:80' },
             { service: 'http_status:503' }
@@ -1307,7 +1346,7 @@ describe('an existing tunnel', () => {
         await f.service.idle();
 
         expect(picked.ingress).toEqual([
-            { hostname: 'shop.bmnw.nl', path: '/admin', service: 'http://localhost:9000' },
+            { hostname: 'wiki.bmnw.nl', path: '/admin', service: 'http://localhost:9000' },
             { hostname: 'nas.passly.dev', service: 'http://nas:80' },
             { hostname: 'shop.bmnw.nl', service: 'http://127.0.0.1:3000' },
             { hostname: '*.bmnw.nl', service: 'http://proxy:80' },
@@ -2269,7 +2308,7 @@ describe('what the person asked and what Cloudflare serves', () => {
         expect(await booted.state()).toMatchObject({ stage: 'running', rows: [{ hostname: 'a.bmnw.nl', enabled: true }] });
     });
 
-    test('shows a hostname on whose record Cloudflare refuses on Try again while its hostnames cannot be read', async () => {
+    test('keeps a hostname meant on and its child whose record Cloudflare refuses on Try again while its hostnames cannot be read', async () => {
         const f = await fixture();
 
         await readyTunnel(f);
@@ -2280,28 +2319,9 @@ describe('what the person asked and what Cloudflare serves', () => {
         await f.service.idle();
 
         expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' });
-        expect(tunnelStore(f.home).read()?.rows[0]).toMatchObject({ hostname: 'a.bmnw.nl', enabled: false });
+        expect(tunnelStore(f.home).read()?.rows[0]).toMatchObject({ hostname: 'a.bmnw.nl', enabled: true });
         expect(await f.state()).toMatchObject({ stage: 'failed', rows: [{ hostname: 'a.bmnw.nl', enabled: true }] });
         expect(f.runner.running).toBe(1);
-    });
-
-    test('holds a hostname that is off with its 404 before a path of the dashboard on that hostname that takes the root', async () => {
-        const f = await fixture();
-
-        await readyTunnel(f);
-
-        const id = await rowOn(f, 'a', 3000);
-
-        ourTunnel(f).ingress = [{ hostname: 'a.bmnw.nl', path: '^/', service: 'http://localhost:9000' }, ...ourTunnel(f).ingress];
-        await f.service.update(id, { enabled: false });
-        await f.service.idle();
-
-        expect(ourTunnel(f).ingress).toEqual([
-            { hostname: 'a.bmnw.nl', service: 'http_status:404' },
-            { hostname: 'a.bmnw.nl', path: '^/', service: 'http://localhost:9000' },
-            { service: 'http_status:404' }
-        ]);
-        expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: false }]);
     });
 
     test('deletes a record of its own under the name of a removed hostname that the row knew by another id', async () => {
@@ -2484,6 +2504,56 @@ describe('what the person asked and what Cloudflare serves', () => {
 
         expect(f.cloudflare.records.map((record) => record.name)).toEqual(['a.bmnw.nl']);
         expect(home.ingress).toEqual([{ hostname: 'a.bmnw.nl', service: 'http_status:404' }, { service: 'http://localhost:8080' }]);
+    });
+
+    // Found by the property test as seed 3764 (round 12): the read back after a write was never noted.
+    test('shows a hostname on that a wildcard serves in the read back of its 404, when every read after it fails', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const id = await rowOn(f, 'a', 3000);
+        const key = `${READ}/${ourTunnel(f).id}/configurations`;
+
+        ourTunnel(f).ingress = [{ hostname: '*.bmnw.nl', service: 'http_status:404' }, ...ourTunnel(f).ingress];
+        f.cloudflare.writers.push(prependWildcard);
+        f.cloudflare.lose(key, 503, 2);
+        f.cloudflare.lose(key, 503);
+
+        await expect(f.service.update(id, { enabled: false })).rejects.toBeInstanceOf(CloudflareError);
+
+        expect(ourTunnel(f).ingress.slice(0, 2)).toEqual([
+            { hostname: '*.bmnw.nl', service: 'http://localhost:9999' },
+            { hostname: 'a.bmnw.nl', service: 'http_status:404' }
+        ]);
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: true }]);
+    });
+
+    test('makes no record for a hostname while another writer keeps taking its 404 away, on add and on turning it on', async () => {
+        const f = await fixture();
+        const serving = (tunnel: { ingress: Array<Record<string, unknown>> }): void => {
+            tunnel.ingress = [{ service: 'http://localhost:9999' }];
+        };
+
+        await readyTunnel(f);
+        f.cloudflare.writers.push(serving, serving);
+
+        await expect(f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000 })).rejects.toMatchObject({ code: 'hostname-unheld' });
+
+        const id = (await f.state()).rows[0]!.id;
+
+        f.cloudflare.writers.push(serving, serving);
+
+        await expect(f.service.update(id, { enabled: true })).rejects.toMatchObject({ code: 'hostname-unheld' });
+
+        expect(f.cloudflare.records).toEqual([]);
+        expect(tunnelStore(f.home).read()?.rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: false }]);
+
+        await f.service.update(id, { enabled: true });
+        await f.service.idle();
+
+        expect(f.cloudflare.records.map((record) => record.name)).toEqual(['a.bmnw.nl']);
+        expect(ourTunnel(f).ingress).toEqual([{ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' }, { service: 'http://localhost:9999' }]);
     });
 });
 
