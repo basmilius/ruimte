@@ -6,11 +6,6 @@ import { isRebound, keyIn, overridesSnapshot, type OverrideSnapshot } from '@/su
 const specs = new Map<string, CommandSpec>();
 let bound: Record<'window' | 'workspace', { snapshot: OverrideSnapshot; keys: [string, Shortcut][] }> | null = null;
 
-/* Keeps the keys of a feature's table typed by its own ids, which the global registry cannot. */
-export function defineCommands<const Table extends Record<string, CommandSpec>>(table: Table): Table {
-    return table;
-}
-
 /* Adds the rows of one feature's `command-table.ts`, in order. An id twice is a wiring mistake. */
 export function registerCommands(table: Readonly<Record<string, CommandSpec>>): void {
     for (const [id, spec] of Object.entries(table)) {

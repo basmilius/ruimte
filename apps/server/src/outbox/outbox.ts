@@ -3,9 +3,8 @@ import { OutboxWorkSchema, traitsOf, type OutboxWork } from './kinds/index.ts';
 
 export type { OutboxWork } from './kinds/index.ts';
 export type OutboxEntry = OutboxEntryOf<OutboxWork>;
-export type OutboxEntryOfKind<K extends OutboxWork['kind']> = Extract<OutboxEntry, { kind: K }>;
+type OutboxEntryOfKind<K extends OutboxWork['kind']> = Extract<OutboxEntry, { kind: K }>;
 export type StartAgentEntry = OutboxEntryOfKind<'start-agent'>;
-export type ResumeRunEntry = OutboxEntryOfKind<'resume-run'>;
 export type WakeParentEntry = OutboxEntryOfKind<'wake-parent'>;
 export type EndChildrenEntry = OutboxEntryOfKind<'end-children'>;
 export type DeliverSummaryEntry = OutboxEntryOfKind<'deliver-summary'>;

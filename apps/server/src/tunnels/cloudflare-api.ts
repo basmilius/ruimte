@@ -12,7 +12,7 @@ const MAX_REASON = 300;
 
 export type CloudflareFetch = (url: string, init: RequestInit) => Promise<Response>;
 
-export type CloudflareErrorCode = 'token-refused' | 'no-permission' | 'not-found' | 'conflict' | 'rate-limited' | 'unreachable' | 'cloudflare';
+type CloudflareErrorCode = 'token-refused' | 'no-permission' | 'not-found' | 'conflict' | 'rate-limited' | 'unreachable' | 'cloudflare';
 
 /* A failure in the words of a person: what Ruimte was doing and why Cloudflare would not. Never holds the token. */
 export class CloudflareError extends CodedError<CloudflareErrorCode> {
@@ -57,9 +57,8 @@ const RecordSchema = z.object({
 });
 const ConfigSchema = z.object({ config: z.looseObject({ ingress: z.array(z.record(z.string(), z.unknown())).optional() }).nullish() });
 
-export type CloudflareNamed = z.infer<typeof NamedSchema>;
 export type CloudflareZone = z.infer<typeof ZoneSchema>;
-export type CloudflareTunnel = z.infer<typeof TunnelSchema>;
+type CloudflareTunnel = z.infer<typeof TunnelSchema>;
 export type CloudflareRecord = z.infer<typeof RecordSchema>;
 
 /* Whether the tunnel's settings live in the dashboard, which is the only kind whose hostnames the API changes. */
@@ -103,12 +102,12 @@ function normalizedRule(rule: CloudflareIngressRule): CloudflareIngressRule {
 }
 
 /* A tunnel's configuration: its ingress, and the settings beside it (such as `warp-routing`) that Ruimte never changes. */
-export interface CloudflareTunnelConfig {
+interface CloudflareTunnelConfig {
     readonly ingress: readonly CloudflareIngressRule[];
     readonly rest: Readonly<Record<string, unknown>>;
 }
 
-export interface CloudflareRecordInput {
+interface CloudflareRecordInput {
     readonly name: string;
     readonly content: string;
     readonly comment: string;

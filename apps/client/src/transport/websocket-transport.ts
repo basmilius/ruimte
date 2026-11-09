@@ -1,5 +1,5 @@
 import { PROTOCOL_REFUSED_CLOSE_CODE, protocolMismatch, protocolOfRefusal } from '@ruimte/contracts';
-import { LinkTransport, type Link, type LinkEvents, type SocketAddress } from './link-transport';
+import type { Link, LinkEvents } from './link-transport';
 import { protocolRefusal, withProtocol } from './protocol';
 
 export type { SocketAddress } from './link-transport';
@@ -22,10 +22,4 @@ export function socketLink(url: string, events: LinkEvents): Link {
         send: (data) => socket.send(data),
         close: () => socket.close()
     };
-}
-
-export class WebSocketTransport extends LinkTransport {
-    constructor(address: SocketAddress) {
-        super(address, socketLink);
-    }
 }

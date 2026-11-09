@@ -5,7 +5,7 @@ import { createRegistry } from './create-registry';
 export type PanelGroup = 'project' | 'connected' | 'made';
 
 /* How the project's file keeps the panel that was open: beside `panel`, in a key an older client ignores. */
-export type StoredPanelFlag = 'launchesPanel' | 'databasesPanel' | 'outputPanel';
+type StoredPanelFlag = 'launchesPanel' | 'databasesPanel' | 'outputPanel';
 
 /* A panel of the side column. The feature that draws it registers it, and the frame lists what was registered. */
 export interface PanelDefinition {
@@ -29,7 +29,3 @@ export interface PanelDefinition {
 }
 
 export const panelRegistry = createRegistry<PanelDefinition>('panel');
-
-export function panelDefinition(kind: string): PanelDefinition | undefined {
-    return panelRegistry.find(kind);
-}
