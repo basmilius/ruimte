@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { TunnelStateSchema, type TunnelState } from '@ruimte/contracts';
 import { CloudflareError, type CloudflareFetch } from './cloudflare-api.ts';
 import type { CloudflaredProcess } from './cloudflared-runner.ts';
-import { isCatchAll, servedBy, servedFor, TunnelConfigError } from './tunnel-config.ts';
+import { TunnelConfigError } from './tunnel-config.ts';
 import { TunnelService } from './tunnel-service.ts';
 import type { StoredRow, StoredTunnels } from './tunnel-store.ts';
 import { FAKE_API_TOKEN, FakeCloudflare, FakeCloudflared, MemoryTokenStore, type FakeTunnel } from './tunnel-test-helpers.ts';
@@ -10,25 +10,30 @@ import { FAKE_API_TOKEN, FakeCloudflare, FakeCloudflared, MemoryTokenStore, type
 /*
  * Seeded runs of what a person, Cloudflare and another writer can do to Tunnels, one step at a time, with faults drawn per
  * step. After every step the invariants of `CLAUDE.md` are checked against what the fake Cloudflare holds and what Ruimte
- * last read of it. A failure names its seed; `RUIMTE_SEED=<seed>` runs that one alone.
+ * last read of it, and every run ends at rest: a Try again without faults, after which Cloudflare serves exactly what the
+ * person meant. What Cloudflare serves is judged by a matcher of this file's own. A failure names its seed;
+ * `RUIMTE_SEED=<seed>` runs that one alone, and `RUIMTE_SEQUENCES=<count>` searches more.
  */
-const SEQUENCES = 240;
+const SEQUENCES = Number(process.env.RUIMTE_SEQUENCES ?? 320);
 const BATCH = 40;
-const STEPS = 20;
+const STEPS = 30;
 const SERVING = 'http://localhost:8080';
 const ROTATED_TOKEN = 'cf-api-token-rotated-9876543210';
 const HOSTS = [
     { zone: 'bmnw.nl', label: 'a' },
     { zone: 'bmnw.nl', label: 'b' },
     { zone: 'passly.dev', label: 'c' },
+    { zone: 'passly.dev', label: 'd' },
     { zone: 'bmnw.nl', label: 'taken' }
 ] as const;
 // The name with a record someone else made, which Ruimte refuses by design.
 const FOREIGN = 'taken.bmnw.nl';
-const PORTS = [3000, 3001, 4210] as const;
+const PORTS = [3000, 3001, 3002, 4210] as const;
 const DENIED = [4210, 4230];
 const LISTENER_PORT = 4230;
 const MARKER = 'Managed by Ruimte · f7a7';
+const PATHS = ['/', '/api/x', '/static/a.js'] as const;
+const WRITER_PATHS = ['^/api', '.*', '^/$', '^/static'] as const;
 
 type Rule = Record<string, unknown>;
 type Random = () => number;
@@ -56,6 +61,36 @@ function meantOn(row: StoredRow): boolean {
     return row.enabled && row.leaving !== true;
 }
 
+function hostMatches(pattern: unknown, hostname: string): boolean {
+    if (pattern === undefined || pattern === '' || pattern === '*') {
+        return true;
+    }
+
+    if (typeof pattern !== 'string') {
+        return false;
+    }
+
+    return pattern.startsWith('*.') ? hostname.endsWith(pattern.slice(1)) : pattern === hostname;
+}
+
+function pathMatches(pattern: unknown, path: string): boolean {
+    return pattern === undefined || pattern === '' || new RegExp(String(pattern)).test(path);
+}
+
+/* The rule `cloudflared` answers a request with: the first in order whose hostname and path both match it. */
+function ruleFor(ingress: readonly Rule[], hostname: string, path: string): Rule | undefined {
+    return ingress.find((rule) => hostMatches(rule.hostname, hostname) && pathMatches(rule.path, path));
+}
+
+function serves(rule: Rule | undefined): boolean {
+    return rule !== undefined && !String(rule.service).startsWith('http_status:');
+}
+
+/* The paths of `PATHS` a request for the hostname reaches an origin on. */
+function servedPaths(ingress: readonly Rule[], hostname: string): string[] {
+    return PATHS.filter((path) => serves(ruleFor(ingress, hostname, path)));
+}
+
 /* Everything of a run that outlives a restart of the daemon. */
 interface Ground {
     next: Random;
@@ -70,12 +105,12 @@ interface Ground {
     beforePut: Map<string, Rule[]>;
     /* Hostnames the current step asks to turn on, so a write may serve them. */
     turningOn: Set<string>;
-    /* Zones whose DNS records Cloudflare refused during this step, which may turn a row off. */
-    refusedZones: Set<string>;
-    /* Hostnames whose rule without a path another writer put on the tunnel. */
+    /* Hostnames another writer put a rule for on the tunnel. */
     writerHosts: Set<string>;
     /* Hostnames whose rules and records an unlink without reach left behind, as it says. */
     abandoned: Set<string>;
+    /* Calls to Cloudflare until the tunnel is deleted in the dashboard, or null. */
+    vanishIn: number | null;
     log: string[];
     problems: string[];
 }
@@ -112,7 +147,7 @@ class WatchedCloudflared extends FakeCloudflared {
     }
 }
 
-function tunnelOf(world: World): FakeTunnel | undefined {
+function tunnelOf(world: Ground): FakeTunnel | undefined {
     const id = world.disk.value?.tunnel?.id;
 
     return world.cloudflare.tunnels.find((tunnel) => tunnel.id === id);
@@ -122,7 +157,7 @@ function hasOurRecord(world: Ground, hostname: string): boolean {
     return world.cloudflare.records.some((record) => record.name === hostname && record.comment === MARKER);
 }
 
-/* Invariant 2: a write of Ruimte's never serves a row the person meant off or is taking off. */
+/* Invariant 2: a write of Ruimte's never serves a row the person meant off or is taking off, on any path. */
 function checkWrite(world: Ground, tunnelId: string, ingress: readonly Rule[]): void {
     const stored = world.disk.value;
 
@@ -136,13 +171,14 @@ function checkWrite(world: Ground, tunnelId: string, ingress: readonly Rule[]): 
         }
 
         const own = ingress.find((rule) => rule.hostname === row.hostname && (rule.path === undefined || rule.path === ''));
+        const paths = servedPaths(ingress, row.hostname);
 
-        if (own !== undefined && servedBy(own) !== null) {
+        if (serves(own)) {
             world.problems.push(`wrote a serving rule for ${row.hostname}, meant off`);
         }
 
-        if (hasOurRecord(world, row.hostname) && servedFor(ingress, row.hostname) !== null) {
-            world.problems.push(`wrote an ingress that serves ${row.hostname}, meant off with its record standing`);
+        if (hasOurRecord(world, row.hostname) && paths.length > 0) {
+            world.problems.push(`wrote an ingress that serves ${row.hostname} at ${paths.join(' ')}, meant off with its record standing`);
         }
     }
 }
@@ -153,6 +189,17 @@ function watchedFetch(current: Ground): CloudflareFetch {
         const method = init.method ?? 'GET';
         const config = /\/cfd_tunnel\/([^/]+)\/configurations$/.exec(path);
         const body = typeof init.body === 'string' ? (JSON.parse(init.body) as { config?: { ingress?: Rule[] } }) : undefined;
+
+        if (current.vanishIn !== null && (current.vanishIn -= 1) <= 0) {
+            const gone = tunnelOf(current);
+
+            current.vanishIn = null;
+
+            if (gone !== undefined) {
+                current.cloudflare.tunnels.splice(current.cloudflare.tunnels.indexOf(gone), 1);
+                current.log.push(`  (the tunnel is deleted in the dashboard)`);
+            }
+        }
 
         if (config !== null && method === 'PUT') {
             const tunnel = current.cloudflare.tunnels.find((candidate) => candidate.id === config[1]);
@@ -170,12 +217,6 @@ function watchedFetch(current: Ground): CloudflareFetch {
                     : ((await response.clone().json()) as { result: { config: { ingress: Rule[] } } }).result.config.ingress;
 
             current.known.set(config[1]!, structuredClone(ingress));
-        }
-
-        const zone = /^\/client\/v4\/zones\/([^/]+)\/dns_records/.exec(path);
-
-        if (zone !== null && response.status >= 400 && response.status < 500 && response.status !== 401 && response.status !== 429) {
-            current.refusedZones.add(zone[1]!);
         }
 
         return response;
@@ -263,9 +304,10 @@ function writerOf(world: World): Writer {
     }
 
     if (choice === 2) {
-        const rule = { hostname: host(), path: pick(world.next, ['^/api', '.*', '^/$']), service: 'http://localhost:7000' };
+        const rule = { hostname: host(), path: pick(world.next, WRITER_PATHS), service: 'http://localhost:7000' };
 
         return (tunnel) => {
+            world.writerHosts.add(rule.hostname);
             tunnel.ingress = [rule, ...tunnel.ingress];
         };
     }
@@ -274,7 +316,7 @@ function writerOf(world: World): Writer {
         const catchAll = { service: service() };
 
         return (tunnel) => {
-            tunnel.ingress = [...tunnel.ingress.filter((rule) => !isCatchAll(rule)), catchAll];
+            tunnel.ingress = [...tunnel.ingress.filter((rule) => !(rule.hostname === undefined && rule.path === undefined)), catchAll];
         };
     }
 
@@ -283,7 +325,7 @@ function writerOf(world: World): Writer {
             const before = world.beforePut.get(tunnel.id) ?? tunnel.ingress;
 
             for (const rule of before) {
-                if (typeof rule.hostname === 'string' && rule.path === undefined) {
+                if (typeof rule.hostname === 'string') {
                     world.writerHosts.add(rule.hostname);
                 }
             }
@@ -305,7 +347,7 @@ function writerOf(world: World): Writer {
     };
 }
 
-/* Faults for one step: refusals and failures by path, lost answers and writers right after a PUT. */
+/* Faults for one step: refusals and failures by path, lost answers, writers right after a PUT, a zone the token loses and the tunnel deleted. */
 function injectFaults(world: World): void {
     const { next, cloudflare } = world;
     const tunnelId = world.disk.value?.tunnel?.id ?? 'none';
@@ -317,7 +359,9 @@ function injectFaults(world: World): void {
         'POST /zones/zone-bmnw.nl/dns_records',
         'PUT /zones/zone-bmnw.nl/dns_records',
         'DELETE /zones/zone-bmnw.nl/dns_records',
+        'GET /zones/zone-passly.dev/dns_records',
         'POST /zones/zone-passly.dev/dns_records',
+        'DELETE /zones/zone-passly.dev/dns_records',
         'GET /zones'
     ];
 
@@ -348,13 +392,24 @@ function injectFaults(world: World): void {
 
         world.log.push(`  ${count} writers`);
     }
+
+    if (next() < 0.1) {
+        const zone = pick(next, cloudflare.zones);
+
+        cloudflare.hidden.add(zone.id);
+        world.log.push(`  token loses ${zone.name}`);
+    }
+
+    if (next() < 0.03 && world.disk.value?.tunnel != null) {
+        world.vanishIn = 1 + Math.floor(next() * 8);
+        world.log.push(`  tunnel deleted after ${world.vanishIn} calls`);
+    }
 }
 
 interface Intent {
     enabled: boolean;
     leaving: boolean;
     comeBack: boolean;
-    zoneId: string;
     hostname: string;
 }
 
@@ -362,14 +417,25 @@ function intents(world: World): Map<string, Intent> {
     return new Map(
         (world.disk.value?.rows ?? []).map((row) => [
             row.id,
-            { enabled: row.enabled, leaving: row.leaving === true, comeBack: row.comeBack, zoneId: row.zoneId, hostname: row.hostname }
+            { enabled: row.enabled, leaving: row.leaving === true, comeBack: row.comeBack, hostname: row.hostname }
         ])
     );
 }
 
-/* Invariant 3: only a person's step changes the intent of a row it targets; any other row may only leave, or go off on a refusal of its own. */
-function checkIntent(world: World, before: Map<string, Intent>, tunnelWasLeaving: boolean, targets: 'all' | ReadonlySet<string>, restart: boolean): void {
+/*
+ * Invariant 3: only a person's step changes the intent of a row it targets; any other row may only leave by a Remove or
+ * unlink, or go when Ruimte forgets a tunnel deleted in the dashboard. Nothing Cloudflare says turns a row off.
+ */
+function checkIntent(
+    world: World,
+    before: Map<string, Intent>,
+    tunnelBefore: { id: string; leaving: boolean } | null,
+    targets: 'all' | ReadonlySet<string>,
+    restart: boolean
+): void {
     const after = intents(world);
+    const tunnelWasLeaving = tunnelBefore?.leaving === true;
+    const forgotten = tunnelBefore !== null && world.disk.value?.tunnel == null && !world.cloudflare.tunnels.some((tunnel) => tunnel.id === tunnelBefore.id);
 
     if (targets === 'all') {
         return;
@@ -389,8 +455,12 @@ function checkIntent(world: World, before: Map<string, Intent>, tunnelWasLeaving
         const now = after.get(id);
 
         if (now === undefined) {
-            if (!was.leaving && !tunnelWasLeaving) {
+            if (!was.leaving && !tunnelWasLeaving && !forgotten) {
                 world.problems.push(`row ${was.hostname} was dropped without a Remove`);
+            }
+
+            if (forgotten) {
+                world.abandoned.add(was.hostname);
             }
 
             continue;
@@ -404,10 +474,8 @@ function checkIntent(world: World, before: Map<string, Intent>, tunnelWasLeaving
             world.problems.push(`row ${was.hostname} turned on without a person`);
         }
 
-        const refused = world.refusedZones.has(was.zoneId) || was.hostname === FOREIGN;
-
-        if (was.enabled && !now.enabled && !refused && !(restart && !was.comeBack)) {
-            world.problems.push(`row ${was.hostname} turned off without a person or a refusal of its own`);
+        if (was.enabled && !now.enabled && !(restart && !was.comeBack)) {
+            world.problems.push(`row ${was.hostname} turned off without a person`);
         }
     }
 }
@@ -427,8 +495,10 @@ async function checkState(world: World): Promise<void> {
     // Without a record of Ruimte's under the name no request reaches the tunnel, whatever its ingress says.
     if (known !== undefined) {
         for (const row of state.rows) {
-            if (!row.enabled && hasOurRecord(world, row.hostname) && servedFor(known, row.hostname) !== null) {
-                world.problems.push(`shows ${row.hostname} off while the ingress Ruimte last read serves it`);
+            const paths = servedPaths(known, row.hostname);
+
+            if (!row.enabled && hasOurRecord(world, row.hostname) && paths.length > 0) {
+                world.problems.push(`shows ${row.hostname} off while the ingress Ruimte last read serves it at ${paths.join(' ')}`);
             }
         }
     }
@@ -442,7 +512,7 @@ async function checkState(world: World): Promise<void> {
             world.problems.push('runs cloudflared while the state says another runner');
         }
 
-        if (!state.rows.some((row) => row.enabled)) {
+        if (!state.rows.some((row) => row.enabled && (row.kind === 'dev' || world.listener.on))) {
             world.problems.push('runs cloudflared while no row is on or served');
         }
 
@@ -454,7 +524,8 @@ async function checkState(world: World): Promise<void> {
 
 /* Invariant 4: what a finished Remove or unlink took off is gone from Cloudflare, as far as Ruimte knows it. */
 function checkGone(world: World, tunnelId: string, hostnames: readonly string[]): void {
-    const known = world.known.get(tunnelId) ?? [];
+    // A tunnel deleted in the dashboard took its rules along.
+    const known = world.cloudflare.tunnels.some((tunnel) => tunnel.id === tunnelId) ? (world.known.get(tunnelId) ?? []) : [];
 
     for (const hostname of hostnames) {
         if (hasOurRecord(world, hostname)) {
@@ -465,6 +536,118 @@ function checkGone(world: World, tunnelId: string, hostnames: readonly string[])
             world.problems.push(`left a rule of ${hostname} behind`);
         }
     }
+}
+
+/* What the rule of a row meant on points at, or null when it serves nothing (the MCP while its listener is off). */
+function serviceOf(world: World, row: StoredRow): string | null {
+    if (row.kind === 'mcp') {
+        return world.listener.on ? `http://127.0.0.1:${LISTENER_PORT}` : null;
+    }
+
+    return `${row.origin?.https === true ? 'https' : 'http'}://127.0.0.1:${row.port}`;
+}
+
+/*
+ * Invariant 6, at rest after a Try again without faults: Cloudflare serves exactly what the person meant. A row meant on
+ * has its record and serves its port on every path a person's own rule with a path on its hostname leaves to it, a row
+ * meant off serves nothing, nothing is still leaving, and no record or rule of this machine is left without a row.
+ */
+function checkConverged(world: World, state: TunnelState): void {
+    const stored = world.disk.value;
+    const rows = stored?.rows ?? [];
+    const tunnel = tunnelOf(world);
+    const kept = new Set(rows.map((row) => row.hostname));
+    const ourHosts = new Set(HOSTS.map((host) => `${host.label}.${host.zone}`));
+
+    if (stored?.tunnel != null && tunnel === undefined) {
+        world.problems.push('keeps a tunnel that is gone from Cloudflare');
+    }
+
+    if (stored?.tunnel?.leaving === true) {
+        world.problems.push('has not finished unlinking');
+    }
+
+    for (const row of rows) {
+        if (row.leaving === true) {
+            world.problems.push(`still has ${row.hostname} leaving`);
+        }
+
+        if (tunnel === undefined) {
+            continue;
+        }
+
+        if (!meantOn(row)) {
+            const paths = servedPaths(tunnel.ingress, row.hostname);
+
+            if (hasOurRecord(world, row.hostname) && paths.length > 0) {
+                world.problems.push(`serves ${row.hostname} at ${paths.join(' ')}, meant off`);
+            }
+
+            continue;
+        }
+
+        if (!hasOurRecord(world, row.hostname)) {
+            world.problems.push(`has no record of ${row.hostname}, meant on`);
+        }
+
+        const wanted = serviceOf(world, row);
+
+        for (const path of PATHS) {
+            const rule = ruleFor(tunnel.ingress, row.hostname, path);
+            const persons = rule !== undefined && rule.hostname === row.hostname && rule.path !== undefined;
+
+            if (!persons && (wanted === null ? serves(rule) : rule?.service !== wanted)) {
+                world.problems.push(`serves ${row.hostname}${path} with ${String(rule?.service)}, meant ${String(wanted)}`);
+            }
+        }
+    }
+
+    for (const record of world.cloudflare.records) {
+        const target = world.cloudflare.tunnels.some((candidate) => record.content === `${candidate.id}.cfargotunnel.com`);
+
+        if (record.comment === MARKER && target && !kept.has(record.name) && !world.abandoned.has(record.name)) {
+            world.problems.push(`left the record of ${record.name} without a row`);
+        }
+    }
+
+    for (const candidate of world.cloudflare.tunnels) {
+        for (const rule of candidate.ingress) {
+            const hostname = typeof rule.hostname === 'string' ? rule.hostname : '';
+            const ours = candidate === tunnel && kept.has(hostname);
+
+            if (ourHosts.has(hostname) && rule.path === undefined && !ours && !world.writerHosts.has(hostname) && !world.abandoned.has(hostname)) {
+                world.problems.push(`left the rule of ${hostname} on ${candidate.name} without a row`);
+            }
+        }
+    }
+
+    // Invariant 5 the other way: with something live and no other runner, the child runs.
+    const live = state.rows.some((row) => row.enabled && (row.kind === 'dev' || world.listener.on));
+
+    if (tunnel !== undefined && live && tunnel.connections === 0 && world.runner.running === 0) {
+        world.problems.push('runs no cloudflared while a row is on and nothing else runs the tunnel');
+    }
+}
+
+/* The person fixes what was wrong (a token Cloudflare takes) and presses Try again with every fault gone. */
+async function rest(world: World): Promise<void> {
+    world.cloudflare.heal();
+    world.vanishIn = null;
+
+    const token = world.tokens.read();
+
+    if (token === null || token !== world.cloudflare.acceptedToken) {
+        world.log.push('at rest: token first');
+        world.cloudflare.acceptedToken = FAKE_API_TOKEN;
+        await attempt(world, () => world.service.setToken(FAKE_API_TOKEN));
+    } else {
+        world.log.push('at rest: retry');
+        await attempt(world, () => world.service.retry());
+    }
+
+    await world.service.idle();
+    await checkState(world);
+    checkConverged(world, await world.service.state());
 }
 
 function zoneIdOf(world: World, name: string): string {
@@ -479,19 +662,21 @@ function rowsOf(world: World): StoredRow[] {
 async function step(world: World): Promise<void> {
     const { next, service } = world;
     const before = intents(world);
-    const tunnelWasLeaving = world.disk.value?.tunnel?.leaving === true;
+    const stored = world.disk.value?.tunnel;
+    const tunnelBefore = stored == null ? null : { id: stored.id, leaving: stored.leaving === true };
     const rows = rowsOf(world);
     const row = rows.length === 0 ? undefined : pick(next, rows);
-    const draw = next() * 22;
+    const kept = world.tokens.read();
+    // A person whose token is gone or refused soon pastes one, or most runs would end without a tunnel to judge.
+    const draw = (kept === null || kept !== world.cloudflare.acceptedToken) && next() < 0.3 ? 19 : next() * 22;
     let targets: 'all' | ReadonlySet<string> = new Set();
     let restart = false;
 
     world.turningOn.clear();
-    world.refusedZones.clear();
     injectFaults(world);
 
     if (world.disk.value?.tunnel == null && draw < 8) {
-        if (next() < 0.5) {
+        if (next() < 0.5 || world.cloudflare.tunnels.length === 0) {
             world.log.push('setup');
             await attempt(world, () => service.setup());
         } else {
@@ -500,7 +685,7 @@ async function step(world: World): Promise<void> {
             world.log.push(`link ${tunnel.name}`);
             await attempt(world, () => service.link(undefined, tunnel.id));
         }
-    } else if (draw < 5) {
+    } else if (draw < 7) {
         const host = pick(next, HOSTS);
         const kind = next() < 0.2 ? 'mcp' : 'dev';
         const port = pick(next, PORTS);
@@ -521,13 +706,12 @@ async function step(world: World): Promise<void> {
         );
 
         const refusedBy = failed instanceof TunnelConfigError ? failed.code : null;
-
         const leftBy = refusedBy === 'hostname-on-tunnel' ? !world.writerHosts.has(hostname) : refusedBy === 'other-machine';
 
         if (leftBy && !world.abandoned.has(hostname)) {
             world.problems.push(`add of ${hostname} refused with ${refusedBy} by what Ruimte left behind`);
         }
-    } else if (draw < 10 && row !== undefined) {
+    } else if (draw < 11 && row !== undefined) {
         const change = Math.floor(next() * 4);
         const update =
             change === 0
@@ -546,7 +730,7 @@ async function step(world: World): Promise<void> {
 
         targets = new Set([row.id]);
         await attempt(world, () => service.update(row.id, update));
-    } else if (draw < 12 && row !== undefined) {
+    } else if (draw < 12.5 && row !== undefined) {
         const tunnelId = world.disk.value?.tunnel?.id ?? '';
 
         world.log.push(`remove ${row.hostname}`);
@@ -557,7 +741,7 @@ async function step(world: World): Promise<void> {
         if (failed === null && !rowsOf(world).some((candidate) => candidate.id === row.id)) {
             checkGone(world, tunnelId, [row.hostname]);
         }
-    } else if (draw < 12.7 && world.disk.value?.tunnel != null) {
+    } else if (draw < 13 && world.disk.value?.tunnel != null) {
         const tunnelId = world.disk.value.tunnel.id;
         const hostnames = rows.map((candidate) => candidate.hostname);
 
@@ -574,7 +758,7 @@ async function step(world: World): Promise<void> {
                 checkGone(world, tunnelId, hostnames);
             }
         }
-    } else if (draw < 13.5) {
+    } else if (draw < 13.6) {
         const enabled = !world.listener.on;
 
         world.log.push(`mcp ${enabled}`);
@@ -631,8 +815,10 @@ async function step(world: World): Promise<void> {
     await world.service.idle();
     world.cloudflare.failing.clear();
     world.cloudflare.writers.length = 0;
+    world.cloudflare.hidden.clear();
+    world.vanishIn = null;
     world.turningOn.clear();
-    checkIntent(world, before, tunnelWasLeaving, targets, restart);
+    checkIntent(world, before, tunnelBefore, targets, restart);
     await checkState(world);
 }
 
@@ -654,9 +840,9 @@ async function sequence(seed: number): Promise<string[]> {
         known: new Map(),
         beforePut: new Map(),
         turningOn: new Set(),
-        refusedZones: new Set(),
         writerHosts: new Set(),
         abandoned: new Set(),
+        vanishIn: null,
         log: [],
         problems: []
     };
@@ -668,13 +854,17 @@ async function sequence(seed: number): Promise<string[]> {
         await step(world);
     }
 
+    if (world.problems.length === 0) {
+        await rest(world);
+    }
+
     await world.service.stop();
 
     return world.problems.length === 0 ? [] : [`seed ${seed}: ${[...new Set(world.problems)].join('; ')}\n  after ${world.log.join('\n  ')}`];
 }
 
 const only = process.env.RUIMTE_SEED === undefined ? null : Number(process.env.RUIMTE_SEED);
-const batches = only === null ? Array.from({ length: SEQUENCES / BATCH }, (_, batch) => batch * BATCH) : [only];
+const batches = only === null ? Array.from({ length: Math.ceil(SEQUENCES / BATCH) }, (_, batch) => batch * BATCH) : [only];
 
 describe('TunnelService under seeded steps and faults', () => {
     test.each(batches)('keeps its invariants from seed %i on', async (first) => {

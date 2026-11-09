@@ -129,6 +129,8 @@ export class FakeCloudflare {
     readonly failing = new Map<string, number>();
     /* Changes another writer makes to a tunnel's configuration right after a PUT of Ruimte's landed, one per PUT. */
     readonly writers: Array<(tunnel: FakeTunnel) => void> = [];
+    /* Ids of zones the token no longer reaches: the zone list leaves them out and their records answer 403. */
+    readonly hidden = new Set<string>();
     private readonly losses: Array<{ key: string; status: number | null; skip: number }> = [];
     private counter = 0;
 
@@ -138,6 +140,14 @@ export class FakeCloudflare {
      */
     lose(key: string, status: number | null, skip = 0): void {
         this.losses.push({ key, status, skip });
+    }
+
+    /* Drops every failure, lost answer, writer and hidden zone still waiting. */
+    heal(): void {
+        this.failing.clear();
+        this.losses.length = 0;
+        this.writers.length = 0;
+        this.hidden.clear();
     }
 
     readonly fetch: CloudflareFetch = async (url, init) => {
@@ -251,7 +261,7 @@ export class FakeCloudflare {
         }
 
         if (method === 'GET' && path === '/zones') {
-            return this.ok(this.zones);
+            return this.ok(this.zones.filter((zone) => !this.hidden.has(zone.id)));
         }
 
         const tunnels = /^\/accounts\/([^/]+)\/cfd_tunnel(?:\/([^/]+)(?:\/(token|configurations))?)?$/.exec(path);
@@ -261,6 +271,10 @@ export class FakeCloudflare {
         }
 
         const dns = /^\/zones\/([^/]+)\/dns_records(?:\/([^/]+))?$/.exec(path);
+
+        if (dns !== null && this.hidden.has(dns[1]!)) {
+            return this.fail(403, 'Authentication error');
+        }
 
         if (dns !== null) {
             return this.routeRecord(method, dns[1]!, dns[2], query, body);
