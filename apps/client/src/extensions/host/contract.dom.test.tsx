@@ -60,7 +60,6 @@ function contextOf(extra: object): Record<string, unknown> {
     return { ...baseContext(), ...Object.fromEntries(Object.entries(extra).map(([key, value]) => [key, nodes(value)])) };
 }
 
-/* What a person reads and presses of something drawn. */
 function screenOf(mounted: Mounted): ContractScreen {
     return {
         text: () => mounted.host.textContent ?? '',

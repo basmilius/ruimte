@@ -36,7 +36,6 @@ export function isDesktop(): boolean {
     return desktop() !== null;
 }
 
-/* The system browser in the desktop app, a new tab elsewhere. */
 export function openInSystemBrowser(url: string): void {
     const bridge = desktop();
 

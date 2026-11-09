@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DesignElement } from '@/design/design-protocol';
 
-/* The properties the panel offers, with the key the page reports its computed value under. */
 const PROPERTIES = [
     { property: 'color', key: 'color' },
     { property: 'background-color', key: 'backgroundColor' },

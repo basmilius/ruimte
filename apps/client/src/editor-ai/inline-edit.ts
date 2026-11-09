@@ -276,7 +276,6 @@ export class InlineEditFeature implements InlineEdit {
         this.store.setState({ container });
     }
 
-    /* Puts the question above its lines, or takes it away. */
     private setPrompt(prompt: InlinePrompt | null): void {
         this.store.setState({ prompt, ...(prompt === null ? { promptContainer: null } : {}) });
         const render = (container: HTMLElement): void => this.store.setState({ promptContainer: container });
@@ -352,7 +351,6 @@ export class InlineEditFeature implements InlineEdit {
         sync();
     }
 
-    /* Draws the card in the editor while the session wants it shown, and takes it away when it does not. */
     private sync(session: InlineEditSession): void {
         const { editor } = this.language;
         const state = session.store.getState();

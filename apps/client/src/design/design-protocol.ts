@@ -48,7 +48,6 @@ export type DesignZoom = { action: 'set'; zoom: number } | { action: 'fit' };
 const TweakValueSchema = z.union([z.string().max(500), z.number().finite(), z.boolean()]);
 export type TweakValue = z.infer<typeof TweakValueSchema>;
 
-// One control of the tweaks a page declares, with the value it holds now.
 const TweakSchema = z.object({
     label: z.string().max(80).optional(),
     type: z.enum(['color', 'range', 'select', 'toggle', 'text']),
@@ -116,7 +115,6 @@ export function tweaksOf(declared: unknown): Tweaks | null {
     return parsed.success && Object.keys(parsed.data).length > 0 ? parsed.data : null;
 }
 
-/* One message for the page. */
 export function designMessage(method: (typeof DESIGN_METHODS)[keyof typeof DESIGN_METHODS], params?: object): object {
     return params === undefined ? { jsonrpc: '2.0', method } : { jsonrpc: '2.0', method, params };
 }

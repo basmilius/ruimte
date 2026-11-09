@@ -31,7 +31,6 @@ function clientOf(endpointId: string) {
     return client;
 }
 
-/* What an inline edit uses of the app, for one machine. */
 export function inlineEditDeps(endpointId: string): InlineEditDeps {
     const keyOf = (chatId: string): string => endpointKey(endpointId, chatId);
     const files = () => draftFiles(endpointId, transportOf(endpointId));

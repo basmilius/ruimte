@@ -33,7 +33,6 @@ export interface ReviewSource {
     chatExists(chatId: string): boolean;
     /* The file as a chat reads it, such as `src/score.ts`. */
     label(): string;
-    /* The language of a code fence, when the file has one. */
     language(): string | null;
 }
 
@@ -55,7 +54,6 @@ interface ReviewState {
     items: readonly ReviewItem[];
     /* The change a step landed on last, as an index into `items`. */
     current: number | null;
-    /* The change whose comment is being typed. */
     commenting: { runId: string; text: string } | null;
 }
 

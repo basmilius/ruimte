@@ -51,7 +51,6 @@ function isTypingTarget(el: EventTarget | null): boolean {
     return el instanceof HTMLElement && (el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
 }
 
-/* Whether anything else on screen has a claim on the keyboard right now. */
 function somethingElseHasIt(target: EventTarget | null): boolean {
     const ui = useUi.getState();
     return isTypingTarget(target) || isInFloatingLayer(target) || ui.settings.open || ui.paletteOpen || anyDialogOpen();

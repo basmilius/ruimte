@@ -19,7 +19,6 @@ export function useDesignOffered(): boolean {
     return hasFolder && supported;
 }
 
-/* "Design", then "Design 2", over every design of the project, a view of its own or a node on a canvas. */
 function freeDesignName(names: readonly string[]): string {
     const taken = new Set(names);
     let name = 'Design';

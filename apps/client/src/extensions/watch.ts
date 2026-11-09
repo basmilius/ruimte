@@ -8,7 +8,6 @@ import type { Transport } from '@/transport';
 import { fireAndForget } from '@/transport-api/transport';
 import { watchPool } from '@/transport/pool-watch';
 
-/* What this computer has installed, and what the machine on it has linked for development. */
 export function startExtensions(): () => void {
     void syncExtensions();
 

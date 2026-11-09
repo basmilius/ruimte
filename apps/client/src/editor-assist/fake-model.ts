@@ -52,7 +52,6 @@ export class FakeEditorAssistModel {
         this.transport.emit('editor.text', { id: this.last.id, text });
     }
 
-    /* The last request is done with this text. */
     answer(text: string): void {
         this.waiting.get(this.last.id)?.({ state: 'done', text });
     }

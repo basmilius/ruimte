@@ -103,7 +103,6 @@ function Widget({ entry, context }: { entry: SlotEntry; context: object }) {
     return entry.component === undefined ? null : createElement(entry.component, { context, nodeId: (context as { node?: { id: string } }).node?.id });
 }
 
-/* One entry in a row of buttons, with words beside its icon or the icon alone. */
 function RowEntry({ resolved, context, slot, words }: { resolved: ResolvedEntry; context: object; slot: SlotName; words: boolean }) {
     const { entry, title, icon, disabled } = resolved;
 

@@ -86,7 +86,6 @@ export interface InlineEditInit {
     readonly account?: string;
 }
 
-/* A turn as the chat shows it now. */
 interface TurnOutcome {
     readonly state: 'running' | 'done' | 'aborted' | 'error';
     readonly text: string;

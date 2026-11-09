@@ -16,7 +16,6 @@ type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'app'>;
 
 const APPLY = shortcut('Mod+Enter');
 
-/* The mark of the agent's CLI, in the color its chats wear. */
 function ProviderMark({ kind }: { kind: AgentKind }) {
     return (
         <span className={`flex shrink-0 items-center ${kind === 'claude' ? 'text-(--agent-1)' : 'text-text-muted'}`}>

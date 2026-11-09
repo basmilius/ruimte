@@ -3,7 +3,6 @@ import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import { chooserChats } from '@/language/chat-chooser';
 import { useProjectSource } from '@/project/project-source';
 
-/* The chat that wrote something, as the project shows it now. */
 interface ChatIdentity {
     /* False once the chat is gone from the project, which leaves the card without a way to open it. */
     exists: boolean;

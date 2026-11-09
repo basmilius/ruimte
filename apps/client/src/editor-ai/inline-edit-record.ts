@@ -50,7 +50,6 @@ function inlineEdits(endpointId: string): StoredValue<Record<string, InlineEditR
     return storedJson(`ruimte.inlineEdits.${endpointId}`, InlineEditsSchema);
 }
 
-/* The records of one machine by path. */
 export function readInlineEdits(endpointId: string, storage?: KeyValueStorage | null): Record<string, InlineEditRecord> {
     return inlineEdits(endpointId).read(storage) ?? {};
 }

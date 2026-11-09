@@ -52,7 +52,6 @@ function scriptsWeight(from: string): number {
     return byteLength(framedPagesElement('{}', from)) + byteLength(runtimeAssetsElement(from));
 }
 
-/* What one page adds to the script that frames pages when it names `url` as `path`. */
 function framedEntryWeight(path: string, url: string): number {
     return byteLength(inlineJson(path)) + byteLength(inlineJson(url)) + 2;
 }

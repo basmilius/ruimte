@@ -141,7 +141,6 @@ export function DrawingView({ id }: { id: string }) {
 
     useViewportSize(rootRef, drawingStore);
 
-    /* Paints on every change of what is drawn, of the camera or of the theme, once per frame. */
     useEffect(() => {
         let frame = 0;
         const draw = (): void => {
@@ -534,7 +533,6 @@ export function DrawingView({ id }: { id: string }) {
     );
 }
 
-/* What the pointer says it will do here: the tool, unless a gesture is already saying otherwise. */
 function cursorFor(tool: string, gesture: Gesture['kind'] | null, space: boolean): string {
     if (gesture === 'pan') {
         return 'grabbing';

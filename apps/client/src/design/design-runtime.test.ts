@@ -87,7 +87,6 @@ describe('what a design page may say', () => {
 
 type Listener = (event: { source: unknown; origin: string; data: unknown }) => void;
 
-/* A stand-in element that keeps its attributes. */
 class StandInElement {
     readonly nodeType = 1;
     readonly attributes = new Map<string, string>();

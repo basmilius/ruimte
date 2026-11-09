@@ -55,7 +55,6 @@ function Problems({ problems }: { problems: readonly InlineProblem[] }) {
     );
 }
 
-/* The question over the selected lines: what to change, which agent answers, and the lines and problems that go along. */
 export function InlinePromptCard({ feature, language, prompt }: { feature: InlineEditFeature; language: EditorLanguage; prompt: InlinePrompt }) {
     const { t } = useTranslation('inline-edit');
     const input = useRef<HTMLInputElement>(null);

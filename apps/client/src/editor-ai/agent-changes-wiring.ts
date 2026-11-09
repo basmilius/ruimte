@@ -23,7 +23,6 @@ type AgentReviewApp = Pick<ReviewSource, 'offer' | 'focusChat' | 'chatExists' | 
     folder(): string | null;
 };
 
-/* The path the way a chat reads it: inside the project folder it is relative to it. */
 function projectRelative(path: string, folder: string | null): string {
     return folder !== null && isPathBelow(folder, path) ? relativeTo(folder, path) : path;
 }

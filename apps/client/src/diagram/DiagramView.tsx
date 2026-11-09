@@ -115,7 +115,6 @@ function RenameField({ id, onDone }: { id: string; onDone: () => void }) {
     );
 }
 
-/* What a right-click on a node offers: its label, its tone and the way back to where the layout puts it. */
 function NodeMenuPopup({ id, onRename }: { id: string; onRename: () => void }) {
     const { t } = useTranslation('drawing');
     const store = useDiagramStore();

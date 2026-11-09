@@ -10,7 +10,6 @@ import { HANDLE_HIT_SIZE } from './handle-hit';
 /* The squares on a selection box, in screen pixels whatever the zoom is. */
 const HANDLE = 8;
 
-/* How far above the box the handle that turns the selection sits. */
 const ROTATE_OFFSET = 24;
 
 const CURSOR: Record<string, string> = {

@@ -35,7 +35,6 @@ const OPEN_MIN = { w: 360, h: 320 };
 /* The card is placed by its top-left corner beside the node, so only its right and bottom edges move. */
 const OPEN_EDGES: readonly ResizeEdge[] = ['e', 's', 'se'];
 
-/* Where each page stands: one column beside the node from its top, the open page at its size and every other one a line. */
 function pageRects(node: Rect, pages: readonly string[], open: string | null, size: { w: number; h: number }): Rect[] {
     const rects: Rect[] = [];
     for (const page of pages) {
@@ -46,7 +45,6 @@ function pageRects(node: Rect, pages: readonly string[], open: string | null, si
     return rects;
 }
 
-/* A design node as the place it is, null while it names no folder. */
 function placeOfNode(node: ProjectNode, canvasId: string): DesignPlace | null {
     return node.path === undefined || node.path === '' ? null : { id: node.id, name: node.title, path: node.path, chats: nodeChats(node), canvasId };
 }

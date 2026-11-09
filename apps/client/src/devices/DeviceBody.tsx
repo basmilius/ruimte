@@ -73,7 +73,6 @@ function useDeviceFor(reference: DeviceReference | undefined): { device: DeviceI
     return { device, loading: row.loading, error: row.error };
 }
 
-/* The buttons a running device has, and its tools beside them. */
 export function DeviceControls({ device }: { device: DeviceInfo }) {
     if (device.state !== 'booted') {
         return null;

@@ -11,7 +11,6 @@ import { useDesignFolder } from '@/state/design-places';
 const CHAT_WIDTH = 400;
 const CHAT_MIN_WIDTH = 320;
 
-/* A design: the chat that works on it, and beside it the pages of its folder on a stage. */
 export function DesignView({ view, focused }: { view: ProjectDesignView; focused: boolean }) {
     const { t } = useTranslation('shell');
     const design = placeOfView(view);

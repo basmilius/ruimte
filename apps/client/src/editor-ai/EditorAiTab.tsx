@@ -10,7 +10,6 @@ import { useSettings } from '@/state/settings';
 import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
 import { useKeyOf } from '@/surface/shortcut-overrides';
 
-/* What AI does in the editor: which agent edits inline, how an agent's changes show in open files and whether the gutter says who wrote a line. */
 export function EditorAiTab() {
     const { t } = useTranslation('settings');
     const assistAgent = useSettings((s) => s.aiAssistAgent);

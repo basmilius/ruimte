@@ -3,7 +3,6 @@ import { inlineDesignPage, runtimeAssets, type DesignFiles } from './design-inli
 import { DESIGN_PAGE_MAX_BYTES, pageDataUrl } from './design-page';
 import { runtimeAssetsElement } from './design-runtime';
 
-/* A design folder in memory that counts how often each page is read. */
 function folder(pages: Record<string, string>, assets: Record<string, number> = {}) {
     const reads = new Map<string, number>();
     const files: DesignFiles = {
@@ -66,7 +65,6 @@ describe('a page that frames another page of its folder', () => {
     });
 });
 
-/* What a page weighs once the frame has it: its bytes as the frame writes them. */
 const weight = (html: string): number => new TextEncoder().encode(html).length;
 
 describe('what a standing page builds', () => {
@@ -129,7 +127,6 @@ describe('what a standing page builds', () => {
 describe('a page with a script at the bounds of a visual', () => {
     const script = '<script>void 0</script>';
 
-    /* A page of exactly `bytes` bytes that opens with a script. */
     function scripted(bytes: number): string {
         return script + 'x '.repeat((bytes - script.length) / 2);
     }

@@ -6,7 +6,6 @@ import { baseContext, nodeInfoOf, resolveSlot } from '@/extensions/slots';
 import { focusedCanvas } from '@/state/canvas';
 import type { Contributions } from '@/state/extension-registry';
 
-/* The commands and actions the installed extensions add to the palette. */
 export type ExtensionRows = Pick<Contributions, 'commands' | 'slotEntries'>;
 
 export function extensionCommands({ commands, slotEntries }: ExtensionRows): Command[] {

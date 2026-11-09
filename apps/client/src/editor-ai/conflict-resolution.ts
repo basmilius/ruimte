@@ -24,9 +24,7 @@ export interface ConflictAuthor {
 export interface ConflictBlockState {
     id: string;
     theirs: readonly string[];
-    /* The number of the first of `theirs` in the incoming file. */
     theirsFirstLine: number;
-    /* Whether the block has no line of ours left, which a person removed or never had. */
     oursEmpty: boolean;
     author: ConflictAuthor | null;
 }
@@ -304,7 +302,6 @@ export class ConflictResolution {
         return this.runs.reduce<ProvenanceRun | null>((newest, run) => (newest === null || run.at > newest.at ? run : newest), null);
     }
 
-    /* The rows and the tint, where the blocks stand now. */
     private draw(): void {
         const signature = this.open
             .map((block) => {

@@ -9,7 +9,6 @@ export interface DeviceControl {
     shutdown(device: DeviceInfo): Promise<unknown>;
 }
 
-/* What erasing asks of a machine beside starting and stopping. */
 interface DeviceEraser extends DeviceControl {
     action(action: DeviceAction): Promise<unknown>;
 }

@@ -263,7 +263,6 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
             releaseOnNextFrame();
         }
     };
-    /* Lets go a frame after the last move landed, unless the gesture went on meanwhile. */
     const releaseOnNextFrame = (): void => {
         const state = trackpad.current;
         state.frame = window.requestAnimationFrame(() => {

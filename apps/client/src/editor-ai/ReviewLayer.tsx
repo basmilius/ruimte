@@ -182,7 +182,6 @@ export function ReviewLayer({ review, editor }: { review: AgentReview; editor: E
     );
 }
 
-/* The line over the editor that says how many changes wait, steps between them and answers them all. */
 export function ReviewBar({ review }: { review: AgentReview }) {
     const { t } = useTranslation('panels');
     const { items, current } = useStore(review.store, (state) => state);

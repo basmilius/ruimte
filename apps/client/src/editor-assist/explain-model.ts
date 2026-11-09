@@ -4,7 +4,6 @@ const MAX_STATEMENT_LINES = 12;
 /* The keywords and shapes that make a signature one of a function or method, in the languages the servers cover. */
 const FUNCTION_LIKE = /\b(?:function|def|fn|func|fun|sub|method|constructor|init)\b|=>|\)\s*(?::|->)\s*\S/;
 
-/* Whether a hover's signature is a function or a method, which is what Explain is offered for. */
 export function isFunctionSignature(signature: string): boolean {
     return FUNCTION_LIKE.test(signature);
 }

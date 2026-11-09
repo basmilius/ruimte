@@ -10,7 +10,6 @@ export const DEFAULT_NOTE = { w: 180, h: 180 };
 /* Under this many world units a drag is a click, whatever the hand did. */
 export const DRAG_THRESHOLD = 3;
 
-/* A line snaps to this many degrees while Shift is held. */
 const ANGLE_STEP = Math.PI / 12;
 
 export function snapPoint(point: Point, snap: boolean): Point {

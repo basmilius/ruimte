@@ -57,7 +57,6 @@ afterEach(async () => {
     restoreLayout();
 });
 
-/* The name of the page the stage shows, as its switcher reads it. */
 function shownPage(): string | null {
     const trigger = mounted.host.querySelector<HTMLButtonElement>('button[aria-label^="Page: "]');
 

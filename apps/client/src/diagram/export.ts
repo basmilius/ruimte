@@ -36,7 +36,6 @@ export async function diagramPng(store: DiagramSource): Promise<Blob | null> {
     }
 }
 
-/* Where the file of a diagram view sits, or null when no project is open. */
 export function diagramJsonPath(viewId: string): string | null {
     const folder = useProject.getState().current?.folder ?? null;
     return folder === null ? null : absoluteOf(folder, `.ruimte/diagrams/${encodeURIComponent(viewId)}.json`);

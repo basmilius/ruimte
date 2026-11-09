@@ -25,7 +25,6 @@ function dialogButton(label: string): HTMLElement | null {
     return [...(eraseDialog()?.querySelectorAll<HTMLElement>('button') ?? [])].find((button) => button.textContent?.trim() === label) ?? null;
 }
 
-/* The device requests that change it, in the order they went. */
 function lifecycle(): string[] {
     return machine.sent
         .filter((request) => request.type === 'device.shutdown' || request.type === 'device.boot' || request.type === 'device.action')

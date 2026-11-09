@@ -441,7 +441,6 @@ function InstalledGroup({
     );
 }
 
-/* Settings, Extensions: the store and what is installed on the left, and on the right one extension or the store. */
 export function ExtensionsPane() {
     const { t } = useTranslation('settings');
     const installed = useInstalledExtensions((state) => state.installed);

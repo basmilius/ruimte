@@ -51,7 +51,6 @@ const MINUTE_MS = 60_000;
 
 const TOOL_ICONS = { view: MousePointer2, comment: MessageSquarePlus, edit: SquareMousePointer, draw: PenLine } as const;
 
-/* The comments waiting to be sent, as the numbered pins the page draws on their elements. */
 function pinsOf(comments: readonly DesignComment[]): { selector: string; number: number }[] {
     return comments.map((comment, index) => ({ selector: comment.element.selector, number: index + 1 }));
 }

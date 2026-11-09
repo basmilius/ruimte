@@ -11,7 +11,6 @@ function useAddDesign(at: () => Point): (provider: ProviderInfo, account?: strin
     return (provider, account) => void addDesignNode(canvasStore, provider, at(), account === undefined ? {} : { account });
 }
 
-/* A design node on the CLI a person picks, in every menu that adds to a canvas. */
 export function DesignAddItem({ at }: { at: () => Point }) {
     const { t } = useTranslation('canvas');
     const offered = useDesignOffered();

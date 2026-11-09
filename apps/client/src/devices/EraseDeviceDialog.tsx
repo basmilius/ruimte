@@ -5,7 +5,6 @@ import { useDevices } from '@/clients/devices/state';
 import { eraseDevice } from '@/devices/control';
 import { deviceClientFor } from '@/workspace/connections';
 
-/* The question before a simulator or an emulator loses its apps, their data and its settings. */
 export function EraseDeviceDialog() {
     const { t } = useTranslation('machines');
     const request = useDevices((state) => state.erasing);
