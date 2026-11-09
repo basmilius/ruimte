@@ -26,6 +26,8 @@ import {
     normalizedOrigin,
     servedBy,
     servedFor,
+    takesHost,
+    takesRoot,
     TunnelConfigError,
     tunnelNameOf
 } from './tunnel-config.ts';
@@ -70,19 +72,16 @@ function otherRuleOf(rule: CloudflareIngressRule): TunnelOtherRule {
 }
 
 /*
- * Whether a rule someone else wrote could take the traffic of a hostname. One without a hostname takes its path on every
- * host, and a wildcard counts for every name under it; an exact hostname, also Ruimte's own with a path, takes nothing else.
+ * Whether a rule someone else wrote could take the traffic of a hostname. One without a hostname or with `*` takes its
+ * path on every host, and a wildcard counts for every name under it. A path on the hostname itself is the person's: it
+ * keeps serving its path while the row is on, and only a row held off goes before one that would take the root.
  */
-function mayCatch(rule: CloudflareIngressRule, hostname: string): boolean {
-    if (typeof rule.hostname !== 'string') {
-        return true;
-    }
-
-    if (!rule.hostname.includes('*')) {
+function mayCatch(rule: CloudflareIngressRule, hostname: string, held: boolean): boolean {
+    if (!takesHost(rule, hostname)) {
         return false;
     }
 
-    return !rule.hostname.startsWith('*.') || hostname.endsWith(rule.hostname.slice(1));
+    return rule.hostname !== hostname || (held && takesRoot(rule, hostname));
 }
 
 /* JSON with the keys of every object sorted, since Cloudflare need not send a rule's keys back in the order Ruimte wrote them. */
@@ -1092,7 +1091,8 @@ export class TunnelService {
 
     /*
      * A row that is on gets its record first, looked up by name, since a delete whose answer got lost may have taken it.
-     * One whose record fails goes off, and the first failure is said.
+     * One whose record is refused goes off, as an intent, and the first refusal is said. Any other failure leaves the
+     * intent as it is, so the network coming back or Try again tries the record again.
      */
     private async recordRowsComingBack(): Promise<unknown> {
         const tunnel = this.stored.tunnel;
@@ -1106,12 +1106,12 @@ export class TunnelService {
             try {
                 await this.recordRow(this.api(), row, tunnel.id);
             } catch (e) {
+                if (!(e instanceof TunnelConfigError || (e instanceof CloudflareError && e.refused))) {
+                    throw e;
+                }
+
                 refused ??= e;
-                this.stored = {
-                    ...this.stored,
-                    rows: this.stored.rows.map((candidate) => (candidate.id === row.id ? { ...candidate, enabled: false } : candidate))
-                };
-                this.save();
+                this.intend(this.stored.rows.map((candidate) => (candidate.id === row.id ? { ...candidate, enabled: false } : candidate)));
             }
         }
 
@@ -1171,18 +1171,16 @@ export class TunnelService {
     }
 
     /*
-     * Deletes the record of a row, only while it is still the one Ruimte made. A row whose record Cloudflare never
-     * confirmed takes the one under its name that carries this machine's mark, if a create landed after all. The row
-     * then has no record, so turning it on again before Remove or unlink finished makes one first.
+     * Deletes every record under the name of a row that is still one Ruimte made, whatever id the row kept: a create
+     * whose answer got lost may have made one the row never heard of. The row then has no record, so turning it on again
+     * before Remove or unlink finished makes one first.
      */
     private async deleteRecordOf(api: CloudflareApi, row: StoredRow, tunnelId: string): Promise<void> {
         const target = this.targetOf(tunnelId);
-        const live = (await api.recordsNamed(row.zoneId, row.hostname)).find(
-            (record) => (row.recordId === null || record.id === row.recordId) && this.isOurs(record, target)
-        );
+        const live = (await api.recordsNamed(row.zoneId, row.hostname)).filter((record) => this.isOurs(record, target));
 
-        if (live !== undefined) {
-            await api.deleteRecord(row.zoneId, live.id, row.hostname);
+        for (const record of live) {
+            await api.deleteRecord(row.zoneId, record.id, row.hostname);
         }
 
         this.stored = {
@@ -1383,17 +1381,20 @@ export class TunnelService {
         }
 
         const ingress: CloudflareIngressRule[] = [];
+        const holding = new Set(held.map((row) => row.hostname));
+        const catches = (rule: CloudflareIngressRule, ours: IngressRule): boolean => mayCatch(rule, ours.hostname, holding.has(ours.hostname));
         let waiting = rules.map((rule) => ({ ...rule }));
 
         for (const rule of kept) {
-            ingress.push(...waiting.filter((ours) => mayCatch(rule, ours.hostname)), rule);
-            waiting = waiting.filter((ours) => !mayCatch(rule, ours.hostname));
+            ingress.push(...waiting.filter((ours) => catches(rule, ours)), rule);
+            waiting = waiting.filter((ours) => !catches(rule, ours));
         }
 
         ingress.push(...waiting, { ...catchAll });
 
+        // Nothing to write is no proof a held row serves nothing, so the second round still says when one does.
         if (canonical(ingress) === canonical(current.ingress)) {
-            return true;
+            return !held.some((row) => servedFor(current.ingress, row.hostname) !== null);
         }
 
         attempt.sent = true;

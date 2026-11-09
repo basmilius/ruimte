@@ -2217,6 +2217,117 @@ describe('what the person asked and what Cloudflare serves', () => {
         expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' });
         expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: true }]);
     });
+
+    test('keeps a hostname that comes back meant on when looking up its record fails at boot, and brings it up on Try again', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await f.service.add({ kind: 'dev', zone: f.bmnw.id, label: 'a', port: 3000, comeBack: true });
+        await f.service.idle();
+        await f.service.stop();
+        f.cloudflare.failing.set('GET /zones/zone-bmnw.nl/dns_records', 503);
+
+        const booted = await fixture({}, '/usr/bin/cloudflared', { home: f.home, cloudflare: f.cloudflare, tokens: f.tokens });
+
+        await booted.service.resume();
+        await booted.service.idle();
+
+        expect(tunnelStore(f.home).read()?.rows[0]).toMatchObject({ hostname: 'a.bmnw.nl', enabled: true });
+        expect(await booted.state()).toMatchObject({ stage: 'failed', rows: [{ hostname: 'a.bmnw.nl', enabled: true }] });
+
+        f.cloudflare.failing.clear();
+        await booted.service.retry();
+        await booted.service.idle();
+
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' });
+        expect(await booted.state()).toMatchObject({ stage: 'running', rows: [{ hostname: 'a.bmnw.nl', enabled: true }] });
+        expect(booted.runner.running).toBe(1);
+    });
+
+    test('shows a hostname on whose record Cloudflare refuses on Try again while its hostnames cannot be read', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        await rowOn(f, 'a', 3000);
+        f.cloudflare.failing.set('GET /zones/zone-bmnw.nl/dns_records', 403);
+        f.cloudflare.failing.set(`${READ}/${ourTunnel(f).id}/configurations`, 503);
+        await f.service.retry();
+        await f.service.idle();
+
+        expect(ourTunnel(f).ingress[0]).toEqual({ hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' });
+        expect(tunnelStore(f.home).read()?.rows[0]).toMatchObject({ hostname: 'a.bmnw.nl', enabled: false });
+        expect(await f.state()).toMatchObject({ stage: 'failed', rows: [{ hostname: 'a.bmnw.nl', enabled: true }] });
+        expect(f.runner.running).toBe(1);
+    });
+
+    test('holds a hostname that is off with its 404 before a path of the dashboard on that hostname that takes the root', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const id = await rowOn(f, 'a', 3000);
+
+        ourTunnel(f).ingress = [{ hostname: 'a.bmnw.nl', path: '^/', service: 'http://localhost:9000' }, ...ourTunnel(f).ingress];
+        await f.service.update(id, { enabled: false });
+        await f.service.idle();
+
+        expect(ourTunnel(f).ingress).toEqual([
+            { hostname: 'a.bmnw.nl', service: 'http_status:404' },
+            { hostname: 'a.bmnw.nl', path: '^/', service: 'http://localhost:9000' },
+            { service: 'http_status:404' }
+        ]);
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: false }]);
+    });
+
+    test('deletes a record of its own under the name of a removed hostname that the row knew by another id', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const id = await rowOn(f, 'a', 3000);
+
+        // A create whose answer got lost made a record the row never heard of.
+        f.cloudflare.records[0]!.id = 'rec-lost';
+        await f.service.remove(id);
+        await f.service.idle();
+
+        expect(f.cloudflare.records).toEqual([]);
+        expect((await f.state()).rows).toEqual([]);
+    });
+
+    test('takes a rule for the hostname * as the catch-all, and adds no second one', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+        ourTunnel(f).ingress = [{ hostname: '*', service: 'http_status:404' }];
+        await rowOn(f, 'a', 3000);
+
+        expect(ourTunnel(f).ingress).toEqual([
+            { hostname: 'a.bmnw.nl', service: 'http://127.0.0.1:3000' },
+            { hostname: '*', service: 'http_status:404' }
+        ]);
+    });
+
+    test('shows a hostname on while another writer keeps putting a rule for every hostname before its 404', async () => {
+        const f = await fixture();
+
+        await readyTunnel(f);
+
+        const a = await rowOn(f, 'a', 3000);
+        const b = await rowOn(f, 'b', 3001);
+        const prependEvery = (tunnel: { ingress: Array<Record<string, unknown>> }): void => {
+            tunnel.ingress = [{ hostname: '*', path: '.*', service: 'http://localhost:9999' }, ...tunnel.ingress];
+        };
+
+        await f.service.update(a, { enabled: false });
+        await f.service.idle();
+        f.cloudflare.writers.push(prependEvery, prependEvery);
+        await f.service.update(b, { port: 3005 });
+        await f.service.idle();
+
+        expect((await f.state()).rows).toMatchObject([{ hostname: 'a.bmnw.nl', enabled: true }, { enabled: true }]);
+        expect(tunnelStore(f.home).read()?.rows[0]).toMatchObject({ hostname: 'a.bmnw.nl', enabled: false });
+    });
 });
 
 describe('what the section reads and offers', () => {

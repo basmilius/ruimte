@@ -244,11 +244,23 @@ export function servedBy(rule: Record<string, unknown>): { port?: number; origin
     return { port: Number(loopback[2]), ...(Object.keys(origin).length === 0 ? {} : { origin }) };
 }
 
-/* Whether a rule takes a request for the root path of a hostname, matched the way `cloudflared` matches its ingress. */
-function takesRoot(rule: Record<string, unknown>, hostname: string): boolean {
+/*
+ * Whether a rule's hostname takes a hostname, the way `cloudflared` matches it: none or `*` takes every hostname, a
+ * wildcard like `*.example.com` every name under it, and anything else only itself.
+ */
+export function takesHost(rule: Record<string, unknown>, hostname: string): boolean {
     const ruleHost = typeof rule.hostname === 'string' && rule.hostname !== '' ? rule.hostname : null;
 
-    if (ruleHost !== null && ruleHost !== hostname && !(ruleHost.startsWith('*.') && hostname.endsWith(ruleHost.slice(1)))) {
+    if (ruleHost === null || ruleHost === '*' || ruleHost === hostname) {
+        return true;
+    }
+
+    return ruleHost.startsWith('*.') && hostname.endsWith(ruleHost.slice(1));
+}
+
+/* Whether a rule takes a request for the root path of a hostname, matched the way `cloudflared` matches its ingress. */
+export function takesRoot(rule: Record<string, unknown>, hostname: string): boolean {
+    if (!takesHost(rule, hostname)) {
         return false;
     }
 
@@ -277,7 +289,7 @@ export function servedFor(ingress: readonly Record<string, unknown>[], hostname:
 /* The catch-all every ingress ends in, which answers 404 for any other hostname. */
 export const CATCH_ALL = { service: 'http_status:404' } as const;
 
-/* A rule with neither hostname nor path matches everything, so it can only be the last one. */
+/* A rule without a path whose hostname is none or `*` matches everything, so it can only be the last one. */
 export function isCatchAll(rule: Record<string, unknown>): boolean {
-    return rule.hostname === undefined && rule.path === undefined;
+    return (rule.hostname === undefined || rule.hostname === '*') && rule.path === undefined;
 }
