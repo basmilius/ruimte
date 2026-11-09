@@ -214,12 +214,14 @@ func makeRequest(_ command: String, _ arguments: Arguments) -> Request {
             fail("`cu type` needs the text to type")
         }
         request.text = text
+        request.element = intOption(arguments, "element")
     case "key":
         request.app = requireApp(arguments, command)
         if rest.isEmpty {
             fail("`cu key` needs at least one key combo, e.g. cmd+n")
         }
         request.combos = rest
+        request.element = intOption(arguments, "element")
     case "set-value":
         request.app = requireApp(arguments, command)
         guard let element = intOption(arguments, "element") else {

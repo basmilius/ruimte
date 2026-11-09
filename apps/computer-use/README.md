@@ -81,8 +81,8 @@ cu state <app> [--find T] [--within N]   accessibility tree of the key window, p
 cu click <app> --element N [--count 2] [--button right]
 cu click <app> --x PX --y PX [--count 2] [--button right]
 cu scroll <app> (--element N | --x PX --y PX) --direction up|down|left|right [--pages N]
-cu type <app> <text>                     type text into the focused element
-cu key <app> <combo> [<combo>...]        press keys: cmd+n, return, escape, tab, shift+tab, up
+cu type <app> [--element N] <text>       type text into the focused element, or element N focused first
+cu key <app> [--element N] <combo>...    press keys: cmd+n, return, escape, tab, shift+tab, up
 cu set-value <app> --element N <value>   set the AXValue of element N
 cu drag <app> (--from N | --from-x PX --from-y PX) (--to N | --to-x PX --to-y PX)
 cu read <app> --element N                every text of element N whole, with its role and frame

@@ -266,6 +266,8 @@ struct HandleTable {
     private(set) var signatures: [Int: ElementSignature] = [:]
     /// Where each element was when the state read it, for a click by pixel behind the person's work.
     private(set) var frames: [Int: CGRect] = [:]
+    /// The elements the state found inside a web area, which a parent chain from Chromium does not always reach.
+    private(set) var webIndices = Set<Int>()
     /// What the state before listed and this one did not reach, so a handle the agent read there still leads somewhere.
     private(set) var retired: [Int: (element: AXUIElement, signature: ElementSignature?)] = [:]
     private(set) var nextIndex: Int
@@ -289,6 +291,9 @@ struct HandleTable {
             byIndex[index] = element
             signatures[index] = older.signatures[index]
             frames[index] = older.frames[index]
+            if older.webIndices.contains(index) {
+                webIndices.insert(index)
+            }
         }
         for (index, entry) in older.retired where byIndex[index] == nil && retired[index] == nil {
             retired[index] = entry
@@ -324,13 +329,16 @@ struct HandleTable {
     }
 
     /// Indices only grow, so an index from an older state never points at a different element.
-    mutating func register(_ element: AXUIElement, previous: HandleTable, signature: ElementSignature? = nil, frame: CGRect? = nil) -> Int {
+    mutating func register(_ element: AXUIElement, previous: HandleTable, signature: ElementSignature? = nil, frame: CGRect? = nil, inWebArea: Bool = false) -> Int {
         let index = place(element, previous: previous)
         if let signature {
             signatures[index] = signature
         }
         if let frame {
             frames[index] = frame
+        }
+        if inWebArea {
+            webIndices.insert(index)
         }
         return index
     }
@@ -410,10 +418,10 @@ struct TreeWalker {
     /// Walks one root; `visible` is what counts as on screen for the `offscreen` mark.
     mutating func walk(_ root: AXUIElement, visible: CGRect) {
         visibleRect = visible
-        walk(root, depth: 0, indent: 0, parentLabel: nil)
+        walk(root, depth: 0, indent: 0, parentLabel: nil, inWebArea: false)
     }
 
-    private mutating func walk(_ element: AXUIElement, depth: Int, indent: Int, parentLabel: String?) {
+    private mutating func walk(_ element: AXUIElement, depth: Int, indent: Int, parentLabel: String?, inWebArea: Bool) {
         guard !hitElementLimit, !hitVisitLimit else {
             return
         }
@@ -454,7 +462,7 @@ struct TreeWalker {
         var childParentLabel = parentLabel
         if meaningful {
             let signature = ElementSignature(role: info.role, label: info.label, identifier: info.identifier)
-            let index = handles.register(element, previous: previous, signature: signature, frame: info.frame)
+            let index = handles.register(element, previous: previous, signature: signature, frame: info.frame, inWebArea: inWebArea)
             lines.append(String(repeating: "  ", count: indent) + line(for: info, index: index))
             elements.append(ElementText(index: index, depth: indent, texts: [info.title, info.value, info.description, info.identifier].compactMap { $0 }))
             childIndent += 1
@@ -467,7 +475,7 @@ struct TreeWalker {
             return
         }
         for child in info.children {
-            walk(child, depth: depth + 1, indent: childIndent, parentLabel: childParentLabel)
+            walk(child, depth: depth + 1, indent: childIndent, parentLabel: childParentLabel, inWebArea: inWebArea || info.role == "AXWebArea")
             if hitElementLimit || hitVisitLimit {
                 return
             }

@@ -115,6 +115,7 @@ extension Agent {
                     guard result == .success else {
                         throw AgentError.needsFront("\(Targets.name(app)) did not let element \(index) take the focus (AXError \(result.rawValue)), so clicking it needs the real pointer, and so the app in front")
                     }
+                    await Self.settleFocus(on: element, role: AX.role(element))
                     return ["method": "AXFocused", "element": index, "target": target]
                 }
             }
@@ -128,9 +129,18 @@ extension Agent {
                 if let axAction, pressable {
                     // Read before acting: a button that closes its sheet takes its window and label with it.
                     let target = AX.summary(element)
+                    let role = AX.role(element)
+                    let toggleBefore = Self.number(of: element, role: role)
                     self.overlay.press(target: nil)
                     let result = AXUIElementPerformAction(element, axAction as CFString)
+                    if result != .success, result != .cannotComplete, toggleBefore != nil {
+                        try? await Task.sleep(for: .milliseconds(150))
+                        if ToggleCheck.pressed(role: role, before: toggleBefore, now: Self.number(of: element, role: role)) {
+                            return ["method": axAction, "element": index, "target": target, "note": "the app answered the press with an error, but its value shows it took"]
+                        }
+                    }
                     if result == .success || result == .cannotComplete {
+                        await Self.settleFocus(on: element, role: role)
                         var answer: [String: Any] = ["method": axAction, "element": index, "target": target]
                         // A press that opens a modal returns only once the modal closes, so the call times out after it worked.
                         if result == .cannotComplete {
@@ -306,11 +316,18 @@ extension Agent {
         guard let index = request.element else {
             return
         }
-        let element = try snapshot(for: app).element(index)
+        let snapshot = try snapshot(for: app)
+        let element = try snapshot.element(index)
+        // A web page behind the person's work may answer the focus with success and keep the keys where they were, and
+        // keys that land in another element cannot be taken back. set-value fills such a field without keys (Electron, 2026-11-09).
+        if request.front != true, snapshot.handles.webIndices.contains(index) {
+            throw AgentError("element \(index) is in a web page, where focusing it behind the person's work may leave the keys elsewhere; set-value fills a field there, or type without element into the field that has the focus")
+        }
         let result = AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
         guard result == .success else {
             throw AgentError("element \(index) does not take the focus (AXError \(result.rawValue)); click it first, then type without element")
         }
+        await Self.settleFocus(on: element, role: AX.role(element))
         try await Task.sleep(for: .milliseconds(80))
     }
 
@@ -594,6 +611,25 @@ extension Agent {
 
     /// One character at a time to the app's process, with its window made main first, since some apps take keys behind
     /// the person's work only there. Returns the note for an answer when the focused value did not change.
+    /// The value of a checkbox or radio button as a number, to tell afterwards whether a press took.
+    private static func number(of element: AXUIElement, role: String?) -> Double? {
+        guard let role, ToggleCheck.roles.contains(role) else {
+            return nil
+        }
+        return (AX.attribute(element, kAXValueAttribute) as? NSNumber)?.doubleValue
+    }
+
+    /// A text field in a web page takes the focus a moment after the press, so typing right after it would go nowhere.
+    private static func settleFocus(on element: AXUIElement, role: String?) async {
+        guard role == kAXTextFieldRole || role == kAXTextAreaRole,
+              AX.ancestors(of: element, limit: 40).contains(where: { AX.role($0) == "AXWebArea" }) else {
+            return
+        }
+        for _ in 0..<16 where AX.attribute(element, kAXFocusedAttribute) as? Bool != true {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
     /// The menu item a combo with cmd stands for, which keys posted to an app behind the person's work never reach.
     private static func menuItem(for combo: KeyCombo, in app: NSRunningApplication) -> AXUIElement? {
         guard let shortcut = MenuShortcut.canonical(combo.name) else {
