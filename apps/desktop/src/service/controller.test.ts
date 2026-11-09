@@ -203,7 +203,7 @@ describe('start', () => {
     });
 
     test('waits for a daemon the app did not start, that still wires itself, before it asks it for the proof', async () => {
-        const { controller, events, deps } = setup({ support: 'unsupported' });
+        const { controller, events, deps } = setup({ support: 'dev' });
         let starting = true;
         deps.probe = async () => ({ ...EXPECTED, starting });
         deps.verify = async () => !starting;
