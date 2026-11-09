@@ -82,13 +82,12 @@ struct BackgroundWordsTests {
         #expect(error.message.hasPrefix("A drag needs the real pointer, and so the app in front. Call again with front"))
     }
 
-    @Test func theBarNamesTheAppInTheBackground() throws {
+    @Test func theMenuNamesTheAppInTheBackground() throws {
         let config = OverlayConfig()
-        #expect(config.title(background: nil) == "Ruimte is using your computer")
-        #expect(config.title(background: "Notes") == "Ruimte is working in Notes in the background")
+        #expect(config.menuTitle(background: nil) == "Ruimte is using this Mac")
         #expect(config.menuTitle(background: "Notes") == "Ruimte is using Notes in the background")
-        let dutch = try JSONDecoder().decode(OverlayConfig.self, from: Data(#"{"backgroundTitle": "Ruimte werkt op de achtergrond in {app}"}"#.utf8))
-        #expect(dutch.title(background: "Notities") == "Ruimte werkt op de achtergrond in Notities")
+        let dutch = try JSONDecoder().decode(OverlayConfig.self, from: Data(#"{"backgroundMenuTitle": "Ruimte gebruikt {app} op de achtergrond"}"#.utf8))
+        #expect(dutch.menuTitle(background: "Notities") == "Ruimte gebruikt Notities op de achtergrond")
     }
 }
 

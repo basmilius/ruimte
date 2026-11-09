@@ -10,5 +10,6 @@ let package = Package(
         .executableTarget(name: "RuimteComputerUse", dependencies: ["ComputerUseCore", "Phantom"]),
         .executableTarget(name: "cu", dependencies: ["ComputerUseCore", "Phantom"]),
         .testTarget(name: "ComputerUseCoreTests", dependencies: ["ComputerUseCore"]),
+        .testTarget(name: "PhantomTests", dependencies: ["ComputerUseCore", "Phantom"]),
     ]
 )

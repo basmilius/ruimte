@@ -18,7 +18,7 @@ extension Agent {
         defer {
             overlay.finishAction()
         }
-        overlay.show(ActionLook(state: .look, target: targetName(element, app), frame: info.frame ?? window))
+        overlay.show(ActionLook(state: .look, target: targetName(element, app)))
         var result: [String: Any] = ["app": Targets.descriptor(app), "element": index, "role": info.roleName]
         let texts: [(String, String?)] = [
             ("title", info.title), ("value", info.value), ("description", info.description),
@@ -51,7 +51,7 @@ extension Agent {
         defer {
             overlay.finishAction()
         }
-        overlay.show(ActionLook(state: .look, target: Targets.name(app), frame: window))
+        overlay.show(ActionLook(state: .look, target: Targets.name(app)))
         let clock = ContinuousClock()
         let started = clock.now
         let deadline = started + .seconds(timeout)

@@ -119,7 +119,7 @@ final class Agent {
             }
             return Response.success(["stopped": true])
         case "presence":
-            return await respond { try self.overlay.presence(request.state, label: request.label, step: request.step, ends: request.ends == true) }
+            return await respond { try self.overlay.presence(request.state, step: request.step, ends: request.ends == true) }
         case "clear-stop":
             // The daemon tells the stopped agent itself, so another agent it serves is not refused for that stop.
             overlay.clearStop()
@@ -475,20 +475,20 @@ final class Agent {
     }
 
     /// Starts or keeps the session for a call on the app: `point` picks the screen, and the person's hand in
-    /// `window` takes over. Behind the person's work, which is unless the call asked for the front, the bar names the app.
+    /// `window` takes over. Behind the person's work, which is unless the call asked for the front, the menu names the app.
     func begin(_ app: NSRunningApplication, _ request: Request, near point: CGPoint?, window: CGRect?) {
         overlay.begin(near: point, background: request.front == true ? nil : Targets.name(app))
         overlay.operating(in: window, pid: app.processIdentifier)
     }
 
-    /// A `state` shows as looking: in front the viewfinder goes around the window the agent captures.
+    /// A `state` shows as looking.
     private func look(_ app: NSRunningApplication, _ request: Request) async throws -> [String: Any] {
         let frame = keyWindowFrame(app)
         begin(app, request, near: frame?.center, window: frame)
         defer {
             overlay.finishAction()
         }
-        overlay.show(ActionLook(state: .look, target: Targets.name(app), frame: frame))
+        overlay.show(ActionLook(state: .look, target: Targets.name(app)))
         return try await buildState(app, request)
     }
 

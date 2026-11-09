@@ -21,13 +21,11 @@ final class StatusMenu: NSObject, NSMenuDelegate {
     var onStop: (() -> Void)?
     private var item: NSStatusItem?
     private var content: Content?
-    private var markKey: String?
+    private var markState: PhantomState?
     private var config = OverlayConfig()
-    private var accent: CGColor?
 
-    func show(_ content: Content, config: OverlayConfig, accent: CGColor?) {
+    func show(_ content: Content, config: OverlayConfig) {
         self.config = config
-        self.accent = accent
         if item == nil {
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
             let menu = NSMenu()
@@ -45,18 +43,17 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             return
         }
         self.content = content
-        let theme = PhantomTheme.current(button.effectiveAppearance)
-        let key = "\(PhantomLook.markState(content.state).rawValue)-\(theme.rawValue)"
-        if key != markKey {
+        let shown = PhantomLook.markState(content.state)
+        if shown != markState {
             let scale = button.window?.backingScaleFactor ?? 2
-            if let image = PhantomSnapshot.mark(content.state, theme: theme, accent: accent, scale: scale) {
+            if let image = PhantomSnapshot.mark(shown, scale: scale) {
                 button.image = NSImage(cgImage: image, size: OverlayStyle.MenuBar.mark)
             }
-            markKey = key
+            markState = shown
         }
         var attributes: [NSAttributedString.Key: Any] = [.font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)]
         if content.state.waitsOnPerson {
-            attributes[.foregroundColor] = NSColor(cgColor: OverlayStyle.palette(theme).needs)
+            attributes[.foregroundColor] = NSColor(cgColor: OverlayStyle.color(.needs))
         }
         button.attributedTitle = NSAttributedString(string: content.time, attributes: attributes)
     }
@@ -67,7 +64,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         }
         item = nil
         content = nil
-        markKey = nil
+        markState = nil
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
@@ -100,9 +97,8 @@ final class StatusMenu: NSObject, NSMenuDelegate {
 
         let stop = NSMenuItem(title: config.stop, action: #selector(stop), keyEquivalent: content.keys.contains(.stop) ? "\u{1b}" : "")
         stop.keyEquivalentModifierMask = .option
-        let theme = PhantomTheme.current(NSApp.effectiveAppearance)
         stop.attributedTitle = NSAttributedString(string: config.stop, attributes: [
-            .foregroundColor: NSColor(cgColor: OverlayStyle.palette(theme).error) ?? .systemRed,
+            .foregroundColor: NSColor(cgColor: OverlayStyle.color(.error)) ?? .systemRed,
             .font: NSFont.menuFont(ofSize: 0),
         ])
         stop.target = self

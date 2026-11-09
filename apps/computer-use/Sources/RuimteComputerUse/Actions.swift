@@ -279,10 +279,11 @@ extension Agent {
         }
         let name = targetName(grabbed, app)
         let index = request.element
-        return try await act(app, request, at: start, as: ActionLook(state: .drag, target: name, text: name)) {
+        return try await act(app, request, at: start, as: ActionLook(state: .drag, target: name)) {
             let hit = try await self.prepareMouse(app, at: start, window: snapshot.window, expecting: grabbed, index: index)
             let target = AX.summary(hit)
-            let duration = OverlayStyle.Motion.move.duration
+            // The real pointer takes as long as the cursor's arc, so both arrive together.
+            let duration = PhantomTravel.duration(distance: hypot(end.x - start.x, end.y - start.y))
             Task {
                 try? await self.overlay.glide(to: end, showing: .drag)
             }
@@ -338,7 +339,7 @@ extension Agent {
         try TypingLimit.check(text: text)
         try await focus(app, request)
         let window = snapshots[app.processIdentifier]?.window
-        let look = ActionLook(state: .type, target: targetName(focusedElement(app), app), text: text)
+        let look = ActionLook(state: .type, target: targetName(focusedElement(app), app))
         if request.front != true {
             let keys = try keyTarget(app)
             return try await act(app, request, at: focusPoint(app), as: look, reportPoint: false) {
@@ -367,7 +368,7 @@ extension Agent {
             throw AgentError("key needs at least one combo")
         }
         let window = snapshots[app.processIdentifier]?.window
-        let look = ActionLook(state: .type, target: targetName(focusedElement(app), app), text: combos.map(\.name).joined(separator: " "))
+        let look = ActionLook(state: .type, target: targetName(focusedElement(app), app))
         if request.front != true, let edit = combos.first(where: \.editsFocusedText) {
             throw AgentError.needsFront("\(edit.name) edits the focused text through the key window, which an app behind the person's work does not have, so it does nothing there; set-value replaces a text in the background")
         }
@@ -425,7 +426,7 @@ extension Agent {
         } else {
             newValue = text as CFString
         }
-        return try await act(app, request, at: visibleCenter(of: element, frame: frame), as: ActionLook(state: .type, target: targetName(element, app), text: text)) {
+        return try await act(app, request, at: visibleCenter(of: element, frame: frame), as: ActionLook(state: .type, target: targetName(element, app))) {
             let target = AX.summary(element)
             let result = AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, newValue)
             guard result == .success else {

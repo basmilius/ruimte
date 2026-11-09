@@ -37,17 +37,15 @@ struct CaptureResultTests {
 struct OverlayConfigTests {
     @Test func defaultsAreEnglish() {
         let config = OverlayConfig()
-        #expect(config.title == "Ruimte is using your computer")
         #expect(config.menuTitle == "Ruimte is using this Mac")
         #expect(OverlayConfig.load(from: "/nonexistent/overlay.json") == config)
     }
 
     @Test func readsTranslatedWordsAndKeepsDefaultsForTheRest() throws {
-        let data = Data(#"{"title": "Ruimte gebruikt je computer", "pause": ""}"#.utf8)
+        let data = Data(#"{"menuTitle": "Ruimte gebruikt deze Mac", "pause": ""}"#.utf8)
         let config = try JSONDecoder().decode(OverlayConfig.self, from: data)
-        #expect(config.title == "Ruimte gebruikt je computer")
+        #expect(config.menuTitle == "Ruimte gebruikt deze Mac")
         #expect(config.pause == "Pause")
-        #expect(config.accentComponents == nil)
     }
 
     @Test func fillsTheTargetIntoASteps() {
@@ -55,14 +53,6 @@ struct OverlayConfigTests {
         #expect(config.step(for: .click, target: "Export") == "Clicking Export")
         #expect(config.step(for: .click, target: nil) == "Clicking")
         #expect(config.step(for: .think, target: "Export") == "Deciding what to do next")
-    }
-
-    @Test func parsesAccent() {
-        #expect(RGB(hex: "#FF8000") == RGB(red: 1, green: 128.0 / 255, blue: 0))
-        #expect(RGB(hex: "00ff00") == RGB(red: 0, green: 1, blue: 0))
-        #expect(RGB(hex: "#fff") == nil)
-        #expect(RGB(hex: "#GG0000") == nil)
-        #expect(RGB(hex: "+12345") == nil)
     }
 }
 

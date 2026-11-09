@@ -31,13 +31,12 @@ usage: cu <command> [arguments]
   presence <state> [--label T] [--step T]
                                         show what the agent is doing: think, waiting, permission,
                                         error or done; end ends the session at once
-  pause | resume | stop                  what the buttons of the session bar do
+  pause | resume | stop                  what the items of the menu bar item do
   quit                                  stop the agent
 
 Development only, drawn in this process without the agent:
-  render sheet|<state>|bar [<state>]    PNGs of the overlay: every state, one state, or the session bar
-      [--theme light|dark|both] [--scale 1|2|3|all] [--at SECONDS] [--label T] [--held]
-      [--dots wave|fade|grow|orbit|gather] [--working dots|arc|sway]
+  render sheet|<state>                  PNGs of the overlay: every state, or one state
+      [--theme light|dark|both] [--scale 1|2|3|all] [--at SECONDS] [--working dots|arc]
       [--direction up|down|left|right] [--reduce-motion] [--out DIR]
 
 Every command takes --home <dir>: the RUIMTE_HOME whose local.key it presents and whose
@@ -355,10 +354,9 @@ func choice<Value: RawRepresentable>(_ arguments: Arguments, _ name: String, _ t
 @MainActor
 func render(_ arguments: Arguments) {
     guard let what = arguments.positionals.first else {
-        fail("`cu render` needs sheet, bar or a state: \(PhantomState.allCases.map(\.rawValue).joined(separator: ", "))")
+        fail("`cu render` needs sheet or a state: \(PhantomState.allCases.map(\.rawValue).joined(separator: ", "))")
     }
-    let barState = arguments.positionals.dropFirst().first
-    if what != "sheet" && what != "bar" && PhantomState(rawValue: what) == nil {
+    if what != "sheet" && PhantomState(rawValue: what) == nil {
         fail("unknown state \"\(what)\"")
     }
     let scales: [CGFloat]
@@ -390,23 +388,13 @@ func render(_ arguments: Arguments) {
             options.theme = theme
             options.scale = scale
             options.time = doubleOption(arguments, "at")
-            options.label = arguments.options["label"]
-            options.dots = choice(arguments, "dots", DotMotion.self) ?? .wave
             options.working = choice(arguments, "working", WorkingStyle.self) ?? .dots
             options.scrollDirection = choice(arguments, "direction", ScrollDirection.self) ?? .down
             options.reduceMotion = arguments.flags.contains("reduce-motion")
-            let image: CGImage?
-            var name = "phantom-\(what)"
-            switch what {
-            case "sheet":
-                image = PhantomSnapshot.sheet(options: options)
-            case "bar":
-                let state = barState.flatMap(PhantomState.init(rawValue:)) ?? .idle
-                name += "-\(state.rawValue)"
-                image = PhantomSnapshot.bar(state: state, held: arguments.flags.contains("held"), time: arguments.options["time"] ?? "02:14", options: options)
-            default:
-                image = PhantomSnapshot.state(PhantomState(rawValue: what) ?? .idle, options: options)
-            }
+            let name = "phantom-\(what)"
+            let image = what == "sheet"
+                ? PhantomSnapshot.sheet(options: options)
+                : PhantomSnapshot.state(PhantomState(rawValue: what) ?? .idle, options: options)
             guard let image else {
                 fail("could not draw \(what)")
             }
