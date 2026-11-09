@@ -122,6 +122,8 @@ export function WorkflowBeside({ id, z }: { id: string; z: number }) {
     const [stopping, setStopping] = useState<{ id: string; workflow: ChatWorkflow; sent: boolean } | null>(null);
     // Where the keyboard goes back to once the agent's card closed, which is only drawn after the change.
     const focusAfterClose = useRef<{ phase: string; index: number } | null>(null);
+    // A pick asks for the agent's card to come into view, which only has its place after the change is drawn.
+    const revealAfterPick = useRef(false);
 
     useEffect(() => {
         pruneWorkflowBeside(
@@ -144,6 +146,15 @@ export function WorkflowBeside({ id, z }: { id: string; z: number }) {
             canvasStore.getState().focusCard(cardId);
             line.focus({ preventScroll: true });
         }
+    });
+
+    // Also runs for a pick of the agent that is already open, since every pick writes a new selection.
+    useEffect(() => {
+        if (!revealAfterPick.current) {
+            return;
+        }
+        revealAfterPick.current = false;
+        canvasStore.getState().revealCard(derivedCardId(id, 'agent'));
     });
 
     if (node === undefined || viewId === null) {
@@ -234,7 +245,10 @@ export function WorkflowBeside({ id, z }: { id: string; z: number }) {
                         provider={provider}
                         refused={refused}
                         pickedIndex={agentPhase?.key === phase.key ? picked?.index : undefined}
-                        onPick={(view, step) => openWorkflowAgent(key, candidate.id, view.agent.index, step)}
+                        onPick={(view, step) => {
+                            revealAfterPick.current = true;
+                            openWorkflowAgent(key, candidate.id, view.agent.index, step);
+                        }}
                         onCollapse={() => openWorkflowPhase(key, candidate.id, null)}
                         onMeasure={(h) => setOpenHeights((last) => (last[phase.key] === h ? last : { ...last, [phase.key]: h }))}
                     />

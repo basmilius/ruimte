@@ -1,8 +1,8 @@
 import type { Theme, Windows } from '@adecore/shell';
 import type { ThemeState } from '@adecore/shell/bridge';
 import { isWindowKey, isWindowState, isWindowView, tabStripOf, windowPointOf } from '../app-windows';
+import { electron } from '../electron';
 import { createTabDrag } from '../tab-drag';
-import { electron } from './electron';
 import type { DesktopIpc } from './ipc';
 
 const { screen } = electron;

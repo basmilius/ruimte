@@ -7,6 +7,7 @@ import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
 import { windowUrl } from './app-windows';
 import { installBrowserRoutes } from './browser-routes';
 import { askDaemonWork, clearVoiceKey, handVoiceKey } from './daemon-proof';
+import { electron } from './electron';
 import { LAUNCHER_PIPE_VARIABLE } from './launcher-pipe';
 import { moveLegacyStorage } from './legacy-storage';
 import { MACHINE_ARGUMENT } from './machine-argument';
@@ -14,7 +15,6 @@ import { decideMachineMode, hasInstallTraces, machineModeFile, parseModeOverride
 import { installAgentActivity } from './main/activity';
 import { serveDevExtensionFiles } from './main/dev-extension-files';
 import { installDialogs } from './main/dialogs';
-import { electron } from './main/electron';
 import { ClientExtensions, installExtensions } from './main/extensions';
 import { installGuests, isBrowserGuest, isPreviewGuest, routePreviewLinks, sealPreviewSession } from './main/guests';
 import { desktopIpc } from './main/ipc';
@@ -32,6 +32,7 @@ import { startTelemetry } from './main/telemetry';
 import { installUpdates } from './main/updates';
 import { installUsage } from './main/usage';
 import { installWindows } from './main/windows';
+import { installPortTunnels } from './port-tunnel/tunnel-session';
 import { quitQuestion } from './quit-question';
 import { runSmoke } from './smoke';
 import { installSocketTypeOfServiceGuard } from './socket-tos-guard';
@@ -468,7 +469,7 @@ if (!app.requestSingleInstanceLock()) {
         }
         sealAppSession();
         sealPreviewSession();
-        browserRoutes = installBrowserRoutes(fromAppWindow, join(here, 'guest.cjs'));
+        browserRoutes = installBrowserRoutes(fromAppWindow, join(here, 'guest.cjs'), installPortTunnels(fromAppWindow, join(here, 'guest.cjs')).owns);
         power.followPowerSource();
         followDisplays();
         await startApp({

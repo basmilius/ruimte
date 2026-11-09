@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'bun:test';
-import { normalize } from 'node:path';
+import { join, normalize } from 'node:path';
 import {
     activates,
     additionKindsForLanguage,
     alongsideKindsForPath,
     componentServes,
+    documentLanguageId,
+    initializationOptionsOf,
     KIND_PROFILES,
     kindForLanguage,
     resolveNativeTypescript,
@@ -107,6 +109,89 @@ describe('server profiles', () => {
         expect(component!.initializationOptions(launch)).toEqual({});
         const manifests = ['/work/apps/bridge/Cargo.toml', '/work/apps/speech/Cargo.toml'];
         expect(component!.initializationOptions({ ...launch, cargoManifests: manifests })).toEqual({ linkedProjects: manifests });
+    });
+
+    it('serves Go and its module files in any project, with no Go toolchain download and no go generate', () => {
+        expect(kindForLanguage('go')).toBe('go');
+        expect(kindForLanguage('plaintext', {}, 'service/go.mod')).toBe('go');
+        expect(kindForLanguage('plaintext', {}, 'go.work')).toBe('go');
+        expect(KIND_PROFILES.go.activation).toBeUndefined();
+        expect(KIND_PROFILES.go.runsProjectCode).toBe(true);
+        expect(documentLanguageId('plaintext', 'service/go.mod')).toBe('go.mod');
+        expect(documentLanguageId('go', 'main.go')).toBe('go');
+        const [component] = KIND_PROFILES.go.components;
+        const launch = { ...context, native: { executable: '/home/go/bin/gopls' } };
+        expect(component!.program!(launch)).toBe('/home/go/bin/gopls');
+        expect(component!.initializationOptions(launch)).toEqual({ codelenses: { generate: false, regenerate_cgo: false } });
+        expect(component!.env).toMatchObject({ GOTOOLCHAIN: 'local' });
+    });
+
+    it('serves Zig and its package files in any project, as a kind that builds and cannot do without', () => {
+        expect(kindForLanguage('zig')).toBe('zig');
+        expect(kindForLanguage('plaintext', {}, 'build.zig.zon')).toBe('zig');
+        expect(KIND_PROFILES.zig.activation).toBeUndefined();
+        expect(KIND_PROFILES.zig.runsProjectCode).toBe(true);
+        expect(KIND_PROFILES.zig.runsBuildCode).toEqual({});
+    });
+
+    it('serves Lua in any project, keeps the log and the meta of the server out of the install, and runs project code', () => {
+        expect(kindForLanguage('lua')).toBe('lua');
+        expect(KIND_PROFILES.lua.activation).toBeUndefined();
+        expect(KIND_PROFILES.lua.runsProjectCode).toBe(true);
+        expect(KIND_PROFILES.lua.runsBuildCode).toBeUndefined();
+        const [component] = KIND_PROFILES.lua.components;
+        const storage = join(context.installDirectory, 'storage');
+        expect(component!.args(context)).toEqual([`--logpath=${join(storage, 'log')}`, `--metapath=${join(storage, 'meta')}`]);
+        expect(component!.configuration).toEqual({ Lua: { telemetry: { enable: false }, workspace: { checkThirdParty: false } } });
+    });
+
+    it('serves TOML in any project with taplo, told to fetch no schema', () => {
+        expect(kindForLanguage('toml')).toBe('toml');
+        expect(KIND_PROFILES.toml.activation).toBeUndefined();
+        expect(KIND_PROFILES.toml.runsProjectCode).toBeUndefined();
+        expect(KIND_PROFILES.toml.runsBuildCode).toBeUndefined();
+        const [component] = KIND_PROFILES.toml.components;
+        expect(component!.args(context)).toEqual(['lsp', 'stdio']);
+        expect(component!.configuration).toEqual({ evenBetterToml: { schema: { enabled: false, links: false } } });
+    });
+
+    it('serves Swift in any project, as a kind that builds and cannot do without', () => {
+        expect(kindForLanguage('swift')).toBe('swift');
+        expect(KIND_PROFILES.swift.activation).toBeUndefined();
+        expect(KIND_PROFILES.swift.runsProjectCode).toBe(true);
+        expect(KIND_PROFILES.swift.runsBuildCode).toEqual({});
+        const [component] = KIND_PROFILES.swift.components;
+        expect(component!.program!({ ...context, native: { executable: '/usr/bin/sourcekit-lsp' } })).toBe('/usr/bin/sourcekit-lsp');
+        expect(component!.args(context)).toEqual([]);
+    });
+
+    it('turns the building of code off in the initialization options only for a project held back', () => {
+        const rust = KIND_PROFILES.rust;
+        const [component] = rust.components;
+        const launch = { ...context, native: { executable: '/home/.cargo/bin/rust-analyzer' }, cargoManifests: ['/work/Cargo.toml'] };
+        const off = { cargo: { buildScripts: { enable: false } }, procMacro: { enable: false }, checkOnSave: false };
+
+        expect(initializationOptionsOf(rust, component!, launch)).toEqual({ linkedProjects: ['/work/Cargo.toml'] });
+        expect(initializationOptionsOf(rust, component!, { ...launch, buildHeld: false })).toEqual({ linkedProjects: ['/work/Cargo.toml'] });
+        expect(initializationOptionsOf(rust, component!, { ...launch, buildHeld: true })).toEqual({ linkedProjects: ['/work/Cargo.toml'], ...off });
+    });
+
+    it('marks every kind that builds code as one that runs project code, and lists what it turns off or that it cannot', () => {
+        const building = Object.values(KIND_PROFILES).filter((profile) => profile.runsBuildCode !== undefined);
+
+        expect(building.map((profile) => profile.kind)).toContain('rust');
+        for (const profile of building) {
+            expect(profile.runsProjectCode).toBe(true);
+            expect(profile.runsBuildCode?.off === undefined || Object.keys(profile.runsBuildCode.off).length > 0).toBe(true);
+        }
+    });
+
+    it('opens a JSON file that allows comments as JSONC and any other as JSON', () => {
+        expect(documentLanguageId('json', 'tsconfig.json')).toBe('jsonc');
+        expect(documentLanguageId('json', 'packages/app/tsconfig.build.json')).toBe('jsonc');
+        expect(documentLanguageId('json', '.vscode/settings.json')).toBe('jsonc');
+        expect(documentLanguageId('json', 'package.json')).toBe('json');
+        expect(documentLanguageId('tsx', 'a.tsx')).toBe('typescriptreact');
     });
 
     it('gives every server that pulls its diagnostics the pull, and lets the others push', () => {

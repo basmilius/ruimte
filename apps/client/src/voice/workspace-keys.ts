@@ -1,6 +1,6 @@
-import { isInFloatingLayer, matchesShortcut, isApplePlatform } from '@adecore/ui';
+import { isApplePlatform, isInFloatingLayer } from '@adecore/ui';
+import { commandForKey } from '@/commands/registry';
 import type { WorkspaceKeys } from '@/commands/workspace-keys';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { startVoice, stopVoice } from '@/voice/controller';
 import { createVoiceShortcut } from '@/voice/shortcut';
 import { useVoice } from '@/voice/state';
@@ -17,7 +17,7 @@ export function voiceKeys(): WorkspaceKeys {
 
     return {
         capture(event) {
-            if (event.isComposing || isInFloatingLayer(event.target) || !matchesShortcut(CANVAS_SHORTCUTS.voiceControl, event, isApplePlatform())) {
+            if (event.isComposing || isInFloatingLayer(event.target) || commandForKey('workspace', event, isApplePlatform()) !== 'voice-control') {
                 return false;
             }
             if (voiceShortcut.press(event.timeStamp, event.repeat)) {

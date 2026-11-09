@@ -1,6 +1,7 @@
 import type { Shortcut } from '@adecore/ui';
 import i18next from 'i18next';
 import { agentReviewOf } from '@/language/agent-review-registry';
+import { keymapKeyOf } from '@/surface/shortcut-overrides';
 import { LANGUAGE_COMMANDS, LANGUAGE_COMMAND_IDS, type LanguageCommandId } from './command-table';
 import { languageForCommand } from './focused-language';
 import type { EditorLanguage } from './ruimte-editor-language';
@@ -60,7 +61,7 @@ export function languageCommandRows(): LanguageCommandRow[] {
     return LANGUAGE_COMMAND_IDS.map((id) => ({
         id,
         label: i18next.t(`shell:palette.commands.${LANGUAGE_COMMANDS[id].key}`),
-        shortcut: LANGUAGE_COMMANDS[id].shortcut,
+        shortcut: keymapKeyOf(LANGUAGE_COMMANDS[id].keymap),
         run: () => {
             requestAnimationFrame(() => {
                 const language = languageForCommand();

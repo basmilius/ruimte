@@ -1,7 +1,7 @@
-import { isInFloatingLayer, matchesShortcut, isApplePlatform } from '@adecore/ui';
+import { isApplePlatform, isInFloatingLayer } from '@adecore/ui';
+import { commandForKey } from '@/commands/registry';
 import type { WorkspaceKeys } from '@/commands/workspace-keys';
 import { cancelDictation, stopDictation, toggleFocusedDictation, useDictation } from '@/dictation/controller';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 
 /* Holding the key past this long dictates only while it is held; a tap toggles. */
 const HOLD_MS = 400;
@@ -11,7 +11,7 @@ export function dictationKeys(): WorkspaceKeys {
 
     return {
         capture(event) {
-            if (!event.isComposing && !isInFloatingLayer(event.target) && matchesShortcut(CANVAS_SHORTCUTS.dictation, event, isApplePlatform())) {
+            if (!event.isComposing && !isInFloatingLayer(event.target) && commandForKey('workspace', event, isApplePlatform()) === 'dictation') {
                 if (event.repeat) {
                     event.preventDefault();
                     event.stopPropagation();

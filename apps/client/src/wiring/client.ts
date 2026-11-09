@@ -1,4 +1,6 @@
 import { onLazyOpenError, prefetcher, syncAnimations } from '@adecore/ui';
+import { onClientActionLoadError } from '@/action-port/client-action-loader';
+import { startBreakReminder } from '@/attention/break-reminder';
 import { startAgentNotifications } from '@/attention/notifications';
 import { startPageHolds } from '@/browser/page-hold';
 import { startProjectList } from '@/clients/project/list';
@@ -19,6 +21,7 @@ import { startAgentProjectWatch } from '@/project/agent-project-watch';
 import { bootWindow } from '@/project/open';
 import { startShowViewWatch } from '@/project/show-view-watch';
 import { startWindowTabs } from '@/project/window-tabs';
+import { startTunnelProposalWatch } from '@/proposals/tunnel-watch';
 import { startProposalWatch } from '@/proposals/watch';
 import { startPulsarAccount } from '@/pulsar/account';
 import { startLinkRequest } from '@/pulsar/link-request';
@@ -40,6 +43,7 @@ import { startPing } from '@/transport/ping';
 import { startProviderDetection } from '@/transport/provider-detection';
 import { startStartupReport } from '@/transport/startup-report';
 import { startWakeReconnect } from '@/transport/wake';
+import { startConsentWatch } from '@/tunnels/consent-watch';
 import { configureClient } from '@/wiring/client-config';
 import { installClientHooks, type ClientHooks } from '@/wiring/client-hooks';
 import { startAutoRegistration } from '@/workspace/auto-register-watch';
@@ -99,7 +103,16 @@ function reloadOnStaleChunks(): void {
         // The entry chunk's address carries the hash of the build.
         build: import.meta.url,
         prefetching: () => prefetcher.busy,
-        failedOpen: onLazyOpenError
+        // A lazy surface a person opened, or the action registry a command loads: both are theirs even beside a prefetch.
+        failedOpen: (listener) => {
+            const stops = [onLazyOpenError(listener), onClientActionLoadError(listener)];
+
+            return () => {
+                for (const stop of stops) {
+                    stop();
+                }
+            };
+        }
     });
 }
 
@@ -121,6 +134,7 @@ const STEPS: readonly Step[] = [
     { name: 'nodeActivityTouches', start: startNodeActivityTouches },
     { name: 'waitingSince', start: startWaitingSinceWatch },
     { name: 'agentNotifications', start: () => startAgentNotifications() },
+    { name: 'breakReminder', start: () => startBreakReminder() },
     { name: 'attention', start: startAttentionWatch },
     { name: 'serverInfo', start: startServerInfo },
     { name: 'ping', start: startPing },
@@ -133,6 +147,8 @@ const STEPS: readonly Step[] = [
     { name: 'computer', start: startComputerWatch },
     { name: 'secrets', start: startSecretWatch },
     { name: 'proposals', start: startProposalWatch },
+    { name: 'tunnelProposals', start: startTunnelProposalWatch },
+    { name: 'consent', start: () => startConsentWatch() },
     { name: 'deviceOperated', start: startDeviceOperatedWatch },
     { name: 'planPanel', start: startPlanPanelWatch },
     { name: 'connections', start: startConnections },

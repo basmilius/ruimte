@@ -41,6 +41,15 @@ export function serverDetail(status: LanguageServerStatus, t: TFunction<'panels'
     return status.documents > 0 ? t('language.documents', { count: status.documents, formatted: formatNumber(status.documents) }) : '';
 }
 
+/* Why a kind that builds code runs without that, or not at all, in this project, or that a person let it build in the worktrees of agents. */
+export function buildHeldDetail(status: LanguageServerStatus, t: TFunction<'panels'>): string {
+    if (status.buildHeld === true) {
+        return t('language.buildHeld');
+    }
+
+    return status.buildAllowed === true ? t('language.buildAllowed') : '';
+}
+
 /* A line for each sidecar of the kind, such as the TypeScript 6 process that answers the code actions TypeScript 7 lacks. */
 export function sidecarDetails(status: LanguageServerStatus, t: TFunction<'panels'>): string[] {
     return (status.sidecars ?? []).map((sidecar) => t(`language.sidecar.${sidecar.state}`, { title: sidecar.title, message: sidecar.message ?? '' }));

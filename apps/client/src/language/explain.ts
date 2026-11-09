@@ -82,10 +82,10 @@ export class ExplainFeature {
         }
     }
 
-    /* Offers Explain on a card of a function once the machine has said it has the model. */
+    /* Offers Explain on a card of a symbol, whatever it is, once the machine has said it has the model. A symbol needs a signature or a definition to be explained from. */
     private offer(hover: HoverView): void {
-        const signature = hover.info?.text.signatures[0]?.code;
-        if (!this.enabled || signature === undefined || !isFunctionSignature(signature)) {
+        const info = hover.info;
+        if (!this.enabled || info == null || (info.text.signatures[0] === undefined && info.definition === null)) {
             return;
         }
         this.subject = hover.subject;
@@ -111,7 +111,7 @@ export class ExplainFeature {
         await this.run(hover.subject, {
             language: shikiLanguageOf(this.language.languageId),
             file: this.fileOf(place),
-            ...(signature === undefined ? {} : { signature }),
+            ...(signature === undefined ? {} : { signature, subject: isFunctionSignature(signature) ? 'function' : 'symbol' }),
             documentation: info.text.markdown,
             source: source === '' ? (signature ?? info.word) : source
         });
@@ -125,7 +125,7 @@ export class ExplainFeature {
         }
         const { editor } = this.language;
         const selection = editor.getSelection();
-        const range = isEmptyRange(selection) ? await this.functionAround(selection.start.line) : selection;
+        const range = isEmptyRange(selection) ? await this.symbolAround(selection.start.line) : selection;
         if (range === null) {
             this.tell('nothing');
             return;
@@ -142,13 +142,13 @@ export class ExplainFeature {
         }
     }
 
-    private async functionAround(line: number): Promise<EditorRange | null> {
+    private async symbolAround(line: number): Promise<EditorRange | null> {
         const { service } = this.language.project;
         if (!service.supports('textDocument/documentSymbol', this.language.uri)) {
             return null;
         }
         const symbols = await orNull('service.documentSymbols', service.documentSymbols(this.language.uri));
-        return innermostFunction(symbols, line);
+        return innermostFunction(symbols, line) ?? innermostSymbol(symbols, line);
     }
 
     private fileOf(uri: string): string {
@@ -196,6 +196,22 @@ interface SymbolLike {
 
 /* LSP `SymbolKind`: Method, Constructor and Function. */
 const FUNCTION_KINDS = new Set([6, 9, 12]);
+
+/* The innermost symbol of any kind whose lines hold a line: a class, a field, a constant. A function is found first by `innermostFunction`; this is for a caret outside every one. */
+export function innermostSymbol(symbols: readonly SymbolLike[] | null, line: number): EditorRange | null {
+    let found: EditorRange | null = null;
+    const walk = (list: readonly SymbolLike[]): void => {
+        for (const symbol of list) {
+            const range = symbol.range ?? symbol.location?.range;
+            if (range !== undefined && range.start.line <= line && line <= range.end.line) {
+                found = range;
+                walk(symbol.children ?? []);
+            }
+        }
+    };
+    walk(symbols ?? []);
+    return found;
+}
 
 /* The innermost method, constructor or function whose lines hold a line. */
 export function innermostFunction(symbols: readonly SymbolLike[] | null, line: number): EditorRange | null {

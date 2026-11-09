@@ -2,12 +2,13 @@ import { hasProviderLogo, ProviderLogo } from '@adecore/agents-react/providers';
 import type { Editor } from '@adecore/editor';
 import { Button, ButtonGroup, IconButton } from '@adecore/ui';
 import clsx from 'clsx';
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, FoldVertical } from 'lucide-react';
 import { useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
 import { focusChat } from '@/plan/plan-actions';
+import { useReviewFocus } from '@/state/review-focus';
 import { commentRowId, type AgentReview, type ReviewItem } from './agent-review';
 import { colorOfChat } from './agent-runs';
 import { useChatIdentity, useProviderName } from './use-chat-identity';
@@ -185,6 +186,7 @@ export function ReviewLayer({ review, editor }: { review: AgentReview; editor: E
 export function ReviewBar({ review }: { review: AgentReview }) {
     const { t } = useTranslation('panels');
     const { items, current } = useStore(review.store, (state) => state);
+    const onlyChanges = useReviewFocus((state) => state.onlyChanges);
     const first = items[0];
     const chats = new Set(items.map((item) => item.run.chatId));
     const turns = new Set(items.map((item) => item.run.turnId));
@@ -219,6 +221,13 @@ export function ReviewBar({ review }: { review: AgentReview }) {
                 <ButtonGroup>
                     <IconButton icon={ArrowUp} size="sm" label={t('file.review.previous')} onClick={() => review.step(-1)} />
                     <IconButton icon={ArrowDown} size="sm" label={t('file.review.next')} onClick={() => review.step(1)} />
+                    <IconButton
+                        icon={FoldVertical}
+                        size="sm"
+                        label={t('file.review.onlyChanges')}
+                        aria-pressed={onlyChanges}
+                        onClick={() => useReviewFocus.getState().setOnlyChanges(!onlyChanges)}
+                    />
                 </ButtonGroup>
             </span>
             <span className="grow" />

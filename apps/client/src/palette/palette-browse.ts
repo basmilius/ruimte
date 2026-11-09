@@ -1,43 +1,7 @@
 import i18next from 'i18next';
 import { nameOf, type MachineEntry } from '@/machines/machine-list';
+import { endsWithSeparator, lastSegment } from '@/paths/machine-path';
 import type { ConnectionState } from '@/transport-api/transport';
-
-/* The daemon's separator, not this browser's: a Windows daemon answers in backslashes. */
-export function separatorFor(platform: string | null): string {
-    return platform === 'win32' ? '\\' : '/';
-}
-
-/* Both separators, because a path is typed by hand and the daemon accepts either. */
-export function endsWithSeparator(path: string): boolean {
-    return path.endsWith('/') || path.endsWith('\\');
-}
-
-function withoutTrailing(path: string, sep: string): string {
-    let end = path.length;
-    while (end > 0 && path.slice(end - 1, end) === sep) {
-        end -= 1;
-    }
-    return path.slice(0, end);
-}
-
-/*
- * One level up, ready to browse; null at a root (a drive letter or the home tilde). A cut at the very
- * front answers the separator itself rather than an empty string.
- */
-export function parentOf(path: string, sep: string): string | null {
-    const trimmed = withoutTrailing(path, sep);
-    const cut = trimmed.lastIndexOf(sep);
-    if (cut < 0) {
-        return null;
-    }
-    return cut === 0 ? sep : trimmed.slice(0, cut + 1);
-}
-
-export function lastSegment(path: string, sep: string): string {
-    const trimmed = withoutTrailing(path, sep);
-    const cut = trimmed.lastIndexOf(sep);
-    return cut === -1 ? trimmed : trimmed.slice(cut + 1);
-}
 
 /* What `fs.browse` answered, down to the two fields the presence rule reads. */
 export interface BrowseAnswer {
@@ -82,6 +46,18 @@ export function isFullPath(path: string, platform: string | null): boolean {
     return trimmed.startsWith('/');
 }
 
+/*
+ * Whether what is typed turns the palette into a folder browser; anything else searches nodes and
+ * actions. A drive letter browses only on a machine that has drives, and a bare `C:` stays a search
+ * until the separator, since the machine reads it as relative to that drive's working folder.
+ */
+export function isPathQuery(query: string, platform: string | null): boolean {
+    if (query.startsWith('/') || query.startsWith('~') || query.startsWith('./') || query.startsWith('../')) {
+        return true;
+    }
+    return platform === 'win32' && isFullPath(query, platform);
+}
+
 /* What Enter does with the typed path; a relative one is refused at once rather than after the machine said no. */
 type TypedPathOffer = 'open' | 'create' | 'relative';
 
@@ -99,7 +75,10 @@ interface BrowseStart {
     home: string;
 }
 
-/* Home is the tilde the machine expands itself: what `server.hello` calls home is Ruimte's own folder there. */
+/*
+ * Home is the tilde the machine expands itself: what `server.hello` calls home is Ruimte's own folder
+ * there. `configured` is the machine's own start folder.
+ */
 export function browseStart(configured: string, sep: string): BrowseStart {
     const homePath = `~${sep}`;
     const trimmed = configured.trim();

@@ -36,6 +36,12 @@ const MACHINE_INPUT = z
 
 const DRY_RUN_INPUT = z.boolean({ error: 'dry_run is true or false' }).optional();
 
+const ACCOUNT_INPUT = z
+    .string({ error: 'account needs the id of an account' })
+    .min(1, 'account needs the id of an account')
+    .optional()
+    .describe("An account from a person's @account:<cli>/<id>");
+
 /* Every field says its own sentence, so a role that is missing one reads the same as a role that
    filled it with the wrong thing; zod's default would name a type where the agent needs the field. */
 const RoleSchema = z.strictObject({
@@ -50,7 +56,8 @@ const RoleSchema = z.strictObject({
     provider: agentKindField('provider'),
     model: modelFlag,
     terminal: z.boolean({ error: 'terminal is true or false' }).optional(),
-    effort: effortFlag
+    effort: effortFlag,
+    account: ACCOUNT_INPUT
 });
 
 type Role = z.infer<typeof RoleSchema>;
@@ -69,6 +76,7 @@ const ROLES_LINES: readonly string[] = [
     `roles\tterminal\toptional\ttrue opens a terminal node instead of a chat node; a CLI without a chat backend is a terminal anyway (only ${chatKinds().join(', ')} have one)`,
     "roles\tmodel\toptional\tThe model id for a chat role, with that model's default options; omitted uses the composer preference. Refused for terminals and unknown models",
     "roles\teffort\toptional\tThe reasoning effort for a chat role, one its model offers; omitted keeps the person's last pick when the model offers it, else the model's default. Refused for terminals",
+    "roles\taccount\toptional\tThe id of an account a person named in this chat as @account:<cli>/<id>, for the role's provider; omitted inherits yours",
     ...shippedProviders()
         .filter((provider) => provider.capabilities.chat)
         .flatMap(modelLines),
@@ -172,6 +180,7 @@ const agentStart = defineActionTool('agent', {
         mode: MODE_INPUT,
         model: modelFlag.describe('Ids: guide topic models'),
         effort: effortFlag,
+        account: ACCOUNT_INPUT,
         branch: z.string({ error: 'branch needs the name of a branch' }).min(1, 'branch needs the name of a branch').optional(),
         request_id: z
             .string({ error: 'request_id takes 1 to 128 characters of letters, digits and . _ : -' })
@@ -212,7 +221,8 @@ const agentStart = defineActionTool('agent', {
                 requestId: input.request_id ?? null,
                 base: input.base ?? null,
                 machine: input.machine ?? null,
-                effort: input.effort ?? null
+                effort: input.effort ?? null,
+                account: input.account ?? null
             },
             dryRun
         );
@@ -284,7 +294,8 @@ const agentTeam = defineActionTool('agent', {
                     provider: role.provider,
                     model: role.model ?? null,
                     terminal: role.terminal === true,
-                    effort: role.effort ?? null
+                    effort: role.effort ?? null,
+                    account: role.account ?? null
                 })),
                 cwd: input.cwd ?? null,
                 reads: input.reads === undefined ? null : idList(input.reads, 'reads'),

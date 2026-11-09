@@ -14,7 +14,7 @@ export type PalettePreset = (typeof PALETTE_PRESETS)[number];
    more saturated than a ground a person looks at all day should be; its neutrals stay as they are. */
 const COLOR_GROUND_CHROMA = 0.04;
 
-type NeutralToken = Exclude<PaletteToken, 'accent'>;
+type NeutralToken = Exclude<PaletteToken, 'accent' | 'accent-text' | 'accent-on-surface'>;
 
 /*
  * The OKLCH lightness of the theme's own grays, per side. A tint keeps it, so every contrast the theme

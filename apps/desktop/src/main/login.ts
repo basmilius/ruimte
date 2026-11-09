@@ -1,9 +1,9 @@
 import { join } from 'node:path';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionKeyUnavailableError, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
+import { electron } from '../electron';
 import { heedBodyless } from '../net-response';
 import { listenForLogin, type LoopbackLogin } from '../pulsar-login';
 import { fileSessionKey, fileSessionStore } from '../pulsar-store';
-import { electron } from './electron';
 import type { DesktopIpc } from './ipc';
 import { reportShellProblem } from './telemetry';
 

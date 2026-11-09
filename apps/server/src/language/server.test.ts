@@ -950,6 +950,74 @@ describe('the settings of a project the SQL servers read', () => {
     });
 });
 
+describe('the hold on build code', () => {
+    // Council round 17: the first start read the hold before its configuration, so turning building off meanwhile started it allowed.
+    it('starts with the hold a person set while the first start still read its configuration', async () => {
+        const reading = Promise.withResolvers<void>();
+        const gate = Promise.withResolvers<null>();
+        const rust = KIND_PROFILES.rust;
+        let held = false;
+        const { server, spawner } = rig('rust', fakeSpawner(), {
+            // rust-analyzer reads no settings of the project; one that does gives the start a read to hold up.
+            profile: { ...rust, components: rust.components.map((component) => ({ ...component, settings: () => ({}) })) },
+            native: () => ({ executable: '/home/bin/rust-analyzer' }),
+            buildHeld: () => held,
+            sqlSettings: () => {
+                reading.resolve();
+
+                return gate.promise;
+            }
+        });
+
+        server.attach(document('/work/src/main.rs', 'rust', 'fn main() {}'));
+        await reading.promise;
+        held = true;
+        gate.resolve(null);
+        await server.ensureStarted();
+        await settle();
+
+        const [process] = spawner.processes;
+
+        expect(spawner.processes).toHaveLength(1);
+        expect(process!.server.paramsOf('initialize')[0]).toMatchObject({
+            initializationOptions: { cargo: { buildScripts: { enable: false } }, procMacro: { enable: false }, checkOnSave: false }
+        });
+        expect(process!.spec.env).toMatchObject({ RUSTC_WRAPPER: '', RUSTC_WORKSPACE_WRAPPER: '' });
+        expect(server.appliedBuildHeld).toBe(true);
+    });
+
+    // Council round 18: a kind that cannot turn building off spawned anyway when the hold came while its first start read its configuration.
+    it.each([
+        ['swift', 'swift', '/work/Sources/App/main.swift', 'sourcekit-lsp'],
+        ['zig', 'zig', '/work/src/main.zig', 'zls']
+    ] as const)('does not start %s when a person set the hold while the first start still read its configuration', async (kind, languageId, path, program) => {
+        const reading = Promise.withResolvers<void>();
+        const gate = Promise.withResolvers<null>();
+        const profile = KIND_PROFILES[kind];
+        let held = false;
+        const { server, spawner } = rig(kind, fakeSpawner(), {
+            profile: { ...profile, components: profile.components.map((component) => ({ ...component, settings: () => ({}) })) },
+            native: () => ({ executable: `/home/bin/${program}` }),
+            buildHeld: () => held,
+            sqlSettings: () => {
+                reading.resolve();
+
+                return gate.promise;
+            }
+        });
+
+        server.attach(document(path, languageId, ''));
+        await reading.promise;
+        held = true;
+        gate.resolve(null);
+        await server.ensureStarted();
+        await settle();
+
+        expect(spawner.processes).toHaveLength(0);
+        expect(server.state).toBe('stopped');
+    });
+});
+
 describe('the features a server answers beyond the first ones', () => {
     const position = { line: 0, character: 1 };
     const range = { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } };

@@ -1,6 +1,6 @@
 import { createMenuCommands, devToolsAccelerator, menuTemplateOf, staticMenuTemplate, type PageKeys } from '@adecore/shell';
 import type { MenuShellAction, MenuSpec } from '@ruimte/desktop-bridge';
-import { electron } from './electron';
+import { electron } from '../electron';
 import type { DesktopIpc } from './ipc';
 
 const { app, Menu } = electron;
@@ -97,6 +97,9 @@ export function installMenu(ipc: DesktopIpc, options: MenuOptions): AppMenu {
             console.error('[ruimte] menu refused', error);
         }
     };
+
+    // The page has no quit of its own. `app.quit()` is what a native Quit does, so the quit question follows from it.
+    ipc.on('app:quit', () => app.quit());
 
     ipc.on('menu:set', (event, spec: MenuSpec) => {
         const window = ipc.senderWindow(event);

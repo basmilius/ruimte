@@ -1,8 +1,10 @@
 import { matchesShortcut, type KeyLike, type Shortcut } from '@adecore/ui';
 import type { CommandSpec, MenuPlace } from '@/commands/types';
+import { hasDefaultKey } from '@/surface/default-keys';
+import { isRebound, keyIn, overridesSnapshot, type OverrideSnapshot } from '@/surface/shortcut-overrides';
 
 const specs = new Map<string, CommandSpec>();
-let bound: Record<'window' | 'workspace', [string, Shortcut][]> | null = null;
+let bound: Record<'window' | 'workspace', { snapshot: OverrideSnapshot; keys: [string, Shortcut][] }> | null = null;
 
 /* Keeps the keys of a feature's table typed by its own ids, which the global registry cannot. */
 export function defineCommands<const Table extends Record<string, CommandSpec>>(table: Table): Table {
@@ -47,17 +49,54 @@ export function menuPlacesOf(id: string): readonly MenuPlace[] {
     return 'menu' in places ? [places as MenuPlace] : (places as readonly MenuPlace[]);
 }
 
-function boundLists(): Record<'window' | 'workspace', [string, Shortcut][]> {
-    if (bound === null) {
-        bound = { window: [], workspace: [] };
-        for (const [id, { binds, shortcut }] of specs) {
-            if (binds !== undefined && shortcut !== undefined) {
-                bound[binds].push([id, shortcut]);
-            }
-        }
+/*
+ * The key a row answers to now: the one of the row it shows, the key of the editor's keymap that answers it,
+ * a rebound or default key, or the fixed key it has for good. Read against a snapshot, a component that
+ * redraws with the overrides gets the key they give.
+ */
+export function commandKey(id: string, snapshot: OverrideSnapshot = overridesSnapshot()): Shortcut | undefined {
+    const { shortcut, keyOf, keymap } = commandSpec(id);
+
+    if (keyOf !== undefined) {
+        return keyIn(snapshot, keyOf);
     }
 
-    return bound;
+    if (keymap !== undefined) {
+        return keyIn(snapshot, keymap);
+    }
+
+    return hasDefaultKey(id) ? keyIn(snapshot, id) : shortcut;
+}
+
+function boundLists(): Record<'window' | 'workspace', [string, Shortcut][]> {
+    const snapshot = overridesSnapshot();
+
+    if (bound?.window.snapshot !== snapshot) {
+        const listeners = { window: [] as [string, Shortcut][], workspace: [] as [string, Shortcut][] };
+
+        for (const [id, { binds, aliases }] of specs) {
+            const key = commandKey(id, snapshot);
+
+            if (binds === undefined || key === undefined) {
+                continue;
+            }
+
+            // An alias belongs to the key the row starts with.
+            for (const own of [key, ...(isRebound(snapshot, id) ? [] : (aliases ?? []))]) {
+                listeners[binds].push([id, own]);
+            }
+        }
+
+        // The rows a person rebound first, so a default of a later release never takes their key.
+        const ordered = (rows: [string, Shortcut][]): [string, Shortcut][] => [
+            ...rows.filter(([id]) => isRebound(snapshot, id)),
+            ...rows.filter(([id]) => !isRebound(snapshot, id))
+        ];
+
+        bound = { window: { snapshot, keys: ordered(listeners.window) }, workspace: { snapshot, keys: ordered(listeners.workspace) } };
+    }
+
+    return { window: bound.window.keys, workspace: bound.workspace.keys };
 }
 
 /* The rows one listener binds, each with its key. */

@@ -10,6 +10,7 @@ const ADECORE = String.raw`(?:@adecore|adecore/packages)`;
  */
 export const WORKSPACE_MODULES: readonly RegExp[] = [
     /\/src\/shell\/(?:WorkspaceShell\.tsx|commands\.ts)$/,
+    /\/src\/actions\/(?:client-actions|canvas-actions|developer-actions|layout-actions|view-actions)\.ts$/,
     new RegExp(`${ADECORE}/(?:editor-core|lsp|merge|database)/`),
     new RegExp(`${ADECORE}/editor/src/(?!keymap-table\\.ts$)`),
     new RegExp(`${ADECORE}/editor-react/src/(?!view-state\\.ts$)`),

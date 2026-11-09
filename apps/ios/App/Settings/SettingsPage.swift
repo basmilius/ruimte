@@ -14,6 +14,7 @@ struct MobileSettings: View {
     @AppStorage(Settings.showHiddenFiles) private var hiddenFiles
     @AppStorage(Settings.chatStreaming) private var streaming
     @AppStorage(UiMapSetting.key) private var mapTiles = true
+    @AppStorage(ChatToolCallsSetting.key) private var hidesToolCalls = false
 
     var body: some View {
         NavigationStack { content }
@@ -49,6 +50,15 @@ struct MobileSettings: View {
                 }
                 .pickerStyle(.menu)
                 .accessibilityIdentifier("settings.showReplies")
+                // The setting hides; the row asks whether to show, so on means more, as on the desktop.
+                Toggle(isOn: Binding(get: { !hidesToolCalls }, set: { hidesToolCalls = !$0 })) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Show what an agent reads and runs")
+                        Text("The files an agent read and the commands it ran.")
+                            .font(.caption).foregroundStyle(MobileStyle.muted)
+                    }
+                }
+                .accessibilityIdentifier("settings.showToolCalls")
                 Toggle(isOn: $mapTiles) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Map tiles")

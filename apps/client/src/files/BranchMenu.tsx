@@ -1,7 +1,7 @@
 import { copyText, cameThroughPortal, Button, Icon, IconButton, Input, Menu, Tooltip, ContextMenu } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
 import type { GitRef, Worktree } from '@ruimte/contracts';
-import { ChevronDown, Copy, Eye, Folders, GitBranch, GitFork, GitMerge, Plus, Search } from 'lucide-react';
+import { ChevronDown, Copy, Eye, Folders, GitBranch, GitCompare, GitFork, GitMerge, Plus, Search } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { WorktreeNode } from '@/controllers/worktrees';
@@ -32,6 +32,8 @@ interface BranchActions {
     onOpen(cwd: string): void;
     onCheckout(cwd: string, ref: GitRef): void;
     onCreate(cwd: string): void;
+    /* Opens the comparison dialog for a checkout, with a branch already chosen when a row asked. */
+    onCompare?(cwd: string, ref?: GitRef): void;
 }
 
 interface BranchMenuProps {
@@ -204,6 +206,7 @@ export function BranchMenu({
                                             onOpen={branches.onOpen}
                                             onCheckout={branches.onCheckout}
                                             onCreate={branches.onCreate}
+                                            onCompare={branches.onCompare}
                                         />
                                     ))}
                                 </Menu.Group>
@@ -218,7 +221,13 @@ export function BranchMenu({
                                 onOpen={branches.onOpen}
                                 onCheckout={branches.onCheckout}
                                 onCreate={branches.onCreate}
+                                onCompare={branches.onCompare}
                             />
+                        )}
+                        {branches?.onCompare !== undefined && !nested && target.cwd !== null && (
+                            <Menu.Item onClick={() => branches.onCompare?.(target.cwd!)}>
+                                <Icon icon={GitCompare} size={14} /> {t('git.compare.menu')}
+                            </Menu.Item>
                         )}
                         {showRepos && (
                             <Menu.Item onClick={onShowRepos}>
@@ -249,10 +258,11 @@ interface BranchLevelProps {
     onOpen(cwd: string): void;
     onCheckout(cwd: string, ref: GitRef): void;
     onCreate(cwd: string): void;
+    onCompare?(cwd: string, ref?: GitRef): void;
 }
 
 /* The branches of the one checkout the panel shows, read when their level opens. */
-function BranchLevel({ cwd, refs, branch, onOpen, onCheckout, onCreate }: BranchLevelProps) {
+function BranchLevel({ cwd, refs, branch, onOpen, onCheckout, onCreate, onCompare }: BranchLevelProps) {
     const { t } = useTranslation('panels');
     return (
         <Menu.SubmenuRoot onOpenChange={(open) => open && onOpen(cwd)}>
@@ -260,7 +270,7 @@ function BranchLevel({ cwd, refs, branch, onOpen, onCheckout, onCreate }: Branch
                 <Icon icon={GitBranch} size={14} /> {t('git.branchMenu.switch')}
             </Menu.SubmenuTrigger>
             <Menu.Popup className="max-h-96 w-80 overflow-y-auto">
-                <BranchList cwd={cwd} state={refs} branch={branch} onCheckout={onCheckout} onCreate={onCreate} />
+                <BranchList cwd={cwd} state={refs} branch={branch} onCheckout={onCheckout} onCreate={onCreate} onCompare={onCompare} />
             </Menu.Popup>
         </Menu.SubmenuRoot>
     );
@@ -273,6 +283,7 @@ interface LevelProps {
     onOpen(cwd: string): void;
     onCheckout(cwd: string, ref: GitRef): void;
     onCreate(cwd: string): void;
+    onCompare?(cwd: string, ref?: GitRef): void;
 }
 
 /*
@@ -280,7 +291,8 @@ interface LevelProps {
  * acts on that one repository. The branches are read when the level opens and not before, so a folder
  * of nine repositories costs nine `git.refs` calls only if a person walks all nine.
  */
-function CheckoutLevel({ entry, refs, renderActions, onOpen, onCheckout, onCreate }: LevelProps) {
+function CheckoutLevel({ entry, refs, renderActions, onOpen, onCheckout, onCreate, onCompare }: LevelProps) {
+    const { t } = useTranslation('panels');
     const cwd = entry.cwd;
     if (cwd === null) {
         return null;
@@ -297,8 +309,13 @@ function CheckoutLevel({ entry, refs, renderActions, onOpen, onCheckout, onCreat
             </Menu.SubmenuTrigger>
             <Menu.Popup className="max-h-[28rem] w-80 overflow-y-auto">
                 {renderActions(cwd)}
+                {onCompare !== undefined && (
+                    <Menu.Item onClick={() => onCompare(cwd)}>
+                        <Icon icon={GitCompare} size={14} /> {t('git.compare.menu')}
+                    </Menu.Item>
+                )}
                 <Menu.Separator />
-                <BranchList cwd={cwd} state={refs} branch={refs.branch} onCheckout={onCheckout} onCreate={onCreate} />
+                <BranchList cwd={cwd} state={refs} branch={refs.branch} onCheckout={onCheckout} onCreate={onCreate} onCompare={onCompare} />
             </Menu.Popup>
         </Menu.SubmenuRoot>
     );
@@ -311,12 +328,13 @@ interface BranchListProps {
     branch: string | null;
     onCheckout(cwd: string, ref: GitRef): void;
     onCreate(cwd: string): void;
+    onCompare?(cwd: string, ref?: GitRef): void;
 }
 
 /* The branches of one checkout, with the one that is out marked, the field that finds one among
    many and the button that makes a new one. A branch another worktree has out cannot be checked
-   out here. */
-function BranchList({ cwd, state, branch, onCheckout, onCreate }: BranchListProps) {
+   out here, but it can still be compared. */
+function BranchList({ cwd, state, branch, onCheckout, onCreate, onCompare }: BranchListProps) {
     const { t } = useTranslation('panels');
     const [query, setQuery] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
@@ -369,11 +387,25 @@ function BranchList({ cwd, state, branch, onCheckout, onCreate }: BranchListProp
                 }}
             >
                 {shown.map((ref) => (
-                    <Menu.RadioItem key={`${ref.kind}:${ref.name}`} value={ref.name} disabled={ref.worktree !== undefined}>
-                        <span className="truncate font-mono text-xs">{ref.name}</span>
-                        {ref.isDefault && <Menu.Hint>{t('git.branchMenu.default')}</Menu.Hint>}
-                        {ref.worktree !== undefined && <Menu.Hint className="truncate">{t('git.branchMenu.inWorktree')}</Menu.Hint>}
-                    </Menu.RadioItem>
+                    <ContextMenu.Root key={`${ref.kind}:${ref.name}`}>
+                        <ContextMenu.Trigger className="contents">
+                            <Menu.RadioItem value={ref.name} disabled={ref.worktree !== undefined}>
+                                <span className="truncate font-mono text-xs">{ref.name}</span>
+                                {ref.isDefault && <Menu.Hint>{t('git.branchMenu.default')}</Menu.Hint>}
+                                {ref.worktree !== undefined && <Menu.Hint className="truncate">{t('git.branchMenu.inWorktree')}</Menu.Hint>}
+                            </Menu.RadioItem>
+                        </ContextMenu.Trigger>
+                        <ContextMenu.Popup>
+                            <ContextMenu.Item onClick={() => copyText(ref.name)}>
+                                <Icon icon={Copy} size={14} /> {t('git.branchMenu.copyName')}
+                            </ContextMenu.Item>
+                            {onCompare !== undefined && (
+                                <ContextMenu.Item onClick={() => onCompare(cwd, ref)}>
+                                    <Icon icon={GitCompare} size={14} /> {t('git.compare.withBranch')}
+                                </ContextMenu.Item>
+                            )}
+                        </ContextMenu.Popup>
+                    </ContextMenu.Root>
                 ))}
             </Menu.RadioGroup>
         </>

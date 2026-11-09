@@ -16,13 +16,11 @@ import {
     Workflow
 } from 'lucide-react';
 import { type CommandSpec } from '@/commands/types';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 
 export const VIEW_COMMANDS = {
     'view-new': {
         key: 'newCanvasView',
         icon: Frame,
-        shortcut: CANVAS_SHORTCUTS.newView,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'new-view', group: 'views', order: 10 }
@@ -74,7 +72,6 @@ export const VIEW_COMMANDS = {
     'flag-toggle': {
         key: 'toggleFlag',
         icon: Flag,
-        shortcut: CANVAS_SHORTCUTS.toggleFlag,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'settings', order: 20 }

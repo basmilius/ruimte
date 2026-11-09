@@ -19,7 +19,7 @@ export function ModelsReasoningFilter({ efforts, hidden, onToggle }: ModelsReaso
                         type="button"
                         aria-pressed={!hidden.has(effort)}
                         className={clsx(
-                            'min-h-6 rounded px-0.5 text-2xs hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-accent max-[760px]:min-h-8',
+                            'min-h-6 rounded px-0.5 text-2xs hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-accent-on-surface max-[760px]:min-h-8',
                             hidden.has(effort) ? 'text-text-faint line-through' : 'text-text'
                         )}
                         onClick={() => onToggle(effort)}

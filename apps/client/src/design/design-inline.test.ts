@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { inlineDesignPage, runtimeAssets, type DesignFiles } from './design-inline';
 import { DESIGN_PAGE_MAX_BYTES, pageDataUrl } from './design-page';
+import { runtimeAssetsElement } from './design-runtime';
 
 /* A design folder in memory that counts how often each page is read. */
 function folder(pages: Record<string, string>, assets: Record<string, number> = {}) {
@@ -62,6 +63,110 @@ describe('a page that frames another page of its folder', () => {
         const html = await inlineDesignPage(files, 'Overview.html');
 
         expect(html).toBe('<iframe src="gone.html"></iframe><iframe src="big.html"></iframe>');
+    });
+});
+
+/* What a page weighs once the frame has it: its bytes as the frame writes them. */
+const weight = (html: string): number => new TextEncoder().encode(html).length;
+
+describe('what a standing page builds', () => {
+    test('stays within the bounds of a visual however often one page is framed, the rest staying the path they were', async () => {
+        const child = 'A '.repeat(450_000);
+        const { files, reads } = folder({ 'index.html': '<iframe src="child.html"></iframe>'.repeat(20), 'child.html': child });
+
+        const html = await inlineDesignPage(files, 'index.html');
+
+        expect(weight(html)).toBeLessThanOrEqual(DESIGN_PAGE_MAX_BYTES);
+        expect(reads.get('child.html')).toBe(1);
+        expect(html).toContain(`<iframe src="${pageDataUrl(child)}"></iframe>`);
+        expect(html).toContain('<iframe src="child.html"></iframe>');
+    });
+
+    test('stays within the bounds of a visual however often one file is named, the rest staying the path they were', async () => {
+        const url = `data:image/png;base64,${'A'.repeat(1_000_000)}`;
+        const files: DesignFiles = {
+            readPage: async () => {
+                const text = '<img src="a.png">'.repeat(40);
+
+                return { text, size: weight(text) };
+            },
+            readAsset: async () => ({ url, size: 750_000 })
+        };
+
+        const html = await inlineDesignPage(files, 'index.html');
+
+        expect(weight(html)).toBeLessThanOrEqual(DESIGN_PAGE_MAX_BYTES);
+        expect(html).toContain(`<img src="${url}">`);
+        expect(html).toContain('<img src="a.png">');
+    });
+
+    test('counts a page again each time it stands in another, however deep the pages are framed', async () => {
+        const { files, reads } = folder({
+            'index.html': '<iframe src="middle.html"></iframe>'.repeat(20),
+            'middle.html': '<iframe src="leaf.html"></iframe>'.repeat(20),
+            'leaf.html': 'A '.repeat(50_000)
+        });
+
+        const html = await inlineDesignPage(files, 'index.html');
+
+        expect(weight(html)).toBeLessThanOrEqual(DESIGN_PAGE_MAX_BYTES);
+        expect(reads.get('middle.html')).toBe(1);
+        expect(reads.get('leaf.html')).toBe(1);
+        expect(html).toContain('<iframe src="data:text/html;charset=utf-8,');
+        expect(html).toContain('<iframe src="middle.html"></iframe>');
+    });
+
+    test('puts every page that fits where it was named, with the page that frames it and nothing left over', async () => {
+        const { files } = folder({ 'index.html': '<iframe src="one.html"></iframe><iframe src="one.html"></iframe>', 'one.html': '<p>one</p>' });
+
+        const html = await inlineDesignPage(files, 'index.html');
+
+        expect(html.split(pageDataUrl('<p>one</p>')).length - 1).toBe(3);
+        expect(html).not.toContain('one.html"></iframe>');
+    });
+});
+
+describe('a page with a script at the bounds of a visual', () => {
+    const script = '<script>void 0</script>';
+
+    /* A page of exactly `bytes` bytes that opens with a script. */
+    function scripted(bytes: number): string {
+        return script + 'x '.repeat((bytes - script.length) / 2);
+    }
+
+    async function build(text: string): Promise<string> {
+        const files: DesignFiles = {
+            readPage: async () => ({ text, size: weight(text) }),
+            readAsset: async () => {
+                throw new Error('not there');
+            }
+        };
+
+        return inlineDesignPage(files, 'index.html');
+    }
+
+    test('is refused when it and the script that shows its files do not fit together, rather than built past the bounds', async () => {
+        await expect(build(scripted(DESIGN_PAGE_MAX_BYTES - 1 - ((DESIGN_PAGE_MAX_BYTES - 1 - script.length) % 2)))).rejects.toThrow();
+    });
+
+    test('is built within the bounds when it fits with that script', async () => {
+        const runtime = weight(runtimeAssetsElement(''));
+        const text = scripted(DESIGN_PAGE_MAX_BYTES - runtime - ((DESIGN_PAGE_MAX_BYTES - runtime - script.length) % 2));
+
+        const html = await build(text);
+
+        expect(weight(html)).toBeLessThanOrEqual(DESIGN_PAGE_MAX_BYTES);
+        expect(html).toStartWith('<script data-ruimte-assets>');
+    });
+
+    test('leaves a page it frames as the path it was when that page does not fit with its script', async () => {
+        const runtime = weight(runtimeAssetsElement(''));
+        const child = scripted(DESIGN_PAGE_MAX_BYTES - runtime + 2);
+        const { files } = folder({ 'index.html': '<iframe src="child.html"></iframe>', 'child.html': child });
+
+        const html = await inlineDesignPage(files, 'index.html');
+
+        expect(html).toBe('<iframe src="child.html"></iframe>');
     });
 });
 

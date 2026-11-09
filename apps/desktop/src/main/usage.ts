@@ -1,9 +1,9 @@
 import { join } from 'node:path';
 import type { MachineMode } from '@ruimte/desktop-bridge';
 import { TELEMETRY_DSN, usageIngestUrl } from '@ruimte/telemetry';
+import { electron } from '../electron';
 import { heedBodyless } from '../net-response';
 import { countFromPage, DesktopUsage, fileDesktopUsageStore, flushDesktopUsage, sendDesktopUsage, usageCounts, usageSettingOf } from '../usage';
-import { electron } from './electron';
 import type { DesktopIpc } from './ipc';
 import { telemetryBuild } from './telemetry';
 

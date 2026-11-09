@@ -1,11 +1,6 @@
 import { desktop, isDesktop } from '@/desktop/bridge';
 import { type SettingsSearchRow } from '@/registry/settings-sections';
-import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
-import { hasLocalMachine } from '@/state/local-machine';
-
-function hasOpenedMachine(): boolean {
-    return useEndpoints.getState().endpoints.some((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID || hasLocalMachine());
-}
+import { hasLocalMachine, hasOpenedMachine } from '@/state/local-machine';
 
 export const MACHINE_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
     // On the account row of the Account pane.
@@ -81,6 +76,13 @@ export const MACHINE_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
         section: 'machines',
         label: 'settings:storage.projects.title',
         description: 'settings:storage.projects.footer',
+        available: hasOpenedMachine
+    },
+    {
+        id: 'machines.machine.startFolder',
+        section: 'machines',
+        label: 'settings:machine.startFolder.label',
+        description: 'settings:machine.startFolder.search',
         available: hasOpenedMachine
     },
     {

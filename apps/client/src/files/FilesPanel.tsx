@@ -1,6 +1,6 @@
 import { writeMentionDrag } from '@adecore/agents-react/chat';
 import { FileTree, useFileTree, messageOf } from '@adecore/ui';
-import { Button, ButtonGroup, EmptyState, Icon, IconButton, Input, Menu, Kbd, PanelEmpty, ContextMenu, PromptDialog } from '@adecore/ui';
+import { Button, ButtonGroup, EmptyState, Icon, IconButton, Input, Menu, PanelEmpty, ContextMenu, PromptDialog } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
 import type { FileTreeDropResult, FileTreeVisibleRow } from '@pierre/trees';
 import { ActionRefusal } from '@ruimte/actions';
@@ -86,7 +86,7 @@ import {
     sameEntries,
     type EntryCache
 } from '@/surface/panels/files-tree';
-import { APP_SHORTCUTS } from '@/surface/shortcuts';
+import { RowKbd } from '@/surface/RowKbd';
 import { FilesScene } from '@/ui/EmptyScenes';
 import { useTransport } from '@/workspace/context';
 import { nodeNames, nodesInWorktree, worktreeBase } from '@/worktree-rules/worktree-rows';
@@ -868,7 +868,7 @@ export function FilesPanel() {
                         <IconButton icon={MoreHorizontal} label={t('common:action.more')} render={<Menu.Trigger />} />
                         <Menu.Popup align="end">
                             <Menu.Item onClick={() => useUi.getState().openFindInFiles()}>
-                                <Icon icon={FileSearch} size={14} /> {t('file.empty.findInFiles')} <Kbd shortcut={APP_SHORTCUTS.findInFiles} />
+                                <Icon icon={FileSearch} size={14} /> {t('file.empty.findInFiles')} <RowKbd row="find-in-files" />
                             </Menu.Item>
                             <Menu.Separator />
                             <Menu.CheckboxItem
@@ -1081,7 +1081,7 @@ export function FilesPanel() {
                     <Button className="w-full justify-start" onClick={() => useUi.getState().openFindInFiles(query.trim())}>
                         <Icon icon={FileSearch} size={14} />
                         <span className="grow truncate text-left">{t('file.empty.findInFiles')}</span>
-                        <Kbd variant="inline" shortcut={APP_SHORTCUTS.findInFiles} />
+                        <RowKbd variant="inline" row="find-in-files" />
                     </Button>
                 </div>
             )}

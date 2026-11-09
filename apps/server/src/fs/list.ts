@@ -7,9 +7,22 @@ import { ignoredPaths } from '../git/ignore.ts';
 import { firstInOrder } from './ordered.ts';
 import { classifyEntry, isBuildOutput } from './visibility.ts';
 
-type ListErrorCode = 'not-found' | 'not-a-directory';
+type ListErrorCode = 'not-found' | 'not-a-directory' | 'not-readable';
 
 export class ListError extends CodedError<ListErrorCode> {}
+
+/*
+ * Only a folder that is not there is `not-found`: ENOENT, or ENOTDIR when a part of the path is a file,
+ * which is no folder to the caller either. A folder that is there but refuses (EACCES, EPERM, EIO...)
+ * is `not-readable`, so a caller never takes it for an empty or missing one.
+ */
+export function listFailure(error: unknown): ListError {
+    const code = (error as NodeJS.ErrnoException | null)?.code;
+    if (code === 'ENOENT' || code === 'ENOTDIR') {
+        return new ListError('not-found', 'That folder is not there');
+    }
+    return new ListError('not-readable', 'That folder cannot be read');
+}
 
 interface ListOptions {
     depth?: number;
@@ -98,10 +111,9 @@ export async function listDirectory(path: string, options: ListOptions = {}): Pr
     const depth = options.depth ?? 1;
     const includeHidden = options.hidden ?? false;
     const policy = options.policy ?? NO_MACHINE_HOME;
-    const stats = await stat(root).catch(() => null);
-    if (!stats) {
-        throw new ListError('not-found', 'That folder is not there');
-    }
+    const stats = await stat(root).catch((error: unknown) => {
+        throw listFailure(error);
+    });
     if (!stats.isDirectory()) {
         throw new ListError('not-a-directory', 'That path is a file, not a folder');
     }
@@ -121,10 +133,10 @@ export async function listDirectory(path: string, options: ListOptions = {}): Pr
                 const listed = await readEntries(dir, includeHidden, repository !== null, FS_LIST_MAX_ENTRIES - total);
                 read = listed.entries;
                 truncated = listed.truncated;
-            } catch {
+            } catch (error) {
                 // A directory nobody may read lists as empty; the root is the one place that is an error.
                 if (dir === root) {
-                    throw new ListError('not-found', 'That folder cannot be read');
+                    throw listFailure(error);
                 }
                 continue;
             }

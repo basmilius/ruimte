@@ -13,23 +13,22 @@ import {
     browseBack,
     browseMachines,
     browseStart,
-    endsWithSeparator,
     folderPresence,
+    isPathQuery,
     typedPathOffer,
     linkDot,
     linkHint,
     machineLink,
     machinesStep,
     openBrowse,
-    parentOf,
     pickMachine,
     retryLink,
-    separatorFor,
     settleLink,
     type BrowseStep
 } from '@/palette/palette-browse';
 import { groupBySection, matches, type Entry, type PaletteContext, type PaletteModeView } from '@/palette/palette-entries';
 import { PaletteEntryItem } from '@/palette/PaletteEntryItem';
+import { endsWithSeparator, parentOf, separatorFor, shownPath } from '@/paths/machine-path';
 import { newChatOn } from '@/project/new-chat';
 import { openFolderAction } from '@/project/open-actions';
 import { usePulsarAccount } from '@/pulsar/account';
@@ -37,7 +36,6 @@ import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { isRealMachine } from '@/state/local-machine';
 import { shownFolderOf, useProject } from '@/state/project';
 import { fileManagerName, serverInfoOf, useServers } from '@/state/server';
-import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import type { Transport } from '@/transport-api/transport';
 import { pool, transportFor, type ConnectionState } from '@/transport/index';
@@ -45,11 +43,6 @@ import { useConnections } from '@/transport/status';
 import { refreshAccountMachines } from '@/workspace/account-machines';
 import { useFocusedMachine } from '@/workspace/connections';
 import { ensureMachine } from '@/workspace/reach';
-
-// Typing a path turns the palette into a folder browser; anything else searches nodes and actions.
-function isPathQuery(query: string): boolean {
-    return query.startsWith('/') || query.startsWith('~') || query.startsWith('./') || query.startsWith('../');
-}
 
 const BROWSE_DEBOUNCE_MS = 60;
 
@@ -125,7 +118,6 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
     /* The machine the switcher asked the browser to open on, for a machine it lists nothing of. */
     const browseTarget = useUi((s) => s.paletteBrowseMachine);
     const browseFor = useUi((s) => s.paletteBrowseFor);
-    const browseStartFolder = useSettings((s) => s.browseStartFolder);
     const accountStatus = usePulsarAccount((s) => s.status);
     const connections = useConnections();
     /* Which step of browsing the palette is on, and null when it is not browsing at all. A step of
@@ -154,7 +146,7 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
 
     /* A typed path browses the machine the app is pointed at, which the idle row of the web client is not. */
     const pathStep = (next: string): BrowseStep | null =>
-        isPathQuery(next) && isRealMachine(activeId) ? { endpointId: activeId, machines: false, path: next } : null;
+        isPathQuery(next, serverInfoOf(activeId).platform) && isRealMachine(activeId) ? { endpointId: activeId, machines: false, path: next } : null;
 
     /* Typing never leaves browsing and never empties the list: the field says where you are, the
        step says what you are doing. A path typed in the ordinary palette is the second way in. */
@@ -220,10 +212,13 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
      */
     const commitBrowse = useCallback(
         (endpointId: string, path: string, answer: BrowseAnswer): void => {
-            setListing({ key: browseKey(endpointId, path), result: answer.result });
+            // A Windows machine's home is shown as the folder it is rather than a tilde, once the listing says which.
+            const shown = shownPath(path, answer.result?.parentPath ?? null, serverInfoOf(endpointId).platform);
+
+            setListing({ key: browseKey(endpointId, shown), result: answer.result });
             setFailure(answer.failure);
-            setBrowse({ endpointId, machines: false, path });
-            setQuery(path);
+            setBrowse({ endpointId, machines: false, path: shown });
+            setQuery(shown);
         },
         [setQuery]
     );
@@ -241,10 +236,11 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
         [transport, commitBrowse, cwdFor]
     );
 
-    /* The start folder is one setting for every machine, so it may not exist on this one; home always does. Kept by hand: an effect depends on it. */
+    /* The start folder is the machine's own, but the folder may be gone since; home always exists. Kept by hand: an effect depends on it. */
     const startBrowsing = useCallback(
         async (endpointId: string): Promise<void> => {
-            const { start: from, home } = browseStart(browseStartFolder, separatorFor(serverInfoOf(endpointId).platform));
+            const { platform: machinePlatform, startFolder } = serverInfoOf(endpointId);
+            const { start: from, home } = browseStart(startFolder, separatorFor(machinePlatform));
             const mine = ++generation.current;
             const answer = await requestBrowse(endpointId, from, cwdFor(endpointId), transport);
             if (mine !== generation.current) {
@@ -256,7 +252,7 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
             }
             commitBrowse(endpointId, from, answer);
         },
-        [transport, browseStartFolder, commitBrowse, cwdFor, navigateTo]
+        [transport, commitBrowse, cwdFor, navigateTo]
     );
 
     useEffect(() => {
@@ -567,5 +563,7 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
         )
     };
 
-    return { browsing, typed, restart, placeholder: machineStep ? t('palette.searchMachines') : t('palette.pathPlaceholder'), view };
+    const pathPlaceholder = platform === 'win32' ? t('palette.pathPlaceholderWindows') : t('palette.pathPlaceholder');
+
+    return { browsing, typed, restart, placeholder: machineStep ? t('palette.searchMachines') : pathPlaceholder, view };
 }

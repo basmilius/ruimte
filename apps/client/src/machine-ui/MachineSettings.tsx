@@ -1,5 +1,5 @@
 import { RUNTIME_MODES, runtimeModeLabel } from '@adecore/agents-react/chat';
-import { messageOf, Segmented, Select, Skeleton, Switch, Button, IconButton, Tooltip, FormError, Input, useNow } from '@adecore/ui';
+import { messageOf, Segmented, Select, Switch, Button, IconButton, Tooltip, FormError, Input, useNow } from '@adecore/ui';
 import { formatNumericDate, formatAgo } from '@adecore/ui/format';
 import { ConfirmDialog, SettingsRow } from '@adecore/ui/settings';
 import type { AuthSession, PeerLink, ReachCheck, RuntimeMode, TerminalShell } from '@ruimte/contracts';
@@ -10,10 +10,12 @@ import { Trans, useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
 import { desktop, openInSystemBrowser } from '@/desktop/bridge';
 import { saveMachineSetting, useMachineSetting, type MachineSettingPatch } from '@/machine-ui/machine-setting';
+import { MachineListSection } from '@/machine-ui/MachineListSection';
 import { reachText } from '@/machine-ui/reach-text';
-import { SettingsSection } from '@/machines/SettingsSection';
+import { useMachineList } from '@/machine-ui/use-machine-list';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
+import { useToasts } from '@/state/toasts';
 import { useMachineAnswers } from '@/transport/features';
 import { pool, transportFor, type Transport } from '@/transport/index';
 import { useEndpointConnection } from '@/transport/status';
@@ -384,77 +386,6 @@ function ago(timestamp: number, now: number): string {
     return formatAgo(now - timestamp);
 }
 
-type ListWords = 'machine.access' | 'machine.links';
-
-/* A list the machine behind the socket keeps, so it loads again on every reconnect. */
-function useMachineList<Item>(endpointId: string, enabled: boolean, read: (transport: Transport) => Promise<Item[]>, words: ListWords) {
-    const { t } = useTranslation('settings');
-    const status = useEndpointConnection(endpointId).status;
-    const [items, setItems] = useState<Item[] | null>(null);
-    const [failure, setFailure] = useState<string | null>(null);
-
-    const load = (): void => {
-        const transport = transportFor(endpointId);
-
-        if (!transport) {
-            return;
-        }
-
-        read(transport)
-            .then((next) => {
-                setItems(next);
-                setFailure(null);
-            })
-            .catch((e: unknown) => setFailure(messageOf(e, t(`${words}.listFailed`))));
-    };
-
-    useEffect(() => {
-        if (status === 'open' && enabled) {
-            load();
-        }
-        // oxlint-disable-next-line react-hooks/exhaustive-deps
-    }, [status, enabled, endpointId]);
-
-    return { open: status === 'open', items, failure, setFailure, load };
-}
-
-/* The section around such a list, with what it shows while the machine is silent, loading, empty or failed. */
-function MachineListSection({
-    words,
-    open,
-    items,
-    failure,
-    children
-}: {
-    words: ListWords;
-    open: boolean;
-    items: readonly unknown[] | null;
-    failure: string | null;
-    children: ReactNode;
-}) {
-    const { t } = useTranslation('settings');
-    const waiting = items === null && failure === null;
-
-    return (
-        <SettingsSection title={t(`${words}.title`)} description={t(`${words}.description`)}>
-            {!open && waiting && <SettingsRow muted label={t(`${words}.silent.label`)} description={t(`${words}.silent.description`)} />}
-            {open && waiting && <SettingsRow label={<Skeleton className="w-40" />} control={<Skeleton className="w-8" />} />}
-            {items?.length === 0 && <SettingsRow muted label={t(`${words}.empty`)} />}
-            {children}
-            {failure && (
-                <SettingsRow
-                    muted
-                    label={
-                        <span className="break-words text-status-error" role="alert">
-                            {failure}
-                        </span>
-                    }
-                />
-            )}
-        </SettingsSection>
-    );
-}
-
 async function readSessions(transport: Transport): Promise<AuthSession[]> {
     return (await transport.request('auth.sessions', {})).sessions;
 }
@@ -764,6 +695,73 @@ export function WorktreeFolderRow({ endpoint, reason }: { endpoint: Endpoint; re
                 />
                 {problem !== null && <FormError className="break-words">{problem}</FormError>}
             </div>
+        </SettingsRow>
+    );
+}
+
+/*
+ * Where browsing for a folder starts on this machine, in the style of its paths. Every app that uses the
+ * machine starts there, so it is the machine's to keep; empty is its home folder.
+ */
+export function StartFolderRow({ endpoint, reason }: { endpoint: Endpoint; reason: string | null }) {
+    const { t } = useTranslation('settings');
+    const kept = useServers((s) => s.byEndpoint[endpoint.id]?.startFolder ?? '');
+    const platform = useServers((s) => s.byEndpoint[endpoint.id]?.platform ?? null);
+    const [draft, setDraft] = useState<string | null>(null);
+    const [busy, setBusy] = useState(false);
+    // Enter saves and the field then loses focus: the blur must not save the same value again.
+    const saving = useRef(false);
+    const shown = draft ?? kept;
+
+    const save = async (value: string): Promise<void> => {
+        if (saving.current) {
+            return;
+        }
+        if (value.trim() === kept) {
+            setDraft(null);
+            return;
+        }
+        saving.current = true;
+        setBusy(true);
+        try {
+            await perform('machine.setStartFolder', { endpointId: endpoint.id, folder: value.trim() });
+            setDraft(null);
+        } catch (e) {
+            useToasts.getState().show({
+                id: `endpoint-setting-${endpoint.id}`,
+                kind: 'error',
+                title: t('machine.toast.saveFailed', { machine: endpoint.label }),
+                description: messageOf(e, t('machine.toast.unchanged'))
+            });
+        } finally {
+            saving.current = false;
+            setBusy(false);
+        }
+    };
+
+    return (
+        <SettingsRow
+            searchId="machines.machine.startFolder"
+            label={t('machine.startFolder.label')}
+            description={reason !== null ? t('machine.notAnswering') : t('machine.startFolder.description')}
+        >
+            <Input
+                mono
+                className="w-full min-w-0"
+                value={shown}
+                placeholder={platform === 'win32' ? t('machine.startFolder.placeholderWindows') : t('machine.startFolder.placeholder')}
+                aria-label={t('machine.startFolder.label')}
+                spellCheck={false}
+                disabled={busy || reason !== null}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={() => void save(shown)}
+                onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') {
+                        void save(shown);
+                    }
+                }}
+            />
         </SettingsRow>
     );
 }

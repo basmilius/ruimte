@@ -9,6 +9,7 @@ import { isTerminal } from '../git/pr-checks.ts';
 import { PrSplits } from '../git/pr-split.ts';
 import { GitError } from '../git/run.ts';
 import { JsonFileStore } from '../json-file-store.ts';
+import { wakeWith } from '../outbox/deliver-answer.ts';
 import type { DeliverPrWatchEntry, OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
 import { wakefulClock } from '../timers.ts';
 import type { SessionSink } from '../wire.ts';
@@ -148,14 +149,7 @@ export function prWatchHandler(deps: { watches: Pick<PrWatchStore, 'has'>; openC
         if (!deps.watches.has(entry.payload.watchId)) {
             return;
         }
-        const chat = await deps.openChat(entry.target);
-        if (chat === null) {
-            return;
-        }
-        if (chat.relocating?.() === true) {
-            return 'wait';
-        }
-        return chat.wake({ text: entry.payload.text, label: entry.payload.label, taskIds: [] }) ? undefined : 'wait';
+        return wakeWith(deps.openChat, entry.target, entry.payload);
     };
 }
 

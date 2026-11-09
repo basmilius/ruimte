@@ -23,7 +23,7 @@ export interface Tool {
 }
 
 /* A tool of a toolkit as the catalog lists it: its schema read off its zod input, and its JSON input run as it came. */
-function listed(tool: KitTool): Tool {
+export function listed(tool: KitTool): Tool {
     return {
         name: tool.name,
         description: tool.description,

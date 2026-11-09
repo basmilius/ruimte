@@ -12,7 +12,8 @@ import {
     type EndpointInfo,
     type EndpointSettings,
     type MachineSettingKey,
-    type MachineSettingValues
+    type MachineSettingValues,
+    type TextModelChoice
 } from '@ruimte/contracts';
 import type { LanDoor } from '@ruimte/pulsar';
 import { z } from 'zod';
@@ -50,11 +51,13 @@ export interface SettingContext {
     home: string;
     closedLid: { available: boolean; rule(): Promise<boolean> };
     current: MachineSettingValues;
+    /* Throws when the machine cannot write short texts with this pick: its CLI, model or account is not there. */
+    validateTextModel(choice: TextModelChoice): Promise<void>;
 }
 
 type Effect = (values: MachineSettingValues, ports: SettingPorts) => void | Promise<void>;
 
-type RequestOf<Key extends MachineSettingKey> = Key extends keyof EndpointSettings ? NonNullable<EndpointSettings[Key]> : never;
+type RequestOf<Key extends MachineSettingKey> = Key extends keyof EndpointSettings ? Exclude<EndpointSettings[Key], undefined> : never;
 
 /* The daemon's side of a row of `MACHINE_SETTINGS`: how it is kept in the file, checked in a request and followed once it changed. */
 interface ServerRow<Key extends MachineSettingKey> {
@@ -74,7 +77,18 @@ const keepAwakeChanged: Effect = (_values, ports) => ports.keepAwakeChanged();
 
 const SERVER_ROWS: { readonly [Key in MachineSettingKey]?: ServerRow<Key> } = {
     streamingAllowed: { changed: (values, ports) => ports.streamingChanged(values.streamingAllowed) },
+    agentsSharePorts: { ownerAction: 'let agents share ports' },
     resumeAtReset: { changed: (values, ports) => ports.resumeChanged(values.resumeAtReset) },
+    // A pick this machine cannot use now is refused here, so a person hears why while choosing and not on the first commit message.
+    textModel: {
+        async prepare(request, context) {
+            if (request !== null) {
+                await context.validateTextModel(request);
+            }
+
+            return request;
+        }
+    },
     keepAwake: { changed: keepAwakeChanged },
     keepAwakeOnBattery: { changed: keepAwakeChanged },
     keepAwakeDisplay: { changed: keepAwakeChanged },

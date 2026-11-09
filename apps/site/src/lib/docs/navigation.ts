@@ -60,7 +60,8 @@ export const SECTIONS: readonly NavigationSection[] = [
                     { title: 'Your account and machines', href: '/docs/guide/machines' },
                     { title: 'Phone and web', href: '/docs/guide/phone-and-web' },
                     { title: 'Work on another machine', href: '/docs/guide/other-machines' },
-                    { title: 'A machine without a screen', href: '/docs/guide/headless' }
+                    { title: 'A machine without a screen', href: '/docs/guide/headless' },
+                    { title: 'Tunnels', href: '/docs/guide/tunnels' }
                 ]
             },
             {

@@ -269,6 +269,7 @@ export const CHAT_HOST: ChatHostLayer = {
     providerKeyNote: () => i18next.t('settings:providers.keyNote'),
     useResumeAtReset: (endpointId) => useServers((s) => s.byEndpoint[endpointId]?.resumeAtReset === true),
     useCanReorderAccounts: (endpointId) => useMachineAnswers(endpointId, 'accounts.reorder'),
+    useCanShareAccountConfig: (endpointId) => useMachineAnswers(endpointId, 'accounts.shareConfig'),
     // A chat on screen belongs to the project the window shows; an account id only means something on that project's machine.
     useAccountRule: (endpointId) => {
         const accounts = useDocument((s) => s.accounts);

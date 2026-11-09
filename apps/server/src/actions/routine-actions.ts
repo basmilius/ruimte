@@ -4,6 +4,7 @@ import { isWithin } from '@adecore/utils/path';
 import type { ActionHandlers, ActionInput } from '@ruimte/actions';
 import { freeSlug, ROUTINE_LIMITS, RoutineSchema, slugOf, type Routine, type RoutineEntry, type RoutineKind } from '@ruimte/contracts';
 import { requireInstalled } from '../canvas/agents.ts';
+import { externalActorTitle } from '../canvas/external-caller.ts';
 import { field, orNote } from '../canvas/host.ts';
 import { selectionForOpening } from '../canvas/model.ts';
 import type { RoutineAgentHost } from '../routines/agent-host.ts';
@@ -143,7 +144,8 @@ async function routineFrom(context: ServerActionContext, caller: string, id: str
 }
 
 async function saved(context: ServerActionContext, caller: string, routine: Routine, shared: boolean) {
-    const result = await routinesOf(context).save(context.place.projectId, routine, context.host.starts.modeOf(caller), caller, shared);
+    const title = context.external === undefined ? undefined : externalActorTitle(context.external);
+    const result = await routinesOf(context).save(context.place.projectId, routine, context.host.starts.modeOf(caller), caller, shared, title);
     const kept = result.routine;
     return {
         output: {

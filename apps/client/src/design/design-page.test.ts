@@ -1,17 +1,23 @@
 import { describe, expect, test } from 'bun:test';
 import type { FsEntry } from '@ruimte/contracts';
+import { TransportError } from '@/transport-api/transport';
 import {
     arrangePages,
     assetPathOf,
     assetReferences,
     changeReaches,
     designFiles,
+    designReadFailed,
+    designScope,
     isPagePath,
     layoutPoint,
+    listingAfter,
+    listingOf,
     pageDataUrl,
     pageMentions,
     pageName,
     pagesByChange,
+    scopedListingAfter,
     strokesBox,
     withAssets,
     withFramedPages
@@ -113,6 +119,35 @@ describe('a reference a page makes to its folder', () => {
         expect(assetReferences('<img src="img/100%.png">')).toEqual(['img/100%.png']);
     });
 
+    test('takes a backslash for a separator and refuses every shape that leaves the folder on a machine that does the same', () => {
+        // The same cases run on the iPhone (`DesignInliningTests`), which hands the path to a machine that may be Windows.
+        expect(assetPathOf('assets\\logo.svg')).toBe('assets/logo.svg');
+        expect(assetPathOf('..\\assets\\logo.svg', 'flows')).toBe('assets/logo.svg');
+        expect(assetPathOf('assets/a%20b.png')).toBe('assets/a b.png');
+
+        for (const reference of [
+            '..\\private.txt',
+            'a\\..\\..\\x',
+            'C:\\x',
+            '\\\\server\\share\\x',
+            '\\x',
+            '%2e%2e/x',
+            '%2e%2e%2fx',
+            'a%2f..%2f..%2fx',
+            '%5c..%5cx',
+            '%5c%5cserver%5cshare',
+            '%2fetc/x',
+            '%43:/x',
+            '/etc/x',
+            'a%00b.png',
+            'a/.../x',
+            'a/.. /x'
+        ]) {
+            expect(assetPathOf(reference)).toBeNull();
+        }
+        expect(assetPathOf('..\\..\\x', 'flows')).toBeNull();
+    });
+
     test('is found in an attribute and in CSS, once each, and replaced by its bytes where it has them', () => {
         const html = [
             '<link rel="stylesheet" href="styles.css">',
@@ -185,6 +220,50 @@ describe('a page a design page frames', () => {
         expect(pageMentions('a backup in notes.html.bak')).toEqual([]);
     });
 
+    test('is found in a run of name characters as long as a page without trying again from every character of it', () => {
+        // A scan that retries from every character of the run takes minutes here.
+        const run = 'A'.repeat(900_000);
+
+        expect(pageMentions(run)).toEqual([]);
+        expect(pageMentions(`${run}.html`)).toEqual([`${run}.html`]);
+        expect(pageMentions(`<p>${run}</p> a.html`)).toEqual(['a.html']);
+    });
+
+    test('is found as it always was: the longest name a run holds that ends in .htm or .html on its own', () => {
+        const mentions = /[\w%./-]+\.html?(?![\w-]|\.\w)/gi;
+        const alphabet = ['a', 'B', '1', '.', 'h', 't', 'm', 'l', 'H', 'T', 'M', 'L', '/', '-', '_', '%', '"', ' ', '\n', 'é'];
+        let seed = 7;
+        const next = (): number => {
+            seed = (seed * 48271) % 2147483647;
+
+            return seed;
+        };
+
+        for (const text of [
+            'a.html/b.html',
+            '.html',
+            'a.html-',
+            'a.htmlx',
+            'a.htm.html',
+            'a.html.b',
+            'a.html..',
+            'a.html.-b',
+            'x/.html',
+            'a.HTM b.Html',
+            'a.html%',
+            'é.html',
+            'a.ht'
+        ]) {
+            expect(pageMentions(text)).toEqual([...new Set(text.match(mentions) ?? [])]);
+        }
+
+        for (let i = 0; i < 3000; i++) {
+            const text = Array.from({ length: 1 + (next() % 16) }, () => alphabet[next() % alphabet.length]!).join('');
+
+            expect(pageMentions(text)).toEqual([...new Set(text.match(mentions) ?? [])]);
+        }
+    });
+
     test('stands on its own in an address that keeps every character, and hands its query to the page', () => {
         const html = '<!doctype html>\n<p class="a">100% & more? #1 (yes)\t\\</p>';
         const url = new URL(`${pageDataUrl(html)}?theme=dark#/work`);
@@ -233,5 +312,60 @@ describe('a page a design page frames', () => {
 
         element.setAttribute('src', 'three.html');
         expect(element.attributes.get('src')).toBe('three.html');
+    });
+});
+
+describe('the listing of a design folder', () => {
+    const pages = [entry('Pricing.html')];
+
+    test('reads a folder that is not there as a design without pages, by the code of the error', () => {
+        expect(designReadFailed(new TransportError('not-found', 'Not here'))).toEqual({ kind: 'missing' });
+        expect(designReadFailed(new TransportError('not-found', 'Anything at all'))).toEqual({ kind: 'missing' });
+    });
+
+    test('reads any other error as a failed read, whatever its message says', () => {
+        expect(designReadFailed(new TransportError('not-readable', 'That folder cannot be read'))).toEqual({
+            kind: 'failed',
+            reason: 'That folder cannot be read'
+        });
+        expect(designReadFailed(new TransportError('timeout', 'That folder is not there'))).toEqual({ kind: 'failed', reason: 'That folder is not there' });
+        expect(designReadFailed(new Error('The line dropped'))).toEqual({ kind: 'failed', reason: 'The line dropped' });
+        expect(designReadFailed('odd')).toEqual({ kind: 'failed', reason: 'odd' });
+    });
+
+    test('takes the entries of a read that listed them and clears an earlier failure', () => {
+        expect(listingAfter({ entries: null, problem: 'Broke' }, { kind: 'listed', entries: pages })).toEqual({ entries: pages, problem: null });
+    });
+
+    test('drops its entries for a folder that is not there', () => {
+        expect(listingAfter({ entries: pages, problem: null }, { kind: 'missing' })).toEqual({ entries: null, problem: null });
+    });
+
+    test('keeps the entries it had when a read fails, and says why', () => {
+        expect(listingAfter({ entries: pages, problem: null }, { kind: 'failed', reason: 'Broke' })).toEqual({ entries: pages, problem: 'Broke' });
+        expect(listingAfter({ entries: null, problem: null }, { kind: 'failed', reason: 'Broke' })).toEqual({ entries: null, problem: 'Broke' });
+    });
+
+    test('keeps the entries of a failed read only for the folder it read before', () => {
+        const scope = designScope('machine', '/work/a');
+        const before = scopedListingAfter(null, scope, { kind: 'listed', entries: pages });
+
+        expect(scopedListingAfter(before, scope, { kind: 'failed', reason: 'Broke' }).listing).toEqual({ entries: pages, problem: 'Broke' });
+        expect(scopedListingAfter(before, designScope('machine', '/work/b'), { kind: 'failed', reason: 'Broke' }).listing).toEqual({
+            entries: null,
+            problem: 'Broke'
+        });
+        expect(scopedListingAfter(before, designScope('other', '/work/a'), { kind: 'failed', reason: 'Broke' }).listing).toEqual({
+            entries: null,
+            problem: 'Broke'
+        });
+    });
+
+    test('has no listing for another folder than the one it was read from', () => {
+        const before = scopedListingAfter(null, designScope('machine', '/work/a'), { kind: 'listed', entries: pages });
+
+        expect(listingOf(before, designScope('machine', '/work/a'))).toEqual({ entries: pages, problem: null });
+        expect(listingOf(before, designScope('machine', '/work/b'))).toBeNull();
+        expect(listingOf(null, designScope('machine', '/work/a'))).toBeNull();
     });
 });

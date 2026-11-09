@@ -218,3 +218,24 @@ describe('stripOf', () => {
         expect(stripOf(undefined)).toEqual({ keys: [], active: null });
     });
 });
+
+describe('serializePanels with tabs of this session only', () => {
+    const session: PanelsState['tabs'] = [
+        { key: 'compare:one', kind: 'compare', cwd: '/repo', from: 'main', to: 'topic', mode: 'tips', pinned: true, refresh: 0 },
+        { key: 'snapshot:one', kind: 'snapshot', cwd: '/repo', commit: 'a'.repeat(40), branch: 'topic', path: 'readme.md', pinned: false }
+    ];
+
+    test('leaves neither the tabs nor their place in front in the local file', () => {
+        const stored = serializePanels({ ...defaults, tabs: [...session, full.tabs[0]!], active: 'compare:one' });
+
+        expect(stored.tabs).toEqual([{ path: '/repo/readme.md', pinned: true }]);
+        expect(stored.strip).toHaveLength(1);
+        expect(stored.activeTab).toBe('/repo/readme.md');
+        expect(JSON.stringify(stored)).not.toContain('compare:');
+        expect(JSON.stringify(stored)).not.toContain('snapshot:');
+    });
+
+    test('writes no tab at all when only those are open', () => {
+        expect(serializePanels({ ...defaults, tabs: session, active: 'snapshot:one' })).toMatchObject({ tabs: [], strip: [], activeTab: null });
+    });
+});

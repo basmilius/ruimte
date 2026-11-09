@@ -201,6 +201,18 @@ final class IntelligentUIPresentationTests: XCTestCase {
         XCTAssertEqual(live?.reason, "gone")
     }
 
+    func testAFailedReadKeepsTheTimeOfTheLastGoodOne() {
+        let block: JSONValue = .object(["queries": .object(["$a": .object(["source": .string("git.status")])])])
+        let readings: [String: JSONValue] = [
+            "$a": .object(["state": .string("failed"), "readAt": .number(3_000), "code": .string("timed-out")])
+        ]
+        let live = UiLiveStatus.of(
+            block: block, order: ["$a"], readings: readings, reading: false, lastReadAt: ["$a": 2_000])
+        XCTAssertEqual(live?.state, .failed)
+        XCTAssertEqual(live?.readAt, Date(timeIntervalSince1970: 2))
+        XCTAssertEqual(live?.reason, String(localized: "The source took too long to answer."))
+    }
+
     func testAKnownReasonCodeReadsInTheAppsWordsAndAnUnknownOneAsWritten() {
         XCTAssertEqual(
             UiReason.text(code: "timed-out", reason: "late"), String(localized: "The source took too long to answer."))

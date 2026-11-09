@@ -53,7 +53,7 @@ export const cases: WriteCases = {
         refused: { 'blank text': { text: '  ' }, 'text past its limit': { text: 'x'.repeat(501) } }
     },
     'agent.notify': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { nodeId: 'chat-2', text: 'The schema changed, read it again' },
         refused: {
             'empty text': { nodeId: 'chat-2', text: '' },

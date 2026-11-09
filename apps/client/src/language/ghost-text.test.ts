@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { ManualTimers, keyOf, settle } from '@adecore/editor-react/testing';
+import { ManualTimers, keyOf as eventOf, settle } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { keyOf } from '@/surface/shortcut-overrides';
 import { FakeLanguageTransport } from './fake-daemon';
 import { createEditorLanguage } from './ruimte-editor-language';
 import { RuimteProject } from './ruimte-project';
@@ -26,7 +26,7 @@ async function setup(options: { available?: boolean; text?: string; caret?: { li
     const language = createEditorLanguage(project, editor, uri, 'typescript', timers);
     await language.document.ready;
     editor.moveCaret(options.caret ?? at(1, 4));
-    const suggest = (): boolean => editor.press(keyOf(CANVAS_SHORTCUTS.suggestInline));
+    const suggest = (): boolean => editor.press(eventOf(keyOf('suggestInline')!));
     return { transport, model, editor, language, project, timers, suggest };
 }
 
@@ -90,10 +90,10 @@ describe('ghost text on request', () => {
     test('Option+] takes a word and keeps the rest as the suggestion after it', async () => {
         const { model, editor, language } = await setup();
         await suggested({ model, language }, 'return pool[0];');
-        expect(editor.press(keyOf(CANVAS_SHORTCUTS.acceptGhostWord))).toBe(true);
+        expect(editor.press(eventOf(keyOf('acceptGhostWord')!))).toBe(true);
         expect(editor.getText()).toContain('\n    return\n');
         expect(editor.ghost).toMatchObject({ position: at(1, 10), text: ' pool[0];' });
-        editor.press(keyOf(CANVAS_SHORTCUTS.acceptGhostWord));
+        editor.press(eventOf(keyOf('acceptGhostWord')!));
         expect(editor.getText()).toContain('\n    return pool\n');
         expect(editor.ghost?.text).toBe('[0];');
     });

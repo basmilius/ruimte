@@ -10,6 +10,8 @@ Tag with `git tag -a v<version> -F <notes-file> --cleanup=verbatim`. Without tha
 
 The `gate` job reads the `ci.yml` run of the tagged commit on main and stops the release unless it passed, so tag only after CI is green. Only the native checks (`native.yml`: Rust, Swift, computer use) run again on the tag, all of them, since that CI run skipped those whose paths did not change. `publish` publishes the draft once they and every build pass: as a prerelease for a tag with a `-`, otherwise as Latest unless a newer version already is. It runs one release at a time (`concurrency: release-publish`), so two tags cannot set Latest out of order. It never tries the built daemon. The workflow's token reads only; `draft`, the platform builds and `publish` ask for `contents: write` themselves.
 
+The `client` job builds the page once, and every platform build takes it as an artifact. The platform builds start beside `client`: each compiles the daemon and the main process first and waits for the artifact only before electron-builder (`.github/actions/client-artifact`), failing at once when `client` ends without one.
+
 - The app shows the notes in About and the update toast. Empty notes read "No notes for this version." until filled in.
 - A draft's tag already appears in `releases.atom`.
 - A person's update track (Settings, About) sets `allowPrerelease`: Stable reads the Latest release, Pre-release the newest entry of any kind. Until they choose, a build with a `-` in its version follows Pre-release. The notes follow the same choice, and Stable also keeps the notes of a beta that is still running.
@@ -34,7 +36,7 @@ Export certificate and private key from Keychain Access, then `base64 -i cert.p1
 - `MAC verification failed during PKCS12 import (wrong password?)`: OpenSSL 3 wrote ciphers `security import` cannot read. Rebuild with `-legacy -macalg sha1 -certpbe pbeWithSHA1And3-KeyTripleDES-CBC -keypbe pbeWithSHA1And3-KeyTripleDES-CBC`.
 - `SecKeychainUnlock: The user name or passphrase you entered is not correct`: electron-builder is older than 26.16.1 again (electron-builder#10172). The manifest pins `^26.16.1`.
 
-`OBSERVATORY_UPLOAD_TOKEN` is an upload token of the Ruimte product on Observatory (`ingest.bmnw.nl`). The `error-tracking` job reports the deploy of `ruimte@<version>` after publishing and may fail without holding up the release. The same token uploads the client's hidden source maps through `.github/actions/client-source-maps`, which then deletes them; without it the maps are only deleted. It also uploads each compiled daemon's source map through `.github/actions/daemon-source-map`; the map is kept beside the binary's folder, never in it. electron-builder ships no `.map`. `RUIMTE_TELEMETRY=1` turns crash reports on, stamped into the daemon by the compile steps (`apps/server/README.md`, "Crash reports"), into the shell by `build:main` and into the page by the client build.
+`OBSERVATORY_UPLOAD_TOKEN` is an upload token of the Ruimte product on Observatory (`ingest.bmnw.nl`). The `error-tracking` job reports the deploy of `ruimte@<version>` after publishing and may fail without holding up the release. The same token uploads the client's hidden source maps through `.github/actions/client-source-maps`, which then deletes them; without it the maps are only deleted. In a release the debug ids go in before the `client` artifact and the upload follows it, so the maps ride along in the artifact and electron-builder's filter leaves them out. It also uploads each compiled daemon's source map through `.github/actions/daemon-source-map`; the map is kept beside the binary's folder, never in it. electron-builder ships no `.map`. `RUIMTE_TELEMETRY=1` turns crash reports on, stamped into the daemon by the compile steps (`apps/server/README.md`, "Crash reports"), into the shell by `build:main` and into the page by the client build.
 
 A native shell crash arrives as a minidump without Electron's symbols, which are too large for Observatory. Symbolicate a recurring one locally with its Electron version's symbols.
 
@@ -76,7 +78,7 @@ The build is unsigned (SmartScreen warns). electron-updater checks a signature o
 
 ## Build caches
 
-CI's `packaged (macOS)`, the macOS release and the macOS npm build share native caches through `.github/actions/cache-native-builds`. CI on `main` fills them; a tag can restore `main`'s caches but not another tag's. Rust caches dependencies and recompiles the helpers. A Swift product is reused only when sources, manifests, build scripts, macOS, Xcode and SDK all match. The daemon and the computer use app always build with the release version.
+CI's `packaged (macOS)`, the macOS release and the macOS npm build share native caches through `.github/actions/cache-native-builds`. CI on `main` fills them; a tag can restore `main`'s caches but not another tag's. Rust caches dependencies, and a helper's binary is reused only when its sources, Cargo files, macOS and Rust toolchain all match. A Swift product is reused only when sources, manifests, build scripts, macOS, Xcode and SDK all match. The daemon and the computer use app always build with the release version.
 
 ## Icon
 

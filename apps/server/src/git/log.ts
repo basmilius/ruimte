@@ -1,5 +1,5 @@
-import type { GitCommit, GitLogResult } from '@ruimte/contracts';
-import { FIELD, git, toplevel } from './run.ts';
+import type { GitComparePage, GitCommit, GitLogResult } from '@ruimte/contracts';
+import { FIELD, GitError, git, toplevel } from './run.ts';
 
 export const DEFAULT_LIMIT = 30;
 
@@ -73,4 +73,24 @@ export async function readLog(cwd: string, limit: number = DEFAULT_LIMIT, cursor
 export async function readCommit(top: string, hash: string): Promise<GitCommit | null> {
     const output = await git(['log', '-z', '--decorate=full', `--format=${LOG_FORMAT}`, '--max-count=1', hash], top);
     return output === null ? null : (parseLog(output)[0] ?? null);
+}
+
+/*
+ * A page of the commits `included` has and `excluded` does not, newest first. Both are commit ids pinned
+ * beforehand, so a branch may move while the pages are read.
+ */
+export async function readRangeLog(top: string, excluded: string, included: string, skip: number, limit: number): Promise<GitComparePage> {
+    const output = await git(
+        ['log', '-z', '--decorate=full', `--format=${LOG_FORMAT}`, `--max-count=${limit + 1}`, `--skip=${skip}`, `${excluded}..${included}`, '--'],
+        top
+    );
+
+    if (output === null) {
+        throw new GitError('git-failed', 'Could not read the commits of the comparison.');
+    }
+
+    const commits = parseLog(output);
+    const page = commits.slice(0, limit);
+
+    return { commits: page, next: commits.length > page.length ? skip + page.length : null };
 }

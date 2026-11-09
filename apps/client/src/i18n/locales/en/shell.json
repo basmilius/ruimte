@@ -123,6 +123,12 @@
         "restartNow": "Restart now",
         "whenIdle": "When idle"
     },
+    "breakReminder": {
+        "title": "Time for a break?",
+        "description": "You have worked {{duration}} without a break.",
+        "take": "Take a break",
+        "later": "Later"
+    },
     "notifications": {
         "finished": "Finished",
         "needsYou": "Needs you",
@@ -301,6 +307,7 @@
         "noFolder": "A design needs the project's folder on this machine.",
         "failed": "The design could not be shown.",
         "failedAction": "The design could not do that",
+        "listFailed": "The pages could not be read. {{reason}}",
         "pageFailed": "Could not show {{name}}. {{reason}}",
         "pageTooLarge": "It is {{size}}, and a page holds at most {{limit}}.",
         "pageNotText": "{{name}} is not a text file.",
@@ -725,6 +732,7 @@
             "routines": "Routines",
             "newRoutine": "New routine",
             "toggleGit": "Toggle git panel",
+            "compareBranches": "Compare branches",
             "toggleDatabases": "Toggle databases panel",
             "newDatabaseConsole": "New database console",
             "databaseConnections": "Manage database connections",
@@ -889,7 +897,10 @@
             "settings": "Settings",
             "launchesEdit": "Edit launches…",
             "launchesAfterSettleOff": "Run nothing after a worktree chat finishes",
-            "attentionQueue": "Open attention queue"
+            "attentionQueue": "Open attention queue",
+            "chatTextLarger": "Larger Chat Text",
+            "chatTextSmaller": "Smaller Chat Text",
+            "chatTextReset": "Default Chat Text Size"
         },
         "sections": {
             "recent": "Recent",
@@ -917,6 +928,8 @@
         "inputLabel": "Jump to a node, run a command, or open a folder",
         "placeholder": "Jump to a node, run a command, or type a path like ~/projects",
         "pathPlaceholder": "Folder path, like ~/projects/my-app",
+        "placeholderWindows": "Jump to a node, run a command, or type a path like C:\\Projects",
+        "pathPlaceholderWindows": "Folder path, like C:\\Projects\\my-app",
         "matchCase": "Match case",
         "wholeWords": "Whole words",
         "regex": "Regular expression",
@@ -1020,6 +1033,7 @@
         "routines": "Routines",
         "newRoutine": "New Routine…",
         "toggleGit": "Git",
+        "compareBranches": "Compare Branches…",
         "toggleDatabases": "Databases",
         "devices": "Devices",
         "togglePanel": "Toggle Panel",
@@ -1240,7 +1254,10 @@
         "drawingSavePng": "Save as PNG…",
         "drawingSaveSvg": "Save as SVG…",
         "drawingOnCanvas": "Show on Canvas",
-        "attentionQueue": "Attention Queue"
+        "attentionQueue": "Attention Queue",
+        "chatTextLarger": "Larger Chat Text",
+        "chatTextSmaller": "Smaller Chat Text",
+        "chatTextReset": "Default Chat Text Size"
     },
     "addToMachine": {
         "title": "Add to another machine",
@@ -1349,6 +1366,7 @@
     },
     "editorMenu": {
         "inlineEdit": "Inline edit",
+        "explain": "Explain",
         "selectionToChat": "Add selection to chat",
         "askAgent": "Ask agent"
     },

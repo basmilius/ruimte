@@ -13,6 +13,7 @@ import {
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
 import type { LooseStrip } from '@/layout/legacy-files-cell';
+import { openableViewIds } from '@/layout/split';
 import type { CanvasPatch } from '@/state/canvas-model';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { stripOf } from '@/state/panel-state';
@@ -29,6 +30,7 @@ import { rememberProject, type LastProjectStorage } from './last-project';
 import { mergeProject } from './merge';
 import type { PanelsPort } from './panels-port';
 import { dropProjectDraft, readProjectDraft, writeProjectDraft } from './project-draft';
+import { withoutSessionLayout } from './session-local';
 
 type SaveOutcome = 'saved' | 'offline' | 'failed';
 
@@ -622,7 +624,7 @@ export class ProjectClient {
         if (!this.opened || !current) {
             return;
         }
-        const local = this.localOfScreen();
+        const local = withoutSessionLayout(this.localOfScreen(), this.panels.sessionIds(), openableViewIds(this.documents.getState().views));
         // This client's own copy first, so the machine only has to be where a client that never saw the project starts.
         writeClientLocal(this.storage, this.endpointId(), current.projectId, local);
         if (this.transport.status === 'open') {

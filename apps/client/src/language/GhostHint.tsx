@@ -1,7 +1,7 @@
 import { formatShortcut, Icon, shortcut, isApplePlatform } from '@adecore/ui';
 import { Cpu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { useKeyOf } from '@/surface/shortcut-overrides';
 
 const TAB = shortcut('Tab');
 const ESCAPE = shortcut('Escape');
@@ -10,7 +10,8 @@ const ESCAPE = shortcut('Escape');
 export function GhostHint({ phase }: { phase: 'progress' | 'ready' }) {
     const { t } = useTranslation('panels');
     const apple = isApplePlatform();
-    const keys = (name: string, chord: typeof TAB): string => `${formatShortcut(chord, apple)} ${name}`;
+    const nextWord = useKeyOf('acceptGhostWord');
+    const keys = (name: string, chord: typeof TAB | undefined): string => (chord === undefined ? name : `${formatShortcut(chord, apple)} ${name}`);
     return (
         <span className="inline-flex h-5 items-center gap-2 font-sans text-xs whitespace-nowrap text-text-faint not-italic">
             <span className="flex h-[18px] items-center gap-1.25 rounded-sm bg-surface-sunken px-1.75 dark:bg-surface-active">
@@ -18,9 +19,7 @@ export function GhostHint({ phase }: { phase: 'progress' | 'ready' }) {
                 {t('language.ghost.model')}
             </span>
             {phase === 'ready'
-                ? [keys(t('language.ghost.accept'), TAB), keys(t('language.ghost.next'), CANVAS_SHORTCUTS.acceptGhostWord), formatShortcut(ESCAPE, apple)].join(
-                      ' · '
-                  )
+                ? [keys(t('language.ghost.accept'), TAB), keys(t('language.ghost.next'), nextWord), formatShortcut(ESCAPE, apple)].join(' · ')
                 : `${t('language.ghost.thinking')} · ${formatShortcut(ESCAPE, apple)}`}
         </span>
     );

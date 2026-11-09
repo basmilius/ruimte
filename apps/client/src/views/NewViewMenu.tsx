@@ -15,7 +15,7 @@ import { useEndpointId } from '@/state/current-endpoint';
 import { useContributions } from '@/state/extension-registry';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { useKeyOf } from '@/surface/shortcut-overrides';
 import { useMachineAnswers } from '@/transport/features';
 
 /* A row of one of the two lists below, with the label it is put in order by. */
@@ -99,12 +99,13 @@ export function NewViewItems() {
     // A machine older than designs would keep the view and know nothing of its folder.
     const knowsDesigns = useMachineAnswers(useEndpointId(), 'artifact.saveFolder');
     const extensionViews = useContributions((state) => state.extensionViews);
+    const newViewKey = useKeyOf('view-new');
     const pickAgent = (target: AgentTarget, provider: ProviderInfo, account?: string): void =>
         void createViewAction(target, { provider: provider.kind, account });
     return (
         <>
             {inOrder([
-                itemEntry('canvas', Frame, t('viewKinds.canvas'), () => void createViewAction('canvas'), CANVAS_SHORTCUTS.newView),
+                itemEntry('canvas', Frame, t('viewKinds.canvas'), () => void createViewAction('canvas'), newViewKey),
                 itemEntry('drawing', PenTool, t('viewKinds.drawing'), () => void createViewAction('drawing')),
                 itemEntry('diagram', Workflow, t('viewKinds.diagram'), () => void createViewAction('diagram')),
                 itemEntry('terminal', Terminal, t('viewKinds.terminal'), () => void createViewAction('terminal')),

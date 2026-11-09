@@ -12,6 +12,8 @@ export interface NodeBodyProps {
     focused: boolean;
     /* The node is the one the canvas has its body focus on, whether or not the window has the keyboard. */
     active: boolean;
+    /* A chat or terminal runs its surface only while it is read, zoomed in on, maximized or active; any other node is always so. */
+    sessionLive: boolean;
 }
 
 /* What a piece of a node's header is told. */

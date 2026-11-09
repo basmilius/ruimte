@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve, sep } from 'node:path';
+import { chmod, mkdir, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { basename, dirname, join, resolve, sep } from 'node:path';
+import { gzipSync } from 'node:zlib';
 import { CodedError } from '@adecore/agents';
 import { FakeWatch } from '@adecore/agents/testing';
 import { pathToFileUri } from '@adecore/lsp';
 import { LANGUAGE_ERROR_CODES, type LanguageServerKind } from '@ruimte/contracts';
-import { tarGz } from '../disk/test-archives.ts';
+import { sha256, tarGz } from '../disk/test-archives.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import type { SessionEvent } from '../wire.ts';
 import { LanguageChoices } from './choices.ts';
@@ -15,6 +16,7 @@ import { NativePolicy, nativeProgramFile, type Download } from './native.ts';
 import { KIND_PROFILES, type CatalogKind, type ProjectSqlSettings } from './profiles.ts';
 import { FULL_CAPABILITIES, fakeSpawner, makeAlternatives, ManualClock, settle, type FakeProcess, type FakeSpawner } from './test-fakes.ts';
 import { LANGUAGE_KIND_PACKAGES, pinnedVersionsOf, versionOf, type NpmKind } from './versions.ts';
+import { BUILD_HELD_MESSAGE, WorktreeBuildChoices } from './worktree-build.ts';
 
 let root = '';
 
@@ -62,6 +64,7 @@ function rig(
         platform?: NodeJS.Platform;
         choices?: LanguageChoices;
         native?: NativePolicy;
+        download?: Download;
         /* The text of files that are no document, by path. */
         texts?: Record<string, string>;
         folders?: string[];
@@ -70,6 +73,15 @@ function rig(
         sqlSettings?: (projectId: string) => Promise<ProjectSqlSettings | null>;
         /* The folders made from another machine's work. */
         untrusted?: string[];
+        /* The project folder, `/work` by default. */
+        folder?: string;
+        /* Where the toolchain's programs are, such as rust-analyzer. */
+        programs?: string[];
+        /* The main checkout and the worktrees made for agents' nodes, as the register would say. */
+        agentWorktrees?: { main: string; paths: string[] };
+        worktreeBuild?: WorktreeBuildChoices;
+        /* Answers whether a path exists in place of `files` and `folders`, such as one that holds a start up. */
+        exists?: (path: string) => Promise<boolean>;
     } = {}
 ): Rig {
     const spawner = options.spawner ?? fakeSpawner();
@@ -80,9 +92,11 @@ function rig(
     const disk = new Set<string>();
     const host = new LanguageHost({
         root,
-        folderOf: (projectId) => (projectId === 'p1' ? WORK : null),
+        folderOf: (projectId) => (projectId === 'p1' ? (options.folder ?? WORK) : null),
         holders: () => [...holders],
-        findProgram: () => [],
+        findProgram: (program) => (options.programs ?? []).filter((path) => basename(path) === program),
+        ...(options.agentWorktrees === undefined ? {} : { agentWorktrees: async () => options.agentWorktrees! }),
+        ...(options.worktreeBuild === undefined ? {} : { worktreeBuild: options.worktreeBuild }),
         machineHome: {
             refuse: async (path) => {
                 if (path.startsWith(`${MACHINE_STATE}${sep}`)) {
@@ -94,7 +108,7 @@ function rig(
         spawn: spawner.spawn,
         native:
             options.native ?? new NativePolicy({ checkouts: { 'php-native': { folder: join(root, 'repo'), version: '0.1.0', stubsCommit: STUBS_COMMIT } } }),
-        download: stubsDownload,
+        download: options.download ?? stubsDownload,
         checkoutRevision: async () => options.revision?.() ?? null,
         run: async (spec, onLine) => {
             if (spec.command.endsWith(nativeProgramFile('php-native', process.platform))) {
@@ -105,6 +119,22 @@ function rig(
                 installs.push('php-native');
                 await mkdir(join(spec.cwd, 'target', 'release'), { recursive: true });
                 await writeFile(join(spec.cwd, 'target', 'release', nativeProgramFile('php-native', process.platform)), '');
+                return 0;
+            }
+            if (spec.command.endsWith('zls')) {
+                onLine('0.14.0');
+                return 0;
+            }
+            if (spec.command.endsWith('swift')) {
+                onLine('Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)');
+                return 0;
+            }
+            if (spec.command.endsWith('gopls')) {
+                onLine('golang.org/x/tools/gopls v0.18.1');
+                return 0;
+            }
+            if (spec.command.endsWith('rust-analyzer')) {
+                onLine('rust-analyzer 1.85.0 (4d91de4e 2025-02-17)');
                 return 0;
             }
             if (spec.args.includes('--version')) {
@@ -129,9 +159,9 @@ function rig(
         watch: { platform: options.platform ?? 'darwin', seams: watch, stat: async (path) => (disk.has(path) ? 'file' : null) },
         custom: new CustomLanguageServers({
             path: join(root, 'custom.json'),
-            resolve: (command) => (['zls', 'taplo'].includes(command) ? `/bin/${command}` : null)
+            resolve: (command) => (['nimlsp', 'taplo'].includes(command) ? `/bin/${command}` : null)
         }),
-        exists: async (path) => (options.files ?? []).includes(path) || (options.folders ?? []).includes(path),
+        exists: options.exists ?? (async (path) => (options.files ?? []).includes(path) || (options.folders ?? []).includes(path)),
         isFolder: async (path) => (options.folders ?? []).includes(path),
         readText: async (path) => (path === join(WORK, 'package.json') ? (options.packageJson ?? null) : (options.texts?.[path] ?? null)),
         ...(options.sqlSettings === undefined ? {} : { sqlSettings: options.sqlSettings }),
@@ -159,10 +189,16 @@ async function installed(
         spawner?: FakeSpawner;
         platform?: NodeJS.Platform;
         native?: NativePolicy;
+        download?: Download;
         texts?: Record<string, string>;
         folders?: string[];
         sqlSettings?: (projectId: string) => Promise<ProjectSqlSettings | null>;
         untrusted?: string[];
+        folder?: string;
+        programs?: string[];
+        agentWorktrees?: { main: string; paths: string[] };
+        worktreeBuild?: WorktreeBuildChoices;
+        exists?: (path: string) => Promise<boolean>;
     } = {}
 ): Promise<Rig> {
     const choices = new LanguageChoices({ path: join(root, 'choices.json') });
@@ -883,34 +919,34 @@ describe('several servers on one document', () => {
 });
 
 describe('language servers of a person', () => {
-    const zig = {
-        name: 'Zig',
-        command: 'zls',
+    const nim = {
+        name: 'Nim',
+        command: 'nimlsp',
         args: ['--stdio'],
         env: { ZLS_LOG: '1' },
-        languages: ['zig'],
+        languages: ['nim'],
         patterns: [],
         initializationOptions: { snippets: true }
     };
 
     it('starts on the first document it serves, as the command it was saved with, and reports under its id', async () => {
         const { host, spawner, events } = rig();
-        const saved = await host.customSave(zig);
-        const opened = await open(host, 'src/main.zig', 'const a = 1;', 'client-1', 'zig');
+        const saved = await host.customSave(nim);
+        const opened = await open(host, 'src/main.nim', 'const a = 1;', 'client-1', 'nim');
         expect(opened.servers).toEqual([saved.id]);
         await ready(host, saved.id);
-        const [process] = spawner.of('zls');
-        expect(process!.spec).toMatchObject({ command: 'zls', args: ['--stdio'], cwd: WORK, env: { ZLS_LOG: '1' } });
+        const [process] = spawner.of('nimlsp');
+        expect(process!.spec).toMatchObject({ command: 'nimlsp', args: ['--stdio'], cwd: WORK, env: { ZLS_LOG: '1' } });
         expect(process!.spec.env.BUN_BE_BUN).toBeUndefined();
         expect(process!.server.received.find((message) => message.method === 'initialize')?.params).toMatchObject({
             initializationOptions: { snippets: true }
         });
-        process!.server.handle('textDocument/hover', () => ({ contents: 'zig hover' }));
-        expect(await host.request({ projectId: 'p1', path: 'src/main.zig', method: 'textDocument/hover', params: {} })).toMatchObject({
-            result: { contents: 'zig hover' },
+        process!.server.handle('textDocument/hover', () => ({ contents: 'nim hover' }));
+        expect(await host.request({ projectId: 'p1', path: 'src/main.nim', method: 'textDocument/hover', params: {} })).toMatchObject({
+            result: { contents: 'nim hover' },
             server: saved.id
         });
-        await process!.server.connection.notify('textDocument/publishDiagnostics', { uri: uri('src/main.zig'), version: 1, diagnostics: [] });
+        await process!.server.connection.notify('textDocument/publishDiagnostics', { uri: uri('src/main.nim'), version: 1, diagnostics: [] });
         await settle();
         expect(kinds(events['client-1'], 'language.diagnostics').at(-1)).toMatchObject({ payload: { server: saved.id } });
     });
@@ -918,31 +954,31 @@ describe('language servers of a person', () => {
     it('serves by file pattern, and only the projects it was saved for', async () => {
         const { host } = rig();
         const byPattern = await host.customSave({ name: 'Templates', command: 'taplo', args: [], languages: [], patterns: ['*.tpl'] });
-        await host.customSave({ ...zig, projects: ['/elsewhere'] });
+        await host.customSave({ ...nim, projects: ['/elsewhere'] });
         expect((await open(host, 'views/a.tpl', '', 'client-1', 'plaintext')).servers).toEqual([byPattern.id]);
-        expect((await open(host, 'src/main.zig', '', 'client-1', 'zig')).servers).toEqual([]);
+        expect((await open(host, 'src/main.nim', '', 'client-1', 'nim')).servers).toEqual([]);
         const statuses = await host.status('p1');
         expect(statuses.filter((status) => status.server.startsWith('custom:')).map((status) => status.name)).toEqual(['Templates']);
     });
 
     it('starts for the file that is open when it is saved, and stops when it is removed', async () => {
         const { host, spawner, events } = rig();
-        expect((await open(host, 'src/main.zig', '', 'client-1', 'zig')).servers).toEqual([]);
-        const saved = await host.customSave(zig);
+        expect((await open(host, 'src/main.nim', '', 'client-1', 'nim')).servers).toEqual([]);
+        const saved = await host.customSave(nim);
         await ready(host, saved.id);
-        expect(spawner.of('zls')[0]!.server.documents.has(uri('src/main.zig'))).toBe(true);
+        expect(spawner.of('nimlsp')[0]!.server.documents.has(uri('src/main.nim'))).toBe(true);
         expect(kinds(events['client-2'], 'language.custom.changed')).toHaveLength(1);
         await host.customRemove(saved.id);
-        expect(spawner.of('zls')[0]!.server.exited).toBe(true);
+        expect(spawner.of('nimlsp')[0]!.server.exited).toBe(true);
         expect((await host.status('p1')).some((status) => status.server === saved.id)).toBe(false);
-        expect(kinds(events['client-1'], 'language.providers').at(-1)).toMatchObject({ payload: { path: 'src/main.zig', providers: {} } });
+        expect(kinds(events['client-1'], 'language.providers').at(-1)).toMatchObject({ payload: { path: 'src/main.nim', providers: {} } });
     });
 
     // Windows keeps a folder writable whatever its mode says, so the write this test makes fail would succeed there.
     it.skipIf(process.platform === 'win32')('stops the servers of an extension whose removal the file did not take, and never starts them again', async () => {
         const { host, spawner } = rig();
-        const saved = await host.customSaveFor('poc.machine', zig);
-        await open(host, 'src/main.zig', '', 'client-1', 'zig');
+        const saved = await host.customSaveFor('poc.machine', nim);
+        await open(host, 'src/main.nim', '', 'client-1', 'nim');
         await ready(host, saved.id);
         await chmod(root, 0o555);
         try {
@@ -950,26 +986,26 @@ describe('language servers of a person', () => {
         } finally {
             await chmod(root, 0o755);
         }
-        expect(spawner.of('zls')[0]!.server.exited).toBe(true);
+        expect(spawner.of('nimlsp')[0]!.server.exited).toBe(true);
         expect(host.customOwners()).toEqual([]);
-        expect((await open(host, 'src/other.zig', '', 'client-1', 'zig')).servers).toEqual([]);
-        expect(spawner.of('zls')).toHaveLength(1);
+        expect((await open(host, 'src/other.nim', '', 'client-1', 'nim')).servers).toEqual([]);
+        expect(spawner.of('nimlsp')).toHaveLength(1);
     });
 
     it('starts again with what was saved when a server is changed', async () => {
         const { host, spawner } = rig();
-        const saved = await host.customSave(zig);
-        await open(host, 'src/main.zig', '', 'client-1', 'zig');
+        const saved = await host.customSave(nim);
+        await open(host, 'src/main.nim', '', 'client-1', 'nim');
         await ready(host, saved.id);
-        await host.customSave({ ...zig, id: saved.id, args: ['--other'] });
-        await until(host, () => spawner.of('zls').length === 2);
-        expect(spawner.of('zls')[0]!.server.exited).toBe(true);
-        expect(spawner.of('zls')[1]!.spec.args).toEqual(['--other']);
+        await host.customSave({ ...nim, id: saved.id, args: ['--other'] });
+        await until(host, () => spawner.of('nimlsp').length === 2);
+        expect(spawner.of('nimlsp')[0]!.server.exited).toBe(true);
+        expect(spawner.of('nimlsp')[1]!.spec.args).toEqual(['--other']);
     });
 
     it('never starts a server whose command was changed in the file, and says so', async () => {
         const { host, spawner } = rig();
-        const saved = await host.customSave(zig);
+        const saved = await host.customSave(nim);
         const file = JSON.parse(await readFile(join(root, 'custom.json'), 'utf8')) as { servers: { command: string }[] };
         file.servers[0]!.command = 'taplo';
         await writeFile(join(root, 'custom.json'), JSON.stringify(file));
@@ -985,25 +1021,25 @@ describe('language servers of a person', () => {
             custom: second
         });
         held.subscribe('client-1', () => undefined);
-        expect((await held.open('client-1', { projectId: 'p1', path: 'a.zig', languageId: 'zig', text: '' })).servers).toEqual([]);
+        expect((await held.open('client-1', { projectId: 'p1', path: 'a.nim', languageId: 'nim', text: '' })).servers).toEqual([]);
         expect((await held.status('p1')).find((status) => status.server === saved.id)).toMatchObject({ state: 'crashed' });
         expect(spawner.processes).toHaveLength(0);
     });
 
     it('stays crashed when the process ends, and starts again only on a restart', async () => {
         const { host, spawner } = rig();
-        const saved = await host.customSave(zig);
-        await open(host, 'src/main.zig', '', 'client-1', 'zig');
+        const saved = await host.customSave(nim);
+        await open(host, 'src/main.nim', '', 'client-1', 'nim');
         await ready(host, saved.id);
-        await spawner.of('zls')[0]!.crash(2);
+        await spawner.of('nimlsp')[0]!.crash(2);
         await settle();
         expect((await host.status('p1')).find((status) => status.server === saved.id)).toMatchObject({
             state: 'crashed',
-            message: expect.stringContaining('Zig')
+            message: expect.stringContaining('Nim')
         });
         await host.restart('p1', saved.id);
         await ready(host, saved.id);
-        expect(spawner.of('zls')).toHaveLength(2);
+        expect(spawner.of('nimlsp')).toHaveLength(2);
     });
 });
 
@@ -2436,5 +2472,497 @@ describe('the problems of the whole project', () => {
                 .filter((report) => report.path === 'src/b.ts')
                 .at(-1)
         ).toMatchObject({ diagnostics: [] });
+    });
+});
+
+describe('a server from a pinned release of someone else', () => {
+    const file = new TextEncoder().encode('#!/bin/sh\n');
+    const release = {
+        sourceRevision: 'a'.repeat(40),
+        version: '2026-02-08',
+        checksumOnly: true as const,
+        assets: {
+            [`${process.platform}-${process.arch}`]: {
+                url: 'https://example.test/marksman',
+                sha256: sha256(file),
+                format: 'raw' as const,
+                executable: 'marksman'
+            }
+        }
+    };
+    const markdown = () =>
+        installed(['markdown'], {
+            native: new NativePolicy({ checkouts: {}, releases: { markdown: release } }),
+            download: async (_url, destination) => {
+                await writeFile(destination, file);
+            }
+        });
+
+    it('serves Markdown files in a project with no file of its own for it, from the program of the install', async () => {
+        const { host, spawner } = await markdown();
+
+        expect((await open(host, 'docs/guide.md', '# Guide\n', 'client-1', 'markdown')).servers).toEqual(['markdown']);
+        await ready(host, 'markdown');
+
+        const [process] = spawner.of('markdown');
+        expect(process!.spec.command).toBe(join(root, 'markdown', 'versions', '2026-02-08', 'bin', 'marksman'));
+        expect(process!.spec.args).toEqual(['server']);
+        expect(process!.server.documents.has(uri('docs/guide.md'))).toBe(true);
+        expect((await open(host, 'src/a.ts')).servers).not.toContain('markdown');
+    });
+
+    it('unzips taplo and starts it for TOML with its language server command and no schemas', async () => {
+        const toml = gzipSync(file);
+        const { host, spawner } = await installed(['toml'], {
+            native: new NativePolicy({
+                checkouts: {},
+                releases: {
+                    toml: {
+                        sourceRevision: 'a'.repeat(40),
+                        version: '0.10.0',
+                        checksumOnly: true,
+                        assets: {
+                            [`${process.platform}-${process.arch}`]: {
+                                url: 'https://example.test/taplo.gz',
+                                sha256: sha256(toml),
+                                format: 'gz',
+                                executable: 'taplo'
+                            }
+                        }
+                    }
+                }
+            }),
+            download: async (_url, destination) => {
+                await writeFile(destination, toml);
+            }
+        });
+
+        expect((await open(host, 'Cargo.toml', '[package]\n', 'client-1', 'toml')).servers).toEqual(['toml']);
+        await ready(host, 'toml');
+
+        const [taplo] = spawner.of('toml');
+        expect(taplo!.spec.command).toBe(join(root, 'toml', 'versions', '0.10.0', 'bin', 'taplo'));
+        expect(taplo!.spec.args).toEqual(['lsp', 'stdio']);
+        expect(await readFile(taplo!.spec.command, 'utf8')).toBe('#!/bin/sh\n');
+    });
+
+    it('unpacks Lua next to its own files and keeps it off work from another machine, where a plugin would run', async () => {
+        const archive = tarGz([
+            { path: 'bin/lua-language-server', text: '#!/bin/sh\n', mode: 0o755 },
+            { path: 'main.lua', text: '-- main' }
+        ]);
+        const lua = {
+            native: new NativePolicy({
+                checkouts: {},
+                releases: {
+                    lua: {
+                        sourceRevision: 'a'.repeat(40),
+                        version: '3.19.2',
+                        checksumOnly: true,
+                        assets: {
+                            [`${process.platform}-${process.arch}`]: {
+                                url: 'https://example.test/lua.tar.gz',
+                                sha256: sha256(archive),
+                                format: 'tar.gz' as const,
+                                executable: 'bin/lua-language-server'
+                            }
+                        }
+                    }
+                }
+            }),
+            download: async (_url: string, destination: string) => {
+                await writeFile(destination, archive);
+            }
+        };
+        const { host, spawner } = await installed(['lua'], lua);
+
+        expect((await open(host, 'init.lua', 'print(1)\n', 'client-1', 'lua')).servers).toEqual(['lua']);
+        await ready(host, 'lua');
+        expect(spawner.of('lua')[0]!.spec.command).toBe(join(root, 'lua', 'versions', '3.19.2', 'bin', 'bin', 'lua-language-server'));
+        expect(await readFile(join(root, 'lua', 'versions', '3.19.2', 'bin', 'main.lua'), 'utf8')).toBe('-- main');
+
+        const peer = await installed(['lua'], { ...lua, untrusted: [WORK] });
+
+        expect((await open(peer.host, 'init.lua', 'print(1)\n', 'client-1', 'lua')).servers).toEqual([]);
+    });
+
+    it('keeps the server for work from another machine too, since it runs nothing of the project', async () => {
+        const { host } = await installed(['markdown'], {
+            untrusted: [WORK],
+            native: new NativePolicy({ checkouts: {}, releases: { markdown: release } }),
+            download: async (_url, destination) => {
+                await writeFile(destination, file);
+            }
+        });
+
+        expect((await open(host, 'docs/guide.md', '# Guide\n', 'client-1', 'markdown')).servers).toEqual(['markdown']);
+    });
+});
+
+describe('Go', () => {
+    async function withGo(options: { untrusted?: string[] } = {}) {
+        const program = join(root, 'go', 'bin', 'gopls');
+        await mkdir(dirname(program), { recursive: true });
+        await writeFile(program, '');
+
+        return installed(['go'], { programs: [program], ...options });
+    }
+
+    const openGo = (host: LanguageHost, path: string, languageId = 'go') => open(host, path, 'package main\n', 'client-1', languageId);
+
+    it('serves Go files and module files in any project, with go.mod opened as the language gopls expects', async () => {
+        const { host, spawner } = await withGo();
+
+        expect((await openGo(host, 'cmd/main.go')).servers).toEqual(['go']);
+        await ready(host, 'go');
+        expect((await openGo(host, 'go.mod', 'plaintext')).servers).toEqual(['go']);
+
+        const [process] = spawner.of('go');
+        expect(process!.spec.env).toMatchObject({ GOTOOLCHAIN: 'local' });
+        expect(process!.server.paramsOf('initialize')[0]).toMatchObject({ initializationOptions: { codelenses: { generate: false } } });
+        expect(
+            process!.server.paramsOf('textDocument/didOpen').map((params) => (params as { textDocument: { languageId: string } }).textDocument.languageId)
+        ).toEqual(expect.arrayContaining(['go', 'go.mod']));
+    });
+
+    it('stays off work from another machine, which would run its cgo tools', async () => {
+        const { host } = await withGo({ untrusted: [WORK] });
+
+        expect((await openGo(host, 'cmd/main.go')).servers).toEqual([]);
+    });
+});
+
+/* Every kind that builds the code it reads, with a file it serves and what a project has to hold for it. */
+const BUILDING_KINDS: Array<{ kind: CatalogKind; languageId: string; path: string; program: string; manifest: string | null; works: boolean }> = [
+    { kind: 'rust', languageId: 'rust', path: 'src/main.rs', program: 'rust-analyzer', manifest: 'Cargo.toml', works: true },
+    { kind: 'swift', languageId: 'swift', path: 'Sources/App/main.swift', program: 'sourcekit-lsp', manifest: null, works: false },
+    { kind: 'zig', languageId: 'zig', path: 'src/main.zig', program: 'zls', manifest: null, works: false }
+];
+
+describe('every kind that builds the code it reads', () => {
+    const MAIN = resolve('/main');
+    const WORKTREE = join(WORK, '.worktrees', 'agent');
+
+    it('is the table of kinds with `runsBuildCode`', () => {
+        expect(
+            Object.values(KIND_PROFILES)
+                .filter((profile) => profile.runsBuildCode !== undefined)
+                .map((profile) => profile.kind)
+                .sort()
+        ).toEqual(BUILDING_KINDS.map((entry) => entry.kind).sort());
+        for (const entry of BUILDING_KINDS) {
+            expect(KIND_PROFILES[entry.kind].runsBuildCode?.off !== undefined).toBe(entry.works);
+        }
+    });
+
+    describe.each(BUILDING_KINDS)('$kind', ({ kind, languageId, path, program, manifest, works }) => {
+        async function rigged(options: { folder?: string; agentWorktrees: { main: string; paths: string[] }; worktreeBuild?: WorktreeBuildChoices }) {
+            const executable = join(root, 'bin', program);
+            await mkdir(dirname(executable), { recursive: true });
+            await writeFile(executable, '');
+            const folder = options.folder ?? WORK;
+
+            return installed([kind], { files: manifest === null ? [] : [join(folder, manifest)], programs: [executable], ...options });
+        }
+
+        const openIn = (host: LanguageHost, file: string) => open(host, file, '', 'client-1', languageId);
+
+        it('stays off a file in the worktree of an agent and serves the same file in the checkout', async () => {
+            const { host } = await rigged({ agentWorktrees: { main: MAIN, paths: [WORKTREE] } });
+
+            expect((await openIn(host, path)).servers).toEqual([kind]);
+            expect((await openIn(host, `.worktrees/agent/${path}`)).servers).toEqual([]);
+        });
+
+        it('serves that file once a person allows building in the repository', async () => {
+            const choices = new WorktreeBuildChoices({ path: join(root, 'worktree-build.json') });
+            await choices.set(MAIN, true);
+            const { host } = await rigged({ agentWorktrees: { main: MAIN, paths: [WORKTREE] }, worktreeBuild: choices });
+
+            expect((await openIn(host, `.worktrees/agent/${path}`)).servers).toEqual([kind]);
+        });
+
+        it(
+            works
+                ? 'starts for a project that is such a worktree, with building off'
+                : 'does not start at all for a project that is such a worktree, since loading its project already builds',
+            async () => {
+                const { host, spawner } = await rigged({ agentWorktrees: { main: MAIN, paths: [WORK] } });
+
+                expect((await openIn(host, path)).servers).toEqual(works ? [kind] : []);
+                if (works) {
+                    await ready(host, kind);
+                }
+                await settle();
+                expect(spawner.of(kind).length > 0).toBe(works);
+            }
+        );
+    });
+
+    // Council round 18: turning building off while the first start read its configuration left the kind running without documents.
+    describe.each(BUILDING_KINDS.filter((entry) => !entry.works))('$kind', ({ kind, languageId, path, program }) => {
+        it('does not start when a person turns building off while its first start reads its configuration', async () => {
+            const reading = Promise.withResolvers<void>();
+            const gate = Promise.withResolvers<boolean>();
+            const executable = join(root, 'bin', program);
+            await mkdir(dirname(executable), { recursive: true });
+            await writeFile(executable, '');
+            const choices = new WorktreeBuildChoices({ path: join(root, 'worktree-build.json') });
+            await choices.set(MAIN, true);
+            const { host, spawner } = await installed([kind], {
+                programs: [executable],
+                agentWorktrees: { main: MAIN, paths: [WORK] },
+                worktreeBuild: choices,
+                exists: async (candidate) => {
+                    if (candidate !== join(WORK, 'node_modules', 'typescript', 'lib', 'tsserver.js')) {
+                        return false;
+                    }
+
+                    reading.resolve();
+
+                    return gate.promise;
+                }
+            });
+
+            expect((await open(host, path, '', 'client-1', languageId)).servers).toEqual([kind]);
+
+            await reading.promise;
+            await host.setWorktreeBuild('p1', false);
+            gate.resolve(false);
+            await settle();
+
+            expect(spawner.of(kind)).toHaveLength(0);
+            expect((await host.status('p1')).find((status) => status.server === kind)).toMatchObject({ state: 'stopped', buildHeld: true });
+        });
+    });
+
+    // Council round 19: turning building off and on again while the first start read its configuration left the document without a server.
+    describe.each(BUILDING_KINDS)('$kind', ({ kind, languageId, path, program, manifest }) => {
+        it('starts once when a person turns building off and on again while its first start reads its configuration', async () => {
+            const reading = Promise.withResolvers<void>();
+            const gate = Promise.withResolvers<boolean>();
+            const executable = join(root, 'bin', program);
+            await mkdir(dirname(executable), { recursive: true });
+            await writeFile(executable, '');
+            const choices = new WorktreeBuildChoices({ path: join(root, 'worktree-build.json') });
+            await choices.set(MAIN, true);
+            const { host, spawner } = await installed([kind], {
+                programs: [executable],
+                agentWorktrees: { main: MAIN, paths: [WORK] },
+                worktreeBuild: choices,
+                exists: async (candidate) => {
+                    if (manifest !== null && candidate === join(WORK, manifest)) {
+                        return true;
+                    }
+
+                    if (candidate !== join(WORK, 'node_modules', 'typescript', 'lib', 'tsserver.js')) {
+                        return false;
+                    }
+
+                    reading.resolve();
+
+                    return gate.promise;
+                }
+            });
+
+            expect((await open(host, path, '', 'client-1', languageId)).servers).toEqual([kind]);
+
+            await reading.promise;
+            await host.setWorktreeBuild('p1', false);
+            await host.setWorktreeBuild('p1', true);
+            gate.resolve(false);
+            await until(host, async () => (await host.status('p1')).find((status) => status.server === kind)?.state === 'ready');
+
+            expect(spawner.of(kind)).toHaveLength(1);
+        });
+    });
+});
+
+describe('build code in the worktree of an agent', () => {
+    const MAIN = resolve('/main');
+    const WORKTREE = join(WORK, '.worktrees', 'agent');
+
+    async function withRust(options: {
+        agentWorktrees?: { main: string; paths: string[] };
+        folder?: string;
+        worktreeBuild?: WorktreeBuildChoices;
+        untrusted?: string[];
+    }) {
+        const program = join(root, 'bin', 'rust-analyzer');
+        await mkdir(dirname(program), { recursive: true });
+        await writeFile(program, '');
+        const folder = options.folder ?? WORK;
+
+        return installed(['rust'], { files: [join(folder, 'Cargo.toml')], programs: [program], ...options });
+    }
+
+    const openRust = (host: LanguageHost, path: string) => open(host, path, 'fn main() {}', 'client-1', 'rust');
+
+    it('keeps a kind that builds code off a file in a worktree made for a node, and not off the checkout', async () => {
+        const { host, spawner } = await withRust({ agentWorktrees: { main: MAIN, paths: [WORKTREE] } });
+
+        expect((await openRust(host, 'src/main.rs')).servers).toEqual(['rust']);
+        expect((await openRust(host, '.worktrees/agent/src/main.rs')).servers).toEqual([]);
+        await ready(host, 'rust');
+        expect(spawner.of('rust')[0]!.server.documents.has(uri('src/main.rs'))).toBe(true);
+        expect(spawner.of('rust')[0]!.server.documents.has(uri('.worktrees/agent/src/main.rs'))).toBe(false);
+        expect((await host.status('p1')).find((status) => status.server === 'rust')).toMatchObject({ state: 'ready', buildHeld: true });
+    });
+
+    it('goes by the real path, so a link into the worktree of an agent holds a file back too', async () => {
+        const project = join(root, 'project');
+        const worktree = join(root, 'real-worktree');
+        await mkdir(join(worktree, 'src'), { recursive: true });
+        await mkdir(project, { recursive: true });
+        await symlink(worktree, join(project, 'link'));
+        const { host } = await withRust({ folder: project, agentWorktrees: { main: MAIN, paths: [await realpath(worktree)] } });
+
+        expect((await openRust(host, 'src/main.rs')).servers).toEqual(['rust']);
+        expect((await openRust(host, 'link/src/main.rs')).servers).toEqual([]);
+    });
+
+    it('holds back nothing in a repository without a worktree of an agent, or outside one', async () => {
+        const none = await withRust({ agentWorktrees: { main: MAIN, paths: [] } });
+
+        expect((await openRust(none.host, '.worktrees/agent/src/main.rs')).servers).toEqual(['rust']);
+        expect((await none.host.status('p1')).find((status) => status.server === 'rust')?.buildHeld).toBeUndefined();
+
+        const outside = await withRust({});
+
+        expect((await openRust(outside.host, 'src/main.rs')).servers).toEqual(['rust']);
+    });
+
+    it('lets the servers of a repository build there once a person turns it on, and keeps the choice per main checkout', async () => {
+        const path = join(root, 'worktree-build.json');
+        const { host } = await withRust({ agentWorktrees: { main: MAIN, paths: [WORKTREE] }, worktreeBuild: new WorktreeBuildChoices({ path }) });
+
+        await openRust(host, '.worktrees/agent/src/main.rs');
+        const statuses = await host.setWorktreeBuild('p1', true);
+
+        expect(statuses.find((status) => status.server === 'rust')?.buildHeld).toBeUndefined();
+        expect(statuses.find((status) => status.server === 'rust')?.buildAllowed).toBe(true);
+        expect(statuses.find((status) => status.server === 'css')?.buildAllowed).toBeUndefined();
+        expect(JSON.parse(await readFile(path, 'utf8'))).toEqual({ on: [MAIN] });
+        expect((await openRust(host, '.worktrees/agent/src/lib.rs')).servers).toEqual(['rust']);
+
+        const back = await host.setWorktreeBuild('p1', false);
+
+        expect(back.find((status) => status.server === 'rust')).toMatchObject({ buildHeld: true });
+        expect(back.find((status) => status.server === 'rust')?.buildAllowed).toBeUndefined();
+        expect((await openRust(host, '.worktrees/agent/src/bin.rs')).servers).toEqual([]);
+        expect(JSON.parse(await readFile(path, 'utf8'))).toEqual({ on: [] });
+    });
+
+    it('offers to turn building off only for a repository that has worktrees of agents', async () => {
+        const choices = new WorktreeBuildChoices({ path: join(root, 'worktree-build.json') });
+        await choices.set(MAIN, true);
+        const without = await withRust({ agentWorktrees: { main: MAIN, paths: [] }, worktreeBuild: choices });
+
+        expect((await without.host.status('p1')).find((status) => status.server === 'rust')?.buildAllowed).toBeUndefined();
+    });
+
+    it('moves the open files of a worktree to the kind when the switch goes on, and takes them off when it goes off', async () => {
+        const { host, spawner } = await withRust({ agentWorktrees: { main: MAIN, paths: [WORKTREE] } });
+
+        await openRust(host, 'src/main.rs');
+        await ready(host, 'rust');
+        await openRust(host, '.worktrees/agent/src/lib.rs');
+        await host.setWorktreeBuild('p1', true);
+        await settle();
+
+        expect(spawner.of('rust')[0]!.server.documents.has(uri('.worktrees/agent/src/lib.rs'))).toBe(true);
+
+        await host.setWorktreeBuild('p1', false);
+        await settle();
+
+        expect(spawner.of('rust')[0]!.server.documents.has(uri('.worktrees/agent/src/lib.rs'))).toBe(false);
+        expect(spawner.of('rust')[0]!.server.documents.has(uri('src/main.rs'))).toBe(true);
+    });
+
+    it('starts the server of a project that is such a worktree with building off, and with the profile alone after the switch', async () => {
+        const { host, spawner } = await withRust({ agentWorktrees: { main: MAIN, paths: [WORK] } });
+
+        await openRust(host, 'src/main.rs');
+        await ready(host, 'rust');
+
+        expect(spawner.of('rust')[0]!.server.paramsOf('initialize')[0]).toMatchObject({
+            initializationOptions: { cargo: { buildScripts: { enable: false } }, procMacro: { enable: false }, checkOnSave: false }
+        });
+        expect(spawner.of('rust')[0]!.spec.env).toMatchObject({ RUSTC_WRAPPER: '', RUSTC_WORKSPACE_WRAPPER: '' });
+        expect((await host.status('p1')).find((status) => status.server === 'rust')).toMatchObject({ buildHeld: true });
+
+        await host.setWorktreeBuild('p1', true);
+        await settle();
+        await ready(host, 'rust');
+
+        expect(spawner.of('rust')).toHaveLength(2);
+        expect(spawner.of('rust')[1]!.spec.env).not.toHaveProperty('RUSTC_WRAPPER');
+        expect(JSON.stringify(spawner.of('rust')[1]!.server.paramsOf('initialize')[0])).not.toContain('procMacro');
+    });
+
+    // Council round 16: a status read while the choice was saved moved the hold first, so the switch skipped the restart.
+    it('starts the server again once when a status read comes while the switch is still saving', async () => {
+        let saving!: () => void;
+        let release!: () => void;
+        const called = new Promise<void>((resolve) => (saving = resolve));
+        const gate = new Promise<void>((resolve) => (release = resolve));
+
+        class PausedChoices extends WorktreeBuildChoices {
+            override async set(main: string, on: boolean): Promise<void> {
+                const saved = super.set(main, on);
+                saving();
+                await gate;
+                await saved;
+            }
+        }
+
+        const { host, spawner } = await withRust({
+            agentWorktrees: { main: MAIN, paths: [WORK] },
+            worktreeBuild: new PausedChoices({ path: join(root, 'worktree-build.json') })
+        });
+
+        await openRust(host, 'src/main.rs');
+        await ready(host, 'rust');
+
+        const switching = host.setWorktreeBuild('p1', true);
+
+        await called;
+        await host.status('p1');
+        release();
+        await switching;
+        await settle();
+        await ready(host, 'rust');
+
+        expect(spawner.of('rust')).toHaveLength(2);
+        expect(JSON.stringify(spawner.of('rust')[1]!.server.paramsOf('initialize')[0])).not.toContain('procMacro');
+    });
+
+    it('lets work from another machine win over the switch', async () => {
+        const choices = new WorktreeBuildChoices({ path: join(root, 'worktree-build.json') });
+        await choices.set(MAIN, true);
+        const { host } = await withRust({ agentWorktrees: { main: MAIN, paths: [WORKTREE] }, worktreeBuild: choices, untrusted: [WORKTREE] });
+
+        expect((await openRust(host, 'src/main.rs')).servers).toEqual(['rust']);
+        expect((await openRust(host, '.worktrees/agent/src/main.rs')).servers).toEqual([]);
+    });
+
+    it('says why to an agent: the sentence is the message of the server it would have asked', async () => {
+        const { host } = await withRust({ agentWorktrees: { main: MAIN, paths: [WORKTREE] } });
+        const path = join(WORKTREE, 'src', 'main.rs');
+
+        const servers = await host.forAgent(
+            'p1',
+            { path, languageId: 'rust', disk: 'fn main() {}', owner: 'agent:chat-1' },
+            async (document) => document.servers
+        );
+
+        expect(servers).toEqual([{ kind: 'rust', state: 'stopped', message: BUILD_HELD_MESSAGE, buildHeld: true }]);
+    });
+
+    it('refuses to switch for a project outside a repository', async () => {
+        const { host } = await withRust({});
+
+        await expect(host.setWorktreeBuild('p1', true)).rejects.toMatchObject({ code: LANGUAGE_ERROR_CODES.unavailable });
+        await expect(host.setWorktreeBuild('none', true)).rejects.toMatchObject({ code: LANGUAGE_ERROR_CODES.projectNotFound });
     });
 });

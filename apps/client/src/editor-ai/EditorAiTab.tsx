@@ -7,8 +7,8 @@ import { useEditorAssistAvailability } from '@/editor-assist/use-availability';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { AGENT_CHANGES_MODES, GHOST_TEXT_MODES, type AgentChangesMode, type GhostTextMode } from '@/state/ai-settings';
 import { useSettings } from '@/state/settings';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
+import { useKeyOf } from '@/surface/shortcut-overrides';
 
 /* What AI does in the editor: which agent edits inline, how an agent's changes show in open files and whether the gutter says who wrote a line. */
 export function EditorAiTab() {
@@ -22,7 +22,8 @@ export function EditorAiTab() {
     const model = useEditorAssistAvailability();
     const unavailable = model !== null && !model.available;
     const whyNot = unavailable ? t('editor.ai.assist.unavailable', { reason: model.reason ?? '' }) : null;
-    const ghostKey = formatShortcut(CANVAS_SHORTCUTS.suggestInline, isApplePlatform());
+    const suggestKey = useKeyOf('suggestInline');
+    const ghostKey = suggestKey === undefined ? '' : formatShortcut(suggestKey, isApplePlatform());
 
     return (
         <>

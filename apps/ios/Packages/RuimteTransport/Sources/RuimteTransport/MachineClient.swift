@@ -160,7 +160,7 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         .providerList, .projectSidebar, .projectList, .projectOpen, .drawingPaths, .drawingOpen,
         .diagramLayout, .diagramOpen, .fsBrowse, .fsSearch, .fsGrep, .fsList, .fsRead, .bytesRead, .gitWorktreeList,
         .gitStatus, .gitDiff, .gitRefs, .gitRepos, .gitLog, .gitConflicts, .gitConflict, .gitCapabilities,
-        .usageSummary, .usageLimits, .processesListAlerts, .endpointInfo, .authSessions, .taskList, .agentChildren,
+        .usageSummary, .usageLimits, .processesListAlerts, .endpointInfo, .authSessions, .clientList, .taskList, .agentChildren,
         .planList, .artifactList, .artifactGet,
     ]
 

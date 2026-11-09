@@ -7,7 +7,7 @@ import {
     type ProjectFiles,
     type RenameSuggestionsRequest
 } from '@adecore/editor-react';
-import { fileUriToPath, lspLanguageIdOf, pathToFileUri, type Diagnostic } from '@adecore/lsp';
+import { fileUriToPath, pathToFileUri, type Diagnostic } from '@adecore/lsp';
 import { isApplePlatform } from '@adecore/ui';
 import { isPathBelow, namesPrompt, parseNames } from '@ruimte/contracts';
 import i18next from 'i18next';
@@ -17,11 +17,12 @@ import { useTemplateRequest } from '@/language/template-request';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { RUIMTE_EDITOR_KEYMAP } from '@/surface/editor-keymap';
 import { openFileLink } from '@/surface/panels/file-links';
+import { currentEditorKeymap } from '@/surface/shortcut-overrides';
 import type { Transport } from '@/transport-api/transport';
 import { fireAndForget } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
+import { lspLanguageIdFor } from './language-ids-host';
 import { readPanelHeight, writePanelHeight } from './panel-height';
 import type { DraftProjectFiles } from './project-files';
 import { createSnippetTransformWorker } from './snippet-transform-worker';
@@ -74,7 +75,10 @@ export class RuimteProject {
                 folder,
                 ...(files === null ? {} : { files }),
                 apple: isApplePlatform(),
-                keymap: RUIMTE_EDITOR_KEYMAP,
+                // Read when an editor opens, so a key a person rebinds holds for the editors opened after it.
+                get keymap() {
+                    return currentEditorKeymap();
+                },
                 // Per project and for this session only: what Paste from History lists is never written to disk.
                 clipboard: new ClipboardHistory({ limit: 100 }),
                 snippetTransformWorker: createSnippetTransformWorker,
@@ -137,7 +141,7 @@ function holdUnsavedTexts(service: WireLanguageService, folder: string, files: D
     return files.watchUnsaved((texts) => {
         const holding = new Set<string>();
         for (const [path, text] of texts) {
-            const languageId = isPathBelow(folder, path) ? lspLanguageIdOf(shikiLanguageOfPath(path)) : null;
+            const languageId = isPathBelow(folder, path) ? lspLanguageIdFor(shikiLanguageOfPath(path), path) : null;
             if (languageId !== null) {
                 const uri = pathToFileUri(path);
                 holding.add(uri);

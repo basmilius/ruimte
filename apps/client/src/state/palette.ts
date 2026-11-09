@@ -13,6 +13,8 @@ export type PaletteSide = 'light' | 'dark';
    these (the soft accent, the selection, the terminal's cursor, the lines on a canvas) follows by itself. */
 const PALETTE_TOKENS = [
     'accent',
+    'accent-text',
+    'accent-on-surface',
     'bg',
     'surface',
     'surface-raised',
@@ -39,6 +41,10 @@ export type PaletteInput = Record<PaletteSide, PaletteSideInput>;
 /* Only a six-digit hex color reaches the stylesheet: the terminal and the desktop shell read these tokens
    back as literal colors, and a value that is not one is never written as text into a rule. */
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
+export function isHexColor(value: string): boolean {
+    return HEX_COLOR.test(value);
+}
 
 const SIDES: readonly PaletteSide[] = ['light', 'dark'];
 

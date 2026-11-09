@@ -18,6 +18,7 @@ import { nodeFeature } from './node.ts';
 import { notifyFeature } from './notify.ts';
 import { operationFeature } from './operation.ts';
 import { planFeature } from './plan.ts';
+import { portFeature } from './port.ts';
 import { projectFeature } from './project.ts';
 import { providerFeature } from './provider.ts';
 import { routineFeature } from './routine.ts';
@@ -25,6 +26,7 @@ import { secretFeature } from './secret.ts';
 import { taskFeature } from './task.ts';
 import { templateFeature } from './template.ts';
 import { toolFeature } from './tool.ts';
+import { tunnelFeature } from './tunnel.ts';
 import { uiFeature } from './ui.ts';
 import { viewFeature } from './view.ts';
 import { visualFeature } from './visual.ts';
@@ -56,6 +58,8 @@ export const AGENT_FEATURES = [
     agentFeature,
     flagFeature,
     browserFeature,
+    portFeature,
+    tunnelFeature,
     chatFeature,
     planFeature,
     toolFeature,

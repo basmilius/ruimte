@@ -1,7 +1,8 @@
-import { chordOf, resolveKeymap, type KeymapId } from '@adecore/editor/keymap';
-import { shortcut, type Shortcut, isApplePlatform } from '@adecore/ui';
+import { chordOf, resolveKeymap, type KeymapId, type KeymapOverrides } from '@adecore/editor/keymap';
+import { shortcut, type Shortcut } from '@adecore/ui';
 
-export const RUIMTE_EDITOR_KEYMAP = resolveKeymap({
+/* What Ruimte changes in the editor's table of keys, before a person changes any. */
+export const RUIMTE_KEYMAP_OVERRIDES: KeymapOverrides = {
     expandSelection: {
         other: 'Alt+ArrowUp',
         takenOther: {
@@ -151,27 +152,17 @@ export const RUIMTE_EDITOR_KEYMAP = resolveKeymap({
             by: 'Every shortcut needs a modifier'
         }
     }
-});
+};
+
+/* The editor's keys out of the box. */
+export const RUIMTE_EDITOR_KEYMAP = resolveKeymap(RUIMTE_KEYMAP_OVERRIDES);
 
 /*
  * The key of an editor or language command on a platform, from the one table the editor binds its keys
- * with (`@adecore/editor/keymap`). A menu, the palette and a handler read it here, so what is printed
- * is what answers. Undefined where the platform has no key for it.
+ * with (`@adecore/editor/keymap`), before a person rebinds it (`shell/shortcut-overrides.ts`). Undefined where
+ * the platform has no key for it.
  */
 export function shortcutFor(id: KeymapId, apple: boolean): Shortcut | undefined {
     const chord = chordOf(id, apple, RUIMTE_EDITOR_KEYMAP);
     return chord === null ? undefined : shortcut(chord);
-}
-
-export function editorShortcut(id: KeymapId): Shortcut | undefined {
-    return shortcutFor(id, isApplePlatform());
-}
-
-/* For the commands that have a key on every platform. */
-export function requiredShortcut(id: KeymapId): Shortcut {
-    const found = editorShortcut(id);
-    if (found === undefined) {
-        throw new Error(`The editor key "${id}" has no chord on this platform`);
-    }
-    return found;
 }

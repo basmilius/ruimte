@@ -6,6 +6,7 @@ import {
     appSubframeNavigation,
     hardenGuestPreferences,
     isSystemSettingsPane,
+    TUNNEL_PARTITION_PREFIX,
     type GuestWebPreferences
 } from './web-guards';
 
@@ -182,5 +183,18 @@ describe('hardenGuestPreferences', () => {
         expect(hardenGuestPreferences({ partition: '' })).toBe(false);
         expect(hardenGuestPreferences({ partition: 'persist:other' })).toBe(false);
         expect(hardenGuestPreferences({ partition: 'ruimte' })).toBe(false);
+    });
+
+    test('takes a tunnel partition only when the shell made it for this window, and hardens it like the others', () => {
+        const owned = `${TUNNEL_PARTITION_PREFIX}abc`;
+        const preferences: GuestWebPreferences = { partition: owned, nodeIntegration: true, preload: '/evil.js', sandbox: false };
+
+        expect(hardenGuestPreferences(preferences, (partition) => partition === owned)).toBe(true);
+        expect(preferences).toMatchObject({ nodeIntegration: false, sandbox: true, contextIsolation: true });
+        expect(preferences.preload).toBeUndefined();
+
+        expect(hardenGuestPreferences({ partition: owned })).toBe(false);
+        expect(hardenGuestPreferences({ partition: `${TUNNEL_PARTITION_PREFIX}other` }, (partition) => partition === owned)).toBe(false);
+        expect(hardenGuestPreferences({ partition: 'ruimte-port' }, () => true)).toBe(false);
     });
 });

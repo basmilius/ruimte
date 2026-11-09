@@ -179,7 +179,7 @@ struct MachinePage: View {
     /// What belongs to the machine itself, in the desktop's order: keep awake, the connection, the local network and
     /// the agents.
     private enum MachineSetting: Identifiable {
-        case keepAwake, onBattery, closedLid, display, connection, lanDoor, agents
+        case keepAwake, onBattery, closedLid, display, connection, lanDoor, startFolder, agents
 
         var id: Self { self }
     }
@@ -196,6 +196,7 @@ struct MachinePage: View {
         }
         rows.append(.connection)
         if endpoint.lanDoor != nil { rows.append(.lanDoor) }
+        if endpoint.canSetStartFolder { rows.append(.startFolder) }
         rows.append(.agents)
         return rows
     }
@@ -213,6 +214,8 @@ struct MachinePage: View {
             .accessibilityElement(children: .combine)
         case .lanDoor:
             lanDoorRow.modifier(MachinePageRow())
+        case .startFolder:
+            MachineStartFolderRow(endpoint: endpoint, connected: session.connected).modifier(MachinePageRow())
         case .agents:
             row(String(localized: "Agents"), icon: "bot") { destination = .agents }
         }

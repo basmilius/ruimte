@@ -152,17 +152,27 @@ private struct MachineProjectsHeading: View {
 struct OpenFolderSheet: View {
     let session: SharedMachineSession
     @State private var projectName = ""
-    @State private var folder = ""
+    @State private var folder: String
     @State private var createFolder = false
     @State private var work = RemotePageState()
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openMobileWorkspace) private var openWorkspace
 
+    /// Opens with the machine's start folder filled in, since that is where a person keeps their work there.
+    init(session: SharedMachineSession) {
+        self.session = session
+        _folder = State(initialValue: session.endpoint.startFolder ?? "")
+    }
+
     var body: some View {
         NavigationStack {
             MobileForm {
                 TextField("Name", text: $projectName)
-                TextField("Folder on this machine", text: $folder).textInputAutocapitalization(.never)
+                TextField(
+                    "Folder on this machine", text: $folder,
+                    prompt: Text(verbatim: MachinePath(platform: session.endpoint.platform).example)
+                )
+                .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                 Toggle("Create folder if missing", isOn: $createFolder)
                 if let problem = work.problem { Text(problem).foregroundStyle(MobileStyle.statusError) }

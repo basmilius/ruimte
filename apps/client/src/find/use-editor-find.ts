@@ -1,14 +1,14 @@
 import { MAX_REPLACEMENT_PAGE, MAX_REPLACEMENT_CHARACTERS, type Editor, type EditorFindState } from '@adecore/editor';
 import { compileFind, type FindQuery } from '@adecore/editor-react/models';
-import { matchesShortcut, isApplePlatform } from '@adecore/ui';
+import { isApplePlatform } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { escapeRegExp } from '@/find/escape-regexp';
 import { openFocusedFind } from '@/find/hosts';
 import { lastFindQuery, type FindSeed, type FindState } from '@/find/use-find';
-import { requiredShortcut } from '@/surface/editor-keymap';
 import { editorForCommand } from '@/surface/panels/focused-editor';
+import { matchesKeymapRow } from '@/surface/shortcut-overrides';
 
 const NOTHING: EditorFindState = { count: 0, current: null };
 
@@ -129,12 +129,12 @@ export function useEditorFind(find: FindState, editor: Editor | null): EditorFin
         };
         steppers.set(editor, step);
         const off = editor.onKeyDown((event) => {
-            const forward = matchesShortcut(requiredShortcut('findNext'), event, apple);
-            if (forward || matchesShortcut(requiredShortcut('findPrevious'), event, apple)) {
+            const forward = matchesKeymapRow('findNext', event, apple);
+            if (forward || matchesKeymapRow('findPrevious', event, apple)) {
                 step(forward ? 1 : -1);
                 return true;
             }
-            if (matchesShortcut(requiredShortcut('replace'), event, apple)) {
+            if (matchesKeymapRow('replace', event, apple)) {
                 openFocusedFind({ replace: true });
                 return true;
             }

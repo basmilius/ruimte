@@ -19,6 +19,7 @@ import type { IndexedPlace } from '../projects/project-index.ts';
 import type { ProjectMutation, ProjectStore } from '../projects/project-store.ts';
 import { referencesDirectly, type Reference } from '../projects/references.ts';
 import type { UntrustedFolders } from '../projects/untrusted.ts';
+import type { ExternalCaller } from './external-caller.ts';
 import type { ReachHost } from './reach.ts';
 import type { StartRemoteAgentPayload } from './remote-agent-payload.ts';
 import type { StartClaims } from './start-claims.ts';
@@ -156,6 +157,8 @@ export interface AgentCall {
     reached?: IndexedPlace;
     /* The rev of the project file the caller read before it decided on this write. */
     expectedRevision?: number;
+    /* Set only for a client elsewhere: `caller` is then its actor id, `reached` the project its credential reaches, and no node stands behind it. */
+    external?: ExternalCaller;
 }
 
 /* The snooze on a node as the actions hand it on: an ISO time, or null for none. */
@@ -216,6 +219,9 @@ export function canvasLines(content: ProjectContent): string[] {
 /* What `node_new`, `agent_start` and `agent_team` say when the caller is on no canvas: where the node goes is not all that changes. */
 export const OPENING_OFF_CANVAS =
     'A node opens on a canvas; name which one with view (view_list lists them). A line only joins two nodes of one canvas, so the edge column shows -';
+
+/* What a suggestion that waits on its card says: the call ends now, and the person's answer comes back as a turn. */
+export const ANSWER_WAKES_NOTE = 'note\tThe person answers on the card, and Ruimte wakes your chat with the outcome once your turn has ended';
 
 /* The canvas an id names, refused with the canvases there are when it names none. */
 export function canvasNamed(content: ProjectContent, viewId: string): ProjectCanvasView {

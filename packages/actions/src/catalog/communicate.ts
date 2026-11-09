@@ -12,7 +12,19 @@ import {
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import { MAX_TERMINAL_READ_LINES } from '../limits.ts';
-import { PERSON_AND_VOICE, AGENT, PERSON, nodeId, forActors, CLIENT_ACTORS, operatedView, chatReadUsage, terminalTarget, terminalNamed } from './fields.ts';
+import {
+    PERSON_AND_VOICE,
+    AGENT,
+    PERSON_AND_AGENT,
+    PERSON,
+    nodeId,
+    forActors,
+    CLIENT_ACTORS,
+    operatedView,
+    chatReadUsage,
+    terminalTarget,
+    terminalNamed
+} from './fields.ts';
 
 export const COMMUNICATE_ACTIONS = {
     'terminal.clear': {
@@ -116,7 +128,7 @@ export const COMMUNICATE_ACTIONS = {
         description: 'Sends a message to the agent in another node, along a line that runs from you into it, which gives a chat between turns a turn on it.',
         effect: 'external',
         domain: 'communicate',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ nodeId: nodeId.describe('The node to notify, by id'), text: z.string().min(1).describe('The message') }),
         output: z.object({
             nodeId,
@@ -233,7 +245,7 @@ export const COMMUNICATE_ACTIONS = {
         description: 'Prints one linked source, whole or its last lines.',
         effect: 'read',
         domain: 'communicate',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             sourceId: z
                 .string()

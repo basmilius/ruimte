@@ -232,7 +232,7 @@ describe('WorktreeMerge', () => {
         await writeFile(join(repo, 'shared.txt'), 'uncommitted by the person\n');
         const head = (await gitIn(repo, ['rev-parse', 'HEAD'])).trim();
 
-        await expect(run(path)).rejects.toMatchObject({ code: 'git-failed', message: expect.stringContaining('would be overwritten') });
+        await expect(run(path)).rejects.toMatchObject({ code: 'merge-would-overwrite', message: expect.stringContaining('would be overwritten') });
 
         expect((await gitIn(repo, ['rev-parse', 'HEAD'])).trim()).toBe(head);
         expect(await readFile(join(repo, 'shared.txt'), 'utf8')).toBe('uncommitted by the person\n');

@@ -4,6 +4,7 @@ import type { Transport } from '@/transport-api/transport';
 import { useDocument } from './document.ts';
 import { followMove, moveFile, saveBeforeMove } from './file-moves.ts';
 import { useFiles } from './files.ts';
+import { useProject } from './project.ts';
 import { useTextDrafts, type TextDraft, type TextDrafts } from './text-drafts.ts';
 
 const row = (text: string): TextDraft => ({ disk: 'disk', mtime: 1, text, saving: false, problem: null });
@@ -101,6 +102,69 @@ describe('moving a file', () => {
     test('the cell that holds the tab follows the file', () => {
         followMove('m', '/p/a.ts', '/p/b.ts');
         expect(useDocument.getState().layout!.columns[0]!.cells[0]).toMatchObject({ viewId: '/p/b.ts', tabs: ['/p/b.ts'] });
+    });
+
+    describe('the file views of a project', () => {
+        const views = () => useDocument.getState().views.map((view) => (view.kind === 'file' ? [view.name, view.path] : [view.kind]));
+
+        beforeEach(() => {
+            useDocument.getState().load(
+                {
+                    version: 3,
+                    rev: 1,
+                    name: 'p',
+                    color: '#000',
+                    views: [
+                        { kind: 'file', id: 'v1', name: 'a.ts', path: 'src/a.ts' },
+                        { kind: 'file', id: 'v2', name: 'Entry point', path: 'src/b.ts' },
+                        { kind: 'file', id: 'v3', name: 'other.ts', path: 'src2/other.ts' },
+                        { kind: 'file', id: 'v4', name: 'outside.ts', path: '/elsewhere/outside.ts' },
+                        { kind: 'drawing', id: 'v5', name: 'Sketch' }
+                    ]
+                },
+                null
+            );
+        });
+
+        test('follow a file that moved, and take the new name when they were named after the file', () => {
+            const edits = useDocument.getState().edits;
+            useDocument.getState().followMovedFiles('/p', '/p/src/a.ts', '/p/lib/renamed.ts');
+            useDocument.getState().followMovedFiles('/p', '/p/src/b.ts', '/p/src/c.ts');
+
+            expect(views()).toEqual([
+                ['renamed.ts', 'lib/renamed.ts'],
+                ['Entry point', 'src/c.ts'],
+                ['other.ts', 'src2/other.ts'],
+                ['outside.ts', '/elsewhere/outside.ts'],
+                ['drawing']
+            ]);
+            expect(useDocument.getState().edits).toBe(edits + 2);
+        });
+
+        test('follow a folder that moved, one beside it staying where it is, and a file outside the project keeps an absolute path', () => {
+            useDocument.getState().followMovedFiles('/p', '/p/src', '/p/lib');
+            useDocument.getState().followMovedFiles('/p', '/elsewhere', '/p/vendor');
+
+            expect(views()).toEqual([
+                ['a.ts', 'lib/a.ts'],
+                ['Entry point', 'lib/b.ts'],
+                ['other.ts', 'src2/other.ts'],
+                ['outside.ts', 'vendor/outside.ts'],
+                ['drawing']
+            ]);
+        });
+
+        test('claim no edit when no view is at the path, and follow a move through followMove', () => {
+            const edits = useDocument.getState().edits;
+            useDocument.getState().followMovedFiles('/p', '/p/nothing.ts', '/p/other.ts');
+            expect(useDocument.getState().edits).toBe(edits);
+
+            useProject.setState({ current: { folder: '/p' } as never });
+            followMove('m', '/p/src/a.ts', '/p/src/z.ts');
+            useProject.setState({ current: null });
+
+            expect(views()[0]).toEqual(['z.ts', 'src/z.ts']);
+        });
     });
 
     test('keeps the keyboard where it is unless asked', () => {

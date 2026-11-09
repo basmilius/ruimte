@@ -1,19 +1,5 @@
 import { shortcut } from '@adecore/ui';
 
-/* The window's keys, which the command table hands to `app-shortcuts.ts`; apart from the handler so the terminal keymap can read them without the stores. */
-export const APP_SHORTCUTS = {
-    palette: shortcut('Mod+K'),
-    findInFiles: shortcut('Mod+Shift+F'),
-    settings: shortcut('Mod+,'),
-    // Only while the settings dialog is up, where it stands in for the canvas's find.
-    settingsSearch: shortcut('Mod+F'),
-    sidebar: shortcut('Mod+B'),
-    // The desktop app's own; a browser keeps it for a private window.
-    newWindow: shortcut('Mod+Shift+N'),
-    // Alt+N alone is the canvas's note, and Mod+N a browser keeps for itself.
-    newChat: shortcut('Mod+Alt+N')
-} as const;
-
 /*
  * What a browser tab never hands to a page, so the web client does not print them in its menu; the
  * row still works with a click. Checked in a tab only, and a browser may keep more.

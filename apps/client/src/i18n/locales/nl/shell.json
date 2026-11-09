@@ -123,6 +123,12 @@
         "restartNow": "Nu herstarten",
         "whenIdle": "Zodra het stil is"
     },
+    "breakReminder": {
+        "title": "Tijd voor een pauze?",
+        "description": "Je werkt al {{duration}} zonder pauze.",
+        "take": "Pauze nemen",
+        "later": "Straks"
+    },
     "notifications": {
         "finished": "Klaar",
         "needsYou": "Wacht op jou",
@@ -301,6 +307,7 @@
         "noFolder": "Een design heeft de map van het project op deze machine nodig.",
         "failed": "Het design kon niet worden getoond.",
         "failedAction": "Het design kon dat niet doen",
+        "listFailed": "De pagina's konden niet worden gelezen. {{reason}}",
         "pageFailed": "{{name}} kan niet worden getoond. {{reason}}",
         "pageTooLarge": "Het bestand is {{size}}, en een pagina mag hooguit {{limit}} zijn.",
         "pageNotText": "{{name}} is geen tekstbestand.",
@@ -725,6 +732,7 @@
             "routines": "Routines",
             "newRoutine": "Nieuwe routine",
             "toggleGit": "Git-paneel aan of uit",
+            "compareBranches": "Branches vergelijken",
             "toggleDatabases": "Databasepaneel aan of uit",
             "newDatabaseConsole": "Nieuwe databaseconsole",
             "databaseConnections": "Databaseverbindingen beheren",
@@ -889,7 +897,10 @@
             "settings": "Instellingen",
             "launchesEdit": "Launches bewerken…",
             "launchesAfterSettleOff": "Niets uitvoeren als een worktree-chat klaar is",
-            "attentionQueue": "Open aandachtswachtrij"
+            "attentionQueue": "Open aandachtswachtrij",
+            "chatTextLarger": "Grotere chattekst",
+            "chatTextSmaller": "Kleinere chattekst",
+            "chatTextReset": "Standaard chattekstgrootte"
         },
         "sections": {
             "recent": "Recent",
@@ -917,6 +928,8 @@
         "inputLabel": "Ga naar een node, voer een commando uit of open een map",
         "placeholder": "Ga naar een node, voer een commando uit of typ een pad als ~/projects",
         "pathPlaceholder": "Pad naar map, zoals ~/projects/my-app",
+        "placeholderWindows": "Ga naar een node, voer een commando uit of typ een pad als C:\\Projects",
+        "pathPlaceholderWindows": "Pad naar map, zoals C:\\Projects\\my-app",
         "matchCase": "Hoofdlettergevoelig",
         "wholeWords": "Hele woorden",
         "regex": "Reguliere expressie",
@@ -1020,6 +1033,7 @@
         "routines": "Routines",
         "newRoutine": "Nieuwe routine…",
         "toggleGit": "Git",
+        "compareBranches": "Branches vergelijken…",
         "toggleDatabases": "Databases",
         "devices": "Apparaten",
         "togglePanel": "Paneel aan/uit",
@@ -1240,7 +1254,10 @@
         "drawingSavePng": "Opslaan als PNG…",
         "drawingSaveSvg": "Opslaan als SVG…",
         "drawingOnCanvas": "Op het canvas tonen",
-        "attentionQueue": "Aandachtswachtrij"
+        "attentionQueue": "Aandachtswachtrij",
+        "chatTextLarger": "Grotere chattekst",
+        "chatTextSmaller": "Kleinere chattekst",
+        "chatTextReset": "Standaard chattekstgrootte"
     },
     "addToMachine": {
         "title": "Toevoegen aan een andere machine",
@@ -1349,6 +1366,7 @@
     },
     "editorMenu": {
         "inlineEdit": "Inline wijzigen",
+        "explain": "Uitleg",
         "selectionToChat": "Selectie aan chat toevoegen",
         "askAgent": "Agent vragen"
     },

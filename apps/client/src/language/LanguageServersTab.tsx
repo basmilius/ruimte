@@ -9,7 +9,7 @@ import { draftOf, emptyDraft, type CustomDraft } from '@/language/custom-draft';
 import { CustomServersTracker, useCustomServers } from '@/language/custom-servers';
 import { CustomServerDialog } from '@/language/CustomServerDialog';
 import type { RuimteProject } from '@/language/ruimte-project';
-import { report, serverDetail, sidecarDetails, useStatuses } from '@/language/server-status';
+import { buildHeldDetail, report, serverDetail, sidecarDetails, useStatuses } from '@/language/server-status';
 import { Dot, LogDialog, ServerActionButtons } from '@/language/ServerParts';
 import type { LanguageStatusTracker } from '@/language/status';
 import { actionsOf, groupedStatuses, isOwn, kindOf, nameOf, packageOf, toneOf } from '@/language/status-view';
@@ -53,6 +53,7 @@ function ServerRow({ status, statuses, tracker, searchId, onLog }: ServerRowProp
     const kind = kindOf(status.server);
     const actions = actionsOf(status);
     const detail = serverDetail(status, t);
+    const buildHeld = buildHeldDetail(status, t);
     const fail = (error: unknown): void => report(error, t);
 
     return (
@@ -72,6 +73,7 @@ function ServerRow({ status, statuses, tracker, searchId, onLog }: ServerRowProp
                 <>
                     {packageOf(status.server, statuses)}
                     {detail !== '' && <span className="block break-words">{detail}</span>}
+                    {buildHeld !== '' && <span className="block break-words">{buildHeld}</span>}
                     {sidecarDetails(status, t).map((line) => (
                         <span key={line} className="block break-words">
                             {line}

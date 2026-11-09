@@ -67,6 +67,24 @@ export function sameEntry(hook: unknown, wanted: HookEntry): boolean {
     return isRecord(hook) && Object.entries(wanted).every(([key, value]) => hook[key] === value);
 }
 
+/*
+ * Whether a parsed Claude Code settings file holds nothing but Ruimte's own hooks, which is what the installer
+ * writes into every account folder. Such a file holds nothing of a person's, so an account that shares the
+ * default account's setup may have it replaced by the copy; the hooks are installed over it afterwards.
+ */
+export function ownsSettings(config: unknown): boolean {
+    if (!isRecord(config)) {
+        return false;
+    }
+    const keys = Object.keys(config);
+    if (keys.length !== 1 || keys[0] !== 'hooks' || !isRecord(config.hooks)) {
+        return false;
+    }
+    return Object.values(config.hooks).every(
+        (groups) => Array.isArray(groups) && groups.every((group) => isRecord(group) && Array.isArray(group.hooks) && group.hooks.every(isOurs))
+    );
+}
+
 export interface SettingsMerge {
     config: Record<string, unknown>;
     changed: boolean;

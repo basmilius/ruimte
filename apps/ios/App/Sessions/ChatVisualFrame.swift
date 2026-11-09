@@ -70,6 +70,29 @@ enum ChatVisualNavigation {
         return components?.url == page
     }
 
+    static let assetHandler = "designAssets"
+
+    /// What a design page's script finds as `window.ruimteHost`: the page is the document of the web view, with no
+    /// window above it to ask for a file of its folder, so it asks the app, which answers the bytes or null. It is
+    /// the desktop's runtime script that asks (`runtimeAssetsScript`).
+    static let assetHost = """
+        (function () {
+        var handler = window.webkit.messageHandlers.\(assetHandler);
+        function blobOf(reply) {
+            if (!reply || typeof reply.data !== 'string') { return null; }
+            var binary = atob(reply.data);
+            var bytes = new Uint8Array(binary.length);
+            for (var i = 0; i < binary.length; i++) { bytes[i] = binary.charCodeAt(i); }
+            return new Blob([bytes], { type: String(reply.mime) });
+        }
+        Object.defineProperty(window, 'ruimteHost', { value: Object.freeze({
+            asset: function (path) {
+                return handler.postMessage(String(path)).then(blobOf, function () { return null; });
+            }
+        }) });
+        })();
+        """
+
     /// Runs in a world of the app's own before the page, so the page can neither see nor spoof it. As the top document
     /// the page's bootstrap reports no size and opens links in a new window, which its policy forbids, so this measures
     /// the root as the bootstrap does in a frame and hands over the links a person follows.
@@ -128,6 +151,8 @@ struct ChatVisualFrame: UIViewRepresentable {
     var onHeight: (Double, Double) -> Void = { _, _ in }
     var onShown: () -> Void = {}
     var onFailure: () -> Void = {}
+    /// The files a design page's script names while it runs. Only a design has them.
+    var assets: DesignFiles.RuntimeAssets?
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -151,6 +176,15 @@ struct ChatVisualFrame: UIViewRepresentable {
                 source: ChatVisualNavigation.bridge, injectionTime: .atDocumentStart, forMainFrameOnly: true,
                 in: world))
         configuration.userContentController.add(ChatVisualMessages(coordinator), contentWorld: world, name: "visual")
+        if let assets = frame.assets {
+            // The page's own world, since it is the page's script that asks. The handler answers the page itself only.
+            configuration.userContentController.addUserScript(
+                WKUserScript(
+                    source: ChatVisualNavigation.assetHost, injectionTime: .atDocumentStart, forMainFrameOnly: true,
+                    in: .page))
+            configuration.userContentController.addScriptMessageHandler(
+                ChatVisualAssetReplies(assets), contentWorld: .page, name: ChatVisualNavigation.assetHandler)
+        }
         let view = ChatVisualWebView(frame: .zero, configuration: configuration)
         view.fill = frame.fill
         view.isOpaque = false
@@ -258,6 +292,7 @@ struct ChatVisualFrame: UIViewRepresentable {
         /// Loads the page again with the theme in its address, which the page took off when it first ran.
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
             guard let page, let theme = parent?.theme else { return }
+            parent?.assets?.reopen()
             loaded = false
             shownTheme = theme
             webView.load(URLRequest(url: ChatVisualFrame.address(page, theme: theme)))
@@ -312,6 +347,24 @@ struct ChatVisualFrame: UIViewRepresentable {
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         coordinator?.received(message.body, in: message.webView)
+    }
+}
+
+/// Answers a design page's request for a file of its folder with the bytes, or nothing. A frame the page holds has no
+/// say: a page of the web in it must not read the folder.
+@MainActor private final class ChatVisualAssetReplies: NSObject, WKScriptMessageHandlerWithReply {
+    private let assets: DesignFiles.RuntimeAssets
+
+    init(_ assets: DesignFiles.RuntimeAssets) {
+        self.assets = assets
+    }
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) async -> (
+        Any?, String?
+    ) {
+        guard message.frameInfo.isMainFrame, let path = message.body as? String, let file = await assets.bytes(path)
+        else { return (NSNull(), nil) }
+        return (["mime": file.mime, "data": file.data.base64EncodedString()], nil)
     }
 }
 

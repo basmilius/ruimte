@@ -8,6 +8,7 @@ import { PALETTE_DIALOGS } from '@/palette/dialogs';
 import { windowDialogs } from '@/registry/dialogs';
 import { RELEASE_NOTES_DIALOGS } from '@/release-notes/dialog';
 import { SETTINGS_DIALOGS } from '@/settings/dialogs';
+import { TUNNEL_DIALOGS } from '@/tunnels/dialog';
 import { USAGE_DIALOGS } from '@/usage/dialog';
 
 /* The dialogs of the window, which open over the start screen too, in the order they mount. */
@@ -22,6 +23,7 @@ export function installWindowDialogs(): void {
         ...ONBOARDING_DIALOGS,
         ...AGENT_DIALOGS,
         ...CHAT_WINDOW_DIALOGS,
+        ...TUNNEL_DIALOGS,
         ...LANGUAGE_DIALOGS
     );
 }

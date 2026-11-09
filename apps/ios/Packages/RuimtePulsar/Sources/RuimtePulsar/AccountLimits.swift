@@ -45,7 +45,8 @@ extension ProviderAccountList {
     /// CLI's default one only while it is in use.
     public func hasUnreadAccount(_ kind: String, current: String?, limits: UsageLimits?) -> Bool {
         others(kind, current: current).contains {
-            (Self.limitsEntry(limits, account: $0.id)?.checkedAt ?? 0) == 0
+            let reading = Self.limitsEntry(limits, account: $0.id)
+            return (reading?.checkedAt ?? 0) == 0 || reading?.unavailable?.reason == .failed
         }
     }
 

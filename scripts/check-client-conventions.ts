@@ -29,9 +29,11 @@ export const DESIGN_OPTIONS: DesignOptions = {
     intlExempt: ['apps/client/src/voice/controller.ts'],
     // The places a color is written down as paint rather than read from a token: the syntax palettes, the
     // accents a person and an agent pick from (xterm reads them as literals), and scenes drawn in WebGL or a
-    // canvas that no theme reaches, the pets' pixel art among them.
+    // canvas that no theme reaches, the pets' pixel art among them. The contrast math measures colors against
+    // the theme's two grounds and the two texts it can print on an accent, which only exist as values here.
     colorExempt: [
         'apps/client/src/code-themes.ts',
+        'apps/client/src/state/accent-contrast.ts',
         'apps/client/src/canvas-model/accents.ts',
         'apps/client/src/ui/EclipseStars.tsx',
         'apps/client/src/ui/galaxy/Galaxy.tsx',

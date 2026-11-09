@@ -74,3 +74,14 @@ private let twoClaudes = """
     #expect(sections.map(\.title) == ["Claude limits"])
     #expect(sections.first?.quiet == nil)
 }
+
+@Test func rowAgesTolerateSmallClockSkewWithoutCallingFarFutureValuesFresh() {
+    for (checked, expected): (Int64, Double?) in [
+        (0, nil), (-1, nil), (1_030_000, 0), (1_300_000, nil), (401_000, 599_000), (400_000, 600_000),
+    ] {
+        let entry = UsageLimitsProvider(
+            kind: "claude", account: nil, plan: nil, checkedAt: checked, source: .probe, windows: [], cost: nil,
+            unavailable: nil)
+        #expect(UsageLimitSection.age(entry, now: 1_000_000) == expected)
+    }
+}

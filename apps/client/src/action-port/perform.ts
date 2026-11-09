@@ -1,4 +1,5 @@
 import { ActionRefusal, type ActionCall, type ActionInput, type ActionName, type ActionOutput, type ActionRegistry } from '@ruimte/actions';
+import { loadClientActionRegistry, loadedClientActionRegistry, registerClientActionRegistry } from '@/action-port/client-action-loader';
 
 export const PERSON_ACTION_CALL: ActionCall<void> = {
     actor: { kind: 'person', id: 'local-person' },
@@ -10,26 +11,23 @@ export interface PerformOptions {
     confirmed?: boolean;
 }
 
-let registry: ActionRegistry<void> | null = null;
-
-/* Handed over by `wiring/client-hooks.ts`, which builds the registry out of every feature. */
+/* A registry built up front, as a test does. The app hands over a loader instead (`provideClientActionLoader`). */
 export function provideClientActions(clientActions: ActionRegistry<void>): void {
-    registry = clientActions;
+    registerClientActionRegistry(clientActions);
 }
 
 /*
  * Runs an action as the person at this window. Throws the refusal with the machine's own code, so a
- * surface that says how it went can tell a diverged branch from a failure.
+ * surface that says how it went can tell a diverged branch from a failure. Once the registry is loaded the
+ * action starts in the same turn, so a gesture that shows a view has shown it when the call returns.
  */
 export async function perform<Name extends ActionName>(name: Name, input: ActionInput<Name>, options: PerformOptions = {}): Promise<ActionOutput<Name>> {
-    return performIn(clientRegistry(), name, input, options);
+    return performIn(loadedClientActionRegistry() ?? (await loadClientActionRegistry()), name, input, options);
 }
 
-export function clientRegistry(): ActionRegistry<void> {
-    if (registry === null) {
-        throw new Error('No action registry is installed: run installClientHooks (wiring/client-hooks.ts) before the first action.');
-    }
-    return registry;
+/* The registry builds out of every feature, so it loads with the first action and not with the start screen. */
+export async function clientRegistry(): Promise<ActionRegistry<void>> {
+    return loadedClientActionRegistry() ?? (await loadClientActionRegistry());
 }
 
 export async function performIn<Name extends ActionName>(

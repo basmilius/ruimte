@@ -146,6 +146,7 @@ export function AppearancePane() {
                     description={t('appearance.accent.description')}
                     control={<AccentRow />}
                 />
+                <SettingSwitchRow id="appearance.accentFollowsProject" setting="accentFollowsProject" />
             </SettingsSection>
             <SettingsSection title={t('appearance.interface.title')}>
                 <SettingsRow

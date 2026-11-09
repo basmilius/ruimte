@@ -1,115 +1,31 @@
 import { shortcut, type Shortcut } from '@adecore/ui';
-import type { SplitDirection } from '@/layout/split';
 import type { NodeKind } from '@/state/canvas';
-import { requiredShortcut } from '@/surface/editor-keymap';
+import type { DefaultKeyId } from '@/surface/default-keys';
 
 /*
- * The keys of the workspace, in a module of their own so a menu, the palette, the Keyboard pane and the
- * terminal keymap can print or test them without loading the stores behind the handler. A key that gives a
- * command is a row of the command table (`commands/registry.ts`), which says what binds it.
+ * The keys of the workspace that no one rebinds, in a module of their own so a menu, the palette, the Keyboard pane and
+ * the terminal keymap can print or test them without loading the stores behind the handler. A key a person may rebind is
+ * a row of the command table (`commands/registry.ts`) with its default in `surface/default-keys.ts`.
  */
 export const CANVAS_SHORTCUTS = {
-    dictation: shortcut('Mod+Shift+D'),
-    voiceControl: shortcut('Mod+Shift+M'),
-    splitRight: shortcut('Mod+\\'),
-    splitDown: shortcut('Mod+Shift+\\'),
-    closeCell: shortcut('Mod+W'),
-    maximizeCell: shortcut('Mod+Shift+Enter'),
-    newView: shortcut('Mod+T'),
-    togglePanel: shortcut('Mod+Alt+B'),
-    // S for schedule: Mod+Alt+R runs the chosen launch.
-    routines: shortcut('Mod+Alt+S'),
-    toggleFlag: shortcut('Mod+Alt+F'),
-    launchRun: shortcut('Mod+Alt+R'),
-    launchStop: shortcut('Mod+Alt+.'),
-    focusPrompts: shortcut('Mod+Shift+P'),
-    nextNeedsYou: shortcut('Mod+Alt+P'),
-    attentionQueue: shortcut('Mod+Alt+Shift+P'),
-    previousTab: shortcut('Ctrl+Shift+Tab'),
-    nextTab: shortcut('Ctrl+Tab'),
-    moveTabLeft: shortcut('Mod+Alt+Shift+ArrowLeft'),
-    moveTabRight: shortcut('Mod+Alt+Shift+ArrowRight'),
-    previousView: shortcut('Mod+Shift+['),
-    nextView: shortcut('Mod+Shift+]'),
-    cameraBack: shortcut('Mod+Alt+['),
-    cameraForward: shortcut('Mod+Alt+]'),
     browserBack: shortcut('Mod+['),
     browserForward: shortcut('Mod+]'),
-    undo: shortcut('Mod+Z'),
-    redo: shortcut('Mod+Shift+Z'),
-    group: shortcut('Mod+G'),
     selectAll: shortcut('Mod+A'),
-    zoomReset: shortcut('Mod+0'),
-    fitAll: shortcut('Shift+1'),
-    zoomSelection: shortcut('Shift+2'),
-    zoomNode: shortcut('Mod+Shift+2'),
     deleteSelection: shortcut('Backspace'),
     zoomIn: shortcut('+'),
     zoomOut: shortcut('-'),
-    find: shortcut('Mod+F'),
-    findReplace: shortcut('Mod+Shift+H'),
-    // The editor's and the language commands' keys are the platform's own, in the one table the editor binds (`editor-keymap.ts`).
-    nextProblem: requiredShortcut('nextProblem'),
-    previousProblem: requiredShortcut('previousProblem'),
-    nextHighlight: requiredShortcut('nextHighlight'),
-    previousHighlight: requiredShortcut('previousHighlight'),
-    codeActions: requiredShortcut('codeActions'),
-    refactorThis: requiredShortcut('refactorThis'),
-    quickInfo: requiredShortcut('quickInfo'),
-    triggerCompletion: requiredShortcut('triggerCompletion'),
-    parameterInfo: requiredShortcut('parameterInfo'),
-    historyBack: requiredShortcut('historyBack'),
-    historyForward: requiredShortcut('historyForward'),
-    recentLocations: requiredShortcut('recentLocations'),
-    lastEditLocation: requiredShortcut('lastEditLocation'),
-    pasteFromHistory: requiredShortcut('pasteFromHistory'),
-    typeHierarchy: requiredShortcut('typeHierarchy'),
-    insertLiveTemplate: requiredShortcut('insertLiveTemplate'),
-    surroundWith: requiredShortcut('surroundWith'),
-    surroundWithLiveTemplate: requiredShortcut('surroundWithLiveTemplate'),
-    unwrap: requiredShortcut('unwrap'),
-    goToDefinition: requiredShortcut('goToDefinition'),
-    goToTypeDefinition: requiredShortcut('goToTypeDefinition'),
-    goToImplementation: requiredShortcut('goToImplementation'),
-    goToSymbol: requiredShortcut('goToSymbol'),
-    peekReferences: requiredShortcut('peekReferences'),
-    callHierarchy: requiredShortcut('callHierarchy'),
-    toggleRenderedDocs: requiredShortcut('toggleRenderedDocs'),
-    peekDefinition: requiredShortcut('peekDefinition'),
-    rename: requiredShortcut('renameSymbol'),
-    organizeImports: requiredShortcut('organizeImports'),
-    formatDocument: requiredShortcut('formatDocument'),
-    selectionToChat: requiredShortcut('selectionToChat'),
-    inlineEdit: requiredShortcut('inlineEdit'),
-    suggestInline: requiredShortcut('suggestInline'),
-    acceptGhostWord: requiredShortcut('acceptGhostWord'),
     previousMessage: shortcut('Alt+ArrowUp'),
-    nextMessage: shortcut('Alt+ArrowDown'),
-    raiseEffort: shortcut('Mod+Shift+.'),
-    lowerEffort: shortcut('Mod+Shift+,')
+    nextMessage: shortcut('Alt+ArrowDown')
 } as const;
 
-export const NODE_NAVIGATION_SHORTCUTS: Record<SplitDirection, Shortcut> = {
-    left: shortcut('Alt+ArrowLeft'),
-    right: shortcut('Alt+ArrowRight'),
-    up: shortcut('Alt+ArrowUp'),
-    down: shortcut('Alt+ArrowDown')
-};
-
-export const ADD_NODE_SHORTCUTS = {
-    terminal: shortcut('Alt+T'),
-    chat: shortcut('Alt+C'),
-    browser: shortcut('Alt+B'),
-    group: shortcut('Alt+G'),
-    note: shortcut('Alt+N')
-} as const satisfies Partial<Record<NodeKind, Shortcut>>;
-
-export const FOCUS_SHORTCUTS: Record<SplitDirection, Shortcut> = {
-    left: shortcut('Mod+Alt+ArrowLeft'),
-    right: shortcut('Mod+Alt+ArrowRight'),
-    up: shortcut('Mod+Alt+ArrowUp'),
-    down: shortcut('Mod+Alt+ArrowDown')
-};
+/* The row whose key adds a node of each kind. */
+export const ADD_NODE_ROWS = {
+    terminal: 'add-terminal',
+    chat: 'add-chat',
+    browser: 'add-browser',
+    group: 'add-group',
+    note: 'add-note'
+} as const satisfies Partial<Record<NodeKind, DefaultKeyId>>;
 
 export const VIEW_SHORTCUTS: readonly Shortcut[] = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((number) => shortcut(`Mod+${number}`));
 

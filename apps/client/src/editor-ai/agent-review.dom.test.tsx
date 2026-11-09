@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProvenanceRun } from '@ruimte/contracts';
 import { act } from 'react';
+import { useReviewFocus } from '@/state/review-focus';
 import { useSettings } from '@/state/settings';
 import { textDrafts } from '@/state/text-drafts';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
@@ -64,6 +65,7 @@ afterEach(async () => {
     await page.unmount();
     workspace.close();
     useSettings.setState({ aiAgentChanges: previousMode });
+    useReviewFocus.setState({ onlyChanges: false });
     // An unsaved draft outlives the window that drew it, and the next test opens the same file.
     textDrafts.discard('fake-machine', PATH);
 });
@@ -74,6 +76,23 @@ describe('reviewing what an agent wrote in a file', () => {
 
         expect(page.host.textContent).toContain('Turn 1 in Claude Code changed 1 place');
         expect(button('Undo')).not.toBeNull();
+    });
+
+    test('the bar switches between every line and only the changes, and remembers the choice', async () => {
+        await openReview();
+        const toggle = (): HTMLButtonElement => page.host.querySelector<HTMLButtonElement>('button[aria-label="Show only the changes"]')!;
+
+        expect(toggle().getAttribute('aria-pressed')).toBe('false');
+
+        await clickOn(toggle());
+
+        expect(toggle().getAttribute('aria-pressed')).toBe('true');
+        expect(useReviewFocus.getState().onlyChanges).toBe(true);
+
+        await clickOn(toggle());
+
+        expect(toggle().getAttribute('aria-pressed')).toBe('false');
+        expect(useReviewFocus.getState().onlyChanges).toBe(false);
     });
 
     test('Keep marks the change kept on the machine and leaves the text alone', async () => {

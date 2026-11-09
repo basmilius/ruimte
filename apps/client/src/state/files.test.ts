@@ -7,10 +7,17 @@ import { useDocument } from './document.ts';
 import {
     bindConsole,
     closeTab,
+    compareTabKey,
+    compareTabOf,
     correctTableKind,
     fileTabOf,
+    isDatabaseTab,
     isFileTab,
+    isPromotableTab,
+    isSessionTab,
     moveTabs,
+    openCompareTab,
+    openSnapshotTab,
     openTab,
     pinTab,
     placeTab,
@@ -585,5 +592,63 @@ describe('moveTabs', () => {
         const next = moveTabs(before, '/p', '/q');
         expect(next.tabs[0]).toBe(ORDERS);
         expect(paths(next)).toEqual([ORDERS.key, '/q/a.ts']);
+    });
+});
+
+describe('session-only tabs', () => {
+    const COMMIT_A = 'a'.repeat(40);
+    const COMMIT_B = 'b'.repeat(40);
+
+    test('a comparison of the same refs is one tab, whatever the mode, and comes to the front', () => {
+        const first = openCompareTab(pool(['/repo/a.ts']), '/repo', 'main', 'topic', 'merge-base');
+        const again = openCompareTab(first, '/repo', 'main', 'topic', 'tips');
+        const other = openCompareTab(again, '/repo', 'main', 'other', 'tips');
+
+        expect(first.tabs).toHaveLength(2);
+        expect(again.tabs).toHaveLength(2);
+        expect(again.active).toBe(first.active);
+        expect(compareTabOf(again, again.active)).toMatchObject({ mode: 'tips', from: 'main', to: 'topic' });
+        expect(other.tabs).toHaveLength(3);
+        expect(compareTabKey('/repo', 'main', 'topic')).not.toBe(compareTabKey('/elsewhere', 'main', 'topic'));
+    });
+
+    test('a snapshot is named after the commit, so two moments of one branch are two tabs', () => {
+        const one = openSnapshotTab(pool([]), '/repo', COMMIT_A, 'topic', 'a.ts');
+        const same = openSnapshotTab(one, '/repo', COMMIT_A, 'topic', 'a.ts');
+        const moved = openSnapshotTab(same, '/repo', COMMIT_B, 'topic', 'a.ts');
+
+        expect(same.tabs).toHaveLength(1);
+        expect(moved.tabs).toHaveLength(2);
+    });
+
+    test('neither kind is a file, a database view or a row of the sidebar, and a closed one is not offered again', () => {
+        const opened = openSnapshotTab(openCompareTab(pool([]), '/repo', 'main', 'topic', 'tips'), '/repo', COMMIT_A, 'topic', 'a.ts');
+
+        for (const entry of opened.tabs) {
+            expect(isSessionTab(entry)).toBe(true);
+            expect(isFileTab(entry)).toBe(false);
+            expect(isDatabaseTab(entry)).toBe(false);
+            expect(isPromotableTab(entry)).toBe(false);
+            expect(rememberClosed([], entry)).toEqual([]);
+        }
+
+        expect(moveTabs(opened, '/repo', '/moved').tabs).toEqual(opened.tabs);
+    });
+
+    test('Read again forgets the resolved commits, and a reading from before it cannot pin them', () => {
+        const key = compareTabKey('/repo', 'main', 'topic');
+
+        useFiles.setState(openCompareTab(pool([]), '/repo', 'main', 'topic', 'merge-base'));
+        useFiles.getState().resolveComparison(key, 0, { fromCommit: COMMIT_A, toCommit: COMMIT_B });
+
+        expect(compareTabOf(useFiles.getState(), key)?.resolved).toEqual({ fromCommit: COMMIT_A, toCommit: COMMIT_B });
+
+        useFiles.getState().refreshComparison(key);
+        useFiles.getState().resolveComparison(key, 0, { fromCommit: COMMIT_B, toCommit: COMMIT_A });
+
+        expect(compareTabOf(useFiles.getState(), key)).toMatchObject({ refresh: 1 });
+        expect(compareTabOf(useFiles.getState(), key)?.resolved).toBeUndefined();
+
+        useFiles.setState({ tabs: [] });
     });
 });

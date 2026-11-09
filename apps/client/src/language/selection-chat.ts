@@ -7,7 +7,7 @@ import i18next from 'i18next';
 import { lineRangeLabel, offerSelection, selectionBlock, startLinkedChatOrTell, type SelectionOffer } from '@/language/selection-to-chat';
 import { basenameOf } from '@/paths/file-path';
 import { useProject } from '@/state/project';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { keyOf } from '@/surface/shortcut-overrides';
 import { isShortcut } from './shortcut-keys';
 
 const PLAIN_IDS = new Set(['plaintext', 'text']);
@@ -25,7 +25,7 @@ export class SelectionChatFeature {
         this.language = language;
         language.onDispose(
             language.onServedKey((event) => {
-                if (!isShortcut(CANVAS_SHORTCUTS.selectionToChat, event)) {
+                if (!isShortcut(keyOf('selectionToChat'), event)) {
                     return false;
                 }
                 this.choose();
@@ -45,7 +45,7 @@ export class SelectionChatFeature {
         const range = this.range();
         const rect = editor.rectAt(range.end);
         const at = rect === null ? { x: window.innerWidth / 2, y: window.innerHeight / 3 } : { x: rect.left, y: rect.bottom };
-        offerSelection({ ...this.offerFor(range), shortcut: CANVAS_SHORTCUTS.selectionToChat, returnFocus: () => editor.focus() }, at);
+        offerSelection({ ...this.offerFor(range), shortcut: keyOf('selectionToChat'), returnFocus: () => editor.focus() }, at);
     }
 
     /* A new chat with this agent, linked to the file, with the selection in its prompt. */

@@ -1,19 +1,23 @@
 import { createHash, randomBytes } from 'node:crypto';
+import type { Clock } from '@adecore/agents/coordination';
 import { unrefTimeout } from '@adecore/utils/async';
 import {
     PUSH_NOTIFY_DEFAULT,
     chatWaitAsk,
     clipText,
     pushWaitText,
+    quietState,
     terminalWaitAsk,
     type WaitAsk,
     type ChatItem,
+    type ChatTurnLimit,
     type EventMap,
     type AgentStatus,
     type ProcessAlert,
     type PushNotifyKind,
     type PushSubscribePayload,
-    type PushAttentionEntry
+    type PushAttentionEntry,
+    type QuietHours
 } from '@ruimte/contracts';
 import {
     ADDRESS_BOOK_URL,
@@ -31,7 +35,9 @@ import type { AuthStore } from '../auth/auth-store.ts';
 import type { SessionEvent } from '../wire.ts';
 import { PushAttention } from './attention.ts';
 import { encryptPush } from './encrypt.ts';
+import { limitBody, limitKey, limitWindow, type LimitContext } from './limit-alert.ts';
 import { processAlertBody } from './process-alert.ts';
+import { QuietHold, type QuietRelease, type WithheldAlert } from './quiet-hold.ts';
 import type { SnoozeChange } from './snoozes.ts';
 
 interface PushServiceOptions {
@@ -50,6 +56,28 @@ interface PushServiceOptions {
     onError?: (error: unknown) => void;
     snoozes?: Snoozes;
     schedule?: (delayMs: number, run: () => void) => () => void;
+    limitContext?: (chatId: string) => LimitContext | null;
+
+    /* The clock the end of quiet hours waits on. */
+    clock?: Clock;
+}
+
+/* What shapes one delivery besides the alert itself. */
+interface Delivery {
+    /* Someone asked for this alert (`alert` tool), so quiet hours do not hold it. */
+    asked?: boolean;
+    limit?: LimitReservation;
+    wait?: boolean;
+
+    /* Only this session hears it: the one whose quiet hours ended. */
+    session?: string;
+}
+
+/* The provider and account of a chat as it stopped, which `limitContext` names when it can. */
+interface ChatLimit {
+    limit: ChatTurnLimit;
+    provider: string;
+    account: string;
 }
 
 /* What the push side reads of `SnoozeStore`. */
@@ -68,6 +96,14 @@ interface HeldAlert {
 
     /* A wait's alert, whose body says what the node asks when it goes out rather than when it was raised. */
     wait?: boolean;
+
+    /* The limit this alert raises, which counts as raised only once a phone got it. */
+    limit?: LimitReservation;
+}
+
+interface LimitReservation {
+    key: string;
+    until: number;
 }
 
 interface NodeState {
@@ -76,6 +112,9 @@ interface NodeState {
     title: string;
     startedAt: number;
     ask: WaitAsk | null;
+
+    /* The limit the chat's latest state reports, so a chat that waits on a limit alert can be checked against it. */
+    limit: ChatLimit | null;
 }
 
 const TITLE_MAX = 160;
@@ -86,6 +125,8 @@ const PRESENCE_LEASE_MS = 60_000;
 const HOLD_MS = 60_000;
 // Short, since an approval card on the phone expires after `PUSH_APPROVAL_MAX_AGE_MS`.
 const APPROVAL_HOLD_MS = 10_000;
+// How long one limit without a reset time keeps its other chats quiet.
+const LIMIT_QUIET_MS = 3_600_000;
 
 /* What a subscription hears of for a node: the list its project has, else its own, else what every device heard before it could choose. */
 function notifyKinds(subscription: PushSubscribePayload, projectId: string | null): readonly PushNotifyKind[] {
@@ -120,6 +161,14 @@ export class PushService {
     private readonly activityTimes = new Map<string, { phase: string; at: number }>();
     /* The process warnings already pushed, so a warning that stays raised pushes once. */
     private readonly processAlertIds = new Set<string>();
+    /* The usage limits already pushed, by `limitKey`, with the time each lifts; a restart forgets them and costs one push more at most. */
+    private readonly limitAlerts = new Map<string, number>();
+    /*
+     * The limits whose alert is on its way, with the chats that stopped on the same limit meanwhile and wait to
+     * see whether it reaches a phone, each with the time it stopped. A chat waits as a node id and is looked at
+     * again as it is then, since a stop that is over must not come back as a new one.
+     */
+    private readonly limitPending = new Map<string, Map<string, number>>();
     private machineActivityQueue = Promise.resolve();
     private machineStartedAt = 0;
     private readonly machineActivityStates = new Map<string, string>();
@@ -129,12 +178,27 @@ export class PushService {
     private held: HeldAlert[] = [];
     private cancelRelease: (() => void) | null = null;
     private readonly now: () => number;
+    private readonly quietHold: QuietHold;
 
     constructor(options: PushServiceOptions) {
         this.options = options;
         this.now = options.now ?? Date.now;
         this.attention = new PushAttention(options.attentionPath, this.now);
         options.snoozes?.observe((change) => this.snoozeChanged(change));
+        this.quietHold = new QuietHold({
+            clock: options.clock,
+            now: this.now,
+            subscriptions: async () =>
+                (await options.auth.pushSubscriptions()).map(({ sessionId, subscription }) => ({ sessionId, quietHours: subscription.quietHours })),
+            release: (sessionId, released) => this.releaseQuiet(sessionId, released),
+            track: (work) => this.track(work)
+        });
+    }
+
+    /* A device changed its choices, quiet hours among them: what waited for hours that no longer hold goes out. */
+    subscriptionsChanged(): void {
+        this.track(this.quietHold.look());
+        this.synchronizeActivities();
     }
 
     /* The ledger as clients mark nodes from it: only the nodes a person can open. */
@@ -235,7 +299,9 @@ export class PushService {
         } else if (event.event === 'chat.event') {
             const { chatId, event: chat } = event.payload;
             if (chat.type === 'info') {
-                this.status('chat', chatId, chat.info.status, chat.info.suggestedTitle ?? 'Agent', chatWaitAsk(chat.info.requests));
+                const { info } = chat;
+                const limit = info.limit ? { limit: info.limit, provider: info.provider, account: info.account ?? info.provider } : null;
+                this.status('chat', chatId, info.status, info.suggestedTitle ?? 'Agent', chatWaitAsk(info.requests), limit);
             } else if (chat.type === 'item' && chat.item.kind === 'tool' && chat.item.state === 'running') {
                 const node = this.nodes.get(chatId);
                 if (node) {
@@ -283,17 +349,25 @@ export class PushService {
         }
     }
 
-    private status(target: PushAlertContent['target'], nodeId: string, status: AgentStatus, title: string, ask: WaitAsk | null): void {
+    private status(
+        target: PushAlertContent['target'],
+        nodeId: string,
+        status: AgentStatus,
+        title: string,
+        ask: WaitAsk | null,
+        limit: ChatLimit | null = null
+    ): void {
         title = this.titleOf(nodeId, title);
         this.options.snoozes?.noteStatus(nodeId, status === 'needs-you');
         const previous = this.nodes.get(nodeId);
         const startedAt =
             status === 'running' && previous?.status !== 'running' && previous?.status !== 'needs-you' ? this.now() : (previous?.startedAt ?? this.now());
-        this.nodes.set(nodeId, { target, status, title, startedAt, ask });
+        this.nodes.set(nodeId, { target, status, title, startedAt, ask, limit });
         this.synchronizeActivities();
         if (status === previous?.status) {
             return;
         }
+        this.leaveStandby(nodeId);
         if (status === 'running' || status === 'exited') {
             const entry = this.attention.snapshot().find((entry) => entry.nodeId === nodeId);
             if (entry) {
@@ -303,7 +377,11 @@ export class PushService {
         if (status === 'needs-you' && !this.snoozed(nodeId)) {
             this.waitAlert(target, nodeId, title);
         }
-        if (previous?.status === 'running' && (status === 'idle' || status === 'error') && !this.snoozed(nodeId)) {
+        const stopped = previous?.status === 'running' && (status === 'idle' || status === 'error') && !this.snoozed(nodeId);
+
+        if (stopped && limit?.limit.kind === 'usage') {
+            this.limitAlert(target, nodeId, title, limit);
+        } else if (stopped) {
             this.broadcast(
                 {
                     kind: 'turn',
@@ -342,6 +420,78 @@ export class PushService {
 
     private snoozed(nodeId: string): boolean {
         return this.options.snoozes?.isSnoozed(nodeId) ?? false;
+    }
+
+    /* The hours a device is quiet in right now, else null. */
+    private quietHoursOf(subscription: PushSubscribePayload): QuietHours | null {
+        const hours = subscription.quietHours;
+
+        return hours !== undefined && quietState(hours, this.now()).quiet ? hours : null;
+    }
+
+    /*
+     * The quiet hours of a device ended, so it hears what still waits, each alert looked at again as a held
+     * one is: a snoozed node, an approval already answered and a limit that lifted in the night stay silent,
+     * and the rest goes out fresh, to that device only.
+     */
+    private releaseQuiet(sessionId: string, { alerts, activities }: QuietRelease): void {
+        const now = this.now();
+        const limits = new Set<string>();
+
+        for (const alert of alerts) {
+            const { content } = alert;
+
+            if (
+                this.snoozed(content.nodeId) ||
+                (alert.ledger && this.attention.isRead(content.nodeId, alert.issuedAt)) ||
+                (alert.wait && !this.waiting(content.nodeId)) ||
+                (content.kind === 'approval' && !this.approvals.get(content.nodeId)?.has(content.requestId ?? '')) ||
+                (content.resetsAt !== undefined && content.resetsAt <= now) ||
+                (alert.limit !== undefined && limits.has(alert.limit))
+            ) {
+                continue;
+            }
+
+            if (alert.limit !== undefined) {
+                limits.add(alert.limit);
+            }
+
+            // The pulsar worker refuses an envelope older than `PUSH_MAX_AGE_MS`, so a release goes out as issued now.
+            const issuedAt = this.reissue(alert);
+            const fresh = {
+                ...content,
+                ...(alert.wait ? { body: clipText(this.waitBody(content.nodeId), BODY_MAX) } : {}),
+                expiresAt: issuedAt + (content.kind === 'approval' ? PUSH_APPROVAL_MAX_AGE_MS : PUSH_MAX_AGE_MS)
+            };
+
+            this.queueAlert(() => this.deliverAlert(fresh, issuedAt, alert.preference, alert.ledger, { session: sessionId }));
+        }
+
+        if (activities) {
+            this.synchronizeActivities();
+        }
+    }
+
+    /* Whether a node still exists and still asks for a person. */
+    private waiting(nodeId: string): boolean {
+        return this.activityNodes().find((node) => node.nodeId === nodeId)?.status === 'needs-you';
+    }
+
+    /*
+     * The time a released alert is issued at. One in the ledger moves its entry along, since a phone marks
+     * the push read by that time and a read acknowledgment names the entry it saw; a read of the old entry
+     * was checked before this.
+     */
+    private reissue(alert: WithheldAlert): number {
+        if (!alert.ledger) {
+            return this.now();
+        }
+
+        const entry = this.attention.notify(alert.content.nodeId);
+
+        this.tell(entry);
+
+        return entry.issuedAt;
     }
 
     private activityNodes(): { nodeId: string; target: PushAlertContent['target']; title: string; status: AgentStatus }[] {
@@ -384,6 +534,99 @@ export class PushService {
     /* Something a person has to step in on that no status says: a task that failed, a wake the daemon gave up on. */
     alert(target: PushAlertContent['target'], nodeId: string, title: string, body: string): void {
         this.enqueue(this.attentionContent(target, nodeId, title, body));
+    }
+
+    /*
+     * A chat stopped on its plan's usage limit: an attention alert, since the work stands still until someone
+     * acts. The first chat on one limit of one account that a phone hears about raises it and the rest stay
+     * quiet until it lifts. A chat nobody follows reaches no phone and so leaves the limit for the next one.
+     */
+    private limitAlert(target: PushAlertContent['target'], nodeId: string, title: string, chatLimit: ChatLimit): void {
+        const { limit, provider, account } = chatLimit;
+        const now = this.now();
+
+        for (const [key, until] of this.limitAlerts) {
+            if (until <= now) {
+                this.limitAlerts.delete(key);
+            }
+        }
+
+        const key = limitKey(provider, account, limit.resetsAt);
+
+        if (this.limitAlerts.has(key)) {
+            return;
+        }
+
+        const standby = this.limitPending.get(key);
+
+        if (standby) {
+            standby.set(nodeId, now);
+
+            return;
+        }
+
+        this.limitPending.set(key, new Map());
+
+        const context = this.options.limitContext?.(nodeId) ?? null;
+        const body = limitBody(context, limitWindow(context?.windows ?? [], limit.resetsAt));
+        const until = limit.resetsAt !== undefined && limit.resetsAt > now ? limit.resetsAt : now + LIMIT_QUIET_MS;
+        this.enqueue(
+            {
+                ...this.attentionContent(target, nodeId, title, body),
+                ...(context?.resumes ? {} : { timeSensitive: true }),
+                ...(limit.resetsAt === undefined ? {} : { resetsAt: Math.round(limit.resetsAt) })
+            },
+            false,
+            false,
+            { key, until }
+        );
+    }
+
+    /* Counts the limit as raised when a phone got its alert, and otherwise lets the chats that waited on it try again. */
+    private settleLimit({ key, until }: LimitReservation, sent: boolean): void {
+        const standby = this.limitPending.get(key) ?? new Map<string, number>();
+
+        this.limitPending.delete(key);
+
+        if (sent) {
+            this.limitAlerts.set(key, until);
+
+            return;
+        }
+
+        for (const [nodeId, stoppedAt] of standby) {
+            this.retryLimit(nodeId, key, stoppedAt);
+        }
+    }
+
+    /* Alerts a waiting chat the way a fresh stop would, if it is still stopped on that same limit and nothing has dealt with it since. */
+    private retryLimit(nodeId: string, key: string, stoppedAt: number): void {
+        const node = this.nodes.get(nodeId);
+        const chatLimit = node?.limit;
+
+        if (!node || !chatLimit || (node.status !== 'idle' && node.status !== 'error') || chatLimit.limit.kind !== 'usage') {
+            return;
+        }
+
+        const { limit, provider, account } = chatLimit;
+
+        if (limitKey(provider, account, limit.resetsAt) !== key || (limit.resetsAt !== undefined && limit.resetsAt <= this.now()) || this.snoozed(nodeId)) {
+            return;
+        }
+
+        const entry = this.attention.snapshot().find((candidate) => candidate.nodeId === nodeId);
+
+        if (entry && entry.issuedAt >= stoppedAt && entry.readThrough >= entry.issuedAt) {
+            return;
+        }
+
+        this.limitAlert(node.target, nodeId, node.title, chatLimit);
+    }
+
+    private leaveStandby(nodeId: string): void {
+        for (const standby of this.limitPending.values()) {
+            standby.delete(nodeId);
+        }
     }
 
     private waitAlert(target: PushAlertContent['target'], nodeId: string, title: string): void {
@@ -485,6 +728,12 @@ export class PushService {
                 this.machineActivityStates.delete(sessionId);
                 continue;
             }
+            // A push that starts an activity alerts, so the quiet device hears of the counts again when its hours end.
+            const quiet = this.quietHoursOf(subscription);
+            if (quiet) {
+                this.quietHold.withholdActivity(sessionId, quiet);
+                continue;
+            }
             const cacheKey = JSON.stringify([subscription.handle, state]);
             if (this.machineActivityStates.get(sessionId) === cacheKey) {
                 continue;
@@ -496,13 +745,13 @@ export class PushService {
         }
     }
 
-    private enqueue(content: PushAlertContent, immediate = false, wait = false): void {
+    private enqueue(content: PushAlertContent, immediate = false, wait = false, limit?: LimitReservation): void {
         const entry = this.attention.notify(content.nodeId);
         this.tell(entry);
         if (immediate) {
-            this.queueAlert(() => this.deliverAlert(content, entry.issuedAt, 'needs-you', true));
+            this.queueAlert(() => this.deliverAlert(content, entry.issuedAt, 'needs-you', true, { asked: true }));
         } else {
-            this.dispatch({ content, issuedAt: entry.issuedAt, preference: 'needs-you', ledger: true, ...(wait ? { wait } : {}) });
+            this.dispatch({ content, issuedAt: entry.issuedAt, preference: 'needs-you', ledger: true, ...(wait ? { wait } : {}), ...(limit ? { limit } : {}) });
         }
     }
 
@@ -516,7 +765,7 @@ export class PushService {
 
     private dispatch(alert: Omit<HeldAlert, 'dueAt'>): void {
         if (!this.present()) {
-            this.queueAlert(() => this.deliverAlert(alert.content, alert.issuedAt, alert.preference, alert.ledger));
+            this.queueAlert(() => this.deliverAlert(alert.content, alert.issuedAt, alert.preference, alert.ledger, { limit: alert.limit, wait: alert.wait }));
             return;
         }
         const dueAt = this.now() + (alert.content.kind === 'approval' ? APPROVAL_HOLD_MS : HOLD_MS);
@@ -553,9 +802,13 @@ export class PushService {
                 this.snoozed(content.nodeId) ||
                 (content.kind === 'approval' && !this.approvals.get(content.nodeId)?.has(content.requestId ?? ''))
             ) {
+                if (alert.limit) {
+                    this.settleLimit(alert.limit, false);
+                }
+
                 continue;
             }
-            this.queueAlert(() => this.deliverAlert(content, alert.issuedAt, alert.preference, alert.ledger));
+            this.queueAlert(() => this.deliverAlert(content, alert.issuedAt, alert.preference, alert.ledger, { limit: alert.limit, wait: alert.wait }));
         }
         if (this.held.length === 0) {
             return;
@@ -592,24 +845,62 @@ export class PushService {
         };
     }
 
-    private async deliverAlert(content: PushAlertContent, issuedAt: number, preference: PushNotifyKind, ledger: boolean): Promise<void> {
-        const projectId = this.options.projectOf?.(content.nodeId) ?? null;
-        for (const { sessionId, subscription } of await this.options.auth.pushSubscriptions()) {
-            if (
-                (ledger && this.attention.isRead(content.nodeId, issuedAt)) ||
-                this.connectedSessions.has(sessionId) ||
-                (content.kind === 'approval' ? !subscription.approvals : !subscription.followAll && !subscription.follow.includes(content.nodeId)) ||
-                !notifyKinds(subscription, projectId).includes(preference)
-            ) {
-                continue;
+    private async deliverAlert(
+        content: PushAlertContent,
+        issuedAt: number,
+        preference: PushNotifyKind,
+        ledger: boolean,
+        delivery: Delivery = {}
+    ): Promise<void> {
+        const { limit, session } = delivery;
+        let sent = false;
+        let withheld = false;
+
+        try {
+            const projectId = this.options.projectOf?.(content.nodeId) ?? null;
+            for (const { sessionId, subscription } of await this.options.auth.pushSubscriptions()) {
+                if (
+                    (session !== undefined && sessionId !== session) ||
+                    (ledger && this.attention.isRead(content.nodeId, issuedAt)) ||
+                    this.connectedSessions.has(sessionId) ||
+                    (content.kind === 'approval' ? !subscription.approvals : !subscription.followAll && !subscription.follow.includes(content.nodeId)) ||
+                    !notifyKinds(subscription, projectId).includes(preference)
+                ) {
+                    continue;
+                }
+                const quiet = delivery.asked ? null : this.quietHoursOf(subscription);
+
+                if (quiet) {
+                    // A finished turn or a process warning is over by the time the quiet ends; a wait, an approval or an alert the daemon raised is not.
+                    if (preference === 'needs-you') {
+                        this.quietHold.withhold(sessionId, quiet, {
+                            content,
+                            issuedAt,
+                            preference,
+                            ledger,
+                            ...(delivery.wait ? { wait: true } : {}),
+                            ...(limit ? { limit: limit.key } : {})
+                        });
+                        withheld = true;
+                    }
+
+                    continue;
+                }
+                // A finished turn or a process warning must never replace a wait or an approval still open on the phone.
+                const lane = preference === 'needs-you' ? undefined : preference;
+                const routing = { ...this.routing(subscription, content.nodeId, content.expiresAt, lane), issuedAt };
+                if (routing.expiresAt <= this.now()) {
+                    continue;
+                }
+                if (await this.sendCurrent(sessionId, subscription, this.encrypt(routing, subscription, { ...content, expiresAt: routing.expiresAt }))) {
+                    sent = true;
+                }
             }
-            // A finished turn or a process warning must never replace a wait or an approval still open on the phone.
-            const lane = preference === 'needs-you' ? undefined : preference;
-            const routing = { ...this.routing(subscription, content.nodeId, content.expiresAt, lane), issuedAt };
-            if (routing.expiresAt <= this.now()) {
-                continue;
+        } finally {
+            if (limit) {
+                // An alert held for the morning counts as raised, or every chat on the limit would hold its own.
+                this.settleLimit(limit, sent || withheld);
             }
-            await this.sendCurrent(sessionId, subscription, this.encrypt(routing, subscription, { ...content, expiresAt: routing.expiresAt }));
         }
     }
 
@@ -621,6 +912,11 @@ export class PushService {
                 !subscription.follow.includes(nodeId) ||
                 (subscription.activityNodeId !== undefined && subscription.activityNodeId !== nodeId)
             ) {
+                continue;
+            }
+            const quiet = this.quietHoursOf(subscription);
+            if (quiet) {
+                this.quietHold.withholdActivity(sessionId, quiet);
                 continue;
             }
             const cacheKey = `${sessionId}:${nodeId}`;

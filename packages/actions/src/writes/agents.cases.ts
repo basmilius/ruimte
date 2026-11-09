@@ -21,7 +21,8 @@ const start: ActionInput<'agent.start'> = {
     requestId: 'start-1',
     base: null,
     machine: null,
-    effort: 'high'
+    effort: 'high',
+    account: null
 };
 const AGENT_ONLY = ['agent'] as const;
 const role = { title: 'Tester', prompt: 'Write the tests', provider: 'codex', model: null, terminal: false, effort: 'medium' } as const;
@@ -34,12 +35,12 @@ export const cases: WriteCases = {
         refused: { 'no action': { input: '{}' } }
     },
     'tool.run': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { id: 'acme.builds/failing-log', input: '{}' },
         refused: { 'no tool': { input: '{}' } }
     },
     'agent.answer': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { nodeId: 'chat-2', requestId: 'request-1', answer: 'The second one', answers: null },
         refused: {
             'an empty request': { nodeId: 'chat-2', requestId: '', answer: 'Yes', answers: null },
@@ -48,7 +49,7 @@ export const cases: WriteCases = {
         }
     },
     'task.create': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { nodeId: 'chat-2', prompt: 'Run the integration suite', title: null },
         refused: {
             'no prompt at all': { nodeId: 'chat-2', title: null },
@@ -67,7 +68,7 @@ export const cases: WriteCases = {
         }
     },
     'agent.start': {
-        actors: ['agent', 'voice', 'extension'],
+        actors: ['person', 'voice', 'agent', 'extension'],
         input: start,
         refused: {
             'a CLI that is no identifier': { ...start, provider: 'Cursor CLI' },
@@ -86,11 +87,12 @@ export const cases: WriteCases = {
             worktree: { value: true, actors: AGENT_ONLY },
             branch: { value: 'review', actors: AGENT_ONLY },
             base: { value: 'main', actors: AGENT_ONLY },
-            machine: { value: 'machine-b', actors: AGENT_ONLY }
+            machine: { value: 'machine-b', actors: AGENT_ONLY },
+            account: { value: 'codex_work', actors: AGENT_ONLY }
         }
     },
     'team.start': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: team,
         refused: {
             'nobody in it': { ...team, roles: [] },

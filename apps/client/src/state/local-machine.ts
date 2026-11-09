@@ -1,5 +1,5 @@
 import { machineMode } from '@/desktop/bridge';
-import { LOCAL_ENDPOINT_ID, type Endpoint } from '@/state/endpoints';
+import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 
 /*
  * Only the desktop shell can read the local secret. A browser may be served beside a daemon, but it
@@ -8,6 +8,11 @@ import { LOCAL_ENDPOINT_ID, type Endpoint } from '@/state/endpoints';
  */
 export function hasLocalMachine(): boolean {
     return machineMode() === 'local';
+}
+
+/* Whether this client has a machine to ask: any it was told of, or the local one where a daemon runs. */
+export function hasOpenedMachine(): boolean {
+    return useEndpoints.getState().endpoints.some((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID || hasLocalMachine());
 }
 
 /* The rows a list of machines shows: every row, without the local one where no daemon is behind it. */

@@ -2,7 +2,6 @@ import { AgentKindSchema, DeviceReferenceSchema, ProviderAccountIdSchema } from 
 import { z } from 'zod';
 import {
     PERSON_AND_VOICE,
-    AGENT,
     PERSON,
     PERSON_VOICE_AGENT_AND_AUTOMATION,
     ActionViewKindSchema,
@@ -150,7 +149,7 @@ export const VIEWS_ACTIONS = {
         description: 'Lists the views of the project in sidebar order, with whether you may delete each and why.',
         effect: 'read',
         domain: 'views',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({}),
         output: z.object({
             views: z.array(

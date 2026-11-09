@@ -17,7 +17,13 @@ const SERVER_NAMES: Record<LanguageServerKind, { name: string; package: string }
     eslint: { name: 'ESLint', package: 'vscode-langservers-extracted' },
     tailwind: { name: 'Tailwind CSS', package: '@tailwindcss/language-server' },
     'sql-native': { name: 'SQL', package: 'sql-language-server' },
-    rust: { name: 'Rust', package: 'rust-analyzer' }
+    rust: { name: 'Rust', package: 'rust-analyzer' },
+    markdown: { name: 'Markdown', package: 'marksman' },
+    go: { name: 'Go', package: 'gopls' },
+    swift: { name: 'Swift', package: 'sourcekit-lsp' },
+    toml: { name: 'TOML', package: 'taplo' },
+    lua: { name: 'Lua', package: 'lua-language-server' },
+    zig: { name: 'Zig', package: 'zls' }
 };
 
 export type ServerTone = 'ok' | 'busy' | 'error' | 'idle';
@@ -55,8 +61,8 @@ export function packageOf(server: string, statuses: readonly LanguageServerStatu
 const SERVER_GROUPS = [
     { id: 'scripts', kinds: ['typescript', 'vue', 'eslint'] },
     { id: 'web', kinds: ['html', 'css', 'tailwind'] },
-    { id: 'data', kinds: ['json', 'yaml', 'sql-native'] },
-    { id: 'other', kinds: ['php-native', 'php', 'python', 'rust', 'bash', 'docker'] }
+    { id: 'data', kinds: ['json', 'yaml', 'toml', 'sql-native'] },
+    { id: 'other', kinds: ['php-native', 'php', 'python', 'rust', 'go', 'swift', 'zig', 'lua', 'markdown', 'bash', 'docker'] }
 ] as const satisfies readonly { id: string; kinds: readonly LanguageServerKind[] }[];
 
 type ServerGroupId = (typeof SERVER_GROUPS)[number]['id'];
@@ -85,7 +91,7 @@ function isActive(state: LanguageServerState): boolean {
 
 /* The servers the status popover lists: the ones that serve the open file, and any other that is up or has failed. The alternative the machine does not use is left to the switch on the one it does. */
 export function listedServers(statuses: readonly LanguageServerStatus[], serving: readonly string[]): LanguageServerStatus[] {
-    return statuses.filter((status) => status.chosen !== false && (serving.includes(status.server) || isActive(status.state)));
+    return statuses.filter((status) => status.chosen !== false && (serving.includes(status.server) || isActive(status.state) || status.buildHeld === true));
 }
 
 /* The server that serves the same language instead of this one, when this is the one the machine uses. */

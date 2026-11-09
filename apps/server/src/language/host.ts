@@ -1,8 +1,7 @@
-import { readFile } from 'node:fs/promises';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { readFile, realpath } from 'node:fs/promises';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { CodedError, type WatchSeams } from '@adecore/agents';
 import {
-    documentLanguageId,
     ErrorCodes,
     LspError,
     fileUriToPath,
@@ -25,7 +24,9 @@ import {
     type WorkspaceEditPlan,
     type WorkspaceEditSource
 } from '@adecore/lsp';
+import { KeyedSerializer } from '@adecore/utils/async';
 import { fileExists } from '@adecore/utils/fs';
+import { isWithin } from '@adecore/utils/path';
 import {
     LANGUAGE_ERROR_CODES,
     LANGUAGE_METHODS,
@@ -80,6 +81,7 @@ import {
     alternativesOf,
     CATALOG_KINDS,
     componentServes,
+    documentLanguageId,
     KIND_PROFILES,
     kindForLanguage,
     usesVue,
@@ -101,6 +103,7 @@ import {
     type SharedDocument
 } from './server.ts';
 import { StorageGate } from './storage-gate.ts';
+import { BUILD_HELD_MESSAGE, WorktreeBuildChoices } from './worktree-build.ts';
 
 class LanguageError extends CodedError<LanguageErrorCode> {}
 
@@ -118,7 +121,7 @@ export interface AgentDocument {
     text: string;
     /* Whether a client holds the file open with text that differs from what is on disk. */
     unsaved: boolean;
-    servers: Array<{ kind: LanguageServerId; state: LanguageServerState | 'not-installed'; message?: string }>;
+    servers: Array<{ kind: LanguageServerId; state: LanguageServerState | 'not-installed'; message?: string; buildHeld?: true }>;
     request(method: LanguageMethod, params: object): Promise<LanguageRequestResult>;
     /* What each process last found in the document, after asking those that are asked. */
     diagnostics(): Promise<Array<{ server: string; diagnostics: Diagnostic[] }>>;
@@ -126,6 +129,11 @@ export interface AgentDocument {
 
 function isCatalogKind(id: LanguageServerId): id is CatalogKind {
     return id in KIND_PROFILES;
+}
+
+/* What a kind builds of the code it reads (`KindProfile.runsBuildCode`); nothing for a server of a person's own. */
+function buildCodeOf(kind: LanguageServerId): KindProfile['runsBuildCode'] {
+    return isCatalogKind(kind) ? KIND_PROFILES[kind].runsBuildCode : undefined;
 }
 
 /* The wire still names a retired kind (`CatalogKind`), which has nothing to install, go back to or prefer. */
@@ -171,6 +179,10 @@ interface LanguageHostOptions {
     choices?: LanguageChoices;
     /* Whether a path lies in a folder made from another machine's work, where no server runs the code it holds; none by default. */
     untrusted?: (path: string) => boolean;
+    /* The main checkout of the repository a folder is in and the worktrees the daemon made for the nodes of agents there; null outside a repository. None by default. */
+    agentWorktrees?: (folder: string) => Promise<{ main: string; paths: string[] } | null>;
+    /* Which repositories let their servers build code in the worktrees of agents; by default the file beside the installs. */
+    worktreeBuild?: WorktreeBuildChoices;
     /* Native servers use a selected standalone checkout or the pinned release. */
     native?: NativePolicy;
     /* How an install downloads a release or the stubs. */
@@ -205,6 +217,10 @@ interface ProjectLanguage {
     commands: Map<LanguageServer, CommandLine>;
     /* Watches the project's files while a server of it asked to hear about them. */
     watcher: ProjectFileWatcher | null;
+    /* Whether the project folder lies in a worktree of an agent whose build code a person has not allowed; as of the last document that asked. */
+    buildHeld: boolean;
+    /* Whether a person allowed building in the worktrees of agents of the project's repository, which has some; as of the same read. */
+    buildAllowed: boolean;
 }
 
 /*
@@ -245,6 +261,17 @@ const EDIT_ANSWER_MS = 30_000;
 
 async function readTextOrNull(path: string): Promise<string | null> {
     return readFile(path, 'utf8').catch(() => null);
+}
+
+/* The real path of a file, found through its nearest folder that exists, so a symlinked parent counts for a file that is not there yet. */
+async function realOrSelf(path: string): Promise<string> {
+    try {
+        return await realpath(path);
+    } catch {
+        const parent = dirname(resolve(path));
+
+        return parent === resolve(path) ? parent : join(await realOrSelf(parent), basename(path));
+    }
 }
 
 function withoutItemData(params: object): object {
@@ -297,6 +324,9 @@ export class LanguageHost {
     private readonly installer: LanguageInstaller;
     private readonly custom: CustomLanguageServers;
     private readonly choices: LanguageChoices;
+    private readonly worktreeBuild: WorktreeBuildChoices;
+    /* One switch of build code at a time per main checkout, so two presses never save or apply out of order. */
+    private readonly buildSwitches = new KeyedSerializer();
     private readonly clock: LanguageClock;
     private readonly exists: (path: string) => Promise<boolean>;
     private readonly isFolder: (path: string) => Promise<boolean>;
@@ -369,6 +399,7 @@ export class LanguageHost {
         this.options = options;
         this.custom = options.custom ?? new CustomLanguageServers({ path: join(options.root, 'custom.json') });
         this.choices = options.choices ?? new LanguageChoices({ path: join(options.root, 'choices.json') });
+        this.worktreeBuild = options.worktreeBuild ?? new WorktreeBuildChoices({ path: join(options.root, 'worktree-build.json') });
         this.clock = options.clock ?? realLanguageClock;
         this.exists = options.exists ?? fileExists;
         this.isFolder = options.isFolder ?? isDirectory;
@@ -392,7 +423,7 @@ export class LanguageHost {
 
     /* Reads the servers of a person's own and the machine's choices. Call before a client can ask. */
     async load(): Promise<void> {
-        await Promise.all([this.custom.load(), this.choices.load(), this.installer.load()]);
+        await Promise.all([this.custom.load(), this.choices.load(), this.worktreeBuild.load(), this.installer.load()]);
     }
 
     async status(projectId: string): Promise<LanguageServerStatus[]> {
@@ -401,7 +432,9 @@ export class LanguageHost {
         const project = this.projects.get(projectId) ?? null;
         const folder = project?.folder ?? this.options.folderOf(projectId);
         const own = folder === null ? [] : this.custom.list().filter((server) => runsFor(server, folder));
-        return Promise.all([...CATALOG_KINDS, ...own.map((server) => server.id as LanguageServerId)].map((id) => this.statusOf(project, id)));
+        const standing =
+            folder === null ? { held: false, allowed: false } : project ? await this.refreshStanding(project) : await this.standingOf(folder, folder);
+        return Promise.all([...CATALOG_KINDS, ...own.map((server) => server.id as LanguageServerId)].map((id) => this.statusOf(project, id, standing)));
     }
 
     /* Starts installing a kind, or updating it beside what it runs, and answers while it runs; the end comes as a `language.status` event. */
@@ -488,6 +521,66 @@ export class LanguageHost {
         return this.statusOf(project, id);
     }
 
+    /*
+     * Lets the servers of the project's repository build code in the worktrees of agents, or keeps them
+     * from it again. The servers it changes for start again, which is the press of the person who asked.
+     */
+    async setWorktreeBuild(projectId: string, on: boolean): Promise<LanguageServerStatus[]> {
+        const folder = this.projects.get(projectId)?.folder ?? this.options.folderOf(projectId);
+        if (folder === null) {
+            throw new LanguageError(LANGUAGE_ERROR_CODES.projectNotFound, `No project ${projectId}`);
+        }
+        const worktrees = await this.options.agentWorktrees?.(folder);
+        if (worktrees === undefined || worktrees === null) {
+            throw new LanguageError(LANGUAGE_ERROR_CODES.unavailable, 'The project is not in a git repository');
+        }
+        await this.buildSwitches.run(worktrees.main, async () => {
+            await this.worktreeBuild.set(worktrees.main, on);
+            for (const project of this.projects.values()) {
+                if ((await this.options.agentWorktrees?.(project.folder))?.main === worktrees.main) {
+                    await this.applyBuildHold(project);
+                }
+            }
+        });
+        return this.status(projectId);
+    }
+
+    /*
+     * The hold on build code changed for a project: its documents take the kinds they have now. A kind that cannot turn
+     * building off stops under `project.buildHeld`, also while its first start is on its way. Any other server is judged
+     * by the hold it started with, since any status read moves `project.buildHeld` as soon as the choice changed in
+     * memory, and starts again when that differs.
+     */
+    private async applyBuildHold(project: ProjectLanguage): Promise<void> {
+        await this.refreshStanding(project);
+        for (const document of project.documents.values()) {
+            await this.reroute(project, document);
+        }
+        for (const [kind, server] of [...project.servers]) {
+            const build = buildCodeOf(kind);
+            if (build === undefined || server.state === 'stopped') {
+                continue;
+            }
+
+            // Whatever it started with: a first start still on its way has no hold yet, and stopping it ends that start too.
+            if (project.buildHeld && build.off === undefined) {
+                await server.stop();
+                continue;
+            }
+
+            const applied = server.appliedBuildHeld;
+            if (applied !== null && applied !== project.buildHeld) {
+                void server.restart().catch(() => undefined);
+            }
+        }
+        for (const kind of CATALOG_KINDS.filter((candidate) => buildCodeOf(candidate) !== undefined)) {
+            this.toHolders(project.projectId, {
+                event: 'language.status',
+                payload: { projectId: project.projectId, status: await this.statusOf(project, kind) }
+            });
+        }
+    }
+
     async log(projectId: string, id: LanguageServerId): Promise<LanguageLogLine[]> {
         const server = this.projects.get(projectId)?.servers.get(id);
         return [...(isCatalogKind(id) ? this.installer.logOf(id).tail() : []), ...(server?.log.tail() ?? [])].sort((a, b) => a.at - b.at);
@@ -558,7 +651,7 @@ export class LanguageHost {
         const project = this.projectFor(payload.projectId);
         const absolutePath = await this.pathOf(project, payload.path);
         const storedPath = storedPathOf(project.folder, absolutePath);
-        const kinds = await this.kindsFor(project, payload.languageId, storedPath);
+        const { kinds, held } = await this.kindsFor(project, payload.languageId, storedPath);
         // A client that went or a project that ended meanwhile was already cleaned up, and would leave this document behind.
         if (this.projects.get(payload.projectId) !== project) {
             throw new LanguageError(LANGUAGE_ERROR_CODES.projectNotFound, `No project ${payload.projectId}`);
@@ -581,6 +674,7 @@ export class LanguageHost {
                 absolutePath,
                 uri: pathToFileUri(absolutePath),
                 kinds,
+                ...(held.length > 0 ? { buildHeld: held } : {}),
                 storedPath,
                 languageId: documentLanguageId(payload.languageId, storedPath),
                 mirror: new TextMirror(payload.text),
@@ -592,8 +686,18 @@ export class LanguageHost {
             for (const kind of kinds) {
                 this.ensureServer(project, kind).attach(document);
             }
+            this.announceHeld(project, held);
         }
         return { version: document.version, servers: [...document.kinds], providers: this.providersOf(project, document) };
+    }
+
+    /* A kind kept off a file has no server to report that, so its status goes out on its own. */
+    private announceHeld(project: ProjectLanguage, held: readonly LanguageServerId[]): void {
+        for (const kind of held) {
+            void this.statusOf(project, kind)
+                .then((status) => this.toHolders(project.projectId, { event: 'language.status', payload: { projectId: project.projectId, status } }))
+                .catch(() => undefined);
+        }
     }
 
     /* A save is about to write the document; the servers that asked hear it, and a failure is theirs to log. */
@@ -827,11 +931,22 @@ export class LanguageHost {
                     }),
                 AGENT_READY_MS
             );
-            const servers = kinds.map((kind, index) => {
+            const running: AgentDocument['servers'] = kinds.map((kind, index) => {
                 const server = project.servers.get(kind);
                 const state: LanguageServerState | 'not-installed' = installed[index] ? (server?.state ?? 'stopped') : 'not-installed';
-                return { kind, state, ...(server?.message ? { message: server.message } : {}) };
+                const buildHeld = project.buildHeld && buildCodeOf(kind) !== undefined;
+                const message = server?.message ?? (buildHeld ? BUILD_HELD_MESSAGE : undefined);
+
+                return { kind, state, ...(message ? { message } : {}), ...(buildHeld ? { buildHeld: true as const } : {}) };
             });
+            // A kind kept off the file says why, or the agent would take the silence for a server that is not there.
+            const left: AgentDocument['servers'] = (held.buildHeld ?? []).map((kind) => ({
+                kind,
+                state: 'stopped',
+                message: BUILD_HELD_MESSAGE,
+                buildHeld: true
+            }));
+            const servers = [...running, ...left];
             return await work({
                 storedPath,
                 absolutePath,
@@ -927,7 +1042,9 @@ export class LanguageHost {
             vue: undefined,
             vueCheck: undefined,
             commands: new Map(),
-            watcher: null
+            watcher: null,
+            buildHeld: false,
+            buildAllowed: false
         };
         this.projects.set(projectId, project);
         return project;
@@ -946,8 +1063,11 @@ export class LanguageHost {
         return kind === 'typescript' && (await this.projectUsesVue(project)) ? 'vue' : kind;
     }
 
-    /* The kinds that serve a document: the one of its language, then the additions the project calls for. */
-    private async kindsFor(project: ProjectLanguage, languageId: string, storedPath: string): Promise<LanguageServerId[]> {
+    /*
+     * The kinds that serve a document: the one of its language, then the additions the project calls for.
+     * `held` are the kinds that would serve it but build code, in a worktree whose build code a person has not allowed.
+     */
+    private async kindsFor(project: ProjectLanguage, languageId: string, storedPath: string): Promise<{ kinds: LanguageServerId[]; held: LanguageServerId[] }> {
         const primary = await this.primaryKindFor(project, kindForLanguage(languageId, this.choices.get(), storedPath));
         const candidates = [
             ...additionKindsForLanguage(languageId).map((kind) => [kind, KIND_PROFILES[kind]] as const),
@@ -957,7 +1077,7 @@ export class LanguageHost {
         const untrusted = this.untrusted(project.folder) || this.untrusted(resolve(project.folder, storedPath));
         if (untrusted) {
             // A server of a person's own may run anything of the folder too, so it stays off there with the catalog's that do.
-            return primary === null || KIND_PROFILES[primary].runsProjectCode === true ? [] : [primary];
+            return { kinds: primary === null || KIND_PROFILES[primary].runsProjectCode === true ? [] : [primary], held: [] };
         }
         if (candidates.length > 0) {
             const facts: ProjectFacts = {
@@ -969,11 +1089,75 @@ export class LanguageHost {
             const active = await Promise.all(candidates.map(([, needs]) => activates(needs, facts)));
             kinds.push(...candidates.filter((_, index) => active[index]).map(([kind]) => kind));
         }
-        return [...kinds, ...this.customKindsFor(project, languageId, storedPath)];
+        const { kept, held } = await this.withoutBuildCode(project, storedPath, kinds);
+
+        return { kinds: [...kept, ...this.customKindsFor(project, languageId, storedPath)], held };
     }
 
     private untrusted(path: string): boolean {
         return this.options.untrusted?.(path) === true;
+    }
+
+    /*
+     * Leaves a kind that builds code off a document in the worktree of an agent. When the project itself
+     * lies there, a kind that can work without building stays and starts with that off (`ensureServer`),
+     * and one that cannot stays away, since loading its project already runs it.
+     */
+    private async withoutBuildCode(
+        project: ProjectLanguage,
+        storedPath: string,
+        kinds: readonly LanguageServerId[]
+    ): Promise<{ kept: LanguageServerId[]; held: LanguageServerId[] }> {
+        if (!kinds.some((kind) => buildCodeOf(kind) !== undefined)) {
+            return { kept: [...kinds], held: [] };
+        }
+
+        await this.refreshStanding(project);
+        const documentHeld = !project.buildHeld && (await this.heldBack(project.folder, resolve(project.folder, storedPath)));
+        const held = kinds.filter((kind) => {
+            const build = buildCodeOf(kind);
+
+            return build !== undefined && (documentHeld || (project.buildHeld && build.off === undefined));
+        });
+
+        return { kept: kinds.filter((kind) => !held.includes(kind)), held };
+    }
+
+    /* Whether a path lies in a worktree the daemon made for an agent's node, in a repository whose build code a person has not allowed. */
+    private async heldBack(projectFolder: string, path: string): Promise<boolean> {
+        return (await this.standingOf(projectFolder, path)).held;
+    }
+
+    /*
+     * Where a path stands against the build rule: `held` when it lies in a worktree made for an agent's node
+     * and the repository is not allowed to build there, `allowed` when the repository has such worktrees and
+     * a person turned building on for it, which is what lets them turn it off again.
+     */
+    private async standingOf(projectFolder: string, path: string): Promise<{ held: boolean; allowed: boolean }> {
+        const worktrees = await this.options.agentWorktrees?.(projectFolder);
+
+        if (worktrees === undefined || worktrees === null || worktrees.paths.length === 0) {
+            return { held: false, allowed: false };
+        }
+
+        if (this.worktreeBuild.isOn(worktrees.main)) {
+            return { held: false, allowed: true };
+        }
+
+        const real = await realOrSelf(path);
+        const roots = await Promise.all(worktrees.paths.map(realOrSelf));
+
+        return { held: roots.some((root) => isWithin(root, real)), allowed: false };
+    }
+
+    /* Reads again where the project folder stands against the build rule. */
+    private async refreshStanding(project: ProjectLanguage): Promise<{ held: boolean; allowed: boolean }> {
+        const standing = await this.standingOf(project.folder, project.folder);
+
+        project.buildHeld = standing.held;
+        project.buildAllowed = standing.allowed;
+
+        return standing;
     }
 
     /* The servers of a person's own that run for the project and serve the document; one that is held never does. */
@@ -1089,6 +1273,7 @@ export class LanguageHost {
                 exists: this.exists,
                 readText: this.options.readText,
                 ownTypescript: !this.untrusted(project.folder),
+                buildHeld: () => project.buildHeld,
                 ...(this.options.sqlSettings === undefined ? {} : { sqlSettings: () => this.options.sqlSettings!(project.projectId) }),
                 hooks: this.hooks
             });
@@ -1647,11 +1832,37 @@ export class LanguageHost {
         return null;
     }
 
-    private async statusOf(project: ProjectLanguage | null, id: LanguageServerId): Promise<LanguageServerStatus> {
+    private async statusOf(
+        project: ProjectLanguage | null,
+        id: LanguageServerId,
+        standing = { held: project?.buildHeld ?? false, allowed: project?.buildAllowed ?? false }
+    ): Promise<LanguageServerStatus> {
         if (!isCatalogKind(id)) {
             return this.customStatus(project, id);
         }
-        const kind: CatalogKind = id;
+        const status = await this.catalogStatus(project, id);
+
+        if (status.state === 'not-installed' || status.state === 'installing') {
+            return status;
+        }
+
+        return this.buildHeldIn(project, id, standing.held)
+            ? { ...status, buildHeld: true }
+            : buildCodeOf(id) !== undefined && standing.allowed
+              ? { ...status, buildAllowed: true }
+              : status;
+    }
+
+    /* Whether a kind that builds code runs without that, or not at all, in the project: the folder lies in a worktree held back, or an open file does. */
+    private buildHeldIn(project: ProjectLanguage | null, kind: LanguageServerId, folderHeld: boolean): boolean {
+        if (buildCodeOf(kind) === undefined) {
+            return false;
+        }
+
+        return folderHeld || [...(project?.documents.values() ?? [])].some((document) => document.buildHeld?.includes(kind) === true);
+    }
+
+    private async catalogStatus(project: ProjectLanguage | null, kind: CatalogKind): Promise<LanguageServerStatus> {
         const install = await this.installer.state(kind);
         const base = this.identityOf(kind);
         if (install === 'installing') {
@@ -1674,10 +1885,13 @@ export class LanguageHost {
     private serverStatus(server: LanguageServer): LanguageServerStatus {
         const capabilities = server.capabilities;
         const { sidecars } = server;
+        const project = this.projects.get(server.projectId) ?? null;
         return {
             ...this.identityOf(server.kind),
             state: server.state,
             documents: server.documentCount,
+            ...(this.buildHeldIn(project, server.kind, project?.buildHeld ?? false) ? { buildHeld: true } : {}),
+            ...(buildCodeOf(server.kind) !== undefined && project?.buildAllowed === true ? { buildAllowed: true } : {}),
             ...(server.message ? { message: server.message } : {}),
             ...(capabilities ? { capabilities } : {}),
             ...(sidecars.length > 0 ? { sidecars } : {}),
@@ -1752,7 +1966,7 @@ export class LanguageHost {
 
     /* Gives a document the servers it has now, after a server of a person's own came or went or the machine chose another. */
     private async reroute(project: ProjectLanguage, document: SharedDocument): Promise<void> {
-        const next = await this.kindsFor(project, document.languageId, document.storedPath);
+        const { kinds: next, held } = await this.kindsFor(project, document.languageId, document.storedPath);
         const added = next.filter((kind) => !document.kinds.includes(kind));
         const removed = document.kinds.filter((kind) => !next.includes(kind));
         for (const kind of removed) {
@@ -1760,6 +1974,7 @@ export class LanguageHost {
             this.clearDiagnostics(project, document, kind);
         }
         document.kinds = next;
+        document.buildHeld = held.length > 0 ? held : undefined;
         for (const kind of added) {
             this.ensureServer(project, kind).attach(document);
         }

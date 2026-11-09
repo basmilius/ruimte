@@ -182,7 +182,7 @@ export const cases: WriteCases = {
         }
     },
     'node.arrange': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { viewId: 'board', nodeIds: ['chat-1', 'chat-2', 'chat-3'], layout: 'grid', columns: 2 },
         refused: {
             'a layout it has not': { viewId: 'board', nodeIds: ['chat-1'], layout: 'circle', columns: null },
@@ -200,12 +200,12 @@ export const cases: WriteCases = {
         }
     },
     'link.delete': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { viewId: 'board', edgeId: 'edge-1' },
         refused: { 'an empty line': { viewId: 'board', edgeId: '' } }
     },
     'link.deleteMany': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { viewId: 'board', edgeIds: ['edge-1', 'edge-2'] },
         refused: {
             'no lines at all': { viewId: 'board', edgeIds: [] },

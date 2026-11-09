@@ -3,7 +3,7 @@ import { Mic, Square, X } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useRef, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { useKeyOf } from '@/surface/shortcut-overrides';
 import { cancelDictation, observeSpeech, registerDictationTarget, toggleDictation, useDictation, type DictationInsertion } from './controller';
 import { DictationButton } from './DictationButton';
 
@@ -29,6 +29,7 @@ export function DictationControl(props: Props) {
 function Control({ targetRef, capture, disabled = false, buttonContainer, inlinePreview = false }: Props) {
     const { t } = useTranslation('voice');
     const id = useId();
+    const dictationKey = useKeyOf('dictation');
     const latest = useRef(capture);
     const latestDisabled = useRef(disabled);
     const enabled = useDictation((state) => state.model?.enabled === true);
@@ -91,7 +92,7 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
                     <IconButton
                         icon={active && phase !== 'error' ? Square : Mic}
                         label={label}
-                        kbd={CANVAS_SHORTCUTS.dictation}
+                        kbd={dictationKey}
                         aria-pressed={active && phase !== 'error'}
                         disabled={active && phase === 'finishing'}
                         onPointerDown={(event) => event.preventDefault()}

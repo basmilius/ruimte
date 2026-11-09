@@ -1,7 +1,7 @@
 import type { EditorEngine } from '@adecore/editor';
 import { isApplePlatform } from '@adecore/ui';
 import { codeHighlighter } from '@/code-highlighter';
-import { RUIMTE_EDITOR_KEYMAP } from '@/surface/editor-keymap';
+import { currentEditorKeymap } from '@/surface/shortcut-overrides';
 import { shellShortcuts } from '@/surface/terminal-keymap';
 import SearchWorker from './search.worker.ts?worker';
 
@@ -34,8 +34,9 @@ async function createEngine(): Promise<EditorEngine> {
         searchWorker: () => new SearchWorker(),
         tokenizer: shikiTokenizers(codeHighlighter),
         scopeColors: shikiScopeColors(codeHighlighter),
-        handBack: shellShortcuts(apple),
-        keymap: RUIMTE_EDITOR_KEYMAP,
+        // Asked on every key press, so a key a person rebinds reaches an editor that is already open.
+        handBack: () => shellShortcuts(apple),
+        keymap: () => currentEditorKeymap(),
         apple
     });
 }

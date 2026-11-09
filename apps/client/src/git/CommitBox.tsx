@@ -1,3 +1,4 @@
+import { useProviders } from '@adecore/agents-react/state';
 import {
     Button,
     Checkbox,
@@ -47,6 +48,8 @@ interface CommitBoxProps {
  */
 export function CommitBox({ messageKey, checkouts, named, capabilities, busy, onCommit }: CommitBoxProps) {
     const { t } = useTranslation('panels');
+    const providers = useProviders((state) => state.providers);
+    const writerName = providers.find((provider) => provider.kind === capabilities?.messageProvider)?.name ?? capabilities?.messageProvider;
     const message = useGit((s) => s.messages[messageKey] ?? '');
     const version = useGit((s) => s.messageVersions[messageKey] ?? 0);
     const [offered, setOffered] = useState<{ key: string; source: string; message: string } | null>(null);
@@ -183,7 +186,7 @@ export function CommitBox({ messageKey, checkouts, named, capabilities, busy, on
                     </span>
                 </div>
             )}
-            <div className="flex flex-col rounded-lg border border-field-border bg-field bg-clip-padding has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:-outline-offset-1 has-[textarea:focus-visible]:outline-accent">
+            <div className="flex flex-col rounded-lg border border-field-border bg-field bg-clip-padding has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:-outline-offset-1 has-[textarea:focus-visible]:outline-accent-on-surface">
                 <TextArea
                     variant="bare"
                     size="sm"
@@ -211,7 +214,7 @@ export function CommitBox({ messageKey, checkouts, named, capabilities, busy, on
                                     ? t('git.commit.stopWriting')
                                     : writeFrom === null
                                       ? t('git.commit.writeOneRepo')
-                                      : t('git.commit.letWrite', { provider: capabilities.messageProvider })
+                                      : t('git.commit.letWrite', { provider: writerName })
                             }
                             disabled={!changed || (writeFrom === null && !writing)}
                             onClick={write}

@@ -49,6 +49,8 @@ export interface Area {
     holders?: readonly ClientHolder[];
     /* Anything a source cannot say: output the gate hears about, or presence. Returns what ends it. */
     connect?(end: ClientEnd): Array<() => void>;
+    /* A channel opened, another machine's included; the counterpart of `closed`. */
+    opened?(clientId: string, access: ClientAccess): void;
     /* The channel of a client closed; what it started here and nothing else keeps goes with it. */
     closed?(clientId: string, access: ClientAccess): void | Promise<void>;
     stop?: readonly StopStep[];

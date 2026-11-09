@@ -49,6 +49,7 @@ import { mergeCodeActions, mergeProviders } from './merge.ts';
 import {
     CARGO_DEPTH,
     componentServes,
+    initializationOptionsOf,
     KIND_PROFILES,
     pinnedNativeTypescript,
     pinnedTypescriptLib,
@@ -105,6 +106,8 @@ export interface SharedDocument {
     readonly clients: Set<string>;
     /* What each process last reported for it, by the name of the process, which an agent reads back. */
     reported?: Map<string, Diagnostic[]>;
+    /* The kinds that would serve it but stay off it because its file lies in a worktree whose build code a person has not allowed. */
+    buildHeld?: LanguageServerId[];
 }
 
 export interface LanguageServerHooks {
@@ -151,6 +154,8 @@ export interface LanguageServerOptions {
     realPath?: (path: string) => Promise<string>;
     /* False for a project folder made from another machine's work, whose own TypeScript is never run; the pinned one is. */
     ownTypescript?: boolean;
+    /* True while the project lies in a worktree whose build code a person has not allowed; asked at each start. */
+    buildHeld?: () => boolean;
     hooks: LanguageServerHooks;
 }
 
@@ -285,6 +290,7 @@ export class LanguageServer {
     private children = 0;
     private readyAt: number | null = null;
     private startPromise: Promise<void> | undefined;
+    private cancelledStart: Promise<void> | undefined;
     private sidecarPromise: Promise<Component | null> | undefined;
     /* Why a sidecar did not start or ended, which keeps it from starting again until the kind does. */
     private sidecarFailure: string | undefined;
@@ -321,6 +327,11 @@ export class LanguageServer {
 
     get message(): string | undefined {
         return this.failure;
+    }
+
+    /* The hold on build code its last start read, which is what its processes run with; null before its first start read it. */
+    get appliedBuildHeld(): boolean | null {
+        return this.context?.buildHeld ?? null;
     }
 
     get traceValue(): TraceValue {
@@ -448,18 +459,29 @@ export class LanguageServer {
 
     /*
      * Starts the processes when a document waits for them and the kind is installed; nothing happens
-     * otherwise, and a crashed kind stays crashed. Callers share the start that is under way.
+     * otherwise, and a crashed kind stays crashed. Callers share the start that is under way, unless a stop cancelled
+     * it: that one ends without a spawn, so a caller after the stop starts again once it settled.
      */
     ensureStarted(): Promise<void> {
-        this.startPromise ??= this.begin().finally(() => {
-            this.startPromise = undefined;
+        const previous = this.startPromise;
+
+        if (previous !== undefined && previous !== this.cancelledStart) {
+            return previous;
+        }
+
+        const generation = this.generation;
+        const promise = (previous === undefined ? this.begin(generation) : previous.catch(() => undefined).then(() => this.begin(generation))).finally(() => {
+            if (this.startPromise === promise) {
+                this.startPromise = undefined;
+            }
         });
-        return this.startPromise;
+        this.startPromise = promise;
+
+        return promise;
     }
 
-    private async begin(): Promise<void> {
-        const generation = this.generation;
-        if (this.phase !== 'stopped' || this.documents.size === 0 || !(await this.options.isInstalled())) {
+    private async begin(generation: number): Promise<void> {
+        if (generation !== this.generation || this.phase !== 'stopped' || this.documents.size === 0 || !(await this.options.isInstalled())) {
             return;
         }
         // A stop that came while the install was looked up wins.
@@ -901,6 +923,7 @@ export class LanguageServer {
     /* Ends the processes and leaves the documents attached, for a restart or for the project going. */
     async stop(): Promise<void> {
         this.generation++;
+        this.cancelledStart = this.startPromise;
         this.sidecarPromise = undefined;
         const components = this.components;
         this.components = [];
@@ -938,7 +961,18 @@ export class LanguageServer {
             return;
         }
 
-        const context = await this.launchContext();
+        // The hold is read after the last await of the start, so one a person set while it read its configuration is what it spawns with.
+        const context: LaunchContext = { ...(await this.launchContext()), buildHeld: this.options.buildHeld?.() === true };
+        const build = this.options.profile.runsBuildCode;
+
+        // A kind that cannot turn building off does not start under the hold, as when it was kept off at open.
+        if (context.buildHeld && build !== undefined && build.off === undefined) {
+            this.phase = 'stopped';
+            this.notify();
+
+            return;
+        }
+
         this.context = context;
         try {
             for (const profile of this.options.profile.components.filter((candidate) => candidate.sidecar !== true)) {
@@ -1085,22 +1119,23 @@ export class LanguageServer {
     private spawnComponent(profile: ComponentProfile, context: LaunchContext, generation: number): Component {
         const { runtime } = this.options;
         const own = profile.native ? context.typescriptExecutable : (profile.program?.(context) ?? profile.command);
+        const env = { ...profile.env, ...(context.buildHeld === true ? this.options.profile.runsBuildCode?.env : {}) };
         const child = this.options.spawn(
             own === undefined
                 ? {
                       command: runtime.command,
                       args: [...runtime.args, `${context.installDirectory}/node_modules/${profile.entry}`, ...profile.args(context)],
                       cwd: this.options.folder,
-                      env: { ...runtime.env, ...profile.env }
+                      env: { ...runtime.env, ...env }
                   }
-                : { command: own, args: profile.args(context), cwd: this.options.folder, env: { ...profile.env } }
+                : { command: own, args: profile.args(context), cwd: this.options.folder, env }
         );
         const rootUri = pathToFileUri(this.options.folder);
         const configuration = configurationOf(profile, context);
         const session = new LspSession(child.transport, {
             rootUri,
             workspaceFolders: [{ uri: rootUri, name: basename(this.options.folder) }],
-            initializationOptions: profile.initializationOptions(context),
+            initializationOptions: initializationOptionsOf(this.options.profile, profile, context),
             clientInfo: { name: 'ruimte' },
             snippetSupport: true,
             resourceOperations: ['create', 'rename', 'delete'],

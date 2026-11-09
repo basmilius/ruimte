@@ -319,6 +319,8 @@ export async function render(request: RenderRequest, signal?: AbortSignal): Prom
             context.log?.add('error', line);
         }
     });
+    // Told before anything else, so the daemon keeps this port out of what a person or an agent shares while the child runs.
+    await Bun.write(Bun.stdout, `${JSON.stringify({ proxyPort: proxy.port })}\n`);
     // No size here: a Chrome view takes its size from a resize only, and with one given here a capture after a navigation the page was kept from never returns.
     const open = (): PageView => {
         const log = context.log;

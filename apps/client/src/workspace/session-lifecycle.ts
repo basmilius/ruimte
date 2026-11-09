@@ -3,12 +3,14 @@ import { browserRegistry } from '@/clients/browser/registry';
 import { sessionNodesOf } from '@/clients/project/project-sessions';
 import { watchNodes, type NodeExit } from '@/clients/terminal/lifecycle-watch';
 import { forgetScreen } from '@/clients/terminal/registry';
+import { useChatTextSizes } from '@/state/chat-text-size';
 import { endpointKey } from '@/state/keys';
 import { fireAndForget } from '@/transport-api/transport';
 import { browserClientFor, chatClientFor, sessionClientFor } from '@/workspace/connections';
 
 /* The node names the machine it ran on, so a node that leaves is ended there and not on the machine that is active now. */
 function end(endpointId: string, id: string, kind: CanvasNodeKind, exit: NodeExit): void {
+    useChatTextSizes.getState().reset(endpointKey(endpointId, id));
     if (kind === 'terminal') {
         forgetScreen(endpointId, id);
     } else if (kind === 'browser') {

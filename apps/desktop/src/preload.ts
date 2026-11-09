@@ -68,6 +68,10 @@ const bridge = {
     platform: process.platform,
     bindBrowserRoute: (binding) => invoke('browser:bind-route', binding),
     onBrowserRouteBlocked: on('browser:route-blocked'),
+    openPortTunnel: (request) => invoke('port-tunnel:open', request),
+    closePortTunnel: (id) => send('port-tunnel:close', id),
+    portTunnelSend: (message) => send('port-tunnel:send', message),
+    onPortTunnel: on('port-tunnel:message'),
     versions: { electron: process.versions.electron, chrome: process.versions.chrome, node: process.versions.node },
     /* Handed down as an argument rather than fetched, because `app` is the main process alone and
        the client needs both before it draws its first word or its first number. */
@@ -86,6 +90,7 @@ const bridge = {
     browserContextAction: (action) => send('browser:context-action', action),
     onGuestFocus: on('guest:focus'),
     onOpenSettings: on('menu:settings'),
+    quit: () => send('app:quit'),
     setLanguage: (language) => send('app:language', language),
     setMenu: (spec) => send('menu:set', spec),
     onMenuCommand: on('menu:run'),

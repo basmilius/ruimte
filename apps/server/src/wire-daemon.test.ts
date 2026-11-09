@@ -22,6 +22,7 @@ describe('wireDaemon', () => {
                 'chatMover',
                 'clients',
                 'computer',
+                'connected',
                 'databases',
                 'devices',
                 'extensions',
@@ -31,6 +32,7 @@ describe('wireDaemon', () => {
                 'machine',
                 'maintenance',
                 'network',
+                'ports',
                 'power',
                 'processes',
                 'projects',
@@ -42,6 +44,7 @@ describe('wireDaemon', () => {
                 'stats',
                 'stores',
                 'templates',
+                'tunnels',
                 'usage',
                 'voice',
                 'work'

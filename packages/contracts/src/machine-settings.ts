@@ -1,6 +1,10 @@
 import { BrokerSettingSchema } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { KeepAwakeModeSchema } from './keep-awake.ts';
+import { TextModelChoiceSchema } from './text-model.ts';
+
+/* The longest folder a machine keeps to start browsing in. */
+export const START_FOLDER_MAX = 4096;
 
 export const TerminalShellSchema = z.enum(['powershell', 'git-bash', 'cmd', 'wsl']);
 export type TerminalShell = z.infer<typeof TerminalShellSchema>;
@@ -41,6 +45,9 @@ export const MACHINE_SETTINGS = {
     agentsDeleteAnyView: row({ schema: z.boolean(), default: false }),
     // Lets an agent read the other projects open on this machine and start agents there (`--project`).
     reachOpenProjects: row({ schema: z.boolean(), default: false }),
+    // Lets an agent share a development port of this machine with the person's other devices (`port_share`). The daemon enforces it, and
+    // only the owner turns it on: opening a loopback service to every device of the account is not a paired client's decision.
+    agentsSharePorts: row({ schema: z.boolean(), default: false, ownerOnly: true }),
     // Lets a message of an agent join a running turn, as a person's "Send to a working agent right away" does.
     steerMessages: row({ schema: z.boolean(), default: false }),
     // Browser pages and device screens.
@@ -49,6 +56,8 @@ export const MACHINE_SETTINGS = {
     resumeAtReset: row({ schema: z.boolean(), default: false }),
     // The `visual_*` tools. Off only when a person turned it off.
     visualReplies: row({ schema: z.boolean(), default: true }),
+    // The model that writes new chat titles, commit messages and conflict proposals. Null is Automatic, and so is a pick that will not read.
+    textModel: row({ schema: TextModelChoiceSchema, default: null, nullable: true, request: TextModelChoiceSchema.nullable() }),
     // The daemon holds the block, so it holds without a window and for a phone.
     keepAwake: row({ schema: KeepAwakeModeSchema, default: 'off' }),
     // Hold the block on battery as well; off, it holds on the power adapter only.
@@ -76,7 +85,10 @@ export const MACHINE_SETTINGS = {
     // Only the kinds a person changed; `endpoint.setNodeSize` sets them.
     nodeSizes: row({ schema: EndpointNodeSizesSchema, default: {}, settable: false }),
     // Anonymous daily usage counts sent from a release build. Whether this machine sends anything is the decision of the person who runs it.
-    usageStats: row({ schema: z.boolean(), default: true, ownerOnly: true })
+    usageStats: row({ schema: z.boolean(), default: true, ownerOnly: true }),
+    // Where browsing starts on this machine; empty is the home folder. A path means something on one machine only, so it lives here,
+    // and `endpoint.setStartFolder` sets it for every client.
+    startFolder: row({ schema: z.string().max(START_FOLDER_MAX), default: '', settable: false })
 } as const;
 
 type Rows = typeof MACHINE_SETTINGS;

@@ -3,16 +3,18 @@ import Foundation
 import RuimtePulsar
 import RuimteTransport
 import Testing
+import UIKit
 
 @testable import Ruimte
 
 @Suite @MainActor struct DeviceViewTests {
-    private static let reference: JSONValue = .object([
+    fileprivate static let reference: JSONValue = .object([
         "platform": .string("ios"), "kind": .string("simulator"), "name": .string("iPhone 17 Pro"),
         "runtime": .string("iOS 26.1"),
     ])
 
-    private static func device(state: String = "booted", stream: Bool = true, buttons: [String]? = nil) -> JSONValue {
+    fileprivate static func device(state: String = "booted", stream: Bool = true, buttons: [String]? = nil) -> JSONValue
+    {
         var capabilities: [String: JSONValue] = [
             "boot": .bool(true), "shutdown": .bool(true), "stream": .bool(stream), "input": .bool(true),
             "screenshot": .bool(true),
@@ -117,6 +119,274 @@ import Testing
         #expect(model.phase == .noReference)
         #expect(machine.requests.isEmpty)
     }
+
+    @Test func aPreviewFrameDoesNotDecodeAndPublishOnTheEventCallback() async throws {
+        let machine = DeviceMachine(devices: [Self.device()])
+        let preview = MachineDevicePreview(client: machine, device: try #require(MachineDevice(Self.device().deviceInfo)))
+        await preview.start()
+        defer { preview.stop() }
+        machine.emit(
+            .object([
+                "deviceId": .string("UDID-1"), "backendId": .string("ios-simulator"), "format": .string("jpeg"),
+                "data": .string(Self.jpeg().base64EncodedString()), "sequence": .number(1),
+            ]))
+
+        #expect(preview.image == nil)
+    }
+
+    @Test func theDefaultDecoderReadsJPEGAndRejectsInvalidBytes() async {
+        let image = await DeviceFrameDecoder.image(Self.jpeg().base64EncodedString())
+        #expect(image?.size == CGSize(width: 2, height: 3))
+        #expect(await DeviceFrameDecoder.image("not base64") == nil)
+        #expect(await DeviceFrameDecoder.image(Data("not an image".utf8).base64EncodedString()) == nil)
+    }
+
+    @Test func decodingKeepsOnlyTheLatestPendingFrameAndSurvivesABadImage() async {
+        let probe = FrameProbe()
+        let decoder = DeviceFrameDecoder(decode: { await probe.decode($0) }, show: probe.show)
+        let first = UIImage()
+        let last = UIImage()
+        decoder.submit("first")
+        await probe.waitForRequests(1)
+        decoder.submit("superseded")
+        decoder.submit("bad-image")
+        #expect(probe.inputs == ["first"])
+        probe.complete(0, image: first)
+        await probe.waitForRequests(2)
+        #expect(probe.inputs == ["first", "bad-image"])
+        #expect(probe.images.count == 1 && probe.images.first === first)
+
+        decoder.submit("last")
+        probe.complete(1, image: nil)
+        await probe.waitForRequests(3)
+        #expect(probe.images.count == 1 && probe.images.first === first)
+        probe.complete(2, image: last)
+        await probe.waitForImages(2)
+        #expect(probe.inputs == ["first", "bad-image", "last"])
+        #expect(probe.images.last === last)
+    }
+
+    @Test func aResetDiscardsOldWorkBeforeDecodingTheRestartedStreamsLatestFrame() async {
+        let probe = FrameProbe()
+        let decoder = DeviceFrameDecoder(decode: { await probe.decode($0) }, show: probe.show)
+        decoder.submit("old")
+        await probe.waitForRequests(1)
+        decoder.submit("old-pending")
+        decoder.reset()
+        decoder.submit("new-superseded")
+        decoder.submit("new")
+        #expect(probe.inputs == ["old"])
+        probe.complete(0, image: UIImage())
+        await probe.waitForRequests(2)
+        #expect(probe.inputs == ["old", "new"])
+        #expect(probe.images.isEmpty)
+        let fresh = UIImage()
+        probe.complete(1, image: fresh)
+        await probe.waitForImages(1)
+        #expect(probe.images.count == 1 && probe.images.first === fresh)
+    }
+
+    @Test func previewsFilterAndCoalesceFramesAndRejectAStoppedStreamsResult() async throws {
+        let machine = DeviceMachine(devices: [Self.device()])
+        let probe = FrameProbe()
+        var instant: TimeInterval = 0
+        let preview = MachineDevicePreview(
+            client: machine, device: try #require(MachineDevice(Self.device().deviceInfo)), now: { instant },
+            decode: { await probe.decode($0) })
+        await preview.start()
+        defer { preview.stop() }
+        machine.emit(Self.frame("wrong-device").setting("deviceId", .string("other")))
+        machine.emit(Self.frame("video").setting("format", .string("h264")))
+        machine.emit(Self.frame("first"))
+        await probe.waitForRequests(1)
+        instant = 0.25
+        machine.emit(Self.frame("superseded"))
+        instant = 0.5
+        machine.emit(Self.frame("last"))
+        let first = UIImage()
+        probe.complete(0, image: first)
+        await probe.waitForRequests(2)
+        #expect(probe.inputs == ["first", "last"])
+        #expect(preview.image === first)
+
+        preview.stop()
+        await preview.start()
+        machine.emit(Self.frame("restart"))
+        probe.complete(1, image: UIImage())
+        await probe.waitForRequests(3)
+        #expect(preview.image === first)
+        instant = 0.75
+        machine.emit(Self.frame("barrier"))
+        let fresh = UIImage()
+        probe.complete(2, image: fresh)
+        await probe.waitForRequests(4)
+        #expect(probe.inputs == ["first", "last", "restart", "barrier"])
+        #expect(preview.image === fresh)
+        preview.stop()
+        probe.complete(3, image: nil)
+    }
+
+    @Test func aDeviceViewFiltersAndCoalescesEncodedFramesAndDropsOldResultsOnReopen() async {
+        let machine = DeviceMachine(devices: [Self.device()])
+        let probe = FrameProbe()
+        let model = DeviceViewModel(client: machine, reference: Self.reference.deviceReference, decode: { await probe.decode($0) })
+        model.start()
+        defer { model.stop() }
+        await model.refresh()
+        machine.emit(Self.frame("wrong-backend").setting("backendId", .string("other")))
+        machine.emit(Self.frame("video").setting("format", .string("h264")))
+        machine.emit(Self.frame("first", sequence: 1))
+        await probe.waitForRequests(1)
+        machine.emit(Self.frame("superseded", sequence: 2))
+        machine.emit(Self.frame("last", sequence: 3))
+        let first = UIImage()
+        probe.complete(0, image: first)
+        await probe.waitForRequests(2)
+        #expect(probe.inputs == ["first", "last"])
+        #expect(model.frame === first)
+
+        model.stop()
+        model.start()
+        await model.refresh()
+        machine.emit(Self.frame("restart", sequence: 1))
+        probe.complete(1, image: UIImage())
+        await probe.waitForRequests(3)
+        #expect(model.frame === first)
+        machine.emit(Self.frame("barrier", sequence: 2))
+        let fresh = UIImage()
+        probe.complete(2, image: fresh)
+        await probe.waitForRequests(4)
+        #expect(probe.inputs == ["first", "last", "restart", "barrier"])
+        #expect(model.frame === fresh)
+        model.stop()
+        probe.complete(3, image: nil)
+    }
+
+    private static func jpeg() -> Data {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: CGSize(width: 2, height: 3), format: format).jpegData(
+            withCompressionQuality: 0.8
+        ) { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 2, height: 3))
+        }
+    }
+
+    fileprivate static func frame(_ data: String, sequence: Int = 0) -> JSONValue {
+        .object([
+            "deviceId": .string("UDID-1"), "backendId": .string("ios-simulator"), "format": .string("jpeg"),
+            "data": .string(data), "sequence": .number(Double(sequence)),
+        ])
+    }
+}
+
+@Suite @MainActor struct DeviceFrameAdmissionTests {
+    @Test func anIdlePreviewAdmitsAt250msAndAnInvalidFrameConsumesItsAttempt() async throws {
+        let machine = DeviceMachine(devices: [DeviceViewTests.device()])
+        let frames = ImmediateFrames()
+        var instant: TimeInterval = 0
+        let preview = MachineDevicePreview(
+            client: machine, device: try #require(MachineDevice(DeviceViewTests.device().deviceInfo)), now: { instant },
+            decode: { await frames.decode($0) })
+        await preview.start()
+        defer { preview.stop() }
+
+        await machine.emitAndFinish(DeviceViewTests.frame("first"))
+        #expect(frames.inputs == ["first"])
+        #expect(preview.image === frames.picture)
+        instant = 0.249
+        await machine.emitAndFinish(DeviceViewTests.frame("too-soon"))
+        #expect(frames.inputs == ["first"])
+        instant = 0.25
+        await machine.emitAndFinish(DeviceViewTests.frame("on-time"))
+        #expect(frames.inputs == ["first", "on-time"])
+
+        instant = 0.5
+        await machine.emitAndFinish(DeviceViewTests.frame("invalid"))
+        #expect(frames.inputs == ["first", "on-time", "invalid"])
+        #expect(preview.image === frames.picture)
+        instant = 0.749
+        await machine.emitAndFinish(DeviceViewTests.frame("too-soon-after-invalid"))
+        #expect(frames.inputs == ["first", "on-time", "invalid"])
+        instant = 0.75
+        await machine.emitAndFinish(DeviceViewTests.frame("after-invalid"))
+        #expect(frames.inputs == ["first", "on-time", "invalid", "after-invalid"])
+        #expect(preview.image === frames.picture)
+    }
+
+    @Test func anIdleDeviceViewRejectsDuplicateSequencesIncludingAfterAFailedDecode() async {
+        let machine = DeviceMachine(devices: [DeviceViewTests.device()])
+        let frames = ImmediateFrames()
+        let model = DeviceViewModel(
+            client: machine, reference: DeviceViewTests.reference.deviceReference, decode: { await frames.decode($0) })
+        model.start()
+        defer { model.stop() }
+        await model.refresh()
+
+        await machine.emitAndFinish(DeviceViewTests.frame("first", sequence: 1))
+        #expect(frames.inputs == ["first"])
+        await machine.emitAndFinish(DeviceViewTests.frame("duplicate", sequence: 1))
+        #expect(frames.inputs == ["first"])
+        await machine.emitAndFinish(DeviceViewTests.frame("invalid", sequence: 2))
+        #expect(frames.inputs == ["first", "invalid"])
+        #expect(model.frame === frames.picture)
+        await machine.emitAndFinish(DeviceViewTests.frame("retry-same-sequence", sequence: 2))
+        #expect(frames.inputs == ["first", "invalid"])
+        await machine.emitAndFinish(DeviceViewTests.frame("third", sequence: 3))
+        #expect(frames.inputs == ["first", "invalid", "third"])
+        #expect(model.frame === frames.picture)
+    }
+}
+
+@MainActor private final class ImmediateFrames {
+    private(set) var inputs: [String] = []
+    let picture = UIImage()
+
+    func decode(_ encoded: String) async -> UIImage? {
+        inputs.append(encoded)
+        return encoded == "invalid" ? nil : picture
+    }
+}
+
+@MainActor private final class FrameProbe {
+    private(set) var inputs: [String] = []
+    private(set) var images: [UIImage] = []
+    private var completions: [Int: CheckedContinuation<UIImage?, Never>] = [:]
+    private var requests: [(Int, CheckedContinuation<Void, Never>)] = []
+    private var publications: [(Int, CheckedContinuation<Void, Never>)] = []
+
+    func decode(_ data: String) async -> UIImage? {
+        await withCheckedContinuation { continuation in
+            let index = inputs.count
+            inputs.append(data)
+            completions[index] = continuation
+            let ready = requests.filter { $0.0 <= inputs.count }
+            requests.removeAll { $0.0 <= inputs.count }
+            for (_, arrival) in ready { arrival.resume() }
+        }
+    }
+
+    func show(_ image: UIImage) {
+        images.append(image)
+        let ready = publications.filter { $0.0 <= images.count }
+        publications.removeAll { $0.0 <= images.count }
+        for (_, arrival) in ready { arrival.resume() }
+    }
+
+    func complete(_ index: Int, image: UIImage?) {
+        completions.removeValue(forKey: index)?.resume(returning: image)
+    }
+
+    func waitForRequests(_ count: Int) async {
+        guard inputs.count < count else { return }
+        await withCheckedContinuation { requests.append((count, $0)) }
+    }
+
+    func waitForImages(_ count: Int) async {
+        guard images.count < count else { return }
+        await withCheckedContinuation { publications.append((count, $0)) }
+    }
 }
 
 @MainActor private final class DeviceMachine: MachineRequesting {
@@ -124,6 +394,7 @@ import Testing
     var openRefusal: String?
     var requests: [(WireRequest, JSONValue)] = []
     private let inputArrival = NativeArrival()
+    private var handlers: [UUID: @MainActor @Sendable (JSONValue) -> Void] = [:]
 
     func waitForInput() async {
         await inputArrival.wait()
@@ -143,5 +414,19 @@ import Testing
         }
     }
 
-    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+        guard event == .deviceFrame else { return {} }
+        let id = UUID()
+        handlers[id] = handler
+        return { [weak self] in self?.handlers[id] = nil }
+    }
+
+    func emit(_ payload: JSONValue) {
+        for handler in handlers.values { handler(payload) }
+    }
+
+    func emitAndFinish(_ payload: JSONValue) async {
+        let completion = NativeTaskDrain { emit(payload) }
+        await completion.finish()
+    }
 }

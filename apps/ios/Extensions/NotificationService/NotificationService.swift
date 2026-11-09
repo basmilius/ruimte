@@ -1,5 +1,6 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 @preconcurrency import UserNotifications
 
 final class NotificationService: UNNotificationServiceExtension {
@@ -35,9 +36,9 @@ final class NotificationService: UNNotificationServiceExtension {
             content.badge = NSNumber(value: unseen)
             content.userInfo[NotificationKeys.seenKey] = nodeKey
             content.userInfo[NotificationKeys.issuedAt] = envelope["issuedAt"]?.numberValue
-            if alert.kind == .approval { content.interruptionLevel = .timeSensitive }
+            if alert.kind == .approval || alert.timeSensitive == true { content.interruptionLevel = .timeSensitive }
             content.title = alert.title
-            content.body = alert.body
+            content.body = Self.body(alert, now: Date())
             content.threadIdentifier = envelope["machineId"]?.stringValue ?? "ruimte"
             if alert.kind == .approval, alert.choices?.contains(where: { $0.kind == .allow }) == true,
                 alert.choices?.contains(where: { $0.kind == .deny }) == true
@@ -50,6 +51,13 @@ final class NotificationService: UNNotificationServiceExtension {
             content.sound = nil
             finish(content)
         }
+    }
+    /// The machine writes no time, so a usage limit's push says here when it lifts, in the phone's language and region.
+    private static func body(_ alert: PushAlertContent, now: Date) -> String {
+        guard let resetsAt = alert.resetsAt else { return alert.body }
+        let date = Date(timeIntervalSince1970: Double(resetsAt) / 1000)
+        let moment = Format.isSameDay(date, now) ? Format.clock(date) : Format.weekdayClock(date)
+        return "\(alert.body) \(String(localized: "Lifts \(moment)."))"
     }
     override func serviceExtensionTimeWillExpire() { if let fallback { finish(fallback) } }
     private func finish(_ content: UNNotificationContent) {

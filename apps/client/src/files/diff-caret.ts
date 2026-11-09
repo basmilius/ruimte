@@ -1,14 +1,14 @@
 import type { DiffSource } from '@adecore/editor-react';
 import type { DiffSourceLine } from '@adecore/merge';
-import { matchesShortcut, isApplePlatform } from '@adecore/ui';
+import { isApplePlatform } from '@adecore/ui';
 import { useRef, type RefObject } from 'react';
 import { create } from 'zustand';
 import { ignoreRefusal, perform } from '@/action-port/perform';
 import { cellElement } from '@/layout/cell-rects';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
-import { requiredShortcut } from '@/surface/editor-keymap';
 import { createFocusRegistry } from '@/surface/panels/focus-registry';
+import { matchesKeymapRow } from '@/surface/shortcut-overrides';
 
 interface DiffCaretStore {
     /* Where the caret of each diff tab stands in its file, keyed by the tab, so the tab's menu can say the line. In memory only. */
@@ -87,7 +87,7 @@ export function useDiffCaret(path: string, tabKey: string): { surface: RefObject
         element?.addEventListener('focusin', take);
         const offCaret = source.editor.onCaret(take);
         const offKey = source.editor.onKeyDown((event) => {
-            if (!matchesShortcut(requiredShortcut('jumpToSource'), event, apple)) {
+            if (!matchesKeymapRow('jumpToSource', event, apple)) {
                 return false;
             }
             return openAt(path, source);

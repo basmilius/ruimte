@@ -14,6 +14,7 @@ import { ProjectClient, type ProjectSink } from '@/clients/project/project-clien
 import { RemoteMirror } from '@/clients/project/remote-mirror';
 import { claimWindow } from '@/clients/project/window-claim';
 import { SessionClient } from '@/clients/terminal/session-client';
+import { useChatTextSizes } from '@/state/chat-text-size';
 import { chatSinkFor } from '@/state/chats';
 import { activeEndpoint, endpointById, endpointIdOfMachine, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { isOfEndpoint } from '@/state/keys';
@@ -511,6 +512,7 @@ function prune(): void {
 
 /* Everything one machine held, for a row that is forgotten or a session that was revoked. */
 export function dropMachine(endpointId: string): void {
+    useChatTextSizes.getState().forgetMachine(endpointId);
     const machine = machines.get(endpointId);
     machines.delete(endpointId);
     machine?.dispose();

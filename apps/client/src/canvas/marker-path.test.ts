@@ -15,6 +15,10 @@ describe('markerPath', () => {
         expect(markerPath('dot', at, right)).toBe('M 95 50 A 5 5 0 1 0 105 50 A 5 5 0 1 0 95 50 Z');
     });
 
+    test('a point is a circle of radius 2, smaller than a dot', () => {
+        expect(markerPath('point', at, right)).toBe('M 98 50 A 2 2 0 1 0 102 50 A 2 2 0 1 0 98 50 Z');
+    });
+
     test('a chevron is an open V with its point on the end, opening away from the node', () => {
         // Arms 6 back along the direction and 6 out to either side, and no Z: it is a stroke, not a shape.
         expect(markerPath('chevron', at, right)).toBe('M 106 56 L 100 50 L 106 44');

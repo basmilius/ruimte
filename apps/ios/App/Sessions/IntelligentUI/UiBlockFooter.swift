@@ -14,7 +14,8 @@ struct UiBlockFooter: View {
     var body: some View {
         let model = context.model
         let live = UiLiveStatus.of(
-            block: model.block, order: model.queryNames, readings: model.readings, reading: model.reading)
+            block: model.block, order: model.queryNames, readings: model.readings, reading: model.reading,
+            lastReadAt: model.lastReadAt)
         let fixes = UiBlockFix.list((model.block["diagnostics"]?.arrayValue ?? []) + model.diagnostics)
         let answered = answeredLabel
         if live != nil || answered != nil || !fixes.isEmpty || shownAsText != nil {
@@ -49,6 +50,10 @@ struct UiBlockFooter: View {
                         }
                         .accessibilityElement(children: .combine)
                     }
+                }
+                // On its own line rather than behind a tap, since the value above stays dimmed until it no longer holds.
+                if let live, live.state == .failed || live.state == .refused, let reason = live.reason {
+                    Text(reason)
                 }
                 if let hint {
                     Text(hint).foregroundStyle(MobileStyle.muted)
@@ -103,9 +108,7 @@ private struct UiLivePart: View {
 
     var body: some View {
         let detail: String? =
-            live.state == .failed && live.reason != nil
-            ? live.reason
-            : live.sources.isEmpty ? nil : String(localized: "Reads \(live.sources.joined(separator: ", "))")
+            live.sources.isEmpty ? nil : String(localized: "Reads \(live.sources.joined(separator: ", "))")
         Button {
             hint = hint == nil ? detail : nil
         } label: {

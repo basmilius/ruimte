@@ -12,7 +12,7 @@ import {
 } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { AgentIntegrationsSummarySchema } from './agent-integrations.ts';
-import { ENDPOINT_CHANGED_SETTINGS, ENDPOINT_INFO_SETTINGS, ENDPOINT_REQUEST_SETTINGS } from './machine-settings.ts';
+import { ENDPOINT_CHANGED_SETTINGS, ENDPOINT_INFO_SETTINGS, ENDPOINT_REQUEST_SETTINGS, START_FOLDER_MAX } from './machine-settings.ts';
 import { MachineUpdateSchema } from './machine-update.ts';
 import { NODE_SIZE_MAX, NODE_SIZE_MIN } from './node-defaults.ts';
 import { NodeKindSchema, ProjectIconChoiceSchema } from './project.ts';
@@ -88,7 +88,19 @@ export type EndpointInfo = z.infer<typeof EndpointInfoSchema>;
  * `endpoint.info`. `client` names the app that asks, which a machine counts in its anonymous usage. A
  * string rather than a list, so a machine that does not know a newer kind counts nothing instead of refusing.
  */
-export const EndpointInfoPayloadSchema = z.object({ client: z.string().max(32).optional() });
+export const EndpointInfoPayloadSchema = z.object({
+    client: z.string().max(32).optional(),
+    /*
+     * What the app tells of itself for the machine's list of connected clients, shown and never checked.
+     * Strings rather than lists, so a machine shows a newer value instead of refusing it: `clientOs` is
+     * `macos`, `windows`, `linux`, `ios` or `ipados`, and `clientDevice` is `desktop`, `phone` or `tablet`.
+     */
+    clientVersion: z.string().max(64).optional(),
+    clientOs: z.string().max(64).optional(),
+    clientOsVersion: z.string().max(64).optional(),
+    clientDevice: z.string().max(64).optional()
+});
+export type EndpointInfoPayload = z.infer<typeof EndpointInfoPayloadSchema>;
 
 export const USAGE_CLIENT_KINDS = ['desktop', 'ios', 'station'] as const;
 export type UsageClientKind = (typeof USAGE_CLIENT_KINDS)[number];
@@ -162,6 +174,14 @@ export const EndpointSetNodeSizePayloadSchema = z.object({
 });
 
 /*
+ * `endpoint.setStartFolder`: the folder browsing starts in on this machine, for every client of it. A path
+ * means something on one machine only, so it is the machine's. Empty puts it back to the home folder.
+ */
+export const EndpointSetStartFolderPayloadSchema = z.object({
+    folder: z.string().max(START_FOLDER_MAX)
+});
+
+/*
  * `endpoint.closedLidRule`: the sudoers rule for exactly `pmset -a disablesleep 1` and `0`. Local secret
  * only; macOS asks for an administrator, so the request waits on a person. Removing turns sleep back on
  * and the switch off. Refused with `closed-lid-unavailable` off a Mac, `closed-lid-cancelled` on cancel.
@@ -192,6 +212,35 @@ export const AuthSessionsResultSchema = z.object({
     sessions: z.array(AuthSessionSchema)
 });
 export type AuthSessionsResult = z.infer<typeof AuthSessionsResultSchema>;
+
+/*
+ * One client connected to a machine now, as it told of itself in `endpoint.info`. `access` is `local` (the
+ * local secret), `account`, `machine` (a peer) or `mcp`, an external MCP client that made a request lately.
+ * Strings, so an older client shows a newer kind rather than refusing the list.
+ */
+export const ConnectedClientSchema = z.object({
+    id: z.string().min(1),
+    access: z.string(),
+    // The session's label, or the name a person reads for an external MCP client.
+    label: z.string().optional(),
+    machineId: z.string().optional(),
+    client: z.string().optional(),
+    version: z.string().optional(),
+    os: z.string().optional(),
+    osVersion: z.string().optional(),
+    device: z.string().optional(),
+    // Absent for an external MCP client, which holds no channel.
+    reachability: ReachabilitySchema.optional(),
+    connectedAt: z.number(),
+    // Only for an external MCP client: its last request.
+    lastRequestAt: z.number().optional(),
+    // The channel of the asking client itself.
+    current: z.boolean()
+});
+export type ConnectedClient = z.infer<typeof ConnectedClientSchema>;
+
+export const ClientListResultSchema = z.object({ clients: z.array(ConnectedClientSchema) });
+export type ClientListResult = z.infer<typeof ClientListResultSchema>;
 
 export const AuthRevokePayloadSchema = z.object({
     id: z.string().min(1)
@@ -270,16 +319,23 @@ export const AUTH_REQUEST_SCHEMAS = {
     'endpoint.setIdentity': { payload: EndpointSetIdentityPayloadSchema, result: EndpointInfoSchema },
     'endpoint.settings': { payload: EndpointSettingsSchema, result: EndpointInfoSchema },
     'endpoint.setNodeSize': { payload: EndpointSetNodeSizePayloadSchema, result: EndpointInfoSchema },
+    'endpoint.setStartFolder': { payload: EndpointSetStartFolderPayloadSchema, result: EndpointInfoSchema },
     'endpoint.closedLidRule': { payload: EndpointClosedLidRulePayloadSchema, result: EndpointInfoSchema },
     'endpoint.signPeerAccess': { payload: EndpointSignPeerAccessPayloadSchema, result: EndpointSignPeerAccessResultSchema },
     'endpoint.signRegistration': { payload: EndpointSignRegistrationPayloadSchema, result: EndpointSignRegistrationResultSchema },
     'endpoint.leaveAccount': { payload: EmptySchema, result: EndpointLeaveAccountResultSchema },
     'auth.sessions': { payload: EmptySchema, result: AuthSessionsResultSchema },
-    'auth.revoke': { payload: AuthRevokePayloadSchema, result: EmptySchema }
+    'auth.revoke': { payload: AuthRevokePayloadSchema, result: EmptySchema },
+    // Who is connected now; a person's own, so none of these is on a peer's list.
+    'client.list': { payload: EmptySchema, result: ClientListResultSchema },
+    'client.watch': { payload: EmptySchema, result: EmptySchema },
+    'client.unwatch': { payload: EmptySchema, result: EmptySchema }
 } as const;
 
 export const AUTH_EVENT_SCHEMAS = {
     'endpoint.changed': EndpointChangedEventSchema,
+    // A client connected, left or told of itself, or an external MCP client became active; only to the clients that asked with `client.watch`.
+    'client.changed': EmptySchema,
     // To the desktop app on this machine only: a person asked another client to install the update.
     'endpoint.updateInstall': EmptySchema
 } as const;

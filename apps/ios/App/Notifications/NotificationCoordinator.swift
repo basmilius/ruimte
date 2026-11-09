@@ -146,6 +146,8 @@ struct NotificationDestination: Identifiable, Hashable {
     var approvals: Bool
     var activities: Bool
     var preferences: NotificationPreferences
+    /// The machines that answered `push.preferences` without the quiet hours this phone sent, which need an update.
+    private(set) var machinesWithoutQuietHours = Set<String>()
     var supportsActivities: Bool { UIDevice.current.userInterfaceIdiom == .phone }
     var problem: String?
     var busy = false
@@ -373,14 +375,19 @@ struct NotificationDestination: Identifiable, Hashable {
         let chosen = NotificationPreferences.load(defaults) != nil
         var adoptKinds = !chosen
         var next = preferences
+        var outdated = Set<String>()
         for machine in runtime.machines {
             let session = runtime.session(for: machine)
             guard session.connected else { continue }
-            guard !chosen, let result = try? await session.rpc.request(.pushPreferences) else { continue }
+            guard let result = try? await session.rpc.request(.pushPreferences) else { continue }
+            // A machine from before quiet hours drops them without a word, and answers without.
+            if result["subscribed"] == .bool(true), result["quietHours"] == nil { outdated.insert(machine.id) }
+            guard !chosen else { continue }
             next.adopt(result, machineID: machine.id, kinds: adoptKinds)
             if result["subscribed"] == .bool(true) { adoptKinds = false }
         }
         if next != preferences { preferences = next }
+        if outdated != machinesWithoutQuietHours { machinesWithoutQuietHours = outdated }
     }
 
     func disable(accountDeleted: Bool = false) async {
@@ -437,6 +444,7 @@ struct NotificationDestination: Identifiable, Hashable {
             }
         }
         await synchronize()
+        if preferences.quietHours?.on == true { await readPreferences() }
     }
 
     func startBackgroundActivityDelivery() { startActivityObservers() }

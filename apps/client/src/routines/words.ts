@@ -1,21 +1,13 @@
 import { formatClock, formatDateTime, formatDay, formatDuration, formatElapsedShort } from '@adecore/ui/format';
 import { isDeclined, type CronProblem, type RoutineEntry, type RoutineRun, type RoutineSchedule } from '@ruimte/contracts';
 import i18next from 'i18next';
+import { weekdayWords } from '@/format/weekday';
 import { awaitsApproval, type AgendaBlock, type CellItem } from '@/routines/agenda';
 
 /* A time of a schedule, `HH:MM` on the machine's clock, written the way the region writes a clock. */
 export function clockWords(time: string): string {
     const [hour, minute] = time.split(':').map(Number);
     return formatClock(Date.UTC(2000, 0, 3, hour ?? 0, minute ?? 0), 'UTC');
-}
-
-// 3 January 2000 was a Monday, so an ISO weekday is that date plus the weekday less one.
-function weekdayAt(weekday: number): number {
-    return Date.UTC(2000, 0, 2 + weekday, 12, 0);
-}
-
-export function weekdayWords(weekday: number, width: 'short' | 'long' = 'short'): string {
-    return formatDateTime(weekdayAt(weekday), { weekday: width, timeZone: 'UTC' });
 }
 
 const WEEKDAYS = [1, 2, 3, 4, 5];

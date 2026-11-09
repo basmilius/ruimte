@@ -1,6 +1,8 @@
+import type { KeymapId } from '@adecore/editor/keymap';
 import type { Shortcut } from '@adecore/ui';
 import type { LucideIcon } from 'lucide-react';
 import type { MenuContext } from '@/commands/menu-context';
+import type { DefaultKeyId } from '@/surface/default-keys';
 
 /* A menu of the bar or a submenu with a fixed place, whose groups `shell/menu/model.ts` lays out. */
 export type MenuContainer =
@@ -54,13 +56,25 @@ export interface MenuPlace {
 export interface CommandSpec {
     readonly key: string;
     readonly icon: LucideIcon;
+    /*
+     * A key the row has for good, which no one rebinds: one a composer answers by itself. The keys a person may
+     * rebind are the row's default in `surface/default-keys.ts`, or the key of the editor's keymap named by `keymap`.
+     */
     readonly shortcut?: Shortcut;
+    /* Another row whose key this one shows, so the two move together. */
+    readonly keyOf?: DefaultKeyId;
+    /* The key of the editor's keymap that answers the row, which a person may rebind. */
+    readonly keymap?: KeymapId;
+    /* Keys the row answers besides its own, until a person rebinds it. */
+    readonly aliases?: readonly Shortcut[];
     /*
      * The listener that binds the shortcut, once on `window`: the window's own, which the start screen has
      * too, or the workspace's. Without it the row only shows the key, and whatever has the focus answers it
      * (the editor, a composer).
      */
     readonly binds?: 'window' | 'workspace';
+    /* Only its key reaches the row: no palette row, no menu row. */
+    readonly keyOnly?: true;
     /* The palette has a row for it; without one the menu runs it itself. */
     readonly palette: boolean;
     readonly menu?: MenuPlace | readonly MenuPlace[];

@@ -3,6 +3,7 @@ import { act } from 'react';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { contribute } from '@/state/extension-registry';
+import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
@@ -265,6 +266,148 @@ describe('browsing the folders of a machine', () => {
         await until(() => labels().join() === '..,x,y,z');
         expect(field()!.value).toBe('~/gamma/');
         expectFieldHoldsTheKeys(rows()[0]!);
+    });
+});
+
+describe('browsing the folders of a Windows machine', () => {
+    const HOME = 'C:\\Users\\bas';
+    const FOLDERS: Record<string, string[]> = {
+        '~\\': ['Documents', 'Projects'],
+        'C:\\Users\\bas\\': ['Documents', 'Projects'],
+        'C:\\': ['Users', 'Windows'],
+        'D:\\Work\\': ['alpha', 'beta']
+    };
+    const asked: string[] = [];
+    let disconnect: () => void;
+
+    beforeEach(async () => {
+        asked.length = 0;
+        const machine = new FakeMachine();
+        machine.answer('fs.browse', ({ partialPath }) => {
+            asked.push(partialPath);
+            const home = partialPath.startsWith('~');
+            const parentPath = home ? HOME : partialPath.replace(/\\$/, '') || partialPath;
+            return {
+                parentPath: parentPath.endsWith(':') ? `${parentPath}\\` : parentPath,
+                exists: partialPath !== 'Z:\\Gone\\',
+                entries: (FOLDERS[partialPath] ?? []).map((name) => ({
+                    name,
+                    fullPath: `${home ? HOME : partialPath.replace(/\\$/, '')}\\${name}`,
+                    hasCanvas: false
+                }))
+            };
+        });
+        addMachine('machine-w', 'Office PC');
+        useServers.getState().setInfo('machine-w', { platform: 'win32', home: 'C:\\ProgramData\\Ruimte', version: '1.0.0', model: null });
+        disconnect = connectFakeMachine(machine, 'machine-w');
+        useEndpoints.getState().setActive('machine-w');
+    });
+
+    afterEach(() => {
+        disconnect();
+        useEndpoints.getState().setActive(LOCAL_ENDPOINT_ID);
+        useEndpoints.getState().remove('machine-w');
+        useServers.getState().forget('machine-w');
+    });
+
+    test('the placeholder gives an example in the style of the machine', async () => {
+        await openPalette(
+            () => useUi.getState().setPaletteOpen(true),
+            () => field() !== null
+        );
+        expect(field()!.placeholder).toContain('C:\\Projects');
+    });
+
+    test('a typed drive letter and separator browses that drive, and a bare drive letter stays a search', async () => {
+        await openPalette(
+            () => useUi.getState().setPaletteOpen(true),
+            () => field() !== null
+        );
+        await type('C:');
+        expect(asked).toEqual([]);
+        await type('C:\\');
+        await until(() => labels().join() === 'Users,Windows');
+        expect(asked).toContain('C:\\');
+    });
+
+    const keepStartFolder = (startFolder: string): void =>
+        useServers.getState().setIdentity('machine-w', { label: 'Office PC', nameSource: 'default', icon: null, agentsDeleteAnyView: false, startFolder });
+
+    test('browsing opens in the start folder of the machine', async () => {
+        keepStartFolder('D:\\Work');
+        await openPalette(
+            () => useUi.getState().openFolderBrowser(),
+            () => labels().join() === '..,alpha,beta'
+        );
+        expect(field()!.value).toBe('D:\\Work\\');
+    });
+
+    test('browsing opens in the home folder when the start folder is gone', async () => {
+        keepStartFolder('Z:\\Gone');
+        await openPalette(
+            () => useUi.getState().openFolderBrowser(),
+            () => labels().join() === '..,Documents,Projects'
+        );
+        expect(field()!.value).toBe('C:\\Users\\bas\\');
+    });
+
+    test('browsing opens at the absolute home folder rather than a tilde', async () => {
+        await openPalette(
+            () => useUi.getState().openFolderBrowser(),
+            () => labels().join() === '..,Documents,Projects'
+        );
+        expect(asked[0]).toBe('~\\');
+        expect(field()!.value).toBe('C:\\Users\\bas\\');
+        expect(field()!.placeholder).toContain('C:\\Projects\\my-app');
+    });
+});
+
+describe('a Windows path typed with forward slashes', () => {
+    let disconnect: () => void;
+
+    beforeEach(() => {
+        const machine = new FakeMachine();
+        machine.answer('fs.browse', ({ partialPath }) => {
+            const folder = partialPath === 'C:/' || partialPath === 'C:/Projects';
+
+            return {
+                parentPath: 'C:\\',
+                exists: folder,
+                entries: [{ name: 'Projects', fullPath: 'C:\\Projects', hasCanvas: false }]
+            };
+        });
+        addMachine('machine-w', 'Office PC');
+        useServers.getState().setInfo('machine-w', { platform: 'win32', home: 'C:\\ProgramData\\Ruimte', version: '1.0.0', model: null });
+        disconnect = connectFakeMachine(machine, 'machine-w');
+        useEndpoints.getState().setActive('machine-w');
+    });
+
+    afterEach(() => {
+        disconnect();
+        useEndpoints.getState().setActive(LOCAL_ENDPOINT_ID);
+        useEndpoints.getState().remove('machine-w');
+        useServers.getState().forget('machine-w');
+    });
+
+    test('an existing folder is opened and not offered for creation', async () => {
+        await openPalette(
+            () => useUi.getState().setPaletteOpen(true),
+            () => field() !== null
+        );
+        await type('C:/Projects');
+        await until(() => labels().includes('Projects'));
+
+        expect(page.host.ownerDocument.body.textContent).not.toContain('Create and open');
+        expect(page.host.ownerDocument.body.textContent).not.toContain('Enter creates the folder');
+    });
+
+    test('a folder that is not there is still offered for creation', async () => {
+        await openPalette(
+            () => useUi.getState().setPaletteOpen(true),
+            () => field() !== null
+        );
+        await type('C:/Projectz');
+        await until(() => document.body.textContent?.includes('Create and open') === true);
     });
 });
 

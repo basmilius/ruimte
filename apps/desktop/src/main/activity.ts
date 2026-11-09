@@ -1,6 +1,6 @@
 import type { AgentActivity } from '@ruimte/desktop-bridge';
 import { totalActivity } from '../app-windows';
-import { electron } from './electron';
+import { electron } from '../electron';
 import type { DesktopIpc } from './ipc';
 
 const { app } = electron;

@@ -32,6 +32,7 @@ export function gitDepsWith(overrides: Partial<GitDeps> = {}): GitDeps {
         providers: {} as never,
         prWatches: {} as never,
         placeOf: () => null,
+        textModels: { choice: () => null, prepare: async () => null },
         machineHome: HOME_WITHOUT_STATE,
         bundles: {} as never,
         checkpoints: {} as never,

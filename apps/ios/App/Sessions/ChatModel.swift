@@ -702,7 +702,8 @@ final class ChatModel {
         searchGeneration += 1
         let current = searchGeneration
         suggestionKind = kind
-        suggestions = []
+        // Models and accounts come from the catalog in hand, so they show at once, as on the desktop, and stay when the file search fails.
+        suggestions = kind == "@" ? namedMentions(query) : []
         searchProblem = nil
         searching = true
         defer { if current == searchGeneration { searching = false } }
@@ -722,16 +723,24 @@ final class ChatModel {
                             referable: $0)
                     }
             case "@":
+                found = namedMentions(query)
                 if canMention {
-                    let result = try await client.request(
-                        .fsSearch,
-                        payload: .object([
-                            "cwd": .string(info?.cwd ?? ""), "query": .string(String(query.prefix(256))),
-                            "limit": .number(20),
-                        ])
-                    ).decoded(as: FsSearchResult.self)
-                    found = result.files.map {
-                        ChatSuggestion(kind: "@", value: $0, title: ($0 as NSString).lastPathComponent, detail: $0)
+                    do {
+                        let result = try await client.request(
+                            .fsSearch,
+                            payload: .object([
+                                "cwd": .string(info?.cwd ?? ""), "query": .string(String(query.prefix(256))),
+                                "limit": .number(20),
+                            ])
+                        ).decoded(as: FsSearchResult.self)
+                        found += result.files.map {
+                            ChatSuggestion(kind: "@", value: $0, title: ($0 as NSString).lastPathComponent, detail: $0)
+                        }
+                    } catch is CancellationError {
+                        throw CancellationError()
+                    } catch {
+                        // A failed search leaves out only the files; the models and accounts stay.
+                        if current == searchGeneration, !Task.isCancelled { searchProblem = error.localizedDescription }
                     }
                 }
             case "$":
@@ -764,6 +773,11 @@ final class ChatModel {
         }
     }
 
+    private func namedMentions(_ query: String) -> [ChatSuggestion] {
+        ChatTagSuggestions.models(providers: providers, accounts: accounts, query: query)
+            + ChatTagSuggestions.accounts(providers: providers, accounts: accounts, query: query)
+    }
+
     /// A picked view, node or chat becomes a `#name` chip in the text; the draft keeps the name it was spelled with,
     /// since a rename would otherwise unmake the chip. A chat goes apart, as `chats`.
     func chooseSuggestion(_ suggestion: ChatSuggestion) {
@@ -777,7 +791,10 @@ final class ChatModel {
                 composition.references.append(pick)
             }
         }
-        if suggestion.kind == "@" { mentions = Array(Set(mentions + [suggestion.value])).sorted() }
+        // A model or an account is found again by its pattern, so it adds no mention.
+        if suggestion.kind == "@" && suggestion.section == nil {
+            mentions = Array(Set(mentions + [suggestion.value])).sorted()
+        }
         if suggestion.kind == "$" { skills = Array(Set(skills + [suggestion.value])).sorted() }
         let insertion = ChatDraftSyntax.insertion(
             text: draft, selection: composition.selection, kind: suggestion.kind, value: spelled)
@@ -793,6 +810,10 @@ struct ChatSuggestion: Identifiable {
     let detail: String
     /// What a `#` suggestion points at.
     var referable: ChatReferable?
+    /// The heading of an `@` row below the files, `Models` or `Accounts`; nil for a file.
+    var section: String? = nil
+    /// The CLI whose mark a model or account row wears.
+    var provider: String? = nil
 
     /// The heading over the suggestions a sigil opens.
     static func heading(_ kind: String) -> String {
@@ -814,6 +835,89 @@ struct ChatSuggestion: Identifiable {
         "reload-plugins", "reload-skills", "rename", "resume", "status", "statusline", "terminal-setup", "theme",
         "upgrade", "vim",
     ]
+}
+
+/// The models and accounts `@` offers below the files, by the shared composer's rules (`tag-suggestions.ts`): only
+/// once the query opens a word of a name or an id, never on a bare `@`.
+enum ChatTagSuggestions {
+    static let modelLimit = 5
+    static let accountLimit = 3
+    private static let unusable: Set<String> = ["signed-out", "not-found", "folder-missing", "failed"]
+
+    static func startsAWord(_ text: String, _ query: String) -> Bool {
+        guard !query.isEmpty else { return false }
+        let haystack = text.lowercased()
+        let needle = query.lowercased()
+        var from = haystack.startIndex
+        while let found = haystack.range(of: needle, range: from..<haystack.endIndex) {
+            if found.lowerBound == haystack.startIndex
+                || !haystack[haystack.index(before: found.lowerBound)].isLetter
+                    && !haystack[haystack.index(before: found.lowerBound)].isNumber
+            {
+                return true
+            }
+            from = haystack.index(after: found.lowerBound)
+        }
+        return false
+    }
+
+    /// Whether a CLI can run a model now: an enabled account of it may run, or it keeps no accounts at all.
+    static func signedIn(_ accounts: ProviderAccountList?, kind: String) -> Bool {
+        let entries = accounts?.accounts(of: kind) ?? []
+        return entries.isEmpty || entries.contains { $0.enabled && !unusable.contains($0.state ?? "") }
+    }
+
+    /// Whether the CLI's version is older than `minimum`; an unreadable version blocks nothing.
+    static func tooOld(_ version: String?, minimum: String?) -> Bool {
+        let parts = { (text: String?) -> [Int]? in
+            guard let text, let match = ChatDraftSyntax.matches(#"(\d+)\.(\d+)(?:\.(\d+))?"#, in: text).first else {
+                return nil
+            }
+            return (1...3).map { index in
+                let range = match.range(at: index)
+                return range.location == NSNotFound ? 0 : Int((text as NSString).substring(with: range)) ?? 0
+            }
+        }
+        guard let installed = parts(version), let needed = parts(minimum) else { return false }
+        return installed.lexicographicallyPrecedes(needed)
+    }
+
+    static func models(providers: [ProviderInfo], accounts: ProviderAccountList?, query: String) -> [ChatSuggestion] {
+        guard !query.isEmpty else { return [] }
+        let found = AgentCatalog.installedChats(providers).filter { signedIn(accounts, kind: $0.kind) }.flatMap {
+            provider -> [(legacy: Bool, row: ChatSuggestion)] in
+            let kind = provider.kind
+            return provider.models.compactMap { model in
+                guard startsAWord(model.name, query) || startsAWord(model.slug, query),
+                    !tooOld(provider.version, minimum: model.minCliVersion)
+                else { return nil }
+                return (
+                    model.legacy,
+                    ChatSuggestion(
+                        kind: "@", value: "model:\(kind)/\(model.slug)", title: model.name, detail: model.slug,
+                        section: String(localized: "Models"), provider: kind)
+                )
+            }
+        }
+        return Array((found.filter { !$0.legacy } + found.filter(\.legacy)).map(\.row).prefix(modelLimit))
+    }
+
+    /// The accounts that are ready, of a CLI with a choice of account. The machine refuses one the project turned off.
+    static func accounts(providers: [ProviderInfo], accounts: ProviderAccountList?, query: String) -> [ChatSuggestion] {
+        guard !query.isEmpty, let accounts else { return [] }
+        let found = AgentCatalog.installedChats(providers).flatMap { provider -> [ChatSuggestion] in
+            let kind = provider.kind
+            guard accounts.hasChoice(kind) else { return [] }
+            return accounts.accounts(of: kind).filter { $0.enabled && $0.state == "ready" }.compactMap { entry in
+                let name = entry.name(provider: provider.name)
+                guard startsAWord(name, query) else { return nil }
+                return ChatSuggestion(
+                    kind: "@", value: "account:\(kind)/\(entry.id)", title: name, detail: provider.name,
+                    section: String(localized: "Accounts"), provider: kind)
+            }
+        }
+        return Array(found.prefix(accountLimit))
+    }
 }
 
 extension ChatInfo {

@@ -3,8 +3,10 @@ import { decodeLiveFrame, type EventMap, type LiveFrame, type ServerFrame } from
 import type { Area } from './area.ts';
 import { HIGH_WATER_MARK } from './backpressure.ts';
 import type { LiveSink } from './client-sinks.ts';
+import { ConnectedClients } from './clients/connected-clients.ts';
 import { connectionOpener } from './connection.ts';
 import { Dispatcher } from './dispatcher.ts';
+import { clientArea } from './handlers/client.ts';
 import { sendEvent, type SessionEvent, type SessionSink, type ClientChannel } from './wire.ts';
 
 class FakeChannel implements ClientChannel {
@@ -162,6 +164,27 @@ describe('connectionOpener', () => {
         personChannel.fireClose();
         personChannel.fireClose();
         expect(ended).toEqual([person.client.id]);
+    });
+
+    test('lists a channel while it is open, a peer too, and a peer hears no change of the list', () => {
+        const connected = new ConnectedClients(() => 1_000);
+        const { open } = setup({}, [clientArea({ connected, auth: { list: async () => [] }, external: () => [] })]);
+        const peerChannel = new FakeChannel();
+        const peer = open(peerChannel, { reachability: 'lan', sessionId: 'peer-1', peer: { machineId: 'machine-a' } });
+        connected.watch(peer.client.id);
+        const personChannel = new FakeChannel();
+        const person = open(personChannel, { reachability: 'loopback', sessionId: null });
+        expect(connected.list(person.client.id, () => undefined).map(({ id, access }) => ({ id, access }))).toEqual([
+            { id: peer.client.id, access: 'machine' },
+            { id: person.client.id, access: 'local' }
+        ]);
+
+        personChannel.fireClose();
+        expect(connected.list(peer.client.id, () => undefined).map(({ id }) => id)).toEqual([peer.client.id]);
+        expect(peerChannel.frames).toEqual([]);
+
+        peerChannel.fireClose();
+        expect(connected.list('nobody', () => undefined)).toEqual([]);
     });
 
     test('answers a request on the channel it came in on', async () => {

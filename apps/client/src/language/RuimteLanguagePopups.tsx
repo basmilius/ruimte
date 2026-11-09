@@ -1,13 +1,15 @@
 import { AgentIcon } from '@adecore/agents-react/providers';
 import { EditorRenderingProvider, LanguagePopups, type HoverView } from '@adecore/editor-react';
-import { Button, ContextMenu, Icon, Kbd, Tooltip } from '@adecore/ui';
+import { Button, ContextMenu, Icon, Tooltip } from '@adecore/ui';
 import { Bot, Cpu, MessageSquarePlus, Sparkles } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
+import { useEditorAssistAvailability } from '@/editor-assist/use-availability';
 import { useCodeTheme } from '@/state/code-theme';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { useSettings } from '@/state/settings';
 import { highlightCode } from '@/surface/panels/highlight';
+import { RowKbd } from '@/surface/RowKbd';
 import { useAskAgents } from './ask-agents';
 import type { EditorLanguage } from './ruimte-editor-language';
 
@@ -61,17 +63,25 @@ function HoverActions({ language, view }: { language: EditorLanguage; view: Hove
     );
 }
 
-function MenuActions({ language }: { language: EditorLanguage }) {
+export function MenuActions({ language }: { language: EditorLanguage }) {
     const { t } = useTranslation('shell');
     const { t: chat } = useTranslation('chat');
     const agents = useAskAgents();
+    const aiCodeHelp = useSettings((state) => state.aiCodeHelp);
+    const available = useEditorAssistAvailability()?.available === true;
+    const explains = aiCodeHelp && available;
     return (
         <>
             <ContextMenu.Item onClick={() => language.app.inlineEdit.start()}>
-                <Icon icon={Sparkles} size={14} /> {t('editorMenu.inlineEdit')} <Kbd shortcut={CANVAS_SHORTCUTS.inlineEdit} />
+                <Icon icon={Sparkles} size={14} /> {t('editorMenu.inlineEdit')} <RowKbd row="inlineEdit" />
             </ContextMenu.Item>
+            {explains && (
+                <ContextMenu.Item onClick={() => void language.app.explain.explainHere()}>
+                    <Icon icon={Cpu} size={14} /> {t('editorMenu.explain')}
+                </ContextMenu.Item>
+            )}
             <ContextMenu.Item onClick={() => language.app.selectionChat.choose()}>
-                <Icon icon={MessageSquarePlus} size={14} /> {t('editorMenu.selectionToChat')} <Kbd shortcut={CANVAS_SHORTCUTS.selectionToChat} />
+                <Icon icon={MessageSquarePlus} size={14} /> {t('editorMenu.selectionToChat')} <RowKbd row="selectionToChat" />
             </ContextMenu.Item>
             {agents.length === 1 &&
                 agents.map((agent) => (

@@ -4,7 +4,7 @@ import { parseNumstat, type Numstat } from './diff.ts';
 import { LEAVE_NOTHING_OUT, git, leavingOut, readGit, repositoryRoot, verifyRev, type LeftOut } from './run.ts';
 import { untrackedNumstat } from './untracked-lines.ts';
 
-// Every untracked file is read whole on every run, so only the first ones get real counts.
+// A cold text count reads the whole file, so only the first untracked files get real counts.
 const MAX_UNTRACKED_COUNTS = 100;
 // How many of those are open at once, so a folder of new files does not hold a descriptor each.
 const COUNT_CONCURRENCY = 8;
@@ -122,10 +122,10 @@ function byPath(output: string | null): Map<string, Numstat> {
 }
 
 /* What an untracked file would add: it has no history, so it is the whole file against `/dev/null`. */
-async function untrackedCounts(root: string, paths: string[]): Promise<Map<string, Numstat>> {
+async function untrackedCounts(root: string, paths: string[], now: number): Promise<Map<string, Numstat>> {
     const counts = new Map<string, Numstat>();
     for (let i = 0; i < paths.length; i += COUNT_CONCURRENCY) {
-        const results = await Promise.all(paths.slice(i, i + COUNT_CONCURRENCY).map((path) => untrackedNumstat(root, path)));
+        const results = await Promise.all(paths.slice(i, i + COUNT_CONCURRENCY).map((path) => untrackedNumstat(root, path, now)));
         for (const stat of results) {
             if (stat !== null) {
                 counts.set(stat.path, stat);
@@ -144,6 +144,27 @@ const BASE_CANDIDATES: ReadonlyArray<{ ref: string; name: string }> = [
     { ref: 'refs/heads/main', name: 'main' },
     { ref: 'refs/heads/master', name: 'master' }
 ];
+
+const linkedCache = new Map<string, boolean>();
+
+/*
+ * Whether the checkout is a linked worktree rather than the repository's main one: its own git folder
+ * differs from the shared one. A submodule's do not, where a `.git` file alone would say yes. A root
+ * stays what it is, so the answer is kept.
+ */
+export async function isLinkedWorktree(root: string): Promise<boolean> {
+    const cached = linkedCache.get(root);
+    if (cached !== undefined) {
+        return cached;
+    }
+    const printed = await git(['rev-parse', '--path-format=absolute', '--git-dir', '--git-common-dir'], root);
+    const [own, common] = (printed ?? '').trim().split('\n');
+    const linked = own !== undefined && common !== undefined && own !== '' && own !== common;
+    if (printed !== null) {
+        linkedCache.set(root, linked);
+    }
+    return linked;
+}
 
 /* The branch this repository's work is measured against, remembered per repository for a while. */
 export async function resolveBase(root: string, now: number = Date.now()): Promise<string | null> {
@@ -210,9 +231,9 @@ function fileOf(entry: PorcelainEntry, state: GitFile['state'], status: string, 
  * again since is in two groups, with the counts of that side in each, which is what makes staging
  * one half of a file's changes readable. Renames keep the path they came from.
  */
-export async function readStatus(cwd: string): Promise<GitStatus> {
+export async function readStatus(cwd: string, now: number = Date.now()): Promise<GitStatus> {
     const root = await repositoryRoot(cwd);
-    return root === null ? noRepository() : await readStatusAt(root);
+    return root === null ? noRepository() : await readStatusAt(root, LEAVE_NOTHING_OUT, now);
 }
 
 // Read from here by a caller outside this folder.
@@ -224,24 +245,25 @@ export function noRepository(): GitStatus {
 }
 
 /* `readStatus` for a root `repositoryRoot` already found. */
-export async function readStatusAt(root: string, leftOut: LeftOut = LEAVE_NOTHING_OUT): Promise<GitStatus> {
+export async function readStatusAt(root: string, leftOut: LeftOut = LEAVE_NOTHING_OUT, now: number = Date.now()): Promise<GitStatus> {
     const porcelain = await readGit(['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all', ...leavingOut(await leftOut(root))], root);
     if (porcelain === null) {
         return noRepository();
     }
     const parsed = parsePorcelain(porcelain);
     const entries = parsed.entries.slice(0, GIT_STATUS_MAX_FILES);
-    const [staged, unstaged, base, operation] = await Promise.all([
+    const [staged, unstaged, base, operation, linked] = await Promise.all([
         readGit(['diff', '--cached', '--numstat', '-z'], root).then(byPath),
         readGit(['diff', '--numstat', '-z'], root).then(byPath),
-        resolveBase(root),
-        operationOf(root)
+        resolveBase(root, now),
+        operationOf(root),
+        isLinkedWorktree(root)
     ]);
     const untrackedPaths = entries
         .filter((entry) => entry.untracked)
         .slice(0, MAX_UNTRACKED_COUNTS)
         .map((entry) => entry.path);
-    const [untracked, mergeBase] = await Promise.all([untrackedCounts(root, untrackedPaths), mergeBaseAgainst(root, base)]);
+    const [untracked, mergeBase] = await Promise.all([untrackedCounts(root, untrackedPaths, now), mergeBaseAgainst(root, base)]);
     const files: GitFile[] = [];
     for (const entry of entries) {
         if (entry.untracked) {
@@ -262,6 +284,7 @@ export async function readStatusAt(root: string, leftOut: LeftOut = LEAVE_NOTHIN
         repo: true,
         ...(operation === null ? {} : { operation }),
         root,
+        ...(linked ? { worktree: true } : {}),
         branch: parsed.branch,
         detached: parsed.detached,
         upstream: parsed.upstream,

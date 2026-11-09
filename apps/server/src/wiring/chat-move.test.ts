@@ -151,9 +151,18 @@ describe('what the machine says about moving a chat', () => {
     describe('moving the chat that holds a card of its own suggestion', () => {
         let proposals: ProjectProposals;
 
+        /* The fake CLI echoes what it heard, preamble included. */
+        const lastReply = (): string | undefined =>
+            daemon.chats
+                .get(chatId)
+                ?.thread.list()
+                .flatMap((item) => (item.kind === 'assistant' ? [item.text] : []))
+                .at(-1);
+
         beforeEach(() => {
             proposals = new ProjectProposals({
-                chats: { hold: (id, key) => void daemon.chats.holdForPerson(id, key), release: (id, key) => daemon.chats.releaseHold(id, key) }
+                chats: { hold: (id, key) => void daemon.chats.holdForPerson(id, key), release: (id, key) => daemon.chats.releaseHold(id, key) },
+                answered: (id, wake) => void daemon.link.oweAnswer(id, wake)
             });
             proposals.ask({ chatId, name: 'Vinyl', reason: 'It grew' });
         });
@@ -173,6 +182,49 @@ describe('what the machine says about moving a chat', () => {
             expect(proposals.stands(chatId)).toBe(false);
             expect(daemon.chats.get(chatId)?.thread.held).toBe(false);
             expect(daemon.chats.get(chatId)?.info.status).not.toBe('needs-you');
+        });
+
+        test('wakes the chat once in its new project, with the move in the preamble of that turn', async () => {
+            const folder = join(root, 'vinyl');
+            const result = await chatMover(wiring(proposals)).move({
+                chatId,
+                to: { folder, name: 'Vinyl', createFolder: true, initGit: false },
+                ownFiles: 'leave'
+            });
+
+            await daemon.until(() => daemon.enqueued.some((work) => work.kind === 'deliver-answer'));
+            expect(daemon.outbox.list()).toMatchObject([{ kind: 'deliver-answer', target: chatId, projectId: result.summary.projectId }]);
+            daemon.worker.start();
+
+            const answered = () =>
+                daemon.chats
+                    .get(chatId)
+                    ?.thread.list()
+                    .filter((item) => item.kind === 'turn' && item.label === 'Project: confirmed') ?? [];
+
+            await daemon.until(() => answered().some((turn) => turn.kind === 'turn' && turn.state === 'done'));
+            await daemon.worker.settled();
+            expect(answered()).toMatchObject([{ origin: 'agent' }]);
+            expect(lastReply()).toContain('Confirmed: this chat is now the project Vinyl.');
+            expect(lastReply()).toContain(`Your working directory is now ${folder}`);
+            expect(daemon.outbox.list()).toEqual([]);
+        });
+
+        test('a decline wakes the chat where it is, once', async () => {
+            daemon.worker.start();
+            expect(proposals.decline(proposals.list()[0]!.proposalId)).toBe(true);
+
+            const declined = () =>
+                daemon.chats
+                    .get(chatId)
+                    ?.thread.list()
+                    .filter((item) => item.kind === 'turn' && item.label === 'Project: declined') ?? [];
+
+            await daemon.until(() => declined().some((turn) => turn.kind === 'turn' && turn.state === 'done'));
+            await daemon.worker.settled();
+            expect(declined()).toHaveLength(1);
+            expect(lastReply()).toBe('echo: Declined: make this chat the project Vinyl. Nothing changed.');
+            expect(daemon.chats.get(chatId)?.info.cwd).toBe(join(store.scratchFolder, chatId));
         });
 
         test('a move that is whole but could not save the folder settles the card, since nothing holds the chat any more', async () => {

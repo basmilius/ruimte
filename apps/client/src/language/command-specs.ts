@@ -8,7 +8,7 @@ function languageCommand(id: LanguageCommandId): CommandSpec {
     return {
         key: spec.key,
         icon: spec.icon,
-        ...(spec.shortcut ? { shortcut: spec.shortcut } : {}),
+        ...(spec.keymap ? { keymap: spec.keymap } : {}),
         palette: true,
         menu: {
             menu: spec.menu,
@@ -42,7 +42,7 @@ function editorCommand(id: EditorCommandId): CommandSpec {
     return {
         key: spec.key,
         icon: spec.icon,
-        ...(spec.shortcut ? { shortcut: spec.shortcut } : {}),
+        keymap: spec.keymap,
         palette: true,
         menu: editorMenuPlace(spec.group, EDITOR_COMMAND_IDS.indexOf(id))
     };

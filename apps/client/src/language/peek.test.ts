@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { keyOf, settle } from '@adecore/editor-react/testing';
+import { keyOf as eventOf, settle } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { useToasts } from '@/state/toasts';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { keyOf } from '@/surface/shortcut-overrides';
 import { FakeLanguageTransport, readOnlyFiles } from './fake-daemon';
 import { createEditorLanguage } from './ruimte-editor-language';
 import { RuimteProject } from './ruimte-project';
@@ -148,7 +148,7 @@ describe('peek definition', () => {
         const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: 'use();', theme: 'light' });
         const language = createEditorLanguage(project, editor, uri, 'typescript');
         await language.document.ready;
-        editor.press(keyOf(CANVAS_SHORTCUTS.peekDefinition));
+        editor.press(eventOf(keyOf('peekDefinition')!));
         await settle();
         const view = language.popups.slot('peek').get()!;
         expect(view.kind).toBe('definitions');

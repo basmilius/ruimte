@@ -15,7 +15,7 @@ One protocol (`peer.*`, `remote.*`, bundle chunks, outbox lanes) between two mac
 
 ## What a peer may ask
 
-- A peer is never an owner. Its whole list: `endpoint.info`, `server.ping`, `peer.taskStart`, `peer.taskStop`, `peer.result`, `peer.bundlePut`, `peer.bundleRead`, `peer.close` (`worker/area-tasks.ts`) and `peer.artifactList`, `peer.artifactGet`, `peer.artifactRead` (`worker/area-artifacts.ts`). No `fs.*`, `bytes.read`, `session.*`, `chat.*`, `launch.*`, `project.*`, `device.*`, `browser.*`, `database.*`, `computer.*` or `auth.ticket`.
+- A peer is never an owner. Its whole list: `endpoint.info`, `server.ping`, `peer.taskStart`, `peer.taskStop`, `peer.result`, `peer.bundlePut`, `peer.bundleRead`, `peer.close` (`worker/area-tasks.ts`) and `peer.artifactList`, `peer.artifactGet`, `peer.artifactRead` (`worker/area-artifacts.ts`). No `fs.*`, `bytes.read`, `session.*`, `chat.*`, `launch.*`, `project.*`, `device.*`, `browser.*`, `port.*`, `database.*`, `computer.*` or `auth.ticket`.
 - The dispatcher (`apps/server/src/dispatcher.ts`) refuses a peer everything outside `{ peer: true }` as `forbidden` before parsing, and `register` throws on `owner` with `peer`. Add a request only after asking what a lying machine could do with it. `endpoint.info` names only the peer requests.
 - Every `peer.*` request starts with `requirePeerLinks` (`peer-not-linked`).
 - The artifact requests read only the Output of the linked project (another project's is `not-found`), read-only, in pieces of at most `PEER_ARTIFACT_PIECE_BYTES` (256 KiB). Nothing here writes on a peer's word.

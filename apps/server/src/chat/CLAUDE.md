@@ -44,7 +44,7 @@ Each of these goes with the chat or a clear, and a fork copies only what its cop
 
 - A chat leaves Chats only through `chat.move` (`apps/server/src/chat/move-chat.ts`). It refuses what the Chats write would end or orphan (`chat/move-refusal.ts`), decided before it makes anything.
 - It moves the folder only once the CLI is gone, writes the target before Chats, so a project places the chat at every moment, and rehomes a fork's lineage between the two writes. Each step has an undo. A running move is recorded in `$RUIMTE_HOME/chat-moves` and finished at the next start before the outbox runs (`projects/move-repair.ts`).
-- An agent in Chats only proposes that its chat become a project (`project_propose`, `projects/project-proposals.ts`), refused outside Chats. Its card holds the chat at `needs-you`, which the move ignores for that card alone (`wiring/chat-move.ts`), releases before it makes anything, and restores if it fails. Any other wait refuses the move.
+- An agent in Chats only proposes that its chat become a project (`project_propose`, `projects/project-proposals.ts`), refused outside Chats. Its card holds the chat at `needs-you`, which the move ignores for that card alone (`wiring/chat-move.ts`), releases before it makes anything, and restores if it fails. Any other wait refuses the move. A decline wakes the chat where it is; a move that ran through while the card stood is the confirm, and wakes the chat in the new project once the note of the move is in it (`src/outbox`).
 
 ## Product rules
 

@@ -378,7 +378,7 @@ export const CANVAS_ACTIONS = {
         description: 'Lists the nodes of a canvas, where each stands and the group it is in.',
         effect: 'read',
         domain: 'canvas',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ viewId }),
         output: z.object({
             viewId,
@@ -407,7 +407,7 @@ export const CANVAS_ACTIONS = {
         description: 'Lays nodes out in a grid, a row or a column without overlap.',
         effect: 'shared',
         domain: 'canvas',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             viewId,
             nodeIds: z.array(nodeId).min(1).describe('The nodes to tidy; they are laid out in the order they are named'),
@@ -426,7 +426,7 @@ export const CANVAS_ACTIONS = {
         description: 'Lists the lines of a canvas.',
         effect: 'read',
         domain: 'canvas',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ viewId }),
         // The revision is that of the project file.
         output: z.object({ viewId, edges: z.array(canvasLine), revision })
@@ -463,7 +463,7 @@ export const CANVAS_ACTIONS = {
         description: 'Removes one line whose ends are both yours.',
         effect: 'shared',
         domain: 'canvas',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ viewId, edgeId: z.string().min(1) }),
         output: z.object({ viewId, ...canvasLine.shape })
     },
@@ -473,7 +473,7 @@ export const CANVAS_ACTIONS = {
             'Removes several lines of one canvas in one write, each the way link.delete removes one. Every line is checked before any goes, so a refusal removes none.',
         effect: 'shared',
         domain: 'canvas',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ viewId, edgeIds: z.array(z.string().min(1)).min(1).max(MAX_PER_CALL) }),
         output: z.object({ viewId, edges: z.array(canvasLine) })
     }

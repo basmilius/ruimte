@@ -3,7 +3,7 @@ import { chmod, copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promise
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { helperFileName } from '@adecore/database/host';
-import { EXTENSION_DIR, extensionManifest, launcherManifest, platformManifest } from '../src/manifest';
+import { catalogOf, EXTENSION_DIR, extensionManifest, launcherManifest, platformManifest } from '../src/manifest';
 import { binaryNameOf, LAUNCHER_NAME, targetId, TARGETS } from '../src/targets';
 
 /*
@@ -117,5 +117,6 @@ for (const name of new Bun.Glob('*.d.ts').scanSync({ cwd: extensionSource })) {
     await copyFile(join(extensionSource, name), join(extensionDir, name));
 }
 const extensionSourceManifest = JSON.parse(await readFile(join(extensionSource, 'package.json'), 'utf8')) as Record<string, unknown>;
-await writeJson(join(extensionDir, 'package.json'), extensionManifest(extensionSourceManifest, version));
+const rootManifest = JSON.parse(await readFile(join(repoRoot, 'package.json'), 'utf8')) as Record<string, unknown>;
+await writeJson(join(extensionDir, 'package.json'), extensionManifest(extensionSourceManifest, version, catalogOf(rootManifest)));
 console.log(`Laid out ${extensionDir}`);

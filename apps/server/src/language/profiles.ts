@@ -1,5 +1,5 @@
 import { dirname, join } from 'node:path';
-import { lspLanguageId, SCRIPT_LANGUAGE_IDS } from '@adecore/lsp';
+import { documentLanguageId as lspDocumentLanguageId, lspLanguageId, SCRIPT_LANGUAGE_IDS } from '@adecore/lsp';
 import { matchesFilePattern, type LanguageServerId, type LanguageServerKind } from '@ruimte/contracts';
 import { nativeStorageOf, nativeStubsOf } from './native.ts';
 import { toolchainPath } from './toolchain.ts';
@@ -19,6 +19,8 @@ export interface LaunchContext {
     sql?: ProjectSqlSettings | null;
     /* The topmost `Cargo.toml` files of the project, absolute, for a component that asks for them. */
     cargoManifests?: readonly string[];
+    /* Whether the project lies in the worktree of an agent whose build code a person has not allowed, so `KindProfile.runsBuildCode.off` applies. */
+    buildHeld?: boolean;
 }
 
 /* The settings of the project's SQL as each server that reads it takes them. */
@@ -93,6 +95,13 @@ export interface KindProfile {
     activation?: Activation;
     /* Set for a kind that runs code of the project it reads (a config it loads, a build script, a macro), which never runs on work another machine sent. */
     runsProjectCode?: true;
+    /*
+     * Set for a kind that builds the code it reads, which it does not do in the worktree of an agent until a
+     * person allows it. `off` holds the initialization options that turn the building off for a kind that
+     * works without it; a kind without `off` does not start there, since loading its project already runs it.
+     * `env` is set on the process there as well, for what its settings cannot reach.
+     */
+    runsBuildCode?: { off?: Record<string, unknown>; env?: Record<string, string> };
 }
 
 /* Where the TypeScript 6 SDK of the `typescript` kind sits beside its TypeScript 7 package, under an alias of the same npm package. */
@@ -334,6 +343,67 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
             }
         ]
     },
+    /* marksman, from a pinned release. It reads Markdown and runs nothing of the project. */
+    markdown: {
+        kind: 'markdown',
+        components: [
+            {
+                name: 'markdown',
+                title: 'marksman',
+                languages: ['markdown'],
+                entry: 'marksman',
+                program: (context) => context.native?.executable ?? '',
+                args: () => ['server'],
+                initializationOptions: () => ({})
+            }
+        ]
+    },
+    /*
+     * taplo, from a pinned release: `@taplo/cli` on npm is the WebAssembly build, which has no `lsp` command.
+     * The server is told to fetch no schema catalog, and nothing of the project is run.
+     */
+    toml: {
+        kind: 'toml',
+        components: [
+            {
+                name: 'toml',
+                title: 'Taplo',
+                languages: ['toml'],
+                entry: 'taplo',
+                program: (context) => context.native?.executable ?? '',
+                args: () => ['lsp', 'stdio'],
+                initializationOptions: () => ({}),
+                // Taplo asks for the section `evenBetterToml`. With schemas off it downloads nothing, not the catalog and not a schema a file names.
+                configuration: { evenBetterToml: { schema: { enabled: false, links: false } } }
+            }
+        ]
+    },
+    /*
+     * lua-language-server, from a pinned release. A plugin that `.luarc.json` names is Lua that runs inside
+     * the server, so it stays off work from another machine. The server keeps its log and its generated
+     * `meta` in the storage of the kind and not in the install, which an update replaces.
+     */
+    lua: {
+        kind: 'lua',
+        runsProjectCode: true,
+        components: [
+            {
+                name: 'lua',
+                title: 'Lua Language Server',
+                languages: ['lua'],
+                entry: 'lua-language-server',
+                program: (context) => context.native?.executable ?? '',
+                args: (context) => {
+                    const storage = nativeStorageOf(context.installDirectory);
+
+                    return [`--logpath=${join(storage, 'log')}`, `--metapath=${join(storage, 'meta')}`];
+                },
+                initializationOptions: () => ({}),
+                // Without these the server asks, with a prompt, whether to send telemetry and whether to configure a third-party library.
+                configuration: { Lua: { telemetry: { enable: false }, workspace: { checkThirdParty: false } } }
+            }
+        ]
+    },
     css: {
         kind: 'css',
         components: [
@@ -461,6 +531,12 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
     rust: {
         kind: 'rust',
         runsProjectCode: true,
+        runsBuildCode: {
+            // `cargo check` on save runs build scripts and macros as well.
+            off: { cargo: { buildScripts: { enable: false } }, procMacro: { enable: false }, checkOnSave: false },
+            // `cargo metadata` runs the compiler wrapper a project's `.cargo/config.toml` names; an empty value overrides the file.
+            env: { RUSTC_WRAPPER: '', RUSTC_WORKSPACE_WRAPPER: '', CARGO_BUILD_RUSTC_WRAPPER: '', CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER: '' }
+        },
         activation: { files: ['Cargo.toml'], deeper: { file: 'Cargo.toml', depth: CARGO_DEPTH } },
         components: [
             {
@@ -475,6 +551,74 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
                 cargoManifests: true,
                 // cargo, which rust-analyzer runs, may only be in rustup's own folder for a daemon the desktop app started.
                 env: { PATH: toolchainPath() }
+            }
+        ]
+    },
+    /*
+     * gopls, found where Go put it (`toolchain.ts`). It loads packages with `go list`, which runs cgo tools,
+     * so it stays off work from another machine. `GOTOOLCHAIN=local` keeps a `go.mod` that asks for a newer Go
+     * from downloading one, and the `generate` lenses are off so no command of the server runs `go generate`.
+     */
+    go: {
+        kind: 'go',
+        runsProjectCode: true,
+        components: [
+            {
+                name: 'go',
+                title: 'gopls',
+                languages: ['go', 'go.mod', 'go.work'],
+                patterns: ['go.mod', 'go.work'],
+                entry: 'gopls',
+                program: (context) => context.native?.executable ?? '',
+                args: () => [],
+                initializationOptions: () => ({ codelenses: { generate: false, regenerate_cgo: false } }),
+                env: { PATH: toolchainPath('go'), GOTOOLCHAIN: 'local' }
+            }
+        ]
+    },
+    /*
+     * sourcekit-lsp, found where the Swift toolchain put it (`toolchain.ts`). Loading a `Package.swift` runs
+     * it, and plugins and macros build and run code, so it has no setting that turns that off: in the worktree
+     * of an agent it does not start.
+     */
+    swift: {
+        kind: 'swift',
+        runsProjectCode: true,
+        runsBuildCode: {},
+        components: [
+            {
+                name: 'swift',
+                title: 'sourcekit-lsp',
+                languages: ['swift'],
+                entry: 'sourcekit-lsp',
+                program: (context) => context.native?.executable ?? '',
+                args: () => [],
+                initializationOptions: () => ({}),
+                env: { PATH: toolchainPath('swift') }
+            }
+        ]
+    },
+    /*
+     * zls, found where Zig's installers put it (`toolchain.ts`). It has to match the Zig a project builds
+     * with, so Ruimte pins none. It runs `build.zig` to learn the build, which no setting turns off: in the
+     * worktree of an agent it does not start.
+     */
+    zig: {
+        kind: 'zig',
+        runsProjectCode: true,
+        runsBuildCode: {},
+        components: [
+            {
+                name: 'zig',
+                title: 'zls',
+                languages: ['zig', 'zon'],
+                patterns: ['*.zon'],
+                entry: 'zls',
+                program: (context) => context.native?.executable ?? '',
+                args: () => [],
+                initializationOptions: () => ({}),
+                // zls runs `zig` for the build and for its environment.
+                env: { PATH: toolchainPath('zig') }
             }
         ]
     },
@@ -497,6 +641,37 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
         ]
     }
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function mergeOptions(base: Record<string, unknown>, over: Record<string, unknown>): Record<string, unknown> {
+    const merged: Record<string, unknown> = { ...base };
+
+    for (const [key, value] of Object.entries(over)) {
+        const current = merged[key];
+        merged[key] = isRecord(current) && isRecord(value) ? mergeOptions(current, value) : value;
+    }
+
+    return merged;
+}
+
+/* The initialization options of a process, with the building of code off when the project lies in a worktree held back (`KindProfile.runsBuildCode`). */
+export function initializationOptionsOf(kind: KindProfile, component: ComponentProfile, context: LaunchContext): unknown {
+    const options = component.initializationOptions(context);
+    const off = context.buildHeld === true ? kind.runsBuildCode?.off : undefined;
+
+    return off === undefined || !isRecord(options) ? options : mergeOptions(options, off);
+}
+
+/* The files gopls tells apart by the language id of the document, not by its name. */
+const GO_FILES: Record<string, string> = { 'go.mod': 'go.mod', 'go.work': 'go.work' };
+
+/* The language id a document opens with: the module files of Go by their own id, any other file as `@adecore/lsp` decides. */
+export function documentLanguageId(languageId: string, storedPath: string): string {
+    return GO_FILES[storedPath.slice(storedPath.lastIndexOf('/') + 1)] ?? lspDocumentLanguageId(languageId, storedPath);
+}
 
 /* Whether a process serves a document, by its language or by its path. */
 export function componentServes(component: ComponentProfile, languageId: string, storedPath: string): boolean {

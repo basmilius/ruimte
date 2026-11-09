@@ -1,24 +1,47 @@
 import type { Command } from '@/commands/behavior';
 import { commandArea, editorShortcutRows, isEditorCommand } from '@/settings/editor-shortcuts';
 import { areaTitle, KEYBOARD_AREAS, shortcutGroups, type KeyboardArea, type ShortcutGroup, type ShortcutRow } from '@/settings/shortcuts';
+import { hasDefaultKey } from '@/surface/default-keys';
+import { overridesSnapshot, type OverrideSnapshot } from '@/surface/shortcut-overrides';
 
 /*
  * Every category of the Keyboard pane: the shortcuts the handlers bind, the commands that carry one in the
  * category of their menu, and the editor's keymap. A command whose key the editor's keymap lists is not a
- * command row here, so nothing shows twice.
+ * command row here, so nothing shows twice. A command row of a key a hand row already lists is that row.
  */
-export function arrangeShortcuts(apple: boolean, commands: readonly Pick<Command, 'id' | 'label' | 'shortcut'>[]): ShortcutGroup[] {
+export function arrangeShortcuts(
+    apple: boolean,
+    commands: readonly Pick<Command, 'id' | 'label' | 'shortcut'>[],
+    snapshot: OverrideSnapshot = overridesSnapshot()
+): ShortcutGroup[] {
     const rows = new Map<KeyboardArea, ShortcutRow[]>(KEYBOARD_AREAS.map((area) => [area, []]));
-    for (const group of shortcutGroups(apple)) {
+    const listed = new Set<string>();
+
+    for (const group of shortcutGroups(apple, snapshot)) {
         rows.get(group.id)!.push(...group.shortcuts);
-    }
-    for (const command of commands) {
-        if (command.shortcut !== undefined && !isEditorCommand(command.id)) {
-            rows.get(commandArea(command.id))!.push({ keys: command.shortcut, label: command.label });
+
+        for (const row of group.shortcuts) {
+            if (row.id !== undefined) {
+                listed.add(row.id);
+            }
         }
     }
-    for (const { area, row } of editorShortcutRows(apple)) {
+
+    for (const command of commands) {
+        if (command.shortcut === undefined || isEditorCommand(command.id) || listed.has(command.id)) {
+            continue;
+        }
+
+        rows.get(commandArea(command.id))!.push({
+            ...(hasDefaultKey(command.id) ? { id: command.id } : {}),
+            keys: command.shortcut,
+            label: command.label
+        });
+    }
+
+    for (const { area, row } of editorShortcutRows(apple, snapshot)) {
         rows.get(area)!.push(row);
     }
+
     return KEYBOARD_AREAS.map((area) => ({ id: area, title: areaTitle(area), shortcuts: rows.get(area)! }));
 }

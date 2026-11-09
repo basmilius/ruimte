@@ -28,6 +28,31 @@ async function readWritten(): Promise<Record<string, unknown>> {
 }
 
 describe('readOrCreateEndpointIdentity', () => {
+    test('a text model survives a restart, is announced to other clients and resets explicitly to Automatic', async () => {
+        const identity = await readOrCreateEndpointIdentity(home);
+        const choice = { provider: 'codex', model: 'small', account: 'work' };
+        const changes: unknown[] = [];
+        identity.subscribe('other-client', (event) => changes.push(event));
+        expect(identity.textModel).toBeNull();
+        await identity.setSwitches({ textModel: choice });
+        expect((await readOrCreateEndpointIdentity(home)).textModel).toEqual(choice);
+        expect(changes.at(-1)).toMatchObject({ event: 'endpoint.changed', payload: { textModel: choice } });
+        await identity.setSwitches({ visualReplies: false });
+        expect(identity.textModel).toEqual(choice);
+        await identity.setSwitches({ textModel: null });
+        expect((await readOrCreateEndpointIdentity(home)).textModel).toBeNull();
+        expect(changes.at(-1)).toMatchObject({ payload: { textModel: null } });
+    });
+
+    test('an unreadable stored text model falls back to Automatic without losing the machine identity', async () => {
+        const identity = await readOrCreateEndpointIdentity(home);
+        await writeFile(join(home, 'endpoint.json'), JSON.stringify({ ...(await readWritten()), textModel: { provider: 'codex', model: 42 } }));
+        const after = await readOrCreateEndpointIdentity(home);
+        expect(after.id).toBe(identity.id);
+        expect(after.publicKey).toBe(identity.publicKey);
+        expect(after.textModel).toBeNull();
+    });
+
     test('mints an id and a key pair once and answers with the same ones after that', async () => {
         const first = await readOrCreateEndpointIdentity(home);
         expect(first.id.length).toBeGreaterThan(8);
@@ -139,10 +164,12 @@ describe('readOrCreateEndpointIdentity', () => {
                     icon: null,
                     agentsDeleteAnyView: false,
                     reachOpenProjects: false,
+                    agentsSharePorts: false,
                     steerMessages: false,
                     streamingAllowed: true,
                     resumeAtReset: false,
                     visualReplies: true,
+                    textModel: null,
                     keepAwake: 'off',
                     keepAwakeOnBattery: false,
                     keepAwakeDisplay: false,
@@ -151,7 +178,8 @@ describe('readOrCreateEndpointIdentity', () => {
                     broker: { mode: 'default' },
                     lanDoor: true,
                     nodeSizes: {},
-                    usageStats: true
+                    usageStats: true,
+                    startFolder: ''
                 }
             }
         ]);
@@ -236,6 +264,33 @@ describe('readOrCreateEndpointIdentity', () => {
         const again = await readOrCreateEndpointIdentity(home, 'the-hostname');
         expect(again.id).toBe(identity.id);
         expect(again.nodeSizes).toEqual({ terminal: { w: 640, h: 400 } });
+    });
+
+    test('a start folder is trimmed, survives a restart, and empty clears it from the file', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        expect(identity.startFolder).toBe('');
+        const heard: unknown[] = [];
+        identity.subscribe('client', (event) => heard.push(event));
+
+        await identity.setStartFolder('  D:\\Work ');
+        expect(identity.startFolder).toBe('D:\\Work');
+        expect((await readWritten()).startFolder).toBe('D:\\Work');
+        expect(heard.at(-1)).toMatchObject({ event: 'endpoint.changed', payload: { startFolder: 'D:\\Work' } });
+        expect((await readOrCreateEndpointIdentity(home, 'the-hostname')).startFolder).toBe('D:\\Work');
+
+        await identity.setStartFolder('');
+        expect(identity.startFolder).toBe('');
+        expect((await readWritten()).startFolder).toBeUndefined();
+        expect(heard.at(-1)).toMatchObject({ payload: { startFolder: '' } });
+    });
+
+    test('a start folder that will not read costs only itself', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        const written = await readWritten();
+        await writeFile(join(home, 'endpoint.json'), JSON.stringify({ ...written, startFolder: 42 }));
+        const again = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        expect(again.id).toBe(identity.id);
+        expect(again.startFolder).toBe('');
     });
 
     test('keep awake is off by default, each part set on its own survives a restart, and off writes nothing', async () => {

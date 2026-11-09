@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { keyOf } from '@adecore/editor-react/testing';
+import { keyOf as eventOf } from '@adecore/editor-react/testing';
 import { typeInto } from '@adecore/editor/testing';
 import { isApplePlatform, type Shortcut } from '@adecore/ui';
 import { act } from 'react';
 import { useTemplateRequest } from '@/language/template-request';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { keyOf } from '@/surface/shortcut-overrides';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
@@ -28,7 +28,7 @@ function rows(): HTMLElement[] {
 
 async function press(chord: Shortcut): Promise<void> {
     await act(async () => {
-        input()!.dispatchEvent(new KeyboardEvent('keydown', { ...keyOf(chord), bubbles: true, cancelable: true }));
+        input()!.dispatchEvent(new KeyboardEvent('keydown', { ...eventOf(chord), bubbles: true, cancelable: true }));
     });
 }
 
@@ -94,7 +94,7 @@ describe('templates in an editor no language server serves', () => {
 
     test('Insert Live Template lists the templates and inserts the one picked', async () => {
         await openEditor();
-        await press(CANVAS_SHORTCUTS.insertLiveTemplate);
+        await press(keyOf('insertLiveTemplate')!);
         await until(() => rows().some((row) => row.textContent?.includes('hi')));
         expect(rows().some((row) => row.textContent?.includes('log'))).toBe(true);
 
@@ -111,7 +111,7 @@ describe('templates in an editor no language server serves', () => {
         text = 'run();';
         await openEditor();
         await pressKey(input()!, 'a', MOD);
-        await press(CANVAS_SHORTCUTS.surroundWith);
+        await press(keyOf('surroundWith')!);
         await until(() => rows().length > 0);
         expect(rows()[0]!.textContent).toContain('if');
 

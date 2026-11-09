@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gitIn } from '../git/test-repo.ts';
@@ -57,5 +57,39 @@ describe('listDirectory in a repository', () => {
         const result = await listDirectory(root, { depth: 2 });
         expect(names(result.entries)).not.toContain('gone.md');
         expect(result.entries.find((entry) => entry.name === 'notes' && entry.path.startsWith(sub))!.ignored).toBe(false);
+    });
+});
+
+describe('listDirectory on a folder it cannot list', () => {
+    test('a folder that is not there answers not-found', async () => {
+        await expect(listDirectory(join(root, 'nowhere'))).rejects.toMatchObject({ code: 'not-found' });
+    });
+
+    test('a path through a file answers not-found, since no folder is there', async () => {
+        await expect(listDirectory(join(root, 'item2.txt', 'inside'))).rejects.toMatchObject({ code: 'not-found' });
+    });
+
+    test.skipIf(process.platform === 'win32' || process.getuid?.() === 0)('a folder that is there but cannot be read answers not-readable', async () => {
+        const locked = join(root, 'locked');
+        await mkdir(locked);
+        await writeFile(join(locked, 'existing.html'), '<p>Existing page</p>');
+        await chmod(locked, 0o000);
+        try {
+            await expect(readdir(locked)).rejects.toMatchObject({ code: 'EACCES' });
+            await expect(listDirectory(locked, { hidden: true })).rejects.toMatchObject({ code: 'not-readable', message: 'That folder cannot be read' });
+        } finally {
+            await chmod(locked, 0o700);
+        }
+    });
+
+    test.skipIf(process.platform === 'win32' || process.getuid?.() === 0)('a folder below one that cannot be searched answers not-readable', async () => {
+        const locked = join(root, 'locked');
+        await mkdir(join(locked, 'inner'), { recursive: true });
+        await chmod(locked, 0o000);
+        try {
+            await expect(listDirectory(join(locked, 'inner'))).rejects.toMatchObject({ code: 'not-readable' });
+        } finally {
+            await chmod(locked, 0o700);
+        }
     });
 });

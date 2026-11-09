@@ -1,7 +1,8 @@
 import { basename } from 'node:path';
 import { ARCHIVE_LIST_MAX_ENTRIES, BYTES_READ_MAX_BYTES, type ArchiveEntry, type ArchiveFormat, type ArchiveListResult } from '@ruimte/contracts';
+import { languageOf } from '../disk/language-of.ts';
 import { looksLikeSvg, sniffMime } from '../disk/sniff.ts';
-import { inspect, languageOf, looksBinary, SERVED_TEXT_MIME, SNIFF_BYTES } from '../fs/read.ts';
+import { inspect, looksBinary, SERVED_TEXT_MIME, SNIFF_BYTES } from '../fs/read.ts';
 import { namesTop, safeEntryPath } from './entry-path.ts';
 import { gunzipChunks, parseGzipHeader, plainChunks } from './gzip.ts';
 import { ARCHIVE_SCAN_MAX_BYTES, ARCHIVE_SCAN_MAX_ENTRIES, ArchiveError, InflateMeter } from './limits.ts';

@@ -146,6 +146,25 @@ export class Worktrees {
         return [...(await this.registerOf(main).read()).keys()];
     }
 
+    /*
+     * The main checkout of the repository a folder is in, and the worktrees the register made for an
+     * agent's node. A worktree a person made themselves is not among them; null outside a repository.
+     */
+    async agentWorktrees(folder: string): Promise<{ main: string; paths: string[] } | null> {
+        try {
+            const { main } = await this.read(folder);
+            const records = await this.registerOf(main).read();
+
+            return { main, paths: [...records].filter(([, record]) => record.madeBy !== 'client' && record.nodeId !== undefined).map(([path]) => path) };
+        } catch (error) {
+            if (error instanceof GitError) {
+                return null;
+            }
+
+            throw error;
+        }
+    }
+
     /* The register of a repository, by its main checkout. */
     registerOf(main: string): WorktreeRegister {
         return new WorktreeRegister(join(this.root, folderKey(main)));

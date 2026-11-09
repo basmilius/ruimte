@@ -4,6 +4,7 @@ import { commandSpec, isCommandId, menuPlacesOf } from '@/commands/registry';
 import { RENDERED_DOC_COMMENTS } from '@/features';
 import type { KeyboardArea, ShortcutRow } from '@/settings/shortcuts';
 import { shortcutFor } from '@/surface/editor-keymap';
+import { overridesSnapshot, type OverrideSnapshot } from '@/surface/shortcut-overrides';
 
 type EditorArea = Extract<KeyboardArea, 'editor' | 'navigation' | 'code'>;
 
@@ -160,13 +161,15 @@ function labelOf(id: KeymapId): string {
 const LISTED_WITH_CANVAS: readonly KeymapId[] = ['undo', 'redo'];
 
 /* The editor's keymap as this platform resolves it, with the category of each key; keys the platform leaves unbound are left out. */
-export function editorShortcutRows(apple: boolean): { area: EditorArea; row: ShortcutRow }[] {
+export function editorShortcutRows(apple: boolean, snapshot: OverrideSnapshot = overridesSnapshot()): { area: EditorArea; row: ShortcutRow }[] {
     return KEYMAP_IDS.flatMap((id) => {
-        const keys = shortcutFor(id, apple);
+        // A platform without a chord for the key has nothing to rebind either. The default is the asked platform's, not the host's.
+        const fallback = shortcutFor(id, apple);
+        const keys = fallback === undefined ? undefined : (snapshot.keys.get(id) ?? fallback);
         if (keys === undefined || LISTED_WITH_CANVAS.includes(id) || (id === 'toggleRenderedDocs' && !RENDERED_DOC_COMMENTS)) {
             return [];
         }
-        return [{ area: AREA_OF_KEY[id], row: { keys, label: labelOf(id) } }];
+        return [{ area: AREA_OF_KEY[id], row: { id, keys, label: labelOf(id) } }];
     });
 }
 

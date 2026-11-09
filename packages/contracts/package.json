@@ -14,16 +14,16 @@
     },
     "scripts": {
         "typecheck": "bun check --no-script",
-        "generate:swift": "bun scripts/generate-swift.ts && bun scripts/generate-swift-tables.ts && bun scripts/generate-port-fixtures.ts && bun scripts/generate-port-merge.ts && bun scripts/generate-port-plan.ts && bun scripts/generate-port-format.ts && bun scripts/generate-port-chat.ts && bun ../../apps/ios/Scripts/generate-renderer.ts && bun ../../apps/ios/Scripts/generate-visual.ts && bun ../../apps/ios/Scripts/generate-mermaid.ts && bun ../../apps/server/scripts/generate-native-ui.ts",
-        "check:swift": "bun scripts/generate-swift.ts --check && bun scripts/generate-swift-tables.ts --check && bun scripts/generate-port-fixtures.ts --check && bun scripts/generate-port-merge.ts --check && bun scripts/generate-port-plan.ts --check && bun scripts/generate-port-format.ts --check && bun scripts/generate-port-chat.ts --check && bun ../../apps/ios/Scripts/generate-renderer.ts --check && bun ../../apps/ios/Scripts/generate-visual.ts --check && bun ../../apps/ios/Scripts/generate-mermaid.ts --check && bun ../../apps/server/scripts/generate-native-ui.ts --check"
+        "generate:swift": "bun scripts/generate-swift.ts && bun scripts/generate-swift-tables.ts && bun scripts/generate-port-fixtures.ts && bun scripts/generate-port-merge.ts && bun scripts/generate-port-plan.ts && bun scripts/generate-port-format.ts && bun scripts/generate-port-chat.ts && bun ../../apps/ios/Scripts/generate-renderer.ts && bun ../../apps/ios/Scripts/generate-visual.ts && bun ../../apps/ios/Scripts/generate-design.ts && bun ../../apps/ios/Scripts/generate-mermaid.ts && bun ../../apps/server/scripts/generate-native-ui.ts",
+        "check:swift": "bun scripts/generate-swift.ts --check && bun scripts/generate-swift-tables.ts --check && bun scripts/generate-port-fixtures.ts --check && bun scripts/generate-port-merge.ts --check && bun scripts/generate-port-plan.ts --check && bun scripts/generate-port-format.ts --check && bun scripts/generate-port-chat.ts --check && bun ../../apps/ios/Scripts/generate-renderer.ts --check && bun ../../apps/ios/Scripts/generate-visual.ts --check && bun ../../apps/ios/Scripts/generate-design.ts --check && bun ../../apps/ios/Scripts/generate-mermaid.ts --check && bun ../../apps/server/scripts/generate-native-ui.ts --check"
     },
     "dependencies": {
-        "@adecore/agent-contracts": "0.54.16",
-        "@adecore/diagram": "0.54.16",
-        "@adecore/drawing": "0.54.16",
-        "@adecore/lsp": "0.54.16",
-        "@adecore/plan": "0.54.16",
-        "@adecore/utils": "0.54.16",
+        "@adecore/agent-contracts": "catalog:",
+        "@adecore/diagram": "catalog:",
+        "@adecore/drawing": "catalog:",
+        "@adecore/lsp": "catalog:",
+        "@adecore/plan": "catalog:",
+        "@adecore/utils": "catalog:",
         "@ruimte/pulsar": "workspace:*",
         "zod": "^4.6.7"
     },

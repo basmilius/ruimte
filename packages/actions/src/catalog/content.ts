@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { MAX_PER_CALL } from '../limits.ts';
 import {
     PERSON_AND_VOICE,
-    AGENT,
+    PERSON_AND_AGENT,
     PERSON,
     viewId,
     nodeId,
@@ -45,7 +45,7 @@ export const CONTENT_ACTIONS = {
         agentDescription: 'Writes in several notes in one write, each a note you made or a line joins you to, or any note of the canvas a chat view names.',
         effect: 'shared',
         domain: 'content',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             viewId,
             nodes: z
@@ -220,7 +220,7 @@ export const CONTENT_ACTIONS = {
         description: 'Adds, changes and removes elements of a drawing view by id in one step, while a person may draw in it at the same time.',
         effect: 'shared',
         domain: 'content',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             viewId: viewId.describe('A drawing view of this project, or the id of a node that shows one'),
             revision: revision.describe('The revision of the drawing the edit was decided on, as read --elements printed it'),

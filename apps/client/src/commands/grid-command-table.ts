@@ -15,14 +15,13 @@ import {
 } from 'lucide-react';
 import { desktop, severalCells, hosted } from '@/commands/conditions';
 import { type CommandSpec } from '@/commands/types';
-import { CANVAS_SHORTCUTS, FOCUS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 
 export const GRID_COMMANDS = {
     // The key is bound once, through Close Cell, which closes the tab in front of a host first.
     'tab-close': {
         key: 'closeTab',
         icon: X,
-        shortcut: CANVAS_SHORTCUTS.closeCell,
+        keyOf: 'close-cell',
         palette: true,
         menu: { menu: 'file', group: 'close', order: 20, when: (context) => context.workspace && hosted(context) }
     },
@@ -30,7 +29,6 @@ export const GRID_COMMANDS = {
     'close-cell': {
         key: 'closeCell',
         icon: X,
-        shortcut: CANVAS_SHORTCUTS.closeCell,
         binds: 'workspace',
         palette: false,
         menu: {
@@ -57,7 +55,6 @@ export const GRID_COMMANDS = {
     'split-right': {
         key: 'splitRight',
         icon: PanelRight,
-        shortcut: CANVAS_SHORTCUTS.splitRight,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'view', group: 'split', order: 10, enabled: (context) => context.split.right }
@@ -65,7 +62,6 @@ export const GRID_COMMANDS = {
     'split-down': {
         key: 'splitDown',
         icon: PanelBottom,
-        shortcut: CANVAS_SHORTCUTS.splitDown,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'view', group: 'split', order: 20, enabled: (context) => context.split.down }
@@ -73,7 +69,6 @@ export const GRID_COMMANDS = {
     'tab-move-left': {
         key: 'moveTabLeft',
         icon: ArrowLeft,
-        shortcut: CANVAS_SHORTCUTS.moveTabLeft,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'view', group: 'split', order: 30, when: hosted, enabled: (context) => context.tabs.index > 0 }
@@ -81,7 +76,6 @@ export const GRID_COMMANDS = {
     'tab-move-right': {
         key: 'moveTabRight',
         icon: ArrowRight,
-        shortcut: CANVAS_SHORTCUTS.moveTabRight,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'view', group: 'split', order: 40, when: hosted, enabled: (context) => context.tabs.index < context.tabs.count - 1 }
@@ -102,7 +96,6 @@ export const GRID_COMMANDS = {
     'cell-maximize': {
         key: 'maximizeCell',
         icon: Expand,
-        shortcut: CANVAS_SHORTCUTS.maximizeCell,
         binds: 'workspace',
         palette: true,
         menu: {
@@ -117,7 +110,6 @@ export const GRID_COMMANDS = {
     'tab-previous': {
         key: 'previousTab',
         icon: ArrowLeft,
-        shortcut: CANVAS_SHORTCUTS.previousTab,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'views', order: 50, when: hosted, enabled: (context) => context.tabs.count > 1 }
@@ -125,7 +117,6 @@ export const GRID_COMMANDS = {
     'tab-next': {
         key: 'nextTab',
         icon: ArrowRight,
-        shortcut: CANVAS_SHORTCUTS.nextTab,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'views', order: 60, when: hosted, enabled: (context) => context.tabs.count > 1 }
@@ -133,7 +124,6 @@ export const GRID_COMMANDS = {
     'focus-left': {
         key: 'focusLeft',
         icon: ArrowLeft,
-        shortcut: FOCUS_SHORTCUTS.left,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'go', group: 'focus', order: 10, enabled: (context) => context.cellNeighbors.left }
@@ -141,7 +131,6 @@ export const GRID_COMMANDS = {
     'focus-right': {
         key: 'focusRight',
         icon: ArrowRight,
-        shortcut: FOCUS_SHORTCUTS.right,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'go', group: 'focus', order: 20, enabled: (context) => context.cellNeighbors.right }
@@ -149,7 +138,6 @@ export const GRID_COMMANDS = {
     'focus-up': {
         key: 'focusUp',
         icon: ArrowUp,
-        shortcut: FOCUS_SHORTCUTS.up,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'go', group: 'focus', order: 30, enabled: (context) => context.cellNeighbors.up }
@@ -157,7 +145,6 @@ export const GRID_COMMANDS = {
     'focus-down': {
         key: 'focusDown',
         icon: ArrowDown,
-        shortcut: FOCUS_SHORTCUTS.down,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'go', group: 'focus', order: 40, enabled: (context) => context.cellNeighbors.down }
@@ -165,7 +152,6 @@ export const GRID_COMMANDS = {
     'view-previous': {
         key: 'previousView',
         icon: ChevronsLeft,
-        shortcut: CANVAS_SHORTCUTS.previousView,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'go', group: 'views', order: 10, enabled: (context) => context.viewsSteppable }
@@ -173,7 +159,6 @@ export const GRID_COMMANDS = {
     'view-next': {
         key: 'nextView',
         icon: ChevronsRight,
-        shortcut: CANVAS_SHORTCUTS.nextView,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'go', group: 'views', order: 20, enabled: (context) => context.viewsSteppable }

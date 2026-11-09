@@ -15,9 +15,11 @@ export function startEndpointWatch(): () => void {
                     icon: payload.icon,
                     agentsDeleteAnyView: payload.agentsDeleteAnyView === true,
                     ...(payload.reachOpenProjects === undefined ? {} : { reachOpenProjects: payload.reachOpenProjects }),
+                    ...(payload.agentsSharePorts === undefined ? {} : { agentsSharePorts: payload.agentsSharePorts }),
                     ...(payload.streamingAllowed === undefined ? {} : { streamingAllowed: payload.streamingAllowed }),
                     resumeAtReset: payload.resumeAtReset === true,
                     ...(payload.visualReplies === undefined ? {} : { visualReplies: payload.visualReplies }),
+                    ...(payload.textModel === undefined ? {} : { textModel: payload.textModel }),
                     ...(payload.keepAwake === undefined
                         ? {}
                         : {
@@ -31,7 +33,8 @@ export function startEndpointWatch(): () => void {
                     ...(payload.lanDoor === undefined ? {} : { lanDoor: payload.lanDoor, lanDoorFixed: payload.lanDoorFixed === true }),
                     ...(payload.agentIntegrations === undefined ? {} : { agentIntegrations: payload.agentIntegrations }),
                     ...(payload.nodeSizes === undefined ? {} : { nodeSizes: knownNodeSizes(payload.nodeSizes) }),
-                    ...(payload.usageStats === undefined ? {} : { usageStats: payload.usageStats })
+                    ...(payload.usageStats === undefined ? {} : { usageStats: payload.usageStats }),
+                    ...(payload.startFolder === undefined ? {} : { startFolder: payload.startFolder })
                 });
                 // An event without a URL says nothing about the broker; the same for the door.
                 if (payload.brokerUrl !== undefined) {

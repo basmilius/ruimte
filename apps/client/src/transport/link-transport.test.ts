@@ -467,7 +467,8 @@ describe('LinkTransport', () => {
                 transport.request('git.bundle', {} as never),
                 transport.request('git.fetchBundle', {} as never),
                 transport.request('provider.installAgent', { id: 'agent' }),
-                transport.request('provider.update', { provider: 'claude' })
+                transport.request('provider.update', { provider: 'claude' }),
+                transport.request('usage.refreshLimits', {})
             ];
             let settled = 0;
             for (const reply of replies) {

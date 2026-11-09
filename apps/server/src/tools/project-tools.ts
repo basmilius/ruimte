@@ -1,7 +1,7 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { PROJECT_PROPOSAL_LIMITS } from '@ruimte/contracts';
 import { z } from 'zod';
-import { field, orNote } from '../canvas/host.ts';
+import { ANSWER_WAKES_NOTE, field, orNote } from '../canvas/host.ts';
 import { reachableLines, reachableProjects, reachedFolder, reachedProject, recentLines, SETTING_LINE } from '../canvas/reach.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
 import { defineTool, defineToolkit, textInput, type ToolCall } from './tool.ts';
@@ -131,7 +131,7 @@ const projectClose = defineTool('project', {
 const projectPropose = defineActionTool('project', {
     name: 'project_propose',
     action: 'project.propose',
-    description: 'Suggests in a card that this chat becomes a project.',
+    description: 'Suggests in a card that this chat becomes a project; the answer wakes you.',
     audience: 'chat',
     input: z.object({
         name: textInput('project_propose', 'name', PROJECT_PROPOSAL_LIMITS.name, 'the name of the project'),
@@ -147,7 +147,7 @@ const projectPropose = defineActionTool('project', {
     async run(input, call) {
         const result = await runAction(call, 'project.propose', { name: input.name, reason: input.reason, folder: input.folder ?? null });
 
-        return [`proposal\t${result.proposalId}\t${result.outcome}`];
+        return [`proposal\t${result.proposalId}\t${result.outcome}`, ...(result.outcome === 'waiting' ? [ANSWER_WAKES_NOTE] : [])];
     }
 });
 

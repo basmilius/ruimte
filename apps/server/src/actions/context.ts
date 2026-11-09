@@ -1,5 +1,6 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionCall } from '@ruimte/actions';
+import type { ExternalCaller } from '../canvas/external-caller.ts';
 import { type CanvasHost, type ProjectHost, type AgentCall } from '../canvas/host.ts';
 import { callerKind } from '../canvas/tasks.ts';
 import { extensionOpener, voiceOpener } from '../opener.ts';
@@ -44,6 +45,8 @@ export interface ServerActionContext {
     voice?: VoiceCaller;
     /* Set with the extension actor, whose manifest names the permission: it has no node, so no line can run to it. */
     extension?: true;
+    /* Set only for a client elsewhere with a credential: it acts as the person within the grant, and no node stands behind it. */
+    external?: ExternalCaller;
     /*
      * Throws once whoever asked may no longer, such as an extension turned off since. Set for an extension's chat start,
      * which calls it after every await of its own up to the agent's start. A refusal after the node is written takes the
@@ -181,6 +184,28 @@ export function serverActionCall(
 }
 
 /*
+ * The call of a client elsewhere. The actor is a person whose id belongs to the credential, so an action that
+ * refuses a person refuses it too, and nothing mistakes it for a node. The place is the project its scope allows.
+ */
+export function externalActionCall(
+    host: CanvasHost,
+    place: IndexedPlace,
+    external: ExternalCaller,
+    dryRun = false,
+    expectedRevision?: number
+): ServerActionCall {
+    const context = contextOf(expectedRevision === undefined ? host : heldTo(host, expectedRevision), place);
+    context.external = external;
+
+    return {
+        actor: { kind: 'person', id: external.id, via: 'daemon' },
+        context,
+        dryRun,
+        ...(expectedRevision === undefined ? {} : { expectedRevision })
+    };
+}
+
+/*
  * The call of a Voice session. Its place is the current project of the session, with the canvas on the
  * phone's screen or else the project's first, so an action lands where an agent of that canvas would.
  * Without a current project, an action that needs one refuses and says how to pick one.
@@ -216,5 +241,5 @@ export function noVoiceProject(): ToolRefusal {
 
 /* The caller in the shape the canvas helpers take, which ask who it is and who made what. */
 export function agentCallOf(call: ServerActionCall): AgentCall {
-    return { caller: call.actor.id, host: call.context.host };
+    return { caller: call.actor.id, host: call.context.host, ...(call.context.external === undefined ? {} : { external: call.context.external }) };
 }

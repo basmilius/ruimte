@@ -5,6 +5,7 @@ import { PROVIDER_SETTINGS_SECTION } from '@/providers/settings-section';
 import { settingsSectionRegistry } from '@/registry/settings-sections';
 import { AGENT_SETTINGS_SECTION } from '@/settings/agents-section';
 import { APP_SETTINGS_SECTIONS } from '@/settings/app-sections';
+import { TUNNEL_SETTINGS_SECTION } from '@/tunnels/settings-section';
 import { USAGE_SETTINGS_SECTION } from '@/usage/settings-section';
 import { VOICE_SETTINGS_SECTION } from '@/voice/settings-section';
 
@@ -16,6 +17,7 @@ export function installSettingsSections(): void {
         PROVIDER_SETTINGS_SECTION,
         CHAT_SETTINGS_SECTION,
         AGENT_SETTINGS_SECTION,
+        TUNNEL_SETTINGS_SECTION,
         VOICE_SETTINGS_SECTION,
         USAGE_SETTINGS_SECTION,
         MACHINE_SETTINGS_SECTION

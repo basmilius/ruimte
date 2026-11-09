@@ -319,6 +319,18 @@ export function developerActions(document: StoreApi<DocumentState>, overrides: P
             });
             return { output: diff };
         },
+        'git.compare': async ({ repository, from, to, mode }, call) => {
+            const checkout = await checkoutOf(repository, call);
+            return { output: await ask('git.compare', { cwd: checkout.path, from, to, mode: mode ?? 'merge-base' }) };
+        },
+        'git.compareCommits': async ({ repository, fromCommit, toCommit, side, skip, pageSize }, call) => {
+            const checkout = await checkoutOf(repository, call);
+            return { output: await ask('git.compareCommits', { cwd: checkout.path, fromCommit, toCommit, side, skip: skip ?? 0, limit: pageSize ?? 30 }) };
+        },
+        'git.blob': async ({ repository, commit, path }, call) => {
+            const checkout = await checkoutOf(repository, call);
+            return { output: await ask('git.blob', { cwd: checkout.path, commit, path }) };
+        },
         'git.log': async ({ repository, limit, cursor }, call) => {
             const checkout = await checkoutOf(repository, call);
             return { output: await ask('git.log', { cwd: checkout.path, limit: limit ?? 20, ...(cursor == null ? {} : { cursor }) }) };

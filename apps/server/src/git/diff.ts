@@ -422,6 +422,20 @@ export async function diffCommit(cwd: string, commit: string, leftOut: LeftOut =
     return { ...filesResult(diff), ...(meta ? { commit: meta } : {}) };
 }
 
+/*
+ * Every file that differs between two commits, under the panel's caps. Both are read from the object
+ * store, so the working tree and the index stay out of it.
+ */
+export async function diffCommits(top: string, from: string, to: string, leftOut: LeftOut = LEAVE_NOTHING_OUT): Promise<GitDiffResult> {
+    const diff = await diffTrees(top, from, to, '', PANEL_CAPS, await leftOut(top));
+
+    if (diff === null) {
+        throw new GitError('git-failed', 'Could not read the difference between the two commits.');
+    }
+
+    return filesResult(diff);
+}
+
 /* A tree diff as the answer for many files at once, the counts summed over its files. */
 function filesResult(diff: ChatCheckpointDiff | null): GitDiffResult {
     const files: GitDiffFile[] = (diff?.files ?? []).map((file) => ({

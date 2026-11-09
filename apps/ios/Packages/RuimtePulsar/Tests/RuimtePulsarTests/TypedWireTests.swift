@@ -70,6 +70,16 @@ struct TypedWireTests {
         #expect(idle.agent == nil)
     }
 
+    @Test func aFutureMachineTextProviderDoesNotBreakEndpointInfo() throws {
+        let endpoint = try JSONValue.object([
+            "id": .string("machine"), "label": .string("Mac"), "platform": .string("darwin"),
+            "version": .string("1"), "reachability": .string("lan"), "authenticated": .bool(true),
+            "textModel": .object(["provider": .string("future-cli"), "model": .null]),
+        ]).decoded(as: EndpointInfo.self)
+        #expect(endpoint.id == "machine")
+        #expect(endpoint.textModel != .missing)
+    }
+
     @Test func gitAndProjectPayloadsDecode() throws {
         let git = try #require(try fixtures("event.git.status").first).decoded(as: GitStatusEvent.self)
         #expect(git.status.operation == .merge)

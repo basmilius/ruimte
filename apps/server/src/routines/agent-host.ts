@@ -8,7 +8,14 @@ import type { Routines } from './routines.ts';
 export interface RoutineAgentHost {
     list(projectId: string): Promise<RoutineListResult>;
     /* `shared` places a new routine; one that exists stays in the file it is in. */
-    save(projectId: string, routine: Routine, ceiling: RuntimeMode, caller: string, shared: boolean): Promise<{ routine: Routine; shared: boolean }>;
+    save(
+        projectId: string,
+        routine: Routine,
+        ceiling: RuntimeMode,
+        caller: string,
+        shared: boolean,
+        title?: string
+    ): Promise<{ routine: Routine; shared: boolean }>;
     pause(projectId: string, routineId: string): Promise<void>;
     resume(projectId: string, routineId: string): Promise<void>;
     runNow(projectId: string, routineId: string): Promise<RoutineRunNowResult>;
@@ -25,8 +32,8 @@ export function agentRoutines(
 ): RoutineAgentHost {
     return {
         list: (projectId) => routines.list(projectId),
-        save: async (projectId, routine, ceiling, caller, shared) => {
-            const madeBy = { chatId: caller, title: titleOf(caller) ?? caller, at: now() };
+        save: async (projectId, routine, ceiling, caller, shared, title) => {
+            const madeBy = { chatId: caller, title: title ?? titleOf(caller) ?? caller, at: now() };
             const saved = await routines.saveByAgent(projectId, routine, ceiling, madeBy, shared);
             return { routine: saved.routine, shared: saved.shared };
         },

@@ -46,6 +46,10 @@
             "label": "Accent",
             "description": "Selection rings, focus and the terminal cursor."
         },
+        "accentFollowsProject": {
+            "label": "Follow the project's color",
+            "description": "Each window takes its project's color as the accent. A project on the default color keeps your accent."
+        },
         "interface": {
             "title": "Window",
             "layout": {
@@ -113,13 +117,6 @@
             "description": "The bar under a canvas or drawing.",
             "always": "Always",
             "edge": "Near the bottom edge"
-        },
-        "commandPalette": {
-            "title": "Command palette"
-        },
-        "browseStart": {
-            "label": "Start browsing in",
-            "description": "Where browsing for a folder in the command palette starts, on every machine. Empty means your home folder."
         }
     },
     "editor": {
@@ -652,6 +649,10 @@
             "label": "Agents",
             "description": "What new agents start with and what they may do."
         },
+        "tunnels": {
+            "label": "Tunnels",
+            "description": "Reach Ruimte's MCP and your dev servers from outside."
+        },
         "voice": {
             "label": "Voice",
             "description": "Microphone, dictation and Voice Control."
@@ -841,7 +842,10 @@
         "split": {
             "right": "Split right",
             "down": "Split down",
-            "focusNeighbor": "Focus neighboring cell (arrow keys)",
+            "focusLeft": "Focus cell on the left",
+            "focusRight": "Focus cell on the right",
+            "focusUp": "Focus cell above",
+            "focusDown": "Focus cell below",
             "maximize": "Maximize or restore selected node or cell",
             "close": "Close focused cell"
         },
@@ -885,7 +889,10 @@
             "previousMessage": "Previous message you sent",
             "nextMessage": "Next message you sent",
             "sendAndNewChat": "Send and start new chat beside it",
-            "dictation": "Dictate: press to toggle, hold to talk"
+            "dictation": "Dictate: press to toggle, hold to talk",
+            "textLarger": "Larger Chat Text",
+            "textSmaller": "Smaller Chat Text",
+            "textReset": "Default Chat Text Size"
         },
         "browser": {
             "back": "Back",
@@ -913,7 +920,20 @@
         "noMatch": "Nothing matches \"{{query}}\".",
         "browserNote": "In a browser tab, {{newView}} and {{closeCell}} belong to the browser.",
         "categories": "Shortcut categories",
-        "result": "{{category}} · {{keys}}"
+        "result": "{{category}} · {{keys}}",
+        "shortcutFor": "Shortcut for {{name}}",
+        "recordPrompt": "Press a shortcut",
+        "recordUnsupported": "That key cannot be a shortcut",
+        "needsModifierApple": "Hold Cmd, Control or Option too",
+        "needsModifier": "Hold Ctrl or Alt too",
+        "taken": "{{name}} already uses this key. Change that shortcut first, or press another.",
+        "browserKeeps": "Your browser keeps this key. Press another.",
+        "extensionUses": "An extension uses this key too. Ruimte's shortcut runs first.",
+        "reset": "Reset {{name}} to its default",
+        "restoreDefaults": "Restore defaults",
+        "restoreTitle": "Restore the default shortcuts?",
+        "restoreDescription": "Every shortcut you changed goes back to its default, on this device.",
+        "restoreConfirm": "Restore"
     },
     "backgroundService": {
         "title": "When Ruimte quits",
@@ -995,6 +1015,192 @@
         "onAccount": "On your account",
         "openedThroughAccount": "Opened through your account"
     },
+    "tunnels": {
+        "cloudflare": "Cloudflare",
+        "update": "This machine needs a newer Ruimte.",
+        "loading": "Loading",
+        "elsewhere": "Set up tunnels in the app on that machine.",
+        "loadFailed": "Could not load the tunnels.",
+        "changeFailed": "That did not work.",
+        "failed": "Could not show the tunnels",
+        "retry": "Try again",
+        "clients_one": "{{count}} client active lately",
+        "clients_other": "{{count}} clients active lately",
+        "stage": {
+            "not-installed": "cloudflared not installed",
+            "installing": "Installing cloudflared",
+            "cannot-install": "Cannot install cloudflared here",
+            "no-token": "No API token",
+            "checking": "Checking with Cloudflare",
+            "no-tunnel": "No tunnel yet",
+            "starting": "Starting",
+            "running": "Running",
+            "failed": "Not working"
+        },
+        "install": {
+            "action": "Install"
+        },
+        "token": {
+            "label": "API token",
+            "description": "Needs Zone read, DNS edit and Cloudflare Tunnel edit.",
+            "placeholder": "Paste token",
+            "make": "Make token",
+            "check": "Check",
+            "reaches_one": "Reaches {{count}} domain on {{account}}.",
+            "reaches_other": "Reaches {{count}} domains on {{account}}.",
+            "reachesAccounts_one": "Reaches {{count}} domain on {{accounts}} accounts.",
+            "reachesAccounts_other": "Reaches {{count}} domains on {{accounts}} accounts.",
+            "remove": "Remove"
+        },
+        "tunnel": {
+            "label": "Tunnel",
+            "account": "Account",
+            "pickAccount": "Pick account",
+            "pick": "Which tunnel",
+            "new": "New tunnel",
+            "running": "Running",
+            "idle": "Not running",
+            "use": "Use",
+            "loadFailed": "Could not list your tunnels.",
+            "listing": "Listing your tunnels",
+            "runner": {
+                "ruimte": "Runs on this computer",
+                "other": "Runs outside Ruimte",
+                "none": "Starts with the first hostname"
+            }
+        },
+        "unlink": {
+            "action": "Stop using",
+            "title": "Stop using {{name}}?",
+            "description": "Ruimte removes its hostnames. The tunnel stays in Cloudflare."
+        },
+        "hostnames": {
+            "title": "Hostnames",
+            "description": "Cloudflare can read all traffic through a tunnel.",
+            "add": "Add hostname",
+            "hostname": "Hostname",
+            "target": "Points to",
+            "ruimte": "Ruimte",
+            "others": "Already on this tunnel",
+            "empty": "No hostnames yet",
+            "mcp": "Ruimte MCP",
+            "busy": "Changing {{hostname}}",
+            "more": "More for {{hostname}}",
+            "copy": "Copy address",
+            "open": "Open",
+            "comeBack": "On after restart",
+            "edit": "Edit",
+            "remove": "Remove",
+            "unreachable": "Not reachable"
+        },
+        "add": {
+            "title": "Add hostname",
+            "editTitle": "Edit hostname",
+            "kind": "Points to",
+            "dev": "Dev server",
+            "mcp": "Ruimte MCP",
+            "port": "Port",
+            "pickPort": "Pick port",
+            "otherPort": "Other port",
+            "hostname": "Hostname",
+            "label": "Label",
+            "zone": "Domain",
+            "pickZone": "Pick domain",
+            "findZone": "Find domain",
+            "devWarning": "Anyone with the address reaches this dev server.",
+            "otherRunner": "Points to port {{port}} on the computer that runs this tunnel.",
+            "action": "Add"
+        },
+        "origin": {
+            "advanced": "Advanced",
+            "protocol": "Protocol",
+            "hostHeader": "Host header",
+            "hostHeaderHint": "Sent to the server instead of the hostname.",
+            "noTlsVerify": "Skip TLS check",
+            "noTlsVerifyHint": "For a server with a self-signed certificate.",
+            "serverName": "Server name"
+        },
+        "clients": {
+            "title": "External clients",
+            "mcp": "External MCP",
+            "address": "On this machine at",
+            "notListening": "Not running. Another app may be using its port.",
+            "create": "New bearer",
+            "client": "Client",
+            "kind": "Kind",
+            "reach": "Reach",
+            "lastUsed": "Last used",
+            "never": "Never",
+            "empty": "No clients yet",
+            "neverExpires": "Never expires",
+            "expired": "Expired",
+            "expiresIn_one": "Expires in {{count}} day",
+            "expiresIn_other": "Expires in {{count}} days",
+            "bearer": "Bearer",
+            "oauth": "OAuth",
+            "allProjects": "All projects",
+            "projects_one": "{{count}} project",
+            "projects_other": "{{count}} projects",
+            "approves": "Approves",
+            "more": "More for {{label}}",
+            "revoke": "Revoke",
+            "revokeTitle": "Revoke {{label}}?",
+            "revokeText": "It loses access on its next request. Agents it started keep running."
+        },
+        "tier": {
+            "read": "Read",
+            "work": "Work",
+            "machine": "Machine"
+        },
+        "bearer": {
+            "title": "New bearer",
+            "description": "A fixed key for a client without OAuth.",
+            "label": "Name",
+            "action": "Create",
+            "once": "Copy it now. Ruimte cannot show it again.",
+            "secret": "Bearer",
+            "where": "Use it at {{address}}.",
+            "onHostname": "Allow over the tunnel",
+            "onHostnameWarning": "Anyone with the key can then use it from anywhere.",
+            "failed": "Could not create the bearer."
+        },
+        "grant": {
+            "tier": "Reach",
+            "tierHint": {
+                "read": "Reads projects, canvases, tasks and files.",
+                "work": "Also edits canvases and starts agents.",
+                "machine": "Also runs launches, routines, browsers, devices, databases and computer use."
+            },
+            "projects": "Projects",
+            "allProjects": "All",
+            "someProjects": "Selected",
+            "pickAll": "All projects",
+            "project": "Project",
+            "folder": "Folder",
+            "ceiling": "Highest agent mode",
+            "expiry": "Expires",
+            "expiryOption": {
+                "never": "Never",
+                "30": "In 30 days",
+                "90": "In 90 days",
+                "365": "In a year"
+            },
+            "approvals": "Approve on your behalf",
+            "approvalsWarning": "The client can run shell commands on this machine as you."
+        },
+        "consent": {
+            "title": "{{host}} wants access",
+            "description": "Check that this code matches the client's page.",
+            "unverifiedName": "Calls itself \"{{name}}\" (not verified).",
+            "terminals": "It can read every terminal in the projects it reaches.",
+            "others_one": "{{count}} more waiting",
+            "others_other": "{{count}} more waiting",
+            "code": "Code",
+            "deny": "Deny",
+            "approve": "Approve",
+            "failed": "Could not send the answer."
+        }
+    },
     "agents": {
         "deleteAnyView": {
             "label": "Agents may delete any view or node",
@@ -1008,6 +1214,12 @@
             "description": "Agents in one project can read your other open projects and start agents there. They can also open a project from Recent, bring one to the front, and ask you to close one. They make a new project only once you confirm.",
             "notConnected": "{{machine}} is not connected. Change this from its details under Account, or open one of its projects."
         },
+        "sharePorts": {
+            "label": "Agents may share a dev port",
+            "rowLabel": "Agents on {{machine}} may share a dev port",
+            "description": "An agent can share the port of a dev server with your other devices. They open it through the connection to this machine. A development site may trust every request that comes from this machine. You can stop a share from the browser node.",
+            "notConnected": "{{machine}} is not connected. Change this from its details under Account, or open one of its projects."
+        },
         "resumeAtReset": {
             "label": "Continue after a usage limit",
             "rowLabel": "Chats on {{machine}} continue after a usage limit",
@@ -1019,6 +1231,18 @@
             "rowLabel": "Agents on {{machine}} may show visual replies",
             "description": "A chart, table or mockup above a reply. When off, agents answer in text.",
             "notConnected": "{{machine}} is not connected. Open one of its projects to change this."
+        },
+        "textModel": {
+            "title": "Short texts",
+            "label": "Text model",
+            "description": "Writes new chat titles, commit messages and conflict proposals on this machine. Automatic leaves the choice to Ruimte. Editor AI has its own model.",
+            "automatic": "Automatic",
+            "choose": "Choose",
+            "footer": "Writes short texts on this machine. Without a model, the cheapest one is used, at the CLI's default reasoning.",
+            "loading": "Loading the CLIs on this machine…",
+            "update": "Update this machine to choose a text model.",
+            "unavailable": "This CLI, model or account is not available on this machine. Choose another or Automatic.",
+            "failed": "Could not show the text model."
         },
         "machine": {
             "title": "What agents may do",
@@ -1039,6 +1263,29 @@
         "showViews": {
             "label": "Let agents switch views",
             "description": "A view or project an agent opens replaces yours, and a message lets you go back. When off, the message offers to go there."
+        },
+        "quietHours": {
+            "label": "Quiet hours",
+            "description": "No alert on this computer in these hours. Agents keep working, and what still waits is announced when the hours end.",
+            "days": {
+                "label": "Days",
+                "description": "A night belongs to the day it starts on."
+            },
+            "times": {
+                "label": "Hours",
+                "description": "On this computer's clock. An end before the start runs into the next day.",
+                "from": "Quiet from",
+                "to": "to",
+                "until": "Quiet until"
+            }
+        },
+        "breakReminder": {
+            "label": "Break reminder",
+            "description": "Suggests a break after a stretch of work at this computer. Five minutes away counts as a break.",
+            "stretch": {
+                "label": "Remind me after",
+                "description": "Of work without a break."
+            }
         },
         "working": {
             "title": "Keep awake",
@@ -1493,6 +1740,13 @@
             "refusedRoot": "Use an absolute path other than the disk root, your home folder or Ruimte's data folder.",
             "notAFolder": "That is not a folder, or Ruimte cannot create it or write to it."
         },
+        "startFolder": {
+            "label": "Start browsing in",
+            "description": "Where browsing for a folder starts on this machine, for every app that uses it. Empty means its home folder.",
+            "search": "The folder the folder browser opens in on a machine",
+            "placeholder": "~/projects",
+            "placeholderWindows": "C:\\Projects"
+        },
         "streaming": {
             "label": "Browser and device streaming",
             "description": "Lets this machine show browser pages and device screens in apps that cannot show them themselves.",
@@ -1503,6 +1757,29 @@
             "description": "Sends daily feature-use totals, without names, paths or anything that identifies you. <privacy>What is sent</privacy>",
             "search": "Anonymous daily totals of feature use, sent once a day",
             "toggle": "Send usage statistics from {{machine}}"
+        },
+        "clients": {
+            "title": "Connected now",
+            "description": "The apps, browsers and machines connected to this machine right now.",
+            "listFailed": "Could not list what is connected",
+            "empty": "Nothing is connected right now.",
+            "machine": "Another machine",
+            "browser": "Browser",
+            "unknown": "Unknown app",
+            "unknownVersion": "Unknown version",
+            "connected": "connected {{ago}}",
+            "lastRequest": "Last request {{ago}}",
+            "connections_one": "{{count}} connection",
+            "connections_other": "{{count}} connections",
+            "reach": {
+                "loopback": "This computer",
+                "lan": "Local network",
+                "internet": "Internet"
+            },
+            "silent": {
+                "label": "Not answering",
+                "description": "The list loads once the machine is back."
+            }
         },
         "access": {
             "title": "Apps with access",
@@ -1579,6 +1856,7 @@
         },
         "worktrees": "Worktrees",
         "privacy": "Privacy",
+        "folders": "Folders",
         "streaming": "Streaming",
         "account": {
             "title": "Account",

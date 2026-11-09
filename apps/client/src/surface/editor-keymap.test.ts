@@ -3,19 +3,13 @@ import { keyOf } from '@adecore/editor-react/testing';
 import { KEYMAP_IDS, type KeymapId } from '@adecore/editor/keymap';
 import { matchesShortcut, shortcut, type Shortcut } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { DEFAULT_KEYS } from '@/surface/default-keys';
 import { shortcutFor, RUIMTE_EDITOR_KEYMAP as KEYMAP } from '@/surface/editor-keymap';
-import { APP_SHORTCUTS } from '@/surface/shortcuts';
 import { shellShortcuts } from '@/surface/terminal-keymap';
 
 /* What Ruimte answers from anywhere, a focused editor included: the shortcuts the editor hands back to the page, and the two that act on the surface in front. */
 function ownShortcuts(apple: boolean): Shortcut[] {
-    return [
-        ...shellShortcuts(apple),
-        APP_SHORTCUTS.sidebar,
-        CANVAS_SHORTCUTS.find,
-        CANVAS_SHORTCUTS.findReplace,
-        shortcut(apple ? 'Alt+Meta+I' : 'Ctrl+Shift+I')
-    ];
+    return [...shellShortcuts(apple), DEFAULT_KEYS.sidebar, DEFAULT_KEYS.find, DEFAULT_KEYS['find-replace'], shortcut(apple ? 'Alt+Meta+I' : 'Ctrl+Shift+I')];
 }
 
 function signature(target: Shortcut, apple: boolean): string {
@@ -113,7 +107,9 @@ describe('the zoom keys of the code', () => {
                     )
                 ).toEqual([]);
                 expect(ownShortcuts(apple).some((candidate) => signature(candidate, apple) === mine)).toBe(false);
-                expect(Object.values(CANVAS_SHORTCUTS).some((candidate) => signature(candidate, apple) === mine)).toBe(false);
+                expect([...Object.values(CANVAS_SHORTCUTS), ...Object.values(DEFAULT_KEYS)].some((candidate) => signature(candidate, apple) === mine)).toBe(
+                    false
+                );
             });
         }
     }

@@ -19,7 +19,7 @@ import { setViewShared } from '../../project/views';
 import { focusedCanvas, type CanvasState } from '../../state/canvas';
 import { withClientClosedProject } from '../../state/closed-projects';
 import { useDocument } from '../../state/document';
-import { useFiles } from '../../state/files';
+import { openCompareTab, useFiles } from '../../state/files';
 import { useUi } from '../../state/ui';
 import { createWorkspaceStores, defaultWorkspaceStores } from '../../state/workspace';
 import type { WorkspaceStores } from '../../state/workspace-stores';
@@ -462,7 +462,7 @@ describe('ProjectClient', () => {
         await tick();
         expect(useDocument.getState().shared).toEqual([]);
 
-        setViewShared('main', true);
+        await setViewShared('main', true);
         await tick(10);
         const save = lastSave(transport, 0);
         expect(save.shared).toEqual(['main']);
@@ -824,6 +824,24 @@ describe('ProjectClient', () => {
         expect(defaultWorkspaceStores.document.getState().layout?.columns[0]?.cells[0]).toMatchObject({ viewId: '/repo/readme.md', tabs: ['/repo/readme.md'] });
         expect(useFiles.getState().expandedDirs).toEqual(['src/']);
         expect(transport.of('project.save-local')).toHaveLength(0);
+        dispose();
+    });
+
+    test('a comparison tab and its place in the layout stay out of the local file, while ordinary loose tabs remain', async () => {
+        const { transport, dispose } = setup();
+        await tick();
+        useFiles.getState().open('/repo/readme.md', 8);
+        const files = useFiles.getState();
+        files.show(openCompareTab(files, '/repo', 'main', 'topic', 'tips'), 8);
+        await tick(10);
+        const saved = lastLocal(transport).local;
+
+        expect(JSON.stringify(saved)).not.toContain('compare:');
+        expect(JSON.stringify(saved.layout)).toContain('/repo/readme.md');
+        expect(saved.panels?.activeTab).toBe('/repo/readme.md');
+        expect(saved.panels?.strip).toHaveLength(1);
+        // The tab itself stays on screen for the rest of the session.
+        expect(useFiles.getState().tabs.some((tab) => tab.key.startsWith('compare:'))).toBe(true);
         dispose();
     });
 

@@ -1,0 +1,42 @@
+name: Client artifact
+description: Wait for the release's client job to upload the page, then put it where electron-builder takes it from
+
+# A platform build starts beside the client job, so its own work overlaps the client build and
+# only electron-builder waits. The artifacts API lists an artifact as soon as it is uploaded, while
+# the run still goes; listing it takes `actions: read` in the job that uses this.
+runs:
+  using: composite
+  steps:
+    # A client job that ends without the artifact fails this at once. The artifact is asked once more
+    # after that end, so an upload that landed just before it is not missed.
+    - name: Wait for the client
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+      run: |
+        uploaded() {
+          count=$(gh api "repos/$GH_REPO/actions/runs/$GITHUB_RUN_ID/artifacts?name=client" --jq .total_count 2>/dev/null || echo 0)
+          [ "${count:-0}" -gt 0 ]
+        }
+        # A composite step takes no `timeout-minutes`, so the wait keeps its own.
+        while [ "$SECONDS" -lt 1200 ]; do
+          if uploaded; then
+            exit 0
+          fi
+          state=$(gh api "repos/$GH_REPO/actions/runs/$GITHUB_RUN_ID/jobs?per_page=100" --jq '.jobs[] | select(.name == "client") | .status' 2>/dev/null || true)
+          if [ "$state" = completed ]; then
+            if uploaded; then
+              exit 0
+            fi
+            echo "::error::The client job ended without uploading the client"
+            exit 1
+          fi
+          sleep 5
+        done
+        echo "::error::The client was not uploaded within 20 minutes"
+        exit 1
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      with:
+        name: client
+        path: apps/client/dist

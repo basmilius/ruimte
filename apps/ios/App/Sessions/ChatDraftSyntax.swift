@@ -93,6 +93,37 @@ enum ChatDraftSyntax {
         return found.sorted { $0.range.location < $1.range.location }
     }
 
+    /// Where the text spells a model or an account as `@model:<cli>/<id>` or `@account:<cli>/<id>`, as the shared
+    /// composer's `namedChipRanges` finds them: by the pattern alone, so a draft keeps no list of them. The value is
+    /// `<cli>/<id>`, and punctuation after the id ends the sentence, except a `]` that closes a `[` in the id.
+    static func namedTokens(in text: String) -> [ChatDraftToken] {
+        let source = text as NSString
+        let code = codeRanges(in: text)
+        return matches(#"(?<![^\s(\[{"'\x{201C}\x{2018}])@(model|account):([a-z0-9][a-z0-9-]*)/([^\s`]+)"#, in: text)
+            .compactMap { match in
+                var id = source.substring(with: match.range(at: 3))
+                while let last = id.last, !matches("^" + tokenEnd + "$", in: String(last)).isEmpty,
+                    !(last == "]" && id.dropLast().contains("["))
+                {
+                    id.removeLast()
+                }
+                guard !id.isEmpty else { return nil }
+                let trimmed = match.range(at: 3).length - (id as NSString).length
+                let range = NSRange(location: match.range.location, length: match.range.length - trimmed)
+                guard !code.contains(where: { NSIntersectionRange($0, range).length > 0 }) else { return nil }
+                let cli = source.substring(with: match.range(at: 2))
+                return ChatDraftToken(range: range, value: cli + "/" + id, kind: source.substring(with: match.range(at: 1)))
+            }
+    }
+
+    /// The picked tokens and the named ones together, in text order; a named token over a picked one is left out.
+    static func allTokens(in text: String, picked: [ChatDraftToken]) -> [ChatDraftToken] {
+        let named = namedTokens(in: text).filter { token in
+            !picked.contains { NSIntersectionRange($0.range, token.range).length > 0 }
+        }
+        return (picked + named).sorted { $0.range.location < $1.range.location }
+    }
+
     /// The ids among `references` whose `#name` still stands in the text, in text order and once each.
     static func presentReferences(in text: String, references: [ChatDraftReference]) -> [String] {
         var seen = Set<String>()

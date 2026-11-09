@@ -11,8 +11,8 @@ import { usePage } from '@/nodes/use-page';
 import type { NodeBodyProps, NodeHeaderProps } from '@/registry/node-kinds';
 import { SessionPorts } from '@/terminal/SessionPorts';
 
-export function TerminalNodeBody({ id, live, focused }: NodeBodyProps) {
-    return live ? <TerminalBody id={id} focused={focused} /> : <TerminalPlate id={id} />;
+export function TerminalNodeBody({ id, sessionLive, focused }: NodeBodyProps) {
+    return sessionLive ? <TerminalBody id={id} focused={focused} /> : <TerminalPlate id={id} />;
 }
 
 export function TerminalAfterTitle({ id, renaming }: NodeHeaderProps) {
@@ -41,8 +41,8 @@ export function TerminalContextPill({ id, renaming }: NodeHeaderProps) {
     );
 }
 
-export function ChatNodeBody({ id, focused }: NodeBodyProps) {
-    return <ChatBody id={id} focused={focused} onCanvas workflowsBeside />;
+export function ChatNodeBody({ id, focused, sessionLive }: NodeBodyProps) {
+    return <ChatBody id={id} focused={focused} onCanvas workflowsBeside visible={sessionLive} />;
 }
 
 export function BrowserNodeBody({ id, active }: NodeBodyProps) {

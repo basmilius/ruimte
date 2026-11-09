@@ -1,13 +1,11 @@
 import { CircleOff, CircleStop, Pencil, Play, Square, SquareTerminal } from 'lucide-react';
 import type { MenuContext } from '@/commands/menu-context';
 import { type CommandSpec } from '@/commands/types';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 
 export const LAUNCH_COMMANDS = {
     'launch-run': {
         key: 'launch',
         icon: Play,
-        shortcut: CANVAS_SHORTCUTS.launchRun,
         binds: 'workspace',
         palette: false,
         menu: {
@@ -24,7 +22,6 @@ export const LAUNCH_COMMANDS = {
     'launch-stop': {
         key: 'launchStopNone',
         icon: Square,
-        shortcut: CANVAS_SHORTCUTS.launchStop,
         binds: 'workspace',
         palette: false,
         menu: {

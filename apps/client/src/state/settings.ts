@@ -1,6 +1,7 @@
 import type { EditorFoldOutline, EditorSmartKeys } from '@adecore/editor';
 import { FORMAT_LANGUAGE, formatRegionFrom } from '@adecore/ui/format';
 import {
+    DEFAULT_PROJECT_COLOR,
     DEFAULT_VOICE_PREFERENCES,
     EditorAssistAgentSchema,
     type EditorAssistAgent,
@@ -20,6 +21,7 @@ import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas-model/accents
 import { nodeSortFrom, nodeSortThenFrom, type NodeSort, type NodeSortThen } from '@/canvas-model/node-sort';
 import { renderDistanceFrom, type RenderDistance } from '@/canvas-model/render-distance';
 import { CODE_THEMES } from '@/code-themes';
+import { accentContrast, THEME_SURFACE } from '@/state/accent-contrast';
 import {
     agentChangesModeFrom,
     DEFAULT_AGENT_CHANGES_MODE,
@@ -34,8 +36,17 @@ import {
 import { type CodeFolding, codeFoldingFrom, DEFAULT_CODE_FOLDING } from '@/state/code-folding';
 import { useExtensionTheme } from '@/state/extension-theme';
 import { LANGUAGE_SYSTEM, languageFrom } from '@/state/languages';
-import { applyPalette } from '@/state/palette';
+import { applyPalette, isHexColor, type PaletteSide, type PaletteSideInput } from '@/state/palette';
 import { palettePresetFrom, presetTokens, type PalettePreset } from '@/state/palette-presets';
+import {
+    breakStretchFrom,
+    DEFAULT_BREAK_STRETCH,
+    DEFAULT_QUIET_DAYS,
+    DEFAULT_QUIET_END,
+    DEFAULT_QUIET_START,
+    quietClockFrom,
+    quietDaysFrom
+} from '@/state/quiet-hours';
 import { storedJson, switchesFrom } from '@/state/stored-json';
 
 export const SETTINGS_STORAGE_KEY = 'ruimte.settings';
@@ -164,6 +175,8 @@ export interface Settings {
     needsYouAllProjects: boolean;
     /* One of the node accents. Blue is the brand's own and the one a fresh client starts on. */
     accent: AccentId;
+    /* Each workspace window wears the color of its project as the accent, with the chosen accent for a project on the default color and for the start screen. */
+    accentFollowsProject: boolean;
     /* The tint of the grounds, surfaces and text on both sides; the default keeps the theme's own grays. */
     palette: PalettePreset;
     /* The glow at the top of the sidebar, and of the toolbar while the sidebar is closed, in the color of the project. */
@@ -188,8 +201,9 @@ export interface Settings {
     filesTabLimit: number;
     /* Whether the files tree shows dotfiles; the panel's eye button writes the same value. */
     filesShowHidden: boolean;
-    /* Where the palette starts browsing for a folder; empty is the machine's home. One for every machine,
-       since work folders have the same name everywhere; a path a machine lacks falls back to its home. */
+    /* Where the palette used to start browsing, one value for every machine. A machine keeps its own start
+       folder now; this is read only to hand an old value to the local machine once (`start-folder-migration.ts`),
+       and stays until a later release drops it. */
     browseStartFolder: string;
     /* The Shiki theme id code is drawn in while the app is light, in the viewer, the editor and a chat. */
     codeThemeLight: string;
@@ -269,6 +283,18 @@ export interface Settings {
     /* Whether agent notifications make a sound. Off, because a sound arrives in whatever the person
        walked away to do, which may be a call. */
     agentsTurnSound: boolean;
+    /* Whether this computer raises no alert of its own in the hours below, which follow the computer's clock.
+       Off to start with. Agents keep working, and what still waits is announced when the hours end. */
+    quietHoursOn: boolean;
+    /* ISO weekdays, 1 is Monday. A window belongs to the day it starts on. */
+    quietHoursDays: number[];
+    quietHoursStart: string;
+    /* At or before the start, the hours run into the next day. */
+    quietHoursEnd: string;
+    /* Whether the desktop app suggests a break after a stretch of work. Off to start with. */
+    breakReminderOn: boolean;
+    /* Minutes of work after which the reminder shows, one of `BREAK_STRETCHES`. */
+    breakReminderMinutes: number;
     /* Whether two fingers sideways on a trackpad go back and forward in a browser page. On, because
        it is what every browser on macOS does; off, the pages do not even report their wheel. */
     browserSwipe: boolean;
@@ -322,6 +348,7 @@ const DEFAULT_SETTINGS: Settings = {
     projectNavigation: 'switcher',
     needsYouAllProjects: true,
     accent: 'blue',
+    accentFollowsProject: false,
     palette: 'default',
     projectGlow: true,
     scrollBounce: true,
@@ -377,6 +404,12 @@ const DEFAULT_SETTINGS: Settings = {
     keepAwakeOnBattery: false,
     keepAwakeDisplay: false,
     agentsTurnSound: false,
+    quietHoursOn: false,
+    quietHoursDays: [...DEFAULT_QUIET_DAYS],
+    quietHoursStart: DEFAULT_QUIET_START,
+    quietHoursEnd: DEFAULT_QUIET_END,
+    breakReminderOn: false,
+    breakReminderMinutes: DEFAULT_BREAK_STRETCH,
     browserSwipe: true,
     canvasMinimap: false,
     directStunServers: DEFAULT_STUN_SERVER,
@@ -466,6 +499,8 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         codeTrailingWhitespace: TRAILING_WHITESPACE_MODES.find((mode) => mode === stored.codeTrailingWhitespace) ?? DEFAULT_SETTINGS.codeTrailingWhitespace,
         // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
         accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent,
+        // A window changes color only when a person said so, so only a stored `true` turns it on.
+        accentFollowsProject: stored.accentFollowsProject === true,
         palette: palettePresetFrom(stored.palette),
         projectGlow: stored.projectGlow !== false,
         scrollBounce: stored.scrollBounce !== false,
@@ -491,6 +526,12 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
                 : DEFAULT_SETTINGS.voiceInputDeviceId,
         voiceConfirmDestructiveActions: stored.voiceConfirmDestructiveActions !== false,
         agentsTurnSound: stored.agentsTurnSound === true,
+        quietHoursOn: stored.quietHoursOn === true,
+        quietHoursDays: quietDaysFrom(stored.quietHoursDays),
+        quietHoursStart: quietClockFrom(stored.quietHoursStart, DEFAULT_QUIET_START),
+        quietHoursEnd: quietClockFrom(stored.quietHoursEnd, DEFAULT_QUIET_END),
+        breakReminderOn: stored.breakReminderOn === true,
+        breakReminderMinutes: breakStretchFrom(stored.breakReminderMinutes),
         browserSwipe: stored.browserSwipe !== false,
         canvasMinimap: stored.canvasMinimap === true,
         worktreeMergeStrategy:
@@ -533,17 +574,43 @@ function read(): Settings {
     }
 }
 
-function applyColors(chosen: PalettePreset, accentId: AccentId, preview = false): void {
-    const accent = accentColor(accentId);
+/* The color of the project this window shows, kept in memory: windows share the settings but each shows its own project. */
+let projectAccent: string | null = null;
+
+/* The project's color as an accent, or null when this window keeps the chosen one: a project on the default color has not picked one, and a hand-edited file may hold a value that is no color. */
+function accentOfProject(color: string | null): string | null {
+    if (color === null || !isHexColor(color) || color.toLowerCase() === DEFAULT_PROJECT_COLOR) {
+        return null;
+    }
+
+    return color.toLowerCase();
+}
+
+interface ColorChoice {
+    palette: PalettePreset;
+    accent: AccentId;
+    /* Whether the accent is the project's. A preview of an accent leaves it out, since it shows the chosen one. */
+    followsProject: boolean;
+}
+
+function sideColors(palette: PalettePreset, side: PaletteSide, choice: ColorChoice): PaletteSideInput {
+    const tokens = presetTokens(palette, side);
+
+    if (!choice.followsProject || projectAccent === null) {
+        return { ...tokens, accent: accentColor(choice.accent) };
+    }
+
+    // The project's exact color is the accent. Only here do the text on it and the accent as text get a value of their own.
+    const contrast = accentContrast(projectAccent, tokens.surface ?? THEME_SURFACE[side], side);
+
+    return { ...tokens, accent: projectAccent, 'accent-text': contrast.text, 'accent-on-surface': contrast.onSurface };
+}
+
+function applyColors(choice: ColorChoice, preview = false): void {
     // A theme of an extension sets its own colors, which a palette would only paint over. The choice stays for Ruimte's own.
-    const palette = useExtensionTheme.getState().key === null ? chosen : 'default';
-    applyPalette(
-        {
-            light: { ...presetTokens(palette, 'light'), accent },
-            dark: { ...presetTokens(palette, 'dark'), accent }
-        },
-        { preview }
-    );
+    const palette = useExtensionTheme.getState().key === null ? choice.palette : 'default';
+
+    applyPalette({ light: sideColors(palette, 'light', choice), dark: sideColors(palette, 'dark', choice) }, { preview });
 }
 
 /* Shows the app in a palette or an accent a person is looking at before picking it, or with none back in
@@ -552,8 +619,39 @@ export function previewColors(preview: { palette?: PalettePreset; accent?: Accen
     if (typeof document === 'undefined') {
         return;
     }
+
     const settings = useSettings.getState();
-    applyColors(preview?.palette ?? settings.palette, preview?.accent ?? settings.accent, preview !== null);
+
+    applyColors(
+        {
+            palette: preview?.palette ?? settings.palette,
+            accent: preview?.accent ?? settings.accent,
+            followsProject: settings.accentFollowsProject && preview?.accent === undefined
+        },
+        preview !== null
+    );
+}
+
+/* Hands this window the color of the project it shows, or null for none (the start screen). It takes effect
+   only while the setting is on; a window that shows no project, or one on the default color, keeps the chosen accent. */
+export function setProjectAccent(color: string | null): void {
+    const next = accentOfProject(color);
+
+    if (next === projectAccent) {
+        return;
+    }
+
+    projectAccent = next;
+
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    const settings = useSettings.getState();
+
+    if (settings.accentFollowsProject) {
+        applyColors({ palette: settings.palette, accent: settings.accent, followsProject: true });
+    }
 }
 
 /* The few tokens a person may change are set over the theme's own values: the type on the root, the
@@ -605,7 +703,7 @@ function apply(settings: Settings): void {
     root.setProperty('font-size', `${settings.interfaceFontSize}px`);
     root.setProperty('--code-font-size', `${settings.codeFontSize}px`);
     root.setProperty('--code-line-height', `${codeLineHeight(settings.codeFontSize, settings.codeLineHeight)}px`);
-    applyColors(settings.palette, settings.accent);
+    applyColors({ palette: settings.palette, accent: settings.accent, followsProject: settings.accentFollowsProject });
     const interfaceFont = INTERFACE_FONTS.find((entry) => entry.id === settings.interfaceFont);
     setFontStack('--font-sans', interfaceFont && interfaceFont.id !== 'system' ? interfaceFont.stack : null);
     const font = MONO_FONTS.find((entry) => entry.id === settings.font);

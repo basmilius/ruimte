@@ -138,21 +138,29 @@ final class DeviceViewModel {
             if connected {
                 if phase == .offline { phase = .finding }
             } else {
+                frames.reset()
                 opened = nil
                 if frame != nil || phase == .streaming { phase = .offline }
             }
         }, read: { [weak self] in await self?.refresh() })
     @ObservationIgnored private var opened: [String: JSONValue]?
     @ObservationIgnored private var lastSequence = -1
-    @ObservationIgnored private var decoding = false
-    /// The newest frame that came in while another was decoded, so the screen never stops on a stale one.
-    @ObservationIgnored private var pending: Data?
+    @ObservationIgnored private let decode: DeviceFrameDecoder.Decode
+    @ObservationIgnored private lazy var frames = DeviceFrameDecoder(decode: decode) { [weak self] image in
+        guard let self, phase == .streaming || phase == .starting else { return }
+        frame = image
+        phase = .streaming
+    }
     @ObservationIgnored private var lastMove = Date.distantPast
     @ObservationIgnored private var gestureFromBottom = false
 
-    init(client: any MachineRequesting, reference: StoredDeviceViewDevice?) {
+    init(
+        client: any MachineRequesting, reference: StoredDeviceViewDevice?,
+        decode: @escaping DeviceFrameDecoder.Decode = DeviceFrameDecoder.image
+    ) {
         self.client = client
         self.reference = reference
+        self.decode = decode
         phase = reference == nil ? .noReference : .finding
     }
 
@@ -209,6 +217,7 @@ final class DeviceViewModel {
     }
 
     func retry() {
+        frames.reset()
         opened = nil
         phase = .finding
         Task { await live.refresh() }
@@ -321,6 +330,7 @@ final class DeviceViewModel {
     }
 
     private func open(_ device: DeviceInfo) async {
+        frames.reset()
         if phase != .streaming { phase = .starting }
         var payload = DeviceView.target(device)
         payload["stream"] = .string("events")
@@ -339,6 +349,7 @@ final class DeviceViewModel {
     }
 
     private func detach() {
+        frames.reset()
         guard let opened else { return }
         self.opened = nil
         Task { [client] in _ = try? await client.request(.deviceDetach, payload: .object(opened)) }
@@ -349,34 +360,9 @@ final class DeviceViewModel {
             frame.backendId == opened["backendId"]?.stringValue
         else { return }
         let sequence = Int(frame.sequence)
-        guard (frame.format ?? .jpeg) == .jpeg, sequence != lastSequence, let data = Data(base64Encoded: frame.data)
-        else { return }
+        guard (frame.format ?? .jpeg) == .jpeg, sequence != lastSequence else { return }
         lastSequence = sequence
-        guard !decoding else {
-            pending = data
-            return
-        }
-        decode(data)
-    }
-
-    private func decode(_ data: Data) {
-        decoding = true
-        Task.detached(priority: .userInitiated) { [weak self] in
-            let image = UIImage(data: data)?.preparingForDisplay()
-            await self?.show(image)
-        }
-    }
-
-    private func show(_ image: UIImage?) {
-        decoding = false
-        if let image, phase == .streaming || phase == .starting {
-            frame = image
-            phase = .streaming
-        }
-        if let next = pending {
-            pending = nil
-            decode(next)
-        }
+        frames.submit(frame.data)
     }
 }
 

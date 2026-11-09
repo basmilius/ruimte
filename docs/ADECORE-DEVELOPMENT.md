@@ -1,6 +1,6 @@
 # Developing Ruimte with ADE CORE
 
-Ruimte uses the npm versions pinned in its manifests and `bun.lock`. To work on the shared packages, link the ADE CORE folder beside Ruimte:
+Ruimte uses the npm versions pinned in the catalog of the root `package.json` and in `bun.lock`. To work on the shared packages, link the ADE CORE folder beside Ruimte:
 
 ```sh
 # Once in ../adecore, and again when its dependencies change.
@@ -43,14 +43,16 @@ bun run adecore:npm
 bun run adecore:bump 0.24.0
 ```
 
-`adecore:bump` sets every `@adecore/*` entry in every manifest and dependency section to the version, runs `bun install` and then `adecore:status --npm`.
+The version lives in one place, `workspaces.catalog` in the root `package.json`. Every workspace manifest writes `"catalog:"` for an `@adecore/*` dependency, in any section. `adecore:bump` sets every `@adecore/*` catalog entry to the version, in the root manifest and in the copy the daemon image uses (`apps/server/docker/workspace-package.json`), runs `bun install` and then `adecore:status --npm`.
 
-- Every entry must be an exact version. A range or `workspace:` entry stops it before any change.
+- Before it changes a file it waits until every catalog package has its tarball for that version on npm (30 tries, 10 seconds apart), so a release that is still propagating never half-installs `node_modules`.
+- A workspace that pins an `@adecore/*` package itself, a package the catalog lacks, or a catalog entry that is no exact version stops it before any change. `adecore:check` reports the same, and `bun run lint` runs it.
+- The image catalog must list the same packages as the root's. `adecore:check` and a unit test hold the two equal.
 - A failed install restores the manifests and `bun.lock`.
-- It fails, leaving the files in place, when an entry was missed: a manifest pin on another version, a package in `bun.lock` on another version (ADE CORE releases every package under one version, so that means two copies), or an installed package that differs from its pin.
+- It fails, leaving the files in place, when a package in `bun.lock` is on another version (ADE CORE releases every package under one version, so that means two copies) or an installed package differs from the catalog.
 - It refuses a linked checkout and names the linked package. Switch with `adecore:npm`, bump, then `adecore:link` to go on locally.
 
-Commit the manifests and `bun.lock` together.
+Commit `package.json`, the image manifest and `bun.lock` together. `@ruimte/extension` is published with `npm publish`, which does not know `catalog:`, so `packages/npm` writes the catalog version into its manifest when it lays the package out.
 
 ## Source changes
 

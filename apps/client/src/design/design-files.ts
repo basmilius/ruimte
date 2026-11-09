@@ -1,21 +1,30 @@
 import { useEffect, useState } from 'react';
 import { useFolderWatch } from '@/controllers/fs-watch';
-import { changeReaches, pagesByChange } from '@/design/design-page';
+import { changeReaches, designScope, listingOf, pagesByChange, scopedListingAfter, type ScopedListing } from '@/design/design-page';
 import { listDesignFolder } from '@/design/design-read';
 import { useTransport } from '@/workspace/context';
 
+export interface DesignPages {
+    /* Null until the machine first answers. */
+    pages: string[] | null;
+    /* Why the last read failed, with the pages of the read before it still in `pages`. */
+    problem: string | null;
+    retry(): void;
+}
+
 /*
  * The pages of a design folder the most recently changed first, read again whenever something in it
- * changes; null until the machine first answers, and none while the folder is not there yet. The
- * folder may not exist until the chat makes it, so `watched` (the project folder) is the watch that
- * sees it come.
+ * changes; none while the folder is not there yet. A read that failed keeps the pages already known and
+ * says why. The folder may not exist until the chat makes it, so `watched` (the project folder) is the
+ * watch that sees it come.
  */
-export function useDesignPages(endpointId: string, folder: string | null, watched: string | null): string[] | null {
+export function useDesignPages(endpointId: string, folder: string | null, watched: string | null): DesignPages {
     const transport = useTransport();
-    const [pages, setPages] = useState<string[] | null>(null);
-    // Apart from the pages, since a folder that is not there lists none and still has to be seen coming.
-    const [found, setFound] = useState(false);
+    const [scoped, setScoped] = useState<ScopedListing | null>(null);
     const [version, setVersion] = useState(0);
+    const scope = designScope(endpointId, folder ?? '');
+    // The listing of another folder is none: the pages kept through a failed read are those of this folder only.
+    const listing = listingOf(scoped, scope);
 
     useFolderWatch(endpointId, watched ?? folder);
 
@@ -26,17 +35,18 @@ export function useDesignPages(endpointId: string, folder: string | null, watche
 
         let current = true;
 
-        void listDesignFolder(endpointId, folder).then((entries) => {
+        void listDesignFolder(endpointId, folder).then((read) => {
             if (current) {
-                setPages(entries === null ? [] : pagesByChange(entries));
-                setFound(entries !== null);
+                setScoped((before) => scopedListingAfter(before, scope, read));
             }
         });
 
         return () => {
             current = false;
         };
-    }, [endpointId, folder, version]);
+    }, [endpointId, folder, scope, version]);
+
+    const found = listing !== null && listing.entries !== null;
 
     useEffect(
         () =>
@@ -48,5 +58,11 @@ export function useDesignPages(endpointId: string, folder: string | null, watche
         [transport, folder, found]
     );
 
-    return folder === null ? null : pages;
+    const retry = (): void => setVersion((previous) => previous + 1);
+
+    if (folder === null || listing === null) {
+        return { pages: null, problem: null, retry };
+    }
+
+    return { pages: listing.entries === null ? [] : pagesByChange(listing.entries), problem: listing.problem, retry };
 }

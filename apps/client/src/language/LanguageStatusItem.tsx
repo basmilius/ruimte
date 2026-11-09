@@ -3,7 +3,7 @@ import type { LanguageServerStatus } from '@ruimte/contracts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { EditorLanguage } from './ruimte-editor-language';
-import { report, serverDetail, sidecarDetails, useStatuses } from './server-status';
+import { buildHeldDetail, report, serverDetail, sidecarDetails, useStatuses } from './server-status';
 import { Dot, LogDialog, ServerActionButtons } from './ServerParts';
 import type { LanguageStatusTracker } from './status';
 import { actionsOf, alternativeTo, chipServer, kindOf, listedServers, nameOf, packageOf, toneOf } from './status-view';
@@ -86,6 +86,7 @@ function ServerRow({
     const rollback = actions.rollback && status.state === 'crashed';
     const fail = (error: unknown): void => report(error, t);
     const detail = serverDetail(status, t);
+    const buildHeld = buildHeldDetail(status, t);
     const alternative = alternativeTo(status, statuses);
     const alternativeKind = alternative === null ? null : kindOf(alternative.server);
 
@@ -99,12 +100,13 @@ function ServerRow({
             </div>
             <div className="pl-4 text-xs break-words text-text-faint">{packageOf(status.server, statuses)}</div>
             {detail !== '' && <div className="pl-4 text-xs break-words text-text-muted">{detail}</div>}
+            {buildHeld !== '' && <div className="pl-4 text-xs break-words text-text-muted">{buildHeld}</div>}
             {sidecarDetails(status, t).map((line) => (
                 <div key={line} className="pl-4 text-xs break-words text-text-faint">
                     {line}
                 </div>
             ))}
-            {(actions.install || actions.update || rollback || actions.restart || actions.log || alternativeKind !== null) && (
+            {(actions.install || actions.update || rollback || actions.restart || actions.log || alternativeKind !== null || buildHeld !== '') && (
                 <div className="flex flex-wrap gap-2 pl-4">
                     <ServerActionButtons status={status} tracker={tracker} size="xs" stepBack={rollback} stepBackVariant="secondary" onLog={onLog} />
                     {alternative !== null && alternativeKind !== null && (

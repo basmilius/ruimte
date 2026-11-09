@@ -28,7 +28,19 @@ export const LanguageServerKindSchema = z.enum([
     'tailwind',
     'sql-native',
     // rust-analyzer as the Rust toolchain brings it; Ruimte finds it and never installs it.
-    'rust'
+    'rust',
+    // marksman, a pinned release of someone else's server.
+    'markdown',
+    // gopls as Go brings it; Ruimte finds it and never installs it.
+    'go',
+    // sourcekit-lsp as the Swift toolchain brings it; found, never installed.
+    'swift',
+    // taplo, a pinned release of someone else's server.
+    'toml',
+    // lua-language-server, a pinned release of someone else's server.
+    'lua',
+    // zls as the Zig installation brings it; found, never installed.
+    'zig'
 ]);
 export type LanguageServerKind = z.infer<typeof LanguageServerKindSchema>;
 
@@ -86,7 +98,11 @@ export const LanguageServerStatusSchema = z.object({
     // The version the kind ran before, which `language.rollback` goes back to.
     previous: z.object({ version: z.string() }).optional(),
     // `messages` or `verbose` while the server traces, absent while off. Open on purpose, like `server`.
-    trace: z.string().optional()
+    trace: z.string().optional(),
+    // The kind builds code it reads, and in this project it runs without that or not at all, because the project or an open file lies in a worktree an agent works in. `language.worktreeBuild` turns that on.
+    buildHeld: z.boolean().optional(),
+    // The kind builds code it reads, the project's repository has worktrees of agents, and a person allowed building in them, which `language.worktreeBuild` with `on: false` takes back.
+    buildAllowed: z.boolean().optional()
 });
 export type LanguageServerStatus = z.infer<typeof LanguageServerStatusSchema>;
 
@@ -103,6 +119,9 @@ export const LanguageRollbackPayloadSchema = z.object({ server: LanguageServerKi
 export const LanguagePreferPayloadSchema = z.object({ server: LanguageServerKindSchema });
 
 export const LanguageServerTargetPayloadSchema = z.object({ projectId: ProjectIdSchema, server: LanguageServerIdSchema });
+
+/* Lets the servers of the project's repository run build scripts and macros in the worktrees of agents (`on`), or keeps them from it. The answer is the project's statuses. */
+export const LanguageWorktreeBuildPayloadSchema = z.object({ projectId: ProjectIdSchema, on: z.boolean() });
 
 /* The status right after the request: an install answers while it runs and its end comes as an event, a restart answers once the server is up again, crashed again, or not installed. */
 export const LanguageServerStatusResultSchema = z.object({ status: LanguageServerStatusSchema });
@@ -451,6 +470,8 @@ export const LANGUAGE_REQUEST_SCHEMAS = {
     // A person's step back from an update; like an install, never the daemon's own or a verb's.
     'language.rollback': { payload: LanguageRollbackPayloadSchema, result: LanguageServerStatusResultSchema },
     'language.restart': { payload: LanguageServerTargetPayloadSchema, result: LanguageServerStatusResultSchema },
+    // Only the local secret turns build scripts and macros on in the worktrees of agents: it lets a server run what an agent just wrote.
+    'language.worktreeBuild': { payload: LanguageWorktreeBuildPayloadSchema, result: LanguageStatusResultSchema },
     'language.log': { payload: LanguageServerTargetPayloadSchema, result: LanguageLogResultSchema },
     'language.custom.list': { payload: EmptySchema, result: LanguageCustomListResultSchema },
     // Only the local secret saves or removes a server of a person's own: starting what it names is what the save approves.

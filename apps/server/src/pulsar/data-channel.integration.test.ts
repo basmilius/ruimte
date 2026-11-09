@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { BinaryFrameAssembler, FrameAssembler, isBinaryPiece } from '@ruimte/contracts';
+import { inflateRawSync } from 'node:zlib';
+import { BinaryFrameAssembler, DeflatedFrameAssembler, FrameAssembler, isBinaryPiece, isDeflatedPiece } from '@ruimte/contracts';
 import { RTCPeerConnection, type RTCDataChannel } from 'werift';
 import { directChannel, fromWerift, type DirectChannel } from './data-channel.ts';
 
@@ -53,6 +54,47 @@ async function connected(): Promise<{ daemon: DirectChannel; client: RTCDataChan
 }
 
 describe('the binary lane of a direct channel', () => {
+    test('async compressed text and its following text arrive before queued binary', async () => {
+        const { daemon, client } = await connected();
+        const text = new FrameAssembler();
+        const compressed = new DeflatedFrameAssembler();
+        const binary = new BinaryFrameAssembler();
+        const arrivals: Array<string | Uint8Array> = [];
+        const received = Promise.withResolvers<void>();
+        client.onMessage.subscribe((data) => {
+            const piece = typeof data === 'string' ? data : new Uint8Array(data);
+            if (piece instanceof Uint8Array && isBinaryPiece(piece)) {
+                const result = binary.push(piece, Number.MAX_SAFE_INTEGER);
+                if (result.kind === 'frame') {
+                    arrivals.push(result.frame);
+                }
+            } else if (piece instanceof Uint8Array && isDeflatedPiece(piece)) {
+                const result = compressed.push(piece, Number.MAX_SAFE_INTEGER);
+                if (result.kind === 'frame') {
+                    arrivals.push(inflateRawSync(result.frame).toString());
+                }
+            } else {
+                const result = text.push(typeof piece === 'string' ? piece : new TextDecoder().decode(piece), Number.MAX_SAFE_INTEGER);
+                if (result.kind === 'frame') {
+                    arrivals.push(result.frame);
+                }
+            }
+
+            if (arrivals.length === 3) {
+                received.resolve();
+            }
+        });
+
+        const large = JSON.stringify({ text: 'compress this reply '.repeat(10_000) });
+        const picture = Uint8Array.of(11, 12, 13);
+        daemon.deflate();
+        expect(daemon.send(large)).toBe(Buffer.byteLength(large));
+        daemon.send('after');
+        daemon.send(picture);
+        await received.promise;
+        expect(arrivals).toEqual([large, 'after', picture]);
+    }, 30_000);
+
     test('a reply sent after a large live frame arrives before that frame is through', async () => {
         const { daemon, client } = await connected();
         const text = new FrameAssembler();

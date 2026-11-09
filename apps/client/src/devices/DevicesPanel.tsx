@@ -188,7 +188,7 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
                         type="button"
                         disabled={changing !== null}
                         onClick={() => onOpen(device)}
-                        className="min-w-0 grow truncate text-left text-sm text-text before:absolute before:inset-0 before:rounded-md focus-visible:outline-none focus-visible:before:outline-2 focus-visible:before:outline-accent"
+                        className="min-w-0 grow truncate text-left text-sm text-text before:absolute before:inset-0 before:rounded-md focus-visible:outline-none focus-visible:before:outline-2 focus-visible:before:outline-accent-on-surface"
                     >
                         {device.name}
                     </button>
@@ -249,7 +249,7 @@ function DeviceSection({
                     render={<button type="button" />}
                     aria-expanded={!collapsed}
                     onClick={() => onCollapse(!collapsed)}
-                    className={`group w-full min-w-0 gap-2 text-left text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:outline-accent`}
+                    className={`group w-full min-w-0 gap-2 text-left text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:outline-accent-on-surface`}
                 >
                     <span className="grid size-4 shrink-0 place-items-center">
                         <span className="col-start-1 row-start-1 grid place-items-center group-hover:hidden group-focus-visible:hidden">

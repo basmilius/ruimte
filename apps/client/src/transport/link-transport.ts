@@ -72,7 +72,8 @@ const UNBOUNDED_REQUESTS: ReadonlySet<RequestType> = new Set<RequestType>([
     'editor.generate',
     'provider.installAgent',
     'provider.installServer',
-    'provider.update'
+    'provider.update',
+    'usage.refreshLimits'
 ]);
 
 /* Where the next connection opens. A function, because the address carries a credential that is signed for per connection. */

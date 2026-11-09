@@ -19,10 +19,12 @@ struct MachineUsagePage: View {
     let machines: [UsageMachine]
     @State private var state = RemotePageState()
     @State private var summary: UsageSummary?
-    @State private var limits: UsageLimits?
-    @State private var accounts: ProviderAccountList?
+    @State private var limitReads: UsageLimitsModel
+    private var limits: UsageLimits? { limitReads.limits }
+    private var accounts: ProviderAccountList? { limitReads.accounts }
     /// Per CLI, what the machine types to log in under an account; a CLI without one has no login to offer.
-    @State private var loginCommands: [String: String] = [:]
+    private var loginCommands: [String: String] { limitReads.loginCommands }
+    private var silentLogins: Set<String> { limitReads.silentLogins }
     @State private var login: UsageLogin?
     @State private var breakdown = UsageBreakdown.models
     @State private var selected: Date?
@@ -33,6 +35,7 @@ struct MachineUsagePage: View {
 
     init(client: any MachineRequesting, machineName: String? = nil, machines: [UsageMachine] = []) {
         _client = State(initialValue: client)
+        _limitReads = State(initialValue: UsageLimitsModel(client: client))
         _machineName = State(initialValue: machineName)
         self.machines = machines
     }
@@ -80,9 +83,11 @@ struct MachineUsagePage: View {
         }
         .refreshable { await load() }
         .mobileSheet(item: $login) { login in
-            AccountLoginSheet(client: client, kind: login.kind, accountID: login.accountID, name: login.name)
+            AccountLoginSheet(
+                client: client, kind: login.kind, accountID: login.accountID, name: login.name,
+                silent: silentLogins.contains(login.kind))
         }
-        .task(id: "\(period.rawValue) \(machineName ?? "")") {
+        .task(id: "\(period.rawValue) \(ObjectIdentifier(client))") {
             let client = client
             await RemotePageLifecycle.run(
                 client: client, events: [.usageChanged, .usageLimitsChanged, .accountsChanged],
@@ -91,13 +96,12 @@ struct MachineUsagePage: View {
     }
 
     private func switchTo(_ machine: UsageMachine) {
-        guard machine.name != machineName else { return }
+        guard machine.client !== client else { return }
         client = machine.client
         machineName = machine.name
         state = RemotePageState()
         summary = nil
-        limits = nil
-        accounts = nil
+        limitReads.use(machine.client)
         selected = nil
     }
 
@@ -278,8 +282,24 @@ struct MachineUsagePage: View {
 
     @ViewBuilder private var limitCards: some View {
         let sections = UsageLimitSection.sections(limits: limits, accounts: accounts)
-        if !sections.isEmpty {
-            Text("Limits").font(.subheadline.weight(.semibold)).padding(.top, MobileSpacing.small)
+        HStack {
+            Text("Limits").font(.subheadline.weight(.semibold))
+            Spacer()
+            Button(
+                limitReads.reading ? String(localized: "Reading limits") : String(localized: "Read limits again"),
+                lucideIcon: "list-restart"
+            ) {
+                Task { await limitReads.refresh() }
+            }
+            .font(.footnote)
+            .disabled(limitReads.reading || !limitReads.connected)
+        }
+        .padding(.top, MobileSpacing.small)
+        if !limitReads.connected {
+            Text("Connect to this machine to read limits.").font(.caption).foregroundStyle(MobileStyle.muted)
+        }
+        if let problem = limitReads.problem {
+            Text(problem).font(.caption).foregroundStyle(MobileStyle.statusError)
         }
         ForEach(sections) { section in
             VStack(alignment: .leading, spacing: 12) {
@@ -295,6 +315,7 @@ struct MachineUsagePage: View {
                         Text(plan.capitalized).font(.caption).foregroundStyle(MobileStyle.muted)
                     }
                 }
+                if let entry = section.entry { UsageLimitProvenance(entry: entry) }
                 limitRows(section)
             }
             .modifier(UsageCard())
@@ -385,10 +406,8 @@ struct MachineUsagePage: View {
         await state.read(loaded: summary != nil) { stillTheLatest in
             let result = try await client.request(.usageSummary, payload: period.payload())
                 .decoded(as: UsageSummary.self)
-            limits = try? await client.request(.usageLimits).decoded(as: UsageLimits.self)
-            let list = try? await client.request(.accountsList).decoded(as: AccountsSnapshot.self)
-            accounts = list.map(ProviderAccountList.init)
-            loginCommands = list?.loginCommands ?? [:]
+            guard self.client === client, !Task.isCancelled else { throw CancellationError() }
+            await limitReads.load()
             try stillTheLatest()
             summary = result
         }
@@ -480,4 +499,34 @@ private struct UsageLogin: Identifiable {
     let name: String
 
     var id: String { accountID }
+}
+
+struct UsageLimitProvenance: View {
+    let entry: UsageLimitsProvider
+
+    var body: some View {
+        if !entry.windows.isEmpty, entry.unavailable == nil || entry.unavailable?.reason == .failed {
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                let age = UsageLimitSection.age(entry, now: context.date.timeIntervalSince1970 * 1000)
+                VStack(alignment: .leading, spacing: 3) {
+                    if entry.unavailable?.reason == .failed {
+                        Text("Last known numbers")
+                    }
+                    if let age {
+                        let when = age < 60_000 ? String(localized: "just now") : Format.ago(milliseconds: age)
+                        if entry.source == .event {
+                            Text("Last updated · From a turn · \(when)")
+                        } else {
+                            Text("Last updated · \(when)")
+                        }
+                        if age >= 600_000 { Text("May be out of date") }
+                    } else {
+                        Text("Update time unknown")
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle((age ?? 0) >= 600_000 ? MobileStyle.statusNeedsYou : MobileStyle.muted)
+            }
+        }
+    }
 }

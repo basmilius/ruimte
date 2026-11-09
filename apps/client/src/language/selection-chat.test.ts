@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { EMPTY_DRAFT, readDraft, writeDraft } from '@adecore/agents-react/chat';
-import { keyOf } from '@adecore/editor-react/testing';
+import { keyOf as eventOf } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import type { ProjectDocument } from '@ruimte/contracts';
 import { useChatChooser } from '@/language/chat-chooser';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { keyOf } from '@/surface/shortcut-overrides';
 import { LANGUAGE_COMMANDS } from './command-table';
 import { FakeLanguageTransport } from './fake-daemon';
 import { createEditorLanguage } from './ruimte-editor-language';
@@ -69,7 +69,7 @@ describe('adding the selection to a chat from the editor', () => {
         const { editor, language } = await setup();
         language.app.selectionChat.bindNode('score');
         editor.setSelection({ start: at(0, 0), end: at(1, 13) });
-        expect(editor.press(keyOf(CANVAS_SHORTCUTS.selectionToChat))).toBe(true);
+        expect(editor.press(eventOf(keyOf('selectionToChat')!))).toBe(true);
         expect(readDraft('talk').text).toBe('src/score.ts:1-2\n```typescript\nlet one = 1;\nlet two = 2;\n```\n\n');
         expect(useChatChooser.getState().request).toBeNull();
     });
@@ -99,6 +99,6 @@ describe('adding the selection to a chat from the editor', () => {
     });
 
     test('is a command of the Code menu with the key the editor table gives it', () => {
-        expect(LANGUAGE_COMMANDS['selection-to-chat']).toMatchObject({ menu: 'code', key: 'selectionToChat', shortcut: CANVAS_SHORTCUTS.selectionToChat });
+        expect(LANGUAGE_COMMANDS['selection-to-chat']).toMatchObject({ menu: 'code', key: 'selectionToChat', keymap: 'selectionToChat' });
     });
 });

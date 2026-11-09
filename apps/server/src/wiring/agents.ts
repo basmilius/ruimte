@@ -17,6 +17,7 @@ import { openedChildSource } from '../context/opened-child.ts';
 import { hasDatabaseConnections } from '../database/connection-store.ts';
 import type { MachineHome } from '../disk/machine-home.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
+import { errorText } from '../error-text.ts';
 import type { Checkpoints } from '../git/checkpoints.ts';
 import { readLog } from '../git/log.ts';
 import { NodeLifecycle } from '../node-lifecycle.ts';
@@ -36,6 +37,7 @@ import { SessionManager } from '../sessions/manager.ts';
 import { ModeApprovals, personModeOf } from '../sessions/mode-approvals.ts';
 import { prepareShellIntegration, type ShellEnvironment } from '../sessions/shell-integration.ts';
 import { SnapshotStore, scheduleSnapshots, type SnapshotSchedule } from '../sessions/snapshot-store.ts';
+import { ShortTextModels } from '../short-text/model.ts';
 import { wakefulClock } from '../timers.ts';
 import { agentBounds } from './agent-bounds.ts';
 import { wakeForWaitingMessages } from './agent-messages.ts';
@@ -162,6 +164,8 @@ export interface AgentsBundle {
     proposals: ProjectProposals;
     /* Where a one-shot CLI run works, so a folder from another machine never lends it its configuration. */
     oneShot: OneShotPlace;
+    /* The model a person picked for the machine's short texts: chat titles, commit messages and conflict proposals. */
+    textModels: ShortTextModels;
     /* Refuses a directory an agent node may not start in, at every start. */
     startCwd(nodeId: string, cwd: string): Promise<void>;
     /* A bearer token speaks for a terminal session or a chat, for reading context and for agent commands alike. */
@@ -196,8 +200,16 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         cwdOf: (nodeId) => chats.get(nodeId)?.info.cwd ?? sessions.get(nodeId)?.cwd ?? null
     });
     const oneShot = new OneShotPlace(config.home, untrusted);
+    const textModels = new ShortTextModels({
+        choice: () => identity.textModel,
+        registry: providers.providers,
+        accounts: providers.accounts,
+        cwdFor: (folder) => oneShot.cwdFor(folder)
+    });
     const proposals = new ProjectProposals({
-        chats: { hold: (chatId, key) => void chats.holdForPerson(chatId, key), release: (chatId, key) => chats.releaseHold(chatId, key) }
+        chats: { hold: (chatId, key) => void chats.holdForPerson(chatId, key), release: (chatId, key) => chats.releaseHold(chatId, key) },
+        answered: (chatId, wake) =>
+            void outboxLink.oweAnswer(chatId, wake).catch((e: unknown) => console.error(`Owing the answer of a card failed: ${errorText(e)}`))
     });
     stores.lifecycle.on('closed', (chatId) => proposals.forget(chatId));
     const messagesFor = (targetId: string): string[] => notices.take(targetId).map(renderNotice);
@@ -322,8 +334,11 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
             later.usage().limits.applyLive(update);
         },
         claudeTitles,
-        // One one-shot call per Codex chat, on whichever CLI here answers a single prompt.
-        nameChat: async (provider, input) => seams.nameChat(providers.providers, provider, { ...input, cwd: await oneShot.cwdFor(input.cwd) }),
+        // One one-shot call per chat of a CLI that names nothing itself (Codex, Grok, ...), on that CLI first.
+        // The machine's text model, when a person picked one, names every new chat; else that CLI first.
+        titlePolicy: () => textModels.titlePolicy(),
+        nameChat: (provider, input) =>
+            textModels.title(input, async () => seams.nameChat(providers.providers, provider, { ...input, cwd: await oneShot.cwdFor(input.cwd) })),
         onInterruptedRun: outboxLink.onInterruptedRun,
         facts: {
             projectAccount,
@@ -394,6 +409,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         visuals,
         untrusted,
         oneShot,
+        textModels,
         proposals,
         startCwd: bounds.checkCwd,
         targetForToken,

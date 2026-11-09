@@ -5,8 +5,20 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BackgroundServiceSection } from '@/machine-ui/BackgroundServiceSection';
 import { forgetOnClient, machineDialogModel, removeFromAccount, type MachineActionDeps, type MachineDialogModel } from '@/machine-ui/machine-actions';
+import { MachineClients } from '@/machine-ui/MachineClients';
 import { MachineIdentityForm } from '@/machine-ui/MachineIdentityForm';
-import { BrokerRow, DirectRow, LanDoorRow, MachineAccess, MachineLinks, ReachRow, StreamingRow, UsageStatsRow, WithReason } from '@/machine-ui/MachineSettings';
+import {
+    BrokerRow,
+    DirectRow,
+    LanDoorRow,
+    MachineAccess,
+    MachineLinks,
+    ReachRow,
+    StartFolderRow,
+    StreamingRow,
+    UsageStatsRow,
+    WithReason
+} from '@/machine-ui/MachineSettings';
 import { MachineStorage } from '@/machine-ui/MachineStorage';
 import { useMachineIcon } from '@/machines/machine-icon';
 import { nameOf, reachLabel, type MachineEntry } from '@/machines/machine-list';
@@ -17,6 +29,7 @@ import type { Endpoint } from '@/state/endpoints';
 import { usePulsarMachines } from '@/state/pulsar-machines';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
+import { machineAnswers } from '@/transport/features';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
 import { addMachineToAccount, leaveAccount, openAccountMachine, refreshAccountMachines } from '@/workspace/account-machines';
 import { useRegistrationFailures } from '@/workspace/auto-register-watch';
@@ -134,6 +147,11 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
                             <SettingsSection title={t('machineDialog.streaming')}>
                                 <StreamingRow endpoint={entry.endpoint} reason={reason} />
                             </SettingsSection>
+                            {machineAnswers(connection, 'endpoint.setStartFolder') && (
+                                <SettingsSection title={t('machineDialog.folders')}>
+                                    <StartFolderRow endpoint={entry.endpoint} reason={reason} />
+                                </SettingsSection>
+                            )}
                             {entry.local && <BackgroundServiceSection />}
                             {entry.local && info?.usageStats !== undefined && (
                                 <SettingsSection title={t('machineDialog.privacy')}>
@@ -154,6 +172,7 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
                     {tab === 'storage' && <MachineStorage endpoint={entry.endpoint} />}
                     {tab === 'access' && (
                         <>
+                            <MachineClients endpoint={entry.endpoint} />
                             <MachineAccess endpoint={entry.endpoint} />
                             <AccountSection entry={entry} endpoint={entry.endpoint} model={model} machineAccount={machineAccount} reason={reason} />
                             <RemoveSection entry={entry} model={model} />

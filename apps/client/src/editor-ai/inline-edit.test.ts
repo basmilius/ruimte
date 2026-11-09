@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { useProviderAccountsStore, useProvidersStore } from '@adecore/agents-react/state';
 import type { Editor } from '@adecore/editor';
 import { highlightLayers } from '@adecore/editor-react';
-import { keyOf } from '@adecore/editor-react/testing';
+import { keyOf as eventOf } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { LANGUAGE_COMMANDS } from '@/language/command-table';
 import { FakeLanguageTransport } from '@/language/fake-daemon';
@@ -12,7 +12,7 @@ import { currentEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { keyOf } from '@/surface/shortcut-overrides';
 import { InlineEditFeature, inlineAgentNow } from './inline-edit';
 import { forgetInlineEdit, saveInlineEdit } from './inline-edit-record';
 import { forgetInlineSessions, inlineSessionOf } from './inline-edit-session';
@@ -84,12 +84,12 @@ describe('Mod+I in the editor', () => {
         });
         editor.setSelection(RANGE);
 
-        expect(editor.press(keyOf(CANVAS_SHORTCUTS.inlineEdit))).toBe(true);
+        expect(editor.press(eventOf(keyOf('inlineEdit')!))).toBe(true);
 
         const { prompt } = (language.app.inlineEdit as InlineEditFeature).store.getState();
         expect(prompt).toMatchObject({ range: RANGE, selectedText: SELECTED, span: { startLine: 2, endLine: 3 }, instruction: '' });
         expect(prompt?.problems).toEqual([{ line: 3, severity: 'error', message: 'on the lines', code: 'ts(2345)' }]);
-        expect(editor.press(keyOf(shortcutOf('Escape')))).toBe(true);
+        expect(editor.press(eventOf(shortcutOf('Escape')))).toBe(true);
         expect((language.app.inlineEdit as InlineEditFeature).store.getState().prompt).toBeNull();
     });
 
@@ -107,7 +107,7 @@ describe('Mod+I in the editor', () => {
     });
 
     test('is a command of the Code menu and the palette with the key of the editor table, beside Show Inline Edit', () => {
-        expect(LANGUAGE_COMMANDS['inline-edit']).toMatchObject({ menu: 'code', key: 'inlineEdit', shortcut: CANVAS_SHORTCUTS.inlineEdit });
+        expect(LANGUAGE_COMMANDS['inline-edit']).toMatchObject({ menu: 'code', key: 'inlineEdit', keymap: 'inlineEdit' });
         expect(LANGUAGE_COMMANDS['show-inline-edit']).toMatchObject({ menu: 'code', key: 'showInlineEdit' });
     });
 });
@@ -222,7 +222,7 @@ describe('the question over the selected lines', () => {
         expect(editor.getSelection()).toEqual({ start: at(0, 0), end: at(0, 0) });
         expect(editor.focused).toBe(false);
 
-        expect(editor.press(keyOf(shortcutOf('Escape')))).toBe(true);
+        expect(editor.press(eventOf(shortcutOf('Escape')))).toBe(true);
 
         expect(editor.getSelection()).toEqual(RANGE);
         expect(editor.focused).toBe(true);

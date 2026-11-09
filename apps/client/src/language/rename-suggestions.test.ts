@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { keyOf, settle } from '@adecore/editor-react/testing';
+import { keyOf as eventOf, settle } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { keyOf } from '@/surface/shortcut-overrides';
 import { FakeLanguageTransport, readOnlyFiles } from './fake-daemon';
 import { createEditorLanguage } from './ruimte-editor-language';
 import { RuimteProject } from './ruimte-project';
@@ -42,7 +42,7 @@ async function setup(options: { available?: boolean; fail?: boolean } = {}) {
     const language = createEditorLanguage(project, editor, uri, 'typescript');
     await language.document.ready;
     editor.moveCaret(at(0, 7));
-    editor.press(keyOf(CANVAS_SHORTCUTS.rename));
+    editor.press(eventOf(keyOf('renameSymbol')!));
     await settle();
     return { transport, model, editor, language };
 }

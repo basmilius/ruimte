@@ -1,0 +1,78 @@
+const LANGUAGES: Record<string, string> = {
+    astro: 'astro',
+    c: 'c',
+    cc: 'cpp',
+    cjs: 'javascript',
+    cpp: 'cpp',
+    cs: 'csharp',
+    css: 'css',
+    dart: 'dart',
+    diff: 'diff',
+    dockerfile: 'docker',
+    ex: 'elixir',
+    exs: 'elixir',
+    fish: 'fish',
+    go: 'go',
+    graphql: 'graphql',
+    h: 'c',
+    hpp: 'cpp',
+    htm: 'html',
+    html: 'html',
+    ini: 'ini',
+    java: 'java',
+    js: 'javascript',
+    json: 'json',
+    json5: 'json5',
+    jsonc: 'jsonc',
+    jsx: 'jsx',
+    kt: 'kotlin',
+    less: 'less',
+    lua: 'lua',
+    markdown: 'markdown',
+    md: 'markdown',
+    mdx: 'mdx',
+    mjs: 'javascript',
+    mts: 'typescript',
+    patch: 'diff',
+    php: 'php',
+    phtml: 'php',
+    pl: 'perl',
+    prisma: 'prisma',
+    ps1: 'powershell',
+    py: 'python',
+    r: 'r',
+    rb: 'ruby',
+    rs: 'rust',
+    scala: 'scala',
+    scss: 'scss',
+    sh: 'shellscript',
+    sql: 'sql',
+    svelte: 'svelte',
+    swift: 'swift',
+    toml: 'toml',
+    ts: 'typescript',
+    tsx: 'tsx',
+    twig: 'twig',
+    vue: 'vue',
+    xml: 'xml',
+    yaml: 'yaml',
+    yml: 'yaml',
+    zig: 'zig',
+    zsh: 'shellscript'
+};
+
+// Files a person knows by name alone; there is no extension to go on.
+const BY_NAME: Record<string, string> = {
+    '.env': 'dotenv',
+    '.gitignore': 'ignore',
+    '.gitattributes': 'ignore',
+    dockerfile: 'docker',
+    makefile: 'make'
+};
+
+/* The highlighter id for a file name, or undefined when nothing here recognizes it. */
+export function languageOf(name: string): string | undefined {
+    const lower = name.toLowerCase();
+    const dot = lower.lastIndexOf('.');
+    return LANGUAGES[dot > 0 ? lower.slice(dot + 1) : ''] ?? BY_NAME[lower];
+}

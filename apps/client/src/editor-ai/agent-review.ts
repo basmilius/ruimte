@@ -1,12 +1,14 @@
-import type { Editor } from '@adecore/editor';
+import type { Editor, EditorFolds } from '@adecore/editor';
 import { highlightLayers, LineActionHost, ReviewGroup, RowHost, type HostedAction, type HostedRow, type ReviewMember } from '@adecore/editor-react';
 import { replaceAllLines, replacedWords, type LineReplacement } from '@adecore/editor-react/models';
 import { splitLines } from '@adecore/merge';
 import type { ProvenanceReviewState, ProvenanceRun } from '@ruimte/contracts';
 import { createStore, type StoreApi } from 'zustand';
+import { registerAgentReview } from '@/language/agent-review-registry';
 import { lineRangeLabel, selectionBlock } from '@/language/selection-to-chat';
-import { registerAgentReview } from '../language/agent-review-registry';
+import { useReviewFocus } from '@/state/review-focus';
 import type { AgentChanges, DrawFrame } from './agent-changes';
+import { unchangedFolds } from './review-folds';
 
 const ROW_OWNER = 'review';
 const ACTION_OWNER = 'review';
@@ -82,6 +84,11 @@ export class AgentReview implements ReviewMember {
     /* Runs answered whose new state the machine has not confirmed yet, so their rows are gone at once. */
     private readonly settling = new Set<string>();
     private frame: DrawFrame | null = null;
+    /* The folds the editor had before the review hid its unchanged lines, which come back when it stops; null while nothing is hidden. */
+    private foldsBefore: EditorFolds | null = null;
+    /* The changes and line count the hidden stretches were worked out for, so an edit that moves nothing folds nothing again. */
+    private foldedFor = '';
+    private readonly stopFocus: () => void;
 
     /* The group is the other editors on the same file in this window; one on its own has a group of one. */
     constructor(editor: Editor, changes: AgentChanges, source: ReviewSource, group: ReviewGroup = new ReviewGroup()) {
@@ -95,6 +102,7 @@ export class AgentReview implements ReviewMember {
         this.store = createStore<ReviewState>(() => ({ items: [], current: null, commenting: null }));
         registerAgentReview(editor, this);
         this.stopDraw = changes.onDraw((frame) => this.sync(frame));
+        this.stopFocus = useReviewFocus.subscribe(() => this.focus());
     }
 
     keep(runId: string): void {
@@ -189,6 +197,8 @@ export class AgentReview implements ReviewMember {
 
     dispose(): void {
         this.stopDraw();
+        this.stopFocus();
+        this.unfocus();
         this.leaveGroup();
         registerAgentReview(this.editor, null);
         this.rows.clear();
@@ -222,6 +232,43 @@ export class AgentReview implements ReviewMember {
         const commenting = state.commenting !== null && visible.some((item) => item.run.id === state.commenting!.runId) ? state.commenting : null;
         this.store.setState({ items: visible, current: state.current !== null && state.current < visible.length ? state.current : null, commenting });
         this.draw(visible);
+        this.focus();
+    }
+
+    /*
+     * Hides the lines no change is near while a person asked for that and changes wait for an answer, and puts the
+     * folds back otherwise. The stretches are worked out again only when the changes or the line count moved.
+     */
+    private focus(): void {
+        const { items } = this.store.getState();
+
+        if (!useReviewFocus.getState().onlyChanges || items.length === 0) {
+            this.unfocus();
+
+            return;
+        }
+
+        const lineCount = this.editor.getText().split('\n').length;
+        const changes = items.flatMap((item) => (item.spans.length > 0 ? item.spans : [{ startLine: item.startLine, endLine: item.endLine }]));
+        const signature = JSON.stringify([lineCount, changes]);
+
+        if (signature === this.foldedFor) {
+            return;
+        }
+
+        this.foldsBefore ??= this.editor.getFolds();
+        this.foldedFor = signature;
+        this.editor.setFolds(unchangedFolds(changes, lineCount));
+    }
+
+    private unfocus(): void {
+        if (this.foldsBefore === null) {
+            return;
+        }
+
+        this.editor.setFolds(this.foldsBefore);
+        this.foldsBefore = null;
+        this.foldedFor = '';
     }
 
     /* The runs of settled turns that wait for an answer, in the order of the file. */

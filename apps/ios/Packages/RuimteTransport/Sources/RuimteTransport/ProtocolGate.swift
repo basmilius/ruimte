@@ -12,25 +12,27 @@ import RuimtePulsar
     private let open: ([String]) -> Void
     private let message: (String) -> Void
     private let refuse: (Error) -> Void
+    private let identity: ClientIdentity
     private var checked = false
     private var held: [String] = []
 
     public init(
         send: @escaping (String) throws -> Void, open: @escaping ([String]) -> Void,
-        message: @escaping (String) -> Void, refuse: @escaping (Error) -> Void
+        message: @escaping (String) -> Void, refuse: @escaping (Error) -> Void, identity: ClientIdentity? = nil
     ) {
         self.send = send
         self.open = open
         self.message = message
         self.refuse = refuse
+        self.identity = identity ?? .current
     }
 
-    /// Asks the machine; call it once the link can carry requests. `client` names this app for the machine's
-    /// anonymous usage counts; a machine from before it ignores the field.
+    /// Asks the machine; call it once the link can carry requests. The payload names this app and its device
+    /// (`ClientIdentity`); a machine from before a field ignores it.
     public func start() {
         let frame = JSONValue.object([
             "id": .string(Self.requestID), "type": .string(WireRequest.endpointInfo.rawValue),
-            "payload": .object(["client": .string("ios")]),
+            "payload": identity.payload,
         ])
         do { try send(String(decoding: try frame.encoded(), as: UTF8.self)) } catch { refuse(error) }
     }

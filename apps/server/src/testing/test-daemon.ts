@@ -30,6 +30,7 @@ import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import type { VisualHost } from '../visuals/agent-host.ts';
 import { wireDaemon } from '../wire-daemon.ts';
 import type { DaemonBundles } from '../wiring/bundles.ts';
+import type { OutboxLink } from '../wiring/outbox.ts';
 import { testRuntime, testSeams, type TestSeams } from './test-seams.ts';
 
 /* One run of the daemon over a home, wired by `wireDaemon` with the seams of `test-seams.ts` where a process or the outside world would be. */
@@ -39,6 +40,8 @@ export interface TestDaemon {
     lineage: AgentLineageStore;
     prompts: PendingPromptStore;
     outbox: OutboxStore;
+    /* What the daemon's own services owe the outbox through, as the cards' answers do. */
+    link: OutboxLink;
     prWatches: PrWatchStore;
     worker: OutboxWorker<OutboxWork>;
     sessions: SessionManager;
@@ -186,6 +189,7 @@ export async function bootTestDaemon(options: TestDaemonOptions): Promise<TestDa
         lineage: stores.lineage,
         prompts: stores.prompts,
         outbox: stores.outbox,
+        link: agents.outboxLink,
         worker: work.worker,
         sessions,
         chats,

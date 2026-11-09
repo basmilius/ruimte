@@ -1,0 +1,6 @@
+.change-preview-code {
+    --se-gutter-width: 64px;
+}
+.change-preview-code .se-code-row {
+    min-width: max-content;
+}

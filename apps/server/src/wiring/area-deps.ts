@@ -51,7 +51,7 @@ function boundaryOf({ projects, git }: AreaInput): (clientId: string) => Promise
 }
 
 export function authDeps(input: AreaInput, later: AreaLater): AuthDeps {
-    const { runtime, machine, providers, processes, power } = input;
+    const { runtime, machine, providers, processes, power, agents, connected } = input;
     const { config } = runtime;
 
     return {
@@ -60,6 +60,8 @@ export function authDeps(input: AreaInput, later: AreaLater): AuthDeps {
         peerKey: machine.peerKey,
         home: config.home,
         version: VERSION,
+        announce: (clientId, payload) => connected.announce(clientId, payload),
+        validateTextModel: (choice) => agents.textModels.validate(choice),
         agentIntegrations: {
             summary: () => providers.integrations.summary(),
             files: () => providers.integrations.files(),
@@ -298,6 +300,7 @@ export function gitDeps({ machine, providers, projects, work, git, agents }: Are
         folderOf: async (projectId) => (await store.known()).find((project) => project.projectId === projectId)?.folder ?? null,
         untrusted: (path) => agents.untrusted.inFolder(path),
         untrustFolder: (path, branch) => store.peers.untrustFolder(path, branch),
-        oneShotPlace: agents.oneShot
+        oneShotPlace: agents.oneShot,
+        textModels: agents.textModels
     };
 }

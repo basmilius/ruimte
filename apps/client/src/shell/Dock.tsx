@@ -1,4 +1,4 @@
-import { ButtonGroup, Icon, IconButton, Menu, Separator, Kbd, DockShell, ZoomControls } from '@adecore/ui';
+import { ButtonGroup, Icon, IconButton, Menu, Separator, DockShell, ZoomControls } from '@adecore/ui';
 import { isCanvasView } from '@ruimte/contracts';
 import {
     FileText,
@@ -38,7 +38,9 @@ import { activeViewOf, useDocument } from '@/state/document';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
-import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { ADD_NODE_ROWS } from '@/surface/canvas/shortcuts';
+import { RowKbd } from '@/surface/RowKbd';
+import { useKeyOf } from '@/surface/shortcut-overrides';
 
 /*
  * The canvas's own controls: zoom, locks, layouts and the plus that adds a node. A view of its own
@@ -69,6 +71,8 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
         return id && s.nodes[id]?.kind === 'terminal' && !s.hidden.has(id) ? id : null;
     });
     const dockAutoHide = useSettings((s) => s.dockAutoHide);
+    const zoomKeys = { zoomReset: useKeyOf('zoom-reset'), fitAll: useKeyOf('fit') };
+    const zoomSelectionKey = useKeyOf('zoom-selection');
     // A maximized node is all the canvas shows, so the controls for the rest of it step aside.
     const maximized = useCanvas((s) => maximizedNodeOf(s) !== null);
     /* A file comes out of the open folder, so a project without one has nothing to pick from. */
@@ -123,12 +127,12 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
 
             <ZoomControls
                 zoom={zoom}
-                shortcuts={CANVAS_SHORTCUTS}
+                shortcuts={zoomKeys}
                 onZoomChange={(next) => canvasStore.getState().zoomTo(next)}
                 onFitAll={() => fitAction()}
                 selection={{
                     label: t('dock.zoomToSelection'),
-                    shortcut: CANVAS_SHORTCUTS.zoomSelection,
+                    shortcut: zoomSelectionKey,
                     enabled: hasSelection,
                     onZoom: () => canvasStore.getState().zoomToSelection()
                 }}
@@ -202,11 +206,11 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
     );
 }
 
-function AddNodeItem({ kind, icon }: { kind: keyof typeof ADD_NODE_SHORTCUTS; icon: LucideIcon }) {
+function AddNodeItem({ kind, icon }: { kind: keyof typeof ADD_NODE_ROWS; icon: LucideIcon }) {
     const { t } = useTranslation('shell');
     return (
         <Menu.Item onClick={() => void createNodeAction(kind)}>
-            <Icon icon={icon} size={14} /> {t(`nodeKinds.${kind}`)} <Kbd shortcut={ADD_NODE_SHORTCUTS[kind]} />
+            <Icon icon={icon} size={14} /> {t(`nodeKinds.${kind}`)} <RowKbd row={ADD_NODE_ROWS[kind]} />
         </Menu.Item>
     );
 }

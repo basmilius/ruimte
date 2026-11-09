@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { fileExists } from '@adecore/utils/fs';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { HOOK_EVENTS } from './hooks.ts';
-import { HOOK_MARKER, HookFileRefused, NAMED_HOOK, hookCommand, installHooks, installInFolder, mergeHooks } from './install.ts';
+import { HOOK_MARKER, HookFileRefused, NAMED_HOOK, hookCommand, installHooks, installInFolder, isOurs, mergeHooks, ownsSettings } from './install.ts';
 
 const other = { type: 'command', command: 'echo other' };
 
@@ -83,6 +83,78 @@ describe('mergeHooks', () => {
         const ours = { type: 'command', command: hookCommand('claude'), timeout: 3 };
         const { config } = mergeHooks({ hooks: { PreModelSwitch: [{ hooks: [ours] }] } }, 'claude');
         expect((config.hooks as Record<string, unknown>).PreModelSwitch).toBeUndefined();
+    });
+});
+
+describe('ownsSettings', () => {
+    const ours = { type: 'command', command: hookCommand('claude'), timeout: 3 };
+
+    test('owns a file with only our hooks, whatever their version', () => {
+        const older = { type: 'command', command: `curl "$${HOOK_MARKER}"` };
+        expect(ownsSettings({ hooks: mergeHooks({}, 'claude').config.hooks })).toBe(true);
+        expect(ownsSettings({ hooks: { Stop: [{ hooks: [older] }, { matcher: '', hooks: [ours] }] } })).toBe(true);
+        expect(ownsSettings({ hooks: {} })).toBe(true);
+    });
+
+    test.each([
+        ['undefined', undefined],
+        ['null', null],
+        ['an array', []],
+        ['a string', 'x'],
+        ['an empty object', {}],
+        ['hooks that is not an object', { hooks: [] }],
+        ['another key beside the hooks', { hooks: { Stop: [{ hooks: [ours] }] }, model: 'opus' }],
+        ['permissions only', { permissions: { allow: ['Bash'] } }],
+        ['an event that is not a list', { hooks: { Stop: {} } }],
+        ['a group without hooks', { hooks: { Stop: [{ matcher: '' }] } }],
+        ['a hook of another tool', { hooks: { Stop: [{ hooks: [ours, other] }] } }],
+        ['a hook of another tool in another event', { hooks: { Stop: [{ hooks: [ours] }], Notification: [{ hooks: [other] }] } }]
+    ])('does not own %s', (_name, config) => {
+        expect(ownsSettings(config)).toBe(false);
+    });
+});
+
+describe('a settings file seeded from the default account', () => {
+    const countOurs = (config: Record<string, unknown>, event: string): number =>
+        (config.hooks as Record<string, Array<{ hooks: unknown[] }>>)[event]?.flatMap((group) => group.hooks).filter(isOurs).length ?? 0;
+
+    test('takes the installed hooks without a second copy, and keeps what was copied with them', async () => {
+        // What ~/.claude/settings.json holds: Ruimte's hooks beside another tool's, and keys the seed copies.
+        const installed = mergeHooks({ hooks: { Stop: [{ hooks: [other] }] } }, 'claude').config;
+        const seeded = { permissions: { allow: ['Bash(ls)'] }, hooks: installed.hooks, model: 'opus' };
+        const path = join(dir, 'settings.json');
+        await writeFile(path, `${JSON.stringify(seeded, null, 2)}\n`);
+
+        const [first] = await installInFolder('claude', dir);
+        const written = JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>;
+        const stop = (written.hooks as Record<string, Array<{ hooks: unknown[] }>>).Stop;
+
+        expect(first?.result).toBe('unchanged');
+        expect(written).toEqual(seeded);
+        expect(stop?.flatMap((group) => group.hooks)).toContainEqual(other);
+        for (const event of HOOK_EVENTS.claude ?? []) {
+            expect(countOurs(written, event)).toBe(1);
+        }
+        const [second] = await installInFolder('claude', dir);
+        expect(second?.result).toBe('unchanged');
+    });
+
+    test('folds the older and doubled hooks of the default account into one per event', async () => {
+        const older = { type: 'command', command: `curl "$${HOOK_MARKER}"`, timeout: 1 };
+        const hooks = Object.fromEntries((HOOK_EVENTS.claude ?? []).map((event) => [event, [{ hooks: [older] }, { hooks: [other, older] }]]));
+        const path = join(dir, 'settings.json');
+        await writeFile(path, JSON.stringify({ model: 'opus', hooks }));
+
+        const [first] = await installInFolder('claude', dir);
+        const written = JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>;
+
+        expect(first?.result).toBe('written');
+        expect(written.model).toBe('opus');
+        for (const event of HOOK_EVENTS.claude ?? []) {
+            expect(countOurs(written, event)).toBe(1);
+        }
+        const [second] = await installInFolder('claude', dir);
+        expect(second?.result).toBe('unchanged');
     });
 });
 

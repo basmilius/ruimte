@@ -22,6 +22,7 @@ import { REQUEST_SCHEMAS, EVENT_SCHEMAS } from '../src/index.ts';
 import { MachineUpdateStatusSchema } from '../src/machine-update.ts';
 import { RuntimeModeSchema } from '../src/model.ts';
 import { NODE_ACCENT_COLORS, NODE_ACCENT_NAMES } from '../src/node-accents.ts';
+import { PortEndReasonSchema, PortHostSchema, PortSharedBySchema } from '../src/port.ts';
 import {
     CameraSchema,
     CanvasNodeSchema,
@@ -36,6 +37,7 @@ import { PROTOCOL_VERSION } from '../src/protocol.ts';
 import { PushNotifyKindSchema } from '../src/push.ts';
 import * as server from '../src/server.ts';
 import * as task from '../src/task.ts';
+import { TunnelProposalActionSchema } from '../src/tunnel.ts';
 import { VoiceActivityKindSchema, VoiceActivityStatusSchema, VoicePhaseSchema } from '../src/voice.ts';
 import { refinementsOf, UNNAMED_REFINEMENTS } from './refinements.ts';
 
@@ -270,7 +272,11 @@ const openVocabularies: ReadonlyMap<unknown, readonly string[]> = new Map<unknow
     [UsageProviderSchema, UsageProviderSchema.options],
     [VoicePhaseSchema, VoicePhaseSchema.options],
     [VoiceActivityKindSchema, VoiceActivityKindSchema.options],
-    [VoiceActivityStatusSchema, VoiceActivityStatusSchema.options]
+    [VoiceActivityStatusSchema, VoiceActivityStatusSchema.options],
+    [PortHostSchema, PortHostSchema.options],
+    [PortSharedBySchema, PortSharedBySchema.options],
+    [PortEndReasonSchema, PortEndReasonSchema.options],
+    [TunnelProposalActionSchema, TunnelProposalActionSchema.options]
 ]);
 // Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.
 const apiRoots: Record<string, z.ZodType> = {};
@@ -477,6 +483,9 @@ const typedRoots: [name: string, source: string, path: (string | number)[], keep
     ['FsListResult', 'request.fs.list.result', []],
     ['FsEntry', 'request.fs.list.result', ['properties', 'entries', 'items']],
     ['FsEntryKind', 'request.fs.list.result', ['properties', 'entries', 'items', 'properties', 'kind']],
+    ['FsBrowseResult', 'request.fs.browse.result', []],
+    ['ClientListResult', 'request.client.list.result', []],
+    ['ConnectedClient', 'request.client.list.result', ['properties', 'clients', 'items']],
     ['FsReadResult', 'request.fs.read.result', []],
     ['FsWriteResult', 'request.fs.write.result', []],
     ['FsChangedEvent', 'event.fs.changed', []],

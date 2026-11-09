@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bu
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { PROTOCOL_VERSION, type ServerFrame } from '@ruimte/contracts';
+import { CodedError } from '@adecore/agents';
+import { PROTOCOL_VERSION, type ServerFrame, type TextModelChoice } from '@ruimte/contracts';
 import { machineRegistrationMessage, peerAccessRequestMessage } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { AgentIntegrations } from '../agents/integrations.ts';
@@ -25,6 +26,8 @@ let dispatcher: Dispatcher;
 let lanDoorOpen: boolean;
 let disconnected: string[];
 let streamingChanges: boolean[];
+let validatedTextModels: TextModelChoice[];
+let refuseTextModel: boolean;
 let keepAwakeChanges: number;
 let lidRule: boolean;
 let lidCancels: boolean;
@@ -72,6 +75,8 @@ beforeEach(async () => {
     lanDoorOpen = true;
     disconnected = [];
     streamingChanges = [];
+    validatedTextModels = [];
+    refuseTextModel = false;
     keepAwakeChanges = 0;
     lidRule = false;
     lidCancels = false;
@@ -110,6 +115,14 @@ beforeEach(async () => {
         home,
         version: '0.0.0',
         keepAwake: { available: true },
+        announce: () => undefined,
+        validateTextModel: async (choice) => {
+            validatedTextModels.push(choice);
+
+            if (refuseTextModel) {
+                throw new CodedError('unavailable', 'Text model unavailable');
+            }
+        },
         closedLid: {
             available: true,
             rule: async () => lidRule,
@@ -340,11 +353,14 @@ describe('auth handlers', () => {
             nameSource: 'chosen',
             icon: { kind: 'lucide', value: 'server' },
             agentsDeleteAnyView: true,
+            agentsSharePorts: false,
             reachOpenProjects: true,
             steerMessages: true,
             streamingAllowed: false,
             resumeAtReset: true,
             visualReplies: false,
+            textModel: null,
+            startFolder: '',
             keepAwake: 'always',
             keepAwakeOnBattery: true,
             keepAwakeDisplay: true,
@@ -430,10 +446,12 @@ describe('auth handlers', () => {
                     icon: { kind: 'lucide', value: 'server' },
                     agentsDeleteAnyView: false,
                     reachOpenProjects: false,
+                    agentsSharePorts: false,
                     steerMessages: false,
                     streamingAllowed: true,
                     resumeAtReset: false,
                     visualReplies: true,
+                    textModel: null,
                     keepAwake: 'off',
                     keepAwakeOnBattery: false,
                     keepAwakeDisplay: false,
@@ -447,7 +465,8 @@ describe('auth handlers', () => {
                     broker: { mode: 'default' },
                     lanDoor: true,
                     nodeSizes: {},
-                    usageStats: true
+                    usageStats: true,
+                    startFolder: ''
                 }
             }
         ]);
@@ -481,6 +500,25 @@ describe('auth handlers', () => {
         expect(await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.info')).toMatchObject({ ok: true, result: { visualReplies: false } });
     });
 
+    test('a text model is checked before it is saved, and Automatic needs no check', async () => {
+        const choice = { provider: 'codex', model: null, account: 'work' };
+        const access: ClientAccess = { reachability: 'lan', sessionId: 's1' };
+        refuseTextModel = true;
+
+        expect(await ask(access, 'endpoint.settings', { textModel: choice })).toMatchObject({ ok: false, error: { code: 'unavailable' } });
+        expect(identity.textModel).toBeNull();
+
+        refuseTextModel = false;
+
+        expect(await ask(access, 'endpoint.settings', { textModel: choice })).toMatchObject({ ok: true, result: { textModel: choice } });
+        expect(validatedTextModels).toEqual([choice, choice]);
+
+        refuseTextModel = true;
+
+        expect(await ask(access, 'endpoint.setIdentity', { name: null, icon: null, textModel: null })).toMatchObject({ ok: true, result: { textModel: null } });
+        expect(validatedTextModels).toHaveLength(2);
+    });
+
     test('usage statistics start on, and only a person on this machine turns them off', async () => {
         expect(await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.info')).toMatchObject({ ok: true, result: { usageStats: true } });
 
@@ -491,6 +529,23 @@ describe('auth handlers', () => {
         const off = await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.settings', { usageStats: false });
         expect(off).toMatchObject({ ok: true, result: { usageStats: false } });
         expect(identity.usageStats).toBe(false);
+    });
+
+    test('only a person on this machine lets agents share ports', async () => {
+        const lan: ClientAccess = { reachability: 'lan', sessionId: 's1' };
+
+        expect(await ask(lan, 'endpoint.settings', { agentsSharePorts: true })).toMatchObject({ ok: false, error: { code: 'owner-only' } });
+        expect(await ask(lan, 'endpoint.setIdentity', { name: null, icon: null, agentsSharePorts: true })).toMatchObject({
+            ok: false,
+            error: { code: 'owner-only' }
+        });
+        expect(identity.agentsSharePorts).toBe(false);
+
+        expect(await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.settings', { agentsSharePorts: true })).toMatchObject({
+            ok: true,
+            result: { agentsSharePorts: true }
+        });
+        expect(identity.agentsSharePorts).toBe(true);
     });
 
     test('only the app on this machine says how long it took to start', async () => {
@@ -538,6 +593,30 @@ describe('auth handlers', () => {
         }
         expect(await ask(paired, 'endpoint.setNodeSize', { kind: 'hologram', size: { w: 640, h: 400 } })).toMatchObject({ ok: false });
         expect(identity.nodeSizes).toEqual({});
+    });
+
+    test('any client the machine let in sets where browsing starts, empty clears it, and every client hears it', async () => {
+        const paired: ClientAccess = { reachability: 'lan', sessionId: 's1' };
+        expect(await ask(paired, 'endpoint.info')).toMatchObject({ ok: true, result: { startFolder: '' } });
+        const heard: unknown[] = [];
+        identity.subscribe('other-client', (event) => heard.push(event));
+
+        const set = await ask(paired, 'endpoint.setStartFolder', { folder: '  D:\\Work  ' });
+        expect(set).toMatchObject({ ok: true, result: { startFolder: 'D:\\Work' } });
+        expect(identity.startFolder).toBe('D:\\Work');
+        expect(heard).toEqual([expect.objectContaining({ event: 'endpoint.changed', payload: expect.objectContaining({ startFolder: 'D:\\Work' }) })]);
+
+        const cleared = await ask(paired, 'endpoint.setStartFolder', { folder: '   ' });
+        expect(cleared).toMatchObject({ ok: true, result: { startFolder: '' } });
+        expect(identity.startFolder).toBe('');
+        expect(await ask(undefined, 'endpoint.info')).toMatchObject({ ok: true, result: { features: expect.arrayContaining(['endpoint.setStartFolder']) } });
+    });
+
+    test('a start folder past the longest path is refused', async () => {
+        const paired: ClientAccess = { reachability: 'lan', sessionId: 's1' };
+
+        expect(await ask(paired, 'endpoint.setStartFolder', { folder: 'a'.repeat(4097) })).toMatchObject({ ok: false });
+        expect(identity.startFolder).toBe('');
     });
 
     test('a name nobody could read is refused before it reaches the file', async () => {
@@ -730,6 +809,7 @@ describe('auth handlers', () => {
             for (const type of [
                 'auth.sessions',
                 'auth.revoke',
+                'endpoint.setStartFolder',
                 'endpoint.signPeerAccess',
                 'endpoint.signRegistration',
                 'endpoint.leaveAccount',

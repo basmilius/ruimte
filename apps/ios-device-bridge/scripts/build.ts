@@ -30,17 +30,20 @@ if (!cargo) {
     process.exit(1);
 }
 
-const build = Bun.spawnSync([cargo, 'build', '--release', '--locked', '--target', values.target], {
-    cwd: root,
-    stdio: ['ignore', 'inherit', 'inherit']
-});
-if (build.exitCode !== 0) {
-    process.exit(build.exitCode);
+const built = join(root, 'target', values.target, 'release', 'ios-device-bridge');
+if (process.env.RUIMTE_RUST_CACHE_HIT !== 'true' || !existsSync(built)) {
+    const build = Bun.spawnSync([cargo, 'build', '--release', '--locked', '--target', values.target], {
+        cwd: root,
+        stdio: ['ignore', 'inherit', 'inherit']
+    });
+    if (build.exitCode !== 0) {
+        process.exit(build.exitCode);
+    }
 }
 
 const output = resolve(values.outfile);
 await mkdir(dirname(output), { recursive: true });
-await copyFile(join(root, 'target', values.target, 'release', 'ios-device-bridge'), output);
+await copyFile(built, output);
 await chmod(output, 0o755);
 const sign = Bun.spawnSync(['codesign', '--sign', '-', '--force', output], { stdio: ['ignore', 'ignore', 'inherit'] });
 if (sign.exitCode !== 0) {

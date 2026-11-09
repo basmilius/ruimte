@@ -62,3 +62,12 @@ export const endChildrenKind = defineOutboxKind(EndChildrenWorkSchema, {
 
 /* A summary that was not delivered is said in its fork, by its own handler. */
 export const deliverSummaryKind = defineOutboxKind(DeliverSummarySchema);
+
+const DeliverAnswerSchema = z.object({
+    kind: z.literal('deliver-answer'),
+    // The target is the chat whose card a person answered; the text and label say what they answered, written when they did.
+    payload: z.object({ text: z.string(), label: z.string() })
+});
+
+/* A person's answer on a card the chat raised; one turn that wakes nobody, owed only through `OutboxLink.oweAnswer`. */
+export const deliverAnswerKind = defineOutboxKind(DeliverAnswerSchema);

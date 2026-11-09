@@ -28,7 +28,7 @@ export const cases: WriteCases = {
         }
     },
     'node.updateMany': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: {
             viewId: 'board',
             nodes: [
@@ -109,7 +109,7 @@ export const cases: WriteCases = {
         refused: { 'elements, which are no image': { viewId: 'sketch', format: 'elements' } }
     },
     'drawing.edit': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { viewId: 'sketch', revision: 4, edit: '{"remove":["el-1"]}' },
         refused: {
             'no revision': { viewId: 'sketch', edit: '{}' },

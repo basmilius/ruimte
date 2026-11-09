@@ -28,6 +28,7 @@ The `dev` script runs on port `4211` with `RUIMTE_HOME` from `RUIMTE_DEV_HOME` (
 | `--direct-host-address <ip>` | none | An extra address to announce as a candidate, such as the one a container is published on. Repeatable. |
 | `--broker <url>` | the machine's setting | Announce the machine to this Pulsar broker (`RUIMTE_BROKER_URL`; `off` turns it off). `wss://`, or `ws://` for a broker on this machine or the local network. Without it, the broker set under Settings, Machines, default `wss://broker.ruimte.app`. |
 | `--no-broker` | off | Announce the machine to no broker, whatever else says otherwise. |
+| `--external-port <port>` | the port plus 20 | The loopback port of the listener for external MCP clients (see "External MCP"). It listens only while a person turned the MCP on; `0` lets the system pick one. |
 | `--broker-advertise <url>` | the broker | The broker URL clients are told in `endpoint.info`, when they reach it under another name (`RUIMTE_BROKER_ADVERTISE_URL`). |
 | `--lan-port <port>` | `--port` plus 10 | The port of the door on the local network; `0` lets the system pick one. |
 | `--no-lan` | off | Keep the door on the local network closed, whatever the machine's setting says. |
@@ -119,14 +120,17 @@ A bare `ruimte` at a terminal prints its address and the commands; under the ser
 | `name`, `icon` | The machine's name and Lucide icon. A null name falls back to `--label`, `RUIMTE_LABEL`, else the hostname. |
 | `agentsDeleteAnyView` | Lets an agent's `view_delete`, `node_delete` and `link_delete` remove what it did not make. Off by default. |
 | `reachOpenProjects` | Lets an agent's `project` field read the other projects open on this machine, message their terminals and chats, and start agents there. Off by default. |
+| `agentsSharePorts` | Lets an agent's `port_share` share a dev port of this machine with the person's other devices. Off by default. |
 | `resumeAtReset` | Resumes a chat that stopped on a limit, on a clock. Off by default; a chat's own switch can say no. |
 | `visualReplies` | Lets an agent in a chat show a page above its reply. On by default; written only as `false`. |
+| `textModel` | The CLI, model and account that write short texts: new chat titles, commit messages and conflict proposals. Picked and checked like the editor model (`editor-assist/selection.ts`); a null model is that CLI's cheapest. An explicit pick never falls back to another CLI. Absent is Automatic. |
 | `streamingAllowed` | Browser pages and device screens stream to clients. On by default. |
 | `keepAwake`, `keepAwakeOnBattery`, `keepAwakeDisplay` | Block sleep `off`, `working` (while an agent works) or `always`; on the adapter only unless battery is allowed; the display only under `always`. |
 | `keepAwakeLidClosed` | Also hold with the lid closed (below). |
 | `broker` | The broker this machine announces itself to, or off. |
 | `lanDoor` | Whether the door on the local network is open. |
 | `worktreeRoot` | The folder new worktrees go in; absent is `worktrees` in the data folder. Local secret only. |
+| `startFolder` | The folder browsing starts in on this machine, for every client of it. Absent is the home folder; written only when set. Set with `endpoint.setStartFolder` by any client the machine let in, and checked against nothing on disk; no tool sets it. |
 | `usageStats` | Sends the daily usage counts of a release build. On by default; written only as `false`. Local secret only. |
 | `nodeSizes` | The size a new node starts at, by kind, for people and agents alike. Missing kinds take `NODE_SIZE` in `packages/contracts`. Set one kind at a time with `endpoint.setNodeSize`; no tool changes it. |
 
@@ -198,6 +202,10 @@ $RUIMTE_HOME/
   database-access/<projectId>.json 0700, what agents may do with each connection (see "Databases")
   secrets/<hash>.json              0700 folder, 0600 files: the secrets of a project's launches (see "Launch secrets")
   voice/openai.json                0700 folder, 0600 file: the OpenAI key of Voice run by the daemon (`ruimte voice key`)
+  ports/grants.json                the dev ports a person (or, with `agentsSharePorts`, an agent) shared with the account's other devices, until someone stops sharing them
+  tunnels/tunnels.json             0700 folder: the tunnel (id, name, account), the rows with the zone and DNS record of each, and whether the external MCP is on
+  tunnels/cloudflare-token         0600, the Cloudflare API token a person typed (see "Tunnels"); tunnels/bin/ holds a downloaded `cloudflared`
+  tunnels/credentials.json         0600, hashes of the credentials of external MCP clients and nothing else (see "External MCP")
   voice/preferences.json           the language and voice Voice speaks on this machine (`voice.setPreferences`)
   database-snapshots/<projectId>/<connectionId>/<database>.json
                                    schema snapshots the SQL language servers read, gone with their connection or project
@@ -236,6 +244,7 @@ $RUIMTE_HOME/
   language-servers/
     choices.json                   which server this machine uses where kinds are alternatives (none are today)
     custom.json                    a person's own language servers
+    worktree-build.json            the repositories whose servers may build code in the worktrees of agents
     <kind>/                        one folder per installed kind (see "Language servers")
     packages/<setId>/              shared, immutable npm package sets the installs link to
   usage/                           0700
@@ -395,6 +404,12 @@ A release ships model catalogs as `<kind>-models.json` in `@adecore/agents/provi
 
 The runtime mode (`supervised`, `auto-accept-edits`, `auto`, `full-access`) is one vocabulary that each provider maps to its own flags. Ruimte's MCP tools run without a prompt in every mode, since the daemon checks each call itself: a Claude Code terminal gets `--allowedTools=mcp__ruimte`, a Claude chat the server in its launch with `allowTools` (`mcp__ruimte__*`), Copilot `--allow-tool=ruimte`, and Codex `default_tools_approval_mode="approve"` on the server (`src/ruimte-mcp.ts`).
 
+### Sharing the default Claude account
+
+An extra Claude account can read the setup of the default one. `accounts.shareConfig { id, shared }` sets `shareConfig` on the account and answers `ProviderAccounts`; `sharedConfigKinds` there names the kinds that offer it, and `endpoint.info` lists the request in `features`. A default account and a kind without a share list are refused with `invalid-account`. `accounts.save` keeps the stored value, so an older client cannot turn it off. A peer machine cannot ask it, as for the other `accounts.*` requests.
+
+ADE CORE does the work in `prepare`, before the hooks go in. `CLAUDE.md`, `rules`, `skills`, `agents` and `commands` become links to the entries of `~/.claude` (`CLAUDE_CONFIG_DIR` of the default account), and `settings.json` is written once with only `permissions`, `hooks`, `model`, `statusLine` and `outputStyle`. Nothing else is named, so a login, `env`, `apiKeyHelper`, history, projects and plugins are never shared. An entry the account already holds stays and is reported in its status message. The seed replaces a settings file only when `ownsSettings` (`src/agents/install.ts`) says it holds nothing but Ruimte's hooks, which is what the installer leaves in every account folder. The installer then merges over the seed on `HOOK_MARKER`, so the hooks copied from the default account never double. Turning it off removes only links to the default folder's entries; real files and the copied `settings.json` stay.
+
 ### Claude API
 
 Claude Code on an Anthropic API key, beside a person's own sign-in (`src/providers/anthropic-claude-api-provider.ts`). Save the key in Settings, Providers, Claude API. `anthropic.configure` validates it against the model list before saving it or its settings; `anthropic.status` reports whether a key exists without returning it. Only the machine's owner configures it. The daemon's own requests (the model list) go only to `https://api.anthropic.com`, redirects refused. Everything lives under `$RUIMTE_HOME/anthropic-claude-api`.
@@ -460,6 +475,12 @@ The daemon looks up no addresses, holds no map ticket and never contacts the map
 | `tailwind` | `@tailwindcss/language-server` | HTML, CSS, scripts, Vue and PHP, in a project that uses Tailwind |
 | `sql-native` | the native server from `basmilius/language-server-sql`, shown as SQL | `.sql` files, against the project's schema snapshots |
 | `rust` | rust-analyzer from the Rust toolchain, never installed by Ruimte | Rust, in a project with a `Cargo.toml` in its folder or up to three folders down |
+| `go` | gopls from Go, never installed by Ruimte | Go, `go.mod` and `go.work`, in any project |
+| `swift` | sourcekit-lsp from the Swift toolchain, never installed by Ruimte | Swift, in any project |
+| `zig` | zls from the Zig installation, never installed by Ruimte | Zig and `.zon` files, in any project |
+| `lua` | lua-language-server, a pinned release (`lua-native-release.json`) | Lua, in any project; it runs the plugins a `.luarc.json` names, so not on work from another machine |
+| `toml` | taplo, a pinned release (`toml-native-release.json`) | TOML, in any project, with no schema catalog |
+| `markdown` | marksman, a pinned release (`markdown-native-release.json`) | Markdown, in any project: links, headings and references across files |
 
 Intelephense (kind `php`) was removed, and nothing removes a `language-servers/php` install left on disk.
 
@@ -476,6 +497,16 @@ Native servers (`src/language/native.ts`, `installer.ts`):
 - Install downloads PHP's stubs for the server's commit; the server starts with `storagePath` and `stubsPath` and never goes online.
 
 The `rust` kind runs the `rust-analyzer` on `PATH` or in `~/.cargo/bin` that answers `--version` (`src/language/toolchain.ts`), with `~/.cargo/bin` on its `PATH`. Without one it says to run `rustup component add rust-analyzer`; Install only looks again. It is told every `Cargo.toml` no other one holds (`linkedProjects`, `src/language/manifests.ts`).
+
+The `go` kind runs the `gopls` on `PATH` or in `GOBIN`, `$GOPATH/bin`, `~/go/bin`, `/usr/local/go/bin` or Homebrew's folder that answers `gopls version`, with those folders on its `PATH` so it finds `go`. It runs with `GOTOOLCHAIN=local`, so a `go.mod` asking for a newer Go downloads nothing, and with the `generate` code lenses off. Without one it says to run `go install golang.org/x/tools/gopls@latest`; Install only looks again. It runs project code (`go list` runs cgo tools), so it stays off work from another machine.
+
+The `swift` kind runs the `sourcekit-lsp` on `PATH`, in Xcode's or the command line tools' folder, or in `~/.swiftly/bin`. It prints no version, so the `swift` beside it is asked (`swift --version`). Loading a `Package.swift` runs it, so the kind builds code (`runsBuildCode`) and has no setting that turns that off: it does not start in the worktree of an agent. An Xcode project without a `Package.swift` shows less to sourcekit-lsp than a package does.
+
+The `zig` kind runs the `zls` on `PATH`, in Homebrew's folder, `~/.local/bin` or `~/.zvm/bin`, that answers `--version`, with those folders on its `PATH` so it finds `zig`. Ruimte pins no zls, since it has to match the Zig a project builds with. zls runs `build.zig` to learn the build, so, like Swift, the kind builds code and does not start in the worktree of an agent.
+
+A kind whose server is someone else's program installs from a descriptor of ours (`<kind>-native-release.json`, same shape as the PHP one) with a checksum per platform, and has no development build. The TOML server is taplo's release binary run as `taplo lsp stdio`, because `@taplo/cli` on npm is the WebAssembly build and has no `lsp` command. A release that is one file has `format: "raw"`, or `"gz"` when gzipped; `checksumOnly: true` marks a release whose program is not run at install, since the checksum already names its bytes.
+
+A kind with `runsBuildCode` builds the code it reads. In a worktree the register made for an agent's node it runs without that (rust-analyzer gets build scripts, proc macros and `checkOnSave` off) or, like Swift and Zig, does not start, until a person calls `language.worktreeBuild` for the repository (local secret only). `language-servers/worktree-build.json` holds the main checkouts they allowed. The status carries `buildHeld`, and an agent reads the same sentence as the `message` of that server. Once building is allowed for a repository that has such worktrees, the status carries `buildAllowed` instead, and `language.worktreeBuild` with `on: false` takes the choice back.
 
 `language-servers/choices.json` holds the kind in use where kinds are alternatives, set with `language.prefer`; none are today, so a pick an older Ruimte stored is ignored. `language-servers/custom.json` holds a person's own servers (`src/language/custom.ts`): command, arguments, environment, initialization options, languages, patterns and folders. `language.custom.save`, `remove` and `check` are local secret only; an entry edited by hand so it no longer matches its saved hash never starts until saved again.
 
@@ -513,9 +544,34 @@ A browser upgrade is accepted from the daemon's own origin, `app://ruimte` and l
 
 `src/pulsar/lan-door.ts` listens on every IPv4 interface at the daemon's port plus 10 (`--lan-port`). It answers one WebSocket at `/signal` and 404 for the rest, so the API stays on loopback. The machine proves its key first. One address opens at most 30 sockets a minute and holds at most 8. `endpoint.info` carries `lan: { port, addresses }` while open (private ranges first, then a tailnet's `100.64.0.0/10`, never a container or VM bridge). The door is open unless `lanDoor` is off or `--no-lan` is set; a busy port leaves it closed with a log line.
 
+### External MCP and tunnels
+
+`src/tunnels` opens a second listener on `127.0.0.1` (`--external-port`), off by default and turned on only with the local secret (`tunnel.setMcp`). It answers `/mcp`, `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/authorize` and `/token`, and 404 for everything else, so no API route is on it. Every request needs a credential of its own: an OAuth access token (authorization code with PKCE S256, the client named by a Client ID Metadata Document, consent given in a window of the app on this machine) or a bearer made in the app. Any `Origin` is refused with 403. A session token and the local secret are no credential, and the API port refuses a request that carries `Cf-Ray` or `Cf-Connecting-Ip`.
+
+The client acts as the person within the grant on its credential: a tier (`read`, `work`, `machine`), the projects it reaches, the widest mode of the agents it starts, and an approvals box that adds `approval_list` and `approval_answer`. A hosted client defaults to all projects, `work`, `supervised` and no expiry. It has a tool list of its own (`src/mcp/external-tiers.ts`), never types into a terminal, and is never the owner.
+
+Tunnels manage one tunnel on the person's own Cloudflare account with an API token they typed (Zone read, DNS edit, Cloudflare Tunnel edit; `tunnel.setToken` checks it with `GET /user/tokens/verify` and lists the zones), and run `cloudflared` as a child of the daemon. Ruimte installs the official build when it finds none (checked against a sha256 pinned in the release, `scripts/cloudflared-pins.ts` recomputes it). The tunnel is one Ruimte makes, named `ruimte-<machine>-<4 hex>`, or a dashboard-managed one the person already has. Either way it is managed in Cloudflare, so its hostnames live there and the dashboard shows them. A row writes a proxied CNAME and an ingress rule, and removing it, or unlinking the tunnel, deletes only what Ruimte made; no request deletes a tunnel. The child runs `tunnel --no-autoupdate run` with the tunnel token in `TUNNEL_TOKEN`, and only while Cloudflare reports nothing else running the tunnel. Ruimte relays no byte. Requests: `tunnel.state` (any client), `tunnel.install`, `tunnel.setToken`, `tunnel.clearToken`, `tunnel.setup`, `tunnel.list`, `tunnel.link`, `tunnel.unlink`, `tunnel.add`, `tunnel.update`, `tunnel.remove`, `tunnel.retry`, `tunnel.discover`, `tunnel.setMcp`, `credential.list`, `credential.create`, `credential.update`, `credential.revoke`, `consent.list` and `consent.answer` (all the local secret's); the events `tunnel.changed` and `consent.changed` carry no data. `tunnel.changed` also fires when a credential is used for the first time or after a minute without use, so the settings follow the clients.
+
+An agent reads the hostnames with `tunnel_list` and suggests adding, turning on or off, editing or removing one of Ruimte's with `tunnel_propose`, which neither external tier lists. The daemon raises a card in the agent's chat (`tunnel.proposals`, one per chat and hostname) and holds the chat at `needs-you`. Any client reads and declines a card (`tunnel.proposalDecline`); only the local secret confirms one (`tunnel.proposalConfirm`), which runs `tunnel.add`, `tunnel.update` or `tunnel.remove` as the screen sends it. A card whose row changed since goes stale and refuses. The tool answers `waiting` at once; the next suggestion of the same change and `tunnel_list` report what became of it. A card lapses after an hour, or when the chat stops.
+
+### Shared dev ports
+
+A development port is reachable from another client of the account only after someone shared it on purpose. `port.share` and `port.revoke` are the local secret's; an agent shares with `port_share` while `agentsSharePorts` is on, and stops only what an agent shared. A grant names a project, a literal loopback address (`127.0.0.1` or `::1`, never a hostname and never the other family after a failure) and a port, and lasts under `ports/grants.json` until it is revoked, across restarts. Discovery (`browser.devServers`), a launch's port and a URL in a project file grant nothing, and a grant never names a port Ruimte listens on (the check runs again at every open).
+
+`port.list` and the stream requests are for any client of the account, the station included, and never for a peer machine. A client opens a stream with `port.open` (its own `streamId`), writes with `port.write` (16 KiB chunks at absolute offsets, answered once the service took them, at most 256 KiB unanswered), and hears the service as `port.data` events within the credit it gave with `port.credit` (an absolute count of consumed bytes), ending with `port.end`. A stream belongs to the client that opened it. Per client 16 streams and 1 MiB, per machine 64; a data chunk waits while the connection holds more than 64 KiB, and a service that ignores the pause is cut off, not buffered. Revoking a grant ends its streams with `port.end` (`revoked`). `src/ports` holds the grants, the streams and the real connection (`port-connect.ts`); `scripts/measure-port-bridge` measures the path through the desktop app.
+
 ### Push notifications
 
 A client with a key (the iPhone app) registers with `push.subscribe`, kept in `auth.json` so a revoke takes it along. The daemon decides every push (`src/push/service.ts`) and posts it signed and encrypted to the address book, which relays it to APNs (`apps/pulsar-worker/APNS.md`). Nothing goes to a client holding a socket, and a snoozed node raises nothing until its snooze ends. Each device picks the kinds it hears (`needs-you`, `turn`, `process`), per project if it likes; default is `needs-you`. A finished turn and a process warning have their own collapse ids, so they never replace an attention alert.
+
+A chat that stops on its plan's usage limit raises an attention alert instead of a finished turn, heard under `needs-you`: "Codex (Blis): weekly limit reached." The window comes from the plan reads (`usage.limits`), and the content carries `resetsAt` so the phone words when the limit lifts. It sets `timeSensitive` unless the machine takes the chat up again at the reset. One limit of one account (`src/push/limit-alert.ts`) pushes once until it lifts, or for an hour without a time, kept in memory only.
+
+A device can set quiet hours with an optional `quietHours` on `push.subscribe` (`days` as ISO weekdays, `start` and `end` as `HH:MM`, `timeZone`), read back by `push.preferences`. An older machine drops the field and keeps pushing, and its `push.preferences` answers without it. `quietState` (`packages/contracts/src/quiet-hours.ts`) decides at send time. A window belongs to the day it starts on, an `end` at or before `start` runs into the next day, and a time zone the runtime refuses reads as not quiet. For a quiet device:
+
+- An alert someone asked for (`alert`) still goes out.
+- A wait, an approval and an alert the daemon raised (a failed task, a wake given up, a usage limit) are held in memory (`src/push/quiet-hold.ts`), one per node and one per approval request. Live Activity pushes are skipped.
+- A finished turn and a process warning are dropped.
+- One timer, on the clock the outbox uses, waits for the soonest end while anything is held, and a `push.subscribe` that changes the hours looks again. At the end each held alert is checked as a held one is (snoozed, answered, limit lifted), gets a fresh expiry, goes to that device only, and the machine's counts are sent again. A restart forgets what was held.
 
 Read state lives in `push-attention.json`; a client acknowledges what a focused window shows with `push.read`.
 
@@ -543,6 +599,7 @@ Which chat wrote which lines of a file, for the editor's gutter (`src/provenance
 
 - Commands run without a shell, arguments as lists. `GIT_TERMINAL_PROMPT=0` keeps a credential prompt from stalling, and a remote step gives up after two minutes.
 - `git.watch` with `status: true` answers the first status at once. It stops watching a repository with more than 5,000 tracked files or a status slower than a second (`live: false`); the client then refreshes on focus.
+- `git.compare { cwd, from, to, mode }` reads two refs of one repository without checkout, fetch or any write: the files that differ (`merge-base` from the common ancestor, `tips` between the two tips) and the first page of the commits only each side has. It resolves both refs to commits first and answers them (`fromCommit`, `toCommit`, `baseCommit`), and `git.compareCommits` and `git.blob` read those commits, so a branch that moves meanwhile changes nothing. A missing ref, unrelated histories or several merge bases in `merge-base` mode are errors, never an empty answer. `git.blob` answers one file of a commit up to 512 KiB, or why it has none (`missing`, `binary`, `too-large`, `gitlink`, `not-file`); a symlink is its target as text.
 - `git.identity { paths }` answers per top-level folder its root commits, `origin` without credentials, branch and local branch tips, so two machines can tell they hold the same repository. A slow folder (over five seconds) answers `timed-out`.
 - `git.bundle` writes a checkout (working tree, `head` or a branch) as a bundle under `bundles/`, read with `bytes.read` up to 256 MiB (`bundle-too-large` beyond). `git.bundlePut` takes an incoming bundle in pieces of up to 256 KiB, at most 16 open uploads, and `git.fetchBundle` verifies it and makes a worktree on `ruimte/<branch>` (`src/peer/CLAUDE.md` has the bundle rules).
 - `git.clone` takes HTTPS, SSH or git URLs (never a local path, `file://` or `ext::`) into a missing or empty folder, and leaves no folder when it fails. SSH runs in batch mode unless `GIT_SSH_COMMAND` or `GIT_SSH` is set. `git.ignoredFiles` lists up to 2,000 ignored files. `git.identity` and `git.clone` refuse paths in machine state.
@@ -586,10 +643,10 @@ An agent Ruimte starts gets the daemon's MCP server: `/mcp` on the daemon's port
 `@adecore/agents/usage` answers what the CLIs cost and what is left of their plans, with no vendor API or credential.
 
 - The scanner reads every account's transcripts (`~/.claude/projects`, `~/.codex/sessions`, honoring `CLAUDE_CONFIG_DIR` and `CODEX_HOME`).
-- `usage/scan-state.json` is a cache; deleting it costs one cold scan. `usage/history.jsonl` keeps the usage of every transcript ever read, also after its CLI removed it, so deleting it loses that usage for good. `usage/limits.json` keeps the last plan numbers of every account, shown after a restart until the first read, which covers every signed-in account once.
+- `usage/scan-state.json` is a cache; deleting it costs one cold scan. `usage/history.jsonl` keeps the usage of every transcript ever read, also after its CLI removed it, so deleting it loses that usage for good. `usage/limits.json` keeps the last plan numbers of every account, shown after a restart until that account's next read.
 - Copilot chat turns are logged to `usage/copilot`, a file per session; a Copilot terminal is not counted.
 - Prices come from LiteLLM's `model_prices_and_context_window.json`, refreshed every 24 hours into `usage/prices.json`, with a bundled fallback. An unpriced model shows as unknown, never free. The ECB euro rate comes from frankfurter.app on the same schedule into `usage/exchange-rate.json`. `--no-price-fetch` turns off both.
-- Plan limits come from the CLIs (`get_usage` over Claude Code's stream-json, `account/rateLimits/read` over Codex's app-server) every five minutes, backing off to an hour after a failure. Agents read them with `provider_info`.
+- Plan limits come from the CLIs (`get_usage` over Claude Code's stream-json, `account/rateLimits/read` over Codex's app-server) every five minutes, backing off to an hour after a failure. That clock reads a CLI's default account, and another account only while a chat or terminal used it in the last day since the machine started, or while a client has a usage page open (`usage.subscribe`); the first page to open reads those at once. Cards count as no page. Agents read them with `provider_info`.
 
 ## Smoke test
 

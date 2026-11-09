@@ -120,6 +120,7 @@ targets:
       - path: App/PrivacyInfo.xcprivacy
     dependencies:
       - package: RuimtePulsar
+      - package: RuimteShared
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.ruimte.mobile.notifications

@@ -66,7 +66,24 @@
         "title": "Open a page here",
         "hint": "Pick a dev server or type an address above.",
         "running": "Running",
-        "common": "Common ports"
+        "common": "Common ports",
+        "share": {
+            "action": "Share",
+            "stop": "Stop sharing",
+            "putOnTunnel": "Put this port on a tunnel",
+            "copyPublic": "Copy {{address}}",
+            "sharedBy": "Shared by {{machine}}",
+            "notShared": "Not shared by {{machine}}",
+            "oldMachine": "{{machine}} cannot share ports yet",
+            "oldApp": "This version of Ruimte cannot open a shared port",
+            "failed": "Could not share the port",
+            "stopFailed": "Could not stop sharing",
+            "confirm": {
+                "title": "Share port {{port}}?",
+                "description": "Your other devices open localhost:{{port}} on {{machine}} through the connection Ruimte already has. A development site may accept writes and uploads, and may trust every request that comes from this machine. Every device signed in to your account can reach it until you stop sharing.",
+                "action": "Share port"
+            }
+        }
     },
     "node": {
         "fallbackTitle": "Browser"

@@ -69,8 +69,11 @@ export interface MoveChatDeps {
     snoozes?: Pick<SnoozeStore, 'list' | 'set'>;
     /* Written before the first step and dropped once the move is whole or put back, so a stop in between is finished at the next start (`move-repair.ts`). */
     journal?: Pick<MoveJournal, 'begin' | 'end'>;
-    /* Told once the chat is in its project, also when saving its new folder failed after: the move is done either way. */
-    moved?(chatId: string): void;
+    /*
+     * Told once the chat is in its project, also when saving its new folder failed after: the move is done either way.
+     * `project` names the project only for a move that ran through, told after the note of the move is in the chat.
+     */
+    moved?(chatId: string, project?: string): void;
     /* Seams for a test that makes a step fail; the file system's own by default. */
     moveTranscript?: typeof moveClaudeTranscript;
     moveOwnFiles?: typeof moveOwnFiles;
@@ -297,12 +300,13 @@ export async function moveChat(payload: ChatMovePayload, deps: MoveChatDeps): Pr
         throw e;
     }
     await endJournal();
-    deps.moved?.(chatId);
 
     const words = movedNote({ name: target.name, folder, leftAt });
     await deps.chats
         .deliverNote(chatId, { noteId: `moved-${target.projectId}`, ...words })
         .catch((e: unknown) => console.error(`Leaving the note of a moved chat failed: ${errorText(e)}`));
+    // After the note, so a turn this wakes hears the new folder in its preamble.
+    deps.moved?.(chatId, target.name);
     // The move is done; a summary that cannot be read must not turn it into an error the window does not follow.
     const summary = await deps.projects.summary(target.projectId).catch(() => summaryOf(target, folder));
     return { summary, viewId: chatId, ownFilesLeftAt: leftAt };

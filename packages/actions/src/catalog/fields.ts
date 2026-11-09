@@ -115,6 +115,8 @@ export const PERSON_VOICE_AGENT_AND_AUTOMATION: readonly ActionActorKind[] = ['p
 /* What an extension with the permission may run, as an agent's verb, held to the fields an agent gives. */
 export const AGENT_AND_EXTENSION: readonly ActionActorKind[] = ['agent', 'extension'];
 export const PERSON_VOICE_AGENT_AND_EXTENSION: readonly ActionActorKind[] = ['person', 'voice', 'agent', 'extension'];
+/* What a person's gesture, an agent's verb and an extension may all do, held to the fields an agent gives. */
+export const PERSON_AGENT_AND_EXTENSION: readonly ActionActorKind[] = ['person', 'agent', 'extension'];
 /* What only a client runs: no agent reaches a client, so an agent is left out. */
 export const CLIENT_ACTORS: readonly ActionActorKind[] = ['person', 'voice', 'automation'];
 export const AGENT: readonly ActionActorKind[] = ['agent'];
@@ -440,6 +442,7 @@ export const chatReadUsage = z.object({
     provider: AgentKindSchema,
     model: z.string().describe('The model the CLI reported, else the one picked for the chat'),
     contextTokens: z.number().int(),
+    contextPending: z.literal(true).optional().describe('Set after a compaction whose CLI named no size; contextTokens is 0 until the next reply'),
     contextWindow: z.number().int().nullable().describe('Null when the CLI named no window'),
     contextPercent: z.number().int().nullable().describe('How much of the window the context fills, in whole percent; null without a window'),
     cache: z

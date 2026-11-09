@@ -10,10 +10,11 @@ import {
 } from '@adecore/agents-react/chat';
 import { Composer, SubagentTimeline, Timeline } from '@adecore/agents-react/chat/ui';
 import { providersOf, useChats, useChatRow } from '@adecore/agents-react/state';
-import { ErrorBoundary, LazyBoundary, messageOf } from '@adecore/ui';
+import { ErrorBoundary, Icon, LazyBoundary, messageOf } from '@adecore/ui';
 import { deriveNodeTitle, type AgentKind, type ModelSelection } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { useEffect, useRef, useState } from 'react';
+import { MessageSquare } from 'lucide-react';
+import { Activity, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { peekOpeningMode, settleOpeningMode } from '@/action-port/opening-mode';
 import { perform } from '@/action-port/perform';
@@ -24,10 +25,12 @@ import { useMountCount } from '@/measure/mounts';
 import { MissingProviderNote } from '@/nodes/MissingProviderNote';
 import { OutputChatContext } from '@/output/chat-scope';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
+import { DEFAULT_CHAT_TEXT_SIZE, useChatTextSizes } from '@/state/chat-text-size';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { bringPromptToFront } from '@/surface/canvas/prompt-stack';
+import { ChatOnCanvasContext } from '@/surface/nodes/chat-on-canvas';
 import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/surface/nodes/node-host';
 import { ConnectionNotice, NodeNotice } from '@/surface/nodes/NodeNotice';
 import { useTransportStatus } from '@/transport/status';
@@ -43,12 +46,14 @@ export function ChatBody({
     focused,
     onCanvas = false,
     workflowsBeside = false,
+    visible = true,
     accessories
 }: {
     id: string;
     focused: boolean;
     onCanvas?: boolean;
     workflowsBeside?: boolean;
+    visible?: boolean;
     accessories?: { title: string | undefined };
 }) {
     useMountCount('chat');
@@ -59,6 +64,7 @@ export function ChatBody({
     useSuggestedTitle(id, info?.suggestedTitle);
     const status = useTransportStatus();
     const endpointId = useEndpointId();
+    const textSize = useChatTextSizes((state) => state.byKey[endpointKey(endpointId, id)] ?? DEFAULT_CHAT_TEXT_SIZE);
     const [failure, setFailure] = useState<string | null>(null);
     const [generation, setGeneration] = useState(0);
     const switched = useRef<Promise<void>>(Promise.resolve());
@@ -151,54 +157,64 @@ export function ChatBody({
     );
 
     return (
-        <div className="relative flex h-full flex-col bg-surface" data-surface="chat">
-            <ConnectionNotice status={status} />
-            {status === 'open' && !failure && <MissingProviderNote endpointId={endpointId} kind={info?.provider ?? nodeHost?.provider} chatId={id} />}
-            {failure && (
-                <NodeNotice
-                    tone="error"
-                    onRetry={() => {
-                        setFailure(null);
-                        setGeneration((g) => g + 1);
-                    }}
-                >
-                    {failure}
-                </NodeNotice>
-            )}
-            <SlotRow
-                place="threadHeader"
-                context={{ chat: { id }, node: nodeInfoOf(id) }}
-                words
-                wrap={(row) => <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border px-2 py-1">{row}</div>}
-            />
-            <OutputChatContext value={id}>
-                <LazyBoundary fallback={<div className="grow" />}>
-                    <Timeline
-                        chatId={id}
-                        composer={
-                            composer && (
-                                <div className="relative">
-                                    {accessories !== undefined && <ViewAccessories on="chat" id={id} title={accessories.title} />}
-                                    <SlotRow
-                                        place="composer"
-                                        words
-                                        context={{ chat: { id }, node: nodeInfoOf(id) }}
-                                        wrap={(row) => <div className="flex flex-wrap items-center gap-1 px-2 pb-1">{row}</div>}
-                                    />
-                                    {composer}
-                                </div>
-                            )
-                        }
-                        overlay={
-                            shown && (
-                                <ErrorBoundary key={shown.toolUseId} label={t('chat.conversationFailed')} resetKeys={[shown.toolUseId]}>
-                                    <SubagentTimeline chatId={id} toolUseId={shown.toolUseId} />
-                                </ErrorBoundary>
-                            )
-                        }
-                    />
-                </LazyBoundary>
-            </OutputChatContext>
+        <div className="chat-reading-scope h-full min-h-0" data-chat-text-size={textSize}>
+            <div className="chat-reading-content relative flex h-full flex-col bg-surface" data-surface="chat">
+                <ConnectionNotice status={status} />
+                {status === 'open' && !failure && <MissingProviderNote endpointId={endpointId} kind={info?.provider ?? nodeHost?.provider} chatId={id} />}
+                {failure && (
+                    <NodeNotice
+                        tone="error"
+                        onRetry={() => {
+                            setFailure(null);
+                            setGeneration((g) => g + 1);
+                        }}
+                    >
+                        {failure}
+                    </NodeNotice>
+                )}
+                <SlotRow
+                    place="threadHeader"
+                    context={{ chat: { id }, node: nodeInfoOf(id) }}
+                    words
+                    wrap={(row) => <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border px-2 py-1">{row}</div>}
+                />
+                <OutputChatContext value={id}>
+                    <Activity mode={visible ? 'visible' : 'hidden'}>
+                        <LazyBoundary fallback={<div className="grow" />}>
+                            <Timeline
+                                chatId={id}
+                                composer={
+                                    composer && (
+                                        <div className="relative">
+                                            {accessories !== undefined && <ViewAccessories on="chat" id={id} title={accessories.title} />}
+                                            <SlotRow
+                                                place="composer"
+                                                words
+                                                context={{ chat: { id }, node: nodeInfoOf(id) }}
+                                                wrap={(row) => <div className="flex flex-wrap items-center gap-1 px-2 pb-1">{row}</div>}
+                                            />
+                                            <ChatOnCanvasContext value={onCanvas}>{composer}</ChatOnCanvasContext>
+                                        </div>
+                                    )
+                                }
+                                overlay={
+                                    shown && (
+                                        <ErrorBoundary key={shown.toolUseId} label={t('chat.conversationFailed')} resetKeys={[shown.toolUseId]}>
+                                            <SubagentTimeline chatId={id} toolUseId={shown.toolUseId} />
+                                        </ErrorBoundary>
+                                    )
+                                }
+                            />
+                        </LazyBoundary>
+                    </Activity>
+                    {!visible && (
+                        <div className="flex min-h-0 w-full grow items-center justify-center gap-2 px-4 text-text-faint" aria-hidden="true">
+                            <Icon icon={MessageSquare} size={20} />
+                            <span className="truncate text-sm">{nodeHost?.title ?? id}</span>
+                        </div>
+                    )}
+                </OutputChatContext>
+            </div>
         </div>
     );
 }

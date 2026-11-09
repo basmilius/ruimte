@@ -1,7 +1,7 @@
 import i18next from 'i18next';
 import { behaviorOf, type Command, type PaletteOptions } from '@/commands/behavior';
 import { CommandMoment } from '@/commands/moment';
-import { commandIds, commandSpec } from '@/commands/registry';
+import { commandIds, commandKey, commandSpec } from '@/commands/registry';
 
 type RowProvider = (moment: CommandMoment) => Command[];
 
@@ -15,7 +15,7 @@ export function registerPaletteRows(...added: readonly RowProvider[]): void {
 /* A row of the command table: its words and its key are the table's, what it does is the behavior's. */
 function rowOf(id: string, run: () => void, options: PaletteOptions): Command {
     const spec = commandSpec(id);
-    const shortcut = options.shortcut === undefined ? spec.shortcut : (options.shortcut ?? undefined);
+    const shortcut = options.shortcut === undefined ? commandKey(id) : (options.shortcut ?? undefined);
 
     return {
         id,

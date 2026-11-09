@@ -57,4 +57,17 @@ describe('probeDevServers', () => {
         });
         expect(asked).toEqual(['http://127.0.0.1:4321/']);
     });
+
+    it('asks ::1 only when the caller names it, so a server on IPv6 alone can be shared on purpose', async () => {
+        const asked: string[] = [];
+        await probeDevServers(
+            [4321],
+            async (input) => {
+                asked.push(input);
+                throw new Error('connection refused');
+            },
+            '::1'
+        );
+        expect(asked).toEqual(['http://[::1]:4321/']);
+    });
 });

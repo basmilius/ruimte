@@ -1,4 +1,5 @@
 import { SEND_AND_NEW_SHORTCUT } from '@adecore/agents-react/chat';
+import { shortcut } from '@adecore/ui';
 import {
     ChevronDown,
     ChevronsDown,
@@ -10,17 +11,16 @@ import {
     MessageSquarePlus,
     MessageSquareText,
     RotateCw,
-    SendHorizontal
+    SendHorizontal,
+    ZoomIn,
+    ZoomOut
 } from 'lucide-react';
 import { type CommandSpec } from '@/commands/types';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
-import { APP_SHORTCUTS } from '@/surface/shortcuts';
 
 export const CHAT_COMMANDS = {
     'chat-new': {
         key: 'newChat',
         icon: MessageSquarePlus,
-        shortcut: APP_SHORTCUTS.newChat,
         binds: 'window',
         palette: true,
         menu: { menu: 'file', group: 'new', order: 20, when: (context) => context.newChat }
@@ -37,7 +37,6 @@ export const CHAT_COMMANDS = {
     'chat-effort-up': {
         key: 'raiseEffort',
         icon: ChevronsUp,
-        shortcut: CANVAS_SHORTCUTS.raiseEffort,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'chat', order: 30 }
@@ -45,10 +44,36 @@ export const CHAT_COMMANDS = {
     'chat-effort-down': {
         key: 'lowerEffort',
         icon: ChevronsDown,
-        shortcut: CANVAS_SHORTCUTS.lowerEffort,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'chat', order: 40 }
+    },
+    'chat-text-larger': {
+        key: 'chatTextLarger',
+        icon: ZoomIn,
+        aliases: [shortcut('Mod+='), shortcut('Mod+Shift++')],
+        binds: 'workspace',
+        palette: true,
+        menu: {
+            menu: 'view',
+            group: 'zoom',
+            order: 50,
+            when: (context) => context.chatTextSize !== null,
+            enabled: (context) => context.chatTextSize !== null && context.chatTextSize < 3
+        }
+    },
+    'chat-text-smaller': {
+        key: 'chatTextSmaller',
+        icon: ZoomOut,
+        binds: 'workspace',
+        palette: true,
+        menu: {
+            menu: 'view',
+            group: 'zoom',
+            order: 60,
+            when: (context) => context.chatTextSize !== null,
+            enabled: (context) => context.chatTextSize !== null && context.chatTextSize > 0
+        }
     },
     /* No key here: Alt+Up and Alt+Down are the Go menu's node rows, and the canvas listener steps the
        messages first while the keyboard is in a chat's thread. */

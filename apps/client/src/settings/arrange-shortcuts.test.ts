@@ -80,6 +80,28 @@ describe.each([true, false])('arrangeShortcuts, apple %p', (apple) => {
         }
     });
 
+    test('gives the rows a person may rebind their id, and the rest none', () => {
+        const rows = groups.flatMap((group) => group.shortcuts);
+
+        expect(rows.find((row) => row.label === 'Command palette')?.id).toBe('palette');
+        expect(rows.find((row) => row.label === 'Go to definition')?.id).toBe('goToDefinition');
+        expect(rows.find((row) => row.label === 'Delete selection')?.id).toBeUndefined();
+        expect(rows.find((row) => row.label === 'Select (1)')?.id).toBeUndefined();
+        expect(rows.find((row) => row.label === 'Back one word')?.id).toBeUndefined();
+    });
+
+    test('lists a row once, and a rebindable id only once', () => {
+        const ids = groups.flatMap((group) => group.shortcuts.flatMap((row) => (row.id === undefined ? [] : [row.id])));
+
+        expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    test('lists the four focus keys as rows of their own', () => {
+        expect(labelsOf(groups, 'views')).toEqual(
+            expect.arrayContaining(['Focus cell on the left', 'Focus cell on the right', 'Focus cell above', 'Focus cell below'])
+        );
+    });
+
     test('puts every command row in a category of the pane', () => {
         for (const row of COMMAND_ROWS) {
             expect(KEYBOARD_AREAS).toContain(commandArea(row.id));

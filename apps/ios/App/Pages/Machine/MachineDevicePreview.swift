@@ -15,29 +15,42 @@ final class MachineDevicePreview {
     @ObservationIgnored private let client: any MachineRequesting
     @ObservationIgnored private let device: MachineDevice
     @ObservationIgnored private var unsubscribe: (() -> Void)?
-    @ObservationIgnored private var lastDrawn = ContinuousClock.now - .seconds(1)
+    @ObservationIgnored private let now: () -> TimeInterval
+    @ObservationIgnored private let decode: DeviceFrameDecoder.Decode
+    @ObservationIgnored private var lastAccepted: TimeInterval?
+    @ObservationIgnored private lazy var frames = DeviceFrameDecoder(decode: decode) { [weak self] in self?.image = $0 }
     @ObservationIgnored private var opened = false
 
-    /// A preview is a glance, so it draws at most a few frames a second whatever the device sends.
-    private static let frameGap = Duration.milliseconds(250)
+    /// A preview is a glance, so it accepts at most a few frames a second whatever the device sends.
+    private static let frameGap: TimeInterval = 0.25
 
-    init(client: any MachineRequesting, device: MachineDevice) {
+    init(
+        client: any MachineRequesting, device: MachineDevice,
+        now: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
+        decode: @escaping DeviceFrameDecoder.Decode = DeviceFrameDecoder.image
+    ) {
         self.client = client
         self.device = device
+        self.now = now
+        self.decode = decode
     }
 
     func start() async {
         guard unsubscribe == nil else { return }
+        lastAccepted = nil
         let deviceID = device.deviceID
         let backendID = device.backendID
-        unsubscribe = client.subscribe(.deviceFrame) { [weak self] frame in
-            guard frame.text("deviceId") == deviceID, frame.text("backendId") == backendID else { return }
+        unsubscribe = client.subscribe(.deviceFrame) { [weak self] payload in
+            guard let frame = try? payload.decoded(as: DeviceFrameEvent.self), frame.deviceId == deviceID,
+                frame.backendId == backendID
+            else { return }
             self?.draw(frame)
         }
         do {
             _ = try await client.request(
                 .deviceOpen,
-                payload: device.target.setting("stream", .string("events")).setting("formats", .array([.string("jpeg")])))
+                payload: device.target.setting("stream", .string("events")).setting(
+                    "formats", .array([.string("jpeg")])))
             opened = true
         } catch {
             if error.machineCode == .deviceFormatUnsupported {
@@ -49,6 +62,7 @@ final class MachineDevicePreview {
     }
 
     func stop() {
+        frames.reset()
         unsubscribe?()
         unsubscribe = nil
         guard opened else { return }
@@ -58,13 +72,61 @@ final class MachineDevicePreview {
         Task { _ = try? await client.request(.deviceDetach, payload: target) }
     }
 
-    private func draw(_ frame: JSONValue) {
-        guard frame["format"]?.stringValue ?? "jpeg" == "jpeg" else { return }
-        let now = ContinuousClock.now
-        guard now - lastDrawn >= Self.frameGap, let data = Data(base64Encoded: frame.text("data")),
-            let picture = UIImage(data: data)
-        else { return }
-        lastDrawn = now
-        image = picture
+    private func draw(_ frame: DeviceFrameEvent) {
+        guard unsubscribe != nil, (frame.format ?? .jpeg) == .jpeg else { return }
+        let instant = now()
+        guard lastAccepted.map({ instant - $0 >= Self.frameGap }) ?? true else { return }
+        lastAccepted = instant
+        frames.submit(frame.data)
+    }
+}
+
+@MainActor final class DeviceFrameDecoder {
+    typealias Decode = @Sendable (String) async -> UIImage?
+
+    private let decode: Decode
+    private let show: @MainActor (UIImage) -> Void
+    private var task: Task<Void, Never>?
+    private var pending: String?
+    private var generation = 0
+
+    init(decode: @escaping Decode = DeviceFrameDecoder.image, show: @escaping @MainActor (UIImage) -> Void) {
+        self.decode = decode
+        self.show = show
+    }
+
+    nonisolated static func image(_ encoded: String) async -> UIImage? {
+        await Task.detached(priority: .userInitiated) {
+            guard let data = Data(base64Encoded: encoded), let image = UIImage(data: data) else { return nil }
+            return image.preparingForDisplay() ?? image
+        }.value
+    }
+
+    func submit(_ encoded: String) {
+        guard task == nil else {
+            pending = encoded
+            return
+        }
+        let generation = self.generation
+        let decode = self.decode
+        task = Task { [weak self] in
+            let image = Task.isCancelled ? nil : await decode(encoded)
+            self?.finish(image, generation: generation)
+        }
+    }
+
+    func reset() {
+        generation += 1
+        pending = nil
+        task?.cancel()
+    }
+
+    private func finish(_ image: UIImage?, generation: Int) {
+        if generation == self.generation, let image { show(image) }
+        task = nil
+        if let next = pending {
+            pending = nil
+            submit(next)
+        }
     }
 }

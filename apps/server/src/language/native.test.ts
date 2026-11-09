@@ -2,12 +2,16 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
 import { sha256, tarGz, zip } from '../disk/test-archives.ts';
+import luaDescriptor from './lua-native-release.json' with { type: 'json' };
+import markdownDescriptor from './markdown-native-release.json' with { type: 'json' };
 import {
     fetchStubs,
     installRelease,
     NativePolicy,
     nativeProgramFile,
+    nativeProgramOf,
     nativeStubsOf,
     NATIVE_RELEASES,
     phpLanguageServerCheckout,
@@ -21,6 +25,7 @@ import {
 } from './native.ts';
 import descriptor from './php-native-release.json' with { type: 'json' };
 import sqlDescriptor from './sql-native-release.json' with { type: 'json' };
+import tomlDescriptor from './toml-native-release.json' with { type: 'json' };
 
 let folder = '';
 
@@ -190,7 +195,8 @@ describe('the SQL checkout', () => {
             source: 'dev',
             version: '0.1.4',
             executable: join('/checkout/sql', 'target', 'release', nativeProgramFile('sql-native', process.platform)),
-            checkout: '/checkout/sql'
+            checkout: '/checkout/sql',
+            printsVersion: true
         });
         expect(policy.plan('php-native', '/home/php-native')).not.toBeNull();
     });
@@ -226,7 +232,8 @@ describe('the SQL checkout', () => {
             source: 'release',
             version: '0.1.4',
             executable: join('/home/sql-native', 'bin', 'sql-language-server'),
-            asset: release.assets['linux-x64']
+            asset: release.assets['linux-x64'],
+            printsVersion: true
         });
     });
 });
@@ -256,6 +263,27 @@ describe('native policy', () => {
         }
     });
 
+    it.each([
+        ['markdown', markdownDescriptor, '2026-02-08', 'https://github.com/artempyanykh/marksman/releases/download/2026-02-08/', 'raw'],
+        ['toml', tomlDescriptor, '0.10.0', 'https://github.com/tamasfe/taplo/releases/download/0.10.0/', 'gz'],
+        ['lua', luaDescriptor, '3.19.2', 'https://github.com/LuaLS/lua-language-server/releases/download/3.19.2/', 'archive']
+    ] as const)(
+        'pins the release of %s for every platform it ships, by checksum alone and with no checkout to build from',
+        (kind, release, version, base, format) => {
+            expect(release.version).toBe(version);
+            expect(Object.keys(release.assets).sort()).toEqual(['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64', 'win32-x64']);
+            for (const [target, asset] of Object.entries(release.assets)) {
+                const [platform, arch] = target.split('-');
+                const plan = new NativePolicy({ checkouts: {}, platform: platform as NodeJS.Platform, arch }).plan(kind, folder);
+                expect(plan).toMatchObject({ source: 'release', version, printsVersion: false, asset });
+                expect(format === 'archive' ? ['tar.gz', 'zip'] : [format]).toContain(asset.format);
+                expect(asset.sha256).toMatch(/^[a-f0-9]{64}$/);
+                expect(asset.url).toStartWith(base);
+                expect(asset.executable.endsWith(platform === 'win32' ? `${nativeProgramOf(kind)}.exe` : nativeProgramOf(kind))).toBe(true);
+            }
+        }
+    );
+
     it('runs the checkout the daemon is in, whatever a release says', () => {
         const policy = new NativePolicy({
             checkouts: { 'php-native': { folder: '/checkout/php-language-server', version: '0.1.0', stubsCommit: COMMIT } },
@@ -266,7 +294,8 @@ describe('native policy', () => {
             version: '0.1.0',
             stubsCommit: COMMIT,
             executable: join('/checkout/php-language-server', 'target', 'release', nativeProgramFile('php-native', process.platform)),
-            checkout: '/checkout/php-language-server'
+            checkout: '/checkout/php-language-server',
+            printsVersion: true
         });
     });
 
@@ -319,6 +348,31 @@ describe('installing a release', () => {
             () => undefined
         );
         expect(await readFile(join(folder, 'bin', 'php-language-server'), 'utf8')).toBe('x');
+    });
+
+    it('saves a release that is one file under the name it gives, runnable', async () => {
+        const bytes = new TextEncoder().encode('#!/bin/sh\n');
+        await installRelease(
+            asset({ format: 'raw', sha256: sha256(bytes), executable: 'marksman' }),
+            folder,
+            serving({ 'https://example.test/server.tar.gz': bytes }),
+            () => undefined
+        );
+        expect(await readFile(join(folder, 'bin', 'marksman'), 'utf8')).toBe('#!/bin/sh\n');
+        if (process.platform !== 'win32') {
+            expect((await stat(join(folder, 'bin', 'marksman'))).mode & 0o111).not.toBe(0);
+        }
+    });
+
+    it('unzips a release that is one gzipped file, checking the download and not the file inside', async () => {
+        const bytes = gzipSync(new TextEncoder().encode('#!/bin/sh\n'));
+        await installRelease(
+            asset({ format: 'gz', sha256: sha256(bytes), executable: 'taplo' }),
+            folder,
+            serving({ 'https://example.test/server.tar.gz': bytes }),
+            () => undefined
+        );
+        expect(await readFile(join(folder, 'bin', 'taplo'), 'utf8')).toBe('#!/bin/sh\n');
     });
 
     it('refuses a download that does not match its checksum and unpacks none of it', async () => {

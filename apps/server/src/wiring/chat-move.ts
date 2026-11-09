@@ -209,7 +209,7 @@ export function chatMoveDeps(wiring: ChatMoveWiring): { info: MoveInfoDeps; move
             }
         },
         lineage: wiring.lineage,
-        moved: (chatId) => wiring.proposals.moved(chatId),
+        moved: (chatId, project) => wiring.proposals.moved(chatId, project),
         journal: wiring.journal,
         snoozes: wiring.snoozes
     };

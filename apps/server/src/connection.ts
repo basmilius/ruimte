@@ -43,6 +43,7 @@ export function connectionOpener(host: ConnectionHost): (channel: ClientChannel,
             share: channel.outputShare
         });
         let closed = false;
+        const drainListeners = new Set<() => void>();
         const client: ClientConnection = {
             id: clientId,
             access,
@@ -54,6 +55,14 @@ export function connectionOpener(host: ConnectionHost): (channel: ClientChannel,
             },
             sendBinary(frame: Uint8Array) {
                 gate.sendBinary(frame);
+            },
+            bufferedAmount: () => channel.bufferedAmount(),
+            onDrain(listener) {
+                drainListeners.add(listener);
+
+                return () => {
+                    drainListeners.delete(listener);
+                };
             }
         };
         const sink: LiveSink = (event) => {
@@ -66,12 +75,19 @@ export function connectionOpener(host: ConnectionHost): (channel: ClientChannel,
 
         const kind = clientKindOf(access);
         clientOpened(kind);
+        for (const area of host.areas) {
+            area.opened?.(clientId, access);
+        }
         // Events carry what other clients are doing here; another machine asks for what it needs and hears nothing else.
         const unsubscribes = access.peer !== undefined ? [] : subscribeClient(host.areas, { client, access, sink, gate });
 
         channel.onDrain(() => {
             if (!closed) {
                 gate.onDrain();
+
+                for (const listener of [...drainListeners]) {
+                    listener();
+                }
             }
         });
         channel.onClose(() => {
@@ -80,6 +96,7 @@ export function connectionOpener(host: ConnectionHost): (channel: ClientChannel,
             }
             closed = true;
             clientClosed(kind);
+            drainListeners.clear();
             // The sessions keep running; only this client's view of them goes.
             for (const area of host.areas) {
                 for (const holder of area.holders ?? []) {

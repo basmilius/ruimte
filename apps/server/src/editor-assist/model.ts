@@ -12,7 +12,7 @@ import {
     type EditorAssistStatusResult
 } from '@ruimte/contracts';
 import { oneShotRun } from '../git/one-shot.ts';
-import { selectAssistAgent, type AssistProviders } from './selection.ts';
+import { assistEnvironment, selectAssistAgent, type AssistProviders } from './selection.ts';
 
 interface EditorAssistModelOptions extends AssistProviders {
     home: string;
@@ -92,12 +92,7 @@ export class EditorAssistModel {
 
             const args = provider.leanOneShotArgs?.(run.args, model) ?? [...run.args, '--model', model];
 
-            const inherited = this.options.accounts.envFor(provider.kind, account, this.options.env ?? process.env);
-            const env = Object.fromEntries(
-                Object.entries(inherited).filter(
-                    (entry): entry is [string, string] => entry[1] !== undefined && !entry[0].startsWith('RUIMTE_') && entry[0] !== 'CLAUDECODE'
-                )
-            );
+            const env = assistEnvironment(this.options.accounts, { provider, account }, this.options.env ?? process.env);
             let exit!: (code: number | null) => void;
             const exited = new Promise<number | null>((resolve) => {
                 exit = resolve;

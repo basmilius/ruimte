@@ -68,6 +68,7 @@ import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useViewNodes } from '@/state/view-nodes';
 import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { RowKbd } from '@/surface/RowKbd';
 import { fireAndForget } from '@/transport-api/transport';
 import { useWorkspace } from '@/workspace/connections';
 import { useTransport } from '@/workspace/context';
@@ -386,7 +387,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
                     {node.kind !== 'group' && (
                         <ContextMenu.Item onClick={() => canvas().getState().toggleMaximizedNode(id)}>
                             <Icon icon={maximized ? Shrink : Expand} size={14} /> {t(maximized ? 'node.restore' : 'node.maximize')}{' '}
-                            <Kbd shortcut={CANVAS_SHORTCUTS.maximizeCell} />
+                            <RowKbd row="cell-maximize" />
                         </ContextMenu.Item>
                     )}
                     {sizable && (

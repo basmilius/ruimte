@@ -64,6 +64,11 @@ export function canSwipeBetweenPages(): boolean {
     return desktop()?.platform === 'darwin';
 }
 
+/* Whether this window can tell active time from time away, which only the desktop app can. */
+export function canTellIdle(): boolean {
+    return desktop()?.idleState !== undefined;
+}
+
 export function hasTrafficLights(): boolean {
     return desktop()?.platform === 'darwin';
 }

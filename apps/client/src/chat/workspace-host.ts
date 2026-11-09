@@ -4,12 +4,13 @@ import i18next from 'i18next';
 import { createElement, useMemo } from 'react';
 import { answerComputerAsPerson } from '@/action-port/person-actions';
 import { ChatModelView } from '@/chat/ChatModelView';
+import { useComposerStatus } from '@/chat/composer-status';
 import { ComposerDictation } from '@/chat/ComposerDictation';
 import { openNewChatAfterSend } from '@/chat/new-chat-after-send';
 import { prepareCodeBlockAction } from '@/chat/prepare-code-block';
 import { useProjectChats } from '@/chat/project-chats';
 import { MarkdownImage, ReadImage } from '@/chat/ReadImage';
-import { openReference, useReferables } from '@/chat/referables';
+import { openReference, outsideReference, useReferables } from '@/chat/referables';
 import { ReferenceGlyph } from '@/chat/ReferenceGlyph';
 import { openUiLink, openUiUrl } from '@/chat/ui-links';
 import { useTimelineFind } from '@/chat/use-chat-find';
@@ -21,14 +22,15 @@ import { dictationPreview, dictationRange } from '@/dictation/editor';
 import { saveToOutputActions } from '@/output/save';
 import { useOutputThreadCards } from '@/output/thread-cards';
 import { useChatPlace } from '@/project/use-chat-place';
-import { answerRuimtePrompt, computerPrompt, isRuimtePrompt, proposalPrompt, secretPrompt } from '@/prompts/ruimte-prompts';
+import { answerRuimtePrompt, computerPrompt, isRuimtePrompt, proposalPrompt, secretPrompt, tunnelProposalPrompt } from '@/prompts/ruimte-prompts';
 import { RuimtePromptView } from '@/prompts/RuimtePromptView';
-import { proposalAnswers } from '@/proposals/answer';
+import { proposalAnswers, tunnelProposalAnswers } from '@/proposals/answer';
 import { useNodeProposals } from '@/proposals/proposals';
 import { secretAnswers } from '@/secrets/answer';
 import { useNodeSecretRequests } from '@/secrets/secrets';
 import { useDesignHidesToolCalls } from '@/state/design-tool-calls';
 import { useToasts } from '@/state/toasts';
+import { useNodeTunnelProposals } from '@/state/tunnel-proposals';
 import { openFileLink, parseFileRef, resolveFileRef, type FileRef } from '@/surface/panels/file-links';
 import { isComposerShortcut } from '@/surface/terminal-keymap';
 
@@ -45,6 +47,7 @@ export const WORKSPACE_CHAT_HOST: ChatHostLayer = {
     MarkdownImage,
     ModelView: ChatModelView,
     ComposerHeaderSlot: DesignComposerHeader,
+    useComposerStatus,
     useHidesToolCalls: useDesignHidesToolCalls,
     renderShellCodeBlock: prepareCodeBlockAction,
     fileLinks: {
@@ -67,24 +70,27 @@ export const WORKSPACE_CHAT_HOST: ChatHostLayer = {
             const requests = useNodeComputerApprovals(endpointId, chatId);
             const secrets = useNodeSecretRequests(endpointId, chatId);
             const proposals = useNodeProposals(endpointId, chatId);
+            const tunnels = useNodeTunnelProposals(endpointId, chatId);
             // Kept by hand: the React Compiler leaves a hook in an object literal as written.
             return useMemo(
                 () => [
                     ...requests.map((request) => computerPrompt(chatId, request)),
                     ...secrets.map((request) => secretPrompt(endpointId, chatId, request)),
-                    ...proposals.map((proposal) => proposalPrompt(endpointId, chatId, proposal))
+                    ...proposals.map((proposal) => proposalPrompt(endpointId, chatId, proposal)),
+                    ...tunnels.map((proposal) => tunnelProposalPrompt(endpointId, chatId, proposal))
                 ],
-                [requests, secrets, proposals, endpointId, chatId]
+                [requests, secrets, proposals, tunnels, endpointId, chatId]
             );
         },
         render: (prompt, props) => (isRuimtePrompt(prompt) ? createElement(RuimtePromptView, { prompt, props }) : null),
-        answer: (prompt, action) => answerRuimtePrompt(prompt, action, answerComputerAsPerson, secretAnswers, proposalAnswers)
+        answer: (prompt, action) => answerRuimtePrompt(prompt, action, answerComputerAsPerson, secretAnswers, proposalAnswers, tunnelProposalAnswers)
     },
     openNewChat: (endpointId, chatId) => void openNewChatAfterSend(endpointId, chatId),
     useReferableChats: useProjectChats,
     useReferables,
     ReferenceIcon: ReferenceGlyph,
     openReference,
+    outsideReference,
     useChatPlace,
     useContextSources,
     useThreadCards: useOutputThreadCards,

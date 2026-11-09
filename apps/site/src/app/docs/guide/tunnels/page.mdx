@@ -1,0 +1,93 @@
+import { Note } from '@/components/docs/guide/ui.tsx';
+import { SettingsTunnels } from '@/components/docs/guide/SettingsTunnels.tsx';
+
+export const metadata = { title: 'Tunnels' };
+
+# Tunnels
+
+<p className="lead">A tunnel puts Ruimte's MCP and your dev servers on the internet, through your own Cloudflare account. A bot that runs somewhere else can then work in Ruimte as you.</p>
+
+You need a domain on Cloudflare and an API token for it. You set up tunnels in the Ruimte app on the machine itself. Other windows only show the state.
+
+<SettingsTunnels />
+
+## Set up a tunnel
+
+1. Open Settings, Tunnels.
+2. If Ruimte does not find `cloudflared`, click **Install**. Ruimte downloads Cloudflare's official build and checks it before it runs it. Where no build exists for your system, the pane says what to install yourself.
+3. Click **Make token**. Cloudflare opens its token page with Zone read, DNS edit and Cloudflare Tunnel edit already ticked. Make the token, paste it into **API token** and click **Check**.
+4. Under **Tunnel**, pick the account if the token reaches more than one. Leave **New tunnel** or pick a tunnel you already have, then click **Use**.
+
+The token stays on this machine and goes only to Cloudflare. **Remove** forgets it. If something goes wrong, the Tunnel row says what Cloudflare answered, with **Try again**.
+
+<Note tone="warning">Cloudflare can read all traffic through a tunnel: prompts, file contents, credentials and the cookies of a dev site. A bot you connect reads whatever it is told or asks for, too.</Note>
+
+## Use a tunnel you already have
+
+The tunnel list shows the tunnels on the account that are managed in the Cloudflare dashboard. A tunnel managed in a file on a computer is not in the list; move it to the dashboard first.
+
+Ruimte adds only its own hostnames and DNS records. Your own hostnames show under **Already on this tunnel**, with where each one points, and Ruimte never changes them.
+
+The Tunnel row says who runs it. **Runs on this computer** means Ruimte runs it. **Runs outside Ruimte** means your own service already runs it, here or on another computer, and Ruimte starts nothing.
+
+<Note>A hostname points at a port on the computer that runs the tunnel. If your own service runs the tunnel on another computer, a dev server or the MCP on this machine is out of its reach.</Note>
+
+To stop, click **Stop using** and confirm. Ruimte removes its hostnames and the records it made. The tunnel stays in Cloudflare, also when Ruimte made it.
+
+## Add a hostname
+
+Click **Add hostname**, then choose **Dev server** or **Ruimte MCP**.
+
+- For a dev server, pick a port one of your sessions listens on, or **Other port** to type one.
+- Type a label such as `shop`, or a full hostname, and pick the domain.
+- Click **Add**.
+
+Anyone with the address of a dev server reaches it, without a login. The dialog says so, and **Add** is your confirmation.
+
+For the MCP, Ruimte suggests a long random label, so scanners do not find it. The name protects nothing; a credential does.
+
+If the name already has a DNS record that Ruimte did not make, Ruimte refuses and leaves the record alone.
+
+Some local sites only answer to their own name. Open **Advanced** in the dialog and type it under **Host header**, such as `passly.test` for a PHP site on port 80. For a server on https, pick **HTTPS**; with a self-signed certificate, also tick **Skip TLS check**, and fill in **Server name** if the certificate is for another name. **Points to** shows the host header after the port, and so do hostnames already on the tunnel that set one.
+
+Each hostname has a switch. Its menu has **Copy address**, **Open**, **On after restart** and **Remove**, and for a dev server **Edit**, which changes its port and **Advanced** settings. The hostname itself stays; to change it, remove the row and add a new one. A dev server stays off after a restart unless you turn on **On after restart**, because its port may hold something else by then.
+
+A hostname that is on but gets no traffic says **Not reachable** under its name, with the reason on the line below. It may be a DNS record Cloudflare would not make, a port Ruimte now uses itself, or a port another app took from the MCP. Point at a long reason, or tab to it, to read all of it. Fix the cause, then click **Try again**. The other hostnames keep working meanwhile. A hostname whose removal did not finish says so the same way, and **Try again** finishes it.
+
+## What an agent can do
+
+An agent reads the hostnames of the tunnel: where each one points, whether it is on and whether it is reachable. It also reads the names of your domains. It never sees the API token.
+
+An agent in an AI chat can suggest adding a dev server, turning a hostname on or off, changing a dev server's port, **HTTPS** or **Host header**, or removing a dev server's hostname. The suggestion is a card in the chat, such as "Add shop.example.com → port 5173". Nothing changes until you click **Confirm**, and **Decline** leaves everything as it was. Confirm makes the same change as Settings, so it can take a few seconds. If Cloudflare refuses, the card says why. Once you confirm or decline, the agent hears your answer and goes on.
+
+If the hostname changed after the agent asked, the card says so and only **Decline** is left. An agent cannot touch the hostnames under **Already on this tunnel**, and of the MCP's hostname it only suggests turning it on or off. A bot you connect from outside gets none of this.
+
+## Connect a bot to the MCP
+
+1. Under **External clients**, turn on **External MCP**. Ruimte listens on this machine only, at the address shown under the heading. A bot on the same computer uses it without a tunnel.
+2. To reach it from outside, add a **Ruimte MCP** hostname.
+3. Give the bot the address, ending in `/mcp`. **Copy address** in the hostname's menu copies it.
+
+A client that supports OAuth asks Ruimte for access. A window opens on your machine with the address the client comes from and a short code. The name the client gives itself is not verified, so trust the address. Check that the code matches the one on the client's page, choose what the client may do, and click **Approve**.
+
+A client without OAuth gets a bearer, a fixed key. Click **New bearer**, name it, click **Create** and copy the key. Ruimte shows it once. A bearer works on this machine only, unless you tick **Allow over the tunnel**. Anyone with the key can then use it from anywhere, so prefer OAuth.
+
+## What a client may do
+
+A client acts as you. You choose what it may do when you approve it or create the bearer.
+
+| Choice | Default | Effect |
+| --- | --- | --- |
+| Reach | Work | Read looks at projects, canvases, tasks and files. Work also edits canvases and starts agents. Machine also runs launches, routines, browsers, devices, databases and computer use. |
+| Projects | All | With **Selected**, tick the projects in the table. The box in its head ticks them all. |
+| Highest agent mode | Supervised | A mode wider than this is refused. |
+| Expires | Never | A credential lasts until you revoke it, unless you set an end. |
+| Approve on your behalf | Off | The client can run shell commands. See below. |
+
+A client never types into a terminal, and a terminal's prompts stay where they are. It can read every chat and terminal in the projects it reaches. It cannot make a credential, change its own reach or open the tunnels.
+
+<Note tone="warning">With **Approve on your behalf** on, the client can run shell commands on this machine as you. It approves what an agent, a launch or a routine waits on, so a supervised agent no longer waits for you. A yes holds only for the command it saw.</Note>
+
+## Keep an eye on clients
+
+Nothing expires unless you set an end, so check the table under **External clients** now and then. It shows each client's kind, reach, expiry and last use. **Revoke** in its menu ends access from the next request. Agents it already started keep running.

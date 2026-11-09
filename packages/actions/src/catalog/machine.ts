@@ -9,6 +9,7 @@ import {
     DeviceControlPayloadSchema,
     EndpointSetIdentityPayloadSchema,
     EndpointSetNodeSizePayloadSchema,
+    EndpointSetStartFolderPayloadSchema,
     ProcessAlertKindSchema,
     ProcessGroupKindSchema,
     ProcessSignalSchema,
@@ -25,6 +26,7 @@ import { MAX_KEY_COMBOS, MAX_TYPED_LENGTH } from '../limits.ts';
 import {
     PERSON_AND_VOICE,
     AGENT,
+    PERSON_AND_AGENT,
     PERSON,
     usageDay,
     PaceSchema,
@@ -48,7 +50,7 @@ import {
     computerPixel,
     computerState,
     computerOutcome,
-    AGENT_AND_EXTENSION
+    PERSON_AGENT_AND_EXTENSION
 } from './fields.ts';
 
 export const MACHINE_ACTIONS = {
@@ -69,7 +71,7 @@ export const MACHINE_ACTIONS = {
             'Lists the apps that run on this machine, with how the caller stands with each: allowed always, allowed this time, to ask for, or a terminal.',
         effect: 'read',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({}),
         output: z.object({
             screenRecording: z.boolean(),
@@ -87,7 +89,7 @@ export const MACHINE_ACTIONS = {
         description: 'Reads the accessibility tree of the key window of an app and writes a picture of that window.',
         effect: 'read',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             app: computerApp,
             ...computerHold,
@@ -107,7 +109,7 @@ export const MACHINE_ACTIONS = {
         description: 'Reads the title, value and description of one element of an app whole, where a state cuts them, with its role and frame.',
         effect: 'read',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ app: computerApp, element: computerElement, ...computerHold, ...computerFront }),
         output: z.object({
             app: computerAppRef,
@@ -128,7 +130,7 @@ export const MACHINE_ACTIONS = {
         description: 'Reads an app until a text appears, a text is gone or an element has a value, or the time is up, and answers with what changed.',
         effect: 'read',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             app: computerApp,
             text: z.string().min(1).nullish().describe('Wait until an element holds this text in its title, value, description or identifier, ignoring case'),
@@ -155,7 +157,7 @@ export const MACHINE_ACTIONS = {
         description: 'Clicks an element of an app, or a pixel of its last screenshot.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             app: computerApp,
             element: computerElement.nullish(),
@@ -172,7 +174,7 @@ export const MACHINE_ACTIONS = {
         description: 'Types text into the focused element of an app; a newline is Return and a tab is Tab.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             app: computerApp,
             text: z
@@ -189,7 +191,7 @@ export const MACHINE_ACTIONS = {
         description: 'Presses key combinations in an app, one after the other.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             app: computerApp,
             combos: z
@@ -206,7 +208,7 @@ export const MACHINE_ACTIONS = {
         description: 'Sets the value of a text field, text area or slider of an app directly.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             app: computerApp,
             element: computerElement,
@@ -220,7 +222,7 @@ export const MACHINE_ACTIONS = {
         description: 'Scrolls an element of an app, or the scroll area under a pixel of its last screenshot.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             app: computerApp,
             element: computerElement.nullish(),
@@ -237,7 +239,7 @@ export const MACHINE_ACTIONS = {
         description: 'Lists the menu bar of an app, or runs one of its items.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             app: computerApp,
             item: z
@@ -254,7 +256,7 @@ export const MACHINE_ACTIONS = {
         description: 'Presses on an element or a pixel of an app, moves to another and lets go there.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             app: computerApp,
             from: computerElement.nullish().describe('The element to press on'),
@@ -272,7 +274,7 @@ export const MACHINE_ACTIONS = {
         description: 'Starts an app, or brings it to the front and shows it when it runs, and waits for a window.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ app: computerApp, ...computerThenState }),
         output: computerOutcome
     },
@@ -281,7 +283,7 @@ export const MACHINE_ACTIONS = {
         description: 'Which device this is, whether it runs, its screen and buttons, and what an agent can do on it.',
         effect: 'read',
         domain: 'machine',
-        actors: AGENT_AND_EXTENSION,
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({
             nodeId: deviceNode,
             find: z
@@ -335,7 +337,7 @@ export const MACHINE_ACTIONS = {
         description: 'Lists the simulators, emulators and phones this machine has now, whether each runs, and the id every other device action takes.',
         effect: 'read',
         domain: 'machine',
-        actors: AGENT_AND_EXTENSION,
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({}),
         output: z.object({
             devices: z.array(DeviceReferenceSchema.extend({ deviceId: z.string(), state: DeviceStateSchema }))
@@ -346,7 +348,7 @@ export const MACHINE_ACTIONS = {
         description: 'Writes a png of the screen of a device and answers where it is and how many pixels it has.',
         effect: 'read',
         domain: 'machine',
-        actors: AGENT_AND_EXTENSION,
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({ nodeId: deviceNode }),
         // On this machine, outside the project folder.
         output: z.object({ nodeId, path: z.string(), width: z.number().int(), height: z.number().int() })
@@ -356,7 +358,7 @@ export const MACHINE_ACTIONS = {
         description: 'Taps the screen of a device at a pixel of its last shot, or in the middle of an element of its last state.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT_AND_EXTENSION,
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({ nodeId: deviceNode, x: devicePixel.nullish(), y: devicePixel.nullish(), element: deviceElement.nullish() }),
         output: deviceDone
     },
@@ -365,7 +367,7 @@ export const MACHINE_ACTIONS = {
         description: 'Presses on the screen of a device at one pixel of its last shot, moves to another and lets go there.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             nodeId: deviceNode,
             fromX: devicePixel,
@@ -381,7 +383,7 @@ export const MACHINE_ACTIONS = {
         description: 'Presses one of the buttons a device announces, such as home or lock.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             nodeId: deviceNode,
             button: z.string().min(1).describe('A button the device announces, as device.inspect lists them')
@@ -393,7 +395,7 @@ export const MACHINE_ACTIONS = {
         description: 'Types text into whatever has the focus on a device.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             nodeId: deviceNode,
             text: z.string().min(1).max(2000).describe('The text to type; a newline is Return and a tab is Tab')
@@ -405,7 +407,7 @@ export const MACHINE_ACTIONS = {
         description: 'Opens an app on a device by its bundle id or package name.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT_AND_EXTENSION,
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({
             nodeId: deviceNode,
             app: deviceApp
@@ -417,7 +419,7 @@ export const MACHINE_ACTIONS = {
         description: 'Changes what a device shows: its appearance, text size, status bar, battery and simulated location.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             nodeId: deviceNode,
             appearance: DeviceAppearanceSchema.nullish(),
@@ -436,7 +438,7 @@ export const MACHINE_ACTIONS = {
         description: 'Opens a link or an app scheme on a device.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ nodeId: deviceNode, url: z.string().trim().min(1).max(2048) }),
         output: deviceDone
     },
@@ -445,7 +447,7 @@ export const MACHINE_ACTIONS = {
         description: 'Grants, revokes or resets one permission of an app on a device, or all of them.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             nodeId: deviceNode,
             app: deviceApp,
@@ -459,7 +461,7 @@ export const MACHINE_ACTIONS = {
         description: 'Sends a local push notification to an app on a simulator.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ nodeId: deviceNode, app: deviceApp, payload: z.string().min(1).max(16_384).describe('The alert text') }),
         output: deviceDone
     },
@@ -468,7 +470,7 @@ export const MACHINE_ACTIONS = {
         description: 'Enrolls Face ID or Touch ID on a simulator, or answers a check with a match or no match.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             nodeId: deviceNode,
             event: z.enum(['enroll', 'unenroll', 'match', 'nomatch']),
@@ -481,7 +483,7 @@ export const MACHINE_ACTIONS = {
         description: 'Reads the clipboard of a device, or puts text on it.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             nodeId: deviceNode,
             text: z.string().max(1_048_576).nullish().describe('What to put on it; without it the clipboard is read')
@@ -493,7 +495,7 @@ export const MACHINE_ACTIONS = {
         description: 'Records the screen of a device for some seconds and answers where the video is.',
         effect: 'read',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ nodeId: deviceNode, seconds: z.number().int().min(1).max(60) }),
         // On this machine, outside the project folder.
         output: deviceDone.extend({ path: z.string() })
@@ -521,7 +523,7 @@ export const MACHINE_ACTIONS = {
         description: 'Stops an app that runs on a device.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ nodeId: deviceNode, app: deviceApp }),
         output: deviceDone
     },
@@ -531,7 +533,7 @@ export const MACHINE_ACTIONS = {
             'Starts a simulator or an emulator for the person, as its start in the side panel does, and claims it for the agent; a phone has no start.',
         effect: 'external',
         domain: 'machine',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ nodeId: deviceNode }),
         output: deviceDone.extend({ state: DeviceStateSchema, ready: z.boolean() })
     },
@@ -605,6 +607,16 @@ export const MACHINE_ACTIONS = {
         actors: PERSON,
         input: EndpointSetNodeSizePayloadSchema.extend({ endpointId: givenMachine }),
         output: EndpointSetNodeSizePayloadSchema.extend({ endpointId: z.string() })
+    },
+    'machine.setStartFolder': {
+        title: 'Set where browsing starts on a machine',
+        description: 'Sets the folder browsing for a folder starts in on a machine, for every client of it; empty puts it back to the home folder.',
+        effect: 'external',
+        domain: 'machine',
+        // Where a person starts browsing is theirs to set; an agent names its paths outright.
+        actors: PERSON,
+        input: EndpointSetStartFolderPayloadSchema.extend({ endpointId: givenMachine }),
+        output: EndpointSetStartFolderPayloadSchema.extend({ endpointId: z.string() })
     },
     'machine.revokeAccess': {
         title: 'Revoke access to a machine',

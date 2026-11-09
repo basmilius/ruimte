@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PERSON_VOICE_AND_AGENT, operatedView, browserNode, browserOutcome, PERSON_VOICE_AGENT_AND_EXTENSION, AGENT_AND_EXTENSION } from './fields.ts';
+import { PERSON_VOICE_AND_AGENT, operatedView, browserNode, browserOutcome, PERSON_VOICE_AGENT_AND_EXTENSION, PERSON_AGENT_AND_EXTENSION } from './fields.ts';
 
 export const PAGES_ACTIONS = {
     'browser.inspect': {
@@ -68,7 +68,7 @@ export const PAGES_ACTIONS = {
         description: 'Writes a png of the page of a browser node and answers where it is.',
         effect: 'read',
         domain: 'pages',
-        actors: AGENT_AND_EXTENSION,
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({ nodeId: browserNode, viewId: operatedView }),
         output: browserOutcome.extend({
             // On this machine, outside the project folder; null when nobody has the page open.

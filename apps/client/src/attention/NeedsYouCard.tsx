@@ -11,7 +11,7 @@ import {
 } from '@adecore/agents-react/prompts';
 import { useChats, type ChatState, useProviders } from '@adecore/agents-react/state';
 import { Button, ButtonGroup, ErrorBoundary, IconButton, PreviewCard } from '@adecore/ui';
-import type { ChatAttachResult, ComputerApproval, ProjectProposal, SecretRequest } from '@ruimte/contracts';
+import type { ChatAttachResult, ComputerApproval, ProjectProposal, SecretRequest, TunnelProposal } from '@ruimte/contracts';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +24,7 @@ import { useSecrets } from '@/secrets/secrets';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
+import { useTunnelProposals } from '@/state/tunnel-proposals';
 import { useWaitingSince, type WaitDetails } from '@/state/waiting';
 import { machineTransport } from '@/transport/index';
 import { useEndpointConnection } from '@/transport/status';
@@ -36,6 +37,7 @@ const EXCERPT_LENGTH = 280;
 const EXCERPT_LINES = 4;
 const NO_SECRETS: readonly SecretRequest[] = [];
 const NO_PROPOSALS: readonly ProjectProposal[] = [];
+const NO_TUNNEL_PROPOSALS: readonly TunnelProposal[] = [];
 
 function idOf(prompt: CanvasPrompt): string {
     return prompt.id;
@@ -138,6 +140,7 @@ function useWaitingPrompts(endpointId: string, node: SidebarNode): WaitingPrompt
     const secrets = useSecrets((state) => state.requests[endpointId] ?? NO_SECRETS);
     // Review opens the dialog of this window, so only the machine it works on is reviewed here.
     const proposals = useProposals((state) => (local ? (state.proposals[endpointId] ?? NO_PROPOSALS) : NO_PROPOSALS));
+    const tunnelProposals = useTunnelProposals((state) => state.proposals[endpointId] ?? NO_TUNNEL_PROPOSALS);
     const [read, setRead] = useState<{ chat: ChatState | null; failed: boolean } | null>(null);
     const [revision, setRevision] = useState(0);
 
@@ -190,9 +193,10 @@ function useWaitingPrompts(endpointId: string, node: SidebarNode): WaitingPrompt
             computer,
             secrets,
             proposals,
+            tunnelProposals,
             waitingSince: new Map(since === undefined ? [] : [[key, since]])
         }).prompts;
-    }, [inspects, read, chat, session, since, computer, secrets, proposals, endpointId, key, node.id, node.kind, node.title, node.provider]);
+    }, [inspects, read, chat, session, since, computer, secrets, proposals, tunnelProposals, endpointId, key, node.id, node.kind, node.title, node.provider]);
 
     return { prompts, failed: read?.failed ?? false, lastText: lastTextOf(chat), reread: () => setRevision((before) => before + 1) };
 }

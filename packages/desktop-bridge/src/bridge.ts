@@ -5,6 +5,7 @@ import type { ExtensionsBridge } from './extensions.ts';
 import type { MachineModeBridge } from './machine.ts';
 import type { MenuSpec } from './menu.ts';
 import type { MicrophoneBridge } from './microphone.ts';
+import type { PortTunnelOpened, PortTunnelRequest, PortTunnelToPage, PortTunnelToShell } from './port-tunnel.ts';
 import type { KeepAwakeRequest, SystemIdleState } from './power.ts';
 import type { BackgroundServiceState } from './service.ts';
 import type { SpeechBridge } from './speech.ts';
@@ -26,6 +27,8 @@ export interface BrowserContextParams {
     /* An HTML file's preview, which has no history and only reads. Missing from a shell older than
        the preview's menu. */
     guest?: 'browser' | 'preview';
+    /* False for a page shared through a port: its links and searches never leave for the system browser. Missing means they may. */
+    external?: boolean;
     /* Where the click landed, in the window's coordinates. Chromium maps a guest's point into the embedder before the event leaves. */
     x: number;
     y: number;
@@ -122,6 +125,11 @@ export interface DesktopBridge {
     // Remote projects and persisted owners require a host that guards guest-initiated navigation.
     bindBrowserRoute?(binding: BrowserRouteBinding): Promise<boolean>;
     onBrowserRouteBlocked?(listener: (event: BrowserRouteBlocked) => void): () => void;
+    /* A shared port on another machine as a page of this window: a session and a proxy of its own in the shell, and the bytes through `portTunnelSend`. Null when the shell refuses. */
+    openPortTunnel?(request: PortTunnelRequest): Promise<PortTunnelOpened | null>;
+    closePortTunnel?(id: string): void;
+    portTunnelSend?(message: PortTunnelToShell): void;
+    onPortTunnel?(listener: (message: PortTunnelToPage) => void): () => void;
     platform: string;
     /* For About and a bug report. */
     versions?: { electron: string; chrome: string; node: string };
@@ -156,6 +164,8 @@ export interface DesktopBridge {
        command's id. Without them the shell keeps its own fixed menu. */
     setMenu?(spec: MenuSpec): void;
     onMenuCommand?(listener: (id: string) => void): () => void;
+    /* Quits the app as a native Quit does, so the shell asks its quit question on the way out. Offered in every machine mode. */
+    quit?(): void;
     /* Retained by the shell after its last window closes, for the native quit question. */
     setLanguage?(language: string): void;
     isFullscreen(): Promise<boolean>;

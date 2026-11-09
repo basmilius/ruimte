@@ -1,7 +1,6 @@
 import { IconButton, WorkspaceRailSeparator } from '@adecore/ui';
 import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
-import { commandSpec } from '@/commands/registry';
 import { useFolderInRepo } from '@/controllers/git-repos';
 import { useGitStatus } from '@/controllers/git-watch';
 import { useRoutineList } from '@/routines/routine-list';
@@ -74,7 +73,7 @@ export function PanelControls() {
                             </IconButton>
                         );
                     })}
-                    {group.key === 'made' && <RoutinesButton shortcut={commandSpec('routines').shortcut} />}
+                    {group.key === 'made' && <RoutinesButton />}
                 </Fragment>
             ))}
         </>

@@ -3,10 +3,8 @@ import i18next from 'i18next';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { I18nextProvider } from 'react-i18next';
-import { installClientHooks } from '@/wiring/client-hooks';
+import { clientActions } from '../../testing/client-actions';
 import { prepareCodeBlockAction, type ShellCodeBlockContext } from './prepare-code-block';
-
-const clientActions = installClientHooks().actions;
 
 const context: ShellCodeBlockContext = { scopeId: 'remote', chatId: 'chat', itemId: 'reply', language: 'bash', code: 'echo ok\n', complete: true };
 

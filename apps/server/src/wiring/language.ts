@@ -9,6 +9,7 @@ import type { ProjectStore } from '../projects/project-store.ts';
 import { provenanceChat } from '../provenance/chat-facts.ts';
 import { ProvenanceService } from '../provenance/provenance-service.ts';
 import type { AgentsBundle } from './agents.ts';
+import type { GitBundle } from './git.ts';
 import type { ProvidersBundle } from './providers.ts';
 import type { DaemonSeams } from './seams.ts';
 
@@ -29,6 +30,7 @@ interface LanguageInput {
     agents: AgentsBundle;
     providers: ProvidersBundle;
     seams: Pick<DaemonSeams, 'language' | 'git'>;
+    git: Pick<GitBundle, 'worktrees'>;
 }
 
 export async function wireLanguage({
@@ -40,7 +42,8 @@ export async function wireLanguage({
     sqlAnalysis,
     agents,
     providers,
-    seams
+    seams,
+    git
 }: LanguageInput): Promise<LanguageBundle> {
     const host = new LanguageHost({
         root: join(home, 'language-servers'),
@@ -53,7 +56,8 @@ export async function wireLanguage({
         // A compiled daemon ignores local sources and installs the pinned native releases.
         native: new NativePolicy({ checkouts: { 'php-native': phpLanguageServerCheckout(compiled), 'sql-native': sqlLanguageServerCheckout(compiled) } }),
         sqlSettings: (projectId) => sqlAnalysis.settingsOf(projectId),
-        untrusted: (path) => agents.untrusted.inFolder(path)
+        untrusted: (path) => agents.untrusted.inFolder(path),
+        agentWorktrees: (folder) => git.worktrees.agentWorktrees(folder)
     });
     await host.load();
     const editorAssist = new EditorAssistModel({ home, registry: providers.providers, accounts: providers.accounts });

@@ -17,6 +17,7 @@ import {
 import { toWorld } from '@/canvas-model/math';
 import { layoutDialog } from '@/canvas/dialogs';
 import { isNotePreviewLocked, setNotePreviewLocked } from '@/canvas/note-previews';
+import { focusedChatTextSize, resetChatTextSize } from '@/chat/text-size';
 import { defineBehaviors, type Command, type CommandBehavior, type KeyPress } from '@/commands/behavior';
 import type { GeneratedCommands } from '@/commands/generated';
 import { keyboardOnCanvas, keyFree, onStandaloneView } from '@/commands/key-context';
@@ -192,10 +193,16 @@ export const CANVAS_BEHAVIORS = defineBehaviors({
             () => focusedDiagram().getState().zoomToSelection()
         )
     },
+    // A chat in reading focus has a size of its own, which this row resets in place of the camera's.
     'zoom-reset': {
         keyTier: 'canvas',
-        run: () => zoomTarget().zoomTo(1),
-        offered: zoomable,
+        run: () => {
+            if (!resetChatTextSize()) {
+                zoomTarget().zoomTo(1);
+            }
+        },
+        offered: (moment) =>
+            moment.inWorkspace && focusedChatTextSize() !== null ? { label: i18next.t('shell:palette.commands.chatTextReset') } : zoomable(moment),
         key: onCanvasKey(
             () => focusedCanvas().getState().zoomTo(1),
             () => focusedDiagram().getState().zoomTo(1)

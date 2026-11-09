@@ -1,8 +1,8 @@
 import { join } from 'node:path';
 import { createUpdater, type Windows } from '@adecore/shell';
+import { electron } from '../electron';
 import { heedBodyless } from '../net-response';
 import { createReleaseNotes } from '../release-notes';
-import { electron } from './electron';
 import type { DesktopIpc } from './ipc';
 import type { Machine } from './service';
 

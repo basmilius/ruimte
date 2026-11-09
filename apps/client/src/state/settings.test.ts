@@ -14,6 +14,13 @@ import {
     type Settings
 } from './settings';
 
+test('the accent follows the project only after a stored true', () => {
+    expect(settingsFrom({}).accentFollowsProject).toBe(false);
+    expect(settingsFrom({ accentFollowsProject: true }).accentFollowsProject).toBe(true);
+    expect(settingsFrom({ accentFollowsProject: 'yes' as unknown as boolean }).accentFollowsProject).toBe(false);
+    expect(settingsFrom({ accentFollowsProject: 1 as unknown as boolean }).accentFollowsProject).toBe(false);
+});
+
 test('project glow defaults to on while preserving an explicit opt-out', () => {
     expect(settingsFrom({}).projectGlow).toBe(true);
     expect(settingsFrom({ projectGlow: false }).projectGlow).toBe(false);
@@ -287,6 +294,36 @@ describe('agent notifications', () => {
         expect(settingsFrom({}).agentsTurnSound).toBe(false);
         expect(settingsFrom({ agentsTurnSound: true }).agentsTurnSound).toBe(true);
         expect(settingsFrom({ agentsTurnSound: 1 as unknown as boolean }).agentsTurnSound).toBe(false);
+    });
+});
+
+describe('quiet hours and the break reminder', () => {
+    test('start off, with a night and every day to start from', () => {
+        expect(settingsFrom({})).toMatchObject({
+            quietHoursOn: false,
+            quietHoursDays: [1, 2, 3, 4, 5, 6, 7],
+            quietHoursStart: '22:00',
+            quietHoursEnd: '07:00',
+            breakReminderOn: false,
+            breakReminderMinutes: 50
+        });
+    });
+
+    test('keep what is stored and repair what is not', () => {
+        expect(settingsFrom({ quietHoursOn: true, quietHoursDays: [7, 5, 5], quietHoursStart: '23:30', quietHoursEnd: '06:15' })).toMatchObject({
+            quietHoursOn: true,
+            quietHoursDays: [5, 7],
+            quietHoursStart: '23:30',
+            quietHoursEnd: '06:15'
+        });
+        const broken = settingsFrom({
+            quietHoursDays: [9, 'x'] as unknown as number[],
+            quietHoursStart: '25:00',
+            quietHoursEnd: 7 as unknown as string,
+            breakReminderMinutes: 44
+        });
+        expect(broken).toMatchObject({ quietHoursDays: [1, 2, 3, 4, 5, 6, 7], quietHoursStart: '22:00', quietHoursEnd: '07:00', breakReminderMinutes: 50 });
+        expect(settingsFrom({ breakReminderMinutes: 90 }).breakReminderMinutes).toBe(90);
     });
 });
 

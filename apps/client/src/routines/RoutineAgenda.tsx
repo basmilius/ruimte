@@ -338,7 +338,7 @@ function Block({
     const className = clsx(
         'flex h-7 w-full min-w-0 items-center gap-1 px-1.5 text-xs',
         blockClass(block.look),
-        picked && 'outline-2 outline-offset-1 outline-accent'
+        picked && 'outline-2 outline-offset-1 outline-accent-on-surface'
     );
     const run = block.run;
     if (run === null) {

@@ -1,7 +1,7 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { type ActionInput, type ActionName, type ActionOutput } from '@ruimte/actions';
 import { z } from 'zod';
-import { serverActionCall } from '../actions/context.ts';
+import { externalActionCall, serverActionCall } from '../actions/context.ts';
 import { PROJECT_WRITES } from '../actions/revision.ts';
 import { canvasLines, placeOf, type AgentCall } from '../canvas/host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
@@ -23,8 +23,13 @@ export function linesOf(details: unknown): string[] {
  * the action's own code, or a plain error for a handler that broke.
  */
 export async function runAction<Name extends ActionName>(call: ToolCaller, name: Name, input: ActionInput<Name>, dryRun = false): Promise<ActionOutput<Name>> {
-    const origin = call.reached === undefined ? undefined : placeOf({ caller: call.caller, host: call.host });
-    const result = await call.actions.execute(name, input, serverActionCall(call.host, placeOf(call), call.caller, dryRun, call.expectedRevision, origin));
+    // A client elsewhere stands in no project of its own, so there is no origin: the place is the project its credential reached.
+    const origin = call.reached === undefined || call.external !== undefined ? undefined : placeOf({ caller: call.caller, host: call.host });
+    const actionCall =
+        call.external === undefined
+            ? serverActionCall(call.host, placeOf(call), call.caller, dryRun, call.expectedRevision, origin)
+            : externalActionCall(call.host, placeOf(call), call.external, dryRun, call.expectedRevision);
+    const result = await call.actions.execute(name, input, actionCall);
 
     if (result.status === 'needs_confirmation') {
         throw new ToolRefusal('confirmation-required', `${name} asks for a confirmation an agent cannot give`);

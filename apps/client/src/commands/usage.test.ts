@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { USAGE_DESKTOP_COMMANDS, USAGE_DESKTOP_PANELS, USAGE_DESKTOP_SETTINGS_SECTIONS } from '@ruimte/pulsar';
 import { CHAT_MOVE_PREFIX } from '@/chat/menu-extras';
-import { commandIds } from '@/commands/registry';
+import { commandIds, commandSpec } from '@/commands/registry';
 import { commandUsageName } from '@/commands/usage';
 import { PR_SHOW_IN_PREFIX } from '@/github/commands';
 import { AFTER_SETTLE_PREFIX, LAUNCH_CHOOSE_PREFIX } from '@/launches/menu-extras';
@@ -14,9 +14,15 @@ import { GO_VIEW_PREFIX } from '@/views/menu-extras';
 const CLOSED: PanelState = { open: false, kind: 'files' };
 const SETTINGS_CLOSED = { open: false, section: 'appearance' as const, target: null, searchAt: 0 };
 
+// Rows the address book's ingest does not know yet: an older worker rejects a day that counts a name it lacks, so they count nothing until `USAGE_DESKTOP_COMMANDS` gains the name after the worker is deployed.
+const UNCOUNTED_ROWS = ['git-compare-branches'];
+
 describe('commandUsageName', () => {
     test('names every row of the command table, and the list holds no row the table lost', () => {
-        const names = commandIds().map(commandUsageName);
+        // A row only its key reaches has no count: the list in Observatory would have to learn it first.
+        const names = commandIds()
+            .filter((id) => commandSpec(id).keyOnly !== true && !UNCOUNTED_ROWS.includes(id))
+            .map(commandUsageName);
 
         expect(names.filter((name) => name === null)).toEqual([]);
         expect(names.toSorted()).toEqual([...USAGE_DESKTOP_COMMANDS].toSorted());

@@ -32,7 +32,12 @@ export interface NetworkBundle {
     reach: ReachChecker;
 }
 
-export function wireNetwork(config: ServerConfig, compiled: boolean, machine: MachineBundle, later: Later<Pick<DaemonBundles, 'clients'>>): NetworkBundle {
+export function wireNetwork(
+    config: ServerConfig,
+    compiled: boolean,
+    machine: MachineBundle,
+    later: Later<Pick<DaemonBundles, 'clients' | 'tunnels'>>
+): NetworkBundle {
     const { identity, auth, handshake, access } = machine;
     // A direct channel gets its access from its own handshake, never from the socket its signals came over.
     const peers = new DirectPeers({
@@ -85,7 +90,11 @@ export function wireNetwork(config: ServerConfig, compiled: boolean, machine: Ma
                 publicKey: identity.publicKey,
                 sign: (message) => identity.sign(message),
                 gate,
-                onSettled: () => reach.brokerSettled()
+                onSettled: () => {
+                    reach.brokerSettled();
+                    // The broker took this machine, which is the sign the network is there again.
+                    later.tunnels().service.networkBack();
+                }
             })
     });
 

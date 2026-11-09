@@ -63,6 +63,21 @@ import XCTest
         XCTAssertFalse(machine.sent.contains { $0.0 == .sessionKill })
     }
 
+    func testASilentLoginNeedsAnExplicitFinishAndRechecksWithoutClaimingSuccess() async {
+        let machine = LoginMachine()
+        let model = AccountLoginModel(client: machine, kind: "claude", accountID: "work", name: "Work", silent: true)
+        await model.begin()
+        XCTAssertFalse(machine.sent.contains { $0.0 == .accountsWatchLogin })
+        machine.emit(
+            .accountsChanged,
+            AccountsWire.snapshot(
+                accounts: [:], statuses: [AccountsWire.status("work", state: "ready", email: "me@example.com")]))
+        XCTAssertEqual(model.phase, .running)
+        await model.finish()
+        XCTAssertEqual(machine.sent.last?.0, .accountsRefresh)
+        XCTAssertTrue(machine.sent.contains { $0.0 == .sessionKill && $0.1["sessionId"] == .string(model.sessionID) })
+    }
+
     func testTheNativeOfferSendsTheV2AccessStatement() async throws {
         let key = DeviceKey()
         let machineKey = DeviceKey().publicKey

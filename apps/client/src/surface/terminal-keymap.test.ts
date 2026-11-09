@@ -1,7 +1,8 @@
-import { describe, expect, test } from 'bun:test';
-import type { KeyLike, Shortcut } from '@adecore/ui';
-import { CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS } from '@/surface/canvas/shortcuts';
-import { APP_SHORTCUTS } from '@/surface/shortcuts';
+import { afterEach, describe, expect, test } from 'bun:test';
+import { shortcut as shortcutOf, type KeyLike, type Shortcut } from '@adecore/ui';
+import { VIEW_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { DEFAULT_KEYS } from '@/surface/default-keys';
+import { removeOverrideOf, setOverride } from '@/surface/shortcut-overrides';
 import {
     isAppShortcut,
     isClearShortcut,
@@ -11,7 +12,7 @@ import {
     isTerminalFindShortcut,
     isTerminalPaste,
     macMotionSequence,
-    TERMINAL_HANDED_BACK
+    terminalHandedBack
 } from './terminal-keymap.ts';
 
 function shortcut(key: string, modifiers: Partial<Omit<KeyLike, 'key'>> = {}): KeyLike {
@@ -236,55 +237,101 @@ describe('what a terminal hands back', () => {
        would leave the keyboard with no way to another view or cell. */
     const windowWide = [
         ...VIEW_SHORTCUTS,
-        CANVAS_SHORTCUTS.newView,
-        CANVAS_SHORTCUTS.splitRight,
-        CANVAS_SHORTCUTS.splitDown,
-        CANVAS_SHORTCUTS.closeCell,
-        CANVAS_SHORTCUTS.previousView,
-        CANVAS_SHORTCUTS.nextView,
-        CANVAS_SHORTCUTS.togglePanel,
-        CANVAS_SHORTCUTS.focusPrompts,
-        CANVAS_SHORTCUTS.attentionQueue,
-        ...Object.values(FOCUS_SHORTCUTS)
+        DEFAULT_KEYS['view-new'],
+        DEFAULT_KEYS['split-right'],
+        DEFAULT_KEYS['split-down'],
+        DEFAULT_KEYS['close-cell'],
+        DEFAULT_KEYS['view-previous'],
+        DEFAULT_KEYS['view-next'],
+        DEFAULT_KEYS['panel-toggle'],
+        DEFAULT_KEYS.prompts,
+        DEFAULT_KEYS['attention-queue'],
+        DEFAULT_KEYS['focus-left'],
+        DEFAULT_KEYS['focus-right'],
+        DEFAULT_KEYS['focus-up'],
+        DEFAULT_KEYS['focus-down']
+    ];
+    const kept = [
+        DEFAULT_KEYS['close-cell'],
+        DEFAULT_KEYS['view-new'],
+        DEFAULT_KEYS['split-right'],
+        DEFAULT_KEYS.sidebar,
+        DEFAULT_KEYS['camera-back'],
+        DEFAULT_KEYS['camera-forward']
     ];
 
     test('every shortcut the canvas answers from inside a node is in the list', () => {
         for (const target of windowWide) {
-            expect(TERMINAL_HANDED_BACK).toContain(target);
+            expect(terminalHandedBack()).toContainEqual(target);
         }
     });
 
     test('on macOS every one of them reaches the app', () => {
-        for (const target of TERMINAL_HANDED_BACK) {
+        for (const target of terminalHandedBack()) {
             expect(isAppShortcut(eventFor(target, true), true)).toBe(true);
         }
     });
 
     test('off macOS Ctrl+W, Ctrl+T, Ctrl+\\, Ctrl+B and Ctrl+Alt+[ ] stay with the program', () => {
-        const kept = [
-            CANVAS_SHORTCUTS.closeCell,
-            CANVAS_SHORTCUTS.newView,
-            CANVAS_SHORTCUTS.splitRight,
-            APP_SHORTCUTS.sidebar,
-            CANVAS_SHORTCUTS.cameraBack,
-            CANVAS_SHORTCUTS.cameraForward
-        ];
-        for (const target of TERMINAL_HANDED_BACK) {
+        for (const target of terminalHandedBack()) {
             expect(isAppShortcut(eventFor(target, false), false)).toBe(!kept.includes(target));
         }
     });
 
     test('a text field without a program behind it hands Ctrl+W, Ctrl+T and Ctrl+\\ back off macOS', () => {
-        expect(isShellShortcut(eventFor(CANVAS_SHORTCUTS.closeCell, false), false)).toBe(true);
-        expect(isShellShortcut(eventFor(CANVAS_SHORTCUTS.newView, false), false)).toBe(true);
-        expect(isShellShortcut(eventFor(CANVAS_SHORTCUTS.splitRight, false), false)).toBe(true);
-        expect(isShellShortcut(eventFor(APP_SHORTCUTS.sidebar, false), false)).toBe(false);
+        expect(isShellShortcut(eventFor(DEFAULT_KEYS['close-cell'], false), false)).toBe(true);
+        expect(isShellShortcut(eventFor(DEFAULT_KEYS['view-new'], false), false)).toBe(true);
+        expect(isShellShortcut(eventFor(DEFAULT_KEYS['split-right'], false), false)).toBe(true);
+        expect(isShellShortcut(eventFor(DEFAULT_KEYS.sidebar, false), false)).toBe(false);
     });
 
     test('the modifier is strict', () => {
-        expect(isAppShortcut({ ...eventFor(CANVAS_SHORTCUTS.nextView, true), ctrlKey: true }, true)).toBe(false);
-        expect(isAppShortcut({ ...eventFor(CANVAS_SHORTCUTS.nextView, true), altKey: true }, true)).toBe(false);
+        expect(isAppShortcut({ ...eventFor(DEFAULT_KEYS['view-next'], true), ctrlKey: true }, true)).toBe(false);
+        expect(isAppShortcut({ ...eventFor(DEFAULT_KEYS['view-next'], true), altKey: true }, true)).toBe(false);
         expect(isLeaveNodeShortcut({ key: 'Escape', code: 'Escape', metaKey: true, shiftKey: true, ctrlKey: false, altKey: false }, true)).toBe(false);
+    });
+});
+
+describe('what a terminal hands back after a rebind', () => {
+    const chord = shortcutOf('Mod+Alt+Y');
+
+    afterEach(() => {
+        removeOverrideOf(['split-right', 'sidebar', 'palette', 'chat-effort-up']);
+    });
+
+    test('is the new key, and no longer the old one', () => {
+        setOverride('split-right', chord);
+
+        expect(isAppShortcut(eventFor(chord, true), true)).toBe(true);
+        expect(isAppShortcut(eventFor(DEFAULT_KEYS['split-right'], true), true)).toBe(false);
+    });
+
+    test('keeps a Ctrl key of the program only while the row holds its default', () => {
+        const ctrlKey = shortcutOf('Ctrl+Alt+Y');
+
+        expect(isAppShortcut(eventFor(DEFAULT_KEYS['split-right'], false), false)).toBe(false);
+
+        setOverride('split-right', ctrlKey);
+
+        expect(isAppShortcut(eventFor(ctrlKey, false), false)).toBe(true);
+    });
+
+    test('hands the sidebar back to a text field off macOS once its key is changed', () => {
+        setOverride('sidebar', chord);
+
+        expect(isShellShortcut(eventFor(chord, false), false)).toBe(true);
+    });
+
+    test('follows the palette and the effort keys of a composer', () => {
+        const effort = shortcutOf('Mod+Alt+U');
+
+        setOverride('palette', chord);
+        setOverride('chat-effort-up', effort);
+
+        expect(isShellShortcut(eventFor(chord, true), true)).toBe(true);
+        expect(isShellShortcut(eventFor(DEFAULT_KEYS.palette, true), true)).toBe(false);
+        expect(isComposerShortcut(eventFor(effort, true), true)).toBe(true);
+        expect(isComposerShortcut(eventFor(DEFAULT_KEYS['chat-effort-up'], true), true)).toBe(false);
     });
 });
 

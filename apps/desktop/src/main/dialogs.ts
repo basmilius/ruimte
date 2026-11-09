@@ -3,11 +3,11 @@ import { existsSync } from 'node:fs';
 import { rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { allFilesLabel, openDialogPlan, parseOpenPathRequest, parseSavePathRequest } from '../database-bridge';
+import { electron } from '../electron';
 import { copyablePaths, copyFilesOnWindows, fileClipboard, osClipboardFormat } from '../file-clipboard';
 import { openImageCopy } from '../open-image';
 import { SaveStreams } from '../save-streams';
 import { isSystemSettingsPane, isWebLink } from '../web-guards';
-import { electron } from './electron';
 import type { DesktopIpc } from './ipc';
 
 const { app, clipboard, ClipboardItem, dialog, shell } = electron;

@@ -380,6 +380,17 @@ describe('http', () => {
         expect((await handleMcpRequest(post(initialize, null), deps)).status).toBe(401);
     });
 
+    // The credential of an external client and the id of its actor are for the listener of its own; /mcp knows sessions and chats only.
+    test('a token of an external client gets 401, and no node can take its actor id', async () => {
+        const external = {
+            ...deps,
+            targetForToken: (token: string) => (token === 'rmb_credential' ? null : token === 'tok-forged' ? 'external-cred-1' : null)
+        };
+
+        expect((await handleMcpRequest(post(initialize, 'rmb_credential'), external)).status).toBe(401);
+        expect((await handleMcpRequest(post(initialize, 'tok-forged'), external)).status).toBe(401);
+    });
+
     // A cloned project file picks its node ids, and the caller's id names folders under the machine's home.
     test('a caller whose id is not one path segment gets 401', async () => {
         expect((await handleMcpRequest(post(initialize, 'tok-dots'), deps)).status).toBe(401);

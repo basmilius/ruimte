@@ -249,6 +249,7 @@
             "undoAll": "Alles ongedaan maken",
             "next": "Volgende wijziging",
             "previous": "Vorige wijziging",
+            "onlyChanges": "Alleen de wijzigingen tonen",
             "position": "{{current}} van {{total}}",
             "summary_one": "{{name}} heeft {{count}} plek gewijzigd",
             "summary_other": "{{name}} heeft {{count}} plekken gewijzigd",
@@ -331,6 +332,13 @@
         },
         "viewer": {
             "original": "Origineel"
+        },
+        "changePreview": {
+            "title": "Wijziging sinds de laatste commit",
+            "revert": "Wijziging terugzetten",
+            "truncated": "Preview ingekort. Terugzetten herstelt de hele wijziging.",
+            "author": "Geschreven door {{chat}}",
+            "authorTurn": "Geschreven door {{chat}} · Turn {{turn}}"
         }
     },
     "files": {
@@ -584,6 +592,50 @@
             "writeOneRepo": "Schrijft voor één repository tegelijk",
             "suggestionReady": "Je concept veranderde tijdens dit voorstel.",
             "useSuggestion": "Voorstel gebruiken"
+        },
+        "compare": {
+            "title": "Branches vergelijken",
+            "menu": "Branches vergelijken…",
+            "withBranch": "Deze branch vergelijken…",
+            "description": "Kies twee branches om hun bestanden en commits naast elkaar te zien. Er wordt niets uitgecheckt of gefetcht en je working tree blijft zoals hij is.",
+            "repository": "Repository",
+            "chooseRepository": "Kies een repository",
+            "noRepository": "Geen repository gevonden",
+            "from": "Basis-branch",
+            "to": "Branch om te vergelijken",
+            "mode": "Vergelijking",
+            "mergeBase": "Wijzigingen sinds de branches uiteen liepen",
+            "tips": "Verschil tussen de twee tips",
+            "open": "Vergelijken",
+            "loadingRefs": "Branches lezen…",
+            "session": "De vergelijking blijft open in dit venster tot je hem sluit. Remote branches tonen wat het laatst is opgehaald.",
+            "offline": "Deze machine is niet verbonden, dus branches kunnen niet worden vergeleken.",
+            "update": "Deze machine is te oud om branches te vergelijken. Werk hem bij om dit te gebruiken.",
+            "failed": "Kon de vergelijking niet tonen",
+            "tab": "{{from}} → {{to}}",
+            "choose": "Andere branches kiezen…",
+            "refresh": "Branches opnieuw lezen",
+            "reading": "Vergelijking lezen…",
+            "summaryMergeBase": "Wijzigingen in {{to}} ({{toCommit}}) sinds die branch afsplitste van {{from}} ({{fromCommit}}), geteld vanaf de gemeenschappelijke voorouder {{base}}.",
+            "summaryTips": "Het verschil tussen de tip van {{from}} ({{fromCommit}}) en de tip van {{to}} ({{toCommit}}).",
+            "section": "Tonen",
+            "files": "Bestanden ({{total}})",
+            "commits": "Commits",
+            "noFiles": "Geen verschillen in de bestanden.",
+            "noCommits": "Deze branch heeft geen eigen commits.",
+            "onlyOn": "Alleen op {{branch}}",
+            "moreCommits": "Meer commits tonen",
+            "openOn": "Openen op {{branch}}",
+            "ancestorName": "gemeenschappelijke voorouder",
+            "readOnly": "Alleen lezen. {{branch}} bij commit {{commit}}, niet je working tree.",
+            "symlink": "Symbolic link in {{branch}} bij commit {{commit}}. De tekst is het pad waar hij naar wijst.",
+            "blob": {
+                "missing": "Dit bestand bestaat niet bij deze commit.",
+                "binary": "Dit bestand is binair en wordt niet getoond.",
+                "too-large": "Dit bestand is te groot om te tonen.",
+                "gitlink": "Dit is een submodule. De commit bevat er geen bestandsinhoud van.",
+                "not-file": "Dit is een map, geen bestand."
+            }
         },
         "conflict": {
             "cherry-pick": "Er wacht een cherry-pick op je",
@@ -844,6 +896,10 @@
         "useInstead": "Gebruik liever {{name}}",
         "restart": "Herstart",
         "restartAll": "Alles herstarten",
+        "buildHeld": "Buildscripts en macro's staan uit in deze worktree.",
+        "buildAllow": "Aanzetten voor deze repository",
+        "buildAllowed": "Buildscripts en macro's draaien in de worktrees van agents.",
+        "buildHold": "Uitzetten voor deze repository",
         "showLog": "Toon log",
         "logTitle": "Log van {{name}}",
         "logEmpty": "Nog niets gelogd",
@@ -1019,7 +1075,7 @@
             "note": "Geschreven door het model uit Instellingen, Editor, AI.",
             "thinking": "Uitleg wordt geschreven…",
             "off": "Uitleg staat uit. Zet hem aan bij Instellingen, Editor, AI.",
-            "nothing": "Selecteer code, of zet de cursor in een functie, om die uit te leggen.",
+            "nothing": "Selecteer code, of zet de cursor in een symbool, om dat uit te leggen.",
             "tooOld": "Werk deze machine bij om het editormodel te gebruiken."
         }
     },

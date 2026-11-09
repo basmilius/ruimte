@@ -7,7 +7,7 @@ import { findSettings } from '@/settings/find-settings';
 import { aboutSection, accountSection, groupLabel, sectionDescription, sectionLabel, settingsGroupsWith, type SettingsSectionMeta } from '@/settings/sections';
 import { useContributions, type SettingsSectionContribution } from '@/state/extension-registry';
 import { useUi, type SettingsSectionId } from '@/state/ui';
-import { APP_SHORTCUTS } from '@/surface/shortcuts';
+import { useKeyOf } from '@/surface/shortcut-overrides';
 
 // Built on every render rather than once: the words move with the language, the list does not.
 function entryOf(meta: SettingsSectionMeta, contributed: readonly SettingsSectionContribution[]): SettingsSectionEntry {
@@ -30,6 +30,7 @@ export function SettingsDialog() {
     const target = useUi((s) => s.settings.target);
     const searchAt = useUi((s) => s.settings.searchAt);
     const setSettings = useUi((s) => s.setSettings);
+    const searchKey = useKeyOf('settings-search');
     const contributed = useContributions((state) => state.settingsSections);
     settingsSectionRegistry.useAll();
     // The labels come from `i18next.t`, which no redraw follows: this one is what draws them again in a language picked here.
@@ -49,7 +50,7 @@ export function SettingsDialog() {
             account={{ section: entryOf(accountSection(), contributed), tab: <AccountTab sectionId={accountSection().id} /> }}
             search={{
                 find: (query) => findSettings(query, isApplePlatform()),
-                hint: formatShortcut(APP_SHORTCUTS.settingsSearch, isApplePlatform()),
+                hint: formatShortcut(searchKey, isApplePlatform()),
                 focusAt: searchAt
             }}
             target={target}

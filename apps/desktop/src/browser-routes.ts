@@ -1,6 +1,7 @@
 import type { BrowserRouteBinding, BrowserRouteBlocked } from '@ruimte/desktop-bridge';
 import { browserDestinationAllowed, parseBrowserRoute } from './browser-route-policy';
-import { electron } from './main/electron';
+import { electron } from './electron';
+import type { PortTunnels } from './port-tunnel/tunnel-session';
 import { allowGuestPermission, BROWSER_PARTITION, hardenGuestPreferences } from './web-guards';
 
 const { app, ipcMain, session, webContents } = electron;
@@ -9,7 +10,8 @@ const { app, ipcMain, session, webContents } = electron;
    an attached blank guest; neither its page nor a different app window can claim that guest. */
 export function installBrowserRoutes(
     isAppSender: (event: Electron.IpcMainInvokeEvent) => boolean,
-    guestPreload: string
+    guestPreload: string,
+    ownsTunnel: PortTunnels['owns']
 ): {
     attachApp(contents: Electron.WebContents): void;
 } {
@@ -95,7 +97,7 @@ export function installBrowserRoutes(
     return {
         attachApp(contents) {
             contents.on('will-attach-webview', (event, preferences) => {
-                if (!hardenGuestPreferences(preferences)) {
+                if (!hardenGuestPreferences(preferences, (partition) => ownsTunnel(contents, partition))) {
                     event.preventDefault();
                 }
             });

@@ -288,6 +288,8 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     const inViewport = useNodeInViewport(id);
     const live = useHeldWhileVisible(inViewport || maximized);
     const renderBody = useRenderZoom() || maximized;
+    const sessionNode = node?.kind === 'chat' || node?.kind === 'terminal';
+    const sessionLive = useHeldWhileVisible(!sessionNode || (inViewport && renderBody) || maximized || active);
     const [renaming, setRenaming] = useState(false);
     // Where a right-click landed on a group, in the canvas's own coordinates, for what its menu adds there.
     const menuPoint = useRef<Point>({ x: 0, y: 0 });
@@ -336,7 +338,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     // A newer Ruimte's node: it moves, resizes and goes away like any other, and nothing else about it is this version's to change.
     const isUnknown = node.kind === 'unknown';
     const kind = kinds.find((candidate) => candidate.id === node.kind);
-    const bodyProps = { id, live, renderBody, focused: takesKeyboard, active };
+    const bodyProps = { id, live, renderBody, focused: takesKeyboard, active, sessionLive };
     const headerProps = { id, chatId, narrow: node.w < MACHINE_PILL_MIN_WIDTH, renaming };
     const collapsed = isGroup && node.collapsed === true;
     // Any other node folded to its header: its body stays mounted at the height it had, under the header and out of reach.
@@ -402,6 +404,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                 }}
             >
                 <header
+                    data-node-header
                     className={clsx(
                         'group/header flex h-[39px] shrink-0 items-center gap-2 pr-1 text-text-muted',
                         // The collapse button carries 6px of optical padding, so 4px puts its glyph in the column of a node's kind icon.

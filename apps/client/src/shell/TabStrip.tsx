@@ -19,7 +19,17 @@ import { useCellView } from '@/shell/use-cell-view';
 import { useWaitingCount } from '@/state/attention';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { isArtifactTab, isCheckoutDiff, isDatabaseTab, useFiles, type ArtifactTab, type DatabaseTab, type FileTab } from '@/state/files';
+import {
+    isArtifactTab,
+    isCheckoutDiff,
+    isDatabaseTab,
+    isSessionTab,
+    useFiles,
+    type ArtifactTab,
+    type DatabaseTab,
+    type FileTab,
+    type SessionTab
+} from '@/state/files';
 import { useGit } from '@/state/git';
 import { endpointKey } from '@/state/keys';
 import { useSessionRow } from '@/state/sessions';
@@ -27,8 +37,8 @@ import { setTabPinned } from '@/state/tab-close';
 import { isUnsavedDraft, useTextDrafts } from '@/state/text-drafts';
 import { useViewPinned } from '@/state/view-pins';
 import { PATHS_DRAG_TYPE } from '@/surface/canvas/drop';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { isLooseView, viewGlyphOf, type LooseCellView } from '@/surface/cell-view';
+import { useKeyOf } from '@/surface/shortcut-overrides';
 import { StatusDot } from '@/surface/StatusDot';
 import { databaseTabTitle } from '@/surface/tab-look';
 import { setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
@@ -55,6 +65,7 @@ interface TabShellProps {
 
 /* One tab of the strip, whatever it holds: the looks and the keys are the strip's, what it says and what its menu offers are the view's. */
 function TabShell({ id, label, hint, glyph, detail, unsavedLabel, pinned = false, onDragData, attention, onDoubleClick, onClose, menu }: TabShellProps) {
+    const closeKey = useKeyOf('close-cell');
     const onDragStart = (event: React.DragEvent<HTMLButtonElement>): void => {
         // The bar is a drag handle of its own, whose payload would take the place of this one.
         event.stopPropagation();
@@ -72,7 +83,7 @@ function TabShell({ id, label, hint, glyph, detail, unsavedLabel, pinned = false
                         item={{ id, label, hint, icon: glyph, detail, attention, unsaved: unsavedLabel, pinned }}
                         data-tab-id={id}
                         onClose={onClose}
-                        closeShortcut={CANVAS_SHORTCUTS.closeCell}
+                        closeShortcut={closeKey}
                         onDoubleClick={onDoubleClick}
                         onDragStart={(_, event) => onDragStart(event)}
                     />
@@ -170,9 +181,17 @@ function ArtifactTabItem({ tab, label }: { tab: ArtifactTab; label: string }) {
     return <TabShell id={tab.key} label={label} hint={label} glyph={<LooseGlyph tab={tab} />} {...looseControls(tab.key, tab.pinned)} menu={null} />;
 }
 
+/* A comparison and a snapshot name no file of the working tree, so they offer no file menu and give no file to drag. */
+function SessionTabItem({ tab, label }: { tab: SessionTab; label: string }) {
+    return <TabShell id={tab.key} label={label} hint={label} glyph={<LooseGlyph tab={tab} />} {...looseControls(tab.key, tab.pinned)} menu={null} />;
+}
+
 function LooseTabItem({ view }: { view: LooseCellView }) {
     if (isArtifactTab(view.tab)) {
         return <ArtifactTabItem tab={view.tab} label={view.name} />;
+    }
+    if (isSessionTab(view.tab)) {
+        return <SessionTabItem tab={view.tab} label={view.name} />;
     }
     return isDatabaseTab(view.tab) ? <DatabaseTabItem tab={view.tab} /> : <FileTabItem tab={view.tab} tabKey={view.id} label={view.name} />;
 }

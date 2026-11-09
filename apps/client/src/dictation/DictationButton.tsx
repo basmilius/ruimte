@@ -1,7 +1,7 @@
 import { IconButton } from '@adecore/ui';
 import { CircleAlert, Mic, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { useKeyOf } from '@/surface/shortcut-overrides';
 import type { DictationPhase } from './controller';
 
 /* The microphone button of a field or a terminal; `phase` is `idle` while another target dictates. */
@@ -21,6 +21,7 @@ export function DictationButton({
     const { t } = useTranslation('voice');
     const working = phase === 'starting' || phase === 'finishing';
     const recording = phase === 'listening';
+    const key = useKeyOf('dictation');
 
     return (
         <IconButton
@@ -28,7 +29,7 @@ export function DictationButton({
             busy={working}
             size={size}
             label={error || (working ? t(`dictation.${phase}`) : recording ? t('dictation.stop') : t('dictation.start'))}
-            kbd={CANVAS_SHORTCUTS.dictation}
+            kbd={key}
             aria-pressed={recording}
             aria-busy={working}
             className={error ? 'text-status-error' : recording ? 'text-accent' : undefined}

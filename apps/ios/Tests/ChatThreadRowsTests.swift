@@ -90,6 +90,18 @@ final class ChatThoughtTests: XCTestCase {
         XCTAssertEqual(presentation.entries.map(\.id), ["fold-turn", "flow", "answer"])
     }
 
+    @MainActor func testACompactionStaysInSightBesideTheFoldOfItsTurn() {
+        let presentation = ChatPresentation()
+        presentation.replace(
+            [
+                item("turn", "turn").setting("state", .string("done")),
+                item("read", "tool"),
+                item("compacted", "compaction").setting("preTokens", .number(180_000)),
+                item("answer", "assistant").setting("text", .string("Done.")),
+            ].map { $0.setting("turnId", .string("turn")).chatItem }, info: nil)
+        XCTAssertEqual(presentation.entries.map(\.id), ["fold-turn", "compacted", "answer"])
+    }
+
     @MainActor func testWorkLinesSitTightAndProseKeepsABlockGap() {
         let presentation = ChatPresentation()
         presentation.replace(
@@ -130,6 +142,33 @@ final class ChatThoughtTests: XCTestCase {
                 item("answer", "assistant").setting("text", .string("Done.")),
             ].map { $0.setting("turnId", .string("turn")).chatItem }, info: nil)
         XCTAssertEqual(presentation.entries.map(\.rhythm), [.question, .block])
+    }
+
+    @MainActor func testThoughtsAreBlocksQuestionsAndNotesWorkLinesAndMessagesSaidToTheChat() {
+        let presentation = ChatPresentation()
+        presentation.replace(
+            [
+                item("ask", "user"),
+                item("thought", "thinking").setting("text", .string("Which file first?")),
+                item("asked", "question").setting("state", .string("answered")),
+                item("note", "note").setting("text", .string("Retrying.")),
+                item("message", "note").setting(
+                    "message",
+                    .object(["from": .string("chat-2"), "title": .string("Lexer"), "text": .string("Done here.")])),
+                item("said", "note").setting("said", .bool(true)).setting("text", .string("Ruimte: Read this.")),
+            ].map(\.chatItem), info: nil)
+        XCTAssertEqual(presentation.entries.map(\.rhythm), [.question, .block, .work, .work, .question, .question])
+    }
+
+    @MainActor func testASelectionSwitchAndAMessageTheAgentSentHaveNoTimeOfTheirOwn() {
+        let turn = ChatItemState(item("turn", "turn").setting("createdAt", .number(5)).chatItem)
+        XCTAssertNil(ChatVisuals.rowTime(ChatTimelineEntry(id: "switch-turn", kind: .selectionSwitch, items: [turn])))
+        let sent = ChatItemState(
+            item("sent", "tool").setting("name", .string("Bash"))
+                .setting("input", .object(["command": .string("ruimte-context notify chat-2 --text 'Done.'")]))
+                .setting("state", .string("running")).setting("createdAt", .number(5)).chatItem)
+        XCTAssertNotNil(sent.item.toolItem.flatMap(RuimteCommandLook.sent(of:)))
+        XCTAssertNil(ChatVisuals.rowTime(ChatTimelineEntry(id: "sent", kind: .message, items: [sent])))
     }
 
     private func item(_ id: String, _ kind: String) -> JSONValue {

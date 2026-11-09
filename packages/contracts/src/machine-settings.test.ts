@@ -5,10 +5,12 @@ import { MACHINE_SETTING_KEYS, isOwnerOnlySetting, isOwnerSeenSetting, settingDe
 const SWITCHES = [
     'agentsDeleteAnyView',
     'reachOpenProjects',
+    'agentsSharePorts',
     'steerMessages',
     'streamingAllowed',
     'resumeAtReset',
     'visualReplies',
+    'textModel',
     'keepAwake',
     'keepAwakeOnBattery',
     'keepAwakeDisplay',
@@ -30,14 +32,14 @@ describe('the machine settings table', () => {
         const settings = (shape: Record<string, unknown>): string[] =>
             Object.keys(shape).filter((key) => (MACHINE_SETTING_KEYS as readonly string[]).includes(key));
 
-        expect(settings(EndpointInfoSchema.shape).toSorted()).toEqual([...SWITCHES, 'nodeSizes'].toSorted());
+        expect(settings(EndpointInfoSchema.shape).toSorted()).toEqual([...SWITCHES, 'nodeSizes', 'startFolder'].toSorted());
         expect(settings(EndpointChangedEventSchema.shape).toSorted()).toEqual(
-            [...SWITCHES.filter((key) => key !== 'worktreeRoot' && key !== 'terminalShell'), 'nodeSizes'].toSorted()
+            [...SWITCHES.filter((key) => key !== 'worktreeRoot' && key !== 'terminalShell'), 'nodeSizes', 'startFolder'].toSorted()
         );
     });
 
     test('refuses the owner-only settings to other clients and keeps two of them from the event', () => {
-        expect(MACHINE_SETTING_KEYS.filter(isOwnerOnlySetting).toSorted()).toEqual(['terminalShell', 'usageStats', 'worktreeRoot']);
+        expect(MACHINE_SETTING_KEYS.filter(isOwnerOnlySetting).toSorted()).toEqual(['agentsSharePorts', 'terminalShell', 'usageStats', 'worktreeRoot']);
         expect(MACHINE_SETTING_KEYS.filter(isOwnerSeenSetting).toSorted()).toEqual(['terminalShell', 'worktreeRoot']);
     });
 
@@ -45,10 +47,12 @@ describe('the machine settings table', () => {
         expect(MACHINE_SETTING_KEYS.map((key) => [key, settingDefault(key)])).toEqual([
             ['agentsDeleteAnyView', false],
             ['reachOpenProjects', false],
+            ['agentsSharePorts', false],
             ['steerMessages', false],
             ['streamingAllowed', true],
             ['resumeAtReset', false],
             ['visualReplies', true],
+            ['textModel', null],
             ['keepAwake', 'off'],
             ['keepAwakeOnBattery', false],
             ['keepAwakeDisplay', false],
@@ -58,7 +62,8 @@ describe('the machine settings table', () => {
             ['worktreeRoot', null],
             ['terminalShell', null],
             ['nodeSizes', {}],
-            ['usageStats', true]
+            ['usageStats', true],
+            ['startFolder', '']
         ]);
     });
 });

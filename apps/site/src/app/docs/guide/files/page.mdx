@@ -14,7 +14,7 @@ export const metadata = { title: 'Files and the editor' };
 Click the folder icon in the rail at the right of the window, or run **Toggle files panel**.
 
 - **Filter files** narrows the tree. **Show hidden and ignored files** adds those files to it.
-- Right-click a file or folder to create, rename or delete, or to copy its name, path or relative path.
+- Right-click a file or folder to create, rename or delete, or to copy its name, path or relative path. A file you saved as a view in the sidebar follows the file when you rename or move it in Ruimte, and keeps a name you gave it.
 - **Copy mentions** copies the selected files as `@` references for a chat.
 - On a Mac, select a file and press <Shortcut keys="Space" /> for Quick Look.
 
@@ -29,7 +29,11 @@ Besides code, Ruimte shows images, PDFs, audio, video, Markdown, HTML pages, tab
 
 ## Edit code
 
-The editor uses language servers for TypeScript, Vue, PHP, SQL, CSS, Python and more: completion, problems while you type, go to definition, find usages, rename, code actions, refactorings, organize imports and formatting. **Toggle problems panel** lists the problems of the open files.
+The editor uses language servers for TypeScript, Vue, PHP, SQL, CSS, Python, Markdown, Go, Swift, TOML, Lua, Zig and more: completion, problems while you type, go to definition, find usages, rename, code actions, refactorings, organize imports and formatting. **Toggle problems panel** lists the problems of the open files. **Peek references**, in the context menu, opens every place a name is used under its line, with the code of each place in the colors of its syntax.
+
+The servers for Rust, Swift and Zig build the code they read. In a worktree where an agent works they build nothing. The language status then says "Build scripts and macros are off in this worktree." The Rust server keeps running with less, for instance without expanded macros, and the Swift and Zig servers do not start there. **Turn on for this repository** lets the servers of that repository build in those worktrees. Only you can press it, and no agent can. While it is on, the status says "Build scripts and macros run in the worktrees of agents." and **Turn off for this repository** takes it back.
+
+Ruimte finds the servers for Rust, Go, Swift and Zig where their toolchains put them, and never installs them. For the others, press Install under Settings, Editor.
 
 | Shortcut | Action |
 | --- | --- |
@@ -42,6 +46,12 @@ The editor uses language servers for TypeScript, Vue, PHP, SQL, CSS, Python and 
 Settings, Keyboard lists every editor shortcut. Settings, Editor sets the font, display, folding, smart keys, live templates and language servers.
 
 **Code vision** shows above each class, function and method how often it is used and who wrote it. Turn **Usages** or **Authors** off under Settings, Editor.
+
+## See and revert a change
+
+A mark in the margin shows a line you changed since the last commit. Rest the pointer on it to see that stretch as it was in the last commit, with the new lines under the old ones. **Revert change** puts it back as an ordinary edit, so <Shortcut keys="Mod+Z" /> takes it back. Nothing is saved or staged until you save the file.
+
+When an agent wrote the lines, the card names the chat and the turn. Press it to see the agent's own card.
 
 ## Work with an agent in the editor
 
@@ -57,9 +67,11 @@ When an agent edits a file you have open, Settings, Editor, Agent changes in ope
 | Gutter | A mark beside each line an agent changed |
 | Review | Each change with **Keep**, **Undo** and **Comment**. An undo or comment becomes a draft for the chat. |
 
-**Next agent change** and **Previous agent change** in the command palette step through the changes.
+**Next agent change** and **Previous agent change** in the command palette step through the changes. **Show only the changes** in the review bar folds every stretch of unchanged lines, keeping three lines around each change. Press it again to bring back the folds you had.
 
 The editor also explains code, suggests names and offers code suggestions on request. Choose a model under Settings, Editor, AI. Automatic uses the cheapest available model, trying Claude, Codex, Grok, then Antigravity. <Shortcut keys="Tab" /> accepts a suggestion, <Shortcut keys="Alt+]" /> accepts one word, <Shortcut keys="Escape" /> dismisses it. The selected provider receives the code around the cursor.
+
+**Explain** appears on the hover card of any symbol, a class or a constant as much as a function. It is also in the context menu, where it explains the selection, or without a selection the function or other symbol around the cursor.
 
 ## When a file changes on disk
 

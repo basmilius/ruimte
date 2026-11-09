@@ -3,13 +3,13 @@ import type { MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
 import { CHAT_MOVE_PREFIX } from '@/chat/menu-extras';
 import { behaviorOf } from '@/commands/behavior';
 import { generatedOf } from '@/commands/generated';
-import { commandIds as tableIds, commandSpec, isCommandId, menuPlacesOf } from '@/commands/registry';
+import { commandIds as tableIds, commandKey, commandSpec, isCommandId, menuPlacesOf } from '@/commands/registry';
 import { isPaletteId } from '@/commands/run';
 import { LANGUAGE_COMMAND_IDS } from '@/language/command-table';
 import { EDITOR_COMMAND_IDS, editorCommandRows } from '@/language/editor-commands';
 import { languageCommandRows } from '@/language/language-commands';
 import { AFTER_SETTLE_PREFIX, LAUNCH_CHOOSE_PREFIX } from '@/launches/menu-extras';
-import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { DEFAULT_KEYS } from '@/surface/default-keys';
 import { GO_VIEW_PREFIX } from '@/views/menu-extras';
 import { menuIconOf } from './icons';
 import { menuModel, toAccelerator, type MenuContext } from './model';
@@ -80,6 +80,7 @@ function context(patch: Partial<MenuContext> = {}): MenuContext {
         prWatch: false,
         routines: false,
         chat: false,
+        chatTextSize: null,
         terminalKeys: false,
         terminalFind: false,
         diff: false,
@@ -117,6 +118,18 @@ function offered(spec: MenuSpec, id: string): Extract<MenuNode, { kind: 'command
     expect(row, id).toBeDefined();
     return row!;
 }
+
+test('chat text shares one contextual reset and keeps the existing editor font commands', () => {
+    const spec = menuModel(context({ view: 'chat', chat: true, chatTextSize: 3 }));
+    expect(offered(spec, 'chat-text-larger').enabled).toBe(false);
+    expect(offered(spec, 'chat-text-smaller').enabled).not.toBe(false);
+    expect(offered(spec, 'zoom-reset').label).toBe('Default Chat Text Size');
+    expect(commandIds(spec).filter((id) => id === 'zoom-reset')).toHaveLength(1);
+    expect(offered(spec, 'increase-font-size')).toBeDefined();
+    const plain = menuModel(context({ chatTextSize: null }));
+    expect(find(plain, 'chat-text-larger')).toBeUndefined();
+    expect(offered(plain, 'zoom-reset').label).toBe('Actual Size');
+});
 
 const EVERY_CONTEXT: MenuContext[] = [
     START_SCREEN,
@@ -666,8 +679,10 @@ describe('the commands behind the menu', () => {
     test('every row of the table has something that does it', () => {
         for (const id of tableIds()) {
             // The language and editing commands are rows of `languageCommandRows()` and `editorCommandRows()`, which the palette spreads in.
+            // A key-only row is a key a window listener answers; it has no behavior of its own.
             const done =
                 behaviorOf(id) !== undefined ||
+                commandSpec(id).keyOnly === true ||
                 (LANGUAGE_COMMAND_IDS as readonly string[]).includes(id) ||
                 (EDITOR_COMMAND_IDS as readonly string[]).includes(id);
             expect(done ? id : `${id} does nothing`).toBe(id);
@@ -697,15 +712,15 @@ describe('the menu the web client draws', () => {
 
 describe('accelerators', () => {
     test('Mod is Cmd on macOS and Ctrl elsewhere, named keys the way Electron spells them', () => {
-        expect(toAccelerator(CANVAS_SHORTCUTS.previousView, true)).toBe('CommandOrControl+Shift+[');
-        expect(toAccelerator(CANVAS_SHORTCUTS.togglePanel, false)).toBe('CommandOrControl+Alt+B');
-        expect(toAccelerator(CANVAS_SHORTCUTS.splitRight, true)).toBe('CommandOrControl+\\');
+        expect(toAccelerator(DEFAULT_KEYS['view-previous'], true)).toBe('CommandOrControl+Shift+[');
+        expect(toAccelerator(DEFAULT_KEYS['panel-toggle'], false)).toBe('CommandOrControl+Alt+B');
+        expect(toAccelerator(DEFAULT_KEYS['split-right'], true)).toBe('CommandOrControl+\\');
     });
 
     test('on macOS a key without Cmd or Ctrl gets none, since the menu would take it from every text field', () => {
-        expect(toAccelerator(ADD_NODE_SHORTCUTS.terminal, true)).toBeUndefined();
-        expect(toAccelerator(CANVAS_SHORTCUTS.fitAll, true)).toBeUndefined();
-        expect(toAccelerator(ADD_NODE_SHORTCUTS.terminal, false)).toBe('Alt+T');
+        expect(toAccelerator(DEFAULT_KEYS['add-terminal'], true)).toBeUndefined();
+        expect(toAccelerator(DEFAULT_KEYS.fit, true)).toBeUndefined();
+        expect(toAccelerator(DEFAULT_KEYS['add-terminal'], false)).toBe('Alt+T');
     });
 
     test('every row of the command table with a chord yields a whole accelerator, ending in a key Electron knows', () => {
@@ -713,7 +728,7 @@ describe('accelerators', () => {
         const checked: string[] = [];
 
         for (const id of tableIds()) {
-            const chord = commandSpec(id).shortcut;
+            const chord = commandKey(id);
 
             if (chord === undefined || menuPlacesOf(id).length === 0) {
                 continue;

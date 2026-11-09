@@ -16,7 +16,7 @@ import {
     type ProjectNode,
     type RuntimeMode
 } from '@ruimte/contracts';
-import { agentNode, groupLines, grownGroup, inheritedAccount, readsOf, requireInstalled, startPrompt, terminalMode } from '../canvas/agents.ts';
+import { agentNode, groupLines, grownGroup, namedAccount, readsOf, requireInstalled, startPrompt, terminalMode } from '../canvas/agents.ts';
 import { depthForOpening } from '../canvas/depth.ts';
 import { NEW_NODE, OPENING_OFF_CANVAS, canvasFor, canvasLines, field, newNode, type AgentStartHost, type ProjectHost, type AgentCall } from '../canvas/host.ts';
 import { modeForOpening } from '../canvas/mode.ts';
@@ -326,7 +326,7 @@ const startAgentNow: StartHandler = async (input, call) => {
     // A bounded opener gives no cwd, and an agent of another project stands in none of this one's folders, so the project's own folder is judged for both.
     refuseUntrustedStart(host, caller.caller, checkedCwd, [{ provider: kind, chat }], bounded || context.origin !== undefined ? place.folder : undefined);
     const runtimeMode = chat ? (input.mode ?? undefined) : terminalMode(caller, input.mode ?? undefined, ceiling);
-    const account = inheritedAccount(caller, kind, place.projectId);
+    const account = await namedAccount(caller, kind, place.projectId, input.account, input.machine);
     context.stillAllowed?.();
     const worktrees = input.worktree
         ? await startWorktrees(caller, place, remote !== null, dryRun, () => {
@@ -672,7 +672,7 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
     const modes: Array<RuntimeMode | undefined> = roles.map((role) =>
         kindOf(host.starts, role) === 'chat' ? (input.mode ?? undefined) : terminalMode(caller, input.mode ?? undefined, ceiling)
     );
-    const accounts = roles.map((role) => inheritedAccount(caller, role.provider, place.projectId));
+    const accounts = await Promise.all(roles.map((role) => namedAccount(caller, role.provider, place.projectId, role.account, input.machine)));
 
     return host.projects
         .mutate<{ output: ActionOutput<'team.start'>; operation?: { id: string; status: 'running' } }>(place.projectId, async (content) => {

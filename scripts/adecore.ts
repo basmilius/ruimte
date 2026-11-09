@@ -4,13 +4,18 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 const EXACT_VERSION = /^\d+\.\d+\.\d+(?:-[\w.-]+)?$/;
 const DEPENDENCY_SECTIONS = ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'] as const;
-
-type DependencySection = (typeof DEPENDENCY_SECTIONS)[number];
+const CATALOG_REFERENCE = 'catalog:';
+// The root manifest inside the daemon image; it keeps a catalog of its own because the image never sees the root's.
+const DOCKER_MANIFEST = 'apps/server/docker/workspace-package.json';
+const REGISTRY = 'https://registry.npmjs.org';
+// The registry's CDN can answer 404 for a new tarball for several minutes after the publish.
+const REGISTRY_TRIES = 60;
+const REGISTRY_PAUSE_MS = 10_000;
 
 export interface Manifest {
     name: string;
     version?: string;
-    workspaces?: string[] | { packages: string[] };
+    workspaces?: string[] | { packages: string[]; catalog?: Record<string, string> };
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;
     optionalDependencies?: Record<string, string>;
@@ -37,10 +42,10 @@ export interface PackageStatus {
     mode: 'npm' | 'local' | 'other' | 'missing';
 }
 
-export interface Pin {
-    section: DependencySection;
-    name: string;
-    version: string;
+export interface Registry {
+    /** Whether the tarball of this version can be downloaded. */
+    has(name: string, version: string): Promise<boolean>;
+    pause(): Promise<void>;
 }
 
 export type RunCommand = (cwd: string, args: string[]) => Promise<void>;
@@ -66,12 +71,26 @@ function dependenciesOf(manifest: Manifest, peers = false): Record<string, strin
     return { ...manifest.dependencies, ...manifest.devDependencies, ...manifest.optionalDependencies, ...(peers ? manifest.peerDependencies : {}) };
 }
 
+export function catalogOf(manifest: Manifest): Record<string, string> {
+    const workspaces = manifest.workspaces;
+
+    return Array.isArray(workspaces) ? {} : (workspaces?.catalog ?? {});
+}
+
 function consumersIn(root: string): Dependency[] {
-    return packagesIn(root).flatMap((consumer) =>
+    const packages = packagesIn(root);
+    const catalog = catalogOf(packages[0].manifest);
+
+    return packages.flatMap((consumer) =>
         Object.entries(dependenciesOf(consumer.manifest))
             .filter(([name]) => name.startsWith('@adecore/'))
             .sort(([left], [right]) => left.localeCompare(right))
-            .map(([name, version]) => ({ consumer, name, version, path: join(consumer.folder, 'node_modules', name) }))
+            .map(([name, version]) => ({
+                consumer,
+                name,
+                version: version === CATALOG_REFERENCE ? (catalog[name] ?? version) : version,
+                path: join(consumer.folder, 'node_modules', name)
+            }))
     );
 }
 
@@ -233,39 +252,129 @@ export async function restoreNpmPackages(root: string, adecore = adecorePath(roo
     clearClientCache(root);
 }
 
-export function adecorePins(manifest: Manifest): Pin[] {
-    return DEPENDENCY_SECTIONS.flatMap((section) =>
-        Object.entries(manifest[section] ?? {})
-            .filter(([name]) => name.startsWith('@adecore/'))
-            .map(([name, version]) => ({ section, name, version }))
-    );
+function adecoreEntries(entries: Record<string, string> | undefined): [string, string][] {
+    return Object.entries(entries ?? {}).filter(([name]) => name.startsWith('@adecore/'));
+}
+
+/**
+ * What stops a package from taking its ADE CORE version from the root catalog: a pin of its own, a
+ * name the catalog lacks, or a catalog entry that is no exact version.
+ */
+export function catalogProblems(root: string): string[] {
+    const packages = packagesIn(root);
+    const catalog = catalogOf(packages[0].manifest);
+    const problems = adecoreEntries(catalog)
+        .filter(([, version]) => !EXACT_VERSION.test(version))
+        .map(([name, version]) => `package.json: the catalog entry ${name} is "${version}", not an exact version`);
+
+    for (const pkg of packages) {
+        // Forward slashes on every platform, so a problem reads the same on Windows.
+        const file = `${relative(root, pkg.folder).split(sep).join('/') || '.'}/package.json`;
+
+        for (const section of DEPENDENCY_SECTIONS) {
+            for (const [name, version] of adecoreEntries(pkg.manifest[section])) {
+                if (version !== CATALOG_REFERENCE) {
+                    problems.push(`${file}: ${name} in ${section} is "${version}", not "${CATALOG_REFERENCE}"`);
+                } else if (!(name in catalog)) {
+                    problems.push(`${file}: ${name} in ${section} is missing from the catalog in package.json`);
+                }
+            }
+        }
+    }
+
+    return problems;
+}
+
+/**
+ * The daemon image installs from a root manifest of its own, so its catalog has to say what the root's says.
+ */
+export function dockerCatalogDrift(root: string): string[] {
+    const file = join(root, DOCKER_MANIFEST);
+
+    if (!existsSync(file)) {
+        return [];
+    }
+
+    const expected = catalogOf(readPackage(root).manifest);
+    const actual = catalogOf(JSON.parse(readFileSync(file, 'utf8')) as Manifest);
+
+    return [...new Set([...Object.keys(expected), ...Object.keys(actual)])]
+        .sort()
+        .filter((name) => expected[name] !== actual[name])
+        .map((name) => `${DOCKER_MANIFEST}: ${name} is ${actual[name] ?? 'missing'}, the root catalog has ${expected[name] ?? 'no entry'}`);
 }
 
 /**
  * Rewrites the text rather than serializing the parsed manifest, so the file keeps its own layout.
  */
-export function bumpManifest(text: string, version: string, file = 'package.json'): { text: string; pins: Pin[] } {
+export function bumpCatalog(text: string, version: string, file = 'package.json'): { text: string; names: string[] } {
     const manifest = JSON.parse(text) as Manifest;
-    const pins = adecorePins(manifest);
-    for (const pin of pins) {
-        if (!EXACT_VERSION.test(pin.version)) {
-            throw new Error(`${file}: ${pin.name} in ${pin.section} is "${pin.version}", not an exact version. No manifest was changed.`);
+    const entries = adecoreEntries(catalogOf(manifest));
+
+    for (const [name, pinned] of entries) {
+        if (!EXACT_VERSION.test(pinned)) {
+            throw new Error(`${file}: the catalog entry ${name} is "${pinned}", not an exact version. No manifest was changed.`);
         }
     }
+
+    const names = entries.map(([name]) => name);
     const expected = structuredClone(manifest);
-    for (const pin of pins) {
-        expected[pin.section]![pin.name] = version;
+
+    for (const name of names) {
+        (expected.workspaces as { catalog: Record<string, string> }).catalog[name] = version;
     }
+
     let next = text;
-    for (const name of new Set(pins.map((pin) => pin.name))) {
+
+    for (const name of names) {
         const key = name.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
         next = next.replace(new RegExp(`("${key}"\\s*:\\s*")[^"]*(")`, 'g'), `$1${version}$2`);
     }
+
     if (!Bun.deepEquals(JSON.parse(next), expected, true)) {
-        throw new Error(`${file}: the ADE CORE pins could not be rewritten without touching other fields. No manifest was changed.`);
+        throw new Error(`${file}: the ADE CORE catalog could not be rewritten without touching other fields. No manifest was changed.`);
     }
-    return { text: next, pins };
+
+    return { text: next, names };
 }
+
+/**
+ * A release is on npm one package at a time, and an install in between would leave node_modules half bumped.
+ */
+export async function awaitRelease(names: string[], version: string, registry: Registry, tries = REGISTRY_TRIES): Promise<void> {
+    let missing = names;
+
+    for (let attempt = 1; ; attempt++) {
+        const found = await Promise.all(missing.map((name) => registry.has(name, version)));
+        missing = missing.filter((_, i) => !found[i]);
+
+        if (missing.length === 0) {
+            return;
+        }
+
+        if (attempt >= tries) {
+            throw new Error(`${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not on npm at ${version} after ${tries} tries. No file was changed.`);
+        }
+
+        await registry.pause();
+    }
+}
+
+const npmRegistry: Registry = {
+    async has(name, version) {
+        const short = name.slice('@adecore/'.length);
+
+        try {
+            const response = await fetch(`${REGISTRY}/${name}/-/${short}-${version}.tgz`, { method: 'HEAD' });
+
+            return response.status === 200;
+        } catch {
+            // A network hiccup counts as not there yet; the tries bound the wait.
+            return false;
+        }
+    },
+    pause: () => Bun.sleep(REGISTRY_PAUSE_MS)
+};
 
 export function lockedOffVersion(lock: string, version: string): string[] {
     const locked = new Set(
@@ -274,15 +383,12 @@ export function lockedOffVersion(lock: string, version: string): string[] {
     return [...locked].sort();
 }
 
-function pinsOffVersion(root: string, version: string): string[] {
-    return packagesIn(root).flatMap((pkg) =>
-        adecorePins(pkg.manifest)
-            .filter((pin) => pin.version !== version)
-            .map((pin) => `${relative(root, pkg.folder) || '.'}: ${pin.name} in ${pin.section} is ${pin.version}`)
-    );
+/* Every ADE CORE package the lockfile installs, the ones the catalog names and the ones they pull in. */
+export function lockedPackages(lock: string): string[] {
+    return [...new Set([...lock.matchAll(/"(@adecore\/[\w.-]+)@[^"]+"/g)].map((match) => match[1]!))].sort();
 }
 
-export async function bumpPackages(root: string, adecore: string, version: string, run: RunCommand = runBun): Promise<void> {
+export async function bumpPackages(root: string, adecore: string, version: string, run: RunCommand = runBun, registry: Registry = npmRegistry): Promise<void> {
     if (!EXACT_VERSION.test(version)) {
         throw new Error(`${version} is not an exact version such as 0.24.0.`);
     }
@@ -294,13 +400,28 @@ export async function bumpPackages(root: string, adecore: string, version: strin
             `${linked[0].workspace}: ${linked[0].name} is linked to ${linked[0].target}. Run bun run adecore:npm first, bump, then bun run adecore:link to continue on the local folder.`
         );
     }
-    const lockfile = join(root, 'bun.lock');
-    const manifests = packagesIn(root).map((pkg) => join(pkg.folder, 'package.json'));
-    const before = new Map([lockfile, ...manifests].map((file) => [file, readFileSync(file, 'utf8')]));
-    const bumped = manifests.map((file) => ({ file, ...bumpManifest(before.get(file)!, version, relative(root, file)) }));
-    if (bumped.every((entry) => entry.pins.length === 0)) {
-        throw new Error('No manifest pins an ADE CORE package.');
+    const problems = catalogProblems(root);
+    if (problems.length > 0) {
+        throw new Error(`Every ADE CORE dependency takes its version from the catalog. No file was changed:\n  ${problems.join('\n  ')}`);
     }
+    const lockfile = join(root, 'bun.lock');
+    const manifests = [join(root, 'package.json'), join(root, DOCKER_MANIFEST)].filter((file) => existsSync(file));
+    const before = new Map([lockfile, ...manifests].map((file) => [file, readFileSync(file, 'utf8')]));
+    const bumped = manifests.map((file) => ({ file, ...bumpCatalog(before.get(file)!, version, relative(root, file).split(sep).join('/')) }));
+    if (bumped[0].names.length === 0) {
+        throw new Error('The catalog in package.json holds no ADE CORE package.');
+    }
+    // The image installs from its own manifest, so it has to end on the same catalog as the root.
+    const drift = bumped.slice(1).filter((entry) => !Bun.deepEquals(catalogOf(JSON.parse(entry.text)), catalogOf(JSON.parse(bumped[0].text))));
+    if (drift.length > 0) {
+        throw new Error(
+            `${relative(root, drift[0].file).split(sep).join('/')} does not list the same ADE CORE packages as the root catalog. No file was changed.`
+        );
+    }
+    // Before any write: a release still propagating would otherwise leave a half-installed node_modules. A package
+    // the catalog does not name (editor-core under editor) is released with the rest and installed all the same.
+    const released = [...new Set([...bumped[0].names, ...lockedPackages(before.get(lockfile)!)])].sort();
+    await awaitRelease(released, version, registry);
     for (const entry of bumped) {
         if (entry.text !== before.get(entry.file)) {
             writeFileSync(entry.file, entry.text);
@@ -314,9 +435,9 @@ export async function bumpPackages(root: string, adecore: string, version: strin
         }
         throw error;
     }
-    const missed = [...pinsOffVersion(root, version), ...lockedOffVersion(readFileSync(lockfile, 'utf8'), version).map((entry) => `bun.lock: ${entry}`)];
+    const missed = lockedOffVersion(readFileSync(lockfile, 'utf8'), version).map((entry) => `bun.lock: ${entry}`);
     if (missed.length > 0) {
-        throw new Error(`These ADE CORE entries are not on ${version}. Review the manifests and bun.lock:\n  ${missed.join('\n  ')}`);
+        throw new Error(`These ADE CORE entries are not on ${version}. Review the catalog and bun.lock:\n  ${missed.join('\n  ')}`);
     }
     if (statusMode(packageStatus(root, adecore)) !== 'npm') {
         throw new Error(`Some ADE CORE packages do not resolve to the npm install of ${version}. Run adecore:status to inspect them.`);
@@ -408,14 +529,22 @@ async function main(): Promise<void> {
     const bump = command === 'bump' && args.length === 1 && !args[0].startsWith('-');
     if (
         !bump &&
-        (!['link', 'npm', 'status'].includes(command ?? '') ||
+        (!['link', 'npm', 'status', 'check'].includes(command ?? '') ||
             args.some((arg) => !['--npm', '--brief'].includes(arg)) ||
             (args.length > 0 && command !== 'status'))
     ) {
-        throw new Error('Usage: bun run adecore:link | adecore:npm | adecore:status [--npm] [--brief] | adecore:bump <version>');
+        throw new Error('Usage: bun run adecore:link | adecore:npm | adecore:status [--npm] [--brief] | adecore:check | adecore:bump <version>');
     }
     const root = resolve(import.meta.dir, '..');
     const adecore = adecorePath(root);
+    if (command === 'check') {
+        const problems = [...catalogProblems(root), ...dockerCatalogDrift(root)];
+        if (problems.length > 0) {
+            console.error(`ADE CORE versions come only from the catalog in package.json:\n  ${problems.join('\n  ')}`);
+            process.exitCode = 1;
+        }
+        return;
+    }
     if (command === 'link') {
         linkLocalPackages(root, adecore);
     } else if (command === 'npm') {
@@ -428,7 +557,7 @@ async function main(): Promise<void> {
         process.exitCode = 1;
     }
     if (bump) {
-        console.log(`Every ADE CORE pin is ${args[0]}. Commit the manifests and bun.lock together.`);
+        console.log(`The ADE CORE catalog is ${args[0]}. Commit package.json, ${DOCKER_MANIFEST} and bun.lock together.`);
     } else if (command !== 'status') {
         console.log('Restart bun dev after switching. Package manifests and bun.lock are unchanged.');
     }

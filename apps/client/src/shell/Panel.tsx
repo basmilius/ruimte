@@ -6,9 +6,9 @@ import { hasOverlayControls } from '@/desktop/bridge';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { closesFromRail, usePanelEntries } from '@/shell/panels';
 import { useShownPanel, useUi } from '@/state/ui';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { usePanelGap } from '@/surface/panel-layout';
 import { PanelHeaderProvider } from '@/surface/PanelHeaderSlot';
+import { useKeyOf } from '@/surface/shortcut-overrides';
 import { useInstantWidth } from '@/surface/useInstantWidth';
 
 const DEFAULT_WIDTH = 540;
@@ -20,6 +20,7 @@ export function Panel() {
     const gap = usePanelGap();
     const { t } = useTranslation('shell');
     const panel = useShownPanel();
+    const togglePanelKey = useKeyOf('panel-toggle');
     const open = panel.open;
     const [leadingHeaderSlot, setLeadingHeaderSlot] = useState<HTMLElement | null>(null);
     const [titleSignal, setTitleSignal] = useState<HTMLElement | null>(null);
@@ -64,7 +65,7 @@ export function Panel() {
                         <Separator className="peer-empty:hidden" />
                         <CloseButton
                             label={t('panel.close', { name: label })}
-                            kbd={CANVAS_SHORTCUTS.togglePanel}
+                            kbd={togglePanelKey}
                             onClick={() => useUi.getState().setPanel({ open: false })}
                         />
                     </>

@@ -1,7 +1,7 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionResult } from '@ruimte/actions';
 import { z } from 'zod';
-import { serverActionCall } from '../actions/context.ts';
+import { externalActionCall, serverActionCall } from '../actions/context.ts';
 import { linesOf } from './action-tool.ts';
 import { defineTool, defineToolkit, PROJECT_INPUT, VIEW_INPUT, type ToolCall } from './tool.ts';
 
@@ -73,9 +73,11 @@ const contextRead = defineTool('context', {
     async run(input, call) {
         const own = call.host.projects.locate(call.caller);
         const actionCall =
-            call.reached === undefined
-                ? serverActionCall(call.host, own, call.caller)
-                : serverActionCall(call.host, call.reached, call.caller, false, undefined, own ?? undefined);
+            call.external !== undefined && call.reached !== undefined
+                ? externalActionCall(call.host, call.reached, call.external)
+                : call.reached === undefined
+                  ? serverActionCall(call.host, own, call.caller)
+                  : serverActionCall(call.host, call.reached, call.caller, false, undefined, own ?? undefined);
         const result = await call.actions.execute(
             'context.read',
             {
@@ -102,7 +104,8 @@ const contextRead = defineTool('context', {
             throw refusal;
         }
 
-        const sources = await listed(call).catch(() => null);
+        // A client elsewhere has no node, so nothing is linked to it and the refusal has no list to offer.
+        const sources = call.external === undefined ? await listed(call).catch(() => null) : null;
         const linked = sources?.map((source) => `${source.id}\t${source.kind}\t${source.title}`) ?? [];
 
         throw new ToolRefusal(refusal.code, refusal.message, [...linked, ...refusal.lines]);

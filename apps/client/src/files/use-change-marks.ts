@@ -11,7 +11,7 @@ export function useChangeMarks(editor: Editor | null, base: string | null): void
         if (editor === null || base === null) {
             return;
         }
-        const mark = (): void => editor.setChangeMarks(changeMarksOf(base, editor.getText()));
+        const mark = (): void => editor.setChangeMarks(changeMarksOf(base, editor.getText()), 'git');
         mark();
         let timer: ReturnType<typeof setTimeout> | undefined;
         const off = editor.onChange(() => {
@@ -21,7 +21,7 @@ export function useChangeMarks(editor: Editor | null, base: string | null): void
         return () => {
             clearTimeout(timer);
             off();
-            editor.setChangeMarks([]);
+            editor.setChangeMarks([], 'git');
         };
     }, [editor, base]);
 }

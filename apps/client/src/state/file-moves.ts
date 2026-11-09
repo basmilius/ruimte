@@ -5,6 +5,7 @@ import { basenameOf } from '@/paths/file-path';
 import { useDocument } from '@/state/document';
 import { isFileTab, useFiles } from '@/state/files';
 import { endpointKey, splitKey } from '@/state/keys';
+import { useProject } from '@/state/project';
 import { isUnsavedDraft, textDrafts, useTextDrafts, type TextDrafts } from '@/state/text-drafts';
 import type { Transport } from '@/transport-api/transport';
 
@@ -46,6 +47,7 @@ export function followMove(endpointId: string, from: string, to: string, focus =
     const { activeViewId } = useDocument.getState();
     const renamed = useFiles.getState().moved(from, to);
     followViewStates(endpointId, from, to);
+    useDocument.getState().followMovedFiles(useProject.getState().current?.folder ?? null, from, to);
     const moved = activeViewId === null ? undefined : renamed.get(activeViewId);
     if (focus && moved !== undefined && moved !== activeViewId) {
         useFiles.getState().requestCaret(moved);

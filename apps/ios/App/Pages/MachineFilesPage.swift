@@ -89,7 +89,7 @@ struct MachineFilesPage: View {
                     MobileStyle.muted)
             }
         }
-        .navigationTitle(path == "~" ? String(localized: "Files") : URL(fileURLWithPath: path).lastPathComponent)
+        .navigationTitle(path == "~" ? String(localized: "Files") : MachinePath(inferring: path).name(path))
         .navigationDestination(item: $selectedEntry) { entry in
             if entry.directory {
                 MachineFilesPage(client: client, path: entry.path, project: project, marks: marks)
@@ -116,7 +116,7 @@ struct MachineFilesPage: View {
                 client: client, events: [.fsChanged],
                 matches: RemotePageLifecycle.typed(FsChangedEvent.self) { event in
                     let resolved = listing?.path ?? path
-                    return resolved == event.root || resolved.hasPrefix(event.root + "/")
+                    return MachinePath(inferring: resolved).isBelow(resolved, root: event.root)
                 },
                 watch: { fsWatch(path: listing?.path ?? path) },
                 start: { if path == "~" { await load() } }, load: load)
@@ -140,8 +140,7 @@ struct MachineFilesPage: View {
 
     private func load() async {
         await state.read(loaded: listing != nil) { stillTheLatest in
-            let resolved =
-                path == "~" ? try await client.request(.serverHello).decoded(as: ServerHelloResult.self).home : path
+            let resolved = path == "~" ? try await MachinePath.startFolder(client: client) : path
             let result = try await client.request(
                 .fsList, payload: .object(["path": .string(resolved), "depth": .number(1), "hidden": .bool(hidden)])
             ).decoded(as: FsListResult.self)
@@ -269,10 +268,11 @@ struct FileContentPage: View {
                 await changes.load(client: client, path: path)
             }
             .task(id: path) {
-                let parent = URL(fileURLWithPath: path).deletingLastPathComponent().path
+                let style = MachinePath(inferring: path)
+                let parent = style.parent(path)
                 await RemotePageLifecycle.run(
                     client: client, events: [.fsChanged],
-                    matches: RemotePageLifecycle.typed(FsChangedEvent.self) { parent == $0.root || parent.hasPrefix($0.root + "/") },
+                    matches: RemotePageLifecycle.typed(FsChangedEvent.self) { style.isBelow(parent, root: $0.root) },
                     watch: { fsWatch(path: parent) }, load: load)
             }
             // Only a pause, and not on the way into full screen: the page comes back without reading the file again.
@@ -282,8 +282,8 @@ struct FileContentPage: View {
             }
         }
     }
-    private var name: String { URL(fileURLWithPath: path).lastPathComponent }
-    private var fileExtension: String { URL(fileURLWithPath: path).pathExtension.lowercased() }
+    private var name: String { MachinePath(inferring: path).name(path) }
+    private var fileExtension: String { MachinePath(inferring: path).fileExtension(path) }
     private var isHTML: Bool { ["html", "htm"].contains(fileExtension) }
     private var isMarkdown: Bool { ["md", "markdown"].contains(fileExtension) }
 
@@ -572,7 +572,7 @@ private extension FsReadResult {
 private let largeTextMaxBytes: Double = 8 * 1024 * 1024
 
 /// The `fs.watch` that a folder's `fs.changed` events come under.
-private func fsWatch(path: String) -> LiveWatch {
+func fsWatch(path: String) -> LiveWatch {
     .area(.fsWatch, payload: .object(["path": .string(path)]))
 }
 

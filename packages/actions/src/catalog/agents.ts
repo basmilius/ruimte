@@ -14,7 +14,8 @@ import {
     OPERATION_ACTIONS,
     agentNodeKind,
     agentReads,
-    AGENT_VOICE_AND_EXTENSION
+    PERSON_VOICE_AGENT_AND_EXTENSION,
+    PERSON_AND_AGENT
 } from './fields.ts';
 
 export const AGENTS_ACTIONS = {
@@ -96,7 +97,7 @@ export const AGENTS_ACTIONS = {
         description: 'Lists the tools the extensions on this machine offer agents, each with what it does and the input it takes.',
         effect: 'read',
         domain: 'agents',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({}),
         output: z.object({ tools: z.array(z.object({ id: z.string(), description: z.string(), parameters: z.string() })) })
     },
@@ -105,7 +106,7 @@ export const AGENTS_ACTIONS = {
         description: 'Runs a tool an extension on this machine offers, with its input as JSON, and prints what it answers.',
         effect: 'external',
         domain: 'agents',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             id: z.string().min(1).max(256).describe('The tool, as tool list prints it'),
             input: z.string().max(100_000).describe('Its input, as JSON')
@@ -117,7 +118,7 @@ export const AGENTS_ACTIONS = {
         description: 'Answers a question an agent you opened asked and waits on, the way a person answers it in that node; an approval stays with the person.',
         effect: 'external',
         domain: 'agents',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             nodeId: nodeId.describe('The agent that asked, by id; only one you opened yourself'),
             requestId: z.string().min(1).describe('The request the question came with, as the > Question line of a read or the note about it names it'),
@@ -135,7 +136,7 @@ export const AGENTS_ACTIONS = {
             'Lists the tasks you gave and the task you were given that are still open or have yet to wake you: id, direction, status, the other node, title, wake, result, batch.',
         effect: 'read',
         domain: 'agents',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             all: z.boolean().describe('Also lists the history: tasks that settled and already woke their chat, and a task you were given that settled')
         }),
@@ -150,7 +151,7 @@ export const AGENTS_ACTIONS = {
         description: 'Gives a task to an agent you opened that is already running, whose result wakes you the way the task of a new one does.',
         effect: 'external',
         domain: 'agents',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             nodeId: nodeId.describe('The agent to give the task to, by id; only a chat you opened yourself'),
             prompt: z.string().nullable().describe('What the task asks'),
@@ -182,7 +183,7 @@ export const AGENTS_ACTIONS = {
         effect: 'external',
         domain: 'agents',
         // Voice starts a chat with the person's CLI and nothing more: what only an agent gives stays an agent field.
-        actors: AGENT_VOICE_AND_EXTENSION,
+        actors: PERSON_VOICE_AGENT_AND_EXTENSION,
         input: z.object({
             provider: AgentKindSchema.describe('The CLI the agent runs'),
             terminal: z.boolean().describe('Makes a terminal node instead of a chat node'),
@@ -215,7 +216,10 @@ export const AGENTS_ACTIONS = {
                 .trim()
                 .min(1)
                 .nullish()
-                .describe("The reasoning effort for a chat agent, one the model offers; null keeps the person's last pick when the model offers it")
+                .describe("The reasoning effort for a chat agent, one the model offers; null keeps the person's last pick when the model offers it"),
+            account: agentField(z.string().min(1)).describe(
+                "An account a person named in the calling chat as @account:<cli>/<id>, for this CLI; null inherits the caller's"
+            )
         }),
         output: z.object({
             nodeId,
@@ -234,7 +238,7 @@ export const AGENTS_ACTIONS = {
         description: `Starts a team of up to ${MAX_OPENED_PER_CALLER} agents in this project`,
         effect: 'external',
         domain: 'agents',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             label: givenName.describe('The name of the group the agents land in'),
             roles: z
@@ -250,7 +254,12 @@ export const AGENTS_ACTIONS = {
                             .trim()
                             .min(1)
                             .nullish()
-                            .describe("The reasoning effort for a chat role, one the model offers; null keeps the person's last pick when the model offers it")
+                            .describe("The reasoning effort for a chat role, one the model offers; null keeps the person's last pick when the model offers it"),
+                        account: z
+                            .string()
+                            .min(1)
+                            .nullish()
+                            .describe("An account a person named in the calling chat as @account:<cli>/<id>, for this role's CLI; null inherits the caller's")
                     })
                 )
                 .min(1)
@@ -295,7 +304,7 @@ export const AGENTS_ACTIONS = {
         description: 'Reads where an operation an action answered with stands: queued, running, completed, failed or cancelled, per agent it started.',
         effect: 'read',
         domain: 'agents',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ operationId: z.string().min(1).describe('The id the action answered with') }),
         output: z.object({
             operationId: z.string(),

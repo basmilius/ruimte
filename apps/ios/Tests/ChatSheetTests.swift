@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import XCTest
 
@@ -22,6 +23,28 @@ final class ChatSheetTests: XCTestCase {
         XCTAssertNil(usage.segments)
         XCTAssertNil(usage.window)
         XCTAssertEqual(usage.fraction, 0)
+    }
+
+    func testAFoldWithoutASizeIsPendingUntilTheNextCount() {
+        let pending = ChatContextUsage(
+            ChatInfoUsage(contextTokens: 0, contextWindow: 200_000, costUsd: 0, turns: 2, contextPending: true))
+        XCTAssertTrue(pending.pending)
+        XCTAssertEqual(pending.fraction, 0)
+        XCTAssertNil(pending.segments)
+        XCTAssertFalse(ChatContextUsage(ChatInfoUsage(contextTokens: 9000, contextWindow: 200_000, costUsd: 0, turns: 3)).pending)
+    }
+
+    func testACompactionNamesTheSizesItKnows() {
+        let pre = Format.tokens(123_323)
+        let post = Format.tokens(86_425)
+        XCTAssertEqual(
+            ChatCompactionRule.text(preTokens: 123_323, postTokens: 86_425), "Context compacted from \(pre) to \(post) tokens")
+        XCTAssertEqual(ChatCompactionRule.text(preTokens: 123_323, postTokens: nil), "Context compacted from \(pre) tokens")
+        XCTAssertEqual(ChatCompactionRule.text(preTokens: nil, postTokens: 86_425), "Context compacted to \(post) tokens")
+        XCTAssertEqual(ChatCompactionRule.text(preTokens: nil, postTokens: nil), "Context compacted")
+        // A CLI that does not know the size before says zero.
+        XCTAssertEqual(ChatCompactionRule.text(preTokens: 0, postTokens: nil), "Context compacted")
+        XCTAssertEqual(ChatCompactionRule.text(preTokens: 0, postTokens: 86_425), "Context compacted to \(post) tokens")
     }
 
     func testTokensReadAsTheDesktopWritesThem() {

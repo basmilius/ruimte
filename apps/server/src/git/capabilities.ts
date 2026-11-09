@@ -1,5 +1,5 @@
 import { detectCli } from '@adecore/agents/providers';
-import type { GitCapabilitiesResult } from '@ruimte/contracts';
+import type { AgentKind, GitCapabilitiesResult } from '@ruimte/contracts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 
 // An install shows up on the next check; a probe per menu open would cost a process every time.
@@ -12,10 +12,16 @@ let cached: { at: number; gh: boolean } | null = null;
  * "Write message" button needs an agent CLI that answers a single prompt. A client hides what is
  * not there instead of showing a button that fails.
  */
-export async function readCapabilities(registry: ProviderRegistry, now: number = Date.now()): Promise<GitCapabilitiesResult> {
+export async function readCapabilities(
+    registry: ProviderRegistry,
+    now: number = Date.now(),
+    chosen?: AgentKind,
+    detect: typeof detectCli = detectCli
+): Promise<GitCapabilitiesResult> {
     if (cached === null || now - cached.at >= TTL_MS) {
-        cached = { at: now, gh: (await detectCli('gh')).installed };
+        cached = { at: now, gh: (await detect('gh')).installed };
     }
-    const provider = await registry.oneShotProvider();
-    return { gh: cached.gh, messageProvider: provider?.kind ?? null, amend: true };
+    // The machine's pick is reported even when it cannot write now, so a client sending that kind is told why instead of falling back.
+    const provider = chosen === undefined ? await registry.oneShotProvider() : null;
+    return { gh: cached.gh, messageProvider: chosen ?? provider?.kind ?? null, amend: true };
 }

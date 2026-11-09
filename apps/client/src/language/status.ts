@@ -57,6 +57,21 @@ export class LanguageStatusTracker extends SnapshotTracker<readonly LanguageServ
         this.set(status);
     }
 
+    /* Whether the machine can let servers build code in the worktrees of agents, which a machine from before it cannot. */
+    canAllowWorktreeBuild(): boolean {
+        return machineAnswers(this.transport.connection, 'language.worktreeBuild');
+    }
+
+    /* A person lets the servers of this repository build scripts and macros in the worktrees of agents; only the local secret may. */
+    async allowWorktreeBuild(): Promise<void> {
+        this.replace((await this.transport.request('language.worktreeBuild', { projectId: this.projectId, on: true })).servers);
+    }
+
+    /* A person takes that back, so the servers of this repository build nothing in the worktrees of agents again. */
+    async holdWorktreeBuild(): Promise<void> {
+        this.replace((await this.transport.request('language.worktreeBuild', { projectId: this.projectId, on: false })).servers);
+    }
+
     async log(server: string): Promise<LanguageLogLine[]> {
         return (await this.transport.request('language.log', { projectId: this.projectId, server })).lines;
     }

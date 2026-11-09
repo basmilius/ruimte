@@ -20,9 +20,7 @@ import RuimtePulsar
     private var signalingRoute: SignalingRoute?
     private var peer: RTCPeerConnection?
     private var channel: RTCDataChannel?
-    private var assembler = FrameAssembler()
-    private var binaryAssembler = MarkedFrameAssembler.binary
-    private var deflatedAssembler = MarkedFrameAssembler.deflated
+    private var incoming: DirectFrameInbox?
     private var deflating = false
     private var liveness: ChannelLiveness?
     private var gate: ProtocolGate?
@@ -64,6 +62,13 @@ import RuimtePulsar
         self.scheduler = scheduler
         connectionID = try Base64URL.randomToken(bytes: 16)
         super.init()
+        incoming = DirectFrameInbox(
+            policy: { [weak self] in
+                guard let self, !ended else { return nil }
+                if authenticated { events.progress() }
+                return DirectReceivePolicy(authenticated: authenticated, deflating: deflating)
+            },
+            received: { [weak self] in self?.receive($0) })
         cancelTimeout = scheduler.after(milliseconds: 20_000) { [weak self] in
             self?.events.failing(.timeout)
             self?.fail(
@@ -276,88 +281,36 @@ import RuimtePulsar
         offerIfReady()
     }
 
-    private func receive(_ buffer: RTCDataBuffer) {
+    private func receive(_ data: Data, isBinary: Bool) {
         guard !ended else { return }
         liveness?.heard(now: now)
-        if buffer.isBinary, binaryAssembler.accepts(buffer.data) {
-            receiveBinaryPiece(buffer.data)
-        } else if buffer.isBinary, deflatedAssembler.accepts(buffer.data) {
-            receiveDeflatedPiece(buffer.data)
-        } else if let text = String(data: buffer.data, encoding: .utf8) {
-            receivePiece(text)
-        } else {
-            fail(TransportWords.unreadableReply)
-        }
+        incoming?.push(data, isBinary: isBinary)
     }
 
-    private func receivePiece(_ text: String) {
-        if authenticated { events.progress() }
-        let limit = authenticated ? DirectFraming.authenticatedFrameChars : DirectFraming.handshakeFrameChars
-        switch assembler.push(text, maxChars: limit) {
-        case .invalid:
-            let message =
-                if case .tooLarge = assembler.failure { TransportWords.tooLarge } else {
-                    TransportWords.unreadableReply
-                }
-            trace(message)
-            fail(message)
+    private func receive(_ result: DirectFrameResult) {
+        guard !ended else { return }
+        switch result {
         case .partial: break
-        case .frame(let frame):
-            if frame.utf16.count > 1_024 * 1_024 {
-                trace("received large frame: \(frame.utf16.count) UTF-16 units")
+        case .failure(let failure):
+            switch failure {
+            case .tooLarge: fail(TransportWords.tooLarge)
+            case .unreadable: fail(TransportWords.unreadableReply)
+            case .unexpectedBinary:
+                fail(
+                    String(
+                        localized: "The machine gave an unexpected answer to the direct connection.",
+                        bundle: .module))
+            }
+        case .binary(let frame): events.binary(frame)
+        case .text(let frame, let units, let deflated):
+            if units > 1_024 * 1_024 {
+                trace("received large \(deflated ? "deflated " : "")frame: \(units) UTF-16 units")
             }
             if authenticated {
                 gate?.receive(frame)
                 return
             }
             do { try handshake(JSONValue.decode(Data(frame.utf8))) } catch { end(error) }
-        }
-    }
-
-    // Only a reply that asked for binary comes this way, so nothing reads one before the handshake.
-    private func receiveBinaryPiece(_ piece: Data) {
-        guard authenticated else {
-            fail(
-                String(
-                    localized: "The machine gave an unexpected answer to the direct connection.", bundle: .module))
-            return
-        }
-        events.progress()
-        switch binaryAssembler.push(piece, maxBytes: WireConstants.bytesReplyMaxBytes) {
-        case .invalid:
-            trace("invalid binary piece")
-            fail(TransportWords.unreadableReply)
-        case .partial: break
-        case .frame(let frame): events.binary(frame)
-        }
-    }
-
-    // Only a machine this app chose deflate with sends these, and only once it let the app in.
-    private func receiveDeflatedPiece(_ piece: Data) {
-        guard authenticated, deflating else {
-            fail(TransportWords.unreadableReply)
-            return
-        }
-        events.progress()
-        // A UTF-16 unit takes at most three bytes in UTF-8, so this holds every frame the text path would take.
-        let maxBytes = DirectFraming.authenticatedFrameChars * 3
-        switch deflatedAssembler.push(piece, maxBytes: maxBytes) {
-        case .invalid:
-            trace("invalid deflated piece")
-            fail(TransportWords.unreadableReply)
-        case .partial: break
-        case .frame(let deflated):
-            do {
-                let frame = try DirectFraming.inflate(deflated, maxBytes: maxBytes)
-                if frame.utf16.count > 1_024 * 1_024 {
-                    trace("received large deflated frame: \(frame.utf16.count) UTF-16 units")
-                }
-                gate?.receive(frame)
-            } catch .tooLarge {
-                fail(TransportWords.tooLarge)
-            } catch {
-                fail(TransportWords.unreadableReply)
-            }
         }
     }
 
@@ -505,6 +458,7 @@ import RuimtePulsar
     private func end(_ error: Error?) {
         guard !ended else { return }
         ended = true
+        incoming?.close()
         trace("ended: \(error?.localizedDescription ?? "closed")")
         cancelTimeout?()
         cancelGather?()
@@ -550,9 +504,10 @@ extension NativeWebRTCLink: RTCPeerConnectionDelegate, RTCDataChannelDelegate {
             }
         }
     }
-    nonisolated public func dataChannel(_ dataChannel: RTCDataChannel, didReceiveMessageWith buffer: RTCDataBuffer)
-    {
-        Task { @MainActor [weak self] in self?.receive(buffer) }
+    nonisolated public func dataChannel(_ dataChannel: RTCDataChannel, didReceiveMessageWith buffer: RTCDataBuffer) {
+        let data = buffer.data
+        let isBinary = buffer.isBinary
+        Task { @MainActor [weak self] in self?.receive(data, isBinary: isBinary) }
     }
     nonisolated public func peerConnection(
         _ peerConnection: RTCPeerConnection, didChange stateChanged: RTCSignalingState
@@ -585,7 +540,6 @@ extension NativeWebRTCLink: RTCPeerConnectionDelegate, RTCDataChannelDelegate {
     nonisolated public func peerConnection(
         _ peerConnection: RTCPeerConnection, didRemove candidates: [RTCIceCandidate]
     ) {}
-    nonisolated public func peerConnection(_ peerConnection: RTCPeerConnection, didOpen dataChannel: RTCDataChannel)
-    {}
+    nonisolated public func peerConnection(_ peerConnection: RTCPeerConnection, didOpen dataChannel: RTCDataChannel) {}
 }
 #endif

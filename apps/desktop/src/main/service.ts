@@ -13,13 +13,13 @@ import { commandLineServiceProgram, daemonServiceSpec, platformServiceManager, s
 import { BUILD_FILE } from '@ruimte/service/runtime';
 import { openDaemonLog, type DaemonLog } from '../daemon-log';
 import { askDaemonWork, proveDaemon, stopDaemonGently, type DaemonPort } from '../daemon-proof';
+import { electron } from '../electron';
 import { askLoginShellPath, fileLoginPathCache, loadLoginPath } from '../login-path';
 import { removeOwnDefinition, secretFor, tildeHome } from '../machine-mode';
 import { createServiceController, type ServiceController } from '../service/controller';
 import { keepRunningSetting, serviceSupport } from '../service/settings';
 import { createSecretGate } from '../startup';
 import type { DaemonStartupDiagnostics } from '../telemetry';
-import { electron } from './electron';
 import type { DesktopIpc } from './ipc';
 import { reportShellProblem } from './telemetry';
 

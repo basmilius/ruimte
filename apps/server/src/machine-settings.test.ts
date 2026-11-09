@@ -17,6 +17,7 @@ function context(patch: Partial<SettingContext> = {}): SettingContext {
         owner: false,
         home: '/home/ruimte',
         closedLid: { available: true, rule: async () => true },
+        validateTextModel: async () => undefined,
         current: defaultSettings(),
         ...patch
     };

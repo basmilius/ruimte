@@ -42,6 +42,7 @@ export interface AccountsInput {
     home: string;
     providers: ProviderAccountsOptions['providers'];
     install: NonNullable<ProviderAccountsOptions['install']>;
+    ownsSettings: NonNullable<ProviderAccountsOptions['ownsSettings']>;
 }
 
 /* What the wiring of the git services is built from. */

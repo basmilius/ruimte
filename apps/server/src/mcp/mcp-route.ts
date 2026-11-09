@@ -3,13 +3,13 @@ import { Server, WebStandardStreamableHTTPServerTransport, type CallToolResult }
 import type { ServerActions } from '../actions/server-actions.ts';
 import { AgentFiles } from '../agent-files/files.ts';
 import type { ArtifactUploads } from '../agent-files/uploads.ts';
-import { bearerCaller } from '../agents/bearer.ts';
 import type { CanvasHost } from '../canvas/host.ts';
 import { callerKind } from '../canvas/tasks.ts';
 import { errorText } from '../error-text.ts';
 import { ProjectError } from '../projects/project-error.ts';
 import { MCP_MAX_IMAGE_BYTES } from '../ruimte-mcp.ts';
 import { VERSION } from '../version.ts';
+import { callerOf } from './caller.ts';
 import type { Tool, ToolContext } from './catalog.ts';
 import { MCP_INSTRUCTIONS } from './instructions.ts';
 
@@ -122,12 +122,13 @@ function toolContext(caller: string, deps: McpDeps): ToolContext {
  * bearer token on every request, never a session id.
  */
 export async function handleMcpRequest(request: Request, deps: McpDeps): Promise<Response> {
-    const caller = bearerCaller(request, deps.targetForToken);
+    const identity = callerOf(request, deps.targetForToken);
 
-    if (caller === null) {
+    if (identity === null) {
         return new Response('Unknown token', { status: 401 });
     }
 
+    const caller = identity.id;
     const server = new Server({ name: 'ruimte', version: VERSION }, { capabilities: { tools: {} }, instructions: MCP_INSTRUCTIONS });
 
     server.setRequestHandler('tools/list', async () => ({

@@ -184,6 +184,15 @@ final class MachineEndpoint {
     var lanDoor: Bool? { info.map { $0.lanDoor ?? true } }
     /// A flag the machine started with decides the door, so the switch changes nothing.
     var lanDoorFixed: Bool { info?.lanDoorFixed == true }
+    /// `win32`, `darwin` or `linux`: the style of the paths the machine writes.
+    var platform: String? { info?.platform }
+    /// Where browsing starts on the machine, as a person wrote it; nil while unset, which is its home folder.
+    var startFolder: String? {
+        let folder = info?.startFolder ?? ""
+        return folder.isEmpty ? nil : folder
+    }
+    /// A machine from before the start folder has no request to set it, and the row stays away.
+    var canSetStartFolder: Bool { (client as? MachineFeatures)?.answers(.endpointSetStartFolder) == true }
 
     func start() { live.start() }
 
@@ -332,6 +341,14 @@ final class MachineEndpoint {
             info = previous
             problem = String(localized: "Could not change the local network setting. \(error.localizedDescription)")
         }
+    }
+
+    /// Sets where browsing starts on the machine for every client of it; an empty folder puts it back to the home folder.
+    func setStartFolder(_ folder: String) async throws {
+        let answer = try await client.request(
+            .endpointSetStartFolder,
+            payload: .object(["folder": .string(folder.trimmingCharacters(in: .whitespacesAndNewlines))]))
+        apply(answer)
     }
 
     /// Names the machine for every client; an empty name hands it back to the one it starts with.

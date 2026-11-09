@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { keyOf } from '@adecore/editor-react/testing';
+import { keyOf as eventOf } from '@adecore/editor-react/testing';
 import { typeInto } from '@adecore/editor/testing';
 import { isApplePlatform } from '@adecore/ui';
 import { act } from 'react';
 import { useSettings } from '@/state/settings';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { keyOf } from '@/surface/shortcut-overrides';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
@@ -74,7 +74,7 @@ describe('the completion list of the editor', () => {
             await act(async () => input()!.focus());
             await pressKey(input()!, 'End', MOD);
             await act(async () => {
-                input()!.dispatchEvent(new KeyboardEvent('keydown', { ...keyOf(CANVAS_SHORTCUTS.suggestInline), bubbles: true, cancelable: true }));
+                input()!.dispatchEvent(new KeyboardEvent('keydown', { ...eventOf(keyOf('suggestInline')!), bubbles: true, cancelable: true }));
             });
             await until(() => page.host.querySelector('.se-ghost-accessory') !== null);
             await pressKey(input()!, 'Tab');

@@ -1,0 +1,37 @@
+{
+  "version": "0.10.0",
+  "sourceRevision": "20a9145169437bb1a5629577094f20c01e83369b",
+  "checksumOnly": true,
+  "assets": {
+    "darwin-arm64": {
+      "url": "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-darwin-aarch64.gz",
+      "sha256": "713734314c3e71894b9e77513c5349835eefbd52908445a0d73b0c7dc469347d",
+      "format": "gz",
+      "executable": "taplo"
+    },
+    "darwin-x64": {
+      "url": "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-darwin-x86_64.gz",
+      "sha256": "898122cde3a0b1cd1cbc2d52d3624f23338218c91b5ddb71518236a4c2c10ef2",
+      "format": "gz",
+      "executable": "taplo"
+    },
+    "linux-arm64": {
+      "url": "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-linux-aarch64.gz",
+      "sha256": "033681d01eec8376c3fd38fa3703c79316f5e14bb013d859943b60a07bccdcc3",
+      "format": "gz",
+      "executable": "taplo"
+    },
+    "linux-x64": {
+      "url": "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-linux-x86_64.gz",
+      "sha256": "8fe196b894ccf9072f98d4e1013a180306e17d244830b03986ee5e8eabeb6156",
+      "format": "gz",
+      "executable": "taplo"
+    },
+    "win32-x64": {
+      "url": "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-windows-x86_64.gz",
+      "sha256": "550fdc955343f8a196447a05346ecf8827e391726e4ded577bb00a0a36cf220c",
+      "format": "gz",
+      "executable": "taplo.exe"
+    }
+  }
+}

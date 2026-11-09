@@ -199,6 +199,46 @@ enum UiMotion {
     static var arrival: AnyTransition { AnyTransition.opacity.combined(with: .offset(y: 2)) }
 }
 
+extension EnvironmentValues {
+    /// Set inside a node a failed read dimmed, so a stale node within it does not dim twice.
+    @Entry fileprivate var uiDimmed = false
+}
+
+/// A node whose live read failed dims its last value until a read succeeds, as the desktop's `chat-ui-stale`.
+private struct UiLiveDim: ViewModifier {
+    let stale: Bool
+    @Environment(\.uiDimmed) private var dimmed
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(stale && !dimmed ? 0.5 : 1)
+            .animation(.easeOut(duration: 0.16), value: stale)
+            .environment(\.uiDimmed, dimmed || stale)
+    }
+}
+
+/// A value a live read changed takes the accent once and settles back to `base` in 800 ms, not under Reduce Motion.
+struct UiLit: ViewModifier {
+    /// The read that lit the value, from `UiBlockModel.lit`; nil while no read changed it.
+    let read: Int?
+    let base: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var glowing = false
+
+    func body(content: Content) -> some View {
+        content
+            .foregroundStyle(glowing ? MobileStyle.accent : base)
+            .onChange(of: read) { _, read in
+                guard read != nil, !reduceMotion else { return }
+                glowing = true
+                Task { @MainActor in
+                    await Task.yield()
+                    withAnimation(.easeOut(duration: 0.8)) { glowing = false }
+                }
+            }
+    }
+}
+
 /// Picks the renderer by type, or the fallback of the node when this version cannot draw it.
 struct UiNodeView: View {
     let node: UiNode
@@ -209,7 +249,7 @@ struct UiNodeView: View {
         if let problem = UiFallbackProblem.of(node, catalogVersion: context.catalogVersion) {
             UiFallbackPart(fallback: node.fallback, problem: problem)
         } else {
-            renderer
+            renderer.modifier(UiLiveDim(stale: context.model.liveState(sourceID: node.sourceID) == .stale))
         }
     }
 
@@ -224,7 +264,7 @@ struct UiNodeView: View {
         case "Timeline": UiTimelineView(node: node, context: context)
         case "Event": UiEventView(node: node, context: context)
         case "Stats": UiStatsView(node: node, context: context)
-        case "Stat": UiStatView(node: node)
+        case "Stat": UiStatView(node: node, lit: context.model.lit[UiBlockModel.litKey(nodeID: node.id)])
         case "EntityList": UiEntityListView(node: node, context: context)
         case "Entry": UiEntryView(node: node, context: context)
         case "Table": UiTableView(node: node, context: context)

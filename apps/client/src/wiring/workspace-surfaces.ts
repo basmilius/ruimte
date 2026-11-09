@@ -7,6 +7,7 @@ import { DEVICE_NODE_KIND, DEVICE_VIEW_KIND } from '@/devices/node-kind';
 import { DIAGRAM_VIEW_KIND } from '@/diagram/view-kind';
 import { DRAWING_VIEW_KIND } from '@/drawing/view-kind';
 import { EXTENSION_VIEW_KIND } from '@/extensions/view-kind';
+import { SESSION_TAB_BODY } from '@/files/tab-body';
 import { FILE_VIEW_KIND } from '@/files/view-kind';
 import { DIFF_TAB_DRAG } from '@/git/tab-drag';
 import { NODE_BODY_KINDS, NODE_VIEW_KINDS } from '@/nodes/node-kinds';
@@ -43,6 +44,6 @@ export function installWorkspaceSurfaces(): void {
         DESIGN_VIEW_KIND,
         DATABASE_VIEW_KIND
     );
-    tabBodyRegistry.add(DATABASE_TAB_BODY, ARTIFACT_TAB_BODY);
+    tabBodyRegistry.add(DATABASE_TAB_BODY, ARTIFACT_TAB_BODY, SESSION_TAB_BODY);
     tabDragRegistry.add(DATABASE_TAB_DRAG, ARTIFACT_TAB_DRAG, DIFF_TAB_DRAG);
 }

@@ -64,19 +64,22 @@ enum ChatVisuals {
     static func parse(_ values: [JSONValue]) -> [ChatVisual] { values.compactMap(ChatVisual.init) }
 
     /// When what a row shows began, as the desktop's timeline reads it; nil for a row that only follows the one
-    /// before it (a turn's changed files and forks, a note, a report). The working row closes the thread.
+    /// before it (a turn's changed files and forks, a selection switch, a note, a report, a message the agent sent).
+    /// The working row closes its turn.
     @MainActor static func rowTime(_ entry: ChatTimelineEntry) -> Double? {
         switch entry.kind {
         case .activity: return .infinity
-        case .turnFold, .turnStart, .selectionSwitch, .subagent, .tools: return entry.items.first?.item.createdAt
-        case .changedFiles, .forks, .visual, .output: return nil
+        case .turnFold, .turnStart, .subagent, .tools: return entry.items.first?.item.createdAt
+        case .changedFiles, .forks, .visual, .output, .selectionSwitch: return nil
         // It stands for the call it is repeated over, which it carries after the thought.
         case .liveThought: return entry.items.last?.item.createdAt
         case .message:
             guard let item = entry.items.first?.item else { return nil }
             switch item {
             case .user, .assistant, .thinking, .approval, .question: return item.createdAt
-            case .tool: return ChatSubagents.handbackReport(item) == nil ? item.createdAt : nil
+            case .tool(let tool):
+                return ChatSubagents.handbackReport(item) == nil && RuimteCommandLook.sent(of: tool) == nil
+                    ? item.createdAt : nil
             case .subagent, .turn, .note, .compaction: return nil
             }
         }

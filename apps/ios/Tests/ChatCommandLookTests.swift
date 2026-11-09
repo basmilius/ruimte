@@ -307,8 +307,12 @@ final class ChatCommandLookTests: XCTestCase {
             of: tool("ruimte/device_shot", ["device": .string("iphone"), "wait": .number(3)]))
         XCTAssertEqual(device.map { Line($0.label, $0.detail) }, Line("Device", "shot device=iphone wait=3"))
         XCTAssertEqual(
-            ChatToolPresentation.groupLabel([tool("mcp__ruimte__node_new", [:]), bash("ruimte-context link new a b")]),
+            ChatToolPresentation.groupLabel([tool("mcp__ruimte__node_new", [:]), tool("mcp__ruimte__link_new", [:])]),
             ChatToolSentence(text: "Used Ruimte Canvas 2 times", branded: true))
+        // The tool and the command are two looks, so a run of both is no one look's.
+        XCTAssertEqual(
+            ChatToolPresentation.groupLabel([tool("mcp__ruimte__node_new", [:]), bash("ruimte-context link new a b")]),
+            ChatToolSentence(text: "2 tool calls"))
     }
 
     private func notifyTool(_ input: [String: JSONValue], output: String?, state: String = "done") -> ChatAgentSent? {

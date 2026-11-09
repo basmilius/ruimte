@@ -54,6 +54,15 @@ describe('the words of a message', () => {
         expect(messageText(2)).toStartWith('2 agents of this project sent you the messages above.');
         expect(messageText(1)).toContain('Agents reading each other wake each other a few times');
     });
+
+    test('tells its agent a message of an external MCP client came from the person, by the name the client signs with', () => {
+        const notice = (from: string, fromTitle: string): Notice => ({ ...left('hi'), from, fromTitle, createdAt: 0 });
+        const external = notice('external-cred-1', 'MCP · claude.ai');
+        expect(messageText(1, [external])).toStartWith(`The person's external MCP client "MCP · claude.ai" sent you the message above.`);
+        expect(messageText(2, [notice('term-1', 'shell'), external])).toStartWith(
+            `Another agent of this project and the person's external MCP client "MCP · claude.ai" sent you the messages above.`
+        );
+    });
 });
 
 describe('deliverNotice', () => {

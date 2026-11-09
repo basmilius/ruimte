@@ -113,4 +113,15 @@ struct PushAPITests {
         }
         #expect(await requests.values.count == 1)
     }
+
+    @Test func aLimitAlertDecodesWithAndWithoutItsFields() throws {
+        let base = #""kind":"attention","target":"chat","nodeId":"chat","title":"Chat","body":"Codex: weekly limit reached.","expiresAt":1"#
+        let limit = try JSONDecoder().decode(
+            PushAlertContent.self, from: Data("{\(base),\"timeSensitive\":true,\"resetsAt\":1900000000000}".utf8))
+        #expect(limit.timeSensitive == true)
+        #expect(limit.resetsAt == 1_900_000_000_000)
+        let plain = try JSONDecoder().decode(PushAlertContent.self, from: Data("{\(base)}".utf8))
+        #expect(plain.timeSensitive == nil)
+        #expect(plain.resetsAt == nil)
+    }
 }

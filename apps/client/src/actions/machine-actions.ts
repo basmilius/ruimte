@@ -228,6 +228,10 @@ export function machineActions(overrides: Partial<MachineReach> = {}): ActionHan
             machine.adoptInfo(endpointId, await askOn(endpointId, (link) => link.request('endpoint.setNodeSize', { kind, size })));
             return { output: { endpointId, kind, size } };
         },
+        'machine.setStartFolder': async ({ endpointId, folder }) => {
+            machine.adoptInfo(endpointId, await askOn(endpointId, (link) => link.request('endpoint.setStartFolder', { folder })));
+            return { output: { endpointId, folder } };
+        },
         'machine.revokeAccess': async ({ endpointId, sessionId }) => {
             await askOn(endpointId, (link) => link.request('auth.revoke', { id: sessionId }));
             return { output: { endpointId, sessionId } };

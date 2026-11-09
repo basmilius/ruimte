@@ -6,6 +6,7 @@ import type { OpenPathRequest, SavePathRequest } from './database.ts';
 import type { InstalledClientExtension } from './extensions.ts';
 import type { MachineStopPreview } from './machine.ts';
 import type { MenuSpec } from './menu.ts';
+import type { PortTunnelOpened, PortTunnelRequest, PortTunnelToPage, PortTunnelToShell } from './port-tunnel.ts';
 import type { KeepAwakeRequest, SystemIdleState } from './power.ts';
 import type { BackgroundServiceState } from './service.ts';
 import type { SpeechEvent, SpeechState } from './speech.ts';
@@ -67,6 +68,7 @@ export const IPC_INVOKE = {
     'extensions:link': invoke<[folder: string, revision: number, enabled?: boolean]>(),
     'extensions:unlink': invoke<[id: string]>(),
     'browser:bind-route': invoke<[binding: BrowserRouteBinding], boolean>(),
+    'port-tunnel:open': invoke<[request: PortTunnelRequest], PortTunnelOpened | null>(),
     'browser:capture': invoke<[webContentsId: number], Uint8Array | null>(),
     'dialog:pick-folder': invoke<[initialPath?: string], string | null>(),
     'dialog:save-file': invoke<[suggestedName: string, bytes: Uint8Array, mime: string], string | null>(),
@@ -128,6 +130,9 @@ export const IPC_SEND = {
     'quick-look:close': send(),
     'devtools:guest': send<[webContentsId: number]>(),
     'browser:context-action': send<[action: BrowserContextAction]>(),
+    'port-tunnel:close': send<[id: string]>(),
+    'port-tunnel:send': send<[message: PortTunnelToShell]>(),
+    'app:quit': send(),
     'app:language': send<[language: string]>(),
     'menu:set': send<[spec: MenuSpec]>(),
     'window:theme': send<[theme: ThemeState]>(),
@@ -146,6 +151,7 @@ export const IPC_EVENT = {
     'service:state': push<[state: BackgroundServiceState]>(),
     'extensions:changed': push(),
     'browser:route-blocked': push<[event: BrowserRouteBlocked]>(),
+    'port-tunnel:message': push<[message: PortTunnelToPage]>(),
     'browser:context-menu': push<[params: BrowserContextParams]>(),
     'guest:focus': push<[webContentsId: number]>(),
     'menu:settings': push<[section: string | null]>(),

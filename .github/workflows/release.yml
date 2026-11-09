@@ -95,24 +95,40 @@ jobs:
         env:
           RUIMTE_TELEMETRY: '1'
         run: bun run --cwd apps/client build
-      - uses: ./.github/actions/client-source-maps
+      # The debug ids go in before the artifact, which the mac build waits for, and the upload of the
+      # maps after it. Its maps ride along in the artifact; electron-builder's filter keeps them out
+      # of every build.
+      - name: Debug ids
+        continue-on-error: true
+        uses: basmilius/observatory-action@683baa9a3c1e5e14235539ead23ffae56b85dfab # v1
         with:
-          dist: apps/client/dist
-          release: ruimte@${{ env.RUIMTE_VERSION }}
-          token: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
+          url: https://ingest.bmnw.nl
+          version: ruimte@${{ env.RUIMTE_VERSION }}
+          sourcemaps: apps/client/dist
+          inject: 'true'
+          upload: 'false'
+          deploy: 'false'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: client
           path: apps/client/dist
           if-no-files-found: error
           retention-days: 7
+      - uses: ./.github/actions/client-source-maps
+        with:
+          dist: apps/client/dist
+          release: ruimte@${{ env.RUIMTE_VERSION }}
+          token: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
 
-  # The platform builds upload to the draft (`--publish always`), so they write.
+  # The platform builds upload to the draft (`--publish always`), so they write. Each starts beside
+  # the client job and waits for its artifact only where electron-builder needs it
+  # (`.github/actions/client-artifact`), which takes `actions: read`.
   mac:
-    needs: [draft, client]
+    needs: draft
     runs-on: macos-latest
     permissions:
       contents: write
+      actions: read
     steps:
       # Without them the build goes out unsigned or unnotarized, which Squirrel refuses as an update
       # and Gatekeeper blocks as a download, so a missing one stops the release here and the draft
@@ -140,10 +156,6 @@ jobs:
       - uses: ./.github/actions/install
       - name: Version from the tag
         run: echo "RUIMTE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: client
-          path: apps/client/dist
       - name: Compile the daemon
         env:
           RUIMTE_TELEMETRY: '1'
@@ -167,6 +179,12 @@ jobs:
           umask 077
           printf '%s' "$APPLE_API_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
           echo "APPLE_API_KEY=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+      - name: Build the main process
+        working-directory: apps/desktop
+        env:
+          RUIMTE_TELEMETRY: '1'
+        run: bun run build:main
+      - uses: ./.github/actions/client-artifact
       - name: Build and upload
         working-directory: apps/desktop
         env:
@@ -179,7 +197,6 @@ jobs:
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           RUIMTE_TELEMETRY: '1'
         run: |
-          bun run build:main
           bun x electron-builder --mac --arm64 --publish always \
             -c.extraMetadata.version="$RUIMTE_VERSION" -c.mac.notarize=true
       - name: Shred the key
@@ -187,7 +204,7 @@ jobs:
         run: rm -f "$RUNNER_TEMP/AuthKey.p8"
 
   linux:
-    needs: [draft, client]
+    needs: draft
     strategy:
       matrix:
         include:
@@ -200,6 +217,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install rpmbuild when the runner lacks it
@@ -211,10 +229,6 @@ jobs:
       - uses: ./.github/actions/install
       - name: Version from the tag
         run: echo "RUIMTE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: client
-          path: apps/client/dist
       - name: Compile the daemon
         env:
           RUIMTE_TELEMETRY: '1'
@@ -229,6 +243,12 @@ jobs:
           path: apps/server/dist/linux-${{ matrix.arch }}
           if-no-files-found: error
           retention-days: 7
+      - name: Build the main process
+        working-directory: apps/desktop
+        env:
+          RUIMTE_TELEMETRY: '1'
+        run: bun run build:main
+      - uses: ./.github/actions/client-artifact
       # Every target goes up, AppImage included: the feed an install updates from has to name the
       # format it was installed from.
       - name: Build and upload
@@ -237,7 +257,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUIMTE_TELEMETRY: '1'
         run: |
-          bun run build:main
           bun x electron-builder --linux --${{ matrix.arch }} --publish always \
             -c.extraMetadata.version="$RUIMTE_VERSION"
 
@@ -246,11 +265,12 @@ jobs:
   # Off unless the repository variable WINDOWS_RELEASE is `true`, so it never holds up the others.
   # NSIS only builds on Windows; the daemon would cross-compile anywhere.
   windows:
-    needs: [draft, client]
+    needs: draft
     if: vars.WINDOWS_RELEASE == 'true'
     runs-on: windows-latest
     permissions:
       contents: write
+      actions: read
     defaults:
       run:
         shell: bash
@@ -259,10 +279,6 @@ jobs:
       - uses: ./.github/actions/install
       - name: Version from the tag
         run: echo "RUIMTE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: client
-          path: apps/client/dist
       - name: Compile the daemon
         env:
           RUIMTE_TELEMETRY: '1'
@@ -277,6 +293,12 @@ jobs:
           path: apps/server/dist/win-x64
           if-no-files-found: error
           retention-days: 7
+      - name: Build the main process
+        working-directory: apps/desktop
+        env:
+          RUIMTE_TELEMETRY: '1'
+        run: bun run build:main
+      - uses: ./.github/actions/client-artifact
       # The installer, its blockmap and `latest.yml` go up together: electron-updater reads the feed of
       # the NSIS target, and the zip rides along for whoever wants it without an installer.
       - name: Build and upload
@@ -285,7 +307,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUIMTE_TELEMETRY: '1'
         run: |
-          bun run build:main
           bun x electron-builder --win --x64 --publish always \
             -c.extraMetadata.version="$RUIMTE_VERSION"
 
@@ -311,7 +332,7 @@ jobs:
         run: echo "::warning::OBSERVATORY_UPLOAD_TOKEN is empty; no deploy reported"
       - name: Report the deploy
         if: env.OBSERVATORY_UPLOAD_TOKEN != ''
-        uses: basmilius/observatory-action@dae861d69a193baacbe35c29b9b99754f2938f10 # v1
+        uses: basmilius/observatory-action@683baa9a3c1e5e14235539ead23ffae56b85dfab # v1
         with:
           url: https://ingest.bmnw.nl
           token: ${{ env.OBSERVATORY_UPLOAD_TOKEN }}

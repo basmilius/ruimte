@@ -249,6 +249,7 @@
             "undoAll": "Undo all",
             "next": "Next change",
             "previous": "Previous change",
+            "onlyChanges": "Show only the changes",
             "position": "{{current}} of {{total}}",
             "summary_one": "{{name}} changed {{count}} place",
             "summary_other": "{{name}} changed {{count}} places",
@@ -331,6 +332,13 @@
         },
         "viewer": {
             "original": "Original"
+        },
+        "changePreview": {
+            "title": "Change since last commit",
+            "revert": "Revert change",
+            "truncated": "Preview shortened. Revert restores the entire change.",
+            "author": "Written by {{chat}}",
+            "authorTurn": "Written by {{chat}} · Turn {{turn}}"
         }
     },
     "files": {
@@ -584,6 +592,50 @@
             "writeOneRepo": "Writes for one repository at a time",
             "suggestionReady": "Your draft changed during this suggestion.",
             "useSuggestion": "Use suggestion"
+        },
+        "compare": {
+            "title": "Compare branches",
+            "menu": "Compare branches…",
+            "withBranch": "Compare this branch…",
+            "description": "Choose two branches to see their files and commits side by side. Nothing is checked out or fetched, and your working tree stays as it is.",
+            "repository": "Repository",
+            "chooseRepository": "Choose a repository",
+            "noRepository": "No repository found",
+            "from": "Base branch",
+            "to": "Branch to compare",
+            "mode": "Comparison",
+            "mergeBase": "Changes since the branches diverged",
+            "tips": "Difference between the two tips",
+            "open": "Compare",
+            "loadingRefs": "Reading branches…",
+            "session": "The comparison stays open in this window until you close it. Remote branches show what was fetched last.",
+            "offline": "This machine is not connected, so branches cannot be compared.",
+            "update": "This machine is too old to compare branches. Update it to use this.",
+            "failed": "Could not show the comparison",
+            "tab": "{{from}} → {{to}}",
+            "choose": "Change branches…",
+            "refresh": "Read the branches again",
+            "reading": "Reading the comparison…",
+            "summaryMergeBase": "Changes in {{to}} ({{toCommit}}) since it split from {{from}} ({{fromCommit}}), counted from the common ancestor {{base}}.",
+            "summaryTips": "The difference between the tip of {{from}} ({{fromCommit}}) and the tip of {{to}} ({{toCommit}}).",
+            "section": "Show",
+            "files": "Files ({{total}})",
+            "commits": "Commits",
+            "noFiles": "No files differ.",
+            "noCommits": "This branch has no commits of its own.",
+            "onlyOn": "Only on {{branch}}",
+            "moreCommits": "Show more commits",
+            "openOn": "Open on {{branch}}",
+            "ancestorName": "common ancestor",
+            "readOnly": "Read only. {{branch}} at commit {{commit}}, not your working tree.",
+            "symlink": "Symbolic link in {{branch}} at commit {{commit}}. The text is the path it points to.",
+            "blob": {
+                "missing": "This file does not exist at this commit.",
+                "binary": "This file is binary, so it is not shown.",
+                "too-large": "This file is too large to show.",
+                "gitlink": "This is a submodule. The commit holds no file content for it.",
+                "not-file": "This is a folder, not a file."
+            }
         },
         "conflict": {
             "cherry-pick": "A cherry-pick waits on you",
@@ -844,6 +896,10 @@
         "useInstead": "Use {{name}} instead",
         "restart": "Restart",
         "restartAll": "Restart all",
+        "buildHeld": "Build scripts and macros are off in this worktree.",
+        "buildAllow": "Turn on for this repository",
+        "buildAllowed": "Build scripts and macros run in the worktrees of agents.",
+        "buildHold": "Turn off for this repository",
         "showLog": "Show log",
         "logTitle": "{{name}} log",
         "logEmpty": "Nothing logged yet",
@@ -1019,7 +1075,7 @@
             "note": "Written by the model chosen in Settings, Editor, AI.",
             "thinking": "Explaining…",
             "off": "Explain is off. Turn it on in Settings, Editor, AI.",
-            "nothing": "Select code, or put the caret in a function, to explain it.",
+            "nothing": "Select code, or put the caret in a symbol, to explain it.",
             "tooOld": "Update this machine to use the editor model."
         }
     },

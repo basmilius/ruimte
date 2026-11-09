@@ -5,6 +5,7 @@ import { serverInfoOf, useServers } from '@/state/server';
 import { fireAndForget } from '@/transport-api/transport';
 import { pool, transportFor } from '@/transport/index';
 import { noteDaemonIdentity } from '@/workspace/identity';
+import { moveBrowseStartFolder } from '@/workspace/start-folder-migration';
 import { watchOpenMachines } from '../transport/open-machines';
 
 /*
@@ -22,6 +23,7 @@ function load(endpointId: string): void {
         link.request('endpoint.info', {}).then(async (info) => {
             const settled = noteDaemonIdentity(endpointId, info);
             adoptEndpointInfo(settled, info);
+            void moveBrowseStartFolder(settled, info, async (folder) => adoptEndpointInfo(settled, await link.request('endpoint.setStartFolder', { folder })));
             void fireAndForget(
                 'provider.list',
                 link.request('provider.list', {}).then(({ providers }) => useProvidersStore.getState().setProviders(settled, providers))
@@ -44,9 +46,11 @@ export function adoptEndpointInfo(endpointId: string, info: EndpointInfo): void 
         icon: info.icon ?? null,
         agentsDeleteAnyView: info.agentsDeleteAnyView === true,
         reachOpenProjects: info.reachOpenProjects === true,
+        agentsSharePorts: info.agentsSharePorts === true,
         streamingAllowed: info.streamingAllowed ?? true,
         resumeAtReset: info.resumeAtReset === true,
         visualReplies: info.visualReplies ?? true,
+        textModel: info.textModel,
         keepAwake: info.keepAwake ?? 'off',
         keepAwakeOnBattery: info.keepAwakeOnBattery === true,
         keepAwakeDisplay: info.keepAwakeDisplay === true,
@@ -68,6 +72,7 @@ export function adoptEndpointInfo(endpointId: string, info: EndpointInfo): void 
         gitBashMissing: info.gitBashMissing === true,
         nodeSizes: knownNodeSizes(info.nodeSizes),
         usageStats: info.usageStats,
+        startFolder: info.startFolder ?? '',
         viewReferences: info.viewReferences === true
     });
     adoptMachineName(endpointId, info.label, info.nameSource ?? 'default');

@@ -102,6 +102,7 @@ struct MachineAccessSheet: View {
     var body: some View {
         NavigationStack {
             MobileForm {
+                MachineClientsSection(session: session)
                 MachineAccessSection(session: session, runtime: runtime, name: name)
             }
             .navigationTitle("Apps with access")

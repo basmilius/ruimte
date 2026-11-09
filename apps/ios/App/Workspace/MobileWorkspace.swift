@@ -328,14 +328,20 @@ final class MobileWorkspace {
     }
 
     func ensureSession(_ item: ProjectItem) async throws {
-        let kind = item.kind
-        guard kind == "chat" || kind == "terminal", let raw = rawItem(item.id) else { return }
-        if kind == "chat", session.hasLiveChat(item.id) { return }
+        guard let raw = rawItem(item.id) else { return }
+        try await ensureSession(id: item.id, kind: item.kind, raw: raw)
+    }
+
+    /// Starts the session of an item as its options say. A further chat of a design is no item of the document, so it
+    /// brings its own options.
+    func ensureSession(id: String, kind: String, raw: JSONValue) async throws {
+        guard kind == "chat" || kind == "terminal" else { return }
+        if kind == "chat", session.hasLiveChat(id) { return }
         let metadata = raw["node"] ?? raw
         let cwd = metadata.text("cwd")
         let resolved = cwd.hasPrefix("/") || cwd.hasPrefix("~") ? cwd : (cwd.isEmpty ? folder : folder + "/" + cwd)
         var payload: [String: JSONValue] = [
-            kind == "chat" ? "chatId" : "sessionId": .string(item.id), "cwd": .string(resolved),
+            kind == "chat" ? "chatId" : "sessionId": .string(id), "cwd": .string(resolved),
         ]
         if kind == "terminal" {
             payload["cols"] = .number(100)
@@ -353,10 +359,10 @@ final class MobileWorkspace {
         do {
             let info = try await client.request(
                 kind == "chat" ? .chatCreate : .sessionCreate, payload: .object(payload))
-            if kind == "terminal" { heldCommands[item.id] = info["heldCommand"]?.stringValue }
+            if kind == "terminal" { heldCommands[id] = info["heldCommand"]?.stringValue }
         } catch let error as MachineClientError where kind == "terminal" && error.code == .sessionExists {
             // The existing shell is shared with the desktop and keeps its current dimensions.
-            await refreshHeldCommands(including: item.id)
+            await refreshHeldCommands(including: id)
         }
     }
 

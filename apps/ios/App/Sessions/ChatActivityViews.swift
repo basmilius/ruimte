@@ -69,18 +69,23 @@ struct ChatElapsed: View {
     }
 }
 
+/// The line closing a running turn, under the mark of the call it runs last and a spinner between calls. While it
+/// waits on a person or lost its machine it says so instead of its clock, which the desktop does not.
 struct ChatWorkingRow: View {
+    let entry: ChatTimelineEntry
     let presentation: ChatPresentation
 
     var body: some View {
+        let call = entry.items.last?.item.toolItem
+        let startedAt = entry.items.first?.item.turnItem?.createdAt ?? presentation.startedAt
         HStack(spacing: 8) {
-            if presentation.isAnimating {
-                Spinner(size: 14).foregroundStyle(MobileStyle.statusRunning)
+            if let call {
+                ChatToolMarkView(mark: ChatToolPresentation.mark(call)).foregroundStyle(MobileStyle.accent)
             } else {
-                Image(lucide: "circle-pause", size: 14)
+                Spinner(size: 14).foregroundStyle(MobileStyle.statusRunning)
             }
             ChatLiveLabel(text: presentation.activityLabel, active: presentation.isAnimating)
-            if presentation.isAnimating, let startedAt = presentation.startedAt {
+            if presentation.isAnimating, let startedAt {
                 ChatElapsed(startedAt: startedAt, clock: true).accessibilityHidden(true)
             }
         }
@@ -186,9 +191,10 @@ struct ChatToolRow: View {
                 )
                 .accessibilityElement(children: .combine)
             }
+            // The suffixes `readImagePath` on the desktop draws, without SVG, which UIImage cannot.
             if item.state == .done, ["Read", "NotebookRead"].contains(item.name),
                 let path = item.input["file_path"]?.stringValue,
-                ["png", "jpg", "jpeg", "gif", "webp", "heic", "heif"].contains((path as NSString).pathExtension.lowercased())
+                ["png", "jpg", "jpeg", "gif", "webp"].contains((path as NSString).pathExtension.lowercased())
             {
                 ChatInlineImage(
                     resource: .object(["kind": .string("file"), "path": .string(path)]),
@@ -229,9 +235,8 @@ private struct ChatToolLine: View {
     var body: some View {
         let run = RuimteCommandLook.run(of: item)
         HStack(spacing: 8) {
-            // Only the mark and the word at the end say it failed, so the line stays readable in its own tone.
-            ChatToolMarkView(mark: failed ? .lucide("circle-alert") : ChatToolPresentation.mark(item))
-                .foregroundStyle(failed ? MobileStyle.statusError : MobileStyle.muted)
+            ChatToolMarkView(mark: ChatToolPresentation.mark(item))
+                .foregroundStyle(running ? MobileStyle.accent : MobileStyle.muted)
             // The label is the body face and the detail mono, so only a shared baseline puts them on one line.
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 ChatLiveLabel(
@@ -269,7 +274,9 @@ private struct ChatToolLine: View {
                 } else if running {
                     ChatElapsed(startedAt: item.progress?.startedAt ?? item.createdAt)
                 } else if failed {
-                    Text("Failed").foregroundStyle(MobileStyle.statusError)
+                    // Only a cross says it failed, so the line stays readable in its own tone.
+                    Image(lucide: "x", size: 12).foregroundStyle(MobileStyle.statusError)
+                        .accessibilityLabel(String(localized: "Failed"))
                 }
                 if opens {
                     Image(lucide: expanded ? "chevron-down" : "chevron-right", size: 12)

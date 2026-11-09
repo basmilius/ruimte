@@ -1,9 +1,17 @@
 import { afterAll, beforeAll, describe, expect, spyOn, test } from 'bun:test';
+import { constants } from 'node:fs';
 import * as fs from 'node:fs/promises';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rename, rm, symlink, truncate, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { untrackedNumstat } from './untracked-lines.ts';
+import { openFlags, untrackedNumstat as readUntrackedNumstat } from './untracked-lines.ts';
+
+async function untrackedNumstat(root: string, path: string) {
+    const stat = await fs.lstat(join(root, path), { bigint: true }).catch(() => null);
+    const changedAt = stat === null ? 0n : stat.mtimeNs > stat.ctimeNs ? stat.mtimeNs : stat.ctimeNs;
+
+    return await readUntrackedNumstat(root, path, Number(changedAt / 1_000_000n) + 5000);
+}
 
 let root: string;
 
@@ -20,7 +28,38 @@ async function counted(name: string, content: string | Uint8Array): Promise<unkn
     return await untrackedNumstat(root, name);
 }
 
+describe('openFlags', () => {
+    // Windows has no O_NONBLOCK or O_NOFOLLOW in `constants`, so the POSIX flags are only checked where they exist.
+    test.skipIf(process.platform === 'win32')('opens read-only without blocking or following a link', () => {
+        const flags = openFlags('darwin') as number;
+
+        expect(flags & constants.O_NONBLOCK).toBe(constants.O_NONBLOCK);
+        expect(flags & constants.O_NOFOLLOW).toBe(constants.O_NOFOLLOW);
+        expect(flags & (constants.O_WRONLY | constants.O_RDWR)).toBe(0);
+        expect(openFlags('linux')).toBe(flags);
+    });
+
+    test('opens a plain read on Windows', () => {
+        expect(openFlags('win32')).toBe('r');
+    });
+});
+
 describe('untrackedNumstat', () => {
+    test('unchanged counts reopen no content on the next read', async () => {
+        const name = 'unchanged.txt';
+        const absolute = join(root, name);
+        await writeFile(absolute, 'one\ntwo\n');
+        const opens = spyOn(fs, 'open');
+
+        try {
+            expect(await untrackedNumstat(root, name)).toEqual({ path: name, added: 2, deleted: 0, binary: false });
+            expect(await untrackedNumstat(root, name)).toEqual({ path: name, added: 2, deleted: 0, binary: false });
+            expect(opens.mock.calls.filter(([path]) => path === absolute)).toHaveLength(1);
+        } finally {
+            opens.mockRestore();
+        }
+    });
+
     test('every line is added, the last one too when it has no newline', async () => {
         expect(await counted('closed.txt', 'one\ntwo\n')).toEqual({ path: 'closed.txt', added: 2, deleted: 0, binary: false });
         expect(await counted('open.txt', 'one\ntwo')).toEqual({ path: 'open.txt', added: 2, deleted: 0, binary: false });
@@ -64,7 +103,8 @@ describe('untrackedNumstat', () => {
             );
 
             try {
-                expect(await untrackedNumstat(root, 'growing.txt')).toEqual({
+                // At time zero every file is fresh and never reused, so the second size is counted too.
+                expect(await readUntrackedNumstat(root, 'growing.txt', 0)).toEqual({
                     path: 'growing.txt',
                     added: size === limit ? 1 : 0,
                     deleted: 0,
@@ -87,5 +127,223 @@ describe('untrackedNumstat', () => {
         await mkdir(join(root, 'folder'));
         expect(await untrackedNumstat(root, 'folder')).toBeNull();
         expect(await untrackedNumstat(root, 'missing.txt')).toBeNull();
+    });
+
+    test('ctime invalidates a same-size rewrite even when mtime is preserved', async () => {
+        const name = 'preserved-mtime.txt';
+        const absolute = join(root, name);
+        await writeFile(absolute, 'a\nb\n');
+        let version = 1n;
+        const original = fs.lstat;
+        const metadata = spyOn(fs, 'lstat').mockImplementation(async (path, options) => {
+            const stat = await original(path, options);
+
+            return path === absolute ? Object.assign(Object.create(stat), { mtimeNs: 10n, ctimeNs: version }) : stat;
+        });
+
+        try {
+            expect(await untrackedNumstat(root, name)).toMatchObject({ added: 2 });
+            await writeFile(absolute, 'abcd');
+            version = 2n;
+            expect(await untrackedNumstat(root, name)).toMatchObject({ added: 1 });
+            expect(await untrackedNumstat(root, name)).toMatchObject({ added: 1 });
+        } finally {
+            metadata.mockRestore();
+        }
+    });
+
+    test('recent or future colliding timestamps are reread before older stable counts are reused', async () => {
+        const name = 'coarse-timestamps.txt';
+        const absolute = join(root, name);
+        await writeFile(absolute, 'a\nb\n');
+        let mtimeNs = 1_000_000_000n;
+        const original = fs.lstat;
+        const metadata = spyOn(fs, 'lstat').mockImplementation(async (path, options) => {
+            const stat = await original(path, options);
+
+            return path === absolute ? Object.assign(Object.create(stat), { mtimeNs, ctimeNs: 1_000_000_000n }) : stat;
+        });
+        const opens = spyOn(fs, 'open');
+
+        try {
+            expect(await readUntrackedNumstat(root, name, 1000)).toMatchObject({ added: 2 });
+            await writeFile(absolute, 'abcd');
+            expect(await readUntrackedNumstat(root, name, 1001)).toMatchObject({ added: 1 });
+            expect(await readUntrackedNumstat(root, name, 3001)).toMatchObject({ added: 1 });
+            expect(await readUntrackedNumstat(root, name, 3002)).toMatchObject({ added: 1 });
+            expect(opens.mock.calls.filter(([path]) => path === absolute)).toHaveLength(3);
+
+            await writeFile(absolute, 'a\nb\n');
+            expect(await readUntrackedNumstat(root, name, 500)).toMatchObject({ added: 2 });
+            expect(await readUntrackedNumstat(root, name, 600)).toMatchObject({ added: 2 });
+            expect(opens.mock.calls.filter(([path]) => path === absolute)).toHaveLength(5);
+
+            mtimeNs = 10_000_000_000n;
+            expect(await readUntrackedNumstat(root, name, 5000)).toMatchObject({ added: 2 });
+            await writeFile(absolute, 'abcd');
+            expect(await readUntrackedNumstat(root, name, 5001)).toMatchObject({ added: 1 });
+            expect(opens.mock.calls.filter(([path]) => path === absolute)).toHaveLength(7);
+        } finally {
+            opens.mockRestore();
+            metadata.mockRestore();
+        }
+    });
+
+    test('an atomic replacement invalidates matching size and timestamps', async () => {
+        const name = 'replaced.txt';
+        const absolute = join(root, name);
+        const replacement = join(root, 'replacement.txt');
+        await writeFile(absolute, 'a\nb\n');
+        await writeFile(replacement, 'abcd');
+        const original = fs.lstat;
+        const metadata = spyOn(fs, 'lstat').mockImplementation(async (path, options) => {
+            const stat = await original(path, options);
+
+            return path === absolute ? Object.assign(Object.create(stat), { mtimeNs: 10n, ctimeNs: 10n }) : stat;
+        });
+
+        try {
+            expect(await untrackedNumstat(root, name)).toMatchObject({ added: 2 });
+            await rename(replacement, absolute);
+            expect(await untrackedNumstat(root, name)).toMatchObject({ added: 1 });
+        } finally {
+            metadata.mockRestore();
+        }
+    });
+
+    test('missing and non-file paths cannot reuse a remembered file count', async () => {
+        const name = 'removed.txt';
+        const absolute = join(root, name);
+        expect(await counted(name, 'a\nb\n')).toMatchObject({ added: 2 });
+        await rm(absolute);
+        expect(await untrackedNumstat(root, name)).toBeNull();
+        await mkdir(absolute);
+        expect(await untrackedNumstat(root, name)).toBeNull();
+        await rm(absolute, { recursive: true });
+        expect(await counted(name, 'new')).toMatchObject({ added: 1 });
+    });
+
+    test.skipIf(process.platform === 'win32')('a cached regular file replaced by a symlink is no longer counted', async () => {
+        const name = 'linked.txt';
+        const absolute = join(root, name);
+        const target = join(root, 'link-target.txt');
+        expect(await counted(name, 'a\nb\n')).toMatchObject({ added: 2 });
+        await rename(absolute, target);
+        await symlink(target, absolute);
+        expect(await untrackedNumstat(root, name)).toBeNull();
+    });
+
+    test('a failed open is retried even when file metadata did not change', async () => {
+        const name = 'temporarily-unreadable.txt';
+        const absolute = join(root, name);
+        await writeFile(absolute, 'line\n');
+        const original = fs.open;
+        let refused = true;
+        const opens = spyOn(fs, 'open').mockImplementation((path, flags, mode) => {
+            if (path === absolute && refused) {
+                return Promise.reject(new Error('temporarily unavailable'));
+            }
+
+            return original(path, flags, mode);
+        });
+
+        try {
+            expect(await untrackedNumstat(root, name)).toBeNull();
+            refused = false;
+            expect(await untrackedNumstat(root, name)).toMatchObject({ added: 1 });
+            expect(opens.mock.calls.filter(([path]) => path === absolute)).toHaveLength(2);
+        } finally {
+            opens.mockRestore();
+        }
+    });
+
+    test('a different file opened after the path check cannot poison remembered counts', async () => {
+        const name = 'opened-identity.txt';
+        const absolute = join(root, name);
+        const other = join(root, 'other-identity.txt');
+        await writeFile(absolute, 'a\nb\n');
+        await writeFile(other, 'abcd');
+        const original = fs.open;
+        let redirected = true;
+        const opens = spyOn(fs, 'open').mockImplementation((path, flags, mode) => {
+            return original(path === absolute && redirected ? other : path, flags, mode);
+        });
+
+        try {
+            expect(await untrackedNumstat(root, name)).toBeNull();
+            redirected = false;
+            expect(await untrackedNumstat(root, name)).toMatchObject({ added: 2 });
+            expect(await untrackedNumstat(root, name)).toMatchObject({ added: 2 });
+            expect(opens.mock.calls.filter(([path]) => path === absolute)).toHaveLength(2);
+        } finally {
+            opens.mockRestore();
+        }
+    });
+
+    test('results belong to their caller and keep its relative spelling', async () => {
+        const name = 'caller-owned.txt';
+        await writeFile(join(root, name), 'a\nb\n');
+        const first = await untrackedNumstat(root, name);
+
+        if (first === null) {
+            throw new Error('The fixture file was not counted');
+        }
+
+        first.added = 999;
+        const alias = await untrackedNumstat(root, './caller-owned.txt');
+
+        if (alias === null) {
+            throw new Error('The fixture file was not counted');
+        }
+
+        expect(alias).toEqual({ path: './caller-owned.txt', added: 2, deleted: 0, binary: false });
+        alias.added = 1000;
+        expect(await untrackedNumstat(root, name)).toMatchObject({ path: name, added: 2 });
+    });
+
+    test('recently used counts survive while the oldest is evicted at the fixed limit', async () => {
+        const name = 'evicted.txt';
+        const absolute = join(root, name);
+        await writeFile(absolute, 'old\n');
+        const opens = spyOn(fs, 'open');
+
+        try {
+            await untrackedNumstat(root, name);
+
+            for (let index = 0; index < 511; index += 1) {
+                await counted(`evict-${index}.txt`, 'line\n');
+            }
+
+            expect(await untrackedNumstat(root, name)).toMatchObject({ added: 1 });
+            await counted('evict-newest.txt', 'line\n');
+            expect(await untrackedNumstat(root, name)).toMatchObject({ added: 1 });
+            expect(await untrackedNumstat(root, 'evict-0.txt')).toMatchObject({ added: 1 });
+            expect(opens.mock.calls.filter(([path]) => path === absolute)).toHaveLength(1);
+            expect(opens.mock.calls.filter(([path]) => path === join(root, 'evict-0.txt'))).toHaveLength(2);
+        } finally {
+            opens.mockRestore();
+        }
+    });
+
+    test('a sparse file above the existing size cap is binary without opening content', async () => {
+        const name = 'above-limit.txt';
+        const absolute = join(root, name);
+        await writeFile(absolute, '');
+        await truncate(absolute, 512 * 1024 * 1024 + 1);
+        const original = fs.open;
+        const opens = spyOn(fs, 'open').mockImplementation((path, flags, mode) => {
+            if (path === absolute) {
+                return Promise.reject(new Error('An oversized fixture must not be read'));
+            }
+
+            return original(path, flags, mode);
+        });
+
+        try {
+            expect(await untrackedNumstat(root, name)).toEqual({ path: name, added: 0, deleted: 0, binary: true });
+            expect(opens.mock.calls.filter(([path]) => path === absolute)).toHaveLength(0);
+        } finally {
+            opens.mockRestore();
+        }
     });
 });

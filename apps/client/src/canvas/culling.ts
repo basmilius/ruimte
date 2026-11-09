@@ -26,9 +26,10 @@ export function useNodeInViewport(id: string): boolean {
 }
 
 /*
- * Whether the camera is close enough for the costly bodies (a file, a diagram, a device) to draw live,
- * by the render distance this client chose. Below it such a body shows its plate, which is what keeps a
- * canvas full of files moving; what costs nothing to draw ignores it. One boolean per canvas, so a node
+ * Whether the camera is close enough for the costly bodies (a file, a diagram, a device, a chat or a terminal) to draw live,
+ * by the render distance this client chose. Below it a body shows its plate; chats and terminals
+ * keep their active body and wait through the hold before hiding. A canvas full of files can keep
+ * moving because those editors stop drawing; what costs nothing to draw ignores it. One boolean per canvas, so a node
  * renders when the camera crosses the line and not on every frame of a zoom. Attention keeps a line of
  * its own (`SEEN_ZOOM`), since this one is about what the machine can carry, not what a person can read.
  */
@@ -37,7 +38,7 @@ export function useRenderZoom(): boolean {
     return useCanvasCamera((s) => rendersAtZoom(distance, s.camera.zoom));
 }
 
-/* True while visible and for a grace period after; the caller unmounts the live view when it turns false. */
+/* Holds a live surface across brief pans or zooms, so it does not repeatedly rebuild. */
 export function useHeldWhileVisible(visible: boolean): boolean {
     const [held, setHeld] = useState(true);
     // Re-arming the hold is derived while rendering: an effect would cost an extra render each time.

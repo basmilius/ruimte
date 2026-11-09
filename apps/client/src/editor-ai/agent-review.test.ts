@@ -1,9 +1,10 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 import { ReviewGroup } from '@adecore/editor-react';
 import { ManualTimers } from '@adecore/editor-react/testing';
 import { type FakeEditor, FakeEditorEngine } from '@adecore/editor/fake';
 import type { ProvenanceReadResult, ProvenanceReviewState, ProvenanceRun } from '@ruimte/contracts';
-import { agentReviewOf } from '../language/agent-review-registry';
+import { agentReviewOf } from '@/language/agent-review-registry';
+import { useReviewFocus } from '@/state/review-focus';
 import { AgentChanges } from './agent-changes';
 import { AgentReview, commentRowId, revertNote } from './agent-review';
 
@@ -55,8 +56,14 @@ interface Shared {
     marked: Setup['marked'];
 }
 
-function setup(runs: ProvenanceRun[], mode: 'review' | 'gutter' | 'off' = 'review', chats: readonly string[] = ['chat-a'], shared?: Shared): Setup {
-    const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: DISK, theme: 'light' });
+function setup(
+    runs: ProvenanceRun[],
+    mode: 'review' | 'gutter' | 'off' = 'review',
+    chats: readonly string[] = ['chat-a'],
+    shared?: Shared,
+    disk = DISK
+): Setup {
+    const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: disk, theme: 'light' });
     const timers = new ManualTimers();
     const daemon = shared?.daemon ?? { runs };
     const holdMark = shared?.holdMark ?? { gate: null };
@@ -67,8 +74,8 @@ function setup(runs: ProvenanceRun[], mode: 'review' | 'gutter' | 'off' = 'revie
     const changes = new AgentChanges(
         editor,
         {
-            read: async (): Promise<ProvenanceReadResult> => ({ mtime: 10, lines: 8, runs: daemon.runs }),
-            disk: () => ({ text: DISK, mtime: 10 }),
+            read: async (): Promise<ProvenanceReadResult> => ({ mtime: 10, lines: disk.split('\n').length - 1, runs: daemon.runs }),
+            disk: () => ({ text: disk, mtime: 10 }),
             nameOf: () => 'Claude Code'
         },
         timers
@@ -441,5 +448,57 @@ describe('two editors on one file', () => {
         expect(shared.marked).toEqual([{ ids: ['r1'], state: 'kept' }]);
         expect(rowIds(second.editor)).toEqual([]);
         expect(actionLines(second.editor)).toEqual([]);
+    });
+});
+
+describe('hiding the lines no change is near', () => {
+    const LONG = Array.from({ length: 40 }, (_, index) => `line ${index + 1}`).join('\n') + '\n';
+    const AFTER_REVIEW = { collapsed: [{ startLine: 0, endLine: 14 }], custom: [{ startLine: 2, endLine: 4 }] };
+
+    afterEach(() => {
+        useReviewFocus.setState({ onlyChanges: false });
+    });
+
+    test('folds everything but the changes and three lines around them while it is on, and puts back the folds from before when it goes off', async () => {
+        const { editor, review, changes } = setup([run('r1', 18, 19)], 'review', ['chat-a'], undefined, LONG);
+        editor.setFolds(AFTER_REVIEW);
+        await flush();
+        expect(editor.getFolds()).toEqual(AFTER_REVIEW);
+
+        useReviewFocus.getState().setOnlyChanges(true);
+        expect(editor.getFolds().custom).toEqual([
+            { startLine: 0, endLine: 13 },
+            { startLine: 21, endLine: 40 }
+        ]);
+
+        useReviewFocus.getState().setOnlyChanges(false);
+        expect(editor.getFolds()).toEqual(AFTER_REVIEW);
+        review.dispose();
+        changes.dispose();
+    });
+
+    test('hides them as soon as the changes are drawn when the choice was made before, and shows every line again when the last change is answered', async () => {
+        useReviewFocus.getState().setOnlyChanges(true);
+        const { editor, review, changes } = setup([run('r1', 18, 19)], 'review', ['chat-a'], undefined, LONG);
+        await flush();
+        expect(editor.getFolds().custom).toHaveLength(2);
+
+        review.keep('r1');
+        await flush();
+        expect(editor.getFolds().custom).toEqual([]);
+        review.dispose();
+        changes.dispose();
+    });
+
+    test('leaves the folds of a person alone while the choice is off, and gives them back when the review goes', async () => {
+        const { editor, review, changes } = setup([run('r1', 18, 19)], 'review', ['chat-a'], undefined, LONG);
+        editor.setFolds(AFTER_REVIEW);
+        await flush();
+        expect(editor.getFolds()).toEqual(AFTER_REVIEW);
+
+        useReviewFocus.getState().setOnlyChanges(true);
+        review.dispose();
+        expect(editor.getFolds()).toEqual(AFTER_REVIEW);
+        changes.dispose();
     });
 });

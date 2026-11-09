@@ -144,6 +144,8 @@ export interface CanvasState extends CameraSlice {
     leaveDerivedCard(id: string, next: string): void;
     /* What a press in a card does: its owner's content has the keyboard, and the card is where the keys go on from. */
     focusCard(id: string): void;
+    /* Moves the camera just far enough to bring a card into view, and leaves it where it is for a card in view. */
+    revealCard(id: string): void;
     setGesturing(gesturing: boolean): void;
     setPanning(panning: boolean): void;
     setHoverGroup(id: string | null): void;

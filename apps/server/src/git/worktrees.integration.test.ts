@@ -172,6 +172,21 @@ describe('Worktrees', () => {
         expect((await worktrees.list(repo))[0]).not.toHaveProperty('nodeId');
     });
 
+    test('the worktrees of agents are those made for a node; one a person made, or one with no node yet, is not', async () => {
+        const agent = await worktrees.add(repo, 'agent-work', { madeBy: 'verb' });
+        await worktrees.claim(repo, agent.worktree.path, 'chat-a');
+        const forked = await worktrees.addFresh(repo, 'forked', { madeBy: 'fork', nodeId: 'chat-b' });
+        const person = await worktrees.add(repo, 'by-hand', { madeBy: 'client', projectId: 'project-1' });
+        await worktrees.claim(repo, person.worktree.path, 'chat-c');
+        await worktrees.add(repo, 'unclaimed', { madeBy: 'verb' });
+
+        const found = await worktrees.agentWorktrees(join(agent.worktree.path));
+
+        expect(found?.main).toBe(await realpath(repo));
+        expect(found?.paths.sort()).toEqual([agent.worktree.path, forked.path].sort());
+        expect(await worktrees.agentWorktrees(root)).toBeNull();
+    });
+
     test('an existing branch gets a worktree without a new branch, and removing it leaves that branch alone', async () => {
         await git(['branch', 'existing']);
         const added = await worktrees.add(repo, 'existing');

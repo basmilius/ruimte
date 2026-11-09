@@ -13,6 +13,11 @@ import {
 export interface ActionActor {
     kind: ActionActorKind;
     id: string;
+    /*
+     * Set for a client elsewhere that acts as a person through the daemon's own executor. That executor honors every field an
+     * agent may give, so the fields kept for an agent are open to this actor; the app's own gestures never set it.
+     */
+    via?: 'daemon';
 }
 
 export interface ActionCall<Context> {
@@ -323,7 +328,7 @@ export class ActionRegistry<Context> {
         }
         const values = parsed.data as Record<string, unknown>;
         const forbidden = Object.entries(definition.input.shape as Record<string, z.ZodType>).find(
-            ([field, schema]) => !mayGive(schema, values[field], call.actor.kind)
+            ([field, schema]) => !mayGive(schema, values[field], call.actor.via === 'daemon' ? 'agent' : call.actor.kind)
         );
         if (forbidden) {
             return failure(name, 'forbidden-field', `The ${call.actor.kind} actor may not give “${forbidden[0]}” to “${name}”.`);

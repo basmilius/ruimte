@@ -1,13 +1,19 @@
 import { closedLidOffered, keepAwakeAvailable } from '@/controllers/keep-awake';
+import { canTellIdle } from '@/desktop/bridge';
 import { settingsRow as row, type SettingsSearchRow } from '@/registry/settings-sections';
+import { hasOpenedMachine } from '@/state/local-machine';
 
 export const AGENT_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
     { id: 'agents.defaults.permissions', section: 'agents', label: 'settings:agents.defaults.permissions' },
+    row('agents.textModel', hasOpenedMachine),
     { id: 'agents.defaults.terminalMode', section: 'agents', label: 'settings:agents.defaults.terminalMode' },
     row('agents.resumeAtReset'),
     row('agents.deleteAnyView'),
     row('agents.reachOpenProjects'),
+    row('agents.sharePorts'),
     row('agents.working.sound'),
+    row('agents.quietHours'),
+    row('agents.breakReminder', canTellIdle),
     row('agents.showViews'),
     {
         id: 'agents.keepAwake.mode',

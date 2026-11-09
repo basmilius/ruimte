@@ -29,7 +29,8 @@ export function productionSeams(runtime: DaemonRuntime): DaemonSeams {
         pty: new BunPtyAdapter(),
         chatSpawn: spawnChatProcess,
         providers: { detect: null, added: [], codexHelp: null },
-        accounts: ({ home, providers, install }) => new ProviderAccountsService({ home, host: RUIMTE_ACCOUNTS_HOST, providers, install }),
+        accounts: ({ home, providers, install, ownsSettings }) =>
+            new ProviderAccountsService({ home, host: RUIMTE_ACCOUNTS_HOST, providers, install, ownsSettings }),
         git: {
             worktrees: ({ home, agents, now, checkoutRoot, foreign }) => new Worktrees(home, agents, now, checkoutRoot, foreign),
             checkpoints: (home, machineHome) => new Checkpoints(home, machineHome),

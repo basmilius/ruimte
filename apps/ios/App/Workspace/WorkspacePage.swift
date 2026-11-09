@@ -668,6 +668,16 @@ struct ProjectItemPage: View {
                         client: workspace.client, chatID: current.id, title: title, isPrepared: ready,
                         workspace: workspace)
                 }
+            } else if current.kind == "design" {
+                if let design = workspace.rawItem(current.id).flatMap({
+                    DesignPlace($0, canvasID: current.isView ? nil : canvasHolding.stableID)
+                }) {
+                    DesignPage(workspace: workspace, design: design, title: title)
+                } else {
+                    ContentUnavailableView(
+                        String(localized: "No folder for this design"), lucideIcon: "swatch-book",
+                        description: Text("Open this design in Ruimte on the machine to give it a folder."))
+                }
             } else if let problem {
                 ContentUnavailableView {
                     Label(String(localized: "Could not open"), lucideIcon: "triangle-alert", iconSize: 48)
@@ -788,10 +798,14 @@ struct ProjectItemPage: View {
         }
     }
 
+    /// The canvas a node stands on, as the document holds it.
+    private var canvasHolding: JSONValue {
+        workspace.views.first { $0.list("nodes").contains { $0.stableID == item.id } } ?? .object([:])
+    }
+
     /// The nodes inside a group's frame, which the document alone can say.
     private var members: [JSONValue] {
-        let canvas = workspace.views.first { $0.list("nodes").contains { $0.stableID == item.id } } ?? .object([:])
-        return CanvasEditing.members(of: workspace.rawItem(current.id) ?? .null, in: canvas)
+        CanvasEditing.members(of: workspace.rawItem(current.id) ?? .null, in: canvasHolding)
     }
 
     private var subtitle: String { workspace.ready ? workspace.title : projectName ?? workspace.title }
@@ -820,19 +834,21 @@ struct AddProjectItem: View {
     @State private var name = ""
     @State private var detail = ""
     @State private var provider = "codex"
-    @State private var providers: [ProviderInfo]?
+    @State private var catalog: NewChatModel
     @State private var saving = false
 
     init(workspace: MobileWorkspace, canvasID: String?, kind: String = "chat") {
         self.workspace = workspace
         self.canvasID = canvasID
+        _catalog = State(initialValue: NewChatModel(client: workspace.client, machineID: workspace.session.machine.id))
         _kind = State(initialValue: kind)
     }
 
     private var chatAgents: [(kind: String, name: String)] {
-        guard let providers else { return [] }
+        guard let providers = catalog.providers else { return [] }
         return AgentCatalog.installedChats(providers).map { ($0.kind, $0.name) }
     }
+
     var body: some View {
         NavigationStack {
             MobileForm {
@@ -853,35 +869,61 @@ struct AddProjectItem: View {
                         Text("Choose a model in the chat").tag("")
                     }
                 }
-                if let problem = workspace.problem { Text(problem).foregroundStyle(MobileStyle.statusError) }
+                if kind == "chat", !provider.isEmpty {
+                    NewChatAccountPicker(model: catalog, provider: provider, project: workspace.document)
+                }
+                if let problem = catalog.problem ?? workspace.problem {
+                    Text(problem).foregroundStyle(MobileStyle.statusError)
+                    if catalog.agents == nil { Button("Try again") { Task { await loadAgents() } } }
+                }
             }.navigationTitle(canvasID == nil ? "Add view" : "Add node")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Add") { Task { await add() } }.disabled(
-                            saving || ((kind == "browser" || kind == "file") && detail.isEmpty))
+                            saving || !workspace.session.connected
+                                || (kind == "chat" && !provider.isEmpty && catalog.agents == nil)
+                                || ((kind == "browser" || kind == "file") && detail.isEmpty)
+                                || (kind == "chat"
+                                    && catalog.refusal(provider: provider, project: workspace.document) != nil)
+                        )
                     }
                 }
         }
-        .task(id: workspace.session.generation) {
-            guard workspace.session.connected, let loaded = try? await AgentCatalog.load(workspace.client) else {
-                return
-            }
-            providers = loaded
-            if !provider.isEmpty && !chatAgents.contains(where: { $0.kind == provider }) {
-                provider = chatAgents.first?.kind ?? ""
-            }
+        .disabled(saving)
+        .task {
+            await RemotePageLifecycle.run(
+                client: workspace.client, events: [.accountsChanged],
+                load: loadAgents)
         }
     }
+
+    private func loadAgents() async {
+        await catalog.load()
+        if !provider.isEmpty && !chatAgents.contains(where: { $0.kind == provider }) {
+            provider = chatAgents.first?.kind ?? ""
+        }
+    }
+
     private func add() async {
         saving = true
         defer { saving = false }
         let id = kind + "-" + UUID().uuidString
         let title = name.isEmpty ? kind.capitalized : name
         var item: [String: JSONValue] = ["id": .string(id), "kind": .string(kind)]
-        let agent: [String: JSONValue] =
+        var agent: [String: JSONValue] =
             kind == "chat" && !provider.isEmpty
             ? ["provider": .string(provider), "providerFixed": .bool(true)] : [:]
+        if kind == "chat", !provider.isEmpty {
+            do {
+                if let account = try await catalog.prepare(provider: provider, project: workspace.document) {
+                    agent["account"] = .string(account)
+                }
+            } catch {
+                catalog.problem = error.localizedDescription
+                return
+            }
+        }
         if canvasID != nil {
             item.merge(agent) { _, new in new }
             if kind == "group" {

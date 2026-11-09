@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { answerWorkspaceKey, answerWorkspaceKeyEarly } from '@/commands/key-dispatch';
 import { createWorkspaceKeys } from '@/commands/workspace-keys';
+import { isShortcutRecording } from '@/surface/shortcut-overrides';
 
 /*
  * The one listener of the workspace's keys, bound on `window` once per workspace so a split grid does not
@@ -12,6 +13,10 @@ export function useCanvasShortcuts(): void {
     useEffect(() => {
         const keys = createWorkspaceKeys();
         const onKeyDownCapture = (e: KeyboardEvent): void => {
+            // A key pressed to record a shortcut is that shortcut's, and runs nothing.
+            if (isShortcutRecording()) {
+                return;
+            }
             for (const listener of keys) {
                 if (listener.capture?.(e)) {
                     return;

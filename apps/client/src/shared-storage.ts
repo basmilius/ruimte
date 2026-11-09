@@ -7,6 +7,7 @@ import { useContributions } from '@/state/extension-registry';
 import { followOtherWindows, type StorageTarget } from '@/state/other-windows';
 import { SETTINGS_STORAGE_KEY, useSettings } from '@/state/settings';
 import { THEME_STORAGE_KEY, useTheme } from '@/state/theme';
+import { reloadOverrides, SHORTCUT_OVERRIDES_KEY } from '@/surface/shortcut-overrides';
 
 /* A language or a region picked in another window redraws this one too; reading the setting alone would not. */
 function reloadSettings(): void {
@@ -21,7 +22,7 @@ function reloadSettings(): void {
 
 /*
  * The keys a person means for the whole app: the machines this client knows (with the keys it
- * pinned for them), the settings, the theme, the defaults a new agent starts with, how the usage
+ * pinned for them), the settings, the theme, the keys they rebound, the defaults a new agent starts with, how the usage
  * page reads and what a built-in names. What a window keeps for itself (the open view, the camera,
  * the panels) stays out of it.
  */
@@ -30,6 +31,7 @@ export function startSharedStorage(target?: StorageTarget | null): () => void {
         followOtherWindows(ENDPOINTS_STORAGE_KEY, () => useEndpoints.getState().reload(), target),
         followOtherWindows(SETTINGS_STORAGE_KEY, reloadSettings, target),
         followOtherWindows(THEME_STORAGE_KEY, () => useTheme.getState().reload(), target),
+        followOtherWindows(SHORTCUT_OVERRIDES_KEY, reloadOverrides, target),
         followOtherWindows(EXTENSION_THEME_STORAGE_KEY, applyStoredExtensionTheme, target),
         followOtherWindows(CHAT_PREFERENCES_KEY, reloadChatPreferences, target),
         followOtherWindows(USAGE_PREFERENCES_KEY, reloadUsagePreferences, target),

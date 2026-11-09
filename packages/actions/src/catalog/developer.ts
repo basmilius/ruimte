@@ -10,6 +10,10 @@ import {
     RoutineEntrySchema,
     SECRET_LIMITS,
     SECRET_VARIABLE_PATTERN,
+    GitBlobResultSchema,
+    GitCompareModeSchema,
+    GitComparePageSchema,
+    GitCompareResultSchema,
     GitConflictResultSchema,
     GitConflictsResultSchema,
     GitDiffResultSchema,
@@ -26,6 +30,7 @@ import { z } from 'zod';
 import {
     PERSON_AND_VOICE,
     AGENT,
+    PERSON_AND_AGENT,
     PERSON,
     databaseConnection,
     databaseSchema,
@@ -41,7 +46,6 @@ import {
     revision,
     forActors,
     PERSON_VOICE_AND_AGENT,
-    PERSON_AND_AGENT,
     routineId,
     optionalFields,
     launchName,
@@ -65,7 +69,7 @@ import {
     gitRunOutput,
     gitRunsOutput,
     pullStrategy,
-    AGENT_AND_EXTENSION
+    PERSON_AGENT_AND_EXTENSION
 } from './fields.ts';
 
 export const DEVELOPER_ACTIONS = {
@@ -127,6 +131,52 @@ export const DEVELOPER_ACTIONS = {
             base: z.string().min(1).nullable().describe('The base scope starts at this branch instead of the repository base')
         }),
         output: GitDiffResultSchema
+    },
+    'git.compare': {
+        title: 'Compare two branches',
+        description:
+            'Reads two refs of a repository without checking either out: the files that differ and the commits only each side has. Both refs are resolved to commits first, and the answer names them.',
+        effect: 'read',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            repository,
+            from: z.string().min(1).describe('The left ref: a branch as git.refs lists it, a tag or a commit'),
+            to: z.string().min(1).describe('The right ref: a branch as git.refs lists it, a tag or a commit'),
+            mode: GitCompareModeSchema.nullable().describe(
+                'merge-base shows what the right ref adds since the two diverged, tips the plain difference of the two tips; merge-base without it'
+            )
+        }),
+        output: GitCompareResultSchema
+    },
+    'git.compareCommits': {
+        title: 'Read comparison commits',
+        description: 'Reads a later page of the commits only one side of a branch comparison has, between the commits that comparison resolved.',
+        effect: 'read',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            repository,
+            fromCommit: z.string().min(1).describe('The fromCommit the comparison answered'),
+            toCommit: z.string().min(1).describe('The toCommit the comparison answered'),
+            side: z.enum(['left', 'right']).describe('left for the commits only fromCommit has, right for the commits only toCommit has'),
+            skip: z.number().int().min(0).nullable().describe('The next the previous page answered; null for the first page'),
+            pageSize: z.number().int().min(1).max(100).nullable().describe('Commits per page; 30 without it')
+        }),
+        output: GitComparePageSchema
+    },
+    'git.blob': {
+        title: 'Read a committed file',
+        description: 'Reads one file as a commit holds it, up to 512 KiB, or says why there is no text. A symlink answers the path it points at.',
+        effect: 'read',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            repository,
+            commit: z.string().min(1).describe('A commit id a comparison answered, never a branch name'),
+            path: z.string().min(1).describe('One file relative to the repository root')
+        }),
+        output: GitBlobResultSchema
     },
     'git.log': {
         title: 'Read git history',
@@ -560,7 +610,7 @@ export const DEVELOPER_ACTIONS = {
         agentDescription: 'Lists the launches of the project: id, name, kind, state, approved, port, url',
         effect: 'read',
         domain: 'developer',
-        actors: AGENT_AND_EXTENSION,
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({}),
         output: z.object({
             launches: z.array(
@@ -585,7 +635,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Prints the output of a launch, whole or its last lines, as its terminal shows it now.',
         effect: 'read',
         domain: 'developer',
-        actors: AGENT_AND_EXTENSION,
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({
             launch: launchName,
             tail: z.number().int().min(1).nullable().describe('Only the last this many lines; without it the whole output')
@@ -600,7 +650,7 @@ export const DEVELOPER_ACTIONS = {
         effect: 'shared',
         domain: 'developer',
         // An agent's launch is never approved by its save; a person approves it from the launch chip.
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             name: launchFieldName,
             kind: LaunchConfigKindSchema.describe('service runs until stopped, task runs once and ends, group starts other launches'),
@@ -614,7 +664,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Changes fields of a launch of the project; a change to what it runs waits on a person to approve it again before it starts.',
         effect: 'shared',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ launch: launchName, ...optionalFields(launchFields) }),
         output: launchSaved
     },
@@ -623,7 +673,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Starts a launch a person approved on this machine as it stands now; one that already runs is left running.',
         effect: 'external',
         domain: 'developer',
-        actors: AGENT_AND_EXTENSION,
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({ launch: launchName }),
         output: launchStarted
     },
@@ -632,7 +682,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Stops a launch a person approved on this machine and starts it again, or starts it when it did not run.',
         effect: 'external',
         domain: 'developer',
-        actors: AGENT_AND_EXTENSION,
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({ launch: launchName }),
         output: launchStarted
     },
@@ -641,7 +691,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Stops a launch, or every launch of a group, with Ctrl+C and SIGTERM after a grace period; only a person kills one.',
         effect: 'external',
         domain: 'developer',
-        actors: AGENT_AND_EXTENSION,
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({ launch: launchName }),
         // How many of its launches ran and are being stopped.
         output: z.object({ launchId: z.string(), name: z.string(), stopping: z.number().int() })
@@ -651,7 +701,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Lists the routines of the project: what each runs and when, whether a person approved it here, whether it is paused, and its last run.',
         effect: 'read',
         domain: 'developer',
-        actors: AGENT_AND_EXTENSION,
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({}),
         output: z.object({ routines: z.array(RoutineEntrySchema), timeZone: z.string() })
     },
@@ -662,7 +712,7 @@ export const DEVELOPER_ACTIONS = {
         effect: 'shared',
         domain: 'developer',
         // An agent's save never approves; a person saves and approves through Routines in the app.
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             title: routineTitle,
             schedule: routineSchedule,
@@ -676,7 +726,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Changes fields of a routine of the project; a change that touches what it runs or when waits on a person to approve it again.',
         effect: 'shared',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({ routineId, ...optionalFields(routineFields) }),
         output: routineSaved
     },
@@ -685,7 +735,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Pauses a routine on this machine, so it starts nothing until it is resumed.',
         effect: 'local',
         domain: 'developer',
-        actors: AGENT_AND_EXTENSION,
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({ routineId }),
         output: routineNamed
     },
@@ -694,7 +744,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Resumes a paused routine from its next time on; the times it was paused through do not run.',
         effect: 'local',
         domain: 'developer',
-        actors: AGENT_AND_EXTENSION,
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({ routineId }),
         output: routineNamed
     },
@@ -703,7 +753,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Starts a run of a routine now, only when a person approved it on this machine as it stands and its previous run has ended.',
         effect: 'external',
         domain: 'developer',
-        actors: AGENT_AND_EXTENSION,
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({ routineId }),
         output: routineNamed.extend({ runId: z.string() })
     },
@@ -757,7 +807,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Lists the database connections of the project, where each points and what agents may do with it; never a password.',
         effect: 'read',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({}),
         output: z.object({
             connections: z.array(
@@ -777,7 +827,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Lists the schemas of a database connection and the tables and views of one of them, with the row count the server estimates.',
         effect: 'read',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             connection: databaseConnection,
             schema: databaseSchema.describe("The schema whose tables to list; without it the connection's own database, or every schema when it has none")
@@ -793,7 +843,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Describes a table or view of a database connection: its columns, primary key, indexes and foreign keys.',
         effect: 'read',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             connection: databaseConnection,
             table: z.string().min(1).describe('The table or view, by name'),
@@ -834,7 +884,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Runs one statement that reads (SELECT or WITH) on a read-only session of a database connection and answers its first rows.',
         effect: 'read',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             connection: databaseConnection,
             sql: z.string().min(1).describe('One statement that starts with SELECT or WITH'),
@@ -859,7 +909,7 @@ export const DEVELOPER_ACTIONS = {
             'Runs one or more statements on a database connection a person allowed agents to write to, and answers what each did; never in the supervised mode.',
         effect: 'external',
         domain: 'developer',
-        actors: AGENT,
+        actors: PERSON_AND_AGENT,
         input: z.object({
             connection: databaseConnection,
             sql: z.string().min(1).describe('The statements, separated by semicolons'),

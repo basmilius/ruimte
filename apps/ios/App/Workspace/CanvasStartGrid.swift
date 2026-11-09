@@ -13,7 +13,7 @@ enum AgentCatalog {
     }
 
     /// Installed CLIs that open as a chat.
-    static func installedChats(_ providers: [ProviderInfo]) -> [ProviderInfo] {
+    nonisolated static func installedChats(_ providers: [ProviderInfo]) -> [ProviderInfo] {
         providers.filter { $0.installed && $0.capabilities.chat }
     }
 }
@@ -26,7 +26,18 @@ struct CanvasStartGrid: View {
     /// Opens the add sheet for a kind that needs more than a tap, like a URL or a path.
     let compose: (String) -> Void
     let added: () -> Void
-    @State private var providers: [ProviderInfo]?
+    @State private var catalog: NewChatModel
+    @State private var chatProvider: String?
+
+    init(workspace: MobileWorkspace, viewID: String, compose: @escaping (String) -> Void, added: @escaping () -> Void) {
+        self.workspace = workspace
+        self.viewID = viewID
+        self.compose = compose
+        self.added = added
+        _catalog = State(initialValue: NewChatModel(client: workspace.client, machineID: workspace.session.machine.id))
+    }
+
+    private var providers: [ProviderInfo]? { catalog.providers }
     @State private var saving = false
 
     private var agents: [ProviderInfo] {
@@ -83,13 +94,15 @@ struct CanvasStartGrid: View {
         }
         .disabled(saving)
         .accessibilityIdentifier("canvas.startGrid")
-        .task(id: workspace.session.generation) {
-            guard workspace.session.connected else { return }
-            do {
-                let loaded = try await AgentCatalog.load(workspace.client)
-                if !Task.isCancelled { providers = loaded }
-            } catch {
-                // Without a list the agent tiles stay away; the other tiles still work.
+        .task {
+            await RemotePageLifecycle.run(client: workspace.client, events: [.accountsChanged], load: catalog.load)
+        }
+        .mobileSheet(isPresented: $chatProvider.isPresent()) {
+            if let kind = chatProvider {
+                NewChatAccountSheet(
+                    model: catalog, provider: kind, project: workspace.document, connected: workspace.session.connected,
+                    starting: saving,
+                    start: { insertChat(kind) }, close: { chatProvider = nil })
             }
         }
     }
@@ -115,11 +128,13 @@ struct CanvasStartGrid: View {
                         provider.name,
                         detail: chat ? String(localized: "Chat") : String(localized: "Terminal"), icon: "bot"
                     ) {
-                        insert(
-                            kind: chat ? "chat" : "terminal", title: provider.name,
-                            extra: chat
-                                ? ["provider": .string(provider.kind), "providerFixed": .bool(true)]
-                                : ["provider": .string(provider.kind)])
+                        if chat && catalog.needsAccountChoice(provider: provider.kind, project: workspace.document) {
+                            chatProvider = provider.kind
+                        } else if chat {
+                            insertChat(provider.kind)
+                        } else {
+                            insert(kind: "terminal", title: provider.name, extra: ["provider": .string(provider.kind)])
+                        }
                     }
                 }
             }
@@ -150,6 +165,35 @@ struct CanvasStartGrid: View {
         .buttonStyle(.plain)
         .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
         .hoverEffect(.highlight)
+    }
+
+    private func insertChat(_ provider: String) {
+        saving = true
+        Task {
+            defer { saving = false }
+            do {
+                let account = try await catalog.prepare(provider: provider, project: workspace.document)
+                var extra: [String: JSONValue] = ["provider": .string(provider), "providerFixed": .bool(true)]
+                if let account { extra["account"] = .string(account) }
+                await workspace.updateView(viewID) { view in
+                    view.setting(
+                        "nodes",
+                        .array(
+                            view.list("nodes") + [
+                                newCanvasNode(
+                                    kind: "chat", title: AgentDirectory.shared.name(provider), after: view.list("nodes"),
+                                    extra: extra)
+                            ]))
+                }
+                if workspace.problem == nil {
+                    chatProvider = nil
+                    added()
+                }
+            } catch {
+                catalog.problem = error.localizedDescription
+                workspace.problem = error.localizedDescription
+            }
+        }
     }
 
     private func insert(kind: String, title: String, extra: [String: JSONValue] = [:]) {

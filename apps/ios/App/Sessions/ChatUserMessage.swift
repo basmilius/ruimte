@@ -189,14 +189,23 @@ struct ChatAgentSentMessage: View {
                 ChatReferenceChip(look: ChatReferenceChip.look(sent.to, chat: false, lookup: lookup, lastName: sent.title ?? ""))
             }
         }
-        ChatExpansionButton(expanding: !opened) {
-            opened.toggle()
-        } label: {
-            Text(status).font(.caption).foregroundStyle(MobileStyle.muted)
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        HStack(spacing: 6) {
+            Text(status)
+            if sent.state == .sending {
+                ChatElapsed(startedAt: item.progress?.startedAt ?? item.createdAt, runningFor: true)
+                    .foregroundStyle(MobileStyle.faint)
+            }
+            ChatExpansionButton(expanding: !opened) {
+                opened.toggle()
+            } label: {
+                Image(lucide: "square-terminal", size: 14).frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(opened ? String(localized: "Hide the call") : String(localized: "Show the call"))
+            Spacer(minLength: 0)
         }
-        .buttonStyle(.plain)
-        .accessibilityValue(opened ? "Expanded" : "Collapsed")
+        .font(.caption).foregroundStyle(MobileStyle.muted)
         if opened {
             ChatToolBodyView(item: item)
         }
@@ -322,6 +331,12 @@ struct ChatReferenceChip: View {
     /// Without the project around it a thread cannot tell a reference that left it from one it does not know.
     /// `lastName` is what the message knows the reference was called, shown when it is not in the project now.
     static func look(_ id: String, chat: Bool, lookup: ChatReferenceLookup, lastName: String = "") -> Look {
+        // The person's external MCP client sent it, as the daemon's `isExternalActor` reads the id: no node, and never gone.
+        if id.hasPrefix("external-") {
+            return Look(
+                id: id, icon: "plug", title: lastName.isEmpty ? String(localized: "External MCP client") : lastName,
+                opens: false, gone: false)
+        }
         guard lookup.known else {
             let fallback = chat ? String(localized: "Chat") : String(localized: "View or node")
             return Look(
@@ -455,14 +470,23 @@ struct ChatForksRow: View {
 /// A compaction as a dashed rule: what stands above it is still there to read, but only a summary to the agent.
 struct ChatCompactionRule: View {
     let preTokens: Double?
+    var postTokens: Double? = nil
+
+    /// A size the CLI did not name, or named as zero, is left out rather than guessed.
+    static func text(preTokens: Double?, postTokens: Double?) -> String {
+        switch (preTokens.flatMap { $0 == 0 ? nil : $0 }, postTokens) {
+        case let (pre?, post?):
+            String(localized: "Context compacted from \(Format.tokens(pre)) to \(Format.tokens(post)) tokens")
+        case let (pre?, nil): String(localized: "Context compacted from \(Format.tokens(pre)) tokens")
+        case let (nil, post?): String(localized: "Context compacted to \(Format.tokens(post)) tokens")
+        case (nil, nil): String(localized: "Context compacted")
+        }
+    }
 
     var body: some View {
         HStack(spacing: 12) {
             dash
-            Text(
-                preTokens.map { String(localized: "Context compacted from \(Format.number($0)) tokens") }
-                    ?? String(localized: "Context compacted")
-            )
+            Text(Self.text(preTokens: preTokens, postTokens: postTokens))
             .font(.caption).foregroundStyle(MobileStyle.faint).lineLimit(1).layoutPriority(1)
             dash
         }

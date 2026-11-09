@@ -73,7 +73,11 @@ export const BrowserInputPayloadSchema = BrowserTargetPayloadSchema.extend({
 const DevServerPortSchema = z.number().int().min(1).max(65535);
 
 /* The ports a splash asks about at once, which is the table in `apps/client/src/browser/dev-servers.ts`. */
-export const BrowserDevServersPayloadSchema = z.object({ ports: z.array(DevServerPortSchema).min(1).max(32) });
+export const BrowserDevServersPayloadSchema = z.object({
+    ports: z.array(DevServerPortSchema).min(1).max(32),
+    /* Asks on `::1` instead, for a server that listens on IPv6 alone; discovery itself stays on IPv4. */
+    host: z.enum(['127.0.0.1', '::1']).optional()
+});
 
 export const DevServerSchema = z.object({
     port: DevServerPortSchema,

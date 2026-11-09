@@ -91,3 +91,18 @@ private func limits(_ entries: [String]) throws -> UsageLimits {
             == AccountSessionWindow(used: 0.45, resetsAt: 1_700_000_000_000))
     #expect(ProviderAccountList.sessionWindow(snapshot, account: "work") == nil)
 }
+
+@Test func aFailedAccountReadingCanBeAskedForAgainBeforeContinuation() throws {
+    let accounts = ProviderAccountList(try accountsSnapshot(decode(threeClaudes)))
+    let failed = try limits([
+        entry("work", windows: [window("session", 0.1)], unavailable: true),
+        entry("spare", windows: [window("session", 1)]),
+    ])
+    #expect(accounts.hasUnreadAccount("claude", current: nil, limits: failed))
+    #expect(accounts.continueTargets("claude", current: nil, limits: failed).isEmpty)
+    let recovered = try limits([
+        entry("work", windows: [window("session", 0.1)]), entry("spare", windows: [window("session", 1)]),
+    ])
+    #expect(!accounts.hasUnreadAccount("claude", current: nil, limits: recovered))
+    #expect(accounts.continueTargets("claude", current: nil, limits: recovered).map(\.id) == ["work"])
+}

@@ -3172,8 +3172,10 @@ public struct PushAlertContent: Codable, Sendable, Equatable {
     public let `requestId`: String?
     public let `choices`: [PushAlertContentChoicesItem]?
     public let `expiresAt`: Int64
+    public let `timeSensitive`: Bool?
+    public let `resetsAt`: Int64?
 
-    public init(`kind`: PushAlertContentKind, `target`: PushAlertContentTarget, `nodeId`: String, `title`: String, `body`: String, `requestId`: String? = nil, `choices`: [PushAlertContentChoicesItem]? = nil, `expiresAt`: Int64) {
+    public init(`kind`: PushAlertContentKind, `target`: PushAlertContentTarget, `nodeId`: String, `title`: String, `body`: String, `requestId`: String? = nil, `choices`: [PushAlertContentChoicesItem]? = nil, `expiresAt`: Int64, `timeSensitive`: Bool? = nil, `resetsAt`: Int64? = nil) {
         self.`kind` = `kind`
         self.`target` = `target`
         self.`nodeId` = `nodeId`
@@ -3182,6 +3184,8 @@ public struct PushAlertContent: Codable, Sendable, Equatable {
         self.`requestId` = `requestId`
         self.`choices` = `choices`
         self.`expiresAt` = `expiresAt`
+        self.`timeSensitive` = `timeSensitive`
+        self.`resetsAt` = `resetsAt`
     }
 
     public init(from decoder: Decoder) throws {
@@ -3195,6 +3199,8 @@ public struct PushAlertContent: Codable, Sendable, Equatable {
         `requestId` = try container.decodeIfPresent(String.self, forKey: .`requestId`)
         `choices` = try container.decodeIfPresent([PushAlertContentChoicesItem].self, forKey: .`choices`)
         `expiresAt` = try container.decode(Int64.self, forKey: .`expiresAt`)
+        `timeSensitive` = try container.decodeIfPresent(Bool.self, forKey: .`timeSensitive`)
+        `resetsAt` = try container.decodeIfPresent(Int64.self, forKey: .`resetsAt`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -3207,6 +3213,8 @@ public struct PushAlertContent: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`requestId`, forKey: .`requestId`)
         try container.encodeIfPresent(`choices`, forKey: .`choices`)
         try container.encode(`expiresAt`, forKey: .`expiresAt`)
+        try container.encodeIfPresent(`timeSensitive`, forKey: .`timeSensitive`)
+        try container.encodeIfPresent(`resetsAt`, forKey: .`resetsAt`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -3218,6 +3226,8 @@ public struct PushAlertContent: Codable, Sendable, Equatable {
         case `requestId` = "requestId"
         case `choices` = "choices"
         case `expiresAt` = "expiresAt"
+        case `timeSensitive` = "timeSensitive"
+        case `resetsAt` = "resetsAt"
     }
 }
 
@@ -6194,13 +6204,15 @@ public struct ChatCompactionItem: Codable, Sendable, Equatable {
     public let `turnId`: String?
     public let `kind`: String
     public let `preTokens`: Int64?
+    public let `postTokens`: Int64?
 
-    public init(`id`: String, `createdAt`: Double, `turnId`: String?, `kind`: String = "compaction", `preTokens`: Int64?) {
+    public init(`id`: String, `createdAt`: Double, `turnId`: String?, `kind`: String = "compaction", `preTokens`: Int64?, `postTokens`: Int64? = nil) {
         self.`id` = `id`
         self.`createdAt` = `createdAt`
         self.`turnId` = `turnId`
         self.`kind` = `kind`
         self.`preTokens` = `preTokens`
+        self.`postTokens` = `postTokens`
     }
 
     public init(from decoder: Decoder) throws {
@@ -6210,6 +6222,7 @@ public struct ChatCompactionItem: Codable, Sendable, Equatable {
         `turnId` = try container.decode(String?.self, forKey: .`turnId`)
         `kind` = try container.decode(String.self, forKey: .`kind`)
         `preTokens` = try container.decode(Int64?.self, forKey: .`preTokens`)
+        `postTokens` = try container.decodeIfPresent(Int64.self, forKey: .`postTokens`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -6219,6 +6232,7 @@ public struct ChatCompactionItem: Codable, Sendable, Equatable {
         try container.encode(`turnId`, forKey: .`turnId`)
         try container.encode(`kind`, forKey: .`kind`)
         try container.encode(`preTokens`, forKey: .`preTokens`)
+        try container.encodeIfPresent(`postTokens`, forKey: .`postTokens`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -6227,6 +6241,7 @@ public struct ChatCompactionItem: Codable, Sendable, Equatable {
         case `turnId` = "turnId"
         case `kind` = "kind"
         case `preTokens` = "preTokens"
+        case `postTokens` = "postTokens"
     }
 }
 
@@ -6235,6 +6250,7 @@ public struct ChatInfo: Codable, Sendable, Equatable {
     public let `provider`: String
     public let `account`: String?
     public let `cwd`: String
+    public let `workdir`: String?
     public let `agentSessionId`: String?
     public let `model`: String?
     public let `selection`: ChatInfoSelection
@@ -6261,11 +6277,12 @@ public struct ChatInfo: Codable, Sendable, Equatable {
     public let `goal`: ChatInfoGoal?
     public let `createdAt`: Double
 
-    public init(`chatId`: String, `provider`: String, `account`: String? = nil, `cwd`: String, `agentSessionId`: String?, `model`: String?, `selection`: ChatInfoSelection, `runtimeMode`: String, `effectiveRuntimeMode`: String? = nil, `permissionMode`: String? = nil, `status`: String, `running`: Bool, `activeTurnId`: String?, `slashCommands`: [String], `skills`: [String]? = nil, `queue`: [ChatInfoQueueItem]? = nil, `queuePaused`: Bool? = nil, `background`: [ChatInfoBackgroundItem]? = nil, `delegating`: Bool? = nil, `usage`: ChatInfoUsage, `suggestedTitle`: String? = nil, `hidden`: Bool? = nil, `forkOf`: ChatInfoForkOf? = nil, `resumeAtReset`: Bool? = nil, `limit`: ChatInfoLimit? = nil, `resumeAt`: Double? = nil, `requests`: [ChatInfoRequestsItem]? = nil, `goal`: ChatInfoGoal? = nil, `createdAt`: Double) {
+    public init(`chatId`: String, `provider`: String, `account`: String? = nil, `cwd`: String, `workdir`: String? = nil, `agentSessionId`: String?, `model`: String?, `selection`: ChatInfoSelection, `runtimeMode`: String, `effectiveRuntimeMode`: String? = nil, `permissionMode`: String? = nil, `status`: String, `running`: Bool, `activeTurnId`: String?, `slashCommands`: [String], `skills`: [String]? = nil, `queue`: [ChatInfoQueueItem]? = nil, `queuePaused`: Bool? = nil, `background`: [ChatInfoBackgroundItem]? = nil, `delegating`: Bool? = nil, `usage`: ChatInfoUsage, `suggestedTitle`: String? = nil, `hidden`: Bool? = nil, `forkOf`: ChatInfoForkOf? = nil, `resumeAtReset`: Bool? = nil, `limit`: ChatInfoLimit? = nil, `resumeAt`: Double? = nil, `requests`: [ChatInfoRequestsItem]? = nil, `goal`: ChatInfoGoal? = nil, `createdAt`: Double) {
         self.`chatId` = `chatId`
         self.`provider` = `provider`
         self.`account` = `account`
         self.`cwd` = `cwd`
+        self.`workdir` = `workdir`
         self.`agentSessionId` = `agentSessionId`
         self.`model` = `model`
         self.`selection` = `selection`
@@ -6299,6 +6316,7 @@ public struct ChatInfo: Codable, Sendable, Equatable {
         `provider` = try container.decode(String.self, forKey: .`provider`)
         `account` = try container.decodeIfPresent(String.self, forKey: .`account`)
         `cwd` = try container.decode(String.self, forKey: .`cwd`)
+        `workdir` = try container.decodeIfPresent(String.self, forKey: .`workdir`)
         `agentSessionId` = try container.decode(String?.self, forKey: .`agentSessionId`)
         `model` = try container.decode(String?.self, forKey: .`model`)
         `selection` = try container.decode(ChatInfoSelection.self, forKey: .`selection`)
@@ -6332,6 +6350,7 @@ public struct ChatInfo: Codable, Sendable, Equatable {
         try container.encode(`provider`, forKey: .`provider`)
         try container.encodeIfPresent(`account`, forKey: .`account`)
         try container.encode(`cwd`, forKey: .`cwd`)
+        try container.encodeIfPresent(`workdir`, forKey: .`workdir`)
         try container.encode(`agentSessionId`, forKey: .`agentSessionId`)
         try container.encode(`model`, forKey: .`model`)
         try container.encode(`selection`, forKey: .`selection`)
@@ -6364,6 +6383,7 @@ public struct ChatInfo: Codable, Sendable, Equatable {
         case `provider` = "provider"
         case `account` = "account"
         case `cwd` = "cwd"
+        case `workdir` = "workdir"
         case `agentSessionId` = "agentSessionId"
         case `model` = "model"
         case `selection` = "selection"
@@ -6682,8 +6702,9 @@ public struct ChatInfoUsage: Codable, Sendable, Equatable {
     public let `breakdown`: ChatInfoUsageBreakdown?
     public let `cacheTtlMs`: Int64?
     public let `cacheExpiresAt`: Double?
+    public let `contextPending`: Bool?
 
-    public init(`contextTokens`: Int64, `contextWindow`: Int64?, `costUsd`: Double, `turns`: Int64, `breakdown`: ChatInfoUsageBreakdown? = nil, `cacheTtlMs`: Int64? = nil, `cacheExpiresAt`: Double? = nil) {
+    public init(`contextTokens`: Int64, `contextWindow`: Int64?, `costUsd`: Double, `turns`: Int64, `breakdown`: ChatInfoUsageBreakdown? = nil, `cacheTtlMs`: Int64? = nil, `cacheExpiresAt`: Double? = nil, `contextPending`: Bool? = nil) {
         self.`contextTokens` = `contextTokens`
         self.`contextWindow` = `contextWindow`
         self.`costUsd` = `costUsd`
@@ -6691,6 +6712,7 @@ public struct ChatInfoUsage: Codable, Sendable, Equatable {
         self.`breakdown` = `breakdown`
         self.`cacheTtlMs` = `cacheTtlMs`
         self.`cacheExpiresAt` = `cacheExpiresAt`
+        self.`contextPending` = `contextPending`
     }
 
     public init(from decoder: Decoder) throws {
@@ -6702,6 +6724,7 @@ public struct ChatInfoUsage: Codable, Sendable, Equatable {
         `breakdown` = try container.decodeIfPresent(ChatInfoUsageBreakdown.self, forKey: .`breakdown`)
         `cacheTtlMs` = try container.decodeIfPresent(Int64.self, forKey: .`cacheTtlMs`)
         `cacheExpiresAt` = try container.decodeIfPresent(Double.self, forKey: .`cacheExpiresAt`)
+        `contextPending` = try container.decodeIfPresent(Bool.self, forKey: .`contextPending`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -6713,6 +6736,7 @@ public struct ChatInfoUsage: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`breakdown`, forKey: .`breakdown`)
         try container.encodeIfPresent(`cacheTtlMs`, forKey: .`cacheTtlMs`)
         try container.encodeIfPresent(`cacheExpiresAt`, forKey: .`cacheExpiresAt`)
+        try container.encodeIfPresent(`contextPending`, forKey: .`contextPending`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -6723,6 +6747,7 @@ public struct ChatInfoUsage: Codable, Sendable, Equatable {
         case `breakdown` = "breakdown"
         case `cacheTtlMs` = "cacheTtlMs"
         case `cacheExpiresAt` = "cacheExpiresAt"
+        case `contextPending` = "contextPending"
     }
 }
 
@@ -7739,6 +7764,7 @@ public struct GitStatus: Codable, Sendable, Equatable {
     public let `repo`: Bool
     public let `operation`: GitOperationKind?
     public let `root`: String?
+    public let `worktree`: Bool?
     public let `branch`: String?
     public let `detached`: Bool
     public let `upstream`: String?
@@ -7750,10 +7776,11 @@ public struct GitStatus: Codable, Sendable, Equatable {
     public let `truncated`: Bool
     public let `live`: Bool
 
-    public init(`repo`: Bool, `operation`: GitOperationKind? = nil, `root`: String?, `branch`: String?, `detached`: Bool, `upstream`: String?, `ahead`: Int64, `behind`: Int64, `base`: String?, `mergeBase`: String?, `files`: [GitStatusFile], `truncated`: Bool, `live`: Bool) {
+    public init(`repo`: Bool, `operation`: GitOperationKind? = nil, `root`: String?, `worktree`: Bool? = nil, `branch`: String?, `detached`: Bool, `upstream`: String?, `ahead`: Int64, `behind`: Int64, `base`: String?, `mergeBase`: String?, `files`: [GitStatusFile], `truncated`: Bool, `live`: Bool) {
         self.`repo` = `repo`
         self.`operation` = `operation`
         self.`root` = `root`
+        self.`worktree` = `worktree`
         self.`branch` = `branch`
         self.`detached` = `detached`
         self.`upstream` = `upstream`
@@ -7771,6 +7798,7 @@ public struct GitStatus: Codable, Sendable, Equatable {
         `repo` = try container.decode(Bool.self, forKey: .`repo`)
         `operation` = try container.decodeIfPresent(GitOperationKind.self, forKey: .`operation`)
         `root` = try container.decode(String?.self, forKey: .`root`)
+        `worktree` = try container.decodeIfPresent(Bool.self, forKey: .`worktree`)
         `branch` = try container.decode(String?.self, forKey: .`branch`)
         `detached` = try container.decode(Bool.self, forKey: .`detached`)
         `upstream` = try container.decode(String?.self, forKey: .`upstream`)
@@ -7788,6 +7816,7 @@ public struct GitStatus: Codable, Sendable, Equatable {
         try container.encode(`repo`, forKey: .`repo`)
         try container.encodeIfPresent(`operation`, forKey: .`operation`)
         try container.encode(`root`, forKey: .`root`)
+        try container.encodeIfPresent(`worktree`, forKey: .`worktree`)
         try container.encode(`branch`, forKey: .`branch`)
         try container.encode(`detached`, forKey: .`detached`)
         try container.encode(`upstream`, forKey: .`upstream`)
@@ -7804,6 +7833,7 @@ public struct GitStatus: Codable, Sendable, Equatable {
         case `repo` = "repo"
         case `operation` = "operation"
         case `root` = "root"
+        case `worktree` = "worktree"
         case `branch` = "branch"
         case `detached` = "detached"
         case `upstream` = "upstream"
@@ -8019,10 +8049,12 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
     public let `icon`: Presence<MachineIcon>
     public let `agentsDeleteAnyView`: Bool?
     public let `reachOpenProjects`: Bool?
+    public let `agentsSharePorts`: Bool?
     public let `steerMessages`: Bool?
     public let `streamingAllowed`: Bool?
     public let `resumeAtReset`: Bool?
     public let `visualReplies`: Bool?
+    public let `textModel`: Presence<EndpointInfoTextModel>
     public let `keepAwake`: KeepAwakeMode?
     public let `keepAwakeOnBattery`: Bool?
     public let `keepAwakeDisplay`: Bool?
@@ -8033,6 +8065,7 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
     public let `terminalShell`: EndpointTerminalShell?
     public let `nodeSizes`: [String: EndpointNodeSize]?
     public let `usageStats`: Bool?
+    public let `startFolder`: String?
     public let `keepAwakeAvailable`: Bool?
     public let `keepAwakeLidAvailable`: Bool?
     public let `keepAwakeLidRule`: Bool?
@@ -8053,17 +8086,19 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
     public let `features`: [String]?
     public let `viewReferences`: Bool?
 
-    public init(`id`: String, `label`: String, `nameSource`: EndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `keepAwake`: KeepAwakeMode? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `broker`: EndpointBroker? = nil, `lanDoor`: Bool? = nil, `worktreeRoot`: Presence<String> = .missing, `terminalShell`: EndpointTerminalShell? = nil, `nodeSizes`: [String: EndpointNodeSize]? = nil, `usageStats`: Bool? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: EndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: EndpointInfoReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `brokerFixed`: Bool? = nil, `lan`: Presence<LanDoor> = .missing, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing, `agentIntegrations`: EndpointAgentIntegrations? = nil, `gitBashMissing`: Bool? = nil, `features`: [String]? = nil, `viewReferences`: Bool? = nil) {
+    public init(`id`: String, `label`: String, `nameSource`: EndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `agentsSharePorts`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `textModel`: Presence<EndpointInfoTextModel> = .missing, `keepAwake`: KeepAwakeMode? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `broker`: EndpointBroker? = nil, `lanDoor`: Bool? = nil, `worktreeRoot`: Presence<String> = .missing, `terminalShell`: EndpointTerminalShell? = nil, `nodeSizes`: [String: EndpointNodeSize]? = nil, `usageStats`: Bool? = nil, `startFolder`: String? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: EndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: EndpointInfoReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `brokerFixed`: Bool? = nil, `lan`: Presence<LanDoor> = .missing, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing, `agentIntegrations`: EndpointAgentIntegrations? = nil, `gitBashMissing`: Bool? = nil, `features`: [String]? = nil, `viewReferences`: Bool? = nil) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
         self.`icon` = `icon`
         self.`agentsDeleteAnyView` = `agentsDeleteAnyView`
         self.`reachOpenProjects` = `reachOpenProjects`
+        self.`agentsSharePorts` = `agentsSharePorts`
         self.`steerMessages` = `steerMessages`
         self.`streamingAllowed` = `streamingAllowed`
         self.`resumeAtReset` = `resumeAtReset`
         self.`visualReplies` = `visualReplies`
+        self.`textModel` = `textModel`
         self.`keepAwake` = `keepAwake`
         self.`keepAwakeOnBattery` = `keepAwakeOnBattery`
         self.`keepAwakeDisplay` = `keepAwakeDisplay`
@@ -8074,6 +8109,7 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
         self.`terminalShell` = `terminalShell`
         self.`nodeSizes` = `nodeSizes`
         self.`usageStats` = `usageStats`
+        self.`startFolder` = `startFolder`
         self.`keepAwakeAvailable` = `keepAwakeAvailable`
         self.`keepAwakeLidAvailable` = `keepAwakeLidAvailable`
         self.`keepAwakeLidRule` = `keepAwakeLidRule`
@@ -8103,10 +8139,12 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
         `icon` = try container.contains(.`icon`) ? (container.decodeNil(forKey: .`icon`) ? .null : .value(container.decode(MachineIcon.self, forKey: .`icon`))) : .missing
         `agentsDeleteAnyView` = try container.decodeIfPresent(Bool.self, forKey: .`agentsDeleteAnyView`)
         `reachOpenProjects` = try container.decodeIfPresent(Bool.self, forKey: .`reachOpenProjects`)
+        `agentsSharePorts` = try container.decodeIfPresent(Bool.self, forKey: .`agentsSharePorts`)
         `steerMessages` = try container.decodeIfPresent(Bool.self, forKey: .`steerMessages`)
         `streamingAllowed` = try container.decodeIfPresent(Bool.self, forKey: .`streamingAllowed`)
         `resumeAtReset` = try container.decodeIfPresent(Bool.self, forKey: .`resumeAtReset`)
         `visualReplies` = try container.decodeIfPresent(Bool.self, forKey: .`visualReplies`)
+        `textModel` = try container.contains(.`textModel`) ? (container.decodeNil(forKey: .`textModel`) ? .null : .value(container.decode(EndpointInfoTextModel.self, forKey: .`textModel`))) : .missing
         `keepAwake` = try container.decodeIfPresent(KeepAwakeMode.self, forKey: .`keepAwake`)
         `keepAwakeOnBattery` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeOnBattery`)
         `keepAwakeDisplay` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeDisplay`)
@@ -8117,6 +8155,7 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
         `terminalShell` = try container.decodeIfPresent(EndpointTerminalShell.self, forKey: .`terminalShell`)
         `nodeSizes` = try container.decodeIfPresent([String: EndpointNodeSize].self, forKey: .`nodeSizes`)
         `usageStats` = try container.decodeIfPresent(Bool.self, forKey: .`usageStats`)
+        `startFolder` = try container.decodeIfPresent(String.self, forKey: .`startFolder`)
         `keepAwakeAvailable` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeAvailable`)
         `keepAwakeLidAvailable` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidAvailable`)
         `keepAwakeLidRule` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidRule`)
@@ -8150,10 +8189,16 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
         }
         try container.encodeIfPresent(`agentsDeleteAnyView`, forKey: .`agentsDeleteAnyView`)
         try container.encodeIfPresent(`reachOpenProjects`, forKey: .`reachOpenProjects`)
+        try container.encodeIfPresent(`agentsSharePorts`, forKey: .`agentsSharePorts`)
         try container.encodeIfPresent(`steerMessages`, forKey: .`steerMessages`)
         try container.encodeIfPresent(`streamingAllowed`, forKey: .`streamingAllowed`)
         try container.encodeIfPresent(`resumeAtReset`, forKey: .`resumeAtReset`)
         try container.encodeIfPresent(`visualReplies`, forKey: .`visualReplies`)
+        switch `textModel` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`textModel`)
+        case .value(let value): try container.encode(value, forKey: .`textModel`)
+        }
         try container.encodeIfPresent(`keepAwake`, forKey: .`keepAwake`)
         try container.encodeIfPresent(`keepAwakeOnBattery`, forKey: .`keepAwakeOnBattery`)
         try container.encodeIfPresent(`keepAwakeDisplay`, forKey: .`keepAwakeDisplay`)
@@ -8168,6 +8213,7 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`terminalShell`, forKey: .`terminalShell`)
         try container.encodeIfPresent(`nodeSizes`, forKey: .`nodeSizes`)
         try container.encodeIfPresent(`usageStats`, forKey: .`usageStats`)
+        try container.encodeIfPresent(`startFolder`, forKey: .`startFolder`)
         try container.encodeIfPresent(`keepAwakeAvailable`, forKey: .`keepAwakeAvailable`)
         try container.encodeIfPresent(`keepAwakeLidAvailable`, forKey: .`keepAwakeLidAvailable`)
         try container.encodeIfPresent(`keepAwakeLidRule`, forKey: .`keepAwakeLidRule`)
@@ -8208,10 +8254,12 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
         case `icon` = "icon"
         case `agentsDeleteAnyView` = "agentsDeleteAnyView"
         case `reachOpenProjects` = "reachOpenProjects"
+        case `agentsSharePorts` = "agentsSharePorts"
         case `steerMessages` = "steerMessages"
         case `streamingAllowed` = "streamingAllowed"
         case `resumeAtReset` = "resumeAtReset"
         case `visualReplies` = "visualReplies"
+        case `textModel` = "textModel"
         case `keepAwake` = "keepAwake"
         case `keepAwakeOnBattery` = "keepAwakeOnBattery"
         case `keepAwakeDisplay` = "keepAwakeDisplay"
@@ -8222,6 +8270,7 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
         case `terminalShell` = "terminalShell"
         case `nodeSizes` = "nodeSizes"
         case `usageStats` = "usageStats"
+        case `startFolder` = "startFolder"
         case `keepAwakeAvailable` = "keepAwakeAvailable"
         case `keepAwakeLidAvailable` = "keepAwakeLidAvailable"
         case `keepAwakeLidRule` = "keepAwakeLidRule"
@@ -8247,6 +8296,38 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
 public enum EndpointNameSource: String, CaseIterable, Codable, Sendable, Equatable {
     case `chosen` = "chosen"
     case `default` = "default"
+}
+
+public struct EndpointInfoTextModel: Codable, Sendable, Equatable {
+    public let `provider`: String
+    public let `model`: String?
+    public let `account`: String?
+
+    public init(`provider`: String, `model`: String?, `account`: String? = nil) {
+        self.`provider` = `provider`
+        self.`model` = `model`
+        self.`account` = `account`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `provider` = try container.decode(String.self, forKey: .`provider`)
+        `model` = try container.decode(String?.self, forKey: .`model`)
+        `account` = try container.decodeIfPresent(String.self, forKey: .`account`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`provider`, forKey: .`provider`)
+        try container.encode(`model`, forKey: .`model`)
+        try container.encodeIfPresent(`account`, forKey: .`account`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `provider` = "provider"
+        case `model` = "model"
+        case `account` = "account"
+    }
 }
 
 public enum KeepAwakeMode: String, CaseIterable, Codable, Sendable, Equatable {
@@ -8543,10 +8624,12 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
     public let `icon`: MachineIcon?
     public let `agentsDeleteAnyView`: Bool?
     public let `reachOpenProjects`: Bool?
+    public let `agentsSharePorts`: Bool?
     public let `steerMessages`: Bool?
     public let `streamingAllowed`: Bool?
     public let `resumeAtReset`: Bool?
     public let `visualReplies`: Bool?
+    public let `textModel`: Presence<EndpointChangedEventTextModel>
     public let `keepAwake`: KeepAwakeMode?
     public let `keepAwakeOnBattery`: Bool?
     public let `keepAwakeDisplay`: Bool?
@@ -8555,6 +8638,7 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
     public let `lanDoor`: Bool?
     public let `nodeSizes`: [String: EndpointNodeSize]?
     public let `usageStats`: Bool?
+    public let `startFolder`: String?
     public let `keepAwakeLidRule`: Bool?
     public let `brokerUrl`: Presence<String>
     public let `brokerFixed`: Bool?
@@ -8562,17 +8646,19 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
     public let `lanDoorFixed`: Bool?
     public let `agentIntegrations`: EndpointAgentIntegrations?
 
-    public init(`id`: String, `label`: String, `nameSource`: EndpointNameSource, `icon`: MachineIcon?, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `keepAwake`: KeepAwakeMode? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `broker`: EndpointBroker? = nil, `lanDoor`: Bool? = nil, `nodeSizes`: [String: EndpointNodeSize]? = nil, `usageStats`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `brokerUrl`: Presence<String> = .missing, `brokerFixed`: Bool? = nil, `lan`: Presence<LanDoor> = .missing, `lanDoorFixed`: Bool? = nil, `agentIntegrations`: EndpointAgentIntegrations? = nil) {
+    public init(`id`: String, `label`: String, `nameSource`: EndpointNameSource, `icon`: MachineIcon?, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `agentsSharePorts`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `textModel`: Presence<EndpointChangedEventTextModel> = .missing, `keepAwake`: KeepAwakeMode? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `broker`: EndpointBroker? = nil, `lanDoor`: Bool? = nil, `nodeSizes`: [String: EndpointNodeSize]? = nil, `usageStats`: Bool? = nil, `startFolder`: String? = nil, `keepAwakeLidRule`: Bool? = nil, `brokerUrl`: Presence<String> = .missing, `brokerFixed`: Bool? = nil, `lan`: Presence<LanDoor> = .missing, `lanDoorFixed`: Bool? = nil, `agentIntegrations`: EndpointAgentIntegrations? = nil) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
         self.`icon` = `icon`
         self.`agentsDeleteAnyView` = `agentsDeleteAnyView`
         self.`reachOpenProjects` = `reachOpenProjects`
+        self.`agentsSharePorts` = `agentsSharePorts`
         self.`steerMessages` = `steerMessages`
         self.`streamingAllowed` = `streamingAllowed`
         self.`resumeAtReset` = `resumeAtReset`
         self.`visualReplies` = `visualReplies`
+        self.`textModel` = `textModel`
         self.`keepAwake` = `keepAwake`
         self.`keepAwakeOnBattery` = `keepAwakeOnBattery`
         self.`keepAwakeDisplay` = `keepAwakeDisplay`
@@ -8581,6 +8667,7 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
         self.`lanDoor` = `lanDoor`
         self.`nodeSizes` = `nodeSizes`
         self.`usageStats` = `usageStats`
+        self.`startFolder` = `startFolder`
         self.`keepAwakeLidRule` = `keepAwakeLidRule`
         self.`brokerUrl` = `brokerUrl`
         self.`brokerFixed` = `brokerFixed`
@@ -8597,10 +8684,12 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
         `icon` = try container.decode(MachineIcon?.self, forKey: .`icon`)
         `agentsDeleteAnyView` = try container.decodeIfPresent(Bool.self, forKey: .`agentsDeleteAnyView`)
         `reachOpenProjects` = try container.decodeIfPresent(Bool.self, forKey: .`reachOpenProjects`)
+        `agentsSharePorts` = try container.decodeIfPresent(Bool.self, forKey: .`agentsSharePorts`)
         `steerMessages` = try container.decodeIfPresent(Bool.self, forKey: .`steerMessages`)
         `streamingAllowed` = try container.decodeIfPresent(Bool.self, forKey: .`streamingAllowed`)
         `resumeAtReset` = try container.decodeIfPresent(Bool.self, forKey: .`resumeAtReset`)
         `visualReplies` = try container.decodeIfPresent(Bool.self, forKey: .`visualReplies`)
+        `textModel` = try container.contains(.`textModel`) ? (container.decodeNil(forKey: .`textModel`) ? .null : .value(container.decode(EndpointChangedEventTextModel.self, forKey: .`textModel`))) : .missing
         `keepAwake` = try container.decodeIfPresent(KeepAwakeMode.self, forKey: .`keepAwake`)
         `keepAwakeOnBattery` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeOnBattery`)
         `keepAwakeDisplay` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeDisplay`)
@@ -8609,6 +8698,7 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
         `lanDoor` = try container.decodeIfPresent(Bool.self, forKey: .`lanDoor`)
         `nodeSizes` = try container.decodeIfPresent([String: EndpointNodeSize].self, forKey: .`nodeSizes`)
         `usageStats` = try container.decodeIfPresent(Bool.self, forKey: .`usageStats`)
+        `startFolder` = try container.decodeIfPresent(String.self, forKey: .`startFolder`)
         `keepAwakeLidRule` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidRule`)
         `brokerUrl` = try container.contains(.`brokerUrl`) ? (container.decodeNil(forKey: .`brokerUrl`) ? .null : .value(container.decode(String.self, forKey: .`brokerUrl`))) : .missing
         `brokerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`brokerFixed`)
@@ -8625,10 +8715,16 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
         try container.encode(`icon`, forKey: .`icon`)
         try container.encodeIfPresent(`agentsDeleteAnyView`, forKey: .`agentsDeleteAnyView`)
         try container.encodeIfPresent(`reachOpenProjects`, forKey: .`reachOpenProjects`)
+        try container.encodeIfPresent(`agentsSharePorts`, forKey: .`agentsSharePorts`)
         try container.encodeIfPresent(`steerMessages`, forKey: .`steerMessages`)
         try container.encodeIfPresent(`streamingAllowed`, forKey: .`streamingAllowed`)
         try container.encodeIfPresent(`resumeAtReset`, forKey: .`resumeAtReset`)
         try container.encodeIfPresent(`visualReplies`, forKey: .`visualReplies`)
+        switch `textModel` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`textModel`)
+        case .value(let value): try container.encode(value, forKey: .`textModel`)
+        }
         try container.encodeIfPresent(`keepAwake`, forKey: .`keepAwake`)
         try container.encodeIfPresent(`keepAwakeOnBattery`, forKey: .`keepAwakeOnBattery`)
         try container.encodeIfPresent(`keepAwakeDisplay`, forKey: .`keepAwakeDisplay`)
@@ -8637,6 +8733,7 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`lanDoor`, forKey: .`lanDoor`)
         try container.encodeIfPresent(`nodeSizes`, forKey: .`nodeSizes`)
         try container.encodeIfPresent(`usageStats`, forKey: .`usageStats`)
+        try container.encodeIfPresent(`startFolder`, forKey: .`startFolder`)
         try container.encodeIfPresent(`keepAwakeLidRule`, forKey: .`keepAwakeLidRule`)
         switch `brokerUrl` {
         case .missing: break
@@ -8660,10 +8757,12 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
         case `icon` = "icon"
         case `agentsDeleteAnyView` = "agentsDeleteAnyView"
         case `reachOpenProjects` = "reachOpenProjects"
+        case `agentsSharePorts` = "agentsSharePorts"
         case `steerMessages` = "steerMessages"
         case `streamingAllowed` = "streamingAllowed"
         case `resumeAtReset` = "resumeAtReset"
         case `visualReplies` = "visualReplies"
+        case `textModel` = "textModel"
         case `keepAwake` = "keepAwake"
         case `keepAwakeOnBattery` = "keepAwakeOnBattery"
         case `keepAwakeDisplay` = "keepAwakeDisplay"
@@ -8672,12 +8771,45 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
         case `lanDoor` = "lanDoor"
         case `nodeSizes` = "nodeSizes"
         case `usageStats` = "usageStats"
+        case `startFolder` = "startFolder"
         case `keepAwakeLidRule` = "keepAwakeLidRule"
         case `brokerUrl` = "brokerUrl"
         case `brokerFixed` = "brokerFixed"
         case `lan` = "lan"
         case `lanDoorFixed` = "lanDoorFixed"
         case `agentIntegrations` = "agentIntegrations"
+    }
+}
+
+public struct EndpointChangedEventTextModel: Codable, Sendable, Equatable {
+    public let `provider`: String
+    public let `model`: String?
+    public let `account`: String?
+
+    public init(`provider`: String, `model`: String?, `account`: String? = nil) {
+        self.`provider` = `provider`
+        self.`model` = `model`
+        self.`account` = `account`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `provider` = try container.decode(String.self, forKey: .`provider`)
+        `model` = try container.decode(String?.self, forKey: .`model`)
+        `account` = try container.decodeIfPresent(String.self, forKey: .`account`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`provider`, forKey: .`provider`)
+        try container.encode(`model`, forKey: .`model`)
+        try container.encodeIfPresent(`account`, forKey: .`account`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `provider` = "provider"
+        case `model` = "model"
+        case `account` = "account"
     }
 }
 
@@ -12125,6 +12257,181 @@ public enum FsEntryKind: String, CaseIterable, Codable, Sendable, Equatable {
     case `other` = "other"
 }
 
+public struct FsBrowseResult: Codable, Sendable, Equatable {
+    public let `parentPath`: String
+    public let `entries`: [FsBrowseResultEntriesItem]
+    public let `exists`: Bool?
+
+    public init(`parentPath`: String, `entries`: [FsBrowseResultEntriesItem], `exists`: Bool? = nil) {
+        self.`parentPath` = `parentPath`
+        self.`entries` = `entries`
+        self.`exists` = `exists`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `parentPath` = try container.decode(String.self, forKey: .`parentPath`)
+        `entries` = try container.decode([FsBrowseResultEntriesItem].self, forKey: .`entries`)
+        `exists` = try container.decodeIfPresent(Bool.self, forKey: .`exists`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`parentPath`, forKey: .`parentPath`)
+        try container.encode(`entries`, forKey: .`entries`)
+        try container.encodeIfPresent(`exists`, forKey: .`exists`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `parentPath` = "parentPath"
+        case `entries` = "entries"
+        case `exists` = "exists"
+    }
+}
+
+public struct FsBrowseResultEntriesItem: Codable, Sendable, Equatable {
+    public let `name`: String
+    public let `fullPath`: String
+    public let `hasCanvas`: Bool
+
+    public init(`name`: String, `fullPath`: String, `hasCanvas`: Bool) {
+        self.`name` = `name`
+        self.`fullPath` = `fullPath`
+        self.`hasCanvas` = `hasCanvas`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `fullPath` = try container.decode(String.self, forKey: .`fullPath`)
+        `hasCanvas` = try container.decode(Bool.self, forKey: .`hasCanvas`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`fullPath`, forKey: .`fullPath`)
+        try container.encode(`hasCanvas`, forKey: .`hasCanvas`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `name` = "name"
+        case `fullPath` = "fullPath"
+        case `hasCanvas` = "hasCanvas"
+    }
+}
+
+public struct ClientListResult: Codable, Sendable, Equatable {
+    public let `clients`: [ConnectedClient]
+
+    public init(`clients`: [ConnectedClient]) {
+        self.`clients` = `clients`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `clients` = try container.decode([ConnectedClient].self, forKey: .`clients`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`clients`, forKey: .`clients`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `clients` = "clients"
+    }
+}
+
+public struct ConnectedClient: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `access`: String
+    public let `label`: String?
+    public let `machineId`: String?
+    public let `client`: String?
+    public let `version`: String?
+    public let `os`: String?
+    public let `osVersion`: String?
+    public let `device`: String?
+    public let `reachability`: ConnectedClientReachability?
+    public let `connectedAt`: Double
+    public let `lastRequestAt`: Double?
+    public let `current`: Bool
+
+    public init(`id`: String, `access`: String, `label`: String? = nil, `machineId`: String? = nil, `client`: String? = nil, `version`: String? = nil, `os`: String? = nil, `osVersion`: String? = nil, `device`: String? = nil, `reachability`: ConnectedClientReachability? = nil, `connectedAt`: Double, `lastRequestAt`: Double? = nil, `current`: Bool) {
+        self.`id` = `id`
+        self.`access` = `access`
+        self.`label` = `label`
+        self.`machineId` = `machineId`
+        self.`client` = `client`
+        self.`version` = `version`
+        self.`os` = `os`
+        self.`osVersion` = `osVersion`
+        self.`device` = `device`
+        self.`reachability` = `reachability`
+        self.`connectedAt` = `connectedAt`
+        self.`lastRequestAt` = `lastRequestAt`
+        self.`current` = `current`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `access` = try container.decode(String.self, forKey: .`access`)
+        `label` = try container.decodeIfPresent(String.self, forKey: .`label`)
+        `machineId` = try container.decodeIfPresent(String.self, forKey: .`machineId`)
+        `client` = try container.decodeIfPresent(String.self, forKey: .`client`)
+        `version` = try container.decodeIfPresent(String.self, forKey: .`version`)
+        `os` = try container.decodeIfPresent(String.self, forKey: .`os`)
+        `osVersion` = try container.decodeIfPresent(String.self, forKey: .`osVersion`)
+        `device` = try container.decodeIfPresent(String.self, forKey: .`device`)
+        `reachability` = try container.decodeIfPresent(ConnectedClientReachability.self, forKey: .`reachability`)
+        `connectedAt` = try container.decode(Double.self, forKey: .`connectedAt`)
+        `lastRequestAt` = try container.decodeIfPresent(Double.self, forKey: .`lastRequestAt`)
+        `current` = try container.decode(Bool.self, forKey: .`current`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`access`, forKey: .`access`)
+        try container.encodeIfPresent(`label`, forKey: .`label`)
+        try container.encodeIfPresent(`machineId`, forKey: .`machineId`)
+        try container.encodeIfPresent(`client`, forKey: .`client`)
+        try container.encodeIfPresent(`version`, forKey: .`version`)
+        try container.encodeIfPresent(`os`, forKey: .`os`)
+        try container.encodeIfPresent(`osVersion`, forKey: .`osVersion`)
+        try container.encodeIfPresent(`device`, forKey: .`device`)
+        try container.encodeIfPresent(`reachability`, forKey: .`reachability`)
+        try container.encode(`connectedAt`, forKey: .`connectedAt`)
+        try container.encodeIfPresent(`lastRequestAt`, forKey: .`lastRequestAt`)
+        try container.encode(`current`, forKey: .`current`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `access` = "access"
+        case `label` = "label"
+        case `machineId` = "machineId"
+        case `client` = "client"
+        case `version` = "version"
+        case `os` = "os"
+        case `osVersion` = "osVersion"
+        case `device` = "device"
+        case `reachability` = "reachability"
+        case `connectedAt` = "connectedAt"
+        case `lastRequestAt` = "lastRequestAt"
+        case `current` = "current"
+    }
+}
+
+public enum ConnectedClientReachability: String, CaseIterable, Codable, Sendable, Equatable {
+    case `loopback` = "loopback"
+    case `lan` = "lan"
+    case `tunnel` = "tunnel"
+    case `public` = "public"
+}
+
 public enum FsReadResult: Codable, Sendable, Equatable {
     case `text`(FsTextRead)
     case `binary`(FsBinaryRead)
@@ -12894,6 +13201,7 @@ public struct GitRefsResult: Codable, Sendable, Equatable {
 
 public struct GitRef: Codable, Sendable, Equatable {
     public let `name`: String
+    public let `fullName`: String?
     public let `kind`: GitRefKind
     public let `current`: Bool
     public let `isDefault`: Bool
@@ -12901,8 +13209,9 @@ public struct GitRef: Codable, Sendable, Equatable {
     public let `commit`: String?
     public let `at`: Int64
 
-    public init(`name`: String, `kind`: GitRefKind, `current`: Bool, `isDefault`: Bool, `worktree`: String? = nil, `commit`: String? = nil, `at`: Int64) {
+    public init(`name`: String, `fullName`: String? = nil, `kind`: GitRefKind, `current`: Bool, `isDefault`: Bool, `worktree`: String? = nil, `commit`: String? = nil, `at`: Int64) {
         self.`name` = `name`
+        self.`fullName` = `fullName`
         self.`kind` = `kind`
         self.`current` = `current`
         self.`isDefault` = `isDefault`
@@ -12914,6 +13223,7 @@ public struct GitRef: Codable, Sendable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         `name` = try container.decode(String.self, forKey: .`name`)
+        `fullName` = try container.decodeIfPresent(String.self, forKey: .`fullName`)
         `kind` = try container.decode(GitRefKind.self, forKey: .`kind`)
         `current` = try container.decode(Bool.self, forKey: .`current`)
         `isDefault` = try container.decode(Bool.self, forKey: .`isDefault`)
@@ -12925,6 +13235,7 @@ public struct GitRef: Codable, Sendable, Equatable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`fullName`, forKey: .`fullName`)
         try container.encode(`kind`, forKey: .`kind`)
         try container.encode(`current`, forKey: .`current`)
         try container.encode(`isDefault`, forKey: .`isDefault`)
@@ -12935,6 +13246,7 @@ public struct GitRef: Codable, Sendable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case `name` = "name"
+        case `fullName` = "fullName"
         case `kind` = "kind"
         case `current` = "current"
         case `isDefault` = "isDefault"
@@ -14812,14 +15124,16 @@ public struct AccountsSnapshot: Codable, Sendable, Equatable {
     public let `loginCommands`: [String: String]?
     public let `chatLogins`: [String]?
     public let `silentLogins`: [String]?
+    public let `sharedConfigKinds`: [String]?
 
-    public init(`accounts`: [String: AccountConfig], `statuses`: [AccountStatus], `secretsAvailable`: Bool? = nil, `loginCommands`: [String: String]? = nil, `chatLogins`: [String]? = nil, `silentLogins`: [String]? = nil) {
+    public init(`accounts`: [String: AccountConfig], `statuses`: [AccountStatus], `secretsAvailable`: Bool? = nil, `loginCommands`: [String: String]? = nil, `chatLogins`: [String]? = nil, `silentLogins`: [String]? = nil, `sharedConfigKinds`: [String]? = nil) {
         self.`accounts` = `accounts`
         self.`statuses` = `statuses`
         self.`secretsAvailable` = `secretsAvailable`
         self.`loginCommands` = `loginCommands`
         self.`chatLogins` = `chatLogins`
         self.`silentLogins` = `silentLogins`
+        self.`sharedConfigKinds` = `sharedConfigKinds`
     }
 
     public init(from decoder: Decoder) throws {
@@ -14830,6 +15144,7 @@ public struct AccountsSnapshot: Codable, Sendable, Equatable {
         `loginCommands` = try container.decodeIfPresent([String: String].self, forKey: .`loginCommands`)
         `chatLogins` = try container.decodeIfPresent([String].self, forKey: .`chatLogins`)
         `silentLogins` = try container.decodeIfPresent([String].self, forKey: .`silentLogins`)
+        `sharedConfigKinds` = try container.decodeIfPresent([String].self, forKey: .`sharedConfigKinds`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -14840,6 +15155,7 @@ public struct AccountsSnapshot: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`loginCommands`, forKey: .`loginCommands`)
         try container.encodeIfPresent(`chatLogins`, forKey: .`chatLogins`)
         try container.encodeIfPresent(`silentLogins`, forKey: .`silentLogins`)
+        try container.encodeIfPresent(`sharedConfigKinds`, forKey: .`sharedConfigKinds`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -14849,6 +15165,7 @@ public struct AccountsSnapshot: Codable, Sendable, Equatable {
         case `loginCommands` = "loginCommands"
         case `chatLogins` = "chatLogins"
         case `silentLogins` = "silentLogins"
+        case `sharedConfigKinds` = "sharedConfigKinds"
     }
 }
 
@@ -14861,8 +15178,9 @@ public struct AccountConfig: Codable, Sendable, Equatable {
     public let `shadowHome`: String?
     public let `env`: [AccountConfigEnvItem]?
     public let `order`: Int64?
+    public let `shareConfig`: Bool?
 
-    public init(`kind`: String, `label`: String? = nil, `color`: String? = nil, `enabled`: Bool? = nil, `home`: String? = nil, `shadowHome`: String? = nil, `env`: [AccountConfigEnvItem]? = nil, `order`: Int64? = nil) {
+    public init(`kind`: String, `label`: String? = nil, `color`: String? = nil, `enabled`: Bool? = nil, `home`: String? = nil, `shadowHome`: String? = nil, `env`: [AccountConfigEnvItem]? = nil, `order`: Int64? = nil, `shareConfig`: Bool? = nil) {
         self.`kind` = `kind`
         self.`label` = `label`
         self.`color` = `color`
@@ -14871,6 +15189,7 @@ public struct AccountConfig: Codable, Sendable, Equatable {
         self.`shadowHome` = `shadowHome`
         self.`env` = `env`
         self.`order` = `order`
+        self.`shareConfig` = `shareConfig`
     }
 
     public init(from decoder: Decoder) throws {
@@ -14883,6 +15202,7 @@ public struct AccountConfig: Codable, Sendable, Equatable {
         `shadowHome` = try container.decodeIfPresent(String.self, forKey: .`shadowHome`)
         `env` = try container.decodeIfPresent([AccountConfigEnvItem].self, forKey: .`env`)
         `order` = try container.decodeIfPresent(Int64.self, forKey: .`order`)
+        `shareConfig` = try container.decodeIfPresent(Bool.self, forKey: .`shareConfig`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -14895,6 +15215,7 @@ public struct AccountConfig: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`shadowHome`, forKey: .`shadowHome`)
         try container.encodeIfPresent(`env`, forKey: .`env`)
         try container.encodeIfPresent(`order`, forKey: .`order`)
+        try container.encodeIfPresent(`shareConfig`, forKey: .`shareConfig`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -14906,6 +15227,7 @@ public struct AccountConfig: Codable, Sendable, Equatable {
         case `shadowHome` = "shadowHome"
         case `env` = "env"
         case `order` = "order"
+        case `shareConfig` = "shareConfig"
     }
 }
 

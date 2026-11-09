@@ -84,6 +84,8 @@ struct ChatVisualContent: View {
     let read: () async throws -> Data
     var fill = false
     var onHeight: (Double, Double) -> Void = { _, _ in }
+    /// The files a design page's script names while it runs; none for a visual.
+    var assets: DesignFiles.RuntimeAssets?
     @Environment(\.colorScheme) private var colorScheme
     @State private var page: Data?
     @State private var shown = false
@@ -93,7 +95,7 @@ struct ChatVisualContent: View {
             if let page {
                 ChatVisualFrame(
                     visual: visual, page: page, theme: colorScheme == .dark ? .dark : .light, fill: fill,
-                    onHeight: onHeight, onShown: { shown = true }, onFailure: { failed = true }
+                    onHeight: onHeight, onShown: { shown = true }, onFailure: { failed = true }, assets: assets
                 )
                 .opacity(failed ? 0 : 1)
             }

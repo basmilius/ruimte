@@ -490,6 +490,43 @@ describe('native install', () => {
             expect(installer.versionOf('php-native')).toBe('1.2.3');
         });
 
+        it('installs a release of someone else’s server that is one file, by its checksum alone and without running it', async () => {
+            const calls: unknown[] = [];
+            const file = new TextEncoder().encode('#!/bin/sh\n');
+            const release: NativeRelease = {
+                sourceRevision: COMMIT,
+                version: '2026-02-08',
+                checksumOnly: true,
+                assets: {
+                    [`${process.platform}-${process.arch}`]: {
+                        url: 'https://example.test/marksman',
+                        sha256: sha256(file),
+                        format: 'raw',
+                        executable: 'marksman'
+                    }
+                }
+            };
+            const installer = new LanguageInstaller({
+                root,
+                runtime,
+                run: async (spec) => {
+                    calls.push(spec);
+                    return 0;
+                },
+                native: new NativePolicy({ checkouts: {}, releases: { markdown: release } }),
+                download: async (_url, destination) => {
+                    await writeFile(destination, file);
+                },
+                onChange: () => undefined
+            });
+            await installer.install('markdown');
+            expect(installer.failureOf('markdown')).toBeNull();
+            expect(await installer.state('markdown')).toBe('installed');
+            expect(installer.launchOf('markdown')?.executable).toBe(join(root, 'markdown', 'versions', '2026-02-08', 'bin', 'marksman'));
+            expect(installer.versionOf('markdown')).toBe('2026-02-08');
+            expect(calls).toEqual([]);
+        });
+
         it('stops at a checksum that does not match, before it runs anything', async () => {
             const calls: unknown[] = [];
             const installer = new LanguageInstaller({
@@ -734,7 +771,7 @@ describe('the SQL server install', () => {
             run,
             onChange: () => undefined,
             onSwitched: (kind) => switched.push(kind),
-            findProgram: () => [proxy, executable]
+            findProgram: (program) => (program === 'rust-analyzer' ? [proxy, executable] : [])
         });
         await installer.load();
         expect(await installer.state('rust')).toBe('missing');
@@ -755,6 +792,63 @@ describe('the SQL server install', () => {
         expect(calls).toEqual([proxy, proxy, executable]);
         expect(await readdir(root)).not.toContain('rust');
         await expect(installer.rollback('rust')).rejects.toThrow();
+    });
+
+    it('finds sourcekit-lsp, which prints no version, by the `swift` beside it', async () => {
+        const executable = join(root, 'swift', 'bin', 'sourcekit-lsp');
+        await mkdir(dirname(executable), { recursive: true });
+        await writeFile(executable, '');
+        const calls: Array<{ command: string; args: string[] }> = [];
+        const run: RunCommand = async (spec, onLine) => {
+            calls.push({ command: spec.command, args: spec.args });
+            onLine('Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)');
+            return 0;
+        };
+        const installer = new LanguageInstaller({
+            root,
+            runtime,
+            run,
+            onChange: () => undefined,
+            findProgram: (program) => (program === 'sourcekit-lsp' ? [executable] : [])
+        });
+        await installer.load();
+
+        expect(await installer.state('swift')).toBe('installed');
+        expect(installer.versionOf('swift')).toBe('6.4');
+        expect(installer.launchOf('swift')).toEqual({ executable });
+        expect(calls).toEqual([{ command: join(dirname(executable), 'swift'), args: ['--version'] }]);
+    });
+
+    it('finds gopls by its version command, with the folders of Go on the PATH it runs with', async () => {
+        const executable = join(root, 'go', 'bin', 'gopls');
+        await mkdir(dirname(executable), { recursive: true });
+        await writeFile(executable, '');
+        const calls: Array<{ command: string; args: string[]; path: string | undefined }> = [];
+        const run: RunCommand = async (spec, onLine) => {
+            calls.push({ command: spec.command, args: spec.args, path: spec.env.PATH });
+            onLine('golang.org/x/tools/gopls v0.18.1');
+            onLine('    golang.org/x/tools/gopls@v0.18.1 h1:abc=');
+            return 0;
+        };
+        const installer = new LanguageInstaller({
+            root,
+            runtime,
+            run,
+            onChange: () => undefined,
+            findProgram: (program) => (program === 'gopls' ? [executable] : [])
+        });
+        await installer.load();
+
+        expect(await installer.state('go')).toBe('installed');
+        expect(installer.versionOf('go')).toBe('v0.18.1');
+        expect(installer.launchOf('go')).toEqual({ executable });
+        expect(calls).toEqual([{ command: executable, args: ['version'], path: expect.stringContaining('/usr/local/go/bin') }]);
+
+        const lacking = new LanguageInstaller({ root, runtime, run, onChange: () => undefined, findProgram: () => [] });
+        await lacking.load();
+
+        expect(await lacking.state('go')).toBe('missing');
+        expect(lacking.failureOf('go')).toBe('gopls is not on this machine. It comes with Go: run go install golang.org/x/tools/gopls@latest');
     });
 });
 

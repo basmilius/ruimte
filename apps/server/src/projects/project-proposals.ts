@@ -29,6 +29,8 @@ interface ProposalChats {
 
 interface ProjectProposalsOptions {
     chats: ProposalChats;
+    /* Owes the chat a turn with a person's answer (`deliver-answer`); absent in a test that only reads the cards. */
+    answered?(chatId: string, wake: { text: string; label: string }): void;
     now?: () => number;
     timers?: Timers;
     cardMs?: number;
@@ -36,6 +38,8 @@ interface ProjectProposalsOptions {
 
 interface Pending {
     proposal: ProjectProposal;
+    /* A move took the hold; until it ends, the move is the answer and a decline loses the race. */
+    moving: boolean;
     cancelExpiry: () => void;
 }
 
@@ -43,24 +47,32 @@ function holdKeyOf(proposalId: string): string {
     return `project-proposal:${proposalId}`;
 }
 
+/* The turn that tells the chat how the person answered its card; a confirm is the move that ran through. */
+export function proposalWake(name: string, outcome: 'confirmed' | 'declined'): { text: string; label: string } {
+    return outcome === 'confirmed'
+        ? { text: `Confirmed: this chat is now the project ${name}.`, label: 'Project: confirmed' }
+        : { text: `Declined: make this chat the project ${name}. Nothing changed.`, label: 'Project: declined' };
+}
+
 /*
  * The cards in which an agent in Chats suggests that its chat becomes a project, one per chat: a
  * second suggestion joins the card that stands. Whoever answers first settles it, and nothing is made
  * here; a move of the chat takes the card down. A suggestion never waits for the person, since a turn
- * held open would block the very move the card offers, so a decline reaches the agent with its next
- * suggestion, once.
+ * held open would block the very move the card offers: a decline, or a move that ran through while
+ * the card stood, wakes the chat with the answer instead.
  */
 export class ProjectProposals {
     private readonly chats: ProposalChats;
+    private readonly answered: (chatId: string, wake: { text: string; label: string }) => void;
     private readonly now: () => number;
     private readonly timers: Timers;
     private readonly cardMs: number;
     private readonly sinks = new ClientSinks();
     private readonly pending = new Map<string, Pending>();
-    private readonly unheard = new Map<string, ProposalAnswer>();
 
     constructor(options: ProjectProposalsOptions) {
         this.chats = options.chats;
+        this.answered = options.answered ?? (() => undefined);
         this.now = options.now ?? Date.now;
         this.timers = options.timers ?? realTimers;
         this.cardMs = options.cardMs ?? PROPOSAL_CARD_MS;
@@ -70,13 +82,8 @@ export class ProjectProposals {
         return this.sinks.subscribe(clientId, sink);
     }
 
-    /* Raises the card, or joins the one that stands, and answers `waiting` at once; an answer nobody heard yet comes instead, once. */
+    /* Raises the card, or joins the one that stands, and answers `waiting` at once. */
     ask(ask: ProposalAsk): ProposalAnswer {
-        const told = this.unheard.get(ask.chatId);
-        if (told !== undefined && !this.pending.has(ask.chatId)) {
-            this.unheard.delete(ask.chatId);
-            return told;
-        }
         return { proposalId: this.raise(ask).proposal.proposalId, outcome: 'waiting' };
     }
 
@@ -99,36 +106,48 @@ export class ProjectProposals {
             return null;
         }
         const key = holdKeyOf(pending.proposal.proposalId);
+        pending.moving = true;
         this.chats.release(chatId, key);
         return () => {
             if (this.pending.get(chatId) === pending) {
+                pending.moving = false;
                 this.chats.hold(chatId, key);
             }
         };
     }
 
-    /* A person's no. False when the card is gone already, which tells a second client it lost the race. */
+    /* A person's no. False when the card is gone already or a move took it, which tells a second client it lost the race. */
     decline(proposalId: string): boolean {
         const found = this.find(proposalId);
-        if (found === undefined) {
+        if (found === undefined || found.moving) {
             return false;
         }
-        this.settle(found, { proposalId, outcome: 'declined' });
+        this.settle(found);
+        this.answered(found.proposal.chatId, proposalWake(found.proposal.name, 'declined'));
         return true;
     }
 
-    /* The chat left Chats for a project, however the person got there: it can suggest nothing more, so nothing is left to tell it. */
-    moved(chatId: string): void {
-        this.forget(chatId);
+    /*
+     * The chat left Chats for a project, however the person got there: it can suggest nothing more. A move that ran
+     * through into `project` while the card stood is the person's yes; one that stopped halfway (no `project`) tells nothing.
+     */
+    moved(chatId: string, project?: string): void {
+        const pending = this.pending.get(chatId);
+        if (pending === undefined) {
+            return;
+        }
+        this.settle(pending);
+        if (project !== undefined) {
+            this.answered(chatId, proposalWake(project, 'confirmed'));
+        }
     }
 
     /* The chat stopped running or is gone: nobody is left to hear an answer. */
     forget(chatId: string): void {
         const pending = this.pending.get(chatId);
         if (pending !== undefined) {
-            this.settle(pending, null);
+            this.settle(pending);
         }
-        this.unheard.delete(chatId);
     }
 
     observe(event: SessionEvent): void {
@@ -158,9 +177,9 @@ export class ProjectProposals {
             this.publish();
             return standing;
         }
-        this.unheard.delete(ask.chatId);
         const pending: Pending = {
             proposal: { proposalId: randomUUID(), chatId: ask.chatId, ...words, createdAt: now, expiresAt },
+            moving: false,
             cancelExpiry: () => undefined
         };
         pending.cancelExpiry = this.expireLater(pending);
@@ -171,11 +190,11 @@ export class ProjectProposals {
     }
 
     private expireLater(pending: Pending): () => void {
-        return this.timers.set(() => this.settle(pending, null), this.cardMs);
+        return this.timers.set(() => this.settle(pending), this.cardMs);
     }
 
-    /* The agent hears the answer with its next suggestion; a card that only lapsed or whose chat is gone or moved has none. */
-    private settle(pending: Pending, answer: ProposalAnswer | null): void {
+    /* Takes the card down; a card that only lapsed tells the agent nothing. */
+    private settle(pending: Pending): void {
         const { chatId, proposalId } = pending.proposal;
         if (this.pending.get(chatId) !== pending) {
             return;
@@ -183,9 +202,6 @@ export class ProjectProposals {
         pending.cancelExpiry();
         this.pending.delete(chatId);
         this.chats.release(chatId, holdKeyOf(proposalId));
-        if (answer !== null) {
-            this.unheard.set(chatId, answer);
-        }
         this.publish();
     }
 

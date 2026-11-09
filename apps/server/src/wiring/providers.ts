@@ -1,5 +1,6 @@
 import { cliExecutable, type ProviderAccountsService } from '@adecore/agents/providers';
 import type { AgentKind } from '@ruimte/contracts';
+import { ownsSettings } from '../agents/install.ts';
 import { AgentIntegrations } from '../agents/integrations.ts';
 import type { ServerConfig } from '../config.ts';
 import type { AgentServers } from '../handlers/agent-servers.ts';
@@ -85,7 +86,7 @@ export async function wireProviders(
     void modelCatalogs.refresh();
     fetched();
     // Before the managers, which start every CLI under the account its node or chat names.
-    const accounts = seams.accounts({ home: config.home, providers, install: (kind, folder) => integrations.installFolder(kind, folder) });
+    const accounts = seams.accounts({ home: config.home, providers, install: (kind, folder) => integrations.installFolder(kind, folder), ownsSettings });
     await accounts.load();
     const servers: AgentServers = {
         of: (kind) => providers.servers.get(kind)?.install,

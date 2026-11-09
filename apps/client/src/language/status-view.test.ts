@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { LanguageServerStatus } from '@ruimte/contracts';
+import type { LanguageServerKind, LanguageServerStatus } from '@ruimte/contracts';
 import {
     actionsOf,
     alternativeTo,
@@ -79,6 +79,23 @@ describe('what a person can do', () => {
         expect(toneOf('indexing')).toBe('busy');
         expect(toneOf('crashed')).toBe('error');
         expect(toneOf('stopped')).toBe('idle');
+    });
+});
+
+describe('the servers of the languages added later', () => {
+    const named: Array<[LanguageServerKind, string, string]> = [
+        ['markdown', 'Markdown', 'marksman'],
+        ['go', 'Go', 'gopls'],
+        ['swift', 'Swift', 'sourcekit-lsp'],
+        ['toml', 'TOML', 'taplo'],
+        ['lua', 'Lua', 'lua-language-server'],
+        ['zig', 'Zig', 'zls']
+    ];
+
+    test.each(named)('names %s and its program, and groups it with the others', (kind, name, program) => {
+        expect(nameOf(kind)).toBe(name);
+        expect(packageOf(kind)).toBe(program);
+        expect(groupedStatuses([status(kind, 'stopped')]).flatMap((group) => group.statuses.map((entry) => entry.server))).toEqual([kind]);
     });
 });
 

@@ -12,10 +12,8 @@ import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useSettings } from '@/state/settings';
 import { bypassesQueue, executeVoiceTool } from '@/voice/tools';
-import { installClientHooks } from '@/wiring/client-hooks';
+import { clientActions } from '../../testing/client-actions';
 import { emptyCanvas } from '../../testing/project-fixtures';
-
-const clientActions = installClientHooks().actions;
 
 const main = emptyCanvas();
 

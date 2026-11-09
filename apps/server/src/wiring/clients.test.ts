@@ -42,7 +42,7 @@ describe('disconnecting a session', () => {
 describe('registering a direct channel', () => {
     test('refuses a grant revoked while the channel opened, and registers one that still holds', () => {
         const handshake = { granted: (sessionId: string) => sessionId !== 'revoked-session' } as unknown as Handshake;
-        const clients = wireClients(handshake, {} as ConnectionHost);
+        const clients = wireClients(handshake, { areas: [] } as unknown as ConnectionHost);
         // Machines that work here, which subscribe to nothing, so the opener needs no services.
         const revokedAccess = { reachability: 'lan' as const, sessionId: 'revoked-session', peer: { machineId: 'machine-a' } };
         const keptAccess = { reachability: 'lan' as const, sessionId: 'kept-session', peer: { machineId: 'machine-b' } };

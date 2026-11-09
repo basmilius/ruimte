@@ -9,6 +9,7 @@ import { assumeStaged, useGitCheckouts, useProjectRepos, visibleRepos, withoutNe
 import { useProjectNodes, useWorktrees, worktreeLists } from '@/controllers/worktrees';
 import { openInSystemBrowser } from '@/desktop/bridge';
 import { SlotRow } from '@/extensions/SlotSurfaces';
+import { fullRefName, showBranchCompare } from '@/files/branch-compare';
 import { BranchMenu, type CheckoutRefs } from '@/files/BranchMenu';
 import { activeDiff, allCollapseKeys } from '@/files/git-tree';
 import { stageFiles } from '@/files/stage-files';
@@ -30,6 +31,7 @@ import { useGit } from '@/state/git';
 import { gitPlace, gitTarget, gitTargets, type GitPick, type GitTarget } from '@/state/git-target';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
+import { useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { PanelHeaderActions, PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeaderTitleHidden } from '@/surface/PanelHeaderSlot';
@@ -80,6 +82,7 @@ export function GitPanel() {
     const hiddenRepos = useGit((s) => s.hiddenRepos);
     const tabLimit = useSettings((s) => s.filesTabLimit);
     const endpointId = useEndpointId();
+    const textModel = useServers((state) => state.byEndpoint[endpointId]?.textModel);
     const transport = useTransport();
     const worktrees = useWorktrees(transport, endpointId, folder, true);
     const derived = useMemo(() => gitTarget(nodes, selection, folder, worktrees), [nodes, selection, folder, worktrees]);
@@ -186,12 +189,27 @@ export function GitPanel() {
         if (probe === null) {
             return;
         }
+        let stale = false;
+
         // What this machine can offer is the same for every repository on it; one is enough to ask.
         transport
             .request('git.capabilities', { cwd: probe })
-            .then(setCapabilities)
-            .catch(() => setCapabilities(null));
-    }, [transport, probe]);
+            .then((next) => {
+                if (!stale) {
+                    setCapabilities(next);
+                }
+            })
+            .catch(() => {
+                if (!stale) {
+                    setCapabilities(null);
+                }
+            });
+
+        return () => {
+            stale = true;
+        };
+        // The machine's text model decides who writes a message, so a change of it asks again.
+    }, [transport, probe, textModel?.provider]);
 
     /* One action on one checkout: it runs, it says how it went, and that checkout is read again after. */
     const actOn = async (
@@ -521,6 +539,7 @@ export function GitPanel() {
                         renderActions: repoActions,
                         onOpen: loadRefs,
                         onCheckout: checkout,
+                        onCompare: (path, ref) => showBranchCompare({ cwd: path, ...(ref === undefined ? {} : { to: fullRefName(ref) }) }),
                         onCreate: (path) => setDialog({ kind: 'create-branch', cwd: path })
                     }}
                     onOpenMenu={openBranchMenu}

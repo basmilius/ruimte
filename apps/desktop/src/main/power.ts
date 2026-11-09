@@ -1,6 +1,6 @@
 import type { KeepAwakeRequest } from '@ruimte/desktop-bridge';
+import { electron } from '../electron';
 import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE, mergeKeepAwake } from '../keep-awake';
-import { electron } from './electron';
 import type { DesktopIpc } from './ipc';
 
 const { powerMonitor, powerSaveBlocker } = electron;

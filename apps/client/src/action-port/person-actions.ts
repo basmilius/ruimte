@@ -136,7 +136,7 @@ export async function showViewOnCanvasAction(viewId: string): Promise<string | n
 
 /* Resolves how to take it back, or null when nothing happened. */
 export async function shareViewAction(viewId: string, shared: boolean): Promise<{ view: string; undo: () => void } | null> {
-    const result = await clientRegistry().execute('view.share', { viewId, shared }, PERSON_ACTION_CALL);
+    const result = await (await clientRegistry()).execute('view.share', { viewId, shared }, PERSON_ACTION_CALL);
     if (result.status !== 'completed') {
         return null;
     }
@@ -145,7 +145,7 @@ export async function shareViewAction(viewId: string, shared: boolean): Promise<
         view: result.output.view,
         undo: () => {
             if (undoToken) {
-                void clientRegistry().undo(undoToken, PERSON_ACTION_CALL);
+                void clientRegistry().then((actions) => actions.undo(undoToken, PERSON_ACTION_CALL));
             }
         }
     };

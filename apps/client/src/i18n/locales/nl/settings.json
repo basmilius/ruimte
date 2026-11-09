@@ -46,6 +46,10 @@
             "label": "Accentkleur",
             "description": "Selectieranden, focus en de cursor in een terminal."
         },
+        "accentFollowsProject": {
+            "label": "Kleur van het project volgen",
+            "description": "Elk venster gebruikt de kleur van zijn project als accent. Een project in de standaardkleur houdt je eigen accent."
+        },
         "interface": {
             "title": "Venster",
             "layout": {
@@ -113,13 +117,6 @@
             "description": "De balk onder een canvas of tekening.",
             "always": "Altijd",
             "edge": "Bij de onderrand"
-        },
-        "commandPalette": {
-            "title": "Opdrachtenpalet"
-        },
-        "browseStart": {
-            "label": "Bladeren beginnen in",
-            "description": "Waar bladeren naar een map in het opdrachtenpalet begint, op elke machine. Leeg is je thuismap."
         }
     },
     "editor": {
@@ -652,6 +649,10 @@
             "label": "Agents",
             "description": "Waarmee nieuwe agents beginnen en wat ze mogen."
         },
+        "tunnels": {
+            "label": "Tunnels",
+            "description": "Bereik de MCP van Ruimte en je dev servers van buitenaf."
+        },
         "voice": {
             "label": "Voice",
             "description": "Microfoon, dicteren en Voice Control."
@@ -713,7 +714,7 @@
             },
             "sidebarSortThen": {
                 "label": "Binnen dezelfde soort of status",
-                "description": "Welke node eerst komt als er meer dezelfde soort of status hebben.",
+                "description": "Welke node eerst komt als er meerdere van dezelfde soort of status zijn.",
                 "options": {
                     "recent": "Recent bijgewerkt",
                     "least-recent": "Langst niet bijgewerkt",
@@ -841,7 +842,10 @@
         "split": {
             "right": "Rechts splitsen",
             "down": "Omlaag splitsen",
-            "focusNeighbor": "Cel ernaast focussen (pijltoetsen)",
+            "focusLeft": "Cel links focussen",
+            "focusRight": "Cel rechts focussen",
+            "focusUp": "Cel erboven focussen",
+            "focusDown": "Cel eronder focussen",
             "maximize": "Geselecteerde node of cel maximaliseren of herstellen",
             "close": "Gefocuste cel sluiten"
         },
@@ -885,7 +889,10 @@
             "previousMessage": "Vorig bericht dat je stuurde",
             "nextMessage": "Volgend bericht dat je stuurde",
             "sendAndNewChat": "Versturen en daarnaast een nieuwe chat starten",
-            "dictation": "Dicteren: druk om te schakelen, houd vast om te spreken"
+            "dictation": "Dicteren: druk om te schakelen, houd vast om te spreken",
+            "textLarger": "Grotere chattekst",
+            "textSmaller": "Kleinere chattekst",
+            "textReset": "Standaard chattekstgrootte"
         },
         "browser": {
             "back": "Terug",
@@ -913,7 +920,20 @@
         "noMatch": "Niets komt overeen met \"{{query}}\".",
         "browserNote": "In een browsertabblad horen {{newView}} en {{closeCell}} bij de browser.",
         "categories": "Categorieën van sneltoetsen",
-        "result": "{{category}} · {{keys}}"
+        "result": "{{category}} · {{keys}}",
+        "shortcutFor": "Sneltoets voor {{name}}",
+        "recordPrompt": "Druk op een sneltoets",
+        "recordUnsupported": "Die toets kan geen sneltoets zijn",
+        "needsModifierApple": "Houd ook Cmd, Control of Option ingedrukt",
+        "needsModifier": "Houd ook Ctrl of Alt ingedrukt",
+        "taken": "{{name}} gebruikt deze toets al. Wijzig eerst die sneltoets, of druk op een andere.",
+        "browserKeeps": "Je browser houdt deze toets voor zichzelf. Druk op een andere.",
+        "extensionUses": "Een extensie gebruikt deze toets ook. De sneltoets van Ruimte gaat voor.",
+        "reset": "Zet {{name}} terug naar de standaard",
+        "restoreDefaults": "Standaardwaarden herstellen",
+        "restoreTitle": "De standaard sneltoetsen herstellen?",
+        "restoreDescription": "Elke sneltoets die je hebt gewijzigd gaat terug naar de standaard, op dit apparaat.",
+        "restoreConfirm": "Herstellen"
     },
     "backgroundService": {
         "title": "Als Ruimte afsluit",
@@ -995,6 +1015,192 @@
         "onAccount": "Op je account",
         "openedThroughAccount": "Geopend via je account"
     },
+    "tunnels": {
+        "cloudflare": "Cloudflare",
+        "update": "Deze machine heeft een nieuwere Ruimte nodig.",
+        "loading": "Laden",
+        "elsewhere": "Stel tunnels in met de app op die machine.",
+        "loadFailed": "De tunnels konden niet worden geladen.",
+        "changeFailed": "Dat is niet gelukt.",
+        "failed": "Tunnels konden niet worden getoond",
+        "retry": "Opnieuw proberen",
+        "clients_one": "{{count}} client onlangs actief",
+        "clients_other": "{{count}} clients onlangs actief",
+        "stage": {
+            "not-installed": "cloudflared niet geïnstalleerd",
+            "installing": "cloudflared wordt geïnstalleerd",
+            "cannot-install": "Kan cloudflared hier niet installeren",
+            "no-token": "Geen API-token",
+            "checking": "Controleren bij Cloudflare",
+            "no-tunnel": "Nog geen tunnel",
+            "starting": "Starten",
+            "running": "Draait",
+            "failed": "Werkt niet"
+        },
+        "install": {
+            "action": "Installeren"
+        },
+        "token": {
+            "label": "API-token",
+            "description": "Heeft Zone read, DNS edit en Cloudflare Tunnel edit nodig.",
+            "placeholder": "Plak token",
+            "make": "Token maken",
+            "check": "Controleren",
+            "reaches_one": "Bereikt {{count}} domein op {{account}}.",
+            "reaches_other": "Bereikt {{count}} domeinen op {{account}}.",
+            "reachesAccounts_one": "Bereikt {{count}} domein op {{accounts}} accounts.",
+            "reachesAccounts_other": "Bereikt {{count}} domeinen op {{accounts}} accounts.",
+            "remove": "Verwijderen"
+        },
+        "tunnel": {
+            "label": "Tunnel",
+            "account": "Account",
+            "pickAccount": "Kies account",
+            "pick": "Welke tunnel",
+            "new": "Nieuwe tunnel",
+            "running": "Draait",
+            "idle": "Draait niet",
+            "use": "Gebruiken",
+            "loadFailed": "Kon je tunnels niet ophalen.",
+            "listing": "Je tunnels worden opgehaald",
+            "runner": {
+                "ruimte": "Draait op deze computer",
+                "other": "Draait buiten Ruimte",
+                "none": "Start bij de eerste hostnaam"
+            }
+        },
+        "unlink": {
+            "action": "Niet meer gebruiken",
+            "title": "{{name}} niet meer gebruiken?",
+            "description": "Ruimte haalt zijn hostnamen weg. De tunnel blijft in Cloudflare."
+        },
+        "hostnames": {
+            "title": "Hostnamen",
+            "description": "Cloudflare kan al het verkeer door een tunnel lezen.",
+            "add": "Hostnaam toevoegen",
+            "hostname": "Hostnaam",
+            "target": "Wijst naar",
+            "ruimte": "Ruimte",
+            "others": "Al op deze tunnel",
+            "empty": "Nog geen hostnamen",
+            "mcp": "Ruimte MCP",
+            "busy": "{{hostname}} wordt aangepast",
+            "more": "Meer voor {{hostname}}",
+            "copy": "Adres kopiëren",
+            "open": "Openen",
+            "comeBack": "Aan na herstart",
+            "edit": "Bewerken",
+            "remove": "Verwijderen",
+            "unreachable": "Niet bereikbaar"
+        },
+        "add": {
+            "title": "Hostnaam toevoegen",
+            "editTitle": "Hostnaam bewerken",
+            "kind": "Wijst naar",
+            "dev": "Dev server",
+            "mcp": "Ruimte MCP",
+            "port": "Poort",
+            "pickPort": "Kies poort",
+            "otherPort": "Andere poort",
+            "hostname": "Hostnaam",
+            "label": "Label",
+            "zone": "Domein",
+            "pickZone": "Kies domein",
+            "findZone": "Zoek domein",
+            "devWarning": "Iedereen met het adres bereikt deze dev server.",
+            "otherRunner": "Wijst naar poort {{port}} op de computer die deze tunnel draait.",
+            "action": "Toevoegen"
+        },
+        "origin": {
+            "advanced": "Geavanceerd",
+            "protocol": "Protocol",
+            "hostHeader": "Host-header",
+            "hostHeaderHint": "Gaat naar de server in plaats van de hostnaam.",
+            "noTlsVerify": "TLS-controle overslaan",
+            "noTlsVerifyHint": "Voor een server met een zelfondertekend certificaat.",
+            "serverName": "Servernaam"
+        },
+        "clients": {
+            "title": "Externe clients",
+            "mcp": "Externe MCP",
+            "address": "Op deze machine op",
+            "notListening": "Draait niet. Misschien gebruikt een andere app de poort.",
+            "create": "Nieuwe bearer",
+            "client": "Client",
+            "kind": "Soort",
+            "reach": "Bereik",
+            "lastUsed": "Laatst gebruikt",
+            "never": "Nooit",
+            "empty": "Nog geen clients",
+            "neverExpires": "Verloopt nooit",
+            "expired": "Verlopen",
+            "expiresIn_one": "Verloopt over {{count}} dag",
+            "expiresIn_other": "Verloopt over {{count}} dagen",
+            "bearer": "Bearer",
+            "oauth": "OAuth",
+            "allProjects": "Alle projecten",
+            "projects_one": "{{count}} project",
+            "projects_other": "{{count}} projecten",
+            "approves": "Keurt goed",
+            "more": "Meer voor {{label}}",
+            "revoke": "Intrekken",
+            "revokeTitle": "{{label}} intrekken?",
+            "revokeText": "Verliest de toegang bij het volgende verzoek. Agents die hij startte blijven draaien."
+        },
+        "tier": {
+            "read": "Lezen",
+            "work": "Werken",
+            "machine": "Machine"
+        },
+        "bearer": {
+            "title": "Nieuwe bearer",
+            "description": "Een vaste sleutel voor een client zonder OAuth.",
+            "label": "Naam",
+            "action": "Maken",
+            "once": "Kopieer hem nu. Ruimte kan hem niet nog eens tonen.",
+            "secret": "Bearer",
+            "where": "Gebruik hem op {{address}}.",
+            "onHostname": "Toestaan via de tunnel",
+            "onHostnameWarning": "Wie de sleutel heeft, kan hem dan overal gebruiken.",
+            "failed": "De bearer kon niet worden gemaakt."
+        },
+        "grant": {
+            "tier": "Bereik",
+            "tierHint": {
+                "read": "Leest projecten, canvassen, taken en bestanden.",
+                "work": "Past ook canvassen aan en start agents.",
+                "machine": "Draait ook launches, routines, browsers, apparaten, databases en computergebruik."
+            },
+            "projects": "Projecten",
+            "allProjects": "Alle",
+            "someProjects": "Selectie",
+            "pickAll": "Alle projecten",
+            "project": "Project",
+            "folder": "Map",
+            "ceiling": "Hoogste agent-modus",
+            "expiry": "Verloopt",
+            "expiryOption": {
+                "never": "Nooit",
+                "30": "Over 30 dagen",
+                "90": "Over 90 dagen",
+                "365": "Over een jaar"
+            },
+            "approvals": "Goedkeuren namens jou",
+            "approvalsWarning": "De client kan dan namens jou shell commands op deze machine uitvoeren."
+        },
+        "consent": {
+            "title": "{{host}} vraagt toegang",
+            "description": "Controleer of deze code gelijk is aan die op de pagina van de client.",
+            "unverifiedName": "Noemt zichzelf \"{{name}}\" (niet gecontroleerd).",
+            "terminals": "Hij kan elke terminal lezen in de projecten die hij bereikt.",
+            "others_one": "Nog {{count}} wachtend",
+            "others_other": "Nog {{count}} wachtend",
+            "code": "Code",
+            "deny": "Weigeren",
+            "approve": "Goedkeuren",
+            "failed": "Het antwoord kon niet worden verstuurd."
+        }
+    },
     "agents": {
         "deleteAnyView": {
             "label": "Agents mogen elke weergave of node verwijderen",
@@ -1008,6 +1214,12 @@
             "description": "Agents in het ene project kunnen je andere open projecten lezen en daar agents starten. Ze kunnen ook een project uit Recent openen, er een naar voren halen en je vragen er een te sluiten. Een nieuw project maken ze pas als jij dat bevestigt.",
             "notConnected": "{{machine}} is niet verbonden. Pas dit aan in de details onder Account, of open een van zijn projecten."
         },
+        "sharePorts": {
+            "label": "Agents mogen een dev-poort delen",
+            "rowLabel": "Agents op {{machine}} mogen een dev-poort delen",
+            "description": "Een agent kan de poort van een dev server delen met je andere apparaten. Die openen de poort via de verbinding met deze machine. Een ontwikkelsite vertrouwt misschien elk verzoek van deze machine. Je stopt een gedeelde poort vanuit de browser-node.",
+            "notConnected": "{{machine}} is niet verbonden. Pas dit aan in de details onder Account, of open een van zijn projecten."
+        },
         "resumeAtReset": {
             "label": "Doorgaan na een verbruikslimiet",
             "rowLabel": "Chats op {{machine}} gaan door na een verbruikslimiet",
@@ -1019,6 +1231,18 @@
             "rowLabel": "Agents op {{machine}} mogen visuele antwoorden tonen",
             "description": "Een grafiek, tabel of mockup boven een antwoord. Als dit uit staat, antwoorden agents in tekst.",
             "notConnected": "{{machine}} is niet verbonden. Open een van zijn projecten om dit aan te passen."
+        },
+        "textModel": {
+            "title": "Korte teksten",
+            "label": "Tekstmodel",
+            "description": "Schrijft nieuwe chattitels, commitberichten en conflictvoorstellen op deze machine. Bij Automatisch beslist Ruimte. Editor-AI heeft een eigen model.",
+            "automatic": "Automatisch",
+            "choose": "Kiezen",
+            "footer": "Schrijft korte teksten op deze machine. Zonder model wordt het goedkoopste gebruikt, met de standaardreasoning van de CLI.",
+            "loading": "De CLI's op deze machine laden…",
+            "update": "Werk deze machine bij om een tekstmodel te kiezen.",
+            "unavailable": "Deze CLI, dit model of dit account is niet beschikbaar op deze machine. Kies een ander of Automatisch.",
+            "failed": "Kon het tekstmodel niet tonen."
         },
         "machine": {
             "title": "Wat agents mogen",
@@ -1039,6 +1263,29 @@
         "showViews": {
             "label": "Agents van weergave laten wisselen",
             "description": "Een weergave of project dat een agent opent, vervangt het jouwe, en een melding laat je teruggaan. Als dit uit staat, biedt de melding aan erheen te gaan."
+        },
+        "quietHours": {
+            "label": "Stille uren",
+            "description": "Geen melding op deze computer in deze uren. Agents blijven werken, en wat nog wacht hoor je als de uren eindigen.",
+            "days": {
+                "label": "Dagen",
+                "description": "Een nacht hoort bij de dag waarop hij begint."
+            },
+            "times": {
+                "label": "Uren",
+                "description": "Op de klok van deze computer. Een einde voor het begin loopt door tot de volgende dag.",
+                "from": "Stil vanaf",
+                "to": "tot",
+                "until": "Stil tot"
+            }
+        },
+        "breakReminder": {
+            "label": "Pauzeherinnering",
+            "description": "Stelt een pauze voor na een tijd werken aan deze computer. Vijf minuten van je computer af tellen als pauze.",
+            "stretch": {
+                "label": "Herinner me na",
+                "description": "Werken zonder pauze."
+            }
         },
         "working": {
             "title": "Wakker houden",
@@ -1493,6 +1740,13 @@
             "refusedRoot": "Gebruik een absoluut pad buiten de schijfroot, je thuismap of de datamap van Ruimte.",
             "notAFolder": "Dat is geen map, of Ruimte kan hem niet aanmaken of er niet in schrijven."
         },
+        "startFolder": {
+            "label": "Bladeren beginnen in",
+            "description": "Waar bladeren naar een map op deze machine begint, voor elke app die haar gebruikt. Leeg is haar thuismap.",
+            "search": "De map waarin de mappenbrowser op een machine opent",
+            "placeholder": "~/projects",
+            "placeholderWindows": "C:\\Projects"
+        },
         "streaming": {
             "label": "Streamen van browser en apparaten",
             "description": "Laat deze machine browserpagina's en schermen van apparaten tonen in apps die dat zelf niet kunnen.",
@@ -1503,6 +1757,29 @@
             "description": "Stuurt dagtotalen van functiegebruik, zonder namen, paden of iets dat jou herkenbaar maakt. <privacy>Wat er verstuurd wordt</privacy>",
             "search": "Anonieme dagtotalen van gebruikte functies, één keer per dag verstuurd",
             "toggle": "Gebruiksstatistieken versturen vanaf {{machine}}"
+        },
+        "clients": {
+            "title": "Nu verbonden",
+            "description": "De apps, browsers en machines die nu met deze machine verbonden zijn.",
+            "listFailed": "Kon niet opsommen wat er verbonden is",
+            "empty": "Er is nu niets verbonden.",
+            "machine": "Een andere machine",
+            "browser": "Browser",
+            "unknown": "Onbekende app",
+            "unknownVersion": "Onbekende versie",
+            "connected": "verbonden {{ago}}",
+            "lastRequest": "Laatste verzoek {{ago}}",
+            "connections_one": "{{count}} verbinding",
+            "connections_other": "{{count}} verbindingen",
+            "reach": {
+                "loopback": "Deze computer",
+                "lan": "Lokaal netwerk",
+                "internet": "Internet"
+            },
+            "silent": {
+                "label": "Geeft geen antwoord",
+                "description": "De lijst laadt zodra de machine terug is."
+            }
         },
         "access": {
             "title": "Apps met toegang",
@@ -1579,6 +1856,7 @@
         },
         "worktrees": "Worktrees",
         "privacy": "Privacy",
+        "folders": "Mappen",
         "streaming": "Streaming",
         "account": {
             "title": "Account",

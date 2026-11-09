@@ -71,7 +71,7 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
                     'text-element absolute rounded-sm px-1 py-0.5 leading-tight text-text',
                     text.bold ? 'font-bold' : 'font-medium',
                     text.italic && 'italic',
-                    selected && !editing && 'outline-2 outline-accent',
+                    selected && !editing && 'outline-2 outline-accent-on-surface',
                     !editing && 'cursor-default'
                 )}
                 style={{

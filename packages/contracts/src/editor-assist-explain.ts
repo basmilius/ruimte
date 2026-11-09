@@ -17,6 +17,8 @@ export interface ExplainInput {
     readonly file: string;
     /* The signature a server hover showed, when the explanation is of a symbol. */
     readonly signature?: string;
+    /* What the symbol of the signature is: a function by default, or something else, such as a class or a value. */
+    readonly subject?: 'function' | 'symbol';
     readonly documentation?: string;
     readonly source: string;
 }
@@ -24,7 +26,7 @@ export interface ExplainInput {
 /* `answerIn` is the interface language spelled out, since the model follows a request for a language and not a code. */
 export function explainPrompt(input: ExplainInput, answerIn: string): string {
     const parts = [
-        input.signature === undefined ? 'Explain this code.' : 'Explain this function.',
+        input.signature === undefined ? 'Explain this code.' : `Explain this ${input.subject ?? 'function'}.`,
         `Answer in ${answerIn}.`,
         '',
         `File: ${input.file} (${input.language})`

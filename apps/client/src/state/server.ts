@@ -6,7 +6,8 @@ import type {
     NodeSizes,
     ProjectIconChoice,
     Reachability,
-    TerminalShell
+    TerminalShell,
+    TextModelChoice
 } from '@ruimte/contracts';
 import type { BrokerSetting } from '@ruimte/pulsar';
 import { create } from 'zustand';
@@ -30,12 +31,16 @@ export interface ServerInfo {
     agentsDeleteAnyView: boolean;
     /* Whether an agent on this machine may reach its other open projects. The daemon enforces it. */
     reachOpenProjects: boolean;
+    /* Whether an agent on this machine may share a development port with the person's other devices. The daemon enforces it. */
+    agentsSharePorts: boolean;
     /* Whether the daemon permits browser and device streaming. */
     streamingAllowed: boolean;
     /* Whether a chat that stopped on a limit may be taken up again on a clock. */
     resumeAtReset: boolean;
     /* Whether an agent may show a page above its reply. */
     visualReplies: boolean;
+    /* The model that writes the machine's short texts; null is Automatic, undefined a machine that predates the setting. */
+    textModel?: TextModelChoice | null;
     /* When the machine keeps itself awake. */
     keepAwake: KeepAwakeMode;
     keepAwakeOnBattery: boolean;
@@ -74,6 +79,8 @@ export interface ServerInfo {
     nodeSizes: NodeSizes;
     /* Whether the machine sends its anonymous usage counts; undefined from a machine without the switch. */
     usageStats: boolean | undefined;
+    /* Where browsing starts on the machine, for every client of it; empty means its home folder, and so does a machine that has no such setting. */
+    startFolder: string;
     /* Whether the machine resolves `references` on `chat.send`; without it a `#` reaches only chats. */
     viewReferences: boolean;
 }
@@ -89,6 +96,7 @@ const UNKNOWN: ServerInfo = {
     icon: null,
     agentsDeleteAnyView: false,
     reachOpenProjects: false,
+    agentsSharePorts: false,
     streamingAllowed: true,
     resumeAtReset: false,
     visualReplies: true,
@@ -113,6 +121,7 @@ const UNKNOWN: ServerInfo = {
     gitBashMissing: false,
     nodeSizes: {},
     usageStats: undefined,
+    startFolder: '',
     viewReferences: false
 };
 
@@ -128,9 +137,11 @@ interface ServersStore {
             | 'icon'
             | 'agentsDeleteAnyView'
             | 'reachOpenProjects'
+            | 'agentsSharePorts'
             | 'streamingAllowed'
             | 'resumeAtReset'
             | 'visualReplies'
+            | 'textModel'
             | 'keepAwake'
             | 'keepAwakeOnBattery'
             | 'keepAwakeDisplay'
@@ -152,6 +163,7 @@ interface ServersStore {
             | 'gitBashMissing'
             | 'nodeSizes'
             | 'usageStats'
+            | 'startFolder'
             | 'viewReferences'
         >
     ): void;
@@ -167,9 +179,11 @@ interface ServersStore {
                 Pick<
                     ServerInfo,
                     | 'reachOpenProjects'
+                    | 'agentsSharePorts'
                     | 'streamingAllowed'
                     | 'resumeAtReset'
                     | 'visualReplies'
+                    | 'textModel'
                     | 'keepAwake'
                     | 'keepAwakeOnBattery'
                     | 'keepAwakeDisplay'
@@ -184,6 +198,7 @@ interface ServersStore {
                     | 'terminalShell'
                     | 'nodeSizes'
                     | 'usageStats'
+                    | 'startFolder'
                 >
             >
     ): void;

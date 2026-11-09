@@ -67,6 +67,14 @@ extension ChatModel {
         return accounts.entries.first { $0.kind == provider && $0.id == accountID }
     }
 
+    /// What tints the provider's mark, as on the desktop: the account's own color, else its CLI's while the CLI has a
+    /// choice of accounts. A sole account without a color keeps the mark as it is.
+    var accountTint: Color? {
+        let entry = accounts?.entries.first { $0.kind == provider && $0.id == accountID }
+        if let color = RuimteColors.nodeAccent(entry?.color) { return color }
+        return accountChoice == nil ? nil : MachineUsagePage.color(provider)
+    }
+
     var accountName: String? {
         guard let accounts, accounts.hasChoice(provider) else { return nil }
         return accountChoice?.name(provider: usageProviderName(provider)) ?? accountID

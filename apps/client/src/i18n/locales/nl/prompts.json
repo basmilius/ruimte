@@ -24,6 +24,19 @@
         "review": "Bekijken…",
         "decline": "Weigeren"
     },
+    "tunnelProposal": {
+        "add": "{{hostname}} toevoegen → poort {{port}}",
+        "on": "{{hostname}} aanzetten → poort {{port}}",
+        "onMcp": "{{hostname}} aanzetten → Ruimte MCP",
+        "off": "{{hostname}} uitzetten",
+        "edit": "{{hostname}} omzetten → poort {{port}}",
+        "remove": "{{hostname}} verwijderen",
+        "hostHeader": "Host-header {{header}}",
+        "stale": "{{hostname}} is veranderd sinds de agent het vroeg. Weiger dit en vraag het opnieuw.",
+        "confirm": "Bevestigen",
+        "confirming": "Bevestigen…",
+        "decline": "Weigeren"
+    },
     "waiting": {
         "approval": "Toestemming gevraagd door {{tool}}",
         "question": "Vraag van {{tool}}",

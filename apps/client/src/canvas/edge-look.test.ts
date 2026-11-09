@@ -57,7 +57,7 @@ describe('lineMeaning', () => {
         expect(lineMeaning(lineOf(edgeOf('page', 'agent')), reads, driven).reversed).toBe(true);
         expect(edgeLook(lineMeaning(lineOf(edgeOf('page', 'agent')), reads, driven), solo)).toEqual({
             tail: 'chevron',
-            head: 'none',
+            head: 'point',
             dashed: false,
             accent: false,
             width: 2
@@ -82,7 +82,7 @@ describe('lineMeaning', () => {
 
 describe('edgeLook', () => {
     test('a context line one way gives at its tail and is read at its head', () => {
-        expect(look('context')).toEqual({ tail: 'none', head: 'dot', dashed: false, accent: true, width: 2 });
+        expect(look('context')).toEqual({ tail: 'point', head: 'dot', dashed: false, accent: true, width: 2 });
     });
 
     test('a pair reads both ways, so both ends are closed off the same', () => {
@@ -90,7 +90,7 @@ describe('edgeLook', () => {
     });
 
     test('a task still out dashes the context line it runs along, however the pair stands', () => {
-        const open: EdgeLook = { tail: 'none', head: 'dot', dashed: true, accent: true, width: 2 };
+        const open: EdgeLook = { tail: 'point', head: 'dot', dashed: true, accent: true, width: 2 };
         expect(look('context', { pair: false, openTask: true })).toEqual(open);
         expect(look('context', { pair: true, openTask: true })).toEqual(open);
         // Settled, the line is a context line again and says so only in its label.
@@ -98,7 +98,7 @@ describe('edgeLook', () => {
     });
 
     test('a target points into the thing it drives and stays neutral', () => {
-        expect(look('target')).toEqual({ tail: 'none', head: 'chevron', dashed: false, accent: false, width: 2 });
+        expect(look('target')).toEqual({ tail: 'point', head: 'chevron', dashed: false, accent: false, width: 2 });
     });
 
     test('an origin points at what was opened, dashed where a target line is solid', () => {

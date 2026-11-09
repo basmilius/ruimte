@@ -12,7 +12,6 @@ import {
     useAgentIntegrations,
     useIntegrationChoice
 } from '@/controllers/agent-integrations';
-import { useLocalTilde } from '@/format/home-path';
 import { fireAndForget } from '@/transport-api/transport';
 
 const OUTCOME_KEYS = {
@@ -30,13 +29,12 @@ const OUTCOME_KEYS = {
 /* One line per file of what became of it; the reports of a revoke are what a person checks the result by. */
 export function IntegrationReports({ reports }: { reports: readonly AgentIntegrationReport[] }) {
     const { t } = useTranslation('settings');
-    const tilde = useLocalTilde();
     return (
         <ul className="mt-2 flex flex-col gap-1 text-xs text-text-muted">
             {reports.map((report) => (
                 <li key={report.path} className="break-all">
                     <span className="text-text">{t(`agents.integrations.outcome.${OUTCOME_KEYS[report.outcome]}`, { message: report.message ?? '' })}</span>{' '}
-                    <span className="font-mono">{tilde(report.path)}</span>
+                    <span className="font-mono">{report.path}</span>
                 </li>
             ))}
         </ul>
@@ -58,7 +56,6 @@ export function IntegrationDetails({
     consequence?: boolean;
 }) {
     const { t } = useTranslation('settings');
-    const tilde = useLocalTilde();
     const own = files?.filter((file) => file.provider === entry.provider) ?? [];
     return (
         <div className="flex flex-col gap-1 text-xs text-text-muted">
@@ -69,7 +66,7 @@ export function IntegrationDetails({
                     <ul className="mt-0.5 flex flex-col gap-0.5">
                         {own.map((file) => (
                             <li key={file.path} className="font-mono break-all">
-                                {tilde(file.path)}
+                                {file.path}
                             </li>
                         ))}
                     </ul>

@@ -108,6 +108,14 @@ test("a worktree added later cannot expand the agent's original roots", async ()
     await expect(host.sources['git.status']!.authorize(info(), access, { repo: join(root, 'outside') })).rejects.toMatchObject({ reason: 'outside-project' });
 });
 
+test('a repository that is gone fails its read instead of refusing it', async () => {
+    const host = ruimteUiSources(hosts);
+    const access = await host.capture(info());
+    await expect(host.sources['git.status']!.authorize(info(), access, { repo: 'gone' })).resolves.toBeUndefined();
+    await expect(host.sources['git.status']!.read(info(), { repo: 'gone' }, new AbortController().signal, access)).rejects.toThrow('not there');
+    expect(reads).toEqual([]);
+});
+
 test("a moved chat does not read the old project's queries or links", async () => {
     const host = ruimteUiSources(hosts);
     const access = await host.capture(info());

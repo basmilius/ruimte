@@ -21,22 +21,25 @@ import SwiftUI
     let kind: String
     let accountID: String
     let name: String
+    let silent: Bool
     private(set) var sessionID = AccountLoginModel.newSessionID()
     private(set) var phase = Phase.starting
     /// The account as it read until this login started, which is what a landing has to differ from.
     private var before: AccountStatus?
     private var started = false
+    private(set) var finishing = false
     @ObservationIgnored private var live: LiveResource?
 
     /// A grid a login prints its address and its prompts into; the phone follows it like any other terminal.
     static let cols = 80
     static let rows = 24
 
-    init(client: any MachineRequesting, kind: String, accountID: String, name: String) {
+    init(client: any MachineRequesting, kind: String, accountID: String, name: String, silent: Bool = false) {
         self.client = client
         self.kind = kind
         self.accountID = accountID
         self.name = name
+        self.silent = silent
     }
 
     private static func newSessionID() -> String { "login-\(UUID().uuidString.lowercased())" }
@@ -67,7 +70,7 @@ import SwiftUI
             client: client,
             events: [
                 .apply(.accountsChanged, as: AccountsSnapshot.self) { [weak self] snapshot in
-                    guard let self, phase == .running else { return }
+                    guard let self, !silent, phase == .running else { return }
                     let now = status(in: snapshot)
                     if Self.landed(before: before, now: now) { phase = .landed(email: now?.email) }
                 },
@@ -94,7 +97,9 @@ import SwiftUI
                 ]))
             if phase == .starting { phase = .running }
             // Watching is a courtesy: the status still arrives on the machine's own clock.
-            _ = try? await client.request(.accountsWatchLogin, payload: .object(["id": .string(accountID)]))
+            if !silent {
+                _ = try? await client.request(.accountsWatchLogin, payload: .object(["id": .string(accountID)]))
+            }
         } catch {
             started = false
             phase = .failed(error.localizedDescription)
@@ -107,6 +112,16 @@ import SwiftUI
         sessionID = Self.newSessionID()
         phase = .starting
         await begin()
+    }
+
+    func finish() async {
+        guard !finishing else { return }
+        finishing = true
+        defer { finishing = false }
+        await end()
+        if (client as? MachineFeatures)?.answers(.accountsRefresh) == true {
+            _ = try? await client.request(.accountsRefresh)
+        }
     }
 
     func end() async {
@@ -141,18 +156,31 @@ struct AccountLoginSheet: View {
 
     private var cli: String { AgentDirectory.shared.name(kind) }
 
-    init(client: any MachineRequesting, kind: String, accountID: String, name: String) {
-        _model = State(initialValue: AccountLoginModel(client: client, kind: kind, accountID: accountID, name: name))
+    init(client: any MachineRequesting, kind: String, accountID: String, name: String, silent: Bool = false) {
+        _model = State(
+            initialValue: AccountLoginModel(
+                client: client, kind: kind, accountID: accountID, name: name, silent: silent))
         self.kind = kind
     }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                Text("\(cli) logs you in here. This closes once you are logged in.")
-                    .font(.caption).foregroundStyle(MobileStyle.muted)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16).padding(.vertical, 8)
+                Text(
+                    model.silent
+                        ? String(
+                            localized:
+                                "This CLI cannot report a completed login. Tap Done when you finish, then check the account state."
+                        )
+                        : String(localized: "\(cli) logs you in here. This closes once you are logged in.")
+                )
+                .font(.caption).foregroundStyle(MobileStyle.muted)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16).padding(.vertical, 8)
+                Text(
+                    "The CLI runs on the machine. If it opens a browser there, finish the login from this phone with the code or link it shows."
+                )
+                .font(.caption).foregroundStyle(MobileStyle.muted).padding(.horizontal, 16)
                 if let notice = model.notice {
                     HStack {
                         Text(notice).font(.callout)
@@ -182,6 +210,16 @@ struct AccountLoginSheet: View {
             .modifier(MobilePageSurface())
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }
+                if model.silent {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") {
+                            Task {
+                                await model.finish()
+                                dismiss()
+                            }
+                        }.disabled(model.finishing || model.phase == .starting)
+                    }
+                }
             }
         }
         .task { await model.begin() }

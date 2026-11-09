@@ -5,6 +5,7 @@ import { focusedChatComposerKey, focusedChatId, keyboardChatKey } from '@/chat/f
 import { CHAT_MOVE_PREFIX } from '@/chat/menu-extras';
 import { openForkDialog } from '@/chat/open-fork';
 import { restartChatSession } from '@/chat/restart-session';
+import { focusedChatTextSize, stepChatTextSize } from '@/chat/text-size';
 import { defineBehaviors, type CommandBehavior, type KeyHandler } from '@/commands/behavior';
 import type { GeneratedCommands } from '@/commands/generated';
 import { moveChatDialog } from '@/project/dialogs';
@@ -39,6 +40,19 @@ function withChat(run: (chat: { id: string; key: string }) => void): () => void 
 
 const onFocusedChat: Pick<CommandBehavior, 'offered'> = { offered: (moment) => moment.inWorkspace && focusedChatId() !== null };
 
+/* The reading size steps with the palette row and the menu row; the key is answered in the capture phase (`chat/workspace-keys.ts`), since the composer's editor has a keymap of its own. */
+function steppingTextSize(direction: -1 | 1): CommandBehavior {
+    return {
+        run: () => void stepChatTextSize(direction),
+        offered: (moment) => {
+            const size = moment.inWorkspace ? focusedChatTextSize() : null;
+
+            return size !== null && (direction === 1 ? size < 3 : size > 0);
+        },
+        afterClose: true
+    };
+}
+
 function steppingEffort(direction: 'up' | 'down'): CommandBehavior {
     return {
         run: withChat(({ key }) => stepEffortFromComposer(key, direction)),
@@ -63,6 +77,8 @@ export const CHAT_BEHAVIORS = defineBehaviors({
     'chat-restart': { run: withChat(({ id }) => void restartChatSession(id)), ...onFocusedChat },
     'chat-effort-up': steppingEffort('up'),
     'chat-effort-down': steppingEffort('down'),
+    'chat-text-larger': steppingTextSize(1),
+    'chat-text-smaller': steppingTextSize(-1),
     'chat-message-previous': { run: withChat(({ key }) => stepTimelineMessage(key, -1)), ...onFocusedChat },
     'chat-message-next': { run: withChat(({ key }) => stepTimelineMessage(key, 1)), ...onFocusedChat },
     // The palette cannot grey a row, so a chat that works offers none; the menu says why.

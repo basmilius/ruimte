@@ -394,19 +394,26 @@ struct ChatSuggestionRows: View {
     let choose: (ChatSuggestion) -> Void
 
     var body: some View {
-        if model.searching {
+        // The models and accounts of an `@` show while its files are still on the way, and stay beside a failed search.
+        if model.searching && model.suggestions.isEmpty {
             HStack(spacing: 10) {
                 ProgressView()
                 Text("Searching…")
             }.font(.subheadline).padding(12)
-        } else if let error = model.searchProblem {
-            Text(error).font(.subheadline).foregroundStyle(MobileStyle.statusError).padding(12)
         } else if model.suggestions.isEmpty {
-            Text("No matches").font(.subheadline).foregroundStyle(MobileStyle.muted).padding(12)
+            if let error = model.searchProblem {
+                Text(error).font(.subheadline).foregroundStyle(MobileStyle.statusError).padding(12)
+            } else {
+                Text("No matches").font(.subheadline).foregroundStyle(MobileStyle.muted).padding(12)
+            }
         } else {
             // The limit would keep every other project out of sight; the rows scroll.
             let sectioned = model.suggestions.contains { $0.referable?.section != nil }
-            let shown = sectioned ? model.suggestions : Array(model.suggestions.prefix(limit))
+            // Models and accounts come first and keep their own limits, so the files never push them out.
+            let files = model.suggestions.filter { $0.section == nil }
+            let shown =
+                sectioned
+                ? model.suggestions : model.suggestions.filter { $0.section != nil } + Array(files.prefix(limit))
             ForEach(Array(shown.enumerated()), id: \.element.id) { index, suggestion in
                 if let section = suggestion.referable?.section {
                     if index == 0 || shown[index - 1].referable?.section != section {
@@ -422,6 +429,18 @@ struct ChatSuggestionRows: View {
                         .frame(maxWidth: .infinity, alignment: .leading).padding(.top, index == 0 ? 0 : 6)
                         .accessibilityAddTraits(.isHeader)
                     }
+                } else if let section = suggestion.section {
+                    if index == 0 || shown[index - 1].section != section {
+                        Text(section)
+                            .font(.caption.weight(.semibold)).foregroundStyle(MobileStyle.muted)
+                            .frame(maxWidth: .infinity, alignment: .leading).padding(.top, index == 0 ? 0 : 6)
+                            .accessibilityAddTraits(.isHeader)
+                    }
+                } else if suggestion.kind == "@", index > 0, shown[index - 1].section != nil {
+                    Text("Files")
+                        .font(.caption.weight(.semibold)).foregroundStyle(MobileStyle.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
+                        .accessibilityAddTraits(.isHeader)
                 } else if let group = suggestion.referable?.group,
                     index == 0 || shown[index - 1].referable?.group != group
                 {
@@ -434,7 +453,11 @@ struct ChatSuggestionRows: View {
                     choose(suggestion)
                 } label: {
                     HStack(spacing: 10) {
-                        Image(lucide: suggestion.icon, size: 18).foregroundStyle(MobileStyle.muted)
+                        if let provider = suggestion.provider {
+                            ChatProviderMark(provider: provider, size: 18).foregroundStyle(MobileStyle.muted)
+                        } else {
+                            Image(lucide: suggestion.icon, size: 18).foregroundStyle(MobileStyle.muted)
+                        }
                         VStack(alignment: .leading, spacing: 2) {
                             Text(suggestion.title).font(.subheadline).lineLimit(1).truncationMode(.middle)
                             if !suggestion.detail.isEmpty {
@@ -446,6 +469,9 @@ struct ChatSuggestionRows: View {
                     }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
                     .padding(.leading, suggestion.referable?.trail.last?.kind == "canvas" ? 20 : 0)
                 }.buttonStyle(.plain)
+            }
+            if let error = model.searchProblem {
+                Text(error).font(.subheadline).foregroundStyle(MobileStyle.statusError).padding(12)
             }
         }
     }

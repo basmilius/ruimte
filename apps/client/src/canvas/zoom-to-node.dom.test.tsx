@@ -92,10 +92,16 @@ describe('zoom to node', () => {
         expect(frameOf(SMALL.id).querySelector('header input')).not.toBeNull();
     });
 
-    test('a double-click anywhere on a node without the keyboard zooms until it fills the view', async () => {
-        await doubleClickAsChromium(bodyOf(LARGE.id));
+    test('a double-click on the header of a node without the keyboard zooms until it fills the view', async () => {
+        await doubleClickAsChromium(frameOf(LARGE.id).querySelector('[data-header-space]')!);
         expect(zoom()).toBeCloseTo((1280 - 96) / 1800);
         expect(liveCanvas('main')!.selection).toEqual([LARGE.id]);
+    });
+
+    test('a double-click in the body of a node without the keyboard stays its own', async () => {
+        await doubleClickAsChromium(bodyOf(LARGE.id));
+        expect(zoom()).toBe(0.3);
+        expect(Object.keys(liveCanvas('main')!.texts)).toEqual([]);
     });
 
     test('a double-click on a header the browser sends to the canvas zooms and places no text behind the node', async () => {

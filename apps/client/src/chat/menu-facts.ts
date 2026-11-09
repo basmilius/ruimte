@@ -1,4 +1,5 @@
 import { focusedChatId } from '@/chat/focused-chat';
+import { focusedChatTextSize } from '@/chat/text-size';
 import type { MenuFacts, MenuHost } from '@/commands/menu-context';
 import { moveTargetsOf } from '@/project/move-targets';
 import { newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
@@ -12,6 +13,8 @@ declare module '@/commands/menu-context' {
     interface MenuFacts {
         /* A chat has the focus: the chat view in the focused cell, or the chat node with the keyboard or selected alone (`focused-chat.ts`). */
         chat: boolean;
+        /* The reading size of the focused chat, 0 to 3, or null while no chat is focused. */
+        chatTextSize: number | null;
         /* The chat in the focused cell runs a turn or waits on a person, so it cannot move now. */
         chatWorking: boolean;
         /* The projects of this machine a chat in Chats can move to, most recently touched first. */
@@ -21,12 +24,13 @@ declare module '@/commands/menu-context' {
     }
 }
 
-export function chatFacts(_host: MenuHost): Pick<MenuFacts, 'chat' | 'chatWorking' | 'moveProjects' | 'newChat'> {
+export function chatFacts(_host: MenuHost): Pick<MenuFacts, 'chat' | 'chatTextSize' | 'chatWorking' | 'moveProjects' | 'newChat'> {
     const facts = activeViewFacts();
     const endpointId = currentEndpointId();
 
     return {
         chat: windowWorkspace() !== null && focusedChatId() !== null,
+        chatTextSize: windowWorkspace() !== null ? focusedChatTextSize() : null,
         chatWorking: facts?.working ?? false,
         moveProjects:
             facts?.offers.moveToProject === true

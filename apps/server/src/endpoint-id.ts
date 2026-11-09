@@ -140,6 +140,13 @@ export class EndpointIdentity extends SettingReaders {
         this.announce();
     }
 
+    /* Empty puts browsing back in the home folder. Nothing is checked on disk: a folder that is gone already sends browsing home. */
+    async setStartFolder(folder: string): Promise<void> {
+        this.values = { ...this.values, startFolder: folder.trim() };
+        await this.persist();
+        this.announce();
+    }
+
     settings(): MachineSettingValues {
         return this.values;
     }

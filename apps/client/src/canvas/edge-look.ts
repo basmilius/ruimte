@@ -58,16 +58,16 @@ export function lineMeaning(line: EdgeLine, reads: (nodeId: string) => boolean, 
  */
 function lookOf(role: LineRole, pair: boolean, openTask: boolean): EdgeLook {
     if (openTask) {
-        return { tail: 'none', head: 'dot', dashed: true, accent: true, width: EDGE_WIDTH };
+        return { tail: 'point', head: 'dot', dashed: true, accent: true, width: EDGE_WIDTH };
     }
     switch (role) {
         case 'context':
-            return { tail: pair ? 'dot' : 'none', head: 'dot', dashed: false, accent: true, width: EDGE_WIDTH };
+            return { tail: pair ? 'dot' : 'point', head: 'dot', dashed: false, accent: true, width: EDGE_WIDTH };
         case 'target':
-            return { tail: 'none', head: 'chevron', dashed: false, accent: false, width: EDGE_WIDTH };
+            return { tail: 'point', head: 'chevron', dashed: false, accent: false, width: EDGE_WIDTH };
         case 'origin':
             // A target line's shape, dashed because it grants nothing: it only says where a node came from.
-            return { tail: 'none', head: 'chevron', dashed: true, accent: false, width: EDGE_WIDTH };
+            return { tail: 'point', head: 'chevron', dashed: true, accent: false, width: EDGE_WIDTH };
         case 'plain':
             return { tail: 'dot', head: 'dot', dashed: false, accent: false, width: EDGE_WIDTH };
     }

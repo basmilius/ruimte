@@ -2,6 +2,7 @@ import { createServerActions } from './actions/server-actions.ts';
 import { AGENT_FEATURES, AGENT_TOOLKITS } from './agent-features/list.ts';
 import { stopSteps, type Area, type StopPhase } from './area.ts';
 import { dropEmptyMark } from './chat/scratch-project.ts';
+import { ConnectedClients } from './clients/connected-clients.ts';
 import { Dispatcher } from './dispatcher.ts';
 import { errorText } from './error-text.ts';
 import { buildCatalog } from './mcp/catalog.ts';
@@ -28,6 +29,7 @@ import { wireLaunches } from './wiring/launches.ts';
 import { wireMachine } from './wiring/machine.ts';
 import { wireMaintenance } from './wiring/maintenance.ts';
 import { wireNetwork } from './wiring/network.ts';
+import { wirePorts } from './wiring/ports.ts';
 import { wirePower } from './wiring/power.ts';
 import { wireProcesses } from './wiring/processes.ts';
 import { wireProjects } from './wiring/projects.ts';
@@ -40,6 +42,7 @@ import type { DaemonRuntime } from './wiring/runtime.ts';
 import type { DaemonSeams } from './wiring/seams.ts';
 import { wireSettingPorts } from './wiring/setting-ports.ts';
 import { wireTemplates } from './wiring/templates.ts';
+import { wireTunnels } from './wiring/tunnels.ts';
 import { wireUsageStats } from './wiring/usage-stats.ts';
 import { wireUsage } from './wiring/usage.ts';
 import { wireVoice } from './wiring/voice.ts';
@@ -81,7 +84,10 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     const { config } = runtime;
     const { home } = config;
     const { later, provide } = lateness<DaemonBundles>();
+    // The port the API answers on, which is not `config.port` when the system picked one; known once `start` is given it.
+    let servedPort: number | null = null;
     provide('actions', createServerActions(AGENT_FEATURES));
+    const catalog = buildCatalog(AGENT_TOOLKITS);
     const extensions = provide('extensions', wireExtensions(home, later));
 
     const machineModel = seams.machine.model();
@@ -143,9 +149,30 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
             later
         })
     );
+    const connected = provide('connected', new ConnectedClients(() => seams.clock.now()));
+    const tunnels = provide(
+        'tunnels',
+        await wireTunnels({
+            config,
+            canvasHost,
+            agents,
+            projects,
+            processes,
+            artifacts,
+            stores,
+            launches,
+            routines,
+            machineId: identity.id,
+            actions: later.actions(),
+            tools: catalog,
+            externalUsed: () => connected.externalChanged(),
+            later: { apiPort: () => servedPort ?? config.port }
+        })
+    );
+    const ports = provide('ports', wirePorts(config, tunnels.deniedPorts));
 
     const { sessions, chats } = agents;
-    const push = provide('push', wirePush(home, machine.auth, identity, agents, projects.store, work.snoozes));
+    const push = provide('push', wirePush(home, machine.auth, identity, agents, projects.store, work.snoozes, usage));
     sessions.observe((event) => push.consume(event));
     sessions.observe((event) => work.tasks.terminals.sessionEvent(event));
     chats.observe((event) => push.consume(event));
@@ -163,6 +190,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     chats.observe((event) => extensions.host.forwardEvent(event.event, event.payload));
     sessions.observe((event) => extensions.host.forwardEvent(event.event, event.payload));
     chats.observe((event) => agents.proposals.observe(event));
+    chats.observe((event) => tunnels.proposals.observe(event));
     chats.observe((event) => launches.afterSettle.chatEvent(event));
     chats.observe((event) => {
         if (event.event === 'chat.event' && event.payload.event.type === 'item' && event.payload.event.item.kind === 'user') {
@@ -181,7 +209,8 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
             sqlAnalysis: databases.sqlAnalysis,
             agents,
             providers,
-            seams
+            seams,
+            git
         })
     );
     const network = provide('network', wireNetwork(config, compiled, machine, later));
@@ -236,7 +265,10 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
             settingPorts,
             actions: later.actions(),
             canvasHost,
-            extensions
+            extensions,
+            connected,
+            tunnels,
+            ports
         },
         later
     );
@@ -299,7 +331,10 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
         clients,
         actions: later.actions(),
         canvasHost,
-        extensions
+        extensions,
+        connected,
+        tunnels,
+        ports
     };
 
     return {
@@ -313,6 +348,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
             work.endChildren.start();
         },
         start: async ({ port, requestStop, serve }) => {
+            servedPort = port;
             noteMoment('daemon.boot', 'wired');
             void extensions.host.startAutostarted();
             // Only from here on has the identity everything its announce describes; a CLI found sooner took the daemon down.
@@ -347,7 +383,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
                 clients,
                 canvasHost,
                 actions: later.actions(),
-                tools: buildCatalog(AGENT_TOOLKITS),
+                tools: catalog,
                 voice,
                 artifacts
             });
@@ -368,6 +404,8 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
             void chats.recoverInterrupted().catch((e) => console.error('Resuming interrupted turns failed:', errorText(e)));
 
             void network.brokerSwitch.publish({ host: config.host, port });
+            // After the API answers, so the deny list of the tunnels knows its port.
+            await tunnels.service.resume().catch((e: unknown) => console.error('Bringing the tunnels back failed:', errorText(e)));
             processes.selfUpdate.start();
             // `always` holds from the start, before any agent has moved.
             power.keepAwake.check();

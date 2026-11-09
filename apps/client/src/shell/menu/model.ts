@@ -5,7 +5,7 @@ import { desktop as isDesktop, onCanvas } from '@/commands/conditions';
 import { only, role, separator, shell, submenu, t, tidy, type CommandOptions, type MenuCommand } from '@/commands/menu-builders';
 import type { MenuContext, MenuHost } from '@/commands/menu-context';
 import { menuExtrasOf } from '@/commands/menu-extras';
-import { commandIds, commandSpec, menuPlacesOf } from '@/commands/registry';
+import { commandIds, commandKey, commandSpec, menuPlacesOf } from '@/commands/registry';
 import type { MenuContainer, MenuPlace } from '@/commands/types';
 import { BROWSER_KEEPS } from '@/surface/shortcuts';
 
@@ -248,7 +248,7 @@ function tableRow({ id, place }: PlacedCommand, context: MenuContext, command: M
     const words = place.words?.(context) ?? { key: spec.key };
     const enabled = place.enabled?.(context);
     return command(id, t(words.key, words.values), {
-        shortcut: shortcutOf(spec.shortcut, place, context),
+        shortcut: shortcutOf(commandKey(id), place, context),
         ...(enabled === undefined ? {} : { enabled }),
         checked: place.checked?.(context),
         radio: place.radio === true

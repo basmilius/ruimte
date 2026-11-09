@@ -44,15 +44,21 @@ These keys open a picker in the composer:
 | Key | Picks |
 | --- | --- |
 | `/` | A command of the CLI |
-| `@` | A file of the project |
+| `@` | A file of the project, a model or an account |
 | `$` | A skill |
 | `#` | A view or node of the project |
 
 A `#` reference lets the agent read and work in that view or node, as over a line on the canvas. A terminal you reference stays read-only.
 
-- To attach files, click the attach button or drop them on the chat.
+Type part of a model's name after `@`, such as `@opus`, and Models and Accounts appear above Files. Pick a model or an account when you ask the agent to start another agent, and that agent runs on it. Your own chat keeps its model and account.
+
+The + under the composer opens the same pickers, and also holds Attach files… and Stash this prompt (<Shortcut keys="Mod+S" />). Once you stashed a prompt, Stashed prompts takes its place, with your stashed prompts and Stash this prompt under it.
+
+- To attach files, choose Attach files… under the + or drop them on the chat.
 - To change which key sends, open Settings, Chats, Send with.
 - <Shortcut keys="Alt+ArrowUp" /> and <Shortcut keys="Alt+ArrowDown" /> bring back messages you sent.
+
+A chat that works on a branch other than the default one, in a worktree or on another machine shows where under the composer. Click the branch to see its worktree and folder. A folder with several repositories, such as submodules, shows the branch the agent works in and counts the other repositories off their default branch; click it to see each one. When the agent moves into a worktree itself, the line follows it.
 
 A message you send while Claude Code or Codex works reaches it at its next step. Hold <Shortcut keys="Alt" /> while sending to queue it until the turn ends instead. Turning off Settings, Chats, Send to a working agent right away swaps the two.
 

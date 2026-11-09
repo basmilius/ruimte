@@ -139,11 +139,11 @@ export function CanvasNode({
 
 export type EdgeLook = 'context' | 'plain' | 'target' | 'task';
 
-const LOOKS: Record<EdgeLook, { readonly tail?: 'dot'; readonly head: 'dot' | 'chevron'; readonly accent: boolean; readonly dashed: boolean }> = {
-    context: { head: 'dot', accent: true, dashed: false },
+const LOOKS: Record<EdgeLook, { readonly tail: 'dot' | 'point'; readonly head: 'dot' | 'chevron'; readonly accent: boolean; readonly dashed: boolean }> = {
+    context: { tail: 'point', head: 'dot', accent: true, dashed: false },
     plain: { tail: 'dot', head: 'dot', accent: false, dashed: false },
-    target: { head: 'chevron', accent: false, dashed: false },
-    task: { head: 'dot', accent: true, dashed: true }
+    target: { tail: 'point', head: 'chevron', accent: false, dashed: false },
+    task: { tail: 'point', head: 'dot', accent: true, dashed: true }
 };
 
 /**
@@ -183,17 +183,15 @@ export function CanvasEdge({
                 animate={{ pathLength: shown ? 1 : 0, opacity: shown ? 1 : 0 }}
                 transition={{ duration: shown ? 0.6 : 0.2, ease: EASE, delay: shown ? delay : 0 }}
             />
-            {tail && (
-                <motion.path
-                    d={markerPath(tail, route.start, route.startAlong)}
-                    fill="var(--canvas-bg)"
-                    stroke={color}
-                    strokeWidth={2}
-                    initial={false}
-                    animate={{ opacity: shown ? 1 : 0 }}
-                    transition={{ duration: 0.2, delay: shown ? delay : 0 }}
-                />
-            )}
+            <motion.path
+                d={markerPath(tail, route.start, route.startAlong)}
+                fill={tail === 'point' ? color : 'var(--canvas-bg)'}
+                stroke={color}
+                strokeWidth={2}
+                initial={false}
+                animate={{ opacity: shown ? 1 : 0 }}
+                transition={{ duration: 0.2, delay: shown ? delay : 0 }}
+            />
             <motion.path
                 d={markerPath(head, route.end, route.endAlong)}
                 fill={head === 'dot' ? 'var(--canvas-bg)' : 'none'}

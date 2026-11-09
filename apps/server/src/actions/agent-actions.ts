@@ -2,6 +2,7 @@ import { ToolRefusal } from '@adecore/agents/context';
 import { answerQuestion } from '@adecore/agents/coordination';
 import type { ActionHandlers } from '@ruimte/actions';
 import { chatNameOf, isAgentKind, isCanvasView, nodeChats, viewChats, type CanvasNodeKind, type ProjectView } from '@ruimte/contracts';
+import { externalActorTitle } from '../canvas/external-caller.ts';
 import { field } from '../canvas/host.ts';
 import { refuseOtherMachine } from '../canvas/remote-node.ts';
 import { hostService, type ServerActionContext } from './context.ts';
@@ -91,7 +92,13 @@ export const agentActions: ActionHandlers<ServerActionContext> = {
 
         // A caller in another project, which `project` reached this one from, is named with its project, so the answer knows where to go.
         const own = context.origin === undefined ? null : await host.projects.read(context.origin.projectId);
-        const fromTitle = own === null ? titleOf(content.views, caller) : `${titleOf(own.views, caller)} in ${own.name}`;
+        const fromTitle =
+            context.external !== undefined
+                ? externalActorTitle(context.external)
+                : own === null
+                  ? titleOf(content.views, caller)
+                  : `${titleOf(own.views, caller)} in ${own.name}`;
+
         const delivery = await host.messages.notify({
             projectId: place.projectId,
             targetId: nodeId,

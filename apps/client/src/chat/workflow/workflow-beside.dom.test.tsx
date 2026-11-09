@@ -142,7 +142,10 @@ describe('a chat node that runs a workflow', () => {
         expect(verify.querySelector('[data-workflow-agent="1"]')).not.toBeNull();
         expect(card('Read')!.querySelector('[data-workflow-agent="0"]')).toBeNull();
         // One still waiting has no conversation to open.
-        expect(verify.querySelector<HTMLButtonElement>('[data-workflow-agent="2"]')!.disabled).toBe(true);
+        const waiting = verify.querySelector<HTMLButtonElement>('[data-workflow-agent="2"]')!;
+        expect(waiting.disabled).toBe(true);
+        expect(waiting.querySelector('.lucide-chevron-right')).toBeNull();
+        expect(verify.querySelector('[data-workflow-agent="1"] .lucide-chevron-right')).not.toBeNull();
         expect(machine.requests('chat.subagent')).toEqual([]);
     });
 
@@ -169,6 +172,28 @@ describe('a chat node that runs a workflow', () => {
         expect(focusedCanvas().getState().navigationId).toBe(derivedCardId(chatId, 'phase:phase-2'));
         // The conversation opened beside the node, never in the node's own place.
         expect(Object.keys(useSubagentView.getState().trails).filter((key) => key.endsWith(chatId))).toEqual([]);
+    });
+
+    test("brings the agent's card into view when its line is pressed, also while that card is open", async () => {
+        await open();
+        await until(() => card('Verify')?.querySelector('[data-workflow-agent="1"]') != null);
+        // A canvas the agent's card, right of the phases, stands beyond.
+        await act(async () => {
+            focusedCanvas().getState().setViewport({ w: 700, h: 800 });
+            focusedCanvas().getState().setCamera({ x: 0, y: 0, zoom: 1 });
+        });
+        await clickOn(card('Verify')!.querySelector('[data-workflow-agent="1"]'));
+        await until(() => card('Checker') !== undefined);
+        await until(() => focusedCanvas().getState().camera.x < 0);
+        const revealed = focusedCanvas().getState().camera;
+        const rect = focusedCanvas().getState().derivedCards[derivedCardId(chatId, 'agent')]!.rect;
+        expect((rect.x + rect.w) * revealed.zoom + revealed.x).toBeLessThanOrEqual(700);
+
+        // Pressed again with the card open but off screen, the same press shows it.
+        await act(async () => focusedCanvas().getState().setCamera({ x: 0, y: 0, zoom: 1 }));
+        await clickOn(card('Verify')!.querySelector('[data-workflow-agent="1"]'));
+        await until(() => focusedCanvas().getState().camera.x < 0);
+        expect(focusedCanvas().getState().camera).toEqual(revealed);
     });
 
     test('wears the color a person gave the node', async () => {

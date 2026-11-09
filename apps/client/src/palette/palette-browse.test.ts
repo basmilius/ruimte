@@ -9,49 +9,19 @@ import {
     browseStart,
     folderPresence,
     isFullPath,
+    isPathQuery,
     linkDot,
     linkHint,
     machineLink,
     machinesStep,
     openBrowse,
     paletteStart,
-    parentOf,
     pickMachine,
     retryLink,
-    separatorFor,
     settleLink,
     typedPathOffer,
     type BrowseStep
 } from './palette-browse';
-
-describe('separatorFor', () => {
-    test('a Windows daemon answers in backslashes, every other one in slashes', () => {
-        expect(separatorFor('win32')).toBe('\\');
-        expect(separatorFor('darwin')).toBe('/');
-        expect(separatorFor(null)).toBe('/');
-    });
-});
-
-describe('parentOf', () => {
-    test('one level up a POSIX path, with the separator a browse needs', () => {
-        expect(parentOf('/a/b/c/', '/')).toBe('/a/b/');
-        expect(parentOf('/a/b/c', '/')).toBe('/a/b/');
-        expect(parentOf('/a', '/')).toBe('/');
-        expect(parentOf('~/projects', '/')).toBe('~/');
-    });
-
-    test('one level up a Windows path', () => {
-        expect(parentOf('C:\\a\\b', '\\')).toBe('C:\\a\\');
-        expect(parentOf('C:\\a', '\\')).toBe('C:\\');
-    });
-
-    test('a root has nowhere to go', () => {
-        expect(parentOf('/', '/')).toBeNull();
-        expect(parentOf('C:\\', '\\')).toBeNull();
-        expect(parentOf('~/', '/')).toBeNull();
-        expect(parentOf('', '/')).toBeNull();
-    });
-});
 
 describe('folderPresence', () => {
     const listing = { entries: [{ name: 'projects' }, { name: 'Pictures' }], exists: true };
@@ -65,6 +35,19 @@ describe('folderPresence', () => {
         expect(folderPresence('~/projects', listing, '/')).toBe('there');
         expect(folderPresence('~/pro', listing, '/')).toBe('missing');
         expect(folderPresence('~/pictures', listing, '/')).toBe('missing');
+    });
+
+    test('a Windows path takes either separator for the last segment', () => {
+        const drive = { entries: [{ name: 'Projects' }], exists: true };
+
+        expect(folderPresence('C:/Projects', drive, '\\')).toBe('there');
+        expect(folderPresence('C:\\Projects', drive, '\\')).toBe('there');
+        expect(folderPresence('C:/Proj', drive, '\\')).toBe('missing');
+        expect(folderPresence('C:/Projects/', drive, '\\')).toBe('there');
+    });
+
+    test('a path on a machine with forward slashes keeps a backslash inside a name', () => {
+        expect(folderPresence('/srv/a\\b', { entries: [{ name: 'a\\b' }], exists: true }, '/')).toBe('there');
     });
 
     test('a daemon that does not know the field leaves the question open', () => {
@@ -99,6 +82,37 @@ describe('isFullPath', () => {
 
     test('surrounding spaces do not count, as the machine trims them too', () => {
         expect(isFullPath('  /tmp ', 'linux')).toBe(true);
+    });
+});
+
+describe('isPathQuery', () => {
+    test('a slash, a tilde and a dot path browse on every machine', () => {
+        for (const platform of ['darwin', 'linux', 'win32', null]) {
+            expect(isPathQuery('/tmp', platform)).toBe(true);
+            expect(isPathQuery('~', platform)).toBe(true);
+            expect(isPathQuery('~/projects', platform)).toBe(true);
+            expect(isPathQuery('./app', platform)).toBe(true);
+            expect(isPathQuery('../app', platform)).toBe(true);
+            expect(isPathQuery('open file', platform)).toBe(false);
+        }
+    });
+
+    test('a drive letter browses on Windows once the separator is typed, with either slash', () => {
+        expect(isPathQuery('C:\\', 'win32')).toBe(true);
+        expect(isPathQuery('C:/', 'win32')).toBe(true);
+        expect(isPathQuery('d:\\Work\\app', 'win32')).toBe(true);
+        expect(isPathQuery('\\\\server\\share', 'win32')).toBe(true);
+    });
+
+    test('a bare drive letter stays a search, since the machine reads it as relative to the drive', () => {
+        expect(isPathQuery('C:', 'win32')).toBe(false);
+        expect(isPathQuery('C', 'win32')).toBe(false);
+    });
+
+    test('a drive letter is only a search on a machine without drives', () => {
+        expect(isPathQuery('C:\\', 'darwin')).toBe(false);
+        expect(isPathQuery('C:\\', 'linux')).toBe(false);
+        expect(isPathQuery('C:\\', null)).toBe(false);
     });
 });
 

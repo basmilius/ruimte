@@ -1,7 +1,5 @@
 import { CornerUpRight, FileText, FilePlus, Folder, FolderPlus, Search } from 'lucide-react';
 import { type CommandSpec } from '@/commands/types';
-import { editorShortcut } from '@/surface/editor-keymap';
-import { APP_SHORTCUTS } from '@/surface/shortcuts';
 
 export const FILE_COMMANDS = {
     'file-new': {
@@ -32,7 +30,7 @@ export const FILE_COMMANDS = {
     'open-file-at-line': {
         key: 'jumpToSource',
         icon: FileText,
-        shortcut: editorShortcut('jumpToSource'),
+        keymap: 'jumpToSource',
         palette: true,
         menu: { menu: 'go', group: 'editor-navigation', order: 100, enabled: (context) => context.diff }
     },
@@ -45,7 +43,6 @@ export const FILE_COMMANDS = {
     'find-in-files': {
         key: 'findInFiles',
         icon: Search,
-        shortcut: APP_SHORTCUTS.findInFiles,
         binds: 'window',
         palette: true,
         // Off macOS a focused terminal keeps Ctrl+Shift+F for its own find (`TERMINAL_FIND_SHORTCUT`).

@@ -3,10 +3,12 @@ import {
     PROTOCOL_VERSION,
     type AgentIntegrationReport,
     type AgentIntegrationsResult,
+    type EndpointInfoPayload,
     type EndpointSettings,
     type MachineUpdate,
     type MachineUpdateReport,
-    type MachineWork
+    type MachineWork,
+    type TextModelChoice
 } from '@ruimte/contracts';
 import { peerAccessRequestMessage } from '@ruimte/pulsar';
 import { INTEGRATION_KINDS, IntegrationsFixed, isIntegrationKind } from '../agents/integrations.ts';
@@ -49,6 +51,10 @@ export interface AuthDeps {
         files(): Promise<AgentIntegrationsResult['files']>;
         set(kind: (typeof INTEGRATION_KINDS)[number], on: boolean): Promise<AgentIntegrationReport[]>;
     };
+    // What a client told of itself, for the list of connected clients.
+    announce(clientId: string, payload: EndpointInfoPayload): void;
+    // Throws when the machine cannot write short texts with this pick: its CLI, model or account is not there.
+    validateTextModel(choice: TextModelChoice): Promise<void>;
     // The update of the desktop app on this machine, and what installing it would end right now.
     updates: {
         subscribe(clientId: string, sink: LiveSink): () => void;
@@ -103,6 +109,7 @@ function registerRequests(dispatcher: Dispatcher, host: AuthDeps): void {
         'endpoint.info',
         async (payload, client) => {
             countClient(client.access, payload.client);
+            host.announce(client.id, payload);
             if (client.access?.peer !== undefined) {
                 return {
                     id: identity.id,
@@ -127,7 +134,15 @@ function registerRequests(dispatcher: Dispatcher, host: AuthDeps): void {
         access: ClientAccess | undefined,
         write: (patch: SettingPatch) => Promise<void>
     ): Promise<void> => {
-        await write(await prepareSettings(settings, { owner: isOwner(access), home: host.home, closedLid: host.closedLid, current: identity.settings() }));
+        await write(
+            await prepareSettings(settings, {
+                owner: isOwner(access),
+                home: host.home,
+                closedLid: host.closedLid,
+                current: identity.settings(),
+                validateTextModel: (choice) => host.validateTextModel(choice)
+            })
+        );
     };
 
     /*
@@ -150,6 +165,15 @@ function registerRequests(dispatcher: Dispatcher, host: AuthDeps): void {
      */
     dispatcher.register('endpoint.setNodeSize', async (payload, client) => {
         await identity.setNodeSize(payload.kind, payload.size);
+        return info(client.access);
+    });
+
+    /*
+     * Any client the machine let in may set it, like a name: where browsing starts is a path on this
+     * machine, so every client of it starts in the same place. No tool reaches it.
+     */
+    dispatcher.register('endpoint.setStartFolder', async (payload, client) => {
+        await identity.setStartFolder(payload.folder);
         return info(client.access);
     });
 

@@ -31,6 +31,7 @@ import { MACHINE_UPDATE_REQUEST_SCHEMAS, MACHINE_UPDATE_EVENT_SCHEMAS } from './
 import { NANOGPT_REQUEST_SCHEMAS } from './nanogpt.ts';
 import { PEER_REQUEST_SCHEMAS, PEER_EVENT_SCHEMAS } from './peer.ts';
 import { PLAN_HOST_REQUEST_SCHEMAS, PLAN_HOST_EVENT_SCHEMAS } from './plan-host.ts';
+import { PORT_REQUEST_SCHEMAS, PORT_EVENT_SCHEMAS } from './port.ts';
 import { PROCESSES_REQUEST_SCHEMAS, PROCESSES_EVENT_SCHEMAS } from './processes.ts';
 import { PROJECT_SIDEBAR_REQUEST_SCHEMAS, PROJECT_SIDEBAR_EVENT_SCHEMAS } from './project-sidebar.ts';
 import { PROJECT_REQUEST_SCHEMAS, PROJECT_EVENT_SCHEMAS } from './project.ts';
@@ -49,6 +50,7 @@ import { SQL_BINDING_REQUEST_SCHEMAS, SQL_BINDING_EVENT_SCHEMAS } from './sql-bi
 import { TASK_REQUEST_SCHEMAS, TASK_EVENT_SCHEMAS } from './task.ts';
 import { TEMPLATES_REQUEST_SCHEMAS, TEMPLATES_EVENT_SCHEMAS } from './templates.ts';
 import { TERMINAL_PREPARE_REQUEST_SCHEMAS } from './terminal-prepare.ts';
+import { TUNNEL_REQUEST_SCHEMAS, TUNNEL_EVENT_SCHEMAS } from './tunnel.ts';
 import { VOICE_REQUEST_SCHEMAS, VOICE_EVENT_SCHEMAS } from './voice.ts';
 
 export * from './agent.ts';
@@ -95,6 +97,7 @@ export { cleanGhost, ghostPrompt, type GhostInput } from './editor-assist-ghost.
 export { NAMES_ASKED, namesPrompt, parseNames, type NamesInput } from './editor-assist-names.ts';
 export { EDITOR_ASSIST_INSTRUCTIONS } from './editor-assist-purposes.ts';
 export * from './timeouts.ts';
+export { TextModelChoiceSchema, type TextModelChoice } from './text-model.ts';
 export * from './launches.ts';
 export * from './launch-rules.ts';
 export * from './secrets.ts';
@@ -110,6 +113,7 @@ export * from './node-defaults.ts';
 export * from './node-title.ts';
 export { emptyCanvasGroupIds, groupUnder, joinGroupUnder } from './canvas-groups.ts';
 export * from './plan-host.ts';
+export * from './port.ts';
 export * from './processes.ts';
 export * from './provenance.ts';
 export * from './reach.ts';
@@ -126,6 +130,7 @@ export * from './session.ts';
 export * from './session-ports.ts';
 export * from './render.ts';
 export * from './push.ts';
+export * from './quiet-hours.ts';
 export * from './peer.ts';
 export * from './remote.ts';
 export * from './session-status.ts';
@@ -139,6 +144,7 @@ export * from './sql-binding.ts';
 export * from './task.ts';
 export * from './built-in-templates.ts';
 export * from './templates.ts';
+export * from './tunnel.ts';
 export * from './terminal-prepare.ts';
 export * from './text.ts';
 export * from './usage.ts';
@@ -201,6 +207,8 @@ export const REQUEST_SCHEMAS = {
     ...ARCHIVE_REQUEST_SCHEMAS,
     ...GIT_REQUEST_SCHEMAS,
     ...AUTH_REQUEST_SCHEMAS,
+    ...TUNNEL_REQUEST_SCHEMAS,
+    ...PORT_REQUEST_SCHEMAS,
     ...PROCESSES_REQUEST_SCHEMAS,
     ...COMPUTER_REQUEST_SCHEMAS,
     ...SECRETS_REQUEST_SCHEMAS,
@@ -254,6 +262,8 @@ export const EVENT_SCHEMAS = {
     ...FS_EVENT_SCHEMAS,
     ...GIT_EVENT_SCHEMAS,
     ...AUTH_EVENT_SCHEMAS,
+    ...TUNNEL_EVENT_SCHEMAS,
+    ...PORT_EVENT_SCHEMAS,
     ...PROCESSES_EVENT_SCHEMAS,
     ...COMPUTER_EVENT_SCHEMAS,
     ...SECRETS_EVENT_SCHEMAS,

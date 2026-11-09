@@ -1,9 +1,9 @@
 import { join } from 'node:path';
 import { liveTools, mintLiveSession, parseOpenAiLivePreferences } from '@ruimte/voice';
 import { databaseSecretFile, parseSecret, parseSecretKey } from '../database-bridge';
+import { electron } from '../electron';
 import { heedBodyless } from '../net-response';
 import { fileSecretStore, type SecretStore } from '../secret-store';
-import { electron } from './electron';
 import type { DesktopIpc } from './ipc';
 import { pendingRemovalFile, voiceKey, type MachineVoiceKey } from './voice-key';
 

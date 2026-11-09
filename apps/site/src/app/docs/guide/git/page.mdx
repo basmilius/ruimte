@@ -16,7 +16,7 @@ Click the branch icon in the rail, or run **Toggle git panel**. It covers the pr
 ## Commit and push
 
 1. Stage the files, or let **Commit** stage all.
-2. Write a message, or click **Let Claude Code write the message** (or another CLI) for a suggestion based on the staged changes.
+2. Write a message, or click **Let Claude Code write the message** (or another CLI) for a suggestion based on the staged changes. The model comes from the machine's [text model](/docs/guide/settings#text-model).
 3. Click **Commit**, or **Commit and push**.
 
 **Commit** commits what is staged in every repository with one message. **Amend** changes the last commit instead.
@@ -36,6 +36,33 @@ With several repositories, **Pull all**, **Sync all** and **Fetch all** act on a
 <Note>A pull only fast-forwards. When your branch and the remote both moved, Ruimte asks how to combine them before it changes anything.</Note>
 
 Changes are grouped as code, tests, mocks and generated files. Click a file to see its diff.
+
+## Compare two branches
+
+To see what one branch has that another lacks, compare them. Neither branch is checked out, so your files and your current work stay as they are.
+
+Open the dialog from any of these:
+
+- **Compare branches…** in the branch menu.
+- A right-click on a branch in the branch menu, then **Compare this branch…**. This also works for a branch that another worktree has checked out.
+- **Compare branches** in the command palette or the View menu.
+
+With several repositories, choose one first. Then choose the base branch, the branch to compare, and what to show:
+
+| Comparison | Shows |
+| --- | --- |
+| Changes since the branches diverged | What the second branch added since it split from the first |
+| Difference between the two tips | The plain difference between the latest commit of each |
+
+The first one is the default, and it is what a pull request shows. Branches with no common ancestor can only be compared by their tips.
+
+The comparison opens as a tab with the changed files in a tree beside the diff of the selected file. **Commits** lists the commits that only one of the two branches has. Remote branches show what you fetched last, because a comparison never fetches.
+
+The tab keeps the commits it read first, even when a branch moves afterwards. Click **Read the branches again** to read the branches by name once more.
+
+To see a file as it is on one branch, click **Open on** and the branch name, or right-click the file in the tree. The file opens read-only. When the diff starts at the common ancestor, that version is on offer too. Neither tab touches the file in your working tree.
+
+Comparison tabs belong to the window. Reloading closes them.
 
 ## Resolve a merge conflict
 

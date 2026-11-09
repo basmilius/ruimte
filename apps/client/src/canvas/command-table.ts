@@ -25,14 +25,12 @@ import {
 } from 'lucide-react';
 import { zoomable, desktop, onCanvas } from '@/commands/conditions';
 import { type CommandSpec } from '@/commands/types';
-import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, NODE_NAVIGATION_SHORTCUTS } from '@/surface/canvas/shortcuts';
 
 export const CANVAS_COMMANDS = {
     // A page cannot reach the browser's own undo, so the web client undoes what has a history of its own.
     'edit-undo': {
         key: 'undo',
         icon: Undo2,
-        shortcut: CANVAS_SHORTCUTS.undo,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'edit', group: 'history', order: 30, when: (context) => !desktop(context) && context.workspace, enabled: zoomable }
@@ -40,7 +38,6 @@ export const CANVAS_COMMANDS = {
     'edit-redo': {
         key: 'redo',
         icon: Redo2,
-        shortcut: CANVAS_SHORTCUTS.redo,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'edit', group: 'history', order: 40, when: (context) => !desktop(context) && context.workspace, enabled: zoomable }
@@ -48,7 +45,7 @@ export const CANVAS_COMMANDS = {
     'node-maximize': {
         key: 'maximizeNode',
         icon: Expand,
-        shortcut: CANVAS_SHORTCUTS.maximizeCell,
+        keyOf: 'cell-maximize',
         palette: true,
         menu: {
             menu: 'view',
@@ -67,7 +64,6 @@ export const CANVAS_COMMANDS = {
     fit: {
         key: 'zoomToFit',
         icon: Maximize2,
-        shortcut: CANVAS_SHORTCUTS.fitAll,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'view', group: 'zoom', order: 10, enabled: zoomable }
@@ -75,7 +71,6 @@ export const CANVAS_COMMANDS = {
     'zoom-selection': {
         key: 'zoomToSelection',
         icon: Focus,
-        shortcut: CANVAS_SHORTCUTS.zoomSelection,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'view', group: 'zoom', order: 20, enabled: zoomable }
@@ -83,7 +78,6 @@ export const CANVAS_COMMANDS = {
     'zoom-node': {
         key: 'zoomToNode',
         icon: Crosshair,
-        shortcut: CANVAS_SHORTCUTS.zoomNode,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'view', group: 'zoom', order: 30, when: onCanvas, enabled: (context) => context.nodeZoomable && !context.nodeMaximized }
@@ -91,15 +85,19 @@ export const CANVAS_COMMANDS = {
     'zoom-reset': {
         key: 'zoomReset',
         icon: Percent,
-        shortcut: CANVAS_SHORTCUTS.zoomReset,
         binds: 'workspace',
         palette: true,
-        menu: { menu: 'view', group: 'zoom', order: 40, enabled: zoomable }
+        menu: {
+            menu: 'view',
+            group: 'zoom',
+            order: 40,
+            enabled: (context) => zoomable(context) || context.chatTextSize !== null,
+            words: (context) => ({ key: context.chatTextSize === null ? 'zoomReset' : 'chatTextReset' })
+        }
     },
     'camera-back': {
         key: 'cameraBack',
         icon: ArrowLeft,
-        shortcut: CANVAS_SHORTCUTS.cameraBack,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'views', order: 30, when: onCanvas, enabled: (context) => context.cameraHistory.back }
@@ -107,7 +105,6 @@ export const CANVAS_COMMANDS = {
     'camera-forward': {
         key: 'cameraForward',
         icon: ArrowRight,
-        shortcut: CANVAS_SHORTCUTS.cameraForward,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'views', order: 40, when: onCanvas, enabled: (context) => context.cameraHistory.forward }
@@ -115,7 +112,6 @@ export const CANVAS_COMMANDS = {
     'node-left': {
         key: 'nodeLeft',
         icon: ArrowLeft,
-        shortcut: NODE_NAVIGATION_SHORTCUTS.left,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'nodes', order: 10, enabled: (context) => context.nodeNeighbors.left }
@@ -123,7 +119,6 @@ export const CANVAS_COMMANDS = {
     'node-right': {
         key: 'nodeRight',
         icon: ArrowRight,
-        shortcut: NODE_NAVIGATION_SHORTCUTS.right,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'nodes', order: 20, enabled: (context) => context.nodeNeighbors.right }
@@ -131,7 +126,6 @@ export const CANVAS_COMMANDS = {
     'node-up': {
         key: 'nodeUp',
         icon: ArrowUp,
-        shortcut: NODE_NAVIGATION_SHORTCUTS.up,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'nodes', order: 30, enabled: (context) => context.nodeNeighbors.up }
@@ -139,7 +133,6 @@ export const CANVAS_COMMANDS = {
     'node-down': {
         key: 'nodeDown',
         icon: ArrowDown,
-        shortcut: NODE_NAVIGATION_SHORTCUTS.down,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'nodes', order: 40, enabled: (context) => context.nodeNeighbors.down }
@@ -147,7 +140,6 @@ export const CANVAS_COMMANDS = {
     'add-terminal': {
         key: 'addTerminal',
         icon: Terminal,
-        shortcut: ADD_NODE_SHORTCUTS.terminal,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'canvas-add', order: 10 }
@@ -155,7 +147,6 @@ export const CANVAS_COMMANDS = {
     'add-chat': {
         key: 'addChat',
         icon: MessageSquare,
-        shortcut: ADD_NODE_SHORTCUTS.chat,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'canvas-add', order: 20 }
@@ -163,7 +154,6 @@ export const CANVAS_COMMANDS = {
     'add-browser': {
         key: 'addBrowser',
         icon: Globe,
-        shortcut: ADD_NODE_SHORTCUTS.browser,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'canvas-add', order: 30 }
@@ -171,7 +161,6 @@ export const CANVAS_COMMANDS = {
     'add-note': {
         key: 'addNote',
         icon: StickyNote,
-        shortcut: ADD_NODE_SHORTCUTS.note,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'canvas-add', order: 40 }
@@ -181,7 +170,6 @@ export const CANVAS_COMMANDS = {
     'add-group': {
         key: 'addGroup',
         icon: Group,
-        shortcut: ADD_NODE_SHORTCUTS.group,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'canvas-add', order: 70 }
@@ -189,7 +177,6 @@ export const CANVAS_COMMANDS = {
     'group-selection': {
         key: 'groupSelection',
         icon: SquareDashed,
-        shortcut: CANVAS_SHORTCUTS.group,
         binds: 'workspace',
         palette: true,
         menu: { menu: 'kind', group: 'canvas-arrange', order: 10, enabled: (context) => context.selection > 0 }

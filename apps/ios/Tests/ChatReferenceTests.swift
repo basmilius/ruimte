@@ -79,6 +79,14 @@ import XCTest
         XCTAssertEqual(ChatReferenceChip.look("drawing-sketch", chat: false, lookup: lookup).icon, "brain")
     }
 
+    func testAMessageOfAnExternalMCPClientWearsAPlugAndIsNotGone() {
+        let lookup = ChatReferenceLookup(items: [], known: true)
+        let look = ChatReferenceChip.look("external-cred-1", chat: false, lookup: lookup, lastName: "MCP · claude.ai")
+        XCTAssertEqual(look.icon, "plug")
+        XCTAssertEqual(look.title, "MCP · claude.ai")
+        XCTAssertFalse(look.gone)
+    }
+
     func testAReferenceSentFromTheIPhoneCarriesWhatTheDesktopSends() async throws {
         let fixture = try fixture()
         let client = ReferenceClientFake()
@@ -119,6 +127,28 @@ import XCTest
         let payload = try XCTUnwrap(client.requests.first { $0.0 == .chatSend }?.1)
         XCTAssertEqual(payload.list("chats").compactMap(\.stringValue), ["standalone"])
         XCTAssertNil(payload["references"])
+        await model.composition.flush()
+    }
+
+    private let grok = ProviderWire.provider(
+        "grok", name: "Grok", models: [ProviderWire.model("grok-4", name: "Grok 4")]
+    ).providerInfo
+
+    func testModelSuggestionsStayWhenTheFileSearchFails() async throws {
+        let model = ChatModel(client: ReferenceClientFake(files: nil), chatID: "chat", draftRoot: root)
+        model.providers = [grok]
+        await model.search("@", query: "Grok")
+        XCTAssertEqual(model.suggestions.map(\.title), ["Grok 4"])
+        XCTAssertNotNil(model.searchProblem)
+        await model.composition.flush()
+    }
+
+    func testFilesFollowTheModelsWhenTheFileSearchAnswers() async throws {
+        let model = ChatModel(client: ReferenceClientFake(files: ["docs/grok.md"]), chatID: "chat", draftRoot: root)
+        model.providers = [grok]
+        await model.search("@", query: "Grok")
+        XCTAssertEqual(model.suggestions.map(\.title), ["Grok 4", "grok.md"])
+        XCTAssertNil(model.searchProblem)
         await model.composition.flush()
     }
 
@@ -163,9 +193,21 @@ import XCTest
 
 @MainActor private final class ReferenceClientFake: MachineRequesting {
     var requests: [(WireRequest, JSONValue)] = []
+    /// What `fs.search` finds; nil makes it fail the way a timed-out search does.
+    let files: [String]?
+
+    init(files: [String]? = []) {
+        self.files = files
+    }
 
     func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
+        if type == .fsSearch {
+            guard let files else {
+                throw MachineClientError.server(code: "not-readable", message: "Cannot search the working folder")
+            }
+            return .object(["files": .array(files.map { .string($0) })])
+        }
         return .object([:])
     }
 

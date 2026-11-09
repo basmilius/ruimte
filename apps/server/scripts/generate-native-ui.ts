@@ -77,6 +77,11 @@ const cases: ParityCase[] = [
         queries: { $zeta: { files: ['a'] }, $alpha: { files: [] } }
     },
     {
+        name: 'live table',
+        source: '$status = @Query("git.status", {})\n<Stats><Stat label="Files" value={@Count($status.files)}/></Stats><Table rows={$status.rows}><Column key="name"/><Column key="state"/></Table><Summary>Plain</Summary>',
+        queries: { $status: { files: ['a'], rows: [{ name: 'core', state: 'ok' }] } }
+    },
+    {
         name: 'timeline',
         source: '<Timeline><Event at="14:02" tone="warning" detail="p95 above 2 s">Alert fired</Event><Event at="2026-10-14T12:20:00Z">Recovered</Event><Event at="after lunch">Unreadable time</Event></Timeline>'
     },

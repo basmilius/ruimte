@@ -118,7 +118,15 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
     const authorizeOnly = async (info: ChatInfo, input: unknown) => {
         await authorize(info, input);
     };
+    /*
+     * Whatever authorize throws reads as not allowed, without the time of the last read. A repository that is gone
+     * is no refusal, so it passes here and fails in the read, which `repository` checks again before anything is read.
+     */
     const authorizeRepository = async (info: ChatInfo, input: unknown, args: Record<string, unknown>) => {
+        const access = await authorize(info, input);
+        if ((await realOrNull(resolve(access.cwd, String(args.repo ?? '.')))) === null) {
+            return;
+        }
         await repository(info, input, args);
     };
     const sources = {

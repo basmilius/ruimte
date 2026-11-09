@@ -3,10 +3,11 @@ import { basename } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
 import { fileUriToPath, lspLanguageId, type Diagnostic, type Range } from '@adecore/lsp';
 import { storedPathOf, type LanguageMethod, type SqlChoice } from '@ruimte/contracts';
-import { languageOf } from '../fs/read.ts';
+import { languageOf } from '../disk/language-of.ts';
 import type { AgentDocument, LanguageHost } from './host.ts';
 import { KIND_PROFILES } from './profiles.ts';
 import type { SqlFileContext } from './sql-file-context.ts';
+import { BUILD_HELD_MESSAGE } from './worktree-build.ts';
 
 /* The project's running language servers as an agent may ask them; absent on a host without them. */
 export type LanguageAgentHost = Pick<
@@ -569,6 +570,15 @@ export class AgentLanguage {
         }
         if (document.servers.some((server) => server.state === 'ready' || server.state === 'indexing')) {
             return;
+        }
+        if (
+            document.servers.some((server) => server.buildHeld === true) &&
+            document.servers.every((server) => server.buildHeld === true || server.state === 'not-installed')
+        ) {
+            throw new ToolRefusal(
+                'language-server-build-held',
+                `${BUILD_HELD_MESSAGE}; a person turns them on in the app, in the language status of the project`
+            );
         }
         const missing = document.servers.filter((server) => server.state === 'not-installed').map((server) => server.kind);
         if (missing.length === document.servers.length) {

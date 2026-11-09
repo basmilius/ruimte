@@ -17,6 +17,7 @@ import type { ChatManager } from '../chat/chat-manager.ts';
 import { MESSAGE_WORDS } from '../context/notices.ts';
 import type { NodeLifecycle } from '../node-lifecycle.ts';
 import { openerOf } from '../opener.ts';
+import { deliverAnswerHandler } from '../outbox/deliver-answer.ts';
 import { wireEndChildren, type EndChildrenWiring } from '../outbox/end-children.ts';
 import { OUTBOX_KIND_NAMES, outboxRetries } from '../outbox/kinds/index.ts';
 import type { OutboxStore, OutboxWork } from '../outbox/outbox.ts';
@@ -73,6 +74,15 @@ export class OutboxLink {
 
     wake(chatId: string): void {
         this.worker.wake(chatId);
+    }
+
+    /* Owes the chat the turn that tells it how a person answered its card; a chat no project holds is owed nothing. */
+    async oweAnswer(chatId: string, answer: { text: string; label: string }): Promise<void> {
+        const projectId = this.projectOf(chatId);
+        if (projectId === null) {
+            return;
+        }
+        await this.enqueue(projectId, chatId, { kind: 'deliver-answer', payload: answer });
     }
 
     /* Owes the resume of a limited turn at `at`, in place of whatever this chat owed before; a chat no project holds is owed nothing. */
@@ -298,6 +308,7 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
     worker.handle('end-children', endChildren.handler);
     worker.handle('deliver-summary', summaries.handler);
     worker.handle('deliver-waiting', taskWiring.deliverWaiting);
+    worker.handle('deliver-answer', unlessClosed(deliverAnswerHandler({ openChat })));
 
     // A node deleted before anyone ran it takes its prompt with it, and a node that is gone frees the count its opener is held to.
     lifecycle.on('placed', (projectId, ids) => {

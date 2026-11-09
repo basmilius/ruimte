@@ -11,6 +11,7 @@ import { bytesArea } from '../handlers/bytes.ts';
 import { chatImageArea } from '../handlers/chat-image.ts';
 import { chatSearchArea } from '../handlers/chat-search.ts';
 import { chatArea } from '../handlers/chat.ts';
+import { clientArea } from '../handlers/client.ts';
 import { computerArea } from '../handlers/computer.ts';
 import { databaseArea } from '../handlers/database.ts';
 import { deviceArea } from '../handlers/device.ts';
@@ -24,6 +25,7 @@ import { gitArea } from '../handlers/git.ts';
 import { languageArea } from '../handlers/language.ts';
 import { launchesArea } from '../handlers/launches.ts';
 import { planArea } from '../handlers/plan.ts';
+import { portsArea } from '../handlers/ports.ts';
 import { processesArea } from '../handlers/processes.ts';
 import { proposalsArea } from '../handlers/project-proposals.ts';
 import { projectArea } from '../handlers/project.ts';
@@ -41,6 +43,7 @@ import { snoozeArea } from '../handlers/snooze.ts';
 import { tasksArea } from '../handlers/tasks.ts';
 import { templateArea } from '../handlers/template.ts';
 import { terminalPrepareArea } from '../handlers/terminal-prepare.ts';
+import { tunnelsArea } from '../handlers/tunnels.ts';
 import { usageArea } from '../handlers/usage.ts';
 import { voiceArea } from '../handlers/voice.ts';
 import { remoteArea } from '../peer/giver/area.ts';
@@ -85,18 +88,34 @@ import { statsLifecycle } from './usage-stats.ts';
 export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
     const { runtime, machine, stores, providers, agents, projects, templates, artifacts, databases, work, launches, routines, devices } = input;
     const { usage, processes, language, push, voice, power, network, computer, extensions, stats, maintenance } = input;
+    const { connected, tunnels, ports } = input;
     const store = projects.store;
     const streamingAllowed = (): boolean => machine.identity.streamingAllowed;
 
     return [
         processesLifecycle(processes),
         powerLifecycle(power),
+        tunnelsArea({
+            service: tunnels.service,
+            proposals: tunnels.proposals,
+            credentials: tunnels.credentials,
+            consent: tunnels.consent,
+            listener: tunnels.listener,
+            changes: tunnels.sinks,
+            changed: () => {
+                tunnels.sinks.emit({ event: 'tunnel.changed', payload: {} });
+                // A revoked credential leaves the list of connected clients at once.
+                connected.externalChanged();
+            }
+        }),
+        portsArea({ grants: ports.grants, streams: ports.streams, changes: ports.sinks }),
+        clientArea({ connected, auth: machine.auth, external: () => tunnels.credentials.active() }),
         maintenanceLifecycle(maintenance),
         extensionsArea({ host: extensions.host, ...extensions.handlerDeps(), readChat: extensions.readChat }),
         voiceArea(voice),
         serverArea({ version: VERSION, home: runtime.config.home, model: input.machineModel }),
         authArea(authDeps(input, later)),
-        pushArea({ auth: machine.auth, push, changed: () => push.synchronizeActivities() }),
+        pushArea({ auth: machine.auth, push, changed: () => push.subscriptionsChanged() }),
         providerKeysArea({ nanogpt: providers.nanogpt, claudeApi: providers.claudeApi }),
         providerDetectArea({ providers: providers.providers, accounts: providers.accounts, feed: providers.feed, now: Date.now }),
         agentServersArea({ servers: providers.servers }),

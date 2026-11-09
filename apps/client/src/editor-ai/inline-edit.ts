@@ -23,7 +23,7 @@ import { currentEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { keyOf } from '@/surface/shortcut-overrides';
 import { inlineEditDeps } from './inline-edit-deps';
 import { sweepInlineEdits } from './inline-edit-prune';
 import { inlineEditFor, onInlineEditsChange } from './inline-edit-record';
@@ -92,7 +92,7 @@ export class InlineEditFeature implements InlineEdit {
         const { editor } = language;
         const offs = [
             language.onServedKey((event) => {
-                if (isShortcut(CANVAS_SHORTCUTS.inlineEdit, event)) {
+                if (isShortcut(keyOf('inlineEdit'), event)) {
                     this.start();
                     return true;
                 }

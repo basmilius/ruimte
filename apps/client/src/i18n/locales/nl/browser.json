@@ -66,7 +66,24 @@
         "title": "Open hier een pagina",
         "hint": "Kies een dev server of typ hierboven een adres.",
         "running": "Draait",
-        "common": "Veelgebruikte poorten"
+        "common": "Veelgebruikte poorten",
+        "share": {
+            "action": "Delen",
+            "stop": "Stoppen met delen",
+            "putOnTunnel": "Deze poort op een tunnel zetten",
+            "copyPublic": "{{address}} kopiëren",
+            "sharedBy": "Gedeeld door {{machine}}",
+            "notShared": "Niet gedeeld door {{machine}}",
+            "oldMachine": "{{machine}} kan nog geen poorten delen",
+            "oldApp": "Deze versie van Ruimte kan geen gedeelde poort openen",
+            "failed": "Kon de poort niet delen",
+            "stopFailed": "Kon het delen niet stoppen",
+            "confirm": {
+                "title": "Poort {{port}} delen?",
+                "description": "Je andere apparaten openen localhost:{{port}} op {{machine}} via de verbinding die Ruimte al heeft. Een ontwikkelsite kan schrijfacties en uploads accepteren en vertrouwt misschien elk verzoek van deze machine. Elk apparaat dat bij je account is aangemeld, kan erbij tot je stopt met delen.",
+                "action": "Poort delen"
+            }
+        }
     },
     "node": {
         "fallbackTitle": "Browser"

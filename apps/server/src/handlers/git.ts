@@ -11,6 +11,7 @@ import { fetchBundle, makeBundle, type BundleStore } from '../git/bundles.ts';
 import { readCapabilities } from '../git/capabilities.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import { cloneRepository } from '../git/clone.ts';
+import { compareBranches, compareCommits, readSnapshot } from '../git/compare.ts';
 import { readConflict, readConflicts, resolveConflict, runOperation } from '../git/conflict.ts';
 import { diffCheckout, diffCommit, diffFile } from '../git/diff.ts';
 import { parseIssueRef, readIssue, readPullRequest, runGh } from '../git/github.ts';
@@ -18,6 +19,7 @@ import { IdentityReader } from '../git/identity.ts';
 import { listIgnoredFiles } from '../git/ignored.ts';
 import { readLog } from '../git/log.ts';
 import { suggestMessage } from '../git/message.ts';
+import type { TextWriter } from '../git/one-shot.ts';
 import { prSplits } from '../git/pr-split.ts';
 import { listRefs, readRefCommit } from '../git/refs.ts';
 import { cachedRepos } from '../git/repo-cache.ts';
@@ -31,6 +33,7 @@ import type { Worktrees } from '../git/worktrees.ts';
 import type { PrWatchStore } from '../github/pr-watch.ts';
 import type { OneShotPlace } from '../peer/worker/one-shot-place.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
+import type { ShortTextModels } from '../short-text/model.ts';
 import { sendEvent, type ClientConnection } from '../wire.ts';
 
 export interface GitDeps {
@@ -49,10 +52,13 @@ export interface GitDeps {
     /* Writes down a folder this machine never vouched for, before git makes it. */
     untrustFolder(path: string, branch: string): Promise<void>;
     oneShotPlace: Pick<OneShotPlace, 'cwdFor'>;
+    /* The machine's text model, which writes commit messages and conflict proposals when it has a pick. */
+    textModels: Pick<ShortTextModels, 'choice' | 'prepare'>;
 }
 
 interface AgentRunOptions {
     provider?: AgentKind;
+    writer?: TextWriter;
     onSpawn(kill: () => void): void;
     cwdFor(folder: string): Promise<string>;
 }
@@ -87,8 +93,22 @@ export function gitArea(deps: GitDeps): Area {
 }
 
 function registerRequests(dispatcher: Dispatcher, deps: GitDeps): void {
-    const { worktrees, merges, statuses, providers, prWatches, placeOf, machineHome, bundles, checkpoints, folderOf, untrusted, untrustFolder, oneShotPlace } =
-        deps;
+    const {
+        worktrees,
+        merges,
+        statuses,
+        providers,
+        prWatches,
+        placeOf,
+        machineHome,
+        bundles,
+        checkpoints,
+        folderOf,
+        untrusted,
+        untrustFolder,
+        oneShotPlace,
+        textModels
+    } = deps;
     // A checkout may hold the home, so what runs over all of it leaves the machine's state out and keeps the open folders.
     const leftOut: LeftOut = (top) => machineHome.stateWithin(top);
     const actions = new GitActions(leftOut);
@@ -184,6 +204,21 @@ function registerRequests(dispatcher: Dispatcher, deps: GitDeps): void {
             ...(payload.commit ? { commit: payload.commit } : {})
         };
         return await diffFile(payload.cwd, payload.path, options, await mergeBaseWith(payload.cwd, payload.base));
+    });
+
+    dispatcher.register('git.compare', async (payload) => {
+        await refuse(payload.cwd);
+        return await compareBranches(payload.cwd, payload.from, payload.to, payload.mode, leftOut);
+    });
+
+    dispatcher.register('git.compareCommits', async (payload) => {
+        await refuse(payload.cwd);
+        return await compareCommits(payload.cwd, payload.fromCommit, payload.toCommit, payload.side, payload.skip, payload.limit);
+    });
+
+    dispatcher.register('git.blob', async (payload) => {
+        await refuseFiles(payload.cwd, [payload.path]);
+        return await readSnapshot(payload.cwd, payload.commit, payload.path);
     });
 
     dispatcher.register('git.blame', async (payload) => {
@@ -303,7 +338,7 @@ function registerRequests(dispatcher: Dispatcher, deps: GitDeps): void {
         return { authors: await authorPictures.authorsOf(payload.cwd) };
     });
 
-    dispatcher.register('git.capabilities', () => readCapabilities(providers));
+    dispatcher.register('git.capabilities', () => readCapabilities(providers, Date.now(), textModels.choice()?.provider));
 
     /* Progress streams while the git runs; the reply lands after. */
     dispatcher.register(
@@ -383,8 +418,12 @@ function registerRequests(dispatcher: Dispatcher, deps: GitDeps): void {
     const runAgent = async <T>(actionId: string, provider: AgentKind | undefined, run: (options: AgentRunOptions) => Promise<T>): Promise<T> => {
         const job = actions.claim(actionId);
         try {
+            // The machine's pick answers when it has one; a hint that disagrees is refused there.
+            const writer = await textModels.prepare(provider);
+
             return await run({
                 ...(provider ? { provider } : {}),
+                ...(writer ? { writer } : {}),
                 cwdFor: (folder: string) => oneShotPlace.cwdFor(folder),
                 onSpawn: (kill) => job.hold(kill)
             });

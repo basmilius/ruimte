@@ -21,6 +21,7 @@ import { WINDOW_COMMANDS } from '@/commands/window-command-table';
 import { DATABASE_COMMANDS } from '@/database/command-table';
 import { DEVICE_COMMANDS } from '@/devices/command-table';
 import { DIAGRAM_COMMANDS } from '@/diagram/command-table';
+import { DICTATION_COMMANDS } from '@/dictation/command-table';
 import { DRAWING_COMMANDS } from '@/drawing/command-table';
 import { FILE_COMMANDS } from '@/files/command-table';
 import { fileFacts } from '@/files/menu-facts';
@@ -49,6 +50,7 @@ import { VIEW_COMMANDS } from '@/views/command-table';
 import { VIEW_GENERATED } from '@/views/commands';
 import { VIEW_MENU_EXTRAS } from '@/views/menu-extras';
 import { viewFacts } from '@/views/menu-facts';
+import { VOICE_COMMANDS } from '@/voice/command-table';
 import { WORKTREE_COMMANDS } from '@/worktrees/command-table';
 
 /*
@@ -79,6 +81,8 @@ export function installCommands(): void {
     registerCommands(DRAWING_COMMANDS);
     registerCommands(DIAGRAM_COMMANDS);
     registerCommands(MEASURE_COMMANDS);
+    registerCommands(VOICE_COMMANDS);
+    registerCommands(DICTATION_COMMANDS);
     registerCommands(LANGUAGE_AND_EDITOR_COMMANDS);
 
     registerMenuFacts(

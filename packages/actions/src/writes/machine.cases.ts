@@ -12,7 +12,7 @@ export const cases: WriteCases = {
         refused: { 'a choice it has not': { requestId: 'request-1', choice: 'later' }, 'an empty request': { requestId: '', choice: 'deny' } }
     },
     'computer.click': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: {
             app: 'Safari',
             element: 3,
@@ -35,12 +35,12 @@ export const cases: WriteCases = {
         }
     },
     'computer.type': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { app: 'Notes', text: 'Hello\n' },
         refused: { 'nothing to type': { app: 'Notes', text: '' }, 'more than one call types': { app: 'Notes', text: 'x'.repeat(MAX_TYPED_LENGTH + 1) } }
     },
     'computer.key': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { app: 'Notes', combos: ['cmd+n', 'return'], withState: true },
         refused: {
             'no combos': { app: 'Notes', combos: [] },
@@ -48,12 +48,12 @@ export const cases: WriteCases = {
         }
     },
     'computer.setValue': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { app: 'System Settings', element: 12, value: '50' },
         refused: { 'no element': { app: 'System Settings', value: '50' }, 'an element by name': { app: 'System Settings', element: 'Volume', value: '50' } }
     },
     'computer.scroll': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { app: 'Safari', element: 4, direction: 'down', pages: 2.5 },
         refused: {
             'no way to go': { app: 'Safari', element: 4 },
@@ -62,27 +62,27 @@ export const cases: WriteCases = {
         }
     },
     'computer.menu': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { app: 'TextEdit', item: 'File > Save' },
         refused: { 'an empty item': { app: 'TextEdit', item: '' } }
     },
     'computer.drag': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { app: 'Finder', from: 3, toX: 400, toY: 220 },
         refused: { 'a negative element': { app: 'Finder', from: -1, to: 2 }, 'a pixel above the shot': { app: 'Finder', fromX: 0, fromY: -3, to: 2 } }
     },
     'computer.open': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { app: 'com.apple.TextEdit', front: true },
         refused: { 'an empty app': { app: '' } }
     },
     'device.tap': {
-        actors: ['agent', 'extension'],
+        actors: ['person', 'agent', 'extension'],
         input: { nodeId: 'device-1', x: 120, y: 340 },
         refused: { 'a negative element': { nodeId: 'device-1', element: -1 }, 'a fractional element': { nodeId: 'device-1', element: 1.5 } }
     },
     'device.swipe': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: swipe,
         refused: {
             'faster than a finger': { ...swipe, ms: 49 },
@@ -91,22 +91,22 @@ export const cases: WriteCases = {
         }
     },
     'device.button': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { nodeId: 'device-1', button: 'home' },
         refused: { 'an empty button': { nodeId: 'device-1', button: '' } }
     },
     'device.type': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { nodeId: 'device-1', text: 'ruimte\n' },
         refused: { 'nothing to type': { nodeId: 'device-1', text: '' }, 'past two thousand characters': { nodeId: 'device-1', text: 'x'.repeat(2001) } }
     },
     'device.launch': {
-        actors: ['agent', 'extension'],
+        actors: ['person', 'agent', 'extension'],
         input: { nodeId: 'device-1', app: 'app.ruimte.ios' },
         refused: { 'a blank app': { nodeId: 'device-1', app: ' ' }, 'an app id past its limit': { nodeId: 'device-1', app: 'x'.repeat(257) } }
     },
     'device.set': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { nodeId: 'device-1', appearance: 'dark', statusBar: 'clean', battery: 40, charging: true, latitude: 52.37, longitude: 4.9 },
         refused: {
             'a battery past full': { nodeId: 'device-1', battery: 101 },
@@ -115,12 +115,12 @@ export const cases: WriteCases = {
         }
     },
     'device.open': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { nodeId: 'device-1', url: 'https://ruimte.app' },
         refused: { 'a blank link': { nodeId: 'device-1', url: ' ' } }
     },
     'device.permission': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { nodeId: 'device-1', app: 'app.ruimte.ios', decision: 'grant', permission: 'camera' },
         refused: {
             'a decision it has not': { nodeId: 'device-1', app: 'app.ruimte.ios', decision: 'allow' },
@@ -128,12 +128,12 @@ export const cases: WriteCases = {
         }
     },
     'device.push': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { nodeId: 'device-1', app: 'app.ruimte.ios', payload: 'Build is green' },
         refused: { 'nothing to say': { nodeId: 'device-1', app: 'app.ruimte.ios', payload: '' } }
     },
     'device.biometric': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { nodeId: 'device-1', event: 'match', sensor: 'face' },
         refused: {
             'an event it has not': { nodeId: 'device-1', event: 'blink' },
@@ -141,7 +141,7 @@ export const cases: WriteCases = {
         }
     },
     'device.clipboard': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { nodeId: 'device-1', text: 'héllo' },
         refused: { 'more than a megabyte': { nodeId: 'device-1', text: 'x'.repeat(1_048_577) } }
     },
@@ -159,12 +159,12 @@ export const cases: WriteCases = {
         }
     },
     'device.terminate': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { nodeId: 'device-1', app: 'app.ruimte.ios' },
         refused: { 'a blank app': { nodeId: 'device-1', app: ' ' } }
     },
     'device.start': {
-        actors: ['agent'],
+        actors: ['person', 'agent'],
         input: { nodeId: 'sim-1' },
         refused: { 'no device': { nodeId: '' } }
     },
@@ -186,6 +186,14 @@ export const cases: WriteCases = {
             'a size below what a frame is dragged to': { endpointId: 'endpoint-1', kind: 'terminal', size: { w: 100, h: 400 } },
             'a size of part of a pixel': { endpointId: 'endpoint-1', kind: 'terminal', size: { w: 640.5, h: 400 } },
             'no machine': { kind: 'terminal', size: null }
+        }
+    },
+    'machine.setStartFolder': {
+        actors: ['person'],
+        input: { endpointId: 'endpoint-1', folder: 'D:\\Work' },
+        refused: {
+            'a folder past the longest path': { endpointId: 'endpoint-1', folder: 'x'.repeat(4097) },
+            'no machine': { folder: '' }
         }
     },
     'machine.revokeAccess': {

@@ -404,8 +404,12 @@ struct UiLiveStatus: Equatable {
     let source: String?
     let reason: String?
 
-    /// Nil for a block without queries. `order` names them as the block declares them.
-    static func of(block: JSONValue, order: [String], readings: [String: JSONValue], reading: Bool) -> Self? {
+    /// Nil for a block without queries. `order` names them as the block declares them. `lastReadAt` is when each
+    /// query last read successfully, which a failed reading leaves standing; without it only fresh readings count.
+    static func of(
+        block: JSONValue, order: [String], readings: [String: JSONValue], reading: Bool,
+        lastReadAt: [String: Double]? = nil
+    ) -> Self? {
         let queries = block["queries"]?.objectValue ?? [:]
         guard !queries.isEmpty else { return nil }
         let names = order.filter { queries[$0] != nil }
@@ -413,6 +417,7 @@ struct UiLiveStatus: Equatable {
             readings[name].map { $0["state"] != .string("fresh") } ?? false
         }
         let freshTimes = names.compactMap { name -> Double? in
+            if let lastReadAt { return lastReadAt[name] }
             guard let value = readings[name], value["state"] == .string("fresh") else { return nil }
             return value["readAt"]?.numberValue
         }

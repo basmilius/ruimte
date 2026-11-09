@@ -257,6 +257,8 @@ struct ChatPill: Hashable, Sendable {
         case skill
         /// A view, node or chat, by the Lucide mark its sidebar row wears.
         case reference(String)
+        /// A model or an account a message names, by `model` or `account`.
+        case named(String)
     }
 
     let kind: Kind
@@ -270,12 +272,13 @@ struct ChatPill: Hashable, Sendable {
         case .file(let path): FileKinds.icon(name: path, kind: path.hasSuffix("/") ? "directory" : "file")
         case .skill: "zap"
         case .reference(let mark): mark
+        case .named(let kind): kind == "model" ? "bot" : "user-round"
         }
     }
 
     var tint: Color {
         switch kind {
-        case .code, .reference: MobileStyle.text
+        case .code, .reference, .named: MobileStyle.text
         case .file: MobileStyle.accent
         case .skill: MobileStyle.skill
         }
@@ -320,8 +323,9 @@ enum ChatInlineMarks {
         let links = value.runs[\.link].filter { $0.0 != nil }.map { offsets($0.1, in: value) }
         let chipFont = ChatInlineFonts.chip(around: font)
         let lookup = references.lookup
-        var tokens = ChatDraftSyntax.tokens(
-            in: plain, mentions: mentions, skills: skills, references: references.picked)
+        var tokens = ChatDraftSyntax.allTokens(
+            in: plain,
+            picked: ChatDraftSyntax.tokens(in: plain, mentions: mentions, skills: skills, references: references.picked))
         if references.named {
             tokens += ChatReferables.namedRanges(in: plain, items: lookup.items, referenced: lookup.referenced)
         }
@@ -337,6 +341,7 @@ enum ChatInlineMarks {
                 let trail = lookup.item(token.value)?.trail.map { "\($0.name) › " }.joined() ?? ""
                 pills.append((span, .reference(mark), chipFont, ChatReferables.url(token.value), trail))
             case "$": pills.append((span, .skill, chipFont, nil, ""))
+            case "model", "account": pills.append((span, .named(token.kind), chipFont, nil, ""))
             default: pills.append((span, .file(token.value), chipFont, nil, ""))
             }
         }

@@ -46,6 +46,7 @@ import type { ProviderRegistry } from '../providers/registry.ts';
 import { handleMachineNotify } from '../push/notify-route.ts';
 import { HOOKS_PATH, handleHookRequest } from '../sessions/hook-receiver.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from '../streams/http-stream.ts';
+import { refuseTunnelled } from '../tunnels/external-gate.ts';
 import { BUILD, VERSION } from '../version.ts';
 import { handleVoiceKeyRequest } from '../voice/key-route.ts';
 import type { ClientAccess } from '../wire.ts';
@@ -365,6 +366,13 @@ function daemonHandlers(input: HttpInput): DoorwayHandlers {
     const routes = daemonRoutes(input);
     return {
         async fetch(request, server) {
+            // The API is never a tunnel target. A request Cloudflare's edge forwarded carries these headers, and they only ever refuse.
+            const tunnelled = refuseTunnelled(request);
+
+            if (tunnelled !== null) {
+                return tunnelled;
+            }
+
             const cors = crossOriginHeaders(request);
             if (cors !== null && request.method === 'OPTIONS') {
                 return new Response(null, { status: 204, headers: preflightHeaders(cors) });

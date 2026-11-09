@@ -3,9 +3,9 @@ import { join } from 'node:path';
 import { privateSentryOptions, TELEMETRY_DSN, telemetryRelease } from '@ruimte/telemetry';
 import { fileDedupeStore } from '@ruimte/telemetry/file-store';
 import type { IPCMode } from '@sentry/electron/main';
+import { electron } from '../electron';
 import { RendererMemory, type RendererSample } from '../renderer-memory';
 import { isCrash, problemEvent, processTag, shellBeforeSend, shellTags, type ShellProblem } from '../telemetry';
-import { electron } from './electron';
 
 const { app, webContents } = electron;
 

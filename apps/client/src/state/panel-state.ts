@@ -9,7 +9,18 @@ import {
 import type { LooseStrip } from '@/layout/legacy-files-cell';
 import { panelRegistry } from '@/registry/panels';
 import { databaseTabId, databaseTabKey } from '@/state/database-tabs';
-import { artifactTabKey, isArtifactTab, isDatabaseTab, isFileTab, tabKey, type DatabaseTab, type FileTab, type Tab } from '@/state/files';
+import {
+    artifactTabKey,
+    isArtifactTab,
+    isDatabaseTab,
+    isFileTab,
+    isSessionTab,
+    tabKey,
+    type DatabaseTab,
+    type FileTab,
+    type SessionTab,
+    type Tab
+} from '@/state/files';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE } from '@/state/git';
 import type { PanelDefaults, PanelKind } from '@/state/ui';
 
@@ -116,7 +127,9 @@ function storedDatabaseTab(tab: DatabaseTab): ProjectStripTab {
     }
 }
 
-function storedTab(tab: Tab): ProjectStripTab {
+type StoredTab = Exclude<Tab, SessionTab>;
+
+function storedTab(tab: StoredTab): ProjectStripTab {
     if (isArtifactTab(tab)) {
         return {
             kind: 'artifact',
@@ -183,6 +196,10 @@ function storedFlag(kind: PanelKind): Partial<ProjectPanels> {
 
 /* The other way, for the machine-local file. A width nobody dragged stays out of it. */
 export function serializePanels(state: PanelsState): ProjectPanels {
+    // A comparison and a snapshot live in this window's session only, so neither the tab nor its place in front is written.
+    const tabs = state.tabs.filter((tab): tab is StoredTab => !isSessionTab(tab));
+    const active = tabs.some((tab) => tab.key === state.active) ? state.active : (tabs[0]?.key ?? null);
+
     return {
         panel: storedPanel(state.panel),
         ...(state.panel.kind.startsWith('extension:') ? { extensionPanel: state.panel.kind } : {}),
@@ -191,9 +208,9 @@ export function serializePanels(state: PanelsState): ProjectPanels {
         ...(state.planAnchor === null ? {} : { plan: state.planAnchor }),
         ...(state.planWidth === null ? {} : { planWidth: Math.round(state.planWidth) }),
         // A client from before the strip reads the file tabs alone.
-        tabs: state.tabs.filter(isFileTab).map(storedFileTab),
-        activeTab: state.active,
-        strip: state.tabs.map(storedTab),
+        tabs: tabs.filter(isFileTab).map(storedFileTab),
+        activeTab: active,
+        strip: tabs.map(storedTab),
         expandedDirs: state.expandedDirs,
         git: {
             scope: state.gitScope,

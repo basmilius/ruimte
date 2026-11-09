@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { extensionManifest, launcherManifest, platformManifest } from './manifest';
+import { join } from 'node:path';
+import { catalogOf, extensionManifest, launcherManifest, platformManifest, type Manifest } from './manifest';
+
+const repoRoot = join(import.meta.dir, '..', '..', '..');
 
 describe('platformManifest', () => {
     test('a macOS package holds its binary and installs on that platform only', () => {
@@ -34,13 +37,48 @@ describe('extensionManifest', () => {
     test('goes out at the app version with its own name, license and exports', () => {
         const source = { name: '@ruimte/extension', version: '1.0.0', license: 'MIT', files: ['*.d.ts'], exports: { './client': { types: './client.d.ts' } } };
 
-        expect(extensionManifest(source, '0.30.0-beta.1')).toEqual({
+        expect(extensionManifest(source, '0.30.0-beta.1', {})).toEqual({
             ...source,
             version: '0.30.0-beta.1',
             author: 'Bas Milius',
             homepage: 'https://ruimte.app',
             repository: { type: 'git', url: 'git+https://github.com/basmilius/ruimte.git', directory: 'packages/extension' }
         });
+    });
+
+    test('writes the catalog version for every catalog reference', () => {
+        const source = {
+            name: '@ruimte/extension',
+            dependencies: { '@adecore/ui': 'catalog:' },
+            peerDependencies: { '@adecore/agents-react': 'catalog:', '@types/react': '^19.0.0' },
+            peerDependenciesMeta: { '@adecore/agents-react': { optional: true } }
+        };
+
+        expect(extensionManifest(source, '0.30.0', { '@adecore/ui': '0.56.2', '@adecore/agents-react': '0.56.2' })).toMatchObject({
+            dependencies: { '@adecore/ui': '0.56.2' },
+            peerDependencies: { '@adecore/agents-react': '0.56.2', '@types/react': '^19.0.0' },
+            peerDependenciesMeta: { '@adecore/agents-react': { optional: true } }
+        });
+    });
+
+    test('fails on a catalog reference the root catalog lacks', () => {
+        const source = { name: '@ruimte/extension', dependencies: { '@adecore/ui': 'catalog:' } };
+
+        expect(() => extensionManifest(source, '0.30.0', { '@adecore/charts': '0.56.2' })).toThrow('@adecore/ui in dependencies is "catalog:"');
+    });
+
+    test('fails on a named catalog, which the root does not keep', () => {
+        const source = { name: '@ruimte/extension', dependencies: { '@adecore/ui': 'catalog:other' } };
+
+        expect(() => extensionManifest(source, '0.30.0', { '@adecore/ui': '0.56.2' })).toThrow('"catalog:other"');
+    });
+
+    test('the manifest of packages/extension resolves against the root catalog', async () => {
+        const root = JSON.parse(await Bun.file(join(repoRoot, 'package.json')).text()) as Manifest;
+        const source = JSON.parse(await Bun.file(join(repoRoot, 'packages', 'extension', 'package.json')).text()) as Manifest;
+        const published = JSON.stringify(extensionManifest(source, '0.30.0', catalogOf(root)));
+
+        expect(published).not.toContain('catalog:');
     });
 });
 

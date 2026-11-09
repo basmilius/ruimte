@@ -1,8 +1,8 @@
 import { join } from 'node:path';
+import { electron } from '../electron';
 import { heedBodyless } from '../net-response';
 import { SpeechService, speechHelperPath } from '../speech';
 import { SpeechModel } from '../speech-model';
-import { electron } from './electron';
 import type { DesktopIpc } from './ipc';
 
 const { app, net, systemPreferences } = electron;

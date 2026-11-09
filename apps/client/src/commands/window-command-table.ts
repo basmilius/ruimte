@@ -28,8 +28,6 @@ import {
 } from 'lucide-react';
 import { desktop } from '@/commands/conditions';
 import { type CommandSpec } from '@/commands/types';
-import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
-import { APP_SHORTCUTS } from '@/surface/shortcuts';
 
 export const WINDOW_COMMANDS = {
     about: {
@@ -44,7 +42,6 @@ export const WINDOW_COMMANDS = {
     settings: {
         key: 'settings',
         icon: Settings,
-        shortcut: APP_SHORTCUTS.settings,
         binds: 'window',
         palette: true,
         menu: [
@@ -56,7 +53,6 @@ export const WINDOW_COMMANDS = {
     'settings-search': {
         key: 'searchSettings',
         icon: Search,
-        shortcut: APP_SHORTCUTS.settingsSearch,
         binds: 'window',
         palette: true,
         menu: { menu: 'edit', group: 'search', order: 10, when: (context) => context.settingsOpen }
@@ -75,7 +71,6 @@ export const WINDOW_COMMANDS = {
     'window-new': {
         key: 'newWindow',
         icon: AppWindow,
-        shortcut: APP_SHORTCUTS.newWindow,
         binds: 'window',
         palette: true,
         menu: { menu: 'file', group: 'new', order: 10, when: (context) => context.windows }
@@ -91,7 +86,6 @@ export const WINDOW_COMMANDS = {
     sidebar: {
         key: 'toggleSidebar',
         icon: PanelLeft,
-        shortcut: APP_SHORTCUTS.sidebar,
         binds: 'window',
         palette: true,
         menu: { menu: 'view', group: 'sidebar', order: 10, checked: (context) => context.sidebar }
@@ -100,7 +94,6 @@ export const WINDOW_COMMANDS = {
     palette: {
         key: 'palette',
         icon: Command,
-        shortcut: APP_SHORTCUTS.palette,
         binds: 'window',
         palette: false,
         menu: { menu: 'go', group: 'palette', order: 10, showsShortcut: (context) => !context.terminalKeys }
@@ -155,7 +148,6 @@ export const WINDOW_COMMANDS = {
     'panel-toggle': {
         key: 'togglePanel',
         icon: PanelRightOpen,
-        shortcut: CANVAS_SHORTCUTS.togglePanel,
         binds: 'workspace',
         palette: false,
         menu: { menu: 'view', group: 'panels', order: 50 }

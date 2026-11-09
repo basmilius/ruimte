@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { inflateRawSync } from 'node:zlib';
+import { deflateRawSync, inflateRawSync } from 'node:zlib';
 import {
     BinaryFrameAssembler,
     DeflatedFrameAssembler,
@@ -8,7 +8,7 @@ import {
     DIRECT_PIECE_CHARS,
     FrameAssembler
 } from '@ruimte/contracts';
-import { LOW_WATER_MARK, SOCKET_BACKPRESSURE_LIMIT } from '../backpressure.ts';
+import { HIGH_WATER_MARK, LOW_WATER_MARK, OutputGate, SOCKET_BACKPRESSURE_LIMIT } from '../backpressure.ts';
 import { AUTHENTICATED_FRAME_CHARS, BINARY_LANE_BYTES, directChannel, TEXT_LANE_BYTES, type RawDataChannel } from './data-channel.ts';
 
 class FakeRawChannel implements RawDataChannel {
@@ -19,6 +19,7 @@ class FakeRawChannel implements RawDataChannel {
     readonly sent: Array<string | Uint8Array> = [];
     closeCalls = 0;
     throwOnSend = false;
+    private readonly sentListeners: Array<() => void> = [];
     private readonly messageListeners: Array<(data: string | Uint8Array) => void> = [];
     private readonly stateListeners: Array<(state: RawDataChannel['readyState']) => void> = [];
     private readonly lowListeners: Array<() => void> = [];
@@ -29,6 +30,26 @@ class FakeRawChannel implements RawDataChannel {
         }
         this.sent.push(data);
         this.bufferedAmount += typeof data === 'string' ? Buffer.byteLength(data) : data.byteLength;
+        for (const listener of this.sentListeners) {
+            listener();
+        }
+    }
+
+    async waitForSent(count: number): Promise<void> {
+        if (this.sent.length >= count) {
+            return;
+        }
+
+        const arrival = Promise.withResolvers<void>();
+        const listener = (): void => {
+            if (this.sent.length >= count) {
+                this.sentListeners.splice(this.sentListeners.indexOf(listener), 1);
+                arrival.resolve();
+            }
+        };
+
+        this.sentListeners.push(listener);
+        await arrival.promise;
     }
 
     close(): void {
@@ -73,6 +94,28 @@ class FakeRawChannel implements RawDataChannel {
     }
 }
 
+class ControlledDeflater {
+    readonly requests: Array<{ data: string } & ReturnType<typeof Promise.withResolvers<Uint8Array>>> = [];
+
+    deflate(data: string): Promise<Uint8Array> {
+        const request = { data, ...Promise.withResolvers<Uint8Array>() };
+        this.requests.push(request);
+
+        return request.promise;
+    }
+
+    async complete(index: number, result?: Uint8Array | Error): Promise<void> {
+        const request = this.requests[index]!;
+        if (result instanceof Error) {
+            request.reject(result);
+        } else {
+            request.resolve(result ?? deflateRawSync(request.data));
+        }
+
+        await request.promise.catch(() => undefined);
+    }
+}
+
 /* The channel warns when it drops a frame, which the test asserts through the count and keeps out of the output. */
 function silenced(run: () => void): void {
     const warn = console.warn;
@@ -85,6 +128,16 @@ function silenced(run: () => void): void {
 }
 
 describe('directChannel', () => {
+    test('large negotiated text is accepted before compression sends any piece', () => {
+        const raw = new FakeRawChannel();
+        const channel = directChannel(raw);
+        channel.deflate();
+        const frame = 'x'.repeat(DIRECT_DEFLATE_MIN_BYTES * 4);
+        expect(channel.send(frame)).toBe(Buffer.byteLength(frame));
+        expect(raw.sent).toEqual([]);
+        channel.close(1000, 'Done');
+    });
+
     test('a binary frame goes out in binary pieces the peer joins again, and counts its bytes', () => {
         const raw = new FakeRawChannel();
         const channel = directChannel(raw);
@@ -168,7 +221,7 @@ describe('directChannel', () => {
         raw.bufferedAmount = SOCKET_BACKPRESSURE_LIMIT - 10;
         expect(channel.send('x'.repeat(10))).toBe(10);
         expect(raw.closeCalls).toBe(0);
-        silenced(() => expect(channel.send('x')).toBe(0));
+        silenced(() => expect(channel.send('')).toBe(0));
         expect(raw.closeCalls).toBe(1);
     });
 
@@ -277,7 +330,7 @@ describe('directChannel', () => {
         expect(raw.readyState).toBe('closed');
     });
 
-    test('once deflating, a large text frame goes deflated and inflates back to the frame', () => {
+    test('once deflating, a large text frame goes deflated and inflates back to the frame', async () => {
         const raw = new FakeRawChannel();
         const channel = directChannel(raw);
         expect(channel.deflating).toBe(false);
@@ -285,6 +338,7 @@ describe('directChannel', () => {
         expect(channel.deflating).toBe(true);
         const frame = JSON.stringify({ type: 'event', event: 'chat.items', payload: { text: 'the same words again '.repeat(5_000) } });
         expect(channel.send(frame)).toBe(Buffer.byteLength(frame));
+        await raw.waitForSent(1);
         expect(raw.sent.every((piece) => typeof piece !== 'string')).toBe(true);
         const assembler = new DeflatedFrameAssembler();
         const joined = raw.sent.map((piece) => assembler.push(piece as Uint8Array, Number.MAX_SAFE_INTEGER)).at(-1);
@@ -303,7 +357,7 @@ describe('directChannel', () => {
         expect(raw.sent).toEqual([`=${large}`, `=${small}`]);
     });
 
-    test('a deflated frame keeps its place between text frames, ahead of binary pieces that wait', () => {
+    test('a deflated frame keeps its place between text frames, ahead of binary pieces that wait', async () => {
         const raw = new FakeRawChannel();
         const channel = directChannel(raw);
         channel.deflate();
@@ -311,12 +365,261 @@ describe('directChannel', () => {
         channel.send('{"id":"1"}');
         channel.send(`{"id":"2","text":"${'y'.repeat(DIRECT_DEFLATE_MIN_BYTES * 4)}"}`);
         channel.send('{"id":"3"}');
+        await raw.waitForSent(5);
         // Two binary pieces were out before the frames; the third waits in the lane behind all three.
         expect(raw.sent.slice(2).map((piece) => (typeof piece === 'string' ? piece : `deflated:${piece[0]}`))).toEqual([
             '={"id":"1"}',
             'deflated:4',
             '={"id":"3"}'
         ]);
+    });
+
+    test('only one compression runs at a time and later text and binary wait in order', async () => {
+        const raw = new FakeRawChannel();
+        const io = new ControlledDeflater();
+        const channel = directChannel(raw, SOCKET_BACKPRESSURE_LIMIT, (data) => io.deflate(data));
+        channel.deflate();
+        const first = 'é'.repeat(DIRECT_DEFLATE_MIN_BYTES);
+        const second = 'b'.repeat(DIRECT_DEFLATE_MIN_BYTES * 2);
+        const picture = Uint8Array.of(20, 21, 22);
+        channel.send(first);
+        channel.send(second);
+        channel.send('end');
+        channel.send(picture);
+        expect(io.requests.map(({ data }) => data)).toEqual([first]);
+        expect(raw.sent).toEqual([]);
+        expect(channel.bufferedAmount()).toBe(Buffer.byteLength(first) + Buffer.byteLength(second) + 3 + 4);
+
+        await io.complete(0);
+        expect(io.requests.map(({ data }) => data)).toEqual([first, second]);
+        expect(raw.sent).toHaveLength(1);
+        expect(channel.bufferedAmount()).toBe(raw.bufferedAmount + Buffer.byteLength(second) + 3 + 4);
+
+        await io.complete(1);
+        expect(raw.sent).toHaveLength(4);
+        const compressed = new DeflatedFrameAssembler();
+        for (const [index, frame] of [first, second].entries()) {
+            const result = compressed.push(raw.sent[index] as Uint8Array, Number.MAX_SAFE_INTEGER);
+            expect(result.kind).toBe('frame');
+            if (result.kind === 'frame') {
+                expect(inflateRawSync(result.frame).toString()).toBe(frame);
+            }
+        }
+
+        expect(raw.sent[2]).toBe('=end');
+        expect(new BinaryFrameAssembler().push(raw.sent[3] as Uint8Array, 100)).toEqual({ kind: 'frame', frame: picture });
+        expect(channel.bufferedAmount()).toBe(raw.bufferedAmount);
+        raw.drainTo(0);
+        expect(channel.bufferedAmount()).toBe(0);
+    });
+
+    test('pending UTF-8 input and empty frames count toward admission and closure releases them', async () => {
+        const raw = new FakeRawChannel();
+        const io = new ControlledDeflater();
+        const frame = '😀'.repeat(DIRECT_DEFLATE_MIN_BYTES);
+        const bytes = Buffer.byteLength(frame);
+        const channel = directChannel(raw, bytes + 2, (data) => io.deflate(data));
+        channel.deflate();
+        expect(channel.send(frame)).toBe(bytes);
+        expect(channel.send('')).toBe(0);
+        expect(channel.bufferedAmount()).toBe(bytes + 1);
+        expect(channel.send('')).toBe(0);
+        expect(channel.bufferedAmount()).toBe(bytes + 2);
+        silenced(() => expect(channel.send('')).toBe(0));
+        expect(raw.closeCalls).toBe(1);
+        expect(channel.bufferedAmount()).toBe(0);
+
+        await io.complete(0);
+        expect(raw.sent).toEqual([]);
+        expect(channel.bufferedAmount()).toBe(0);
+    });
+
+    test('compression can release backpressure and signal a drain without any raw drain event', async () => {
+        const raw = new FakeRawChannel();
+        const io = new ControlledDeflater();
+        const channel = directChannel(raw, SOCKET_BACKPRESSURE_LIMIT, (data) => io.deflate(data));
+        let drains = 0;
+        channel.onDrain(() => {
+            drains += 1;
+        });
+        channel.deflate();
+        channel.send('x'.repeat(LOW_WATER_MARK + 1));
+        channel.send('y'.repeat(LOW_WATER_MARK + 1));
+        expect(channel.bufferedAmount()).toBeGreaterThan(LOW_WATER_MARK);
+        expect(raw.bufferedAmount).toBe(0);
+        expect(drains).toBe(0);
+
+        await io.complete(0);
+        expect(channel.bufferedAmount()).toBeGreaterThan(LOW_WATER_MARK);
+        expect(drains).toBe(0);
+
+        await io.complete(1);
+        expect(channel.bufferedAmount()).toBeGreaterThan(0);
+        expect(channel.bufferedAmount()).toBeLessThan(LOW_WATER_MARK);
+        expect(drains).toBe(1);
+    });
+
+    test('a drain listener can enqueue compression and postpone later listeners until pressure falls again', async () => {
+        const raw = new FakeRawChannel();
+        const io = new ControlledDeflater();
+        const channel = directChannel(raw, SOCKET_BACKPRESSURE_LIMIT, (data) => io.deflate(data));
+        const notifications: string[] = [];
+        const next = 'y'.repeat(LOW_WATER_MARK + 1);
+        let reentered = false;
+        channel.onDrain(() => {
+            notifications.push('first');
+            if (!reentered) {
+                reentered = true;
+                channel.send(next);
+            }
+        });
+        channel.onDrain(() => notifications.push('second'));
+        channel.deflate();
+        channel.send('x'.repeat(DIRECT_DEFLATE_MIN_BYTES));
+
+        await io.complete(0);
+        expect(notifications).toEqual(['first']);
+        expect(io.requests.map(({ data }) => data)).toEqual(['x'.repeat(DIRECT_DEFLATE_MIN_BYTES), next]);
+        expect(raw.sent).toHaveLength(1);
+
+        await io.complete(1);
+        expect(notifications).toEqual(['first', 'first', 'second']);
+        expect(raw.sent).toHaveLength(2);
+        const result = new DeflatedFrameAssembler().push(raw.sent[1] as Uint8Array, Number.MAX_SAFE_INTEGER);
+        expect(result.kind).toBe('frame');
+        if (result.kind === 'frame') {
+            expect(inflateRawSync(result.frame).toString()).toBe(next);
+        }
+    });
+
+    test('a transport send failure during completion closes and discards following frames', async () => {
+        const raw = new FakeRawChannel();
+        const io = new ControlledDeflater();
+        const channel = directChannel(raw, SOCKET_BACKPRESSURE_LIMIT, (data) => io.deflate(data));
+        let closes = 0;
+        let drains = 0;
+        channel.onClose(() => {
+            closes += 1;
+        });
+        channel.onDrain(() => {
+            drains += 1;
+        });
+        channel.deflate();
+        channel.send('x'.repeat(DIRECT_DEFLATE_MIN_BYTES));
+        channel.send('after');
+        channel.send(Uint8Array.of(1, 2, 3));
+        raw.throwOnSend = true;
+        const warn = console.warn;
+        console.warn = () => undefined;
+        try {
+            await io.complete(0);
+        } finally {
+            console.warn = warn;
+        }
+
+        expect(raw.sent).toEqual([]);
+        expect(raw.closeCalls).toBe(1);
+        expect(closes).toBe(1);
+        expect(drains).toBe(0);
+        expect(channel.bufferedAmount()).toBe(0);
+        expect(channel.send('late')).toBe(0);
+    });
+
+    test('pending compression can pause the output gate and a completion drain repairs the terminal', async () => {
+        const raw = new FakeRawChannel();
+        const io = new ControlledDeflater();
+        const channel = directChannel(raw, SOCKET_BACKPRESSURE_LIMIT, (data) => io.deflate(data));
+        const screens: string[] = [];
+        const gate = new OutputGate({
+            socket: { send: (data) => channel.send(data), getBufferedAmount: () => channel.bufferedAmount() },
+            share: channel.outputShare,
+            screenOf: (sessionId, deliver) => {
+                screens.push(sessionId);
+                deliver('latest screen');
+
+                return true;
+            }
+        });
+        channel.onDrain(() => gate.onDrain());
+        channel.deflate();
+        gate.send({ id: 'history', ok: true, result: { text: 'x'.repeat(HIGH_WATER_MARK + 1) } });
+        gate.send({ type: 'event', event: 'session.output', payload: { sessionId: 'terminal', data: 'new output' } });
+        expect(gate.staleSessions()).toEqual(['terminal']);
+        expect(raw.sent).toEqual([]);
+        expect(screens).toEqual([]);
+
+        await io.complete(0);
+        expect(screens).toEqual(['terminal']);
+        expect(gate.staleSessions()).toEqual([]);
+        expect(raw.sent).toHaveLength(2);
+        const result = new FrameAssembler().push(raw.sent[1] as string, 1_024);
+        expect(result.kind).toBe('frame');
+        if (result.kind === 'frame') {
+            expect(JSON.parse(result.frame)).toEqual({
+                type: 'event',
+                event: 'session.resync',
+                payload: { sessionId: 'terminal', screen: 'latest screen' }
+            });
+        }
+    });
+
+    test.each(['failure', 'larger output', 'synchronous throw'] as const)('%s sends the original text before later frames', async (outcome) => {
+        const raw = new FakeRawChannel();
+        const io = new ControlledDeflater();
+        const channel = directChannel(raw, SOCKET_BACKPRESSURE_LIMIT, (data) => {
+            if (outcome === 'synchronous throw') {
+                throw new Error('Compression unavailable');
+            }
+
+            return io.deflate(data);
+        });
+        channel.deflate();
+        const frame = 'x'.repeat(DIRECT_DEFLATE_MIN_BYTES);
+        channel.send(frame);
+        channel.send('after');
+        if (outcome === 'synchronous throw') {
+            await raw.waitForSent(2);
+            expect(raw.sent).toEqual([`=${frame}`, '=after']);
+        } else {
+            expect(raw.sent).toEqual([]);
+            await io.complete(0, outcome === 'failure' ? new Error('Compression unavailable') : new Uint8Array(frame.length));
+            expect(raw.sent).toEqual([`=${frame}`, '=after']);
+        }
+
+        expect(channel.isOpen).toBe(true);
+        expect(channel.bufferedAmount()).toBe(Buffer.byteLength(frame) + 7);
+    });
+
+    test.each(['local', 'remote'] as const)('%s close discards pending text and binary and ignores late compression', async (side) => {
+        const raw = new FakeRawChannel();
+        const io = new ControlledDeflater();
+        const channel = directChannel(raw, SOCKET_BACKPRESSURE_LIMIT, (data) => io.deflate(data));
+        let closes = 0;
+        let drains = 0;
+        channel.onClose(() => {
+            closes += 1;
+        });
+        channel.onDrain(() => {
+            drains += 1;
+        });
+        channel.deflate();
+        channel.send('x'.repeat(DIRECT_DEFLATE_MIN_BYTES));
+        channel.send('y'.repeat(DIRECT_DEFLATE_MIN_BYTES));
+        channel.send(Uint8Array.of(1, 2, 3));
+        if (side === 'local') {
+            channel.close(1000, 'Done');
+        } else {
+            raw.setState('closed');
+        }
+
+        expect(channel.bufferedAmount()).toBe(0);
+        expect(closes).toBe(1);
+        await io.complete(0);
+        expect(raw.sent).toEqual([]);
+        expect(io.requests).toHaveLength(1);
+        expect(channel.send('late')).toBe(0);
+        expect(drains).toBe(0);
+        expect(closes).toBe(1);
     });
 
     test('text past what the DataChannel may hold waits in its lane, counts toward bufferedAmount and goes on in order', () => {

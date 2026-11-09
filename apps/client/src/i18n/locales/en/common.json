@@ -24,6 +24,7 @@
         "undo": "Undo"
     },
     "state": {
+        "actionLoadFailed": "The action could not be loaded. Reload Ruimte and try again.",
         "loading": "Loading",
         "empty": "Nothing here yet",
         "error": "Something went wrong",
@@ -33,6 +34,7 @@
             "pages": "The browser pages could not be shown",
             "cellChrome": "The controls over the views could not be shown",
             "routines": "Routines could not be shown",
+            "consent": "The request to connect a client could not be shown",
             "machine": "The machine status could not be shown",
             "projectSwitch": "The project switch screen could not be shown",
             "projectBanner": "The project banner could not be shown",

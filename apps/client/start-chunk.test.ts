@@ -62,6 +62,9 @@ describe('what the start screen preloads', () => {
             '/repo/node_modules/.bun/roughjs@4.6.6/node_modules/roughjs/bundled/rough.esm.js',
             '/repo/node_modules/.bun/@shikijs+langs@4.4.3/node_modules/@shikijs/langs/dist/php.mjs',
             `${APP}/drawing/paint.ts`,
+            `${APP}/actions/client-actions.ts`,
+            `${APP}/actions/canvas-actions.ts`,
+            `${APP}/actions/developer-actions.ts`,
             `${APP}/database/sql-bindings.ts`,
             `${LINKED}/diagram/src/svg.ts`,
             `${NPM}/editor-react/src/EditorView.tsx`

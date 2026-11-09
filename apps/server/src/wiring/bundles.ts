@@ -1,5 +1,6 @@
 import type { ServerActions } from '../actions/server-actions.ts';
 import type { CanvasHost } from '../canvas/host.ts';
+import type { ConnectedClients } from '../clients/connected-clients.ts';
 import type { ComputerUse } from '../computer/computer-use.ts';
 import type { SettingPorts } from '../machine-settings.ts';
 import type { Maintenance } from '../maintenance/maintenance.ts';
@@ -17,6 +18,7 @@ import type { LanguageBundle } from './language.ts';
 import type { LaunchesBundle } from './launches.ts';
 import type { MachineBundle } from './machine.ts';
 import type { NetworkBundle } from './network.ts';
+import type { PortsBundle } from './ports.ts';
 import type { PowerBundle } from './power.ts';
 import type { ProcessesBundle } from './processes.ts';
 import type { ProjectsBundle } from './projects.ts';
@@ -24,6 +26,7 @@ import type { ProvidersBundle } from './providers.ts';
 import type { RemoteBundle } from './remote.ts';
 import type { RoutinesBundle } from './routines.ts';
 import type { TemplatesBundle } from './templates.ts';
+import type { TunnelsBundle } from './tunnels.ts';
 import type { UsageStatsBundle } from './usage-stats.ts';
 import type { UsageBundle } from './usage.ts';
 import type { VoiceBundle } from './voice.ts';
@@ -60,4 +63,7 @@ export interface DaemonBundles {
     actions: ServerActions;
     canvasHost: CanvasHost;
     extensions: ExtensionsBundle;
+    connected: ConnectedClients;
+    tunnels: TunnelsBundle;
+    ports: PortsBundle;
 }

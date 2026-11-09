@@ -363,7 +363,9 @@ struct SubagentConversationPage: View {
             ChatTimeline(
                 presentation: presentation, client: client, chatID: chatID, topInset: insets.top,
                 bottomInset: insets.bottom,
-                onNearTop: { if conversation.status == .ready { conversation.loadEarlier() } })
+                onNearTop: { if conversation.status == .ready { conversation.loadEarlier() } }
+            )
+            .modifier(ChatToolCallsSetting(presentation: presentation))
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if let agent = parent.subagent(toolUseID: crumb.toolUseID)?.item.subagentItem {
