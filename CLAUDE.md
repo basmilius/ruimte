@@ -127,7 +127,8 @@ Several agents, Claude and Codex, work in this checkout at once. Codex reads thi
 - Stage only the files you changed, by path, never `git add -A` or `git add .`, and commit only your own work. Never `git stash`, `reset`, `restore`, `clean` or `checkout --`, and never rewrite a commit.
 - Before a push, `bun run check` and the tests of the changed files pass. After a push, follow its `ci.yml` run in the background (`gh run watch <id> --exit-status`) until it ends, and report the outcome; a red run you caused is yours to fix.
 - Never add a co-author or other attribution to a commit or PR.
-- Skills: `ruimte-release` cuts a Ruimte release, `adecore-release` takes ADE CORE work to npm and bumps Ruimte onto it, `model-catalog` changes the model pickers.
+- UI work is done only once you saw it in Ruimte Dev with a screenshot, through the `ui-check` skill, without being asked. What only Bas can check goes in your report.
+- Skills: `ruimte-release` cuts a Ruimte release, `adecore-release` takes ADE CORE work to npm and bumps Ruimte onto it, `model-catalog` changes the model pickers, `ui-check` checks UI work in Ruimte Dev.
 
 ## Releasing
 
