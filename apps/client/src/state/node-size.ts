@@ -10,7 +10,6 @@ export function machineNodeSizes(endpointId: string = currentEndpointId()): Node
     return serverInfoOf(endpointId).nodeSizes;
 }
 
-/* The size a new node of a kind takes: the one a person gave the kind on the machine, else the built-in one. */
 export function defaultNodeSize(kind: NodeKind, endpointId?: string): NodeSize {
     return nodeSizeOf(machineNodeSizes(endpointId), kind);
 }

@@ -3,7 +3,6 @@ import type { CanvasState } from '@/state/canvas';
 import { center, mirroredSides, nextId, remember, type CanvasGet, type CanvasSet, type Edge, type EdgeSides } from '@/state/canvas-model';
 import { canLink } from '@/state/edge-lines';
 
-/* The lines between nodes and the one being drawn. */
 export function createCanvasEdgesSlice(
     set: CanvasSet,
     get: CanvasGet

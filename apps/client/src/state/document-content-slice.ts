@@ -5,7 +5,6 @@ import { forgetCameraHistories } from '@/state/camera-history';
 import type { DocumentState } from '@/state/document';
 import { localOfView, looseIdsOf, openEditors, settledOn, splitTrash, type DocumentKit } from '@/state/document-model';
 
-/* The project as a whole: loaded, read again, merged with another writer, and handed back to be saved. */
 export function createDocumentContentSlice({
     set,
     get,

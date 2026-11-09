@@ -22,7 +22,6 @@ function chatDelegating(chat: Pick<ChatState, 'info'> | undefined): boolean {
     return chat !== undefined && chatActivity(chat.info) === 'delegating';
 }
 
-/* Whether any agent is working, over every machine this window is watching. */
 export function agentsWorking(sessions: SessionsByKey, chats: ChatStatuses): boolean {
     return Object.values(sessions).some(sessionWorking) || Object.values(chats).some((chat) => chatWorking(chat) || chatDelegating(chat));
 }
@@ -50,7 +49,6 @@ export function nodeWork(node: StatusOf, sessions: SessionsByKey, chats: ChatSta
     return chatDelegating(chat) ? 'delegating' : null;
 }
 
-/* Whether this node has an agent at work in it, its own turn or only its subagents. */
 export function nodeWorking(node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): boolean {
     return nodeWork(node, sessions, chats, endpointId) !== null;
 }

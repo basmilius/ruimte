@@ -294,7 +294,6 @@ export class TextDrafts {
         return this.save(endpointId, path);
     }
 
-    /* Takes what is on disk now and drops the draft. */
     async reload(endpointId: string, path: string): Promise<void> {
         const key = endpointKey(endpointId, path);
         const disk = await this.readText(endpointId, path);

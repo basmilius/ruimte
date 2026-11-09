@@ -6,7 +6,6 @@ import { maximizedNodeOf, type CanvasGet, type CanvasSet } from '@/state/canvas-
 import { announceActivation } from '@/state/node-activation';
 import { mergeSelection } from '@/state/selection';
 
-/* What is selected, which node has the keyboard and which one fills the canvas. */
 export function createCanvasSelectionSlice(
     set: CanvasSet,
     get: CanvasGet

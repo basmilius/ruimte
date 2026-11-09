@@ -74,7 +74,6 @@ export interface EditorRegistry<T> {
     release(viewId: string): void;
     /* Everything outside this list is released, which is what a layout change comes down to. */
     keep(viewIds: readonly string[]): void;
-    /* Every change in every live editor, named by the view it happened in. */
     subscribe(listener: (viewId: string, state: T, previous: T) => void): () => void;
 
     /*

@@ -19,7 +19,6 @@ import {
 import type { DocumentState } from '@/state/document';
 import { canStandInCell, cellViewOf, type DocumentKit } from '@/state/document-model';
 
-/* The tabs of a cell, and the loose views that stand in them without being views of the project. */
 export function createDocumentTabsSlice({
     get,
     commit,

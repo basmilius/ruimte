@@ -41,7 +41,6 @@ export function goOffer(viewId: string): ShowOffer {
     };
 }
 
-/* Says what an agent or a person put on screen, with the way back or over to it; without an offer it only reports. */
 export function showMoveToast(title: string, offer: ShowOffer | null): void {
     stopWatch?.();
     stopWatch = null;

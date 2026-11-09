@@ -19,7 +19,6 @@ import { nextId } from '@/state/canvas';
 import type { DocumentState } from '@/state/document';
 import type { DocumentKit } from '@/state/document-model';
 
-/* The list of views: adding, renaming, deleting with an undo, duplicating and reordering them. */
 export function createDocumentViewsSlice({
     set,
     get,

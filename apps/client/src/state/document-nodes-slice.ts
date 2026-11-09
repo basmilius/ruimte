@@ -46,7 +46,6 @@ function canvasHolding(views: readonly ProjectView[], nodeId: string): ProjectCa
     return views.filter(isCanvasView).find((view) => view.nodes.some((node) => node.id === nodeId));
 }
 
-/* Nodes moving between views: to another canvas, off a canvas into a view of their own, and back. */
 export function createDocumentNodesSlice({
     set,
     get,

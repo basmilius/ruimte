@@ -19,7 +19,6 @@ import { useDocument } from '@/state/document';
  */
 export const SEEN_ZOOM = 0.4;
 
-/* One canvas as a question about sight: where the camera is and what stands in front of it. */
 export interface CanvasSight {
     camera: Camera;
     viewport: { w: number; h: number };
@@ -54,7 +53,6 @@ export function readableNodes(canvas: CanvasSight): string[] {
     return visibleNodes(canvas, { readable: true });
 }
 
-/* An open canvas as the question about sight: a store keys its nodes, a sight lists them in order. */
 export function sightOf(canvas: CanvasState): CanvasSight & { nodes: readonly CanvasNode[] } {
     return {
         camera: canvas.camera,
@@ -75,7 +73,6 @@ function windowFocused(): boolean {
     return typeof document !== 'undefined' && document.hasFocus();
 }
 
-/* One canvas as a question about sight, with what a node needs to say which chat it shows. */
 export interface SightCanvas extends CanvasSight {
     nodes: readonly (Rect & { id: string; kind: string; chats?: ProjectNode['chats'] })[];
 }
@@ -87,7 +84,6 @@ export interface SightWorkspace {
     canvasOf(viewId: string): SightCanvas | null;
 }
 
-/* A view on screen as the questions about sight see it. */
 type SightedView = { kind: 'design'; chat: string } | { kind: 'session'; view: ProjectView } | { kind: 'canvas'; canvas: SightCanvas };
 
 /*
@@ -159,7 +155,6 @@ export function chatsInSight(workspace: SightWorkspace, { planWidth }: { planWid
     return chats;
 }
 
-/* The open project, as the questions about sight read it. */
 export function liveSight(): SightWorkspace {
     const { views, layout } = useDocument.getState();
     return {

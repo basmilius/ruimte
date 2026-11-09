@@ -77,7 +77,6 @@ export interface DrawingState extends CameraSlice, SavedFileSetters<DrawingDocum
     editingTextId: string | null;
     rev: number;
     dirty: boolean;
-    /* Counts changes to the elements, which is what the client saves on. */
     edits: number;
     loading: boolean;
     conflict: DrawingDocument | null;
@@ -425,7 +424,6 @@ export function createDrawingStore(): StoreApi<DrawingState> {
 
 const defaultDrawingStore = createDrawingStore();
 
-/* Its blank editor is the store this module made. */
 export const defaultDrawings = createEditorRegistry(createDrawingStore, defaultDrawingStore);
 
 export const {

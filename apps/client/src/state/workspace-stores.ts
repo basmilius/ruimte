@@ -33,7 +33,6 @@ interface StoreHook<T> extends StoreApi<T> {
     <U>(selector: (state: T) => U): U;
 }
 
-/* A vanilla store as a hook that is also the store. */
 export function storeHook<T>(store: StoreApi<T>): StoreHook<T> {
     const hook = (<U>(selector?: (state: T) => U): T | U => useStore(store, selector as (state: T) => U)) as StoreHook<T>;
     hook.getState = store.getState;
@@ -43,7 +42,6 @@ export function storeHook<T>(store: StoreApi<T>): StoreHook<T> {
     return hook;
 }
 
-/* One editor out of a registry: the cell that was asked for, else the one with the focus, else blank. */
 export function resolveEditor<T>(registry: EditorRegistry<T>, cell: string | null): StoreApi<T> {
     const viewId = cell ?? registry.focused();
     return (viewId === null ? null : registry.peek(viewId)) ?? registry.blank;

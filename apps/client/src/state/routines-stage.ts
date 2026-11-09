@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 
-/* A routine on the stage, by the project it lives in. */
 interface RoutineRef {
     projectId: string;
     routineId: string;

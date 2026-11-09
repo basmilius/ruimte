@@ -52,7 +52,6 @@ function isLatest(activities: NodeActivities, key: string, endpointId: string): 
     return Object.entries(activities).every(([other, otherAt]) => other === key || !isOfEndpoint(other, endpointId) || otherAt <= at);
 }
 
-/* The link to each machine that keeps activity, which is where a touch goes. */
 const machines = new Map<string, Transport>();
 
 function touch(nodeId: string): void {
@@ -115,7 +114,6 @@ export function watchNodeActivity(endpointId: string, transport: Transport, answ
     };
 }
 
-/* Tells the machine whenever a person opens a node. */
 export function startNodeActivityTouches(): () => void {
     return onNodeActivated(touch);
 }

@@ -137,7 +137,6 @@ class FakeTransport implements Transport {
         this.document = document;
     }
 
-    /* Holds every `action` request for one view until the function it hands back is called. */
     hold(action: 'open' | 'save', viewId: string): () => void {
         let release = (): void => undefined;
         this.gates.set(`${action}:${viewId}`, new Promise((resolve) => (release = resolve)));

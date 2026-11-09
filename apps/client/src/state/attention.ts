@@ -23,17 +23,13 @@ export { readableNodes, seenNodes, sightOf, visibleNodes, type CanvasSight } fro
 
 /* Everything one pass of the watcher needs to decide, all of it keyed the same way. */
 export interface AttentionPass {
-    /* The nodes an agent is working in right now. */
     working: ReadonlySet<string>;
     /* The same set as the pass before it saw. */
     previous: ReadonlySet<string>;
     /* The nodes waiting on a person, which the needs-you count already speaks for. */
     needsYou: ReadonlySet<string>;
-    /* What a person can see right now. */
     seen: ReadonlySet<string>;
-    /* The marks as they stand. */
     unseen: ReadonlySet<string>;
-    /* Every node the project still has. */
     known: ReadonlySet<string>;
 }
 
@@ -68,7 +64,6 @@ interface AttentionGroups {
     snoozed: string[];
     /* Nodes with an agent in the middle of a turn. Never a shell somebody left attached. */
     working: string[];
-    /* Nodes whose turn ended while nobody was looking. */
     finished: string[];
 }
 

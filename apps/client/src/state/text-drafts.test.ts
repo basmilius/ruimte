@@ -51,7 +51,6 @@ class FakeLink implements DraftLink {
         return Promise.resolve();
     }
 
-    /* The last write lands on disk at the given mtime. */
     async land(mtime: number): Promise<void> {
         const write = this.writes.at(-1)!;
         this.disk = { text: write.text, mtime };

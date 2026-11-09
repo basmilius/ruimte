@@ -142,7 +142,6 @@ function storedTab(tab: StoredTab): ProjectStripTab {
     return isDatabaseTab(tab) ? storedDatabaseTab(tab) : { kind: 'file', ...storedFileTab(tab) };
 }
 
-/* The tab in front, which has to be one of them, or the first. */
 function activeOf(tabs: readonly Tab[], stored: ProjectPanels | undefined): string | null {
     return tabs.some((tab) => tab.key === stored?.activeTab) ? (stored?.activeTab ?? null) : (tabs[0]?.key ?? null);
 }
@@ -187,7 +186,6 @@ function storedPanel(panel: PanelDefaults['panel']): ProjectPanels['panel'] {
     return definition?.sessionOnly === true ? { open: false, kind: 'files' } : { open: panel.open, kind: panel.kind as ProjectPanelKind };
 }
 
-/* The key that says which panel it was, for a kind the file does not know. */
 function storedFlag(kind: PanelKind): Partial<ProjectPanels> {
     const flag = panelRegistry.find(kind)?.storedAs;
 
@@ -220,7 +218,6 @@ export function serializePanels(state: PanelsState): ProjectPanels {
         },
         /* A list nobody has folded stays out of the file, so the next open still seeds itself. */
         ...(state.sidebarExpanded === null ? {} : { sidebarExpanded: state.sidebarExpanded }),
-        /* A project with no page open writes no map at all. */
         ...(Object.keys(state.favicons).length === 0 ? {} : { favicons: state.favicons })
     };
 }

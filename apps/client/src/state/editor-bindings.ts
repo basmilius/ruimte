@@ -12,7 +12,6 @@ interface EditorBindings<T> {
     focused(): StoreApi<T>;
     /* What one view holds right now, which is fresher than anything the daemon has been told. */
     live(viewId: string): T | null;
-    /* Every change in every editor on screen, named by the view it happened in. */
     subscribe(listener: (viewId: string, state: T, previous: T) => void): () => void;
 }
 

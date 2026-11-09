@@ -11,7 +11,6 @@ interface MachinesState {
     error: string | null;
 }
 
-/* The machines on the account this client is signed in to. */
 export const usePulsarMachines = create<MachinesState>(() => ({ machines: null, removedMachineIds: [], error: null }));
 
 /* The row this client keeps for a machine on the account, whatever id the row is under. */

@@ -9,7 +9,6 @@ import { useTextDrafts, type TextDraft, type TextDrafts } from './text-drafts.ts
 
 const row = (text: string): TextDraft => ({ disk: 'disk', mtime: 1, text, saving: false, problem: null });
 
-/* Saves what it is asked to and says which of them it could not. */
 function drafts(refuse: string[] = []): { fake: TextDrafts; saved: string[] } {
     const saved: string[] = [];
     const fake = {

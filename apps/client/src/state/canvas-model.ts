@@ -178,7 +178,6 @@ export function membersOf(
     return members;
 }
 
-/* A group carries what sits inside it, and a group inside it carries its own members in turn. */
 export function carriedByGroups(
     nodes: Record<string, CanvasNode>,
     texts: Record<string, TextElement>,
@@ -205,7 +204,6 @@ export function carriedByGroups(
     return carried;
 }
 
-/* The frame of a node, a text or a line on the canvas; none for an id that is none of those. */
 export function boundsOfElement(
     id: string,
     nodes: Record<string, CanvasNode>,
@@ -396,12 +394,10 @@ export function patchSnapshot(snapshot: Snapshot, patch: CanvasPatch, groups: re
     return { ...snapshot, nodes, order, texts, lines, edges: edges.filter((edge) => holds(edge.from) && holds(edge.to)) };
 }
 
-/* Remembers the placement before a change; called by every action that changes it. */
 export function remember(s: CanvasState): Pick<CanvasState, 'past' | 'future'> {
     return { past: [...s.past.slice(-(HISTORY_LIMIT - 1)), snapshotOf(s)], future: [] };
 }
 
-/* The maximized node, while it is still on the canvas and not folded away in a group. */
 export function maximizedNodeOf(s: Pick<CanvasState, 'maximizedId' | 'nodes' | 'hidden'>): string | null {
     return s.maximizedId !== null && s.nodes[s.maximizedId] !== undefined && !s.hidden.has(s.maximizedId) ? s.maximizedId : null;
 }

@@ -9,7 +9,6 @@ export const DEFAULT_QUIET_END = '07:00';
 export const BREAK_STRETCHES: readonly number[] = [30, 45, 50, 60, 75, 90, 120];
 export const DEFAULT_BREAK_STRETCH = 50;
 
-/* The four settings that make up this client's quiet hours. */
 interface QuietSettings {
     quietHoursOn: boolean;
     quietHoursDays: readonly number[];

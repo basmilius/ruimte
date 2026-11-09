@@ -16,7 +16,6 @@ function mergedIn<T extends { id: string }>(held: Record<string, T>, removed: re
     return next;
 }
 
-/* The content as a whole: a view loaded in, a change of another writer taken in, the content handed back, and undo. */
 export function createCanvasContentSlice(set: CanvasSet, get: CanvasGet): Pick<CanvasState, 'loadView' | 'applyExternal' | 'exportContent' | 'undo' | 'redo'> {
     return {
         loadView(view, local) {

@@ -19,7 +19,6 @@ interface ProjectListStore {
     setProjects(endpointId: string, summaries: ProjectSummary[]): void;
     /* One row of one machine, for a rename, an icon, or a project another client just opened there. */
     patchProject(endpointId: string, summary: ProjectSummary): void;
-    /* Every row of a machine this client no longer knows. */
     forgetProjects(endpointId: string): void;
 }
 

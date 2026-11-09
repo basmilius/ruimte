@@ -26,7 +26,6 @@ export function nodeNavigationTarget(state: CanvasState, direction: NodeDirectio
     );
 }
 
-/* Where the camera goes to show one node, and which node the arrow keys select next. */
 export function createCanvasNavigationSlice(set: CanvasSet, get: CanvasGet): Pick<CanvasState, 'goToNode' | 'zoomToNode' | 'selectNeighbor'> {
     return {
         goToNode(id, { fit = false } = {}) {

@@ -49,7 +49,6 @@ describe('closing cells through the guards of their loose tabs', () => {
         useDocument
             .getState()
             .load({ version: 3, rev: 1, name: 'p', color: '#000', views: [canvas('a'), canvas('b'), canvas('c')] }, { activeViewId: 'a', views: {} });
-        // Cells: a, then a host with two files.
         useDocument.getState().splitFocused('right', 'b');
         useFiles.getState().open('/p/one.ts', 5);
         useFiles.getState().open('/p/two.ts', 5);

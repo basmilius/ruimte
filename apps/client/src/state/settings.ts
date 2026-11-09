@@ -86,7 +86,6 @@ export function monoFontStack(id: MonoFontId): string {
     return (MONO_FONTS.find((entry) => entry.id === id) ?? MONO_FONTS[0]).stack;
 }
 
-/* The face the terminals draw in: their own pick, or the editor's while the pick is `editor`. */
 export function terminalFontOf(settings: Pick<Settings, 'font' | 'terminalFont'>): MonoFontId {
     return settings.terminalFont === 'editor' ? settings.font : settings.terminalFont;
 }
@@ -120,7 +119,6 @@ function chatStreamingFrom(stored: unknown): ChatStreamingMode {
     return CHAT_STREAMING_MODES.find((mode) => mode === stored) ?? 'words';
 }
 
-/* When this computer stays awake: never, while an agent works, or all the time. */
 export type KeepAwakeMode = 'off' | 'working' | 'always';
 
 const KEEP_AWAKE_MODES: readonly KeepAwakeMode[] = ['off', 'working', 'always'];
@@ -148,7 +146,6 @@ export function codeThemesOf(mode: 'light' | 'dark'): readonly CodeThemeInfo[] {
     ];
 }
 
-/* A stored code theme id, if it is still one of ours or one Shiki bundles for that mode. */
 function codeThemeFrom(stored: unknown, mode: 'light' | 'dark', fallback: string): string {
     return codeThemesOf(mode).find((info) => info.id === stored)?.id ?? fallback;
 }
@@ -169,7 +166,6 @@ export function codeLineHeight(size: number, ratio: number): number {
 export interface Settings {
     sidebarScope: 'current' | 'all-open';
     panelLayout: 'standard' | 'roomy';
-    /* How the toolbar moves between projects: the switcher, or a tab per project this window opened. */
     projectNavigation: 'switcher' | 'tabs';
     /* "Needs you" lists what waits in every open project, not only the one on screen. The combined sidebar always does. */
     needsYouAllProjects: boolean;
@@ -181,7 +177,6 @@ export interface Settings {
     palette: PalettePreset;
     /* The glow at the top of the sidebar, and of the toolbar while the sidebar is closed, in the color of the project. */
     projectGlow: boolean;
-    /* A scroller bounces at its end, as macOS does, with a trackpad or mouse. */
     scrollBounce: boolean;
     interfaceFont: InterfaceFontId;
     font: MonoFontId;
@@ -230,7 +225,6 @@ export interface Settings {
     /* Whether the hover explains code and rename suggests names, both with the chosen editor model. */
     aiCodeHelp: boolean;
     aiAssistAgent: EditorAssistAgent | null;
-    /* When the editor asks the chosen editor model for ghost text. */
     aiGhostText: GhostTextMode;
     /* Whether a font draws `=>` or `!==` as one glyph. Off sets the whole document, since the diffs draw in a shadow root that only inheritance reaches. */
     codeLigatures: boolean;
@@ -326,7 +320,6 @@ export interface Settings {
     sidebarNodeSortThen: NodeSortThen;
 }
 
-/* What `RTCPeerConnection` takes for the servers in the setting; none for an empty field. */
 export function iceServersFrom(value: string): RTCIceServer[] {
     const urls = value.split(/[\s,]+/).filter((url) => url !== '');
     return urls.length === 0 ? [] : [{ urls }];
@@ -449,7 +442,6 @@ function measuresFrom(
     };
 }
 
-/* The settings alone, without the store's version and methods. */
 function settingsOf(state: Settings): Settings {
     return Object.fromEntries(Object.keys(DEFAULT_SETTINGS).map((key) => [key, state[key as keyof Settings]])) as unknown as Settings;
 }

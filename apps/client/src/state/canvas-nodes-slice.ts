@@ -21,7 +21,6 @@ import {
 } from '@/state/canvas-model';
 import { defaultNodeSize } from '@/state/node-size';
 
-/* Adding, changing, grouping and removing the nodes of the canvas. */
 export function createCanvasNodesSlice(
     set: CanvasSet,
     get: CanvasGet

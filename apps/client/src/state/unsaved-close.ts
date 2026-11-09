@@ -34,7 +34,6 @@ export function closeAfterSaving(endpointId: string, paths: readonly string[], r
     });
 }
 
-/* Puts the question away without closing anything. */
 export function dismissClose(): void {
     const { pending } = useUnsavedClose.getState();
     useUnsavedClose.setState({ pending: null });

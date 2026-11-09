@@ -10,12 +10,10 @@ export function hasLocalMachine(): boolean {
     return machineMode() === 'local';
 }
 
-/* Whether this client has a machine to ask: any it was told of, or the local one where a daemon runs. */
 export function hasOpenedMachine(): boolean {
     return useEndpoints.getState().endpoints.some((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID || hasLocalMachine());
 }
 
-/* The rows a list of machines shows: every row, without the local one where no daemon is behind it. */
 export function listedEndpoints<T extends Pick<Endpoint, 'id'>>(endpoints: readonly T[], local: boolean = hasLocalMachine()): T[] {
     return local ? [...endpoints] : endpoints.filter((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID);
 }

@@ -50,7 +50,6 @@ export function isSnoozed(snoozes: Snoozes, key: string, now: number): boolean {
     return (snoozes[key] ?? 0) > now;
 }
 
-/* The first snooze still ahead of `now`, or null when none is. */
 export function nextWake(snoozes: Snoozes, now: number): number | null {
     let next: number | null = null;
     for (const until of Object.values(snoozes)) {
@@ -74,13 +73,11 @@ interface SnoozeStore {
     byKey: Snoozes;
     snooze(endpointId: string, nodeId: string, until: number): void;
     unsnooze(endpointId: string, nodeId: string): void;
-    /* Every snooze a machine holds. */
     receive(endpointId: string, snoozes: readonly Pick<Snooze, 'nodeId' | 'until'>[]): void;
     prune(now: number): void;
     forget(endpointId: string): void;
 }
 
-/* The link to each machine, which is where a change on that machine is sent. */
 const machines = new Map<string, SnoozeSync>();
 
 export const useSnoozes = create<SnoozeStore>((set, get) => {
@@ -229,7 +226,6 @@ export function watchSnoozes(endpointId: string, transport: Transport): () => vo
     };
 }
 
-/* When the snooze standing on a node runs out, or null while none does. */
 export function snoozeOf(snoozes: Snoozes, endpointId: string, nodeId: string): number | null {
     return snoozes[endpointKey(endpointId, nodeId)] ?? null;
 }

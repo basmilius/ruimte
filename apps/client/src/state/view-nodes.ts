@@ -82,7 +82,6 @@ export function projectNodes(): ProjectNodeRef[] {
     return projectNodesIn(useDocument.getState().views);
 }
 
-/* The same nodes for a render, again whenever one comes, goes or changes on any canvas on screen or in the document. */
 export function useProjectNodes(): readonly ProjectNodeRef[] {
     return useViewNodes(projectNodesIn, sameNodeRefs);
 }

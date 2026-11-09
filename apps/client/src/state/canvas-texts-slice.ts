@@ -2,7 +2,6 @@ import { snapToGrid } from '@/canvas-model/math';
 import type { CanvasState } from '@/state/canvas';
 import { droppedIntoGroups, nextId, remember, type CanvasSet, type TextElement } from '@/state/canvas-model';
 
-/* The labels on the canvas. */
 export function createCanvasTextsSlice(set: CanvasSet): Pick<CanvasState, 'addText' | 'updateText' | 'styleText' | 'resizeText' | 'setEditingText'> {
     const patchText = (id: string, patch: Partial<TextElement>, undoable: boolean): void => {
         set((s) => (s.texts[id] ? { texts: { ...s.texts, [id]: { ...s.texts[id], ...patch } }, ...(undoable ? remember(s) : {}) } : {}));

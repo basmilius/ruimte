@@ -20,7 +20,6 @@ import {
 import type { DocumentState } from '@/state/document';
 import { canStandInCell, type DocumentKit } from '@/state/document-model';
 
-/* Which view stands in which cell, which cell has the focus, and how big each is. */
 export function createDocumentGridSlice({
     set,
     get,

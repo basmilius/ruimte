@@ -130,7 +130,6 @@ interface UiStore {
     setSidebarOpen(open: boolean): void;
     toggleSidebar(): void;
     openPalette(seed?: string): void;
-    /* The palette in its find-in-files mode, from the palette itself or from the files panel. */
     openFindInFiles(seed?: string): void;
     /* The palette in its chat search mode; with nothing typed it lists the CLI sessions started outside the app. */
     openChatSearch(seed?: string): void;

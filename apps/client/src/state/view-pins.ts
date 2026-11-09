@@ -48,7 +48,6 @@ function currentProjectKey(): string | null {
     return projectKeyOf(useProject.getState());
 }
 
-/* The same key for a render, which redraws when the project on screen changes. */
 export function useCurrentProjectKey(): string | null {
     return useProject(projectKeyOf);
 }

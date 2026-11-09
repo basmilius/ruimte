@@ -18,7 +18,6 @@ import {
 } from '@/state/canvas-model';
 import { gapFrames } from '@/state/element-frames';
 
-/* What is selected, and what its groups carry, each put where `place` and `line` say. */
 function movedSelection(
     state: Pick<CanvasState, 'nodes' | 'texts' | 'lines' | 'selection'>,
     place: (at: Point) => Point,
@@ -38,7 +37,6 @@ function movedSelection(
     return next;
 }
 
-/* Moving and resizing what is selected, the gap move that pushes its neighbors aside, and the locks on both. */
 export function createCanvasGestureSlice(
     set: CanvasSet,
     get: CanvasGet

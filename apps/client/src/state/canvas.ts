@@ -174,7 +174,6 @@ export interface CanvasState extends CameraSlice {
         at?: Point
     ): string | null;
     updateExtensionNode(id: string, patch: Record<string, unknown>): void;
-    /* Wraps the selected nodes in a group; answers null when nothing is selected. */
     groupSelection(): string | null;
     /* Tidies the members that stand directly in a group into a grid, as one undo step; the ids of what moved, or why not. */
     arrangeGroup(id: string): { moved: string[] } | { refused: ArrangeRefusal };
@@ -228,7 +227,6 @@ export interface CanvasState extends CameraSlice {
 
 export { DEFAULT_TITLES, NODE_SIZE, isAgentKind };
 
-/* One canvas editor, for one view on screen. */
 export function createCanvasStore(): StoreApi<CanvasState> {
     return createStore<CanvasState>((set, get) => {
         const slice = createCameraSlice<CanvasState>(set, get, {
@@ -297,7 +295,6 @@ export function createCanvasStore(): StoreApi<CanvasState> {
 /* The blank canvas of the window: what a view that is not a canvas reads, and what a unit test reads. */
 export const defaultCanvasStore = createCanvasStore();
 
-/* The canvas editors of the window; its blank editor is the store this module made. */
 export const defaultCanvases = createEditorRegistry(createCanvasStore, defaultCanvasStore);
 
 /*
@@ -408,7 +405,6 @@ export function canvasSettled(viewId: string): Promise<boolean> {
     });
 }
 
-/* Every canvas on screen, which is what a watcher about the whole project walks over. */
 export function liveCanvases(): [string, CanvasState][] {
     return defaultCanvases.live().map(([viewId, store]) => [viewId, store.getState()]);
 }

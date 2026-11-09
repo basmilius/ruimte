@@ -127,7 +127,6 @@ function snapshotTabKey(cwd: string, commit: string, path: string): string {
     return `snapshot:${JSON.stringify([cwd, commit, path])}`;
 }
 
-/* The comparison under a key, or undefined for another kind of tab. */
 export function compareTabOf(state: TabPool, key: string | null): CompareTab | undefined {
     const tab = state.tabs.find((entry) => entry.key === key);
     return tab !== undefined && isSessionTab(tab) && tab.kind === 'compare' ? tab : undefined;
@@ -145,7 +144,6 @@ export function openCompareTab(state: TabPool, cwd: string, from: string, to: st
     return placeTab(state, { key, kind: 'compare', pinned: false, cwd, from, to, mode, refresh: 0 });
 }
 
-/* A snapshot that is open already comes to the front. */
 export function openSnapshotTab(state: TabPool, cwd: string, commit: string, branch: string, path: string): TabState {
     const key = snapshotTabKey(cwd, commit, path);
 
@@ -162,7 +160,6 @@ export function artifactTabKey(artifactId: string, machineId?: string): string {
     return machineId === undefined ? `${ARTIFACT_TAB_PREFIX}${artifactId}` : `${ARTIFACT_TAB_PREFIX}${machineId}/${artifactId}`;
 }
 
-/* The file tab under a key, or undefined for another kind of tab or a key that is not open. */
 export function fileTabOf(state: TabPool, key: string | null): FileTab | undefined {
     const tab = state.tabs.find((entry) => entry.key === key);
     return tab === undefined || !isFileTab(tab) ? undefined : tab;
@@ -176,7 +173,6 @@ export function isPromotableTab(tab: Tab | undefined): boolean {
     return isDatabaseTab(tab) ? tab.kind !== 'designer' : tab.view === undefined;
 }
 
-/* The artifact tab already open, or a new one at the end of the pool; either way in front. */
 export function openArtifactTab(state: TabPool, artifactId: string, title: string, machineId?: string): TabState {
     const key = artifactTabKey(artifactId, machineId);
     if (state.tabs.some((tab) => tab.key === key)) {
@@ -234,7 +230,6 @@ interface OpenedTab extends TabState {
     replaced?: string;
 }
 
-/* A tab per open file; one that is open already is the one that comes to the front. */
 export function openTab(state: TabPool, path: string, view?: FileTabView): OpenedTab {
     const key = tabKey(path, view);
     const open = fileTabOf(state, key);
@@ -429,7 +424,6 @@ interface FilesStore extends TabPool {
     closeInOrder(keys: readonly string[]): Promise<boolean>;
     /* Takes the tab out of the pool without remembering it, for a tab that goes on as something else. */
     release(key: string): void;
-    /* The answer to that question. */
     confirmDiscard(): void;
     cancelDiscard(): void;
     setUnsubmitted(key: string, unsubmitted: boolean): void;

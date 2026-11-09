@@ -10,7 +10,6 @@ import type { Edge } from '@/state/canvas';
 export interface EdgeLine {
     /* The edge the line is drawn from; its `from` is the tail and its `to` the head. */
     edge: Edge;
-    /* The edge running back between the same two nodes, when there is one. */
     back: Edge | null;
     /* Every edge this one line stands for: what a click selects and what a delete takes away. */
     ids: string[];
@@ -18,7 +17,6 @@ export interface EdgeLine {
     label: string | undefined;
 }
 
-/* The lines to draw for a set of edges, in the order the edges came, a pair folded into one. */
 export function edgeLines(edges: readonly Edge[]): EdgeLine[] {
     if (edges.length === 0) {
         return [];

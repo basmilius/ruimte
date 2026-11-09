@@ -6,7 +6,6 @@ import { dropEndpoint, endpointKey, endpointOfNode } from '@/state/keys';
 import { useEndpointId } from './current-endpoint';
 
 export interface SessionState {
-    /* True while this client holds a live attachment on the daemon. */
     attached: boolean;
     /* Exit code of the shell, once it has ended. Absent while it runs. */
     exited?: number;
@@ -125,7 +124,6 @@ export function sessionSinkFor(endpointId: string): SessionSink {
     };
 }
 
-/* How often a terminal on the machine in scope was started over. */
 export function useSessionRestarts(nodeId: string): number {
     const endpointId = useEndpointId();
     return useSessions((s) => s.restarts[endpointKey(endpointId, nodeId)] ?? 0);
