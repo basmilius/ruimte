@@ -150,7 +150,7 @@ public final class PhantomCursor {
             layer.removeAllAnimations()
             layer.transform = CATransform3DIdentity
         }
-        beat.opacity = 1
+        drift.opacity = 1
         switch look.beat {
         case .press:
             motion.play(.keyframes("transform.scale", duration: timing.press, [(0, 1), (0.35, timing.pressScale), (1, 1)], easing: timing.smooth), on: beat)
@@ -160,7 +160,8 @@ public final class PhantomCursor {
             let step = timing.typingStep
             motion.play(.keyframes("transform.translation.x", duration: timing.typing, [(0, 0), (0.2, step), (0.4, 2 * step), (0.6, 3 * step), (0.85, 3 * step), (1, 0)], easing: .steps(1), repeats: true), on: beat)
         case .fade:
-            motion.play(.keyframes("opacity", duration: timing.doneFade, [(0, 1), (0.7, 1), (1, 0)]), on: beat)
+            // The drift layer holds the cursor and its disc, so both fade together.
+            motion.play(.keyframes("opacity", duration: timing.doneFade, [(0, 1), (0.7, 1), (1, 0)]), on: drift)
         case nil:
             break
         }
@@ -340,11 +341,15 @@ public final class PhantomCursor {
         let radius = style.discRadius
         let frame = style.place(CGSize(width: 2 * radius, height: 2 * radius), radius: radius)
         let center = CGPoint(x: frame.midX, y: frame.midY)
-        let layer = Layers.cursorBox(around: style.notch)
+        let mark = Layers.cursorBox(around: style.notch)
         let disc = Layers.circle(center: center, diameter: 2 * radius)
         let white = OverlayStyle.Ink.white
         let ink = OverlayStyle.Ink.fill
-        layer.addSublayer(disc)
+        mark.addSublayer(disc)
+        // The signs are drawn for a disc of radius 6 and grow with it.
+        let layer = Layers.cursorBox(around: center)
+        layer.transform = CATransform3DMakeScale(radius / 6, radius / 6, 1)
+        mark.addSublayer(layer)
         let shape = CAShapeLayer()
         shape.frame = layer.bounds
         shape.fillColor = white
@@ -410,7 +415,7 @@ public final class PhantomCursor {
             let draw = timing.draw
             motion.run(.transition("strokeEnd", from: 0, to: 1, duration: draw.duration, easing: draw.easing, delay: timing.drawDelay), on: check)
         }
-        return layer
+        return mark
     }
 
     /// A bold question mark centered in the disc; glyph outlines are y up.

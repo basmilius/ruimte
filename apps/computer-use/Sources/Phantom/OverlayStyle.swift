@@ -77,7 +77,8 @@ public enum OverlayStyle {
         public static let wheelDot: CGFloat = 1.25
         public static let wheelDotOpacity: CGFloat = 0.8
         public static let wheelTravel: CGFloat = 5.6
-        public static let discRadius: CGFloat = 6
+        /// A little larger than the design's 6, by Bas's choice (2026-11-09).
+        public static let discRadius: CGFloat = 7
 
         static var tail: CGPoint {
             let hotspot = Cursor.hotspot
