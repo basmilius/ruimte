@@ -55,10 +55,14 @@ export function defineBehaviors<const Ids extends string>(table: Readonly<Record
     return table;
 }
 
-/* Adds what the rows of one feature do. An id twice is a wiring mistake. */
-export function registerBehaviors(table: Readonly<Record<string, CommandBehavior>>): void {
+/*
+ * Adds what the rows of one feature do. An id twice is a wiring mistake, except under a dev server that
+ * replaces modules: Vite runs the wiring again when a feature module changes, and the new behavior takes the
+ * place of the old. A build and the tests have no `import.meta.hot`, so there it throws. `replacing` is the seam for a test.
+ */
+export function registerBehaviors(table: Readonly<Record<string, CommandBehavior>>, replacing: boolean = import.meta.hot !== undefined): void {
     for (const [id, behavior] of Object.entries(table)) {
-        if (behaviors.has(id)) {
+        if (!replacing && behaviors.has(id)) {
             throw new Error(`The command "${id}" has two behaviors.`);
         }
         behaviors.set(id, behavior);
@@ -103,6 +107,12 @@ export function registerCanvasKeyHandlers(...handlers: readonly KeyHandler[]): v
 
 export function rawCanvasKeyHandlers(): readonly KeyHandler[] {
     return canvasKeyHandlers;
+}
+
+/* Drops the key handlers of both kinds, so the install of the commands can run again (`wiring/workspace-commands.ts`). */
+export function clearKeyHandlers(): void {
+    keyHandlers.length = 0;
+    canvasKeyHandlers.length = 0;
 }
 
 export function takeKey(press: KeyPress, run: () => void): true {

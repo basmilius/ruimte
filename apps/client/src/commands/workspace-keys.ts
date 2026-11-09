@@ -22,6 +22,10 @@ export function registerWorkspaceKeys(...added: readonly WorkspaceKeysFactory[])
     factories.push(...added);
 }
 
+export function clearWorkspaceKeys(): void {
+    factories.length = 0;
+}
+
 /* One listener of each feature, made for the workspace that is mounting. */
 export function createWorkspaceKeys(): WorkspaceKeys[] {
     return factories.map((make) => make());

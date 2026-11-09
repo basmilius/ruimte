@@ -4,9 +4,9 @@ import { CANVAS_BEHAVIORS, canvasPaletteRows } from '@/canvas/commands';
 import { CANVAS_KEY_HANDLERS, canvasKeys, gapKeys } from '@/canvas/workspace-keys';
 import { CHAT_BEHAVIORS, CHAT_KEY_HANDLERS } from '@/chat/commands';
 import { chatKeys } from '@/chat/workspace-keys';
-import { registerBehaviors, registerCanvasKeyHandlers, registerKeyHandlers } from '@/commands/behavior';
-import { registerPaletteRows } from '@/commands/palette-rows';
-import { registerWorkspaceKeys } from '@/commands/workspace-keys';
+import { clearKeyHandlers, registerBehaviors, registerCanvasKeyHandlers, registerKeyHandlers } from '@/commands/behavior';
+import { clearPaletteRows, registerPaletteRows } from '@/commands/palette-rows';
+import { clearWorkspaceKeys, registerWorkspaceKeys } from '@/commands/workspace-keys';
 import { DATABASE_BEHAVIORS } from '@/database/commands';
 import { DEVICE_BEHAVIORS } from '@/devices/commands';
 import { DIAGRAM_BEHAVIORS } from '@/diagram/commands';
@@ -30,29 +30,45 @@ import { VIEW_BEHAVIORS, VIEW_KEY_HANDLERS } from '@/views/commands';
 import { voiceKeys } from '@/voice/workspace-keys';
 import { WORKTREE_BEHAVIORS } from '@/worktrees/commands';
 
-/* What the commands of a workspace do, who answers its keys and which rows its palette makes; loaded with the workspace's chunk. */
-export function installWorkspaceCommands(): void {
-    registerBehaviors(ATTENTION_BEHAVIORS);
-    registerBehaviors(CANVAS_BEHAVIORS);
-    registerBehaviors(CHAT_BEHAVIORS);
-    registerBehaviors(DATABASE_BEHAVIORS);
-    registerBehaviors(DEVICE_BEHAVIORS);
-    registerBehaviors(DIAGRAM_BEHAVIORS);
-    registerBehaviors(DRAWING_BEHAVIORS);
-    registerBehaviors(FILE_BEHAVIORS);
-    registerBehaviors(FIND_BEHAVIORS);
-    registerBehaviors(GIT_BEHAVIORS);
-    registerBehaviors(GITHUB_BEHAVIORS);
-    registerBehaviors(GRID_BEHAVIORS);
-    registerBehaviors(LAUNCH_BEHAVIORS);
-    registerBehaviors(MEASURE_BEHAVIORS);
-    registerBehaviors(OUTPUT_BEHAVIORS);
-    registerBehaviors(PROBLEMS_BEHAVIORS);
-    registerBehaviors(PROCESS_BEHAVIORS);
-    registerBehaviors(ROUTINE_BEHAVIORS);
-    registerBehaviors(TERMINAL_BEHAVIORS);
-    registerBehaviors(VIEW_BEHAVIORS);
-    registerBehaviors(WORKTREE_BEHAVIORS);
+/*
+ * What the commands of a workspace do, who answers its keys and which rows its palette makes; loaded with the workspace's chunk.
+ *
+ * When a command module changes, Vite runs this wiring again against registries that still hold the first run, and only its
+ * dev page has `import.meta.hot`. There a behavior takes the place of the one before it, and the lists only this function
+ * fills start empty. A build and the tests still throw on a behavior twice. `replacing` is the seam for a test.
+ */
+export function installWorkspaceCommands(replacing: boolean = import.meta.hot !== undefined): void {
+    if (replacing) {
+        clearKeyHandlers();
+        clearPaletteRows();
+        clearWorkspaceKeys();
+    }
+
+    for (const table of [
+        ATTENTION_BEHAVIORS,
+        CANVAS_BEHAVIORS,
+        CHAT_BEHAVIORS,
+        DATABASE_BEHAVIORS,
+        DEVICE_BEHAVIORS,
+        DIAGRAM_BEHAVIORS,
+        DRAWING_BEHAVIORS,
+        FILE_BEHAVIORS,
+        FIND_BEHAVIORS,
+        GIT_BEHAVIORS,
+        GITHUB_BEHAVIORS,
+        GRID_BEHAVIORS,
+        LAUNCH_BEHAVIORS,
+        MEASURE_BEHAVIORS,
+        OUTPUT_BEHAVIORS,
+        PROBLEMS_BEHAVIORS,
+        PROCESS_BEHAVIORS,
+        ROUTINE_BEHAVIORS,
+        TERMINAL_BEHAVIORS,
+        VIEW_BEHAVIORS,
+        WORKTREE_BEHAVIORS
+    ]) {
+        registerBehaviors(table, replacing);
+    }
 
     registerPaletteRows(agentPaletteRows, canvasPaletteRows, githubPaletteRows, languagePaletteRows, launchPaletteRows);
     registerKeyHandlers(...VIEW_KEY_HANDLERS, ...CHAT_KEY_HANDLERS);

@@ -12,6 +12,10 @@ export function registerPaletteRows(...added: readonly RowProvider[]): void {
     providers.push(...added);
 }
 
+export function clearPaletteRows(): void {
+    providers.length = 0;
+}
+
 /* A row of the command table: its words and its key are the table's, what it does is the behavior's. */
 function rowOf(id: string, run: () => void, options: PaletteOptions): Command {
     const spec = commandSpec(id);
