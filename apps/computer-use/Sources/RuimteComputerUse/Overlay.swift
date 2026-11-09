@@ -112,6 +112,11 @@ final class Overlay {
         menu.onStop = { [weak self] in
             self?.stop()
         }
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.followSpace()
+            }
+        }
         DistributedNotificationCenter.default().addObserver(forName: Notification.Name("AppleInterfaceThemeChangedNotification"), object: nil, queue: .main) { [weak self] _ in
             // The appearance of the app follows a moment after the notification.
             Task { @MainActor in
@@ -185,6 +190,20 @@ final class Overlay {
     func operating(in frame: CGRect?, pid: pid_t) {
         operatedFrame = frame
         operatedPid = pid
+        followSpace()
+    }
+
+    /// The overlay is on every Space, but the cursor shows only on the one where the app the agent works in has a window,
+    /// so a person on another Space does not see it point at their own work.
+    private func followSpace() {
+        let hidden = operatedPid.map { !WindowStack.showsApp($0, in: WindowCapture.onScreenStack()) } ?? false
+        guard stage.isHidden != hidden else {
+            return
+        }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        stage.isHidden = hidden
+        CATransaction.commit()
     }
 
     /// The app is about to come up by the agent's own doing, which is not the person bringing it forward.
@@ -464,6 +483,8 @@ final class Overlay {
         guard control.isActive, let screen else {
             return
         }
+        // Once a second as well: the app can move its window to another Space without the person switching.
+        followSpace()
         let shown = control.shownState
         let time = SessionControl.clock(control.elapsed(at: now))
         let held = control.mode != .running
@@ -503,6 +524,7 @@ final class Overlay {
         activationObserver = nil
         background = nil
         operatedPid = nil
+        followSpace()
         bar.hide()
         menu.hide()
         look = ActionLook(state: .idle)

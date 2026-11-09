@@ -149,7 +149,9 @@ Without `--front`, a command never activates the app, moves the real pointer or 
 - `scroll --element` uses page actions or the scroll bar's value, and in Chromium `AXScrollToVisible` (about half a page per step).
 - `open` starts an app without activating it. The read commands and `menu` work as in front.
 
-These need the front and are refused with `code` `needs-front`, never done in front on the helper's own: a click by pixel, a double click, a click on an element without a press, a drag, a scroll by pixel or of an area without accessibility scrolling, keys for a minimized window or one on another Space, and select all, cut, copy, paste, undo and redo by key or menu. Menu items that go to the focused view (save, export, print) do nothing in the background, and `note` says so.
+A click or right click by pixel presses the smallest element of the last state around the point that takes `AXPress` or `AXShowMenu`; the app's own hit test is not asked, since an app behind others answers it with its menu bar.
+
+These need the front and are refused with `code` `needs-front`, never done in front on the helper's own: a click by pixel where no element of the last state takes the press, a double click, a click on an element without a press, a drag, a scroll by pixel or of an area without accessibility scrolling, keys for a minimized window or one on another Space, and select all, cut, copy, paste, undo and redo by key or menu. Menu items that go to the focused view (save, export, print) do nothing in the background, and `note` says so.
 
 With `--front` the app comes forward where an action needs it (a minimized window is restored first), keys go through the system event stream, and mouse events use the real pointer and put it back.
 
@@ -169,7 +171,7 @@ Every result has `target`: the role, label, identifier and window acted on.
 
 ### The phantom cursor
 
-During a session the helper draws its own click-through cursor, which never appears in a screenshot. The real pointer only visits a point for a mouse event and returns. A session ends on a stop, on `done`, or two minutes after the last command, unless it waits on the person or the person holds it.
+During a session the helper draws its own click-through cursor, which never appears in a screenshot, and only on the Space where the operated app has a window on screen. The real pointer only visits a point for a mouse event and returns. A session ends on a stop, on `done`, or two minutes after the last command, unless it waits on the person or the person holds it.
 
 ### Pause, take over, stop
 

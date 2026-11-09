@@ -39,6 +39,15 @@ struct WindowStackTests {
         #expect(WindowStack.isCovered(frame, by: [CGRect(x: 0, y: 0, width: 100, height: 99.5)]))
         #expect(!WindowStack.isCovered(frame, by: [CGRect(x: 0, y: 0, width: 100, height: 90)]))
     }
+
+    @Test func anAppShowsOnThisSpaceOnlyWithANormalWindowOnScreen() {
+        let panel = StackedWindow(id: 1, pid: 20, layer: 25, frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        let clear = StackedWindow(id: 2, pid: 20, layer: 0, frame: CGRect(x: 0, y: 0, width: 100, height: 100), alpha: 0)
+        let other = StackedWindow(id: 3, pid: 30, layer: 0, frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        let normal = StackedWindow(id: 4, pid: 20, layer: 0, frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        #expect(!WindowStack.showsApp(20, in: [panel, clear, other]))
+        #expect(WindowStack.showsApp(20, in: [other, normal]))
+    }
 }
 
 struct ValueMatchTests {
