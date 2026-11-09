@@ -48,26 +48,32 @@ export class ProjectFolderWatch {
         const settle = settled(this.seams, WATCH_SETTLE_MS, () => this.changed(projectId));
         const watchers: DirectoryWatcher[] = [];
         const hearsFile = (filename: string | null): boolean => filename === null || filename === PROJECT_FILE;
+        let privateWatchers: DirectoryWatcher[] = [];
+        // A folder that was removed leaves a watcher that never hears again, so each call replaces the last.
         const watchPrivate = (): boolean => {
-            const found = watchDirectories(this.seams, [join(folder, PROJECT_DIR, PRIVATE_DIR)], (filename) => {
+            for (const watcher of privateWatchers) {
+                watcher.close();
+                watchers.splice(watchers.indexOf(watcher), 1);
+            }
+
+            privateWatchers = watchDirectories(this.seams, [join(folder, PROJECT_DIR, PRIVATE_DIR)], (filename) => {
                 if (hearsFile(filename)) {
                     settle.nudge();
                 }
             });
-            watchers.push(...found);
+            watchers.push(...privateWatchers);
 
-            return found.length > 0;
+            return privateWatchers.length > 0;
         };
+
         // The private folder is made on a person's first private save, which may come after this watch began.
-        let privateWatched = watchPrivate();
+        watchPrivate();
 
         watchers.push(
             ...watchDirectories(this.seams, [join(folder, PROJECT_DIR)], (filename) => {
-                if (filename === PRIVATE_DIR && !privateWatched) {
-                    privateWatched = watchPrivate();
-
+                if (filename === PRIVATE_DIR) {
                     // The file may be in the folder already by the time it is watched.
-                    if (privateWatched) {
+                    if (watchPrivate()) {
                         settle.nudge();
                     }
                 } else if (hearsFile(filename)) {

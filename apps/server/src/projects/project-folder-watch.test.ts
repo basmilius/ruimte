@@ -103,4 +103,63 @@ describe('ProjectFolderWatch', () => {
 
         expect(watch.openOn('/work/one/.ruimte/private')).toHaveLength(0);
     });
+
+    test('watches a private folder again after it was removed and made anew', async () => {
+        const watch = new FakeWatch();
+        const heard: string[] = [];
+        let privateExists = true;
+        let opened = 0;
+        const folders = new ProjectFolderWatch(
+            {
+                schedule: watch.schedule,
+                watch: (path, options, listener) => {
+                    if (path.endsWith('/private')) {
+                        if (!privateExists) {
+                            throw new Error('ENOENT');
+                        }
+
+                        opened++;
+                    }
+
+                    return watch.watch(path, options, listener);
+                }
+            },
+            (projectId) => void heard.push(projectId)
+        );
+        folders.sync(new Map([['one', '/work/one']]));
+
+        expect(opened).toBe(1);
+
+        privateExists = false;
+        watch.on('/work/one/.ruimte').emit('private', 'rename');
+
+        expect(watch.openOn('/work/one/.ruimte/private')).toHaveLength(0);
+
+        privateExists = true;
+        watch.on('/work/one/.ruimte').emit('private', 'rename');
+        await watch.settle();
+
+        expect(opened).toBe(2);
+        expect(watch.openOn('/work/one/.ruimte/private')).toHaveLength(1);
+        expect(heard).toEqual(['one']);
+
+        watch.on('/work/one/.ruimte/private').emit('project.json');
+        await watch.settle();
+
+        expect(heard).toEqual(['one', 'one']);
+
+        folders.close();
+
+        expect(watch.openOn('/work/one/.ruimte/private')).toHaveLength(0);
+    });
+
+    test('replaces a private watcher that died when the folder was removed and made in one go', () => {
+        const { watch, folders } = setup();
+        folders.sync(new Map([['one', '/work/one']]));
+        const [dead] = watch.openOn('/work/one/.ruimte/private');
+        watch.on('/work/one/.ruimte').emit('private', 'rename');
+
+        expect(watch.openOn('/work/one/.ruimte/private')).toHaveLength(1);
+        expect(watch.openOn('/work/one/.ruimte/private')[0]).not.toBe(dead);
+    });
 });
