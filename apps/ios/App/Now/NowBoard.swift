@@ -30,6 +30,8 @@ struct NowAttention: Equatable {
     /// Nodes between turns that still have work out: sub-agents or a workflow of their CLI, or a task they gave
     /// another agent that is still open.
     var delegating: Set<String> = []
+    /// By parent id, a child agent of an open task that waits on a person or stopped on a limit.
+    var waitingChildren: [String: String] = [:]
     /// What chats have going beside their turn.
     var activity: [String: ChatActivity] = [:]
     /// When a session last stopped running, in epoch milliseconds.
@@ -63,6 +65,8 @@ struct ProjectViewEntry: Identifiable, Hashable {
     var requests: [NowRequest] = []
     /// Its own turn ended, but work it started still runs; the desktop draws such a node working, in gray.
     var delegating = false
+    /// A child agent it gave a task that waits on a person or on a limit; its own status stays as it is.
+    var waitingChild: String?
     var snoozedUntil: Date?
     /// Whether a denial of this chat's approval can tell the agent why.
     var repliesWithMessage = false
@@ -74,6 +78,13 @@ struct ProjectViewEntry: Identifiable, Hashable {
     /// Where it stands: its project, and its machine once the work spans several.
     func place(namesMachine: Bool) -> String {
         namesMachine ? "\(projectName) · \(machineName)" : projectName
+    }
+
+    /// Whether it waits on a person through a child agent. A child that stands on Now itself already does, so the
+    /// parent is not counted a second time; `waiting` holds `machineID:itemID` of what waits by its own status.
+    func waitsOnChild(besides waiting: Set<String>) -> Bool {
+        guard status != .needsYou, let child = waitingChild else { return false }
+        return !waiting.contains("\(target.machineID):\(child)")
     }
 
     /// Since when its oldest request waits, in epoch milliseconds; nil without a request that says.
@@ -150,8 +161,10 @@ struct NowBoard: Equatable {
 
     static func build(_ machines: [NowMachineInput]) -> NowBoard {
         var board = NowBoard()
-        for entry in entries(machines) {
-            if entry.status == .needsYou {
+        let all = entries(machines)
+        let waiting = Set(all.filter { $0.status == .needsYou }.map { "\($0.target.machineID):\($0.target.itemID)" })
+        for entry in all {
+            if entry.status == .needsYou || entry.waitsOnChild(besides: waiting) {
                 if entry.snoozedUntil == nil {
                     board.needsYou.append(entry)
                 } else {
@@ -204,6 +217,7 @@ struct NowBoard: Equatable {
                             unseen: machine.attention.unseen.contains(itemID),
                             requests: machine.attention.requests[itemID] ?? [],
                             delegating: Self.delegates(machine.attention, itemID),
+                            waitingChild: machine.attention.waitingChildren[itemID],
                             snoozedUntil: machine.snoozes[itemID],
                             repliesWithMessage: machine.attention.providers[itemID].map {
                                 machine.denyReason.contains($0)

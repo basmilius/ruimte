@@ -26,6 +26,10 @@ struct NowCard: View {
     /// Its place and, where the request says when it came, how long it waits, as in "score-engine · 2 min".
     static func subtitle(_ entry: ProjectViewEntry, namesMachine: Bool, at date: Date) -> String {
         let place = entry.place(namesMachine: namesMachine)
+        if entry.status != .needsYou && entry.waitingChild != nil {
+            let child = String(localized: "Sub-agent waiting", comment: "A child agent waits on a person or on a limit")
+            return "\(place) · \(child)"
+        }
         guard let since = entry.waitingSince else { return place }
         let waited = Format.duration(milliseconds: date.timeIntervalSince1970 * 1000 - since)
         return "\(place) · \(waited)"

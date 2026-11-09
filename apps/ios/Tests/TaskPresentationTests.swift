@@ -71,9 +71,23 @@ final class TaskPresentationTests: XCTestCase {
         XCTAssertEqual(store.childTask("c")?.text("status"), "cancelled")
     }
 
-    private func task(_ id: String, project: String, child: String, created: Double, status: String) -> JSONValue {
+    @MainActor func testAParentWaitsThroughAnOpenChildThatNeedsYouOrIsPaused() {
+        let store = TaskStore(client: TaskListMachine())
+        store.put(task("ask", project: "p", parent: "lead", child: "asks", created: 2, status: "open"))
+        store.put(task("works", project: "p", parent: "lead", child: "works", created: 1, status: "open"))
+        store.put(task("settled", project: "p", parent: "other", child: "asks", created: 1, status: "done"))
+        store.put(
+            task("limit", project: "p", parent: "third", child: "limited", created: 1, status: "open")
+                .setting("paused", .object(["kind": .string("usage")])))
+        XCTAssertEqual(store.waitingChildren { $0 == "asks" }, ["lead": "asks", "third": "limited"])
+        XCTAssertEqual(store.waitingChildren { _ in false }, ["third": "limited"])
+    }
+
+    private func task(
+        _ id: String, project: String, parent: String = "parent", child: String, created: Double, status: String
+    ) -> JSONValue {
         .object([
-            "id": .string(id), "projectId": .string(project), "childId": .string(child),
+            "id": .string(id), "projectId": .string(project), "parentId": .string(parent), "childId": .string(child),
             "createdAt": .number(created), "status": .string(status),
         ])
     }

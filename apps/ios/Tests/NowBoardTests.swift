@@ -54,6 +54,30 @@ final class NowBoardTests: XCTestCase {
         XCTAssertEqual(board.needsYou.first?.projectName, "Recept Maker")
     }
 
+    func testAParentWaitsThroughItsChildOnlyWhileTheChildIsNotOnNowItself() {
+        let projects = [
+            project(
+                "app", name: "Recept Maker", opened: 10,
+                views: [
+                    view("lead", kind: "chat", name: "Release plan"),
+                    view("other", kind: "chat", name: "Docs pass"),
+                    view("asks", kind: "chat", name: "Changelog"),
+                ])
+        ]
+        let board = NowBoard.build([
+            NowMachineInput(
+                machineID: "mac", machineName: "MacBook Pro", projects: projects,
+                attention: NowAttention(
+                    statuses: ["lead": .idle, "other": .idle, "asks": .needsYou],
+                    delegating: ["lead", "other"],
+                    waitingChildren: ["lead": "limited", "other": "asks"]))
+        ])
+        XCTAssertEqual(board.needsYou.map(\.target.itemID), ["lead", "asks"])
+        XCTAssertEqual(board.working.map(\.target.itemID), ["other"])
+        XCTAssertEqual(
+            NowCard.subtitle(board.needsYou[0], namesMachine: false, at: .now), "Recept Maker · Sub-agent waiting")
+    }
+
     func testProjectsOpenedLastComeFirstAndMachinesAreNamedOnlyWhenSeveral() {
         let mac = NowMachineInput(
             machineID: "mac", machineName: "MacBook Pro",

@@ -42,6 +42,16 @@ final class ProjectOverviewTests: XCTestCase {
         XCTAssertNil(quiet.words)
     }
 
+    func testActivityCountsAParentWhoseChildWaitsOnceForTheWait() {
+        let views = [view("lead", kind: "chat"), view("other", kind: "chat"), view("asks", kind: "chat")]
+        let attention = NowAttention(
+            statuses: ["lead": .idle, "other": .idle, "asks": .needsYou],
+            waitingChildren: ["lead": "limited", "other": "asks"])
+        let activity = ProjectOverview.activity(views: views, attention: attention, snoozed: [])
+        XCTAssertEqual(activity.needsYou, 2)
+        XCTAssertEqual(ProjectOverview.activity(views: views, attention: attention, snoozed: ["lead"]).needsYou, 1)
+    }
+
     func testGroupsFollowTheProjectOpenedLastAndPutChatsAfterTheProjects() {
         let mac = machine("mac")
         let studio = machine("studio")

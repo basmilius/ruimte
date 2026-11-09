@@ -37,6 +37,9 @@ final class NowModel {
                     statuses: attention.statuses, unseen: attention.unseen, requests: requests,
                     providers: attention.waits.mapValues(\.provider),
                     delegating: attention.delegating.union(feed.session.tasks.parentsWithOpenTasks),
+                    waitingChildren: feed.session.tasks.waitingChildren {
+                        attention.statuses[$0] == .needsYou || attention.waits[$0] != nil
+                    },
                     activity: attention.activity, finishedAt: attention.finishedAt),
                 snoozes: feed.session.snoozes.standing, denyReason: feed.denyReason)
         }
