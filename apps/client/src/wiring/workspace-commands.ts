@@ -1,5 +1,6 @@
 import { agentPaletteRows } from '@/agents/commands';
 import { ATTENTION_BEHAVIORS } from '@/attention/commands';
+import { BROWSER_KEY_HANDLERS } from '@/browser/browser-keys';
 import { CANVAS_BEHAVIORS, canvasPaletteRows } from '@/canvas/commands';
 import { CANVAS_KEY_HANDLERS, canvasKeys, gapKeys } from '@/canvas/workspace-keys';
 import { CHAT_BEHAVIORS, CHAT_KEY_HANDLERS } from '@/chat/commands';
@@ -71,7 +72,7 @@ export function installWorkspaceCommands(replacing: boolean = import.meta.hot !=
     }
 
     registerPaletteRows(agentPaletteRows, canvasPaletteRows, githubPaletteRows, languagePaletteRows, launchPaletteRows);
-    registerKeyHandlers(...VIEW_KEY_HANDLERS, ...CHAT_KEY_HANDLERS);
+    registerKeyHandlers(...VIEW_KEY_HANDLERS, ...BROWSER_KEY_HANDLERS, ...CHAT_KEY_HANDLERS);
     registerCanvasKeyHandlers(...CANVAS_KEY_HANDLERS);
     // Held and released keys in the order they must hear a press: the voice and dictation keys before Escape steps out of anything.
     registerWorkspaceKeys(gapKeys, voiceKeys, dictationKeys, canvasKeys, sidebarKeys, chatKeys);
