@@ -68,6 +68,69 @@ describe('wireDaemon', () => {
         }
     });
 
+    test('fills every field of the host of the agent tools, the optional ones too, so no tool answers that its service is missing', async () => {
+        const home = join(await homeOf(), 'home');
+        const wired = await wireDaemon({
+            runtime: testRuntime(home),
+            launcher: 'standalone',
+            seams: testSeams({ home, clock: new ManualClock() }),
+            shutdown: async () => undefined
+        });
+
+        try {
+            const host = Object.entries(wired.bundles.canvasHost);
+
+            expect(host.filter(([, service]) => service === undefined).map(([field]) => field)).toEqual([]);
+            expect(host.map(([field]) => field).sort()).toEqual([
+                'agentImages',
+                'agents',
+                'artifacts',
+                'browsers',
+                'chatPrompts',
+                'chatThreads',
+                'checkouts',
+                'computer',
+                'context',
+                'databases',
+                'devices',
+                'diagrams',
+                'drawings',
+                'endSession',
+                'extensions',
+                'forks',
+                'hiddenAgents',
+                'language',
+                'launches',
+                'lineage',
+                'machine',
+                'messages',
+                'planLimits',
+                'plans',
+                'ports',
+                'projects',
+                'proposals',
+                'providerInstalls',
+                'reach',
+                'remote',
+                'requests',
+                'routines',
+                'secrets',
+                'snoozes',
+                'startClaims',
+                'starts',
+                'tasks',
+                'templates',
+                'terminals',
+                'tunnels',
+                'untrusted',
+                'visuals',
+                'worktrees'
+            ]);
+        } finally {
+            await wired.stop();
+        }
+    });
+
     test('is wired from the clock of the seams, never the system clock', async () => {
         const home = join(await homeOf(), 'home');
         const clock = new ManualClock();
