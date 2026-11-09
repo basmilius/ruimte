@@ -152,6 +152,39 @@ describe('DeviceClient', () => {
         client.dispose();
     });
 
+    test('a change told while a read is out is read once more after it, never folded into that read', async () => {
+        const transport = new FakeTransport();
+        Object.assign(transport, { connection: { features: ['device.watch'] } });
+        const answer = transport.request.bind(transport);
+        let release: () => void = () => undefined;
+        const held = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        transport.request = async (type, payload) => {
+            if (type === 'device.list' && listReads(transport) === 0) {
+                await held;
+            }
+
+            return answer(type, payload);
+        };
+        const client = new DeviceClient('machine-1', transport);
+        const stop = client.watch();
+        transport.emit('device.changed', {});
+        transport.emit('device.changed', {});
+        await settle();
+
+        expect(listReads(transport)).toBe(0);
+
+        release();
+        await settle();
+        await settle();
+
+        expect(listReads(transport)).toBe(2);
+
+        stop();
+        client.dispose();
+    });
+
     test('asks again after the link came back', async () => {
         const transport = new FakeTransport();
         Object.assign(transport, { connection: { features: ['device.watch'] } });

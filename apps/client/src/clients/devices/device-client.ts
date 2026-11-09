@@ -45,6 +45,8 @@ export class DeviceClient {
     private readonly mounted = new MountedRegistry<MountedDevice>();
     private readonly powerWatches = new Map<string, { refs: number; device: DeviceTarget; timer: ReturnType<typeof setInterval> | null }>();
     private refreshInFlight: Promise<DeviceInfo[]> | null = null;
+    // A change the machine told of while a read was out, which that read may have missed, so the list is read once more after it.
+    private changedDuringRead = false;
     private refreshTimer: ReturnType<typeof setInterval> | null = null;
     private readonly streamHandlers = new HandlerTable<string>();
     private readonly unsubscribe: Array<() => void>;
@@ -76,6 +78,14 @@ export class DeviceClient {
         } finally {
             if (this.refreshInFlight === task) {
                 this.refreshInFlight = null;
+            }
+
+            if (this.changedDuringRead) {
+                this.changedDuringRead = false;
+
+                if (this.watchers > 0) {
+                    fireAndForget('refresh', this.refresh(true));
+                }
             }
         }
     }
@@ -189,7 +199,9 @@ export class DeviceClient {
     }
 
     private changed(): void {
-        if (this.watchers > 0) {
+        if (this.watchers > 0 && this.refreshInFlight !== null) {
+            this.changedDuringRead = true;
+        } else if (this.watchers > 0) {
             fireAndForget('refresh', this.refresh(true));
         }
         for (const watch of this.powerWatches.values()) {
