@@ -39,6 +39,7 @@ import { LAUNCH_GENERATED } from '@/launches/generated-commands';
 import { LAUNCH_MENU_EXTRAS } from '@/launches/menu-extras';
 import { launchFacts } from '@/launches/menu-facts';
 import { MEASURE_COMMANDS } from '@/measure/command-table';
+import { MEASURE_BEHAVIORS } from '@/measure/commands';
 import { OUTPUT_COMMANDS } from '@/output/command-table';
 import { PROCESS_COMMANDS } from '@/processes/command-table';
 import { ROUTINE_COMMANDS } from '@/routines/command-table';
@@ -101,4 +102,6 @@ export function installCommands(): void {
     registerMenuExtras(...AGENT_MENU_EXTRAS, ...CANVAS_MENU_EXTRAS, ...CHAT_MENU_EXTRAS, ...GITHUB_MENU_EXTRAS, ...LAUNCH_MENU_EXTRAS, ...VIEW_MENU_EXTRAS);
     registerGenerated(...AGENT_GENERATED, ...CANVAS_GENERATED, ...CHAT_GENERATED, ...GITHUB_GENERATED, ...LAUNCH_GENERATED, ...VIEW_GENERATED);
     registerBehaviors(WINDOW_BEHAVIORS);
+    // Offered on the start screen too, as main did; what they run loads on first use.
+    registerBehaviors(MEASURE_BEHAVIORS);
 }

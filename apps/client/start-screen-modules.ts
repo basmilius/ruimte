@@ -213,6 +213,7 @@ export const START_SCREEN_MODULES: readonly string[] = [
     'machines/use-machine-entry.ts',
     'main.tsx',
     'measure/command-table.ts',
+    'measure/commands.ts',
     'models/dialog.ts',
     'nodes/extension-chat.ts',
     'onboarding/dialog.ts',

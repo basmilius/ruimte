@@ -20,7 +20,6 @@ import { GITHUB_BEHAVIORS, githubPaletteRows } from '@/github/commands';
 import { languagePaletteRows } from '@/language/commands';
 import { PROBLEMS_BEHAVIORS } from '@/language/problems-commands';
 import { afterSettlePaletteRows, LAUNCH_BEHAVIORS, launchPaletteRows } from '@/launches/commands';
-import { MEASURE_BEHAVIORS } from '@/measure/commands';
 import { OUTPUT_BEHAVIORS } from '@/output/commands';
 import { PROCESS_BEHAVIORS } from '@/processes/commands';
 import { ROUTINE_BEHAVIORS } from '@/routines/commands';
@@ -59,7 +58,6 @@ export function installWorkspaceCommands(replacing: boolean = import.meta.hot !=
         GITHUB_BEHAVIORS,
         GRID_BEHAVIORS,
         LAUNCH_BEHAVIORS,
-        MEASURE_BEHAVIORS,
         OUTPUT_BEHAVIORS,
         PROBLEMS_BEHAVIORS,
         PROCESS_BEHAVIORS,
