@@ -8,7 +8,7 @@ import { Binding } from '../binding.ts';
  */
 export type Later<Bundles> = { readonly [Name in keyof Bundles]: () => Bundles[Name] };
 
-export interface Lateness<Bundles> {
+interface Lateness<Bundles> {
     readonly later: Later<Bundles>;
     provide<Name extends keyof Bundles>(name: Name, bundle: Bundles[Name]): Bundles[Name];
 }

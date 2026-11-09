@@ -3,7 +3,7 @@ import type { ProviderAccountsService } from '@adecore/agents/providers';
 import type { Area } from '../area.ts';
 import { registerAgentHandlers } from './agent.ts';
 
-export interface AccountsDeps {
+interface AccountsDeps {
     accounts: ProviderAccountsService;
 }
 

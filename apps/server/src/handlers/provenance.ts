@@ -3,7 +3,7 @@ import type { MachineHome } from '../disk/machine-home.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import type { ProvenanceService } from '../provenance/provenance-service.ts';
 
-export interface ProvenanceDeps {
+interface ProvenanceDeps {
     provenance: ProvenanceService;
     machineHome: Pick<MachineHome, 'refuse'>;
 }

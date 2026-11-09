@@ -23,7 +23,7 @@ interface TunnelPartitions {
 
 export const usePortTunnelPartitions = create<TunnelPartitions>(() => ({ byKey: {} }));
 
-export type TunnelRoute = { kind: 'none' } | { kind: 'pending' } | { kind: 'ready'; partition: string };
+type TunnelRoute = { kind: 'none' } | { kind: 'pending' } | { kind: 'ready'; partition: string };
 
 /*
  * The pages of browser nodes that show a port shared on another machine. Each has a tunnel in the shell, a

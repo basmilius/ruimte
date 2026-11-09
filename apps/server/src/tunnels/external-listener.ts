@@ -7,14 +7,14 @@ import { doorOf, FailureLimiter, gateRequest } from './external-gate.ts';
 import { handleOAuthRequest, OAUTH_PROTECTED_RESOURCE_PATH } from './oauth.ts';
 
 /* The one route, beside the fixed OAuth paths. Nothing else answers on the listener. */
-export const EXTERNAL_MCP_PATH = '/mcp';
+const EXTERNAL_MCP_PATH = '/mcp';
 
 // Tools answer within 100 seconds; the connection outlives that by a little.
 const REQUEST_TIMEOUT_S = 115;
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
 const HOSTNAME = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
 
-export interface ExternalListenerDeps {
+interface ExternalListenerDeps {
     credentials: CredentialStore;
     consent: ConsentBook;
     limiter: FailureLimiter;

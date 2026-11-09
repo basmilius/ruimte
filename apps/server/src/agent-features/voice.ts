@@ -36,7 +36,7 @@ declare module '../canvas/host.ts' {
 }
 
 /* How a tool reads and prompts chats and asks which agent a terminal runs. */
-export function chatAccess(chats: ChatCore, sessions: SessionManager): Pick<CanvasHost, 'chatThreads' | 'chatPrompts' | 'terminals'> {
+function chatAccess(chats: ChatCore, sessions: SessionManager): Pick<CanvasHost, 'chatThreads' | 'chatPrompts' | 'terminals'> {
     return {
         // A chat nobody opened since a restart is read from its record, which starts no CLI.
         chatThreads: {

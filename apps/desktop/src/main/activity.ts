@@ -5,7 +5,7 @@ import type { DesktopIpc } from './ipc';
 
 const { app } = electron;
 
-export interface AgentActivities {
+interface AgentActivities {
     /* What every window reports together, which the quit question names. */
     total(): AgentActivity;
     /* Lets the report of a window go, as one that closes or reloads does. */

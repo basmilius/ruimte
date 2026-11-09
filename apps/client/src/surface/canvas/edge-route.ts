@@ -118,7 +118,7 @@ export function routeEdge(a: Rect, b: Rect, obstacles: readonly Obstacle[] = [],
 }
 
 /* How far down a left or right side a line meets the box, in world units from its top; the middle when absent. */
-export interface HeldHeights {
+interface HeldHeights {
     fromDown?: number;
     toDown?: number;
 }

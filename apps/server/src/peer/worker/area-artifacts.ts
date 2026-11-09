@@ -6,7 +6,7 @@ import type { PeerLinks } from '../../projects/peer-links.ts';
 import type { ClientConnection } from '../../wire.ts';
 import { requirePeerLinks } from './peer-access.ts';
 
-export interface PeerArtifactsDeps {
+interface PeerArtifactsDeps {
     links: Pick<PeerLinks, 'list' | 'linkOf'>;
     artifacts: Artifacts;
 }

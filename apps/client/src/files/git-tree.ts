@@ -70,7 +70,7 @@ export function checkOfAll(entries: readonly GitEntry[]): CheckState {
 }
 
 /* The paths staging (or unstaging) moves; the rest already stand where it puts them. */
-export function movingPaths(entries: readonly GitEntry[], staged: boolean): string[] {
+function movingPaths(entries: readonly GitEntry[], staged: boolean): string[] {
     return entries.filter((entry) => (staged ? entry.worktree !== null : entry.staged !== null)).map((entry) => entry.path);
 }
 

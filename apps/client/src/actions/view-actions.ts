@@ -56,7 +56,7 @@ import type { DocumentState } from '@/state/document';
 import { nodesOfView } from '@/state/view-nodes';
 
 /* What the view actions reach outside the document; a test hands in a fake of each. */
-export interface ViewReach {
+interface ViewReach {
     /* The agent CLIs of the machine the project runs on. */
     providers(): readonly ProviderInfo[];
     viewDeletion: ViewDeletionMachine;

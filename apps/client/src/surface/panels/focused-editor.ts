@@ -10,7 +10,7 @@ export const registerFocusedEditor = editors.register;
 
 export const focusedEditor = editors.focused;
 
-export const recentEditorIn = editors.recentIn;
+const recentEditorIn = editors.recentIn;
 export const subscribeFocusedEditors = editors.subscribe;
 
 /* Menu availability must read the same target without taking the keyboard from its menu. */

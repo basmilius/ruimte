@@ -18,7 +18,7 @@ export interface PooledTransport extends Transport {
     dispose(): void;
 }
 
-export interface TransportPoolOptions {
+interface TransportPoolOptions {
     /*
      * Opens a socket for an endpoint. The pool builds no addresses, which is what lets a test hand it
      * fakes. `currentId` is the id the entry is under right now, which a rekey changes.

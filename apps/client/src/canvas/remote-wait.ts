@@ -19,7 +19,7 @@ function openTaskOf(tasks: TasksById | undefined, childId: string): Task | null 
 }
 
 /* A machine a node waits for, and how many of its tasks wait on it. */
-export interface WaitedFor {
+interface WaitedFor {
     machine: string;
     count: number;
 }

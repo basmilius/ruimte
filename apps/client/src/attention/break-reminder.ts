@@ -31,7 +31,7 @@ type Stretch = z.infer<typeof StretchSchema>;
 
 const stretches = storedJson<Stretch>('ruimte.break-reminder', StretchSchema);
 
-export interface BreakSources {
+interface BreakSources {
     /* Null outside the desktop app, where nothing says whether a person is at the computer. */
     idleState: ((seconds: number) => Promise<SystemIdleState>) | null;
     focused(): boolean;

@@ -4,9 +4,9 @@ import { sameSecret } from '../auth/local-secret.ts';
 import { defaultGrant, mergedGrant } from './credential-store.ts';
 
 /* How long a client waits for a person on this machine before the request is nothing. */
-export const CONSENT_TIMEOUT_MS = 5 * 60_000;
+const CONSENT_TIMEOUT_MS = 5 * 60_000;
 /* How long an authorization code lives once approved. */
-export const AUTHORIZATION_CODE_MS = 60_000;
+const AUTHORIZATION_CODE_MS = 60_000;
 /* Every cap counts requests that wait for a person, so none of them lets one party fill the window with strangers. */
 const MAX_PENDING = 20;
 const MAX_PENDING_PER_SOURCE = 3;
@@ -16,7 +16,7 @@ const MAX_PENDING_PER_CLIENT = 3;
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const CODE_LENGTH = 6;
 
-export interface PendingConsent {
+interface PendingConsent {
     id: string;
     code: string;
     clientId: string;
@@ -30,7 +30,7 @@ export interface PendingConsent {
     decision: { approved: true; grant: ExternalGrant; expiresAt: number | null; authorizationCode: string; approvedAt: number } | { approved: false } | null;
 }
 
-export type ConsentPoll =
+type ConsentPoll =
     | { status: 'pending' }
     | { status: 'gone' }
     | { status: 'denied'; pending: PendingConsent }

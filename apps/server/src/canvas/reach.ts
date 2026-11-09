@@ -150,7 +150,7 @@ function reachingFrom(host: Pick<CanvasHost, 'reach' | 'projects'>, caller: stri
 }
 
 /* A folder that `project_open` may open, as it really is on disk, and whether a project file is already in it. */
-export interface ReachedFolder {
+interface ReachedFolder {
     reach: ReachHost;
     ownProjectId: string;
     folder: string;

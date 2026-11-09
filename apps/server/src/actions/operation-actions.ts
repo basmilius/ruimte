@@ -17,7 +17,7 @@ export function operationIdOf(action: OperationAction, nodeIds: readonly string[
     return `${action}:${nodeIds.join(',')}`;
 }
 
-export const OPERATION_FORMS: readonly string[] = [
+const OPERATION_FORMS: readonly string[] = [
     'operation\tagent.start:<id>\tthe start of one agent, under the id of its node',
     'operation\tteam.start:<id>,<id>\tthe start of a team, under the ids of its roles in the order they were made'
 ];

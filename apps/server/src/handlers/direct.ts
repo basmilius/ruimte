@@ -2,7 +2,7 @@ import type { SignalEnvelope } from '@ruimte/pulsar';
 import type { Area } from '../area.ts';
 import { sendEvent } from '../wire.ts';
 
-export interface DirectDeps {
+interface DirectDeps {
     peers: {
         receive(envelope: SignalEnvelope, reply: (envelope: SignalEnvelope) => void): void;
         closeAll(): void;

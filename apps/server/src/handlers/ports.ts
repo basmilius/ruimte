@@ -4,7 +4,7 @@ import type { Area, EventSource } from '../area.ts';
 import type { PortGrants } from '../ports/port-grants.ts';
 import type { PortStreams } from '../ports/port-streams.ts';
 
-export interface PortsDeps {
+interface PortsDeps {
     grants: PortGrants;
     streams: PortStreams;
     /* What every client hears: the list of shared ports moved. */

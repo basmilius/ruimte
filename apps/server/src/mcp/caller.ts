@@ -4,7 +4,7 @@ import type { ExternalCaller } from '../canvas/external-caller.ts';
 import { isPathSegment } from '../disk/path-segment.ts';
 
 /* A session or chat of a project, which an agent's bearer token speaks for. */
-export interface NodeCaller {
+interface NodeCaller {
     readonly kind: 'node';
     readonly id: string;
 }

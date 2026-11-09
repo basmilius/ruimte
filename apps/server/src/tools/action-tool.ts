@@ -75,13 +75,13 @@ export function pointedCanvas(call: Pick<AgentCall, 'host' | 'caller'>, ids: rea
     return references.find((reference) => ids.includes(reference.id) && (kind === undefined || reference.kind === kind))?.canvas?.id ?? null;
 }
 
-export interface ActionToolSpec<Input extends z.ZodObject> extends ToolSpec<Input> {
+interface ActionToolSpec<Input extends z.ZodObject> extends ToolSpec<Input> {
     /* The action of `@ruimte/actions` the tool runs, whose handler holds every check. */
     action: ActionName;
 }
 
 /* `revision` is added to a tool whose action writes the project file, so no write goes without it. */
-export interface ActionTool<Input extends z.ZodObject = z.ZodObject> extends Tool<Input> {
+interface ActionTool<Input extends z.ZodObject = z.ZodObject> extends Tool<Input> {
     readonly action: ActionName;
 }
 

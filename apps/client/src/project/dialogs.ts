@@ -48,7 +48,7 @@ export const PROJECT_DIALOGS: readonly DialogContribution[] = [
 ];
 
 /* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
-export type ViewDialog =
+type ViewDialog =
     | { kind: 'settings'; viewId: string }
     /* Promoting a node that has lines drawn into it. Those lines do not survive the move. */
     | { kind: 'promote'; nodeId: string }

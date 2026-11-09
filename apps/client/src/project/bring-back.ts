@@ -3,7 +3,7 @@ import { handOff, type BundleSource, type BundleTarget } from '@/project/bundle-
 import type { Transport } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 
-export interface BringBackRequest {
+interface BringBackRequest {
     /* The machine the node works on. */
     there: BundleSource & Pick<Transport, 'request'>;
     /* The machine the project lives on. */

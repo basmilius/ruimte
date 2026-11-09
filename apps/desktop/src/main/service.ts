@@ -25,7 +25,7 @@ import { reportShellProblem } from './telemetry';
 
 const { app, dialog } = electron;
 
-export interface MachineOptions {
+interface MachineOptions {
     ipc: DesktopIpc;
     port: number;
     /* The home the daemon runs with, where its local secret lives. */

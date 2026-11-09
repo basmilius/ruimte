@@ -49,7 +49,7 @@ import { wireVoice } from './wiring/voice.ts';
 
 const STOP_PHASES: readonly StopPhase[] = ['halt', 'drain', 'end', 'last'];
 
-export interface WireInput {
+interface WireInput {
     runtime: DaemonRuntime;
     launcher: Launcher;
     seams: DaemonSeams;
@@ -58,7 +58,7 @@ export interface WireInput {
 }
 
 /* The daemon wired, not yet answering anyone: its bundles, its requests and the steps that bring it up and take it down. */
-export interface WiredDaemon {
+interface WiredDaemon {
     readonly runtime: DaemonRuntime;
     readonly bundles: DaemonBundles;
     readonly areas: readonly Area[];

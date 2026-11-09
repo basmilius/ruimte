@@ -10,7 +10,7 @@ export type WorkflowBesideCard =
     | { kind: 'phase'; key: string; phase: string; open: boolean; rect: Rect }
     | { kind: 'agent'; key: 'agent'; from: string; rect: Rect };
 
-export interface WorkflowBesideView {
+interface WorkflowBesideView {
     /* Every phase's key, in the order the workflow shows them. */
     phases: readonly string[];
     /* The one phase that is open, or none. */
@@ -19,7 +19,7 @@ export interface WorkflowBesideView {
     agentPhase: string | null;
 }
 
-export interface WorkflowBesideSizes {
+interface WorkflowBesideSizes {
     /* Each phase's header and agents as last measured open; one not measured yet starts at the minimum. */
     openHeights?: Readonly<Record<string, number>>;
     /* What a person gave the agent's card; null keeps the layout's. */

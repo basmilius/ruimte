@@ -5,7 +5,7 @@ import { errorText } from '../error-text.ts';
 import type { CliVersions } from '../providers/cli-versions.ts';
 import type { RegistryAgents } from '../providers/registry-agents.ts';
 
-export interface AgentRegistryDeps {
+interface AgentRegistryDeps {
     agents: RegistryAgents;
     versions: CliVersions;
 }

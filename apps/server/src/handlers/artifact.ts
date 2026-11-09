@@ -3,7 +3,7 @@ import type { ArtifactImporter } from '../artifacts/artifact-import.ts';
 import type { Artifacts } from '../artifacts/artifacts.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 
-export interface ArtifactDeps {
+interface ArtifactDeps {
     artifacts: Artifacts;
     importer: Pick<ArtifactImporter, 'importFrom'>;
 }

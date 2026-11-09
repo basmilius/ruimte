@@ -3,7 +3,7 @@ import type { Dispatcher } from '../dispatcher.ts';
 import type { LaunchRunner } from '../launches/runner.ts';
 import type { LaunchStore } from '../launches/store.ts';
 
-export interface LaunchesDeps {
+interface LaunchesDeps {
     store: LaunchStore;
     runner: LaunchRunner;
 }

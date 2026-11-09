@@ -4,7 +4,7 @@ import type { SessionHandoff } from '@/project/views';
 /* A view a person drew on a surface of its own is duplicated rather than moved to a canvas. */
 const DRAWN_KINDS: readonly ProjectView['kind'][] = ['canvas', 'drawing', 'diagram'];
 
-export function isDrawnKind(kind: ProjectView['kind']): boolean {
+function isDrawnKind(kind: ProjectView['kind']): boolean {
     return DRAWN_KINDS.includes(kind);
 }
 

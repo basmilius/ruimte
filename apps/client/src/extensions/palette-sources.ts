@@ -6,7 +6,7 @@ import { fireAndForget } from '@/transport-api/transport';
 const SEARCH_WAIT_MS = 150;
 const NO_HITS: readonly PaletteHit[] = [];
 
-export interface PaletteHit {
+interface PaletteHit {
     id: string;
     title: string;
     detail?: string;

@@ -59,7 +59,7 @@ export interface ServerConfig {
  * What a session hands its shell. A daemon started from inside another daemon's terminal inherits
  * them, and its own sessions and usage probes would then report into that other daemon's node.
  */
-export const SESSION_VARIABLES = [...RUIMTE_SESSION_VARIABLES, MCP_URL_VARIABLE];
+const SESSION_VARIABLES = [...RUIMTE_SESSION_VARIABLES, MCP_URL_VARIABLE];
 
 /** Removes the variables of a session this process was started from; a daemon never belongs to one. */
 export function forgetInheritedSession(env: Record<string, string | undefined>): void {

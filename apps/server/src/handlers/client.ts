@@ -5,7 +5,7 @@ import type { AuthStore } from '../auth/auth-store.ts';
 import type { ConnectedClients } from '../clients/connected-clients.ts';
 import type { ActiveClient } from '../tunnels/credential-store.ts';
 
-export interface ClientDeps {
+interface ClientDeps {
     connected: ConnectedClients;
     auth: Pick<AuthStore, 'list'>;
     /* The external MCP clients that made a request lately. */

@@ -152,7 +152,7 @@ const linkedCache = new Map<string, boolean>();
  * differs from the shared one. A submodule's do not, where a `.git` file alone would say yes. A root
  * stays what it is, so the answer is kept.
  */
-export async function isLinkedWorktree(root: string): Promise<boolean> {
+async function isLinkedWorktree(root: string): Promise<boolean> {
     const cached = linkedCache.get(root);
     if (cached !== undefined) {
         return cached;

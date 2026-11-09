@@ -87,11 +87,11 @@ interface SettingsState {
 
 /* What the palette is doing: jumping and running commands, searching the files of the open folder,
    searching the project's chats, or picking one file. A step inside the same dialog. */
-export type PaletteMode = 'default' | 'grep' | 'chats' | 'file';
+type PaletteMode = 'default' | 'grep' | 'chats' | 'file';
 
 /* What a picked file becomes. A node carries where it lands, in world units, because the menu that
    asked knows the point that was right-clicked and the palette does not. */
-export type FilePick = { kind: 'node'; at: { x: number; y: number } } | { kind: 'view' } | { kind: 'tab' };
+type FilePick = { kind: 'node'; at: { x: number; y: number } } | { kind: 'view' } | { kind: 'tab' };
 
 interface UiStore {
     paletteOpen: boolean;

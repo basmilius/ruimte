@@ -1,7 +1,7 @@
 import type { Area } from '../area.ts';
 import type { TemplateStore } from '../templates/template-store.ts';
 
-export interface TemplateDeps {
+interface TemplateDeps {
     store: TemplateStore;
 }
 

@@ -23,7 +23,7 @@ export interface DesignSides {
 }
 
 /* A design whose folder goes from one side to the other, both relative to the project folder. */
-export interface DesignMove {
+interface DesignMove {
     id: string;
     name: string;
     from: string;

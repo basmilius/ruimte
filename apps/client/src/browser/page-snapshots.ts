@@ -13,7 +13,7 @@ import { orNull } from '@/transport-api/transport';
  * `stayHidden`. So a page is photographed while it is still drawn, on its way out, and a page that is
  * already far is drawn again for the moment it takes, transparent (`revealing`), and hidden after.
  */
-export interface PageSnapshot {
+interface PageSnapshot {
     far: boolean;
     imageUrl: string | null;
     takenAt: number | null;
@@ -45,7 +45,7 @@ export const HIDE_DEADLINE_MS = 300;
 /* Pictures taken at once over every page, so zooming out over thirty pages is no spike of thirty. */
 export const MAX_CAPTURES = 2;
 
-export interface SnapshotDeps {
+interface SnapshotDeps {
     capture(key: string): Promise<Uint8Array | null>;
     /* The picture at most `width` pixels wide, in a format that keeps it small. */
     shrink(png: Uint8Array, width: number): Promise<Blob | null>;

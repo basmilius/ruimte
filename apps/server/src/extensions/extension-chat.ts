@@ -5,7 +5,7 @@ import type { ExtensionHostOptions } from './extension-host.ts';
 import { outputOf } from './machine-actions.ts';
 import { ExtensionRefusal } from './refusal.ts';
 
-export interface ExtensionChatDeps {
+interface ExtensionChatDeps {
     host: CanvasHost;
     actions: Pick<ActionRegistry<ServerActionContext>, 'execute'>;
     folderOf(projectId: string): string | null;

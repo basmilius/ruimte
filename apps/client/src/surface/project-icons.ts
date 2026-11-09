@@ -173,9 +173,9 @@ import {
     type LucideIcon
 } from 'lucide-react';
 
-export type ProjectIconGroupId = 'general' | 'code' | 'ai' | 'web' | 'infra' | 'data' | 'hardware' | 'design' | 'writing' | 'planning' | 'life';
+type ProjectIconGroupId = 'general' | 'code' | 'ai' | 'web' | 'infra' | 'data' | 'hardware' | 'design' | 'writing' | 'planning' | 'life';
 
-export interface ProjectIconGroup {
+interface ProjectIconGroup {
     readonly id: ProjectIconGroupId;
     readonly icons: Partial<Record<ProjectIconName, LucideIcon>>;
 }

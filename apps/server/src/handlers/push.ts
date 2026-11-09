@@ -14,7 +14,7 @@ function provenSession(client: ClientConnection): string {
     return sessionId;
 }
 
-export interface PushDeps {
+interface PushDeps {
     auth: AuthStore;
     push: PushService;
     /* A subscription was added or removed, so the activities the machine keeps for phones follow. */

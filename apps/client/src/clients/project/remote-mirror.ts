@@ -6,7 +6,7 @@ import type { NodesOfView } from '@/state/view-nodes';
 import { TransportError, type Transport, fireAndForget, orNull } from '@/transport-api/transport';
 
 /* What one machine is to draw of this project: the nodes that run there and the lines between them. */
-export interface MachineMirror {
+interface MachineMirror {
     nodes: PeerNode[];
     edges: ProjectEdge[];
 }

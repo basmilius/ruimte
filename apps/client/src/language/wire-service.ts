@@ -57,7 +57,7 @@ import { LANGUAGE_ERROR_CODES, resolveStoredPath, storedPathOf, type LanguageMet
 import { TransportError, type Transport, fireAndForget } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 
-export interface WireLanguageServiceOptions {
+interface WireLanguageServiceOptions {
     transport: Transport;
     projectId: string;
     /* The project folder on the machine of the daemon: a file URI and a stored path are made of each other against it. */

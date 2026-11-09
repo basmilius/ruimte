@@ -55,7 +55,7 @@ export function isTerminalPaste(event: KeyLike, apple: boolean): boolean {
  * program's, which is why Cmd+K clears the screen here instead of opening the palette. They are rows and not
  * keys, so a key a person rebinds still reaches the app.
  */
-export const TERMINAL_HANDED_BACK_ROWS: readonly DefaultKeyId[] = [
+const TERMINAL_HANDED_BACK_ROWS: readonly DefaultKeyId[] = [
     'dictation',
     'voice-control',
     'view-new',
@@ -94,7 +94,7 @@ export const TERMINAL_HANDED_BACK_ROWS: readonly DefaultKeyId[] = [
  * Ctrl+T transpose, Ctrl+\ SIGQUIT, Ctrl+Alt+[ Meta-Escape), so the terminal keeps them there. Only while the
  * row holds its default: someone who chooses a Ctrl key for it means it.
  */
-export const PTY_CONTROL_ROWS: readonly DefaultKeyId[] = ['sidebar', 'view-new', 'split-right', 'close-cell', 'camera-back', 'camera-forward'];
+const PTY_CONTROL_ROWS: readonly DefaultKeyId[] = ['sidebar', 'view-new', 'split-right', 'close-cell', 'camera-back', 'camera-forward'];
 
 function keptByProgram(row: DefaultKeyId): boolean {
     return PTY_CONTROL_ROWS.includes(row) && !isRebound(overridesSnapshot(), row);

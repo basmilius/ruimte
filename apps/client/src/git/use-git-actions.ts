@@ -32,7 +32,7 @@ function firstOf(actionId: string, output: ActionOutput<'git.push'>): GitActionR
  * One of the panel's actions, by the kind the daemon knows it under, run through the catalog as a
  * person's. The panel's own dialogs have asked whatever there was to ask.
  */
-export async function runGitKind({
+async function runGitKind({
     cwd: repository,
     actionId: run,
     kind,

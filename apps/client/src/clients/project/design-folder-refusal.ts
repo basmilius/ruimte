@@ -1,7 +1,7 @@
 import { designFolderOf, designPlaces, isCanvasView, isSharedDesign, type DesignPlace, type ProjectView } from '@ruimte/contracts';
 
 /* The slice of the document store that puts a design back; the real store has more. */
-export interface DesignPlacing {
+interface DesignPlacing {
     getState(): {
         shared: string[];
         exportViews(): ProjectView[];

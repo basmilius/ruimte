@@ -19,7 +19,7 @@ export interface Hold {
 }
 
 /* Every step that waits for the test, in the order they arrived. */
-export class Gates {
+class Gates {
     readonly held: Hold[] = [];
     // Labels that pass at once, for the steps a test does not mean to order.
     readonly open = new Set<string>();
@@ -87,7 +87,7 @@ export function turnOver(): Promise<void> {
 }
 
 /* A `server/` that does what the host tells it only once the test lets its steps go. */
-export class GatedChild extends EventEmitter {
+class GatedChild extends EventEmitter {
     readonly stdin = new PassThrough();
     readonly stdout = new PassThrough();
     readonly stderr = new PassThrough();
@@ -149,7 +149,7 @@ export interface Plan {
 }
 
 /* Files by their `/` path on every platform: the host joins the store's paths with the separator of the one it runs on. */
-export class FileMap extends Map<string, string> {
+class FileMap extends Map<string, string> {
     override get(path: string): string | undefined {
         return super.get(path.replaceAll('\\', '/'));
     }

@@ -68,13 +68,13 @@ export interface ExtensionSurfaceProps {
     nodeId?: string;
 }
 
-export interface SidebarCardContribution {
+interface SidebarCardContribution {
     id: string;
     title: string;
     component: ComponentType;
 }
 
-export interface ExtensionNodeContribution {
+interface ExtensionNodeContribution {
     // `<extension id>/<type>`.
     id: string;
     title: string;
@@ -87,7 +87,7 @@ export interface ExtensionNodeContribution {
     dataVersion?: number;
 }
 
-export interface ExtensionViewContribution {
+interface ExtensionViewContribution {
     id: string;
     title: string;
     icon?: LucideIcon;
@@ -96,7 +96,7 @@ export interface ExtensionViewContribution {
     open(): void;
 }
 
-export interface CommandContribution {
+interface CommandContribution {
     id: string;
     title: string;
     when?: () => boolean;
@@ -108,7 +108,7 @@ export interface CommandContribution {
 /* A place an extension may put something. Ruimte gives each its spot; the extension decides when it shows. */
 export type SlotName = ExtensionSlotName;
 
-export type SlotFunction = (context: never) => boolean | { title?: string; icon?: LucideIcon; disabled?: boolean | string; badge?: string; order?: number };
+type SlotFunction = (context: never) => boolean | { title?: string; icon?: LucideIcon; disabled?: boolean | string; badge?: string; order?: number };
 
 export type SlotMenuItem =
     | 'separator'
@@ -140,54 +140,54 @@ export interface PaletteSourceContribution {
     onFailure?: (text: string) => void;
 }
 
-export interface SlashCommandContribution {
+interface SlashCommandContribution {
     id: string;
     name: string;
     description: string;
     expand: (args: string) => Promise<string>;
 }
 
-export interface ReferenceContribution {
+interface ReferenceContribution {
     id: string;
     title: string;
     list: () => Promise<readonly { id: string; name: string }[]>;
     read: (item: { id: string; name: string }) => Promise<string>;
 }
 
-export interface DiffViewerContribution {
+interface DiffViewerContribution {
     id: string;
     title: string;
     extensions: readonly string[];
     component: ComponentType<{ file: { path: string; name: string; extension: string }; diff: string }>;
 }
 
-export interface VoiceActionContribution {
+interface VoiceActionContribution {
     id: string;
     description: string;
     parameters: object;
     run: (input: unknown) => Promise<string>;
 }
 
-export interface ToolResultContribution {
+interface ToolResultContribution {
     id: string;
     tools: readonly string[];
     component: ComponentType<{ call: { name: string; input: unknown; output: string | null; state: string } }>;
 }
 
-export interface MarkdownBlockContribution {
+interface MarkdownBlockContribution {
     id: string;
     language: string;
     component: ComponentType<{ source: string }>;
 }
 
-export interface FileViewerContribution {
+interface FileViewerContribution {
     id: string;
     title: string;
     extensions: readonly string[];
     component: ComponentType<{ file: { path: string; name: string; extension: string; text: string | null } }>;
 }
 
-export interface ExtensionSettingsContribution {
+interface ExtensionSettingsContribution {
     id: string;
     component: ComponentType;
     keywords: readonly string[];
@@ -217,14 +217,14 @@ export interface BuiltInThemeContribution {
     thumbnailUrl: string;
 }
 
-export interface ExtensionSchemaContribution {
+interface ExtensionSchemaContribution {
     id: string;
     // Every field of every group, for a lookup by key.
     fields: readonly SettingField[];
     groups: readonly SettingGroup[];
 }
 
-export interface BuiltInContribution {
+interface BuiltInContribution {
     id: string;
     manifest: ExtensionManifest;
     icon?: LucideIcon;

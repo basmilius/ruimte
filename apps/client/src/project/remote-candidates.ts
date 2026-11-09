@@ -14,7 +14,7 @@ export interface RemoteCandidate {
     remoteUrl: string | null;
 }
 
-export interface RemoteProject {
+interface RemoteProject {
     projectId: string;
     name: string;
     folder: string;

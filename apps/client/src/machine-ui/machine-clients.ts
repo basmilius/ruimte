@@ -4,7 +4,7 @@ import i18next from 'i18next';
 import { CircleQuestionMark, Globe, Laptop, Plug, Server, Smartphone, Tablet, type LucideIcon } from 'lucide-react';
 
 /* One row of the list: connections that differ only in id and time, with the earliest time. */
-export interface ClientGroup {
+interface ClientGroup {
     readonly client: ConnectedClient;
     readonly count: number;
 }

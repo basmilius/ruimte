@@ -3,7 +3,7 @@ import type { Area } from '../area.ts';
 import type { DrawingStore } from '../projects/drawing-store.ts';
 import { viewFileHandlers } from './view-files.ts';
 
-export interface DrawingDeps {
+interface DrawingDeps {
     store: DrawingStore;
 }
 

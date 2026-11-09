@@ -10,7 +10,7 @@ const REQUEST_ID = /^[A-Za-z0-9_-]{1,64}$/;
 export type ArtifactUploads = Pick<Artifacts, 'uploadState' | 'uploadAppend'>;
 
 /* The upload a publish names: its request id, the upload the bytes went under, and each file's name and size. */
-export interface StagedArtifact {
+interface StagedArtifact {
     requestId: string;
     upload: string;
     files: { name: string; size: number }[];

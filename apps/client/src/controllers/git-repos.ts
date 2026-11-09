@@ -197,7 +197,7 @@ export function readProjectRepos(
     };
 }
 
-export interface ProjectRepos {
+interface ProjectRepos {
     repos: readonly GitRepo[];
     /* Set when the folder holds more repositories than the list carries. */
     truncated: boolean;
@@ -267,7 +267,7 @@ export function useFolderInRepo(folder: string | null): boolean {
     return folder !== null && answer?.key === key && answer.repos.some((repo) => repo.kind === 'root');
 }
 
-export interface GitCheckouts {
+interface GitCheckouts {
     checkouts: readonly GitCheckout[];
     /* Draws a status the panel expects until the next real one lands. */
     assume(cwd: string, next: (status: GitStatus) => GitStatus): void;

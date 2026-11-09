@@ -29,7 +29,7 @@ export type MachineResource = (
     | { kind: 'artifact'; artifactId: string; versionId: string; file: number }
 ) & { mime?: string };
 
-export type MachineUrl = BlobState;
+type MachineUrl = BlobState;
 
 // Enough for a chat full of screenshots to scroll back without a refetch; what is on screen does not count.
 const IDLE_BYTES = 64 * 1024 * 1024;

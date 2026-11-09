@@ -7,7 +7,7 @@ import { finderRefusal, type FinderRefusal } from '@/surface/canvas/drop';
 /* What the drop was meant to become: a node leaves the person the Files panel, a terminal only a path to type. */
 type FinderTarget = 'node' | 'terminal';
 
-export interface FinderPathOptions {
+interface FinderPathOptions {
     /* A folder names a path as a file does, which a terminal can `cd` into and a canvas cannot show. */
     folders?: boolean;
     refusal?: FinderTarget;

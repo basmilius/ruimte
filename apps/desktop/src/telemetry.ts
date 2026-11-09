@@ -11,7 +11,7 @@ export type ShellProblem =
     | { kind: 'session-cleared'; reason: 'no-key' | 'unauthorized' | 'bad-request' | 'bad-signature' }
     | { kind: 'session-key-unreadable' };
 
-export interface ShellEvent {
+interface ShellEvent {
     message: string;
     level: 'error' | 'fatal';
     fingerprint: string[];
@@ -25,7 +25,7 @@ export interface DaemonStartupDiagnostics {
     output: string[];
 }
 
-export interface ShellIdentity {
+interface ShellIdentity {
     readonly home: string;
     readonly username: string;
     readonly hostname: string;
@@ -34,7 +34,7 @@ export interface ShellIdentity {
 const TAGS = ['process', 'platform', 'arch', 'electron', 'package', 'problem', 'exit_reason', 'step'];
 const EXTRAS = ['exit_code', 'reason', 'ends', 'signal', 'startup_output', 'memory_mb', 'peak_memory_mb', 'uptime_min', 'guests'];
 
-export interface ShellRuntime {
+interface ShellRuntime {
     readonly platform: NodeJS.Platform;
     readonly arch: string;
     readonly electron: string;

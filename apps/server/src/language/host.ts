@@ -241,7 +241,7 @@ interface PendingEdit {
 }
 
 /* The problems a server holds for one file of the project, as a whole-project pull left them. */
-export interface WorkspaceProblems {
+interface WorkspaceProblems {
     server: string;
     path: string;
     absolutePath: string;

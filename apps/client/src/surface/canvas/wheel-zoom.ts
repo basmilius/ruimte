@@ -26,7 +26,7 @@ const GLIDE_SHARE = 0.35;
 /* Close enough in log space to land on the target and stop. */
 const GLIDE_DONE = 0.002;
 
-export type WheelZoom = { kind: 'notch'; factor: number } | { kind: 'pinch'; factor: number };
+type WheelZoom = { kind: 'notch'; factor: number } | { kind: 'pinch'; factor: number };
 
 function pixelsOf(deltaY: number, deltaMode: number): number {
     return deltaMode === 1 ? deltaY * LINE_PIXELS : deltaMode === 2 ? deltaY * PAGE_PIXELS : deltaY;
@@ -46,12 +46,12 @@ export function wheelZoomOf(event: { deltaY: number; deltaMode: number }): Wheel
     return { kind: 'pinch', factor: Math.exp(-delta * 0.01) };
 }
 
-export interface ZoomGlideCamera {
+interface ZoomGlideCamera {
     zoom(): number;
     zoomAt(factor: number, anchor: Point): void;
 }
 
-export interface ZoomGlide {
+interface ZoomGlide {
     /* Adds a step to where the glide is headed, around the point under the pointer. */
     add(factor: number, anchor: Point): void;
     /* Stops where the camera is now, without settling. */

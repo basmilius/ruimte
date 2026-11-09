@@ -3,7 +3,7 @@ interface Entry<T> {
     surface: HTMLElement;
 }
 
-export interface FocusRegistry<T> {
+interface FocusRegistry<T> {
     register(value: T, surface: HTMLElement): () => void;
     /* The value whose surface holds the keyboard. The innermost wins when one surface sits inside another. */
     focused(): T | null;

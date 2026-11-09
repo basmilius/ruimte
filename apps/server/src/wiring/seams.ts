@@ -38,7 +38,7 @@ export interface WiringObservers {
 }
 
 /* What the accounts of the CLIs are built from, which only the wiring of the providers knows. */
-export interface AccountsInput {
+interface AccountsInput {
     home: string;
     providers: ProviderAccountsOptions['providers'];
     install: NonNullable<ProviderAccountsOptions['install']>;
@@ -46,7 +46,7 @@ export interface AccountsInput {
 }
 
 /* What the wiring of the git services is built from. */
-export interface WorktreesInput {
+interface WorktreesInput {
     home: string;
     agents: WorktreeAgents;
     now(): number;
@@ -55,7 +55,7 @@ export interface WorktreesInput {
 }
 
 /* What a project store is made from: the services that follow it, and the files it lays over a document. */
-export interface ProjectStoreInput {
+interface ProjectStoreInput {
     home: string;
     links: ProjectLinks;
     overlays: ProjectOverlays;

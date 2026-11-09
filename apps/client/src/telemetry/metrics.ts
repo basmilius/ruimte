@@ -15,7 +15,7 @@ export interface LinkMeter {
  */
 
 type LinkPath = 'local' | 'lan' | 'direct' | 'turn';
-export type LinkOutcome = 'ok' | 'failed';
+type LinkOutcome = 'ok' | 'failed';
 
 /*
  * Why the transport opens a new link: the open one dropped, an attempt failed, the machine refused it at the protocol

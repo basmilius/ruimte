@@ -13,7 +13,7 @@ const MIX_STEPS = 20;
 /* The ground of each side in `@adecore/ui`'s theme, for a palette that sets none. */
 export const THEME_SURFACE: Record<PaletteSide, string> = { light: '#ffffff', dark: '#131316' };
 
-export interface AccentContrast {
+interface AccentContrast {
     /* The text on the accent: white or near-black, whichever measures higher. */
     text: string;
     /* The accent as text, an icon or a focus ring on the ground: the accent itself while it reaches 3:1, else the nearest mix toward black (light) or white (dark) that does. */

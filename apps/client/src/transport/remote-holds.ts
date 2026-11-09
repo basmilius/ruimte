@@ -24,7 +24,7 @@ function machinesOfNodes(views: readonly ProjectView[], nodesOf: NodesOfView, wo
  * workspace lives. A node draws from its own machine, so its link has to be up while the node is on
  * the canvas, whichever view is in front. Nothing else may keep a link up for a node.
  */
-export class RemoteHolds {
+class RemoteHolds {
     private readonly take: (endpoint: Endpoint) => () => void;
     private readonly held = new Map<string, () => void>();
 

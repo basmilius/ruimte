@@ -8,7 +8,7 @@ import { useToasts } from '@/state/toasts';
 export const SHOW_TOAST_ID = 'show-view';
 
 /* The one button the card offers, and when pressing it would no longer do what it says. */
-export interface ShowOffer {
+interface ShowOffer {
     label: 'goThere' | 'back';
     run(): void;
     stale?(state: DocumentState): boolean;

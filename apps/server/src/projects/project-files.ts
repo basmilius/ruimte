@@ -214,7 +214,7 @@ export function watchDirectories(seams: WatchSeams, dirs: readonly string[], hea
 }
 
 /* A store of a shared and a private file in `.ruimte` that takes in an edit it did not write itself. */
-export interface OutsideEdits {
+interface OutsideEdits {
     seams: WatchSeams;
     writes: Serializer;
     folder: string;

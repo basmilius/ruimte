@@ -10,7 +10,7 @@ export interface AgentServers {
     installed(kind: AgentKind): void;
 }
 
-export interface AgentServersDeps {
+interface AgentServersDeps {
     servers: AgentServers;
 }
 

@@ -30,7 +30,7 @@ export interface TextDraft {
 /* Why a draft is written: a person's save, the pause after typing, the editor losing focus, or a workspace edit of a server. */
 export type DraftSaveReason = 'manual' | 'afterDelay' | 'focusOut' | 'edit';
 
-export type SaveParticipant = (reason: DraftSaveReason) => Promise<void>;
+type SaveParticipant = (reason: DraftSaveReason) => Promise<void>;
 
 export interface DiskText {
     text: string;

@@ -20,7 +20,7 @@ export interface CameraFields {
     pendingCamera: CameraRequest | null;
 }
 
-export interface CameraActions {
+interface CameraActions {
     setViewport(viewport: Viewport): void;
     setCamera(camera: Camera): void;
     panBy(dx: number, dy: number): void;

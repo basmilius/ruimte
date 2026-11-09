@@ -3,7 +3,7 @@ import type { Area } from '../area.ts';
 import { type Dispatcher } from '../dispatcher.ts';
 import type { PlanStore } from '../plans/plan-store.ts';
 
-export interface PlanDeps {
+interface PlanDeps {
     plans: PlanStore;
 }
 

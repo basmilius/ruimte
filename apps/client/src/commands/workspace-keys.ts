@@ -14,7 +14,7 @@ export interface WorkspaceKeys {
     dispose?(): void;
 }
 
-export type WorkspaceKeysFactory = () => WorkspaceKeys;
+type WorkspaceKeysFactory = () => WorkspaceKeys;
 
 const factories: WorkspaceKeysFactory[] = [];
 

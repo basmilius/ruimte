@@ -15,7 +15,7 @@ import { MCP_INSTRUCTIONS } from './instructions.ts';
 
 export { MCP_PATH, MCP_REQUEST_TIMEOUT_S } from '../ruimte-mcp.ts';
 
-export interface McpDeps {
+interface McpDeps {
     /* The session or chat a bearer token speaks for. */
     targetForToken(token: string): string | null;
     host: CanvasHost;

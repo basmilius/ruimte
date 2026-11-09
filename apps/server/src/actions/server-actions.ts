@@ -6,7 +6,7 @@ import { checkProjectRevision } from './revision.ts';
 export type ServerActions = ActionRegistry<ServerActionContext>;
 
 /* What a feature gives the registry: the handlers of its actions, and which of them preview. */
-export interface ActionSource {
+interface ActionSource {
     readonly actions?: ActionHandlers<ServerActionContext>;
     readonly previews?: readonly ActionName[];
 }

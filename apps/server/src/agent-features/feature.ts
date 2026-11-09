@@ -10,7 +10,7 @@ import type { CanvasHostDeps } from '../wiring/canvas-host.ts';
  * optional, since some features have no tool of their own and some need no service. `Fields` is the
  * fields of the host the feature fills, taken from what `host` returns.
  */
-export interface AgentFeature<Fields extends keyof CanvasHost = keyof CanvasHost> {
+interface AgentFeature<Fields extends keyof CanvasHost = keyof CanvasHost> {
     readonly name: string;
     readonly toolkit?: Toolkit;
     readonly actions?: ActionHandlers<ServerActionContext>;

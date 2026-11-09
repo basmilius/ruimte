@@ -8,7 +8,7 @@ interface MachineUpdatePrompt {
 }
 
 /* The question asked again from the rail, with what runs on the machine at that moment. */
-export interface MachineUpdateAgain {
+interface MachineUpdateAgain {
     work: number | null;
 }
 
@@ -62,7 +62,7 @@ export function showsPendingRestart(state: BackgroundServiceState | null, bridge
 }
 
 /* What a restart ends now. Null when the machine cannot say, rather than the count from the start of the session. */
-export function workNow(preview: MachineStopPreview | null): number | null {
+function workNow(preview: MachineStopPreview | null): number | null {
     return preview?.work ? preview.work.terminals + preview.work.agents : null;
 }
 

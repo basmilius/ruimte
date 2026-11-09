@@ -10,7 +10,7 @@ import {
 import type { CanvasPatch } from '@/state/canvas-model';
 
 /* What the incoming document changes on this client, in the shape the stores take it in. */
-export interface DocumentChanges {
+interface DocumentChanges {
     /* Whole views. Where they stand in the list is in the merged content, which is what gets loaded. */
     views: ProjectView[];
     /* Per view this client already has, what its canvas has to take in. Only views that take something. */

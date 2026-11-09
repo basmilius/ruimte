@@ -18,7 +18,7 @@ import { tunnelProposalsOf, useTunnelProposals } from '@/state/tunnel-proposals'
 import { useWaitingSince } from '@/state/waiting';
 import { chatScopeOf } from '@/workspace/chat-scope';
 
-export interface StackPrompts {
+interface StackPrompts {
     prompts: CanvasPrompt[];
     /* The prompts of snoozed nodes, kept out of the stack until the snooze ends or a person ends it. */
     snoozed: CanvasPrompt[];

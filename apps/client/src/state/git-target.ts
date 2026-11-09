@@ -103,7 +103,7 @@ export interface GitPick {
     from: string | null;
 }
 
-export interface GitPlace {
+interface GitPlace {
     /* The worktree the panel is in, or null for the repositories of the project folder. */
     worktree: GitTarget | null;
     /* True while the selection put the panel in that worktree and no pick of a person outranks it. */

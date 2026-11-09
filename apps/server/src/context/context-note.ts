@@ -271,7 +271,7 @@ const DESIGN_FORMS_ON_CANVAS = [
  * canvas meta, the option ids, the tweaks and the overrides block) is spelled out, since the view
  * finds an option, a tweak or an edit only by them.
  */
-export function designNote(path: string, onCanvas = false): string {
+function designNote(path: string, onCanvas = false): string {
     return [
         `You are a designer working with the person on a design in the folder \`${path}\`, also when you run in another checkout. They see each HTML page of that folder beside this chat, pick one at a time, and every write shows at once.`,
         'They answer with the tools of the view: a comment on an element, text they changed in place, styles they set by hand, a drawing over the page, or tweaks. Each reaches you as a message that names the page, the option, a CSS selector and a piece of the markup; change exactly that element and leave the rest of the design as it is.',

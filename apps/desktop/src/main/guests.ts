@@ -10,12 +10,12 @@ const { BrowserWindow, Menu, session, shell, webContents } = electron;
 
 const LOCAL_SCHEMES = ['file:', 'data:', 'blob:', 'about:'];
 
-export interface GuestsOptions {
+interface GuestsOptions {
     /* The app window a guest page sits in, or null for a guest of no window of ours. */
     windowOf(contents: Electron.WebContents): Electron.BrowserWindow | null;
 }
 
-export interface Guests {
+interface Guests {
     contextMenu(contents: Electron.WebContents, params: Electron.ContextMenuParams, guest: GuestKind): void;
 }
 

@@ -12,14 +12,14 @@ const MIB = 1024 * 1024;
 
 const NEEDS_PATH = 'chat_attach needs path, an image or model file of your own';
 
-export interface AgentAttachment {
+interface AgentAttachment {
     name: string;
     /* The bytes, base64. */
     data: string;
 }
 
 /* An image or a model file of the caller's own as `chat.attach` takes it, refused when it is neither or too large. */
-export async function attachmentOf(files: AgentFiles, path: string, name: string | undefined): Promise<AgentAttachment> {
+async function attachmentOf(files: AgentFiles, path: string, name: string | undefined): Promise<AgentAttachment> {
     const buffer = Buffer.alloc(AGENT_MODEL_BYTES + 1);
     const length = await files.read(path, buffer);
 

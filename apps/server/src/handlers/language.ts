@@ -2,7 +2,7 @@ import type { Area } from '../area.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import type { LanguageHost } from '../language/host.ts';
 
-export interface LanguageDeps {
+interface LanguageDeps {
     host: LanguageHost;
 }
 

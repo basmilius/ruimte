@@ -2,9 +2,9 @@ import type { OutboxEntryOf } from '@adecore/agents/coordination';
 import type { z } from 'zod';
 
 /* The schema of one kind of owed work: a literal `kind` and the payload that kind carries. */
-export type OutboxKindSchema = z.ZodObject<{ kind: z.ZodLiteral<string>; payload: z.ZodType }>;
+type OutboxKindSchema = z.ZodObject<{ kind: z.ZodLiteral<string>; payload: z.ZodType }>;
 
-export type OutboxEntryOfSchema<Schema extends OutboxKindSchema> = OutboxEntryOf<z.infer<Schema>>;
+type OutboxEntryOfSchema<Schema extends OutboxKindSchema> = OutboxEntryOf<z.infer<Schema>>;
 
 /* What the chat is told when the work was given up on. */
 export interface OutboxParkedNote<Entry> {
@@ -16,7 +16,7 @@ export interface OutboxParkedNote<Entry> {
     alert?: boolean;
 }
 
-export interface OutboxKindTraits<Schema extends OutboxKindSchema> {
+interface OutboxKindTraits<Schema extends OutboxKindSchema> {
     /* Work owed exactly because its target is gone, which pruning therefore keeps. */
     outlivesTarget?: boolean;
     /* The nodes the work holds beside its target, so nothing else about them runs while it does. */

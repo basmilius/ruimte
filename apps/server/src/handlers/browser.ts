@@ -5,7 +5,7 @@ import type { BrowserPages } from '../browser/pages.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import { streamingGate } from '../streams/streaming-gate.ts';
 
-export interface BrowserDeps {
+interface BrowserDeps {
     browsers: BrowserManager;
     pages: BrowserPages;
     streamingAllowed(): boolean;

@@ -1,7 +1,7 @@
 import { definitionRunsProgram } from '@adecore/service';
 
 /* Who the definition on disk belongs to: nobody, this installation of the app, or anything else. */
-export type ServiceOwnership = 'none' | 'this' | 'other';
+type ServiceOwnership = 'none' | 'this' | 'other';
 
 export interface ServiceIdentity {
     ruimteHome: string;

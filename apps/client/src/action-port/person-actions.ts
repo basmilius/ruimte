@@ -87,7 +87,7 @@ function carriedName(name: string | undefined): string | null {
     return name === undefined ? null : clipText(name.trim(), MAX_TITLE_LENGTH) || null;
 }
 
-export interface CreateViewOptions extends AgentSession {
+interface CreateViewOptions extends AgentSession {
     name?: string;
     url?: string;
     browserOwner?: string;
@@ -210,7 +210,7 @@ export function fitAction(viewId: string | null = activeViewId()): void {
     }
 }
 
-export interface CreateNodeOptions extends AgentSession {
+interface CreateNodeOptions extends AgentSession {
     /* The canvas it goes on, when that is not the one in the focused cell. */
     viewId?: string | null;
     title?: string;

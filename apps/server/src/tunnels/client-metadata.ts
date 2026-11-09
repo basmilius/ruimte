@@ -1,7 +1,7 @@
 import { isIP } from 'node:net';
 import { z } from 'zod';
 
-export const METADATA_TIMEOUT_MS = 5_000;
+const METADATA_TIMEOUT_MS = 5_000;
 export const METADATA_MAX_BYTES = 64 * 1024;
 
 /* What every failure to identify a client says, so the answer tells a caller nothing about this machine's network. */
@@ -114,7 +114,7 @@ export function isBlockedAddress(address: string): boolean {
 }
 
 /* What a get hands back: the status, the content type and the body in pieces, so the reader can stop at the size cap. */
-export interface MetadataResponse {
+interface MetadataResponse {
     status: number;
     contentType: string | null;
     body: AsyncIterable<Uint8Array>;

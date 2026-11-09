@@ -22,7 +22,7 @@ export class PairedWriteRaced extends Error {}
 /* An interrupted write that cannot finish without overwriting an edit made since. */
 export class PairedWriteStuck extends Error {}
 
-export interface PairedWriteTargets {
+interface PairedWriteTargets {
     readonly root: string;
     readonly paths: readonly string[];
 }

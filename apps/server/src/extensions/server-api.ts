@@ -14,7 +14,7 @@ export interface KeyValues {
     delete(key: string): Promise<void>;
 }
 
-export interface ServerClock {
+interface ServerClock {
     /* `run` settles once the task has, and never rejects, so a test's clock can wait for it. */
     every(ms: number, run: () => Promise<void>): void;
 }
@@ -25,7 +25,7 @@ export type ServerMessage =
     | { type: 'subscribe'; name: string }
     | { type: 'emit'; name: string; payload: unknown };
 
-export interface ServerApiOptions {
+interface ServerApiOptions {
     dataFolder: string;
     platform: string;
     permissions: ReadonlySet<string>;

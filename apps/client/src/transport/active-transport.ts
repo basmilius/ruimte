@@ -10,7 +10,7 @@ export interface ActiveSource {
     subscribe(handler: () => void): () => void;
 }
 
-export interface ActiveTransportOptions {
+interface ActiveTransportOptions {
     source: ActiveSource;
     activeId(): string;
     subscribeActive(handler: () => void): () => void;

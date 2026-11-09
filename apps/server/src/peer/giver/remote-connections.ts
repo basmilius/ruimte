@@ -20,7 +20,7 @@ const REFUSAL_WORDS = {
     'statements-refused': 'it takes no statement from this machine'
 } as const;
 
-export type MachineRefusal = keyof typeof REFUSAL_WORDS;
+type MachineRefusal = keyof typeof REFUSAL_WORDS;
 
 /* A link the other machine will not give this one, whatever is tried again. */
 export class RemoteRefusal extends RemoteLinkError {

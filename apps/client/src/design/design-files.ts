@@ -4,7 +4,7 @@ import { changeReaches, designScope, listingOf, pagesByChange, scopedListingAfte
 import { listDesignFolder } from '@/design/design-read';
 import { useTransport } from '@/workspace/context';
 
-export interface DesignPages {
+interface DesignPages {
     /* Null until the machine first answers. */
     pages: string[] | null;
     /* Why the last read failed, with the pages of the read before it still in `pages`. */

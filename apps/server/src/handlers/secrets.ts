@@ -1,7 +1,7 @@
 import type { Area } from '../area.ts';
 import type { SecretService } from '../secrets/secret-service.ts';
 
-export interface SecretsDeps {
+interface SecretsDeps {
     secrets: SecretService;
 }
 

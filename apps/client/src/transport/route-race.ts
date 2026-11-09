@@ -22,7 +22,7 @@ const systemClock: RaceClock = {
     }
 };
 
-export interface RaceOptions {
+interface RaceOptions {
     /* One opener per door address the machine reported; empty where the local network is not tried. */
     lan: readonly SignalingOpener[];
     broker: SignalingOpener | null;
@@ -216,7 +216,7 @@ export function lanDoorUrls(lan: LanDoor | null | undefined, station: boolean): 
     return station || !lan ? [] : lan.addresses.map((address) => lanDoorUrl(address, lan.port));
 }
 
-export interface RoutedLinkOptions {
+interface RoutedLinkOptions {
     /* The machine's own id, which the doors are skipped under. */
     machineId: string;
     lan: readonly SignalingOpener[];

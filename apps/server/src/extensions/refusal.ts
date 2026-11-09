@@ -3,7 +3,7 @@ import { extensionErrorCodeOf, isArgumentErrorCode, type ExtensionErrorCode } fr
 import { errorText } from '../error-text.ts';
 
 /* `invalid-input` is the one code an extension hears as a throw: it gave an argument of the wrong shape. */
-export type ExtensionRefusalCode = ExtensionErrorCode | 'invalid-input';
+type ExtensionRefusalCode = ExtensionErrorCode | 'invalid-input';
 
 /* Why the daemon did not do what an extension asked, under a code the extension can branch on. */
 export class ExtensionRefusal extends CodedError<ExtensionRefusalCode> {}

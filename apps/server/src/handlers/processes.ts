@@ -2,7 +2,7 @@ import type { Area } from '../area.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import type { ProcessMonitor } from '../processes/monitor.ts';
 
-export interface ProcessesDeps {
+interface ProcessesDeps {
     monitor: ProcessMonitor;
 }
 

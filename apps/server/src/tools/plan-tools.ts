@@ -58,7 +58,7 @@ const SECTION_FIELDS: Record<keyof typeof PlanDraftSectionSchema.shape, string> 
 };
 
 /* A document that passes, so an agent has one shape to start from; a test holds it to the schema. */
-export const PLAN_EXAMPLE = JSON.stringify({
+const PLAN_EXAMPLE = JSON.stringify({
     meta: { title: 'Test the split placement', kind: 'test', checks: 'person' },
     items: [
         {

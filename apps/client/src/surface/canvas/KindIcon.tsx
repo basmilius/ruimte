@@ -2,7 +2,7 @@ import { IconButton } from '@adecore/ui';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-export interface KindIconToggle {
+interface KindIconToggle {
     folded: boolean;
     label: string;
     onToggle: () => void;

@@ -6,7 +6,7 @@ import { currentEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 
-export interface MenuLaunch {
+interface MenuLaunch {
     id: string;
     name: string;
     /* A process of it runs, or is being stopped; a group through its members. */

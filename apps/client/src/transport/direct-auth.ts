@@ -5,7 +5,7 @@ import { clientKey, type ClientKey } from '@/endpoint/client-key';
 import { endpointById } from '@/state/endpoints';
 import { localSecretOf } from '@/transport-api/credentials';
 
-export interface ProofCredentials {
+interface ProofCredentials {
     /* The daemon this row pinned; null for the row of the machine this app runs on, which holds the local secret instead. */
     pinned: { publicKey: string; daemonId: string | null } | null;
     key: ClientKey | null;

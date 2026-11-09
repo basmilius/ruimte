@@ -6,7 +6,7 @@ import { shownFolderOf, useProject } from '@/state/project';
 import { machineFor } from '@/workspace/connections';
 
 /* A repository of the project folder that has a branch out, which is what a pull request hangs on. */
-export interface PrRepo {
+interface PrRepo {
     path: string;
     label: string;
 }

@@ -1,6 +1,6 @@
 import type { DesktopIpc } from './ipc';
 
-export interface InterfaceLanguage {
+interface InterfaceLanguage {
     /* The language the page last reported, or null before any page did. */
     current(): string | null;
 }

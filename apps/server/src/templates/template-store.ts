@@ -66,13 +66,13 @@ type TemplateErrorCode =
     | 'template-not-found'
     | 'template-key-taken';
 
-export class TemplateError extends CodedError<TemplateErrorCode> {}
+class TemplateError extends CodedError<TemplateErrorCode> {}
 
 /* The templates a save or an agent's add carries, in the shape a client sends them. */
 export type TemplateDraft = { kind: 'live'; template: LiveTemplateInput } | { kind: 'postfix'; template: PostfixTemplateInput };
 
 /* A template an agent can see: where it comes from, and its body unless the daemon does not hold it (a built-in one). */
-export interface AgentTemplateRow {
+interface AgentTemplateRow {
     id: string;
     kind: TemplateKind;
     key: string;

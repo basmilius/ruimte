@@ -7,7 +7,7 @@ import type { Reclaimed } from '../maintenance/maintenance.ts';
 import { realTimers, type Timers } from '../timers.ts';
 import type { PhpCache } from './host.ts';
 
-export const PHP_CACHE_BUDGET_BYTES = 512 * 1024 * 1024;
+const PHP_CACHE_BUDGET_BYTES = 512 * 1024 * 1024;
 
 const SIGHTINGS_FORMAT = 1;
 const SIGHTINGS_MIN_COUNT = 3;
@@ -42,7 +42,7 @@ export interface CacheOwner {
 }
 
 /* A root seen missing: when it first was, when it last was, and how many passes saw it. */
-export interface Sighting {
+interface Sighting {
     firstMs: number;
     lastMs: number;
     count: number;
@@ -66,7 +66,7 @@ export interface EvictionInput {
     budget: number;
 }
 
-export type GroupReason = 'stubs' | 'vanished' | 'emptied' | 'abandoned' | 'budget';
+type GroupReason = 'stubs' | 'vanished' | 'emptied' | 'abandoned' | 'budget';
 
 /* The files that go together, and the manifest that goes last. */
 export interface Group {
@@ -76,7 +76,7 @@ export interface Group {
     bytes: number;
 }
 
-export interface EvictionPlan {
+interface EvictionPlan {
     remove: Group[];
     sightings: Sightings;
 }
@@ -294,7 +294,7 @@ function ownerOf(manifest: string, text: string): CacheOwner | null {
 }
 
 /* One `opendir` of the top level, bounded; never a recursive scan. */
-export async function listCache(folder: string, signal?: AbortSignal): Promise<Listing> {
+async function listCache(folder: string, signal?: AbortSignal): Promise<Listing> {
     const listing: Listing = { entries: [], owners: [], unreadableOwner: false };
     let directory;
 

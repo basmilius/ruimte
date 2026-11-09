@@ -5,7 +5,7 @@ interface DialogStore<Request> {
 }
 
 /* The state of one dialog: what it was asked for, or null while it is closed. The feature that owns the dialog owns this too. */
-export interface DialogState<Request> {
+interface DialogState<Request> {
     useRequest<Selected>(select: (request: Request | null) => Selected): Selected;
     get(): Request | null;
     open(request: Request): void;
@@ -38,7 +38,7 @@ export function createDialogState<Request>(): DialogState<Request> {
 }
 
 /* A dialog that needs no request: only whether it is up. */
-export interface FlagState {
+interface FlagState {
     useOpen(): boolean;
     isOpen(): boolean;
     open(): void;

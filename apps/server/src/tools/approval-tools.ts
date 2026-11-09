@@ -7,10 +7,10 @@ import { modeRank } from '../canvas/mode.ts';
 import { scopedProjects } from './external-reach.ts';
 import { defineTool, type Tool, type ToolCall } from './tool.ts';
 
-export type ApprovalKind = 'chat' | 'command' | 'launch' | 'routine' | 'mode';
+type ApprovalKind = 'chat' | 'command' | 'launch' | 'routine' | 'mode';
 
 /* One thing that waits for a person, in a project. */
-export interface ApprovalItem {
+interface ApprovalItem {
     kind: ApprovalKind;
     projectId: string;
     /* The node or chat it belongs to, or the launch or routine. */

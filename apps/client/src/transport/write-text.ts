@@ -10,7 +10,7 @@ const PIECES_IN_FLIGHT = 2;
 type WritingTransport = Pick<Transport, 'request' | 'connection'>;
 
 /* The largest text a save can carry to this machine. */
-export function textWriteLimit(answersPieces: boolean): number {
+function textWriteLimit(answersPieces: boolean): number {
     return answersPieces ? FS_WRITE_MAX_BYTES : FS_READ_MAX_TEXT_BYTES;
 }
 

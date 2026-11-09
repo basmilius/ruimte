@@ -23,7 +23,7 @@ type Handler<T extends RequestType> = (
 export type UsageCount = UsageReportCounter | { counter: UsageReportCounter; once: string };
 
 /* Told of every request the dispatcher answers, so what counts or times them stays out of its imports. */
-export interface RequestObserver {
+interface RequestObserver {
     started?(type: RequestType): void;
     answered?(type: RequestType, ms: number, counts: readonly UsageCount[]): void;
 }

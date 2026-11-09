@@ -28,7 +28,7 @@ export interface WorkspaceStores {
 export const CellViewContext = createContext<string | null>(null);
 
 /* The same shape zustand's `create` returns, so a store behind this hook reads like any other. */
-export interface StoreHook<T> extends StoreApi<T> {
+interface StoreHook<T> extends StoreApi<T> {
     (): T;
     <U>(selector: (state: T) => U): U;
 }

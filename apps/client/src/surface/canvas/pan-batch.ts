@@ -8,7 +8,7 @@ export const windowFrames: FrameClock = {
     cancel: (handle) => window.cancelAnimationFrame(handle)
 };
 
-export interface PanBatch {
+interface PanBatch {
     add(dx: number, dy: number): void;
     /* Applies what is waiting now, so a zoom that follows starts from the camera the pan left. */
     flush(): void;

@@ -241,7 +241,7 @@ function keptFrom(
     });
 }
 
-export interface MachineSync {
+interface MachineSync {
     // What this window runs now, of which an extension whose files did not come keeps its version.
     previous?: readonly InstalledClientExtension[];
     // False once a newer sync began, which then holds and drops instead.

@@ -23,7 +23,7 @@ export function isNativeKind(kind: LanguageServerKind): kind is NativeKind {
 }
 
 /* How a release ships: an archive, or the program itself as one file. */
-export type ReleaseFormat = ArchiveFormat | SingleFileFormat;
+type ReleaseFormat = ArchiveFormat | SingleFileFormat;
 
 /* One download of a release: the archive for a platform and architecture. */
 export interface NativeAsset {

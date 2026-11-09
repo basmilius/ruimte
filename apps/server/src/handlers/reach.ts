@@ -1,7 +1,7 @@
 import type { Area } from '../area.ts';
 import type { ReachChecker } from '../pulsar/reach-check.ts';
 
-export interface ReachDeps {
+interface ReachDeps {
     reach: Pick<ReachChecker, 'check' | 'current'>;
 }
 

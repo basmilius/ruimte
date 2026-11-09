@@ -26,7 +26,7 @@ export function machineReportOf(state: UpdateState): MachineUpdateReport | null 
     };
 }
 
-export type InstallStep = 'install' | 'download' | 'wait' | 'none';
+type InstallStep = 'install' | 'download' | 'wait' | 'none';
 
 /* What a requested install does now: a ready update installs, one not yet fetched downloads first. */
 export function installStep(status: UpdateState['status']): InstallStep {
@@ -42,7 +42,7 @@ export function installStep(status: UpdateState['status']): InstallStep {
     }
 }
 
-export interface MachineUpdateShell {
+interface MachineUpdateShell {
     state(): UpdateState;
     download(): Promise<void>;
     /* Installs without the shell's own question, which the person answered on the client that asked. */

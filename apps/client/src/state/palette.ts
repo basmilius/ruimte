@@ -36,7 +36,7 @@ export type PaletteToken = (typeof PALETTE_TOKENS)[number];
 /* What one side sets. A token it leaves out keeps the theme's own value. */
 export type PaletteSideInput = Partial<Record<PaletteToken, string>>;
 
-export type PaletteInput = Record<PaletteSide, PaletteSideInput>;
+type PaletteInput = Record<PaletteSide, PaletteSideInput>;
 
 /* Only a six-digit hex color reaches the stylesheet: the terminal and the desktop shell read these tokens
    back as literal colors, and a value that is not one is never written as text into a rule. */

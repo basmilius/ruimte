@@ -61,7 +61,7 @@ export function nextUnseen(pass: AttentionPass): Set<string> {
 }
 
 /* The three counts the toolbar, the badge and the quit guard all read, as the nodes behind them. */
-export interface AttentionGroups {
+interface AttentionGroups {
     /* Nodes waiting on a person, in the order the project lists them. */
     needsYou: string[];
     /* Nodes waiting on a person who put them aside for now, which no count includes. */

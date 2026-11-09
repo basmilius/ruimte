@@ -78,9 +78,9 @@ export const MONO_FONTS = [
     { id: 'menlo', label: 'Menlo', stack: 'Menlo, ui-monospace, monospace' }
 ] as const;
 
-export type MonoFontId = (typeof MONO_FONTS)[number]['id'];
+type MonoFontId = (typeof MONO_FONTS)[number]['id'];
 
-export type TerminalFontId = MonoFontId | 'editor';
+type TerminalFontId = MonoFontId | 'editor';
 
 export function monoFontStack(id: MonoFontId): string {
     return (MONO_FONTS.find((entry) => entry.id === id) ?? MONO_FONTS[0]).stack;
@@ -100,7 +100,7 @@ export const INTERFACE_FONTS = [
     { id: 'helvetica', label: 'Helvetica Neue', stack: '"Helvetica Neue", Helvetica, Arial, sans-serif' }
 ] as const;
 
-export type InterfaceFontId = (typeof INTERFACE_FONTS)[number]['id'];
+type InterfaceFontId = (typeof INTERFACE_FONTS)[number]['id'];
 
 const WORKTREE_MERGE_STRATEGIES: readonly WorktreeMergeStrategy[] = WorktreeMergeStrategySchema.options;
 
@@ -108,7 +108,7 @@ const WORKTREE_MERGE_STRATEGIES: readonly WorktreeMergeStrategy[] = WorktreeMerg
  * How a reply appears while it is written: a word at a time, a block at a time once each block is
  * closed, or whole once it is done.
  */
-export type ChatStreamingMode = 'words' | 'blocks' | 'whole';
+type ChatStreamingMode = 'words' | 'blocks' | 'whole';
 
 const CHAT_STREAMING_MODES: readonly ChatStreamingMode[] = ['words', 'blocks', 'whole'];
 
@@ -134,7 +134,7 @@ function keepAwakeFrom(stored: unknown, legacy: unknown): KeepAwakeMode {
     return legacy === true ? 'working' : 'off';
 }
 
-export interface CodeThemeInfo {
+interface CodeThemeInfo {
     readonly id: string;
     readonly displayName: string;
     readonly type: 'light' | 'dark';

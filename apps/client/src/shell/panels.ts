@@ -7,7 +7,7 @@ import { panelHidden, type PanelKind } from '@/state/ui';
 export type { PanelGroup };
 
 /* A panel of the side column: a feature's (`registry/panels.ts`) or an extension's. */
-export interface PanelEntry {
+interface PanelEntry {
     readonly kind: string;
     readonly icon: LucideIcon;
     readonly minWidth: number;

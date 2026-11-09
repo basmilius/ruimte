@@ -3,7 +3,7 @@ import type { MachineModeFile } from '../machine-mode';
 import type { DesktopIpc } from './ipc';
 import type { Machine } from './service';
 
-export interface MachineModeOptions {
+interface MachineModeOptions {
     mode: MachineMode;
     machine: Pick<Machine, 'stopPreview' | 'stopOnQuit' | 'removeOwnService'>;
     store: MachineModeFile;

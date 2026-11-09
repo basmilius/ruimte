@@ -7,7 +7,7 @@ import type { DesktopIpc } from './ipc';
 
 const { screen } = electron;
 
-export interface WindowChannelOptions {
+interface WindowChannelOptions {
     windows: Windows;
     theme: Theme;
 }
@@ -18,7 +18,7 @@ export interface Opening {
     inactive: boolean;
 }
 
-export interface WindowChannels {
+interface WindowChannels {
     /* Taken once by the window being created, so the next one opens without it. */
     takeOpening(): Opening;
 }

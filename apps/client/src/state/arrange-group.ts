@@ -9,7 +9,7 @@ export function groupArrangeable(selected: CanvasNode | undefined, locks: { move
 
 export type ArrangeRefusal = 'collapsed' | 'empty' | 'locked' | 'membership';
 
-export type ArrangeResult = { moves: Record<string, Point>; frame: Rect } | { refused: ArrangeRefusal };
+type ArrangeResult = { moves: Record<string, Point>; frame: Rect } | { refused: ArrangeRefusal };
 
 function snapUp(value: number): number {
     return Math.ceil(value / CANVAS_GRID) * CANVAS_GRID;

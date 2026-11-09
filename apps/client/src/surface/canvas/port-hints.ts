@@ -12,7 +12,7 @@ export const HINT_REACH = 56;
 export const HINT_HOT = 14;
 
 /* A port offered to the pointer: a side of a node no line leaves from yet. */
-export interface PortHint {
+interface PortHint {
     nodeId: string;
     side: Side;
     at: Point;

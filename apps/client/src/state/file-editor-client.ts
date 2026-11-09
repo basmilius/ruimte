@@ -28,7 +28,7 @@ export interface ProjectAccess {
 }
 
 /* What an editor of a file-backed view offers this client, whatever kind of file it holds. */
-export interface FileEditorState<TDocument, TContent> extends SavedFileSetters<TDocument> {
+interface FileEditorState<TDocument, TContent> extends SavedFileSetters<TDocument> {
     rev: number;
     dirty: boolean;
     /* Counts changes to the content, which is what this client saves on. */

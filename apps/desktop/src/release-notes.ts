@@ -51,13 +51,13 @@ interface CacheFile {
     releases: Release[];
 }
 
-export interface ReleaseNotesOptions {
+interface ReleaseNotesOptions {
     /* `net.fetch` in the shell, which goes through Chromium's network stack and the system proxy. */
     fetch: (url: string, init: { headers: Record<string, string> }) => Promise<Response>;
     cacheFile: string;
 }
 
-export interface ReleaseNotes {
+interface ReleaseNotes {
     /* The list as it stands. `refresh` asks GitHub first; without it GitHub is only asked while there is nothing to show. */
     list(refresh: boolean): Promise<ReleaseNotesState>;
 }

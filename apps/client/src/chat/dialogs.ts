@@ -8,7 +8,7 @@ import type { DialogContribution } from '@/registry/dialogs';
 import { imageSaveDialog, type ImageSaveDialogState } from '@/surface/image-save';
 
 /* A fork of a chat after a turn; `machine` is the daemon id of the machine the chat runs on, absent for the workspace's. */
-export interface ForkRequest {
+interface ForkRequest {
     chatId: string;
     turnId: string;
     machine?: string;

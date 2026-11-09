@@ -3,7 +3,7 @@ import type { UsageMonitor, UsageService } from '@adecore/agents/usage';
 import type { Area } from '../area.ts';
 import { registerAgentHandlers } from './agent.ts';
 
-export interface UsageDeps {
+interface UsageDeps {
     usage: UsageService;
     limits: UsageMonitor;
 }

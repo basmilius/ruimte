@@ -104,7 +104,7 @@ export interface ExtensionPublishInput {
     files: ReadonlyArray<{ name: string; bytes: Uint8Array }>;
 }
 
-export interface UploadState {
+interface UploadState {
     /* The bytes each staged file holds, by its place. */
     sizes: number[];
     /* The version an earlier publish with this request id made, so a retry need not send its bytes again. */

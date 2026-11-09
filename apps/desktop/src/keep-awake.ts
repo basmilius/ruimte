@@ -2,7 +2,7 @@ import type { KeepAwakeRequest } from '@ruimte/desktop-bridge';
 
 export type KeepAwakeBlocker = 'prevent-app-suspension' | 'prevent-display-sleep';
 
-export interface PowerFacts {
+interface PowerFacts {
     platform: NodeJS.Platform;
     onBattery: boolean;
 }
@@ -45,7 +45,7 @@ export function keepAwakeBlocker(request: KeepAwakeRequest | null, facts: PowerF
 }
 
 /* The part of Electron's `powerSaveBlocker` the hold uses, so a test hands it a fake. */
-export interface PowerSaveBlocker {
+interface PowerSaveBlocker {
     start(type: KeepAwakeBlocker): number;
     stop(id: number): void;
     isStarted(id: number): boolean;

@@ -3,7 +3,7 @@ import type { MarkerShape } from '@/canvas/marker-path';
 import type { EdgeLine } from '@/state/edge-lines';
 
 /* Every meaning a line can have on screen, the plain one included: a line nobody gave a role. */
-export type LineRole = EdgeRole | 'plain';
+type LineRole = EdgeRole | 'plain';
 
 /* How one line is drawn: what it wears where it meets either node, and the stroke it runs in. */
 export interface EdgeLook {
@@ -19,7 +19,7 @@ export interface EdgeLook {
 const EDGE_WIDTH = 2;
 
 /* What a line means and which way it is drawn, since a person draws a pair of meanings both ways. */
-export interface LineMeaning {
+interface LineMeaning {
     role: LineRole;
     /* Whether the head belongs at the tail end: a target line drawn from the page into the agent. */
     reversed: boolean;

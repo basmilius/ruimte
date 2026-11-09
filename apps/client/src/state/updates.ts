@@ -85,7 +85,7 @@ export async function setUpdateTrack(track: UpdateTrack): Promise<void> {
 // Not a setting. The settings store travels with everything that reads and writes preferences.
 const SEEN_VERSION_KEY = 'ruimte.seenVersion';
 
-export type VersionChange = 'first' | 'updated' | 'same' | 'older';
+type VersionChange = 'first' | 'updated' | 'same' | 'older';
 
 export function seenVersionChange(seen: string | null, current: string): VersionChange {
     if (seen === null || !isVersion(seen)) {
@@ -136,7 +136,7 @@ export function noteVersionChange(current: string, storage: Pick<Storage, 'getIt
 }
 
 /* Tells this computer's own machine what the shell's updater does, which `controllers/machine-update.ts` does over the link. */
-export type StartMachineUpdate = (shell: { state(): UpdateState; download(): Promise<void>; install(): void }) => {
+type StartMachineUpdate = (shell: { state(): UpdateState; download(): Promise<void>; install(): void }) => {
     apply(state: UpdateState): void;
     stop(): void;
 };

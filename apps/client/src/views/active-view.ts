@@ -14,7 +14,7 @@ import { pool } from '@/transport';
 import { machineAnswers } from '@/transport/features';
 import { sessionHandoffs, viewOffers, type ViewOffers } from '@/views/view-offers';
 
-export interface ActiveViewFacts {
+interface ActiveViewFacts {
     view: ProjectView;
     offers: ViewOffers;
     shared: boolean;

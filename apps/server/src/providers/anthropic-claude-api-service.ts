@@ -102,7 +102,7 @@ const PageSchema = z.object({
 });
 
 /* The key goes in the header and nowhere else; with redirects as errors it never follows a `Location` to another host. */
-export function anthropicHeaders(key: string): Record<string, string> {
+function anthropicHeaders(key: string): Record<string, string> {
     return { 'x-api-key': key, 'anthropic-version': ANTHROPIC_VERSION, 'content-type': 'application/json' };
 }
 

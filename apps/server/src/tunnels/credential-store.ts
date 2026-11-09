@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { clientHost } from './client-metadata.ts';
 import { tunnelsFolder } from './tunnel-store.ts';
 
-export const BEARER_PREFIX = 'rmb_';
+const BEARER_PREFIX = 'rmb_';
 const ACCESS_PREFIX = 'rma_';
 const REFRESH_PREFIX = 'rmr_';
 
@@ -25,7 +25,7 @@ const LAST_USED_WRITE_MS = 60_000;
 const USE_NEWS_MS = 60_000;
 
 /* The hash of a token, which is all the daemon keeps of one. */
-export function hashToken(token: string): string {
+function hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
 }
 
@@ -54,7 +54,7 @@ type StoredCredential = z.infer<typeof StoredCredentialSchema>;
 
 const FileSchema = z.object({ version: z.literal(1), credentials: z.array(StoredCredentialSchema) });
 
-export interface CredentialStoreOptions {
+interface CredentialStoreOptions {
     /* `$RUIMTE_HOME`; the file is `tunnels/credentials.json`, 0600 in a 0700 folder. Absent keeps nothing, for a test. */
     home?: string;
     now(): number;
@@ -71,7 +71,7 @@ export interface ActiveClient {
     lastUsedAt: number;
 }
 
-export type CredentialRefusal = 'unknown' | 'expired' | 'wrong-door';
+type CredentialRefusal = 'unknown' | 'expired' | 'wrong-door';
 
 /* What a request that presented a token is, or why it is nothing. */
 export type CredentialCheck = { ok: true; credential: Credential; client: string } | { ok: false; reason: CredentialRefusal };
@@ -416,7 +416,7 @@ export class CredentialStore {
     }
 }
 
-export interface OAuthTokens {
+interface OAuthTokens {
     accessToken: string;
     refreshToken: string;
     expiresInS: number;

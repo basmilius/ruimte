@@ -17,9 +17,9 @@ import { MACHINE_WIDE_TOOLS } from './external-tiers.ts';
 import { callTool, refusalResult } from './mcp-route.ts';
 
 /* Cloudflare cuts proxied traffic that reads nothing for 125 seconds, so a tool answers before that or hands back what to poll. */
-export const EXTERNAL_TOOL_BUDGET_MS = 100_000;
+const EXTERNAL_TOOL_BUDGET_MS = 100_000;
 
-export interface ExternalMcpDeps {
+interface ExternalMcpDeps {
     host: CanvasHost;
     actions: ServerActions;
     /* Every tool of the daemon, which `buildCatalog` made from its features. */

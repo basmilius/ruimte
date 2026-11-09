@@ -24,7 +24,7 @@ export function localUsage(localLink: () => Transport | null) {
     };
 }
 
-export type LocalUsage = ReturnType<typeof localUsage>;
+type LocalUsage = ReturnType<typeof localUsage>;
 
 // Why an attempt failed, in the report's words; a link that dropped while open or a switch of route is no failed connect.
 const FAILURE_OF: Partial<Record<ReconnectReason, UsageCountPayload['counter']>> = {

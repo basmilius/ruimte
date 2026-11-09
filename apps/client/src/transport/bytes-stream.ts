@@ -19,7 +19,7 @@ const AHEAD = 3;
 // `BYTES_CHUNK_MAX`, which a test holds this to: importing the value would bring every schema into the worker.
 export const STREAM_PIECE_BYTES = 256 * 1024;
 
-export interface StreamedFile {
+interface StreamedFile {
     machine: string;
     path: string;
     mtime: number;
@@ -34,7 +34,7 @@ export interface PieceQuestion {
     length: number;
 }
 
-export type AskPiece = (question: PieceQuestion) => Promise<BytesPiece>;
+type AskPiece = (question: PieceQuestion) => Promise<BytesPiece>;
 
 export interface RangeRequest {
     url: string;

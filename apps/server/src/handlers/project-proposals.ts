@@ -1,7 +1,7 @@
 import type { Area } from '../area.ts';
 import type { ProjectProposals } from '../projects/project-proposals.ts';
 
-export interface ProposalsDeps {
+interface ProposalsDeps {
     proposals: Pick<ProjectProposals, 'list' | 'decline' | 'subscribe'>;
 }
 

@@ -6,7 +6,7 @@ import type { ExternalListener } from '../tunnels/external-listener.ts';
 import type { TunnelProposals } from '../tunnels/tunnel-proposals.ts';
 import type { TunnelService } from '../tunnels/tunnel-service.ts';
 
-export interface TunnelsDeps {
+interface TunnelsDeps {
     service: TunnelService;
     proposals: Pick<TunnelProposals, 'list' | 'confirm' | 'decline'>;
     credentials: CredentialStore;

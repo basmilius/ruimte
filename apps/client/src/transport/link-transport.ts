@@ -100,7 +100,7 @@ export interface LinkEvents {
 /* Opens a link on an address the transport resolved for this attempt. The transport runs the protocol check on whatever it returns. */
 export type LinkOpener = (url: string, events: LinkEvents) => Link;
 
-export interface LinkTransportOptions {
+interface LinkTransportOptions {
     addressTimeoutMs?: number;
     gateTimeoutMs?: number;
     requestTimeoutMs?: number;

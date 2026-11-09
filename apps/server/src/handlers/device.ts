@@ -7,7 +7,7 @@ import type { Dispatcher } from '../dispatcher.ts';
 import { captureFile, keepCapture, pngSize, writeCapture } from '../shots.ts';
 import { streamingGate } from '../streams/streaming-gate.ts';
 
-export interface DeviceDeps {
+interface DeviceDeps {
     devices: DeviceManager;
     control: DeviceControl;
     watch: DeviceWatch;

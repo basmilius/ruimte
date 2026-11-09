@@ -3,7 +3,7 @@ import { snapLine } from '@/canvas-model/line-geometry';
 import type { CanvasState } from '@/state/canvas';
 import { droppedIntoGroups, nextId, remember, type CanvasGet, type CanvasSet } from '@/state/canvas-model';
 
-export type CanvasLineStyle = Pick<ProjectCanvasLine, 'stroke' | 'strokeWidth' | 'strokeStyle' | 'arrowStart' | 'arrowEnd'>;
+type CanvasLineStyle = Pick<ProjectCanvasLine, 'stroke' | 'strokeWidth' | 'strokeStyle' | 'arrowStart' | 'arrowEnd'>;
 export const DEFAULT_LINE_STYLE: CanvasLineStyle = { stroke: 'ink', strokeWidth: 2, strokeStyle: 'solid' };
 
 export function createCanvasLinesSlice(set: CanvasSet, get: CanvasGet): Pick<CanvasState, 'setLineTool' | 'addLine' | 'updateLine' | 'duplicateLine'> {

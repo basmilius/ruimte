@@ -2,9 +2,9 @@ import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES, type ByteResource, type BytesRea
 import i18next from 'i18next';
 import { blobTypeFor, type BytesPiece } from '../transport-api/piece';
 
-export type ReadPiece = (payload: BytesReadPayload) => Promise<BytesPiece>;
+type ReadPiece = (payload: BytesReadPayload) => Promise<BytesPiece>;
 
-export interface ReadResourceOptions {
+interface ReadResourceOptions {
     chunkBytes?: number;
     maxBytes?: number;
     /* How often a file that changed halfway is started over before it counts as a failure. */
@@ -56,7 +56,7 @@ export async function readResource(read: ReadPiece, resource: ByteResource, opti
     }
 }
 
-export type AcceptPiece = (bytes: Uint8Array<ArrayBuffer>) => void | Promise<void>;
+type AcceptPiece = (bytes: Uint8Array<ArrayBuffer>) => void | Promise<void>;
 
 /*
  * A resource's bytes handed on piece by piece, in order, for one too large to hold whole. A change under

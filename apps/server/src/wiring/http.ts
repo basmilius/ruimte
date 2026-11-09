@@ -326,7 +326,7 @@ interface DoorwayHandlers {
  * told is known before anything is wired. It answers `503` until `answer` hands it the routes, and
  * a socket cannot upgrade before then.
  */
-export interface Doorway {
+interface Doorway {
     readonly server: DoorwayServer;
     readonly port: number;
     readonly hostname: string;

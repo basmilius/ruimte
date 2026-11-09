@@ -66,7 +66,7 @@ export function agentNode(spec: AgentNodeSpec): ProjectNode {
  * rather than refused, since nobody chose it. An agent names an account only as `namedAccount` allows,
  * since an account is someone's costs.
  */
-export function inheritedAccount(call: AgentCall, kind: AgentKind, projectId: string): string | undefined {
+function inheritedAccount(call: AgentCall, kind: AgentKind, projectId: string): string | undefined {
     const opener = call.host.starts.accountOf?.(call.caller) ?? null;
     const account = opener !== null && opener.kind === kind ? (opener.account ?? kind) : undefined;
     return account !== undefined && call.host.starts.accountsOff?.(projectId, kind).includes(account) ? undefined : account;

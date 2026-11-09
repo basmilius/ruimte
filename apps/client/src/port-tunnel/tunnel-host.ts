@@ -2,7 +2,7 @@ import type { PortTunnelToPage, PortTunnelToShell } from '@ruimte/desktop-bridge
 import { PortStreamHub, type PortStreamClient } from './stream-client';
 
 /* As much of the desktop bridge as a tunnel's page uses. */
-export interface TunnelShell {
+interface TunnelShell {
     onPortTunnel(listener: (message: PortTunnelToPage) => void): () => void;
     portTunnelSend(message: PortTunnelToShell): void;
 }

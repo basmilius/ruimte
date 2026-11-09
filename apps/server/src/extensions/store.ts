@@ -16,7 +16,7 @@ import {
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';
 
-export class ExtensionPackError extends Error {
+class ExtensionPackError extends Error {
     readonly code: 'pack-unreadable' | 'pack-manifest' | 'pack-api' | 'pack-path' | 'extension-unknown' | 'store-damaged';
 
     constructor(code: ExtensionPackError['code'], message: string) {
@@ -96,7 +96,7 @@ async function readJson<T>(path: string, schema: z.ZodType<T>, fallback: T): Pro
 }
 
 /* How the store writes a JSON file whole, handed in so a test can fail one as a full disk would. */
-export type ExtensionStoreWrite = (file: string, text: string) => Promise<void>;
+type ExtensionStoreWrite = (file: string, text: string) => Promise<void>;
 
 /*
  * What a machine has installed, under `$RUIMTE_HOME/extensions`: every version of an extension in a

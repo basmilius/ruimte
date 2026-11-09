@@ -3,7 +3,7 @@ import type { EditorRegistry } from '@/state/editors';
 import { editorHook, focusedEditor, useEditorStoreOf, type EditorHook } from '@/state/workspace-stores';
 
 /* The five ways into a registry of editors. A canvas, a drawing and a diagram each offer all five. */
-export interface EditorBindings<T> {
+interface EditorBindings<T> {
     /* What a component reads while it renders: the editor of the cell it is drawn in. */
     use: EditorHook<T>;
     /* The same editor as the store itself, for a component that writes or subscribes rather than reads. */

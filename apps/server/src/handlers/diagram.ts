@@ -3,7 +3,7 @@ import type { Area } from '../area.ts';
 import type { DiagramStore } from '../projects/diagram-store.ts';
 import { viewFileHandlers } from './view-files.ts';
 
-export interface DiagramDeps {
+interface DiagramDeps {
     store: DiagramStore;
 }
 

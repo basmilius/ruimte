@@ -40,7 +40,7 @@ const TOKEN_MASK = '[token]';
 const MAX_OTHER_RULES = 200;
 
 /* The lines `cloudflared` printed, cut to the one a person can read: the last, without its clock and level. */
-export function sentenceOf(lines: readonly string[], fallback: string): string {
+function sentenceOf(lines: readonly string[], fallback: string): string {
     const last = [...lines].reverse().find((line) => line.trim() !== '');
 
     if (last === undefined) {

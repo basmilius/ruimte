@@ -3,7 +3,7 @@ import { type Dispatcher } from '../dispatcher.ts';
 import type { EditorAssistModel } from '../editor-assist/model.ts';
 import { sendEvent } from '../wire.ts';
 
-export interface EditorAssistDeps {
+interface EditorAssistDeps {
     model: Pick<EditorAssistModel, 'generate' | 'status' | 'dispose'>;
 }
 

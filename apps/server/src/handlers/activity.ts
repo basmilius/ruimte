@@ -2,7 +2,7 @@ import { CodedError } from '@adecore/agents';
 import type { NodeActivityStore } from '../activity/node-activity.ts';
 import type { Area } from '../area.ts';
 
-export interface ActivityDeps {
+interface ActivityDeps {
     activity: NodeActivityStore;
 }
 

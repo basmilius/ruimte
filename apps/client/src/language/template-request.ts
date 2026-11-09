@@ -3,7 +3,7 @@ import type { TemplateDraft } from '@/language/template-draft';
 import type { TemplatesTracker } from '@/language/templates';
 
 /* The template form Save as Live Template opens, with the tracker of the project it was asked in. */
-export interface TemplateRequest {
+interface TemplateRequest {
     tracker: TemplatesTracker;
     draft: TemplateDraft;
 }

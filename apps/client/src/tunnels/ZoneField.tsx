@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 /* An account may hold dozens of domains; from this many on the list takes a search field. */
 const SEARCH_FROM = 8;
 
-export interface ZoneFieldProps {
+interface ZoneFieldProps {
     zones: readonly TunnelNamed[];
     /* The id of the zone picked; falls back to the first one while none is. */
     zone: string;

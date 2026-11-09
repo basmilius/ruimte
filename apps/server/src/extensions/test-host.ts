@@ -37,7 +37,7 @@ export class Refused extends Error {
     }
 }
 
-export interface HostNode {
+interface HostNode {
     id: string;
     kind: string;
     title: string;
@@ -87,7 +87,7 @@ export function sizeOfKind(kind: string): { width: number; height: number } {
 }
 
 /* A chat the machine runs, on a canvas or in a view of its own, which `chats.read` and `useChat` find either way. */
-export interface HostChat {
+interface HostChat {
     id: string;
     title: string;
     text: string;

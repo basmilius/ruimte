@@ -4,7 +4,7 @@ const PING_INTERVAL_MS = 10_000;
 /* Above this a round trip is slow enough for the dot to say so. */
 export const SLOW_PING_MS = 250;
 
-export interface PingMonitorOptions {
+interface PingMonitorOptions {
     /* One round trip to the daemon; anything it rejects with counts as a failed measurement. */
     send(): Promise<unknown>;
     report(latency: number | null): void;

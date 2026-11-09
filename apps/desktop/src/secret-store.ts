@@ -16,7 +16,7 @@ export interface SecretStore {
     write(secret: string | null): Promise<void>;
 }
 
-export interface SecretStoreOptions {
+interface SecretStoreOptions {
     /* Throw for a secret that is on disk but cannot be read, rather than take it for unset. */
     reportUnreadable?: boolean;
 }

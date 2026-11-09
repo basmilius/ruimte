@@ -6,7 +6,7 @@ import type { Transport } from '../transport-api/transport';
 const REPORT_MS = 20_000;
 const IDLE_SECONDS = 120;
 
-export interface PresenceSources {
+interface PresenceSources {
     /* Null outside the desktop app, where only the page's own focus says anything. */
     idleState: (() => Promise<SystemIdleState>) | null;
     focused: () => boolean;

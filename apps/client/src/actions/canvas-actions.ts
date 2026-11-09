@@ -51,7 +51,7 @@ import { defaultNodeSize } from '@/state/node-size';
 import { nodesOfView } from '@/state/view-nodes';
 
 /* What the canvas actions reach outside the document; a test hands in a fake of each. */
-export interface CanvasReach {
+interface CanvasReach {
     /* The agent CLIs of the machine the project runs on. */
     providers(): readonly ProviderInfo[];
     viewDeletion: ViewDeletionMachine;

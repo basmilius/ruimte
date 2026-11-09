@@ -2,7 +2,7 @@ import type { Area } from '../area.ts';
 import type { AnthropicClaudeApiService } from '../providers/anthropic-claude-api-service.ts';
 import type { NanoGptService } from '../providers/nanogpt-service.ts';
 
-export interface ProviderKeysDeps {
+interface ProviderKeysDeps {
     nanogpt: NanoGptService;
     claudeApi: AnthropicClaudeApiService;
 }

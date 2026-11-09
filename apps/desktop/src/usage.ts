@@ -46,7 +46,7 @@ const StateSchema = z.object({
 });
 
 type UsageState = z.infer<typeof StateSchema>;
-export type DesktopUsageDay = z.infer<typeof DaySchema>;
+type DesktopUsageDay = z.infer<typeof DaySchema>;
 
 export interface DesktopUsageStore {
     read(): string | null;
@@ -86,7 +86,7 @@ export function usageSettingOf(text: string | null): boolean | null {
     }
 }
 
-export interface UsageGateFacts {
+interface UsageGateFacts {
     // A release build (`telemetryBuild`); a checkout, `bun dev` and a local build count nothing.
     release: boolean;
     mode: MachineMode;
@@ -303,7 +303,7 @@ export function desktopUsageDayOf(record: DesktopUsageDay, cohortWeek: string, p
 }
 
 /* Newest first, as many days as fit in the ingest's size and at most a week per batch. */
-export function desktopUsageBatchesOf(days: readonly UsageDesktopDay[]): UsageDesktopBatch[] {
+function desktopUsageBatchesOf(days: readonly UsageDesktopDay[]): UsageDesktopBatch[] {
     const batches: UsageDesktopDay[][] = [];
     for (const day of days) {
         const last = batches.at(-1);

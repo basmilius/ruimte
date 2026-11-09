@@ -10,7 +10,7 @@ import { focusedEditor } from '@/surface/panels/focused-editor';
 import { focusedChatComposerKey, keyboardChatKey } from './focused-chat';
 
 /* Selection alone leaves +/- with the canvas; a maximized chat is the reading surface even on its frame. */
-export function chatTextTarget(): string | null {
+function chatTextTarget(): string | null {
     if (focusedEditor() !== null || useUi.getState().settings.open) {
         return null;
     }

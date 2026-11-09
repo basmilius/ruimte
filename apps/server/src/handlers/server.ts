@@ -1,6 +1,6 @@
 import type { Area } from '../area.ts';
 
-export interface ServerDeps {
+interface ServerDeps {
     version: string;
     home: string;
     /* What this machine's hardware is called, or null when nothing here could say. */

@@ -123,7 +123,7 @@ export const useSnoozes = create<SnoozeStore>((set, get) => {
  * One machine's side of the snoozes: the list it holds on every fresh link, and every change after.
  * A snooze set or ended while the link was down goes over once it is back.
  */
-export class SnoozeSync {
+class SnoozeSync {
     private readonly endpointId: string;
     private readonly transport: Transport;
     private readonly off: (() => void)[];

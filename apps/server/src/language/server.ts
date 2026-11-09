@@ -183,7 +183,7 @@ interface WorkspacePull {
 }
 
 /* The problems a process holds for a file, as a whole-project pull left them. `fresh` is false for a file the process found unchanged. */
-export interface WorkspaceProblemsReport {
+interface WorkspaceProblemsReport {
     server: string;
     uri: string;
     diagnostics: Diagnostic[];

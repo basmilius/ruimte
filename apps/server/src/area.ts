@@ -9,7 +9,7 @@ export interface EventSource {
 }
 
 /* A part that keeps what a client asked it to hold, like a watch or a stream, until the client goes. */
-export interface ClientHolder {
+interface ClientHolder {
     detachAll(clientId: string): void;
 }
 
@@ -29,7 +29,7 @@ export interface ClientEnd {
  */
 export type StopPhase = 'halt' | 'drain' | 'end' | 'last';
 
-export interface StopStep {
+interface StopStep {
     phase: StopPhase;
     /* Names the step in the log when it fails; a step that fails never keeps the next from running. */
     label: string;

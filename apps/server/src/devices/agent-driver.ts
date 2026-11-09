@@ -29,7 +29,7 @@ const TAP_MS = 60;
 /* One move per frame of a 60 Hz screen, so a scroll view reads the speed a person's finger has. */
 const SWIPE_STEP_MS = 16;
 
-export const SWIPE_DEFAULT_MS = 300;
+const SWIPE_DEFAULT_MS = 300;
 
 export interface Pixel {
     x: number;

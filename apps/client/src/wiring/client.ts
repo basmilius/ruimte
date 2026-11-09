@@ -182,7 +182,7 @@ const STEPS: readonly Step[] = [
 ];
 
 /* What the client started, for the code that draws the window and for whoever wants to stop it. */
-export interface ClientWiring {
+interface ClientWiring {
     readonly hooks: ClientHooks;
     stop(): void;
 }

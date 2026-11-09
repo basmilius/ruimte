@@ -6,7 +6,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { CLIENT_REACT_MAJOR } from './scaffold.ts';
 
-export const HAPPY_DOM = '@happy-dom/global-registrator';
+const HAPPY_DOM = '@happy-dom/global-registrator';
 
 /* The page a `*.dom.test.tsx` file draws into, registered before React loads. */
 export const DOM_PRELOAD = `import { GlobalRegistrator } from '${HAPPY_DOM}';\n\nGlobalRegistrator.register();\n`;

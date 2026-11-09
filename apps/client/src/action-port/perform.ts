@@ -6,7 +6,7 @@ export const PERSON_ACTION_CALL: ActionCall<void> = {
     context: undefined
 };
 
-export interface PerformOptions {
+interface PerformOptions {
     /* The person already answered the app's own dialog before this runs, so the action's question is theirs to answer. */
     confirmed?: boolean;
 }

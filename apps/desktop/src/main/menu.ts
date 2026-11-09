@@ -5,7 +5,7 @@ import type { DesktopIpc } from './ipc';
 
 const { app, Menu } = electron;
 
-export interface MenuOptions {
+interface MenuOptions {
     pageKeys: PageKeys;
     focused(): Electron.BrowserWindow | null;
     /* A page in a browser node or an HTML preview never sees the key, so there the menu answers. */
@@ -17,7 +17,7 @@ export interface MenuOptions {
     openWindow(): Electron.BrowserWindow;
 }
 
-export interface AppMenu {
+interface AppMenu {
     /* What stands until the page sends its own menu, and again after a reload or a crash. */
     setStatic(): void;
     /* The menu of the window in front. */

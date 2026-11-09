@@ -8,7 +8,7 @@ import type { Machine } from './service';
 
 const { app, net } = electron;
 
-export interface UpdatesOptions {
+interface UpdatesOptions {
     windows: Windows;
     machine: Pick<Machine, 'controller' | 'stopsOnQuit'>;
     /* Asks the person whether the quit may end what it ends; true when nothing needs asking. */

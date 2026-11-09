@@ -11,7 +11,7 @@ interface DetectableProviders {
     list(): Promise<ProviderInfo[]>;
 }
 
-export interface ProviderDetectDeps {
+interface ProviderDetectDeps {
     providers: DetectableProviders;
     accounts: { refresh(): Promise<unknown> };
     /* What tells every client the list of providers changed. */

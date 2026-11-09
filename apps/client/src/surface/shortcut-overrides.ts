@@ -51,7 +51,7 @@ function parsedKeys(entries: Entries): ReadonlyMap<string, Shortcut> {
     return keys;
 }
 
-export interface ShortcutOverrides {
+interface ShortcutOverrides {
     snapshot(): OverrideSnapshot;
     subscribe(listener: () => void): () => void;
     set(id: string, key: Shortcut): void;

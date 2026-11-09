@@ -7,7 +7,7 @@ import type { Transport } from '@/transport-api/transport';
 import { transportFor } from '@/transport/index';
 
 /* What one node shows of the view it points at. `snapshot` is null until the file has been read. */
-export interface ViewMirror<TSnapshot> {
+interface ViewMirror<TSnapshot> {
     snapshot: TSnapshot | null;
     /* The view this node points at is not a view of this project any more. */
     gone: boolean;
@@ -20,7 +20,7 @@ interface MirrorState<TSnapshot> {
 }
 
 /* Everything one kind of mirrored view knows how to do that another kind does differently. */
-export interface ViewMirrorKind<TSnapshot> {
+interface ViewMirrorKind<TSnapshot> {
     /*
      * Every change to what an editor of this kind shows, in every cell, since the view a node mirrors
      * may stand in the cell beside it. An editor emptied on its way off screen reports nothing.
@@ -33,7 +33,7 @@ export interface ViewMirrorKind<TSnapshot> {
     onChanged(link: Transport, listener: (viewId: string, snapshot: TSnapshot) => void): void;
 }
 
-export interface ViewMirrorHook<TSnapshot> {
+interface ViewMirrorHook<TSnapshot> {
     (viewId: string | null): ViewMirror<TSnapshot> | null;
 }
 

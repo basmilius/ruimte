@@ -3,7 +3,7 @@ import { TunnelNamedSchema, TunnelRowSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 import { JsonFileStore } from '../json-file-store.ts';
 
-export const TUNNELS_DIR = 'tunnels';
+const TUNNELS_DIR = 'tunnels';
 
 /*
  * A row of the screen with what Ruimte needs to undo it: the zone and the DNS record it made, which is the only record it

@@ -5,7 +5,7 @@ import type { RowId } from '@/surface/shortcut-overrides';
 import { BROWSER_KEEPS } from '@/surface/shortcuts';
 
 /* Why a key cannot be a row's, for the Keyboard pane to put in words. */
-export type ShortcutRefusal = { reason: 'modifier' } | { reason: 'browser' } | { reason: 'taken'; label: string };
+type ShortcutRefusal = { reason: 'modifier' } | { reason: 'browser' } | { reason: 'taken'; label: string };
 
 /* The key as the keyboard sends it, so Mod on macOS and Meta compare as the one key they are. */
 function signature(key: Shortcut, apple: boolean): string {

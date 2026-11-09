@@ -2,7 +2,7 @@ import { CodedError } from '@adecore/agents';
 import type { Area } from '../area.ts';
 import type { SessionPorts } from '../sessions/ports.ts';
 
-export interface SessionPortsDeps {
+interface SessionPortsDeps {
     ports: SessionPorts;
 }
 

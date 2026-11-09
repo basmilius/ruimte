@@ -31,7 +31,7 @@ export type TemplateInput =
  * `project` is null when the project has none to read, `projectTooNew` when its file is from a newer Ruimte
  * and `projectInvalid` when it is JSON that breaks the schema.
  */
-export interface TemplatesSnapshot {
+interface TemplatesSnapshot {
     readonly personal: PersonalTemplates;
     readonly project: ProjectTemplates | null;
     readonly projectTooNew: boolean;
@@ -51,7 +51,7 @@ function isPostfixFamily(value: string): value is PostfixTemplate['languages'][n
 }
 
 /* A family or place a newer Ruimte added is left out, and a template that names no family at all is dropped by the registry. */
-export function liveTemplateOf(stored: StoredLiveTemplate): LiveTemplate {
+function liveTemplateOf(stored: StoredLiveTemplate): LiveTemplate {
     return {
         id: stored.id,
         key: stored.key,
@@ -62,7 +62,7 @@ export function liveTemplateOf(stored: StoredLiveTemplate): LiveTemplate {
     };
 }
 
-export function postfixTemplateOf(stored: StoredPostfixTemplate): PostfixTemplate {
+function postfixTemplateOf(stored: StoredPostfixTemplate): PostfixTemplate {
     return {
         id: stored.id,
         key: stored.key,

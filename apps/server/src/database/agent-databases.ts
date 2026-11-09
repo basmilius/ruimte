@@ -13,13 +13,13 @@ import type { DatabasePasswords } from './agent-passwords.ts';
 import { inOwnedSession, type DatabaseCalls, type SessionCall } from './owned-session.ts';
 
 /* How long one tool may keep its session; past it the call is cancelled and its session closed. */
-export const AGENT_DATABASE_LIMIT_MS = 120_000;
+const AGENT_DATABASE_LIMIT_MS = 120_000;
 
 /* The longest text or binary value a row prints whole; a longer one prints its start and its length. */
-export const AGENT_CELL_LIMIT = 256;
+const AGENT_CELL_LIMIT = 256;
 
 /* How many rows `execute` prints of a statement that reads. */
-export const EXECUTE_ROW_LIMIT = 100;
+const EXECUTE_ROW_LIMIT = 100;
 
 class DatabaseAgentError extends CodedError {}
 

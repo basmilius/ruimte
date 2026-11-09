@@ -5,7 +5,7 @@ export interface ScriptFrame {
     readonly detached: boolean;
 }
 
-export type GuestEdit = 'copy' | 'select-all';
+type GuestEdit = 'copy' | 'select-all';
 
 const COMMANDS: Record<GuestEdit, string> = {
     copy: 'copy',

@@ -214,7 +214,7 @@ function shownKey(): string | null {
 }
 
 /* The pieces a test stands in for; the app passes none of them. */
-export interface WindowTabsDeps {
+interface WindowTabsDeps {
     place: TabsPlace | null;
     /* Whether a switch of project is under way, and a call whenever that changes. */
     switches(): Promise<{ busy(): boolean; subscribe(listener: () => void): () => void }>;

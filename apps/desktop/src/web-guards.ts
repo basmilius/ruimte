@@ -25,7 +25,7 @@ export function isSystemSettingsPane(url: string): boolean {
 }
 
 /* The part of a frame the guards read, up through its parents. */
-export interface FrameInPage {
+interface FrameInPage {
     readonly url: string;
     readonly parent: FrameInPage | null;
 }
@@ -85,7 +85,7 @@ export function allowGuestPermission(permission: string): boolean {
  */
 const APP_PERMISSIONS: ReadonlySet<string> = new Set(['notifications', 'clipboard-read', 'clipboard-sanitized-write', 'fullscreen']);
 
-export interface AppPermissionAsk {
+interface AppPermissionAsk {
     readonly permission: string;
     /* Whether the asking page is the main frame of one of the app's windows; a subframe (a visual, an extension's frame) never is. */
     readonly appMainFrame: boolean;

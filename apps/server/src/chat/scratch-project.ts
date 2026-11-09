@@ -14,12 +14,12 @@ const SCRATCH_NAME = 'Chats';
 const NEW_CHAT_NAME = 'New chat';
 
 /* Whether a person wrote in a chat yet, as its thread says; a chat this daemon has no thread of never had a message. */
-export type ChatWritten = (chatId: string) => Promise<boolean>;
+type ChatWritten = (chatId: string) => Promise<boolean>;
 
 /* Whether a folder sits inside a git checkout. */
-export type CheckoutProbe = (folder: string) => Promise<boolean>;
+type CheckoutProbe = (folder: string) => Promise<boolean>;
 
-export async function insideGitCheckout(folder: string): Promise<boolean> {
+async function insideGitCheckout(folder: string): Promise<boolean> {
     return (await git(['rev-parse', '--show-toplevel'], folder)) !== null;
 }
 

@@ -22,7 +22,7 @@ export interface ExtensionHandlerDeps {
     databaseQuery(projectId: string, connection: string, sql: string): Promise<{ columns: string[]; rows: ExtensionDatabaseValue[][]; hasMore: boolean }>;
 }
 
-export interface ExtensionsDeps extends ExtensionHandlerDeps {
+interface ExtensionsDeps extends ExtensionHandlerDeps {
     host: ExtensionHost;
     readChat(chatId: string): Promise<string>;
 }
@@ -53,7 +53,7 @@ class StreamStop {
  * The runs under way, each by the client that started it and its run id: a client chooses the id, so another client's
  * stop or a second run under the same id never reaches a run that is not its own.
  */
-export class AgentStreams {
+class AgentStreams {
     private readonly runs = new Map<string, StreamStop>();
 
     /* Refused while the client has a run under that id. */

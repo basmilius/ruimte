@@ -131,7 +131,7 @@ export interface SidebarProject {
 }
 
 /* How the nodes under an open canvas are listed; absent keeps the canvas order. */
-export interface SidebarNodeOrder {
+interface SidebarNodeOrder {
     sort: NodeSort;
     then: NodeSortThen;
 
@@ -159,7 +159,7 @@ interface SidebarInput {
 }
 
 /* Groups, notes and drawings are frames, paper and files; the list is about what runs. */
-export const SESSION_KINDS = ['terminal', 'chat', 'browser', 'device', 'design'] as const;
+const SESSION_KINDS = ['terminal', 'chat', 'browser', 'device', 'design'] as const;
 export type SessionKind = (typeof SESSION_KINDS)[number];
 
 export function isSessionKind(kind: CanvasNodeKind): kind is SessionKind {
@@ -211,7 +211,7 @@ export function snoozeTargetOf(node: SidebarNode): string {
 }
 
 /* Whether a node belongs in "Needs you": waiting, and not put aside for now. */
-export function waitsOnYou(node: SidebarNode): boolean {
+function waitsOnYou(node: SidebarNode): boolean {
     return node.status === 'needs-you' && !node.snoozedUntil;
 }
 
@@ -353,7 +353,7 @@ function waitingIn(group: SidebarGroup): SidebarRow[] {
  * the sidebar's order. A project the machine could not read right now says nothing, since its
  * statuses are from before.
  */
-export function needsYouSection(groups: readonly SidebarGroup[], onScreen?: readonly SidebarRow[]): SidebarSection | null {
+function needsYouSection(groups: readonly SidebarGroup[], onScreen?: readonly SidebarRow[]): SidebarSection | null {
     const waiting: (SidebarWaitingGroup & { group: SidebarGroup })[] = [];
     for (const group of [...groups.filter((group) => group.active), ...groups.filter((group) => !group.active)]) {
         if (group.state !== 'ready') {

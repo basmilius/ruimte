@@ -17,7 +17,7 @@ export interface RequestHead {
     headers: Array<[name: string, value: string]>;
 }
 
-export type HeadResult = { kind: 'need-more' } | { kind: 'head'; head: RequestHead; rest: Buffer } | { kind: 'bad'; status: 400 | 431 | 501; reason: string };
+type HeadResult = { kind: 'need-more' } | { kind: 'head'; head: RequestHead; rest: Buffer } | { kind: 'bad'; status: 400 | 431 | 501; reason: string };
 
 export function parseRequestHead(buffer: Buffer): HeadResult {
     const end = buffer.indexOf(HEAD_END);
@@ -68,7 +68,7 @@ export function headerValues(headers: RequestHead['headers'], name: string): str
     return headers.filter(([key]) => key.toLowerCase() === name).map(([, value]) => value);
 }
 
-export type Framing = { kind: 'none' } | { kind: 'length'; bytes: number } | { kind: 'chunked' } | { kind: 'bad'; reason: string };
+type Framing = { kind: 'none' } | { kind: 'length'; bytes: number } | { kind: 'chunked' } | { kind: 'bad'; reason: string };
 
 /* How long the body of a request is, by the rules of RFC 9112 section 6, refusing a request that names two lengths. */
 export function framingOf(headers: RequestHead['headers']): Framing {

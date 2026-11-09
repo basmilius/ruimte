@@ -1,6 +1,6 @@
 import type { DesktopIpc } from './ipc';
 
-export const SAFE_MODE_ARGUMENT = '--safe-mode';
+const SAFE_MODE_ARGUMENT = '--safe-mode';
 
 /* The page starts without extensions and themes when its address has this (`apps/client/src/extensions/safe-mode.ts`). */
 const SAFE_MODE_PARAM = 'safe-mode';
@@ -21,7 +21,7 @@ export function inSafeMode(url: string, safeMode: boolean): string {
     return marked.toString();
 }
 
-export interface SafeModeOptions {
+interface SafeModeOptions {
     /* The command line this start ran with, Electron's own path first. */
     argv: readonly string[];
     /* Quits and starts the app again with these arguments. */

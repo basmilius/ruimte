@@ -6,7 +6,7 @@ const LAST_PROJECT_KEY = 'ruimte.lastProject';
 export type LastProjectStorage = KeyValueStorage;
 
 /* The last project the window had open, which is what a cold start opens again. */
-export interface LastProject {
+interface LastProject {
     endpointId: string;
     projectId: string;
 }

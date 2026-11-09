@@ -7,7 +7,7 @@ import type { DesktopIpc } from './ipc';
 
 const { app, net, systemPreferences } = electron;
 
-export interface SpeechOptions {
+interface SpeechOptions {
     ruimteHome: string;
     repoRoot: string;
     /* To every window. */

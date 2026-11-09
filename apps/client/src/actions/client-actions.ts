@@ -33,7 +33,7 @@ import { endpointOfNodeId } from '@/state/node-endpoint';
 import { shownFolderOf, useProject } from '@/state/project';
 import { diagramClient, drawingClient } from '@/workspace/connections';
 
-export interface ClientActionMachine {
+interface ClientActionMachine {
     sendChat(chatId: string, text: string, extras: ChatSendExtras): Promise<{ queued: boolean; turnId?: string }>;
     clearChat(chatId: string, force: boolean): Promise<void>;
     /* The thread of a chat nobody in this window opened, read without attaching to it for good. */

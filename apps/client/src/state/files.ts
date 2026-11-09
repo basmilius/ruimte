@@ -123,7 +123,7 @@ export function compareTabKey(cwd: string, from: string, to: string): string {
     return `compare:${JSON.stringify([cwd, from, to])}`;
 }
 
-export function snapshotTabKey(cwd: string, commit: string, path: string): string {
+function snapshotTabKey(cwd: string, commit: string, path: string): string {
     return `snapshot:${JSON.stringify([cwd, commit, path])}`;
 }
 
@@ -230,7 +230,7 @@ export function tabsOverLimit(tabs: readonly Tab[], limit: number, opened: strin
 }
 
 /* What opening a path did to the pool; `replaced` is the key of the diff tab it took over, which the layout has to rename. */
-export interface OpenedTab extends TabState {
+interface OpenedTab extends TabState {
     replaced?: string;
 }
 
@@ -292,21 +292,21 @@ export interface RevealLineRequest extends Omit<FileLocation, 'path'> {
     nonce: number;
 }
 
-export interface RevealRequest {
+interface RevealRequest {
     /* Absolute on the daemon's machine, the same path a tab carries. */
     path: string;
     /* Goes up on every ask, so revealing the same file twice is two reveals and not one. */
     nonce: number;
 }
 
-export interface CaretRequest {
+interface CaretRequest {
     /* The tab whose editor takes the keyboard; a file that is not the one up ignores it. */
     key: string;
     /* Goes up on every ask, so a file created twice under one name is two asks. */
     nonce: number;
 }
 
-export interface CreateRequest {
+interface CreateRequest {
     kind: 'file' | 'directory';
     /* Goes up on every ask, so asking for the same kind twice is two asks. */
     nonce: number;
@@ -375,7 +375,7 @@ export interface OpenOptions {
 }
 
 /* The tab whose body is asked to take the keyboard; `nonce` goes up on every ask, so the same tab twice is two asks. */
-export interface FocusRequest {
+interface FocusRequest {
     key: string;
     nonce: number;
 }

@@ -25,7 +25,7 @@ function parseFrame(data: string): CheckFrame | null {
     }
 }
 
-export interface ProtocolGateEvents {
+interface ProtocolGateEvents {
     send(data: string): void;
     open(features: readonly string[]): void;
     message(data: string | Uint8Array): void;

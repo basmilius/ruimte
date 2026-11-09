@@ -20,7 +20,7 @@ import { RENDER_COMMAND, classifyRenderLine, type RenderAnswer, type RenderReque
 /* The width a preview is drawn at, by default the reply column of a chat that is a view of its own. */
 export const PREVIEW_WIDTH = { min: 240, max: 1600, default: REPLY_COLUMN_WIDTH } as const;
 
-export const PREVIEW_LIMIT_MS = 20_000;
+const PREVIEW_LIMIT_MS = 20_000;
 /* Measuring is part of publishing, which must not keep the agent waiting long. */
 const MEASURE_LIMIT_MS = 6_000;
 const SLOTS = 2;
@@ -46,7 +46,7 @@ type VisualRenderErrorCode = 'preview-unavailable' | 'preview-timeout' | 'previe
 
 export class VisualRenderError extends CodedError<VisualRenderErrorCode> {}
 
-export interface RenderedPreview {
+interface RenderedPreview {
     png: Uint8Array;
     width: number;
     height: number;
@@ -175,7 +175,7 @@ export function childLauncher(
     };
 }
 
-export interface VisualRendererOptions {
+interface VisualRendererOptions {
     slots?: number;
     previewLimitMs?: number;
     measureLimitMs?: number;

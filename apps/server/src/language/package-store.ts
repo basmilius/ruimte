@@ -16,7 +16,7 @@ const ASIDE = '.adopting';
 /* A set id is 16 hex digits; anything else in the folder is not Ruimte's to remove. */
 const SET_ID = /^[0-9a-f]{16}$/;
 
-export interface PackageStoreOptions {
+interface PackageStoreOptions {
     /* `$RUIMTE_HOME/language-servers`. */
     root: string;
     runtime: LanguageRuntime;
@@ -27,7 +27,7 @@ export interface PackageStoreOptions {
 }
 
 /* `set.json`: what a set was installed from, written last so a set without it was never finished. */
-export interface PackageSetRecord {
+interface PackageSetRecord {
     format: 1;
     dependencies: Record<string, string>;
     platform: string;
@@ -38,10 +38,10 @@ export interface PackageSetRecord {
 }
 
 /* What adoption did with the packages of an install that held its own: moved into a new set, replaced by a link to an identical set, or left alone because the set differs. */
-export type Adoption = 'moved' | 'linked' | 'kept';
+type Adoption = 'moved' | 'linked' | 'kept';
 
 /* A hold on a set: while it is out, `collect` leaves the set alone. */
-export interface Lease {
+interface Lease {
     readonly setId: string;
     /* The folder of the set, with its `package.json`, `bun.lock`, `node_modules` and `set.json`. */
     readonly folder: string;

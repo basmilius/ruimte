@@ -5,7 +5,7 @@ import { placeOf } from '../canvas/host.ts';
 import { PortGrantError } from '../ports/port-grants.ts';
 import { defineTool, defineToolkit } from './tool.ts';
 
-export const portShare = defineTool('browser', {
+const portShare = defineTool('browser', {
     name: 'port_share',
     description: "Shares a dev server's port with the person's other devices, or stops a share you made. Needs the machine's Agents setting.",
     input: z.object({

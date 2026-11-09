@@ -2,7 +2,7 @@ import { CodedError } from '@adecore/agents';
 import type { Area } from '../area.ts';
 import type { SnoozeStore } from '../push/snoozes.ts';
 
-export interface SnoozeDeps {
+interface SnoozeDeps {
     snoozes: SnoozeStore;
     /* The project index's; a snooze is kept against the project its node is in. */
     locate(nodeId: string): { projectId: string } | null;

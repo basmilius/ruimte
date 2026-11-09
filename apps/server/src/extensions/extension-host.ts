@@ -120,7 +120,7 @@ interface Grant {
 /* What `server/` may ask the daemon, each behind the permission of the same name. */
 export type ExtensionAsks = Readonly<Record<string, (...args: never[]) => Promise<unknown>>>;
 
-export interface ExtensionChatStart {
+interface ExtensionChatStart {
     projectId: string;
     // Where the chat works instead: the project the machine knows in this folder, which then wins over `projectId`.
     folder?: string | undefined;

@@ -9,7 +9,7 @@ export type DesignRead = { kind: 'listed'; entries: FsEntry[] } | { kind: 'missi
  * last read failed. A failed read leaves the entries as they were, so a refresh that failed never turns
  * the pages shown into an empty design.
  */
-export interface DesignListing {
+interface DesignListing {
     entries: FsEntry[] | null;
     problem: string | null;
 }

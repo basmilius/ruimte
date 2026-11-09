@@ -17,7 +17,7 @@ interface Upload {
     readonly pieces: Map<number, number>;
 }
 
-export interface FinishedUpload {
+interface FinishedUpload {
     readonly path: string;
     readonly expectedMtime: number;
     readonly text: string;

@@ -417,7 +417,7 @@ function errnoOf(e: unknown): string | null {
 }
 
 /* Whether a read failed because this process may not read the file, which a sandbox causes too. */
-export function readDenied(e: unknown): boolean {
+function readDenied(e: unknown): boolean {
     const code = errnoOf(e);
     return code === 'EACCES' || code === 'EPERM';
 }

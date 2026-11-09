@@ -16,7 +16,7 @@ import { closeQuietly, withAccess, type SignalingOpener } from './signaling';
 // 24 random bytes, comfortably above the 16 the door asks for.
 const NONCE_BYTES = 24;
 
-export interface LanSignalingOptions {
+interface LanSignalingOptions {
     /* The socket URL of one door address the machine reported (`lanDoorUrl`). */
     url: string;
     /* The machine's key this row pinned. The door has to sign the client's nonce with it before anything else happens. */

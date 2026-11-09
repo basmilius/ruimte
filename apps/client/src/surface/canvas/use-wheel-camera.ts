@@ -15,7 +15,7 @@ function wheelZooms(e: WheelEvent): boolean {
     return e.ctrlKey || isModHeld(e, isApplePlatform());
 }
 
-export interface WheelCameraOptions {
+interface WheelCameraOptions {
     /* A canvas refuses a pan or a zoom while that lock is on; a drawing and a diagram have none. */
     locks?: () => { pan: boolean; zoom: boolean };
     /* True when the wheel belongs to something on the surface rather than to the camera. */

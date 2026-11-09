@@ -2,14 +2,14 @@ import { bearerToken } from '../agents/bearer.ts';
 import type { CredentialCheck, CredentialStore } from './credential-store.ts';
 
 /* A request that came through a tunnel says so in the headers Cloudflare adds; these only ever refuse. */
-export const TUNNEL_HEADERS = ['cf-ray', 'cf-connecting-ip'] as const;
+const TUNNEL_HEADERS = ['cf-ray', 'cf-connecting-ip'] as const;
 
 const FAILURE_WINDOW_MS = 60_000;
 const FAILURES_PER_WINDOW = 20;
 const MAX_TRACKED_SOURCES = 1000;
 
 /* Whether the request carries a header only Cloudflare's edge sets. */
-export function hasTunnelHeaders(headers: Headers): boolean {
+function hasTunnelHeaders(headers: Headers): boolean {
     return TUNNEL_HEADERS.some((name) => headers.has(name));
 }
 
@@ -25,7 +25,7 @@ export function refuseTunnelled(request: Request): Response | null {
  * Whether the `Host` is the listener's own address. A tunnel passes the public hostname on, so any other `Host` means
  * the request did not come straight from this machine. Like the headers above, this is no proof of anything: it only refuses.
  */
-export function isLoopbackHost(host: string | null, port: number | null): boolean {
+function isLoopbackHost(host: string | null, port: number | null): boolean {
     if (host === null) {
         return false;
     }
@@ -81,7 +81,7 @@ export class FailureLimiter {
     }
 }
 
-export type GateResult = { ok: true; credential: CredentialCheck & { ok: true } } | { ok: false; response: Response };
+type GateResult = { ok: true; credential: CredentialCheck & { ok: true } } | { ok: false; response: Response };
 
 export function challenge(metadataUrl: string | null): Response {
     return new Response(null, {

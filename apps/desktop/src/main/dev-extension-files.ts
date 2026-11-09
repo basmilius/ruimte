@@ -3,7 +3,7 @@ import { EXTENSION_FILES_PATH } from '@ruimte/csp';
 import type { ClientExtensions } from './extensions';
 
 // The same number as the proxy in `apps/client/vite.config.ts`.
-export const DEV_EXTENSION_FILES_PORT = 4213;
+const DEV_EXTENSION_FILES_PORT = 4213;
 
 // What a sandboxed frame loads as part of its page; a fetch is `empty` and gets no answer for an opaque origin.
 const FRAME_SUBRESOURCES = new Set(['script', 'style', 'font', 'image', 'audio', 'video', 'track', 'worker']);

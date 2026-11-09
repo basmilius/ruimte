@@ -2,7 +2,7 @@ import { chmod, mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cloudflaredAsset, cloudflaredUrl } from './cloudflared-pins.ts';
 
-export class CloudflaredInstallError extends Error {}
+class CloudflaredInstallError extends Error {}
 
 export interface InstallerPorts {
     platform: string;

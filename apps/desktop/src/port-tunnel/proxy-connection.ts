@@ -26,7 +26,7 @@ export interface ProxySocket {
     destroy(): void;
 }
 
-export interface ProxyConnectionOptions {
+interface ProxyConnectionOptions {
     socket: ProxySocket;
     relay: TunnelRelay;
     /* The only port the tunnel reaches; an authority with another is refused. */

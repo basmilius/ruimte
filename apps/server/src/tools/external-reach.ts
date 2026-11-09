@@ -5,7 +5,7 @@ import { reachableLines, recentLines, type ReachableProject } from '../canvas/re
 import type { IndexedPlace } from '../projects/project-index.ts';
 
 /* Whether the credential's scope names this project; a scope of null names them all. */
-export function inScope(grant: ExternalGrant, projectId: string): boolean {
+function inScope(grant: ExternalGrant, projectId: string): boolean {
     return grant.projects === null || grant.projects.includes(projectId);
 }
 

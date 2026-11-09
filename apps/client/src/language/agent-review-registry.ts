@@ -1,7 +1,7 @@
 import type { Editor } from '@adecore/editor';
 
 /* What the commands that step through the agent's changes need of the review `editor-ai` keeps for a file. */
-export interface SteppableReview {
+interface SteppableReview {
     step(direction: 1 | -1): void;
 }
 

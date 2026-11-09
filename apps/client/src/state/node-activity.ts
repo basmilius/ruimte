@@ -11,7 +11,7 @@ import { fireAndForget, readOnEveryOpen, type Transport } from '@/transport-api/
  * or finished, or a person opened it. The machine keeps it (`activity.list`), so every client lists a
  * canvas in the same order. A machine older than `activity.list` leaves a node without one.
  */
-export type NodeActivities = Readonly<Record<string, number>>;
+type NodeActivities = Readonly<Record<string, number>>;
 
 interface NodeActivityStore {
     byKey: NodeActivities;

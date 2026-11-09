@@ -8,7 +8,7 @@ export type ToolContext = ToolCaller;
 
 export type InputSchema = ToolInputSchema;
 
-export type ToolAnnotations = {
+type ToolAnnotations = {
     readOnlyHint?: boolean;
     destructiveHint?: boolean;
 };

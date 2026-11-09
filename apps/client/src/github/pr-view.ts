@@ -13,7 +13,7 @@ interface VisibleThreads {
 }
 
 /* A thread belongs to a bot when the one who opened it is one. */
-export function isBotThread(thread: GitPrThread): boolean {
+function isBotThread(thread: GitPrThread): boolean {
     return thread.comments[0]?.bot === true;
 }
 

@@ -4,7 +4,7 @@ import { readPiece } from '@/transport-api/piece';
 import { readResource } from '@/transport/byte-transfer';
 import type { Transport } from '@/transport/index';
 
-export interface IconAppearance {
+interface IconAppearance {
     color: string | null;
     black: boolean;
 }

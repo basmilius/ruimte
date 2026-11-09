@@ -36,7 +36,7 @@ export const DESIGN_METHODS = {
 
 export type DesignTool = 'view' | 'comment' | 'edit' | 'draw';
 
-export const DesignCameraSchema = z.object({
+const DesignCameraSchema = z.object({
     x: z.number().finite(),
     y: z.number().finite(),
     zoom: z.number().finite().min(0.01).max(16)
@@ -49,7 +49,7 @@ const TweakValueSchema = z.union([z.string().max(500), z.number().finite(), z.bo
 export type TweakValue = z.infer<typeof TweakValueSchema>;
 
 // One control of the tweaks a page declares, with the value it holds now.
-export const TweakSchema = z.object({
+const TweakSchema = z.object({
     label: z.string().max(80).optional(),
     type: z.enum(['color', 'range', 'select', 'toggle', 'text']),
     value: TweakValueSchema,
@@ -67,7 +67,7 @@ export type Tweaks = z.infer<typeof TweaksSchema>;
 
 const RectSchema = z.object({ x: z.number().finite(), y: z.number().finite(), width: z.number().finite(), height: z.number().finite() });
 
-export const DesignElementSchema = z.object({
+const DesignElementSchema = z.object({
     selector: z.string().min(1).max(1000),
     option: z.string().max(16).nullable(),
     name: z.string().max(200),
@@ -100,7 +100,7 @@ const PageMessageSchema = z.discriminatedUnion('method', [
         })
     )
 ]);
-export type DesignPageMessage = z.infer<typeof PageMessageSchema>;
+type DesignPageMessage = z.infer<typeof PageMessageSchema>;
 
 /* What a design page said, checked: it is an agent's page, so anything else is ignored. */
 export function designPageMessage(data: unknown): DesignPageMessage | null {

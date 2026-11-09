@@ -50,7 +50,7 @@ export interface CanvasPromptsInput {
     snoozes?: Snoozes;
 }
 
-export interface CanvasPrompts {
+interface CanvasPrompts {
     prompts: CanvasPrompt[];
     /* The prompts of snoozed owners, in the same order, for the way back early. */
     snoozed: CanvasPrompt[];

@@ -62,7 +62,7 @@ export function currentProjectId(): string | null {
 }
 
 /* Reads the grants again; a machine that cannot list them has none to use. */
-export function loadPortGrants(endpointId: string): void {
+function loadPortGrants(endpointId: string): void {
     const transport = transportFor(endpointId);
 
     if (transport === null || !machineAnswers(transport.connection, 'port.list')) {

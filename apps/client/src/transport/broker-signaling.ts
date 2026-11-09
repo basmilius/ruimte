@@ -30,7 +30,7 @@ interface Shared {
     iceRequestId: string | null;
 }
 
-export interface BrokerMembership {
+interface BrokerMembership {
     relay(to: string, envelope: SignalEnvelope): Promise<string | null>;
     leave(): void;
 }
@@ -173,7 +173,7 @@ export class BrokerSockets {
 
 const brokerSockets = new BrokerSockets();
 
-export interface BrokerSignalingOptions {
+interface BrokerSignalingOptions {
     brokerUrl: string;
     /* The machine's key this row pinned from the account list. A signal is believed only from this key. */
     machineKey: string;

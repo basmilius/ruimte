@@ -13,7 +13,7 @@ import { isThisMachine } from '@/state/local-machine';
 import { ChatOnCanvasContext } from '@/surface/nodes/chat-on-canvas';
 
 /* Another repository in the chat's folder, such as a submodule, by the name the git panel gives it. */
-export interface OtherRepo {
+interface OtherRepo {
     label: string;
     status: GitStatus | null;
 }

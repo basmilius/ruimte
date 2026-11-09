@@ -61,7 +61,7 @@ export function repositoryName(url: string): string {
     return last.replace(/\.git$/, '') || 'repository';
 }
 
-export type CopySkip = 'link' | 'too-large';
+type CopySkip = 'link' | 'too-large';
 
 export interface CopyCandidate {
     path: string;
@@ -99,7 +99,7 @@ export type CopyOutcome =
     | { path: string; copied: true }
     | { path: string; copied: false; reason: 'binary' | 'too-large' | 'link' | 'private' | 'failed'; message?: string };
 
-export interface CopyIo {
+interface CopyIo {
     read(path: string): Promise<FsReadResult>;
     write(path: string, text: string, mode: number): Promise<void>;
     /* Whether the machine written to makes a file with the bits it is given; one that does not makes every file 0644. */

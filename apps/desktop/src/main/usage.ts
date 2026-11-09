@@ -14,7 +14,7 @@ const SETTING_MS = 60_000;
 // Days only finish at midnight UTC, so an hour is soon enough and also the wait after a failed send.
 const FLUSH_MS = 60 * 60 * 1000;
 
-export interface UsageHandle {
+interface UsageHandle {
     /* The machine is up, so its switch is on disk: counts the start and sends the finished days. */
     started(): void;
     windowOpened(): void;

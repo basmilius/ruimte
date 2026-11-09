@@ -5,7 +5,7 @@ import { transportFor, type Transport } from '@/transport';
 import { ensureMachine } from '@/workspace/reach';
 import { projectIconAppearance } from '../clients/project/icon-appearance';
 
-export interface ProjectSettingsResult {
+interface ProjectSettingsResult {
     endpointId: string;
     summary: ProjectSummary;
 }

@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 
-export interface SmokeOptions {
+interface SmokeOptions {
     /* The app's own address, which the browser node is pointed at. */
     appUrl: string;
     /* Where to write the title bar instead of driving a browser node. */

@@ -6,7 +6,7 @@ import type { DatabaseService } from '../database/database-service.ts';
 import type { SqlAnalysis } from '../database/sql-analysis.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 
-export interface DatabaseDeps {
+interface DatabaseDeps {
     service: DatabaseService;
     connections: DatabaseConnectionStore;
     agents: Pick<AgentDatabases, 'accessFor' | 'setAccess' | 'handPasswords' | 'subscribe' | 'close'>;

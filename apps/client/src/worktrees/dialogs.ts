@@ -41,7 +41,7 @@ export const WORKTREE_DIALOGS: readonly DialogContribution[] = [
 ];
 
 /* The checkout whose unmerged files are being resolved, and the file the overlay opens on. */
-export interface ConflictRequest {
+interface ConflictRequest {
     cwd: string;
     path?: string;
 }

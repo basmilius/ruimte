@@ -107,7 +107,7 @@ interface SummaryCoordinatorDeps {
  * Notes that a fork finished the turn it wrote a summary in, and owes the original its delivery in
  * the outbox. It never delivers itself: it runs inside the broadcast of the fork it heard.
  */
-export class SummaryCoordinator {
+class SummaryCoordinator {
     private readonly deps: SummaryCoordinatorDeps;
     // A settled turn is upserted again (its diff, its tree); one entry per turn is enough, and the handler is idempotent after a restart.
     private readonly owed = new Set<string>();

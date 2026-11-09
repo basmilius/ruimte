@@ -13,7 +13,7 @@ export interface ScreenPoint {
     y: number;
 }
 
-export interface TabDragDeps<Window extends DragWindow> {
+interface TabDragDeps<Window extends DragWindow> {
     detach(window: Window, key: string, at: ScreenPoint): Window | null;
     transfer(key: string, window: Window): boolean;
     windowAt(point: ScreenPoint, except: Window): Window | null;

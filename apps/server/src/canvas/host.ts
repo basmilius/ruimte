@@ -119,7 +119,7 @@ export function referencedBy(host: { context?: { referenced?(targetId: string): 
 }
 
 /* The other machines an agent may give work to, and the owing of that work. */
-export interface RemoteAgentHost {
+interface RemoteAgentHost {
     /* The machines a project is linked to; `ready` is whether this machine holds the link that lets it work in them. */
     machines(projectId: string): Array<{ machineId: string; label: string; remoteProjectId: string; ready: boolean }>;
     /* Owes the start of a task on another machine for the node that stands for it here. */

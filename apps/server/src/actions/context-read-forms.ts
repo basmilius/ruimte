@@ -13,7 +13,7 @@ import { PREVIEW_WIDTH } from '../visuals/renderer.ts';
 import type { ServerActionContext } from './context.ts';
 import { callerChat } from './visual-actions.ts';
 
-export type ReadForm = 'elements' | 'image';
+type ReadForm = 'elements' | 'image';
 
 const PAPER = '#ffffff';
 const PREVIEW_REFUSALS: ReadonlySet<string> = new Set(['preview-unavailable', 'preview-timeout', 'preview-failed']);
@@ -25,7 +25,7 @@ function formRefusal(form: ReadForm, kind: string): ToolRefusal {
 }
 
 /* The width a picture is rendered at: its own, within what a preview takes, and narrower where it would run past the tallest png. */
-export function imageWidth(svg: string): number {
+function imageWidth(svg: string): number {
     const size = /^<svg[^>]*?\swidth="([\d.]+)"[^>]*?\sheight="([\d.]+)"/.exec(svg);
     const width = Number(size?.[1] ?? PREVIEW_WIDTH.default);
     const height = Number(size?.[2] ?? 1);
@@ -35,7 +35,7 @@ export function imageWidth(svg: string): number {
     return Math.max(fitted, widened);
 }
 
-export function imagePage(svg: string, width: number): string {
+function imagePage(svg: string, width: number): string {
     return `<!doctype html><html><head><style>html,body{margin:0;background:${PAPER}}svg{display:block;width:${width}px;height:auto}</style></head><body>${svg}</body></html>`;
 }
 

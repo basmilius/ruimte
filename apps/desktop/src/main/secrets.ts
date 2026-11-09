@@ -9,7 +9,7 @@ import { pendingRemovalFile, voiceKey, type MachineVoiceKey } from './voice-key'
 
 const { app, net, safeStorage } = electron;
 
-export interface InstalledSecrets {
+interface InstalledSecrets {
     /* Gives the saved OpenAI key to the app's own daemon, for the Voice it runs for a phone. */
     handOverVoiceKey(): Promise<void>;
 }

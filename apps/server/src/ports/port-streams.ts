@@ -40,7 +40,7 @@ export interface PortTimers {
     after(ms: number, fire: () => void): () => void;
 }
 
-export interface PortStreamsOptions {
+interface PortStreamsOptions {
     grants: PortGrants;
     connect: PortConnect;
     timers: PortTimers;
@@ -58,7 +58,7 @@ const STREAM_OVERLOAD_BYTES = STREAM_QUEUE_BYTES + 2 * 512 * 1024;
 /* A full channel is asked again this often when no drain came, since a drain only fires when the channel crossed its own threshold. */
 const RECHECK_MS = 20;
 
-export class PortStreamError extends CodedError {}
+class PortStreamError extends CodedError {}
 
 type Closing = Pick<PortEndEvent, 'reason' | 'message'>;
 

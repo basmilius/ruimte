@@ -34,7 +34,7 @@ const SERVER_HOSTED: Readonly<Record<string, string>> = { '@ruimte/extension/ser
 const MAX_ICON_BYTES = 64 * 1024;
 const COPIED_FOLDERS = ['locales', 'assets', 'views', 'themes'];
 
-export class ExtensionBuildError extends Error {}
+class ExtensionBuildError extends Error {}
 
 export function readManifest(folder: string): ExtensionManifest {
     const path = join(folder, 'manifest.json');
@@ -332,7 +332,7 @@ function filesIn(folder: string, prefix = ''): string[] {
     });
 }
 
-export interface PackedExtension {
+interface PackedExtension {
     manifest: ExtensionManifest;
     path: string;
     bytes: number;

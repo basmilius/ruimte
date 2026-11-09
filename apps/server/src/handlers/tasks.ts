@@ -1,7 +1,7 @@
 import type { TaskStore } from '@adecore/agents/coordination';
 import type { Area } from '../area.ts';
 
-export interface TasksDeps {
+interface TasksDeps {
     tasks: TaskStore;
     children(nodeId: string): string[];
 }

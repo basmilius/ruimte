@@ -107,7 +107,7 @@ export interface ProjectMenuRow {
     summary: ProjectSummary;
 }
 
-export interface ProjectMenuRows {
+interface ProjectMenuRows {
     /* The projects in use, most recently opened first. */
     open: ProjectMenuRow[];
     /* The ones a person closed, most recently closed first. */

@@ -3,7 +3,7 @@ import { endpointById } from '@/state/endpoints';
 import { transportFor } from '@/transport';
 import { TransportError, type Transport } from '@/transport-api/transport';
 
-export interface TerminalPrepareMachine {
+interface TerminalPrepareMachine {
     machineId(endpointId: string): string | null;
     transport(endpointId: string): Transport | null;
 }

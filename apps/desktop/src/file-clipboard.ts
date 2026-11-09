@@ -3,7 +3,7 @@ import { isAbsolute, win32 } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 /* What the clipboard holds for files a person copied: the paths as text, and per raw format of the platform its bytes as text. */
-export interface FileClipboard {
+interface FileClipboard {
     text: string;
     formats: Record<string, string>;
 }

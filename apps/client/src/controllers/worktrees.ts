@@ -17,7 +17,7 @@ interface WorktreesStore {
     put(key: string, worktrees: readonly Worktree[]): void;
 }
 
-export const useWorktreeRows = create<WorktreesStore>((set, get) => ({
+const useWorktreeRows = create<WorktreesStore>((set, get) => ({
     rows: {},
     put(key, worktrees) {
         set({ rows: { ...get().rows, [key]: worktrees } });
