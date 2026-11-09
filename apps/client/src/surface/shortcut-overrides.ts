@@ -24,7 +24,6 @@ const EntriesSchema = z.record(z.string(), z.unknown());
 type Entries = Readonly<Record<string, unknown>>;
 
 export interface OverrideSnapshot {
-    /* The overrides that parse, by row id. */
     readonly keys: ReadonlyMap<string, Shortcut>;
 }
 
@@ -122,7 +121,6 @@ export function setOverride(id: RowId, key: Shortcut): void {
     overrides.set(id, key);
 }
 
-/* Puts a row back to its default key. */
 export function removeOverride(id: RowId): void {
     overrides.remove(id);
 }
@@ -138,7 +136,6 @@ export function rebind(id: RowId, key: Shortcut): void {
     }
 }
 
-/* Restore defaults for these rows; an entry of another id stays. */
 export function removeOverrideOf(ids: readonly RowId[]): void {
     overrides.removeMany(ids);
 }
@@ -157,14 +154,12 @@ export function keyIn(snapshot: OverrideSnapshot, id: RowId): Shortcut | undefin
     return snapshot.keys.get(id) ?? defaultKeyOf(id as DefaultKeyId);
 }
 
-/* The key a row answers to now. */
 export function keyOf(id: DefaultKeyId): Shortcut;
 export function keyOf(id: KeymapId): Shortcut | undefined;
 export function keyOf(id: RowId): Shortcut | undefined {
     return keyIn(overridesSnapshot(), id as DefaultKeyId);
 }
 
-/* Whether a key event is the key of a row of the editor's keymap now. */
 export function matchesKeymapRow(id: KeymapId, event: KeyLike, apple: boolean): boolean {
     const key = keyOf(id);
 

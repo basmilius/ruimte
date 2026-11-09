@@ -88,7 +88,6 @@ function hostOfView(view: ProjectView): NodeHost | null {
     return { id: view.id, kind: sessionKindOfView(view), title: view.name, titleSource: view.titleSource, ...view.node, onCanvas: false };
 }
 
-/* A view of its own by its id, or a later chat of a design by its id. */
 function hostOfViewId(views: readonly ProjectView[], id: string): NodeHost | null {
     const view = views.find((each) => each.id === id);
     if (view) {
@@ -231,7 +230,6 @@ export function resetTitle(id: string, viewId?: string): void {
     }
 }
 
-/* Closing a body: the node leaves its canvas, or the view leaves the project. */
 export function closeHost(id: string): void {
     const canvas = canvasOfNode(id);
     if (canvas !== null) {

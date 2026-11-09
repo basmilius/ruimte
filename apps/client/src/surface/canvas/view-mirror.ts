@@ -19,7 +19,6 @@ interface MirrorState<TSnapshot> {
     byKey: Record<string, ViewMirror<TSnapshot>>;
 }
 
-/* Everything one kind of mirrored view knows how to do that another kind does differently. */
 interface ViewMirrorKind<TSnapshot> {
     /*
      * Every change to what an editor of this kind shows, in every cell, since the view a node mirrors

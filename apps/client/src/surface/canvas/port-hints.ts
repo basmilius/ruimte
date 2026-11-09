@@ -11,7 +11,6 @@ export const HINT_REACH = 56;
 /* Within this much of a port the pointer is on it, which is what the accent says. */
 export const HINT_HOT = 14;
 
-/* A port offered to the pointer: a side of a node no line leaves from yet. */
 interface PortHint {
     nodeId: string;
     side: Side;

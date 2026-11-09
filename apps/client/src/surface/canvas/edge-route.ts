@@ -94,14 +94,12 @@ function grow(rect: Rect, margin: number): Bounds {
     };
 }
 
-/* The middle of a side, which is where a connector meets the node itself. */
 export function sidePoint(rect: Rect, side: Side): Point {
     return isVertical(side)
         ? { x: rect.x + rect.w / 2, y: side === 'top' ? rect.y : rect.y + rect.h }
         : { x: side === 'left' ? rect.x : rect.x + rect.w, y: rect.y + rect.h / 2 };
 }
 
-/* Where the dot of a connector on this side sits: the gap out from the node. */
 export function portPoint(rect: Rect, side: Side): Point {
     return push(sidePoint(rect, side), side, NODE_GAP);
 }
@@ -184,7 +182,6 @@ function route(a: End, b: End, obstacles: readonly Obstacle[], fixed: FixedSides
     return pathThrough(plainRoute(a, b, candidates[0]!, blocked), candidates[0]!);
 }
 
-/* The cheapest route between the two ends that keeps clear of every node, or `null` when there is none. */
 function search(a: End, b: End, candidates: readonly SidePair[], blocked: readonly Bounds[], own: readonly Bounds[]): Attempt | null {
     const closed = [...blocked, ...own];
     const facing = candidates[0]!;
@@ -580,7 +577,6 @@ function trace(cameFrom: Int32Array, state: number, pointAt: (vertex: number) =>
     return points.reverse();
 }
 
-/* The frontier of the search: a binary heap of states, the most promising one first. */
 interface Frontier {
     states: number[];
     scores: number[];
@@ -675,7 +671,6 @@ function crosses(a: Point, b: Point, box: Bounds): boolean {
     return enter < leave;
 }
 
-/* The run without the points that add nothing: a repeat, or a stop in the middle of a straight leg. */
 function straighten(points: readonly Point[]): Point[] {
     const kept: Point[] = [];
     for (const point of points) {
@@ -692,7 +687,6 @@ function straighten(points: readonly Point[]): Point[] {
     return kept;
 }
 
-/* The run through the points with its corners rounded, each bend no wider than the legs it joins. */
 function roundedPath(points: readonly Point[], radius: number): string {
     if (points.length < 2) {
         return '';
@@ -719,7 +713,6 @@ function roundedPath(points: readonly Point[], radius: number): string {
     return `${path} L ${last.x} ${last.y}`;
 }
 
-/* The middle of a route measured along its length, so a label rides the halfway point of the whole run. */
 function halfway(points: readonly Point[]): Point {
     const legs = points.slice(1).map((point, index) => Math.hypot(point.x - points[index]!.x, point.y - points[index]!.y));
     let left = legs.reduce((total, length) => total + length, 0) / 2;

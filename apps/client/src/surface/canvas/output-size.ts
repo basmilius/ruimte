@@ -20,7 +20,6 @@ export const RUNS_MIN_W = 320;
 
 const RunsWidthSchema = z.object({ w: z.number().min(RUNS_MIN_W) });
 
-/* The width a person gave the column of runs beside a routine node, kept the way the Output's size is. */
 export function storedRunsWidth(viewId: string, nodeId: string) {
     return storedJson<{ w: number }>(`ruimte.routineRuns.${viewId}.${nodeId}`, RunsWidthSchema);
 }

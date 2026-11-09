@@ -14,7 +14,6 @@ export function PanelHeaderProvider({ hosts, children }: { hosts: PanelHeaderHos
     return <PanelHeaderContext.Provider value={hosts}>{children}</PanelHeaderContext.Provider>;
 }
 
-/* Portal panel-owned controls into the shell header without lifting panel state. */
 export function PanelHeaderSlot({ children }: { children: ReactNode }) {
     const host = useContext(PanelHeaderContext).trailing;
     return host === null ? null : createPortal(children, host);

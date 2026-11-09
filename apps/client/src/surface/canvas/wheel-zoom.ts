@@ -16,7 +16,6 @@ const NOTCH_MIN_PIXELS = 40;
 /* The most a single pinch event may zoom by, so one coarse event from a driver never jumps. */
 const PINCH_MAX_DELTA = 25;
 
-/* Pixels per line and per page, for a wheel that reports in either. */
 const LINE_PIXELS = 16;
 const PAGE_PIXELS = 800;
 
@@ -32,10 +31,6 @@ function pixelsOf(deltaY: number, deltaMode: number): number {
     return deltaMode === 1 ? deltaY * LINE_PIXELS : deltaMode === 2 ? deltaY * PAGE_PIXELS : deltaY;
 }
 
-/*
- * What a wheel event with the zoom modifier asks for. A notch of a mouse wheel is a fixed step, glided
- * to; a pinch follows the fingers event by event.
- */
 export function wheelZoomOf(event: { deltaY: number; deltaMode: number }): WheelZoom {
     const pixels = pixelsOf(event.deltaY, event.deltaMode);
     if (event.deltaMode !== 0 || Math.abs(pixels) >= NOTCH_MIN_PIXELS) {
@@ -52,7 +47,6 @@ interface ZoomGlideCamera {
 }
 
 interface ZoomGlide {
-    /* Adds a step to where the glide is headed, around the point under the pointer. */
     add(factor: number, anchor: Point): void;
     /* Stops where the camera is now, without settling. */
     stop(): void;

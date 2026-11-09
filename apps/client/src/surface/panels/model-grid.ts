@@ -84,7 +84,6 @@ export class ModelGrid extends Mesh<PlaneGeometry, ShaderMaterial> {
         this.frustumCulled = false;
     }
 
-    /* Lays the grid under the model, `cellSize` apart. */
     fit(groundHeight: number, cellSize: number): void {
         this.material.uniforms.groundHeight.value = groundHeight;
         this.material.uniforms.cellSize.value = cellSize;

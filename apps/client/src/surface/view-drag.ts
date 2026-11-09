@@ -10,7 +10,6 @@ export const VIEW_DRAG_TYPE = 'application/x-ruimte-view';
 /* A project heading of the sidebar, which only the sidebar takes, so it never lands in a cell and a view never lands between projects. */
 export const PROJECT_DRAG_TYPE = 'application/x-ruimte-project';
 
-/* The id of the view being dragged, or null for a drag that is about something else. */
 export function draggedViewId(transfer: Pick<DataTransfer, 'types' | 'getData'>): string | null {
     if (!transfer.types.includes(VIEW_DRAG_TYPE)) {
         return null;
@@ -47,12 +46,10 @@ export function setDragging(viewId: string | null, whole = false, tabWidth: numb
     heldTabWidth = viewId === null ? null : tabWidth;
 }
 
-/* The width of the tab being dragged, or null when the drag is not a tab. */
 export function draggingTabWidth(): number | null {
     return heldTabWidth;
 }
 
-/* Whether the drag in progress takes the whole cell of the view it names, tabs and all. */
 export function draggingWholeCell(): boolean {
     return heldWhole;
 }
@@ -126,7 +123,6 @@ interface Spot {
     y: number;
 }
 
-/* Which of the five drop points the pointer is over. */
 export function zoneAt(box: Box, spot: Spot): SplitZone {
     const edgeX = Math.min(box.width * EDGE_SHARE, EDGE_MAX);
     const edgeY = Math.min(box.height * EDGE_SHARE, EDGE_MAX);

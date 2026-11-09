@@ -24,7 +24,6 @@ function targetOf(target: string, hostHeader: string | undefined): string {
     return hostHeader === undefined ? target : `${target} · ${hostHeader}`;
 }
 
-/* The hostnames of the tunnel: Ruimte's own, each with a switch and a menu, and the ones someone else put there, read-only. */
 export function HostnamesSection({
     state,
     endpointId,

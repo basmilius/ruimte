@@ -100,7 +100,6 @@ function keptByProgram(row: DefaultKeyId): boolean {
     return PTY_CONTROL_ROWS.includes(row) && !isRebound(overridesSnapshot(), row);
 }
 
-/* The keys a focused terminal hands back now, the views of a window included. */
 export function terminalHandedBack(): readonly Shortcut[] {
     return [...VIEW_SHORTCUTS, ...TERMINAL_HANDED_BACK_ROWS.map((row) => keyOf(row))];
 }

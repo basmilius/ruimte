@@ -30,7 +30,6 @@ describe('wheelZoomOf', () => {
     });
 });
 
-/* Frames that run only when the test says so. */
 function manualFrames(): FrameClock & { run(): void; pending(): number } {
     let queue: Array<() => void> = [];
     return {
@@ -71,7 +70,6 @@ describe('createZoomGlide', () => {
 
         glide.add(NOTCH_FACTOR, { x: 10, y: 20 });
         frames.run();
-        // The first frame takes a share of the way, not all of it.
         expect(camera.zoom()).toBeGreaterThan(1);
         expect(camera.zoom()).toBeLessThan(NOTCH_FACTOR);
 

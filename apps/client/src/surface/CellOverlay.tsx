@@ -70,7 +70,6 @@ function OverlayBox({ viewId }: { readonly viewId: string }) {
     );
 }
 
-/* The layer itself, mounted once over the parked pages. */
 export function CellOverlayLayer() {
     const layout = useDocument((s) => s.layout);
     // Kept by hand: an effect depends on it.

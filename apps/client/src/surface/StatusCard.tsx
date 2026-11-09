@@ -15,7 +15,6 @@ interface StatusCardProps {
     children?: ReactNode;
 }
 
-/* The card the window shows while it waits on a machine or after one failed it: what, where, why, and what to do. */
 export function StatusCard({ glyph, title, meta, line, failed, icon, children }: StatusCardProps) {
     return (
         <div className="flex w-80 max-w-full flex-col items-center gap-3 px-6 text-center">

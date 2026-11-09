@@ -95,7 +95,6 @@ export interface HandleRail {
     /* Clockwise, starting halfway down the left side, where a port and never a free handle sits. */
     path: string;
     perimeter: number;
-    /* Where the handle starts along the rail, and how far it runs, in world units. */
     from: number;
     length: number;
 }

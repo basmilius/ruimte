@@ -37,7 +37,6 @@ export async function proveChallenge(credentials: ProofCredentials, challenge: D
     throw new Error(i18next.t('machines:direct.needsPairedKey'));
 }
 
-/* The proof for one row, with what this client holds for it right now. */
 export async function directProof(endpointId: string, challenge: DirectChallengeFrame, binding: string): Promise<DirectProofFrame> {
     const endpoint = endpointById(endpointId);
     if (!endpoint) {

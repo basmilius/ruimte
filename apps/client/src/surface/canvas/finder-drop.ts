@@ -13,7 +13,6 @@ interface FinderPathOptions {
     refusal?: FinderTarget;
 }
 
-/* What a person is told when the drag cannot become anything, in the words of their own machine. */
 function refusalToast(refusal: FinderRefusal, fileManager: string, machine: string | null, target: FinderTarget): { title: string; description: string } {
     const suffix = target === 'terminal' ? 'terminalDescription' : 'description';
     if (refusal === 'no-bridge') {

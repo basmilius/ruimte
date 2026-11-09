@@ -26,7 +26,6 @@ export interface NewEntryContext {
     windows: boolean;
     /* What a folder listing holds, or undefined for a folder that was never listed or is not there yet. */
     children(directory: string): readonly Pick<FsEntry, 'name' | 'path' | 'kind'>[] | undefined;
-    /* The absolute path of the folder the entry is made in. */
     parent: string;
 }
 
@@ -91,7 +90,6 @@ export function validateNewEntry(input: string, kind: NewEntryKind, context: New
     return null;
 }
 
-/* The absolute path a typed name makes, which the machine takes. */
 export function newEntryPathOf(parent: string, input: string, kind: NewEntryKind): string {
     return absoluteOf(parent, segmentsOf(input, kind).join('/'));
 }

@@ -34,7 +34,6 @@ describe('the sides a line runs between', () => {
         // Straight across is clear, so the node beside the source keeps the sides the two face.
         const near = routeEdge(source, row[0]!, row.slice(1));
         expect([near.fromSide, near.toSide]).toEqual(['right', 'left']);
-        // The one behind it is reached over the row, and lands on the side the line comes down on.
         const far = routeEdge(source, { x: 1000, y: 0, w: 300, h: 1000 }, row);
         expect(far.fromSide).toBe('bottom');
         expect(far.toSide).toBe('bottom');
@@ -68,13 +67,11 @@ describe('the route between two nodes', () => {
         const straight = routeEdge(box, { x: 400, y: 200, w: 100, h: 100 });
         const around = routeEdge(box, { x: 400, y: 200, w: 100, h: 100 }, [at(180, 0)]);
         expect(turns(straight.d)[0]![0]).toBe(250);
-        // The rail moves to the near side of the node in the way, one margin clear of it.
         expect(turns(around.d)[0]![0]).toBe(168);
     });
 
     test('steps aside when a node blocks the straight shot between two ports that line up', () => {
         const route = routeEdge(box, { x: 400, y: 0, w: 100, h: 100 }, [at(200, 0)]);
-        // Out of the port, up beside it, across above the node and back down: four turns, no diagonal.
         expect(turns(route.d)).toEqual([
             [133, 50],
             [133, -12],
@@ -139,7 +136,6 @@ describe('a route that the rail cannot clear', () => {
         const route = routeEdge(box, target, [between, above]);
         expect(runsThrough(route.d, between)).toBe(false);
         expect(runsThrough(route.d, above)).toBe(false);
-        // Both ends still sit on a port of their own node, wherever the way around took the line.
         expect(route.from).toEqual(portPoint(box, route.fromSide));
         expect(route.to).toEqual(portPoint(target, route.toSide));
     });
@@ -152,7 +148,6 @@ describe('a route that the rail cannot clear', () => {
             { id: 'w', x: 480, y: -200, w: 20, h: 600 }
         ];
         const route = routeEdge(box, { x: 600, y: 0, w: 100, h: 100 }, wall);
-        // Nothing to find, so it draws the line it would have drawn and tucks in behind the nodes.
         expect(route.d).toStartWith('M 109 50');
         expect(route.d).toEndWith('L 591 50');
     });
@@ -164,7 +159,6 @@ describe('a gap between two nodes', () => {
         const left: Obstacle = { id: 'left', x: 200, y: 0, w: 200, h: 600 };
         const right: Obstacle = { id: 'right', x: 430, y: 0, w: 200, h: 600 };
         const route = routeEdge({ x: 0, y: 250, w: 100, h: 100 }, { x: 700, y: 250, w: 100, h: 100 }, [left, right]);
-        // The 30 units between the two nodes would fit a line; it goes round them instead.
         expect(turns(route.d).every(([x]) => x < 400 || x > 430)).toBe(true);
     });
 });
@@ -192,7 +186,6 @@ describe('a port a person drew from', () => {
         const held = routeEdge(box, target, [], { fromSide: 'top' });
         expect(held.fromSide).toBe('top');
         expect(held.from).toEqual(portPoint(box, 'top'));
-        // The end nobody drew from stays free: a line leaving over the top comes in over the top.
         expect(held.toSide).toBe('top');
     });
 

@@ -42,7 +42,6 @@ export function revealablePath(source: FileSource): string | null {
     return source.kind === 'file' ? source.path : null;
 }
 
-/* One string per source and version, for a key or a reset that has to follow both. */
 export function sourceKey(source: FileSource, read: { mtime: number; size: number }): string {
     if (source.kind === 'artifact') {
         return JSON.stringify([source.endpointId, source.artifactId, source.versionId, source.file]);

@@ -152,7 +152,6 @@ export function transportFor(endpointId: string): Transport | null {
 
 const machineTransports = new MachineTransports(pool);
 
-/* One machine as a transport that outlives its link; see `MachineTransports`. */
 export function machineTransport(endpointId: string): Transport {
     return machineTransports.of(endpointId);
 }

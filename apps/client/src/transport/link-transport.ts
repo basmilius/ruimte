@@ -193,7 +193,6 @@ export class LinkTransport implements PooledTransport {
         this.address = address;
     }
 
-    /* Points the transport at another address of the same daemon; it closes and comes back there. */
     switchTo(address: SocketAddress): void {
         if (address === this.address) {
             return;
@@ -202,7 +201,6 @@ export class LinkTransport implements PooledTransport {
         this.reconnect();
     }
 
-    /* Drops the link and opens a new one straight away, on whatever the opener picks now. */
     reconnect(): void {
         if (this.disposed) {
             return;

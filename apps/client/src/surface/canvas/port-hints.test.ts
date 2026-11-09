@@ -15,7 +15,6 @@ function taken(edges: Edge[], hidden = new Set<string>()): ReadonlySet<string> {
 
 describe('the ports offered to a pointer', () => {
     test('are the nearest side of every node within reach', () => {
-        // Just right of node a, far from node b.
         const hints = portHints(nodes, { x: 120, y: 50 }, 56);
         expect(hints).toHaveLength(1);
         expect(hints[0]!.nodeId).toBe('a');

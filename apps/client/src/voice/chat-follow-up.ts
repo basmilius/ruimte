@@ -12,7 +12,6 @@ function threadItems(chat: Pick<ChatState, 'items' | 'order'>, turnId?: string):
     return turn?.kind === 'turn' && !chat.order.includes(turn.id) ? [turn, ...items] : items;
 }
 
-/* A chat this window holds as the runners of Voice read it. */
 export function followedState(chat: Pick<ChatState, 'items' | 'order' | 'info'>, turnId: string): VoiceChatState {
     return { items: threadItems(chat, turnId), info: chat.info };
 }

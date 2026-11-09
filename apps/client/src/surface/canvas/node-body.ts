@@ -10,7 +10,6 @@ export function cardHolds(s: Pick<CanvasState, 'bodyFocusId' | 'navigationId' | 
     return card !== undefined && s.navigationId === cardId && isNodeActive(s.bodyFocusId, card.owner);
 }
 
-/* The id of the card beside a node a press or a key landed in, or null outside every card. */
 export function derivedCardOf(el: EventTarget | null): string | null {
     return el instanceof HTMLElement ? (el.closest<HTMLElement>('[data-derived-card]')?.dataset.derivedCard ?? null) : null;
 }

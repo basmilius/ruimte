@@ -43,7 +43,6 @@ function stackButton(label: string): HTMLElement | null {
     return document.querySelector<HTMLElement>(`[data-prompt-stack="${MAIN.id}"] button[aria-label="${label}"]`);
 }
 
-/* The count at the edge of the stack that opens the snoozed list. */
 function snoozedButton(): HTMLElement | null {
     return ([...stack().querySelectorAll('button')] as HTMLElement[]).find((button) => button.textContent?.includes('snoozed')) ?? null;
 }
@@ -84,7 +83,6 @@ describe('the prompt stack of a canvas', () => {
         await until(() => collapseButton() !== null);
         await clickOn(collapseButton());
         await until(() => machine.requests('chat.detach').some((payload) => payload.chatId === WRITER.id));
-        // Still waiting: the collapsed chat's card stays in the stack.
         expect(stackCard()).not.toBeNull();
 
         // Answered somewhere else: only the status reaches this window, since nothing here reads the thread now.

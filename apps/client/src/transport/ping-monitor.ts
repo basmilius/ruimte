@@ -1,4 +1,3 @@
-/* How often a connected client measures the round trip to its daemon. */
 const PING_INTERVAL_MS = 10_000;
 
 /* Above this a round trip is slow enough for the dot to say so. */

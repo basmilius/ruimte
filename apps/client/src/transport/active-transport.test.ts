@@ -30,7 +30,6 @@ class FakeTransport implements PooledTransport {
         }
     }
 
-    /* What the daemon on the other end would push. */
     emit<E extends EventType>(event: E, payload: EventMap[E]): void {
         for (const handler of this.eventHandlers.get(event) ?? []) {
             (handler as (value: EventMap[E]) => void)(payload);

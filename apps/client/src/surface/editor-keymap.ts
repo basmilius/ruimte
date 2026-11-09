@@ -1,7 +1,6 @@
 import { chordOf, resolveKeymap, type KeymapId, type KeymapOverrides } from '@adecore/editor/keymap';
 import { shortcut, type Shortcut } from '@adecore/ui';
 
-/* What Ruimte changes in the editor's table of keys, before a person changes any. */
 export const RUIMTE_KEYMAP_OVERRIDES: KeymapOverrides = {
     expandSelection: {
         other: 'Alt+ArrowUp',
@@ -154,7 +153,6 @@ export const RUIMTE_KEYMAP_OVERRIDES: KeymapOverrides = {
     }
 };
 
-/* The editor's keys out of the box. */
 export const RUIMTE_EDITOR_KEYMAP = resolveKeymap(RUIMTE_KEYMAP_OVERRIDES);
 
 /*

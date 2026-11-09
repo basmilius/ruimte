@@ -4,7 +4,6 @@ import { strToU8, zipSync } from 'three/examples/jsm/libs/fflate.module.js';
 import { parseModel } from './model-parse';
 import { countGeometry } from './model-view';
 
-/* A binary STL of one triangle standing up along Z, with an optional per-face color. */
 function binaryStl(color?: [number, number, number]): ArrayBuffer {
     const view = new DataView(new ArrayBuffer(84 + 50));
     if (color !== undefined) {

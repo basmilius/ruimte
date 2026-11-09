@@ -14,7 +14,6 @@ export interface LineRoutes {
     rectOf(id: string): Rect | null;
 }
 
-/* What a line was drawn with last time: the line, its route and everything that route was found from. */
 interface Kept {
     line: EdgeLine;
     route: EdgeRoute;

@@ -131,7 +131,6 @@ export function gitStatusEntries(folder: string, root: string | null, files: rea
     return entries;
 }
 
-/* A checkout as the files panel reads it: where it is, and what git said there once it said anything. */
 interface TreeCheckout {
     path: string;
     status: { root: string | null; files: readonly GitFile[] } | null;

@@ -9,7 +9,6 @@ export type Signal = DirectSignalPayload['envelope']['signal'];
 export interface SignalingEvents {
     /* Signals can go out from here; `iceServers` are what the route hands out for this attempt (TURN credentials from the broker), none over a socket. */
     ready(iceServers?: IceServer[]): void;
-    /* A signal from the machine for this attempt. */
     signal(signal: Signal): void;
     /* The way the signals travel is gone, with a sentence for the machine's row. */
     fail(reason: string): void;

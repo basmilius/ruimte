@@ -69,7 +69,6 @@ function closeReason(reason: string): string {
     return i18next.t(`machines:direct.closed.${reason}`, { defaultValue: i18next.t('machines:direct.closed.other') });
 }
 
-/* Inflates a frame the daemon deflated, refusing one that grows past what a frame may be. */
 export async function inflateFrame(deflated: Uint8Array<ArrayBuffer>, maxBytes: number = INFLATED_FRAME_BYTES): Promise<string> {
     const reader = new Blob([deflated]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
     const chunks: Uint8Array[] = [];

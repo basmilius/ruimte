@@ -13,7 +13,6 @@ export interface ViewOffersInput {
     shared: boolean;
     /* False for a view that cannot travel, and for one that is not in the document (yet). */
     canShare: boolean;
-    /* There is a canvas to put the view on. */
     hasCanvas: boolean;
     /* The view on screen is a canvas, which is where "show on the canvas" lands. */
     onCanvas: boolean;
@@ -28,7 +27,6 @@ export interface ViewOffersInput {
     scratch?: boolean;
     /* A person wrote in the chat; a chat nobody wrote in is hidden from the list and has nothing to keep. */
     written: boolean;
-    /* The machine answers `chat.move`. */
     moves: boolean;
 }
 

@@ -5,10 +5,6 @@ import type { CSSProperties, ReactNode } from 'react';
 import { accentShades } from '@/canvas-model/accents';
 import { FRAME } from '@/surface/canvas/derived-card-look';
 
-/*
- * A collapsed card, which is all header: a press opens it. A colored one is tinted as a colored node's
- * header is, and its icon shows the chevron to open it while the pointer is on the line.
- */
 export function CardLine({
     icon,
     accent,

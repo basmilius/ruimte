@@ -36,7 +36,6 @@ export function drawsImageMime(mime: string): boolean {
     return isImageMime(mime) && !UNDRAWN_IMAGE_MIMES.has(mime);
 }
 
-/* The name a person knows an image format by: `image/heic` is HEIC. */
 export function imageFormatName(mime: string): string {
     return mime.replace(/^image\//, '').toUpperCase();
 }

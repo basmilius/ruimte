@@ -121,7 +121,6 @@ export interface SidebarSection {
     viewCount: number;
 }
 
-/* The open project as the sidebar reads it. */
 export interface SidebarProject {
     /* In project order, which is the order of the file, so every machine reads the same list. */
     views: SidebarView[];
@@ -139,7 +138,6 @@ interface SidebarNodeOrder {
     held?: ReadonlyMap<string, number>;
 }
 
-/* Where each node row of the views stands, for `SidebarNodeOrder.held`. */
 export function nodePositions(sections: readonly SidebarSection[]): ReadonlyMap<string, number> {
     const positions = new Map<string, number>();
 
@@ -210,7 +208,6 @@ export function snoozeTargetOf(node: SidebarNode): string {
     return node.chats?.find(waitsOnYou)?.id ?? node.chats?.find((chat) => chat.status === 'needs-you')?.id ?? node.id;
 }
 
-/* Whether a node belongs in "Needs you": waiting, and not put aside for now. */
 function waitsOnYou(node: SidebarNode): boolean {
     return node.status === 'needs-you' && !node.snoozedUntil;
 }

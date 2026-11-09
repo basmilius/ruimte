@@ -6,7 +6,6 @@ function distanceOf(fit: CameraFit): number {
     return Math.hypot(fit.position[0] - fit.target[0], fit.position[1] - fit.target[1], fit.position[2] - fit.target[2]);
 }
 
-/* The local file header of a zip's first entry, with nothing but its name filled in. */
 function zipEntry(name: string): Uint8Array {
     const nameBytes = new TextEncoder().encode(name);
     const header = new Uint8Array(30 + nameBytes.length);

@@ -3,7 +3,6 @@ import { basenameOf } from '@/paths/file-path';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { mentionOf } from '@/surface/panels/files-tree';
 
-/* A file or folder a copy menu acts on. */
 export interface CopyTarget {
     /* Absolute on the daemon's machine, without a trailing slash. */
     absolute: string;
@@ -37,7 +36,6 @@ export function copiedText(folder: string | null, targets: readonly CopyTarget[]
     return lines.join(kind === 'mention' ? ' ' : '\n');
 }
 
-/* What Copy puts on the clipboard as files: every target that is still there. */
 export function copyableFiles(targets: readonly CopyTarget[]): string[] {
     return targets.filter((target) => target.gone !== true).map((target) => target.absolute);
 }

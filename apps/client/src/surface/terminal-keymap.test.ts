@@ -215,7 +215,6 @@ describe('isTerminalFindShortcut', () => {
     });
 });
 
-/* The key event a shortcut stands for, as a keyboard would send it. */
 function eventFor(target: Shortcut, apple: boolean): KeyLike {
     const code = /^[A-Z]$/.test(target.key)
         ? `Key${target.key}`

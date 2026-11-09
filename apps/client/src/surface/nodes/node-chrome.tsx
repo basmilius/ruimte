@@ -15,7 +15,6 @@ export function NodePlate({ icon, busy, children }: { icon?: LucideIcon; busy?: 
     );
 }
 
-/* A node's controls in its header, the way a file node carries its own. */
 export function NodeHeaderControls({ children }: { children: ReactNode }) {
     const { host } = useFileToolbarSlot();
     return host === null ? null : createPortal(children, host);

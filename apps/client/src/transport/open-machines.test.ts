@@ -2,7 +2,6 @@ import { describe, expect, test } from 'bun:test';
 import type { TransportStatus } from '../transport-api/transport';
 import { watchOpenMachines, type OpenMachineSource } from './open-machines';
 
-/* A pool in memory: links under ids with a status, and the `endpoint.changed` listeners on each. */
 function fakeSource() {
     const statuses = new Map<string, TransportStatus>();
     const poolListeners = new Set<() => void>();

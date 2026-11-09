@@ -18,7 +18,6 @@ interface ActiveTransportOptions {
 
 interface Registration {
     bind(transport: Transport): () => void;
-    /* How to take this handler off the socket it is on now; null while there is no socket. */
     off: (() => void) | null;
 }
 

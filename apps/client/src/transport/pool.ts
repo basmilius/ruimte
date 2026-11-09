@@ -112,7 +112,6 @@ export class TransportPool {
         this.emit(newId);
     }
 
-    /* The connection comes up again on what the row says now, keeping every holder and every client built on it. */
     reconnect(endpointId: string): void {
         this.byId.get(endpointId)?.transport.reconnect();
     }

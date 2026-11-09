@@ -6,7 +6,6 @@ import { createPanBatch } from '@/surface/canvas/pan-batch';
 import { createWheelPanSession, PAN_IDLE_MS } from '@/surface/canvas/wheel-pan-session';
 import { createZoomGlide, wheelZoomOf } from '@/surface/canvas/wheel-zoom';
 
-/* How long after the last wheel event a zoom settles on a whole percent. */
 const ZOOM_SETTLE_MS = 160;
 
 /* Chromium reports a trackpad pinch as a wheel with Ctrl held on every platform, so Ctrl always

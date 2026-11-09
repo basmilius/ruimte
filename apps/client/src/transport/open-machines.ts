@@ -5,7 +5,6 @@ export interface OpenMachineSource {
     ids(): string[];
     statusOf(endpointId: string): ConnectionState;
     subscribe(handler: () => void): () => void;
-    /* Listens for `endpoint.changed` on a machine's link; null when it has none. */
     onChanged(endpointId: string, handler: () => void): (() => void) | null;
 }
 

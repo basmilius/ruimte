@@ -18,7 +18,6 @@ export const CANVAS_SHORTCUTS = {
     nextMessage: shortcut('Alt+ArrowDown')
 } as const;
 
-/* The row whose key adds a node of each kind. */
 export const ADD_NODE_ROWS = {
     terminal: 'add-terminal',
     chat: 'add-chat',

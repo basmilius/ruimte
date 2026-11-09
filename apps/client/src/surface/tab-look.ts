@@ -14,7 +14,6 @@ export function databaseTabIcon(tab: DatabaseTab): LucideIcon {
     }
 }
 
-/* What a database tab is called in the strip, which names the table and what of it the tab shows. */
 export function databaseTabTitle(tab: DatabaseTab): string {
     switch (tab.kind) {
         case 'table':

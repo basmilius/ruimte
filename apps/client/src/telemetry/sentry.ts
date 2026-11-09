@@ -25,7 +25,6 @@ import type { PageMetric } from './metrics';
 
 interface ReporterOptions {
     readonly surface: 'desktop' | 'station' | 'bench';
-    /* The version a release build was stamped with. */
     readonly version: string;
     /* What the desktop shell says it runs on; null on the station. */
     readonly platform: string | null;

@@ -4,7 +4,6 @@ import type { ViewOffers } from '@/views/view-offers';
 
 declare module '@/commands/menu-context' {
     interface MenuFacts {
-        /* What the view with the focus offers. */
         offers: ViewOffers | null;
         shared: boolean;
     }

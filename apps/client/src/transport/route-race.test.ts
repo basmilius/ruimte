@@ -31,7 +31,6 @@ function fakeRoute() {
     return route;
 }
 
-/* A clock that only moves when the test says so. */
 function fakeClock() {
     let now = 0;
     const timers: Array<{ at: number; run: () => void; cancelled: boolean }> = [];

@@ -42,7 +42,6 @@ export function voiceDomainsFor(facts: VoiceProjectFacts): ActionDomain[] {
     return ACTION_DOMAINS.filter((domain) => wanted.has(domain));
 }
 
-/* The kinds a project holds, as views and as nodes on its canvases. */
 export function kindsIn(views: readonly ProjectView[], nodesOf: NodesOfView<Pick<ProjectNode, 'kind'>>): Set<string> {
     return new Set(views.flatMap((view) => [view.kind, ...nodesOf(view).map((node) => node.kind)]));
 }

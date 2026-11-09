@@ -52,7 +52,6 @@ export function carriesFiles(types: readonly string[]): boolean {
     return types.includes('Files');
 }
 
-/* Why a file out of the file manager cannot become a node. */
 export type FinderRefusal = 'no-bridge' | 'other-machine';
 
 /*

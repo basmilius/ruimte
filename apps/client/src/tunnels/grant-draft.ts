@@ -17,7 +17,6 @@ export function draftOf(grant: ExternalGrant): GrantDraft {
     return { ...grant, expiry: 'never' };
 }
 
-/* The end of a credential as an epoch time, or null for none. */
 export function expiryAt(expiry: Expiry, now: number): number | null {
     return expiry === 'never' ? null : now + Number(expiry) * DAY_MS;
 }

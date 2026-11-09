@@ -130,7 +130,6 @@ function parseLineSuffix(text: string): FileLocation {
     };
 }
 
-/* A name that is nothing but a dot and one word is a dotfile (`.env`, `.gitignore`), not an extension. */
 function isDotfile(name: string): boolean {
     return name.length > 1 && name.startsWith('.') && !name.slice(1).includes('.');
 }
@@ -213,7 +212,6 @@ interface FileChoice {
     endpointId: string;
 }
 
-/* The files one link could mean, while a person picks one in `FileChoiceDialog`. */
 export const useFileChoice = create<{ choice: FileChoice | null }>(() => ({ choice: null }));
 
 /*

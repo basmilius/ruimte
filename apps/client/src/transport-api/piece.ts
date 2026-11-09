@@ -21,7 +21,6 @@ export function decodeBase64(data: string): Uint8Array<ArrayBuffer> {
     return bytes;
 }
 
-/* A piece of a resource with its bytes as they are, however the machine sent them. */
 export interface BytesPiece extends BytesReadHeader {
     bytes: Uint8Array<ArrayBuffer>;
 }

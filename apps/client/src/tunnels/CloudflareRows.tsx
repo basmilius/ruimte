@@ -15,7 +15,6 @@ type Tone = 'running' | 'idle' | 'error';
 
 const DOT = { running: 'bg-status-running', idle: 'bg-status-idle', error: 'bg-status-error' } as const;
 
-/* The rows of the Cloudflare card: cloudflared while it is missing, the API token, and the tunnel. */
 export function CloudflareRows({ state, endpointId, change }: { state: TunnelState; endpointId: string; change: TunnelChange }) {
     if (state.stage === 'not-installed' || state.stage === 'installing' || state.stage === 'cannot-install') {
         return <InstallRow state={state} change={change} />;

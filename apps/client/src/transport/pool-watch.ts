@@ -84,7 +84,6 @@ export function snapshotWatch<Q extends BareRequest, E extends EventType>(
     };
 }
 
-/* Several watches of one link as a single one. */
 export function joinWatches(...parts: LinkWatch[]): LinkWatch {
     return {
         onOpen: () => {

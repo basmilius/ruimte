@@ -61,7 +61,6 @@ export function NodeNotice({ tone = 'muted', children, onRetry, retryLabel, acti
     );
 }
 
-/* What a body says while its machine's socket is not open. */
 export function ConnectionNotice({ status }: { status: TransportStatus }) {
     const { t } = useTranslation('canvas');
     if (status === 'open') {

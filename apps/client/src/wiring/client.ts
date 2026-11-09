@@ -181,7 +181,6 @@ const STEPS: readonly Step[] = [
     { name: 'terminalTestHooks', start: () => (import.meta.env.DEV ? exposeTerminalTestHooks() : undefined) }
 ];
 
-/* What the client started, for the code that draws the window and for whoever wants to stop it. */
 interface ClientWiring {
     readonly hooks: ClientHooks;
     stop(): void;

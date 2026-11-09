@@ -416,7 +416,6 @@ export function projectIconGlyphOf(name: string): LucideIcon | null {
     return isProjectIconName(name) ? PROJECT_ICON_GLYPHS[name] : null;
 }
 
-// The words a search finds an icon by beyond its own name.
 export const PROJECT_ICON_KEYWORDS: Partial<Record<ProjectIconName, readonly string[]>> = {
     house: ['home', 'smart home'],
     'git-branch': ['version'],

@@ -381,7 +381,6 @@ describe('the hostnames', () => {
         expect(everything()).toContain('Anyone with the address reaches this dev server.');
 
         await pick('Port', '3000 · Vite');
-        // A label is proposed from the port, in front of the first domain.
         await until(() => inputNamed('Label').value === 'dev-3000');
         await typeInto(inputNamed('Label'), 'shop');
         await clickOn(buttonWithText('Add', dialog()!));
@@ -445,7 +444,6 @@ describe('the hostnames', () => {
         await clickOn(buttonWithText('Advanced', dialog()!));
         await until(() => document.querySelector('input[aria-label="Host header"]') !== null);
         await typeInto(inputNamed('Host header'), 'passly.test');
-        // The certificate settings only mean something with https.
         expect(document.querySelector('[aria-label="Skip TLS check"]')).toBeNull();
 
         await clickOn([...document.querySelectorAll('[role="radio"]')].find((radio) => radio.textContent === 'HTTPS') ?? null);
@@ -475,7 +473,6 @@ describe('the hostnames', () => {
         await until(() => dialog()?.textContent?.includes('Edit hostname') === true);
         expect(dialog()?.textContent).toContain('passly.bmnw.nl');
         expect(document.querySelector('input[aria-label="Label"]')).toBeNull();
-        // Advanced is open, since the row has a setting there.
         expect(inputNamed('Host header').value).toBe('passly.test');
         expect(inputNamed('Port').value).toBe('80');
 
@@ -846,7 +843,6 @@ describe('a bearer', () => {
         // The box is the one tab stop of a row.
         expect(document.querySelectorAll('[role="table"][aria-label="Projects"] [role="row"][tabindex]')).toHaveLength(0);
 
-        // A click on the row ticks it, as the box does.
         await clickOn([...document.querySelectorAll('[role="row"]')].find((row) => row.textContent?.includes('Site')) ?? null);
         await typeInto(document.querySelector<HTMLInputElement>('input[maxlength="120"]')!, 'Hosted bot');
         await clickOn(buttonWithText('Create'));

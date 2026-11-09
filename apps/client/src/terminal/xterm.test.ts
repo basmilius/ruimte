@@ -12,7 +12,6 @@ function bind(keys: Partial<Parameters<typeof bindTerminalKeys>[1]>): KeyHandler
     return handler!;
 }
 
-/* The find key of the platform the test runs on, as the bits of a keydown the handler reads. */
 function findKey(): KeyboardEvent & { prevented: boolean } {
     const apple = isApplePlatform();
     const event = {

@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SNOOZE_CHOICES, snoozeUntil, useSnoozedUntil, useSnoozes, type SnoozeChoice } from '@/state/snooze';
 
-/* The moment a choice lands on, beside its name: a clock today, a weekday for tomorrow. */
 function choiceHint(choice: SnoozeChoice, now: number): string {
     const until = snoozeUntil(choice, now);
     return choice === 'tomorrow' ? formatWeekdayClock(until) : formatClock(until);
@@ -52,10 +51,6 @@ export function SnoozeButton({ endpointId, nodeId, tabIndex }: { endpointId: str
     );
 }
 
-/*
- * The rows a context menu of a waiting node starts with: Snooze while it waits, Unsnooze once it is
- * snoozed, and nothing at all for a node that is neither.
- */
 export function SnoozeMenuItems({ endpointId, nodeId, needsYou }: { endpointId: string; nodeId: string; needsYou: boolean }) {
     const { t } = useTranslation('shell');
     const until = useSnoozedUntil(endpointId, nodeId);
@@ -94,7 +89,6 @@ export function SnoozeMenuItems({ endpointId, nodeId, needsYou }: { endpointId: 
     );
 }
 
-/* Says a node is snoozed and until when; the context menu of its row is where it ends. */
 export function SnoozedMark({ until }: { until: number }) {
     const { t } = useTranslation('shell');
     return (
