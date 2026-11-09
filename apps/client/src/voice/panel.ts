@@ -10,6 +10,5 @@ export const VOICE_PANEL: PanelDefinition = {
     toolbar: false,
     group: 'project',
     togglesElsewhere: true,
-    sessionOnly: true,
     component: lazyNamed(() => import('@/voice/VoicePanelBody'), 'VoicePanelBody')
 };

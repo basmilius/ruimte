@@ -8,6 +8,5 @@ export const DEVICES_PANEL: PanelDefinition = {
     minWidth: 320,
     toolbar: true,
     group: 'connected',
-    hiddenInScratch: true,
     component: DevicesPanel
 };

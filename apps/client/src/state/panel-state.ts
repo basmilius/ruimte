@@ -7,7 +7,6 @@ import {
     type ProjectStripTab
 } from '@ruimte/contracts';
 import type { LooseStrip } from '@/layout/legacy-files-cell';
-import { panelRegistry } from '@/registry/panels';
 import { databaseTabId, databaseTabKey } from '@/state/database-tabs';
 import {
     artifactTabKey,
@@ -22,6 +21,7 @@ import {
     type Tab
 } from '@/state/files';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE } from '@/state/git';
+import { kindOfStoredFlag, panelTraits } from '@/state/panel-traits';
 import type { PanelDefaults, PanelKind } from '@/state/ui';
 
 /* Everything the surfaces around the canvas remember for one project on this machine. */
@@ -52,7 +52,7 @@ function storedPanelKind(stored: ProjectPanels, kind: ProjectPanelKind): PanelKi
         return stored.extensionPanel as `extension:${string}`;
     }
 
-    return panelRegistry.all().find((panel) => panel.storedAs !== undefined && stored[panel.storedAs] === true)?.id ?? kind;
+    return kindOfStoredFlag(stored) ?? kind;
 }
 
 function fileTabOf(tab: ProjectFileTab): FileTab {
@@ -178,16 +178,16 @@ export function parsePanels(stored: ProjectPanels | undefined, defaults: PanelsS
 
 /* A client from before a kind existed reads the files panel in its place; one that only lasts the session is stored closed. */
 function storedPanel(panel: PanelDefaults['panel']): ProjectPanels['panel'] {
-    const definition = panelRegistry.find(panel.kind);
-    if (panel.kind.startsWith('extension:') || definition?.storedAs !== undefined) {
+    const traits = panelTraits(panel.kind);
+    if (panel.kind.startsWith('extension:') || traits.storedAs !== undefined) {
         return { open: panel.open, kind: 'files' };
     }
 
-    return definition?.sessionOnly === true ? { open: false, kind: 'files' } : { open: panel.open, kind: panel.kind as ProjectPanelKind };
+    return traits.sessionOnly === true ? { open: false, kind: 'files' } : { open: panel.open, kind: panel.kind as ProjectPanelKind };
 }
 
 function storedFlag(kind: PanelKind): Partial<ProjectPanels> {
-    const flag = panelRegistry.find(kind)?.storedAs;
+    const flag = panelTraits(kind).storedAs;
 
     return flag === undefined ? {} : { [flag]: true };
 }

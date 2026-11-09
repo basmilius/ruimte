@@ -8,7 +8,5 @@ export const LAUNCHES_PANEL: PanelDefinition = {
     minWidth: 480,
     toolbar: false,
     group: 'project',
-    hiddenInScratch: true,
-    storedAs: 'launchesPanel',
     component: lazyNamed(() => import('@/launches/LaunchesPanel'), 'LaunchesPanel')
 };

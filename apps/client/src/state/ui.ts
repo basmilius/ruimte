@@ -1,7 +1,7 @@
 import type { ProjectPanels } from '@ruimte/contracts';
 import { z } from 'zod';
 import { create } from 'zustand';
-import { panelRegistry } from '@/registry/panels';
+import { panelTraits } from '@/state/panel-traits';
 import { isScratchProject, useProject } from '@/state/project';
 import { storedJson, storedText } from '@/state/stored-json';
 
@@ -35,7 +35,7 @@ const CLOSED_PANEL: PanelState = { open: false, kind: 'files' };
 
 /* What the Chats project has no panel for: its folder is the daemon's, and so are its repository and what runs in it. */
 export function panelHidden(kind: PanelKind, scratch: boolean): boolean {
-    return scratch && panelRegistry.find(kind)?.hiddenInScratch === true;
+    return scratch && panelTraits(kind).hiddenInScratch === true;
 }
 
 /* The panel as the window shows it: one the project has no place for reads as closed, whatever its file stored. */

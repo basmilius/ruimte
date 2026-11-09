@@ -8,7 +8,5 @@ export const DATABASES_PANEL: PanelDefinition = {
     minWidth: 260,
     toolbar: true,
     group: 'connected',
-    hiddenInScratch: true,
-    storedAs: 'databasesPanel',
     component: lazyNamed(() => import('@/database/DatabasesPanel'), 'DatabasesPanel')
 };

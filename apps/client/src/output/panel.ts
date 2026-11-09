@@ -8,6 +8,5 @@ export const OUTPUT_PANEL: PanelDefinition = {
     minWidth: 300,
     toolbar: true,
     group: 'made',
-    storedAs: 'outputPanel',
     component: lazyNamed(() => import('@/output/OutputPanel'), 'OutputPanel')
 };

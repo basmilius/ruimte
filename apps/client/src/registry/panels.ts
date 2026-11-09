@@ -4,9 +4,7 @@ import { createRegistry } from './create-registry';
 
 export type PanelGroup = 'project' | 'connected' | 'made';
 
-/* How the project's file keeps the panel that was open: beside `panel`, in a key an older client ignores. */
-type StoredPanelFlag = 'launchesPanel' | 'databasesPanel' | 'outputPanel';
-
+/* How the file stores a kind, and whether the Chats project shows it, are in `state/panel-traits.ts`, which is there before the workspace's chunk. */
 export interface PanelDefinition {
     /* The kind, which is also the part of its words under `shell:panel.names.<id>`. */
     readonly id: string;
@@ -16,14 +14,8 @@ export interface PanelDefinition {
     /* Has a button in the rail. One without opens from a menu and closes from its own header. */
     readonly toolbar: boolean;
     readonly group: PanelGroup;
-    /* The Chats project has no place for it: its folder is the daemon's, and so are its repository and what runs in it. */
-    readonly hiddenInScratch?: boolean;
     /* A button elsewhere toggles it, so the column shows no close button of its own. */
     readonly togglesElsewhere?: boolean;
-    /* Open only for this session: the file stores it as closed, since what it shows does not outlive the window. */
-    readonly sessionOnly?: boolean;
-    /* A kind the file does not know: it is stored as the files panel plus this key. */
-    readonly storedAs?: StoredPanelFlag;
     readonly component: ComponentType;
 }
 

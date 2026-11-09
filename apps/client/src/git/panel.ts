@@ -8,6 +8,5 @@ export const GIT_PANEL: PanelDefinition = {
     minWidth: 240,
     toolbar: true,
     group: 'project',
-    hiddenInScratch: true,
     component: lazyNamed(() => import('@/git/GitPanel'), 'GitPanel')
 };

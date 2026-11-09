@@ -8,7 +8,5 @@ export const PROBLEMS_PANEL: PanelDefinition = {
     minWidth: 360,
     toolbar: false,
     group: 'project',
-    hiddenInScratch: true,
-    sessionOnly: true,
     component: lazyNamed(() => import('@/language/ProblemsPanel'), 'ProblemsPanel')
 };

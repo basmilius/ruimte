@@ -8,6 +8,5 @@ export const FILES_PANEL: PanelDefinition = {
     minWidth: 240,
     toolbar: true,
     group: 'project',
-    hiddenInScratch: true,
     component: FilesPanel
 };
