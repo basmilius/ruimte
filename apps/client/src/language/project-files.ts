@@ -8,10 +8,8 @@ import { isUnsavedDraft, textDrafts, useTextDrafts, type TextDrafts } from '@/st
 import { useToasts } from '@/state/toasts';
 import type { Transport } from '@/transport-api/transport';
 
-/* How many files a toast names before it says how many more there are. */
 const NAMED_FILES = 3;
 
-/* The toasts that wait for their staged files to be saved, by id, with the way to stop waiting. */
 const stagedToasts = new Map<string, () => void>();
 
 export interface DraftProjectFiles extends ProjectFiles {

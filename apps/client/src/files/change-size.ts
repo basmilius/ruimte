@@ -9,7 +9,6 @@ interface SplitRow {
     deleted: number;
 }
 
-/* The kinds that hold any line, in the order of `CHANGE_KINDS`. */
 export function splitRows(split: ChangeSplit): SplitRow[] {
     return CHANGE_KINDS.filter((kind) => split[kind].added + split[kind].deleted > 0).map((kind) => ({
         kind,

@@ -14,7 +14,6 @@ import { orNull } from '@/transport-api/transport';
 
 const TOAST_ID = 'language-explain';
 
-/* What the card of a symbol or selection says about its explanation. */
 interface ExplainView {
     /* The card offers an Explain link: the setting is on, the symbol is a function and the machine has the model. */
     readonly offered: boolean;
@@ -213,7 +212,6 @@ export function innermostSymbol(symbols: readonly SymbolLike[] | null, line: num
     return found;
 }
 
-/* The innermost method, constructor or function whose lines hold a line. */
 export function innermostFunction(symbols: readonly SymbolLike[] | null, line: number): EditorRange | null {
     let found: EditorRange | null = null;
     const walk = (list: readonly SymbolLike[]): void => {

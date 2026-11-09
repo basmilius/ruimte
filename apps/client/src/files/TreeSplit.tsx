@@ -12,7 +12,6 @@ interface TreeSplitProps {
     /* Room for a name and its counts; the column never takes more than half the view either. */
     minWidth: number;
     onWidth(width: number): void;
-    /* The height the column keeps while it stands above the body. */
     stackedHeight: 'h-60' | 'h-72';
     children: ReactNode;
 }

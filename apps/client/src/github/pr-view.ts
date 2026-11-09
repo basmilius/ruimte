@@ -12,7 +12,6 @@ interface VisibleThreads {
     hiddenResolved: number;
 }
 
-/* A thread belongs to a bot when the one who opened it is one. */
 function isBotThread(thread: GitPrThread): boolean {
     return thread.comments[0]?.bot === true;
 }
@@ -59,7 +58,6 @@ export function mergeStateKey(pr: Pick<GitPullRequest, 'mergeable' | 'mergeState
     return MERGE_STATES.includes(state) ? state : 'unknown';
 }
 
-/* A thread as text for a chat's prompt, with where it hangs and who said what. */
 export function threadBlock(pr: Pick<GitPullRequest, 'repo' | 'number'>, thread: GitPrThread): string {
     const where = thread.path === undefined ? '' : thread.line === undefined ? thread.path : `${thread.path}:${thread.line}`;
     const heading = `Review thread on ${pr.repo}#${pr.number}${where === '' ? '' : ` at ${where}`}${thread.resolved ? ' (resolved)' : ''}`;

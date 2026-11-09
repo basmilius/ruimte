@@ -25,7 +25,6 @@ interface NewEntryRowProps {
     placeholder: string;
     kind: NewEntryKind;
     value: string;
-    /* Why the name is refused, shown under the row. */
     message: string | null;
     busy: boolean;
     label: string;

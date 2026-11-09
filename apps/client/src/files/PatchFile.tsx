@@ -15,7 +15,6 @@ import { useGit } from '@/state/git';
 import { usePatchView } from '@/state/patch-view';
 import { useProject } from '@/state/project';
 
-/* The editor with the tree of the patch's files beside it, laid out like a commit tab. */
 function PatchFrame({ tree, children }: { tree: ReactNode; children: ReactNode }) {
     const treeWidth = useGit((s) => s.commitTreeWidth);
     return (

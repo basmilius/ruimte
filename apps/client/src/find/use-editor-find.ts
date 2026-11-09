@@ -15,7 +15,6 @@ const NOTHING: EditorFindState = { count: 0, current: null };
 /* What stepping to the next or the previous match does in each editor, for the menu and the palette. */
 const steppers = new Map<Editor, (direction: 1 | -1) => void>();
 
-/* Goes to the next or the previous match in the editor that has the keyboard; false when none does. */
 export function stepFocusedEditorFind(direction: 1 | -1): boolean {
     const editor = editorForCommand();
     const step = editor === null ? undefined : steppers.get(editor);
@@ -37,7 +36,6 @@ interface EditorFind {
     canStep: boolean;
     status: string | null;
     step(direction: 1 | -1): void;
-    /* Writes `find.replaceText` in place of the match the find is on, or of every match. */
     replace(): void;
     replaceAll(): void;
     /* Puts a caret on every match and closes the bar. */
@@ -63,7 +61,6 @@ export function seedFromSelection(editor: Editor, replace: boolean, query: FindQ
     return { text: query.regex ? escapeRegExp(text) : text, inSelection: false };
 }
 
-/* The seed a file's find bar takes from its editor. */
 export function editorSeed(editor: Editor | null): FindSeed | undefined {
     return editor === null ? undefined : (options, query) => seedFromSelection(editor, options.replace, query);
 }

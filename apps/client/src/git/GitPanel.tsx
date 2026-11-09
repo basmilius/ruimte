@@ -276,7 +276,6 @@ export function GitPanel() {
         });
     };
 
-    /* What a toast calls the files it acted on: the path of one, the count of several. */
     const nameOf = (files: readonly GitFile[]): string => (files.length === 1 ? files[0]!.path : t('git.panel.manyFiles', { count: files.length }));
 
     const discardIn = (path: string, files: GitFile[]): Promise<void> => {
@@ -396,7 +395,6 @@ export function GitPanel() {
             .catch(() => setDialog({ kind: 'pull-request', cwd: path, subject: '' }));
     };
 
-    /* One message over every repository that has something staged: one commit each, same words. */
     const commit = (
         message: { subject: string; body: string },
         options: { targets: readonly CommitCandidate[]; stageAll: boolean; push: boolean; amend: boolean }
@@ -427,7 +425,6 @@ export function GitPanel() {
 
     const entries = useMemo(() => pushEntries(checkouts), [checkouts]);
 
-    /* Every repository that has something to push, one after another under one toast. */
     const pushAll = (): void => {
         const jobs = pushable(entries).map((entry) => ({ cwd: entry.cwd, kind: entry.button.kind, label: entry.label }));
         if (jobs.length === 0) {
@@ -475,7 +472,6 @@ export function GitPanel() {
         onInspect: inspection.inspect
     };
 
-    /* The words of a dialog over files: the name of one, the count of several. */
     const filesDialogText = (kind: 'discard' | 'delete-file', key: 'discard' | 'deleteFile'): { title: string; description: string } => {
         const files = dialog?.kind === kind ? filesOf(dialog.work) : null;
         return {

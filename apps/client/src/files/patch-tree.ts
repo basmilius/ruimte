@@ -22,7 +22,6 @@ const STATUS_LETTERS: Record<PatchFileLayout['status'], string | null> = {
 
 const STATUS_KINDS = { added: 'add', deleted: 'delete' } as const;
 
-/* The name a section has in the tree: where the file ends up, or where it was when it is gone. */
 function nameOf(file: PatchFileLayout, index: number): string {
     return file.newPath ?? file.oldPath ?? `patch-${index + 1}`;
 }
@@ -57,7 +56,6 @@ export function sectionsOf(layout: PatchLayout): PatchSection[] {
     });
 }
 
-/* A tree is for a patch that has more than one file to choose from. */
 export function showsTree(sections: readonly PatchSection[]): boolean {
     return sections.length > 1;
 }
@@ -74,7 +72,6 @@ export function patchSectionParts(section: PatchSection, binaryLabel: string): D
     return section.status === 'binary' ? [{ text: binaryLabel }, ...parts] : parts;
 }
 
-/* Whether any hunk no longer adds up to its header, as after an edit. */
 export function hasInconsistentHunk(layout: PatchLayout): boolean {
     return layout.files.some((file) => file.hunks.some((hunk) => !hunk.consistent));
 }

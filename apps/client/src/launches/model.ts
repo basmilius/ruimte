@@ -14,7 +14,6 @@ export interface LaunchView {
     /* Its own status; a group has none and reads its members'. */
     status: LaunchStatus | null;
     exitCode: number | null;
-    /* The port it answers on once running. */
     port: number | null;
 }
 
@@ -72,7 +71,6 @@ function memberViews(views: ReadonlyMap<string, LaunchView>, group: LaunchConfig
     return (group.launches ?? []).flatMap((id) => views.get(id) ?? []);
 }
 
-/* Every launch of a project with its state, by id. */
 export function launchViews(document: LaunchesDocument, statuses: Readonly<Record<string, LaunchStatus>>): Map<string, LaunchView> {
     const approved = new Set(document.approved);
     const views = new Map<string, LaunchView>();

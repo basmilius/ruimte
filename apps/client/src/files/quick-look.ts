@@ -2,7 +2,6 @@ import { useEffect, useMemo } from 'react';
 import { desktop } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 
-/* The two methods of the desktop shell Quick Look runs on. */
 export interface QuickLookShell {
     previewFile(path: string): Promise<boolean>;
     closeFilePreview(): void;

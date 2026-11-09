@@ -66,7 +66,6 @@ function workNow(preview: MachineStopPreview | null): number | null {
     return preview?.work ? preview.work.terminals + preview.work.agents : null;
 }
 
-/* Opens the question once more, after asking the machine what runs on it now. */
 export async function askMachineUpdateAgain(stopPreview: (() => Promise<MachineStopPreview>) | undefined): Promise<void> {
     const preview = stopPreview ? await stopPreview().catch(() => null) : null;
     useMachineUpdateAgain.setState({ again: { work: workNow(preview) } });

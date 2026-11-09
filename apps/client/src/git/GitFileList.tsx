@@ -78,7 +78,6 @@ export interface GitWork {
     files: GitFile[];
 }
 
-/* The items of a selection as the work of each checkout, with the file each one names. */
 function workOf(items: readonly GitItem[], fileOf: (entry: GitEntry) => GitFile): GitWork[] {
     return byCheckout(items).map(([cwd, entries]) => ({ cwd, files: entries.map(fileOf) }));
 }
@@ -155,7 +154,6 @@ export function GitFileList({ checkouts, reposTruncated, ...props }: ListProps) 
 
 interface TreeProps extends Omit<ListProps, 'checkouts' | 'reposTruncated'> {
     layout: GitTreeLayout;
-    /* What each checkout reads, by its path. */
     statuses: ReadonlyMap<string, GitStatus | null>;
 }
 

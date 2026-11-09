@@ -107,7 +107,6 @@ interface OwnRowProps {
     onRemove(): void;
 }
 
-/* A server of the person's own: what it runs and serves, how it is doing in this project, and the ways to change it. */
 function OwnRow({ server, status, tracker, searchId, onLog, onEdit, onRemove }: OwnRowProps) {
     const { t } = useTranslation('settings');
     const { t: tPanels } = useTranslation('panels');

@@ -3,7 +3,6 @@ import { GitCommitHorizontal, GitCompare, Package } from 'lucide-react';
 import { isArtifactTab, isDatabaseTab, isSessionTab, type Tab } from '@/state/files';
 import { databaseTabIcon } from '@/surface/tab-look';
 
-/* The mark of a loose view: its file, a comparison or a commit, what a database view shows, or an artifact of Output. */
 export function LooseGlyph({ tab, size = 14 }: { tab: Tab; size?: number }) {
     if (isDatabaseTab(tab)) {
         return <Icon icon={databaseTabIcon(tab)} size={size} className="shrink-0 text-text-faint" />;

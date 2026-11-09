@@ -17,7 +17,6 @@ let preview: Promise<MachineStopPreview>;
 let previewFails: boolean;
 let release: (() => void) | null;
 
-/* What a person clicks: the words beside the box. */
 function boxLabel(): HTMLElement | null {
     return box()?.closest('label') ?? null;
 }

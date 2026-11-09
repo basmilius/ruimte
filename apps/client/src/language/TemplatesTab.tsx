@@ -21,7 +21,6 @@ type GroupId = 'script' | 'php' | 'css' | 'html' | 'xml' | 'other';
 
 const GROUPS: readonly GroupId[] = ['script', 'php', 'css', 'html', 'xml', 'other'];
 
-/* One template of the list, whoever it belongs to. */
 interface Entry {
     id: string;
     kind: TemplateKind;

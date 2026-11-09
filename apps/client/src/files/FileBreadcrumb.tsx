@@ -27,10 +27,6 @@ interface FileBreadcrumbProps {
     onSelect(block: EditorBlock): void;
 }
 
-/*
- * Where in the project and in the file the caret is: the folders, the file, and the functions and
- * classes around the cursor, each of which takes the editor there.
- */
 export function FileBreadcrumb({ path, folder, scope, onSelect }: FileBreadcrumbProps) {
     const { t } = useTranslation('panels');
     const { folders, name } = pathCrumbs(path, folder);

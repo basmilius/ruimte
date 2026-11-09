@@ -41,7 +41,6 @@ function target(owner?: LaunchOwner): Target | null {
     return launchTarget(projectOnScreen(), owner);
 }
 
-/* The target with the link to its machine, or null when either is missing. */
 function linkedTarget(owner?: LaunchOwner): (Target & { link: NonNullable<ReturnType<typeof transportFor>> }) | null {
     const at = target(owner);
     const link = at === null ? null : transportFor(at.endpointId);
@@ -140,7 +139,6 @@ export function chooseLaunch(launchId: string): void {
     }
 }
 
-/* The launch on the chip, as its id. */
 export function chosenLaunchId(): string | null {
     const at = target();
     if (at === null) {

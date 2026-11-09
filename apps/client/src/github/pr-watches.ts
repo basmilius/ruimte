@@ -70,7 +70,6 @@ export function watchPrWatches(endpointId: string, transport: Transport): () => 
     };
 }
 
-/* The watch a chat has on the machine in scope, or null. */
 export function useChatPrWatch(chatId: string): GitPrWatch | null {
     const endpointId = useEndpointId();
     return usePrWatches((s) => s.byChat[endpointKey(endpointId, chatId)] ?? null);

@@ -33,7 +33,6 @@ export class GhostTextFeature implements InlineSuggestionSource {
     readonly automatic = false;
     private readonly language: EditorLanguage;
     private readonly client: EditorAssistClient;
-    // The request in flight, until it ends or is cancelled.
     private requesting: AbortSignal | null = null;
     private hints: Root[] = [];
 
@@ -133,7 +132,6 @@ export class GhostTextFeature implements InlineSuggestionSource {
         this.unmountHints();
     }
 
-    /* The text a model reads on each side of the caret, and what is left of the caret's line after it. */
     private around(position: EditorPosition): { before: string; after: string; restOfLine: string } {
         const { editor } = this.language;
         const last = Number.MAX_SAFE_INTEGER;

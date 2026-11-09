@@ -17,7 +17,6 @@ type Phase = { kind: 'loading' } | { kind: 'ready'; model: LoadedModel } | { kin
 const LOADING: Phase = { kind: 'loading' };
 const NO_WEBGL: Phase = { kind: 'no-webgl' };
 
-/* Hands a switch of the toolbar to the viewer once the model is in, and again whenever it flips. */
 function useViewerSetting(
     viewer: RefObject<ModelViewer | null>,
     ready: boolean,

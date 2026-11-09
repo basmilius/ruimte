@@ -43,7 +43,6 @@ function openAt(path: string, source: DiffSource): boolean {
     return true;
 }
 
-/* Whether the view in front of the focused cell is a diff, a commit or a checkout's changes: a file tab with a view. */
 export function diffInFront(): boolean {
     const { activeViewId } = useDocument.getState();
     const tab = activeViewId === null ? undefined : useFiles.getState().tabs.find((entry) => entry.key === activeViewId);

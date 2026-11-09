@@ -7,7 +7,6 @@ import { FileTextMenu, FileToolbar } from '@/files/FileToolbar';
 import { RevealButton } from '@/files/RevealButton';
 import { TEXT_MAX_BYTES } from '@/transport/large-text';
 
-/* What is left when there is nothing to draw: what the file is, how large, and the way to open it. */
 export function UnsupportedFile({ path, name, read }: { path: string; name: string; read: FsReadBinary | FsReadTooLarge }) {
     const { t } = useTranslation('panels');
     return (

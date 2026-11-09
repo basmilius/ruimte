@@ -4,7 +4,6 @@ import { useDocument } from '@/state/document';
 import { languageForCommand, registerFocusedLanguage } from './focused-language';
 import type { EditorLanguage } from './ruimte-editor-language';
 
-/* A box that contains what was put in it, and hears focusin the way an element does. */
 class FakeBox extends EventTarget {
     readonly children = new Set<unknown>();
 

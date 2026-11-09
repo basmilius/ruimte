@@ -21,7 +21,6 @@ interface EditorConfig {
     sections: readonly EditorConfigSection[];
 }
 
-/* One `.editorconfig` and the folder it sits in. */
 interface EditorConfigFile {
     dir: string;
     config: EditorConfig;
@@ -149,7 +148,6 @@ function numberRange(from: number, to: number): string {
     return Array.from({ length: high - low + 1 }, (_, i) => String(low + i)).join('|');
 }
 
-/* A path below a folder, with forward slashes, or null when it is not below it. */
 function relativeTo(dir: string, path: string): string | null {
     return isUnderFolder(path, dir) ? path.slice(dir.length + 1).replace(/\\/g, '/') : null;
 }
@@ -182,7 +180,6 @@ export function resolveMaxLineLength(files: readonly EditorConfigFile[], path: s
     return Number.isInteger(value) && value > 0 ? value : null;
 }
 
-/* What the sections that apply to a path say, nearest file first winning and later sections over earlier ones. */
 function resolveProperties(files: readonly EditorConfigFile[], path: string): Record<string, string> {
     const properties: Record<string, string> = {};
     const rootAt = files.findIndex((file) => file.config.root);
@@ -240,7 +237,6 @@ export interface EditorStyle {
     maxLineLength: number | null;
 }
 
-/* The indentation and the line length the `.editorconfig` files say for a file, read once. */
 export async function editorStyleFor(path: string, roots: readonly string[], read: ReadText): Promise<EditorStyle> {
     const files = await loadEditorConfigs(path, roots, read);
     return { indentation: { ...DEFAULT_INDENTATION, ...resolveIndentation(files, path) }, maxLineLength: resolveMaxLineLength(files, path) };

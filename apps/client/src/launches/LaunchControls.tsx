@@ -50,13 +50,11 @@ export function HeldCommand({ held }: { held: LaunchHeld }) {
     );
 }
 
-/* The phase as a dot, small enough to sit on a button's icon. */
 export function LaunchDot({ view, className }: { view: LaunchView; className?: string }) {
     const { t } = useTranslation('launches');
     return <span role="img" aria-label={t(`phase.${view.phase}`)} className={clsx('inline-block h-2 w-2 shrink-0 rounded-full', dotClass(view), className)} />;
 }
 
-/* The phase of a launch as an icon, in the color of its status. */
 export function LaunchStatusIcon({ view, size = 12, className }: { view: LaunchView; size?: number; className?: string }) {
     const { t } = useTranslation('launches');
     const label = t(`phase.${view.phase}`);

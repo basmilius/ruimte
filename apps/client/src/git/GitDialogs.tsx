@@ -27,7 +27,6 @@ interface ChoiceProps {
     onClose(): void;
 }
 
-/* Picking one branch or one stash: the same list the branch menu draws, in a dialog. */
 export function GitChoice({ open, title, description, choices, filterFrom = 10, empty, loading = false, error, onRetry, onPick, onClose }: ChoiceProps) {
     const { t } = useTranslation('panels');
     /* The filter belongs to one opening of the dialog; closing it is what empties the field. */

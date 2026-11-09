@@ -11,7 +11,6 @@ import { GIT_GROUP } from '@/surface/panels/classes';
 import { useMachineAnswers } from '@/transport/features';
 import { useTransport } from '@/workspace/context';
 
-// One screen of rows at a time; the button at the end asks for the next.
 const PAGE = 30;
 const MINUTE_MS = 60_000;
 
@@ -92,7 +91,6 @@ export function CommitLog({ sources, filterKey, reading, onOpen }: CommitLogProp
         };
     }, [transport, asked]);
 
-    /* The next page of every repository that still has one, which is one step down the whole log. */
     const loadMore = (): void => {
         const current = shown;
         if (current === null) {
@@ -178,7 +176,6 @@ interface RepoFilterProps {
     onPick(cwd: string | null): void;
 }
 
-/* Narrows the log to one repository of the folder, or widens it to all of them again. */
 function RepoFilter({ sources, narrowed, onPick }: RepoFilterProps) {
     const { t } = useTranslation('panels');
     return (
@@ -331,7 +328,6 @@ function useAuthorAccounts(sources: readonly LogSource[]): ReadonlyMap<string, n
     return held?.cwds === cwds ? held.accounts : undefined;
 }
 
-/* The author as a mark at the start of the row: GitHub's picture where the address names an account, else the first letter. */
 function AuthorAvatar({ name, email, picture }: { readonly name: string; readonly email: string | undefined; readonly picture: string | null }) {
     // Offline, or an account GitHub no longer knows: the letter stands in rather than a broken image.
     const [failed, setFailed] = useState<string | null>(null);

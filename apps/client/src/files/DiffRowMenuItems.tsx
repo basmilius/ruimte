@@ -13,7 +13,6 @@ interface DiffRowMenuItemsProps {
     path: string;
     /* The diff deletes it, so there is no file on disk to show, open or reveal. */
     gone: boolean;
-    /* The commit the row is part of; absent outside one. */
     commit?: string;
     /* Where the caret of this row's diff stands in the file, when its diff is on screen. */
     caret?: DiffSourceLine;

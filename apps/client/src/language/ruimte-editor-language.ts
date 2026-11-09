@@ -22,7 +22,6 @@ export function provideInlineEdit(factory: InlineEditFactory): void {
     makeInlineEdit = factory;
 }
 
-/* What Ruimte adds to the editors of a project: the AI features and the project's own trackers. */
 interface RuimteFeatures {
     readonly project: RuimteProject;
     readonly explain: ExplainFeature;

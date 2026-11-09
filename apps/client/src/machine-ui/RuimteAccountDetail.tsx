@@ -174,7 +174,6 @@ function SignInSection() {
     );
 }
 
-/* How a machine joins the account, from that machine, or with the code of a machine that ran `ruimte login`. */
 function AddMachineSection() {
     const { t } = useTranslation('settings');
     const [linkOpen, setLinkOpen] = useState(false);
@@ -196,7 +195,6 @@ function AddMachineSection() {
     );
 }
 
-/* The Ruimte account of this client: how it signs in, and how a machine joins what it reaches. */
 export function RuimteAccountDetail() {
     return (
         <>

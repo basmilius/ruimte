@@ -78,7 +78,6 @@ interface OpenDocument {
     /* The version the daemon will be at once every change sent so far has landed. 0 until the first open is answered. */
     version: number;
     providers: LanguageProviders;
-    /* The kinds of language server that serve the document, as the daemon's last answer to its open said. */
     servers: readonly string[];
     /* While the daemon's copy is being replaced, changes wait for it: the text it carries is read after they were made. */
     resyncing: Promise<void> | null;
@@ -521,7 +520,6 @@ export class WireLanguageService implements LanguageService {
         return resolved === null ? null : pathToFileUri(resolved);
     }
 
-    /* The stored path of a location's URI, or null for a URI that is no file. */
     pathOfLocation(uri: string): string | null {
         const path = fileUriToPath(uri);
         return path === null ? null : storedPathOf(this.options.folder, path);

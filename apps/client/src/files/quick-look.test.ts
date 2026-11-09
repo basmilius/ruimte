@@ -2,7 +2,6 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import type { DesktopBridge } from '@/desktop/bridge';
 import { isQuickLookKey, QuickLook, quickLookShell, type QuickLookShell } from './quick-look';
 
-/* A shell that records what it was asked and answers each show with `answer`. */
 function recordingShell(answer: (path: string) => Promise<boolean> = async () => true): QuickLookShell & { calls: string[] } {
     const calls: string[] = [];
     return {

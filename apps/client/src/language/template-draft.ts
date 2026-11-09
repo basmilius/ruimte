@@ -81,7 +81,6 @@ export function copyOf(draft: TemplateDraft): TemplateDraft {
     return copy;
 }
 
-/* What the machine is asked to save, with the id of a template that already has one. */
 export function inputOf(draft: TemplateDraft): TemplateInput {
     const description = draft.description.trim();
     const shared = {
@@ -102,7 +101,6 @@ export function inputOf(draft: TemplateDraft): TemplateInput {
     };
 }
 
-/* Why the draft cannot be saved, in the editor's own words, or null. */
 export function problemOf(draft: TemplateDraft): string | null {
     const shared = { id: draft.id ?? UNSAVED_ID, key: draft.key, body: draft.body, languages: draft.languages };
 

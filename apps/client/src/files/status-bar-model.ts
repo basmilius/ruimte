@@ -50,12 +50,10 @@ export function lineEndingOf(text: string): 'LF' | 'CRLF' | 'CR' {
     return match?.[0] === '\r\n' ? 'CRLF' : match?.[0] === '\r' ? 'CR' : 'LF';
 }
 
-/* The file read says `utf-8`, and a status bar writes it the way editors have for years. */
 export function encodingLabelOf(encoding: string): string {
     return encoding.toUpperCase();
 }
 
-/* The letter in the small badge before the symbol the caret is in. */
 export function symbolBadgeOf(kind: string | undefined): string {
     switch (kind) {
         case 'function':

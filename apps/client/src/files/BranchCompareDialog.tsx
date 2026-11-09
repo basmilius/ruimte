@@ -14,7 +14,6 @@ import { refLabel } from '@/worktree-rules/ref-label';
 
 type RefsState = { cwd: string; refs: readonly GitRef[]; error: string | null };
 
-/* The refs of one repository, read again when the repository changes or a retry is asked. */
 function useRefs(cwd: string): { refs: readonly GitRef[] | null; error: string | null; retry(): void } {
     const [retries, setRetries] = useState(0);
     const [held, setHeld] = useState<RefsState | null>(null);

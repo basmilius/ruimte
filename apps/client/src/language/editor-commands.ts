@@ -69,7 +69,6 @@ interface EditorCommandSpec {
 /* `folding` is the Code menu's submenu, `lines` and `clipboard` are groups of the Edit menu, `navigate` one of the Go menu and `zoom` one of the View menu. */
 export type EditorCommandGroup = 'folding' | 'lines' | 'clipboard' | 'navigate' | 'zoom';
 
-/* A command named as its key in the editor's keymap. */
 function command(icon: LucideIcon, name: EditorRunCommand & KeymapId, group?: EditorCommandGroup): EditorCommandSpec {
     return { icon, key: name, command: name, keymap: name, ...(group === undefined ? {} : { group }) };
 }

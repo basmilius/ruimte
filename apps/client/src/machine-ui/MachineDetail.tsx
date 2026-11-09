@@ -60,7 +60,6 @@ function tabOfTarget(target: string | null): MachineTab | null {
     return target.startsWith('machines.machine.storage.') ? 'storage' : 'overview';
 }
 
-/* Everything about one machine, beside its row in the Account pane, in a tab per part of it. */
 export function MachineDetail({ entry }: { entry: MachineEntry }) {
     const { t } = useTranslation('settings');
     // The one place in the pane that connects to the machine, so its name, broker and clients with access are live.
@@ -196,7 +195,6 @@ interface AccountSectionProps {
     reason: string | null;
 }
 
-/* Which account the machine is on, why it could not join, and the ways back onto it or off it. */
 function AccountSection({ entry, endpoint, model, machineAccount, reason }: AccountSectionProps) {
     const { t } = useTranslation('settings');
     const signedInAccount = usePulsarAccount((s) => (s.status === 'signed-in' ? (s.account?.id ?? null) : null));
@@ -285,7 +283,6 @@ function AccountSection({ entry, endpoint, model, machineAccount, reason }: Acco
     );
 }
 
-/* Forgetting the machine on this client, or taking it off the account. */
 function RemoveSection({ entry, model }: { entry: MachineEntry; model: MachineDialogModel }) {
     const { t } = useTranslation('settings');
     const [confirming, setConfirming] = useState<'forget' | 'remove' | null>(null);

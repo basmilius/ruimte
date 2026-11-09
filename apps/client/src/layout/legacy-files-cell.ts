@@ -4,7 +4,6 @@ import { cellViewIds } from '@/layout/split';
 /* The id the files cell had in a layout written before every cell could be a tab host. */
 const LEGACY_FILES_ID = 'files';
 
-/* The loose views a project had open, in strip order, and the one that was in front. */
 export interface LooseStrip {
     keys: readonly string[];
     active: string | null;

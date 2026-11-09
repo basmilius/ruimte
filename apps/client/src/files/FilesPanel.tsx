@@ -721,7 +721,6 @@ export function FilesPanel() {
             .finally(() => setDeleteBusy(false));
     };
 
-    /* The diff of the row the menu is on, which only a file git says changed has. */
     const openChanges = (): void => {
         if (root && menuPath && changedFile !== null) {
             const file = absoluteOf(root, menuPath);
@@ -762,7 +761,6 @@ export function FilesPanel() {
     const folderRepo = repos.find((repo) => repo.path === folder)?.label ?? basenameOf(folder);
     const insideNames = worktree === null ? '' : nodeNames(nodesInWorktree(projectNodes, worktree));
 
-    /* A repository of the folder that is a row of its own says how far it is from its upstream and which branch it is on. */
     const repoOfRow = (row: FileTreeVisibleRow) => repoRows.get(isDirectoryPath(row.path) ? row.path : `${row.path}/`);
 
     /* Only a listing that came back empty says so: a folder still loading, or holding only hidden entries, draws no line. */
@@ -781,8 +779,6 @@ export function FilesPanel() {
         );
     };
 
-    /* What stands where the tree would be while it holds no rows: the first listing still on its
-       way, a folder with nothing in it, or a filter nothing here answers to. */
     const placeholder = (): ReactNode => {
         if (searching) {
             if (currentSearch === null) {

@@ -9,7 +9,6 @@ import { accountName } from '@/pulsar/account-name';
 import { usePulsarMachines } from '@/state/pulsar-machines';
 import { refreshAccountMachines } from '@/workspace/account-machines';
 
-/* Who this client is signed in as, and how many machines it knows; it opens the Account pane. */
 export function AccountTab({ sectionId }: { sectionId: string }) {
     const { t } = useTranslation('settings');
     const status = usePulsarAccount((s) => s.status);

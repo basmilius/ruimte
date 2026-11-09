@@ -31,7 +31,6 @@ interface CommitFileTreeProps {
  */
 export function CommitFileTree({ files, shown, onPick, marks = diffFileParts, menu, caret }: CommitFileTreeProps) {
     const { t } = useTranslation('panels');
-    /* The file a right click landed on, which the menu acts on. */
     const [menuPath, setMenuPath] = useState<string | null>(null);
     const filesRef = useRef(files);
     const byPathRef = useRef<ReadonlyMap<string, GitDiffFile>>(new Map());

@@ -29,7 +29,6 @@ const OPTIONS: readonly { key: keyof FindOptions; icon: LucideIcon; label: strin
     { key: 'regex', icon: Regex, label: 'find.regex' }
 ];
 
-/* What a surface that can replace hands the bar: what to do, and why it cannot while it cannot. */
 interface FindReplacement {
     onReplace(): void;
     onReplaceAll(): void;

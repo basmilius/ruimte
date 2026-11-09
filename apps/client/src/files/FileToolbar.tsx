@@ -92,7 +92,6 @@ function FileMenu({ extra }: { extra?: ReactNode }) {
     );
 }
 
-/* What the menus offer: the rows that stand in for a file, else the file's own, else nothing. */
 function useMenuRows(): ReactNode {
     const actions = useFileActions();
     const standIn = useContext(FileMenuRowsContext);
@@ -102,7 +101,6 @@ function useMenuRows(): ReactNode {
     return actions ? <FileMenuRows actions={actions} /> : null;
 }
 
-/* The file this toolbar is about, when it is about one file. */
 function EditorSlot() {
     const actions = useFileActions();
 

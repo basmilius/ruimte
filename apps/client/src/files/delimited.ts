@@ -163,12 +163,10 @@ export function detectDelimiter(text: string): Delimiter {
     return best?.delimiter ?? ',';
 }
 
-/* A `.tsv` is tab separated by its name; a `.csv` says which by its text. */
 export function delimiterOf(name: string, text: string): Delimiter {
     return extensionOf(name) === 'tsv' ? '\t' : detectDelimiter(text);
 }
 
-/* A number column when every value that is not blank is a whole number, or a decimal written with one and the same mark. */
 export function columnKindOf(records: readonly (readonly string[])[], column: number): ColumnKind {
     let integer = true;
     let point = true;
@@ -275,7 +273,6 @@ export interface CellMatch {
     column: number;
 }
 
-/* The cells whose text `pattern` matches, row by row in the order given and left to right within a row. */
 export function findCells(rows: readonly GridRow[], pattern: RegExp): CellMatch[] {
     // A global pattern carries `lastIndex` from one test to the next.
     const once = new RegExp(pattern.source, pattern.flags.replace('g', ''));

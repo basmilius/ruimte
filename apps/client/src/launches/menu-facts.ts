@@ -15,7 +15,6 @@ interface MenuLaunch {
 
 declare module '@/commands/menu-context' {
     interface MenuFacts {
-        /* The launches of the project on screen, each with whether it runs. */
         launches: MenuLaunch[];
         /* The launch on the chip, which the Run menu's first rows act on. */
         chosenLaunch: string | null;

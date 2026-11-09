@@ -7,7 +7,6 @@ declare module '@/commands/menu-context' {
     interface MenuFacts {
         /* The view in front of the focused cell is a diff, whose file Open File at Line opens. */
         diff: boolean;
-        /* The name of the app that shows a folder on this machine. */
         fileManager: string;
     }
 }

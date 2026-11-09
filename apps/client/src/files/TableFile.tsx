@@ -17,7 +17,6 @@ const DELIMITER_NAMES = {
     '\t': 'file.table.delimiters.tab'
 } as const satisfies Record<Delimiter, string>;
 
-/* A `.csv` or `.tsv` file as a table, with the source a click away and editable. */
 export function TableFile({ path, name, read }: { path: string; name: string; read: FsReadText }) {
     const { t } = useTranslation('panels');
     const { source, toggle } = useSourceToggle(path, Table, { label: t('file.view.table'), afterSave: t('file.view.tableAfterSave') });

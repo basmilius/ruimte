@@ -30,7 +30,6 @@ async function setup(options: { available?: boolean; text?: string; caret?: { li
     return { transport, model, editor, language, project, timers, suggest };
 }
 
-// Requests a continuation and lets the fake model answer it.
 async function suggested({ model, language }: Pick<Awaited<ReturnType<typeof setup>>, 'model' | 'language'>, answer: string) {
     void language.app.ghost.request();
     await settle();

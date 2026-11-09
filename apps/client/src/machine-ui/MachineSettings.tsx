@@ -394,7 +394,6 @@ async function readLinks(transport: Transport): Promise<PeerLink[]> {
     return (await transport.request('peer.list', {})).links;
 }
 
-/* The browsers and apps one machine let in, each with a way to cut it off. */
 export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
     const { t } = useTranslation('settings');
     const reachability = useServers((s) => s.byEndpoint[endpoint.id]?.reachability ?? endpoint.reachability);

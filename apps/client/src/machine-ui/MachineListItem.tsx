@@ -74,7 +74,6 @@ function useRowFailure(endpoint: Endpoint | null): string | null {
     return connection.status !== 'open' ? (connection.failure ?? null) : null;
 }
 
-/* One machine in the list of the Account pane: its icon with how it answers, its name, and how this client reaches it. */
 export function MachineListItem({ entry, selected, onSelect }: { entry: MachineEntry; selected: boolean; onSelect(): void }) {
     const { t } = useTranslation('settings');
     const failure = useRowFailure(entry.endpoint);

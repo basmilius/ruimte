@@ -1,7 +1,6 @@
 import i18next, { type TFunction } from 'i18next';
 import type { BackgroundServiceState, MachineStopPreview } from '@/desktop/bridge';
 
-/* What the Background section of This machine shows, from what the shell says about its service. */
 interface BackgroundServiceRow {
     /* The switch, or null where there is no service and `unavailable` says why. */
     toggle: { checked: boolean } | null;

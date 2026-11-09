@@ -16,7 +16,6 @@ export interface LogRow extends GitCommit {
     repo: string;
 }
 
-/* A page of one checkout's log, as the merge below takes it. */
 export interface LoadedLog {
     cwd: string;
     repo: string;
@@ -90,7 +89,6 @@ export function groupCommits(commits: readonly LogRow[], now: number): LogSectio
     return sections;
 }
 
-/* A name on a commit row. */
 interface ShownRef {
     name: string;
     /* The remote-tracking twin on the same commit, such as `origin/main`, or null. */

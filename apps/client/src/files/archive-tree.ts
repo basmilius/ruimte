@@ -18,7 +18,6 @@ export function archiveTreePaths(entries: readonly ArchiveEntry[]): string[] {
         .map((entry) => (entry.kind === 'directory' ? `${entry.path}/` : entry.path));
 }
 
-/* The entry path a row of the tree stands for. */
 export function entryPathOf(treePath: string): string {
     return treePath.replace(/\/+$/, '');
 }
@@ -55,7 +54,6 @@ export function freeFolderName(name: string, taken: ReadonlySet<string>): string
     return `${name} ${count}`;
 }
 
-/* Whether a person's folder name is one name, and one a folder can carry. */
 export function isFolderName(name: string): boolean {
     return name !== '' && name !== '.' && name !== '..' && !/[/\\\0]/.test(name);
 }

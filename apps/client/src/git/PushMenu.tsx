@@ -10,7 +10,6 @@ interface PushMenuProps {
     button: PushButton;
     /* The checkout that single button belongs to; null while no repository is read yet. */
     active: string | null;
-    /* Every repository the panel draws. */
     entries: readonly PushEntry[];
     busy: boolean;
     onPush(cwd: string, kind: GitActionKind): void;

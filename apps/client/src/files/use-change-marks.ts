@@ -5,7 +5,6 @@ import { changeMarksOf } from '@/files/change-marks';
 /* A pause in typing this long before the margin is worked out again, since a diff reads both texts. */
 const MARK_DELAY_MS = 200;
 
-/* Marks the lines of the editor that differ from `base` in its margin and scroll track, and keeps them up with what is typed. */
 export function useChangeMarks(editor: Editor | null, base: string | null): void {
     useEffect(() => {
         if (editor === null || base === null) {

@@ -12,7 +12,6 @@ import { WorktreeRows, type WorktreeActions } from '@/worktrees/WorktreeMenu';
 // The keys the menu itself owns while the field has focus; every other key is the field's.
 const MENU_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Escape', 'Tab', 'Enter']);
 
-/* What is known of one checkout's branches, and whether they are still on their way. */
 export interface CheckoutRefs {
     refs: readonly GitRef[];
     loading: boolean;
@@ -22,17 +21,14 @@ export interface CheckoutRefs {
     branch: string | null;
 }
 
-/* What the picker offers past choosing a place: the branches one level in, and what acts on one checkout. */
 interface BranchActions {
     refsOf(cwd: string): CheckoutRefs;
     /* What one checkout can be told to do, drawn into its own level. The panel owns these, because
        half of them open a dialog it holds. */
     renderActions(cwd: string): ReactNode;
-    /* Reads the branches of a checkout, which is what opening its level asks for. */
     onOpen(cwd: string): void;
     onCheckout(cwd: string, ref: GitRef): void;
     onCreate(cwd: string): void;
-    /* Opens the comparison dialog for a checkout, with a branch already chosen when a row asked. */
     onCompare?(cwd: string, ref?: GitRef): void;
 }
 
@@ -40,7 +36,6 @@ interface BranchMenuProps {
     /* The checkout a panel of one checkout is on; over several repositories, the project folder. */
     target: GitTarget;
     targets: readonly GitTarget[];
-    /* What the chip says: the branch HEAD is on, or the state that is not a branch. */
     branch: string | null;
     detached: boolean;
     /* True while the panel shows more than one repository. The branches then sit one level further
@@ -50,7 +45,6 @@ interface BranchMenuProps {
     worktree: GitTarget | null;
     worktrees: readonly Worktree[];
     nodes: readonly WorktreeNode[];
-    /* What the project row says while the project has one repository: its branch, once read, and its folder. */
     projectBranch: string | null;
     folderLabel: string;
     /* The changes of the project, while the panel shows them; null inside a worktree, where they are not read. */
@@ -261,7 +255,6 @@ interface BranchLevelProps {
     onCompare?(cwd: string, ref?: GitRef): void;
 }
 
-/* The branches of the one checkout the panel shows, read when their level opens. */
 function BranchLevel({ cwd, refs, branch, onOpen, onCheckout, onCreate, onCompare }: BranchLevelProps) {
     const { t } = useTranslation('panels');
     return (

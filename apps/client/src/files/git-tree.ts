@@ -17,7 +17,6 @@ export type GitGroup = 'conflicts' | 'changes' | 'unversioned';
 
 const GIT_GROUPS: readonly GitGroup[] = ['conflicts', 'changes', 'unversioned'];
 
-/* Whether a row is in the index: all of it, none of it, or part of it. */
 type CheckState = 'checked' | 'unchecked' | 'mixed';
 
 /* One changed path of one checkout, with the side git reports for the index and the one for the working tree. */
@@ -109,7 +108,6 @@ const DELETED_COLOR = 'var(--color-term-red)';
 const MUTED_COLOR = 'var(--text-muted)';
 const NEEDS_YOU_COLOR = 'var(--status-needs-you)';
 
-/* A run of a row's decoration. */
 export interface DecorationPart {
     text: string;
     color?: string;
@@ -269,7 +267,6 @@ export function flattenPaths(paths: readonly string[]): FlatNode[] {
     return nodes;
 }
 
-/* A changed file of one checkout. */
 export interface GitItem {
     cwd: string;
     entry: GitEntry;
@@ -289,19 +286,16 @@ export type GitTreeNode =
     | (NodeBase & { kind: 'file'; cwd: string; path: string; item: GitItem });
 
 export interface GitTreeLayout {
-    /* What the tree is built from: the path of every file row. */
     paths: string[];
     /* Every row by its path, without the slash the tree puts after a directory. */
     nodes: ReadonlyMap<string, GitTreeNode>;
     /* The tree path of a changed file, by `fileId`. */
     files: ReadonlyMap<string, string>;
-    /* Where a group or a repository stands among its siblings. */
     ranks: ReadonlyMap<string, number>;
     /* How many levels from the top are groups and repositories. */
     synthetic: number;
 }
 
-/* The changes of one checkout. */
 interface GitTreeSource {
     path: string;
     label: string;

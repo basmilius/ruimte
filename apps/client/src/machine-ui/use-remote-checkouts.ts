@@ -9,7 +9,6 @@ import { machineAnswers } from '@/transport/features';
 import { pool, transportFor } from '@/transport/index';
 import { ensureMachine } from '@/workspace/reach';
 
-/* What the dialog knows of the checkouts a machine could offer: still looking, not reachable, or the possibilities. */
 export type Checkouts =
     | { state: 'loading' }
     | { state: 'error'; message: string }
@@ -96,7 +95,6 @@ export function useRemoteCheckouts(
     return { checkouts, retry };
 }
 
-/* The simulators and phones a machine has, for a device node on it. */
 export function useRemoteDevices(machineId: string, enabled: boolean): { devices: DeviceInfo[] | null; failed: boolean } {
     const [devices, setDevices] = useState<DeviceInfo[] | null>(null);
     const [failed, setFailed] = useState(false);

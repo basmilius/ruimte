@@ -34,7 +34,6 @@ async function openMenu(): Promise<void> {
     await until(() => menuItem('Open file') !== null);
 }
 
-/* Opens the change as a diff tab and puts the caret `down` lines and `right` characters into it. */
 async function caretAt(down: number, right: number): Promise<HTMLTextAreaElement> {
     await act(async () => useFiles.getState().open(FILE, 8, { kind: 'diff', cwd: CWD, scope: 'worktree', staged: false }));
     await until(() => diffInput() !== null);

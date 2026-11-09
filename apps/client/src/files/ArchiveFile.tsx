@@ -51,13 +51,11 @@ const DEFAULT_TREE_WIDTH = 280;
 // Up to this many entries the tree opens with every folder unfolded; past it, a person unfolds what they look for.
 const OPEN_TREE_ENTRIES = 200;
 
-/* What an extract takes: everything, or the entries a person picked, named for the dialog's title. */
 interface ExtractTarget {
     entries?: string[];
     label: string;
 }
 
-/* The entries as the files panel draws files, with each file's size after its name. */
 function ArchiveTree({
     entries,
     label,

@@ -10,7 +10,6 @@ export interface DeviceTarget {
 /* Flutter's targets that are no phone: the browser and the desktop. */
 const FLUTTER_NOT_A_DEVICE = new Set(['chrome', 'edge', 'web-server', 'macos', 'windows', 'linux']);
 
-/* The words of a command line, with quotes taken off. */
 function wordsOf(command: string): string[] {
     return [...command.matchAll(/"([^"]*)"|'([^']*)'|(\S+)/g)].map((match) => match[1] ?? match[2] ?? match[3] ?? '');
 }

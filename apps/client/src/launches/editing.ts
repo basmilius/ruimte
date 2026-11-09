@@ -123,7 +123,6 @@ export function folderRoots(repos: readonly GitRepo[]): string[] {
     return ['', ...repos.filter((repo) => repo.kind !== 'root' && !isAbsolutePath(repo.label) && !repo.label.startsWith('..')).map((repo) => repo.label)];
 }
 
-/* A launch's folder as the checkout it is in and the path below that. */
 export function splitFolder(cwd: string | undefined, roots: readonly string[]): { root: string; sub: string } {
     const folder = (cwd ?? '').trim().replace(/^\.\/?/, '');
     const root = roots
@@ -208,7 +207,6 @@ export function importedIds(saved: readonly LaunchConfigEntry[], document: Pick<
     return saved.filter((launch) => launch.origin !== undefined && !known.has(launch.id)).map((launch) => launch.id);
 }
 
-/* The drafts of a save that an import added, by the id they are saved under. */
 export function importedDraftIds(drafts: readonly LaunchDraft[]): string[] {
     return drafts.filter((draft) => draft.imported === true).map((draft) => draft.entry.id);
 }
@@ -258,7 +256,6 @@ export function foundText(suggestions: readonly LaunchSuggestion[]): string | nu
     return parts.length === 1 ? i18next.t('launches:found.one', { first: parts[0] }) : i18next.t('launches:found.both', { first: parts[0], second: parts[1] });
 }
 
-/* Where a suggestion came from, as the import dialog writes it beside the name. */
 export function suggestionSource(suggestion: LaunchSuggestion): string {
     if (readsAsRunConfiguration(suggestion)) {
         return suggestion.detail;

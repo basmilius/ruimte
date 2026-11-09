@@ -82,7 +82,6 @@ export async function initI18n(): Promise<void> {
     markDocument(language);
 }
 
-/* Reads the setting back and puts the interface in that language, loading its words first. */
 async function applyLanguage(): Promise<void> {
     const language = activeLanguage();
     if (i18next.language === language) {

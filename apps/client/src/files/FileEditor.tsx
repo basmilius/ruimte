@@ -25,7 +25,6 @@ type EditorSetter =
     | 'setRightMargin'
     | 'setFontSize';
 
-/* Hands a value the editor mounted with to it again whenever it changes. */
 function useEditorSetting<Setter extends EditorSetter>(
     editor: RefObject<Editor | null>,
     setter: Setter,
@@ -50,7 +49,6 @@ interface FileEditorProps {
     indentation: EditorIndentation;
     /* The column the project holds lines to, drawn as a line; null for none. */
     rightMargin: number | null;
-    /* Why the file cannot be edited here, null when it can. */
     readOnlyReason: string | null;
     /* Where the placeholder was scrolled to when the editor took over, so nothing moves. */
     placeholderScroll: RefObject<number>;

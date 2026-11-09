@@ -31,7 +31,6 @@ interface ChooserSections {
     readonly others: readonly ChooserChat[];
 }
 
-/* What the chooser reads of a node. */
 type ChooserNode = Pick<ProjectNode, 'id' | 'kind' | 'title' | 'provider' | 'chats'>;
 
 /* Every chat of the project with the CLI it runs, node or view, in sidebar order. */

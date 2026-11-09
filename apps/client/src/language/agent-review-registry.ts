@@ -7,7 +7,6 @@ interface SteppableReview {
 
 const reviews = new WeakMap<Editor, SteppableReview>();
 
-/* The review of the file in an editor, for the commands that step through it. */
 export function agentReviewOf(editor: Editor): SteppableReview | null {
     return reviews.get(editor) ?? null;
 }

@@ -13,7 +13,6 @@ export interface FileActions {
     /* The canvas node the file is drawn in, which a line from the file starts at. Absent on a tab and on a
        view of its own. */
     nodeId?: string;
-    /* Reads the file again, which is what the toolbar's Refresh does. */
     refresh(): void;
 }
 

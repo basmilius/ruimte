@@ -56,7 +56,6 @@ export abstract class SnapshotTracker<T> {
     }
 }
 
-/* The list with `item` in place of the entry `same` finds, or added at the end. */
 export function upsert<T>(list: readonly T[], item: T, same: (candidate: T) => boolean): T[] {
     return list.some(same) ? list.map((candidate) => (same(candidate) ? item : candidate)) : [...list, item];
 }

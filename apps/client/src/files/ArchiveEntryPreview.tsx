@@ -37,7 +37,6 @@ const READING: Probe = { status: 'reading' };
 // The bar the preview draws stays in the preview, under the archive's own, and acts on the entry alone.
 const OWN_BAR = fixedSlot(null);
 
-/* What can be told from the listing alone, before a byte of the entry is asked for. */
 function knownBefore(entry: ArchiveEntry): Probe | null {
     if (entry.kind === 'symlink' || !entry.readable) {
         return { status: 'not-readable' };

@@ -22,7 +22,6 @@ import { useLaunches } from '@/launches/state';
 import { endpointKey } from '@/state/keys';
 import { isScratchProject, useProject } from '@/state/project';
 
-/* The launches document of the project on screen, with the key it sits under. */
 function launchesOfProject(): { key: string; document: NonNullable<ReturnType<typeof useLaunches.getState>['documents'][string]> } | null {
     const { current, currentEndpointId } = useProject.getState();
     if (current === null || currentEndpointId === null) {

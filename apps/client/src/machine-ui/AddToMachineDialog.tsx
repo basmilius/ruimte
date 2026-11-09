@@ -385,7 +385,6 @@ function AddToMachineForm({ request, onDone }: { request: AddToMachineRequest; o
     );
 }
 
-/* The remote the clone comes from, in the protocol picked: loading, no remote at all, or the URL. */
 function SourceField({
     source,
     url,
@@ -471,7 +470,6 @@ function FileList({
     );
 }
 
-/* What was copied and what was not, with the reason for each file left behind. */
 function Summary({ machine, clone, outcomes }: { machine: string; clone: string; outcomes: CopyOutcome[] }) {
     const { t } = useTranslation('shell');
     const copied = outcomes.filter((outcome) => outcome.copied).length;

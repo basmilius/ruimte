@@ -9,7 +9,6 @@ function pictureOf(account: Account): string | null {
     return account.provider === 'github' && account.login !== null ? `https://github.com/${encodeURIComponent(account.login)}.png?size=64` : null;
 }
 
-/* The round mark of a Ruimte account: its GitHub picture, else its first letter, else a person when signed out. */
 export function AccountAvatar({ account }: { readonly account: Account | null }) {
     const picture = account === null ? null : pictureOf(account);
     // Offline, or a login GitHub no longer knows: the letter stands in rather than a broken image.

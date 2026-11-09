@@ -13,7 +13,6 @@ import { useOptionalConnection } from '@/workspace/context';
 
 interface FileEditing {
     endpointId: string;
-    /* Why the file is read only here, null when it can be edited. */
     block: EditBlock | null;
     /* The primary pointer is a finger, which the editor has no touch handling for, so the file is drawn by the viewer. */
     viewer: boolean;
@@ -29,7 +28,6 @@ interface FileEditing {
     retryLoad(): void;
 }
 
-/* How one text file on one surface is drawn and whether it can be edited there. */
 export function useFileEditing(path: string, read: FsReadText, plain: boolean, large: boolean, longLines = false): FileEditing {
     const endpointId = useEndpointId();
     const transport = useOptionalConnection()?.transport ?? null;

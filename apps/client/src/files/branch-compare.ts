@@ -23,7 +23,6 @@ export const useBranchCompare = create<{ request: BranchCompareRequest | null }>
 
 let asked = 0;
 
-/* Opens the comparison dialog for the project on screen. */
 export function showBranchCompare(seed: BranchCompareSeed = {}): void {
     const projectId = useProject.getState().current?.projectId;
 
@@ -43,7 +42,6 @@ export function openComparison(cwd: string, from: string, to: string, mode: GitC
     useFiles.getState().show(openCompareTab(useFiles.getState(), cwd, from, to, mode), useSettings.getState().filesTabLimit);
 }
 
-/* Opens one file of a pinned commit, read-only, as a tab of this session. */
 export function openSnapshot(cwd: string, commit: string, branch: string, path: string): void {
     useFiles.getState().show(openSnapshotTab(useFiles.getState(), cwd, commit, branch, path), useSettings.getState().filesTabLimit);
 }

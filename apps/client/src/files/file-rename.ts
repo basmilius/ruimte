@@ -1,7 +1,6 @@
 import { absoluteOf, isPathBelow } from '@ruimte/contracts';
 import { basenameOf, dirnameOf } from '@/paths/file-path';
 
-/* A file or folder on its way to another place, by absolute path. */
 interface PlannedMove {
     readonly from: string;
     readonly to: string;

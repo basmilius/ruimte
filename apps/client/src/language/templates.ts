@@ -20,7 +20,6 @@ import { TransportError, type Transport, fireAndForget } from '@/transport-api/t
 import { machineAnswers } from '@/transport/features';
 import { SnapshotTracker, upsert } from './snapshot-tracker';
 
-/* A template to save, with the kind that says which list it joins. */
 export type TemplateInput =
     | { readonly kind: 'live'; readonly template: LiveTemplateInput }
     | { readonly kind: 'postfix'; readonly template: PostfixTemplateInput };

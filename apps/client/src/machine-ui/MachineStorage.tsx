@@ -96,7 +96,6 @@ function useStorage(endpointId: string, attempt: number): StorageReading {
     return held !== null && held.key === endpointId ? held.reading : LOADING;
 }
 
-/* What Ruimte keeps in Output on one machine, and the versions a person may let go: the Storage tab of its detail. */
 export function MachineStorage({ endpoint }: { endpoint: Endpoint }) {
     const { t } = useTranslation('settings');
 

@@ -409,7 +409,6 @@ async function openCanvasMenu(): Promise<void> {
 }
 
 describe('linking a machine again', () => {
-    /* A chat that works on the other machine in `cwd`, under a link to `remoteProjectId` there. */
     async function farChat(remoteProjectId: string, cwd: string): Promise<void> {
         links = [{ machineId: REMOTE, remoteProjectId, label: 'MacBook Pro', rootCommit: 'root-a' }];
         there.answer('project.release', () => {

@@ -9,7 +9,6 @@ import { RuimteProject } from './ruimte-project';
 
 type Call = { type: RequestType; payload: unknown };
 
-/* A transport that answers each request with `answer` and has no events. */
 function transportOf(answer: (type: string, payload: never) => unknown): Transport {
     return {
         status: 'open',
@@ -19,7 +18,6 @@ function transportOf(answer: (type: string, payload: never) => unknown): Transpo
     } as unknown as Transport;
 }
 
-/* A transport that records every request and answers it with nothing, or refuses it with `refusal`. */
 function fakeTransport(refusal?: string): { transport: Transport; calls: Call[] } {
     const calls: Call[] = [];
     const transport = transportOf((type, payload) => {

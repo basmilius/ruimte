@@ -96,7 +96,6 @@ async function runGitKind({
 
 export type ActionOutcome = { ok: true; result: GitActionResult } | { ok: false; message: string; code: string | null };
 
-/* One repository's turn in a run over several of them. */
 export interface ManyJob {
     cwd: string;
     kind: GitActionKind;

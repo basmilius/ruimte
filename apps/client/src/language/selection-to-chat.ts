@@ -55,7 +55,6 @@ export function sendToChat(chatId: string, block: string): void {
     focusChat(chatId);
 }
 
-/* The chats a line connects to this node, on the canvas it stands on. */
 export function linkedChatsOfNode(nodeId: string): string[] {
     const canvas = canvasOfNode(nodeId)?.getState();
     return canvas === undefined ? [] : chatsLinkedTo(canvas.nodes, canvas.texts, canvas.edges, nodeId);

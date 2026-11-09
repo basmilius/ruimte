@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { EditorLanguage } from './ruimte-editor-language';
 
-/* The kinds of language server that serve the file, once the daemon has said, and again when what they offer changes. */
 export function useServingKinds(language: EditorLanguage): readonly string[] {
     const [kinds, setKinds] = useState<readonly string[]>([]);
 

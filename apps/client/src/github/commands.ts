@@ -12,7 +12,6 @@ import { shownFolderOf, useProject } from '@/state/project';
 /* The row that shows the pull request of one repository of a folder that holds several. */
 export const PR_SHOW_IN_PREFIX = 'pr-show-in-';
 
-/* The chat the one selected node acts as, and the machine it runs on. */
 function selectedChat(moment: CommandMoment): { endpointId: string; chatId: string } | null {
     const { selected } = moment;
     const chatId = selected === undefined ? null : shownChatOfNode(selected);

@@ -30,7 +30,6 @@ export interface AddToMachineRequest {
     then?: RemoteNodeRequest;
 }
 
-/* A node on another machine being made, or made over for a machine that no longer links the project. */
 export const remoteNodeDialog = createDialogState<RemoteNodeRequest>();
 export const addToMachineDialog = createDialogState<AddToMachineRequest>();
 

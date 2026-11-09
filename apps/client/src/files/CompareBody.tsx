@@ -196,7 +196,6 @@ export function CompareBody({ tab }: { tab: CompareTab }) {
     );
 }
 
-/* The commits only one side has, a page at a time, between the commits the comparison resolved. */
 function CommitSide({ result, cwd, side }: { result: GitCompareResult; cwd: string; side: 'left' | 'right' }) {
     const { t } = useTranslation('panels');
     const [page, setPage] = useState<GitComparePage>(side === 'left' ? result.left : result.right);

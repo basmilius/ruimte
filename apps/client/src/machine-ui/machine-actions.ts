@@ -24,7 +24,6 @@ export interface MachineDialogModel {
     canLeaveAccount: boolean;
 }
 
-/* What the detail of one machine offers, from what this client knows about it. */
 export function machineDialogModel(entry: MachineEntry, context: MachineContext): MachineDialogModel {
     const canLeaveAccount = entry.local && entry.endpoint !== null && typeof context.machineAccount === 'string';
     return {

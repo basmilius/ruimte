@@ -40,7 +40,6 @@ export class LanguageStatusTracker extends SnapshotTracker<readonly LanguageServ
         this.machineChanged(status);
     }
 
-    /* A person went back to the version a kind ran before the one it runs. */
     async rollback(server: LanguageServerKind): Promise<void> {
         const { status } = await this.transport.request('language.rollback', { server });
         this.machineChanged(status);

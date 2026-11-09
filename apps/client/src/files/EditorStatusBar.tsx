@@ -24,18 +24,12 @@ interface EditorStatusBarProps {
     /* The highlighter id the file read as; undefined for plain text. */
     languageId: string | undefined;
     indentation: EditorIndentation;
-    /* As the file read says it, such as `utf-8`. */
     encoding: string;
     lineEnding: string;
     /* The named blocks around the caret, outermost first. */
     scope: readonly EditorBlock[];
 }
 
-/*
- * The strip under the editor, the way a code editor has one: where the file is (branch, problems,
- * the symbol the caret is in) on the left and what it is on the right (position, indentation, encoding,
- * line ending, language and the language servers).
- */
 export function EditorStatusBar({ editor, language, path, languageId, indentation, encoding, lineEnding, scope }: EditorStatusBarProps) {
     const { t } = useTranslation('panels');
     const caret = useEditorCaret(editor);

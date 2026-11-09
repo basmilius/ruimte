@@ -28,7 +28,6 @@ export function pdfPageBox(page: PdfPageSize, scale: number): PdfPageSize {
     };
 }
 
-/* The top of every page in the stack, counted from the top of the stack. */
 export function pdfPageTops(heights: readonly number[]): number[] {
     const tops: number[] = [];
     let top = PDF_PAGE_GAP;

@@ -18,7 +18,6 @@ function caretStore(editor: Editor | null): { get(): EditorPosition; subscribe(l
     };
 }
 
-/* Where the editor's caret is, said again whenever it moves. */
 export function useEditorCaret(editor: Editor | null): EditorPosition {
     const store = caretStore(editor);
     return useSyncExternalStore(store.subscribe, store.get);

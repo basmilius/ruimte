@@ -425,7 +425,6 @@ interface ShowOptions {
     loose?: boolean;
     /* The view whose host a loose view prefers, when that view stands in one. */
     host?: string | null;
-    /* Open beside the view in the focused cell instead of over it. */
     newTab?: boolean;
 }
 

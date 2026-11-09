@@ -37,7 +37,6 @@ function omittedLabel(omitted: GitDiffResult['omitted']): string {
     return omitted === 'binary' ? i18next.t('panels:diff.omitted.binary') : i18next.t('panels:diff.omitted.tooLarge');
 }
 
-/* A diff that has nothing to draw says why, centered where it would be. */
 function DiffMessage({ children }: { children: ReactNode }) {
     return <div className="file-diff grid min-h-0 grow place-items-center">{children}</div>;
 }
@@ -61,7 +60,6 @@ export function DiffFile({ tabKey, path, name, view }: { tabKey: string; path: s
     );
 }
 
-/* One changed file, in whichever scope the tab is set to. */
 function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: string; name: string; view: FileTabView }) {
     const { t } = useTranslation('panels');
     const layout = useSettings((s) => s.diffLayout);
@@ -343,7 +341,6 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
     );
 }
 
-/* The diff of the one file of a commit the tree has picked. */
 function CommitFileDiff({
     file,
     cwd,

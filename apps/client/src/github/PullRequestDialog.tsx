@@ -153,7 +153,6 @@ function useProjectChats() {
     return [...sections.here, ...sections.others];
 }
 
-/* A menu row per chat, with the mark of its CLI. */
 function ChatMenuItems({ chats, onPick }: { chats: ReturnType<typeof useProjectChats>; onPick(chatId: string): void }) {
     return chats.map((chat) => (
         <Menu.Item key={chat.id} onClick={() => onPick(chat.id)}>

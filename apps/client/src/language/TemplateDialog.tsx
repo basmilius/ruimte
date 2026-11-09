@@ -18,7 +18,6 @@ const VARIABLES = [
 
 const EXPRESSION = { id: 'expression', text: '$EXPR' } as const;
 
-/* Adds or changes a template of the person's own or of the project. */
 export function TemplateDialog({ draft, tracker, onClose }: { draft: TemplateDraft | null; tracker: TemplatesTracker; onClose(): void }) {
     const { t } = useTranslation('settings');
     const postfix = draft?.kind === 'postfix';

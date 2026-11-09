@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { FindState } from '@/find/use-find';
 
-/* The part of a `<webview>` a find needs. */
 export interface FindablePage extends HTMLElement {
     findInPage(text: string, options?: { forward?: boolean; findNext?: boolean; matchCase?: boolean }): number;
     stopFindInPage(action: 'clearSelection' | 'keepSelection' | 'activateSelection'): void;

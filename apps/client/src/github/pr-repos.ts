@@ -36,7 +36,6 @@ export function useCurrentPrRepos(): readonly PrRepo[] {
     return folder !== null && key === endpointKey(endpointId ?? currentEndpointId(), folder) ? repos : NO_REPOS;
 }
 
-/* Reads which repositories the folder holds and which of them stand on a branch. */
 export async function refreshPrRepos(): Promise<void> {
     const folder = shownFolderOf(useProject.getState().current);
     const endpointId = currentEndpointId();
