@@ -35,6 +35,8 @@ public enum OverlayStyle {
             return .hex(0xE5484D)
         case .done:
             return .hex(0x30A46C)
+        case .paused:
+            return .hex(0x8E8E93)
         }
     }
 
@@ -75,7 +77,7 @@ public enum OverlayStyle {
         public static let wheelDot: CGFloat = 1.25
         public static let wheelDotOpacity: CGFloat = 0.8
         public static let wheelTravel: CGFloat = 5.6
-        public static let alertRadius: CGFloat = 6
+        public static let discRadius: CGFloat = 6
 
         static var tail: CGPoint {
             let hotspot = Cursor.hotspot
@@ -144,11 +146,13 @@ public enum PhantomTheme: String, CaseIterable, Sendable {
     case dark
 }
 
-/// The colors of the signs: needs you (waiting and permission), error and done.
+/// The colors of the signs: needs you (waiting and permission), error, done and paused. Paused is gray, not blue,
+/// so it never reads as the old accent or as a call for the person.
 public enum PhantomTone: String, Sendable {
     case needs
     case error
     case done
+    case paused
 }
 
 public struct PhantomGround {

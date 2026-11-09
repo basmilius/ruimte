@@ -115,7 +115,10 @@ struct LookTests {
                 #expect(look.glyph != nil || look.mark != nil, "\(state)")
             }
         }
-        #expect(PhantomLook.of(.error).mark == .alert)
+        #expect(PhantomLook.of(.error).mark == .disc(.alert))
+        for state in [PhantomState.think, .waiting, .permission, .paused] {
+            #expect(PhantomLook.of(state).form == .arrow, "\(state) keeps the arrow and puts its sign in a disc")
+        }
         #expect(PhantomLook.of(.drag).form == .hand)
         #expect(PhantomLook.of(.type).form == .beam)
     }

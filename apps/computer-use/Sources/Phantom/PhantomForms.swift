@@ -171,7 +171,6 @@ public struct PhantomPath: Equatable, Sendable {
 public enum PhantomForm: String, CaseIterable, Sendable {
     case arrow
     case dot
-    case small
     case finger
     /// The closed hand of dragging, with the middle of its palm on the hotspot as the system's grab cursor.
     case hand
@@ -192,8 +191,6 @@ public enum PhantomForm: String, CaseIterable, Sendable {
             return PhantomGeometry.poly([CGPoint(x: 4, y: 3.5), CGPoint(x: 20.5, y: 10.5), CGPoint(x: 13.5, y: 13.5), CGPoint(x: 10.5, y: 20.5)]).cgPath
         case .dot:
             return PhantomGeometry.tear(tip: CGPoint(x: 4, y: 3.5), center: CGPoint(x: 12.5, y: 12.5), radius: 7).cgPath
-        case .small:
-            return PhantomGeometry.tear(tip: CGPoint(x: 4, y: 3.5), center: CGPoint(x: 10.5, y: 10.5), radius: 4.5).cgPath
         case .finger:
             return PhantomGeometry.oval(center: CGPoint(x: 4, y: 3.5), radiusX: 10, radiusY: 10).cgPath
         case .hand:

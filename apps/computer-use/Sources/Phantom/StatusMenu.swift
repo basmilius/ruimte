@@ -143,16 +143,17 @@ public enum MenuBarLook {
     public static let tile: CGFloat = 28
     public static let tileRadius: CGFloat = 8
     public static let tileMark: CGFloat = 16
-    /// The button puts its image against the edge of its highlight; these keep the mark off the rounded end.
-    static let markLead: CGFloat = 3
+    /// The button pads its image already: the arrow starts at its tip, and the dot keeps a little more from the words.
     static let markTrail: CGFloat = 1
-    /// The dot sits in the rounded end and a little further from the words than the arrow.
-    static let dotLead: CGFloat = 4
-    static let dotTrail: CGFloat = 5
+    static let dotLead: CGFloat = 0
+    static let dotTrail: CGFloat = 3
 
-    /// The arrow as a template image, so it takes the color of the menu bar.
+    /// The arrow as a template image, so it takes the color of the menu bar, cut to start at its tip so the
+    /// highlight has as much room on the left as on the right.
     public static let arrow: NSImage = {
-        let image = form(.arrow, size: mark, color: .black, lead: markLead, trail: markTrail)
+        let scale = mark / OverlayStyle.Cursor.box
+        let tip = OverlayStyle.Cursor.hotspot.x
+        let image = form(.arrow, size: mark, color: .black, lead: -tip * scale, trail: markTrail - (OverlayStyle.Cursor.box - 20.5) * scale)
         image.isTemplate = true
         return image
     }()

@@ -9,23 +9,33 @@ public enum WorkingStyle: String, CaseIterable, Sendable {
 
 /// What sits inside the form.
 public enum PhantomGlyph: Sendable {
-    case question
     case check
-    case dots
-    case arc
-    case pause
-    case pulse
     case handLines
 }
 
-/// A white sign beside the arrow, grown out of its notch.
-public enum PhantomMark: Sendable {
-    /// Four rounded corners that focus from outside in.
+/// A sign beside the arrow, grown out of its notch.
+public enum PhantomMark: Hashable, Sendable {
+    /// Four white rounded corners that focus from outside in.
     case look
-    /// A wheel with a dot that runs the way it scrolls.
+    /// A white wheel with a dot that runs the way it scrolls.
     case scroll
-    /// A red disc with a white exclamation mark.
+    /// A disc with a sign in it: white for working, in its tone for the rest.
+    case disc(PhantomDisc)
+}
+
+public enum PhantomDisc: String, Sendable {
+    /// White, with dark dots that wave.
+    case dots
+    /// White, with a dark arc that turns.
+    case arc
+    /// Amber, with a white dot that pulses.
+    case waiting
+    /// Amber, with a white question mark.
+    case permission
+    /// Red, with a white exclamation mark.
     case alert
+    /// Gray, with two white bars.
+    case paused
 }
 
 /// How the form itself moves.
@@ -73,19 +83,19 @@ public struct PhantomLook: Sendable {
         case .look:
             return PhantomLook(form: .arrow, mark: .look)
         case .think:
-            return PhantomLook(form: .dot, glyph: working == .arc ? .arc : .dots)
+            return PhantomLook(form: .arrow, mark: .disc(working == .arc ? .arc : .dots))
         case .waiting:
-            return PhantomLook(form: .dot, tone: .needs, glyph: .pulse)
+            return PhantomLook(form: .arrow, tone: .needs, mark: .disc(.waiting))
         case .permission:
-            return PhantomLook(form: .dot, tone: .needs, glyph: .question)
+            return PhantomLook(form: .arrow, tone: .needs, mark: .disc(.permission))
         case .error:
-            return PhantomLook(form: .arrow, tone: .error, mark: .alert, beat: .nudge)
+            return PhantomLook(form: .arrow, tone: .error, mark: .disc(.alert), beat: .nudge)
         case .done:
             return PhantomLook(form: .dot, tone: .done, glyph: .check, beat: .fade)
         case .takeover:
             return PhantomLook(form: .arrow, ghost: true, scale: style.takeoverScale, rimWidth: style.rimWidth * style.ghostRimScale)
         case .paused:
-            return PhantomLook(form: .small, glyph: .pause)
+            return PhantomLook(form: .arrow, tone: .paused, mark: .disc(.paused))
         case .tap:
             return PhantomLook(form: .finger, ring: style.tapRing, fillOpacity: style.tapFillOpacity)
         }

@@ -195,10 +195,7 @@ public final class PhantomCursor {
         let glyph = Layers.plain(CGRect(x: 0, y: 0, width: OverlayStyle.Cursor.box, height: OverlayStyle.Cursor.box))
         let color = look.tone.map(OverlayStyle.color) ?? OverlayStyle.Ink.white
         let timing = OverlayStyle.Motion.self
-        let middle = CGPoint(x: 12.5, y: 12.5)
         switch kind {
-        case .question:
-            glyph.addSublayer(Self.questionMark(color: color))
         case .check:
             let check = CAShapeLayer()
             check.frame = glyph.bounds
@@ -219,36 +216,6 @@ public final class PhantomCursor {
             motion.run(Track(keyPath: "strokeEnd", duration: draw.duration, delay: timing.drawDelay) { time in
                 NSNumber(value: Double(min(1, 12 * draw.easing.progress(CGFloat(time / draw.duration)) / length)))
             }, on: check)
-        case .dots:
-            for (index, x) in [9.3, 12.5, 15.7].enumerated() {
-                let dot = Layers.circle(center: CGPoint(x: x, y: 12.8), diameter: 2.7)
-                dot.fillColor = color
-                glyph.addSublayer(dot)
-                let delay = Double(index) * timing.waveStagger
-                motion.play(.keyframes("transform.translation.y", duration: timing.wave, [(0, 0), (0.3, -1.2), (0.6, 0), (1, 0)], easing: .easeInOut, repeats: true, delay: delay), on: dot)
-                motion.play(.keyframes("opacity", duration: timing.wave, [(0, 0.55), (0.3, 1), (0.6, 0.55), (1, 0.55)], easing: .easeInOut, repeats: true, delay: delay), on: dot)
-            }
-        case .arc:
-            let arc = Layers.circle(center: middle, diameter: 6.6)
-            arc.fillColor = nil
-            arc.strokeColor = color
-            arc.lineWidth = 1.8
-            arc.lineCap = .round
-            arc.lineDashPattern = [11, 30]
-            glyph.addSublayer(arc)
-            motion.play(.keyframes("transform.rotation.z", duration: timing.arc, [(0, 0), (1, 2 * .pi)], easing: .linear, repeats: true), on: arc)
-        case .pause:
-            for x in [8.6, 11.2] {
-                let bar = CAShapeLayer()
-                bar.path = CGPath(roundedRect: CGRect(x: x, y: 8.5, width: 1.6, height: 4), cornerWidth: 0.5, cornerHeight: 0.5, transform: nil)
-                bar.fillColor = color
-                glyph.addSublayer(bar)
-            }
-        case .pulse:
-            let dot = Layers.circle(center: middle, diameter: 4.4)
-            dot.fillColor = color
-            glyph.addSublayer(dot)
-            motion.play(.keyframes("opacity", duration: timing.pulse, [(0, 1), (0.5, 0.35), (1, 1)], easing: .easeInOut, repeats: true), on: dot)
         case .handLines:
             let lines = CAShapeLayer()
             lines.frame = glyph.bounds
@@ -313,8 +280,8 @@ public final class PhantomCursor {
             motion.play(.transition("opacity", from: 0, to: 1, duration: timing.focusIn, easing: timing.smooth), on: layer)
         case .scroll:
             layer = Self.scrollMark(scene.scrollDirection, motion: motion)
-        case .alert:
-            layer = Self.alertMark()
+        case .disc(let sign):
+            layer = Self.discMark(sign, motion: motion)
         }
         if kind != .look {
             motion.play(.transition("transform.scale", from: timing.markInScale, to: 1, duration: timing.markIn, easing: timing.smooth), on: layer)
@@ -387,39 +354,78 @@ public final class PhantomCursor {
         return layer
     }
 
-    private static func alertMark() -> CALayer {
+    /// A disc as the alert of the design, with the sign of its state in it.
+    private static func discMark(_ sign: PhantomDisc, motion: MotionHost) -> CALayer {
         let style = OverlayStyle.Mark.self
-        let radius = style.alertRadius
+        let timing = OverlayStyle.Motion.self
+        let radius = style.discRadius
         let frame = style.place(CGSize(width: 2 * radius, height: 2 * radius), radius: radius)
         let center = CGPoint(x: frame.midX, y: frame.midY)
         let layer = Layers.cursorBox(around: style.notch)
         let disc = Layers.circle(center: center, diameter: 2 * radius)
-        disc.fillColor = OverlayStyle.color(.error)
+        let white = OverlayStyle.Ink.white
+        let ink = OverlayStyle.Ink.fill
         layer.addSublayer(disc)
-        let sign = CAShapeLayer()
-        sign.frame = layer.bounds
-        let path = CGMutablePath()
-        path.addRoundedRect(in: CGRect(x: center.x - 0.75, y: center.y - 3.5, width: 1.5, height: 4.5), cornerWidth: 0.75, cornerHeight: 0.75)
-        path.addEllipse(in: CGRect(x: center.x - 0.9, y: center.y + 2.6 - 0.9, width: 1.8, height: 1.8))
-        sign.path = path
-        sign.fillColor = OverlayStyle.Ink.white
-        layer.addSublayer(sign)
+        let shape = CAShapeLayer()
+        shape.frame = layer.bounds
+        shape.fillColor = white
+        layer.addSublayer(shape)
+        switch sign {
+        case .dots:
+            disc.fillColor = white
+            for (index, offset) in [-2.6, 0, 2.6].enumerated() {
+                let dot = Layers.circle(center: CGPoint(x: center.x + offset, y: center.y), diameter: 1.9)
+                dot.fillColor = ink
+                layer.addSublayer(dot)
+                let delay = Double(index) * timing.waveStagger
+                motion.play(.keyframes("transform.translation.y", duration: timing.wave, [(0, 0), (0.3, -1), (0.6, 0), (1, 0)], easing: .easeInOut, repeats: true, delay: delay), on: dot)
+                motion.play(.keyframes("opacity", duration: timing.wave, [(0, 0.55), (0.3, 1), (0.6, 0.55), (1, 0.55)], easing: .easeInOut, repeats: true, delay: delay), on: dot)
+            }
+        case .arc:
+            disc.fillColor = white
+            let arc = Layers.circle(center: center, diameter: 6)
+            arc.fillColor = nil
+            arc.strokeColor = ink
+            arc.lineWidth = 1.5
+            arc.lineCap = .round
+            arc.lineDashPattern = [10, 30]
+            layer.addSublayer(arc)
+            motion.play(.keyframes("transform.rotation.z", duration: timing.arc, [(0, 0), (1, 2 * .pi)], easing: .linear, repeats: true), on: arc)
+        case .waiting:
+            disc.fillColor = OverlayStyle.color(.needs)
+            let dot = Layers.circle(center: center, diameter: 4)
+            dot.fillColor = white
+            layer.addSublayer(dot)
+            motion.play(.keyframes("opacity", duration: timing.pulse, [(0, 1), (0.5, 0.35), (1, 1)], easing: .easeInOut, repeats: true), on: dot)
+        case .permission:
+            disc.fillColor = OverlayStyle.color(.needs)
+            shape.path = questionMark(center: center)
+        case .alert:
+            disc.fillColor = OverlayStyle.color(.error)
+            let path = CGMutablePath()
+            path.addRoundedRect(in: CGRect(x: center.x - 0.75, y: center.y - 3.5, width: 1.5, height: 4.5), cornerWidth: 0.75, cornerHeight: 0.75)
+            path.addEllipse(in: CGRect(x: center.x - 0.9, y: center.y + 2.6 - 0.9, width: 1.8, height: 1.8))
+            shape.path = path
+        case .paused:
+            disc.fillColor = OverlayStyle.color(.paused)
+            let path = CGMutablePath()
+            for x in [center.x - 2.1, center.x + 0.5] {
+                path.addRoundedRect(in: CGRect(x: x, y: center.y - 2.25, width: 1.6, height: 4.5), cornerWidth: 0.5, cornerHeight: 0.5)
+            }
+            shape.path = path
+        }
         return layer
     }
 
-    private static func questionMark(color: CGColor) -> CALayer {
-        let font = NSFont.systemFont(ofSize: 10, weight: .bold)
+    /// A bold question mark centered in the disc; glyph outlines are y up.
+    private static func questionMark(center: CGPoint) -> CGPath? {
+        let font = NSFont.systemFont(ofSize: 9, weight: .bold)
         var glyph = CGGlyph()
         var character: UniChar = 0x3F
         CTFontGetGlyphsForCharacters(font, &character, &glyph, 1)
         var advance = CGSize.zero
         CTFontGetAdvancesForGlyphs(font, .horizontal, &glyph, &advance, 1)
-        // Glyph outlines are y up; the text sits on the baseline at 16.1 and centers on 12.5.
-        var transform = CGAffineTransform(translationX: 12.5 - advance.width / 2, y: 16.1).scaledBy(x: 1, y: -1)
-        let shape = CAShapeLayer()
-        shape.frame = CGRect(x: 0, y: 0, width: OverlayStyle.Cursor.box, height: OverlayStyle.Cursor.box)
-        shape.path = CTFontCreatePathForGlyph(font, glyph, &transform)
-        shape.fillColor = color
-        return shape
+        var transform = CGAffineTransform(translationX: center.x - advance.width / 2, y: center.y + 3.25).scaledBy(x: 1, y: -1)
+        return CTFontCreatePathForGlyph(font, glyph, &transform)
     }
 }
