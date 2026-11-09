@@ -7,7 +7,7 @@ import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 
 const views: ProjectView[] = [
-    { kind: 'canvas', id: 'main', name: 'Main', nodes: [], edges: [] },
+    { kind: 'canvas', id: 'main', name: 'Main', nodes: [], texts: [], edges: [], layouts: [] },
     { kind: 'file', id: 'readme', name: 'Readme', path: 'README.md' }
 ];
 let workspace: FakeWorkspace;
