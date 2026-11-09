@@ -330,7 +330,12 @@ private struct PadNotificationPage: View {
         }
         .task {
             guard !searched else { return }
-            if let target = await now.locate(machineID: destination.machineID, itemID: destination.nodeID) {
+            let machineID = destination.machineID
+            let tasks = runtime.session(machineID: machineID)?.tasks
+            if let target = await destination.answeredAt(
+                parentOf: { tasks?.childTask($0)?.text("parentId") },
+                locate: { await now.locate(machineID: machineID, itemID: $0) })
+            {
                 open(target)
             } else {
                 searched = true

@@ -542,7 +542,12 @@ struct ChatNoteRow: View {
         let level = item.level
         let parts = ChatForking.noteParts(item.text)
         let from = item.from
-        let forkTitle = from.flatMap { presentation?.places?.title($0) }
+        let placeTitle = from.flatMap { presentation?.places?.title($0) }
+        // A child no view holds is answered from this chat's composer rather than opened.
+        let waitingTitle =
+            placeTitle == nil && ChatForking.waitingNote(item)
+            ? from.flatMap { presentation?.places?.waitingChild($0) } : nil
+        let forkTitle = placeTitle ?? waitingTitle
         VStack(alignment: .leading, spacing: 6) {
             Label(
                 parts.head,
@@ -571,7 +576,11 @@ struct ChatNoteRow: View {
                     }
                     if let from, forkTitle != nil {
                         Button {
-                            presentation?.openRequest = from
+                            if waitingTitle != nil {
+                                presentation?.promptRequest = from
+                            } else {
+                                presentation?.openRequest = from
+                            }
                         } label: {
                             Group {
                                 if ChatForking.waitingNote(item) {

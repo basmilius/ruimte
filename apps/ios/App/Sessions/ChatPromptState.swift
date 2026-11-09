@@ -68,6 +68,15 @@ final class ChatPromptState {
         reconcile()
     }
 
+    /// Brings the oldest request of a chat this one opened to the front, for a note that leads there.
+    func show(chatID: String) {
+        guard
+            let subject = subjects.filter({ $0.chatID == chatID }).min(by: { $0.item.createdAt < $1.item.createdAt })
+        else { return }
+        activeID = subject.key
+        error = nil
+    }
+
     private func reconcile() {
         guard active == nil else { return }
         let candidates = subjects.sorted {

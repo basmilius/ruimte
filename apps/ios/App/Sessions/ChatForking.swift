@@ -222,6 +222,9 @@ struct ChatPlaces {
     /// The name a chat goes by in the project, or nil when it is not in it.
     let title: (String) -> String?
     let shape: (String) -> ChatForkShape?
+    /// The task title of an agent this chat opened outside every view that has not settled, whose requests wait in
+    /// this chat's composer; nil for every other chat.
+    var waitingChild: (String) -> String? = { _ in nil }
     /// Waits until a chat a machine just made is in the project, and answers whether it arrived.
     let arrival: (String) async -> Bool
 }

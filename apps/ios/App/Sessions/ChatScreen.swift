@@ -171,6 +171,11 @@ struct ChatScreen: View {
         .task(id: model.presentation.quoteRequest) {
             if let jump = model.presentation.quoteRequest { await model.revealQuote(jump) }
         }
+        .onChange(of: model.presentation.promptRequest) { _, chatID in
+            guard let chatID else { return }
+            model.presentation.promptRequest = nil
+            prompts.show(chatID: chatID)
+        }
         .onChange(of: model.presentation.bookmarkRequest) { _, request in
             guard let request else { return }
             model.presentation.bookmarkRequest = nil
@@ -352,6 +357,13 @@ struct ChatScreen: View {
             model.presentation.places = ChatPlaces(
                 title: { ChatForking.origin(in: workspace.views, chatID: $0)?.title },
                 shape: { ChatForking.origin(in: workspace.views, chatID: $0)?.shape },
+                waitingChild: { [weak session] id in
+                    guard ChatForking.origin(in: workspace.views, chatID: id) == nil,
+                        let task = session?.tasks.childTask(id), task.text("parentId") == chatID,
+                        task.text("status") == TaskStatus.open.rawValue
+                    else { return nil }
+                    return task.text("title")
+                },
                 arrival: { await workspace.arrival(of: $0) })
         }
     }
