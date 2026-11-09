@@ -73,7 +73,9 @@ function fakeManager(files: ServiceFiles, linger?: boolean): ServiceManager & { 
     };
 }
 
-function setup(options: { existing?: string; linger?: boolean; health?: BuildIdentity | null; build?: string | null; left?: string[] } = {}) {
+function setup(
+    options: { existing?: string; linger?: boolean; health?: (BuildIdentity & { starting?: boolean }) | null; build?: string | null; left?: string[] } = {}
+) {
     const disk = new Map<string, string>();
     const files: ServiceFiles = {
         read: (path) => disk.get(path) ?? null,
@@ -232,6 +234,14 @@ describe('runServiceAction', () => {
             'Running: version 0.2.0 on port 4210',
             'Lingering: off, it stops when you log out (loginctl enable-linger bas)'
         ]);
+    });
+
+    test('status says a daemon that still wires itself is starting, and exits 1', async () => {
+        const plan = planOf(LINUX);
+        const { deps, out } = setup({ existing: plan.definition, health: { version: '0.2.0', build: 'b', starting: true }, build: 'b' });
+        expect(await runServiceAction('status', LINUX, deps)).toBe(1);
+        expect(out).toContain('Starting on port 4210');
+        expect(out.join('\n')).not.toContain('Running');
     });
 
     test('status exits 1 when nothing is installed', async () => {

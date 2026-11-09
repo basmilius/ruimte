@@ -103,7 +103,8 @@ export interface ServiceDeps {
     files: ServiceFiles;
     copyBinaries(from: string, to: string): void;
     removeBinaries(dir: string): string[];
-    health(port: number): Promise<BuildIdentity | null>;
+    /* `starting` is a daemon that holds the port and has not finished wiring itself. */
+    health(port: number): Promise<(BuildIdentity & { starting?: boolean }) | null>;
     readBuild(dir: string): string | null;
     user: string;
     out(line: string): void;
@@ -197,13 +198,18 @@ async function status(facts: ServiceFacts, plan: ServicePlan, deps: ServiceDeps)
         deps.out(`Binary: ${plan.program} (build ${deps.readBuild(plan.binDir) ?? 'unknown'})`);
     }
     const running = await deps.health(facts.port);
-    deps.out(running ? `Running: version ${running.version} on port ${facts.port}` : `Not running on port ${facts.port}`);
+    const ready = running !== null && running.starting !== true;
+    if (running === null) {
+        deps.out(`Not running on port ${facts.port}`);
+    } else {
+        deps.out(ready ? `Running: version ${running.version} on port ${facts.port}` : `Starting on port ${facts.port}`);
+    }
     if (deps.manager.linger) {
         deps.out(
             `Lingering: ${deps.manager.linger.enabled() ? 'on, it keeps running after you log out' : `off, it stops when you log out (loginctl enable-linger ${deps.user})`}`
         );
     }
-    return owner !== 'none' && running ? 0 : 1;
+    return owner !== 'none' && ready ? 0 : 1;
 }
 
 export async function runServiceAction(action: string, facts: ServiceFacts, deps: ServiceDeps): Promise<number> {
