@@ -5,7 +5,8 @@ import { hasLogoMenu, hasOverlayControls } from '@/desktop/bridge';
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
 import { ProjectMenu } from '@/project/ProjectMenu';
 import { StationMenu } from '@/shell/menu/StationMenu';
-import { SIDEBAR_WIDTH_PX, SidebarGlow } from '@/sidebar/SidebarGlow';
+import { useSidebarWidth } from '@/sidebar/sidebar-width';
+import { SidebarGlow } from '@/sidebar/SidebarGlow';
 import { SidebarToggle } from '@/sidebar/SidebarToggle';
 import { useDiagram } from '@/state/diagram';
 import { useDrawing } from '@/state/drawing';
@@ -31,6 +32,7 @@ export function TopRow() {
     const sidebarOpen = useUi((s) => s.sidebarOpen);
     const tabs = useSettings((s) => s.projectNavigation === 'tabs');
     const inset = useTrafficLightInset();
+    const sidebarWidth = useSidebarWidth();
 
     return (
         <WorkspaceTopRow
@@ -49,7 +51,7 @@ export function TopRow() {
                         <div
                             data-toolbar-glow=""
                             className="pointer-events-none absolute inset-y-0 left-0 isolate overflow-hidden"
-                            style={{ width: SIDEBAR_WIDTH_PX }}
+                            style={{ width: sidebarWidth }}
                         >
                             <SidebarGlow />
                         </div>

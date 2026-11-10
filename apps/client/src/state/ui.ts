@@ -13,6 +13,7 @@ export type PanelKind = string;
 const PANEL_KINDS: readonly PanelKind[] = ['files', 'git', 'processes', 'devices'];
 
 const storedSidebar = storedText('ruimte.sidebar');
+const storedSidebarWidth = storedText('ruimte.sidebar.width');
 const storedChosenLaunches = storedJson(
     'ruimte.launches.chosen',
     z.custom<Record<string, string>>((stored) => stored !== null && typeof stored === 'object' && !Array.isArray(stored))
@@ -98,6 +99,8 @@ interface UiStore {
     paletteMode: PaletteMode;
     /* Whether the session list is in view; it survives a reload, like everything else on the canvas. */
     sidebarOpen: boolean;
+    /* The width a person dragged the session list to, null for the default; like `sidebarOpen` it belongs to the app, not a project. */
+    sidebarWidth: number | null;
     /* Which canvases the sidebar has folded open, per project, or null until the list seeds itself.
        It rides the project's machine-local file with the panels (`project/panels-port.ts`). */
     sidebarExpanded: string[] | null;
@@ -145,6 +148,7 @@ interface UiStore {
     setPanel(patch: Partial<PanelState>): void;
     togglePanel(kind?: PanelKind): void;
     setPanelWidth(width: number): void;
+    setSidebarWidth(width: number): void;
     setPlanPanel(state: { anchor: PlanAnchor | null; open: boolean }): void;
     setPlanWidth(width: number): void;
     /* Puts a project's panels on screen in one go, when it opens; they land without sliding. */
@@ -180,6 +184,7 @@ export const useUi = create<UiStore>((set, get) => {
         paletteBrowseFor: 'folder',
         filePick: null,
         sidebarOpen: storedSidebar.read() !== 'closed',
+        sidebarWidth: parseWidth(storedSidebarWidth.read()),
         sidebarExpanded: null,
         settings: { open: false, section: 'general', target: null, searchAt: 0 },
         /* Closed until a project says otherwise, so a reload cannot flash open a panel the project has closed. */
@@ -244,6 +249,10 @@ export const useUi = create<UiStore>((set, get) => {
         },
         setPanelWidth(width) {
             set({ panelWidth: width, panelsRestoring: false });
+        },
+        setSidebarWidth(width) {
+            storedSidebarWidth.write(String(width));
+            set({ sidebarWidth: width, panelsRestoring: false });
         },
         setPlanPanel({ anchor, open }) {
             if (get().planAnchor === anchor && get().planOpen === open) {

@@ -2,10 +2,6 @@ import type { CSSProperties } from 'react';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 
-/* How wide the list is when it is open. The inner column keeps this width while the wrapper
-   animates to zero, so nothing reflows on the way out, and the toolbar draws the glow this wide where it was. */
-export const SIDEBAR_WIDTH_PX = 248;
-
 const GLOW_ORBITS = [
     { size: 130, alpha: 0.05 },
     { size: 230, alpha: 0.035 },

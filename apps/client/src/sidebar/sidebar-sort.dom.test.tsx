@@ -51,9 +51,10 @@ async function pick(sort: 'canvas' | 'recent' | 'name'): Promise<void> {
 }
 
 async function pointer(type: 'pointerover' | 'pointerout'): Promise<void> {
-    const sidebar = canvas.page.host.querySelector('#app-sidebar')!;
+    // On a row, as a pointer that comes into the sidebar comes over what it draws.
+    const row = rowElements()[0]!;
     await act(async () => {
-        sidebar.dispatchEvent(new MouseEvent(type, { bubbles: true, relatedTarget: null }));
+        row.dispatchEvent(new MouseEvent(type, { bubbles: true, relatedTarget: null }));
     });
 }
 
