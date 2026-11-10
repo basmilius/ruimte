@@ -728,6 +728,8 @@ describe('resume at reset', () => {
     test('a resume time left without its entry is taken off when the machine has the switch off by then', async () => {
         const { daemon, childId } = await shownButNotOwed(boot);
         await daemon.chats.recoverInterrupted();
+        // The recovery the boot started may still be loading the chat, and then the call above passes it by.
+        await daemon.until(() => daemon.chats.get(childId) !== undefined && daemon.chats.get(childId)?.info.resumeAt === undefined);
         const chat = daemon.chats.get(childId);
         expect(chat?.info.limit).toMatchObject({ kind: 'usage' });
         expect(chat?.info.resumeAt).toBeUndefined();
