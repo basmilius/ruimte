@@ -1,5 +1,5 @@
 import type { ChatCore } from '@adecore/agents/chat';
-import { chatNoticeTargets, showNotices, steerNotices, withinHops, type NoticeChat, type NoticeStore } from '@adecore/agents/coordination';
+import { chatNoticeTargets, showNotices, steerNotices, type NoticeChat, type NoticeStore } from '@adecore/agents/coordination';
 import type { MessageHost } from '../canvas/host.ts';
 import { deliverNotice, MESSAGE_WORDS } from '../context/notices.ts';
 import { errorText } from '../error-text.ts';
@@ -31,7 +31,8 @@ export async function wakeForWaitingMessages(
     projectId: string | null,
     enqueue: (projectId: string, work: OutboxWork) => Promise<void>
 ): Promise<void> {
-    if (state !== 'done' || projectId === null || !notices.waiting(chatId).some(withinHops)) {
+    // Whether messages may still open a turn there is the handler's to judge, against the chat's own thread.
+    if (state !== 'done' || projectId === null || notices.waiting(chatId).length === 0) {
         return;
     }
 

@@ -12970,6 +12970,10 @@
                         "dropped"
                       ]
                     },
+                    "limited": {
+                      "type": "boolean",
+                      "const": true
+                    },
                     "text": {
                       "type": "string"
                     }
@@ -14664,6 +14668,10 @@
                         "dropped"
                       ]
                     },
+                    "limited": {
+                      "type": "boolean",
+                      "const": true
+                    },
                     "text": {
                       "type": "string"
                     }
@@ -16351,6 +16359,10 @@
                                 "waiting",
                                 "dropped"
                               ]
+                            },
+                            "limited": {
+                              "type": "boolean",
+                              "const": true
                             },
                             "text": {
                               "type": "string"
@@ -19782,6 +19794,10 @@
                                   "dropped"
                                 ]
                               },
+                              "limited": {
+                                "type": "boolean",
+                                "const": true
+                              },
                               "text": {
                                 "type": "string"
                               }
@@ -21995,6 +22011,10 @@
                         "waiting",
                         "dropped"
                       ]
+                    },
+                    "limited": {
+                      "type": "boolean",
+                      "const": true
                     },
                     "text": {
                       "type": "string"
@@ -27219,6 +27239,10 @@
                         "dropped"
                       ]
                     },
+                    "limited": {
+                      "type": "boolean",
+                      "const": true
+                    },
                     "text": {
                       "type": "string"
                     }
@@ -31141,6 +31165,10 @@
                         "waiting",
                         "dropped"
                       ]
+                    },
+                    "limited": {
+                      "type": "boolean",
+                      "const": true
                     },
                     "text": {
                       "type": "string"
@@ -83861,6 +83889,10 @@
                               "dropped"
                             ]
                           },
+                          "limited": {
+                            "type": "boolean",
+                            "const": true
+                          },
                           "text": {
                             "type": "string"
                           }
@@ -87290,6 +87322,10 @@
                                 "waiting",
                                 "dropped"
                               ]
+                            },
+                            "limited": {
+                              "type": "boolean",
+                              "const": true
                             },
                             "text": {
                               "type": "string"

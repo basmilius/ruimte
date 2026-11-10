@@ -21,7 +21,7 @@ export async function wakeWith(
     return chat.wake({ text: wake.text, label: wake.label, taskIds: [] }) ? undefined : 'wait';
 }
 
-/* A person's answer on a card the chat raised; like a task's result, it is hop 0 and its turn wakes nobody. */
+/* A person's answer on a card the chat raised; like a task's result, its turn counts toward no message limit and wakes nobody. */
 export function deliverAnswerHandler(deps: { openChat(chatId: string): Promise<WakeChat | null> }) {
     return (entry: DeliverAnswerEntry): Promise<OutboxOutcome> => wakeWith(deps.openChat, entry.target, entry.payload);
 }

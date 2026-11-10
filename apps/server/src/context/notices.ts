@@ -1,4 +1,4 @@
-import { deliverToChat, MAX_MESSAGE_HOPS, type ChatDelivery, type ChatNoticeTargets, type MessageWords } from '@adecore/agents/coordination';
+import { deliverToChat, MAX_MESSAGE_TURNS, type ChatDelivery, type ChatNoticeTargets, type MessageWords } from '@adecore/agents/coordination';
 import type { Notice, NoticeStore } from '@adecore/agents/coordination';
 import { isExternalActor, type AgentInfo } from '@ruimte/contracts';
 import { takesHookContext } from '../agents/hooks.ts';
@@ -35,7 +35,7 @@ function senders(count: number, notices: readonly Notice[]): string {
  * enforces; without it an agent answers and then waits for a reply that never comes on its own.
  */
 export function messageText(count: number, notices: readonly Notice[] = []): string {
-    return `${senders(count, notices)}. Act on it, and answer with notify if you were asked something. Agents reading each other wake each other a few times; past that a message waits until its node takes a turn for another reason, and the answer to your notify says so.`;
+    return `${senders(count, notices)}. Act on it. Its sender does not read this chat: anything meant for it, an answer or a reply it asked for, goes back with notify to the node named above. Messages wake a chat up to ${MAX_MESSAGE_TURNS} times an hour; past that a message waits until its node takes a turn for another reason, and the answer to your notify says so.`;
 }
 
 /* What a person reads above the turn in the thread: who it came from, by the name they see on the canvas. */
@@ -47,7 +47,8 @@ export function messageLabel(notices: readonly Notice[]): string {
 export const MESSAGE_WORDS: MessageWords = { heard: renderNotice, shown: noticeNote, prompt: messageText, label: messageLabel };
 
 // Without this tail on every answer to a notify, a model polls the node it wrote to until it gives up.
-export const NO_REPLY_NOTICE = 'do not wait on it: an answer reaches you only as a message of its own, and task_new is what brings a result back';
+export const NO_REPLY_NOTICE =
+    'do not wait on it or poll it: an answer reaches you only as a message of its own, which wakes you, so ask for one and end your turn; task_new is what brings a result back';
 
 function delivered(at: NoticeDelivery['at'], wake: boolean, detail: string): NoticeDelivery {
     return { at, wake, detail: `${detail}; ${NO_REPLY_NOTICE}` };
@@ -67,11 +68,11 @@ function chatDelivered({ outcome, waiting }: ChatDelivery): NoticeDelivery {
                 ...delivered('waiting', false, `that chat is in a turn; it reads the message at the latest in a turn of its own when this one ends (${count})`),
                 inTurn: true
             };
-        case 'hop-limit':
+        case 'rate-limit':
             return delivered(
                 'waiting',
                 false,
-                `this chain of messages has woken agents ${MAX_MESSAGE_HOPS} times, which is as far as messages go; that chat reads this one when it next takes a turn for another reason (${count})`
+                `messages woke that chat ${MAX_MESSAGE_TURNS} times this hour, which is as often as they may; it reads this one when it next takes a turn for another reason, or when a person hands it over (${count})`
             );
         case 'wake':
             return delivered('now', true, 'that chat takes a turn on it, and reads it there');

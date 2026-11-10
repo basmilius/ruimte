@@ -74,7 +74,7 @@ One WebSocket, or the same frames over a WebRTC DataChannel, as JSON validated b
 
 Decisions the code cannot show. Do not reverse one without asking Bas. Each area keeps its own under the same heading in its `CLAUDE.md`.
 
-- Five things wake a chat: a finished task, a message within its chain's hop limit, a PR-watch a person turned on, a person's confirm or decline on a tunnel or project card the chat raised, and a restart that took background commands from an idle chat that is no task's child. A terminal is never woken (`apps/server/src/outbox`).
+- Five things wake a chat: a finished task, a message, at most 30 times per chat an hour, a PR-watch a person turned on, a person's confirm or decline on a tunnel or project card the chat raised, and a restart that took background commands from an idle chat that is no task's child. A terminal is never woken (`apps/server/src/outbox`).
 - A child that stops on a limit pauses its task, and a task settles only once its child is really done (`apps/server/src/outbox`).
 - A waiting child leaves its parent a note and never wakes it (`apps/server/src/outbox`).
 - The daemon schedules work on a clock only for the list in `apps/server/src/outbox/CLAUDE.md`. Resuming after a limit is on it only when a person turned that on (`apps/server/src/chat`).

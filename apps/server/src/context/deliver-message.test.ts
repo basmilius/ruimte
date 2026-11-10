@@ -149,7 +149,7 @@ describe('a message to a chat', () => {
         expect(lines).toEqual([notified('chat-third', 'now', 'that chat takes a turn on it, and reads it there', 'Reviewer')]);
         await daemon.until(() => repliesOf(daemon, 'chat-third').some((text) => text.includes('the word is walnut')));
         expect(turnsOf(daemon, 'chat-third').length).toBeGreaterThan(before);
-        expect(turnsOf(daemon, 'chat-third').at(-1)?.messageHop).toBe(2);
+        expect(turnsOf(daemon, 'chat-third').at(-1)?.messageFrom).toEqual(['chat-other']);
         daemon.chats.cancel('chat-other');
     });
 

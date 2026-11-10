@@ -58,6 +58,9 @@ const PERSON_CHAT_ACTIONS: ChatActions = {
     unqueue: async (chatId, messageId) => {
         await perform('chat.unqueue', { chatId, messageId });
     },
+    send: async (chatId, text) => {
+        await perform('chat.send', { chatId, prompt: text });
+    },
     sendNow: async (chatId, messageId) => {
         await perform('chat.sendNow', { chatId, messageId });
     },

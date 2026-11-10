@@ -362,8 +362,7 @@ export class ChatManager {
         session.wake({
             ...continueOnWake(turn.limit.kind, this.core.accountLabel(kind, to), false),
             taskIds: turn.taskIds ?? [],
-            ...(turn.messageFrom === undefined ? {} : { messageFrom: turn.messageFrom }),
-            ...(turn.messageHop === undefined ? {} : { messageHop: turn.messageHop })
+            ...(turn.messageFrom === undefined ? {} : { messageFrom: turn.messageFrom })
         });
     }
 

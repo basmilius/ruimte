@@ -52,7 +52,7 @@ describe('the words of a message', () => {
         expect(messageLabel([notice('term-1', 'shell')])).toBe('Message from shell');
         expect(messageLabel([notice('term-1', 'shell'), notice('term-3', ''), notice('term-1', 'shell')])).toBe('Messages from shell, node term-3');
         expect(messageText(2)).toStartWith('2 agents of this project sent you the messages above.');
-        expect(messageText(1)).toContain('Agents reading each other wake each other a few times');
+        expect(messageText(1)).toContain('Messages wake a chat up to 30 times an hour');
     });
 
     test('tells its agent a message of an external MCP client came from the person, by the name the client signs with', () => {
@@ -69,7 +69,7 @@ describe('deliverNotice', () => {
     const targets = (overrides: Partial<NoticeTargets> = {}): NoticeTargets => ({
         terminal: () => null,
         chat: async () => 'none',
-        hop: () => 0,
+        mayWake: () => true,
         ...overrides
     });
 
@@ -127,13 +127,13 @@ describe('deliverNotice', () => {
         expect(cold.wake).toBe(false);
     });
 
-    test('a message past the hop limit wakes nobody, and its sender hears why', async () => {
-        const delivery = await deliverNotice(store, targets({ chat: async () => 'idle', hop: () => 4 }), left('and what about the tests', 'chat-2'));
+    test('a message to a chat that messages woke as often as they may wakes nobody, and its sender hears why', async () => {
+        const delivery = await deliverNotice(store, targets({ chat: async () => 'idle', mayWake: () => false }), left('and what about the tests', 'chat-2'));
         expect(delivery).toEqual({
             at: 'waiting',
             wake: false,
             detail: answer(
-                'this chain of messages has woken agents 4 times, which is as far as messages go; that chat reads this one when it next takes a turn for another reason (1 waiting)'
+                'messages woke that chat 30 times this hour, which is as often as they may; it reads this one when it next takes a turn for another reason, or when a person hands it over (1 waiting)'
             )
         });
         expect(store.waiting('chat-2')).toHaveLength(1);
@@ -144,7 +144,7 @@ describe('deliverNotice', () => {
         const deliveries = [
             await deliverNotice(store, targets({ chat: async () => 'idle' }), left('the build is green', 'chat-2')),
             await deliverNotice(store, targets({ chat: async () => 'running' }), left('and the tests', 'chat-3')),
-            await deliverNotice(store, targets({ chat: async () => 'idle', hop: () => 4 }), left('and the docs', 'chat-4')),
+            await deliverNotice(store, targets({ chat: async () => 'idle', mayWake: () => false }), left('and the docs', 'chat-4')),
             await deliverNotice(store, targets(), left('and the types', 'chat-5')),
             await deliverNotice(store, targets({ terminal: () => ({ agent: null, notice: () => {} }) }), left('and the lint', 'term-9')),
             await deliverNotice(store, targets({ terminal: () => ({ agent: agent('claude'), notice: () => {} }) }), left('and the rest', 'term-8'))
@@ -152,6 +152,8 @@ describe('deliverNotice', () => {
         for (const delivery of deliveries) {
             expect(delivery.detail).toEndWith(`; ${NO_REPLY_NOTICE}`);
         }
-        expect(NO_REPLY_NOTICE).toBe('do not wait on it: an answer reaches you only as a message of its own, and task_new is what brings a result back');
+        expect(NO_REPLY_NOTICE).toBe(
+            'do not wait on it or poll it: an answer reaches you only as a message of its own, which wakes you, so ask for one and end your turn; task_new is what brings a result back'
+        );
     });
 });

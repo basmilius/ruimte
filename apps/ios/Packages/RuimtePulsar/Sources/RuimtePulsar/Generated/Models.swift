@@ -6041,12 +6041,14 @@ public struct ChatNoteItemMessage: Codable, Sendable, Equatable {
     public let `from`: String
     public let `title`: String
     public let `state`: ChatNoteItemMessageState?
+    public let `limited`: Bool?
     public let `text`: String
 
-    public init(`from`: String, `title`: String, `state`: ChatNoteItemMessageState? = nil, `text`: String) {
+    public init(`from`: String, `title`: String, `state`: ChatNoteItemMessageState? = nil, `limited`: Bool? = nil, `text`: String) {
         self.`from` = `from`
         self.`title` = `title`
         self.`state` = `state`
+        self.`limited` = `limited`
         self.`text` = `text`
     }
 
@@ -6055,6 +6057,7 @@ public struct ChatNoteItemMessage: Codable, Sendable, Equatable {
         `from` = try container.decode(String.self, forKey: .`from`)
         `title` = try container.decode(String.self, forKey: .`title`)
         `state` = try container.decodeIfPresent(ChatNoteItemMessageState.self, forKey: .`state`)
+        `limited` = try container.decodeIfPresent(Bool.self, forKey: .`limited`)
         `text` = try container.decode(String.self, forKey: .`text`)
     }
 
@@ -6063,6 +6066,7 @@ public struct ChatNoteItemMessage: Codable, Sendable, Equatable {
         try container.encode(`from`, forKey: .`from`)
         try container.encode(`title`, forKey: .`title`)
         try container.encodeIfPresent(`state`, forKey: .`state`)
+        try container.encodeIfPresent(`limited`, forKey: .`limited`)
         try container.encode(`text`, forKey: .`text`)
     }
 
@@ -6070,6 +6074,7 @@ public struct ChatNoteItemMessage: Codable, Sendable, Equatable {
         case `from` = "from"
         case `title` = "title"
         case `state` = "state"
+        case `limited` = "limited"
         case `text` = "text"
     }
 }
