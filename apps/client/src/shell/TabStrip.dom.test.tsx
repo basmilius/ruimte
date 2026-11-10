@@ -137,8 +137,9 @@ describe('the tabs of a host', () => {
         expect(tabIds()).toEqual([CHAT.id, SHELL.id, FILE]);
         await openMenuOf(tab(FILE));
         await clickOn(menuItem('Close other tabs'));
-        await until(() => tabIds().length === 1);
-        expect(tabIds()).toEqual([FILE]);
+        // Left alone, the file is a plain cell again, without a strip.
+        await until(() => tabIds().length === 0);
+        expect(page.host.querySelector(`[data-split-cell][data-view-id="${FILE}"]`)).not.toBeNull();
         expect(page.host.querySelector(`[data-sidebar-row="view:${CHAT.id}"]`)).not.toBeNull();
         expect(page.host.querySelector(`[data-sidebar-row="view:${SHELL.id}"]`)).not.toBeNull();
         expect(machine.requests('session.kill')).toEqual([]);
