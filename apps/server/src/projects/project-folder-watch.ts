@@ -126,7 +126,14 @@ export class ProjectFolderWatch {
                     icons.settle.nudge();
                 }
             },
-            () => this.returned(icons, settle)
+            (there) => {
+                if (there) {
+                    this.returned(icons, settle);
+                } else {
+                    // The folder went with both files, so the list says it is not available.
+                    settle.nudge();
+                }
+            }
         );
 
         for (const top of ICON_CHAINS.keys()) {

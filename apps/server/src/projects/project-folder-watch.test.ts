@@ -355,9 +355,11 @@ describe('ProjectFolderWatch', () => {
         folderThere = false;
         watch.on('/work').emit('one', 'rename');
 
+        await watch.settle();
+
         expect(dead?.closed).toBe(true);
         expect(watch.openOn('/work/one')).toHaveLength(0);
-        expect(heard).toEqual([]);
+        expect(heard).toEqual(['one files']);
 
         folderThere = true;
         watch.on('/work').emit('one', 'rename');
@@ -367,16 +369,70 @@ describe('ProjectFolderWatch', () => {
         expect(watch.openOn('/work/one/.ruimte')).toHaveLength(1);
         expect(watch.openOn('/work/one/.ruimte/private')).toHaveLength(1);
         expect(watch.openOn('/work/one/public')).toHaveLength(1);
-        expect(heard).toEqual(['one files', 'one icon']);
+        expect(heard).toEqual(['one files', 'one files', 'one icon']);
 
         watch.on('/work').emit('two', 'rename');
         await watch.settle();
 
-        expect(heard).toEqual(['one files', 'one icon']);
+        expect(heard).toEqual(['one files', 'one files', 'one icon']);
 
         folders.close();
 
         expect(watch.openOn('/work')).toHaveLength(0);
+    });
+
+    test('tells that the project went with a disk that was ejected, and hears it come back from the folder above the disk', async () => {
+        const watch = new FakeWatch();
+        const heard: string[] = [];
+        const failures = new Map<string, () => void>();
+        let mounted = true;
+        const folders = new ProjectFolderWatch(
+            {
+                schedule: watch.schedule,
+                watch: (path, options, listener) => {
+                    if (path.startsWith('/Volumes/Disk') && !mounted) {
+                        throw new Error('ENOENT');
+                    }
+
+                    const watcher = watch.watch(path, options, listener);
+
+                    return {
+                        on: (_event, fail) => {
+                            // A watcher that fails is closed by then.
+                            failures.set(path, () => {
+                                watcher.close();
+                                fail(new Error('EIO'));
+                            });
+                        },
+                        close: () => watcher.close()
+                    };
+                }
+            },
+            (projectId, change) => void heard.push(`${projectId} ${change}`)
+        );
+        folders.sync(new Map([['one', '/Volumes/Disk/one']]));
+
+        expect(watch.openOn('/Volumes/Disk')).toHaveLength(1);
+
+        mounted = false;
+        failures.get('/Volumes/Disk/one')?.();
+        failures.get('/Volumes/Disk')?.();
+        await watch.settle();
+
+        expect(watch.openOn('/Volumes/Disk/one')).toHaveLength(0);
+        expect(watch.openOn('/Volumes')).toHaveLength(1);
+        expect(heard).toEqual(['one files']);
+
+        mounted = true;
+        watch.on('/Volumes').emit('Disk', 'rename');
+        await watch.settle();
+
+        expect(watch.openOn('/Volumes/Disk/one')).toHaveLength(1);
+        expect(watch.openOn('/Volumes/Disk')).toHaveLength(1);
+        expect(watch.openOn('/Volumes')).toHaveLength(0);
+        expect(heard).toEqual(['one files', 'one files', 'one icon']);
+
+        folders.close();
     });
 
     test('tells that the icon may have changed for the files an icon is derived from, and for no other', async () => {

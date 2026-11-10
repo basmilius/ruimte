@@ -224,14 +224,15 @@ export interface FolderChain {
  * again, and a folder that is not there yet has none, so whenever a folder hears the name of the next one (or no
  * name), the watch starts again from that next folder down. `heard` gets the depth of the folder that heard.
  *
- * With `returned`, the nearest folder above the first one that is there is watched too: it hears the first folder
- * go, which lets go of the watcher that died with it, and come back, which arms the chain again and calls `returned`.
+ * With `moved`, the nearest folder above the first one that is there is watched too: it hears the first folder go,
+ * which lets go of the watcher that died with it and calls `moved(false)`, and come back, which arms the chain again
+ * and calls `moved(true)`. When that folder goes itself, as a disk that is ejected, the one above it takes over.
  */
 export function watchFolderChain(
     seams: WatchSeams,
     folders: readonly string[],
     heard: (depth: number, filename: string | null) => void,
-    returned?: () => void
+    moved?: (there: boolean) => void
 ): FolderChain {
     const watchers: (DirectoryWatcher | null)[] = folders.map(() => null);
     const root = folders[0]!;
@@ -261,8 +262,14 @@ export function watchFolderChain(
 
         // An error is how a watcher whose folder went away ends, so it keeps no place a retry would take for a live one.
         watcher?.on('error', () => {
-            if (watchers[depth] === watcher) {
-                watchers[depth] = null;
+            if (watchers[depth] !== watcher) {
+                return;
+            }
+
+            watchers[depth] = null;
+
+            if (depth === 0 && !closed) {
+                moved?.(false);
             }
         });
 
@@ -280,11 +287,11 @@ export function watchFolderChain(
         return basename(below);
     };
 
-    const anchorAt = (): void => {
+    const anchorFrom = (start: string): void => {
         anchor?.watcher.close();
         anchor = null;
 
-        for (let folder = dirname(root); ; folder = dirname(folder)) {
+        for (let folder = start; ; folder = dirname(folder)) {
             const toward = towardRoot(folder);
             const [watcher] = watchDirectories(seams, [folder], (filename) => {
                 // No name says nothing of the first folder while it is watched, and the parent of a project hears its siblings too.
@@ -295,6 +302,7 @@ export function watchFolderChain(
 
             if (watcher !== undefined) {
                 anchor = { folder, watcher };
+                watcher.on('error', () => anchorGone(watcher, folder));
 
                 return;
             }
@@ -305,23 +313,46 @@ export function watchFolderChain(
         }
     };
 
+    const anchorAt = (): void => anchorFrom(dirname(root));
+
+    // The folder above takes over, since a folder that went may still answer a watch for a moment; it hears the one that went come back.
+    const anchorGone = (watcher: DirectoryWatcher, folder: string): void => {
+        if (closed || anchor?.watcher !== watcher) {
+            return;
+        }
+
+        if (dirname(folder) === folder) {
+            anchor = null;
+        } else {
+            anchorFrom(dirname(folder));
+        }
+
+        rearm();
+    };
+
+    const rearm = (): void => {
+        const had = watchers[0] !== null;
+
+        arm(0);
+
+        const has = watchers[0] !== null;
+
+        if (had !== has) {
+            moved?.(has);
+        }
+    };
+
     const rootMoved = (heardIn: string): void => {
         if (heardIn !== dirname(root)) {
             anchorAt();
         }
 
-        const missing = watchers[0] === null;
-
-        arm(0);
-
-        if (missing && watchers[0] !== null) {
-            returned?.();
-        }
+        rearm();
     };
 
     arm(0);
 
-    if (returned !== undefined) {
+    if (moved !== undefined) {
         anchorAt();
     }
 
@@ -331,7 +362,7 @@ export function watchFolderChain(
                 return false;
             }
 
-            if (returned !== undefined && anchor?.folder !== dirname(root)) {
+            if (moved !== undefined && anchor?.folder !== dirname(root)) {
                 anchorAt();
             }
 
