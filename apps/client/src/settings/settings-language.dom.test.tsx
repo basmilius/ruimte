@@ -36,7 +36,8 @@ beforeEach(async () => {
 
 afterEach(async () => {
     await act(async () => {
-        useUi.getState().setSettings({ open: false });
+        // The whole state, the row a search led to included: a later file in this process opens the dialog from it.
+        useUi.setState({ settings: { open: false, section: 'general', target: null, searchAt: 0 } });
         useSettings.getState().update({ language });
         await i18next.changeLanguage('en');
         document.documentElement.lang = documentLanguage;

@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { behaviorOf, rawCanvasKeyHandlers, rawKeyHandlers } from '@/commands/behavior';
 import { installWorkspaceCommands } from './workspace-commands';
+import { installWorkspaceRegistries } from './workspace-registries';
+
+// Once, as the workspace's chunk does; the tests run it a second time.
+installWorkspaceRegistries();
 
 describe('installWorkspaceCommands', () => {
     test('refuses to register a behavior twice outside a dev server', () => {

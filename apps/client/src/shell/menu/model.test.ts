@@ -11,8 +11,12 @@ import { languageCommandRows } from '@/language/language-commands';
 import { AFTER_SETTLE_PREFIX, LAUNCH_CHOOSE_PREFIX } from '@/launches/menu-extras';
 import { DEFAULT_KEYS } from '@/surface/default-keys';
 import { GO_VIEW_PREFIX } from '@/views/menu-extras';
+import { installWorkspaceRegistries } from '@/wiring/workspace-registries';
 import { menuIconOf } from './icons';
 import { menuModel, toAccelerator, type MenuContext } from './model';
+
+// Every row of the table has a behavior once the workspace's chunk installed its own.
+installWorkspaceRegistries();
 
 const NO_OFFERS = {
     duplicate: false,

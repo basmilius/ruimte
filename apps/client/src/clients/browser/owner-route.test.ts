@@ -10,6 +10,7 @@ import { readNodeHost } from '@/surface/nodes/node-host';
 import { openLinkBeside } from '../../browser/open-beside';
 import { browserRouteAvailable } from './owner-route';
 import { browserRegistry } from './registry';
+import '../../../testing/client-actions';
 
 const originalGlobals = new Map(['window', 'document'].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
 const originalEndpoints = useEndpoints.getState();

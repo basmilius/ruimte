@@ -10,6 +10,10 @@ import { allSettingsSections } from '@/settings/sections';
 import { openedBy, usageSectionOf } from '@/shell/command-usage';
 import type { PanelState } from '@/state/ui';
 import { GO_VIEW_PREFIX } from '@/views/menu-extras';
+import { installWorkspaceRegistries } from '@/wiring/workspace-registries';
+
+// The panels come with the workspace's chunk.
+installWorkspaceRegistries();
 
 const CLOSED: PanelState = { open: false, kind: 'files' };
 const SETTINGS_CLOSED = { open: false, section: 'appearance' as const, target: null, searchAt: 0 };
