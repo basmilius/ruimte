@@ -144,15 +144,6 @@ export const GRID_BEHAVIORS = defineBehaviors({
             return host !== null && host.tabs.length > 1 && canSplit(host.layout, host.layout.focus, 'right', host.viewId);
         }
     },
-    'tab-ungroup': {
-        run: () => {
-            const host = hostOf();
-            if (host !== null) {
-                useDocument.getState().ungroupCell(host.layout.focus);
-            }
-        },
-        offered: () => hostOf()?.tabs.length === 1
-    },
     'cell-maximize': {
         run: () => useDocument.getState().toggleMaximized(),
         offered: () => {

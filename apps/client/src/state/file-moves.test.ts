@@ -100,7 +100,7 @@ describe('moving a file', () => {
 
     test('the cell that holds the tab follows the file', () => {
         followMove('m', '/p/a.ts', '/p/b.ts');
-        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toMatchObject({ viewId: '/p/b.ts', tabs: ['/p/b.ts'] });
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toEqual({ viewId: '/p/b.ts', size: 1 });
     });
 
     describe('the file views of a project', () => {

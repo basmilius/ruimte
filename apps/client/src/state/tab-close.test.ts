@@ -69,7 +69,7 @@ describe('closing the tabs of a host', () => {
             .getState()
             .load({ version: 3, rev: 1, name: 'p', color: '#000', views: [canvas('a'), canvas('b'), canvas('c')] }, { activeViewId: 'a', views: {} });
         useFiles.getState().open('/p/a.ts', 5);
-        useDocument.getState().setActiveView('b');
+        useDocument.getState().showView('b', { newTab: true });
         useFiles.getState().open('/p/b.ts', 5);
     });
 

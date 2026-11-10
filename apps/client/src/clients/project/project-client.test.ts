@@ -818,7 +818,7 @@ describe('ProjectClient', () => {
         expect(useUi.getState().panel).toEqual({ open: true, kind: 'git' });
         expect(useUi.getState().panelWidth).toBe(420);
         expect(useFiles.getState().tabs.map((tab) => tab.key)).toEqual(['/repo/readme.md']);
-        expect(defaultWorkspaceStores.document.getState().layout?.columns[0]?.cells[0]).toMatchObject({ viewId: '/repo/readme.md', tabs: ['/repo/readme.md'] });
+        expect(defaultWorkspaceStores.document.getState().layout?.columns[0]?.cells[0]).toMatchObject({ viewId: '/repo/readme.md' });
         expect(useFiles.getState().expandedDirs).toEqual(['src/']);
         expect(transport.of('project.save-local')).toHaveLength(0);
         dispose();
@@ -828,6 +828,8 @@ describe('ProjectClient', () => {
         const { transport, dispose } = setup();
         await tick();
         useFiles.getState().open('/repo/readme.md', 8);
+        // Pinned, so the comparison grows a host with it rather than taking its place.
+        useFiles.getState().setPinned('/repo/readme.md', true);
         const files = useFiles.getState();
         files.show(openCompareTab(files, '/repo', 'main', 'topic', 'tips'), 8);
         await tick(10);

@@ -51,8 +51,6 @@ export interface DocumentState {
     maximized: string | null;
     /* The canvas that was up last, which is where a node put back on a canvas lands. */
     lastCanvasViewId: string | null;
-    /* A view in the tab host that last had the focus, which is where a loose view goes when the focus is elsewhere. */
-    lastHostViewId: string | null;
     /* Machine state beside the document, never in the shared file: where every view stood. */
     viewLocal: Record<string, ProjectViewLocal>;
     /* Whether the keyboard is inside the body of a standalone view; Escape leaves it to the sidebar. */
@@ -106,11 +104,12 @@ export interface DocumentState {
     /* A view into a cell's zone: the four edges split, the middle takes the place of what is there. */
     dropViewAt(viewId: string, at: CellAt, zone: SplitZone): void;
     /*
-     * A loose view, whose content `state/files.ts` holds, put on screen: a tab in the focused host or in the
-     * one that last had the focus, else a host of its own in the focused cell. `focus: false` leaves the
-     * focus where it is unless the view took a cell's place. Null when nothing moved.
+     * A loose view, whose content `state/files.ts` holds, put on screen: a tab in the focused host, else in
+     * the place of the focused cell's view. A view `keeps` holds on to is not replaced, and grows a host with
+     * the new one instead. `focus: false` leaves the focus where it is unless the view took a cell's place.
+     * Null when nothing moved.
      */
-    showLoose(key: string, options?: { focus?: boolean }): ShownView | null;
+    showLoose(key: string, options?: { focus?: boolean; keeps?: (viewId: string) => boolean }): ShownView | null;
     /* A loose view lands in a cell's zone, standing nowhere yet or moving from where it stands. False when the grid has no room. */
     dropLooseAt(key: string, at: CellAt, zone: SplitZone): boolean;
     /* A loose view joins the tabs of a cell, which becomes a host. False when it already fills that cell alone. */
@@ -121,7 +120,6 @@ export interface DocumentState {
     moveTab(viewId: string, delta: number): void;
     /* The tab leaves its host for a cell of its own to the right. False when it is the only tab or the grid has no room. */
     splitTabOff(viewId: string): boolean;
-    ungroupCell(at: CellAt): void;
     closeLoose(key: string): void;
     /* Closing a tab leaves the view available in the sidebar. */
     closeViewTab(viewId: string): void;
@@ -212,7 +210,6 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
             emptyLayout: false,
             maximized: null,
             lastCanvasViewId: null,
-            lastHostViewId: null,
             viewLocal: {},
             bodyFocused: false,
             edits: 0,

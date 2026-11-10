@@ -312,8 +312,8 @@ describe('a node and a view of its own', () => {
     });
 
     test('a view put on a canvas from a tab hands its tab to the canvas', () => {
-        useDocument.getState().showLoose('/p/notes.md');
         const shell = useDocument.getState().addStandaloneView({ kind: 'terminal', name: 'Shell', node: {} });
+        useDocument.getState().dropLooseAsTab('/p/notes.md', useDocument.getState().layout!.focus, 0);
         expect(useDocument.getState().putOnCanvas(shell, 'a')).toBe(true);
         expect(useDocument.getState().layout!.columns[0]!.cells[0]).toMatchObject({ viewId: 'a', tabs: ['/p/notes.md', 'a'] });
         expect(focusedCanvas().getState().order).toEqual(['n1', shell]);

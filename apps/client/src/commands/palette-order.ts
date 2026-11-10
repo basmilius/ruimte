@@ -61,7 +61,6 @@ export const PALETTE_ORDER: readonly PaletteOrderEntry[] = [
     'tab-move-left',
     'tab-move-right',
     'tab-split-off',
-    'tab-ungroup',
     'cell-maximize',
     'cell-close-others',
     'cell-close-right',

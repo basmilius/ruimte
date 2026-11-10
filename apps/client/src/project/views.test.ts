@@ -136,6 +136,8 @@ describe('files dropped on the list', () => {
         useFiles.setState({ tabs: [], recent: [] });
         useDocument.getState().load(document, { activeViewId: 'main', views: {} });
         useFiles.getState().open('/elsewhere/a.md', 5);
+        // A pinned file is not replaced, so the next one grows a host with it.
+        useFiles.getState().setPinned('/elsewhere/a.md', true);
         useFiles.getState().open('/elsewhere/b.md', 5);
         await promoteLooseFile('/elsewhere/a.md', null);
         const [file] = useDocument.getState().views;
@@ -208,6 +210,7 @@ describe('a loose table kept in the sidebar', () => {
             .getState()
             .show({ tabs: [{ key: 'database:d', kind: 'designer', pinned: false, connectionId: 'shop', schema: 'shop' }], active: 'database:d' }, 5);
         expect(await promoteLooseDatabase('database:d')).toBe(false);
+        useFiles.getState().setPinned('database:d', true);
         const designer = useFiles.getState().tabs;
         useFiles.getState().show({ tabs: [...designer, { key: 'database:t1', kind: 'table', pinned: false, ...ORDERS }], active: 'database:t1' }, 5);
         useFiles.getState().setUnsubmitted('database:t1', true);

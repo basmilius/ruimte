@@ -12,7 +12,7 @@ import {
     type StandaloneNode
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
-import { cellAt, collapseTabHosts, focusedViewId, isTabHost, locateView, viewIdsIn } from '@/layout/split';
+import { collapseTabHosts, focusedViewId, locateView, viewIdsIn } from '@/layout/split';
 import type { CanvasState } from '@/state/canvas';
 import type { DiagramState } from '@/state/diagram';
 import type { DocumentState } from '@/state/document';
@@ -156,13 +156,12 @@ export function settledOn(
     views: ProjectView[],
     viewLocal: Record<string, ProjectViewLocal>,
     layout: SplitLayout | null,
-    was: Pick<DocumentState, 'lastCanvasViewId' | 'lastHostViewId'>
-): Pick<DocumentState, 'views' | 'viewLocal' | 'layout' | 'emptyLayout' | 'activeViewId' | 'lastCanvasViewId' | 'lastHostViewId' | 'bodyFocused'> {
-    layout = collapseTabHosts(layout, views);
+    was: Pick<DocumentState, 'lastCanvasViewId'>
+): Pick<DocumentState, 'views' | 'viewLocal' | 'layout' | 'emptyLayout' | 'activeViewId' | 'lastCanvasViewId' | 'bodyFocused'> {
+    layout = collapseTabHosts(layout);
     const activeViewId = layout === null ? null : focusedViewId(layout);
     const active = cellViewOf({ views }, activeViewId);
     const canvas = active !== null && isCanvasView(active);
-    const focused = layout === null ? null : cellAt(layout, layout.focus);
     return {
         views,
         viewLocal,
@@ -170,7 +169,6 @@ export function settledOn(
         emptyLayout: layout === null,
         activeViewId,
         lastCanvasViewId: canvas ? activeViewId : was.lastCanvasViewId,
-        lastHostViewId: focused !== null && isTabHost(focused) ? focused.viewId : was.lastHostViewId,
         /* A view of its own has no canvas to fall back to, so the keyboard starts inside its body.
            A loose view is not in the list, and is no canvas either. */
         bodyFocused: activeViewId !== null && !canvas

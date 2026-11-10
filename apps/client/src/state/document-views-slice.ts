@@ -65,7 +65,7 @@ export function createDocumentViewsSlice({
         const stood =
             state.layout === null || standing === null
                 ? null
-                : { before: state.layout, after: collapseTabHosts(closeTab(state.layout, id) ?? (next ? singleLayout(next.id) : null), views) };
+                : { before: state.layout, after: collapseTabHosts(closeTab(state.layout, id) ?? (next ? singleLayout(next.id) : null)) };
         set({
             views,
             viewLocal,

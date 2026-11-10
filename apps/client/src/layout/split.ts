@@ -372,8 +372,8 @@ export function ungroup(layout: SplitLayout, at: CellAt): SplitLayout {
     return { ...layout, columns: replaceCell(layout.columns, at, { viewId: cell.tabs[0], size: cell.size }) };
 }
 
-/* Loose views have no sidebar entry to return to, so they keep their tab and its close button. */
-export function collapseTabHosts(layout: SplitLayout | null, views: readonly ProjectView[]): SplitLayout | null {
+/* A host of one tab is a plain cell again: tabs are what a person makes by dragging, never what is left of them. */
+export function collapseTabHosts(layout: SplitLayout | null): SplitLayout | null {
     if (layout === null) {
         return null;
     }
@@ -381,10 +381,6 @@ export function collapseTabHosts(layout: SplitLayout | null, views: readonly Pro
     const columns = layout.columns.map((column) => {
         const cells = column.cells.map((cell) => {
             if (cell.tabs?.length !== 1) {
-                return cell;
-            }
-            const view = views.find((view) => view.id === cell.viewId);
-            if (view === undefined || view.kind === 'file' || view.kind === 'database') {
                 return cell;
             }
             changed = true;
@@ -421,28 +417,7 @@ export interface ShownView {
 }
 
 interface ShowOptions {
-    /* A view without a row in the sidebar: it goes to a tab host rather than over a view. */
-    loose?: boolean;
-    /* The view whose host a loose view prefers, when that view stands in one. */
-    host?: string | null;
     newTab?: boolean;
-}
-
-/* The host holding `preferred`, else the first host in reading order: columns left to right, cells top to bottom. */
-export function hostFor(layout: SplitLayout, preferred: string | null): CellAt | null {
-    if (preferred !== null) {
-        const at = locateView(layout, preferred);
-        if (at !== null && isTabHost(cellAt(layout, at)!)) {
-            return at;
-        }
-    }
-    for (let column = 0; column < layout.columns.length; column += 1) {
-        const cell = layout.columns[column].cells.findIndex(isTabHost);
-        if (cell !== -1) {
-            return { column, cell };
-        }
-    }
-    return null;
 }
 
 function shownAsTab(layout: SplitLayout, viewId: string, at: CellAt): ShownView {
@@ -462,9 +437,7 @@ function shownAsTab(layout: SplitLayout, viewId: string, at: CellAt): ShownView 
  *    the view being looked at, since then there is nothing to do and nothing to undo.
  * 2. The focused cell is a tab host: a new tab right of the active one.
  * 3. `newTab`: the focused cell becomes a host of its view and the new one.
- * 4. `loose` with a host on screen: a tab in the host of `host`, else the first host.
- * 5. `loose` without one: the focused cell becomes a host of this view alone.
- * 6. It replaces the view in the focused cell.
+ * 4. It replaces the view in the focused cell, even with a host elsewhere.
  */
 export function showViewIn(layout: SplitLayout, viewId: string, options: ShowOptions = {}): ShownView | null {
     const standing = locateView(layout, viewId);
@@ -478,17 +451,6 @@ export function showViewIn(layout: SplitLayout, viewId: string, options: ShowOpt
     const focused = cellAt(layout, at);
     if (focused !== null && (isTabHost(focused) || options.newTab)) {
         return shownAsTab(layout, viewId, at);
-    }
-    if (options.loose) {
-        const host = hostFor(layout, options.host ?? null);
-        if (host !== null) {
-            return shownAsTab(layout, viewId, host);
-        }
-        if (focused !== null) {
-            const replaced = runSplitCommands(layout, tradeCommands(layout, viewId, at));
-            const host = { viewId, tabs: [viewId], size: focused.size };
-            return { layout: { ...replaced, columns: replaceCell(replaced.columns, at, host) }, at, replaced: focused.viewId, from: at };
-        }
     }
     return { layout: dropView(layout, viewId, at, 'center'), at, replaced: focused?.viewId ?? null, from: at };
 }

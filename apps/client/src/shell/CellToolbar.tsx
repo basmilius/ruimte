@@ -1,6 +1,5 @@
 import { SubagentTitleCrumb } from '@adecore/agents-react/chat/ui';
-import { Icon, Menu, PaneBar, Tooltip } from '@adecore/ui';
-import { Ungroup } from 'lucide-react';
+import { PaneBar, Tooltip } from '@adecore/ui';
 import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { closeCellAction } from '@/action-port/person-actions';
@@ -18,7 +17,6 @@ import { useCellBarSlot } from '@/shell/top-row-slot';
 import { useHasViewToolbar, useViewToolbarLeads } from '@/shell/view-toolbar';
 import { ViewToolbar } from '@/shell/ViewToolbar';
 import { useDocument } from '@/state/document';
-import { isDatabaseTab } from '@/state/files';
 import { isLooseView, viewGlyphOf, type CellView } from '@/surface/cell-view';
 import { FileToolbarSlotProvider } from '@/surface/panels/file-toolbar-slot';
 import { setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
@@ -95,7 +93,6 @@ export function CellToolbar({
     const tabs = useDocument((s) => (s.layout === null ? undefined : cellAt(s.layout, at)?.tabs));
     const hosted = tabs !== undefined;
     const hasViewToolbar = useHasViewToolbar(view);
-    const compactToolbar = view.kind === 'file' || view.kind === 'terminal' || (isLooseView(view) && !isDatabaseTab(view.tab));
     const leads = useViewToolbarLeads(view);
     /* A lone cell with nothing to do takes no bar. The wrapper stays, so the body keeps its place
        in the tree and a session inside it survives the bar coming and going. */
@@ -122,7 +119,6 @@ export function CellToolbar({
                             </span>
                         )
                     }
-                    compactActions={compactToolbar}
                     separated={leads}
                     accessory={
                         // A terminal's text takes every pixel of its body, so what a built-in adds stands in the bar.
@@ -158,14 +154,6 @@ export function CellToolbar({
                     }}
                     menu={
                         <>
-                            {tabs?.length === 1 && (
-                                <>
-                                    <Menu.Item onClick={() => useDocument.getState().ungroupCell(at)}>
-                                        <Icon icon={Ungroup} size={14} /> {t('viewMenu.ungroup')}
-                                    </Menu.Item>
-                                    <Menu.Separator />
-                                </>
-                            )}
                             <SplitItems at={at} separated />
                             {/* A loose view is no view of the project: nothing to rename, share or delete. */}
                             {isLooseView(view) ? <FileMenuItems tabKey={view.id} /> : <ViewMenuItems viewId={view.id} kind={view.kind} />}

@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import type { ProjectCanvasView } from '@ruimte/contracts';
-import { cellAt, cellViewIds, viewIdsIn } from '@/layout/split';
+import { cellAt, cellViewIds, viewIdsIn, type CellAt } from '@/layout/split';
 import { closeWithoutSaving, dismissClose, useUnsavedClose } from '@/state/unsaved-close';
 import { currentEndpointId } from './current-endpoint';
 import { useDocument } from './document.ts';
@@ -164,6 +164,18 @@ async function settle(): Promise<void> {
     }
 }
 
+/* The first path takes the focused cell's place, the rest join it as tabs the way a drag would. */
+function hostOf(limit: number, first: string, ...rest: string[]): void {
+    useFiles.getState().open(first, limit);
+    for (const path of rest) {
+        dropAsTab(path, limit, useDocument.getState().layout!.focus);
+    }
+}
+
+function dropAsTab(path: string, limit: number, at: CellAt): void {
+    useFiles.getState().dropTab(placeTab(useFiles.getState(), { key: path, path, pinned: false }), limit, at, 'center');
+}
+
 function leaveUnsaved(path: string): void {
     useTextDrafts.setState({ rows: { [endpointKey(currentEndpointId(), path)]: { disk: 'on disk', mtime: 1, text: 'edited', saving: false, problem: null } } });
 }
@@ -180,11 +192,30 @@ describe('the store and the tab hosts', () => {
             .load({ version: 3, rev: 1, name: 'p', color: '#000', views: [canvas('a'), canvas('b'), canvas('c')] }, { activeViewId: 'a', views: {} });
     });
 
-    test('opening a file makes a host of its own in the focused cell, which it replaces', () => {
+    test('opening a file takes the place of the focused cell view, as a view of its own', () => {
         useFiles.getState().open('/p/a.ts', 5);
         expect(useDocument.getState().activeViewId).toBe('/p/a.ts');
-        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toMatchObject({ viewId: '/p/a.ts', tabs: ['/p/a.ts'] });
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toEqual({ viewId: '/p/a.ts', size: 1 });
         expect(viewIdsIn(useDocument.getState().layout!)).toEqual(['/p/a.ts']);
+    });
+
+    test('a second file in a plain cell takes the place of the first, which goes where a closed tab goes', () => {
+        useFiles.getState().open('/p/a.ts', 5);
+        useFiles.getState().open('/p/b.ts', 5);
+        expect(tabsOfCells()).toEqual([['/p/b.ts']]);
+        expect(useFiles.getState().tabs.map(nameOf)).toEqual(['/p/b.ts']);
+        expect(useFiles.getState().recent).toEqual([{ kind: 'file', path: '/p/a.ts' }]);
+    });
+
+    test('a file that is pinned or holds unsaved changes is not replaced, and grows a host with the new one', () => {
+        useFiles.getState().open('/p/a.ts', 5);
+        useFiles.getState().setPinned('/p/a.ts', true);
+        useFiles.getState().open('/p/b.ts', 5);
+        expect(tabsOfCells()).toEqual([['/p/a.ts', '/p/b.ts']]);
+        useFiles.getState().close('/p/a.ts');
+        leaveUnsaved('/p/b.ts');
+        useFiles.getState().open('/p/c.ts', 5);
+        expect(tabsOfCells()).toEqual([['/p/b.ts', '/p/c.ts']]);
     });
 
     test('with other cells around it takes the place of the focused one only', () => {
@@ -193,10 +224,8 @@ describe('the store and the tab hosts', () => {
         expect(viewIdsIn(useDocument.getState().layout!)).toEqual(['a', '/p/a.ts']);
     });
 
-    test('a second file is a tab of the host, right of the one in front', () => {
-        useFiles.getState().open('/p/a.ts', 5);
-        useFiles.getState().open('/p/b.ts', 5);
-        useFiles.getState().open('/p/c.ts', 5);
+    test('a file opened in a focused host is a tab of it, right of the one in front', () => {
+        hostOf(5, '/p/a.ts', '/p/b.ts', '/p/c.ts');
         expect(tabsOfCells()).toEqual([['/p/a.ts', '/p/b.ts', '/p/c.ts']]);
         useDocument.getState().activateTab('/p/a.ts');
         useFiles.getState().open('/p/d.ts', 5);
@@ -205,8 +234,7 @@ describe('the store and the tab hosts', () => {
     });
 
     test('a file already open comes to the front instead of opening twice', () => {
-        useFiles.getState().open('/p/a.ts', 5);
-        useFiles.getState().open('/p/b.ts', 5);
+        hostOf(5, '/p/a.ts', '/p/b.ts');
         useFiles.getState().open('/p/a.ts', 5);
         expect(useFiles.getState().tabs.map(nameOf)).toEqual(['/p/a.ts', '/p/b.ts']);
         expect(useDocument.getState().activeViewId).toBe('/p/a.ts');
@@ -215,36 +243,22 @@ describe('the store and the tab hosts', () => {
     describe('with a host on screen and the focus in a plain cell', () => {
         beforeEach(() => {
             useDocument.getState().splitFocused('right', 'b');
-            useFiles.getState().open('/p/a.ts', 5);
+            hostOf(5, '/p/a.ts', '/p/x.ts');
             useDocument.getState().focusCellAt({ column: 0, cell: 0 });
         });
 
-        test('a file goes to the host that last had the focus', () => {
+        test('a file takes the place of the focused view and leaves the host alone', () => {
             expect(useDocument.getState().activeViewId).toBe('a');
             useFiles.getState().open('/p/b.ts', 5);
-            expect(tabsOfCells()).toEqual([['a'], ['/p/a.ts', '/p/b.ts']]);
+            expect(tabsOfCells()).toEqual([['/p/b.ts'], ['/p/a.ts', '/p/x.ts']]);
             expect(useDocument.getState().activeViewId).toBe('/p/b.ts');
         });
 
-        test('opened hidden it lands there as well and the focus stays', () => {
+        test('opened hidden it does the same, and the focus goes with the cell it took', () => {
             useFiles.getState().openHidden('/p/b.ts', 5);
-            expect(tabsOfCells()).toEqual([['a'], ['/p/a.ts', '/p/b.ts']]);
-            expect(shape()).toEqual([['a'], ['/p/b.ts']]);
-            expect(useDocument.getState().activeViewId).toBe('a');
+            expect(tabsOfCells()).toEqual([['/p/b.ts'], ['/p/a.ts', '/p/x.ts']]);
+            expect(useDocument.getState().activeViewId).toBe('/p/b.ts');
         });
-    });
-
-    test('of two hosts, the one that last had the focus takes the file', () => {
-        useDocument.getState().splitFocused('right', 'b');
-        useFiles.getState().open('/p/a.ts', 5);
-        // The middle of the plain cell joins a change to it, which makes it the second host.
-        useFiles.getState().dropDiff('/p/x.ts', { kind: 'diff', cwd: '/p', scope: 'worktree', staged: false }, 5, { column: 0, cell: 0 }, 'center');
-        useDocument.getState().splitFocused('right', 'c');
-        expect(tabsOfCells()).toEqual([['a', 'diff:/p/x.ts'], ['c'], ['/p/a.ts']]);
-        useDocument.getState().focusCellAt({ column: 2, cell: 0 });
-        useDocument.getState().focusCellAt({ column: 1, cell: 0 });
-        useFiles.getState().open('/p/b.ts', 5);
-        expect(tabsOfCells()).toEqual([['a', 'diff:/p/x.ts'], ['c'], ['/p/a.ts', '/p/b.ts']]);
     });
 
     test('opened hidden with no host it behaves like an open', () => {
@@ -269,9 +283,9 @@ describe('the store and the tab hosts', () => {
 
     test('a diff that takes over the diff tab keeps the place of the one it replaced', () => {
         const view = { kind: 'diff', cwd: '/p', scope: 'worktree', staged: false } as const;
-        useFiles.getState().open('/p/a.ts', 5);
+        hostOf(5, '/p/a.ts', '/p/b.ts');
+        useDocument.getState().activateTab('/p/a.ts');
         useFiles.getState().open('/p/a.ts', 5, view);
-        useFiles.getState().open('/p/b.ts', 5);
         useFiles.getState().open('/p/c.ts', 5, view);
         expect(tabsOfCells()).toEqual([['/p/a.ts', 'diff:/p/c.ts', '/p/b.ts']]);
         expect(
@@ -284,17 +298,14 @@ describe('the store and the tab hosts', () => {
 
     describe('the limit', () => {
         test('past it the leftmost tab of the host that is not the new one closes and is remembered', () => {
-            for (const path of ['/p/a.ts', '/p/b.ts', '/p/c.ts']) {
-                useFiles.getState().open(path, 2);
-            }
+            hostOf(2, '/p/a.ts', '/p/b.ts', '/p/c.ts');
             expect(tabsOfCells()).toEqual([['/p/b.ts', '/p/c.ts']]);
             expect(useFiles.getState().tabs.map(nameOf)).toEqual(['/p/b.ts', '/p/c.ts']);
             expect(useFiles.getState().recent).toEqual([{ kind: 'file', path: '/p/a.ts' }]);
         });
 
         test('a pin and unsaved changes hold a tab', () => {
-            useFiles.getState().open('/p/a.ts', 2);
-            useFiles.getState().open('/p/b.ts', 2);
+            hostOf(2, '/p/a.ts', '/p/b.ts');
             leaveUnsaved('/p/a.ts');
             useFiles.getState().open('/p/c.ts', 2);
             expect(tabsOfCells()).toEqual([['/p/a.ts', '/p/c.ts']]);
@@ -305,7 +316,7 @@ describe('the store and the tab hosts', () => {
 
         test('only the loose tabs count, and a view of the project is never the one that goes', () => {
             useFiles.getState().open('/p/a.ts', 2);
-            useDocument.getState().setActiveView('b');
+            useDocument.getState().showView('b', { newTab: true });
             useFiles.getState().open('/p/b.ts', 2);
             useFiles.getState().open('/p/c.ts', 2);
             expect(tabsOfCells()).toEqual([['b', '/p/b.ts', '/p/c.ts']]);
@@ -316,7 +327,7 @@ describe('the store and the tab hosts', () => {
             useFiles.getState().open('/p/a.ts', 2);
             useFiles.getState().dropDiff('/p/x.ts', { kind: 'diff', cwd: '/p', scope: 'worktree', staged: false }, 2, { column: 0, cell: 0 }, 'center');
             useDocument.getState().focusCellAt({ column: 1, cell: 0 });
-            useFiles.getState().open('/p/b.ts', 2);
+            dropAsTab('/p/b.ts', 2, { column: 1, cell: 0 });
             useFiles.getState().open('/p/c.ts', 2);
             expect(tabsOfCells()).toEqual([
                 ['a', 'diff:/p/x.ts'],
@@ -327,8 +338,7 @@ describe('the store and the tab hosts', () => {
 
     describe('closing a tab', () => {
         test('saves a file with unsaved changes first, and closes it once that worked', async () => {
-            useFiles.getState().open('/p/a.ts', 5);
-            useFiles.getState().open('/p/b.ts', 5);
+            hostOf(5, '/p/a.ts', '/p/b.ts');
             leaveUnsaved('/p/a.ts');
             useFiles.getState().close('/p/a.ts');
             expect(saves).toHaveBeenCalledTimes(1);
@@ -372,9 +382,7 @@ describe('the store and the tab hosts', () => {
         });
 
         test('the neighbor to the right takes over, then the one before it', () => {
-            for (const path of ['/p/a.ts', '/p/b.ts', '/p/c.ts']) {
-                useFiles.getState().open(path, 5);
-            }
+            hostOf(5, '/p/a.ts', '/p/b.ts', '/p/c.ts');
             useDocument.getState().activateTab('/p/b.ts');
             useFiles.getState().close('/p/b.ts');
             expect(useDocument.getState().activeViewId).toBe('/p/c.ts');
@@ -414,8 +422,7 @@ describe('the store and the tab hosts', () => {
     });
 
     test('a file that moved keeps its tab, in the pool and in the cell that holds it', () => {
-        useFiles.getState().open('/p/a.ts', 5);
-        useFiles.getState().open('/p/b.ts', 5);
+        hostOf(5, '/p/a.ts', '/p/b.ts');
         const renamed = useFiles.getState().moved('/p/a.ts', '/p/c.ts');
         expect([...renamed]).toEqual([['/p/a.ts', '/p/c.ts']]);
         expect(useFiles.getState().tabs.map(nameOf)).toEqual(['/p/c.ts', '/p/b.ts']);

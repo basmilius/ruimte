@@ -76,7 +76,6 @@ export const USAGE_DESKTOP_COMMANDS = [
     'projectTabMoveLeft',
     'projectTabMoveRight',
     'tabSplitOff',
-    'tabUngroup',
     'cellMaximize',
     'nodeMaximize',
     'noteLockPreview',
@@ -280,7 +279,13 @@ export const USAGE_DESKTOP_GENERATED_COMMANDS = [
     'prShowIn'
 ] as const;
 
-export type UsageDesktopCommand = (typeof USAGE_DESKTOP_COMMANDS)[number] | (typeof USAGE_DESKTOP_GENERATED_COMMANDS)[number];
+// Rows the table lost, which an older client still counts: a day that names one would fail as a whole.
+export const USAGE_DESKTOP_RETIRED_COMMANDS = ['tabUngroup'] as const;
+
+export type UsageDesktopCommand =
+    | (typeof USAGE_DESKTOP_COMMANDS)[number]
+    | (typeof USAGE_DESKTOP_GENERATED_COMMANDS)[number]
+    | (typeof USAGE_DESKTOP_RETIRED_COMMANDS)[number];
 
 // A command that came through the menu's accelerator because the page never saw the key counts as the menu's.
 export const USAGE_COMMAND_SOURCES = ['menu', 'shortcut', 'palette'] as const;
@@ -314,7 +319,7 @@ export const USAGE_MACHINE_MODES = ['local', 'none'] as const;
 const prefixed = <Prefix extends string, Value extends string>(prefix: Prefix, values: readonly Value[]): `${Prefix}.${Value}`[] =>
     values.map((value) => `${prefix}.${value}` as const);
 
-const COMMANDS: readonly UsageDesktopCommand[] = [...USAGE_DESKTOP_COMMANDS, ...USAGE_DESKTOP_GENERATED_COMMANDS];
+const COMMANDS: readonly UsageDesktopCommand[] = [...USAGE_DESKTOP_COMMANDS, ...USAGE_DESKTOP_GENERATED_COMMANDS, ...USAGE_DESKTOP_RETIRED_COMMANDS];
 
 export const USAGE_DESKTOP_COUNTERS = [
     'windows.opened',

@@ -43,9 +43,13 @@ describe('a database view as a loose view', () => {
         expect(useFiles.getState().focusRequest).toEqual({ key: tab!.key, nonce: 1 });
     });
 
-    test('a second table is a tab of the host the first one stands in', () => {
+    test('a second table takes the place of the first, unless the first is pinned', () => {
         actOnDatabase({ kind: 'open-table', ref: ORDERS, view: 'data' });
         actOnDatabase({ kind: 'open-table', ref: { ...ORDERS, table: 'items' }, view: 'data' });
+        const [items] = useFiles.getState().tabs.map((tab) => tab.key);
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toEqual({ viewId: items, size: 1 });
+        useFiles.getState().setPinned(items!, true);
+        actOnDatabase({ kind: 'open-table', ref: ORDERS, view: 'data' });
         const keys = useFiles.getState().tabs.map((tab) => tab.key);
         expect(keys).toHaveLength(2);
         expect(useDocument.getState().layout!.columns[0]!.cells[0]).toMatchObject({ viewId: keys[1], tabs: keys });

@@ -486,6 +486,12 @@ export const useFiles = create<FilesStore>((set, get) => {
             closeNow(closing);
         }
     };
+    /* A view an open may not take the place of: a pinned tab, or one whose edits would go with it. */
+    const keeps = (viewId: string): boolean => {
+        const tab = get().tabs.find((entry) => entry.key === viewId);
+
+        return get().unsubmitted[viewId] === true || (tab !== undefined && (tab.pinned || get().keepsOpen(tab)));
+    };
     const focusRequestAfter = (key: string, options: OpenOptions | undefined): FocusRequest | null =>
         options?.focus === false ? get().focusRequest : { key, nonce: (get().focusRequest?.nonce ?? 0) + 1 };
     /* The pool as an open left it, and the cell that followed a diff tab taking over another's key. */
@@ -507,7 +513,7 @@ export const useFiles = create<FilesStore>((set, get) => {
     ): void => {
         const key = opened.active!;
         take(opened, line, options);
-        useDocument.getState().showLoose(key, { focus: !quietly });
+        useDocument.getState().showLoose(key, { focus: !quietly, keeps });
         makeRoom(key, limit);
     };
     /* A drop that did not land leaves a tab no cell holds, which goes again. */
@@ -557,8 +563,8 @@ export const useFiles = create<FilesStore>((set, get) => {
                 recent: []
             });
         },
-        /* A tab and the cell that draws it are one thing to the person opening a file: an open puts the
-           tab in the host they were working in, like any view. Beside it is a drag. */
+        /* An open shows the file where the person works, like any view: a tab of a focused host, else in the
+           place of the cell's view. Tabs beside it come from a drag. */
         open(path, limit, view, line, options) {
             openIn(openTab(get(), path, view), limit, line, options, false);
         },
@@ -569,7 +575,7 @@ export const useFiles = create<FilesStore>((set, get) => {
             const key = next.active;
             set({ tabs: next.tabs, focusRequest: key === null ? get().focusRequest : focusRequestAfter(key, options) });
             if (key !== null) {
-                useDocument.getState().showLoose(key, { focus: true });
+                useDocument.getState().showLoose(key, { focus: true, keeps });
                 makeRoom(key, limit);
             }
         },

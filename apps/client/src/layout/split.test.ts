@@ -628,7 +628,7 @@ describe('activateTab', () => {
 describe('showViewIn rules', () => {
     test('1: a placed view takes its cell into focus and becomes the active tab', () => {
         const layout = gridOf([['a'], ['[b *c]']]);
-        const shown = showViewIn(layout, 'b', { newTab: true, loose: true })!;
+        const shown = showViewIn(layout, 'b', { newTab: true })!;
         expect(tabShapeOf(shown.layout)).toEqual([['a'], ['[*b c]']]);
         expect(shown.at).toEqual(second);
         expect(shown.from).toEqual(first);
@@ -657,7 +657,7 @@ describe('showViewIn rules', () => {
 
     test('2: it comes before every other rule', () => {
         const layout = gridOf([['[a *b]'], ['[c *d]']], first);
-        const shown = showViewIn(layout, 'x', { loose: true, newTab: true, host: 'c' })!;
+        const shown = showViewIn(layout, 'x', { newTab: true })!;
         expect(tabShapeOf(shown.layout)).toEqual([['[a b *x]'], ['[c *d]']]);
     });
 
@@ -671,37 +671,7 @@ describe('showViewIn rules', () => {
         expect(cellAt(back, second)!.tabs).toBeUndefined();
     });
 
-    test('4: a loose view goes to the first host in reading order and that host takes the focus', () => {
-        const layout = gridOf([['a', '[b *c]'], ['[d *e]']], first);
-        const shown = showViewIn(layout, 'x', { loose: true })!;
-        expect(tabShapeOf(shown.layout)).toEqual([['a', '[b c *x]'], ['[d *e]']]);
-        expect(shown.at).toEqual({ column: 0, cell: 1 });
-        expect(shown.layout.focus).toEqual({ column: 0, cell: 1 });
-        expect(shown.from).toEqual(first);
-        const back = undoShowView(shown.layout, shown);
-        expect(tabShapeOf(back)).toEqual([['a', '[b *c]'], ['[d *e]']]);
-        expect(back.focus).toEqual(first);
-    });
-
-    test('4: the host of the named view wins, but only when that view stands in a host', () => {
-        const layout = gridOf([['a'], ['[b *c]'], ['[d *e]']], first);
-        expect(tabShapeOf(showViewIn(layout, 'x', { loose: true, host: 'd' })!.layout)).toEqual([['a'], ['[b *c]'], ['[d e *x]']]);
-        expect(tabShapeOf(showViewIn(layout, 'x', { loose: true, host: 'a' })!.layout)).toEqual([['a'], ['[b c *x]'], ['[d *e]']]);
-    });
-
-    test('5: a loose view without a host replaces the focused cell by a host of its own', () => {
-        const layout = gridOf([['a'], ['b']], second);
-        const shown = showViewIn(layout, 'x', { loose: true })!;
-        expect(tabShapeOf(shown.layout)).toEqual([['a'], ['[*x]']]);
-        expect(shown.replaced).toBe('b');
-        expect(shown.at).toEqual(second);
-        const back = undoShowView(shown.layout, shown);
-        expect(tabShapeOf(back)).toEqual([['a'], ['b']]);
-        expect(cellAt(back, second)!.tabs).toBeUndefined();
-        sums(shown.layout);
-    });
-
-    test('6: otherwise it replaces the view in the focused cell, even with a host elsewhere', () => {
+    test('4: otherwise it replaces the view in the focused cell, even with a host elsewhere', () => {
         const layout = gridOf([['a'], ['[b *c]']], first);
         const shown = showViewIn(layout, 'x')!;
         expect(tabShapeOf(shown.layout)).toEqual([['x'], ['[b *c]']]);
@@ -719,9 +689,9 @@ describe('showViewIn rules', () => {
         expect(tabShapeOf(undoShowView(moved, shown))).toEqual([['a'], ['[b c *d]']]);
     });
 
-    test('undo of a replaced host cell leaves a cell that grew more tabs alone', () => {
-        const shown = showViewIn(gridOf([['a']]), 'x', { loose: true })!;
-        const grown = showViewIn(shown.layout, 'y')!.layout;
+    test('undo of a replaced cell leaves a cell that grew more tabs alone', () => {
+        const shown = showViewIn(gridOf([['a']]), 'x')!;
+        const grown = showViewIn(shown.layout, 'y', { newTab: true })!.layout;
         expect(tabShapeOf(undoShowView(grown, shown))).toEqual([['[x *y]']]);
     });
 });

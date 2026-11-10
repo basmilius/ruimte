@@ -254,19 +254,21 @@ describe('loose views in cells', () => {
         expect(useDocument.getState().edits).toBe(0);
     });
 
-    test('shown with no host take the focused cell as a host, and the way back puts the view back', () => {
+    test('shown in a plain cell take the place of its view, and the way back puts the view back', () => {
         const shown = useDocument.getState().showLoose(NOTES)!;
         expect(shown.replaced).toBe('a');
-        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toMatchObject({ viewId: NOTES, tabs: [NOTES] });
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toEqual({ viewId: NOTES, size: 1 });
         useDocument.getState().undoShowView(shown);
         expect(shape()).toEqual([['a']]);
         expect(useDocument.getState().layout!.columns[0]!.cells[0]!.tabs).toBeUndefined();
     });
 
-    test('shown in a cell of their own that holds one grow tabs there instead of replacing it', () => {
+    test('shown over a loose view replace it, unless a person holds on to that one', () => {
         useDocument.getState().dropLooseAt(NOTES, { column: 0, cell: 0 }, 'right');
         useDocument.getState().showLoose('/p/other.md');
-        expect(useDocument.getState().layout!.columns[1]!.cells[0]).toMatchObject({ viewId: '/p/other.md', tabs: [NOTES, '/p/other.md'] });
+        expect(tabsOf()).toEqual([['a'], ['/p/other.md']]);
+        useDocument.getState().showLoose('/p/third.md', { keeps: (id) => id === '/p/other.md' });
+        expect(useDocument.getState().layout!.columns[1]!.cells[0]).toMatchObject({ viewId: '/p/third.md', tabs: ['/p/other.md', '/p/third.md'] });
     });
 
     test('shown over a loose view that is gone take the way back without it', () => {
@@ -289,28 +291,28 @@ describe('loose views in cells', () => {
 });
 
 describe('tab hosts in the document', () => {
-    function hostOf(...keys: string[]): void {
-        for (const key of keys) {
-            useDocument.getState().showLoose(key);
+    /* The first key takes the focused cell's place, the rest join it as tabs the way a drag would. */
+    function hostOf(first: string, ...rest: string[]): void {
+        useDocument.getState().showLoose(first);
+        for (const key of rest) {
+            useDocument.getState().dropLooseAsTab(key, useDocument.getState().layout!.focus);
         }
     }
 
     test('a view of the project shown in a focused host is a tab of it, and the way back takes it out', () => {
-        hostOf('/p/a.md');
+        hostOf('/p/a.md', '/p/b.md');
         const shown = useDocument.getState().showView('b')!;
-        expect(tabsOf()).toEqual([['/p/a.md', 'b']]);
+        expect(tabsOf()).toEqual([['/p/a.md', '/p/b.md', 'b']]);
         expect(useDocument.getState().activeViewId).toBe('b');
         useDocument.getState().undoShowView(shown);
-        expect(tabsOf()).toEqual([['/p/a.md']]);
+        expect(tabsOf()).toEqual([['/p/a.md', '/p/b.md']]);
     });
 
-    test('remembers the host that last had the focus', () => {
-        hostOf('/p/a.md');
+    test('a loose view shown in a plain cell takes its place, even with a host elsewhere', () => {
+        hostOf('/p/a.md', '/p/b.md');
         useDocument.getState().splitFocused('right', 'b');
-        expect(useDocument.getState().lastHostViewId).toBe('/p/a.md');
-        useDocument.getState().focusCellAt({ column: 0, cell: 0 });
-        useDocument.getState().activateTab('/p/a.md');
-        expect(useDocument.getState().lastHostViewId).toBe('/p/a.md');
+        useDocument.getState().showLoose('/p/c.md');
+        expect(tabsOf()).toEqual([['/p/a.md', '/p/b.md'], ['/p/c.md']]);
     });
 
     test('steps along the tabs of the focused host, round the ends, and leaves a plain cell alone', () => {
@@ -334,7 +336,7 @@ describe('tab hosts in the document', () => {
 
     test('a view of the project closes as a tab without leaving the project, including the last tab', () => {
         hostOf('/p/a.md');
-        useDocument.getState().showView('b');
+        useDocument.getState().showView('b', { newTab: true });
         useDocument.getState().closeViewTab('b');
         expect(tabsOf()).toEqual([['/p/a.md']]);
         expect(useDocument.getState().views.map((each) => each.id)).toContain('b');
@@ -349,21 +351,22 @@ describe('tab hosts in the document', () => {
         expect(useDocument.getState().activeViewId).toBeNull();
     });
 
-    test.each(['/p/a.md', 'diff:/p/a.md', 'database:orders'])('a lone loose view keeps its host: %s', (key) => {
+    test.each(['/p/a.md', 'diff:/p/a.md', 'database:orders'])('a loose view left alone in a host stands as a plain view: %s', (key) => {
         hostOf(key);
-        useDocument.getState().showView('b');
+        useDocument.getState().showView('b', { newTab: true });
         useDocument.getState().closeViewTab('b');
-        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toMatchObject({ viewId: key, tabs: [key] });
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toEqual({ viewId: key, size: 1 });
     });
 
-    test.each(['file', 'database'] as const)('a lone project %s view keeps its host and can close', (kind) => {
-        hostOf('/p/a.md');
+    test.each(['file', 'database'] as const)('a project %s view left alone in a host stands as a plain view and can close', (kind) => {
+        hostOf('/p/a.md', '/p/b.md');
         const id =
             kind === 'file'
                 ? useDocument.getState().addFileView('notes', '/p/notes.md')
                 : useDocument.getState().addDatabaseView('orders', { connectionId: 'shop', schema: 'shop', table: 'orders', mode: 'data' });
         useDocument.getState().closeLoose('/p/a.md');
-        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toMatchObject({ viewId: id, tabs: [id] });
+        useDocument.getState().closeLoose('/p/b.md');
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toEqual({ viewId: id, size: 1 });
         useDocument.getState().closeViewTab(id);
         expect(useDocument.getState().layout).toBeNull();
         expect(useDocument.getState().views.some((view) => view.id === id)).toBe(true);
@@ -445,10 +448,10 @@ describe('a local file with the files cell of an older release', () => {
         expect(shape()).toEqual([['a']]);
     });
 
-    test('with only an active view named reads as a grid of that one host', () => {
+    test('with only an active view named reads as a grid of that one view', () => {
         load(undefined, 'files', { keys: ['/p/a.ts'], active: '/p/a.ts' });
         expect(shape()).toEqual([['/p/a.ts']]);
-        expect(useDocument.getState().layout!.columns[0]!.cells[0]!.tabs).toEqual(['/p/a.ts']);
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]!.tabs).toBeUndefined();
     });
 
     test('without the cell leaves the strip unplaced in the layout', () => {
@@ -461,7 +464,7 @@ describe('a local file with the files cell of an older release', () => {
         const written = useDocument.getState().exportLocal();
         expect(JSON.stringify(written)).not.toContain('"files"');
         useDocument.getState().load(document([view('a'), view('b')]), written, { keys: ['/p/a.ts'], active: '/p/a.ts' });
-        expect(useDocument.getState().layout!.columns[1]!.cells[0]).toMatchObject({ viewId: '/p/a.ts', tabs: ['/p/a.ts'] });
+        expect(useDocument.getState().layout!.columns[1]!.cells[0]).toEqual({ viewId: '/p/a.ts', size: 1 });
     });
 
     test('a cell that names a loose key the pool does not hold is dropped', () => {

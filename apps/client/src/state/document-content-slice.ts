@@ -25,10 +25,7 @@ export function createDocumentContentSlice({
             const stored = local ?? { activeViewId: null, layout: undefined };
             // A file written before views could stand side by side reads as one cell on the view it named.
             const layout = layoutOf(state.reloading ? stored : migrateFilesCell(stored, loose), views, standing);
-            const settled = settledOn(views, viewLocal, layout, {
-                lastCanvasViewId: views.find(isCanvasView)?.id ?? null,
-                lastHostViewId: state.reloading ? state.lastHostViewId : null
-            });
+            const settled = settledOn(views, viewLocal, layout, { lastCanvasViewId: views.find(isCanvasView)?.id ?? null });
             set({
                 ...settled,
                 emptyLayout: local?.emptyLayout === true,

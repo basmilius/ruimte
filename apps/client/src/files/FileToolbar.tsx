@@ -22,8 +22,9 @@ export function FileToolbar({ children, menu, leading }: { children?: ReactNode;
         <>
             {children}
             <EditorSlot />
-            {/* With no controls the menu is the only group there is, and a line would divide nothing. */}
-            {children !== undefined && <Separator />}
+            {/* With no controls the menu is the only group there is, and a line would divide nothing. Children that
+                all draw nothing leave it first in the bar a surface lent, which hides it. */}
+            {children !== undefined && <Separator className="first:hidden" />}
             <FileMenu extra={menu} />
         </>
     );

@@ -10,7 +10,6 @@ import {
     ListX,
     PanelBottom,
     PanelRight,
-    Ungroup,
     X
 } from 'lucide-react';
 import { desktop, severalCells, hosted } from '@/commands/conditions';
@@ -85,12 +84,6 @@ export const GRID_COMMANDS = {
         icon: PanelRight,
         palette: true,
         menu: { menu: 'view', group: 'split', order: 50, when: hosted, enabled: (context) => context.tabs.splitOff }
-    },
-    'tab-ungroup': {
-        key: 'ungroup',
-        icon: Ungroup,
-        palette: true,
-        menu: { menu: 'view', group: 'split', order: 60, when: hosted, enabled: (context) => context.tabs.count === 1 }
     },
     // One key for both: a node on the canvas takes it first (`maximizeTargetOf`), so the row it acts on shows it.
     'cell-maximize': {

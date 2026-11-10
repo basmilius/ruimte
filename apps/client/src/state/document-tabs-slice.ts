@@ -8,16 +8,14 @@ import {
     dropAsTab,
     dropView,
     focusCell,
-    hostFor,
     isTabHost,
     locateView,
     moveTabBy,
     replaceViewId,
-    showViewIn,
-    ungroup
+    showViewIn
 } from '@/layout/split';
 import type { DocumentState } from '@/state/document';
-import { canStandInCell, cellViewOf, type DocumentKit } from '@/state/document-model';
+import { canStandInCell, type DocumentKit } from '@/state/document-model';
 
 export function createDocumentTabsSlice({
     get,
@@ -31,7 +29,6 @@ export function createDocumentTabsSlice({
     | 'dropViewAsTab'
     | 'moveTab'
     | 'splitTabOff'
-    | 'ungroupCell'
     | 'closeLoose'
     | 'closeViewTab'
     | 'replaceViewKey'
@@ -40,17 +37,15 @@ export function createDocumentTabsSlice({
 > {
     return {
         showLoose(key, options) {
-            const state = get();
-            const layout = state.layout;
+            const layout = get().layout;
             if (layout === null) {
-                commit({ columns: [{ size: 1, cells: [{ viewId: key, tabs: [key], size: 1 }] }], focus: { column: 0, cell: 0 } });
+                commit({ columns: [{ size: 1, cells: [{ viewId: key, size: 1 }] }], focus: { column: 0, cell: 0 } });
                 return null;
             }
             const focused = cellAt(layout, layout.focus);
-            // A loose view alone in its cell grows tabs rather than being replaced, since nothing would bring it back.
-            const grows =
-                focused !== null && !isTabHost(focused) && cellViewOf(state, focused.viewId) === null && hostFor(layout, state.lastHostViewId) === null;
-            const shown = showViewIn(layout, key, { loose: true, host: state.lastHostViewId, newTab: grows });
+            // A loose view a person holds on to (pinned, or with edits) grows tabs rather than being replaced.
+            const grows = focused !== null && !isTabHost(focused) && options?.keeps?.(focused.viewId) === true;
+            const shown = showViewIn(layout, key, { newTab: grows });
             if (shown === null) {
                 return null;
             }
@@ -97,10 +92,6 @@ export function createDocumentTabsSlice({
             }
             commit(dropView(state.layout, viewId, at, 'right'));
             return true;
-        },
-
-        ungroupCell(at) {
-            change((layout) => ungroup(layout, at));
         },
 
         closeLoose(key) {

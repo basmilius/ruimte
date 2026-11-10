@@ -5,7 +5,7 @@ import { dismissClose, useUnsavedClose } from '@/state/unsaved-close';
 import { closeCellGuarded, closeCellsRightOfGuarded, closeOtherCellsGuarded } from './cell-close.ts';
 import { currentEndpointId } from './current-endpoint';
 import { useDocument } from './document.ts';
-import { useFiles, type DatabaseTab } from './files.ts';
+import { placeTab, useFiles, type DatabaseTab } from './files.ts';
 import { endpointKey } from './keys.ts';
 import { textDrafts, useTextDrafts } from './text-drafts.ts';
 
@@ -51,7 +51,8 @@ describe('closing cells through the guards of their loose tabs', () => {
             .load({ version: 3, rev: 1, name: 'p', color: '#000', views: [canvas('a'), canvas('b'), canvas('c')] }, { activeViewId: 'a', views: {} });
         useDocument.getState().splitFocused('right', 'b');
         useFiles.getState().open('/p/one.ts', 5);
-        useFiles.getState().open('/p/two.ts', 5);
+        // The second file joins the first as a tab, the way a drag does.
+        useFiles.getState().dropTab(placeTab(useFiles.getState(), { key: '/p/two.ts', path: '/p/two.ts', pinned: false }), 5, { column: 1, cell: 0 }, 'center');
     });
 
     test('saves a file with unsaved changes first and then closes the cell', async () => {
