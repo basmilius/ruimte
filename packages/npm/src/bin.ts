@@ -48,7 +48,9 @@ const execve = (process as { execve?: (file: string, args: string[], env: NodeJS
 if (typeof execve === 'function' && process.platform !== 'win32') {
     try {
         execve(binary, [binary, ...args], process.env);
-    } catch {}
+    } catch {
+        // Falls through to a child, which works everywhere.
+    }
 }
 
 const child = spawn(binary, args, { stdio: 'inherit' });
