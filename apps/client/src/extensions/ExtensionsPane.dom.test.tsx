@@ -128,12 +128,12 @@ describe('installing from a file', () => {
     });
 
     test('refuses a pack that asks for a permission Ruimte does not know, as the machine would', async () => {
-        const toasts = useToasts.getState().toasts.length;
+        const refused = () => useToasts.getState().toasts.some((toast) => toast.description?.includes('ui.canvasOverlay is not a permission'));
 
         await chooseFile(manifestOf({ 'files.read': 'Reads your notes', 'ui.canvasOverlay': 'Walks over the canvas' }));
-        await until(() => useToasts.getState().toasts.length > toasts);
+        // The install of the test before can still toast after this one began, so the toast is found by what it says.
+        await until(refused);
 
-        expect(useToasts.getState().toasts.at(-1)?.description).toContain('ui.canvasOverlay is not a permission');
         expect(mounted.host.textContent).not.toContain('Local pack');
     });
 });

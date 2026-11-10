@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
-import { useServers } from '@/state/server';
+import { serverInfoOf, useServers } from '@/state/server';
 import { mount, type Mounted } from '../../testing/dom';
 import { TerminalShellRow } from '../machine-ui/MachineSettings';
 
@@ -8,7 +8,8 @@ let page: Mounted;
 
 function setMissing(gitBashMissing: boolean): void {
     useServers.setState((state) => ({
-        byEndpoint: { ...state.byEndpoint, [LOCAL_ENDPOINT_ID]: { ...state.byEndpoint[LOCAL_ENDPOINT_ID]!, gitBashMissing } }
+        // A whole entry, so the files after this one in the shared DOM process read every field of it.
+        byEndpoint: { ...state.byEndpoint, [LOCAL_ENDPOINT_ID]: { ...serverInfoOf(LOCAL_ENDPOINT_ID), gitBashMissing } }
     }));
 }
 
