@@ -53,7 +53,7 @@
     "test": "bun test --conditions=source --parallel --no-isolate --only-failures --timings=test-timings.json",
     "test:windows": "bun test --conditions=source --parallel=8 --no-isolate --only-failures",
     "test:timings": "bun run test --update-timings",
-    "test:dom": "bun --config=dom.bunfig.toml test --conditions=source .dom.test. && bun --config=dom.bunfig.toml test --isolate --conditions=source .cold.test.",
+    "test:dom": "bun --config=dom.bunfig.toml test --conditions=source .dom.test. && bun --config=dom.bunfig.toml test --isolate --conditions=source --path-ignore-patterns='**/*.integration.test.ts' .cold.test.",
     "test:integration": "bun scripts/test-integration.ts",
     "test:package": "bun scripts/test-integration.ts --suite package",
     "test:devices": "bun scripts/test-integration.ts --suite devices",
