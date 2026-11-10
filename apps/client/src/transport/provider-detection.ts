@@ -1,4 +1,3 @@
-import { useProvidersStore } from '@adecore/agents-react/state';
 import type { ProviderInfo } from '@ruimte/contracts';
 import { useEffect } from 'react';
 import { currentEndpointId, useEndpointId } from '@/state/current-endpoint';
@@ -6,6 +5,7 @@ import { pool, transportFor } from '@/transport';
 import { fireAndForget } from '@/transport-api/transport';
 import type { Transport } from '../transport-api/transport';
 import { machineAnswers } from './features';
+import { setMachineProviders } from './machine-providers';
 
 // The machine guards its own probes as well; this only keeps one client from asking on every menu it opens.
 const DETECT_INTERVAL_MS = 10_000;
@@ -33,7 +33,7 @@ function detectProviders(endpointId: string): void {
         : link.request('provider.list', {});
     void fireAndForget(
         'reply.then',
-        reply.then(({ providers }) => useProvidersStore.getState().setProviders(endpointId, providers))
+        reply.then(({ providers }) => setMachineProviders(endpointId, providers))
     );
 }
 

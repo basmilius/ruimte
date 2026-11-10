@@ -1,16 +1,16 @@
-import { useProvidersStore } from '@adecore/agents-react/state';
 import { messageOf } from '@adecore/ui';
 import type { AgentKind, CliVersion, RegistryAgent, RegistryCatalog } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { useMachineAnswers } from '@/transport/features';
 import { transportFor } from '@/transport/index';
+import { setMachineProviders } from '@/transport/machine-providers';
 
 export async function listProvidersAgain(endpointId: string): Promise<void> {
     const link = transportFor(endpointId);
     if (link) {
         const { providers } = await link.request('provider.list', {});
-        useProvidersStore.getState().setProviders(endpointId, providers);
+        setMachineProviders(endpointId, providers);
     }
 }
 

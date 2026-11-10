@@ -1,9 +1,9 @@
-import { useProvidersStore } from '@adecore/agents-react/state';
 import { knownNodeSizes, type EndpointInfo, type EndpointNameSource } from '@ruimte/contracts';
 import { LOCAL_ENDPOINT_ID, localMachineLabel, useEndpoints } from '@/state/endpoints';
 import { serverInfoOf, useServers } from '@/state/server';
 import { fireAndForget } from '@/transport-api/transport';
 import { pool, transportFor } from '@/transport/index';
+import { setMachineProviders } from '@/transport/machine-providers';
 import { noteDaemonIdentity } from '@/workspace/identity';
 import { moveBrowseStartFolder } from '@/workspace/start-folder-migration';
 import { watchOpenMachines } from '../transport/open-machines';
@@ -26,7 +26,7 @@ function load(endpointId: string): void {
             void moveBrowseStartFolder(settled, info, async (folder) => adoptEndpointInfo(settled, await link.request('endpoint.setStartFolder', { folder })));
             void fireAndForget(
                 'provider.list',
-                link.request('provider.list', {}).then(({ providers }) => useProvidersStore.getState().setProviders(settled, providers))
+                link.request('provider.list', {}).then(({ providers }) => setMachineProviders(settled, providers))
             );
             const hello = await link.request('server.hello', {});
             useServers.getState().setInfo(settled, { platform: hello.platform, home: hello.home, version: hello.version, model: hello.model ?? null });

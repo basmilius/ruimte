@@ -446,6 +446,7 @@ export const START_SCREEN_MODULES: readonly string[] = [
     'transport/large-text.ts',
     'transport/link-transport.ts',
     'transport/local-usage.ts',
+    'transport/machine-providers.ts',
     'transport/machine-transport.ts',
     'transport/machine-url.ts',
     'transport/open-machines.ts',

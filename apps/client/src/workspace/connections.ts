@@ -1,5 +1,5 @@
 import { ChatClient, chatPreferencesPayload, useChatPreferences } from '@adecore/agents-react/chat';
-import { useChats, knownAccounts, providerAccountsOf, useProviderAccountsStore, watchProviderAccounts, providerSinkFor } from '@adecore/agents-react/state';
+import { useChats, knownAccounts, providerAccountsOf, useProviderAccountsStore, watchProviderAccounts } from '@adecore/agents-react/state';
 import type { ProjectSummary } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { BrowserClient } from '@/clients/browser/browser-client';
@@ -28,6 +28,7 @@ import type { Transport } from '@/transport-api/transport';
 import { fireAndForget } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 import { machineTransport, pool } from '@/transport/index';
+import { forgetMachineProviders, machineProviderSink, reapplyMachineProviders, setMachineProviders } from '@/transport/machine-providers';
 import { useOptionalConnection } from '@/workspace/context';
 import { forgetProjectSessions } from '@/workspace/session-lifecycle';
 import { workspaceOf, useWindow, windowWorkspace } from '@/workspace/window';
@@ -122,7 +123,8 @@ function buildMachine(endpoint: Endpoint): Machine {
     const stops = [
         ...[...machineWatches].map((watch) => watch(endpoint.id, transport)),
         watchProviderAccounts(endpoint.id, transport),
-        transport.on('provider.changed', ({ providers }) => providerSinkFor(endpoint.id).setProviders(providers)),
+        transport.on('provider.changed', ({ providers }) => setMachineProviders(endpoint.id, providers)),
+        pool.subscribeStatus(endpoint.id, () => reapplyMachineProviders(endpoint.id)),
         transport.subscribeStatus((status) => {
             if (status === 'open') {
                 clearedRows.delete(endpoint.id);
@@ -130,7 +132,7 @@ function buildMachine(endpoint: Endpoint): Machine {
         })
     ];
     const sessions = new SessionClient(transport, sessionSinkFor(endpoint.id));
-    const chats = new ChatClient(transport, chatSinkFor(endpoint.id), providerSinkFor(endpoint.id));
+    const chats = new ChatClient(transport, chatSinkFor(endpoint.id), machineProviderSink(endpoint.id));
     const browsers = new BrowserClient(endpoint.id, transport);
     const devices = new DeviceClient(endpoint.id, transport);
     chats.setPreferences(preferencesFor(endpoint.id));
@@ -146,6 +148,7 @@ function buildMachine(endpoint: Endpoint): Machine {
                 stop();
             }
             clearedRows.delete(endpoint.id);
+            forgetMachineProviders(endpoint.id);
             sessions.dispose();
             chats.dispose();
             browsers.dispose();

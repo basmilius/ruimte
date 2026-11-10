@@ -1,5 +1,5 @@
 import { accountStatusLine, ACCOUNT_TONE_CLASSES, CliMark } from '@adecore/agents-react/providers';
-import { useProviderAccountsStore, useProviders, useProvidersStore } from '@adecore/agents-react/state';
+import { useProviderAccountsStore, useProviders } from '@adecore/agents-react/state';
 import { Button, Icon, Pill } from '@adecore/ui';
 import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
 import { LogIn, RefreshCw, Sparkles } from 'lucide-react';
@@ -11,6 +11,7 @@ import { joinNames, type CliRow } from '@/onboarding/tasks';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { transportFor } from '@/transport';
 import { orNull } from '@/transport-api/transport';
+import { setMachineProviders } from '@/transport/machine-providers';
 
 interface ProvidersTaskProps {
     machine: string;
@@ -30,7 +31,7 @@ async function checkAgain(): Promise<void> {
         // The accounts are secondary: a refresh that fails keeps the providers.
         orNull('accounts.refresh', link.request('accounts.refresh', {}))
     ]);
-    useProvidersStore.getState().setProviders(LOCAL_ENDPOINT_ID, providers);
+    setMachineProviders(LOCAL_ENDPOINT_ID, providers);
     if (accounts !== null) {
         useProviderAccountsStore.getState().set(LOCAL_ENDPOINT_ID, accounts);
     }
