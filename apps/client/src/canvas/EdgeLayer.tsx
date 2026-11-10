@@ -96,7 +96,13 @@ function EdgeLabel({
                         /* The gap between the label and the button takes the pointer, so moving onto the button keeps the line hovered. */
                         <span
                             className="pointer-events-auto absolute top-1/2 left-full flex -translate-y-1/2 pl-1"
-                            onPointerDown={(event) => event.stopPropagation()}
+                            onPointerDown={(event) => {
+                                event.stopPropagation();
+                                // The gap is the line's to press: on a line without a label it sits right on the line.
+                                if (event.target === event.currentTarget) {
+                                    pressLine(canvasStore.getState(), ids, event.shiftKey);
+                                }
+                            }}
                         >
                             <IconButton
                                 icon={X}
