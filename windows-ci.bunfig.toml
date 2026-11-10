@@ -5,6 +5,7 @@
 pathIgnorePatterns = [
     "**/*.integration.test.ts",
     "**/*.dom.test.tsx",
+    "**/*.cold.test.tsx",
     "**/docs/reports/**",
     "extensions/*/test/**",
     "extensions/poc/*/test/**",
