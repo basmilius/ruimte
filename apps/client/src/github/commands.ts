@@ -16,6 +16,11 @@ function selectedChat(moment: CommandMoment): { endpointId: string; chatId: stri
     return selected === undefined || chatId === null ? null : { endpointId: endpointOfNodeId(selected.id), chatId };
 }
 
+/* The repositories the palette read in render, or the ones the store holds now. */
+function reposOf(moment: CommandMoment): readonly { readonly path: string; readonly label: string }[] {
+    return moment.facts.prRepos ?? prReposOfCurrent();
+}
+
 export const GITHUB_BEHAVIORS = defineBehaviors({
     // A folder with several repositories has one row per repository instead (`githubPaletteRows`).
     'pr-show': {
@@ -26,7 +31,7 @@ export const GITHUB_BEHAVIORS = defineBehaviors({
                 pullRequestDialog.set({ cwd: folder });
             }
         },
-        offered: (moment) => moment.folder !== null && moment.prRepos.length <= 1
+        offered: (moment) => moment.folder !== null && reposOf(moment).length <= 1
     },
     'pr-watch-stop': {
         run: () => {
@@ -48,7 +53,7 @@ export const GITHUB_BEHAVIORS = defineBehaviors({
 });
 
 export function githubPaletteRows(moment: CommandMoment): Command[] {
-    const repos = moment.prRepos;
+    const repos = reposOf(moment);
     if (moment.folder === null || repos.length <= 1) {
         return [];
     }

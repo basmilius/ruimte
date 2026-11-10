@@ -1,14 +1,17 @@
 import { isCanvasView, isDiagramView, isDrawingView, type ProjectView } from '@ruimte/contracts';
-import { prReposOfCurrent, type PrRepo } from '@/github/pr-repos';
 import { focusedCanvas, type CanvasNode, type CanvasState } from '@/state/canvas';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument, type DocumentState } from '@/state/document';
 import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
 import { windowWorkspace } from '@/workspace/window';
 
-/* Facts a component already read in render, handed in so its memo of the rows moves when they do. */
+/*
+ * Facts a component already read in render, handed in so its memo of the rows moves when they do. A command
+ * reads one of these first, and its own store when the moment was not handed it.
+ */
 export interface MomentFacts {
-    readonly prRepos?: readonly PrRepo[];
+    /* The repositories of the project folder with a branch out, which the pull request rows need. */
+    readonly prRepos?: readonly { readonly path: string; readonly label: string }[];
 }
 
 /*
@@ -16,17 +19,12 @@ export interface MomentFacts {
  * palette build or key press. The facts a command needs of its own feature it reads from its own stores.
  */
 export class CommandMoment {
-    private readonly facts: MomentFacts;
+    readonly facts: MomentFacts;
     private canvasState: CanvasState | null = null;
     private documentState: DocumentState | null = null;
 
     constructor(facts: MomentFacts = {}) {
         this.facts = facts;
-    }
-
-    /* The repositories of the project folder with a branch out, which a pull request row needs. */
-    get prRepos(): readonly PrRepo[] {
-        return this.facts.prRepos ?? prReposOfCurrent();
     }
 
     /* The start screen is outside every project, so only the commands about the window are offered there. */
