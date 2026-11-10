@@ -194,6 +194,18 @@ describe('a port a person drew from', () => {
         expect([held.fromSide, held.toSide]).toEqual(['bottom', 'bottom']);
         expect(held.to).toEqual(portPoint(target, 'bottom'));
     });
+
+    test('lets go once the other node lies wholly behind it, so the line takes the short way', () => {
+        // Drawn from the bottom of the upper node to the top of the lower one, then the lower one moved above.
+        const above = { x: 0, y: -400, w: 100, h: 100 };
+        const freed = routeEdge(box, above, [], { fromSide: 'bottom', toSide: 'top' });
+        expect([freed.fromSide, freed.toSide]).toEqual(['top', 'bottom']);
+    });
+
+    test('still holds while the other node overlaps it on that axis', () => {
+        const beside = { x: 600, y: -60, w: 100, h: 100 };
+        expect(routeEdge(box, beside, [], { fromSide: 'bottom' }).fromSide).toBe('bottom');
+    });
 });
 
 describe('a line leaving the bottom of a node', () => {

@@ -17,6 +17,14 @@ import { edgeTask, taskEdgeLabel, useTasks } from '@/state/tasks';
 import { routeDraft, SIDE_NORMAL, type EdgeRoute, type Obstacle, type Side } from '@/surface/canvas/edge-route';
 import { lineRoutes } from '@/surface/canvas/line-routes';
 
+/* A press on a line takes the keyboard back from the node that had it, as a press on the empty canvas
+   does, so Delete and Backspace reach the selected line. */
+function pressLine(canvas: CanvasState, ids: string[], additive: boolean): void {
+    canvas.setBodyFocus(null);
+    (document.activeElement as HTMLElement | null)?.blur();
+    canvas.select(ids, additive);
+}
+
 function EdgeLabel({
     ids,
     label,
@@ -78,24 +86,29 @@ function EdgeLabel({
                             className="pointer-events-auto cursor-text rounded-full border border-border bg-surface-raised px-2.5 py-0.5 text-xs whitespace-nowrap text-text-muted"
                             onPointerDown={(event) => {
                                 event.stopPropagation();
-                                canvasStore.getState().select(ids, event.shiftKey);
+                                pressLine(canvasStore.getState(), ids, event.shiftKey);
                             }}
                         >
                             {label}
                         </span>
                     )}
                     {active && (
-                        <IconButton
-                            icon={X}
-                            size="xs"
-                            label={t('action.remove')}
-                            className="pointer-events-auto absolute top-1/2 left-full ml-1 -translate-y-1/2 rounded-full border border-border bg-surface-raised"
+                        /* The gap between the label and the button takes the pointer, so moving onto the button keeps the line hovered. */
+                        <span
+                            className="pointer-events-auto absolute top-1/2 left-full flex -translate-y-1/2 pl-1"
                             onPointerDown={(event) => event.stopPropagation()}
-                            onClick={(event) => {
-                                event.stopPropagation();
-                                onRemove();
-                            }}
-                        />
+                        >
+                            <IconButton
+                                icon={X}
+                                size="xs"
+                                label={t('action.remove')}
+                                className="rounded-full border border-border bg-surface-raised"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    onRemove();
+                                }}
+                            />
+                        </span>
                     )}
                 </div>
             </div>
@@ -174,7 +187,7 @@ const EdgeRow = memo(function EdgeRow({ layer, line, route, label, stroke, width
                             onPointerDown={(e) => {
                                 e.stopPropagation();
                                 // One line is one thing to click, so both of its directions are selected together.
-                                canvasStore.getState().select(line.ids, e.shiftKey);
+                                pressLine(canvasStore.getState(), line.ids, e.shiftKey);
                             }}
                             onDoubleClick={(e) => {
                                 e.stopPropagation();

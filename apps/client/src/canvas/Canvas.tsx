@@ -532,7 +532,7 @@ export function Canvas() {
         if (port) {
             e.preventDefault();
             e.stopPropagation();
-            // The port it starts on is the side the line keeps, however the two nodes move later.
+            // The port it starts on is the side the line keeps, until the other node lies wholly behind it.
             const fromSide = portElement?.dataset.portSide as NodeSide | undefined;
             s.setLinkDraft({ from: port, to: toWorld(s.camera, point), fromSide });
             startGesture({ kind: 'link', from: port, fromSide }, e);

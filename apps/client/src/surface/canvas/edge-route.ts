@@ -295,10 +295,29 @@ function sideCandidates(a: Rect, b: Rect, fixed: FixedSides = {}): readonly Side
     const across: SidePair = to.x >= from.x ? ['right', 'left'] : ['left', 'right'];
     const down: SidePair = to.y >= from.y ? ['bottom', 'top'] : ['top', 'bottom'];
     const [facing, other] = Math.abs(to.x - from.x) >= Math.abs(to.y - from.y) ? [across, down] : [down, across];
-    // A port a person drew from is the only side that end gets, wherever the two nodes end up.
-    const fromSides: readonly Side[] = fixed.fromSide ? [fixed.fromSide] : [facing[0], other[0], OPPOSITE[other[0]]];
-    const toSides: readonly Side[] = fixed.toSide ? [fixed.toSide] : [facing[1], other[1], OPPOSITE[other[1]]];
+    // A port a person drew from is the only side that end gets, until the other node lies wholly behind it.
+    const fromSides: readonly Side[] = holds(a, fixed.fromSide, b) ? [fixed.fromSide] : [facing[0], other[0], OPPOSITE[other[0]]];
+    const toSides: readonly Side[] = holds(b, fixed.toSide, a) ? [fixed.toSide] : [facing[1], other[1], OPPOSITE[other[1]]];
     return fromSides.flatMap((fromSide) => toSides.map((toSide): SidePair => [fromSide, toSide]));
+}
+
+/*
+ * Whether a side a person drew from still holds: not once the other node lies wholly behind it, where
+ * the line could only wrap around both. The side stays stored, so it holds again once the nodes move back.
+ */
+function holds(rect: Rect, side: Side | undefined, other: Rect): side is Side {
+    switch (side) {
+        case undefined:
+            return false;
+        case 'top':
+            return other.y < rect.y + rect.h;
+        case 'bottom':
+            return other.y + other.h > rect.y;
+        case 'left':
+            return other.x < rect.x + rect.w;
+        case 'right':
+            return other.x + other.w > rect.x;
+    }
 }
 
 /* The pairs whose two ports lie closest, which is as much of the list as the search can pay for. */
