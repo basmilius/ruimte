@@ -1,14 +1,16 @@
 import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import type { ChatSidecar } from '@adecore/agents/chat';
 import { applyPlanOps, canDeletePlan, createPlan, planProgress, randomItemId, refuse, type PlanApplied, type PlanDraft, type PlanRefusal } from '@adecore/plan';
 import { KeyedSerializer } from '@adecore/utils/async';
 import { isNotFound } from '@adecore/utils/errors';
 import { writeAtomic } from '@adecore/utils/fs';
 import { PLAN_LIMITS, PlanSchema, type Plan, type PlanActor, type PlanMeta, type PlanOfChat, type PlanOp } from '@ruimte/contracts';
+import { homeFolder } from '@ruimte/service/home';
 import { z } from 'zod';
 import { ClientSinks } from '../client-sinks.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { countUsage } from '../stats/usage-stats.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 
 const SUFFIX = '.plans.json';
 
@@ -18,13 +20,11 @@ export function planFileName(chatId: string): string {
     return `${encodeURIComponent(chatId)}${SUFFIX}`;
 }
 
-/* Whether a name in the chats folder is a plans file, which the chat records beside it must not count as a chat. */
-export function isPlanFileName(name: string): boolean {
+function isPlanFileName(name: string): boolean {
     return name.endsWith(SUFFIX);
 }
 
 interface PlanStoreOptions {
-    /* The clock `at` and `createdAt` are read from; a test hands in its own. */
     now?: () => number;
     /* Mints the ids of plans and of items that come without one. */
     mintId?: () => string;
@@ -39,9 +39,10 @@ interface PlanCreateInput {
 /*
  * The plans of every chat, one file per chat beside its record under `$RUIMTE_HOME/chats`, not in
  * the record itself, which is rewritten on every turn and strips what it does not know. The daemon
- * is the only writer, so there is no watcher.
+ * is the only writer, so there is no watcher. It is a sidecar of the chat core, which takes its files
+ * out of the chat list, removes them with a chat and copies them into a fork.
  */
-export class PlanStore {
+export class PlanStore implements ChatSidecar {
     readonly dir: string;
     private readonly now: () => number;
     private readonly mintId: () => string;
@@ -50,9 +51,13 @@ export class PlanStore {
     private readonly sinks = new ClientSinks();
 
     constructor(home: string, options: PlanStoreOptions = {}) {
-        this.dir = join(home, 'chats');
+        this.dir = homeFolder(home, 'chats');
         this.now = options.now ?? Date.now;
         this.mintId = options.mintId ?? randomItemId;
+    }
+
+    owns(name: string): boolean {
+        return isPlanFileName(name);
     }
 
     /* Every connection hears every plan, since a chat's pill shows whether or not anyone attached the chat. */

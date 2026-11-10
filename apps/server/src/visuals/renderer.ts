@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { cancellableTimeout } from '@adecore/utils/async';
-import { VISUAL_MEASURE_WIDTHS, type VisualAppearance, type VisualHeight } from '@ruimte/contracts';
+import { REPLY_COLUMN_WIDTH, VISUAL_MEASURE_WIDTHS, type VisualAppearance, type VisualHeight } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { errorText } from '../error-text.ts';
 import { reservedPorts } from '../ports/reserved-ports.ts';
 import type { ConsoleEntry } from './page-console.ts';
@@ -16,10 +17,10 @@ import { RENDER_COMMAND, classifyRenderLine, type RenderAnswer, type RenderReque
  * it is killed with its whole process group, its browser included.
  */
 
-/* The width a preview is drawn at: the reply column of a chat that is a view of its own (`.chat-column-content` in `@adecore/agents-react`). */
-export const PREVIEW_WIDTH = { min: 240, max: 1600, default: 768 } as const;
+/* The width a preview is drawn at, by default the reply column of a chat that is a view of its own. */
+export const PREVIEW_WIDTH = { min: 240, max: 1600, default: REPLY_COLUMN_WIDTH } as const;
 
-export const PREVIEW_LIMIT_MS = 20_000;
+const PREVIEW_LIMIT_MS = 20_000;
 /* Measuring is part of publishing, which must not keep the agent waiting long. */
 const MEASURE_LIMIT_MS = 6_000;
 const SLOTS = 2;
@@ -36,7 +37,7 @@ export interface RenderProcess {
     gone: Promise<void>;
 }
 
-type RenderLauncher = (job: RenderJob, budgetMs: number) => RenderProcess;
+export type RenderLauncher = (job: RenderJob, budgetMs: number) => RenderProcess;
 
 /* Calls `run` after `ms`, unless the function it answers is called first. */
 export type Schedule = (ms: number, run: () => void) => () => void;
@@ -45,7 +46,7 @@ type VisualRenderErrorCode = 'preview-unavailable' | 'preview-timeout' | 'previe
 
 export class VisualRenderError extends CodedError<VisualRenderErrorCode> {}
 
-export interface RenderedPreview {
+interface RenderedPreview {
     png: Uint8Array;
     width: number;
     height: number;
@@ -160,7 +161,7 @@ export function childLauncher(
                     }
                 }
                 if (profile !== null) {
-                    await rm(profile, { recursive: true, force: true, maxRetries: 3 }).catch(() => undefined);
+                    await bestEffort('rm', rm(profile, { recursive: true, force: true, maxRetries: 3 }));
                 }
             });
         return {
@@ -174,7 +175,7 @@ export function childLauncher(
     };
 }
 
-export interface VisualRendererOptions {
+interface VisualRendererOptions {
     slots?: number;
     previewLimitMs?: number;
     measureLimitMs?: number;

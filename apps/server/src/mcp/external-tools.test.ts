@@ -1,14 +1,28 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { DEFAULT_EXTERNAL_CEILING, type ExternalGrant, type ExternalTier } from '@ruimte/contracts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
+import { externalActorId, isExternalActor, type ExternalCaller } from '../canvas/external-caller.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { ContextRefusal } from '../context/context-store.ts';
-import { canvasFixture, folder, host, lineage, notified, onDisk, projectId, started } from '../tools/canvas-test-fixture.ts';
-import type { CanvasHost } from '../tools/host.ts';
-import { externalActorId, isExternalActor, type ExternalCaller } from './caller.ts';
+import { canvasFixture, type CanvasFixture } from '../tools/canvas-fixture-test-helpers.ts';
+import { catalog } from './catalog-test-helpers.ts';
 import { externalCatalog, visibleExternalTools } from './external-catalog.ts';
 import { callExternalTool } from './external-route.ts';
 import { APPROVAL_TOOLS, TIER_TOOLS } from './external-tiers.ts';
 
-canvasFixture();
+let fx: CanvasFixture;
+let projectId: string;
+let folder: string;
+
+beforeEach(async () => {
+    fx = await canvasFixture();
+    projectId = fx.projectId;
+    folder = fx.folder;
+});
+
+afterEach(async () => {
+    await fx.dispose();
+});
 
 function grant(tier: ExternalTier, rest: Partial<ExternalGrant> = {}): ExternalGrant {
     return { tier, projects: null, ceiling: DEFAULT_EXTERNAL_CEILING, approvals: false, ...rest };
@@ -20,7 +34,7 @@ function caller(tier: ExternalTier = 'work', rest: Partial<ExternalGrant> = {}, 
 
 /* The fixture's host, with the projects of the machine the way `ReachHost` lists them. */
 function machine(): CanvasHost {
-    const base = host();
+    const base = fx.host();
 
     return {
         ...base,
@@ -47,7 +61,11 @@ function machine(): CanvasHost {
 
 async function call(who: ExternalCaller, name: string, input: Record<string, unknown>): Promise<{ refused: boolean; text: string }> {
     const through = machine();
-    const result = await callExternalTool(visibleExternalTools(who, through), who, name, input, { host: through });
+    const result = await callExternalTool(visibleExternalTools(who, through, catalog()), who, name, input, {
+        host: through,
+        actions: serverActions,
+        tools: catalog()
+    });
     const text = result.content.map((part) => (part.type === 'text' ? part.text : '')).join('\n');
 
     return { refused: result.isError === true, text };
@@ -64,7 +82,7 @@ describe('the tiers', () => {
     });
 
     test('lists only tools that exist, so a renamed tool cannot silently drop out of a tier', () => {
-        const names = new Set(externalCatalog().map((tool) => tool.name));
+        const names = new Set(externalCatalog(catalog()).map((tool) => tool.name));
 
         for (const name of TIER_TOOLS.machine) {
             expect(names.has(name), name).toBe(true);
@@ -97,7 +115,7 @@ describe('the tiers', () => {
     });
 
     test('shows a Read credential only the tools that look', () => {
-        const names = visibleExternalTools(caller('read'), machine()).map((tool) => tool.name);
+        const names = visibleExternalTools(caller('read'), machine(), catalog()).map((tool) => tool.name);
 
         expect(names).toContain('node_list');
         expect(names).not.toContain('node_new');
@@ -112,7 +130,7 @@ describe('the tiers', () => {
     });
 
     test('hides computer use while it is off and the approval tools while the box is off', () => {
-        const names = visibleExternalTools(caller('machine'), machine()).map((tool) => tool.name);
+        const names = visibleExternalTools(caller('machine'), machine(), catalog()).map((tool) => tool.name);
 
         expect(names).not.toContain('computer_state');
         expect(names).toContain('database_query');
@@ -120,7 +138,7 @@ describe('the tiers', () => {
     });
 
     test('asks for the project on every tool but the machine-wide four', () => {
-        for (const tool of visibleExternalTools(caller('machine'), machine())) {
+        for (const tool of visibleExternalTools(caller('machine'), machine(), catalog())) {
             const required = (tool.inputSchema as { required?: string[] }).required ?? [];
 
             expect(required.includes('project'), tool.name).toBe(!['guide', 'project_list', 'project_open', 'project_activate'].includes(tool.name));
@@ -218,14 +236,14 @@ describe('a client elsewhere writes', () => {
         const { refused } = await call(caller('work'), 'node_new', { project: projectId, view: 'main', kind: 'note', text: 'from outside' });
 
         expect(refused).toBe(false);
-        expect(JSON.stringify(await onDisk())).toContain('from outside');
+        expect(JSON.stringify(await fx.onDisk())).toContain('from outside');
     });
 
     test('writes in a note it did not make, by naming the canvas', async () => {
         const { refused } = await call(caller('work'), 'node_edit', { project: projectId, view: 'main', node_id: 'note-1', text: 'edited from outside' });
 
         expect(refused).toBe(false);
-        expect(JSON.stringify(await onDisk())).toContain('edited from outside');
+        expect(JSON.stringify(await fx.onDisk())).toContain('edited from outside');
     });
 
     test('signs a message with the name of its client, a bearer by its label and an OAuth client by its host', async () => {
@@ -233,7 +251,7 @@ describe('a client elsewhere writes', () => {
         const oauth = await call({ ...caller('work', {}, 'cred-2'), label: 'grok.com' }, 'notify', { project: projectId, id: 'chat-1', text: 'and the docs' });
 
         expect([bearer.refused, oauth.refused]).toEqual([false, false]);
-        expect(notified.map(({ from, fromTitle }) => [from, fromTitle])).toEqual([
+        expect(fx.notified.map(({ from, fromTitle }) => [from, fromTitle])).toEqual([
             ['external-cred-1', 'MCP · Hosted bot'],
             ['external-cred-2', 'MCP · grok.com']
         ]);
@@ -257,8 +275,8 @@ describe('agents a client elsewhere starts', () => {
         });
 
         expect(refused).toBe(false);
-        expect(started.at(-1)).toMatchObject({ openedBy: who.id, node: 'chat', runtimeMode: 'supervised' });
-        expect(lineage.depthOf(who.id)).toBe(0);
+        expect(fx.started.at(-1)).toMatchObject({ openedBy: who.id, node: 'chat', runtimeMode: 'supervised' });
+        expect(fx.lineage.depthOf(who.id)).toBe(0);
     });
 
     test('refuses a mode above the ceiling on the credential, and carries the ceiling on what it starts', async () => {
@@ -267,6 +285,6 @@ describe('agents a client elsewhere starts', () => {
         const within = await call(who, 'agent_start', { project: projectId, view: 'main', cli: 'claude', prompt: 'go' });
 
         expect(wider.text).toContain('refused mode-above-parent');
-        expect(lineage.ceilingOf(within.text.split('\t')[0]!)).toBe('supervised');
+        expect(fx.lineage.ceilingOf(within.text.split('\t')[0]!)).toBe('supervised');
     });
 });

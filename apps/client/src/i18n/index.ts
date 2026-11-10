@@ -6,8 +6,8 @@ import { initReactI18next } from 'react-i18next';
 import { forgetMemoizedWords } from '@/compiler-runtime';
 import { desktop } from '@/desktop/bridge';
 import { activeLanguage } from '@/i18n/active';
-import { APP_LANGUAGES, FALLBACK_LANGUAGE, type AppLanguage } from '@/i18n/languages';
 import { NAMESPACES } from '@/i18n/namespaces';
+import { APP_LANGUAGES, FALLBACK_LANGUAGE, type AppLanguage } from '@/state/languages';
 import { useSettings } from '@/state/settings';
 
 // Bundle namespaces together so the first render waits on one request per language.
@@ -17,8 +17,8 @@ const bundles = {
 };
 
 const editorBundles = {
-    en: () => import('@adecore/editor-react/locales/en.json'),
-    nl: () => import('@adecore/editor-react/locales/nl.json')
+    en: () => import('@adecore/editor-react/locales/en'),
+    nl: () => import('@adecore/editor-react/locales/nl')
 };
 
 const loaded = new Map<AppLanguage, Promise<void>>();
@@ -82,7 +82,6 @@ export async function initI18n(): Promise<void> {
     markDocument(language);
 }
 
-/* Reads the setting back and puts the interface in that language, loading its words first. */
 async function applyLanguage(): Promise<void> {
     const language = activeLanguage();
     if (i18next.language === language) {

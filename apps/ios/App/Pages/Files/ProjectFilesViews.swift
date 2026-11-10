@@ -78,7 +78,6 @@ struct FileLinesView: View {
         }
     }
 
-    /// One attributed string per line, cut at every newline.
     static func split(_ text: AttributedString) -> [AttributedString] {
         var lines: [AttributedString] = []
         var start = text.startIndex
@@ -95,7 +94,6 @@ struct FileLinesView: View {
     }
 }
 
-/// The gutter mark of one line: green for a new line, blue for a changed one, a red notch where lines went.
 struct FileChangeBar: View {
     let change: FileLineChange?
 
@@ -117,7 +115,6 @@ struct FileChangeBar: View {
     }
 }
 
-/// The chats a file can be mentioned in, the one opened last first.
 struct FileMentionMenu<Label: View>: View {
     let project: FilesProject
     let path: String
@@ -147,7 +144,6 @@ struct FileMentionMenu<Label: View>: View {
     }
 }
 
-/// The question before a file or folder goes to the machine's trash.
 struct FileDeleteConfirmation: ViewModifier {
     let client: any MachineRequesting
     @Binding var path: String?
@@ -164,7 +160,7 @@ struct FileDeleteConfirmation: ViewModifier {
                 Button("Move to Trash", role: .destructive) {
                     Task {
                         do {
-                            _ = try await client.request("fs.delete", payload: .object(["path": .string(pending)]))
+                            _ = try await client.request(.fsDelete, payload: .object(["path": .string(pending)]))
                             onDeleted()
                         } catch {
                             problem = error.localizedDescription

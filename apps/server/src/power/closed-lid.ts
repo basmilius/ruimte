@@ -1,5 +1,6 @@
 import { CodedError } from '@adecore/agents';
 import { CLOSED_LID_BATTERY_FLOOR } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { errorText } from '../error-text.ts';
 import { keepAwakeWanted, type KeepAwakeSetting } from './keep-awake.ts';
 
@@ -22,14 +23,12 @@ export interface ClosedLidSetting extends KeepAwakeSetting {
     lidClosed: boolean;
 }
 
-/* What the power source stream last said. */
 export interface PowerState {
     adapter: boolean;
     /* Charge of the internal battery in percent; null on a Mac without one. */
     percent: number | null;
 }
 
-/* Only a Mac turns sleep off this way. */
 function closedLidAvailable(platform: NodeJS.Platform): boolean {
     return platform === 'darwin';
 }
@@ -132,7 +131,6 @@ export function adminCommand(script: string, prompt: string): string[] {
     ];
 }
 
-/* The dialog's answer when the person pressed Cancel. */
 export function adminCancelled(stderr: string): boolean {
     return stderr.includes('(-128)');
 }
@@ -219,7 +217,6 @@ export interface ClosedLidSystem {
     startWatchdog(): Dismissable;
     /* Streams power readings; null once the stream ended without being stopped. */
     watchPower(listener: (power: PowerState | null) => void): Stoppable;
-    /* Runs a script as root after macOS's own administrator dialog. */
     runAsAdmin(script: string, prompt: string): Promise<AdminResult>;
     /* Says that this home turned sleep off, kept until it is on again, so a start after a crash or a power cut knows. */
     marker: {
@@ -276,7 +273,6 @@ export class ClosedLid {
         return this.rule && !this.refused;
     }
 
-    /* Whether sleep is off right now on this daemon's word. */
     get holding(): boolean {
         return this.held !== null;
     }
@@ -460,13 +456,13 @@ export class ClosedLid {
             watchdog = system.startWatchdog();
         } catch (e) {
             log(`Keeping this Mac awake with its lid closed failed, since its watchdog did not start: ${errorText(e)}`);
-            await system.marker.remove().catch(() => undefined);
+            await bestEffort('system.marker.remove', system.marker.remove());
             this.target = false;
             return;
         }
         if (!(await system.setSleepDisabled(true))) {
             watchdog.dismiss();
-            await system.marker.remove().catch(() => undefined);
+            await bestEffort('system.marker.remove', system.marker.remove());
             this.target = false;
             this.refused = true;
             log(`sudo did not let this user turn sleep off; the rule in ${closedLidRulePath(this.options.uid)} needs installing again`);

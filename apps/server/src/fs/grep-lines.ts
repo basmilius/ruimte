@@ -6,7 +6,6 @@ export const MAX_FILE_BYTES = 2 * 1024 * 1024;
 // A hit on a line this long is one nothing can show; the line is a minified bundle, not source.
 export const MAX_LINE_LENGTH = 500;
 
-/* What the search without ripgrep hands its worker. */
 export interface GrepWorkerRequest {
     root: SearchRoot;
     paths: string[];

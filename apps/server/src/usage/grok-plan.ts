@@ -22,7 +22,6 @@ function timeOf(value: unknown): number | null {
     return Number.isFinite(time) ? time : null;
 }
 
-/* The billing answer as the one window of the subscription. */
 export function readGrokBilling(response: unknown): ProbeResult {
     const config = isRecord(response) && isRecord(response.config) ? response.config : null;
     if (config === null) {

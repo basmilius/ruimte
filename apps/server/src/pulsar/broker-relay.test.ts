@@ -9,7 +9,6 @@ import { OFFER, signedSignal } from './test-helpers.ts';
 const BROKER_URL = 'ws://broker.test:4400';
 const NONCE = 'n'.repeat(32);
 
-/* The broker end of the daemon's socket, driven by hand. */
 class FakeSocket {
     readonly sent: BrokerPeerFrame[] = [];
     closed = false;
@@ -64,7 +63,6 @@ let clock = 0;
 
 type Machine = ReturnType<typeof generateKeyPair>;
 
-/* Dials the broker through a fake socket and goes through the handshake up to ready. */
 async function connect(machine: Machine, gate: SignalGate, extra: Partial<ConstructorParameters<typeof BrokerRelay>[0]> = {}) {
     const sockets: FakeSocket[] = [];
     const relay = new BrokerRelay({

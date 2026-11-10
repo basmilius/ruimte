@@ -1,5 +1,6 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers } from '@ruimte/actions';
+import { imageType } from '../agent-files/visual-images.ts';
 import {
     AGENT_IMAGE_BYTES,
     AGENT_IMAGE_TYPES,
@@ -8,7 +9,6 @@ import {
     agentAttachmentBytes,
     agentAttachmentType
 } from '../chat/attachment-type.ts';
-import { imageType } from '../mcp/visual-images.ts';
 import { hostService, requireChatCaller, type ServerActionContext } from './context.ts';
 
 const MIB = 1024 * 1024;

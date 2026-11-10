@@ -49,14 +49,14 @@ enum ChatShellPrepare {
 
     /// The terminals of this project on this machine, by session id: a terminal view, or a terminal node of a canvas
     /// that no other machine runs.
-    static func terminals(_ views: [JSONValue]) -> Set<String> {
+    static func terminals(_ views: [StoredView]) -> Set<String> {
         var ids = Set<String>()
         for view in views {
-            if view.text("kind") == "terminal" {
-                ids.insert(view.stableID)
+            if case .terminal = view {
+                ids.insert(view.id)
             }
-            for node in view.list("nodes") where node.text("kind") == "terminal" && node["machine"] == nil {
-                ids.insert(node.stableID)
+            for node in view.nodes where node.kind == .terminal && node.machine == nil {
+                ids.insert(node.id)
             }
         }
         return ids
@@ -99,7 +99,6 @@ struct ChatPreparePreview: Identifiable, Equatable {
     private(set) var busy = false
     var preview: ChatPreparePreview?
     var failure: String?
-    /// The terminal the command went to, once it is there.
     var prepared: String?
     @ObservationIgnored private var attachments: [MachineAttachment] = []
 
@@ -116,7 +115,7 @@ struct ChatPreparePreview: Identifiable, Equatable {
         defer { busy = false }
         do {
             let machineID = try await machineID()
-            await attach(ChatShellPrepare.terminals(workspace.views))
+            await attach(ChatShellPrepare.terminals(workspace.storedViews))
             let answer = try await context.client.request(
                 .sessionPreparePreview,
                 payload: .object([
@@ -143,14 +142,10 @@ struct ChatPreparePreview: Identifiable, Equatable {
             prepared = target.title
             close()
             return true
-        } catch MachineClientError.server(let code, let message)
-            where ["terminal-prepare-refused", "terminal-editor-refused", "terminal-prepare-unconfirmed"].contains(code)
-        {
-            failure = Self.failure(code: code, message: message)
-            return false
         } catch {
             // Once sent, a broken reply cannot tell whether the editor took the line.
-            failure = Self.failure(code: "terminal-prepare-unconfirmed", message: error.localizedDescription)
+            let code = error.machineCode.flatMap { Self.refusals.contains($0) ? $0 : nil } ?? .terminalPrepareUnconfirmed
+            failure = Self.failure(code: code, message: error.localizedDescription)
             return false
         }
     }
@@ -160,13 +155,17 @@ struct ChatPreparePreview: Identifiable, Equatable {
         release()
     }
 
-    static func failure(code: String, message: String) -> String {
+    private static let refusals: Set<MachineErrorCode> = [
+        .terminalPrepareRefused, .terminalEditorRefused, .terminalPrepareUnconfirmed,
+    ]
+
+    static func failure(code: MachineErrorCode, message: String) -> String {
         switch code {
-        case "terminal-prepare-unconfirmed":
+        case .terminalPrepareUnconfirmed:
             String(
                 localized:
                     "Not confirmed. The command may already be in the terminal, so check its input first.")
-        case "terminal-editor-refused":
+        case .terminalEditorRefused:
             String(localized: "The terminal did not accept the command. Open the preview again.")
         default: message
         }
@@ -174,24 +173,24 @@ struct ChatPreparePreview: Identifiable, Equatable {
 
     private func machineID() async throws -> String {
         let info = try await context.client.request(.endpointInfo)
-        guard let id = info["id"]?.stringValue, !id.isEmpty else { throw Self.wrongMachine }
+        guard let id = try? info.decoded(as: EndpointInfo.self).id, !id.isEmpty else { throw Self.wrongMachine }
         return id
     }
 
     private static var wrongMachine: MachineClientError {
-        .server(code: "wrong-machine", message: String(localized: "This chat's machine is not connected."))
+        .server(
+            code: MachineErrorCode.wrongMachine.rawValue,
+            message: String(localized: "This chat's machine is not connected."))
     }
 
     private func attach(_ terminals: Set<String>) async {
         guard
-            let list = try? await context.client.request(.sessionList)
+            let list = try? await context.client.request(.sessionList).decoded(as: SessionListResult.self)
         else { return }
-        for info in list.list("sessions") {
-            let id = info.text("sessionId")
-            guard terminals.contains(id), info["exited"]?.boolValue != true, info["agent"]?.objectValue == nil,
-                info["heldCommand"]?.objectValue == nil
-            else { continue }
-            let attachment = context.client.acquireAttachment("session", id: id)
+        for info in list.sessions {
+            let id = info.sessionId
+            guard terminals.contains(id), !info.exited, info.agent.present == nil else { continue }
+            let attachment = context.client.acquireAttachment(.session, id: id)
             if (try? await TerminalSnapshot.load(attachment: attachment, sessionID: id) { _ in }) != nil {
                 attachments.append(attachment)
             } else {

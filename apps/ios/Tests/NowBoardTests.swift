@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import XCTest
 
 @testable import Ruimte
@@ -6,20 +7,18 @@ import XCTest
 final class NowBoardTests: XCTestCase {
     private func project(
         _ id: String, name: String, opened: Double, scratch: Bool = false, views: [JSONValue]?
-    ) -> JSONValue {
-        var summary: [String: JSONValue] = [
-            "projectId": .string(id), "name": .string(name), "lastOpenedAt": .number(opened),
-        ]
-        if scratch { summary["scratch"] = .bool(true) }
-        return .object(["summary": .object(summary), "views": views.map(JSONValue.array) ?? .null])
+    ) -> ProjectSidebarEntry {
+        ProjectRowWire.sidebarEntry(
+            ProjectRowWire.summary(id, name: name, opened: opened, scratch: scratch), views: views
+        ).sidebarEntry
     }
 
     private func view(_ id: String, kind: String, name: String = "", nodes: [JSONValue] = []) -> JSONValue {
-        .object(["id": .string(id), "kind": .string(kind), "name": .string(name), "nodes": .array(nodes)])
+        ProjectRowWire.sidebarView(id, kind: kind, name: name, nodes: nodes)
     }
 
     private func node(_ id: String, kind: String, title: String) -> JSONValue {
-        .object(["id": .string(id), "kind": .string(kind), "title": .string(title)])
+        ProjectRowWire.sidebarNode(id, kind: kind, title: title)
     }
 
     func testSectionsFollowStatusAndUnseen() {
@@ -137,11 +136,11 @@ final class NowBoardTests: XCTestCase {
         ]
         let chat = NowBoard.preview(
             ProjectViewTarget(machineID: "mac", projectID: "a", viewID: "chat", itemID: "chat"), in: projects)
-        XCTAssertEqual(chat?.item.text("name"), "Plan")
+        XCTAssertEqual(chat?.item.name, "Plan")
         XCTAssertEqual(chat?.projectName, "A")
         let term = NowBoard.preview(
             ProjectViewTarget(machineID: "mac", projectID: "b", viewID: "canvas", itemID: "term"), in: projects)
-        XCTAssertEqual(term?.item.text("kind"), "terminal")
+        XCTAssertEqual(term?.item.kind, "terminal")
         XCTAssertEqual(term?.projectName, "B")
         XCTAssertNil(
             NowBoard.preview(
@@ -241,7 +240,7 @@ final class NowBoardTests: XCTestCase {
                     "requestId": .string("r"), "itemId": .string("i"), "kind": .string("approval"),
                     "createdAt": .number(1),
                     "approval": .object([
-                        "toolName": .string("Edit"), "subject": .string("src/transport/pool.ts"),
+                        "toolName": .string("Edit"), "subject": .string("src/transport/pool.ts"), "description": .null,
                         "path": .string("src/transport/pool.ts"), "canAllowAlways": .bool(false),
                     ]),
                 ])))
@@ -309,10 +308,14 @@ final class NowBoardTests: XCTestCase {
             try XCTUnwrap(
                 NowRequest(
                     .object([
-                        "requestId": .string(id), "kind": .string("question"), "createdAt": .number(createdAt),
+                        "requestId": .string(id), "itemId": .string("i"), "kind": .string("question"),
+                        "createdAt": .number(createdAt),
                         "question": .object([
                             "questions": .array([
-                                .object(["id": .string("q"), "question": .string("Which?"), "choices": .array([])])
+                                .object([
+                                    "id": .string("q"), "header": .string(""), "question": .string("Which?"),
+                                    "choices": .array([]), "multiSelect": .bool(false),
+                                ])
                             ])
                         ]),
                     ])))
@@ -351,11 +354,7 @@ final class NowBoardTests: XCTestCase {
             let next = start.addingTimeInterval(hours * 3_600).timeIntervalSince1970 * 1000
             return ScheduledItem(
                 machineID: "mac", machineName: "MacBook Pro",
-                entry: RoutineEntry(
-                    json: .object([
-                        "routine": .object(["id": .string(id), "title": .string(id)]), "projectId": .string("p"),
-                        "approved": .bool(true), "next": .number(next),
-                    ])))
+                entry: RoutineWire.entry(id, project: "p", next: next).routineEntry)
         }
         var scheduled = ScheduledBoard()
         scheduled.today = [routine("render", in: 1), routine("changelog", in: 3)]
@@ -364,5 +363,12 @@ final class NowBoardTests: XCTestCase {
         let items = NowComingUp.build(snoozed: board.snoozed, scheduled: scheduled, routines: 2)
         XCTAssertEqual(items.map(\.id), ["routine:mac:p:render", "snoozed:mac:app:a", "routine:mac:p:changelog"])
         XCTAssertEqual(items.map(\.at), [1, 2, 3].map { start.addingTimeInterval($0 * 3_600) })
+    }
+
+    func testTheCardGridHasOneColumnPerCountWithAGapOnlyBetweenThem() {
+        XCTAssertEqual(NowSections.grid(columns: 1).map(\.spacing), [nil])
+        XCTAssertEqual(NowSections.grid(columns: 2).map(\.spacing), [MobileSpacing.medium, nil])
+        XCTAssertEqual(NowSections.grid(columns: 3).map(\.spacing), [MobileSpacing.medium, MobileSpacing.medium, nil])
+        XCTAssertEqual(NowSections.grid(columns: 0).count, 1, "A count under one is the phone's single column")
     }
 }

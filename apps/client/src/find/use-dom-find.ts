@@ -14,7 +14,6 @@ interface DomFind {
     currentMark: number | null;
 }
 
-/* Centers a match that stands outside the scroller, and leaves one that is in view where it is. */
 function bringIntoView(scroller: HTMLElement, range: Range): void {
     const box = scroller.getBoundingClientRect();
     const rect = range.getBoundingClientRect();

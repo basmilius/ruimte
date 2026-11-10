@@ -27,13 +27,9 @@ import XCTest
     private func saved(
         _ id: String, at: Double, turn: String? = nil, chat: String = "chat", number: Int = 1, latest: Bool = true
     ) -> ChatSavedVersion {
-        var provenance: [String: JSONValue] = ["maker": .string("agent"), "chatId": .string(chat)]
-        if let turn { provenance["turnId"] = .string(turn) }
-        let version = OutputVersion(
-            json: .object([
-                "versionId": .string(id), "number": .number(Double(number)), "createdAt": .number(at),
-                "files": .array([]), "bytes": .number(0), "provenance": .object(provenance),
-            ]))
+        let version = OutputWire.version(
+            id, number: number, at: at, files: [], provenance: OutputWire.provenance(chat: chat, turn: turn)
+        ).outputVersion
         return ChatSavedVersion(artifactID: "art-\(id)", title: id, kind: "report", version: version, latest: latest)
     }
 
@@ -147,11 +143,7 @@ import XCTest
 
     func testAChatShowsOnlyWhatItSavedItselfEveryVersionOfAnItemReadWhole() {
         let items = [
-            OutputItem(
-                json: .object([
-                    "artifactId": .string("many"), "title": .string("Cut"), "kind": .string("recording"),
-                    "versionCount": .number(2), "latest": .object([:]),
-                ]))
+            OutputWire.summary("many", title: "Cut", kind: "recording", versionCount: 2).outputItem
         ]
         let versions = [
             "many": [
@@ -165,16 +157,10 @@ import XCTest
     }
 
     private func version(_ maker: String, _ files: [(name: String, mime: String, size: Double)]) -> OutputVersion {
-        OutputVersion(
-            json: .object([
-                "versionId": .string("v1"), "number": .number(1), "createdAt": .number(1),
-                "files": .array(
-                    files.map {
-                        .object(["name": .string($0.name), "mime": .string($0.mime), "size": .number($0.size)])
-                    }),
-                "bytes": .number(10),
-                "provenance": .object(["maker": .string(maker), "machineId": .string("mac"), "chatId": .string("chat")]),
-            ]))
+        OutputWire.version(
+            "v1", at: 1, files: files.map { OutputWire.file($0.name, mime: $0.mime, size: $0.size) },
+            provenance: OutputWire.provenance(maker: maker, chat: "chat")
+        ).outputVersion
     }
 
     func testAPageADocumentTextAnImageAndAPdfAnAgentOrARoutinePublishedDrawInline() {

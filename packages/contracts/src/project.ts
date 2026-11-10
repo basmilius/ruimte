@@ -1,12 +1,13 @@
+import { RuntimeModeSchema } from '@adecore/agent-contracts/model';
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
+import { ProviderAccountIdSchema } from '@adecore/agent-contracts/provider-accounts';
 import { DrawingFontSchema, DrawingStrokeStyleSchema, DrawingStrokeWidthSchema } from '@adecore/drawing/protocol';
 import { isRecord } from '@adecore/utils/record';
 import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
 import { DeviceReferenceSchema } from './device.ts';
 import { GitDiffScopeSchema } from './git.ts';
-import { RuntimeModeSchema } from './model.ts';
 import { NODE_ACCENT_NAMES } from './node-accents.ts';
-import { ProviderAccountIdSchema } from './provider-accounts.ts';
 
 export const ProjectIdSchema = z.string().min(1);
 
@@ -650,15 +651,6 @@ export type ProjectChatView = z.infer<typeof ProjectChatViewSchema>;
 export const DesignChatSchema = keepingUnknown(z.object({ id: z.string().min(1), name: z.string().min(1), node: StandaloneNodeSchema }));
 export type DesignChat = z.infer<typeof DesignChatSchema>;
 
-/*
- * The folder of a design, relative to the project folder: its name under `.ruimte/private/designs/`
- * while the design is one person's, and under `.ruimte/designs/` once it is shared, so it goes into git
- * with its view. A path with a slash is a folder of the project a design named itself and stays put.
- */
-export function designFolderOf(view: { path: string }, shared: boolean): string {
-    return view.path.includes('/') ? view.path : `.ruimte/${shared ? '' : 'private/'}designs/${view.path}`;
-}
-
 // A control character or a backtick would break out of the code span the path stands in, in the chat's prompt.
 function hasUnsafeCharacter(path: string): boolean {
     return [...path].some((character) => {
@@ -687,11 +679,13 @@ export function isDesignPath(path: string): boolean {
     return path.split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..');
 }
 
+export const ProjectDesignPathSchema = z.string().min(1).refine(isDesignPath, 'must name a folder of its own');
+
 // The first chat is `node` under the view's own id; `chats` are the ones started after it, oldest first, read through `viewChats`. `path` is the folder's name.
 export const ProjectDesignViewSchema = ViewBaseSchema.extend({
     kind: z.literal('design'),
     node: StandaloneNodeSchema,
-    path: z.string().min(1).refine(isDesignPath, 'must name a folder of its own'),
+    path: ProjectDesignPathSchema,
     // Raw like a design node's, so one entry this version cannot read never makes the whole file unreadable.
     chats: z.array(RawEntrySchema).optional()
 });
@@ -1373,7 +1367,7 @@ export const SplitColumnSchema = z.object({
 });
 export type SplitColumn = z.infer<typeof SplitColumnSchema>;
 
-// The limits live in the client's `shell/split.ts`, so a file edited past them is trimmed rather than refused.
+// The limits live in the client's `layout/split.ts`, so a file edited past them is trimmed rather than refused.
 export const SplitLayoutSchema = z.object({
     columns: z.array(SplitColumnSchema).min(1),
     // The sidebar reads the view in this cell as the active row.
@@ -1639,3 +1633,40 @@ export type ProjectSetAccountsPayload = z.infer<typeof ProjectSetAccountsPayload
 export const ProjectSetAccountsResultSchema = z.object({
     accounts: ProjectAccountsSchema
 });
+
+/* A project the machine knows whose files changed from outside, which no client holding it would have heard. */
+export const ProjectListChangedEventSchema = z.object({ projectId: z.string().min(1) });
+export type ProjectListChangedEvent = z.infer<typeof ProjectListChangedEventSchema>;
+
+export const PROJECT_REQUEST_SCHEMAS = {
+    'project.list': { payload: EmptySchema, result: ProjectListResultSchema },
+    // `project.listChanged` for every project of the machine, not only the ones this client holds, until `project.unwatch` or the channel closes.
+    'project.watch': { payload: EmptySchema, result: EmptySchema },
+    'project.unwatch': { payload: EmptySchema, result: EmptySchema },
+    'project.referables': { payload: EmptySchema, result: ProjectReferablesResultSchema },
+    'project.open': { payload: ProjectOpenPayloadSchema, result: ProjectOpenResultSchema },
+    'project.save': { payload: ProjectSavePayloadSchema, result: ProjectSaveResultSchema },
+    'project.save-local': { payload: ProjectSaveLocalPayloadSchema, result: EmptySchema },
+    'project.close': { payload: ProjectTargetPayloadSchema, result: ProjectCloseResultSchema },
+    'project.closing': { payload: ProjectTargetPayloadSchema, result: ProjectClosingResultSchema },
+    'project.release': { payload: ProjectTargetPayloadSchema, result: EmptySchema },
+    'project.setIcon': { payload: ProjectSetIconPayloadSchema, result: ProjectSummaryResultSchema },
+    'project.setIdentity': { payload: ProjectSetIdentityPayloadSchema, result: ProjectSummaryResultSchema },
+    // One person's accounts for a project's new starts, in its private file. Only a person on this machine sets them, never a verb.
+    'project.setAccounts': { payload: ProjectSetAccountsPayloadSchema, result: ProjectSetAccountsResultSchema },
+    'project.delete': { payload: ProjectDeletePayloadSchema, result: EmptySchema },
+    'project.newChat': { payload: ProjectNewChatPayloadSchema, result: ProjectNewChatResultSchema },
+    'project.newInlineChat': { payload: ProjectNewInlineChatPayloadSchema, result: ProjectNewInlineChatResultSchema },
+    'project.showInlineChat': { payload: ProjectInlineChatTargetPayloadSchema, result: EmptySchema },
+    'project.removeInlineChat': { payload: ProjectInlineChatTargetPayloadSchema, result: EmptySchema }
+} as const;
+
+export const PROJECT_EVENT_SCHEMAS = {
+    'project.changed': ProjectChangedEventSchema,
+    // Only to the clients that asked with `project.watch`.
+    'project.listChanged': ProjectListChangedEventSchema,
+    'project.showView': ProjectShowViewEventSchema,
+    'project.activate': ProjectAgentAskEventSchema,
+    'project.askClose': ProjectAgentAskEventSchema,
+    'project.askOpen': ProjectAgentFolderEventSchema
+} as const;

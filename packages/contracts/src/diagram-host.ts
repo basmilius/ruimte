@@ -1,6 +1,8 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { DiagramContentSchema, DiagramDocumentSchema } from '@adecore/diagram/protocol';
 import { z } from 'zod';
 import { ProjectIdSchema, ProjectSaveResultSchema } from './project.ts';
+import { RenderSceneResultSchema } from './render.ts';
 
 export {
     DiagramShapeSchema,
@@ -61,3 +63,15 @@ export const DiagramChangedEventSchema = z.object({
     viewId: z.string().min(1),
     document: DiagramDocumentSchema
 });
+
+export const DIAGRAM_HOST_REQUEST_SCHEMAS = {
+    'diagram.layout': { payload: DiagramTargetPayloadSchema, result: RenderSceneResultSchema },
+    'diagram.open': { payload: DiagramTargetPayloadSchema, result: DiagramOpenResultSchema },
+    'diagram.save': { payload: DiagramSavePayloadSchema, result: DiagramSaveResultSchema },
+    'diagram.close': { payload: DiagramTargetPayloadSchema, result: EmptySchema },
+    'diagram.copy': { payload: DiagramCopyPayloadSchema, result: EmptySchema }
+} as const;
+
+export const DIAGRAM_HOST_EVENT_SCHEMAS = {
+    'diagram.changed': DiagramChangedEventSchema
+} as const;

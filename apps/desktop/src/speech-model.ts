@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { createReadStream, existsSync } from 'node:fs';
-import { mkdir, open, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, open, readFile, rename, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
+import { writeAtomic } from '@adecore/utils/fs';
 import type { SpeechState } from '@ruimte/desktop-bridge';
 
 const SPEECH_REVISION = 'a61d2818df4659c956b9661a9447f46e98c15126';
@@ -86,8 +87,7 @@ export class SpeechModel {
 
     async #save(enabled: boolean): Promise<void> {
         await mkdir(this.directory, { recursive: true });
-        await writeFile(`${this.#settings}.tmp`, JSON.stringify({ enabled }));
-        await rename(`${this.#settings}.tmp`, this.#settings);
+        await writeAtomic(this.#settings, JSON.stringify({ enabled }));
     }
 
     /* The size and time of every model file, for the next start to trust them by. */
@@ -99,8 +99,7 @@ export class SpeechModel {
             })
         );
         const path = join(this.directory, CHECKED);
-        await writeFile(`${path}.tmp`, JSON.stringify({ revision: SPEECH_REVISION, files }));
-        await rename(`${path}.tmp`, path);
+        await writeAtomic(path, JSON.stringify({ revision: SPEECH_REVISION, files }));
     }
 
     async #checked(): Promise<CheckedFile[]> {

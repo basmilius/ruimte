@@ -1,4 +1,3 @@
-/* Whether a process with this id still runs. */
 export function processAlive(pid: number): boolean {
     try {
         process.kill(pid, 0);

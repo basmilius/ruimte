@@ -1,10 +1,13 @@
-import type { ActionHandlers } from '@ruimte/actions';
+import type { ActionHandlers, ActionName } from '@ruimte/actions';
 import type { TemplateDraft } from '../templates/template-store.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 function templatesOf(context: ServerActionContext) {
     return hostService(context, 'templates', 'no-templates', 'This machine keeps no editor templates');
 }
+
+/* The actions of this file that honor a dry run. */
+export const templatePreviews: readonly ActionName[] = ['template.add'];
 
 // A refusal of the store is a coded error, which the registry already hands on under its own code.
 export const templateActions: ActionHandlers<ServerActionContext> = {

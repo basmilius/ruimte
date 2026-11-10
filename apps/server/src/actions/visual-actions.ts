@@ -2,7 +2,8 @@ import { CodedError } from '@adecore/agents';
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers } from '@ruimte/actions';
 import { VISUAL_LIMITS, type ChatVisual, type VisualLayout } from '@ruimte/contracts';
-import { field, orNote, type VisualHost } from '../tools/host.ts';
+import { field, orNote } from '../canvas/host.ts';
+import type { VisualHost } from '../visuals/agent-host.ts';
 import { PREVIEW_WIDTH } from '../visuals/renderer.ts';
 import { hostService, requireChatCaller, type ServerActionContext } from './context.ts';
 
@@ -54,7 +55,6 @@ async function visualChat(context: ServerActionContext, caller: string): Promise
     return { visuals, chatId };
 }
 
-/* Passes on what the store refuses a page with, for the agent to change. */
 async function storeRefusalsAsTool<Result>(work: () => Promise<Result>): Promise<Result> {
     try {
         return await work();

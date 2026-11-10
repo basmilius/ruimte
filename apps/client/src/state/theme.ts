@@ -8,7 +8,7 @@ export const THEME_STORAGE_KEY = 'ruimte.theme';
 const storedThemeKey = storedText(THEME_STORAGE_KEY);
 
 function systemTheme(): 'light' | 'dark' {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return globalThis.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 function resolvedOf(theme: Theme): 'light' | 'dark' {
@@ -20,6 +20,10 @@ function storedTheme(): Theme {
 }
 
 function apply(theme: Theme): void {
+    // The store also exists where there is no page, such as the unit run that wires the commands.
+    if (typeof document === 'undefined') {
+        return;
+    }
     document.documentElement.dataset.theme = resolvedOf(theme);
 }
 
@@ -35,7 +39,7 @@ interface ThemeState {
 export const useTheme = create<ThemeState>((set, get) => {
     const initial = storedTheme();
     apply(initial);
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    globalThis.matchMedia?.('(prefers-color-scheme: dark)').addEventListener('change', () => {
         if (get().theme === 'system') {
             apply('system');
             set({ resolved: systemTheme() });

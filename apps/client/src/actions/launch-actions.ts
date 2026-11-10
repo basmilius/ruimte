@@ -1,6 +1,6 @@
 import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
 import { refusing, type Requester } from '@/actions/refusal';
-import { windowWorkspace } from '@/state/window';
+import { windowWorkspace } from '@/workspace/window';
 
 /* What the launch actions reach outside the document; a test hands in a fake. */
 export interface LaunchReach {

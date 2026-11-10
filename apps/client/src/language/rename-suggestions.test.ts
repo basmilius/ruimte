@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
+import { keyOf as eventOf, settle } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
-import { keyOf } from '@/shell/shortcut-overrides';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
+import { keyOf } from '@/surface/shortcut-overrides';
+import { installWorkspaceRegistries } from '@/wiring/workspace-registries';
 import { FakeLanguageTransport, readOnlyFiles } from './fake-daemon';
-import { eventOf } from './key-events';
-import { EditorLanguage } from './ruimte-editor-language';
-import { ProjectLanguage } from './ruimte-project-language';
-import { settleLanguage as settle } from './settle.test';
+import { createEditorLanguage } from './ruimte-editor-language';
+import { RuimteProject } from './ruimte-project';
+
+// An editor is drawn only in a workspace, whose chunk installs this before it draws one (`App.tsx`).
+installWorkspaceRegistries();
 
 const uri = 'file:///work/app/src/a.ts';
 const otherUri = 'file:///work/app/src/b.ts';
@@ -38,9 +41,9 @@ async function setup(options: { available?: boolean; fail?: boolean } = {}) {
         };
         return { result: results[payload.method] ?? null, server: 'typescript', version: 1 };
     });
-    const project = new ProjectLanguage(transport, 'p1', '/work/app', readOnlyFiles({ '/work/app/src/b.ts': 'log(hits);' }));
+    const project = new RuimteProject(transport, 'p1', '/work/app', readOnlyFiles({ '/work/app/src/b.ts': 'log(hits);' }));
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: TEXT, theme: 'light' });
-    const language = new EditorLanguage(project, editor, uri, 'typescript');
+    const language = createEditorLanguage(project, editor, uri, 'typescript');
     await language.document.ready;
     editor.moveCaret(at(0, 7));
     editor.press(eventOf(keyOf('renameSymbol')!));
@@ -72,8 +75,8 @@ describe('rename suggestions', () => {
         const { model, language, transport } = await setup();
         model.answer('1. matchedSkills\n2. matches\n3. not a name\n4. class\n5. foundSkills\n6. hits');
         await settle();
-        expect(language.popups.getState().rename!.suggestions).toEqual(['matchedSkills', 'matches', 'foundSkills']);
-        expect(language.popups.getState().rename!.name).toBe('hits');
+        expect(language.popups.slot('rename').get()!.suggestions).toEqual(['matchedSkills', 'matches', 'foundSkills']);
+        expect(language.popups.slot('rename').get()!.name).toBe('hits');
         expect(renameSent(transport)).toBe(false);
     });
 
@@ -81,7 +84,7 @@ describe('rename suggestions', () => {
         useSettings.setState({ aiCodeHelp: false });
         const off = await setup();
         expect(off.model.requests).toEqual([]);
-        expect(off.language.popups.getState().rename!.suggestions).toEqual([]);
+        expect(off.language.popups.slot('rename').get()!.suggestions).toEqual([]);
 
         useSettings.setState({ aiCodeHelp: true });
         const missing = await setup({ available: false });
@@ -98,10 +101,10 @@ describe('rename suggestions', () => {
         language.rename.cancel();
         await settle();
         expect(model.cancels).toEqual([model.last.id]);
-        expect(language.popups.getState().rename).toBeNull();
+        expect(language.popups.slot('rename').get()).toBeNull();
         model.answer('matchedSkills');
         await settle();
-        expect(language.popups.getState().rename).toBeNull();
+        expect(language.popups.slot('rename').get()).toBeNull();
         expect(editor.getText()).toBe(TEXT);
         expect(renameSent(transport)).toBe(false);
     });
@@ -110,11 +113,11 @@ describe('rename suggestions', () => {
         const { model, language, editor } = await setup();
         model.answer('!!!');
         await settle();
-        expect(language.popups.getState().rename).toMatchObject({ suggestions: [], phase: 'input', name: 'hits' });
+        expect(language.popups.slot('rename').get()).toMatchObject({ suggestions: [], phase: 'input', name: 'hits' });
         expect(editor.getText()).toBe(TEXT);
         const failed = await setup({ fail: true });
         expect(failed.transport.callsOf('editor.generate')).toHaveLength(1);
-        expect(failed.language.popups.getState().rename).toMatchObject({ suggestions: [], phase: 'input', name: 'hits' });
+        expect(failed.language.popups.slot('rename').get()).toMatchObject({ suggestions: [], phase: 'input', name: 'hits' });
         expect(failed.editor.getText()).toBe(TEXT);
         expect(renameSent(failed.transport)).toBe(false);
     });

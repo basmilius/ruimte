@@ -1,6 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
-/* Runs a callback after a delay and hands back what cancels it. */
 export type Schedule = (callback: () => void, ms: number) => () => void;
 
 function browserSchedule(callback: () => void, ms: number): () => void {
@@ -33,12 +32,10 @@ export class Hold<T> {
         this.schedule = schedule;
     }
 
-    /** What to draw: the live value, or the last one while it is held. */
     get(): T | null {
         return this.shown;
     }
 
-    /** Takes the live value; `null` means it is absent. */
     set(value: T | null): void {
         if (value !== null) {
             this.stopTimer();
@@ -61,12 +58,10 @@ export class Hold<T> {
         };
     }
 
-    /** Drops a pending release; a later `set` starts over. */
     dispose(): void {
         this.stopTimer();
     }
 
-    /** Stores the value to draw and tells listeners only when it draws differently. */
     private show(value: T | null): void {
         const same = value === null || this.shown === null ? value === this.shown : this.equals(value, this.shown);
         this.shown = value;
@@ -81,7 +76,6 @@ export class Hold<T> {
     }
 }
 
-/* `value`, or the last value that was not `null` until it has been `null` for `holdMs`. */
 export function useHeld<T>(value: T | null, equals: (left: T, right: T) => boolean, holdMs: number): T | null {
     const [hold] = useState(() => new Hold<T>(holdMs, equals, browserSchedule));
     const held = useSyncExternalStore(

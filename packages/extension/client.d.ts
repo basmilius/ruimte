@@ -236,10 +236,14 @@ export interface SlotContexts {
     /** `nodes` is the selection if the node is in it. */
     nodeMenu: { node: NodeInfo; nodes: NodeInfo[] };
     canvasMenu: { at: { x: number; y: number } };
+    lineMenu: { from: NodeInfo; to: NodeInfo };
     viewToolbar: {};
     viewMenu: { target: { id: string; kind: string } };
     panelHeader: { panel: string };
     commandPalette: { nodes: NodeInfo[] };
+    projectMenu: {};
+    sidebarFooter: {};
+    editorStatusBar: { file: FileInfo };
     sidebarRow: { node: NodeInfo };
     tabMenu: { target: { id: string } };
     emptyCanvas: {};
@@ -256,11 +260,7 @@ export interface SlotContexts {
     noteToolbar: { node: NodeInfo };
     routineMenu: { routine: { id: string } };
     composer: { chat: { id: string }; node: NodeInfo };
-    projectMenu: {};
-    sidebarFooter: {};
-    editorStatusBar: { file: FileInfo };
     messageActions: { chat: { id: string }; message: { id: string; kind: 'user' | 'assistant'; text: string } };
-    lineMenu: { from: NodeInfo; to: NodeInfo };
     fileMenu: { file: FileInfo; files: FileInfo[] };
     editorToolbar: { file: FileInfo };
     editorMenu: { file: FileInfo; files: FileInfo[] };

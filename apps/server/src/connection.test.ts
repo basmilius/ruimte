@@ -1,11 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import { decodeLiveFrame, type EventMap, type LiveFrame, type ServerFrame } from '@ruimte/contracts';
+import type { Area } from './area.ts';
 import { HIGH_WATER_MARK } from './backpressure.ts';
 import type { LiveSink } from './client-sinks.ts';
 import { ConnectedClients } from './clients/connected-clients.ts';
-import { connectionOpener, type ClientChannel, type ConnectionServices } from './connection.ts';
+import { connectionOpener } from './connection.ts';
 import { Dispatcher } from './dispatcher.ts';
-import type { SessionEvent, SessionSink } from './sessions/manager.ts';
+import { clientArea } from './handlers/client.ts';
+import { sendEvent, type SessionEvent, type SessionSink, type ClientChannel } from './wire.ts';
 
 class FakeChannel implements ClientChannel {
     readonly frames: ServerFrame[] = [];
@@ -84,22 +86,27 @@ class FakeSource {
 
 const NAMES = ['sessions', 'chats', 'identity', 'projects', 'drawings', 'diagrams', 'folders', 'statuses', 'usage', 'limits', 'processes'] as const;
 
-function setup(screens: Record<string, string> = {}, extra: Partial<ConnectionServices> = {}) {
+const HELD: readonly string[] = ['sessions', 'chats', 'folders', 'statuses'];
+
+function setup(screens: Record<string, string> = {}, extra: Area[] = []) {
     const order: string[] = [];
     const sources = Object.fromEntries(NAMES.map((name) => [name, new FakeSource(name, order)])) as Record<(typeof NAMES)[number], FakeSource>;
     const dispatcher = new Dispatcher();
     dispatcher.register('server.hello', () => ({ version: '1.2.3', platform: 'test', home: '/tmp/home' }));
-    const sessions = Object.assign(sources.sessions, {
-        get: (sessionId: string) =>
-            sessionId in screens
-                ? {
-                      isAttached: () => true,
-                      snapshotFor: (_clientId: string, onScreen: (screen: string) => void) => queueMicrotask(() => onScreen(screens[sessionId] as string))
-                  }
-                : undefined
+    const areas: Area[] = [...NAMES.map((name) => ({ name, sources: [sources[name]], holders: HELD.includes(name) ? [sources[name]] : [] })), ...extra];
+    const open = connectionOpener({
+        dispatcher,
+        areas,
+        screenOf: (_clientId, sessionId, deliver) => {
+            if (!(sessionId in screens)) {
+                return false;
+            }
+            queueMicrotask(() => deliver(screens[sessionId] as string));
+            return true;
+        },
+        requestKeyFrame: () => undefined
     });
-    const services: ConnectionServices = { ...sources, sessions, dispatcher, ...extra };
-    return { open: connectionOpener(services), sources, order };
+    return { open, sources, order };
 }
 
 // The dispatcher answers across an await; one macrotask settles it.
@@ -131,7 +138,9 @@ describe('connectionOpener', () => {
 
     test('tells the tasks of another machine when its channel closes, and nothing when any other channel does', () => {
         const closed: string[] = [];
-        const { open } = setup({}, { peerTasks: { channelClosed: (clientId) => void closed.push(clientId) } });
+        const { open } = setup({}, [
+            { name: 'peer tasks', closed: (clientId, access) => (access.peer === undefined ? undefined : void closed.push(clientId)) }
+        ]);
         const peerChannel = new FakeChannel();
         const peer = open(peerChannel, { reachability: 'lan', sessionId: 'peer-1', peer: { machineId: 'machine-a' } });
         const personChannel = new FakeChannel();
@@ -145,7 +154,7 @@ describe('connectionOpener', () => {
 
     test("ends the Voice sessions of a person's channel when it closes, once", () => {
         const ended: string[] = [];
-        const { open } = setup({}, { voice: { channelClosed: (clientId) => void ended.push(clientId) } });
+        const { open } = setup({}, [{ name: 'voice', closed: (clientId, access) => (access.peer === undefined ? void ended.push(clientId) : undefined) }]);
         const personChannel = new FakeChannel();
         const person = open(personChannel, { reachability: 'loopback', sessionId: null });
         const peerChannel = new FakeChannel();
@@ -159,7 +168,7 @@ describe('connectionOpener', () => {
 
     test('lists a channel while it is open, a peer too, and a peer hears no change of the list', () => {
         const connected = new ConnectedClients(() => 1_000);
-        const { open } = setup({}, { connected });
+        const { open } = setup({}, [clientArea({ connected, auth: { list: async () => [] }, external: () => [] })]);
         const peerChannel = new FakeChannel();
         const peer = open(peerChannel, { reachability: 'lan', sessionId: 'peer-1', peer: { machineId: 'machine-a' } });
         connected.watch(peer.client.id);
@@ -205,12 +214,10 @@ describe('connectionOpener', () => {
             subscribe: (_clientId: string, sink: LiveSink) => {
                 deviceSink = sink;
                 return () => undefined;
-            },
-            detachAll: () => undefined,
-            requestKeyFrame: () => undefined
+            }
         };
         const channel = new FakeChannel();
-        setup({}, { devices }).open(channel, { reachability: 'loopback', sessionId: null });
+        setup({}, [{ name: 'devices', sources: [devices] }]).open(channel, { reachability: 'loopback', sessionId: null });
         const header = { deviceId: 'phone-1', backendId: 'simctl', platform: 'ios' as const, sequence: 1, width: 2, height: 3 };
         const live: LiveFrame = { event: 'device.frame', payload: header, bytes: new Uint8Array([9]) };
 
@@ -247,16 +254,14 @@ describe('connectionOpener', () => {
 
     test('releases the database sessions of a client once when its channel closes', () => {
         const released: string[] = [];
-        const { open } = setup(
-            {},
+        const { open } = setup({}, [
             {
-                databases: {
-                    release: async (clientId) => {
-                        released.push(clientId);
-                    }
+                name: 'databases',
+                closed: async (clientId) => {
+                    released.push(clientId);
                 }
             }
-        );
+        ]);
         const channel = new FakeChannel();
         open(channel, { reachability: 'loopback', sessionId: null });
 
@@ -288,20 +293,19 @@ describe('connectionOpener', () => {
 
 test('requested notifications travel over the connection and unsubscribe on close', () => {
     const listeners = new Set<(alert: EventMap['push.notification']) => void>();
-    const { open } = setup(
-        {},
+    const { open } = setup({}, [
         {
-            presence: {
-                connected: () => () => undefined,
-                observeNotification: (listener) => {
+            name: 'push',
+            connect: ({ client }) => [
+                ((listener: (alert: EventMap['push.notification']) => void) => {
                     listeners.add(listener);
                     return () => {
                         listeners.delete(listener);
                     };
-                }
-            }
+                })((alert) => sendEvent(client, 'push.notification', alert))
+            ]
         }
-    );
+    ]);
     const channel = new FakeChannel();
     open(channel, { reachability: 'loopback', sessionId: null });
     const payload = { projectId: 'project', viewId: 'main', nodeId: 'node', title: 'Build', body: 'Ready' };

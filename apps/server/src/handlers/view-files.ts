@@ -1,4 +1,4 @@
-import type { ClientConnection } from '../dispatcher.ts';
+import type { ClientConnection } from '../wire.ts';
 
 /* The part of a view file store a request reaches; the store has more, and none of it is on the wire. */
 interface ViewFileRequests<TDocument, TContent> {

@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { homeFolder } from '@ruimte/service/home';
 import type { Reclaimed } from './maintenance/maintenance.ts';
 import { sweepFolder } from './maintenance/sweep-folder.ts';
 
@@ -9,12 +10,7 @@ const SHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 /* A person saves a capture or a recording where they want it; the machine's copy is gone after a week. */
 const CAPTURE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-/* Under `$RUIMTE_HOME`, and one of the folders a client may read from there. */
-export const DEVICE_CAPTURES_FOLDER = 'device-captures';
-
 const PLACED_CAPTURES_FOLDER = 'placed';
-
-const SCREENSHOTS_FOLDER = 'screenshots';
 
 /* An id comes from the project file, so it never becomes a path of its own. */
 function fileSafe(id: string): string {
@@ -38,23 +34,18 @@ function sweep(folder: string, now: number, maxAgeMs: number, signal?: AbortSign
     });
 }
 
-/* The folders a picture the machine took for an agent or a person is in, under the machine's own folder. */
-export function shotFolders(home: string): string[] {
-    return [join(home, SCREENSHOTS_FOLDER), join(home, 'computer-use', 'screenshots'), join(home, DEVICE_CAPTURES_FOLDER)];
-}
-
 export function sweepScreenshots(home: string, now: number, signal?: AbortSignal): Promise<Reclaimed> {
-    return sweep(join(home, SCREENSHOTS_FOLDER), now, SHOT_MAX_AGE_MS, signal);
+    return sweep(homeFolder(home, 'screenshots'), now, SHOT_MAX_AGE_MS, signal);
 }
 
 /* Never reaches `placed`, which is a folder below this one. */
 export function sweepDeviceCaptures(home: string, now: number, signal?: AbortSignal): Promise<Reclaimed> {
-    return sweep(join(home, DEVICE_CAPTURES_FOLDER), now, CAPTURE_MAX_AGE_MS, signal);
+    return sweep(homeFolder(home, 'deviceCaptures'), now, CAPTURE_MAX_AGE_MS, signal);
 }
 
 /* Writes a png an agent asked for under the machine's own folder, outside any project, and answers its path. */
 export async function writeShot(home: string, id: string, image: Uint8Array): Promise<string> {
-    const folder = join(home, SCREENSHOTS_FOLDER);
+    const folder = homeFolder(home, 'screenshots');
     await mkdir(folder, { recursive: true });
     const now = Date.now();
     await sweep(folder, now, SHOT_MAX_AGE_MS);
@@ -65,7 +56,7 @@ export async function writeShot(home: string, id: string, image: Uint8Array): Pr
 
 /* A new file for a person's capture or recording of a device, which the client reads over `bytes.read`. */
 export async function captureFile(home: string, id: string, extension: 'png' | 'mp4', now = Date.now()): Promise<string> {
-    const folder = join(home, DEVICE_CAPTURES_FOLDER);
+    const folder = homeFolder(home, 'deviceCaptures');
     await mkdir(folder, { recursive: true });
     await sweep(folder, now, CAPTURE_MAX_AGE_MS);
     return join(folder, `${fileSafe(id)}-${now}.${extension}`);
@@ -79,7 +70,7 @@ export async function writeCapture(home: string, id: string, image: Uint8Array, 
 
 /* A capture a person placed on a canvas, which a file view reads for as long as it stays, so no sweep reaches it. */
 export async function keepCapture(home: string, id: string, image: Uint8Array, now = Date.now()): Promise<string> {
-    const folder = join(home, DEVICE_CAPTURES_FOLDER, PLACED_CAPTURES_FOLDER);
+    const folder = join(homeFolder(home, 'deviceCaptures'), PLACED_CAPTURES_FOLDER);
     await mkdir(folder, { recursive: true });
     const path = join(folder, `${fileSafe(id)}-${now}.png`);
     await writeFile(path, image);

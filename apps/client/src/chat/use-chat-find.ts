@@ -4,12 +4,12 @@ import { compileFind, stepIndex } from '@adecore/editor-react/models';
 import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useContextNames } from '@/chat/ruimte-command-look';
 import { hitKey, hitRow, indexRows, NOTHING, placeOfHit, searchChat, type ChatHit } from '@/chat/search';
-import { useDesignHidesToolCalls } from '@/design/design-tool-calls';
 import { findRanges } from '@/find/dom-text';
 import { FindBar } from '@/find/FindBar';
 import { clearFindHighlights, setFindHighlights } from '@/find/highlights';
 import { useFind, type FindState } from '@/find/use-find';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { useDesignHidesToolCalls } from '@/state/design-tool-calls';
 
 // A fold that opens but still hides the hit would otherwise be asked again on every render.
 const MAX_SEEK_STEPS = 4;
@@ -23,7 +23,6 @@ interface ChatFind {
     invalid: boolean;
     step(direction: 1 | -1): void;
     reveal: FindReveal | null;
-    /* The row each hit is shown at, in the order of the hits. */
     hitRows: readonly number[];
     currentRow: number | null;
 }
@@ -256,7 +255,6 @@ function useChatFind(options: TimelineFindOptions): ChatFind {
     };
 }
 
-/* The find of a thread as the chat draws it: whether it is open, the bar over the thread, and where its hits are. */
 export function useTimelineFind(options: TimelineFindOptions): TimelineFind {
     const chatFind = useChatFind(options);
     return {

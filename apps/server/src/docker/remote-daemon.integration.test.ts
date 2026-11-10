@@ -60,7 +60,6 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 const DOOR_PORT = PORT + 10;
 const REPO = '/work/atlas';
 const HOME = '/root/.ruimte';
-// What the machine calls a client the suite let in on a statement.
 const CLIENT_LABEL = 'Bench laptop';
 // A broker of the suite's own on this machine, which the test container dials (`compose.yml`).
 const BROKER_PORT = 4420;
@@ -76,9 +75,7 @@ interface Pending {
     reject(reason: Error): void;
 }
 
-/* The client side of the wire, small enough to be obviously right: one socket, ids and events. */
 class RemoteClient {
-    /* Whether the daemon on the other end went away, which is the whole point of the pool's tests. */
     closed = false;
     private readonly socket: WebSocket;
     private readonly pending = new Map<string, Pending>();
@@ -131,7 +128,6 @@ class RemoteClient {
         return reply;
     }
 
-    /* Everything the daemon wrote on `session.output` since the last read. */
     takeOutput(): string {
         return this.output.splice(0).join('');
     }
@@ -170,7 +166,8 @@ class RemoteClient {
         if (frame.ok) {
             pending.resolve(frame.result);
         } else {
-            pending.reject(new Error(`${frame.error.code}: ${frame.error.message}`));
+            // The code rides on the error, as on the app's own transport, so a test checks it rather than the words.
+            pending.reject(Object.assign(new Error(`${frame.error.code}: ${frame.error.message}`), { code: frame.error.code }));
         }
     }
 }
@@ -273,7 +270,6 @@ function statementFor(machine: Machine, clientPublicKey: string, overrides: Part
     };
 }
 
-/* A peer statement for another machine of the account to work in the container. */
 function peerStatementFor(machine: Machine, peerPublicKey: string, overrides: Partial<PeerStatement> = {}): PeerStatement {
     const key = statementKey();
     const issuedAt = Date.now();
@@ -446,7 +442,6 @@ interface OfferOptions {
     statement?: AccessStatement;
     // Offered in place of a client statement, by a machine of the account that works here.
     peer?: PeerStatement;
-    // Pings a quiet channel the way the app does.
     ping?: { idleMs?: number; timeoutMs?: number };
     // Tells the sessions of two keys apart in `auth.sessions`; they share CLIENT_LABEL otherwise.
     label?: string;
@@ -506,7 +501,6 @@ async function remoteSocket(key?: KeyPair): Promise<LetIn & { client: RemoteClie
     return { ...letIn, client: await RemoteClient.connect(letIn.ticket) };
 }
 
-/* Everything the sessions of a channel wrote so far, as the frames arrive. */
 function outputOf(channel: DirectClient): () => string {
     let output = '';
     channel.onFrame((raw) => {
@@ -639,7 +633,7 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         const owner = await connectOwner();
         try {
             for (const asker of [client, owner]) {
-                await expect(asker.request('auth.pairingToken', {})).rejects.toThrow(/^unknown-request:/);
+                await expect(asker.request('auth.pairingToken', {})).rejects.toMatchObject({ code: 'unknown-request' });
             }
         } finally {
             owner.close();
@@ -661,7 +655,6 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         ];
         const script = `const codes = []; for (const [path, method] of ${JSON.stringify(doors)}) { codes.push((await fetch('http://127.0.0.1:${PORT}' + path, { method })).status); } console.log(codes.join(','));`;
         expect(await inContainer(['bun', '-e', script])).toBe('401,403,401,401,401');
-        // A wrong secret is no secret either.
         const guessed = `console.log((await fetch('http://127.0.0.1:${PORT}/machine/status', { headers: { authorization: 'Bearer guessed' } })).status);`;
         expect(await inContainer(['bun', '-e', guessed])).toBe('403');
     });
@@ -876,8 +869,8 @@ describe.skipIf(!ENABLED)('a client let in on a statement is not the owner', () 
     });
 
     test('it cannot put the machine on an account or take it off, and is not told which account it is on', async () => {
-        await expect(remote.client.request('endpoint.signRegistration', { accountId: 'bench-account' })).rejects.toThrow(/^forbidden:/);
-        await expect(remote.client.request('endpoint.leaveAccount', {})).rejects.toThrow(/^forbidden:/);
+        await expect(remote.client.request('endpoint.signRegistration', { accountId: 'bench-account' })).rejects.toMatchObject({ code: 'forbidden' });
+        await expect(remote.client.request('endpoint.leaveAccount', {})).rejects.toMatchObject({ code: 'forbidden' });
         expect((await remote.client.request<EndpointInfo>('endpoint.info', {})).accountId).toBeUndefined();
         // The owner is told, and letting a client in on a statement put the machine on no account.
         expect((await owner.request<EndpointInfo>('endpoint.info', {})).accountId).toBeNull();
@@ -885,7 +878,7 @@ describe.skipIf(!ENABLED)('a client let in on a statement is not the owner', () 
 
     test("it reads nothing of the machine's own state under the home, by request or by URL", async () => {
         for (const path of [`${HOME}/local.key`, `${HOME}/endpoint.json`, `${HOME}/auth.json`]) {
-            await expect(remote.client.request('fs.read', { path })).rejects.toThrow(/^machine-state:/);
+            await expect(remote.client.request('fs.read', { path })).rejects.toMatchObject({ code: 'machine-state' });
         }
         const byUrl = await fetch(`${BASE_URL}/fs/file?path=${encodeURIComponent(`${HOME}/local.key`)}&token=${encodeURIComponent(remote.ticket)}`);
         expect(byUrl.status).toBe(403);
@@ -1012,9 +1005,9 @@ describe.skipIf(!ENABLED)('a direct connection through the door', () => {
 
             const refused = (resource: unknown) => client.request('bytes.read', { resource, offset: 0, length: 1024 });
             // A program, since text is served and only a binary that is no picture, sound, video or PDF is not.
-            await expect(refused({ kind: 'file', path: '/usr/bin/git' })).rejects.toThrow(/^not-found:/);
-            await expect(refused({ kind: 'file', path: `${HOME}/endpoint.json` })).rejects.toThrow(/^machine-state:/);
-            await expect(refused({ kind: 'attachment', chatId: 'no-such-chat', attachmentId: 'nothing' })).rejects.toThrow(/^not-found:/);
+            await expect(refused({ kind: 'file', path: '/usr/bin/git' })).rejects.toMatchObject({ code: 'not-found' });
+            await expect(refused({ kind: 'file', path: `${HOME}/endpoint.json` })).rejects.toMatchObject({ code: 'machine-state' });
+            await expect(refused({ kind: 'attachment', chatId: 'no-such-chat', attachmentId: 'nothing' })).rejects.toMatchObject({ code: 'not-found' });
             const deep = await client.request<BytesReadResult>('bytes.read', {
                 resource: { kind: 'file', path: huge },
                 offset: 39 * 1024 * 1024,
@@ -1111,11 +1104,11 @@ describe.skipIf(!ENABLED)('another machine of the account as a peer', () => {
 
     test('it is refused file reads, terminal input, launches and project saves, and is listed as a machine', async () => {
         const { channel } = await asPeer();
-        await expect(channel.request('fs.read', { path: `${REPO}/README.md` })).rejects.toThrow(/^forbidden:/);
-        await expect(channel.request('session.write', { sessionId: 'any', data: 'id\n' })).rejects.toThrow(/^forbidden:/);
-        await expect(channel.request('launch.start', { projectId: 'any', launchId: 'any' })).rejects.toThrow(/^forbidden:/);
-        await expect(channel.request('project.save', { projectId: 'any' })).rejects.toThrow(/^forbidden:/);
-        await expect(channel.request('endpoint.signRegistration', { accountId: 'bench-account' })).rejects.toThrow(/^forbidden:/);
+        await expect(channel.request('fs.read', { path: `${REPO}/README.md` })).rejects.toMatchObject({ code: 'forbidden' });
+        await expect(channel.request('session.write', { sessionId: 'any', data: 'id\n' })).rejects.toMatchObject({ code: 'forbidden' });
+        await expect(channel.request('launch.start', { projectId: 'any', launchId: 'any' })).rejects.toMatchObject({ code: 'forbidden' });
+        await expect(channel.request('project.save', { projectId: 'any' })).rejects.toMatchObject({ code: 'forbidden' });
+        await expect(channel.request('endpoint.signRegistration', { accountId: 'bench-account' })).rejects.toMatchObject({ code: 'forbidden' });
         const listed = (await owner.request<AuthSessionsResult>('auth.sessions', {})).sessions.filter((session) => session.machineId === 'bench-peer-machine');
         expect(listed.length).toBeGreaterThan(0);
     }, 60_000);

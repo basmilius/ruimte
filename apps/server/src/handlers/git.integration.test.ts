@@ -4,11 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { ServerFrame } from '@ruimte/contracts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { MachineHome } from '../fs/machine-home.ts';
 import { GitStatusWatcher } from '../git/status-watcher.ts';
 import { initRepo } from '../git/test-repo.ts';
-import { registerGitHandlers } from './git.ts';
+import { gitArea } from './git.ts';
+import { gitDepsWith } from './test-helpers.ts';
 
 let root: string;
 
@@ -26,7 +27,7 @@ test('a client that closed while its git.watch was set up leaves no watcher behi
     const fake = new FakeWatch();
     const statuses = new GitStatusWatcher('darwin', fake);
     const dispatcher = new Dispatcher();
-    registerGitHandlers(dispatcher, {} as never, {} as never, statuses, {} as never);
+    gitArea(gitDepsWith({ statuses })).handlers?.(dispatcher);
     const client = { id: 'phone', closed: false, send: (_frame: ServerFrame) => undefined };
 
     const handled = dispatcher.handle(client, JSON.stringify({ id: 'watch', type: 'git.watch', payload: { cwd: repo } }));
@@ -44,7 +45,7 @@ test('a git.watch that asks for the status answers it once the watch is up', asy
     const fake = new FakeWatch();
     const statuses = new GitStatusWatcher('darwin', fake);
     const dispatcher = new Dispatcher();
-    registerGitHandlers(dispatcher, {} as never, {} as never, statuses, {} as never);
+    gitArea(gitDepsWith({ statuses })).handlers?.(dispatcher);
     const replies: ServerFrame[] = [];
     const client = { id: 'phone', closed: false, send: (frame: ServerFrame) => replies.push(frame) };
 
@@ -62,7 +63,7 @@ test("git.identity answers for a repository and never for the machine's own stat
     await initRepo(repo, { 'a.txt': 'a\n' });
     const home = join(root, 'home');
     const dispatcher = new Dispatcher();
-    registerGitHandlers(dispatcher, {} as never, {} as never, {} as never, {} as never, undefined, undefined, new MachineHome(home));
+    gitArea(gitDepsWith({ machineHome: new MachineHome(home) })).handlers?.(dispatcher);
     const ask = async (paths: string[]): Promise<ServerFrame> => {
         const frames: ServerFrame[] = [];
         await dispatcher.handle(

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ArtifactProvenance } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { pinKey } from './artifact-cleanup.ts';
 import { ArtifactStore } from './artifact-store.ts';
 import { Artifacts, MAX_OPEN_UPLOADS } from './artifacts.ts';

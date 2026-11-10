@@ -1,5 +1,6 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 @preconcurrency import UserNotifications
 
 final class NotificationService: UNNotificationServiceExtension {
@@ -16,7 +17,7 @@ final class NotificationService: UNNotificationServiceExtension {
         content.categoryIdentifier = ""
         fallback = content
         do {
-            guard let raw = request.content.userInfo["ruimte"] else { throw PushCryptoError.invalid }
+            guard let raw = request.content.userInfo[NotificationKeys.envelope] else { throw PushCryptoError.invalid }
             let envelope = try JSONValue.decode(JSONSerialization.data(withJSONObject: raw))
             let store = try SharedPushStore()
             guard let context = try store.context() else { throw PushCryptoError.wrongDevice }
@@ -33,8 +34,8 @@ final class NotificationService: UNNotificationServiceExtension {
                 id: receiptKey, expiresAt: expires, now: now, unseenNode: nodeKey,
                 issuedAt: envelope["issuedAt"]?.numberValue)
             content.badge = NSNumber(value: unseen)
-            content.userInfo["ruimte.seenKey"] = nodeKey
-            content.userInfo["ruimte.issuedAt"] = envelope["issuedAt"]?.numberValue
+            content.userInfo[NotificationKeys.seenKey] = nodeKey
+            content.userInfo[NotificationKeys.issuedAt] = envelope["issuedAt"]?.numberValue
             if alert.kind == .approval || alert.timeSensitive == true { content.interruptionLevel = .timeSensitive }
             content.title = alert.title
             content.body = Self.body(alert, now: Date())
@@ -43,7 +44,7 @@ final class NotificationService: UNNotificationServiceExtension {
                 alert.choices?.contains(where: { $0.kind == .deny }) == true
             {
                 let remembers = alert.choices?.contains(where: { $0.kind == .remember }) == true
-                content.categoryIdentifier = remembers ? "ruimte.approval.remember" : "ruimte.approval"
+                content.categoryIdentifier = remembers ? NotificationCategory.approvalRemember : NotificationCategory.approval
             }
             finish(content)
         } catch {

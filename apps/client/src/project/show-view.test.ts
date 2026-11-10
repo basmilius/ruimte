@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectView } from '@ruimte/contracts';
-import { nodesOfView } from '@/project/view-nodes';
+import { nodesOfView } from '@/state/view-nodes';
 import { callerName, showViewNotice } from './show-view';
 
 function canvas(id: string, nodes: { id: string; title: string }[]): ProjectView {

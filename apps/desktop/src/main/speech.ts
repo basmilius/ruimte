@@ -1,13 +1,13 @@
 import { join } from 'node:path';
-import type { AppIpc } from '@adecore/shell';
+import { electron } from '../electron';
 import { heedBodyless } from '../net-response';
 import { SpeechService, speechHelperPath } from '../speech';
 import { SpeechModel } from '../speech-model';
-import { electron } from './electron';
+import type { DesktopIpc } from './ipc';
 
 const { app, net, systemPreferences } = electron;
 
-export interface SpeechOptions {
+interface SpeechOptions {
     ruimteHome: string;
     repoRoot: string;
     /* To every window. */
@@ -22,8 +22,7 @@ function dictationId(id: unknown): string {
     return id;
 }
 
-/* Speech to Text and the microphone the windows share. */
-export function installSpeech(ipc: AppIpc, options: SpeechOptions): void {
+export function installSpeech(ipc: DesktopIpc, options: SpeechOptions): void {
     const speechHelper = speechHelperPath(app.isPackaged, join(process.resourcesPath, 'bin', 'ruimte'), options.repoRoot);
     const speechModel = new SpeechModel(
         options.ruimteHome,

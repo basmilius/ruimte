@@ -1,9 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { AgentKindSchema, EndpointChangedEventSchema, KNOWN_AGENT_KINDS, REQUEST_SCHEMAS } from './index.ts';
+import { AgentKindSchema, EndpointChangedEventSchema, REQUEST_SCHEMAS } from './index.ts';
 
 describe('an agent kind on the wire', () => {
     test('a kind this version does not know by name still parses, so a newer machine reads', () => {
-        expect(KNOWN_AGENT_KINDS).not.toContain('future-cli');
         const base = { id: 'm1', label: 'Mac', nameSource: 'default', icon: null };
         const summary = { providers: [{ provider: 'future-cli', state: 'on', reviewed: true }], fixed: false };
 

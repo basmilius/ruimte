@@ -1,4 +1,4 @@
-import { centerOf } from '@adecore/drawing';
+import { centerOf } from '@adecore/utils/geometry';
 import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
 import {
     clipText,
@@ -36,22 +36,22 @@ import {
     unknownCanvas
 } from '@/actions/action-reach';
 import { agentNodeOptions } from '@/agents/nodes';
+import { isMeasured, visibleRect } from '@/canvas-model/math';
 import { LOCK_KEYS } from '@/canvas/locks';
-import { isMeasured, visibleRect } from '@/canvas/math';
 import { liesWithin, nearestFreeNodeRect } from '@/canvas/place-node';
-import { useDesignChat } from '@/design/design-chat';
+import { basenameOf } from '@/paths/file-path';
 import { nodeDeletionFacts, saveNodeFiles, type ViewDeletionMachine } from '@/project/view-deletion';
-import { nodesOfView } from '@/project/view-nodes';
-import { basenameOf } from '@/shell/panels/files-tree';
 import { liveCanvas, type AddNodeOptions, type CanvasState, type Locks, type NodeKind } from '@/state/canvas';
 import { goingWithDelete } from '@/state/canvas-model';
+import { useDesignChat } from '@/state/design-chat';
 import { liveDiagram } from '@/state/diagram';
 import type { DocumentState } from '@/state/document';
 import { liveDrawing } from '@/state/drawing';
 import { defaultNodeSize } from '@/state/node-size';
+import { nodesOfView } from '@/state/view-nodes';
 
 /* What the canvas actions reach outside the document; a test hands in a fake of each. */
-export interface CanvasReach {
+interface CanvasReach {
     /* The agent CLIs of the machine the project runs on. */
     providers(): readonly ProviderInfo[];
     viewDeletion: ViewDeletionMachine;
@@ -105,7 +105,6 @@ function goingWith(canvas: CanvasState, nodeIds: readonly string[]): ProjectNode
     return goingWithDelete(nodeIds, canvas.nodes, canvas.texts, canvas.lines).flatMap((id) => canvas.nodes[id] ?? []);
 }
 
-/* The nodes, texts, lines, groups, layouts, locks and history of a canvas on screen. */
 export function canvasActions(document: StoreApi<DocumentState>, reach: CanvasReach): ActionHandlers<void> {
     const { providers, viewDeletion } = reach;
     return {

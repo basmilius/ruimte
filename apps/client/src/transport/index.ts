@@ -1,6 +1,5 @@
 import { verifySignature } from '@ruimte/pulsar/verify-web';
 import { clientKey, type ClientKey } from '@/endpoint/client-key';
-import { rememberTicket } from '@/endpoint/credentials';
 import { socketAddressFor } from '@/endpoint/handshake';
 import { machineAccess } from '@/pulsar/statements';
 import { LOCAL_ENDPOINT_ID, brokerRouteOf, endpointById, useEndpoints, type Endpoint } from '@/state/endpoints';
@@ -10,6 +9,8 @@ import { IS_STATION } from '@/station';
 import type { LinkKind, MachineKind } from '@/telemetry/events';
 import { linkMetrics, linkPathOf } from '@/telemetry/metrics';
 import { recordPageMetric, reportConnectionProblem } from '@/telemetry/report';
+import { rememberTicket } from '@/transport-api/credentials';
+import type { Transport } from '../transport-api/transport';
 import { ActiveTransport } from './active-transport';
 import { brokerSignaling } from './broker-signaling';
 import { directProof } from './direct-auth';
@@ -21,12 +22,11 @@ import { MachineTransports } from './machine-transport';
 import { TransportPool } from './pool';
 import { lanDoorUrls, lanSkips, routedLink } from './route-race';
 import type { SignalingOpener } from './signaling';
-import type { Transport } from './transport';
 import { webRtcLink, type WebRtcLinkOptions } from './webrtc-link';
 import { socketLink } from './websocket-transport';
 
-export type { ConnectionState, SignalRoute, Transport, TransportStatus } from './transport';
-export { TransportError } from './transport';
+export type { ConnectionState, SignalRoute, Transport, TransportStatus } from '../transport-api/transport';
+export { fireAndForget, orNull, TransportError } from '../transport-api/transport';
 
 /* What a direct connection to a row needs whatever carries its signals. */
 function directOptions(endpointId: () => string): Omit<WebRtcLinkOptions, 'signaling'> {
@@ -152,7 +152,6 @@ export function transportFor(endpointId: string): Transport | null {
 
 const machineTransports = new MachineTransports(pool);
 
-/* One machine as a transport that outlives its link; see `MachineTransports`. */
 export function machineTransport(endpointId: string): Transport {
     return machineTransports.of(endpointId);
 }

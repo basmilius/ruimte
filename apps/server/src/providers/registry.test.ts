@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import { hasHooks } from '../agents/hooks.ts';
-import { BUILT_IN_KINDS } from './kinds.ts';
-import { ProviderRegistry, providerFor } from './registry.ts';
+import { ProviderRegistry } from './registry.ts';
+import { tableKinds } from './table.ts';
 
 describe('ProviderRegistry', () => {
     test('lists CLIs and API providers with their capabilities, the frontier labs first and the API providers last', async () => {
         const registry = new ProviderRegistry({ detect: async () => ({ installed: true, version: '1.2.3' }) });
         const providers = await registry.list();
-        expect(providers.map((provider) => provider.kind).toSorted()).toEqual([...BUILT_IN_KINDS].toSorted());
+        expect(providers.map((provider) => provider.kind).toSorted()).toEqual(tableKinds().toSorted());
         expect(providers.map((provider) => provider.name)).toEqual(['Claude Code', 'Codex', 'Antigravity', 'GitHub Copilot', 'Grok', 'Claude API', 'NanoGPT']);
         expect(providers.map((provider) => provider.capabilities.chat)).toEqual([true, true, true, true, true, true, true]);
         expect(providers.map((provider) => provider.capabilities.terminal)).toEqual([true, true, true, true, true, false, false]);
@@ -59,7 +59,7 @@ describe('ProviderRegistry', () => {
         const server = { launch: () => (serverPath === null ? null : [serverPath]) };
         const probed: string[] = [];
         const registry = new ProviderRegistry({
-            antigravityServer: server,
+            serverLaunches: { antigravity: server },
             detect: async (command) => {
                 probed.push(command);
                 return { installed: command === 'agy', version: command === 'agy' ? '1.4.0' : null };
@@ -76,7 +76,7 @@ describe('ProviderRegistry', () => {
     });
 
     test('a kind this daemon does not offer gets a provider that starts nothing, never another CLI', async () => {
-        const provider = providerFor('future-cli');
+        const provider = new ProviderRegistry().get('future-cli');
         expect(provider.kind).toBe('future-cli');
         expect(provider.capabilities.chat).toBe(false);
         expect(provider.capabilities.terminal).toBe(false);

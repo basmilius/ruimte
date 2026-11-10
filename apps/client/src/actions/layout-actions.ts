@@ -3,9 +3,8 @@ import { isCanvasView, isOpenableView, type ProjectNode } from '@ruimte/contract
 import type { StoreApi } from 'zustand';
 import { kindOf, kindOfNode, unknownView } from '@/actions/action-reach';
 import { projectPathOf } from '@/actions/files-actions';
-import { looseTabLabel } from '@/shell/panels/tab-label';
-import { canDropAsTab, canSplit, cellAt, cellViewIds, focusedViewId, freeViewFor, isSameCell, locateView } from '@/shell/split';
-import { positionAfterLifting } from '@/shell/tab-drop';
+import { canDropAsTab, canSplit, cellAt, cellViewIds, focusedViewId, freeViewFor, isSameCell, locateView } from '@/layout/split';
+import { positionAfterLifting } from '@/layout/tab-drop';
 import { sightOf, visibleNodes } from '@/state/attention';
 import { focusedCanvas } from '@/state/canvas';
 import { closeCellGuarded } from '@/state/cell-close';
@@ -13,6 +12,7 @@ import { activeViewOf, cellViewOf, type DocumentState } from '@/state/document';
 import { openTab, useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
+import { looseTabLabel } from '@/surface/panels/tab-label';
 
 /* What stands in a cell: a view of the project, or a loose view of this client, which the document does not have. */
 function cellName(state: DocumentState, viewId: string): string {
@@ -20,7 +20,6 @@ function cellName(state: DocumentState, viewId: string): string {
     return cellViewOf(state, viewId)?.name ?? (loose === undefined ? viewId : looseTabLabel(loose));
 }
 
-/* The cells of the grid column by column, each named by the view standing in it. */
 function cellsOf(state: DocumentState): ActionOutput<'workspace.inspect'>['cells'] {
     const layout = state.layout;
     if (layout === null) {
@@ -37,7 +36,6 @@ function cellsOf(state: DocumentState): ActionOutput<'workspace.inspect'>['cells
     );
 }
 
-/* The grid of cells the views stand in, and what the workspace has on screen. */
 export function layoutActions(document: StoreApi<DocumentState>): ActionHandlers<void> {
     return {
         'workspace.inspect': () => {

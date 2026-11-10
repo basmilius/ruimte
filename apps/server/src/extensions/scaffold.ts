@@ -44,7 +44,6 @@ const TSCONFIG = `${JSON.stringify(
     4
 )}\n`;
 
-/* Any text a person typed as a string literal in single quotes, the way the rest of the project writes one. */
 function quoted(text: string): string {
     return `'${JSON.stringify(text).slice(1, -1).replaceAll('\\"', '"').replaceAll("'", "\\'")}'`;
 }
@@ -125,7 +124,6 @@ function exampleTest(surface: 'panel' | 'node' | 'view' | 'card' | null, withSer
 const PARTS: readonly string[] = ['client', 'server', 'both'];
 const SURFACES: readonly string[] = ['panel', 'node', 'view', 'card', 'none'];
 
-/* What is wrong with answers given on the command line, before a file is written, or null when they make a project. */
 export function scaffoldProblem(answers: ScaffoldAnswers): string | null {
     if (!PARTS.includes(answers.parts)) {
         return `--parts is client, server or both, not ${answers.parts}`;
@@ -145,7 +143,6 @@ export function scaffoldFolder(answers: ScaffoldAnswers): string {
     return answers.id.slice(answers.id.indexOf('.') + 1);
 }
 
-/* A project that builds and runs as it is, with an example of what was asked for and a test of it. */
 export function scaffoldFiles(answers: ScaffoldAnswers): Record<string, string> {
     const withClient = answers.parts !== 'server' && answers.surface !== 'none';
     const withServer = answers.parts !== 'client';

@@ -9,10 +9,8 @@ struct ProjectsPage<Notice: View>: View {
     /// Without a search field or an updating mark of its own: on the iPhone's Projects tab the tabs around it hold
     /// those, in the iPad's sidebar the palette searches.
     var embedded = false
-    /// What groups the list per machine and counts what each project holds.
     var now: NowModel? = nil
     var gitLines: ProjectGitLines? = nil
-    /// A card per machine and New chat and Recently closed as two capsules, as the iPhone draws the tab.
     var cards = false
     let showRecent: () -> Void
     @ViewBuilder let notice: () -> Notice
@@ -96,13 +94,11 @@ struct ProjectsPage<Notice: View>: View {
         .onAppear { AppUsage.screen(.screenProjects) }
     }
 
-    /// The machines whose trouble no card of theirs already offers Reconnect for.
     private var connectionProblems: [Machine] {
         let carded = cards && grouped ? Set(groups.map(\.machine.id)) : []
         return runtime.machines.filter { projects.problems[$0.id] != nil && !carded.contains($0.id) }
     }
 
-    /// Chats in a card when no project groups them, then New chat and Recently closed as two equal capsules.
     @ViewBuilder private var cardActions: some View {
         if !grouped && !projects.chats.isEmpty {
             ProjectCardRows(
@@ -167,7 +163,6 @@ struct ProjectsPage<Notice: View>: View {
             activity: { activity[$0] }, git: { gitLines.line($0) })
     }
 
-    /// Asks again for the branches whenever a project opens or closes, or a machine comes back.
     private var gitRequestKey: String {
         projects.open.filter(\.connected).map { "\($0.id.machineID)/\($0.id.projectID)" }.joined(separator: "|")
     }
@@ -185,7 +180,6 @@ struct ProjectsPage<Notice: View>: View {
     }
 }
 
-/// New chat and Recently closed as two equal capsules under the cards.
 struct ProjectsCapsuleActions: View {
     let machines: [Machine]
     let newChat: (Machine) -> Void

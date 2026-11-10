@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { isApplePlatform } from '@adecore/ui';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
 import { canvasOfNode } from '@/state/canvas';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
-import { windowWorkspace } from '@/state/window';
+import { windowWorkspace } from '@/workspace/window';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
@@ -47,7 +47,6 @@ describe('find in a terminal node', () => {
     });
 });
 
-/* A drag out of the file manager as a browser delivers it: bytes with a name, and the shell can say where each one lives. */
 function finderDrag(type: 'dragover' | 'drop', ...paths: string[]): DragEvent {
     const event = new Event(type, { bubbles: true, cancelable: true }) as DragEvent;
     Object.defineProperty(event, 'dataTransfer', {

@@ -42,7 +42,6 @@ export class SaveStreams {
         });
     }
 
-    /* Answers the path the file now has. */
     async end(owner: number, id: string): Promise<string> {
         const save = this.owned(owner, id);
         this.saves.delete(id);

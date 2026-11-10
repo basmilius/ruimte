@@ -1,15 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 import type { RequestType } from '@ruimte/contracts';
 import { TextDrafts, textDrafts, type DraftLink } from '@/state/text-drafts';
-import type { Transport } from '@/transport/transport';
-import { TransportError } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
+import { TransportError } from '@/transport-api/transport';
 import { FakeLanguageTransport } from './fake-daemon';
 import { draftFiles } from './project-files';
-import { ProjectLanguage } from './ruimte-project-language';
+import { RuimteProject } from './ruimte-project';
 
 type Call = { type: RequestType; payload: unknown };
 
-/* A transport that answers each request with `answer` and has no events. */
 function transportOf(answer: (type: string, payload: never) => unknown): Transport {
     return {
         status: 'open',
@@ -19,7 +18,6 @@ function transportOf(answer: (type: string, payload: never) => unknown): Transpo
     } as unknown as Transport;
 }
 
-/* A transport that records every request and answers it with nothing, or refuses it with `refusal`. */
 function fakeTransport(refusal?: string): { transport: Transport; calls: Call[] } {
     const calls: Call[] = [];
     const transport = transportOf((type, payload) => {
@@ -60,10 +58,10 @@ describe('overwriting', () => {
             return { size: payload.text.length, mtime: 2 };
         }) as never);
         const drafts = new TextDrafts(() => null);
-        const project = new ProjectLanguage(transport, 'p1', '/work', draftFiles('local', transport, 'p1', drafts));
+        const project = new RuimteProject(transport, 'p1', '/work', draftFiles('local', transport, 'p1', drafts));
         try {
             expect(
-                await project.applyWorkspaceEdit({
+                await project.language.applyWorkspaceEdit({
                     documentChanges: [
                         { kind: 'create', uri: 'file:///work/src/a.php', options: { overwrite: true } },
                         {

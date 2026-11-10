@@ -10,28 +10,28 @@ final class WorkspaceViewSectionsTests: XCTestCase {
             view("leading"), separator("named", "Work"), view("chat"),
             separator("empty", "  \n"), view("terminal"), separator("trailing", "Later"),
         ]
-        let sections = WorkspaceViewSections.split(views)
+        let sections = WorkspaceViewSections.split(items(views))
         XCTAssertEqual(sections.map(\.id), [.leading, .divider("named"), .divider("empty")])
         XCTAssertEqual(sections.map(\.title), [nil, "Work", nil])
-        XCTAssertEqual(sections.map { $0.items.map(\.stableID) }, [["leading"], ["chat"], ["terminal"]])
+        XCTAssertEqual(sections.map { $0.items.map(\.id) }, [["leading"], ["chat"], ["terminal"]])
     }
 
     func testLeadingAndConsecutiveSeparatorsDoNotCreateEmptyItems() {
-        let sections = WorkspaceViewSections.split([
+        let sections = WorkspaceViewSections.split(items([
             separator("first", "Unused"), separator("second", "Used"), view("chat"), separator("last"),
-        ])
+        ]))
         XCTAssertEqual(sections.count, 1)
         XCTAssertEqual(sections.first?.title, "Used")
         XCTAssertEqual(sections.first?.id, .divider("second"))
-        XCTAssertTrue(WorkspaceViewSections.split([separator("only")]).isEmpty)
+        XCTAssertTrue(WorkspaceViewSections.split(items([separator("only")])).isEmpty)
     }
 
     func testSubheadersOpenASectionUnderTheirOwnTextAndKeepTheirSlot() throws {
         let views = [view("leading"), subheader("work", "Work"), view("a"), view("b"), separator("line"), view("terminal")]
-        let sections = WorkspaceViewSections.split(views)
+        let sections = WorkspaceViewSections.split(items(views))
         XCTAssertEqual(sections.map(\.id), [.leading, .divider("work"), .divider("line")])
         XCTAssertEqual(sections.map(\.title), [nil, "Work", nil])
-        XCTAssertEqual(sections.map { $0.items.map(\.stableID) }, [["leading"], ["a", "b"], ["terminal"]])
+        XCTAssertEqual(sections.map { $0.items.map(\.id) }, [["leading"], ["a", "b"], ["terminal"]])
         // A heading divides the list rather than standing in it, so a reorder never moves into its slot.
         let moved = try XCTUnwrap(
             WorkspaceViewSections.moving(
@@ -42,10 +42,10 @@ final class WorkspaceViewSectionsTests: XCTestCase {
 
     func testSearchPreservesSectionMembershipAndCannotExposeSeparatorsAsRows() {
         let views = [view("first", "Alpha"), separator("work", "Work"), view("second", "Beta"), view("third", "Alpha")]
-        let sections = WorkspaceViewSections.split(views, search: "alpha")
+        let sections = WorkspaceViewSections.split(items(views), search: "alpha")
         XCTAssertEqual(sections.map(\.id), [.leading, .divider("work")])
-        XCTAssertEqual(sections.map { $0.items.map(\.stableID) }, [["first"], ["third"]])
-        XCTAssertTrue(WorkspaceViewSections.split(views, search: "Work").isEmpty)
+        XCTAssertEqual(sections.map { $0.items.map(\.id) }, [["first"], ["third"]])
+        XCTAssertTrue(WorkspaceViewSections.split(items(views), search: "Work").isEmpty)
         XCTAssertNil(
             WorkspaceViewSections.moving(
                 views, sectionID: .divider("work"), expectedIDs: ["third"], from: [0], to: 1))
@@ -119,8 +119,8 @@ final class WorkspaceViewSectionsTests: XCTestCase {
         let empty = view("new").setting("empty", .bool(true))
         let views = [view("a"), empty, view("c"), view("d")]
         let listed = { WorkspaceViewSections.isListed($0, selectedID: nil) }
-        XCTAssertEqual(views.filter(listed).map(\.stableID), ["a", "c", "d"])
-        XCTAssertTrue(WorkspaceViewSections.isListed(empty, selectedID: "new"))
+        XCTAssertEqual(items(views).filter(listed).map(\.id), ["a", "c", "d"])
+        XCTAssertTrue(WorkspaceViewSections.isListed(item(empty), selectedID: "new"))
         let moved = try XCTUnwrap(
             WorkspaceViewSections.moving(
                 views, sectionID: .leading, expectedIDs: ["a", "c", "d"], from: [2], to: 0, listed: listed))
@@ -129,25 +129,45 @@ final class WorkspaceViewSectionsTests: XCTestCase {
     }
 
     func testAHiddenViewIsNeverListedAndKeepsItsSlot() throws {
-        let canvas = JSONValue.object(["id": .string("peer"), "kind": .string("canvas"), "name": .string("MacBook Pro"), "hidden": .bool(true)])
+        let canvas = ProjectWire.view(
+            .object(["id": .string("peer"), "kind": .string("canvas"), "name": .string("MacBook Pro"), "hidden": .bool(true)]))
         let inline = view("inline").setting("hidden", .bool(true))
         let views = [view("a"), canvas, view("b"), inline]
         let listed = { WorkspaceViewSections.isListed($0, selectedID: "peer") }
-        XCTAssertEqual(views.filter(listed).map(\.stableID), ["a", "b"])
-        XCTAssertFalse(WorkspaceViewSections.isListed(inline, selectedID: "inline"))
+        XCTAssertEqual(items(views).filter(listed).map(\.id), ["a", "b"])
+        XCTAssertFalse(WorkspaceViewSections.isListed(item(inline), selectedID: "inline"))
         let moved = try XCTUnwrap(
             WorkspaceViewSections.moving(
                 views, sectionID: .leading, expectedIDs: ["a", "b"], from: [1], to: 0, listed: listed))
         XCTAssertEqual(moved.map(\.stableID), ["b", "peer", "a", "inline"])
     }
 
+    private func items(_ views: [JSONValue]) -> [ProjectItem] { views.map(item) }
+    private func item(_ view: JSONValue) -> ProjectItem { ProjectWire.item(view) }
+
     private func view(_ id: String, _ name: String? = nil) -> JSONValue {
-        .object(["id": .string(id), "kind": .string("chat"), "name": .string(name ?? id)])
+        ProjectWire.view(.object(["id": .string(id), "kind": .string("chat"), "name": .string(name ?? id)]))
     }
     private func separator(_ id: String, _ name: String = "") -> JSONValue {
-        .object(["id": .string(id), "kind": .string("separator"), "name": .string(name)])
+        ProjectWire.view(.object(["id": .string(id), "kind": .string("separator"), "name": .string(name)]))
     }
     private func subheader(_ id: String, _ name: String) -> JSONValue {
-        .object(["id": .string(id), "kind": .string("subheader"), "name": .string(name)])
+        ProjectWire.view(.object(["id": .string(id), "kind": .string("subheader"), "name": .string(name)]))
+    }
+
+    func testEveryIconGroupTheContractsNameHasALabel() {
+        for group in WireVocabulary.projectIconGroups {
+            XCTAssertNotNil(IconChoiceGrid.groupLabel(group.id), "No label for the icon group \(group.id)")
+        }
+    }
+
+    @MainActor func testEveryIconOfTheContractsHasAShapeAndEveryKeywordNamesAnIcon() {
+        let names = Set(WireVocabulary.projectIconGroups.flatMap(\.names))
+        for name in names {
+            XCTAssertNotNil(LucideIcon.icon(named: name), "Missing Lucide shape \(name)")
+        }
+        for name in WireVocabulary.projectIconKeywords.keys {
+            XCTAssertTrue(names.contains(name), "Keywords for \(name), which no group offers")
+        }
     }
 }

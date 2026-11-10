@@ -1,8 +1,8 @@
 import type { TerminalSize, TerminalViewHandle } from '@adecore/terminal';
+import { isApplePlatform } from '@adecore/ui';
 import type { Terminal } from '@xterm/xterm';
-import { isApplePlatform } from '@/desktop/bridge';
-import { isAppShortcut, isClearShortcut, isLeaveNodeShortcut, isTerminalFindShortcut, isTerminalPaste, macMotionSequence } from '@/terminal/keymap';
-import type { SessionClient } from '@/terminal/session-client';
+import type { SessionClient } from '@/clients/terminal/session-client';
+import { isAppShortcut, isClearShortcut, isLeaveNodeShortcut, isTerminalFindShortcut, isTerminalPaste, macMotionSequence } from '@/surface/terminal-keymap';
 
 /* ESC CR: what agent CLIs read as "newline, do not submit". Harmless in a plain shell. */
 const SHIFT_ENTER = '\x1b\r';

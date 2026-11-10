@@ -38,7 +38,6 @@ enum DrawingSlot: CaseIterable, Identifiable {
         allCases.first { $0.tools.contains(tool) } ?? .hand
     }
 
-    /// The tool a tap on this place picks: the one last used there, else its first.
     func tool(remembered: [DrawingSlot: DrawingTool]) -> DrawingTool {
         remembered[self].flatMap { tools.contains($0) ? $0 : nil } ?? tools[0]
     }
@@ -110,7 +109,6 @@ struct DrawingToolbar: View {
     }
 }
 
-/// The options of the active sort of tool, the stroke color and width every tool draws with, and snapping.
 private struct DrawingToolOptions: View {
     @Bindable var model: DrawingEditorModel
     let slot: DrawingSlot

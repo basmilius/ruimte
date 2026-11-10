@@ -9,14 +9,13 @@ const MAX_CONNECTIONS = 64;
 /* A connection that has not sent a whole request head with the secret by then is not a browser, however slowly it writes. */
 const HEAD_TIMEOUT_MS = 10_000;
 
-export interface ProxyListenerOptions {
+interface ProxyListenerOptions {
     relay: TunnelRelay;
     port: number;
     refused(authority: string): void;
 }
 
 export interface ProxyListener {
-    /* Where the proxy listens on loopback. */
     readonly port: number;
     /* The password of the proxy login, which only the shell's login handler for this tunnel's session ever answers with. */
     readonly secret: string;

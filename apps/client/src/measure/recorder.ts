@@ -145,14 +145,12 @@ function startWindow(): () => void {
     };
 }
 
-/* Starts a fresh window of samples, ending the one before. */
 export function startRecording(facts: unknown = scene): void {
     scene = facts;
     stop?.();
     stop = startWindow();
 }
 
-/* How this page started, from the entries the browser keeps since it loaded: reload a window in a project, then copy. */
 function pageStart(): Record<string, unknown> {
     const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
     const paint = performance.getEntriesByName('first-contentful-paint')[0];
@@ -169,7 +167,6 @@ function pageStart(): Record<string, unknown> {
     };
 }
 
-/* The numbers since the window began, as plain JSON. */
 export function snapshot(): Record<string, unknown> {
     const samples = current ?? freshWindow();
     const longFrames = samples.longFrames;

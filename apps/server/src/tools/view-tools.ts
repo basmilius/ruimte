@@ -3,12 +3,12 @@ import { DEFAULT_EDGE_TONE, DEFAULT_GROUP_TONE, DEFAULT_NODE_TONE } from '@adeco
 import { DRAWING_EDIT_LIMITS, DrawingElementPatchSchema, NewDrawingElementSchema } from '@adecore/drawing';
 import { DIAGRAM_LIMITS, DRAWING_COLORS, DiagramEdgeSchema, DiagramGroupSchema, DiagramMetaSchema, DiagramNodeSchema } from '@ruimte/contracts';
 import { z } from 'zod';
+import { field, titleField } from '../canvas/host.ts';
+import { VIEW_KINDS } from '../canvas/views.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
 import { oneWrite } from './batch.ts';
-import { field, titleField } from './host.ts';
 import { fieldLines, typeOf } from './schema-lines.ts';
 import { defineTool, defineToolkit, PROJECT_INPUT, REVISION_INPUT } from './tool.ts';
-import { VIEW_KINDS } from './views.ts';
 
 // A canvas with more nodes than this would bury the one line that says the view is gone.
 const DELETED_NODE_LINES = 20;
@@ -278,7 +278,7 @@ const DIAGRAM_GUIDE = [
 ];
 
 /* An edit that passes, so an agent has one shape to start from; a test holds it to the schema. */
-export const DRAWING_EDIT_EXAMPLE = JSON.stringify({
+const DRAWING_EDIT_EXAMPLE = JSON.stringify({
     add: [
         { kind: 'ellipse', x: 620, y: 40, w: 90, h: 90, stroke: 'orange', strokeWidth: 2, fill: 'solid', fillColor: 'yellow' },
         {

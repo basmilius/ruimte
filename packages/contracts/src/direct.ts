@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { SignalEnvelopeSchema } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { ProtocolVersionSchema } from './protocol.ts';
@@ -54,6 +55,9 @@ export const DirectSecretProofFrameSchema = z.object({
     compression: z.string().max(64).optional()
 });
 
+export type DirectKeyProofFrame = z.infer<typeof DirectKeyProofFrameSchema>;
+export type DirectSecretProofFrame = z.infer<typeof DirectSecretProofFrameSchema>;
+
 export const DirectProofFrameSchema = z.discriminatedUnion('type', [DirectKeyProofFrameSchema, DirectSecretProofFrameSchema]);
 export type DirectProofFrame = z.infer<typeof DirectProofFrameSchema>;
 
@@ -68,8 +72,13 @@ export const DirectRefusedFrameSchema = z.object({
     type: z.literal('direct.refused'),
     reason: z.string().max(512),
     // Set when the refusal is about the wire version: the daemon's own, so the client can say which side is behind.
-    protocol: ProtocolVersionSchema.optional()
+    protocol: ProtocolVersionSchema.optional(),
+    // Why, so a dialing machine can tell one that will never have it (`not-paired`) from one worth another try; an open string, absent from a machine older than the field.
+    code: z.string().max(64).optional()
 });
+
+export type DirectAcceptedFrame = z.infer<typeof DirectAcceptedFrameSchema>;
+export type DirectRefusedFrame = z.infer<typeof DirectRefusedFrameSchema>;
 
 export const DirectVerdictFrameSchema = z.discriminatedUnion('type', [DirectAcceptedFrameSchema, DirectRefusedFrameSchema]);
 
@@ -90,24 +99,6 @@ export function sdpFingerprints(sdp: string): string[] {
  */
 export function channelBinding(offerSdp: string, answerSdp: string): string {
     return JSON.stringify([sdpFingerprints(offerSdp), sdpFingerprints(answerSdp)]);
-}
-
-/*
- * The bytes signed on a channel. Prefixes of their own, so a signature over the HTTP handshake's
- * challenge never verifies as one over a channel's, and the binding last, since it is JSON and the
- * fields before it never hold a newline.
- */
-export function daemonChannelMessage(daemonId: string, challenge: string, binding: string): string {
-    return `ruimte-daemon-channel-v1\n${daemonId}\n${challenge}\n${binding}`;
-}
-
-export function clientChannelMessage(daemonId: string, challenge: string, publicKey: string, binding: string): string {
-    return `ruimte-client-channel-v1\n${daemonId}\n${challenge}\n${publicKey}\n${binding}`;
-}
-
-// Keyed with the local secret as an HMAC-SHA256, so the channel learns that the client holds it and never the secret itself.
-export function localSecretChannelMessage(daemonId: string, challenge: string, binding: string): string {
-    return `ruimte-local-channel-v1\n${daemonId}\n${challenge}\n${binding}`;
 }
 
 /*
@@ -275,3 +266,11 @@ export class DeflatedFrameAssembler extends MarkedFrameAssembler {
         super(DEFLATED_MORE, DEFLATED_LAST);
     }
 }
+
+export const DIRECT_REQUEST_SCHEMAS = {
+    'direct.signal': { payload: DirectSignalPayloadSchema, result: EmptySchema }
+} as const;
+
+export const DIRECT_EVENT_SCHEMAS = {
+    'direct.signaled': DirectSignalPayloadSchema
+} as const;

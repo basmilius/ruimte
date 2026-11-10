@@ -40,7 +40,6 @@ enum PaletteRanking {
         .map(\.2)
     }
 
-    /// The ranges of a name the query's words cover, for the palette to mark.
     static func highlights(_ query: String, in text: String) -> [Range<String.Index>] {
         words(query).compactMap { text.range(of: $0, options: .caseInsensitive) }
     }
@@ -104,8 +103,8 @@ enum PaletteCommands {
                     icon: "message-square-plus",
                     action: .newChat(machineID: machine.id)))
         }
-        for row in projects where !NewChat.isChats(row.summary) {
-            let name = row.summary.text("name", fallback: String(localized: "Untitled project"))
+        for row in projects where !row.summary.isChats {
+            let name = row.summary.name
             let entries: [(String, String, PaletteCommand.ProjectAction)] = [
                 (String(localized: "New view in \(name)…"), "plus", .newView),
                 (String(localized: "New terminal in \(name)"), "terminal", .newTerminal),
@@ -195,21 +194,22 @@ final class PaletteFiles {
         let current = generation
         let typed = self.query
         guard typed.count >= Self.shortest else { return }
-        let asked = projects.filter { $0.connected && !NewChat.isChats($0.summary) }
+        let asked = projects.filter { $0.connected && !$0.summary.isChats }
         let tasks = asked.map { row in
             let machineClient = client(row.machine)
-            let folder = row.summary.text("folder")
-            let name = row.summary.text("name", fallback: String(localized: "Untitled project"))
+            let folder = row.summary.folder
+            let name = row.summary.name
             return Task { () -> ([PaletteFile], PaletteFileFailure?) in
                 do {
                     let answer = try await machineClient.request(
-                        "fs.search",
+                        .fsSearch,
                         payload: .object([
                             "cwd": .string(folder), "query": .string(typed),
                             "limit": .number(Double(Self.perProject)),
-                        ]))
+                        ])
+                    ).decoded(as: FsSearchResult.self)
                     return (
-                        answer.list("files").compactMap(\.stringValue).map {
+                        answer.files.map {
                             PaletteFile(project: row.id, projectName: name, path: $0, folder: folder)
                         }, nil
                     )

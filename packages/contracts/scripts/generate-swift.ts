@@ -2,6 +2,9 @@ import { createCipheriv, createPrivateKey, createPublicKey, diffieHellman, hkdfS
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { UsageProviderSchema } from '@adecore/agent-contracts';
+import * as chat from '@adecore/agent-contracts/chat';
+import * as envelope from '@adecore/agent-contracts/envelope';
+import { RuntimeModeSchema } from '@adecore/agent-contracts/model';
 import { PLAN_STATE_MARKERS } from '@adecore/plan';
 import * as plan from '@adecore/plan/protocol';
 import { z } from 'zod';
@@ -13,15 +16,12 @@ import * as signing from '../../pulsar/src/signing.ts';
 import { PULSAR_STATEMENT_PUBLIC_KEYS } from '../../pulsar/src/statement-key.ts';
 import * as agent from '../src/agent.ts';
 import { ARTIFACT_KINDS, ArtifactKindSchema } from '../src/artifact.ts';
-import { PairPayloadSchema, PairResultSchema } from '../src/auth.ts';
 import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES, BYTES_REPLY_KIND, BYTES_REPLY_MAX_BYTES, CHAT_MODEL_MAX_BYTES } from '../src/bytes.ts';
-import * as chat from '../src/chat.ts';
 import * as liveness from '../src/direct-liveness.ts';
 import * as direct from '../src/direct.ts';
-import * as envelope from '../src/envelope.ts';
 import { REQUEST_SCHEMAS, EVENT_SCHEMAS } from '../src/index.ts';
 import { MachineUpdateStatusSchema } from '../src/machine-update.ts';
-import { RuntimeModeSchema } from '../src/model.ts';
+import { NODE_ACCENT_COLORS, NODE_ACCENT_NAMES } from '../src/node-accents.ts';
 import { PortEndReasonSchema, PortHostSchema, PortSharedBySchema } from '../src/port.ts';
 import {
     CameraSchema,
@@ -30,8 +30,7 @@ import {
     PROJECT_ICON_NAMES,
     PROJECT_VIEW_KINDS,
     ProjectIconNameSchema,
-    ProjectViewSchema,
-    ProjectCanvasViewSchema
+    ProjectViewSchema
 } from '../src/project.ts';
 import { PROTOCOL_VERSION } from '../src/protocol.ts';
 import { PushNotifyKindSchema } from '../src/push.ts';
@@ -39,6 +38,7 @@ import * as server from '../src/server.ts';
 import * as task from '../src/task.ts';
 import { TunnelProposalActionSchema } from '../src/tunnel.ts';
 import { VoiceActivityKindSchema, VoiceActivityStatusSchema, VoicePhaseSchema } from '../src/voice.ts';
+import { refinementsOf, UNNAMED_REFINEMENTS } from './refinements.ts';
 
 type Schema = Record<string, any>;
 const roots: Record<string, z.ZodType> = {};
@@ -51,13 +51,14 @@ for (const module of [address, broker, signaling, direct, server, envelope, push
 }
 /*
  * The closed vocabularies of the daemon's own domain, so a Swift switch over one stops compiling when
- * a case is added instead of falling into a default. Their object schemas stay out: a plan step holds
- * its own sub-steps, so its JSON Schema carries a `$ref` this generator does not resolve, and the app
- * reads those shapes through the dynamic `WireSchema` tables anyway.
+ * a case is added instead of falling into a default. Their object schemas stay out: the app reads the
+ * plan document through the typed roots below and the rest through the dynamic `WireSchema` tables.
  */
 const vocabularies: Record<string, z.ZodType> = {};
 // Open on the wire, so its Swift enum holds the kinds this version knows by name and a newer one decodes as nil.
-const KnownAgentKindSchema = z.enum(agent.KNOWN_AGENT_KINDS);
+// The list is frozen here: the contracts no longer carry one, and the app's vocabulary stays as it shipped until the iPhone work reads the machine's providers instead.
+const KNOWN_AGENT_KINDS = ['claude', 'codex', 'gemini', 'copilot', 'apple'] as const;
+const KnownAgentKindSchema = z.enum(KNOWN_AGENT_KINDS);
 for (const module of [agent, task, plan, chat]) {
     for (const [name, rawValue] of Object.entries(module)) {
         const value = rawValue === agent.AgentKindSchema ? KnownAgentKindSchema : rawValue;
@@ -67,31 +68,20 @@ for (const module of [agent, task, plan, chat]) {
         }
     }
 }
-roots.PairPayloadSchema = PairPayloadSchema;
-roots.PairResultSchema = PairResultSchema;
-roots.ProjectCanvasDefaultsSchema = ProjectCanvasViewSchema.pick({ layouts: true });
 const schemas: Record<string, Schema> = {};
+function stampRefinements(zodSchema: object, jsonSchema: Schema, where: string): void {
+    const refinements = refinementsOf(zodSchema, where);
+    if (refinements?.length) {
+        jsonSchema['x-refinements'] = refinements;
+    }
+}
 for (const [name, schema] of Object.entries(roots)) {
-    schemas[name] = z.toJSONSchema(schema, { io: 'input', unrepresentable: 'throw' });
+    schemas[name] = z.toJSONSchema(schema, {
+        io: 'input',
+        unrepresentable: 'throw',
+        override: ({ zodSchema, jsonSchema, path }) => stampRefinements(zodSchema, jsonSchema, `${name} ${path.join('.')}`)
+    });
 }
-// JSON Schema cannot carry Zod refinements; retain the statement lifetime check explicitly.
-function stampStatement(schema: Schema): void {
-    if (schema.type === 'object' && schema.properties?.machineId && schema.properties?.clientPublicKey && schema.properties?.expiresAt) {
-        schema['x-statement-lifetime-ms'] = address.ACCESS_STATEMENT_LIFETIME_MS;
-    }
-    for (const value of Object.values(schema)) {
-        if (Array.isArray(value)) {
-            value.forEach((child) => {
-                if (child && typeof child === 'object') {
-                    stampStatement(child);
-                }
-            });
-        } else if (value && typeof value === 'object') {
-            stampStatement(value);
-        }
-    }
-}
-Object.values(schemas).forEach(stampStatement);
 function canonical(schema: Schema): string {
     return JSON.stringify(schema, (key, value) => (key === '$schema' ? undefined : value));
 }
@@ -105,7 +95,8 @@ function camel(name: string): string {
     return name.replace(/[-. ]+(\w)/g, (_match, letter) => letter.toUpperCase());
 }
 function identifier(name: string): string {
-    return `\`${camel(name)}\``;
+    // `self` would assign to the instance itself.
+    return `\`${name === 'self' ? 'itself' : camel(name)}\``;
 }
 function nullable(schema: Schema): Schema | undefined {
     return Array.isArray(schema.type) && schema.type.includes('null')
@@ -115,6 +106,9 @@ function nullable(schema: Schema): Schema | undefined {
           : undefined;
 }
 function typeOf(schema: Schema, suggested: string, force = false): string {
+    if (schema['x-ref']) {
+        return refNames.get(schema['x-ref'])!;
+    }
     const inner = nullable(schema);
     if (inner) {
         return `${typeOf(inner, suggested)}?`;
@@ -236,7 +230,7 @@ const constants = {
     bytesChunkMax: BYTES_CHUNK_MAX,
     pushMaxAgeMs: push.PUSH_MAX_AGE_MS,
     pushMaxClockSkewMs: push.PUSH_MAX_CLOCK_SKEW_MS,
-    pushHKDFSalt: push.PUSH_HKDF_SALT,
+    pushHKDFSalt: signing.PUSH_HKDF_SALT,
     bytesReadMaxBytes: BYTES_READ_MAX_BYTES,
     chatModelMaxBytes: CHAT_MODEL_MAX_BYTES,
     bytesReplyKind: BYTES_REPLY_KIND,
@@ -265,7 +259,7 @@ const constantSource = Object.entries(constants)
  * are any string, and the known words ride along as `x-open-enum` for the app to fall back from.
  */
 const openVocabularies: ReadonlyMap<unknown, readonly string[]> = new Map<unknown, readonly string[]>([
-    [agent.AgentKindSchema, agent.KNOWN_AGENT_KINDS],
+    [agent.AgentKindSchema, KNOWN_AGENT_KINDS],
     [agent.AgentStatusSchema, agent.AgentStatusSchema.options],
     [ArtifactKindSchema, ARTIFACT_KINDS],
     [RuntimeModeSchema, RuntimeModeSchema.options],
@@ -284,24 +278,29 @@ const openVocabularies: ReadonlyMap<unknown, readonly string[]> = new Map<unknow
 ]);
 // Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.
 const apiRoots: Record<string, z.ZodType> = {};
-for (const [name, pair] of Object.entries(REQUEST_SCHEMAS)) {
+// Sorted, so the generated files do not move when an area file adds a request.
+const requestNames = Object.keys(REQUEST_SCHEMAS).sort() as (keyof typeof REQUEST_SCHEMAS)[];
+const eventNames = Object.keys(EVENT_SCHEMAS).sort() as (keyof typeof EVENT_SCHEMAS)[];
+for (const name of requestNames) {
+    const pair = REQUEST_SCHEMAS[name];
     apiRoots[`request.${name}.payload`] = pair.payload;
     apiRoots[`request.${name}.result`] = pair.result;
 }
-for (const [name, schema] of Object.entries(EVENT_SCHEMAS)) {
-    apiRoots[`event.${name}`] = schema;
+for (const name of eventNames) {
+    apiRoots[`event.${name}`] = EVENT_SCHEMAS[name];
 }
 for (const [name, schema] of Object.entries(apiRoots)) {
     roots[name] = schema;
     schemas[name] = z.toJSONSchema(schema, {
         io: 'input',
         unrepresentable: 'throw',
-        override: ({ zodSchema, jsonSchema }) => {
+        override: ({ zodSchema, jsonSchema, path }) => {
             const known = openVocabularies.get(zodSchema);
             if (known) {
                 jsonSchema['x-open-enum'] = [...known];
                 delete jsonSchema.enum;
             }
+            stampRefinements(zodSchema, jsonSchema, `${name} ${path.join('.')}`);
             if (zodSchema instanceof z.ZodPipe && zodSchema.in === CameraSchema) {
                 jsonSchema['x-output-null'] = true;
             }
@@ -316,40 +315,75 @@ for (const [name, schema] of Object.entries(apiRoots)) {
             }
         }
     });
-    stampStatement(schemas[name]!);
-    if (name === 'request.chat.send.payload') {
-        schemas[name]!['x-message-content'] = true;
-    }
-    if (name === 'request.session.attach.payload') {
-        schemas[name]!['x-follow-dimensions'] = true;
-    }
+}
+if (UNNAMED_REFINEMENTS.length > 0) {
+    throw new Error(`Name these refinements in scripts/refinements.ts:\n${[...new Set(UNNAMED_REFINEMENTS)].join('\n')}`);
 }
 /*
  * The payloads the app reads on its hot paths become structs, so a renamed field stops the app's build instead of
  * reading as an empty string. They come from the API's own JSON Schemas, open vocabularies included, so a newer
- * machine's word still decodes. A `$ref` only reaches the recursive blocks of an intelligent UI reply, which the app
- * reads as JSON.
+ * machine's word still decodes. A `$ref` reaches the recursive blocks of an intelligent UI reply, which the app reads as
+ * JSON, so it becomes `{}`. The plan document is the one tree typed: its `$ref` is inlined where it first appears and
+ * a repeat inside itself becomes an `x-ref`, which `typeOf` answers with the name of the struct being declared.
  */
-function typedSchema(value: unknown): any {
+interface RefScope {
+    defs: Record<string, unknown>;
+    active: string[];
+}
+function typedSchema(value: unknown, scope?: RefScope): any {
     if (Array.isArray(value)) {
-        return value.map(typedSchema);
+        return value.map((child) => typedSchema(child, scope));
     }
     if (!value || typeof value !== 'object') {
         return value;
     }
     if ('$ref' in value) {
-        return {};
+        const ref = String(value.$ref);
+        if (!scope) {
+            return {};
+        }
+        if (scope.active.includes(ref)) {
+            return { 'x-ref': ref };
+        }
+        return typedSchema(scope.defs[ref.split('/').pop()!], { defs: scope.defs, active: [...scope.active, ref] });
+    }
+    const words = 'anyOf' in value ? wordsOf(value.anyOf) : undefined;
+    if (words) {
+        return { type: 'string', enum: words };
     }
     return Object.fromEntries(
         Object.entries(value)
             .filter(([key]) => key !== '$defs' && key !== '$schema')
-            .map(([key, child]) => [key, typedSchema(child)])
+            .map(([key, child]) => [key, typedSchema(child, scope)])
     );
 }
+// Members that are only words, such as a node kind next to the literal `unknown`, are one enum in Swift.
+function wordsOf(members: unknown): string[] | undefined {
+    if (!Array.isArray(members) || members.length < 2) {
+        return undefined;
+    }
+    const words: string[] = [];
+    for (const member of members) {
+        const plain =
+            member && typeof member === 'object' && member.type === 'string' && Object.keys(member).every((key) => ['type', 'enum', 'const'].includes(key));
+        if (!plain) {
+            return undefined;
+        }
+        words.push(...(member.enum ?? [member.const]));
+    }
+    return words;
+}
+function typedSource(source: string): any {
+    const schema = schemas[source];
+    return typedSchema(schema, source.includes('.plan.') ? { defs: schema.$defs ?? {}, active: [] } : undefined);
+}
+// The Swift name of each `x-ref` in the typed schemas, filled in once the struct it points at is named.
+const refNames = new Map<string, string>();
 function pascal(word: string): string {
     return camel(word).charAt(0).toUpperCase() + camel(word).slice(1);
 }
-const typedRoots: [name: string, source: string, path: (string | number)[]][] = [
+// The fourth member names properties the app keeps as JSON, because it merges and saves them whole.
+const typedRoots: [name: string, source: string, path: (string | number)[], keep?: string[]][] = [
     ['ChatItem', 'request.chat.attach.result', ['properties', 'items', 'items']],
     ['ChatInfo', 'request.chat.attach.result', ['properties', 'info']],
     ['ChatEvent', 'request.chat.attach.result', ['properties', 'events', 'items']],
@@ -362,12 +396,242 @@ const typedRoots: [name: string, source: string, path: (string | number)[]][] = 
     ['GitStatusFile', 'request.git.status.result', ['properties', 'files', 'items']],
     ['GitStatus', 'request.git.status.result', []],
     ['GitStatusEvent', 'event.git.status', []],
-    ['ProjectSummary', 'event.project.summary', ['properties', 'summary']]
+    ['ProjectSummary', 'event.project.summary', ['properties', 'summary']],
+    ['EndpointInfo', 'request.endpoint.info.result', []],
+    ['EndpointChangedEvent', 'event.endpoint.changed', []],
+    ['EndpointUpdate', 'request.endpoint.info.result', ['properties', 'update']],
+    ['EndpointUpdateChangedEvent', 'event.endpoint.updateChanged', []],
+    ['EndpointInstallUpdateResult', 'request.endpoint.installUpdate.result', []],
+    ['MachineWork', 'request.endpoint.installUpdate.result', ['properties', 'ending']],
+    ['LanDoor', 'request.endpoint.info.result', ['properties', 'lan', 'anyOf', 0]],
+    ['KeepAwakeMode', 'request.endpoint.info.result', ['properties', 'keepAwake']],
+    ['ProcessesSubscribeResult', 'request.processes.subscribe.result', []],
+    ['ProcessSample', 'event.processes.sample', []],
+    ['ProcessMachine', 'event.processes.sample', ['properties', 'machine']],
+    ['ProcessGroup', 'event.processes.sample', ['properties', 'groups', 'items']],
+    ['ProcessGroupKind', 'event.processes.sample', ['properties', 'groups', 'items', 'properties', 'kind']],
+    ['ProcessRow', 'event.processes.sample', ['properties', 'groups', 'items', 'properties', 'processes', 'items']],
+    ['ProcessPoint', 'event.processes.sample', ['properties', 'fine', 'anyOf', 0]],
+    ['ProcessesAlerts', 'event.processes.alerts', []],
+    ['ProcessAlert', 'event.processes.alerts', ['properties', 'alerts', 'items']],
+    ['ProcessAlertKind', 'event.processes.alerts', ['properties', 'alerts', 'items', 'properties', 'kind']],
+    ['LaunchesDocument', 'request.launches.read.result', []],
+    ['LaunchConfigEntry', 'request.launches.read.result', ['properties', 'launches', 'items']],
+    ['LaunchConfigKind', 'request.launches.read.result', ['properties', 'launches', 'items', 'properties', 'kind']],
+    ['LaunchConfigOverlay', 'request.launches.read.result', ['properties', 'launches', 'items', 'properties', 'overlay']],
+    ['LaunchStatus', 'event.launch.status', []],
+    ['LaunchState', 'event.launch.status', ['properties', 'state']],
+    ['LaunchListResult', 'request.launch.list.result', []],
+    ['LaunchStartResult', 'request.launch.start.result', []],
+    ['LaunchHeld', 'request.launch.start.result', ['properties', 'held', 'items']],
+    ['LaunchBusy', 'request.launch.start.result', ['properties', 'busy']],
+    ['LaunchesDetectResult', 'request.launches.detect.result', []],
+    ['LaunchSuggestion', 'request.launches.detect.result', ['properties', 'suggestions', 'items']],
+    ['LaunchConfig', 'request.launches.detect.result', ['properties', 'suggestions', 'items', 'properties', 'launch']],
+    ['LaunchSuggestionSource', 'request.launches.detect.result', ['properties', 'suggestions', 'items', 'properties', 'source']],
+    ['GitReposResult', 'request.git.repos.result', []],
+    ['GitRepo', 'request.git.repos.result', ['properties', 'repos', 'items']],
+    ['WorktreeListResult', 'request.git.worktree-list.result', []],
+    ['Worktree', 'request.git.worktree-list.result', ['properties', 'worktrees', 'items']],
+    ['WorktreeWork', 'request.git.worktree-list.result', ['properties', 'worktrees', 'items', 'properties', 'work']],
+    ['WorktreeAddResult', 'request.git.worktree-add.result', []],
+    ['WorktreeRemoveResult', 'request.git.worktree-remove.result', []],
+    ['WorktreeMergeResult', 'request.git.worktree-merge.result', []],
+    ['GitProgressEvent', 'event.git.progress', []],
+    ['RoutineListResult', 'request.routine.list.result', []],
+    ['RoutineEntry', 'request.routine.list.result', ['properties', 'routines', 'items']],
+    ['Routine', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'routine']],
+    ['RoutineSchedule', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'routine', 'oneOf', 0, 'properties', 'schedule']],
+    ['RoutineLocal', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'local']],
+    ['RoutineHeld', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'held']],
+    ['RoutineMadeBy', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'madeBy']],
+    ['RoutineRun', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'runs', 'items']],
+    ['RoutineRunKind', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'runs', 'items', 'properties', 'kind']],
+    ['RoutineRunState', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'runs', 'items', 'properties', 'state']],
+    ['RoutineSkip', 'request.routine.list.result', ['properties', 'routines', 'items', 'properties', 'runs', 'items', 'properties', 'skipped']],
+    ['RoutineRunNowResult', 'request.routine.runNow.result', []],
+    ['ArtifactListResult', 'request.artifact.list.result', []],
+    ['ArtifactSummary', 'request.artifact.list.result', ['properties', 'artifacts', 'items']],
+    ['ArtifactVersion', 'request.artifact.list.result', ['properties', 'artifacts', 'items', 'properties', 'latest']],
+    ['ArtifactFile', 'request.artifact.list.result', ['properties', 'artifacts', 'items', 'properties', 'latest', 'properties', 'files', 'items']],
+    ['ArtifactProvenance', 'request.artifact.list.result', ['properties', 'artifacts', 'items', 'properties', 'latest', 'properties', 'provenance']],
+    ['ArtifactOrigin', 'request.artifact.list.result', ['properties', 'artifacts', 'items', 'properties', 'latest', 'properties', 'origin']],
+    ['ArtifactGetResult', 'request.artifact.get.result', []],
+    ['Artifact', 'request.artifact.get.result', ['properties', 'artifact']],
+    ['ArtifactChangedEvent', 'event.artifact.changed', []],
+    ['PlanListResult', 'request.plan.list.result', []],
+    ['PlanOfChat', 'request.plan.list.result', ['properties', 'plans', 'items']],
+    ['StoredPlan', 'request.plan.list.result', ['properties', 'plans', 'items', 'properties', 'plan']],
+    ['StoredPlanMeta', 'request.plan.list.result', ['properties', 'plans', 'items', 'properties', 'plan', 'properties', 'meta']],
+    ['StoredPlanItem', 'request.plan.list.result', ['properties', 'plans', 'items', 'properties', 'plan', 'properties', 'items', 'items']],
+    ['StoredPlanSection', 'request.plan.list.result', ['properties', 'plans', 'items', 'properties', 'plan', 'properties', 'items', 'items', 'oneOf', 0]],
+    ['StoredPlanText', 'request.plan.list.result', ['properties', 'plans', 'items', 'properties', 'plan', 'properties', 'items', 'items', 'oneOf', 1]],
+    ['StoredPlanStep', 'request.plan.list.result', ['properties', 'plans', 'items', 'properties', 'plan', 'properties', 'items', 'items', 'oneOf', 2]],
+    ['PlanApplyResult', 'request.plan.apply.result', []],
+    ['PlanChangedEvent', 'event.plan.changed', []],
+    ['PlanRemovedEvent', 'event.plan.removed', []],
+    ['PlanCreatedEvent', 'event.plan.created', []],
+    ['TaskListResult', 'request.task.list.result', []],
+    ['AgentTask', 'request.task.list.result', ['properties', 'tasks', 'items']],
+    ['AgentTaskResult', 'request.task.list.result', ['properties', 'tasks', 'items', 'properties', 'result', 'anyOf', 0]],
+    ['AgentTaskPaused', 'request.task.list.result', ['properties', 'tasks', 'items', 'properties', 'paused']],
+    ['AgentTaskBackground', 'request.task.list.result', ['properties', 'tasks', 'items', 'properties', 'background']],
+    ['TaskChangedEvent', 'event.task.changed', []],
+    ['ServerHelloResult', 'request.server.hello.result', []],
+    ['FsListResult', 'request.fs.list.result', []],
+    ['FsEntry', 'request.fs.list.result', ['properties', 'entries', 'items']],
+    ['FsEntryKind', 'request.fs.list.result', ['properties', 'entries', 'items', 'properties', 'kind']],
+    ['FsBrowseResult', 'request.fs.browse.result', []],
+    ['ClientListResult', 'request.client.list.result', []],
+    ['ConnectedClient', 'request.client.list.result', ['properties', 'clients', 'items']],
+    ['FsReadResult', 'request.fs.read.result', []],
+    ['FsWriteResult', 'request.fs.write.result', []],
+    ['FsChangedEvent', 'event.fs.changed', []],
+    ['FsSearchResult', 'request.fs.search.result', []],
+    ['FsGrepResult', 'request.fs.grep.result', []],
+    ['FsGrepMatch', 'request.fs.grep.result', ['properties', 'matches', 'items']],
+    ['GitConflictsResult', 'request.git.conflicts.result', []],
+    ['GitConflictEntry', 'request.git.conflicts.result', ['properties', 'files', 'items']],
+    ['GitConflictKind', 'request.git.conflicts.result', ['properties', 'files', 'items', 'properties', 'kind']],
+    ['GitOperationKind', 'request.git.conflicts.result', ['properties', 'operation', 'anyOf', 0]],
+    ['GitConflictDetail', 'request.git.conflict.result', []],
+    ['GitDiffOmitted', 'request.git.conflict.result', ['properties', 'omitted']],
+    ['GitResolveResult', 'request.git.resolve.result', []],
+    ['GitResolveAiResult', 'request.git.resolveAi.result', []],
+    ['GitResolveAiBlock', 'request.git.resolveAi.result', ['properties', 'blocks', 'items']],
+    ['GitDiffResult', 'request.git.diff.result', []],
+    ['GitDiffFile', 'request.git.diff.result', ['properties', 'files', 'items']],
+    ['GitDiffKind', 'request.git.diff.result', ['properties', 'kind']],
+    ['GitCommit', 'request.git.log.result', ['properties', 'commits', 'items']],
+    ['GitLogResult', 'request.git.log.result', []],
+    ['GitRefsResult', 'request.git.refs.result', []],
+    ['GitRef', 'request.git.refs.result', ['properties', 'refs', 'items']],
+    ['GitRefKind', 'request.git.refs.result', ['properties', 'refs', 'items', 'properties', 'kind']],
+    ['GitStash', 'request.git.refs.result', ['properties', 'stashes', 'items']],
+    ['GitCapabilitiesResult', 'request.git.capabilities.result', []],
+    ['GitActionResult', 'request.git.action.result', []],
+    ['GitActionCommit', 'request.git.action.result', ['properties', 'commit']],
+    ['GitSuggestMessageResult', 'request.git.suggestMessage.result', []],
+    ['GitDiscardResult', 'request.git.discard.result', []],
+    ['DeviceListResult', 'request.device.list.result', []],
+    ['DeviceInfo', 'request.device.list.result', ['properties', 'devices', 'items']],
+    ['DevicePlatform', 'request.device.list.result', ['properties', 'devices', 'items', 'properties', 'platform']],
+    ['DeviceKind', 'request.device.list.result', ['properties', 'devices', 'items', 'properties', 'kind']],
+    ['DeviceState', 'request.device.list.result', ['properties', 'devices', 'items', 'properties', 'state']],
+    ['DeviceCapabilities', 'request.device.list.result', ['properties', 'devices', 'items', 'properties', 'capabilities']],
+    ['DeviceUnavailable', 'request.device.list.result', ['properties', 'unavailable', 'items']],
+    ['DeviceOpenResult', 'request.device.open.result', []],
+    ['DeviceDetail', 'request.device.detail.result', []],
+    ['DeviceSettings', 'request.device.detail.result', ['properties', 'settings']],
+    ['DeviceCaptureResult', 'request.device.capture.result', []],
+    ['DeviceClipboardResult', 'request.device.clipboard.result', []],
+    ['DeviceFrameEvent', 'event.device.frame', []],
+    ['ChatListResult', 'request.chat.list.result', []],
+    ['ChatStatusEvent', 'event.chat.status', []],
+    ['SessionListResult', 'request.session.list.result', []],
+    ['SessionInfo', 'request.session.list.result', ['properties', 'sessions', 'items']],
+    ['SessionAttachResult', 'request.session.attach.result', []],
+    ['SessionOutputEvent', 'event.session.output', []],
+    ['SessionResyncEvent', 'event.session.resync', []],
+    ['SessionSizeEvent', 'event.session.size', []],
+    ['SessionExitEvent', 'event.session.exit', []],
+    ['PushAttentionResult', 'request.push.attention.result', []],
+    ['PushAttentionEntry', 'event.push.attention', []],
+    ['UsageSummary', 'request.usage.summary.result', []],
+    ['UsageResolution', 'request.usage.summary.result', ['properties', 'resolution']],
+    ['UsageBucket', 'request.usage.summary.result', ['properties', 'buckets', 'items']],
+    ['UsageTotals', 'request.usage.summary.result', ['properties', 'buckets', 'items', 'properties', 'totals']],
+    ['UsageModel', 'request.usage.summary.result', ['properties', 'models', 'items']],
+    ['UsagePriceBasis', 'request.usage.summary.result', ['properties', 'models', 'items', 'properties', 'priceBasis']],
+    ['UsageProject', 'request.usage.summary.result', ['properties', 'projects', 'items']],
+    ['UsageProjectProvider', 'request.usage.summary.result', ['properties', 'projects', 'items', 'properties', 'byProvider', 'additionalProperties']],
+    ['UsageScan', 'request.usage.summary.result', ['properties', 'scan']],
+    ['UsagePricing', 'request.usage.summary.result', ['properties', 'pricing']],
+    ['UsageRate', 'request.usage.summary.result', ['properties', 'rate', 'anyOf', 0]],
+    ['UsageLimits', 'request.usage.limits.result', []],
+    ['UsageLimitsProvider', 'request.usage.limits.result', ['properties', 'providers', 'items']],
+    ['UsageLimitsAccount', 'request.usage.limits.result', ['properties', 'providers', 'items', 'properties', 'account']],
+    ['UsageLimitsWindow', 'request.usage.limits.result', ['properties', 'providers', 'items', 'properties', 'windows', 'items']],
+    ['UsageLimitsWindowKind', 'request.usage.limits.result', ['properties', 'providers', 'items', 'properties', 'windows', 'items', 'properties', 'kind']],
+    ['UsageLimitsUnavailable', 'request.usage.limits.result', ['properties', 'providers', 'items', 'properties', 'unavailable', 'anyOf', 0]],
+    ['AccountsSnapshot', 'request.accounts.list.result', []],
+    ['AccountConfig', 'request.accounts.list.result', ['properties', 'accounts', 'additionalProperties']],
+    ['AccountStatus', 'request.accounts.list.result', ['properties', 'statuses', 'items']],
+    ['AccountState', 'request.accounts.list.result', ['properties', 'statuses', 'items', 'properties', 'state']],
+    // `provider.detect` and `provider.changed` carry the same list, so they decode into these types too.
+    ['ProviderListResult', 'request.provider.list.result', []],
+    ['ProviderInfo', 'request.provider.list.result', ['properties', 'providers', 'items']],
+    ['ProviderModel', 'request.provider.list.result', ['properties', 'providers', 'items', 'properties', 'models', 'items']],
+    [
+        'ProviderModelOption',
+        'request.provider.list.result',
+        ['properties', 'providers', 'items', 'properties', 'models', 'items', 'properties', 'options', 'items']
+    ],
+    [
+        'ProviderOptionChoice',
+        'request.provider.list.result',
+        ['properties', 'providers', 'items', 'properties', 'models', 'items', 'properties', 'options', 'items', 'oneOf', 0, 'properties', 'choices', 'items']
+    ],
+    ['ProviderCapabilities', 'request.provider.list.result', ['properties', 'providers', 'items', 'properties', 'capabilities']],
+    ['ProviderDiffs', 'request.provider.list.result', ['properties', 'providers', 'items', 'properties', 'capabilities', 'properties', 'diffs']],
+    ['ProviderCompaction', 'request.provider.list.result', ['properties', 'providers', 'items', 'properties', 'capabilities', 'properties', 'compaction']],
+    ['ProviderGoals', 'request.provider.list.result', ['properties', 'providers', 'items', 'properties', 'capabilities', 'properties', 'goals']],
+    ['ProviderInstall', 'request.provider.list.result', ['properties', 'providers', 'items', 'properties', 'install']],
+    ['VoiceKeyStatus', 'request.voice.keyStatus.result', []],
+    ['VoicePreferencesState', 'request.voice.preferences.result', []],
+    ['VoiceMachinePreferences', 'request.voice.preferences.result', ['properties', 'preferences', 'anyOf', 0]],
+    ['VoiceStartResult', 'request.voice.start.result', []],
+    ['VoiceStopResult', 'request.voice.stop.result', []],
+    ['VoiceConfirmResult', 'request.voice.confirm.result', []],
+    ['VoiceStatusEvent', 'event.voice.status', []],
+    ['VoicePhase', 'event.voice.status', ['properties', 'phase']],
+    ['VoiceError', 'event.voice.status', ['properties', 'error']],
+    ['VoiceProject', 'event.voice.status', ['properties', 'project', 'anyOf', 0]],
+    ['VoiceActivityEvent', 'event.voice.activity', []],
+    ['VoiceActivityEntry', 'event.voice.activity', ['properties', 'entry']],
+    ['VoiceActivityKind', 'event.voice.activity', ['properties', 'entry', 'properties', 'kind']],
+    ['VoiceActivityStatus', 'event.voice.activity', ['properties', 'entry', 'properties', 'status']],
+    ['VoiceActivityConfirmation', 'event.voice.activity', ['properties', 'entry', 'properties', 'confirmation']],
+    // The requests a delegated chat waits on are read one by one like the thread's items, so one this app cannot read does not blank the page.
+    ['ChatSubagentPage', 'request.chat.subagent.result', [], ['pending']],
+    ['ChatSubagentHistory', 'request.chat.subagent.result', ['properties', 'history']],
+    ['ChatSubagentContext', 'request.chat.subagent.result', ['properties', 'context']],
+    ['ChatSubagentSource', 'request.chat.subagent.result', ['properties', 'source']],
+    ['ChatSubagentChangedEvent', 'event.chat.subagentChanged', []],
+    ['SkillsListResult', 'request.skills.list.result', []],
+    ['SkillInfo', 'request.skills.list.result', ['properties', 'skills', 'items']],
+    ['ProjectListResult', 'request.project.list.result', []],
+    ['ProjectSidebarResult', 'request.project.sidebar.result', []],
+    ['ProjectSidebarEntry', 'request.project.sidebar.result', ['properties', 'projects', 'items']],
+    ['ProjectSidebarView', 'request.project.sidebar.result', ['properties', 'projects', 'items', 'properties', 'views', 'anyOf', 0, 'items']],
+    [
+        'ProjectSidebarNode',
+        'request.project.sidebar.result',
+        ['properties', 'projects', 'items', 'properties', 'views', 'anyOf', 0, 'items', 'properties', 'nodes', 'items']
+    ],
+    ['ProjectSummaryEvent', 'event.project.summary', []],
+    // `project.setIdentity` and `project.setIcon` answer with the row the project lists keep.
+    ['ProjectSummaryResult', 'request.project.setIdentity.result', []],
+    ['ProjectNewChatResult', 'request.project.newChat.result', []],
+    ['ProjectIcon', 'event.project.summary', ['properties', 'summary', 'properties', 'icon']],
+    // The document stays JSON to merge and save, so a node or view this app has no word for survives a save. The
+    // summary is only ever read, so it has its types.
+    ['ProjectOpenResult', 'request.project.open.result', [], ['document', 'local']],
+    ['ProjectChangedEvent', 'event.project.changed', [], ['document']],
+    ['ProjectSaveResult', 'request.project.save.result', []],
+    ['ProjectShowViewEvent', 'event.project.showView', []],
+    // The views are read one by one, so a view this app cannot read does not blank the list.
+    ['StoredDocument', 'request.project.open.result', ['properties', 'document'], ['views']],
+    ['StoredView', 'request.project.open.result', ['properties', 'document', 'properties', 'views', 'items']],
+    ['StoredNode', 'request.project.open.result', ['properties', 'document', 'properties', 'views', 'items', 'oneOf', 0, 'properties', 'nodes', 'items']]
 ];
-const typed = typedRoots.map(([name, source, path]) => {
-    const schema = path.reduce((node: any, key) => node?.[key], typedSchema(schemas[source]));
+const typed = typedRoots.map(([name, source, path, keep]) => {
+    const schema = path.reduce((node: any, key) => node?.[key], typedSource(source));
     if (!schema) {
         throw new Error(`No schema at ${source} ${path.join('.')}`);
+    }
+    for (const key of keep ?? []) {
+        schema.properties[key] = {};
     }
     names.set(canonical(schema), name);
     return [name, schema] as const;
@@ -376,7 +640,6 @@ function typedMembers(union: string, tag: string): Map<string, Schema> {
     const schema = typed.find(([name]) => name === union)![1];
     return new Map((schema.oneOf ?? schema.anyOf).map((member: Schema) => [member.properties[tag].const, member]));
 }
-// The members of a union are named after their tag: `ChatUserItem`, `ChatDeltaEvent`.
 for (const [union, tag, suffix] of [
     ['ChatItem', 'kind', 'Item'],
     ['ChatEvent', 'type', 'Event']
@@ -385,11 +648,46 @@ for (const [union, tag, suffix] of [
         names.set(canonical(member), `Chat${pascal(value)}${suffix}`);
     }
 }
+for (const [value, member] of typedMembers('StoredView', 'kind')) {
+    names.set(canonical(member), `Stored${pascal(value)}View`);
+}
+for (const [value, member] of typedMembers('FsReadResult', 'kind')) {
+    names.set(canonical(member), `Fs${pascal(value)}Read`);
+}
+for (const [value, member] of typedMembers('Routine', 'kind')) {
+    names.set(canonical(member), `${pascal(value)}Routine`);
+}
+for (const [value, member] of typedMembers('RoutineSchedule', 'kind')) {
+    names.set(canonical(member), `Routine${pascal(value)}Schedule`);
+}
 // Named once, so an assistant message and a delta share the shapes of an intelligent UI reply.
 const assistant = typedMembers('ChatItem', 'kind').get('assistant')!.properties;
 names.set(canonical(assistant.ui.items), 'ChatUiBlock');
 names.set(canonical(assistant.uiQueries), 'ChatUiQueryState');
 names.set(canonical(assistant.uiAnswers.additionalProperties), 'ChatUiAnswer');
+// What `endpoint.info` and `endpoint.changed` share is declared once, under a name that does not say which of them.
+const endpointInfo = typed.find(([name]) => name === 'EndpointInfo')![1].properties;
+names.set(canonical(endpointInfo.icon.anyOf[0]), 'MachineIcon');
+names.set(canonical(endpointInfo.nameSource), 'EndpointNameSource');
+names.set(canonical(endpointInfo.broker), 'EndpointBroker');
+names.set(canonical(endpointInfo.terminalShell), 'EndpointTerminalShell');
+names.set(canonical(endpointInfo.nodeSizes.additionalProperties), 'EndpointNodeSize');
+names.set(canonical(endpointInfo.agentIntegrations), 'EndpointAgentIntegrations');
+names.set(canonical(typed.find(([name]) => name === 'ProcessSample')![1].properties.scope), 'ProcessScope');
+// A launch and a suggestion for one both say where an import read it from.
+names.set(canonical(typed.find(([name]) => name === 'LaunchConfig')![1].properties.origin), 'LaunchOrigin');
+for (const [value, member] of typedMembers('ProviderModelOption', 'type')) {
+    names.set(canonical(member), `Provider${pascal(value)}Option`);
+}
+for (const [value, member] of typedMembers('ProjectIcon', 'kind')) {
+    if (value !== 'lucide') {
+        names.set(canonical(member), `Project${pascal(value)}Icon`);
+    }
+}
+// A step holds its own sub-steps, and the section's items are the same union without a section.
+const storedStep = typed.find(([name]) => name === 'StoredPlanStep')![1];
+refNames.set(storedStep.properties.steps.items['x-ref'], 'StoredPlanStep');
+names.set(canonical(typed.find(([name]) => name === 'StoredPlanSection')![1].properties.items.items), 'StoredPlanSectionItem');
 validatingStructs = false;
 for (const [name, schema] of typed) {
     const type = typeOf(schema, name);
@@ -404,12 +702,12 @@ function tableSource(name: string, entries: string[], methods: string): string {
 const apiSource = [
     tableSource(
         'WireRequest',
-        Object.keys(REQUEST_SCHEMAS),
+        requestNames,
         `    public func validatePayload(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("request.\\(rawValue).payload", value) }\n    public func validateResult(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("request.\\(rawValue).result", value) }`
     ),
     tableSource(
         'WireEvent',
-        Object.keys(EVENT_SCHEMAS),
+        eventNames,
         `    public func validatePayload(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("event.\\(rawValue)", value) }`
     )
 ].join('\n\n');
@@ -425,6 +723,19 @@ ${plan.PlanStepStateSchema.options.map((state) => `        case .${camel(state)}
         }
     }
 }`;
+/*
+ * The paint of each node accent, in the order the desktop lists them. The names come from `NODE_ACCENT_NAMES`, the
+ * color from `NODE_ACCENT_COLORS`, so a color changed in TypeScript reaches the app with the next generation.
+ */
+const nodeAccentSource = `public enum NodeAccentPaint {
+    /// The accents in the order the desktop lists them, \`NODE_ACCENT_NAMES\` in \`packages/contracts\`.
+    public static let names: [String] = [${NODE_ACCENT_NAMES.map((name) => JSON.stringify(name)).join(', ')}]
+
+    /// Each accent as 0xRRGGBB, \`NODE_ACCENT_COLORS\` in \`packages/contracts\`.
+    public static let colors: [String: UInt32] = [
+${NODE_ACCENT_NAMES.map((name) => `        ${JSON.stringify(name)}: 0x${NODE_ACCENT_COLORS[name].slice(1)}`).join(',\n')},
+    ]
+}`;
 const root = resolve(import.meta.dir, '../../../apps/ios/Packages/RuimtePulsar');
 const outputs = new Map<string, string>([
     [
@@ -435,6 +746,10 @@ const outputs = new Map<string, string>([
         'Sources/RuimtePulsar/Generated/Models.swift',
         `// Generated by packages/contracts/scripts/generate-swift.ts; edit the TypeScript schemas.\nimport Foundation\n\npublic enum WireConstants {\n${constantSource}\n}\n\n${[...declarations.values()].join('\n\n')}\n\n${planMarkerSource}\n`
     ],
+    [
+        'Sources/RuimtePulsar/Generated/NodeAccents.swift',
+        `// Generated by packages/contracts/scripts/generate-swift.ts; edit the TypeScript schemas.\n${nodeAccentSource}\n`
+    ],
     ['Sources/RuimtePulsar/Generated/schemas.json', JSON.stringify(schemas, null, 2) + '\n']
 ]);
 const key = 'A'.repeat(43);
@@ -444,6 +759,7 @@ const offer = {
     connectionId: 'attempt_1',
     signal: { kind: 'offer' as const, sdp: 'v=0\r\na=fingerprint:sha-256 aa:BB\r\n', access: { statement, label: 'Bás 📱 漢字 / "ruimte"\n' } }
 };
+const channelBindingFixture = direct.channelBinding(offer.signal.sdp, 'a=fingerprint:SHA-256 cc:dd\r\na=fingerprint:sha-256 CC:DD\r\n');
 const signatureFixtures = [
     {
         kind: 'sessionKey',
@@ -462,33 +778,58 @@ const signatureFixtures = [
             connectionId: 'attempt_2',
             signal: { kind: 'candidate', candidate: '', sdpMid: null, sdpMLineIndex: null }
         })
-    }
+    },
+    {
+        kind: 'machineRegistration',
+        args: ['account-1', 'machine-1', key, 'Mac', 1000],
+        expected: signing.machineRegistrationMessage('account-1', 'machine-1', key, 'Mac', 1000)
+    },
+    { kind: 'accessStatement', args: ['machine-1', key, nonce, 1000, 121000], expected: signing.accessStatementMessage('machine-1', key, nonce, 1000, 121000) },
+    {
+        kind: 'accessStatementV2',
+        args: ['machine-1', key, 'account-1', key, nonce, 1000, 121000],
+        expected: signing.accessStatementV2Message('machine-1', key, 'account-1', key, nonce, 1000, 121000)
+    },
+    { kind: 'deviceLinkStart', args: ['machine-1', key, 'Mac', 1000], expected: signing.deviceLinkStartMessage('machine-1', key, 'Mac', 1000) },
+    { kind: 'lanDoor', args: [nonce, 'machine-1', key], expected: signing.lanDoorMessage(nonce, 'machine-1', key) },
+    { kind: 'mapsTicketMac', args: [key, 1789488000123], expected: signing.mapsTicketBytes(key, 1789488000123) },
+    {
+        kind: 'peerAccessRequest',
+        args: ['machine-1', key, 'machine-2', nonce],
+        expected: signing.peerAccessRequestMessage('machine-1', key, 'machine-2', nonce)
+    },
+    {
+        kind: 'peerStatement',
+        args: ['machine-1', key, 'account-1', key, 'machine-2', key, nonce, 1000, 121000],
+        expected: signing.peerStatementMessage('machine-1', key, 'account-1', key, 'machine-2', key, nonce, 1000, 121000)
+    },
+    { kind: 'extensionStore', args: ['{"extensions":[]}'], expected: signing.extensionStoreMessage('{"extensions":[]}') },
+    { kind: 'daemonChallenge', args: ['machine-1', 'challenge'], expected: signing.daemonChallengeMessage('machine-1', 'challenge') },
+    { kind: 'clientAuth', args: ['machine-1', 'challenge', key], expected: signing.clientAuthMessage('machine-1', 'challenge', key) },
+    {
+        kind: 'daemonChannel',
+        args: ['machine-1', 'challenge', channelBindingFixture],
+        expected: signing.daemonChannelMessage('machine-1', 'challenge', channelBindingFixture)
+    },
+    {
+        kind: 'clientChannel',
+        args: ['machine-1', 'challenge', key, channelBindingFixture],
+        expected: signing.clientChannelMessage('machine-1', 'challenge', key, channelBindingFixture)
+    },
+    {
+        kind: 'localChannel',
+        args: ['machine-1', 'challenge', channelBindingFixture],
+        expected: signing.localSecretChannelMessage('machine-1', 'challenge', channelBindingFixture)
+    },
+    { kind: 'machineProof', args: [4210, nonce], expected: signing.machineProofMessage(4210, nonce) }
 ];
 const framingFixtures = ['hello', 'A'.repeat(15999) + '📱' + '終', 'e\u0301'.repeat(9000), ''].map((input) => ({ input, pieces: direct.splitFrame(input) }));
 const validationInputs: { schema: string; input: unknown }[] = [
-    { schema: 'PairPayloadSchema', input: { token: 'one-use', label: 'iPhone', publicKey: key } },
-    { schema: 'PairPayloadSchema', input: { token: '', label: 'iPhone' } },
     {
-        schema: 'PairResultSchema',
-        input: {
-            endpoint: {
-                id: 'machine-1',
-                label: 'Mac',
-                platform: 'darwin',
-                version: '1.0',
-                protocol: PROTOCOL_VERSION,
-                reachability: 'public',
-                authenticated: true
-            }
-        }
+        schema: 'request.endpoint.info.result',
+        input: { id: 'machine-1', label: 'Mac', platform: 'darwin', version: '1.0', protocol: PROTOCOL_VERSION, reachability: 'public', authenticated: true }
     },
-    { schema: 'PairResultSchema', input: { endpoint: { id: 'machine-1' } } },
-    ...[0, -1, 1].map((width) => ({
-        schema: 'ProjectCanvasDefaultsSchema',
-        input: { layouts: [{ name: 'Canvas', nodes: { node: { x: 0, y: 0, w: width, h: 1 } }, texts: {} }] }
-    })),
-    { schema: 'ProjectCanvasDefaultsSchema', input: {} },
-    { schema: 'ProjectCanvasDefaultsSchema', input: { layouts: null } },
+    { schema: 'request.endpoint.info.result', input: { id: 'machine-1' } },
     { schema: 'AccountSchema', input: { id: 'account', provider: 'github', login: null } },
     { schema: 'AccountSchema', input: { id: 'account', provider: 'github' } },
     { schema: 'ServerHelloResultSchema', input: { version: '1', platform: 'darwin', home: '/Users/bas' } },
@@ -827,11 +1168,11 @@ const pushContent = {
 };
 const pushShared = diffieHellman({ privateKey: ephemeralKey, publicKey: createPublicKey(recipientKey) });
 const pushSymmetric = Buffer.from(
-    hkdfSync('sha256', pushShared, Buffer.from(push.PUSH_HKDF_SALT), Buffer.from(push.pushEncryptionInfo(pushRouting.machineId, pushRouting.handle)), 32)
+    hkdfSync('sha256', pushShared, Buffer.from(signing.PUSH_HKDF_SALT), Buffer.from(push.pushEncryptionInfo(pushRouting.machineId, pushRouting.handle)), 32)
 );
 const pushNonce = Buffer.alloc(12, 3);
 const pushCipher = createCipheriv('aes-256-gcm', pushSymmetric, pushNonce, { authTagLength: 16 });
-pushCipher.setAAD(Buffer.from(push.pushRoutingMessage(pushRouting)));
+pushCipher.setAAD(Buffer.from(signing.pushRoutingMessage(pushRouting)));
 const pushCiphertext = Buffer.concat([pushCipher.update(Buffer.from(JSON.stringify(pushContent))), pushCipher.final(), pushCipher.getAuthTag()]);
 const unsignedPush = {
     ...pushRouting,
@@ -846,7 +1187,7 @@ const pushEncryption = { privateKey: pushPrivateBytes.toString('base64url'), mac
 const readContent = { nodeId: 'node-1', through: 999, expiresAt: 121000 };
 const readNonce = Buffer.alloc(12, 4);
 const readCipher = createCipheriv('aes-256-gcm', pushSymmetric, readNonce, { authTagLength: 16 });
-readCipher.setAAD(Buffer.from(push.pushRoutingMessage(pushRouting)));
+readCipher.setAAD(Buffer.from(signing.pushRoutingMessage(pushRouting)));
 const readCiphertext = Buffer.concat([readCipher.update(Buffer.from(JSON.stringify(readContent))), readCipher.final(), readCipher.getAuthTag()]);
 const unsignedRead = {
     ...unsignedPush,
@@ -883,10 +1224,11 @@ outputs.set(
             pushEncryption,
             pushReadEncryption,
             pushActivitySigning,
-            requestTypes: Object.keys(REQUEST_SCHEMAS),
-            eventTypes: Object.keys(EVENT_SCHEMAS),
+            requestTypes: requestNames,
+            eventTypes: eventNames,
             crypto,
             signatures: signatureFixtures,
+            purposes: signing.SIGNING_PURPOSES,
             framing: framingFixtures,
             validations,
             binding: {
@@ -899,7 +1241,6 @@ outputs.set(
         2
     ) + '\n'
 );
-outputs.set('../RuimteTransport/Tests/RuimteTransportTests/Fixtures/wire.json', outputs.get('Tests/RuimtePulsarTests/Fixtures/wire.json')!);
 for (const [path, contents] of outputs) {
     const destination = resolve(root, path);
     if (process.argv.includes('--check')) {

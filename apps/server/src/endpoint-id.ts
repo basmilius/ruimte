@@ -5,30 +5,34 @@ import { dirname, join } from 'node:path';
 import { isNotFound } from '@adecore/utils/errors';
 import { writeAtomic } from '@adecore/utils/fs';
 import {
-    KeepAwakeModeSchema,
     ProjectIconChoiceSchema,
-    START_FOLDER_MAX,
-    TextModelChoiceSchema,
-    knownNodeSizes,
     nodeSizeOf,
+    type EndpointChangedEvent,
+    type EndpointInfo,
     type EndpointNameSource,
+    type KeepAwakeMode,
+    type MachineSettingValues,
     type NodeKind,
     type NodeSize,
     type NodeSizes,
-    type KeepAwakeMode,
-    type AgentIntegrationsSummary,
-    type LanDoor,
-    type ProjectIconChoice,
-    type TextModelChoice,
-    TerminalShellSchema,
-    type TerminalShell
+    type ProjectIconChoice
 } from '@ruimte/contracts';
-import { BrokerSettingSchema, type BrokerSetting } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { generateKeyPair, signMessage } from './auth/keys.ts';
-import { Binding } from './binding.ts';
 import { ClientSinks } from './client-sinks.ts';
-import type { SessionSink } from './sessions/manager.ts';
+import {
+    SETTING_FILE_SHAPE,
+    defaultSettings,
+    followSettings,
+    settingFields,
+    settingsFromFile,
+    settingsToFile,
+    withSettings,
+    type SettingDescription,
+    type SettingPatch,
+    type SettingPorts
+} from './machine-settings.ts';
+import type { SessionSink } from './wire.ts';
 
 /*
  * The version stays at 1 on purpose as fields are added: zod strips what it does not know, so an older
@@ -43,50 +47,7 @@ const FileSchema = z.object({
        rather than refused: the id and key pair every client pinned are worth more than a name. */
     name: z.string().min(1).optional().catch(undefined),
     icon: ProjectIconChoiceSchema.optional().catch(undefined),
-    /* Whether an agent's `view_delete` may remove any view here, not only the ones it made. A machine
-       setting because the daemon enforces it. Absent is off. */
-    agentsDeleteAnyView: z.boolean().optional().catch(undefined),
-    /* Whether an agent may reach the other projects open here with the field `project`. A machine setting because
-       the daemon enforces it. Absent is off. */
-    reachOpenProjects: z.boolean().optional().catch(undefined),
-    /* Whether an agent may share a development port of this machine with the person's other devices (`port_share`). A machine
-       setting because the daemon enforces it. Absent is off. */
-    agentsSharePorts: z.boolean().optional().catch(undefined),
-    /* Whether a message of an agent joins a running turn. The person's "Send to a working agent right away",
-       a machine setting because no client stands between two agents. Absent is off. */
-    steerMessages: z.boolean().optional().catch(undefined),
-    /* Whether clients may stream browser pages and device screens. Absent is on. */
-    streamingAllowed: z.boolean().optional().catch(undefined),
-    /* Whether a chat stopped on a limit may resume on a clock when its own switch lets it. The daemon
-       keeps that clock, so the switch is the machine's. Absent is off. */
-    resumeAtReset: z.boolean().optional().catch(undefined),
-    /* Whether an agent in an AI chat may show a page above its reply. Absent is on. */
-    visualReplies: z.boolean().optional().catch(undefined),
-    /* The model that writes short texts. Absent is Automatic, and so is a pick that will not read. */
-    textModel: TextModelChoiceSchema.optional().catch(undefined),
-    /* The daemon holds the sleep block, so a phone can set it. Absent is off, on the adapter only and
-       without the display. */
-    keepAwake: KeepAwakeModeSchema.optional().catch(undefined),
-    keepAwakeOnBattery: z.boolean().optional().catch(undefined),
-    keepAwakeDisplay: z.boolean().optional().catch(undefined),
-    // Does nothing until the sudoers rule is installed. Absent is off.
-    keepAwakeLidClosed: z.boolean().optional().catch(undefined),
-    /* Absent is the build's default, and one that will not read falls back to it, since a machine on
-       the default broker is findable. */
-    broker: BrokerSettingSchema.optional().catch(undefined),
-    /* Whether a client on the same network signals without the broker. Absent is open. */
-    lanDoor: z.boolean().optional().catch(undefined),
-    /* Absent is `worktrees` in the data folder. */
-    worktreeRoot: z.string().min(1).optional().catch(undefined),
-    /* Absent is PowerShell. */
-    terminalShell: TerminalShellSchema.optional().catch(undefined),
-    /* Only the kinds a person changed, read one kind at a time (`knownNodeSizes`) so a size that will
-       not read costs that kind alone. */
-    nodeSizes: z.unknown().optional(),
-    /* Where browsing starts on this machine. Absent is the home folder. */
-    startFolder: z.string().max(START_FOLDER_MAX).optional().catch(undefined),
-    /* Whether a release build sends its anonymous daily usage counts. Absent is on. */
-    usageStats: z.boolean().optional().catch(undefined)
+    ...SETTING_FILE_SHAPE
 });
 
 interface IdentityOptions {
@@ -98,22 +59,8 @@ interface IdentityOptions {
     defaultName: string;
     name: string | null;
     icon: ProjectIconChoice | null;
-    agentsDeleteAnyView: boolean;
-    reachOpenProjects: boolean;
-    agentsSharePorts: boolean;
-    steerMessages: boolean;
-    streamingAllowed: boolean;
-    resumeAtReset: boolean;
-    visualReplies: boolean;
-    textModel: TextModelChoice | null;
-    keepAwake: KeepAwakeSetting;
-    broker: BrokerSetting;
-    lanDoor: boolean;
-    worktreeRoot: string | null;
-    terminalShell: TerminalShell | null;
-    nodeSizes: NodeSizes;
-    usageStats: boolean;
-    startFolder: string | null;
+    settings: MachineSettingValues;
+    ports: () => SettingPorts;
 }
 
 export interface KeepAwakeSetting {
@@ -123,87 +70,28 @@ export interface KeepAwakeSetting {
     lidClosed: boolean;
 }
 
-/* What the daemon's broker switch lends the identity: a way to follow a new setting and to say where it ended up. */
-interface IdentityBroker {
-    apply(): Promise<void>;
-    describe(): { brokerUrl: string | null; brokerFixed: boolean };
-}
-
-/* What the daemon's door on the local network lends the identity: a way to follow a new setting and to say where the door stands. */
-export interface IdentityLanDoor {
-    apply(): void;
-    describe(): { lan: LanDoor | null; lanDoorFixed: boolean };
-}
-
-/* What the closed lid lends the identity: whether its rule is installed, which every event carries. */
-interface IdentityClosedLid {
-    describe(): { keepAwakeLidRule: boolean };
-}
-
-/* What the consent for the CLIs' global settings lends the identity: where it stands, which every event carries. */
-interface IdentityAgentIntegrations {
-    describe(): { agentIntegrations: AgentIntegrationsSummary };
-}
-
-/* The switches a client sets on the machine; one left out stays as it stands. */
-export interface IdentityFlags {
-    agentsDeleteAnyView?: boolean;
-    reachOpenProjects?: boolean;
-    agentsSharePorts?: boolean;
-    steerMessages?: boolean;
-    streamingAllowed?: boolean;
-    resumeAtReset?: boolean;
-    visualReplies?: boolean;
-    // Null puts it back to Automatic.
-    textModel?: TextModelChoice | null;
-    keepAwake?: KeepAwakeMode;
-    keepAwakeOnBattery?: boolean;
-    keepAwakeDisplay?: boolean;
-    keepAwakeLidClosed?: boolean;
-    broker?: BrokerSetting;
-    lanDoor?: boolean;
-    // An empty string puts it back to the data folder.
-    worktreeRoot?: string;
-    terminalShell?: TerminalShell;
-    usageStats?: boolean;
-}
+/* Every setting of `MACHINE_SETTINGS` reads from the identity by its own name; the constructor defines them. */
+const SettingReaders = class {} as unknown as new () => Readonly<MachineSettingValues>;
 
 /*
  * The daemon's id and the key that proves it, minted once in `$RUIMTE_HOME`: a client keys what it
  * remembers on the id and pins the key, so only a new home is a new daemon. The name and icon a person
- * picked live here too, so every client of this machine sees the same ones.
+ * picked live here too, so every client of this machine sees the same ones, and so do the settings.
  */
-export class EndpointIdentity {
+export class EndpointIdentity extends SettingReaders {
     readonly id: string;
     readonly publicKey: string;
     private readonly path: string;
     private readonly privateKey: string;
     private readonly defaultName: string;
     private readonly sinks = new ClientSinks();
+    private readonly ports: () => SettingPorts;
     private chosenName: string | null;
     private chosenIcon: ProjectIconChoice | null;
-    private deleteAnyView: boolean;
-    private reachOpen: boolean;
-    private sharePorts: boolean;
-    private steerAgents: boolean;
-    private allowStreaming: boolean;
-    private resumeLimited: boolean;
-    private visuals: boolean;
-    private chosenTextModel: TextModelChoice | null;
-    private awake: KeepAwakeSetting;
-    private brokerSetting: BrokerSetting;
-    private readonly brokerSwitch = new Binding<IdentityBroker>('The broker switch of the machine identity');
-    private lanDoorOpen: boolean;
-    private checkoutRoot: string | null;
-    private shellChoice: TerminalShell | null;
-    private sizes: NodeSizes;
-    private stats: boolean;
-    private browseStart: string | null;
-    private readonly door = new Binding<IdentityLanDoor>('The door on the local network of the machine identity');
-    private readonly closedLid = new Binding<IdentityClosedLid>('The closed-lid rule of the machine identity');
-    private readonly integrations = new Binding<IdentityAgentIntegrations>('The agent integrations of the machine identity');
+    private values: MachineSettingValues;
 
     constructor(options: IdentityOptions) {
+        super();
         this.path = options.path;
         this.id = options.id;
         this.publicKey = options.publicKey;
@@ -211,22 +99,11 @@ export class EndpointIdentity {
         this.defaultName = options.defaultName;
         this.chosenName = options.name;
         this.chosenIcon = options.icon;
-        this.deleteAnyView = options.agentsDeleteAnyView;
-        this.reachOpen = options.reachOpenProjects;
-        this.sharePorts = options.agentsSharePorts;
-        this.steerAgents = options.steerMessages;
-        this.allowStreaming = options.streamingAllowed;
-        this.resumeLimited = options.resumeAtReset;
-        this.visuals = options.visualReplies;
-        this.chosenTextModel = options.textModel;
-        this.awake = options.keepAwake;
-        this.brokerSetting = options.broker;
-        this.lanDoorOpen = options.lanDoor;
-        this.checkoutRoot = options.worktreeRoot;
-        this.shellChoice = options.terminalShell;
-        this.sizes = options.nodeSizes;
-        this.stats = options.usageStats;
-        this.browseStart = options.startFolder;
+        this.values = options.settings;
+        this.ports = options.ports;
+        for (const key of Object.keys(this.values) as (keyof MachineSettingValues)[]) {
+            Object.defineProperty(this, key, { get: () => this.values[key], enumerable: true });
+        }
     }
 
     /* What clients call this machine: the name a person gave it, or the one it started with. */
@@ -242,130 +119,45 @@ export class EndpointIdentity {
         return this.chosenIcon;
     }
 
-    get agentsDeleteAnyView(): boolean {
-        return this.deleteAnyView;
-    }
-
-    /* Read at every call across projects, so turning it off refuses the next one. */
-    get reachOpenProjects(): boolean {
-        return this.reachOpen;
-    }
-
-    /* Read at every `port_share`, so turning it off refuses the next one. */
-    get agentsSharePorts(): boolean {
-        return this.sharePorts;
-    }
-
-    get steerMessages(): boolean {
-        return this.steerAgents;
-    }
-
-    get streamingAllowed(): boolean {
-        return this.allowStreaming;
-    }
-
-    /* Each chat can still say no. */
-    get resumeAtReset(): boolean {
-        return this.resumeLimited;
-    }
-
-    /* Whether `visual_show` publishes; pages already in a thread show either way. */
-    get visualReplies(): boolean {
-        return this.visuals;
-    }
-
-    /* The model that writes short texts; null is Automatic. */
-    get textModel(): TextModelChoice | null {
-        return this.chosenTextModel;
-    }
-
-    get keepAwake(): KeepAwakeSetting {
-        return this.awake;
-    }
-
-    /* The setting as `endpoint.info` and `endpoint.changed` spell it. */
-    keepAwakeFields(): { keepAwake: KeepAwakeMode; keepAwakeOnBattery: boolean; keepAwakeDisplay: boolean; keepAwakeLidClosed: boolean } {
+    get keepAwakeSetting(): KeepAwakeSetting {
         return {
-            keepAwake: this.awake.mode,
-            keepAwakeOnBattery: this.awake.onBattery,
-            keepAwakeDisplay: this.awake.display,
-            keepAwakeLidClosed: this.awake.lidClosed
+            mode: this.values.keepAwake,
+            onBattery: this.values.keepAwakeOnBattery,
+            display: this.values.keepAwakeDisplay,
+            lidClosed: this.values.keepAwakeLidClosed
         };
     }
 
-    /* Lets every event say whether the closed-lid rule is installed. */
-    attachClosedLid(closedLid: IdentityClosedLid): void {
-        this.closedLid.bind(closedLid);
-    }
-
-    /* Lets every event say what a person allowed in the CLIs' global settings. */
-    attachAgentIntegrations(integrations: IdentityAgentIntegrations): void {
-        this.integrations.bind(integrations);
-    }
-
-    /* The broker a person picked for this machine, which a flag or the environment may still override. */
-    get broker(): BrokerSetting {
-        return this.brokerSetting;
-    }
-
-    /* Hands a changed broker setting to the switch that runs the relay, and lets the event say what it became. */
-    attachBroker(broker: IdentityBroker): void {
-        this.brokerSwitch.bind(broker);
-    }
-
-    /* `--no-lan` may still override it. */
-    get lanDoor(): boolean {
-        return this.lanDoorOpen;
-    }
-
-    /* Null while new worktrees go in the data folder. */
-    get worktreeRoot(): string | null {
-        return this.checkoutRoot;
-    }
-
-    /* Null until a person chose one. */
-    get terminalShell(): TerminalShell | null {
-        return this.shellChoice;
-    }
-
-    get usageStats(): boolean {
-        return this.stats;
-    }
-
-    /* Null while browsing starts in the home folder. A path means something on one machine only, so it lives here. */
-    get startFolder(): string | null {
-        return this.browseStart;
-    }
-
-    /* Only the kinds a person changed; `nodeSize` answers for every kind. */
-    get nodeSizes(): NodeSizes {
-        return this.sizes;
-    }
-
     nodeSize(kind: NodeKind): NodeSize {
-        return nodeSizeOf(this.sizes, kind);
+        return nodeSizeOf(this.values.nodeSizes, kind);
     }
 
     /* Null puts the kind back to its built-in size. Every client hears it, since every client adds nodes here. */
     async setNodeSize(kind: NodeKind, size: NodeSize | null): Promise<void> {
-        const { [kind]: _replaced, ...others } = this.sizes;
-        this.sizes = size === null ? others : { ...others, [kind]: { w: size.w, h: size.h } };
+        const { [kind]: _replaced, ...others }: NodeSizes = this.values.nodeSizes;
+        this.values = { ...this.values, nodeSizes: size === null ? others : { ...others, [kind]: { w: size.w, h: size.h } } };
         await this.persist();
         this.announce();
     }
 
     /* Empty puts browsing back in the home folder. Nothing is checked on disk: a folder that is gone already sends browsing home. */
     async setStartFolder(folder: string): Promise<void> {
-        const trimmed = folder.trim();
-
-        this.browseStart = trimmed === '' ? null : trimmed;
+        this.values = { ...this.values, startFolder: folder.trim() };
         await this.persist();
         this.announce();
     }
 
-    /* Hands a changed door setting to the door, and lets the event say where it stands. */
-    attachLanDoor(door: IdentityLanDoor): void {
-        this.door.bind(door);
+    settings(): MachineSettingValues {
+        return this.values;
+    }
+
+    /* Where the parts of the daemon stand, which every event carries. */
+    describe(): SettingDescription {
+        return this.ports().describe();
+    }
+
+    ownerSettings(): Partial<EndpointInfo> {
+        return settingFields(this.values, 'owner');
     }
 
     /* Signs a message with the daemon's private key; the private half never leaves this object. */
@@ -379,75 +171,37 @@ export class EndpointIdentity {
 
     /*
      * A null name hands the machine back to the one it starts with; a null icon leaves it without
-     * one. A switch not passed stays as it stands, since naming a machine is a control of its own.
+     * one. A setting not passed stays as it stands, since naming a machine is a control of its own.
      */
-    async setIdentity(name: string | null, icon: ProjectIconChoice | null, flags: IdentityFlags = {}): Promise<void> {
+    async setIdentity(name: string | null, icon: ProjectIconChoice | null, patch: SettingPatch = {}): Promise<void> {
+        const before = this.values;
         this.chosenName = name;
         this.chosenIcon = icon;
-        this.deleteAnyView = flags.agentsDeleteAnyView ?? this.deleteAnyView;
-        this.reachOpen = flags.reachOpenProjects ?? this.reachOpen;
-        this.sharePorts = flags.agentsSharePorts ?? this.sharePorts;
-        this.steerAgents = flags.steerMessages ?? this.steerAgents;
-        this.allowStreaming = flags.streamingAllowed ?? this.allowStreaming;
-        this.resumeLimited = flags.resumeAtReset ?? this.resumeLimited;
-        this.visuals = flags.visualReplies ?? this.visuals;
-        this.chosenTextModel = flags.textModel === undefined ? this.chosenTextModel : flags.textModel;
-        this.awake = {
-            mode: flags.keepAwake ?? this.awake.mode,
-            onBattery: flags.keepAwakeOnBattery ?? this.awake.onBattery,
-            display: flags.keepAwakeDisplay ?? this.awake.display,
-            lidClosed: flags.keepAwakeLidClosed ?? this.awake.lidClosed
-        };
-        this.brokerSetting = flags.broker ?? this.brokerSetting;
-        this.lanDoorOpen = flags.lanDoor ?? this.lanDoorOpen;
-        this.stats = flags.usageStats ?? this.stats;
-        if (flags.worktreeRoot !== undefined) {
-            this.checkoutRoot = flags.worktreeRoot === '' ? null : flags.worktreeRoot;
-        }
-        this.shellChoice = flags.terminalShell ?? this.shellChoice;
+        this.values = withSettings(before, patch);
         await this.persist();
-        if (flags.broker !== undefined) {
-            await this.brokerSwitch.get().apply();
-        }
-        if (flags.lanDoor !== undefined) {
-            this.door.get().apply();
-        }
+        await followSettings(before, this.values, this.ports);
         this.announce();
     }
 
-    setSwitches(flags: IdentityFlags): Promise<void> {
-        return this.setIdentity(this.chosenName, this.chosenIcon, flags);
+    setSwitches(patch: SettingPatch): Promise<void> {
+        return this.setIdentity(this.chosenName, this.chosenIcon, patch);
+    }
+
+    /* What `endpoint.changed` says, and the part of `endpoint.info` that does not depend on who asks. */
+    snapshot(): EndpointChangedEvent {
+        return {
+            id: this.id,
+            label: this.label,
+            nameSource: this.nameSource,
+            icon: this.chosenIcon,
+            ...settingFields(this.values, 'everyone'),
+            ...this.ports().describe()
+        } as EndpointChangedEvent;
     }
 
     /* Also called after a change in something the event describes. */
     announce(): void {
-        this.sinks.emit({
-            event: 'endpoint.changed',
-            payload: {
-                id: this.id,
-                label: this.label,
-                nameSource: this.nameSource,
-                icon: this.chosenIcon,
-                agentsDeleteAnyView: this.deleteAnyView,
-                reachOpenProjects: this.reachOpen,
-                agentsSharePorts: this.sharePorts,
-                steerMessages: this.steerAgents,
-                streamingAllowed: this.allowStreaming,
-                resumeAtReset: this.resumeLimited,
-                visualReplies: this.visuals,
-                textModel: this.chosenTextModel,
-                ...this.keepAwakeFields(),
-                ...this.closedLid.get().describe(),
-                ...this.integrations.get().describe(),
-                broker: this.brokerSetting,
-                ...this.brokerSwitch.get().describe(),
-                lanDoor: this.lanDoorOpen,
-                ...this.door.get().describe(),
-                nodeSizes: this.sizes,
-                usageStats: this.stats,
-                startFolder: this.browseStart ?? ''
-            }
-        });
+        this.sinks.emit({ event: 'endpoint.changed', payload: this.snapshot() });
     }
 
     /* Writes the file as this object stands; a fresh home is written the moment it is minted. */
@@ -459,25 +213,7 @@ export class EndpointIdentity {
             privateKey: this.privateKey,
             ...(this.chosenName === null ? {} : { name: this.chosenName }),
             ...(this.chosenIcon === null ? {} : { icon: this.chosenIcon }),
-            ...(this.deleteAnyView ? { agentsDeleteAnyView: true } : {}),
-            ...(this.reachOpen ? { reachOpenProjects: true } : {}),
-            ...(this.sharePorts ? { agentsSharePorts: true } : {}),
-            ...(this.steerAgents ? { steerMessages: true } : {}),
-            ...(!this.allowStreaming ? { streamingAllowed: false } : {}),
-            ...(this.resumeLimited ? { resumeAtReset: true } : {}),
-            ...(this.visuals ? {} : { visualReplies: false }),
-            ...(this.chosenTextModel === null ? {} : { textModel: this.chosenTextModel }),
-            ...(this.awake.mode === 'off' ? {} : { keepAwake: this.awake.mode }),
-            ...(this.awake.onBattery ? { keepAwakeOnBattery: true } : {}),
-            ...(this.awake.display ? { keepAwakeDisplay: true } : {}),
-            ...(this.awake.lidClosed ? { keepAwakeLidClosed: true } : {}),
-            ...(this.brokerSetting.mode === 'default' ? {} : { broker: this.brokerSetting }),
-            ...(this.lanDoorOpen ? {} : { lanDoor: false }),
-            ...(this.checkoutRoot === null ? {} : { worktreeRoot: this.checkoutRoot }),
-            ...(this.shellChoice === null ? {} : { terminalShell: this.shellChoice }),
-            ...(Object.keys(this.sizes).length === 0 ? {} : { nodeSizes: this.sizes }),
-            ...(this.stats ? {} : { usageStats: false }),
-            ...(this.browseStart === null ? {} : { startFolder: this.browseStart })
+            ...settingsToFile(this.values)
         };
         await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
         // Durable: a power cut right after a change must not leave an empty file where the key pair was.
@@ -517,8 +253,20 @@ async function readEndpointFile(path: string): Promise<z.infer<typeof FileSchema
     return file;
 }
 
-/* Reads `$RUIMTE_HOME/endpoint.json` and mints whatever is not in it yet. */
-export async function readOrCreateEndpointIdentity(home: string, defaultName: string = hostname()): Promise<EndpointIdentity> {
+/* A daemon that has not handed its parts over yet cannot follow a change or describe itself. */
+function portsNotHandedOver(): SettingPorts {
+    throw new Error('The settings of the machine identity were used before the daemon handed over its parts');
+}
+
+/*
+ * Reads `$RUIMTE_HOME/endpoint.json` and mints whatever is not in it yet. `ports` is read when a setting
+ * changes or an event describes the machine, which the daemon wires after the identity.
+ */
+export async function readOrCreateEndpointIdentity(
+    home: string,
+    defaultName: string = hostname(),
+    ports: () => SettingPorts = portsNotHandedOver
+): Promise<EndpointIdentity> {
     const path = join(home, 'endpoint.json');
     const file = await readEndpointFile(path);
     const keys = file?.publicKey && file.privateKey ? { publicKey: file.publicKey, privateKey: file.privateKey } : null;
@@ -530,27 +278,8 @@ export async function readOrCreateEndpointIdentity(home: string, defaultName: st
         defaultName,
         name: file?.name ?? null,
         icon: file?.icon ?? null,
-        agentsDeleteAnyView: file?.agentsDeleteAnyView ?? false,
-        reachOpenProjects: file?.reachOpenProjects ?? false,
-        agentsSharePorts: file?.agentsSharePorts ?? false,
-        steerMessages: file?.steerMessages ?? false,
-        streamingAllowed: file?.streamingAllowed ?? true,
-        resumeAtReset: file?.resumeAtReset ?? false,
-        visualReplies: file?.visualReplies ?? true,
-        textModel: file?.textModel ?? null,
-        keepAwake: {
-            mode: file?.keepAwake ?? 'off',
-            onBattery: file?.keepAwakeOnBattery ?? false,
-            display: file?.keepAwakeDisplay ?? false,
-            lidClosed: file?.keepAwakeLidClosed ?? false
-        },
-        broker: file?.broker ?? { mode: 'default' },
-        lanDoor: file?.lanDoor ?? true,
-        worktreeRoot: file?.worktreeRoot ?? null,
-        terminalShell: file?.terminalShell ?? null,
-        nodeSizes: knownNodeSizes(file?.nodeSizes),
-        usageStats: file?.usageStats ?? true,
-        startFolder: file?.startFolder ?? null
+        settings: file === null ? defaultSettings() : settingsFromFile(file),
+        ports
     });
     if (!keys) {
         await identity.persist();

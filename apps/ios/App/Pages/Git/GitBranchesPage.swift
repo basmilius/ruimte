@@ -20,7 +20,6 @@ import SwiftUI
 
     var checkout: GitCheckout? { repositories.checkout(path) }
 
-    /// Points the actions at another repository of the folder.
     func point(at path: String) {
         guard path != self.path else { return }
         self.path = path
@@ -62,7 +61,8 @@ import SwiftUI
         case .deleteBranch(let cwd, let ref, let force):
             let extra: [String: JSONValue] = force ? ["ref": .string(ref), "force": .bool(true)] : ["ref": .string(ref)]
             await repositories.act(client: client, cwd: cwd, kind: "delete-branch", extra: extra)
-            if !force, let problem = repositories.problem, gitIsUnmergedRefusal(problem) {
+            // Only git refusing to delete a branch it has not merged anywhere earns a second ask.
+            if !force, repositories.refusal == .branchNotMerged {
                 confirmation = .deleteBranch(cwd: cwd, ref: ref, force: true)
                 return
             }
@@ -97,12 +97,12 @@ import SwiftUI
 struct GitBranchRow: View {
     let client: any MachineRequesting
     let actions: GitBranchActions
-    let ref: JSONValue
+    let ref: GitRef
 
     var body: some View {
-        let name = ref.text("name")
-        let isCurrent = ref["current"] == .bool(true)
-        let elsewhere = ref["worktree"]?.stringValue
+        let name = ref.name
+        let isCurrent = ref.current
+        let elsewhere = ref.worktree
         Button {
             Task { await actions.switchTo(client: client, branch: name) }
         } label: {
@@ -140,7 +140,7 @@ struct GitBranchRow: View {
                     actions.prompt = .renameBranch(cwd: actions.path, branch: name)
                 }
             }
-            if !isCurrent && ref.text("kind") == "local" {
+            if !isCurrent && ref.kind == .local {
                 Button(String(localized: "Delete branch"), lucideIcon: "trash", role: .destructive) {
                     actions.confirmation = .deleteBranch(cwd: actions.path, ref: name, force: false)
                 }
@@ -160,11 +160,10 @@ struct GitBranchRow: View {
             }
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         }
-        return ref["isDefault"] == .bool(true) ? String(localized: "Default branch") : nil
+        return ref.isDefault ? String(localized: "Default branch") : nil
     }
 }
 
-/// The questions and the typed prompts of the branch actions, put on a page once.
 struct GitBranchDialogs: ViewModifier {
     let client: any MachineRequesting
     @Bindable var actions: GitBranchActions
@@ -199,17 +198,16 @@ struct GitBranchDialogs: ViewModifier {
     }
 }
 
-/// Every branch of one repository, the remote ones too, with a search over them.
 struct GitBranchesPage: View {
     let client: any MachineRequesting
     let actions: GitBranchActions
     @State private var query = ""
     @State private var remotes = false
 
-    private var shown: [JSONValue] {
+    private var shown: [GitRef] {
         let source = remotes ? actions.refs.refs : actions.refs.branches
         let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
-        return needle.isEmpty ? source : source.filter { $0.text("name").lowercased().contains(needle) }
+        return needle.isEmpty ? source : source.filter { $0.name.lowercased().contains(needle) }
     }
 
     var body: some View {
@@ -229,7 +227,7 @@ struct GitBranchesPage: View {
             } else if shown.isEmpty {
                 ContentUnavailableView(String(localized: "No branches"), lucideIcon: "git-branch")
             }
-            ForEach(shown, id: \.stableID) { ref in
+            ForEach(shown, id: \.name) { ref in
                 GitBranchRow(client: client, actions: actions, ref: ref)
             }
         }

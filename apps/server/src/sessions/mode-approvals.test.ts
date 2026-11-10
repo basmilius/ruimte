@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { ProjectNode, ProjectView, RuntimeMode } from '@ruimte/contracts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { documentPathInFolder, privatePathOf } from '../projects/project-files.ts';
 import { ProjectStore } from '../projects/project-store.ts';
@@ -101,6 +102,7 @@ describe('a mode an agent writes into the private project file', () => {
                     }
                 }
             }),
+            projectOverlays(join(root, 'home')),
             new FakeWatch()
         );
         const { projectId } = (await store.openProject({ folder })).summary;

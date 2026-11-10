@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { REQUEST_SCHEMAS, type FsEntry, type ProjectCanvasView, type ProjectNode, type RequestType } from '@ruimte/contracts';
 import { act } from 'react';
-import { useDesignChat } from '@/design/design-chat';
 import { canvasOfNode } from '@/state/canvas';
-import { TransportError } from '@/transport/transport';
+import { useDesignChat } from '@/state/design-chat';
+import { TransportError } from '@/transport-api/transport';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, layOutChat, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
@@ -38,7 +38,6 @@ let restoreLayout: () => void;
 // What the design folder holds, which a test changes as the chat would write.
 let listing: FsEntry[];
 
-/* The window on a canvas with the design node, or with `nodes`, its folder holding `entries`. */
 async function start(entries: FsEntry[] = PAGES, nodes: ProjectNode[] = [BOARD]): Promise<void> {
     listing = entries;
     const main: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes, texts: [], edges: [], layouts: [] };

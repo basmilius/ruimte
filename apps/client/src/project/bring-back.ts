@@ -1,19 +1,16 @@
 import type { GitFetchBundleResult } from '@ruimte/contracts';
 import { handOff, type BundleSource, type BundleTarget } from '@/project/bundle-transfer';
+import type { Transport } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
-import type { Transport } from '@/transport/transport';
 
-export interface BringBackRequest {
+interface BringBackRequest {
     /* The machine the node works on. */
     there: BundleSource & Pick<Transport, 'request'>;
     /* The machine the project lives on. */
     here: BundleTarget & Pick<Transport, 'connection'>;
-    /* The folder the node works in, on `there`. */
     cwd: string;
-    /* The project's folder and id, on `here`. */
     folder: string;
     projectId: string;
-    /* What `here` calls the machine, for the branch it is listed under. */
     machine: string;
     title: string;
 }

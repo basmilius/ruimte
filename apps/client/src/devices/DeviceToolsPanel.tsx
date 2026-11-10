@@ -32,15 +32,15 @@ import {
 import { ClipboardCopy, ClipboardPaste, Copy, Download, Frame, ImagePlus, LoaderCircle, PackagePlus, Square, Video } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { recordingKey, useDevices, useRecordingEnded, useRecordingSince } from '@/clients/devices/state';
 import type { DeviceActionBody } from '@/devices/control';
 import { copyScreenshot, placeScreenshotOnCanvas, saveScreenshot, startRecording, stopRecording } from '@/devices/device-capture';
 import { isInstallable, isMedia } from '@/devices/device-files';
 import { MachineFilePicker } from '@/devices/MachineFilePicker';
-import { recordingKey, useDevices, useRecordingEnded, useRecordingSince } from '@/devices/state';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
-import { deviceClientFor } from '@/transport/connections';
 import { useMachineAnswers } from '@/transport/features';
+import { deviceClientFor } from '@/workspace/connections';
 
 /* Answers whether the device took the change. */
 type Act = (body: DeviceActionBody) => Promise<boolean>;

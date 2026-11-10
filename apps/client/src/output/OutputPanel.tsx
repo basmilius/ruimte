@@ -57,13 +57,12 @@ import { useLinkedMachines } from '@/output/linked-machines';
 import { KindTile, OutputProjectGlyph } from '@/output/look';
 import { openArtifact, useOutputRequest } from '@/output/open';
 import { RemoveArtifactDialog, type RemoveArtifactRequest } from '@/output/RemoveArtifactDialog';
-import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
-import { FILE_TOOLBAR } from '@/shell/panels/classes';
-import { setDragging } from '@/shell/view-drag';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpointIdOfMachine, useEndpoints } from '@/state/endpoints';
-import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
+import { PanelHeaderActions, PanelHeaderSlot } from '@/surface/PanelHeaderSlot';
+import { FILE_TOOLBAR } from '@/surface/panels/classes';
 import { useMachineAnswers } from '@/transport/features';
 import { OutputScene } from '@/ui/EmptyScenes';
 
@@ -75,7 +74,6 @@ const SOURCE_ICONS: Record<ArtifactSource, LucideIcon> = { agent: Bot, person: U
 
 const NO_ARTIFACTS: readonly ArtifactSummary[] = [];
 
-/* The panel asked to show one project: this window's own as it starts, any other among All projects, where its rows carry its mark. */
 function filtersFor(asked: string, projectId: string | null): OutputFilters {
     return asked === projectId ? defaultFilters(projectId) : { ...defaultFilters(projectId), project: ALL };
 }
@@ -255,13 +253,11 @@ function LinkedMachineOutput({ link, filters, query, now }: { link: RemoteLink; 
     );
 }
 
-/* What a row's right click asks the panel for, with the dialogs that live once in the panel. */
 interface RowActions {
     copy(artifact: ArtifactSummary): void;
     remove(artifact: ArtifactSummary): void;
 }
 
-/* The right click on a row, about the latest version. A row of another machine is only opened or copied here. */
 function ArtifactRowMenu({
     endpointId,
     machineId,
@@ -304,7 +300,6 @@ function ArtifactRowMenu({
     );
 }
 
-/* Pin to canvas as a submenu of the right click, one row per canvas; the node follows the latest. */
 function PinToCanvasSubmenu({ artifact }: { artifact: ArtifactSummary }) {
     const { t } = useTranslation('output');
     const canvases = usePinCanvases();
@@ -380,7 +375,6 @@ function ArtifactRow({
                         onClick={() => openArtifact(artifact.artifactId, artifact.title, null, machineId)}
                         draggable={machineId === undefined}
                         onDragStart={(event) => machineId === undefined && startArtifactDrag(event.dataTransfer, artifact)}
-                        onDragEnd={() => setDragging(null)}
                     />
                 }
             >
@@ -408,12 +402,10 @@ function ArtifactRow({
     );
 }
 
-/* How many filters beyond the project narrow the list. */
 function narrowing(filters: OutputFilters): number {
     return [filters.kind, filters.source, filters.routine, filters.date, filters.size].filter((value) => value !== ALL).length;
 }
 
-/* What the list is narrowed to, only while it differs from where the panel starts, with the way back. */
 function ScopeLine({ filters, projectId, onReset }: { filters: OutputFilters; projectId: string | null; onReset(): void }) {
     const { t } = useTranslation('output');
     if (!filtersChanged(filters, projectId)) {
@@ -443,7 +435,6 @@ function ScopeLine({ filters, projectId, onReset }: { filters: OutputFilters; pr
     );
 }
 
-/* Every filter in one menu behind the header's button, which stands out while any of them differs from where the panel starts. */
 function FiltersMenu({
     artifacts,
     filters,
@@ -524,7 +515,6 @@ function FiltersMenu({
     );
 }
 
-/* One filter as a row of the menu that says what it is set to and opens its choices. */
 function FilterSubmenu({
     title,
     label,

@@ -1,15 +1,13 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 import XCTest
 
 @testable import Ruimte
 
 final class UsageMoneyTests: XCTestCase {
-    private func rate(_ value: Double = 0.8, currency: String = "EUR") -> JSONValue {
-        .object([
-            "currency": .string(currency), "rate": .number(value), "date": .string("2026-09-15"),
-            "fetchedAt": .number(0),
-        ])
+    private func rate(_ value: Double = 0.8, currency: String = "EUR") -> UsageRate {
+        UsageRate(currency: currency, rate: value, date: "2026-09-15", fetchedAt: 0)
     }
 
     func testEuroSelectionUsesRegionEvenWhenTheLanguageIsEnglish() {
@@ -31,7 +29,7 @@ final class UsageMoneyTests: XCTestCase {
     }
 
     func testMissingOrInvalidRateKeepsDollarAmountsAndExplainsTheFallback() {
-        let invalid: [JSONValue?] = [nil, .null, rate(0), rate(-1), rate(.infinity), rate(.nan), rate(currency: "GBP")]
+        let invalid: [UsageRate?] = [nil, rate(0), rate(-1), rate(.infinity), rate(.nan), rate(currency: "GBP")]
         for value in invalid {
             let money = UsageMoneyFormatter(locale: Locale(identifier: "nl_NL"), rate: value)
             XCTAssertEqual(money.currencyCode, "USD")

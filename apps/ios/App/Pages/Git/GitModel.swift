@@ -11,8 +11,7 @@ struct GitCheckout: Identifiable, Equatable {
     /// What a person reads: the path under the project folder, or the folder's own name for the
     /// repository the folder itself is in.
     let label: String
-    /// `root`, `submodule` or `nested`, as `git.repos` reports it.
-    let kind: String
+    let kind: GitRepoKind
     var status: GitStatus?
     var failure: String?
 
@@ -25,7 +24,6 @@ struct GitCheckout: Identifiable, Equatable {
     /// The merge, rebase, cherry-pick or revert that stopped halfway in this checkout.
     var operation: String? { status?.operation?.rawValue }
     var conflictCount: Int { files(state: "conflicted").count }
-    /// Whether something waits on a person here: an operation that stopped halfway, or a conflict.
     var halted: Bool { operation != nil || conflictCount > 0 }
 
     func files(state: String) -> [GitStatusFile] { files.filter { $0.state.rawValue == state } }
@@ -49,20 +47,11 @@ struct GitCheckout: Identifiable, Equatable {
     }
 }
 
-/// The groups a change falls in, in the order a person acts on them.
 let gitFileGroups = ["conflicted", "staged", "unstaged", "untracked"]
 
 enum GitPanel {
-    /// The hold on `git.watch` that a checkout's `git.status` events come under.
-    @MainActor static func watch(_ client: any MachineRequesting, cwd: String) -> MachineSubscription {
-        let payload: JSONValue = .object(["cwd": .string(cwd)])
-        return client.acquireSubscription(start: "git.watch", stop: "git.unwatch", payload: payload, stopPayload: payload)
-    }
-
-    /// The label a repository is listed under, for a page that only has its path.
-    static func label(folder: String, path: String) -> String {
-        guard path != folder, path.hasPrefix(folder + "/") else { return (path as NSString).lastPathComponent }
-        return String(path.dropFirst(folder.count + 1))
+    static func watch(cwd: String) -> LiveWatch {
+        .area(.gitWatch, payload: .object(["cwd": .string(cwd)]))
     }
 
     /// One checkout's status without the repositories standing inside it. A repository git does not
@@ -93,7 +82,6 @@ enum GitPanel {
         return changed.count == 1 ? (changed, true) : ([], false)
     }
 
-    /// The repositories a push would move, each with its `pushKind`.
     static func pushable(_ checkouts: [GitCheckout]) -> [(checkout: GitCheckout, kind: String)] {
         checkouts.compactMap { checkout in
             guard checkout.isRepository, checkout.branch != nil, checkout.status?.upstream == nil || checkout.ahead > 0
@@ -103,23 +91,21 @@ enum GitPanel {
     }
 }
 
-/// A page of one checkout's log, as the merge below takes it.
 struct GitLoadedLog {
     let cwd: String
     let repo: String
-    var commits: [JSONValue]
+    var commits: [GitCommit]
     /// Nil when this checkout has no further page.
     var cursor: String?
 }
 
-/// One commit with the checkout it came out of.
 struct GitLogRow: Identifiable {
     let cwd: String
     let repo: String
-    let commit: JSONValue
+    let commit: GitCommit
 
-    var id: String { cwd + "\u{0}" + commit.text("hash") }
-    var at: Double { commit.number("at") }
+    var id: String { cwd + "\u{0}" + commit.hash }
+    var at: Double { Double(commit.at) }
 }
 
 extension GitPanel {
@@ -129,7 +115,7 @@ extension GitPanel {
     /// those rows in now would mean moving them later. They come with the next page instead.
     static func mergeLogs(_ logs: [GitLoadedLog]) -> (rows: [GitLogRow], more: Bool) {
         let floor =
-            logs.filter { $0.cursor != nil }.compactMap { $0.commits.last?.number("at") }.max() ?? -.infinity
+            logs.filter { $0.cursor != nil }.compactMap { $0.commits.last.map { Double($0.at) } }.max() ?? -.infinity
         let rows =
             logs
             .flatMap { log in log.commits.map { GitLogRow(cwd: log.cwd, repo: log.repo, commit: $0) } }
@@ -139,7 +125,6 @@ extension GitPanel {
     }
 }
 
-/// The three parts of the git sheet, in the order the design draws its segments.
 enum GitSegment: String, CaseIterable, Identifiable {
     case changes, history, branches
 
@@ -159,7 +144,6 @@ extension GitPanel {
         checkout.isRepository && checkout.ahead > 0 && checkout.behind > 0
     }
 
-    /// What the pill at the top of the sheet says: the branch of the one repository, or how many there are.
     static func pillTitle(_ checkouts: [GitCheckout]) -> String {
         if checkouts.count > 1 { return String(localized: "\(checkouts.count) repositories") }
         guard let only = checkouts.first else { return "Git" }
@@ -167,7 +151,6 @@ extension GitPanel {
         return only.status?.detached == true ? String(localized: "Detached HEAD") : String(localized: "No commits")
     }
 
-    /// The words on the commit bar: how many files go in, which is everything when nothing is staged yet.
     static func commitTitle(_ checkouts: [GitCheckout]) -> String {
         let plan = commitTargets(checkouts)
         guard !plan.targets.isEmpty else { return String(localized: "Commit", comment: "Git commit button") }
@@ -177,7 +160,6 @@ extension GitPanel {
         return String(localized: "Commit \(count) files")
     }
 
-    /// One line per repository on the repositories page: where it stands, in a word or two.
     static func repositoryState(_ checkout: GitCheckout) -> String {
         if let failure = checkout.failure { return failure }
         guard checkout.isRepository else { return String(localized: "Not a repository") }
@@ -189,7 +171,6 @@ extension GitPanel {
     }
 }
 
-/// Git at work, with the desktop's spinner and the last line git wrote.
 struct GitBusyRow: View {
     let text: String
     var cancel: (() -> Void)?
@@ -206,7 +187,6 @@ struct GitBusyRow: View {
     }
 }
 
-/// A wide button that floats over the bottom of a git page, glass since it stands above the list.
 struct GitBarButton: View {
     let title: String
     var prominent = true
@@ -221,7 +201,6 @@ struct GitBarButton: View {
     }
 }
 
-/// The bar the buttons of a git page stand in, over the bottom of its list.
 struct GitBottomBar<Content: View>: View {
     @ViewBuilder var content: Content
 

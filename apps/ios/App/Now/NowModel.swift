@@ -26,6 +26,13 @@ final class NowModel {
         }
     }
 
+    /// Reads again only the machines that cannot say when a project changed, which is what a clock is for.
+    func refreshUnwatched() async {
+        await withTaskGroup(of: Void.self) { group in
+            for feed in feeds.values where !feed.watching { group.addTask { await feed.refresh() } }
+        }
+    }
+
     var inputs: [NowMachineInput] {
         feeds.values.map { feed in
             let attention = feed.session.attention
@@ -49,10 +56,8 @@ final class NowModel {
     var liveRequests: Set<String> {
         Set(
             feeds.values.flatMap { feed in
-                feed.session.attention.waits.values.flatMap(\.requests).compactMap { request in
-                    request["requestId"]?.stringValue.map {
-                        NowAnswers.key(machineID: feed.session.machine.id, requestID: $0)
-                    }
+                feed.session.attention.waits.values.flatMap(\.requests).map {
+                    NowAnswers.key(machineID: feed.session.machine.id, requestID: $0.requestId)
                 }
             })
     }
@@ -77,20 +82,20 @@ final class NowModel {
     /// A routine run that waits on a person as an entry a card answers, from what its machine's attention store holds
     /// of the run's chat. The chat is on no canvas, so the entry names the routine's project and the chat alone.
     func entry(for wait: ScheduledWait) -> ProjectViewEntry? {
-        guard let chatID = wait.run.chatID else { return nil }
+        guard let chatID = wait.run.chatId else { return nil }
         let machineID = wait.item.machineID
         let chat = feeds[machineID]?.session.attention.waits[chatID]
         let requests = unanswered(chat?.requests ?? [], machineID: machineID)
         return ProjectViewEntry(
             target: ProjectViewTarget(
-                machineID: machineID, projectID: wait.item.entry.projectID, viewID: chatID, itemID: chatID),
+                machineID: machineID, projectID: wait.item.entry.projectId, viewID: chatID, itemID: chatID),
             machineName: wait.item.machineName, projectName: wait.item.entry.projectName,
             title: wait.item.entry.title, kind: "chat", iconName: "workflow", status: .needsYou, requests: requests,
             repliesWithMessage: chat.map { feeds[machineID]?.denyReason.contains($0.provider) == true } ?? false)
     }
 
     /// A request answered from this device leaves its card before the machine says it settled.
-    private func unanswered(_ requests: [JSONValue], machineID: String) -> [NowRequest] {
+    private func unanswered(_ requests: [ChatInfoRequestsItem], machineID: String) -> [NowRequest] {
         requests.compactMap(NowRequest.init).filter {
             !answers.answered.contains(NowAnswers.key(machineID: machineID, requestID: $0.requestID))
         }
@@ -113,8 +118,8 @@ final class NowModel {
         for input in inputs {
             let snoozed = Set(input.snoozes.keys)
             for project in input.projects {
-                guard let summary = project["summary"], let views = project["views"]?.arrayValue else { continue }
-                result[UnifiedProjectRow.ID(machineID: input.machineID, projectID: summary.text("projectId"))] =
+                guard let views = project.views else { continue }
+                result[UnifiedProjectRow.ID(machineID: input.machineID, projectID: project.summary.projectId)] =
                     ProjectOverview.activity(views: views, attention: input.attention, snoozed: snoozed)
             }
         }
@@ -122,7 +127,7 @@ final class NowModel {
     }
 
     /// The task another agent opened a node with, if any.
-    func task(for target: ProjectViewTarget) -> JSONValue? {
+    func task(for target: ProjectViewTarget) -> AgentTask? {
         feeds[target.machineID]?.session.tasks.childTask(target.itemID)
     }
 
@@ -172,102 +177,58 @@ extension AppRuntime {
     }
 }
 
-/// One read of a feed at a time: a refresh while one runs waits on it, and a burst of events folds into one read, as
-/// the desktop's sidebar watch does.
-@MainActor
-final class FeedReads {
-    private let load: @MainActor () async -> Void
-    private var pending: Task<Void, Never>?
-    private var loading: Task<Void, Never>?
-
-    init(load: @escaping @MainActor () async -> Void) { self.load = load }
-
-    func refresh() async {
-        if let loading {
-            await loading.value
-            return
-        }
-        let task = Task { await load() }
-        loading = task
-        await task.value
-        loading = nil
-    }
-
-    func schedule() {
-        guard pending == nil else { return }
-        pending = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(150))
-            guard let self, !Task.isCancelled else { return }
-            pending = nil
-            await refresh()
-        }
-    }
-
-    /// A link that dropped has nothing to read until it is back.
-    func cancelScheduled() {
-        pending?.cancel()
-        pending = nil
-    }
-
-    func cancel() {
-        cancelScheduled()
-        loading?.cancel()
-    }
-}
+/// How long a burst of events is gathered into one read of a feed, as the desktop's sidebar watch does.
+let feedSettleMilliseconds: Double = 150
 
 @MainActor @Observable
 final class NowFeed: MachineFeed {
     let session: SharedMachineSession
-    private(set) var projects: [JSONValue] = []
+    private(set) var projects: [ProjectSidebarEntry] = []
     private(set) var loaded = false
     private(set) var problem: String?
     /// The CLIs on this machine whose denial carries a message, from `provider.list`.
     private(set) var denyReason: Set<String> = []
     @ObservationIgnored private var providersGeneration: Int?
-    @ObservationIgnored private var stops: [() -> Void] = []
-    @ObservationIgnored private lazy var reads = FeedReads { [weak self] in await self?.load() }
+    // A project no client holds has no watcher on the machine, so a new chat there shows on `project.listChanged`
+    // from a machine that takes `project.watch`, and on a read every few seconds from one that does not.
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: session.rpc,
+        events: [
+            .reread(.projectChanged), .reread(.projectSummary), .reread(.projectListChanged),
+            .reread(.sessionListChanged),
+        ], watch: .area(.projectWatch, gated: true), settleMilliseconds: feedSettleMilliseconds,
+        read: { [weak self] in await self?.load() })
     @ObservationIgnored private var watched = Set<String>()
 
     init(session: SharedMachineSession) { self.session = session }
 
     func start() {
-        guard stops.isEmpty else { return }
+        guard !live.isStarted else { return }
         session.retain()
-        let client = session.rpc
-        stops = ["project.changed", "project.summary", "session.list-changed"].map { event in
-            client.subscribe(event) { [weak self] _ in self?.reads.schedule() }
-        }
-        stops.append(
-            client.observeConnection { [weak self] connected in
-                guard let self else { return }
-                if connected {
-                    reads.schedule()
-                } else {
-                    reads.cancelScheduled()
-                }
-            })
-        if session.connected { reads.schedule() }
+        live.start()
     }
 
     func stop() {
-        guard !stops.isEmpty else { return }
-        stops.forEach { $0() }
-        stops.removeAll()
-        reads.cancel()
+        guard live.isStarted else { return }
+        live.stop()
         for id in watched { session.tasks.unwatch(id) }
         watched.removeAll()
         session.release()
     }
 
-    func refresh() async { await reads.refresh() }
+    func refresh() async { await live.refresh() }
+
+    /// Whether the machine took `project.watch` on this link, so it says by itself when a project changed.
+    var watching: Bool { live.isWatching }
 
     private func load() async {
         guard session.connected else { return }
         let generation = session.generation
         do {
-            let result = try await session.rpc.request("project.sidebar", payload: .object([:]))
-            guard !Task.isCancelled, generation == session.generation, !stops.isEmpty else { return }
-            projects = result.list("projects")
+            let result = try await session.rpc.request(.projectSidebar, payload: .object([:]))
+                .decoded(as: ProjectSidebarResult.self)
+            guard !Task.isCancelled, generation == session.generation, live.isStarted else { return }
+            projects = result.projects
             loaded = true
             problem = nil
             watchTasks()
@@ -284,12 +245,12 @@ final class NowFeed: MachineFeed {
         else { return }
         providersGeneration = generation
         denyReason = Set(
-            providers.filter { $0["capabilities"]?["denyReason"]?.boolValue == true }.map { $0.text("kind") })
+            providers.filter { $0.capabilities.denyReason }.map(\.kind))
     }
 
     /// Asks for the tasks of every open project, so a row of a node another agent opened wears its task mark.
     private func watchTasks() {
-        let open = Set(projects.compactMap { $0["summary"]?.text("projectId") }.filter { !$0.isEmpty })
+        let open = Set(projects.map(\.summary.projectId).filter { !$0.isEmpty })
         for id in open.subtracting(watched) { session.tasks.watch(id) }
         for id in watched.subtracting(open) { session.tasks.unwatch(id) }
         watched = open

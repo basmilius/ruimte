@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { keyOf as eventOf } from '@adecore/editor-react/testing';
 import { typeInto } from '@adecore/editor/testing';
+import { isApplePlatform } from '@adecore/ui';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
-import { keyOf } from '@/shell/shortcut-overrides';
 import { useSettings } from '@/state/settings';
+import { keyOf } from '@/surface/shortcut-overrides';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { eventOf } from './key-events';
 
 const MOD = isApplePlatform() ? { metaKey: true } : { ctrlKey: true };
 const VIEW = { kind: 'file', id: 'greet-view', name: 'greet.ts', path: 'greet.ts' };

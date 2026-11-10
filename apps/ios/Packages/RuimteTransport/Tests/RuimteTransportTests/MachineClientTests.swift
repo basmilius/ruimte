@@ -15,12 +15,12 @@ import Testing
     @Test func queuedFramesKeepOrderAndDiscardPreviousConnections() async throws {
         let client = MachineClient(send: { _ in }, connected: true)
         var received: [String] = []
-        let stop = client.subscribe("session.output") { received.append($0["data"]!.stringValue!) }
+        let stop = client.subscribe(.sessionOutput) { received.append($0["data"]!.stringValue!) }
         defer { stop() }
         func frame(_ data: String) throws -> String {
             String(
                 decoding: try JSONValue.object([
-                    "type": .string("event"), "event": .string("session.output"),
+                    "type": .string("event"), "event": .string(WireEvent.sessionOutput.rawValue),
                     "payload": .object(["sessionId": .string("s"), "data": .string(data)]),
                 ]).encoded(), as: UTF8.self)
         }
@@ -40,7 +40,7 @@ import Testing
     @Test func framesBetweenTheLinkOpeningAndTheClientConnectingWaitForIt() async throws {
         let client = MachineClient(send: { _ in })
         var received: [String] = []
-        let stop = client.subscribe("session.output") { received.append($0["data"]?.stringValue ?? "") }
+        let stop = client.subscribe(.sessionOutput) { received.append($0["data"]?.stringValue ?? "") }
         defer { stop() }
         func frame(_ data: String) -> String {
             #"{"type":"event","event":"session.output","payload":{"sessionId":"s","data":"\#(data)"}}"#
@@ -76,11 +76,11 @@ import Testing
                     #"{"type":"event","event":"chat.event","payload":{"chatId":"c","event":{"type":"delta","itemId":"i","text":" delta"}}}"#
                 )
             }, connected: true)
-        let stop = client.subscribe("chat.event") { text += $0["event"]?["text"]?.stringValue ?? "" }
+        let stop = client.subscribe(.chatEvent) { text += $0["event"]?["text"]?.stringValue ?? "" }
         defer { stop() }
         let requesting: any MachineRequesting = client
         _ = try await requesting.request(
-            "chat.history", payload: .object(["chatId": .string("c"), "cursor": .string("epoch:1")])
+            .chatHistory, payload: .object(["chatId": .string("c"), "cursor": .string("epoch:1")])
         ) { _ in text = "snapshot" }
         #expect(text == "snapshot delta")
     }
@@ -111,26 +111,26 @@ import Testing
                 }
             }, scheduler: clock, connected: true)
         let shared = client!
-        async let first = shared.request("fs.read", payload: .object(["path": .string("/first")]))
-        async let second = shared.request("fs.read", payload: .object(["path": .string("/second")]))
+        async let first = shared.request(.fsRead, payload: .object(["path": .string("/first")]))
+        async let second = shared.request(.fsRead, payload: .object(["path": .string("/second")]))
         let values = try await [first, second]
         #expect(values.map { $0["text"] } == [.string("/first"), .string("/second")])
         #expect(client.pendingRequestCount == 0)
         #expect(clock.pending.isEmpty)
         client = MachineClient(
             send: { text in try answer(client, JSONValue.decode(Data(text.utf8)), .object([:])) }, connected: true)
-        await #expect(throws: (any Error).self) { try await client.request("server.ping") }
+        await #expect(throws: (any Error).self) { try await client.request(.serverPing) }
     }
 
     @Test func timeoutCancellationAndReconnectDiscardOutstandingRequests() async throws {
         let clock = FakeScheduler()
         var client: MachineClient!
         client = MachineClient(send: { _ in clock.advance() }, scheduler: clock, connected: true)
-        await #expect(throws: MachineClientError.timeout("server.ping")) { try await client.request("server.ping") }
+        await #expect(throws: MachineClientError.timeout("server.ping")) { try await client.request(.serverPing) }
         #expect(client.pendingRequestCount == 0)
         var task: Task<JSONValue, Error>!
         client = MachineClient(send: { _ in task.cancel() }, scheduler: clock, connected: true)
-        task = Task { try await client.request("server.ping") }
+        task = Task { try await client.request(.serverPing) }
         await #expect(throws: CancellationError.self) { try await task.value }
         #expect(client.pendingRequestCount == 0)
         #expect(clock.pending.isEmpty)
@@ -141,7 +141,7 @@ import Testing
                 client.disconnected()
                 client.connected()
             }, scheduler: clock, connected: true)
-        await #expect(throws: MachineClientError.disconnected) { try await client.request("server.ping") }
+        await #expect(throws: MachineClientError.disconnected) { try await client.request(.serverPing) }
         #expect(sends == 1)
         #expect(client.pendingRequestCount == 0)
     }
@@ -153,7 +153,7 @@ import Testing
             send: { sent.append(try JSONValue.decode(Data($0.utf8))) }, scheduler: clock, connected: true)
         let history = Task {
             try await client.request(
-                "chat.history", payload: .object(["chatId": .string("c"), "cursor": .string("epoch:1")]))
+                .chatHistory, payload: .object(["chatId": .string("c"), "cursor": .string("epoch:1")]))
         }
         while sent.isEmpty { await Task.yield() }
         // Each firing is a timeout's worth of a reply coming in piece by piece.
@@ -168,7 +168,7 @@ import Testing
         _ = try await history.value
         #expect(clock.pending.isEmpty)
 
-        let ping = Task { try await client.request("server.ping") }
+        let ping = Task { try await client.request(.serverPing) }
         while sent.count < 2 { await Task.yield() }
         client.heard()
         clock.advance()
@@ -180,7 +180,7 @@ import Testing
         let clock = FakeScheduler()
         var sends = 0
         let client = MachineClient(send: { _ in sends += 1 }, scheduler: clock, connected: true)
-        let status = Task { try await client.request("git.status", payload: .object(["cwd": .string("/work")])) }
+        let status = Task { try await client.request(.gitStatus, payload: .object(["cwd": .string("/work")])) }
         while sends == 0 { await Task.yield() }
         for _ in 0..<MachineClient.maxTimeoutRenewals {
             client.heard()
@@ -196,7 +196,7 @@ import Testing
         var sends = 0
         let client = MachineClient(send: { _ in sends += 1 }, scheduler: ImmediateClock(), connected: true)
         client.heard()
-        await #expect(throws: MachineClientError.timeout("server.ping")) { try await client.request("server.ping") }
+        await #expect(throws: MachineClientError.timeout("server.ping")) { try await client.request(.serverPing) }
         #expect(sends == 0)
     }
 
@@ -206,7 +206,7 @@ import Testing
         client = MachineClient(send: { _ in #expect(clock.pending.isEmpty) }, scheduler: clock, connected: true)
         let push = Task {
             try await client.request(
-                "git.action",
+                .gitAction,
                 payload: .object(["cwd": .string("/work"), "actionId": .string("push-1"), "kind": .string("push")]))
         }
         while client.pendingRequestCount == 0 { await Task.yield() }
@@ -222,8 +222,8 @@ import Testing
         let client = MachineClient(send: { _ in }, connected: true)
         var events: [JSONValue] = []
         var rejected: [JSONValue] = []
-        let stop = client.subscribe("chat.event") { events.append($0) }
-        let stopRejected = client.subscribeRejected("chat.event") { rejected.append($0) }
+        let stop = client.subscribe(.chatEvent) { events.append($0) }
+        let stopRejected = client.subscribeRejected(.chatEvent) { rejected.append($0) }
         client.receive(
             #"{"type":"event","event":"chat.event","payload":{"chatId":"c1","event":{"type":"future","x":1}}}"#)
         client.receive(
@@ -242,11 +242,11 @@ import Testing
         var sends = 0
         let client = MachineClient(send: { _ in sends += 1 }, connected: true)
         await #expect(throws: (any Error).self) {
-            try await client.request("session.attach", payload: .object(["sessionId": .string("s")]))
+            try await client.request(.sessionAttach, payload: .object(["sessionId": .string("s")]))
         }
         #expect(sends == 0)
         var events: [JSONValue] = []
-        let stop = client.subscribe("session.output") { events.append($0) }
+        let stop = client.subscribe(.sessionOutput) { events.append($0) }
         let valid = #"{"type":"event","event":"session.output","payload":{"sessionId":"s","data":"hello"}}"#
         client.receive(valid)
         client.receive(#"{"type":"event","event":"session.output","payload":{"sessionId":"s","data":1}}"#)
@@ -278,11 +278,11 @@ import Testing
         let parentPayload: JSONValue = .object(["path": .string("/project")])
         let childPayload: JSONValue = .object(["path": .string("/project/src")])
         let parent = client.acquireSubscription(
-            start: "fs.watch", stop: "fs.unwatch", payload: parentPayload, stopPayload: parentPayload)
+            start: .fsWatch, stop: .fsUnwatch, payload: parentPayload, stopPayload: parentPayload)
         let child = client.acquireSubscription(
-            start: "fs.watch", stop: "fs.unwatch", payload: childPayload, stopPayload: childPayload)
+            start: .fsWatch, stop: .fsUnwatch, payload: childPayload, stopPayload: childPayload)
         let childAgain = client.acquireSubscription(
-            start: "fs.watch", stop: "fs.unwatch", payload: childPayload, stopPayload: childPayload)
+            start: .fsWatch, stop: .fsUnwatch, payload: childPayload, stopPayload: childPayload)
         try await parent.refresh()
         try await child.refresh()
         await parent.release()
@@ -303,19 +303,19 @@ import Testing
                 let frame = try JSONValue.decode(Data(text.utf8))
                 types.append(frame["type"]!.stringValue!)
                 let result: JSONValue =
-                    frame["type"] == .string("session.attach")
+                    frame["type"] == .string(WireRequest.sessionAttach.rawValue)
                     ? .object([
                         "screen": .string("snapshot"), "cols": .number(80), "rows": .number(24), "exited": .bool(false),
                     ]) : .object([:])
                 try answer(client, frame, result)
-                if frame["type"] == .string("session.attach") {
+                if frame["type"] == .string(WireRequest.sessionAttach.rawValue) {
                     client.receive(
                         #"{"type":"event","event":"session.output","payload":{"sessionId":"s","data":"tail"}}"#)
                 }
             }, connected: true)
-        let first = client.acquireAttachment("session", id: "s")
-        let second = client.acquireAttachment("session", id: "s")
-        let stop = client.subscribe("session.output") { _ in ordering.append("event") }
+        let first = client.acquireAttachment(.session, id: "s")
+        let second = client.acquireAttachment(.session, id: "s")
+        let stop = client.subscribe(.sessionOutput) { _ in ordering.append("event") }
         _ = try await first.snapshot(
             payload: .object(["sessionId": .string("s"), "follow": .bool(true)]),
             onSnapshot: { _ in ordering.append("snapshot") })
@@ -342,14 +342,14 @@ import Testing
                     clock.advance()
                 }
             }, scheduler: clock, connected: true)
-        let result = try await client.request("server.hello")
+        let result = try await client.request(.serverHello)
         #expect(result["home"] == .string("/Users/\u{FFFD}"))
     }
 
     @Test func aLoneSurrogateHalfInAnEventReadsAsAReplacementCharacter() {
         let client = MachineClient(send: { _ in }, connected: true)
         var received: [String] = []
-        let stop = client.subscribe("session.output") { received.append($0["data"]?.stringValue ?? "") }
+        let stop = client.subscribe(.sessionOutput) { received.append($0["data"]?.stringValue ?? "") }
         defer { stop() }
         client.receive(#"{"type":"event","event":"session.output","payload":{"sessionId":"s","data":"\udc00 \ud83d"}}"#)
         #expect(received == ["\u{FFFD} \u{FFFD}"])
@@ -368,7 +368,7 @@ import Testing
                 }
             }, scheduler: clock, connected: true)
         await #expect(throws: MachineClientError.invalid("The machine sent a reply this app cannot read.")) {
-            try await client.request("server.ping")
+            try await client.request(.serverPing)
         }
         client = MachineClient(
             send: { text in
@@ -377,7 +377,7 @@ import Testing
                 clock.advance()
             }, scheduler: clock, connected: true)
         await #expect(throws: MachineClientError.invalid("The machine sent a reply this app cannot read.")) {
-            try await client.request("server.ping")
+            try await client.request(.serverPing)
         }
         #expect(client.pendingRequestCount == 0)
     }
@@ -394,10 +394,10 @@ import Testing
                 client.receive(String(decoding: try reply.encoded(), as: UTF8.self))
             }, connected: true)
         await #expect(throws: MachineClientError.server(code: "conflict", message: "Reload the project")) {
-            try await client.request("server.ping")
+            try await client.request(.serverPing)
         }
         client = MachineClient(send: { _ in throw MachineClientError.disconnected }, connected: true)
-        await #expect(throws: MachineClientError.disconnected) { try await client.request("server.ping") }
+        await #expect(throws: MachineClientError.disconnected) { try await client.request(.serverPing) }
         #expect(client.pendingRequestCount == 0)
     }
 }
@@ -406,12 +406,12 @@ import Testing
     var replies: [JSONValue]
     var offsets: [Double] = []
     init(_ replies: [JSONValue]) { self.replies = replies }
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         offsets.append(payload["offset"]!.numberValue!)
         guard !replies.isEmpty else { throw MachineClientError.invalid("Unexpected request") }
         return replies.removeFirst()
     }
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }
 
 @MainActor struct MachineResourceTests {

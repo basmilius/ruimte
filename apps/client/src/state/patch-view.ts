@@ -3,7 +3,7 @@ import { storedText } from '@/state/stored-json';
 
 const storedMode = storedText('ruimte.patch-view');
 
-export type PatchViewMode = 'patch' | 'text';
+type PatchViewMode = 'patch' | 'text';
 
 export function readMode(): PatchViewMode {
     return storedMode.read() === 'text' ? 'text' : 'patch';

@@ -10,18 +10,16 @@ import {
     type PortEndEvent,
     type PortHost
 } from '@ruimte/contracts';
-import { sendEvent, type ClientConnection } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
+import { sendEvent, type ClientConnection } from '../wire.ts';
 import type { PortGrants } from './port-grants.ts';
 
-/* What a service on loopback says to a stream. */
 export interface PortSocketHandlers {
     data(bytes: Uint8Array): void;
     /* The service closed its side, or the connection failed (`error` is then the reason). */
     ended(error: string | null): void;
 }
 
-/* One connection to the service of a grant. */
 export interface PortSocket {
     /* Settles once every byte went to the service, which is what frees the client's window. */
     write(bytes: Uint8Array): Promise<void>;
@@ -32,7 +30,6 @@ export interface PortSocket {
     resume(): void;
 }
 
-/* Connects to one literal address; rejects when nothing answers. */
 export type PortConnect = (host: PortHost, port: number, handlers: PortSocketHandlers) => Promise<PortSocket>;
 
 /* A clock the streams use for the five seconds an answer may take and for rechecking a full channel. */
@@ -40,7 +37,7 @@ export interface PortTimers {
     after(ms: number, fire: () => void): () => void;
 }
 
-export interface PortStreamsOptions {
+interface PortStreamsOptions {
     grants: PortGrants;
     connect: PortConnect;
     timers: PortTimers;
@@ -58,7 +55,7 @@ const STREAM_OVERLOAD_BYTES = STREAM_QUEUE_BYTES + 2 * 512 * 1024;
 /* A full channel is asked again this often when no drain came, since a drain only fires when the channel crossed its own threshold. */
 const RECHECK_MS = 20;
 
-export class PortStreamError extends CodedError {}
+class PortStreamError extends CodedError {}
 
 type Closing = Pick<PortEndEvent, 'reason' | 'message'>;
 
@@ -289,7 +286,6 @@ export class PortStreams {
         this.finish(stream, null, false);
     }
 
-    /* A client went, so everything it opened goes with it. */
     channelClosed(clientId: string): void {
         const entry = this.clients.get(clientId);
 

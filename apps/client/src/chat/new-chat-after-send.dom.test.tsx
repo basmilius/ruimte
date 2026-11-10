@@ -3,7 +3,7 @@ import { readChatPreferences, rememberChatPreferences } from '@adecore/agents-re
 import type { ProjectView, RuntimeMode } from '@ruimte/contracts';
 import { act } from 'react';
 import { openNewChatAfterSend } from '@/chat/new-chat-after-send';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { chatInfoOf } from '../../testing/chat-info';
 import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
@@ -17,7 +17,6 @@ let machine: FakeMachine;
 let workspace: FakeWorkspace;
 let page: Mounted;
 
-/* The mode each chat runs in on the machine, as it was created and configured. */
 const modes = new Map<string, RuntimeMode>();
 
 afterEach(async () => {

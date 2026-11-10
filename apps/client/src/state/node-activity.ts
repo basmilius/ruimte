@@ -1,16 +1,17 @@
 import type { NodeActivity } from '@ruimte/contracts';
 import { create } from 'zustand';
-import { projectNodes } from '@/project/view-nodes';
-import { currentEndpointId, dropEndpoint, endpointKey, endpointOfNode, isOfEndpoint } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
+import { dropEndpoint, endpointKey, endpointOfNode, isOfEndpoint } from '@/state/keys';
 import { onNodeActivated } from '@/state/node-activation';
-import { readOnEveryOpen, type Transport } from '@/transport/transport';
+import { projectNodes } from '@/state/view-nodes';
+import { fireAndForget, readOnEveryOpen, type Transport } from '@/transport-api/transport';
 
 /*
  * When each node last changed for a person, on its machine's clock: its agent started, waited, stopped
  * or finished, or a person opened it. The machine keeps it (`activity.list`), so every client lists a
  * canvas in the same order. A machine older than `activity.list` leaves a node without one.
  */
-export type NodeActivities = Readonly<Record<string, number>>;
+type NodeActivities = Readonly<Record<string, number>>;
 
 interface NodeActivityStore {
     byKey: NodeActivities;
@@ -51,7 +52,6 @@ function isLatest(activities: NodeActivities, key: string, endpointId: string): 
     return Object.entries(activities).every(([other, otherAt]) => other === key || !isOfEndpoint(other, endpointId) || otherAt <= at);
 }
 
-/* The link to each machine that keeps activity, which is where a touch goes. */
 const machines = new Map<string, Transport>();
 
 function touch(nodeId: string): void {
@@ -69,7 +69,7 @@ function touch(nodeId: string): void {
     }
 
     // The node may be in no project on that machine, such as one bound to it from here; it then has no activity.
-    void transport.request('activity.touch', { nodeId }).catch(() => undefined);
+    void fireAndForget('activity.touch', transport.request('activity.touch', { nodeId }));
 }
 
 /* One machine's activity: all of it on every fresh link, and every change after. `answers` says whether it keeps any. */
@@ -87,15 +87,15 @@ export function watchNodeActivity(endpointId: string, transport: Transport, answ
         }
 
         machines.set(endpointId, transport);
-        transport
-            .request('activity.list', {})
-            .then(({ activity }) => {
+        // A failed ask leaves the activity as it was; the next open link asks again.
+        void fireAndForget(
+            'activity.list',
+            transport.request('activity.list', {}).then(({ activity }) => {
                 if (current === generation) {
                     useNodeActivity.getState().receive(endpointId, activity, true);
                 }
             })
-            // A failed ask leaves the activity as it was; the next open link asks again.
-            .catch(() => undefined);
+        );
     };
 
     const offEvent = transport.on('activity.changed', ({ activity }) => useNodeActivity.getState().receive(endpointId, activity, false));
@@ -114,7 +114,6 @@ export function watchNodeActivity(endpointId: string, transport: Transport, answ
     };
 }
 
-/* Tells the machine whenever a person opens a node. */
 export function startNodeActivityTouches(): () => void {
     return onNodeActivated(touch);
 }

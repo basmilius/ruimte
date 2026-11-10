@@ -7,7 +7,6 @@ import type { ExternalTier } from '@ruimte/contracts';
  * whose input is a path on the machine (`artifact_publish`, `device_install`, `device_media`, `language_*`, `template_new`).
  */
 
-/* What a client may look at. */
 const READ: readonly string[] = [
     'guide',
     'project_list',
@@ -23,7 +22,6 @@ const READ: readonly string[] = [
     'operation_get'
 ];
 
-/* What a client may do on canvases and with agents, beside reading. */
 const WORK: readonly string[] = [
     'view_new',
     'view_edit',
@@ -109,7 +107,6 @@ export const TIER_TOOLS: Readonly<Record<ExternalTier, readonly string[]>> = {
 /* Tools that take no `project`: they work on the machine, not in a project. */
 export const MACHINE_WIDE_TOOLS: ReadonlySet<string> = new Set(['guide', 'project_list', 'project_open', 'project_activate', ...APPROVAL_TOOLS]);
 
-/* Whether a tier lists the tool. */
 export function tierHas(tier: ExternalTier, name: string): boolean {
     return TIER_TOOLS[tier].includes(name);
 }

@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { ProjectIdSchema } from './project.ts';
 
@@ -124,3 +125,23 @@ export function readDatabaseEntries(entries: readonly unknown[]): DatabaseFileEn
         return parsed.success ? { connection: parsed.data } : { raw };
     });
 }
+
+export const DATABASE_REQUEST_SCHEMAS = {
+    'database.connections': { payload: DatabaseConnectionsPayloadSchema, result: DatabaseConnectionsSchema },
+    // A person's save of the whole list; a password in it never reaches a file.
+    'database.connections.save': { payload: DatabaseConnectionsSavePayloadSchema, result: DatabaseConnectionsSchema },
+    // One message of `@adecore/database`'s protocol, answered with its response. Export and import only for the local secret.
+    'database.request': { payload: DatabaseRequestPayloadSchema, result: DatabaseRequestResultSchema },
+    'database.agentAccess': { payload: DatabaseConnectionsPayloadSchema, result: DatabaseAgentAccessMapSchema },
+    // A person's choice for one connection; `write` only through the local secret.
+    'database.agentAccess.set': { payload: DatabaseAgentAccessSetPayloadSchema, result: DatabaseAgentAccessMapSchema },
+    // The passwords a client holds for the project's connections, kept in memory for its agents.
+    'database.passwords': { payload: DatabasePasswordsPayloadSchema, result: EmptySchema }
+} as const;
+
+export const DATABASE_EVENT_SCHEMAS = {
+    // To every client that holds the project, except the one whose save it answers.
+    'database.connections.changed': DatabaseConnectionsChangedEventSchema,
+    // To every client that holds the project, except the one that set it.
+    'database.agentAccess.changed': DatabaseAgentAccessChangedEventSchema
+} as const;

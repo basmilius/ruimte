@@ -29,20 +29,20 @@ import UIKit
 
     @Test func aReferenceFindsTheDeviceByWhatAPersonCallsIt() {
         let other = Self.device().setting("runtime", .string("iOS 18.4"))
-        #expect(DeviceView.resolve(Self.reference, in: [other, Self.device()]) == Self.device())
-        #expect(DeviceView.resolve(Self.reference, in: [other]) == nil)
+        #expect(DeviceView.resolve(Self.reference.deviceReference, in: [other.deviceInfo, Self.device().deviceInfo]) == Self.device().deviceInfo)
+        #expect(DeviceView.resolve(Self.reference.deviceReference, in: [other.deviceInfo]) == nil)
     }
 
     @Test func aDeviceInTheListSaysWhatThePageShows() {
-        #expect(DeviceView.phase(for: Self.device()) == .starting)
-        #expect(DeviceView.phase(for: Self.device(state: "shutdown")) == .stopped)
-        #expect(DeviceView.phase(for: Self.device(state: "transitioning")) == .starting)
-        if case .noStream = DeviceView.phase(for: Self.device(stream: false)) {
+        #expect(DeviceView.phase(for: Self.device().deviceInfo) == .starting)
+        #expect(DeviceView.phase(for: Self.device(state: "shutdown").deviceInfo) == .stopped)
+        #expect(DeviceView.phase(for: Self.device(state: "transitioning").deviceInfo) == .starting)
+        if case .noStream = DeviceView.phase(for: Self.device(stream: false).deviceInfo) {
         } else {
             Issue.record("A device without a stream should say so")
         }
-        #expect(DeviceView.canBoot(Self.device(state: "shutdown")))
-        #expect(!DeviceView.canBoot(Self.device()))
+        #expect(DeviceView.canBoot(Self.device(state: "shutdown").deviceInfo))
+        #expect(!DeviceView.canBoot(Self.device().deviceInfo))
     }
 
     @Test func refusalsOfOpeningBecomeStatesAPersonCanReadOrRetry() {
@@ -60,8 +60,8 @@ import UIKit
     }
 
     @Test func buttonsKeepWhatThisVersionKnowsAndDefaultToAnIPhonesOwn() {
-        #expect(DeviceView.buttons(Self.device()) == ["home", "swipeHome", "appSwitcher", "lock", "siri"])
-        #expect(DeviceView.buttons(Self.device(buttons: ["back", "home", "teleport"])) == ["back", "home"])
+        #expect(DeviceView.buttons(Self.device().deviceInfo) == ["home", "swipeHome", "appSwitcher", "lock", "siri"])
+        #expect(DeviceView.buttons(Self.device(buttons: ["back", "home", "teleport"]).deviceInfo) == ["back", "home"])
     }
 
     @Test func aTouchLandsAsAShareOfTheFittedScreen() {
@@ -76,16 +76,16 @@ import UIKit
 
     @Test func aBootedSimulatorOpensAsJPEGEventsAndTakesTaps() async {
         let machine = DeviceMachine(devices: [Self.device()])
-        let model = DeviceViewModel(client: machine, reference: Self.reference)
+        let model = DeviceViewModel(client: machine, reference: Self.reference.deviceReference)
         await model.refresh()
         #expect(model.phase == .streaming)
-        let open = machine.requests.first { $0.0 == "device.open" }?.1
+        let open = machine.requests.first { $0.0 == .deviceOpen }?.1
         #expect(open?["stream"] == .string("events"))
         #expect(open?["formats"] == .array([.string("jpeg")]))
 
         model.touch("down", at: CGPoint(x: 0.5, y: 0.96))
         await machine.waitForInput()
-        let input = machine.requests.first { $0.0 == "device.input" }?.1
+        let input = machine.requests.first { $0.0 == .deviceInput }?.1
         #expect(input?["deviceId"] == .string("UDID-1"))
         #expect(input?["input"]?["edge"] == .string("bottom"))
         #expect(input?["input"]?["phase"] == .string("down"))
@@ -96,11 +96,11 @@ import UIKit
     @Test func aDeviceThatStreamsVideoOrIsMissingSaysSoInsteadOfAScreen() async {
         let machine = DeviceMachine(devices: [Self.device()])
         machine.openRefusal = "device-format-unsupported"
-        let model = DeviceViewModel(client: machine, reference: Self.reference)
+        let model = DeviceViewModel(client: machine, reference: Self.reference.deviceReference)
         await model.refresh()
         #expect(model.phase == .unsupportedFormat)
         await model.refresh()
-        #expect(machine.requests.filter { $0.0 == "device.open" }.count == 1)
+        #expect(machine.requests.filter { $0.0 == .deviceOpen }.count == 1)
 
         machine.devices = []
         await model.refresh()
@@ -122,7 +122,7 @@ import UIKit
 
     @Test func aPreviewFrameDoesNotDecodeAndPublishOnTheEventCallback() async throws {
         let machine = DeviceMachine(devices: [Self.device()])
-        let preview = MachineDevicePreview(client: machine, device: try #require(MachineDevice(Self.device())))
+        let preview = MachineDevicePreview(client: machine, device: try #require(MachineDevice(Self.device().deviceInfo)))
         await preview.start()
         defer { preview.stop() }
         machine.emit(
@@ -191,7 +191,7 @@ import UIKit
         let probe = FrameProbe()
         var instant: TimeInterval = 0
         let preview = MachineDevicePreview(
-            client: machine, device: try #require(MachineDevice(Self.device())), now: { instant },
+            client: machine, device: try #require(MachineDevice(Self.device().deviceInfo)), now: { instant },
             decode: { await probe.decode($0) })
         await preview.start()
         defer { preview.stop() }
@@ -229,7 +229,7 @@ import UIKit
     @Test func aDeviceViewFiltersAndCoalescesEncodedFramesAndDropsOldResultsOnReopen() async {
         let machine = DeviceMachine(devices: [Self.device()])
         let probe = FrameProbe()
-        let model = DeviceViewModel(client: machine, reference: Self.reference, decode: { await probe.decode($0) })
+        let model = DeviceViewModel(client: machine, reference: Self.reference.deviceReference, decode: { await probe.decode($0) })
         model.start()
         defer { model.stop() }
         await model.refresh()
@@ -287,7 +287,7 @@ import UIKit
         let frames = ImmediateFrames()
         var instant: TimeInterval = 0
         let preview = MachineDevicePreview(
-            client: machine, device: try #require(MachineDevice(DeviceViewTests.device())), now: { instant },
+            client: machine, device: try #require(MachineDevice(DeviceViewTests.device().deviceInfo)), now: { instant },
             decode: { await frames.decode($0) })
         await preview.start()
         defer { preview.stop() }
@@ -319,7 +319,7 @@ import UIKit
         let machine = DeviceMachine(devices: [DeviceViewTests.device()])
         let frames = ImmediateFrames()
         let model = DeviceViewModel(
-            client: machine, reference: DeviceViewTests.reference, decode: { await frames.decode($0) })
+            client: machine, reference: DeviceViewTests.reference.deviceReference, decode: { await frames.decode($0) })
         model.start()
         defer { model.stop() }
         await model.refresh()
@@ -392,7 +392,7 @@ import UIKit
 @MainActor private final class DeviceMachine: MachineRequesting {
     var devices: [JSONValue]
     var openRefusal: String?
-    var requests: [(String, JSONValue)] = []
+    var requests: [(WireRequest, JSONValue)] = []
     private let inputArrival = NativeArrival()
     private var handlers: [UUID: @MainActor @Sendable (JSONValue) -> Void] = [:]
 
@@ -402,20 +402,20 @@ import UIKit
 
     init(devices: [JSONValue]) { self.devices = devices }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
-        if type == "device.input" { inputArrival.record() }
+        if type == .deviceInput { inputArrival.record() }
         switch type {
-        case "device.list": return .object(["devices": .array(devices)])
-        case "device.open":
+        case .deviceList: return .object(["devices": .array(devices)])
+        case .deviceOpen:
             if let openRefusal { throw MachineClientError.server(code: openRefusal, message: openRefusal) }
             return (devices.first ?? .object([:])).setting("streamId", .string("device:1"))
         default: return .object([:])
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
-        guard event == "device.frame" else { return {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+        guard event == .deviceFrame else { return {} }
         let id = UUID()
         handlers[id] = handler
         return { [weak self] in self?.handlers[id] = nil }
@@ -429,6 +429,4 @@ import UIKit
         let completion = NativeTaskDrain { emit(payload) }
         await completion.finish()
     }
-
-    func observeConnection(_ handler: @escaping @MainActor @Sendable (Bool) -> Void) -> () -> Void { {} }
 }

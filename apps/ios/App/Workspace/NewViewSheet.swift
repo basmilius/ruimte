@@ -7,17 +7,13 @@ enum NewViewResult: Equatable {
     case view(String)
     /// A view that asks for what it shows, its address, before it opens.
     case ask(JSONValue)
-    /// A heading, which asks for its words.
     case heading(JSONValue)
-    /// A file view starts from the file, picked in the project's files.
     case file
 }
 
 /// The views New view makes, as the desktop makes them: named after what they are until a session or a person names
 /// them.
 enum NewViewFactory {
-    static let kinds = ["terminal", "canvas", "browser", "file", "drawing", "diagram"]
-
     static func base(_ kind: String) -> String {
         switch kind {
         case "canvas": "Canvas"
@@ -27,28 +23,6 @@ enum NewViewFactory {
         }
     }
 
-    /// What a person reads for a kind of view or node where it has no name of its own.
-    static func kindTitle(_ kind: String) -> String {
-        switch kind {
-        case "terminal": String(localized: "Terminal")
-        case "chat": String(localized: "Chat")
-        case "canvas": String(localized: "Canvas")
-        case "browser": String(localized: "Browser")
-        case "file": String(localized: "File")
-        case "drawing": String(localized: "Drawing")
-        case "diagram": String(localized: "Diagram")
-        case "device": String(localized: "Device")
-        case "group": String(localized: "Group")
-        case "note": String(localized: "Note")
-        case "separator": String(localized: "Separator")
-        case "subheader": String(localized: "Subheader")
-        case "artifact": String(localized: "Output")
-        case "design": String(localized: "Design")
-        default: kind.capitalized
-        }
-    }
-
-    /// "Canvas", then "Canvas 2", until a name is free.
     static func freeName(_ views: [JSONValue], base: String) -> String {
         let taken = Set(views.compactMap { $0["name"]?.stringValue })
         guard taken.contains(base) else { return base }
@@ -81,7 +55,6 @@ enum NewViewFactory {
         return .object(item)
     }
 
-    /// What the page does with a view once it is made.
     static func result(for item: JSONValue) -> NewViewResult? {
         switch item.text("kind") {
         case "separator": nil
@@ -108,7 +81,7 @@ struct NewViewSheet: View {
             && agents?.isEmpty == false
     }
 
-    private var kinds: [String] { NewViewFactory.kinds + (designOffered ? ["design"] : []) }
+    private var kinds: [String] { ProjectKinds.newView + (designOffered ? ["design"] : []) }
 
     var body: some View {
         NavigationStack {
@@ -129,7 +102,7 @@ struct NewViewSheet: View {
                             } label: {
                                 VStack(spacing: 6) {
                                     LucideIcon(name: WorkspaceViewIcon.name(for: .object(["kind": .string(kind)])), size: 18)
-                                    Text(NewViewFactory.kindTitle(kind)).font(.footnote)
+                                    Text(ProjectKinds.label(kind)).font(.footnote)
                                 }
                                 .frame(maxWidth: .infinity, minHeight: 68)
                                 .background(MobileStyle.hover, in: .rect(cornerRadius: 18))
@@ -168,9 +141,7 @@ struct NewViewSheet: View {
                 if agents == nil && !workspace.session.connected { agents = [] }
                 return
             }
-            agents = AgentCatalog.installed(providers, target: "chat").map {
-                ($0.text("kind"), $0.text("name", fallback: $0.text("kind")))
-            }
+            agents = AgentCatalog.installedChats(providers).map { ($0.kind, $0.name) }
         }
     }
 
@@ -245,13 +216,12 @@ struct NewViewSheet: View {
             var onDisk: [String] = []
             for folder in DesignFiles.folders {
                 let listed = try? await workspace.client.request(
-                    "fs.list",
+                    .fsList,
                     payload: .object([
                         "path": .string(workspace.folder + "/" + folder), "depth": .number(1), "hidden": .bool(true),
-                    ]))
-                onDisk += (listed?.list("entries") ?? []).filter { $0.text("kind") == "directory" }.map {
-                    $0.text("name")
-                }
+                    ])
+                ).decoded(as: FsListResult.self)
+                onDisk += (listed?.entries ?? []).filter { $0.kind == .directory }.map(\.name)
             }
             let name = DesignFiles.freeName(workspace.views)
             let item = DesignFiles.view(

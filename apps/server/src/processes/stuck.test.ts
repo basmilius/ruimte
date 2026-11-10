@@ -60,7 +60,6 @@ function observation(at: number, durationMs: number | null, groups: ObservedGrou
     };
 }
 
-/* Readings every `stepMs` from `from` to `to`, the first without a duration, as the monitor feeds them. */
 function series(judge: StuckJudge, from: number, to: number, stepMs: number, build: (at: number) => ObservedGroup[]) {
     let last = judge.observe(observation(from, null, build(from)));
     for (let at = from + stepMs; at <= to; at += stepMs) {

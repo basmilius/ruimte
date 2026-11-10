@@ -1,6 +1,6 @@
 import { CodedError } from '@adecore/agents';
 import { buildTitlePrompt, parseTitle, type ChatTitleInput } from '@adecore/agents/chat';
-import type { ProviderAccountsService } from '@adecore/agents/providers';
+import { cliExecutable, type ProviderAccountsService } from '@adecore/agents/providers';
 import { EditorAssistProviderSchema, type AgentKind, type EditorAssistAgent, type TextModelChoice } from '@ruimte/contracts';
 import { assistEnvironment, selectAssistAgent, type AssistProviders, type AssistSelection, type AssistWording } from '../editor-assist/selection.ts';
 import { oneShotRun, type TextWriter } from '../git/one-shot.ts';
@@ -121,7 +121,7 @@ export class ShortTextModels {
                     throw new GitError('git-failed', `${provider.name} cannot write short texts.`);
                 }
 
-                return await (this.host.run ?? streamWithTimeout)(provider.command[0]!, run.args, await this.host.cwdFor(cwd), timeoutMs, {
+                return await (this.host.run ?? streamWithTimeout)(cliExecutable(provider), run.args, await this.host.cwdFor(cwd), timeoutMs, {
                     env,
                     stdin: run.stdin,
                     onSpawn: (kill) => {

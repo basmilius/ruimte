@@ -13,7 +13,6 @@ function placed<T>(items: Record<string, T>, places: Record<string, Partial<T>>)
     return next;
 }
 
-/* The named placements a person saves and puts the canvas back into. */
 export function createCanvasLayoutsSlice(set: CanvasSet, get: CanvasGet): Pick<CanvasState, 'saveLayout' | 'putLayout' | 'applyLayout' | 'deleteLayout'> {
     return {
         saveLayout(name) {

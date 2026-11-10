@@ -5,11 +5,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatItem, ProjectContent, ProjectSummary } from '@ruimte/contracts';
 import type { LiveEvent } from '@ruimte/voice';
-import { serverActions } from '../actions/server-actions.ts';
-import { connectionOpener, socketChannel, type ConnectionServices, type SocketChannel, type OpenConnection } from '../connection.ts';
-import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
-import { registerVoiceHandlers } from '../handlers/voice.ts';
-import type { CanvasHost } from '../tools/host.ts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
+import type { CanvasHost } from '../canvas/host.ts';
+import { connectionHostOf } from '../connection-test-helpers.ts';
+import { connectionOpener, socketChannel, type SocketChannel, type OpenConnection } from '../connection.ts';
+import { Dispatcher } from '../dispatcher.ts';
+import { voiceArea } from '../handlers/voice.ts';
+import type { ClientAccess } from '../wire.ts';
 import { SYSTEM_CLOCK } from './clock.ts';
 import { VoiceKeyStore } from './key-store.ts';
 import { openAiLive } from './openai-live.ts';
@@ -75,10 +77,6 @@ function fakeOpenAi(): FakeOpenAi {
     return { ...fake, url: `http://127.0.0.1:${server.port}`, stop: () => void server.stop(true) };
 }
 
-function source() {
-    return { subscribe: () => () => undefined, detachAll: () => undefined };
-}
-
 interface Daemon {
     url: string;
     sessions: VoiceSessions;
@@ -126,24 +124,12 @@ function daemon(home: string, openAiUrl: string, threads: Map<string, ChatItem[]
         machine: { id: 'machine-1', label: 'Studio' }
     });
     const dispatcher = new Dispatcher();
-    registerVoiceHandlers(dispatcher, { keys: new VoiceKeyStore(home), preferences, sessions });
-    const services = {
-        dispatcher,
-        sessions: { ...source(), get: () => undefined },
-        chats: source(),
-        identity: source(),
-        projects: source(),
-        drawings: source(),
-        diagrams: source(),
-        folders: source(),
-        statuses: source(),
-        usage: source(),
-        limits: source(),
-        processes: source(),
-        voice: sessions,
-        voicePreferences: preferences
-    } as unknown as ConnectionServices;
-    const open = connectionOpener(services);
+    voiceArea({ keys: new VoiceKeyStore(home), preferences, sessions }).handlers?.(dispatcher);
+    const open = connectionOpener(
+        connectionHostOf(dispatcher, [
+            { name: 'voice', sources: [preferences], closed: (clientId, access) => (access.peer === undefined ? sessions.channelClosed(clientId) : undefined) }
+        ])
+    );
     const sockets = new Map<ServerWebSocket<ClientAccess>, { channel: SocketChannel; connection: OpenConnection }>();
     const server = Bun.serve<ClientAccess>({
         hostname: '127.0.0.1',

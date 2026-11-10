@@ -10,13 +10,11 @@ export const REGISTER_RETRY_MAX_MS = 30 * 60_000;
 const MACHINE_NAME_MAX = 80;
 
 interface AutoRegistrarDeps {
-    /* The machine behind this row signs its agreement to join the account. */
     sign(endpointId: string, accountId: string): Promise<RegisterMachinePayload>;
     register(payload: RegisterMachinePayload): Promise<void>;
     now?: () => number;
 }
 
-/* What a record on the account says about a machine, and what the machine says about itself right now. */
 export interface MachineRecord {
     name: string;
     icon: unknown;
@@ -24,13 +22,11 @@ export interface MachineRecord {
     publicKey: string;
 }
 
-/* What the account list said last: the machines on it, and the ones a person took off. */
 export interface AccountList {
     records: ReadonlyMap<string, MachineRecord>;
     removed: ReadonlySet<string>;
 }
 
-/* What a machine said in its last `endpoint.info`, as far as its record goes. */
 interface AnnouncedIdentity {
     label: string | null;
     icon: unknown;
@@ -183,12 +179,10 @@ export class AutoRegistrar {
         }
     }
 
-    /* The error each machine's last registration failed with, so a person can see why rather than only a retry. */
     failedMachines(): ReadonlyMap<string, unknown> {
         return new Map([...this.failures].map(([machineId, failure]) => [machineId, failure.error]));
     }
 
-    /* When the earliest machine that failed may be asked again, for a timer; null when none is waiting. */
     nextRetryAt(): number | null {
         return this.failures.size === 0 ? null : Math.min(...[...this.failures.values()].map((failure) => failure.retryAt));
     }

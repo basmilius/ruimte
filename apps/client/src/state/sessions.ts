@@ -1,11 +1,11 @@
 import type { ChatStatuses } from '@adecore/agents-react/state';
-import { chatWaitAsk, terminalWaitAsk, type AgentInfo, type AgentKind, type AgentStatus, type WaitAsk } from '@ruimte/contracts';
+import { chatWaitAsk, sessionStatus, terminalWaitAsk, type AgentInfo, type AgentKind, type AgentStatus, type WaitAsk } from '@ruimte/contracts';
 import { create } from 'zustand';
 import type { CanvasNode } from '@/state/canvas';
-import { dropEndpoint, endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
+import { dropEndpoint, endpointKey, endpointOfNode } from '@/state/keys';
+import { useEndpointId } from './current-endpoint';
 
 export interface SessionState {
-    /* True while this client holds a live attachment on the daemon. */
     attached: boolean;
     /* Exit code of the shell, once it has ended. Absent while it runs. */
     exited?: number;
@@ -124,7 +124,6 @@ export function sessionSinkFor(endpointId: string): SessionSink {
     };
 }
 
-/* How often a terminal on the machine in scope was started over. */
 export function useSessionRestarts(nodeId: string): number {
     const endpointId = useEndpointId();
     return useSessions((s) => s.restarts[endpointKey(endpointId, nodeId)] ?? 0);
@@ -134,24 +133,6 @@ export function useSessionRestarts(nodeId: string): number {
 export function useSessionRow<T>(nodeId: string, select: (row: SessionState | undefined) => T): T {
     const endpointId = useEndpointId();
     return useSessions((s) => select(s.byKey[endpointKey(endpointId, nodeId)]));
-}
-
-export function sessionStatus(state: SessionState | undefined): AgentStatus | undefined {
-    if (!state) {
-        return undefined;
-    }
-    // A live agent knows better than the shell what is going on.
-    if (state.agent?.live) {
-        return state.agent.status;
-    }
-    // The daemon marks the record when the CLI went down with the shell, and it outlives the shell.
-    if (state.agent?.status === 'exited') {
-        return 'exited';
-    }
-    if (state.exited !== undefined) {
-        return 'error';
-    }
-    return state.attached ? 'running' : undefined;
 }
 
 /* What a node needs to have a status. Geometry says nothing about whether something is running. */

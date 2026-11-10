@@ -54,7 +54,6 @@ const SCRIPTS = /^(typescript|javascript|typescriptreact|javascriptreact|tsx|jsx
 const MARKUP = /^(html|xml|svg|xsl|vue|svelte|astro)$/;
 const MARKDOWN = /^(markdown|md|mdx)$/;
 
-/* The roles that fold when a file of this language opens for the first time. */
 export function foldRolesFor(language: string | undefined, folding: CodeFolding): FoldRole[] {
     const id = language?.toLowerCase() ?? '';
     const php = id === 'php';

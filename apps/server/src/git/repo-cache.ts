@@ -1,7 +1,6 @@
 import { join, resolve } from 'node:path';
 import { isWithin } from '@adecore/utils/path';
-import type { GitReposResult } from '@ruimte/contracts';
-import { PROJECT_DIR } from '../projects/project-files.ts';
+import { PROJECT_DIR, type GitReposResult } from '@ruimte/contracts';
 import { listRepos } from './repos.ts';
 
 // Covers the burst of commit links a chat resolves at once; past it a checkout no watcher saw shows up anyway.
@@ -91,7 +90,7 @@ export function cachedRepos(folder: string, fresh = false): Promise<GitReposResu
     return shared.get(folder, fresh);
 }
 
-/* What the shared watch (`fs/shared-watch.ts`) calls with the directories a burst touched, whoever watched them. */
+/* Drops what the shared watch says a burst touched; `wiring/git.ts` subscribes it. */
 export function forgetRepos(changed?: readonly string[]): void {
     shared.forget(changed);
 }

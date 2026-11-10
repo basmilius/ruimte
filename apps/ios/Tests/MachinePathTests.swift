@@ -126,24 +126,29 @@ final class MachineStartFolderTests: XCTestCase {
         self.existing = existing
     }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         switch type {
-        case "endpoint.info":
+        case .endpointInfo:
             var info: [String: JSONValue] = ["platform": .string(platform)]
             if let startFolder { info["startFolder"] = .string(startFolder) }
-            return .object(info)
-        case "fs.browse":
+            return EndpointWire.info(info)
+        case .fsBrowse:
             let partial = payload["partialPath"]?.stringValue ?? ""
             browsed.append(partial)
             if partial.hasPrefix("~") {
                 let home = platform == "win32" ? "C:\\Users\\bas" : "/Users/bas"
-                return .object(["parentPath": .string(existing || partial == "~/" ? home : home + "/gone"), "exists": .bool(existing || partial == "~/")])
+                return .object([
+                    "parentPath": .string(existing || partial == "~/" ? home : home + "/gone"),
+                    "entries": .array([]), "exists": .bool(existing || partial == "~/"),
+                ])
             }
-            return .object(["parentPath": .string(String(partial.dropLast())), "exists": .bool(existing)])
+            return .object([
+                "parentPath": .string(String(partial.dropLast())), "entries": .array([]), "exists": .bool(existing),
+            ])
         default:
             return .object([:])
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

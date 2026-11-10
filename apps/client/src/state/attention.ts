@@ -1,31 +1,20 @@
 import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
-import {
-    isCanvasView,
-    isChatHostView,
-    isDesignView,
-    type AgentStatus,
-    type ProjectNode,
-    type ProjectSidebarView,
-    type ProjectView,
-    type SplitLayout
-} from '@ruimte/contracts';
+import type { AgentStatus, ProjectSidebarView } from '@ruimte/contracts';
 import { create } from 'zustand';
-import { intersects, isMeasured, visibleRect, type Rect } from '@/canvas/math';
-import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
 import { desktop } from '@/desktop/bridge';
-import { nodeRefsOfView, projectNodes, useViewNodes } from '@/project/view-nodes';
-import { shownViewIdsIn } from '@/shell/split';
 import { nodeWorking } from '@/state/agent-work';
-import { liveCanvas, subscribeCanvases } from '@/state/canvas';
+import { subscribeCanvases } from '@/state/canvas';
 import { subscribeChatStatuses } from '@/state/chats';
 import { waitsThroughChild } from '@/state/delegation';
 import { useDocument } from '@/state/document';
-import { nodesInSight, seenNodes, sightOf, type CanvasSight } from '@/state/in-sight';
-import { currentEndpointId, endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
+import { nodesInSight, seenNodes } from '@/state/in-sight';
+import { endpointKey, endpointOfNode } from '@/state/keys';
 import { seePushNotifications, subscribePushAttention, unreadOnMachine } from '@/state/push-attention';
 import { nodeStatus, useSessions, type SessionsByKey, type StatusOf } from '@/state/sessions';
 import { snoozeOf, useSnoozes, type Snoozes } from '@/state/snooze';
 import { useTasks, type TasksById } from '@/state/tasks';
+import { nodeRefsOfView, projectNodes, useViewNodes } from '@/state/view-nodes';
+import { currentEndpointId, useEndpointId } from './current-endpoint';
 
 export { readableNodes, seenNodes, sightOf, visibleNodes, type CanvasSight } from '@/state/in-sight';
 
@@ -34,80 +23,15 @@ export { readableNodes, seenNodes, sightOf, visibleNodes, type CanvasSight } fro
  * Endpoint-scoped keys preserve marks across machine switches and remove them with the machine.
  */
 
-/* One canvas as a question about which chats stand on it. */
-export interface ChatSightCanvas extends CanvasSight {
-    nodes: readonly (Rect & { id: string; kind: string; chats?: ProjectNode['chats'] })[];
-}
-
-/* What `chatsInSight` reads of a workspace, handed in so a test builds one without a store. */
-export interface ChatSightWorkspace {
-    views: readonly ProjectView[];
-    layout: SplitLayout | null;
-    canvasOf(viewId: string): ChatSightCanvas | null;
-}
-
-/*
- * Plan visibility ignores zoom and window focus. It also uses the pre-panel viewport so opening the
- * panel cannot push its own chat out of sight and immediately close it.
- */
-export function chatsInSight(workspace: ChatSightWorkspace, { planWidth }: { planWidth: number }): Set<string> {
-    const onScreen = new Set(workspace.layout === null ? [] : shownViewIdsIn(workspace.layout));
-    const chats = new Set<string>();
-    for (const view of workspace.views) {
-        if (!onScreen.has(view.id)) {
-            continue;
-        }
-        if (isDesignView(view)) {
-            // Only the chat in front is in sight; the others of the design wait behind its picker.
-            chats.add(activeDesignChat(placeOfView(view), useDesignChat.getState().picked));
-            continue;
-        }
-        if (isChatHostView(view)) {
-            chats.add(view.id);
-            continue;
-        }
-        const canvas = isCanvasView(view) ? workspace.canvasOf(view.id) : null;
-        if (canvas === null || !isMeasured(canvas.viewport)) {
-            continue;
-        }
-        const rect = visibleRect(canvas.camera, { w: canvas.viewport.w + planWidth, h: canvas.viewport.h });
-        for (const node of canvas.nodes) {
-            const inFront = canvas.maximized ? node.id === canvas.maximized : canvas.hidden?.has(node.id) !== true && intersects(node, rect);
-            const shown = inFront ? shownChatOfNode(node) : null;
-            if (shown !== null) {
-                chats.add(shown);
-            }
-        }
-    }
-    return chats;
-}
-
-/* The open project, as `chatsInSight` reads it. */
-export function liveChatSight(): ChatSightWorkspace {
-    const { views, layout } = useDocument.getState();
-    return {
-        views,
-        layout,
-        canvasOf: (viewId) => {
-            const canvas = liveCanvas(viewId);
-            return canvas === null ? null : sightOf(canvas);
-        }
-    };
-}
-
 /* Everything one pass of the watcher needs to decide, all of it keyed the same way. */
 export interface AttentionPass {
-    /* The nodes an agent is working in right now. */
     working: ReadonlySet<string>;
     /* The same set as the pass before it saw. */
     previous: ReadonlySet<string>;
     /* The nodes waiting on a person, which the needs-you count already speaks for. */
     needsYou: ReadonlySet<string>;
-    /* What a person can see right now. */
     seen: ReadonlySet<string>;
-    /* The marks as they stand. */
     unseen: ReadonlySet<string>;
-    /* Every node the project still has. */
     known: ReadonlySet<string>;
 }
 
@@ -135,14 +59,13 @@ export function nextUnseen(pass: AttentionPass): Set<string> {
 }
 
 /* The three counts the toolbar, the badge and the quit guard all read, as the nodes behind them. */
-export interface AttentionGroups {
+interface AttentionGroups {
     /* Nodes waiting on a person, in the order the project lists them. */
     needsYou: string[];
     /* Nodes waiting on a person who put them aside for now, which no count includes. */
     snoozed: string[];
     /* Nodes with an agent in the middle of a turn. Never a shell somebody left attached. */
     working: string[];
-    /* Nodes whose turn ended while nobody was looking. */
     finished: string[];
 }
 

@@ -35,7 +35,6 @@ struct ChatForkPoint: Equatable {
 /// index jumps to.
 struct ChatMessageMark: Identifiable, Equatable {
     enum Kind: Equatable { case person, wake }
-    /// The timeline entry the index scrolls to.
     let id: String
     let kind: Kind
     let text: String
@@ -48,24 +47,17 @@ struct ChatMessageMark: Identifiable, Equatable {
 enum ChatForking {
     static let titleMax = 120
 
-    /// Whether a machine can fork this CLI's conversation and go on with it in a fork. Every kind this app knows by name
-    /// is answered here, so a CLI added to `KNOWN_AGENT_KINDS` is decided on before it is offered a fork.
-    static func forkable(_ kind: AgentKind) -> Bool {
-        switch kind {
-        case .claude, .codex: true
-        case .gemini, .copilot, .apple: false
-        }
-    }
+    /// Whether a machine's CLI keeps a conversation that a fork goes on with: the `fork` capability its `provider.list`
+    /// entry reports. Only a machine can say what its CLIs do, so a new CLI needs no update of this app.
+    static func canFork(_ provider: ProviderInfo) -> Bool { provider.capabilities.fork == true }
 
-    /// A CLI this app does not know is not forkable; only a machine that knows it can say what it can do.
-    static func forkable(provider: String) -> Bool { AgentKind(rawValue: provider).map(forkable) ?? false }
-
-    /// Why a chat cannot be forked after this turn right now, or nil when it can.
-    static func refusal(info: ChatInfo?, turn: ChatItem?) -> String? {
+    /// Why a chat cannot be forked after this turn right now, or nil when it can. `cliCanFork` is what the machines'
+    /// lists say of the chat's CLI.
+    static func refusal(info: ChatInfo?, turn: ChatItem?, cliCanFork: Bool) -> String? {
         guard let info, let turn = turn?.turnItem else {
             return String(localized: "This turn is not in the conversation")
         }
-        guard forkable(provider: info.provider) else {
+        guard cliCanFork else {
             return String(localized: "This agent cannot fork its conversation")
         }
         guard info.agentSessionId != nil else {
@@ -77,7 +69,6 @@ enum ChatForking {
         return nil
     }
 
-    /// Why a fork cannot write a summary for its original right now, or nil when it can.
     static func summaryRefusal(info: ChatInfo?, originalPresent: Bool) -> String? {
         if !originalPresent { return String(localized: "Original no longer in this project") }
         if info?.activeTurnId != nil { return String(localized: "Wait for the turn to end") }
@@ -121,19 +112,18 @@ enum ChatForking {
 
     /// Whether a chat is a view of its own or a node on a canvas, and the name it goes by; nil when it is not in
     /// the project.
-    static func origin(in views: [JSONValue], chatID: String) -> (shape: ChatForkShape, title: String)? {
+    static func origin(in views: [StoredView], chatID: String) -> (shape: ChatForkShape, title: String)? {
         for view in views {
-            if view.text("kind") == "chat" && view.stableID == chatID {
-                return (.view, view.text("name", fallback: String(localized: "Chat")))
+            if case .chat(let chat) = view, chat.id == chatID {
+                return (.view, chat.name)
             }
-            if let node = view.list("nodes").first(where: { $0.stableID == chatID && $0.text("kind") == "chat" }) {
-                return (.node, node.text("title", fallback: String(localized: "Chat")))
+            if let node = view.nodes.first(where: { $0.id == chatID && $0.kind == .chat }) {
+                return (.node, node.title)
             }
         }
         return nil
     }
 
-    /// Why a branch cannot be the fork's, or nil when it can.
     static func branchRefusal(_ branch: String, taken: [String]) -> String? {
         let name = branch.trimmingCharacters(in: .whitespaces)
         if name.isEmpty { return String(localized: "Name the branch") }
@@ -182,7 +172,6 @@ enum ChatForking {
         String(localized: "\(count) forks after this turn")
     }
 
-    /// The places the message index lists, in thread order.
     @MainActor static func marks(entries: [ChatTimelineEntry]) -> [ChatMessageMark] {
         entries.compactMap { entry in
             guard let item = entry.items.first?.item else { return nil }
@@ -219,7 +208,6 @@ enum ChatForking {
 /// Where the chats of a project stand and how to get there, for the rows of a timeline that lead to another chat.
 @MainActor
 struct ChatPlaces {
-    /// The name a chat goes by in the project, or nil when it is not in it.
     let title: (String) -> String?
     let shape: (String) -> ChatForkShape?
     /// The task title of an agent this chat opened outside every view that has not settled, whose requests wait in

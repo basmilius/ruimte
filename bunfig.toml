@@ -2,12 +2,18 @@
 # Real shells, watchers and sockets run through `test:integration` and the tests that need a page
 # through `test:dom`. An extension's `test/` runs under `ruimte extension test`,
 # against its fake host (`apps/server/src/cli/extension-test.integration.test.ts`).
-pathIgnorePatterns = ["**/*.integration.test.ts", "**/*.dom.test.tsx", "**/docs/reports/**", "extensions/*/test/**", "extensions/poc/*/test/**"]
+pathIgnorePatterns = ["**/*.integration.test.ts", "**/*.dom.test.tsx", "**/*.cold.test.tsx", "**/docs/reports/**", "extensions/*/test/**", "extensions/poc/*/test/**"]
 # The client's English words, so a pure function that reads one off i18next is testable
 # without every test file initializing it first. The dedupe preload goes first and by path,
 # since the root has no copy of the library under the isolated install.
 # No React Compiler here: a unit test renders once, to static markup, where its memoizing cannot
 # show, and Babel in every isolated test file made the run many times slower. The DOM run
 # (`dom.bunfig.toml`) tests the compiled client.
+# Neither run has the client's action registry or the workspace's wiring from the start: a test that needs
+# them imports `apps/client/testing/client-actions.ts` or calls `installWorkspaceRegistries`, as the workspace's chunk does.
 # The last one makes every process start fail (`scripts/no-process-preload.ts`).
-preload = ["./apps/client/node_modules/@adecore/ui/src/testing/dedupe.ts", "./apps/client/test-preload.ts", "./scripts/no-process-preload.ts"]
+preload = [
+    "./apps/client/node_modules/@adecore/ui/src/testing/dedupe.ts",
+    "./apps/client/test-preload.ts",
+    "./scripts/no-process-preload.ts"
+]

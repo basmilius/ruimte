@@ -1,0 +1,13 @@
+import type { Editor, EditorBlock } from '@adecore/editor';
+import { useEffect, useState } from 'react';
+
+const NOTHING: readonly EditorBlock[] = [];
+
+export function useEditorScope(editor: Editor | null): readonly EditorBlock[] {
+    const [state, setState] = useState<{ editor: Editor | null; scope: readonly EditorBlock[] }>({ editor: null, scope: NOTHING });
+
+    useEffect(() => editor?.onScope((scope) => setState({ editor, scope })), [editor]);
+
+    // What an editor said stays with it, so the next editor starts from nothing and not from where the last one was.
+    return state.editor === editor ? state.scope : NOTHING;
+}

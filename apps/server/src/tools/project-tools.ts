@@ -1,9 +1,9 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { PROJECT_PROPOSAL_LIMITS } from '@ruimte/contracts';
 import { z } from 'zod';
+import { ANSWER_WAKES_NOTE, field, orNote } from '../canvas/host.ts';
+import { reachableLines, reachableProjects, reachedFolder, reachedProject, recentLines, SETTING_LINE } from '../canvas/reach.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { ANSWER_WAKES_NOTE, field, orNote } from './host.ts';
-import { reachableLines, reachableProjects, reachedFolder, reachedProject, recentLines, SETTING_LINE } from './reach.ts';
 import { defineTool, defineToolkit, textInput, type ToolCall } from './tool.ts';
 
 function projectIdInput(tool: string) {

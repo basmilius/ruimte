@@ -8,7 +8,6 @@ import { chatInfoOf } from '../../../apps/client/testing/chat-info';
 
 const NO_PETS: ReadonlySet<string> = new Set();
 
-/* How many kids a thread brings, without tasks to look up. */
 function petKidCount(row: ChatState | undefined, ownPets: ReadonlySet<string>): number {
     return petKidMoods(row, ownPets, undefined).length;
 }

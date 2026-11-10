@@ -6,14 +6,13 @@ import { isNotFound } from '@adecore/utils/errors';
 import { fileExists } from '@adecore/utils/fs';
 import { isWithin } from '@adecore/utils/path';
 import type { ChatInfo } from '@ruimte/contracts';
+import { checkCwd } from '../canvas/project-paths.ts';
 import { locateFile } from '../fs/locate.ts';
 import { cachedRepos } from '../git/repo-cache.ts';
 import { git, toplevel } from '../git/run.ts';
-import { checkCwd } from '../tools/project-paths.ts';
 import { UiSourceAccessSchema, type UiSourceAccess } from './ui-access.ts';
 import type { UiSourceHosts } from './ui-sources.ts';
 
-/* The real path of the repository a directory is in; null outside one. */
 async function repositoryOf(directory: string): Promise<string | null> {
     try {
         return await realpath(await toplevel(directory));

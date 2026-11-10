@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { ProjectIdSchema, ProjectSaveResultSchema } from './project.ts';
 
@@ -253,3 +254,21 @@ export function readLaunchEntries(entries: readonly unknown[]): LaunchFileEntry[
         return parsed.success ? { launch: parsed.data } : { raw };
     });
 }
+
+export const LAUNCHES_REQUEST_SCHEMAS = {
+    'launches.read': { payload: LaunchesTargetPayloadSchema, result: LaunchesDocumentSchema },
+    // A person's save; it approves on this machine every launch it adds or changes.
+    'launches.save': { payload: LaunchesSavePayloadSchema, result: LaunchesSaveResultSchema },
+    'launches.detect': { payload: LaunchesDetectPayloadSchema, result: LaunchesDetectResultSchema },
+    // A person's choice, which approves the task for the project's worktrees as it stands now.
+    'launches.afterSettle': { payload: LaunchesAfterSettlePayloadSchema, result: EmptySchema },
+    'launch.start': { payload: LaunchStartPayloadSchema, result: LaunchStartResultSchema },
+    'launch.restart': { payload: LaunchStartPayloadSchema, result: LaunchStartResultSchema },
+    'launch.stop': { payload: LaunchStopPayloadSchema, result: EmptySchema },
+    'launch.list': { payload: EmptySchema, result: LaunchListResultSchema }
+} as const;
+
+export const LAUNCHES_EVENT_SCHEMAS = {
+    'launch.status': LaunchStatusSchema,
+    'launches.changed': LaunchesChangedEventSchema
+} as const;

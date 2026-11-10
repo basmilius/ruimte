@@ -1,13 +1,13 @@
 import type { ChatUiLinkReading } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
+import { ignoreRefusal, perform } from '@/action-port/perform';
 import { openInSystemBrowser } from '@/desktop/bridge';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useFiles } from '@/state/files';
-import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { useUi } from '@/state/ui';
+import { conflictsDialog } from '@/worktrees/dialogs';
 
 function refuse(key: 'elsewhere' | 'invalidUrl'): void {
     useToasts.getState().show({ kind: 'error', title: i18next.t(`chat:uiLink.${key}`) });
@@ -26,7 +26,7 @@ export function openUiLink(endpointId: string, reading: ChatUiLinkReading): void
         void perform('file.preview', { path: target.path, line: target.line, endpointId }).catch(ignoreRefusal);
     } else if (target.type === 'Diff' && reading.cwd) {
         if (reading.conflicted && reading.relativePath) {
-            useUi.getState().setConflicts({ cwd: reading.cwd, path: reading.relativePath });
+            conflictsDialog.set({ cwd: reading.cwd, path: reading.relativePath });
         } else {
             useFiles.getState().open(target.path, useSettings.getState().filesTabLimit, {
                 kind: 'diff',

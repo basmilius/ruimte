@@ -16,7 +16,7 @@ import RuimteTransport
 
     var folder: String { workspace.folder }
     var client: any MachineRequesting { workspace.client }
-    var chats: [FilesChat] { FilesMention.chats(in: workspace.views, current: workspace.selectedID) }
+    var chats: [FilesChat] { FilesMention.chats(in: workspace.storedViews, current: workspace.selectedID) }
 
     /// Adds the file to the chat's draft. The line it returns says where it went.
     func mention(_ path: String, in chat: FilesChat) async -> String? {
@@ -27,7 +27,6 @@ import RuimteTransport
             comment: "%1$@ is a file path, %2$@ the chat title")
     }
 
-    /// The file as a view of the project, opened; a file that already has one opens that one.
     func openAsView(_ path: String) async {
         let stored = FilesMention.relative(folder: folder, path: path) ?? path
         if let existing = workspace.views.first(where: { $0.text("kind") == "file" && $0.text("path") == stored }) {
@@ -64,20 +63,14 @@ enum FilesMention {
     }
 
     /// Every chat of the project, the current one first and the rest in the order the project lists them.
-    static func chats(in views: [JSONValue], current: String?) -> [FilesChat] {
+    static func chats(in views: [StoredView], current: String?) -> [FilesChat] {
         var chats: [FilesChat] = []
         for view in views {
-            if view.text("kind") == "chat" {
-                chats.append(
-                    FilesChat(
-                        id: view.stableID, title: view.text("name", fallback: String(localized: "Chat")),
-                        current: view.stableID == current))
+            if case .chat(let chat) = view {
+                chats.append(FilesChat(id: chat.id, title: chat.name, current: chat.id == current))
             }
-            for node in view.list("nodes") where node.text("kind") == "chat" {
-                chats.append(
-                    FilesChat(
-                        id: node.stableID, title: node.text("title", fallback: String(localized: "Chat")),
-                        current: false))
+            for node in view.nodes where node.kind == .chat {
+                chats.append(FilesChat(id: node.id, title: node.title, current: false))
             }
         }
         return chats.filter(\.current) + chats.filter { !$0.current }
@@ -119,7 +112,6 @@ struct GitFileMarks: Equatable {
         return directory && directories.contains(path) ? "M" : nil
     }
 
-    /// One letter per state, as a person reads them: new, deleted, renamed, conflicted, or changed.
     static func letter(state: String, status: String) -> String {
         if state == "conflicted" { return "!" }
         switch status.first {
@@ -148,7 +140,6 @@ struct GitFileMarks: Equatable {
     }
 }
 
-/// How a line of a file differs from the last commit.
 enum FileLineChange: Equatable {
     case added, modified
     /// Lines were taken away just above this one.
@@ -203,12 +194,10 @@ enum FileLineChanges {
     }
 }
 
-/// The changed lines of one file against the last commit, read from the checkout it is in.
 @MainActor @Observable final class FileChangeMarksModel {
     private(set) var marks: [Int: FileLineChange] = [:]
     /// A file git has never seen, whose every line is new.
     private(set) var untracked = false
-    /// The diff of this file a person can open, nil when it has none.
     private(set) var diff: GitDiffTarget?
 
     var isEmpty: Bool { marks.isEmpty && !untracked }
@@ -218,7 +207,7 @@ enum FileLineChanges {
     func load(client: any MachineRequesting, path: String) async {
         let parent = (path as NSString).deletingLastPathComponent
         guard
-            let answer = try? await client.request("git.status", payload: .object(["cwd": .string(parent)])),
+            let answer = try? await client.request(.gitStatus, payload: .object(["cwd": .string(parent)])),
             let status = try? answer.decoded(as: GitStatus.self), status.repo, let root = status.root,
             let relative = FilesMention.relative(folder: root, path: path)
         else {
@@ -243,8 +232,9 @@ enum FileLineChanges {
             "cwd": .string(root), "scope": .string("base"), "staged": .bool(false), "path": .string(relative),
             "base": .string("HEAD"),
         ])
-        guard let answer = try? await client.request("git.diff", payload: payload) else { return }
-        marks = FileLineChanges.parse(answer.text("diff"))
+        guard let answer = try? await client.request(.gitDiff, payload: payload).decoded(as: GitDiffResult.self)
+        else { return }
+        marks = FileLineChanges.parse(answer.diff)
     }
 
     private func clear() {
@@ -292,17 +282,18 @@ enum FileLineChanges {
         let sent = text
         do {
             let result = try await client.request(
-                "fs.write",
-                payload: .object(["path": .string(path), "text": .string(sent), "expectedMtime": .number(mtime)]))
-            mtime = result.number("mtime")
+                .fsWrite,
+                payload: .object(["path": .string(path), "text": .string(sent), "expectedMtime": .number(mtime)])
+            ).decoded(as: FsWriteResult.self)
+            mtime = result.mtime
             // Only what went out is saved; text typed while the write was under way stays an open edit.
             original = sent
             editing = text != sent
             problem = nil
             return true
         } catch {
-            switch gitRefusalCode(error) {
-            case "stale":
+            switch error.machineCode {
+            case .stale:
                 stale = true
                 problem = String(
                     localized: "This file changed on the machine since you opened it. Your edits are still here.")

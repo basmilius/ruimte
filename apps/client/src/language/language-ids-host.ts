@@ -1,4 +1,4 @@
-import { lspLanguageIdOf } from '@adecore/editor-react';
+import { lspLanguageIdOf } from '@adecore/lsp';
 import { matchesFilePattern, type LanguageServerStatus } from '@ruimte/contracts';
 
 /* The files of a native server that no highlighter id names: Zig's package manifests. */

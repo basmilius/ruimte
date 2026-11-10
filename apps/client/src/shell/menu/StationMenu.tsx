@@ -4,12 +4,12 @@ import type { MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
 import { Menu as MenuGlyph } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { runMenuCommand } from '@/commands/run';
 import { desktop } from '@/desktop/bridge';
-import { runMenuCommand } from '@/shell/menu/actions';
+import { useBackgroundServiceState } from '@/machine-ui/use-background-service';
 import { menuContext } from '@/shell/menu/context';
 import { menuIconOf } from '@/shell/menu/icons';
 import { menuModel } from '@/shell/menu/model';
-import { useBackgroundServiceState } from '@/shell/use-background-service';
 import { IS_STATION } from '@/station';
 import { Brand } from '@/ui/Brand';
 

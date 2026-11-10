@@ -1,25 +1,19 @@
-import { ProviderAccountsService } from '@adecore/agents/providers';
+import { cliExecutable, type ProviderAccountsService } from '@adecore/agents/providers';
 import type { AgentKind } from '@ruimte/contracts';
 import { ownsSettings } from '../agents/install.ts';
 import { AgentIntegrations } from '../agents/integrations.ts';
 import type { ServerConfig } from '../config.ts';
-import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { AgentServers } from '../handlers/agent-servers.ts';
-import { RUIMTE_ACCOUNTS_HOST } from '../providers/accounts-host.ts';
-import { ANTIGRAVITY_ACP_RELEASE } from '../providers/acp-providers.ts';
 import { AcpRegistry } from '../providers/acp-registry.ts';
-import { AcpServerInstall } from '../providers/acp-server.ts';
-import { anthropicClaudeApiService } from '../providers/anthropic-claude-api-provider.ts';
 import type { AnthropicClaudeApiService } from '../providers/anthropic-claude-api-service.ts';
 import { CliVersions, type OwnInstall } from '../providers/cli-versions.ts';
-import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
-import { terminalExecutable } from '../providers/launch.ts';
 import { ModelCatalogFeed } from '../providers/model-catalogs.ts';
-import { nanoGptService } from '../providers/nanogpt-provider.ts';
 import type { NanoGptService } from '../providers/nanogpt-service.ts';
 import { ProviderFeed } from '../providers/provider-feed.ts';
 import { RegistryAgents } from '../providers/registry-agents.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
+import { modelFeedKinds } from '../providers/table.ts';
+import type { DaemonSeams } from './seams.ts';
 
 /* The agent CLIs of this machine, their accounts and what a person allowed in their settings. */
 export interface ProvidersBundle {
@@ -46,27 +40,30 @@ export interface ProvidersBundle {
  */
 export async function wireProviders(
     config: ServerConfig,
-    identity: EndpointIdentity,
     alongside: () => Promise<void>,
-    fetched: () => void = () => undefined
+    fetched: () => void,
+    seams: Pick<DaemonSeams, 'providers' | 'accounts'>
 ): Promise<ProvidersBundle> {
-    const nanogpt = nanoGptService;
-    const claudeApi = anthropicClaudeApiService;
-    await Promise.all([nanogpt.load(config.home), claudeApi.load(config.home)]);
-    const antigravityServer = new AcpServerInstall({ provider: 'antigravity', home: config.home, release: ANTIGRAVITY_ACP_RELEASE });
     const providers = new ProviderRegistry({
-        antigravityServer,
         home: config.home,
+        ...(seams.providers.codexHelp === null ? {} : { commands: { codexHelp: seams.providers.codexHelp } }),
+        ...(seams.providers.detect === null ? {} : { detect: seams.providers.detect }),
         onList: () => {
             void integrations.refreshInstalled();
             void modelCatalogs.refresh();
             fetched();
         }
     });
+    const { nanogpt, claudeApi } = providers;
+    await Promise.all([nanogpt.load(config.home), claudeApi.load(config.home)]);
+
+    for (const provider of seams.providers.added) {
+        providers.add(provider);
+    }
     const modelCatalogs = new ModelCatalogFeed({
         home: config.home,
         allowFetch: config.modelFetch,
-        catalogs: Object.fromEntries((['claude', 'codex', 'antigravity', 'copilot', 'grok'] as const).map((kind) => [kind, providers.catalogFor(kind)])),
+        catalogs: Object.fromEntries(modelFeedKinds().map((kind) => [kind, providers.catalogFor(kind)])),
         // The Claude API takes its options from Claude Code's catalog, which may now know a model it did not.
         changed: () => claudeApi.rebuildCatalog()
     });
@@ -78,24 +75,21 @@ export async function wireProviders(
             Object.entries(accounts.snapshot().accounts)
                 .filter(([id, account]) => account.kind === kind && id !== kind && account.home !== undefined)
                 .map(([, account]) => account.home!),
-        installed: async (kind) => (await providers.get(kind).detect(terminalExecutable(kind), process.env)).installed
+        installed: async (kind) => {
+            const command = cliExecutable(providers.get(kind));
+            const detect = seams.providers.detect;
+
+            return (detect === null ? await providers.get(kind).detect(command, process.env) : await detect(command)).installed;
+        }
     });
     await Promise.all([integrations.load(), modelCatalogs.load(), alongside()]);
     void modelCatalogs.refresh();
     fetched();
-    identity.attachAgentIntegrations({ describe: () => ({ agentIntegrations: integrations.summary() }) });
     // Before the managers, which start every CLI under the account its node or chat names.
-    const accounts = new ProviderAccountsService({
-        home: config.home,
-        host: RUIMTE_ACCOUNTS_HOST,
-        client: RUIMTE_CODEX_CLIENT,
-        providers,
-        install: (kind, folder) => integrations.installFolder(kind, folder),
-        ownsSettings
-    });
+    const accounts = seams.accounts({ home: config.home, providers, install: (kind, folder) => integrations.installFolder(kind, folder), ownsSettings });
     await accounts.load();
     const servers: AgentServers = {
-        of: (kind) => (kind === 'antigravity' ? antigravityServer : undefined),
+        of: (kind) => providers.servers.get(kind)?.install,
         installed: (kind) => {
             providers.invalidate(kind);
             void integrations.refreshInstalled();
@@ -105,17 +99,17 @@ export async function wireProviders(
     const registryAgents = new RegistryAgents({ home: config.home, registry, providers });
     registryAgents.load();
     const ownInstall = (kind: AgentKind): OwnInstall | null => {
-        if (kind === 'antigravity') {
-            const status = antigravityServer.status();
+        const server = providers.servers.get(kind);
+        if (server !== undefined) {
             return {
-                version: status.installed,
-                path: antigravityServer.launch()?.[0] ?? null,
-                latest: () => Promise.resolve(ANTIGRAVITY_ACP_RELEASE.version),
+                version: server.install.status().installed,
+                path: server.install.launch()?.[0] ?? null,
+                latest: () => Promise.resolve(server.release.version),
                 update: async () => {
-                    const after = await antigravityServer.install();
+                    const after = await server.install.install();
                     servers.installed(kind);
                     if (after.state === 'failed') {
-                        throw new Error(after.error ?? 'The Antigravity server did not install');
+                        throw new Error(after.error ?? `The ${providers.get(kind).name} server did not install`);
                     }
                 }
             };
@@ -139,7 +133,7 @@ export async function wireProviders(
     const versions = new CliVersions({
         executables: { claude: 'claude', codex: 'codex', grok: 'grok', copilot: 'copilot' },
         own: ownInstall,
-        ownKinds: () => ['antigravity', ...registryAgents.installed().map((agent) => agent.kind)],
+        ownKinds: () => [...providers.servers.keys(), ...registryAgents.installed().map((agent) => agent.kind)],
         providers
     });
     // Before the feed listens, so the list it sends reads the new key instead of the cached detection.

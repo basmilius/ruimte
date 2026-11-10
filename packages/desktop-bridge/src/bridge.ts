@@ -12,7 +12,6 @@ import type { SpeechBridge } from './speech.ts';
 import type { AgentActivity, ReleaseNotesState, UpdateState, UpdateTrack } from './update.ts';
 import type { OpenAiLivePreferences } from './voice.ts';
 
-/* A point on the screen, where the top left corner of a window that opens goes. */
 export interface WindowPoint {
     x: number;
     y: number;
@@ -60,7 +59,6 @@ export interface SaveFileStreamBridge {
     begin(suggestedName: string, mime: string): Promise<string | null>;
     /* At most 1 MiB per piece; a larger one ends the save. */
     write(id: string, bytes: Uint8Array): Promise<void>;
-    /* Answers the path the file got. */
     end(id: string): Promise<string>;
     abort(id: string): Promise<void>;
 }
@@ -104,11 +102,16 @@ export interface OpenAiCredentialStatus {
     machineKeyLeft?: boolean;
 }
 
+export interface OpenAiLiveSession {
+    session: { id: string };
+    transport: { type: 'webrtc'; sdp: string };
+}
+
 export interface OpenAiBridge {
     credentialStatus(): Promise<OpenAiCredentialStatus>;
     saveApiKey(apiKey: string): Promise<OpenAiCredentialStatus>;
     clearApiKey(): Promise<OpenAiCredentialStatus>;
-    createLiveSession(sdp: string, preferences: OpenAiLivePreferences): Promise<{ session: { id: string }; transport: { type: 'webrtc'; sdp: string } }>;
+    createLiveSession(sdp: string, preferences: OpenAiLivePreferences): Promise<OpenAiLiveSession>;
 }
 
 /*
@@ -126,7 +129,6 @@ export interface DesktopBridge {
     portTunnelSend?(message: PortTunnelToShell): void;
     onPortTunnel?(listener: (message: PortTunnelToPage) => void): () => void;
     platform: string;
-    /* For About and a bug report. */
     versions?: { electron: string; chrome: string; node: string };
     /* The region the operating system writes numbers and dates in; Chromium's own locale is the
        language of the app bundle. Read when the window opened, so a change lands on the next start. */

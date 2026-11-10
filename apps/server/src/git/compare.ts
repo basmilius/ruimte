@@ -1,6 +1,6 @@
 import { basename } from 'node:path';
 import { GIT_BLOB_MAX_BYTES, type GitBlobResult, type GitCompareMode, type GitComparePage, type GitCompareResult } from '@ruimte/contracts';
-import { languageOf } from '../fs/read.ts';
+import { languageOf } from '../disk/language-of.ts';
 import { diffCommits } from './diff.ts';
 import { readRangeLog } from './log.ts';
 import { GitError, LEAVE_NOTHING_OUT, git, runGit, runGitBytes, toplevel, verifyRev, type GitResult, type LeftOut } from './run.ts';

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { settle } from '@adecore/editor-react/testing';
 import type { LanguageServerStatus } from '@ruimte/contracts';
 import { FakeLanguageTransport } from './fake-daemon';
-import { settleLanguage as settle } from './settle.test';
 import { LanguageStatusTracker } from './status';
 
 function status(server: string, state: LanguageServerStatus['state'], extra: Partial<LanguageServerStatus> = {}): LanguageServerStatus {

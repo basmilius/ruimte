@@ -1,5 +1,5 @@
+import { CodedError } from '@adecore/agents';
 import { SESSION_PORT_VERIFY_MAX_AGE_MS, type SessionPort, type SessionPortsResult, type SessionPortVerification } from '@ruimte/contracts';
-import { RequestError } from '../dispatcher.ts';
 import type { ListenerProbe, TcpListener } from '../processes/listeners.ts';
 import type { ProcessSampler, RawProcess } from '../processes/sampler.ts';
 
@@ -124,11 +124,11 @@ export class SessionPorts {
         const session = this.options.current(id);
         const now = this.now();
         if (!session) {
-            throw new RequestError('session-port-closed', 'This session has ended');
+            throw new CodedError('session-port-closed', 'This session has ended');
         }
         // Verification always reads afresh, with one global scan and no unbounded queue of clicks.
         if (this.pending || now - this.verifiedAt < VERIFY_INTERVAL_MS) {
-            throw new RequestError('session-port-busy', 'Port verification is busy. Try again');
+            throw new CodedError('session-port-busy', 'Port verification is busy. Try again');
         }
         this.verifiedAt = now;
         const pending = this.scan({ session, port: listener.port });
@@ -145,7 +145,7 @@ export class SessionPorts {
             result?.status !== 'ready' ||
             !result.ports.some((entry) => sameListener(entry, listener))
         ) {
-            throw new RequestError('session-port-unverified', 'This listener could not be verified for this session');
+            throw new CodedError('session-port-unverified', 'This listener could not be verified for this session');
         }
         return { url: `http://${listener.host}:${listener.port}/`, machineId: this.options.machineId, validForMs: SESSION_PORT_VERIFY_MAX_AGE_MS };
     }

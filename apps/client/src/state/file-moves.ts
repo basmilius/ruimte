@@ -1,12 +1,13 @@
 import { followViewStates } from '@adecore/editor-react';
+import { isPathBelow } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { basenameOf, isPathBelow } from '@/shell/panels/files-tree';
+import { basenameOf } from '@/paths/file-path';
 import { useDocument } from '@/state/document';
 import { isFileTab, useFiles } from '@/state/files';
 import { endpointKey, splitKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { isUnsavedDraft, textDrafts, useTextDrafts, type TextDrafts } from '@/state/text-drafts';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
 /* The paths of the drafts at a path, or under it for a folder; with `unsavedOnly` just those holding text that is not saved. */
 export function draftPathsUnder(endpointId: string, path: string, unsavedOnly: boolean): string[] {

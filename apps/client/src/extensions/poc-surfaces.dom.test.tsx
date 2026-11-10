@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
 import type { ComponentType } from 'react';
-import { useContributions } from '@/extensions/registry';
+import { useContributions } from '@/state/extension-registry';
 import { mount, until, type Mounted } from '../../testing/dom';
 import { loadPoc } from '../../testing/poc';
 

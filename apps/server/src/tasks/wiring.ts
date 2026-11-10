@@ -2,7 +2,7 @@ import type { TaskCoordinator, TaskCoordinatorDeps, TaskStore, WaitingObserver, 
 import { wireTasks as wireTaskCore, type TaskVerbs } from '@adecore/agents/coordination';
 import type { Task } from '@ruimte/contracts';
 import type { ChatManager } from '../chat/chat-manager.ts';
-import type { OutboxEntry, OutboxWork, StartAgentEntry } from '../outbox/outbox.ts';
+import type { OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
 import { parkedNote } from './parked-note.ts';
 import { terminalTasks, type TerminalTasks } from './terminal-tasks.ts';
 import { TASK_WORDS } from './words.ts';
@@ -37,8 +37,8 @@ export interface TaskWiring {
     backgroundLimit: OutboxHandlers<OutboxWork>['background-limit'];
     giveTask: OutboxHandlers<OutboxWork>['give-task'];
     deliverWaiting: OutboxHandlers<OutboxWork>['deliver-waiting'];
+    /* Given up on: what waited on the entry hears it, and the chat is told in the words of the kind. */
     onParked(entry: OutboxEntry, error: unknown): void;
-    onStartGaveUp(entry: StartAgentEntry, error: unknown): void;
     /* What the daemon does with the child's own prune of the project: cancel, then look at the parents again. */
     prune(projectId: string, ids: ReadonlySet<string>): Promise<void>;
 }
@@ -50,13 +50,13 @@ export interface TaskWiring {
 export function wireTasks(deps: TaskWiringDeps): TaskWiring {
     const core = wireTaskCore({
         tasks: deps.tasks,
-        chats: deps.chats,
+        chats: deps.chats.core,
         outbox: { list: deps.entries, enqueue: deps.enqueue, remove: deps.remove, wake: deps.wake },
         placed: deps.placed,
         titleFor: deps.titleFor,
-        alert: (nodeId, title, body) => deps.alert(deps.chats.get(nodeId) ? 'chat' : 'terminal', nodeId, title, body),
+        alert: (nodeId, title, body) => deps.alert(deps.chats.core.get(nodeId) ? 'chat' : 'terminal', nodeId, title, body),
         // Deferred, so a row is never written into a parent from inside the broadcast of the child that settled it.
-        changed: (task: Task) => queueMicrotask(() => deps.chats.syncTaskRow(task)),
+        changed: (task: Task) => queueMicrotask(() => deps.chats.core.syncTaskRow(task)),
         ...(deps.retryAt ? { retryAt: deps.retryAt } : {}),
         words: TASK_WORDS,
         ...(deps.now ? { now: deps.now } : {})
@@ -65,7 +65,7 @@ export function wireTasks(deps: TaskWiringDeps): TaskWiring {
     const onParked = parkedNote({
         madeBy: deps.madeBy,
         titleFor: deps.titleFor,
-        note: (chatId, text) => deps.chats.addNote(chatId, 'warning', text),
+        note: (chatId, text) => deps.chats.core.addNote(chatId, 'warning', text),
         alert: (chatId, text) => deps.alert('chat', chatId, 'Could not wake the chat', text)
     });
 
@@ -81,10 +81,9 @@ export function wireTasks(deps: TaskWiringDeps): TaskWiring {
         deliverWaiting: core.handlers['deliver-waiting'],
         onParked: (entry, error) => {
             core.onParked(entry, error);
-            onParked(entry, error);
-        },
-        onStartGaveUp: (entry, error) => {
-            core.coordinator.startFailed(entry.target, error);
+            if (entry.kind === 'start-agent') {
+                core.coordinator.startFailed(entry.target, error);
+            }
             onParked(entry, error);
         },
         prune: core.prune

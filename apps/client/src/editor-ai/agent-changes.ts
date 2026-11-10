@@ -1,9 +1,9 @@
 import type { Editor, EditorRect } from '@adecore/editor';
 import { realTimers, type Timers } from '@adecore/editor-react';
-import { splitLines } from '@adecore/merge';
+import { lineMap, splitLines } from '@adecore/merge';
 import type { AgentKind, ProvenanceChangedEvent, ProvenanceReadResult, ProvenanceRun } from '@ruimte/contracts';
 import type { AgentChangesMode } from '@/state/ai-settings';
-import { colorOfChat, drawnRuns, lastWritten, lineMap, removalRuns, type DrawnRun, type RemovalRun } from './agent-runs';
+import { colorOfChat, drawnRuns, lastWritten, removalRuns, type DrawnRun, type RemovalRun } from './agent-runs';
 
 /* A pause in typing this long before the bars are worked out again, since that reads both texts. */
 const REMAP_DELAY_MS = 200;
@@ -14,7 +14,6 @@ const CARD_GRACE_MS = 200;
 /* Far past any line, which the editor reads as the end of it. */
 const END_OF_LINE = 100_000;
 
-/* The turn that is writing in this file right now. */
 export interface LiveWriter {
     chatId: string;
     turnId: string;
@@ -51,7 +50,6 @@ interface AgentChangesSource {
     read(): Promise<ProvenanceReadResult>;
     /* What is on disk as far as this client knows, or what moved under an unsaved draft, which is the text the daemon's runs are mapped onto when the mtimes agree. */
     disk(): { text: string; mtime: number } | null;
-    /* What the cursor of a turn says. */
     nameOf(provider: AgentKind | undefined): string;
     /* The turn the machine says a chat is running: null when it runs none, undefined when this client does not know the chat. */
     activeTurn?(chatId: string): string | null | undefined;

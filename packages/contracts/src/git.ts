@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { WorktreeSchema } from '@adecore/agent-contracts/worktree';
 import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
@@ -944,3 +945,56 @@ export const GitBlobResultSchema = z.object({
     language: z.string().optional()
 });
 export type GitBlobResult = z.infer<typeof GitBlobResultSchema>;
+
+export const GIT_REQUEST_SCHEMAS = {
+    'git.worktree-add': { payload: WorktreeAddPayloadSchema, result: WorktreeAddResultSchema },
+    'git.worktree-list': { payload: WorktreeListPayloadSchema, result: WorktreeListResultSchema },
+    'git.worktree-remove': { payload: WorktreeRemovePayloadSchema, result: WorktreeRemoveResultSchema },
+    'git.worktree-merge': { payload: WorktreeMergePayloadSchema, result: WorktreeMergeResultSchema },
+    'git.worktree-abort': { payload: GitCwdPayloadSchema, result: EmptySchema },
+    'git.status': { payload: GitCwdPayloadSchema, result: GitStatusSchema },
+    'git.watch': { payload: GitWatchPayloadSchema, result: GitWatchResultSchema },
+    'git.unwatch': { payload: GitCwdPayloadSchema, result: EmptySchema },
+    'git.compare': { payload: GitComparePayloadSchema, result: GitCompareResultSchema },
+    'git.compareCommits': { payload: GitCompareCommitsPayloadSchema, result: GitComparePageSchema },
+    'git.blob': { payload: GitBlobPayloadSchema, result: GitBlobResultSchema },
+    'git.diff': { payload: GitDiffPayloadSchema, result: GitDiffResultSchema },
+    'git.blame': { payload: GitBlamePayloadSchema, result: GitBlameResultSchema },
+    'git.identity': { payload: GitIdentityPayloadSchema, result: GitIdentityResultSchema },
+    'git.stage': { payload: GitStagePayloadSchema, result: EmptySchema },
+    'git.discard': { payload: GitDiscardPayloadSchema, result: GitDiscardResultSchema },
+    'git.pr': { payload: GitPullRequestPayloadSchema, result: GitPullRequestResultSchema },
+    'git.prSplit': { payload: GitPrSplitPayloadSchema, result: GitPrSplitResultSchema },
+    'git.pr-watch': { payload: GitPrWatchPayloadSchema, result: GitPrWatchResultSchema },
+    'git.pr-unwatch': { payload: GitPrUnwatchPayloadSchema, result: EmptySchema },
+    'git.pr-watches': { payload: GitPrWatchesPayloadSchema, result: GitPrWatchesResultSchema },
+    'git.issue': { payload: GitIssuePayloadSchema, result: GitIssueSchema },
+    'git.ref-commit': { payload: GitRefCommitPayloadSchema, result: GitRefCommitResultSchema },
+    'git.refs': { payload: GitCwdPayloadSchema, result: GitRefsResultSchema },
+    'git.repos': { payload: GitReposPayloadSchema, result: GitReposResultSchema },
+    'git.log': { payload: GitLogPayloadSchema, result: GitLogResultSchema },
+    'git.authors': { payload: GitCwdPayloadSchema, result: GitAuthorsResultSchema },
+    'git.action': { payload: GitActionPayloadSchema, result: GitActionResultSchema },
+    'git.cancel': { payload: GitCancelPayloadSchema, result: EmptySchema },
+    'git.clone': { payload: GitClonePayloadSchema, result: GitCloneResultSchema },
+    'git.ignoredFiles': { payload: GitIgnoredFilesPayloadSchema, result: GitIgnoredFilesResultSchema },
+    'git.conflicts': { payload: GitCwdPayloadSchema, result: GitConflictsResultSchema },
+    'git.conflict': { payload: GitConflictPayloadSchema, result: GitConflictResultSchema },
+    'git.resolve': { payload: GitResolvePayloadSchema, result: GitResolveResultSchema },
+    'git.resolveAi': { payload: GitResolveAiPayloadSchema, result: GitResolveAiResultSchema },
+    'git.operation': { payload: GitOperationPayloadSchema, result: GitActionResultSchema },
+    'git.capabilities': { payload: GitCwdPayloadSchema, result: GitCapabilitiesResultSchema },
+    'git.suggestMessage': { payload: GitSuggestMessagePayloadSchema, result: GitSuggestMessageResultSchema },
+    'git.bundle': { payload: GitBundlePayloadSchema, result: GitBundleResultSchema },
+    'git.bundlePut': { payload: GitBundlePutPayloadSchema, result: GitBundlePutResultSchema },
+    'git.fetchBundle': { payload: GitFetchBundlePayloadSchema, result: GitFetchBundleResultSchema }
+} as const;
+
+export const GIT_EVENT_SCHEMAS = {
+    'git.status': GitStatusEventSchema,
+    'git.changed': GitChangedEventSchema,
+    'git.progress': GitProgressEventSchema,
+    // The watches of a project changed (one started, stopped or ended by itself); a client that holds it asks again.
+    'git.pr-watches': GitPrWatchesEventSchema,
+    'git.worktrees': GitWorktreesEventSchema
+} as const;

@@ -7,24 +7,26 @@ import {
     type ToolSpec as CoreToolSpec
 } from '@adecore/agents/context';
 import { z } from 'zod';
-import type { AgentFiles } from '../mcp/files.ts';
-import type { ArtifactUploads } from '../mcp/uploads.ts';
+import type { ServerActions } from '../actions/server-actions.ts';
+import type { AgentFiles } from '../agent-files/files.ts';
+import type { ArtifactUploads } from '../agent-files/uploads.ts';
+import type { AgentCall } from '../canvas/host.ts';
+import { reachedPlace } from '../canvas/reach.ts';
 import { countToolCall } from '../stats/usage-stats.ts';
 import { noteActivity } from '../telemetry/activity.ts';
-import type { AgentCall } from './host.ts';
-import { reachedPlace } from './reach.ts';
 
 /* Who sees a tool: every caller, only an AI chat, only while computer use is on, only in a project with a database connection. */
 export type Audience = 'everyone' | 'chat' | 'computer' | 'database';
 
 /* Who calls a tool: the caller and the daemon, and the files and uploads a tool that takes a path reads. */
 export interface ToolCaller extends AgentCall {
+    /* The daemon's registry, which a tool runs the actions of its feature on. */
+    actions: ServerActions;
     /* The folders a file this caller names may come from, worked out on first use. */
     files(): Promise<AgentFiles>;
     uploads?: ArtifactUploads;
 }
 
-/* What a tool runs with, which `runTool` gives it. */
 export interface ToolCall extends ToolCaller {
     /* Hands back a png this call wrote, which goes back as image content; a path in the answer's text never does. */
     image(path: string): void;
@@ -80,7 +82,6 @@ export const TAIL_INPUT = z
     .positive('tail needs a positive whole number')
     .optional();
 
-/* A required text field of `tool`, trimmed and capped at `max` characters. */
 export function textInput(tool: string, name: string, max: number, what: string): z.ZodString {
     const needs = `${tool} needs ${name}, ${what}`;
 

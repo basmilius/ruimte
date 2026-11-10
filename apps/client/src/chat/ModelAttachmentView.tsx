@@ -5,8 +5,8 @@ import { Box, RotateCcw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { modelMimeOf } from '@/chat/model-attachment';
-import { canDrawWebgl, ModelViewer } from '@/shell/panels/model-viewer';
 import { useTheme } from '@/state/theme';
+import { canDrawWebgl, ModelViewer } from '@/surface/panels/model-viewer';
 
 type Phase = { kind: 'waiting' } | { kind: 'loading' } | { kind: 'ready' } | { kind: 'failed'; reason: string } | { kind: 'no-webgl' };
 

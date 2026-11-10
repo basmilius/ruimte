@@ -3,9 +3,7 @@ import Observation
 import RuimtePulsar
 import RuimteTransport
 
-/// Why a save of the launches did not land.
 enum LaunchSaveFailure: Error, Equatable {
-    /// The launches changed elsewhere since they were read; start over from the latest.
     case conflict
     case failed(String)
 }
@@ -27,15 +25,28 @@ enum LaunchesText {
     let client: any MachineRequesting
     let projectID: String
     let folder: String
-    /// Nil until the machine answered.
-    private(set) var document: LaunchesDocument?
+    private(set) var document: LaunchBook?
     /// By launch id: what ran since the machine started.
     private(set) var statuses: [String: LaunchStatus] = [:]
-    private(set) var repos: [LaunchRepo] = []
+    private(set) var repos: [GitRepo] = []
     private(set) var connected = false
     var problem: String?
     var ask: LaunchAsk?
-    private var subscriptions: [() -> Void] = []
+    // What changed while the link was down was pushed to nobody, so every link reads again.
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.launchStatus, as: LaunchStatus.self) { [weak self] status in
+                guard let self, status.projectId == projectID else { return }
+                statuses[status.launchId] = status
+            },
+            .apply(.launchesChanged, as: LaunchesChanged.self) { [weak self] change in
+                guard let self, change.projectId == projectID else { return }
+                document = change.document
+            },
+        ],
+        connection: { [weak self] available in self?.connected = available },
+        read: { [weak self] in await self?.load() })
 
     init(client: any MachineRequesting, projectID: String, folder: String) {
         self.client = client
@@ -56,50 +67,29 @@ enum LaunchesText {
 
     func name(_ launchID: String) -> String { document?.launch(launchID)?.name ?? launchID }
 
-    func start() {
-        guard subscriptions.isEmpty else { return }
-        subscriptions.append(
-            client.subscribe("launch.status") { [weak self] payload in
-                guard let self, payload.text("projectId") == projectID else { return }
-                let status = LaunchStatus(json: payload)
-                statuses[status.launchID] = status
-            })
-        subscriptions.append(
-            client.subscribe("launches.changed") { [weak self] payload in
-                guard let self, payload.text("projectId") == projectID, let document = payload["document"] else { return }
-                self.document = LaunchesDocument(json: document)
-            })
-        subscriptions.append(
-            client.observeConnection { [weak self] available in
-                guard let self else { return }
-                connected = available
-                // What changed while the link was down was pushed to nobody.
-                if available { Task { await self.load() } }
-            })
-    }
+    func start() { live.start() }
 
-    func stop() {
-        subscriptions.forEach { $0() }
-        subscriptions.removeAll()
-    }
+    func stop() { live.stop() }
 
     func load() async {
         do {
-            let answer = try await client.request(.launchesRead, payload: .object(["projectId": .string(projectID)]))
-            document = LaunchesDocument(json: answer)
+            document = try await client.request(.launchesRead, payload: .object(["projectId": .string(projectID)]))
+                .decoded(as: LaunchBook.self)
         } catch is CancellationError {
             return
         } catch {
             problem = error.localizedDescription
             return
         }
-        if let list = try? await client.request(.launchList) {
-            let own = list.list("launches").map(LaunchStatus.init(json:)).filter { $0.projectID == projectID }
-            statuses = Dictionary(own.map { ($0.launchID, $0) }, uniquingKeysWith: { _, last in last })
+        if let list = try? await client.request(.launchList).decoded(as: LaunchListResult.self) {
+            let own = list.launches.filter { $0.projectId == projectID }
+            statuses = Dictionary(own.map { ($0.launchId, $0) }, uniquingKeysWith: { _, last in last })
         }
         // Without the repositories the launches list without headings.
-        if let answer = try? await client.request("git.repos", payload: .object(["folder": .string(folder)])) {
-            repos = answer.list("repos").map(LaunchRepo.init(json:))
+        if let answer = try? await client.request(.gitRepos, payload: .object(["folder": .string(folder)]))
+            .decoded(as: GitReposResult.self)
+        {
+            repos = answer.repos
         }
     }
 
@@ -111,18 +101,20 @@ enum LaunchesText {
         if replace { payload["replace"] = .bool(true) }
         do {
             let result = try await client.request(restart ? .launchRestart : .launchStart, payload: .object(payload))
+                .decoded(as: LaunchStartResult.self)
             problem = nil
-            switch result.text("outcome") {
-            case "held":
-                ask = .held(
-                    launchID: launchID, restart: restart, held: result.list("held").map(LaunchHeld.init(json:)),
-                    replace: replace)
-            case "busy":
-                let busy = result["busy"] ?? .object([:])
-                ask = .busy(
-                    launchID: launchID, restart: restart, holder: busy.text("launchId"), port: Int(busy.number("port")),
-                    approve: approve)
-            default:
+            switch result.outcome {
+            case .held:
+                ask = .held(launchID: launchID, restart: restart, held: result.held ?? [], replace: replace)
+            case .busy:
+                if let busy = result.busy {
+                    ask = .busy(
+                        launchID: launchID, restart: restart, holder: busy.launchId, port: Int(busy.port),
+                        approve: approve)
+                } else {
+                    ask = nil
+                }
+            case .started:
                 ask = nil
             }
         } catch {
@@ -130,7 +122,6 @@ enum LaunchesText {
         }
     }
 
-    /// The press on a launch's play button: a start, or a restart while what it runs still runs.
     func press(_ launch: LaunchEntry) async {
         await run(launch.id, restart: LaunchLogic.runs(launch, statuses: statuses))
     }
@@ -147,9 +138,8 @@ enum LaunchesText {
         }
     }
 
-    /// Every launch of the project that runs; a group stops through its members.
     func stopAll() async {
-        for status in statuses.values where status.live { await stop(status.launchID) }
+        for status in statuses.values where status.live { await stop(status.launchId) }
     }
 
     /// Saves the whole list against the rev it was read at. A save by a person approves what it adds or changes.
@@ -159,12 +149,12 @@ enum LaunchesText {
             "projectId": .string(projectID), "baseRev": .number(Double(baseRev)), "launches": .array(launches),
         ]
         if !imported.isEmpty { payload["imported"] = .array(imported.map { .string($0) }) }
-        do {
-            _ = try await client.request(.launchesSave, payload: .object(payload))
-        } catch MachineClientError.server(let code, _) where code == "rev-conflict" {
-            throw LaunchSaveFailure.conflict
-        } catch {
-            throw LaunchSaveFailure.failed(error.localizedDescription)
+        // No reload to merge onto: the list is the person's edit of a whole, so a conflict goes back to them.
+        var rev = RevSave()
+        switch await rev.send({ try await client.request(.launchesSave, payload: .object(payload)) }) {
+        case .saved: return
+        case .conflict: throw LaunchSaveFailure.conflict
+        case .failed(let error): throw LaunchSaveFailure.failed(error.localizedDescription)
         }
     }
 
@@ -182,13 +172,13 @@ enum LaunchesText {
         }
     }
 
-    /// What the machine finds in the project to import; nil when it could not look.
     func detect() async -> [LaunchSuggestion]? {
         guard
             let result = try? await client.request(
                 .launchesDetect,
-                payload: .object(["projectId": .string(projectID), "sources": .array([.string("vscode-launch")])]))
+                payload: .object(["projectId": .string(projectID), "sources": .array([.string("vscode-launch")])])
+            ).decoded(as: LaunchesDetectResult.self)
         else { return nil }
-        return result.list("suggestions").map(LaunchSuggestion.init(json:))
+        return result.suggestions
     }
 }

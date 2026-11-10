@@ -82,7 +82,7 @@ final class ChatCommandLookTests: XCTestCase {
                 ]),
             ])
         ]
-        let names = RuimteCommandLook.projectNames(views)
+        let names = RuimteCommandLook.projectNames(ProjectWire.stored(views))
         XCTAssertEqual(names["chat-ab12"], ChatCommandName(name: "Lexer", icon: "message-square", view: false))
         XCTAssertEqual(names["main"], ChatCommandName(name: "Werk", icon: "frame", view: true))
         let run = RuimteCommandLook.match("ruimte-context read chat-ab12 --view main note-x9 term-zz main")!

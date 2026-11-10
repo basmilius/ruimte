@@ -1,36 +1,16 @@
 import { isRecentProject, type ProjectAgentAskEvent, type ProjectAgentFolderEvent, type ProjectClosingResult, type ProjectSummary } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { create } from 'zustand';
+import { useAgentCloseAsk, useAgentFolderAsk } from '@/project/agent-asks';
 import { closingProject, isOpenHere, openProject } from '@/project/open';
 import type { SwitchOutcome } from '@/project/project-switch';
-import { showMoveToast } from '@/project/show-toast';
 import { callerName } from '@/project/show-view';
-import { nodesOfView } from '@/project/view-nodes';
 import { useDocument } from '@/state/document';
 import { useProjectList } from '@/state/project-list';
 import { useSettings } from '@/state/settings';
+import { showMoveToast } from '@/state/show-toast';
+import { nodesOfView } from '@/state/view-nodes';
 import { watchPool } from '@/transport/pool-watch';
 
-/* The confirmation an agent's `project_close` raised, with what the machine said closing would end. */
-export interface AgentCloseAsk extends ProjectClosingResult {
-    endpointId: string;
-    projectId: string;
-    name: string;
-    agent: string;
-}
-
-export const useAgentCloseAsk = create<{ ask: AgentCloseAsk | null }>(() => ({ ask: null }));
-
-/* The folder an agent's `project_open` asked to make a project; only the person's own open of it makes one. */
-export interface AgentFolderAsk {
-    endpointId: string;
-    folder: string;
-    agent: string;
-}
-
-export const useAgentFolderAsk = create<{ ask: AgentFolderAsk | null }>(() => ({ ask: null }));
-
-/* What the watch reaches outside the event; a test hands in a fake of each. */
 export interface AgentProjectDeps {
     showing(endpointId: string, projectId: string): boolean;
     listed(endpointId: string, projectId: string): ProjectSummary | null;

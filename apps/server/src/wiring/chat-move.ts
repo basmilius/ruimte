@@ -1,28 +1,28 @@
 import { stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
+import type { ChatCore } from '@adecore/agents/chat';
 import type { AgentLineageStore, NoticeStore, TaskStore } from '@adecore/agents/coordination';
 import { chatIsWorking, type ChatInfo } from '@ruimte/contracts';
-import type { ChatManager } from '../chat/chat-manager.ts';
 import { ChatError } from '../chat/errors.ts';
-import type { MachineHome } from '../fs/machine-home.ts';
+import { moveChat, type MoveChatDeps } from '../chat/move-chat.ts';
+import { chatMoveInfo, type MoveInfoDeps } from '../chat/move-info.ts';
+import type { MoveJournal } from '../chat/move-journal.ts';
+import { moveRefusal, type MoveRefusalDeps } from '../chat/move-refusal.ts';
+import { repairInterruptedMoves, type MoveRepairDeps } from '../chat/move-repair.ts';
+import { ownFolderOf } from '../chat/own-files.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import { gitOrThrow, readGit } from '../git/run.ts';
 import { repositoryRoot } from '../git/status.ts';
 import type { PrWatchStore } from '../github/pr-watch.ts';
 import type { ChatMoveHandlers } from '../handlers/chat.ts';
 import type { OutboxStore } from '../outbox/outbox.ts';
-import { moveChat, type MoveChatDeps } from '../projects/move-chat.ts';
-import { chatMoveInfo, type MoveInfoDeps } from '../projects/move-info.ts';
-import type { MoveJournal } from '../projects/move-journal.ts';
-import { moveRefusal, type MoveRefusalDeps } from '../projects/move-refusal.ts';
-import { repairInterruptedMoves, type MoveRepairDeps } from '../projects/move-repair.ts';
-import { ownFolderOf } from '../projects/own-files.ts';
 import type { ProjectProposals } from '../projects/project-proposals.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { SnoozeStore } from '../push/snoozes.ts';
 
 export interface ChatMoveWiring {
-    chats: ChatManager;
+    chats: ChatCore;
     store: ProjectStore;
     lineage: AgentLineageStore;
     tasks: TaskStore;
@@ -30,15 +30,12 @@ export interface ChatMoveWiring {
     notices: NoticeStore;
     prWatches: PrWatchStore;
     machineHome: Pick<MachineHome, 'refuse'>;
-    /* Absent in a test that stops nowhere in the middle. */
-    journal?: MoveJournal;
-    /* Absent in a test with no snoozes. */
-    snoozes?: SnoozeStore;
-    /* The suggestions that hold a chat at `needs-you`, and that a move settles; absent in a test with none. */
-    proposals?: Pick<ProjectProposals, 'stands' | 'moved' | 'pauseHold'>;
+    journal: MoveJournal;
+    snoozes: SnoozeStore;
+    /* The suggestions that hold a chat at `needs-you`, and that a move settles. */
+    proposals: Pick<ProjectProposals, 'stands' | 'moved' | 'pauseHold'>;
 }
 
-/* Whether the chat is a chat view of the Chats project. */
 export function chatIsInChats(store: Pick<ProjectStore, 'index' | 'scratchFolder'>, chatId: string): boolean {
     const place = store.index.locate(chatId);
     return (
@@ -79,7 +76,7 @@ function chatMoveRefusalDeps(wiring: ChatMoveWiring): MoveRefusalDeps {
                 return false;
             }
             // The card of its own suggestion holds the chat at needs-you, and the move it asks for must not refuse for that.
-            return session.busy || chatIsWorking(session.info, wiring.proposals?.stands(chatId) === true);
+            return session.busy || chatIsWorking(session.info, wiring.proposals.stands(chatId));
         },
         lineage,
         tasks,
@@ -90,7 +87,7 @@ function chatMoveRefusalDeps(wiring: ChatMoveWiring): MoveRefusalDeps {
 }
 
 /* The info of a chat, loaded from disk when nobody has it. */
-async function loadedInfo(chats: ChatManager, chatId: string): Promise<ChatInfo> {
+async function loadedInfo(chats: ChatCore, chatId: string): Promise<ChatInfo> {
     if (chats.get(chatId) === undefined && (await chats.hasStored(chatId))) {
         await chats.create({ chatId });
     }
@@ -101,8 +98,7 @@ async function loadedInfo(chats: ChatManager, chatId: string): Promise<ChatInfo>
     return session.info;
 }
 
-/* The chat steps a move and its repair share. */
-function sharedChatSteps(chats: ChatManager) {
+function sharedChatSteps(chats: ChatCore) {
     return {
         load: (chatId: string) => loadedInfo(chats, chatId),
         relocate: (chatId: string, cwd: string, during: () => Promise<void>) => chats.relocate(chatId, cwd, during),
@@ -111,28 +107,30 @@ function sharedChatSteps(chats: ChatManager) {
     };
 }
 
-/* Finishes the chat moves the machine stopped in the middle of; once at start, before the outbox runs. */
-export function repairChatMoves(wiring: ChatMoveWiring & { journal: MoveJournal }): Promise<string[]> {
+/* What the move dialog asks the machine, the move itself, and the repair of a move a restart cut short. */
+export interface ChatMover extends ChatMoveHandlers {
+    /* Finishes the chat moves the machine stopped in the middle of; once at start, before the outbox runs. */
+    repair(): Promise<string[]>;
+}
+
+export function chatMover(wiring: ChatMoveWiring): ChatMover {
+    const deps = chatMoveDeps(wiring);
     const { chats, store } = wiring;
-    const deps: MoveRepairDeps = {
+    const repairDeps: MoveRepairDeps = {
         scratchFolder: store.scratchFolder,
         journal: wiring.journal,
         projects: { known: () => store.known(), mutate: (projectId, apply) => store.mutate(projectId, apply) },
         index: store.index,
         lineage: wiring.lineage,
-        ...(wiring.snoozes ? { snoozes: wiring.snoozes } : {}),
+        snoozes: wiring.snoozes,
         ownFolder: (chatId) => ownFolderOf(store.scratchFolder, chatId),
         chats: sharedChatSteps(chats)
     };
-    return repairInterruptedMoves(deps);
-}
 
-/* What the move dialog asks the machine, and the move itself. */
-export function chatMoveHandlers(wiring: ChatMoveWiring): ChatMoveHandlers {
-    const deps = chatMoveDeps(wiring);
     return {
         info: (payload) => chatMoveInfo(payload, deps.info),
-        move: (payload) => moveChat(payload, deps.move)
+        move: (payload) => moveChat(payload, deps.move),
+        repair: () => repairInterruptedMoves(repairDeps)
     };
 }
 
@@ -200,7 +198,7 @@ export function chatMoveDeps(wiring: ChatMoveWiring): { info: MoveInfoDeps; move
             ...sharedChatSteps(chats),
             claim: (chatId) => {
                 // The card holds the chat, and a held chat does not relocate: the move it asks for lets go of the hold and puts it back if the move fails.
-                const putBack = wiring.proposals?.pauseHold(chatId) ?? (() => undefined);
+                const putBack = wiring.proposals.pauseHold(chatId) ?? (() => undefined);
                 if (chats.get(chatId)?.relocatable === false) {
                     putBack();
                     return null;
@@ -209,9 +207,9 @@ export function chatMoveDeps(wiring: ChatMoveWiring): { info: MoveInfoDeps; move
             }
         },
         lineage: wiring.lineage,
-        moved: (chatId, project) => wiring.proposals?.moved(chatId, project),
-        ...(wiring.journal ? { journal: wiring.journal } : {}),
-        ...(wiring.snoozes ? { snoozes: wiring.snoozes } : {})
+        moved: (chatId, project) => wiring.proposals.moved(chatId, project),
+        journal: wiring.journal,
+        snoozes: wiring.snoozes
     };
     return { info: infoDeps, move: moveDeps };
 }

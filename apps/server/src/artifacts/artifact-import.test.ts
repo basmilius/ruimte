@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { PEER_ARTIFACT_PIECE_BYTES, type ArtifactProvenance } from '@ruimte/contracts';
-import { checkedReply } from '../remote/peer-reply.ts';
+import { checkedReply } from '../peer/giver/peer-reply.ts';
 import { ArtifactImporter } from './artifact-import.ts';
 import { ArtifactStore } from './artifact-store.ts';
 import { Artifacts } from './artifacts.ts';

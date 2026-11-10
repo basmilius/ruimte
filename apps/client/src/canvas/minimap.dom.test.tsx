@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { act } from 'react';
-import { visibleRect } from '@/canvas/math';
+import { visibleRect } from '@/canvas-model/math';
 import { minimapScale, minimapWorld, rectOnMap } from '@/canvas/minimap-geometry';
 import { canvasOfNode } from '@/state/canvas';
 import { useSettings } from '@/state/settings';

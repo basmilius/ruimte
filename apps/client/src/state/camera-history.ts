@@ -1,4 +1,4 @@
-import { emptyCameraHistory, type CameraHistory } from '@/canvas/camera-history';
+import { emptyCameraHistory, type CameraHistory } from '@/canvas-model/camera-history';
 
 /*
  * Per view and in memory only: a canvas store is dropped when its view leaves the grid, and the way

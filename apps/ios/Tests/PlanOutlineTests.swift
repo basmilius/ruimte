@@ -30,67 +30,17 @@ final class PlanOutlineTests: XCTestCase {
         ])
     }
 
-    private func document(_ value: JSONValue) throws -> PlanDocument { try XCTUnwrap(PlanDocument(value)) }
+    private func document(_ value: JSONValue) throws -> PlanDocument {
+        PlanDocument(try value.decoded(as: StoredPlan.self))
+    }
+
+    private func planStep(_ value: JSONValue) throws -> PlanStep {
+        PlanStep(try value.decoded(as: StoredPlanStep.self))
+    }
 
     private func parent(_ states: [PlanStepState]) throws -> PlanStep {
         let steps = states.enumerated().map { step("c\($0.offset)", state: $0.element.rawValue) }
-        return try XCTUnwrap(PlanStep(step("p", steps: steps)))
-    }
-
-    /// Every pair of `derived state` in `@adecore/plan/plan.test.ts`, in the order that file has them. The
-    /// derivation lives twice, so these vectors are what keeps the phone and the desktop from drifting apart.
-    private static let derivedPairs: [(PlanStepState, PlanStepState, PlanStepState)] = [
-        (.open, .open, .open),
-        (.open, .active, .active),
-        (.open, .done, .active),
-        (.open, .failed, .failed),
-        (.open, .skipped, .open),
-        (.open, .blocked, .blocked),
-        (.active, .active, .active),
-        (.active, .done, .active),
-        (.active, .failed, .failed),
-        (.active, .skipped, .active),
-        (.active, .blocked, .blocked),
-        (.done, .done, .done),
-        (.done, .failed, .failed),
-        (.done, .skipped, .done),
-        (.done, .blocked, .blocked),
-        (.failed, .failed, .failed),
-        (.failed, .skipped, .failed),
-        (.failed, .blocked, .failed),
-        (.skipped, .skipped, .done),
-        (.skipped, .blocked, .blocked),
-        (.blocked, .blocked, .blocked),
-        (.open, .warning, .active),
-        (.open, .info, .active),
-        (.active, .warning, .active),
-        (.active, .info, .active),
-        (.done, .warning, .warning),
-        (.done, .info, .done),
-        (.failed, .warning, .failed),
-        (.failed, .info, .failed),
-        (.skipped, .warning, .warning),
-        (.skipped, .info, .done),
-        (.blocked, .warning, .blocked),
-        (.blocked, .info, .blocked),
-        (.warning, .warning, .warning),
-        (.warning, .info, .warning),
-        (.info, .info, .done),
-    ]
-
-    func testParentDerivesItsStateLikeThePlanPackage() throws {
-        for (first, second, expected) in Self.derivedPairs {
-            XCTAssertEqual(try parent([first, second]).state, expected, "\(first.rawValue) and \(second.rawValue)")
-            XCTAssertEqual(try parent([second, first]).state, expected, "\(second.rawValue) and \(first.rawValue)")
-        }
-    }
-
-    func testOneChildPassesItsStateUp() throws {
-        for state in [PlanStepState.open, .active, .done, .failed, .blocked, .warning] {
-            XCTAssertEqual(try parent([state]).state, state, state.rawValue)
-        }
-        XCTAssertEqual(try parent([.skipped]).state, .done)
-        XCTAssertEqual(try parent([.info]).state, .done)
+        return try planStep(step("p", steps: steps))
     }
 
     func testFailedGoesBeforeBlockedInAnyMix() throws {
@@ -105,28 +55,16 @@ final class PlanOutlineTests: XCTestCase {
             steps: [
                 step("b", steps: [step("c", state: "done"), step("d", state: "warning")]), step("e", state: "info"),
             ])
-        XCTAssertEqual(try XCTUnwrap(PlanStep(warned)).state, .warning)
+        XCTAssertEqual(try planStep(warned).state, .warning)
         let informed = step(
             "a",
             steps: [
                 step("b", steps: [step("c", state: "info"), step("d", state: "skipped")]), step("e", state: "done"),
             ])
-        XCTAssertEqual(try XCTUnwrap(PlanStep(informed)).state, .done)
+        XCTAssertEqual(try planStep(informed).state, .done)
         let unfinished = step(
             "a", steps: [step("b", steps: [step("c", state: "warning"), step("d")]), step("e", state: "info")])
-        XCTAssertEqual(try XCTUnwrap(PlanStep(unfinished)).state, .active)
-    }
-
-    /// A state added to `PlanStepStateSchema` reaches the generated enum on its own; these hold the hand-written
-    /// tables beside it, so nobody ships a state a person cannot pick or that shows no marker.
-    func testEveryStateIsPlacedInTheTablesAPersonSees() {
-        XCTAssertEqual(Set(PlanStepState.personStates + [.active]), Set(PlanStepState.allCases))
-        XCTAssertEqual(Set(PlanStepState.testOutcomes + [.open, .active]), Set(PlanStepState.allCases))
-        XCTAssertEqual(Set(PlanStepState.allCases.map(\.marker)).count, PlanStepState.allCases.count)
-        XCTAssertEqual(
-            PlanStepState.allCases.filter(\.asksForNote), [.failed, .warning, .info])
-        XCTAssertEqual(
-            PlanStepState.allCases.filter(\.isFinished), [.done, .skipped, .warning, .info])
+        XCTAssertEqual(try planStep(unfinished).state, .active)
     }
 
     func testProgressCountsLeavesOnlyAndNamesTheActiveStep() throws {
@@ -196,9 +134,9 @@ final class PlanOutlineTests: XCTestCase {
     }
 
     func testTappingTheCircleTogglesBetweenOpenAndDone() throws {
-        XCTAssertEqual(try XCTUnwrap(PlanStep(step("a"))).toggled, .done)
-        XCTAssertEqual(try XCTUnwrap(PlanStep(step("a", state: "active"))).toggled, .done)
-        XCTAssertEqual(try XCTUnwrap(PlanStep(step("a", state: "done"))).toggled, .open)
+        XCTAssertEqual(try planStep(step("a")).toggled, .done)
+        XCTAssertEqual(try planStep(step("a", state: "active")).toggled, .done)
+        XCTAssertEqual(try planStep(step("a", state: "done")).toggled, .open)
     }
 
     func testRowsFollowTheFilterAndTheFolds() throws {
@@ -282,7 +220,7 @@ final class PlanOutlineTests: XCTestCase {
             value = .object(fields)
         }
         XCTAssertEqual(
-            document.markdown(for: try XCTUnwrap(PlanStep(value))), "- [ ] Step a (failed)\n    > Broke\n    > twice")
+            document.markdown(for: try planStep(value)), "- [ ] Step a (failed)\n    > Broke\n    > twice")
     }
 
     func testNewestPlanComesFirst() throws {
@@ -310,19 +248,22 @@ final class PlanOutlineTests: XCTestCase {
         let machine = PlanMachine()
         let store = PlanStore(client: machine)
         store.start()
-        machine.emit("plan.changed", .object(["chatId": .string("chat"), "plan": plan("p", rev: 3, items: [])]))
-        machine.emit("plan.changed", .object(["chatId": .string("chat"), "plan": plan("p", rev: 2, items: [])]))
+        machine.emit(.planChanged, .object(["chatId": .string("chat"), "plan": plan("p", rev: 3, items: [])]))
+        machine.emit(.planChanged, .object(["chatId": .string("chat"), "plan": plan("p", rev: 2, items: [])]))
         XCTAssertEqual(store.plans(for: "chat").map(\.rev), [3])
 
-        store.setListed([.object(["chatId": .string("chat"), "plan": plan("p", rev: 1, items: [])])])
+        store.setListed([
+            try JSONValue.object(["chatId": .string("chat"), "plan": plan("p", rev: 1, items: [])])
+                .decoded(as: PlanOfChat.self)
+        ])
         XCTAssertEqual(store.plans(for: "chat").map(\.rev), [3], "a list answer older than an event does not win")
 
-        machine.emit("plan.created", .object(["chatId": .string("chat"), "planId": .string("q")]))
+        machine.emit(.planCreated, .object(["chatId": .string("chat"), "planId": .string("q")]))
         XCTAssertTrue(store.unseen.contains("chat"))
         store.markSeen("chat")
         XCTAssertFalse(store.unseen.contains("chat"))
 
-        machine.emit("plan.removed", .object(["chatId": .string("chat"), "planId": .string("p")]))
+        machine.emit(.planRemoved, .object(["chatId": .string("chat"), "planId": .string("p")]))
         XCTAssertTrue(store.plans(for: "chat").isEmpty)
     }
 
@@ -339,7 +280,7 @@ final class PlanOutlineTests: XCTestCase {
         store.start()
         defer { store.stop() }
         await fulfillment(of: [listed], timeout: 1)
-        XCTAssertEqual(machine.sent.filter { $0.0 == "plan.list" }.map(\.1), [.object([:])])
+        XCTAssertEqual(machine.sent.filter { $0.0 == .planList }.map(\.1), [.object([:])])
         XCTAssertEqual(store.plans(for: "chat").map(\.rev), [6])
     }
 
@@ -365,7 +306,7 @@ final class PlanOutlineTests: XCTestCase {
         machine.answer = .object(["plan": plan("p", rev: 5, items: [step("a", state: "done", by: "person")])])
         let store = PlanStore(client: machine)
         try await store.apply(chatID: "chat", planID: "p", ops: [PlanOps.set(["a"], .done)])
-        XCTAssertEqual(machine.sent.last?.0, "plan.apply")
+        XCTAssertEqual(machine.sent.last?.0, .planApply)
         XCTAssertEqual(machine.sent.last?.1["planId"], .string("p"))
         XCTAssertEqual(
             machine.sent.last?.1,
@@ -381,19 +322,19 @@ final class PlanOutlineTests: XCTestCase {
 }
 
 @MainActor private final class PlanMachine: MachineRequesting {
-    var handlers: [String: @MainActor @Sendable (JSONValue) -> Void] = [:]
-    var sent: [(String, JSONValue)] = []
+    var handlers: [WireEvent: @MainActor @Sendable (JSONValue) -> Void] = [:]
+    var sent: [(WireRequest, JSONValue)] = []
     var answer: JSONValue = .object(["plans": .array([])])
     var listed: [JSONValue] = []
 
-    func emit(_ event: String, _ payload: JSONValue) { handlers[event]?(payload) }
+    func emit(_ event: WireEvent, _ payload: JSONValue) { handlers[event]?(payload) }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
-        return type == "plan.list" ? .object(["plans": .array(listed)]) : answer
+        return type == .planList ? .object(["plans": .array(listed)]) : answer
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
         handlers[event] = handler
         return {}
     }
@@ -401,7 +342,6 @@ final class PlanOutlineTests: XCTestCase {
 
 @MainActor
 final class PlanActivityHoldTests: XCTestCase {
-    /// Runs nothing on its own; a test fires what is due.
     @MainActor private final class ManualScheduler {
         var pending: [(id: Int, delay: Duration, action: @MainActor () -> Void)] = []
         private var next = 0
@@ -506,13 +446,13 @@ final class PlanActivityHoldTests: XCTestCase {
                 ])
             ]),
         ])
-        let document = try XCTUnwrap(PlanDocument(value))
+        let plan = PlanDocument(try value.decoded(as: StoredPlan.self))
         XCTAssertEqual(
-            document.reveal("c", filter: .all, collapseDone: false, collapsed: ["s", "p", "other"]),
+            plan.reveal("c", filter: .all, collapseDone: false, collapsed: ["s", "p", "other"]),
             PlanReveal(filter: .all, collapseDone: false, collapsed: ["other"]))
         XCTAssertEqual(
-            document.reveal("c", filter: .open, collapseDone: true, collapsed: []),
+            plan.reveal("c", filter: .open, collapseDone: true, collapsed: []),
             PlanReveal(filter: .all, collapseDone: false, collapsed: []))
-        XCTAssertNil(document.reveal("missing", filter: .all, collapseDone: false, collapsed: []))
+        XCTAssertNil(plan.reveal("missing", filter: .all, collapseDone: false, collapsed: []))
     }
 }

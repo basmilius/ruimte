@@ -8,16 +8,14 @@ import {
 } from '@ruimte/contracts';
 import { portFlag } from '../config.ts';
 import { reachAdvice } from '../pulsar/reach-classify.ts';
-import type { Fetch } from './local-daemon.ts';
+import { askLocalDaemon, type Fetch } from './local-daemon.ts';
 
 type StatusAnswer = { status: MachineStatus } | { problem: 'not-running' | 'other-home' | 'too-old' };
 
 /* Asks the daemon on `port` how clients reach it, on the local secret of the home this command runs with; `check` has it check again first. */
 export async function readMachineStatus(port: number, secret: string, fetcher: Fetch, check = false): Promise<StatusAnswer> {
     const query = check ? `?${MACHINE_STATUS_CHECK_QUERY}=1` : '';
-    const response = await fetcher(`http://127.0.0.1:${port}${MACHINE_STATUS_PATH}${query}`, { headers: { authorization: `Bearer ${secret}` } }).catch(
-        () => null
-    );
+    const response = await askLocalDaemon({ port, fetch: fetcher }, secret, `${MACHINE_STATUS_PATH}${query}`);
     if (!response) {
         return { problem: 'not-running' };
     }

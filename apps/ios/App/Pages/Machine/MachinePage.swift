@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import SwiftUI
 
@@ -27,11 +28,10 @@ struct MachinePage: View {
         _projects = State(initialValue: MachineProjectList(session: session))
         let endpoint = session.endpoint
         _devices = State(
-            initialValue: MachineDevices(client: session.rpc) { endpoint.info?["platform"]?.stringValue })
+            initialValue: MachineDevices(client: session.rpc) { endpoint.info?.platform })
     }
 
     private var endpoint: MachineEndpoint { session.endpoint }
-    private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
     private var name: String { endpoint.label ?? session.machine.name }
 
     var body: some View {
@@ -73,7 +73,7 @@ struct MachinePage: View {
             }
             ToolbarItem(id: "machine.menu", placement: .topBarTrailing) {
                 Menu {
-                    if isPad {
+                    if MobileDevice.isPad {
                         Button(String(localized: "Machine settings"), lucideIcon: "pencil") { naming = true }
                     } else {
                         Button(String(localized: "Name and icon"), lucideIcon: "pencil") { naming = true }
@@ -96,7 +96,6 @@ struct MachinePage: View {
         }
         .task(id: session.generation) {
             guard session.connected else { return }
-            await projects.load()
             if endpoint.streamingAllowed { await devices.load() }
         }
         .task(id: session.connected) {
@@ -118,12 +117,13 @@ struct MachinePage: View {
             Button("Restart", role: .destructive) { Task { await endpoint.confirmInstall() } }
             Button("Cancel", role: .cancel) { endpoint.cancelInstall() }
         } message: { work in
-            Text(MachineUpdate.restartQuestion(update: endpoint.update, work: work, machine: name))
+            Text(EndpointUpdate.restartQuestion(update: endpoint.update, work: work, machine: name))
         }
         .mobileSheet(isPresented: $openingFolder) { OpenFolderSheet(session: session) }
         .mobileSheet(isPresented: $naming) {
             MachineIdentitySheet(
-                endpoint: endpoint, fallbackName: name, access: isPad ? (session: session, runtime: runtime) : nil)
+                endpoint: endpoint, fallbackName: name,
+                access: MobileDevice.isPad ? (session: session, runtime: runtime) : nil)
         }
         .mobileSheet(isPresented: $access) { MachineAccessSheet(session: session, runtime: runtime, name: name) }
         .onAppear { AppUsage.screen(.screenMachine) }
@@ -280,7 +280,7 @@ struct MachinePage: View {
                         selection: Binding(
                             get: { keepAwake.mode }, set: { mode in changeKeepAwake { $0.mode = mode } })
                     ) {
-                        ForEach(KeepAwakeMode.allCases) { Text($0.label).tag($0) }
+                        ForEach(KeepAwakeMode.allCases, id: \.self) { Text($0.label).tag($0) }
                     }
                     .pickerStyle(.menu)
                     .labelsHidden()
@@ -328,7 +328,6 @@ struct MachinePage: View {
         .disabled(endpoint.savingKeepAwake || !closedLid.ruleInstalled)
     }
 
-    /// Changes one part of keep awake and sends the rest as the machine has it now.
     private func changeKeepAwake(_ change: (inout MachineKeepAwake) -> Void) {
         guard var next = endpoint.keepAwake else { return }
         change(&next)
@@ -357,7 +356,6 @@ struct MachinePageRow: ViewModifier {
     }
 }
 
-/// A setting's name with what it does under it, as the desktop's settings rows read.
 struct MachineSettingLabel: View {
     let title: String
     var detail: String?
@@ -374,7 +372,6 @@ struct MachineSettingLabel: View {
     }
 }
 
-/// What went wrong on the link to the machine, with Reconnect while it is away.
 struct MachineProblemRow: View {
     let problem: String
     var reconnect: (() -> Void)?
@@ -395,8 +392,6 @@ struct MachineProblemRow: View {
     }
 }
 
-/// A row that opens a page of the machine: its mark, its name, a value and the chevron, and the limits of its
-/// accounts under the name where it has them.
 struct MachineLinkLabel: View {
     let title: String
     let icon: String
@@ -427,7 +422,6 @@ struct MachineLinkLabel: View {
     }
 }
 
-/// The limits of a machine, an account to a row, and a line when the machine could not say which accounts it has.
 struct MachineLimitList: View {
     let limits: MachineLimits
 
@@ -549,7 +543,6 @@ struct MachineLimitRow: View {
     }
 }
 
-/// Says once, above the machines, which bar is which.
 struct MachineLimitLegend: View {
     var body: some View {
         HStack(spacing: 8) {
@@ -567,9 +560,8 @@ struct MachineLimitLegend: View {
     }
 }
 
-/// The update of the machine's app: what is there, and Restart where a phone may install it.
 struct MachineUpdateBanner: View {
-    let update: MachineUpdate
+    let update: EndpointUpdate
     let install: MachineInstallStep
     let start: () -> Void
 

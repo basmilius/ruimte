@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { CONTEXT_VERBS } from '@ruimte/contracts';
 import { USAGE_VERB_COUNTERS } from '@ruimte/pulsar';
+import { AGENT_TOOLKITS as TOOLKITS } from '../agent-features/list.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { guideTool } from '../mcp/guide.ts';
-import type { CanvasHost } from '../tools/host.ts';
 import { toolCall } from '../tools/tool-test-helpers.ts';
 import { runTool } from '../tools/tool.ts';
-import { TOOLKITS } from '../tools/toolkits.ts';
 import { UsageCounter } from './usage-counter.ts';
 import {
     countClient,
     countLimit,
     countProjectOpened,
-    countRequest,
+    countUsages,
     countTurn,
     countUsage,
     countToolCall,
@@ -100,45 +100,10 @@ describe('counting at the sites', () => {
         });
     });
 
-    test('a request counts only when it is an action a person takes', () => {
-        countRequest('device.action');
-        countRequest('project.list');
-        expect(counts()).toEqual({ 'actions.device': 1 });
-    });
-
-    test('a request counts what it did, from its payload where the type alone does not say', () => {
-        countRequest('git.action', { kind: 'commit-push' });
-        countRequest('git.action', { kind: 'sync' });
-        countRequest('git.action', { kind: 'checkout' });
-        countRequest('git.resolve', {});
-        countRequest('git.pr-watch', {});
-        countRequest('database.request', { id: 'd1', method: 'execute' });
-        countRequest('database.request', { id: 'd2', method: 'tables' });
-        countRequest('fs.write', { path: 'a.ts' });
-        countRequest('device.boot', {});
-        countRequest('voice.start', {});
-        countRequest('peer.taskStart', {});
-        expect(counts()).toEqual({
-            'git.commits': 1,
-            'git.pushes': 2,
-            'git.pulls': 1,
-            'git.conflictsResolved': 1,
-            'prWatches.started': 1,
-            'actions.database': 2,
-            'database.queries': 1,
-            'files.saved': 1,
-            'actions.device': 1,
-            'devices.started': 1,
-            'voice.sessions': 1,
-            'peers.tasks': 1
-        });
-    });
-
-    test('a file read counts once per file a day, however often a client reads it again', () => {
-        countRequest('fs.read', { path: '/work/a.ts' });
-        countRequest('fs.read', { path: '/work/a.ts' });
-        countRequest('fs.read', { path: '/work/b.ts' });
-        expect(counts()).toEqual({ 'files.opened': 2 });
+    test('what the dispatcher says an answered request counts is counted, once per key where it says once', () => {
+        countUsages(['actions.device', { counter: 'files.opened', once: '/work/a.ts' }, { counter: 'files.opened', once: '/work/a.ts' }]);
+        countUsages([{ counter: 'files.opened', once: '/work/b.ts' }]);
+        expect(counts()).toEqual({ 'actions.device': 1, 'files.opened': 2 });
     });
 
     test('a project counts once a day, however often clients open it again', () => {

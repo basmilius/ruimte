@@ -1,8 +1,8 @@
 import type { EditorAssistGenerateResult, EditorAssistPurpose, EditorAssistStatusResult } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useSettings } from '@/state/settings';
+import { TransportError, type Transport, fireAndForget } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
-import { TransportError, type Transport } from '@/transport/transport';
 
 export interface EditorAssistRequest {
     readonly purpose: EditorAssistPurpose;
@@ -82,7 +82,7 @@ export class EditorAssistClient {
         }
         const id = `assist-${++this.sequence}`;
         const off = request.onText === undefined ? null : this.transport.on('editor.text', (event) => event.id === id && request.onText?.(event.text));
-        const cancel = (): void => void this.transport.request('editor.cancel', { id }).catch(() => undefined);
+        const cancel = (): void => void fireAndForget('editor.cancel', this.transport.request('editor.cancel', { id }));
         signal?.addEventListener('abort', cancel, { once: true });
         try {
             const result = await this.transport.request('editor.generate', {

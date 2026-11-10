@@ -9,7 +9,7 @@ import type { LimitsUpdate } from '@adecore/agents/usage';
 import type { ChatInfo, ChatTurnItem, ProjectCanvasView, ProjectContent } from '@ruimte/contracts';
 import { setProjectAccounts } from '../projects/project-accounts.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../testing/test-daemon.ts';
 import { turnsOf } from './chat-test-helpers.ts';
 import { sayAndSettle, writeLeadTranscript } from './lead-chat-test-helpers.ts';
 
@@ -44,7 +44,6 @@ let projectId: string;
 let daemon: TestDaemon;
 let accounts: ProviderAccountsService;
 let limitUpdates: LimitsUpdate[];
-let machine: { resumeAtReset: boolean };
 let clock: ManualClock;
 
 beforeEach(async () => {
@@ -53,7 +52,6 @@ beforeEach(async () => {
     const env = { PATH: process.env.PATH, HOME: home, USERPROFILE: home, ANTHROPIC_API_KEY: 'sk-inherited' };
     folders = new Set([personal, join(home, '.codex'), join(root, 'codex_work')]);
     limitUpdates = [];
-    machine = { resumeAtReset: false };
     accounts = await testAccounts({
         home,
         env,
@@ -72,10 +70,8 @@ beforeEach(async () => {
         installed: ['claude', 'codex'],
         accounts,
         env,
-        machine,
         onLimits: (update) => limitUpdates.push(update)
     });
-    daemon.worker.start();
 });
 
 afterEach(async () => {
@@ -92,7 +88,6 @@ function say(chatId: string, text: string): Promise<void> {
     return sayAndSettle(daemon, chatId, text);
 }
 
-/* Has the lead chat start an agent and answers its node id. */
 async function openAgent(input: Record<string, unknown>): Promise<string> {
     const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', input);
     return line!.split('\t')[0]!;
@@ -163,7 +158,7 @@ describe('a chat under an account', () => {
         expect(await daemon.request('chat.configure', { chatId: 'chat-codex', account: 'codex_work' })).toMatchObject({ ok: true });
         await say('chat-codex', 'again');
         expect(daemon.chatEnvs.at(-1)!.CODEX_HOME).toBe(join(root, 'codex_work'));
-        expect(daemon.chats.codexProcess(daemon.chats.get('chat-codex')!.info).env.CODEX_HOME).toBe(join(root, 'codex_work'));
+        expect(daemon.chats.threadProcess(daemon.chats.get('chat-codex')!.info).env.CODEX_HOME).toBe(join(root, 'codex_work'));
     });
 
     test("the app-server that reads a Codex thread starts without Ruimte's MCP server, which only the chat's own process holds a token for", async () => {
@@ -171,7 +166,7 @@ describe('a chat under an account', () => {
         await say('chat-codex', 'hello');
         const mcp = (command: readonly string[]): boolean => command.some((arg) => arg.startsWith('mcp_servers.ruimte.'));
         expect(mcp(daemon.chatCommands.at(-1)!)).toBe(true);
-        expect(mcp(daemon.chats.codexProcess(daemon.chats.get('chat-codex')!.info).command)).toBe(false);
+        expect(mcp(daemon.chats.threadProcess(daemon.chats.get('chat-codex')!.info).command)).toBe(false);
     });
 });
 
@@ -227,7 +222,7 @@ describe('going on under another account after a limit', () => {
     });
 
     test('a Claude chat goes on in a fork on the other account, and its own resume at the reset lapses', async () => {
-        machine.resumeAtReset = true;
+        await daemon.setSwitches({ resumeAtReset: true });
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
         await say('chat-lead', `limit:${RESET_AT / 1000}`);
         await daemon.until(() => owedResumes().length === 1);
@@ -254,16 +249,16 @@ describe('going on under another account after a limit', () => {
         );
         original.configure({ resumeAtReset: false });
         original.configure({ resumeAtReset: true });
-        machine.resumeAtReset = false;
+        await daemon.setSwitches({ resumeAtReset: false });
         daemon.chats.resumeSettingChanged();
-        machine.resumeAtReset = true;
+        await daemon.setSwitches({ resumeAtReset: true });
         daemon.chats.resumeSettingChanged();
         expect(owedResumes().filter((entry) => entry.target === 'chat-lead')).toEqual([]);
         expect(original.info.resumeAt).toBeUndefined();
     });
 
     test('a Codex chat whose CLI still runs a command in the background is refused, and keeps the resume it is owed', async () => {
-        machine.resumeAtReset = true;
+        await daemon.setSwitches({ resumeAtReset: true });
         await daemon.chats.create({ chatId: 'chat-codex', provider: 'codex', cwd: folder });
         await say('chat-codex', `serve\nlimit:${RESET_AT / 1000}`);
         await daemon.until(() => owedResumes().length === 1);
@@ -279,7 +274,7 @@ describe('going on under another account after a limit', () => {
     });
 
     test('a resume that comes due while a change of account waits on a background command opens its turn once that command ends', async () => {
-        machine.resumeAtReset = true;
+        await daemon.setSwitches({ resumeAtReset: true });
         await daemon.chats.create({ chatId: 'chat-codex', provider: 'codex', cwd: folder });
         await say('chat-codex', `serve\nlimit:${RESET_AT / 1000}`);
         await daemon.until(() => owedResumes().length === 1);

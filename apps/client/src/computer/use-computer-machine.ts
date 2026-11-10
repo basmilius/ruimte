@@ -1,24 +1,27 @@
 import { messageOf } from '@adecore/ui';
 import type { ComputerAppGrants, ComputerGrant, ComputerRevokePayload, ComputerUseStatus } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
+import { useComputer } from '@/computer/computer';
 import { computerSetupOf, opensSystemSettings, recheckOf, SYSTEM_SETTINGS_PANES, type ComputerSetup } from '@/computer/setup';
 import { desktop } from '@/desktop/bridge';
 import { activeLanguage } from '@/i18n/active';
-import { useComputer } from '@/state/computer';
 import { useServers } from '@/state/server';
 import { transportFor } from '@/transport';
+import type { Transport } from '@/transport-api/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { useEndpointConnection } from '@/transport/status';
-import type { Transport } from '@/transport/transport';
 
 /* Accessibility shows up in a running helper, so while one is missing the machine is asked again this often. */
 const POLL_MS = 2_000;
 
 /* Asks quietly: a failed recheck changes nothing on screen, and the next one or the person's own press tries again. */
 function recheckOn(endpointId: string, how: 'restart' | 'status'): void {
-    transportFor(endpointId)
-        ?.request(how === 'restart' ? 'computer.restart' : 'computer.status', {})
-        .then((next) => useComputer.getState().setStatus(endpointId, next))
-        .catch(() => undefined);
+    fireAndForget(
+        'transportFor',
+        transportFor(endpointId)
+            ?.request(how === 'restart' ? 'computer.restart' : 'computer.status', {})
+            .then((next) => useComputer.getState().setStatus(endpointId, next))
+    );
 }
 
 export interface ComputerMachine {

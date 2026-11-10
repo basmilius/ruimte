@@ -697,7 +697,6 @@ function sketchPartsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
 
 type MotionKind = 'step' | 'hop' | 'waddle' | 'fly' | 'hover' | 'paddle' | 'ripple' | 'glide' | 'roll' | 'pot-hop' | 'scuttle';
 
-/* How a shape moves: its walk, where its eyes are to close or cross, and where its bow sits. */
 interface MotionRig {
     kind: MotionKind;
     eyes: [number, number][];

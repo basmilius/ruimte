@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Worktree } from '@ruimte/contracts';
+import { checkCwd } from '../canvas/project-paths.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
-import { checkCwd } from '../tools/project-paths.ts';
 import { checkoutHost } from './worktree-host.ts';
 import type { Worktrees } from './worktrees.ts';
 

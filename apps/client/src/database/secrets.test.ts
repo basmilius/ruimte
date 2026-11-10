@@ -24,7 +24,6 @@ const server: DatabaseConnection = {
 };
 const file: DatabaseConnection = { id: 'cache', name: 'Cache', shared: false, config: { engine: 'sqlite', path: '/repo/cache.db' } };
 
-/* A password saved for where the connection points now. */
 function savedFor(connection: DatabaseConnection, password: string): SavedPassword {
     return { password, target: passwordTarget(connection.config) };
 }

@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 
 /*
@@ -62,3 +63,13 @@ export const SecretDeclinePayloadSchema = z.object({
 export const SecretAnswerResultSchema = z.object({
     accepted: z.boolean()
 });
+
+export const SECRETS_REQUEST_SCHEMAS = {
+    'secret.requests': { payload: EmptySchema, result: SecretRequestsSchema },
+    'secret.save': { payload: SecretSavePayloadSchema, result: SecretAnswerResultSchema },
+    'secret.decline': { payload: SecretDeclinePayloadSchema, result: SecretAnswerResultSchema }
+} as const;
+
+export const SECRETS_EVENT_SCHEMAS = {
+    'secret.requests': SecretRequestsSchema
+} as const;

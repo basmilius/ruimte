@@ -6,7 +6,6 @@
 export class StorageGate {
     private held: Promise<void> | null = null;
 
-    /* Resolves once no pass holds the gate. */
     async wait(): Promise<void> {
         while (this.held !== null) {
             await this.held;

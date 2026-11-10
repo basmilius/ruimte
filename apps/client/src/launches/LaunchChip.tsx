@@ -4,12 +4,12 @@ import type { GitRepo, LaunchesDocument } from '@ruimte/contracts';
 import { GitBranch, Pencil, Play, Plus, Search, ShieldCheck, SquareTerminal } from 'lucide-react';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useProjectRepos } from '@/controllers/git-repos';
 import { afterSettleCandidates, chooseAfterSettle, chooseLaunch, launchActions, showLaunchOutput, startLaunch } from '@/launches/actions';
 import { foundText, newSuggestions } from '@/launches/editing';
 import { HeldCommand, LaunchDot, LaunchStatusIcon } from '@/launches/LaunchControls';
 import { headlineOf, launchSections, type LaunchView } from '@/launches/model';
 import { useLaunches, useLaunchSuggestions, useProjectLaunches } from '@/launches/state';
-import { useProjectRepos } from '@/state/git-repos';
 import { useUi } from '@/state/ui';
 
 /* Launches belong to the project, so the button lives in the rail, and its menu opens beside it. */

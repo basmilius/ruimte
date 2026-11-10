@@ -1,11 +1,12 @@
-import { EXTENSION_PACK_MAX_UNPACKED_BYTES, ExtensionManifestSchema, ExtensionPackSchema, type ExtensionManifest } from '@ruimte/contracts';
+import { EXTENSION_ICON_PATH, EXTENSION_PACK_MAX_UNPACKED_BYTES, PackTooLargeError, readExtensionPack, type ExtensionManifest } from '@ruimte/contracts';
 import { EXTENSION_STORE_PUBLIC_KEY, extensionStoreMessage, ExtensionStoreIndexSchema, type ExtensionStoreEntry } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-web';
 import { desktop } from '@/desktop/bridge';
 import { syncExtensions } from '@/extensions/loader';
 import { extensionRequest } from '@/extensions/machine-request';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { machineTransport, TransportError, type Transport } from '@/transport';
+import { machineAnswers } from '@/transport/features';
 
 const STORE_BASE = 'https://cdn.jsdelivr.net/gh/ruimte-app/extensions@main/';
 
@@ -117,15 +118,10 @@ export interface PackPreview {
     icon: string | null;
 }
 
-function textOf(base64: string): string {
-    return new TextDecoder().decode(Uint8Array.from(atob(base64), (char) => char.charCodeAt(0)));
-}
-
-/* The stream as text, refused once it grows past what a pack may unpack to. */
-async function unpackedText(stream: ReadableStream<Uint8Array>): Promise<string> {
-    const reader = stream.getReader();
-    const decoder = new TextDecoder();
-    let text = '';
+/* The stream whole, refused once it grows past what a pack may unpack to. */
+async function gunzip(bytes: Uint8Array): Promise<Uint8Array> {
+    const reader = new Blob([bytes as BufferSource]).stream().pipeThrough(new DecompressionStream('gzip')).getReader();
+    const chunks: Uint8Array[] = [];
     let size = 0;
 
     for (let read = await reader.read(); !read.done; read = await reader.read()) {
@@ -134,33 +130,27 @@ async function unpackedText(stream: ReadableStream<Uint8Array>): Promise<string>
         if (size > EXTENSION_PACK_MAX_UNPACKED_BYTES) {
             await reader.cancel();
 
-            throw new Error('This pack unpacks to more than an extension may hold');
+            throw new PackTooLargeError();
         }
 
-        text += decoder.decode(read.value, { stream: true });
+        chunks.push(read.value);
     }
 
-    return text + decoder.decode();
+    return new Uint8Array(await new Blob(chunks as BlobPart[]).arrayBuffer());
 }
 
 /* What a `.rex` from a file says it is, so a person sees its name and permissions before it runs anywhere. */
 export async function readPack(file: Blob): Promise<PackPreview> {
     const bytes = new Uint8Array(await file.arrayBuffer());
-    const unzipped = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-    const pack = ExtensionPackSchema.parse(JSON.parse(await unpackedText(unzipped)));
-    const manifest = pack.files['manifest.json'];
+    const pack = await readExtensionPack(bytes, gunzip);
 
-    if (manifest === undefined) {
-        throw new Error('This file holds no manifest.json');
+    if (!pack.ok) {
+        throw new Error(pack.message);
     }
 
-    const icon = pack.files['assets/icon.svg'];
+    const icon = pack.files[EXTENSION_ICON_PATH];
 
-    return {
-        bytes,
-        manifest: ExtensionManifestSchema.parse(JSON.parse(textOf(manifest))),
-        icon: icon === undefined ? null : `data:image/svg+xml;base64,${icon}`
-    };
+    return { bytes, manifest: pack.manifest, icon: icon === undefined ? null : `data:image/svg+xml;base64,${icon}` };
 }
 
 /*
@@ -168,6 +158,11 @@ export async function readPack(file: Blob): Promise<PackPreview> {
  * own list says whether it has one, since an extension with only a client part is no failure on the machine.
  */
 async function changeOnMachine(link: Transport, id: string, change: () => Promise<unknown>): Promise<string | null> {
+    // A machine from before the extension API has no part to change.
+    if (!machineAnswers(link.connection, 'extension.list')) {
+        return null;
+    }
+
     try {
         const { extensions } = await extensionRequest(link, 'extension.list', {});
 
@@ -177,11 +172,6 @@ async function changeOnMachine(link: Transport, id: string, change: () => Promis
 
         return null;
     } catch (e) {
-        // A machine from before the extension API has no part to change.
-        if (e instanceof TransportError && e.code === 'unavailable') {
-            return null;
-        }
-
         return e instanceof Error ? e.message : String(e);
     }
 }

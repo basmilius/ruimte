@@ -1,4 +1,3 @@
-/* What the external server tells a model once. */
 export const EXTERNAL_INSTRUCTIONS = [
     'These tools operate Ruimte as the person who made your credential, inside the projects and the tier that credential names.',
     'Every tool but guide, project_list, project_open and project_activate takes project, the id of a project from project_list.',

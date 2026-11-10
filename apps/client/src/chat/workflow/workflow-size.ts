@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import type { CardSize } from '@/routines/output-size';
 import { storedJson } from '@/state/stored-json';
+import type { CardSize } from '@/surface/canvas/output-size';
 
 /* Room for an agent's header and a few rows of its conversation. */
 export const AGENT_MIN: CardSize = { w: 320, h: 240 };

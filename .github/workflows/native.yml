@@ -20,6 +20,7 @@ jobs:
     outputs:
       rust: ${{ steps.paths.outputs.rust }}
       swift_pulsar: ${{ steps.paths.outputs.RuimtePulsar }}
+      swift_shared: ${{ steps.paths.outputs.RuimteShared }}
       swift_transport: ${{ steps.paths.outputs.RuimteTransport }}
       swift_voice: ${{ steps.paths.outputs.RuimteVoice }}
       swift_intelligent_ui: ${{ steps.paths.outputs.RuimteIntelligentUI }}
@@ -39,6 +40,10 @@ jobs:
             RuimtePulsar:
               - '.github/**'
               - 'apps/ios/Packages/RuimtePulsar/**'
+            RuimteShared:
+              - '.github/**'
+              - 'apps/ios/Packages/RuimtePulsar/**'
+              - 'apps/ios/Packages/RuimteShared/**'
             RuimteTransport:
               - '.github/**'
               - 'apps/ios/Packages/RuimtePulsar/**'
@@ -83,6 +88,18 @@ jobs:
     defaults:
       run:
         working-directory: apps/ios/Packages/RuimtePulsar
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: swift test
+
+  swift-shared:
+    name: swift (RuimteShared)
+    needs: changes
+    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.swift_shared == 'true') }}
+    runs-on: xcode-27
+    defaults:
+      run:
+        working-directory: apps/ios/Packages/RuimteShared
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: swift test
@@ -143,7 +160,7 @@ jobs:
   native:
     name: Native checks
     if: ${{ always() }}
-    needs: [changes, rust, swift-pulsar, swift-transport, swift-voice, swift-intelligent-ui, computer-use]
+    needs: [changes, rust, swift-pulsar, swift-shared, swift-transport, swift-voice, swift-intelligent-ui, computer-use]
     runs-on: ubuntu-latest
     steps:
       - name: Check job results

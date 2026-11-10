@@ -1,9 +1,9 @@
-import type { AppIpc } from '@adecore/shell';
 import type { MachineMode } from '@ruimte/desktop-bridge';
 import type { MachineModeFile } from '../machine-mode';
+import type { DesktopIpc } from './ipc';
 import type { Machine } from './service';
 
-export interface MachineModeOptions {
+interface MachineModeOptions {
     mode: MachineMode;
     machine: Pick<Machine, 'stopPreview' | 'stopOnQuit' | 'removeOwnService'>;
     store: MachineModeFile;
@@ -14,7 +14,7 @@ export interface MachineModeOptions {
 }
 
 /* The page chooses whether this app runs a machine; the shell writes it and starts over with it. */
-export function installMachineMode(ipc: AppIpc, options: MachineModeOptions): void {
+export function installMachineMode(ipc: DesktopIpc, options: MachineModeOptions): void {
     const { machine, store } = options;
     const later = options.later ?? ((run: () => void) => void setTimeout(run, 0));
     // Once a choice is on its way the app is going down, and a second one would write over it.

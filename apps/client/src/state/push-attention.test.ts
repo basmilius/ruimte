@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { PushAttentionEntry } from '@ruimte/contracts';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 import { PushAttentionSync } from './push-attention';
 
 async function flush() {

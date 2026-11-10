@@ -1,0 +1,124 @@
+import { isInFloatingLayer } from '@adecore/ui';
+import i18next from 'i18next';
+import { defineBehaviors, takeKey, type Command } from '@/commands/behavior';
+import type { CommandMoment } from '@/commands/moment';
+import {
+    afterSettleCandidates,
+    chooseAfterSettle,
+    chosenLaunchId,
+    runChosenLaunch,
+    showLaunchOutput,
+    startLaunch,
+    stopAllLaunches,
+    stopChosenLaunch,
+    stopLaunch
+} from '@/launches/actions';
+import { launchViews } from '@/launches/model';
+import { useLaunches } from '@/launches/state';
+import { endpointKey } from '@/state/keys';
+import { isScratchProject, useProject } from '@/state/project';
+
+function launchesOfProject(): { key: string; document: NonNullable<ReturnType<typeof useLaunches.getState>['documents'][string]> } | null {
+    const { current, currentEndpointId } = useProject.getState();
+    if (current === null || currentEndpointId === null) {
+        return null;
+    }
+    const key = endpointKey(currentEndpointId, current.projectId);
+    const document = useLaunches.getState().documents[key];
+
+    return document === undefined ? null : { key, document };
+}
+
+function hasLaunches(moment: CommandMoment): boolean {
+    return moment.inWorkspace && !moment.scratch && launchesOfProject() !== null;
+}
+
+/* From anywhere but a popup, a terminal included: restarting the server is what you do while typing. */
+function launchKey(run: () => void): (press: Parameters<typeof takeKey>[0]) => boolean {
+    return (press) => {
+        // The Chats project has no launches, and its keys fall through to whatever has the focus.
+        if (isScratchProject(useProject.getState().current)) {
+            return true;
+        }
+        if (!isInFloatingLayer(press.event.target)) {
+            takeKey(press, run);
+        }
+
+        return true;
+    };
+}
+
+export const LAUNCH_BEHAVIORS = defineBehaviors({
+    'launch-run': { run: runChosenLaunch, key: launchKey(runChosenLaunch) },
+    'launch-stop': { run: stopChosenLaunch, key: launchKey(stopChosenLaunch) },
+    'launches-stop-all': { run: stopAllLaunches },
+    'launches-output': { run: () => showLaunchOutput() },
+    'launches-edit': {
+        run: () => useLaunches.getState().setDialog({ kind: 'edit', launchId: chosenLaunchId() }),
+        offered: hasLaunches
+    },
+    'launches-after-settle-off': {
+        run: () => void chooseAfterSettle(null),
+        offered: (moment) => hasLaunches(moment) && launchesOfProject()?.document.afterSettle !== undefined
+    }
+});
+
+function paletteLaunches(moment: CommandMoment): ReturnType<typeof launchesOfProject> {
+    return !moment.inWorkspace || moment.scratch ? null : launchesOfProject();
+}
+
+/* One row per launch that says what a press does to it now, so a launch that runs offers its restart and its stop. */
+export function launchPaletteRows(moment: CommandMoment): Command[] {
+    const found = paletteLaunches(moment);
+    if (found === null) {
+        return [];
+    }
+    const { key, document } = found;
+    const views = launchViews(document, useLaunches.getState().statuses[key] ?? {});
+
+    return document.launches.flatMap((launch): Command[] =>
+        views.get(launch.id)?.live === true
+            ? [
+                  {
+                      id: `launch-restart-${launch.id}`,
+                      label: i18next.t('launches:palette.restart', { name: launch.name }),
+                      run: () => void startLaunch(launch.id, { restart: true })
+                  },
+                  {
+                      id: `launch-stop-${launch.id}`,
+                      label: i18next.t('launches:palette.stop', { name: launch.name }),
+                      run: () => void stopLaunch(launch.id)
+                  }
+              ]
+            : [
+                  {
+                      id: `launch-start-${launch.id}`,
+                      label: i18next.t('launches:palette.start', { name: launch.name }),
+                      run: () => void startLaunch(launch.id)
+                  }
+              ]
+    );
+}
+
+/* The tasks that may run after a worktree chat settles; the chosen one comes back only while it waits on approval again. */
+export function afterSettlePaletteRows(moment: CommandMoment): Command[] {
+    const document = paletteLaunches(moment)?.document;
+    if (document === undefined) {
+        return [];
+    }
+    const chosen = document.afterSettle;
+
+    return afterSettleCandidates(document).flatMap((launch): Command[] =>
+        chosen?.launchId === launch.id && chosen.approved
+            ? []
+            : [
+                  {
+                      id: `launch-after-settle-${launch.id}`,
+                      label: i18next.t(chosen?.launchId === launch.id ? 'launches:palette.afterSettleApprove' : 'launches:palette.afterSettle', {
+                          name: launch.name
+                      }),
+                      run: () => void chooseAfterSettle(launch.id)
+                  }
+              ]
+    );
+}

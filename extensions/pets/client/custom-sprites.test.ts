@@ -31,7 +31,6 @@ function littleEndian(value: number, length: number): number[] {
     return Array.from({ length }, (_, i) => (value >>> (8 * i)) & 255);
 }
 
-/* The start of a PNG of this size, padded to `length` bytes: enough for a header to read. */
 function png(width: number, height: number, length = 64): string {
     const head = bytesOf('\x89PNG\r\n\x1a\n', bigEndian(13), 'IHDR', bigEndian(width), bigEndian(height), [8, 6, 0, 0, 0]);
     return `data:image/png;base64,${btoa(head.padEnd(length, '\0'))}`;

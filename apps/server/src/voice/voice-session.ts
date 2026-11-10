@@ -15,17 +15,16 @@ import type {
     VoiceStartResult,
     VoiceStatusEvent
 } from '@ruimte/contracts';
-import { contextChunks, daemonVoiceTools, liveSessionBody, VoiceCompletionDelivery, VoiceToolLoop, type LiveEvent } from '@ruimte/voice';
+import { contextChunks, daemonVoiceTools, timeContext, VoiceCompletionDelivery, VoiceToolLoop, type LiveEvent } from '@ruimte/voice';
 import { voiceActionCall, type ServerActionContext, type VoiceCaller, type VoiceOpenProject } from '../actions/context.ts';
+import { openProjects } from '../actions/voice-project-reading.ts';
+import { type CanvasHost } from '../canvas/host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import { type CanvasHost } from '../tools/host.ts';
 import { voicePolicy } from './action-policy.ts';
 import type { VoiceClock } from './clock.ts';
 import { LiveError, type OpenAiLive } from './openai-live.ts';
 import { voicePreferencesFor } from './preferences-store.ts';
-import { openProjects } from './project-reading.ts';
-import { phonePrompts } from './prompts.ts';
-import { sessionContext, timeContext } from './session-context.ts';
+import { sessionContext } from './session-context.ts';
 import type { LiveSideband } from './sideband.ts';
 import { VoiceToolExecutor, type VoiceActionRunner, type VoiceToolQuestion } from './tool-executor.ts';
 import { VoiceFollower, type VoiceFollowActivity, type VoiceFollowChats } from './voice-follower.ts';
@@ -37,7 +36,6 @@ export const VOICE_CLOCK_MS = 60_000;
 /* A burst of changes to the project gives one new context, not one per write. */
 export const VOICE_CONTEXT_DEBOUNCE_MS = 250;
 
-/* What a session needs of the daemon, so a test hands in fakes for every part. */
 export interface VoiceSessionDeps {
     live: OpenAiLive;
     /* The key from `$RUIMTE_HOME/voice`, read at every start; null when none is set. */
@@ -84,6 +82,11 @@ const TIMELINE: Partial<Record<ActionDomain, VoiceActivityKind>> = {
     agents: 'chat',
     plans: 'chat'
 };
+
+/* What the session holds its project under in the project holds. Not an opener, though it shares the prefix. */
+function voiceHolder(sessionId: string): string {
+    return `voice:${sessionId}`;
+}
 
 /* Cut to the bounds of the wire, since a title names a chat whose name has none. */
 function confirmationOf(question: VoiceToolQuestion): VoiceActivityConfirmation {
@@ -141,7 +144,7 @@ export class VoiceSession {
         this.owner = start.owner;
         this.#start = start;
         this.#deps = deps;
-        this.#holder = `voice:${start.sessionId}`;
+        this.#holder = voiceHolder(start.sessionId);
     }
 
     get phase(): VoicePhase {
@@ -185,8 +188,7 @@ export class VoiceSession {
             }
             const tools = daemonVoiceTools();
             const { language, voice } = voicePreferencesFor(this.#deps.preferences(), payload);
-            const body = liveSessionBody({ language, voice, ...phonePrompts(), tools, sdp: payload.sdp });
-            const minting = live.mint(key, body, signal);
+            const minting = live.mint(key, { language, voice, tools, sdp: payload.sdp }, signal);
             // A mint that answers once the start ended would stay open at OpenAI, so it is closed again.
             minting.then(
                 (answer) => {
@@ -297,7 +299,6 @@ export class VoiceSession {
         return this.#end('closed');
     }
 
-    /* The person's answer from the phone to an action that asked first. */
     async confirm(token: string, approved: boolean): Promise<boolean> {
         if (this.#phase !== 'active' || this.#executor === null) {
             return false;
@@ -485,7 +486,6 @@ export class VoiceSession {
         });
     }
 
-    /* A step of a chat the session follows, in the phone's timeline. */
     #followed(entry: VoiceFollowActivity): void {
         if (this.#phase !== 'active') {
             return;

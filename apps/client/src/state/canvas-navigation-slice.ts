@@ -1,5 +1,5 @@
-import { cameraCenteredOn, cameraToFit, toWorld, ZOOM_MAX } from '@/canvas/math';
-import { cameraToReveal, neighboringNode, type NodeDirection } from '@/canvas/node-navigation';
+import { cameraCenteredOn, cameraToFit, toWorld, ZOOM_MAX } from '@/canvas-model/math';
+import { cameraToReveal, neighboringNode, type NodeDirection } from '@/canvas-model/node-navigation';
 import type { CanvasState } from '@/state/canvas';
 import { maximizedNodeOf, zoomNodeTargetOf, type CanvasGet, type CanvasSet } from '@/state/canvas-model';
 
@@ -26,7 +26,6 @@ export function nodeNavigationTarget(state: CanvasState, direction: NodeDirectio
     );
 }
 
-/* Where the camera goes to show one node, and which node the arrow keys select next. */
 export function createCanvasNavigationSlice(set: CanvasSet, get: CanvasGet): Pick<CanvasState, 'goToNode' | 'zoomToNode' | 'selectNeighbor'> {
     return {
         goToNode(id, { fit = false } = {}) {

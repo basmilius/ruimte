@@ -13,7 +13,6 @@ interface ComputerTaskProps {
     next: { label: string; go(): void };
 }
 
-/* Computer use on this Mac: the switch, the two permissions it waits for, and the restart Screen Recording takes. */
 export function ComputerTask({ machine, computer, next }: ComputerTaskProps) {
     const { t } = useTranslation(['onboarding', 'settings']);
     const { connected, status, setup, local, busy, error } = computer;

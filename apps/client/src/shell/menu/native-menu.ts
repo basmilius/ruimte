@@ -1,35 +1,34 @@
 import { useProvidersStore } from '@adecore/agents-react/state';
 import i18next from 'i18next';
 import { useEffect } from 'react';
-import { usePromptStacks } from '@/canvas/prompt-stack';
+import { runMenuCommand } from '@/commands/run';
 import { desktop } from '@/desktop/bridge';
+import { usePrRepos } from '@/github/pr-repos';
 import { subscribeFocusedLanguages } from '@/language/focused-language';
 import { useLaunches } from '@/launches/state';
 import { useNewChat } from '@/project/new-chat';
-import { runMenuCommand } from '@/shell/menu/actions';
+import { useProposals } from '@/proposals/proposals';
 import { menuContext } from '@/shell/menu/context';
 import { menuModel } from '@/shell/menu/model';
-import { subscribeFocusedEditors } from '@/shell/panels/focused-editor';
-import { subscribeOverrides } from '@/shell/shortcut-overrides';
 import { subscribeCameraHistories } from '@/state/camera-history';
 import { subscribeCanvases } from '@/state/canvas';
 import { useChatTextSizes } from '@/state/chat-text-size';
 import { subscribeChatThreads } from '@/state/chats';
 import { useDocument } from '@/state/document';
-import { usePrRepos } from '@/state/pr-repos';
 import { useProject } from '@/state/project';
-import { useProposals } from '@/state/proposals';
 import { useServers } from '@/state/server';
 import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
 import { useUi } from '@/state/ui';
-import { useWindow } from '@/state/window';
+import { usePromptStacks } from '@/surface/canvas/prompt-stack';
+import { subscribeFocusedEditors } from '@/surface/panels/focused-editor';
+import { subscribeOverrides } from '@/surface/shortcut-overrides';
+import { useWindow } from '@/workspace/window';
 
 /* A chat streams word by word and a camera moves every frame; the menu only needs where things settled. */
 const SETTLE_MS = 100;
 
-/* Mounted once by the app: keeps the shell's native menu on what has the focus and runs its clicks. */
 export function useNativeMenu(): void {
     useEffect(() => {
         const bridge = desktop();

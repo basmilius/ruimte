@@ -54,10 +54,10 @@ import {
 } from '@adecore/lsp';
 import { messageOf } from '@adecore/ui';
 import { LANGUAGE_ERROR_CODES, resolveStoredPath, storedPathOf, type LanguageMethod, type LanguageProviders } from '@ruimte/contracts';
+import { TransportError, type Transport, fireAndForget } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
-import { TransportError, type Transport } from '@/transport/transport';
 
-export interface WireLanguageServiceOptions {
+interface WireLanguageServiceOptions {
     transport: Transport;
     projectId: string;
     /* The project folder on the machine of the daemon: a file URI and a stored path are made of each other against it. */
@@ -78,7 +78,6 @@ interface OpenDocument {
     /* The version the daemon will be at once every change sent so far has landed. 0 until the first open is answered. */
     version: number;
     providers: LanguageProviders;
-    /* The kinds of language server that serve the document, as the daemon's last answer to its open said. */
     servers: readonly string[];
     /* While the daemon's copy is being replaced, changes wait for it: the text it carries is read after they were made. */
     resyncing: Promise<void> | null;
@@ -501,7 +500,7 @@ export class WireLanguageService implements LanguageService {
         const { transport, projectId } = this.options;
 
         if (document !== undefined && machineAnswers(transport.connection, 'language.willSave')) {
-            void transport.request('language.willSave', { projectId, path: document.path, reason }).catch(() => undefined);
+            void fireAndForget('language.willSave', transport.request('language.willSave', { projectId, path: document.path, reason }));
         }
 
         return Promise.resolve();
@@ -521,7 +520,6 @@ export class WireLanguageService implements LanguageService {
         return resolved === null ? null : pathToFileUri(resolved);
     }
 
-    /* The stored path of a location's URI, or null for a URI that is no file. */
     pathOfLocation(uri: string): string | null {
         const path = fileUriToPath(uri);
         return path === null ? null : storedPathOf(this.options.folder, path);
@@ -583,7 +581,10 @@ export class WireLanguageService implements LanguageService {
             return;
         }
         this.documents.delete(document.uri);
-        await this.options.transport.request('language.document.close', { projectId: this.options.projectId, path: document.path }).catch(() => undefined);
+        await fireAndForget(
+            'language.document.close',
+            this.options.transport.request('language.document.close', { projectId: this.options.projectId, path: document.path })
+        );
     }
 
     private textOf(document: OpenDocument): string | undefined {
@@ -641,14 +642,15 @@ export class WireLanguageService implements LanguageService {
         } catch (error) {
             answer = { applied: false, failureReason: messageOf(error) };
         }
-        await this.options.transport
-            .request('language.edit.answer', {
+        await fireAndForget(
+            'language.edit.answer',
+            this.options.transport.request('language.edit.answer', {
                 projectId: this.options.projectId,
                 editId,
                 applied: answer.applied,
                 ...(answer.failureReason ? { failureReason: answer.failureReason } : {})
             })
-            .catch(() => undefined);
+        );
     }
 
     /* `itemServers` names the process of each item of a merged list, which then resolves against that process and not the one that headed the answer. */

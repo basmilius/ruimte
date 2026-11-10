@@ -8,11 +8,13 @@ import { SingleFlight } from '@adecore/utils/async';
 import { writeAtomic } from '@adecore/utils/fs';
 import type { AgentKind, RegistryAgent, RegistryCatalog } from '@ruimte/contracts';
 import { z } from 'zod';
-import { downloadFile, type FileDownload } from '../artifacts/artifact-fs.ts';
+import { bestEffort } from '../best-effort.ts';
+import { extractEntries, extractZipFile, readArchive } from '../disk/archive.ts';
+import { downloadFile, type FileDownload } from '../disk/download.ts';
 import { errorText } from '../error-text.ts';
-import { extractEntries, extractZipFile, readArchive } from '../language/archive.ts';
+import { withRuimteMcp } from '../ruimte-mcp.ts';
 import { acpCatalogStore } from './acp-catalog-store.ts';
-import { RUIMTE_ACP_CLIENT, loadingRuimteMcp } from './acp-providers.ts';
+import { RUIMTE_ACP_CLIENT } from './acp-providers.ts';
 import type { AcpRegistry, RegistryDistribution, RegistryEntry } from './acp-registry.ts';
 import { downloadChecked } from './acp-server.ts';
 import { throwOnFailure } from './cli-versions.ts';
@@ -31,7 +33,6 @@ const InstalledSchema = z.object({
     sha256: z.string().nullable()
 });
 
-/* An agent a person installed from the registry, as `installed.json` keeps it. */
 type InstalledAgent = z.infer<typeof InstalledSchema>;
 
 /* Runs a package manager; the default spawns it, a test answers from memory. */
@@ -42,7 +43,6 @@ const INSTALL_TIMEOUT_MS = 10 * 60_000;
 const runInstall: InstallRun = (command, options) =>
     runProcess(command, { ...options, timeoutMs: INSTALL_TIMEOUT_MS, timeoutMessage: `${basename(command[0] ?? '')} did not finish in time` });
 
-/* What a registry agent's provider is told to the registry that offers it. */
 interface OfferedProviders {
     add(provider: ChatProvider): void;
     remove(kind: AgentKind): void;
@@ -56,7 +56,6 @@ interface RegistryAgentsOptions {
     providers: OfferedProviders;
     download?: FileDownload;
     run?: InstallRun;
-    // Where an executable on the PATH is, null for none.
     which?: (command: string) => string | null;
     platform?: NodeJS.Platform;
 }
@@ -96,7 +95,6 @@ export function npmBin(name: string, bin: unknown): string | null {
     return names.length === 1 ? names[0]! : names.includes(unscoped) ? unscoped : null;
 }
 
-/* How the archive at an address is packed, by its file name. */
 function packingOf(url: string): 'zip' | 'tar.gz' | 'tar' | 'bare' {
     const name = new URL(url).pathname.toLowerCase();
     if (name.endsWith('.zip')) {
@@ -160,7 +158,6 @@ export class RegistryAgents {
         return [...this.agents.values()];
     }
 
-    /* The line that starts an installed agent, absolute. */
     launch(agent: InstalledAgent): string[] {
         return [join(this.folderOf(agent.id), folderOf(agent.version), agent.command), ...agent.args];
     }
@@ -235,7 +232,7 @@ export class RegistryAgents {
             await this.dropOtherVersions(folder, folderOf(entry.version));
             this.offer(agent);
         } catch (e) {
-            await rm(target, { recursive: true, force: true }).catch(() => undefined);
+            await bestEffort('rm', rm(target, { recursive: true, force: true }));
             this.failures.set(id, { error: errorText(e) });
         }
         return entry;
@@ -322,7 +319,7 @@ export class RegistryAgents {
     private async dropOtherVersions(folder: string, keep: string): Promise<void> {
         for (const name of await readdir(folder)) {
             if (name !== keep && name !== INSTALLED_FILE && !name.startsWith('.')) {
-                await rm(join(folder, name), { recursive: true, force: true }).catch(() => undefined);
+                await bestEffort('rm', rm(join(folder, name), { recursive: true, force: true }));
             }
         }
     }
@@ -330,22 +327,21 @@ export class RegistryAgents {
     private offer(agent: InstalledAgent): void {
         this.agents.set(agent.id, agent);
         const [command, ...args] = this.launch(agent);
-        const provider = loadingRuimteMcp(
-            createAcpProvider({
-                kind: agent.kind,
-                name: agent.name,
-                command: command!,
-                args,
-                env: agent.env,
-                catalog: agentDefaultCatalog(),
-                model: agentModel,
-                loginHint: `Sign in to ${agent.name} the way its own documentation says, then start the chat again.`,
-                client: RUIMTE_ACP_CLIENT,
-                catalogStore: acpCatalogStore(this.home, agent.kind),
-                // The record says what is installed; starting the agent to ask would run code a person never asked to run.
-                detect: (path) => Promise.resolve({ installed: existsSync(path), version: agent.version })
-            })
-        );
+        const provider = createAcpProvider({
+            kind: agent.kind,
+            name: agent.name,
+            command: command!,
+            args,
+            env: agent.env,
+            catalog: agentDefaultCatalog(),
+            model: agentModel,
+            loginHint: `Sign in to ${agent.name} the way its own documentation says, then start the chat again.`,
+            client: RUIMTE_ACP_CLIENT,
+            launch: withRuimteMcp,
+            catalogStore: acpCatalogStore(this.home, agent.kind),
+            // The record says what is installed; starting the agent to ask would run code a person never asked to run.
+            detect: (path) => Promise.resolve({ installed: existsSync(path), version: agent.version })
+        });
         this.providers.add(provider);
         this.providers.invalidate(agent.kind);
     }

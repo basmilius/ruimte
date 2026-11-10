@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { act } from 'react';
-import { useDesignChat } from '@/design/design-chat';
 import { revealNode } from '@/project/views';
 import { focusedCanvas } from '@/state/canvas';
+import { useDesignChat } from '@/state/design-chat';
 import { useDocument } from '@/state/document';
 import { chatInfoOf } from '../../testing/chat-info';
 import { layOutChat, mount, until, type Mounted } from '../../testing/dom';

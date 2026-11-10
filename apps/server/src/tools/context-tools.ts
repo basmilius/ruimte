@@ -2,7 +2,6 @@ import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionResult } from '@ruimte/actions';
 import { z } from 'zod';
 import { externalActionCall, serverActionCall } from '../actions/context.ts';
-import { serverActions } from '../actions/server-actions.ts';
 import { linesOf } from './action-tool.ts';
 import { defineTool, defineToolkit, PROJECT_INPUT, VIEW_INPUT, type ToolCall } from './tool.ts';
 
@@ -29,7 +28,7 @@ function refused(result: ActionResult): ToolRefusal {
 
 /* What a person linked to the caller, always in its own project, which is what a refused read lists under it. */
 async function listed(call: ToolCall): Promise<ListedSource[]> {
-    const result = await serverActions.execute('context.list', {}, serverActionCall(call.host, call.host.projects.locate(call.caller), call.caller));
+    const result = await call.actions.execute('context.list', {}, serverActionCall(call.host, call.host.projects.locate(call.caller), call.caller));
 
     if (result.status !== 'completed') {
         throw refused(result);
@@ -79,7 +78,7 @@ const contextRead = defineTool('context', {
                 : call.reached === undefined
                   ? serverActionCall(call.host, own, call.caller)
                   : serverActionCall(call.host, call.reached, call.caller, false, undefined, own ?? undefined);
-        const result = await serverActions.execute(
+        const result = await call.actions.execute(
             'context.read',
             {
                 sourceId: input.id,

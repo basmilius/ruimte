@@ -84,7 +84,7 @@ private let coordinatorRoot: JSONValue = .object([
         let finish = Gate<JSONValue>()
         var write: JSONValue?
         let coordinator = ImageSaveCoordinator(chatID: "chat") { type, payload in
-            if type == "chat.saveImage" {
+            if type == .chatSaveImage {
                 write = payload
                 await began.release(true)
                 return await finish.wait()

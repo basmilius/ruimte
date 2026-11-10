@@ -1,6 +1,6 @@
 import { knownAccounts, providerAccountsOf, providersOf } from '@adecore/agents-react/state';
 import type { EditorRange, EditorTrackedRange } from '@adecore/editor';
-import { highlightLayers, shikiLanguageOf } from '@adecore/editor-react';
+import { highlightLayers, shikiLanguageOf, type EditorLanguage } from '@adecore/editor-react';
 import {
     codeLabelOf,
     inlineRangeOf,
@@ -16,14 +16,14 @@ import { fileUriToPath } from '@adecore/lsp';
 import { storedPathOf, type AgentKind } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
-import type { HostLanguage as EditorLanguage } from '@/language/host-language';
+import type { InlineEdit } from '@/language/ruimte-editor-language';
 import { isShortcut } from '@/language/shortcut-keys';
-import { keyOf } from '@/shell/shortcut-overrides';
 import { inlineEditAccountOn, inlineEditAgentOn } from '@/state/ai-settings';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
+import { keyOf } from '@/surface/shortcut-overrides';
 import { inlineEditDeps } from './inline-edit-deps';
 import { sweepInlineEdits } from './inline-edit-prune';
 import { inlineEditFor, onInlineEditsChange } from './inline-edit-record';
@@ -74,7 +74,7 @@ export function inlineAgentNow(endpointId: string): { provider: AgentKind; model
  * answer as a proposal under the selection that only Apply writes into the file. The session behind it
  * (`inline-edit-session.ts`) outlives this editor; this class draws it while an editor holds the file.
  */
-export class InlineEditFeature {
+export class InlineEditFeature implements InlineEdit {
     readonly store: StoreApi<InlineEditView> = createStore<InlineEditView>(() => ({ prompt: null, promptContainer: null, session: null, container: null }));
     private readonly language: EditorLanguage;
     private readonly depsFor: (endpointId: string) => InlineEditDeps;
@@ -91,11 +91,14 @@ export class InlineEditFeature {
         this.depsFor = depsFor;
         const { editor } = language;
         const offs = [
-            editor.onKeyDown((event) => {
-                if (language.served && isShortcut(keyOf('inlineEdit'), event)) {
+            language.onServedKey((event) => {
+                if (isShortcut(keyOf('inlineEdit'), event)) {
                     this.start();
                     return true;
                 }
+                return false;
+            }),
+            editor.onKeyDown((event) => {
                 if (event.key === 'Escape' && this.store.getState().prompt !== null) {
                     this.cancel();
                     return true;
@@ -273,7 +276,6 @@ export class InlineEditFeature {
         this.store.setState({ container });
     }
 
-    /* Puts the question above its lines, or takes it away. */
     private setPrompt(prompt: InlinePrompt | null): void {
         this.store.setState({ prompt, ...(prompt === null ? { promptContainer: null } : {}) });
         const render = (container: HTMLElement): void => this.store.setState({ promptContainer: container });
@@ -349,7 +351,6 @@ export class InlineEditFeature {
         sync();
     }
 
-    /* Draws the card in the editor while the session wants it shown, and takes it away when it does not. */
     private sync(session: InlineEditSession): void {
         const { editor } = this.language;
         const state = session.store.getState();

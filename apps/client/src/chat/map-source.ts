@@ -59,7 +59,6 @@ export class MapTickets {
     private readonly listeners = new Set<() => void>();
     private refresh: unknown = null;
     private expiry: unknown = null;
-    /* Who the tickets are for; null while nothing is to be asked. */
     private identity: string | null = '';
     /* Bumped whenever the ticket stops belonging to whoever asked, so a late answer can be told from a current one. */
     private generation = 0;
@@ -99,7 +98,6 @@ export class MapTickets {
         this.publish();
     }
 
-    /* Asks for a ticket when there is none, it is about to end or the last ask failed long enough ago. */
     ensure(): Promise<void> {
         if (this.pending !== null || this.identity === null) {
             return this.pending ?? Promise.resolve();

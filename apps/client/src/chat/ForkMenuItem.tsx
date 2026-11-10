@@ -3,10 +3,10 @@ import { useChatRow, useProviders } from '@adecore/agents-react/state';
 import { DisabledReason, Icon, ContextMenu, messageOf } from '@adecore/ui';
 import { GitFork, MessageSquareShare, Undo2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { chatForkRefusal } from '@/chat/fork-refusal';
 import { openForkDialog } from '@/chat/open-fork';
-import { useChatPlace } from '@/chat/use-chat-place';
+import { useChatPlace } from '@/project/use-chat-place';
 import { useToasts } from '@/state/toasts';
 
 /*
@@ -16,8 +16,11 @@ import { useToasts } from '@/state/toasts';
 export function ForkMenuItem({ chatId }: { chatId: string }) {
     const { t } = useTranslation('chat');
     const turnId = useChatRow(chatId, (row) => (row ? lastSettledTurn(row.structure, row.order) : null));
+    const info = useChatRow(chatId, (row) => row?.info ?? null);
+    const turn = useChatRow(chatId, (row) => (turnId === null ? undefined : row?.structure[turnId]));
     const providers = useProviders((s) => s.providers);
-    const refusal = useChatRow(chatId, (row) => (turnId === null ? null : chatForkRefusal(row?.info ?? null, row?.structure[turnId], providers)));
+    const loaded = useProviders((s) => s.loaded);
+    const refusal = turnId === null ? null : chatForkRefusal(info, turn, { providers, loaded });
     const forked = useChatRow(chatId, (row) => row?.info.forkOf !== undefined);
     return (
         <>

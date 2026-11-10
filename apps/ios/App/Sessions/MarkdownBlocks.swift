@@ -19,7 +19,6 @@ struct MarkdownBlock: Sendable, Equatable {
     /// The gap between the items of a list, which stand closer than the blocks of a message do.
     static let itemSpacing: CGFloat = 6
 
-    /// `blocks` with each run of list items in one group, so a list keeps its items together.
     static func grouped(_ blocks: [MarkdownBlock]) -> [[MarkdownBlock]] {
         var groups: [[MarkdownBlock]] = []
         for block in blocks {

@@ -37,7 +37,6 @@ export function useConnection(): ConnectionState {
     return useSyncExternalStore(subscribe, readConnection);
 }
 
-/* The socket of one machine, for a list that shows a dot per row. */
 export function useEndpointConnection(endpointId: string): ConnectionState {
     return useSyncExternalStore(
         (onChange: () => void) => pool.subscribeStatus(endpointId, onChange),
@@ -60,7 +59,6 @@ export function useLastSeenAt(endpointId: string): number | null {
     return useLastSeen((s) => s.byEndpoint[endpointId] ?? null);
 }
 
-/* The machines this client holds a socket for, in the order the pool opened them. */
 export function useConnectedEndpoints(): string[] {
     return useSyncExternalStore(subscribePool, readPoolIds);
 }
@@ -93,7 +91,6 @@ export function useConnections(): Record<string, ConnectionState> {
     return useSyncExternalStore(subscribePool, readConnections);
 }
 
-/* The machines that are answering right now, for a list that spans them. */
 export function useOpenEndpoints(): string[] {
     return useSyncExternalStore(subscribePool, readOpenIds);
 }

@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { UNDO_MS } from '@adecore/ui';
 import type { ProjectSummary } from '@ruimte/contracts';
-import { SHOW_TOAST_ID } from '@/project/show-toast';
+import { SHOW_TOAST_ID } from '@/state/show-toast';
 import { useToasts } from '@/state/toasts';
-import { activateProject, askToClose, useAgentCloseAsk, type AgentProjectDeps } from './agent-project-watch';
+import { useAgentCloseAsk } from './agent-asks';
+import { activateProject, askToClose, type AgentProjectDeps } from './agent-project-watch';
 
 const TARGET: ProjectSummary = {
     projectId: 'atlas',
@@ -19,7 +20,6 @@ const TARGET: ProjectSummary = {
 
 const PAYLOAD = { projectId: 'atlas', fromProjectId: 'home', by: 'chat-1' };
 
-/* A window on `shown`, which a successful open moves to the project it opened. */
 function fakeWindow(options: Partial<Pick<AgentProjectDeps, 'open' | 'listed'>> & { shown?: string; follow?: boolean } = {}) {
     let shown = options.shown ?? 'home';
     let asked = 0;

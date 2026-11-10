@@ -6,9 +6,7 @@ export type LoadErrorKind = 'offline' | 'dns' | 'refused' | 'certificate' | 'tim
 
 interface LoadError {
     kind: LoadErrorKind;
-    /* What happened, in the app's own words. */
     title: string;
-    /* What to check, where there is anything to check. */
     hint: string | null;
     /* Chromium's own name for the failure, kept because it is the part worth searching for. */
     symbol: string;

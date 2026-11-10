@@ -56,7 +56,6 @@ export interface SidebandHandlers {
     lost(code: number): void;
 }
 
-// How long a close waits for `session.closed` before it lets the socket go regardless.
 export const SIDEBAND_CLOSE_WAIT_MS = 3000;
 // Event ids the daemon sent, kept to tell its own events from another client's.
 const SENT_MEMORY = 512;

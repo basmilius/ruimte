@@ -108,7 +108,6 @@ export function spawnLanguageProcess(spec: LanguageProcessSpec): LanguageChild {
     };
 }
 
-/* Runs a command to its end and answers its exit code, line by line what it printed. */
 export type RunCommand = (spec: LanguageProcessSpec, onLine: (line: string) => void) => Promise<number>;
 
 export const runCommand: RunCommand = (spec, onLine) =>

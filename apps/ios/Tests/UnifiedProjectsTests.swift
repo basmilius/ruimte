@@ -27,7 +27,7 @@ final class UnifiedProjectsTests: XCTestCase {
         fixture.model.reconcile(machines: [second, first], connect: nil)
         XCTAssertEqual(fixture.model.open.map(\.machine.id), ["first"])
         XCTAssertEqual(fixture.model.open.map(\.id.projectID), [sharedID])
-        XCTAssertEqual(fixture.model.recent.map { $0.summary.number("closedAt") }, [50, 5, 0])
+        XCTAssertEqual(fixture.model.recent.map { $0.summary.closedAt.present }, [50, 5, 0])
         XCTAssertTrue((fixture.model.open + fixture.model.recent).allSatisfy { !$0.connected })
     }
 
@@ -66,12 +66,28 @@ final class UnifiedProjectsTests: XCTestCase {
         fixture.model.stop()
         fixture.model.stop()
         XCTAssertEqual(client.holds, 0)
-        XCTAssertTrue(client.eventHandlers.isEmpty)
+        XCTAssertTrue(client.eventHandlers.values.allSatisfy(\.isEmpty))
         XCTAssertTrue(client.connectionHandlers.isEmpty)
         let offline = UnifiedProjects(defaults: fixture.defaults)
         offline.reconcile(machines: [machine], connect: nil)
-        XCTAssertEqual(offline.open[0].summary.number("lastOpenedAt"), 42)
+        XCTAssertEqual(offline.open[0].summary.lastOpenedAt, 42)
         XCTAssertFalse(offline.open[0].connected)
+    }
+
+    @MainActor func testAProjectChangedOnDiskReadsTheListAgain() async throws {
+        let fixture = try ProjectListFixture()
+        defer { fixture.clean() }
+        let client = ProjectListClient()
+        client.response = .object(["projects": .array([fixture.summary(opened: 1)])])
+        fixture.model.reconcile(machines: [fixture.machine("machine")], connect: { _ in client.connection })
+        client.setConnected(true)
+        await fixture.model.refresh()
+        let before = client.requests
+        client.response = .object(["projects": .array([fixture.summary(opened: 1), fixture.summary(opened: 2)])])
+        client.emit(.object(["projectId": .string("x")]), as: .projectListChanged)
+        for _ in 0..<20 where fixture.model.open.count < 2 { await Task.yield() }
+        XCTAssertEqual(client.requests, before + 1)
+        XCTAssertEqual(fixture.model.open.count, 2)
     }
 
     @MainActor func testReconcileUpdatesLabelsWithoutAcquiringAnotherLease() throws {
@@ -152,7 +168,7 @@ final class UnifiedProjectsTests: XCTestCase {
         client.response = .object(["projects": .array([closed])])
         client.emit(.object(["summary": closed]))
         XCTAssertTrue(fixture.model.open.isEmpty)
-        XCTAssertEqual(fixture.model.recent.first?.summary.text("name"), "Renamed")
+        XCTAssertEqual(fixture.model.recent.first?.summary.name, "Renamed")
         XCTAssertEqual(client.requests, 1)
         XCTAssertEqual(fixture.model.recent.count, 1)
     }
@@ -175,7 +191,7 @@ final class UnifiedProjectsTests: XCTestCase {
         client.finishHeld(.object(["projects": .array([project])]))
         await refresh.value
         XCTAssertEqual(client.requests, 2)
-        XCTAssertEqual(fixture.model.open.first?.summary.text("name"), "New name")
+        XCTAssertEqual(fixture.model.open.first?.summary.name, "New name")
     }
 
     @MainActor func testInvalidCacheRowsAreDiscardedAndCacheIsBounded() async throws {
@@ -242,7 +258,7 @@ final class UnifiedProjectsTests: XCTestCase {
 
 @MainActor private final class ProjectListClient: MachineRequesting {
     var response: JSONValue = .object(["projects": .array([])])
-    var eventHandlers: [UUID: @MainActor @Sendable (JSONValue) -> Void] = [:]
+    var eventHandlers: [WireEvent: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
     var connectionHandlers: [UUID: @MainActor @Sendable (Bool) -> Void] = [:]
     var connected = false
     var current = true
@@ -256,8 +272,8 @@ final class UnifiedProjectsTests: XCTestCase {
             client: self, retain: { self.holds += 1 }, release: { self.holds -= 1 },
             isCurrent: { self.current })
     }
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
-        XCTAssertEqual(type, "project.list")
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
+        XCTAssertEqual(type, .projectList)
         requests += 1
         guard holdResponses else { return response }
         return try await withCheckedThrowingContinuation {
@@ -266,13 +282,12 @@ final class UnifiedProjectsTests: XCTestCase {
             waiting = nil
         }
     }
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void)
         -> () -> Void
     {
-        XCTAssertEqual(event, "project.summary")
         let id = UUID()
-        eventHandlers[id] = handler
-        return { self.eventHandlers.removeValue(forKey: id) }
+        eventHandlers[event, default: [:]][id] = handler
+        return { self.eventHandlers[event]?.removeValue(forKey: id) }
     }
     func observeConnection(_ handler: @escaping @MainActor @Sendable (Bool) -> Void) -> () -> Void {
         let id = UUID()
@@ -284,7 +299,9 @@ final class UnifiedProjectsTests: XCTestCase {
         connected = value
         for handler in connectionHandlers.values { handler(value) }
     }
-    func emit(_ value: JSONValue) { for handler in eventHandlers.values { handler(value) } }
+    func emit(_ value: JSONValue, as event: WireEvent = .projectSummary) {
+        for handler in (eventHandlers[event] ?? [:]).values { handler(value) }
+    }
     func waitForHeldRequest() async {
         if held != nil { return }
         await withCheckedContinuation { waiting = $0 }

@@ -12,9 +12,10 @@ import {
     type ProjectContent,
     type ProjectView
 } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { DiagramStore } from './diagram-store.ts';
 import { DrawingStore } from './drawing-store.ts';
+import { projectOverlays } from './overlays.ts';
 import { setProjectAccounts } from './project-accounts.ts';
 import { documentOnDisk, privateFileOnDisk, rawPrivateViews, projectLinks, setPrivateViews } from './project-file-test-helpers.ts';
 import { GITIGNORE_TEXT, documentPathInFolder, fromPortable, privatePathOf, toPortable } from './project-files.ts';
@@ -45,7 +46,7 @@ beforeEach(async () => {
     await mkdir(folder);
     fake = new FakeWatch();
     links = projectLinks();
-    store = new ProjectStore(home, links, fake);
+    store = new ProjectStore(home, links, projectOverlays(home), fake);
     changed = [];
     summaries = [];
     unsubscribe = store.subscribe('c1', (event) => {
@@ -98,7 +99,6 @@ async function pull(name: string): Promise<void> {
     await writeFile(path, JSON.stringify(pulled, null, 2));
 }
 
-/* A change that adds a note to the first canvas, making one when the project has none. */
 function addNote(id: string) {
     return (current: ProjectContent) => {
         const [first, ...rest] = current.views;
@@ -424,6 +424,27 @@ describe('ProjectStore', () => {
         expect((await store.list())[0]!.icon).toEqual({ kind: 'lucide', value: 'rocket' });
     });
 
+    test('an icon put in the folder of a project no client holds shows in the next list, and watchers hear of it', async () => {
+        const opened = await store.openProject({ folder });
+        const { projectId } = opened.summary;
+        store.release(projectId);
+        store.watchList('c1');
+        const shared = join(folder, '.ruimte');
+        while (fake.openOn(shared).length === 0) {
+            await new Promise((resolve) => setImmediate(resolve));
+        }
+        expect((await store.list())[0]!.icon).toEqual({ kind: 'initial', value: 'R' });
+
+        await writeFile(join(shared, 'icon.png'), PNG);
+        fake.on(shared).emit('icon.png');
+        await fake.settle();
+        while (!changed.some((event) => event.event === 'project.listChanged')) {
+            await new Promise((resolve) => setImmediate(resolve));
+        }
+
+        expect((await store.list())[0]!.icon).toMatchObject({ kind: 'image', value: '.ruimte/icon.png' });
+    });
+
     test('a first open seeds the name from .idea/.name and writes it into the canvas', async () => {
         await mkdir(join(folder, '.idea'), { recursive: true });
         await writeFile(join(folder, '.idea', '.name'), 'Ruimte Daemon\n');
@@ -580,8 +601,22 @@ describe('ProjectStore', () => {
     test('closing survives a restart, because the registry carries it and not the client', async () => {
         const { summary } = await store.openProject({ folder });
         await store.closeProject(summary.projectId, 'c1');
-        const restarted = new ProjectStore(home, projectLinks(), fake);
+        const restarted = new ProjectStore(home, projectLinks(), projectOverlays(home), fake);
         expect((await restarted.list())[0]?.closedAt).toBeNumber();
+    });
+
+    test('a client holds the folder of a project it has on screen, and the scratch folder only for a caller that does not write into it', async () => {
+        const { summary } = await store.openProject({ folder });
+        const scratch = await store.ensureProject(store.scratchFolder, { name: 'Chats', icon: { kind: 'lucide', value: 'messages-square' } });
+        store.hold('c1', summary.projectId);
+        store.hold('c1', scratch.projectId);
+
+        expect(await store.holdsFolder('c1', folder)).toBe(true);
+        expect(await store.holdsFolder('c2', folder)).toBe(false);
+        expect(await store.holdsFolder('c1', join(folder, 'elsewhere'))).toBe(false);
+        expect(await store.holdsFolder('c1', store.scratchFolder)).toBe(true);
+        expect(await store.holdsFolder('c1', store.scratchFolder, { refuseScratch: true })).toBe(false);
+        expect(await store.holdsFolder('c1', folder, { refuseScratch: true })).toBe(true);
     });
 
     test('a project another client still holds keeps its place, its watcher and its sessions', async () => {
@@ -886,7 +921,7 @@ describe('the project index', () => {
         await store.save(opened.summary.projectId, 0, linked('from disk'));
         await store.closeProject(opened.summary.projectId, 'c1');
 
-        const restarted = new ProjectStore(home, projectLinks(), fake);
+        const restarted = new ProjectStore(home, projectLinks(), projectOverlays(home), fake);
         expect(restarted.index.sourcesFor('agent')).toEqual([]);
         await restarted.warmIndex();
         expect(restarted.index.sourcesFor('agent')[0]).toMatchObject({ text: 'from disk' });
@@ -898,7 +933,7 @@ describe('the project index', () => {
         await store.save(opened.summary.projectId, 0, linked('x'));
         await writeFile(documentPathInFolder(folder), '{ not json');
 
-        const restarted = new ProjectStore(home, projectLinks(), fake);
+        const restarted = new ProjectStore(home, projectLinks(), projectOverlays(home), fake);
         await restarted.warmIndex();
         expect(restarted.index.has(opened.summary.projectId)).toBe(false);
         // Nobody asked for that file, so it is not set aside the way an open would.
@@ -1701,7 +1736,7 @@ describe('the machine of a node', () => {
         expect(await textOfProjectFiles()).not.toContain('"machine"');
         expect(JSON.parse(await readFile(join(home, 'remote', `${projectId}.json`), 'utf8'))).toMatchObject({ nodes: { n1: 'machine-b' } });
 
-        const fresh = new ProjectStore(home, projectLinks(), new FakeWatch());
+        const fresh = new ProjectStore(home, projectLinks(), projectOverlays(home), new FakeWatch());
         await fresh.remote.load();
         expect(canvas((await fresh.openProject({ projectId })).document).nodes[0]).toMatchObject({ machine: 'machine-b' });
         fresh.closeAll();
@@ -1726,7 +1761,7 @@ describe('the machine of a node', () => {
         store.closeAll();
         let fail = false;
         let writes = 0;
-        store = new ProjectStore(home, links, fake, {
+        store = new ProjectStore(home, links, projectOverlays(home), fake, {
             ...PROJECT_WRITE_IO,
             write: async (...args) => {
                 if (fail) {
@@ -1819,6 +1854,7 @@ describe('the machine of a node', () => {
         const busy = new ProjectStore(
             join(root, 'busy-home'),
             projectLinks({ bindings: { machineId: 'machine-a', started: async (nodeId) => nodeId === 'n1' } }),
+            projectOverlays(join(root, 'busy-home')),
             new FakeWatch()
         );
         const busyId = (await busy.openProject({ folder })).summary.projectId;
@@ -1877,7 +1913,7 @@ describe('the machine of a node', () => {
         expect(store.remote.machineOf(projectId, 'n1')).toBe('machine-b');
         store.closeAll();
         await setPrivateViews(folder, [{ ...canvas(content()), nodes: [] }]);
-        const fresh = new ProjectStore(home, projectLinks(), new FakeWatch());
+        const fresh = new ProjectStore(home, projectLinks(), projectOverlays(home), new FakeWatch());
         await fresh.remote.load();
         expect(fresh.remote.machineOf(projectId, 'n1')).toBe('machine-b');
         await fresh.warmIndex();
@@ -1962,7 +1998,7 @@ describe('locks and reads from memory', () => {
         expect((await store.read(second.summary.projectId)).name).toBe('quick');
         gate.resolve();
         await slow;
-        const fresh = new ProjectStore(home, projectLinks(), new FakeWatch());
+        const fresh = new ProjectStore(home, projectLinks(), projectOverlays(home), new FakeWatch());
         expect((await fresh.list()).map((project) => project.name).sort()).toEqual(['quick', 'slow']);
     });
 
@@ -2005,7 +2041,7 @@ describe('locks and reads from memory', () => {
         await pull('released');
         expect((await store.read(projectId)).name).toBe('released');
 
-        const blind = new ProjectStore(home, projectLinks(), {
+        const blind = new ProjectStore(home, projectLinks(), projectOverlays(home), {
             watch: () => {
                 throw new Error('no watcher here');
             },
@@ -2106,7 +2142,7 @@ describe('the folder of a design', () => {
     test('what a chat in a turn still wrote to the folder its design left goes into the new one once the turn ends', async () => {
         let working = true;
         store.closeAll();
-        store = new ProjectStore(home, projectLinks({ chatWorking: (chatId) => working && chatId === 'd1' }), fake);
+        store = new ProjectStore(home, projectLinks({ chatWorking: (chatId) => working && chatId === 'd1' }), projectOverlays(home), fake);
         const opened = await store.openProject({ folder });
         const projectId = opened.summary.projectId;
         await store.save(projectId, 0, withDesign([designView()]));

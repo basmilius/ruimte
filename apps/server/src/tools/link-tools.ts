@@ -1,8 +1,8 @@
 import { z } from 'zod';
+import { field, placeOf, titleField } from '../canvas/host.ts';
+import { idList } from '../canvas/nodes.ts';
 import { canvasIdFor, defineActionTool, runAction } from './action-tool.ts';
 import { idsInput } from './batch.ts';
-import { field, placeOf, titleField } from './host.ts';
-import { idList } from './nodes.ts';
 import { defineToolkit, PROJECT_INPUT, VIEW_INPUT } from './tool.ts';
 
 const OFF_CANVAS = 'This session is not on a canvas; name one with view';

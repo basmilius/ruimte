@@ -7,6 +7,7 @@ import { Package } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useReferables } from '@/chat/referables';
+import { weekdayWords } from '@/format/weekday';
 import { useLaunches } from '@/launches/state';
 import { freshRoutineId } from '@/routines/agenda';
 import { firstLine, useAgentPick, type AgentPick } from '@/routines/agent-pick';
@@ -15,7 +16,7 @@ import { promptDraftOf, routinePicked } from '@/routines/prompt-picks';
 import { useRoutineSkills } from '@/routines/prompt-skills';
 import { useRoutineLists } from '@/routines/routine-list';
 import { routineIdsTaken, saveRoutine } from '@/routines/routine-save';
-import { cronProblemWords, dayClockWords, everyWords, weekdayWords } from '@/routines/words';
+import { cronProblemWords, dayClockWords, everyWords } from '@/routines/words';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
@@ -31,7 +32,6 @@ const NEXT_SHOWN = 3;
 
 const NO_REFERABLES: Referables = { items: [], chatsOnly: false };
 
-/* The next few times an expression runs after `from`, so a person sees what the fields mean. */
 function nextTimes(expression: string, from: number, timeZone: string): number[] {
     const times: number[] = [];
     let cursor: number | null = from;
@@ -68,7 +68,6 @@ export function RoutineForm({
     const { t } = useTranslation('routines');
     const editing = request.editing?.routine;
     const allProjects = useProjectList((s) => s.projects);
-    // The project the form was opened from leads, the rest keep their order.
     const projects = allProjects
         .filter((row) => row.endpointId === endpointId)
         .sort((left, right) => Number(right.summary.projectId === request.projectId) - Number(left.summary.projectId === request.projectId));

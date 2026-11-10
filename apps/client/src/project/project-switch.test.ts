@@ -1,8 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import { ProjectSwitch, REVEAL_DELAY_MS, type SwitchClock, type SwitchContext, type SwitchRun, type SwitchTarget } from './project-switch';
 
-/* A clock that only moves when a test says so. */
 function fakeClock(): SwitchClock & { advance(ms: number): void } {
     let now = 0;
     let timers: { at: number; run: () => void }[] = [];
@@ -53,7 +52,6 @@ function controlledRun() {
 
 const target: SwitchTarget = { endpointId: 'studio', summary: null, folder: null, name: null };
 
-/* Lets the awaits between steps run. */
 async function flush(): Promise<void> {
     for (let i = 0; i < 5; i += 1) {
         await Promise.resolve();

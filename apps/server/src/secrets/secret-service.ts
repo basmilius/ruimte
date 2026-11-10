@@ -1,8 +1,9 @@
 import type { SecretRequest } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { NodeLifecycle } from '../node-lifecycle.ts';
 import type { Timers } from '../timers.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { SecretRequests, type SecretAsk, type SecretChats, type SecretOutcome } from './secret-requests.ts';
 import type { SecretSlot, SecretStore } from './secret-store.ts';
 
@@ -62,17 +63,19 @@ export class SecretService {
         return this.requests.decline(requestId);
     }
 
-    /* A turn that ends or a chat that stops takes its cards down. */
     observe(event: SessionEvent): void {
         if (event.event !== 'chat.event') {
             return;
         }
         const { chatId, event: chat } = event.payload;
-        if (chat.type === 'item' && chat.item.kind === 'turn' && chat.item.state !== 'running') {
-            this.requests.turnEnded(chatId);
-        } else if ((chat.type === 'info' || chat.type === 'reset') && chat.info.status === 'exited') {
+        if ((chat.type === 'info' || chat.type === 'reset') && chat.info.status === 'exited') {
             this.requests.forget(chatId);
         }
+    }
+
+    follow(lifecycle: NodeLifecycle): void {
+        lifecycle.on('turnEnded', (chatId) => this.requests.turnEnded(chatId));
+        lifecycle.on('closed', (nodeId) => this.nodeClosed(nodeId));
     }
 
     nodeClosed(nodeId: string): void {

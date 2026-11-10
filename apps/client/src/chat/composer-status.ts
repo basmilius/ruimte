@@ -3,25 +3,22 @@ import { useChatRow } from '@adecore/agents-react/state';
 import type { GitStatus } from '@ruimte/contracts';
 import type { TFunction } from 'i18next';
 import { Folder, FolderGit2, GitBranch, Server } from 'lucide-react';
-import { createContext, useContext } from 'react';
+import { useContext } from 'react';
 import { useTranslation } from 'react-i18next';
-import { nameOf } from '@/shell/settings/machine-list';
-import { useMachineEntry } from '@/shell/use-machine-entry';
-import { useGitCheckouts, useProjectRepos } from '@/state/git-repos';
-import { useGitStatus } from '@/state/git-watch';
+import { useGitCheckouts, useProjectRepos } from '@/controllers/git-repos';
+import { useGitStatus } from '@/controllers/git-watch';
+import { nameOf } from '@/machines/machine-list';
+import { useMachineEntry } from '@/machines/use-machine-entry';
 import { isThisMachine } from '@/state/local-machine';
-
-/* Set by a chat drawn as a node on the canvas, whose head already names its machine. */
-export const ChatOnCanvasContext = createContext(false);
+import { ChatOnCanvasContext } from '@/surface/nodes/chat-on-canvas';
 
 /* Another repository in the chat's folder, such as a submodule, by the name the git panel gives it. */
-export interface OtherRepo {
+interface OtherRepo {
     label: string;
     status: GitStatus | null;
 }
 
 interface WhereInput {
-    /* The checkout the CLI works in now. */
     status: GitStatus | null;
     others: readonly OtherRepo[];
     /* The machine's name, set only when the chat runs on another machine than this one. */

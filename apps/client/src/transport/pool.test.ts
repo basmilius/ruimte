@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { endpoint, FakeLink } from '../../testing/fake-link';
 import type { Endpoint } from '../state/endpoints';
+import type { TransportStatus } from '../transport-api/transport';
 import { TransportPool } from './pool';
-import type { TransportStatus } from './transport';
 import type { SocketAddress } from './websocket-transport';
 
 class FakeTransport extends FakeLink {

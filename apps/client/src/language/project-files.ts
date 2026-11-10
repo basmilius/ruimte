@@ -1,17 +1,15 @@
 import type { ProjectFiles, StagedFile } from '@adecore/editor-react';
 import { messageOf } from '@adecore/ui';
 import i18next from 'i18next';
-import { basenameOf } from '@/shell/panels/files-tree';
+import { basenameOf } from '@/paths/file-path';
 import { draftPathsUnder, forgetDeleted, moveFile } from '@/state/file-moves';
 import { endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
 import { isUnsavedDraft, textDrafts, useTextDrafts, type TextDrafts } from '@/state/text-drafts';
 import { useToasts } from '@/state/toasts';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
-/* How many files a toast names before it says how many more there are. */
 const NAMED_FILES = 3;
 
-/* The toasts that wait for their staged files to be saved, by id, with the way to stop waiting. */
 const stagedToasts = new Map<string, () => void>();
 
 export interface DraftProjectFiles extends ProjectFiles {

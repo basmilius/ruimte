@@ -27,19 +27,18 @@ import { refreshRoutines, useRoutineList } from '@/routines/routine-list';
 import { AgendaLegend, RoutineAgenda, RoutineWeekList, type AgendaGroup } from '@/routines/RoutineAgenda';
 import { RoutineDetail } from '@/routines/RoutineDetail';
 import { RoutineSide } from '@/routines/RoutineSide';
-import { leaveRoutines, setRoutinesFilter, setRoutinesLayout, showRoutine, stepWeek, useRoutinesStage } from '@/routines/stage';
-import { failed } from '@/shell/surface-failure';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
-import { useEndpointId } from '@/state/keys';
 import { isThisMachine } from '@/state/local-machine';
 import { useProject } from '@/state/project';
+import { leaveRoutines, setRoutinesFilter, setRoutinesLayout, showRoutine, stepWeek, useRoutinesStage } from '@/state/routines-stage';
+import { failed } from '@/surface/surface-failure';
 import { machineTransport } from '@/transport';
 import { RoutinesScene } from '@/ui/EmptyScenes';
 
 const MINUTE_MS = 60_000;
 
-/* Routines as a sheet over the workspace: the week of the project's routines, or one routine opened inside it. */
 export function RoutinesStage() {
     const { t } = useTranslation('routines');
     const open = useRoutinesStage((s) => s.open);
@@ -97,7 +96,6 @@ function StageBody({ endpointId }: { endpointId: string }) {
     return <WeekStage endpointId={endpointId} result={result} projectId={projectId} projectName={projectName} />;
 }
 
-/* Where in Routines this is, what can be done here, and Close at the far right. */
 function StageHeader({ title, crumbs, children }: { title: string; crumbs?: React.ReactNode; children?: React.ReactNode }) {
     const { t } = useTranslation('routines');
     return (

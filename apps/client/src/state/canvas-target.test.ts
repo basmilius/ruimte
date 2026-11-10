@@ -9,7 +9,6 @@ const views: ProjectView[] = [
     { kind: 'terminal', id: 'shell', name: 'Shell', node: {} }
 ];
 
-/* One column per entry, a cell per id in it; the focus goes on the given cell. */
 function layout(columns: string[][], focus = { column: 0, cell: 0 }): SplitLayout {
     return {
         columns: columns.map((cells) => ({ size: 1 / columns.length, cells: cells.map((viewId) => ({ viewId, size: 1 / cells.length })) })),

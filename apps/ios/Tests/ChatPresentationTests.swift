@@ -70,15 +70,12 @@ final class ChatPresentationTests: XCTestCase {
     }
 
     func testASelectionSwitchNamesOnlyWhatChanged() {
-        func choice(_ id: String, _ label: String) -> JSONValue {
-            .object(["id": .string(id), "label": .string(label)])
+        func model(_ slug: String, _ name: String, _ options: [JSONValue]) -> ProviderModel {
+            ProviderWire.model(slug, name: name, options: options).providerModel
         }
-        func model(_ slug: String, _ name: String, _ options: [JSONValue]) -> JSONValue {
-            .object(["slug": .string(slug), "name": .string(name), "options": .array(options)])
-        }
-        let effort: JSONValue = .object([
-            "id": .string("effort"), "type": .string("select"), "defaultChoice": .string("medium"),
-            "choices": .array([choice("low", "Low"), choice("medium", "Medium"), choice("xhigh", "Extra High")]),
+        let effort = ProviderWire.effort(choices: [
+            ProviderWire.choice("low", "Low"), ProviderWire.choice("medium", "Medium"),
+            ProviderWire.choice("xhigh", "Extra High"),
         ])
         let models = [
             model("opus", "Claude Opus 5.5", [effort]), model("sonnet", "Claude Sonnet 5.5", [effort]),
@@ -267,7 +264,8 @@ final class ChatPresentationTests: XCTestCase {
         XCTAssertEqual(depth, ChatSubagentBranch.maxNesting)
     }
 
-    @MainActor func testAgentTurnCanOpenTheSourceAgentInAnEarlierFold() {
+    /// A settled sub-agent stays outside the fold of its turn, so the row to open is already there.
+    @MainActor func testAgentTurnCanOpenTheSourceAgentOfAnEarlierTurn() {
         let presentation = ChatPresentation()
         let first = item("first", "turn").setting("turnId", .string("first")).setting("state", .string("done"))
         let agent = item("agent", "subagent").setting("turnId", .string("first")).setting("toolUseId", .string("spawn"))

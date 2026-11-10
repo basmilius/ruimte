@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
 import { makeHarness, Recorder, type Harness } from '../sessions/test-helpers.ts';
-import { registerSessionHandlers } from './session.ts';
-import { askOnce } from './test-helpers.ts';
+import { sessionArea } from './session.ts';
+import { askOnce, sessionDepsWith } from './test-helpers.ts';
 
 let harness: Harness;
 let dispatcher: Dispatcher;
@@ -11,7 +11,7 @@ let dispatcher: Dispatcher;
 beforeEach(async () => {
     harness = await makeHarness();
     dispatcher = new Dispatcher();
-    registerSessionHandlers(dispatcher, harness.manager);
+    sessionArea(sessionDepsWith(harness.manager)).handlers?.(dispatcher);
     await harness.manager.create({ sessionId: 'terminal', cols: 120, rows: 40, shell: '/bin/sh', args: [], cwd: harness.home });
 });
 
@@ -111,7 +111,7 @@ describe('following a shared terminal', () => {
 describe('a login for a client that goes', () => {
     test('leaves no login shell behind when the client closed while it started', async () => {
         const logins = new Dispatcher();
-        registerSessionHandlers(logins, harness.manager, undefined, { commandOf: () => 'claude /login', nameOf: () => 'Claude Code' });
+        sessionArea(sessionDepsWith(harness.manager, { logins: { commandOf: () => 'claude /login', nameOf: () => 'Claude Code' } })).handlers?.(logins);
         const frames: ServerFrame[] = [];
         const client = { id: 'phone', closed: false, send: (frame: ServerFrame) => frames.push(frame) };
 
@@ -168,7 +168,7 @@ describe('a shell that ends with its client', () => {
 describe('a node that runs on another machine', () => {
     async function ask(type: string, payload: unknown): Promise<ServerFrame> {
         const guarded = new Dispatcher();
-        registerSessionHandlers(guarded, harness.manager, undefined, undefined, (nodeId) => (nodeId === 'remote' ? 'machine-b' : null));
+        sessionArea(sessionDepsWith(harness.manager, { machineOf: (nodeId) => (nodeId === 'remote' ? 'machine-b' : null) })).handlers?.(guarded);
         const frames: ServerFrame[] = [];
         await guarded.handle({ id: 'client', send: (frame) => frames.push(frame) }, JSON.stringify({ id: 'request', type, payload }));
         return frames[0]!;

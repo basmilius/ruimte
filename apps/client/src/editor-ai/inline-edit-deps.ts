@@ -5,8 +5,8 @@ import { useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
-import { chatClientFor } from '@/transport/connections';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
+import { chatClientFor } from '@/workspace/connections';
 import { forgetInlineEdit, saveInlineEdit } from './inline-edit-record';
 import type { InlineEditDeps } from './inline-edit-session';
 
@@ -31,7 +31,6 @@ function clientOf(endpointId: string) {
     return client;
 }
 
-/* What an inline edit uses of the app, for one machine. */
 export function inlineEditDeps(endpointId: string): InlineEditDeps {
     const keyOf = (chatId: string): string => endpointKey(endpointId, chatId);
     const files = () => draftFiles(endpointId, transportOf(endpointId));

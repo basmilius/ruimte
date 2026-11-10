@@ -32,7 +32,6 @@ export const CLOSE = {
 
 export class Peer {
     readonly socket: PeerSocket;
-    /* What the address counts against, `addressKeyOf`. */
     readonly ip: string;
     /* The host this peer dialed, which is what it signs. */
     readonly name: string;
@@ -198,12 +197,10 @@ export class Broker {
         }
     }
 
-    /* A pong: the peer is still there. */
     heard(peer: Peer): void {
         peer.lastHeardAt = this.now();
     }
 
-    /* The socket is gone, whoever closed it. */
     closed(peer: Peer): void {
         if (!this.peers.delete(peer)) {
             return;

@@ -1,4 +1,4 @@
-import { ignoreRefusal, perform } from '@/actions/client-actions';
+import { ignoreRefusal, perform } from '@/action-port/perform';
 
 const HISTORY_ACTIONS = { back: 'browser.back', forward: 'browser.forward', stop: 'browser.stop' } as const;
 

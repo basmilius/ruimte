@@ -71,7 +71,6 @@ enum ChatRename {
 }
 
 extension ChatModel {
-    /// Whether the chat is snoozed at `now`.
     func isSnoozed(now: Date = .now) -> Bool {
         snoozedUntil.map { $0 > now.timeIntervalSince1970 * 1000 } ?? false
     }

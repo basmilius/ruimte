@@ -9,32 +9,26 @@ import RuimteTransport
 final class ScheduledModel {
     private(set) var feeds: [String: ScheduledFeed] = [:]
     @ObservationIgnored private var contextID = ""
-    @ObservationIgnored private var viewers = 0
-    @ObservationIgnored private var stopping: Task<Void, Never>?
-
-    /// A page of Scheduled came on screen. The feeds run until the last one went.
-    func appear(runtime: AppRuntime) {
-        viewers += 1
-        stopping?.cancel()
-        stopping = nil
-        reconcile(runtime: runtime)
-    }
-
-    func disappear() {
-        viewers = max(0, viewers - 1)
-        guard viewers == 0 else { return }
-        // A push from the list to a routine leaves one page before the next appears; the watch stays through it.
-        stopping = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(2))
-            guard let self, !Task.isCancelled, viewers == 0 else { return }
+    // A push from the list to a routine leaves one page before the next appears; the watch stays through it.
+    @ObservationIgnored private lazy var viewers = LiveHolds(
+        graceMilliseconds: 2_000,
+        ended: { [weak self] in
+            guard let self else { return }
             for feed in feeds.values { feed.stop() }
             feeds.removeAll()
             contextID = ""
-        }
+        })
+
+    /// A page of Scheduled came on screen. The feeds run until the last one went.
+    func appear(runtime: AppRuntime) {
+        viewers.retain()
+        reconcile(runtime: runtime)
     }
 
+    func disappear() { viewers.release() }
+
     func reconcile(runtime: AppRuntime) {
-        guard viewers > 0 else { return }
+        guard viewers.isHeld else { return }
         runtime.reconcile(&feeds, context: &contextID)
     }
 
@@ -57,13 +51,12 @@ final class ScheduledModel {
     var connecting: Bool { feeds.values.contains { $0.answers == nil && $0.session.failedAttempts < 3 } }
 
     func entry(_ target: RoutineTarget) -> RoutineEntry? {
-        feeds[target.machineID]?.entries.first { $0.projectID == target.projectID && $0.id == target.routineID }
+        feeds[target.machineID]?.entries.first { $0.projectId == target.projectID && $0.id == target.routineID }
     }
 
     func feed(_ machineID: String) -> ScheduledFeed? { feeds[machineID] }
 }
 
-/// One machine's routines.
 @MainActor @Observable
 final class ScheduledFeed: MachineFeed {
     let session: SharedMachineSession
@@ -73,40 +66,30 @@ final class ScheduledFeed: MachineFeed {
     /// Nil until the link opened once, false on a machine that does not answer `routine.list`.
     private(set) var answers: Bool?
     private(set) var problem: String?
-    @ObservationIgnored private var stops: [() -> Void] = []
-    @ObservationIgnored private var lease: MachineSubscription?
-    @ObservationIgnored private lazy var reads = FeedReads { [weak self] in await self?.load() }
+    // What changed while the link was down was pushed to nobody, so the watch is asked again on every link.
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: session.rpc, events: [.reread(.routineChanged)], watch: .area(.routineWatch, gated: true),
+        settleMilliseconds: feedSettleMilliseconds,
+        connection: { [weak self] connected in
+            guard let self, connected else { return }
+            answers = session.rpc.answers(.routineList)
+        }, read: { [weak self] in await self?.load() })
 
     init(session: SharedMachineSession) { self.session = session }
 
     func start() {
-        guard stops.isEmpty else { return }
+        guard !live.isStarted else { return }
         session.retain()
-        let client = session.rpc
-        stops.append(client.subscribe(.routineChanged) { [weak self] _ in self?.reads.schedule() })
-        stops.append(
-            client.observeConnection { [weak self] connected in
-                guard let self else { return }
-                if connected {
-                    Task { await self.linked() }
-                } else {
-                    reads.cancelScheduled()
-                }
-            })
+        live.start()
     }
 
     func stop() {
-        guard !stops.isEmpty else { return }
-        stops.forEach { $0() }
-        stops.removeAll()
-        reads.cancel()
-        let lease = lease
-        self.lease = nil
-        Task { await lease?.release() }
+        guard live.isStarted else { return }
+        live.stop()
         session.release()
     }
 
-    func refresh() async { await reads.refresh() }
+    func refresh() async { await live.refresh() }
 
     func pause(_ entry: RoutineEntry) async throws {
         try await send(.routinePause, entry)
@@ -116,11 +99,11 @@ final class ScheduledFeed: MachineFeed {
         try await send(.routineResume, entry)
     }
 
-    /// `started`, `held` or `busy`, as the machine answers it.
-    func runNow(_ entry: RoutineEntry) async throws -> String {
+    func runNow(_ entry: RoutineEntry) async throws -> RoutineRunNowResultOutcome {
         let answer = try await session.rpc.request(.routineRunNow, payload: payload(entry))
+            .decoded(as: RoutineRunNowResult.self)
         await refresh()
-        return answer.text("outcome")
+        return answer.outcome
     }
 
     private func send(_ request: WireRequest, _ entry: RoutineEntry) async throws {
@@ -129,36 +112,22 @@ final class ScheduledFeed: MachineFeed {
     }
 
     private func payload(_ entry: RoutineEntry) -> JSONValue {
-        .object(["projectId": .string(entry.projectID), "routineId": .string(entry.id)])
+        .object(["projectId": .string(entry.projectId), "routineId": .string(entry.id)])
     }
 
-    private func linked() async {
-        let client = session.rpc
-        answers = client.answers(.routineList)
+    private func load() async {
+        guard session.connected else { return }
         guard answers == true else {
             entries = []
             return
         }
-        // What changed while the link was down was pushed to nobody, so the watch is asked again on every link.
-        if client.answers(.routineWatch) {
-            if lease == nil {
-                lease = client.acquireSubscription(
-                    start: WireRequest.routineWatch.rawValue, stop: WireRequest.routineUnwatch.rawValue,
-                    payload: .object([:]), stopPayload: .object([:]))
-            }
-            _ = try? await lease?.refresh()
-        }
-        await refresh()
-    }
-
-    private func load() async {
-        guard session.connected, answers == true else { return }
         let generation = session.generation
         do {
             let result = try await session.rpc.request(.routineList, payload: .object([:]))
-            guard !Task.isCancelled, generation == session.generation, !stops.isEmpty else { return }
-            entries = result.list("routines").map(RoutineEntry.init(json:))
-            timeZone = TimeZone(identifier: result.text("timeZone"))
+                .decoded(as: RoutineListResult.self)
+            guard !Task.isCancelled, generation == session.generation, live.isStarted else { return }
+            entries = result.routines
+            timeZone = TimeZone(identifier: result.timeZone)
             problem = nil
         } catch {
             guard !Task.isCancelled, generation == session.generation else { return }

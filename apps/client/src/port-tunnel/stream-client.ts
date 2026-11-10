@@ -1,6 +1,7 @@
 import { PORT_CHUNK_BYTES, type EventMap, type EventType, type PortEndEvent, type RequestMap, type RequestType } from '@ruimte/contracts';
 import { base64Of } from '../base64';
-import { decodeBase64 } from '../transport/piece';
+import { decodeBase64 } from '../transport-api/piece';
+import { fireAndForget } from '../transport-api/transport';
 
 /* As much of a `Transport` as the streams use, so a test or a measurement hands in a plainer one. */
 export interface PortTransport {
@@ -10,7 +11,6 @@ export interface PortTransport {
 
 export interface PortStreamHandlers {
     data(bytes: Uint8Array): void;
-    /* Bytes the machine wrote to the service in all, which frees room for the next ones. */
     flushed(total: number): void;
     /* `reason` is null for a service that finished, else the sentence to tell a person. */
     end(reason: string | null): void;
@@ -74,7 +74,6 @@ export class PortStreamClient {
         this.pump();
     }
 
-    /* The bytes of the answer the page took in; the machine hears of them in steps. */
     consumed(bytes: number): void {
         this.consumedTotal += bytes;
 
@@ -101,7 +100,7 @@ export class PortStreamClient {
         this.hub.forget(this.id);
 
         if (this.opened) {
-            void this.hub.transport.request('port.close', { streamId: this.id }).catch(() => undefined);
+            void fireAndForget('port.close', this.hub.transport.request('port.close', { streamId: this.id }));
         }
     }
 
@@ -142,7 +141,7 @@ export class PortStreamClient {
 
     private credit(): void {
         this.credited = this.consumedTotal;
-        void this.hub.transport.request('port.credit', { streamId: this.id, offset: this.credited }).catch(() => undefined);
+        void fireAndForget('port.credit', this.hub.transport.request('port.credit', { streamId: this.id, offset: this.credited }));
     }
 
     private pump(): void {
@@ -163,7 +162,7 @@ export class PortStreamClient {
 
         if (this.wantsShut && !this.shutSent && this.opened && !this.ended && this.queue.length === 0 && this.sent === this.flushedTotal) {
             this.shutSent = true;
-            void this.hub.transport.request('port.close', { streamId: this.id, half: 'write' }).catch(() => undefined);
+            void fireAndForget('port.close', this.hub.transport.request('port.close', { streamId: this.id, half: 'write' }));
         }
     }
 
@@ -181,14 +180,13 @@ export class PortStreamClient {
         this.hub.forget(this.id);
 
         if (tell) {
-            void this.hub.transport.request('port.close', { streamId: this.id }).catch(() => undefined);
+            void fireAndForget('port.close', this.hub.transport.request('port.close', { streamId: this.id }));
         }
 
         this.handlers.end(reason);
     }
 }
 
-/* The streams of one machine connection: it subscribes to the data and end events once and hands each to its stream. */
 export class PortStreamHub {
     readonly transport: PortTransport;
     private readonly streams = new Map<string, PortStreamClient>();
@@ -226,14 +224,12 @@ export class PortStreamHub {
         this.streams.delete(streamId);
     }
 
-    /* The link went: every stream ends for its page, and a page that asks again opens a new one. */
     abortAll(reason: string): void {
         for (const stream of [...this.streams.values()]) {
             stream.abort(reason);
         }
     }
 
-    /* The tunnel ended: the hub stops listening, and every stream ends. */
     dispose(reason: string): void {
         for (const stop of this.stops) {
             stop();

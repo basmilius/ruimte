@@ -43,7 +43,6 @@ export const FAKE_SIMULATOR: DeviceInfo = {
     }
 };
 
-/* A running emulator with the tools Android has. */
 export const FAKE_EMULATOR: DeviceInfo = {
     deviceId: 'Pixel_9_API_36',
     backendId: 'android',
@@ -93,7 +92,6 @@ export function referenceOf(device: DeviceInfo): DeviceReference {
 export interface FakeDevices {
     /* What the last `device.detail` and `device.action` answer with. */
     settings: DeviceSettings;
-    /* What `device.power` answers for a phone. */
     power: DevicePower | null;
     /* What the device clipboard holds, which a write replaces. */
     clipboard: string;

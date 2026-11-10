@@ -135,7 +135,6 @@ struct MobilePermissionActions: View {
     }
 }
 
-/// The prominent capsule that sends an answer, with a spinner in its place while it goes.
 struct MobileSendButton: View {
     let title: String
     var sending = false

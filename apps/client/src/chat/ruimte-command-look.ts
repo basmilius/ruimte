@@ -11,9 +11,9 @@ import type {
 import { unescapeText } from '@ruimte/actions/text-escapes';
 import type { ContextVerb } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { useSidebarSource, type SidebarSource } from '@/shell/sidebar-source';
+import { useProjectSource, type ProjectSource } from '@/project/project-source';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { memoByIdentity } from '@/state/identity-memo';
-import { currentEndpointId } from '@/state/keys';
 import { RuimteMark } from '@/ui/RuimteMark';
 
 /* What a verb reads as: the name after "Ruimte", and the word the detail starts at, the verb itself being 0. */
@@ -105,7 +105,6 @@ function describeContextCall(args: readonly string[]): CommandLookMatch {
     };
 }
 
-/* The verb a tool of the MCP server was: its own, or its first word's. */
 function verbOfTool(tool: string): string {
     const toolkit = tool.split('_')[0]!;
     if (Object.hasOwn(TOOL_VERBS, tool)) {
@@ -136,7 +135,7 @@ interface ProjectName {
 }
 
 /* Every view and node of the project by id, under the title it has now; one map per state of the sidebar. */
-const projectNames = memoByIdentity((source: SidebarSource): ReadonlyMap<string, ProjectName> => {
+const projectNames = memoByIdentity((source: ProjectSource): ReadonlyMap<string, ProjectName> => {
     const names = new Map<string, ProjectName>();
     for (const view of source.views) {
         names.set(view.id, { name: view.name ?? '', view: true });
@@ -153,7 +152,7 @@ const projectNames = memoByIdentity((source: SidebarSource): ReadonlyMap<string,
  * each as the `#` chip a message draws for it.
  */
 export function useContextNames(endpointId: string, chatId: string): (word: string, option: string | null) => CommandName | null {
-    const names = projectNames(useSidebarSource());
+    const names = projectNames(useProjectSource());
     const here = endpointId === currentEndpointId() && names.has(chatId);
     return (word: string, option: string | null): CommandName | null => {
         const named = here ? names.get(word) : undefined;
@@ -239,7 +238,6 @@ export function sentByNotify(call: CommandLookCall): CommandLookSent | null {
     return sentMessage({ ...words, text: words.text === '-' ? call.heredoc : unescapeText(words.text) }, call);
 }
 
-/* The message to `id`, once there is text and the call says how it went. */
 function sentMessage(
     words: { id: string; text: string | null; project: string | null },
     call: Pick<CommandLookCall, 'state' | 'output'>

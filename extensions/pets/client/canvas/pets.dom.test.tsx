@@ -93,10 +93,8 @@ describe('pets on a canvas', () => {
 
         await clickOn(petsSwitch());
         await until(() => pet(WRITER.id) !== null);
-        // A note has no agent, so no pet.
         expect(pet(PLAN.id)).toBeNull();
 
-        // Turned off, a pet beams out where it stood before it goes, a picture that takes no press.
         await clickOn(petsSwitch());
         await until(() => pet(WRITER.id) === null);
         expect(canvas.page.host.querySelector(`[data-pet-box="${WRITER.id}"][data-pet-leaving]`)).not.toBeNull();
@@ -122,7 +120,6 @@ describe('pets on a canvas', () => {
         expect(document.querySelector('[data-pet-set="woodland"]')?.textContent).toContain('Hazel, Bramble, Oak, Bandit');
         expect(setSwitch('Buddies')?.getAttribute('aria-checked')).toBe('true');
         expect(setSwitch('Nox and Chanel')?.getAttribute('aria-checked')).toBe('false');
-        // The only set picked cannot be left out.
         expect(setSwitch('Buddies')?.hasAttribute('data-disabled')).toBe(true);
 
         await clickOn(setSwitch('Nox and Chanel'));
@@ -207,7 +204,6 @@ describe('pets on a canvas', () => {
         attachWith([reviewer, subagent('tester')]);
         usePetSettings.getState().update({ pets: true });
         await open();
-        // Kids are drawn only while their node is in view, as their pet is.
         await act(async () => store().getState().setCamera({ x: -1800, y: -800, zoom: 1 }));
         await act(async () => machine.emit('chat.status', { chatId: WRITER.id, info: chatInfoOf(WRITER.id) }));
         await until(() => kids(WRITER.id).length === 2);
@@ -233,7 +229,6 @@ describe('pets on a canvas', () => {
         await open();
         await act(async () => machine.emit('chat.status', { chatId: WRITER.id, info: chatInfoOf(WRITER.id) }));
         const roaming = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>(`[data-pet-roam] [data-pet-kid="${WRITER.id}"]`)];
-        // Three at most, however many sub-agents work.
         await until(() => roaming().length === 3);
         expect(roaming().map((kid) => kid.querySelector('button'))).toEqual([null, null, null]);
     });
@@ -403,7 +398,6 @@ describe('a figure of your own', () => {
         expect(dialog()?.querySelector('[data-pet-state="sleep"]')?.textContent).toContain('Plays Standing');
 
         await clickOn(dialog()!.querySelector('button[aria-label="Remove the strip for Working"]'));
-        // The keys stay on the row, on the button that gives it a strip again.
         expect(document.activeElement?.getAttribute('aria-label')).toBe('Choose file for Working');
         await typeInto(dialog()!.querySelector('input:not([type="file"])')!, 'Kitten');
         await clickOn(buttonWithText('Save', dialog()!));

@@ -1,9 +1,9 @@
 import { ACTION_DOMAINS, type ActionDomain } from '@ruimte/actions';
 import type { ProjectNode, ProjectView } from '@ruimte/contracts';
-import { nodesOfView, type NodesOfView } from '@/project/view-nodes';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
-import { windowWorkspace } from '@/state/window';
+import { nodesOfView, type NodesOfView } from '@/state/view-nodes';
+import { windowWorkspace } from '@/workspace/window';
 
 /* What a project holds, as far as the tools Voice gets are concerned. */
 interface VoiceProjectFacts {
@@ -42,7 +42,6 @@ export function voiceDomainsFor(facts: VoiceProjectFacts): ActionDomain[] {
     return ACTION_DOMAINS.filter((domain) => wanted.has(domain));
 }
 
-/* The kinds a project holds, as views and as nodes on its canvases. */
 export function kindsIn(views: readonly ProjectView[], nodesOf: NodesOfView<Pick<ProjectNode, 'kind'>>): Set<string> {
     return new Set(views.flatMap((view) => [view.kind, ...nodesOf(view).map((node) => node.kind)]));
 }

@@ -1,9 +1,8 @@
 import { isCanvasView } from '@ruimte/contracts';
-import { cellElement } from '@/shell/cell-rects';
+import { cellElement } from '@/layout/cell-rects';
 import { focusedCanvas } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 
-/* A surface that can be searched: the element it draws in, and what opens its bar. */
 interface FindHost {
     element: HTMLElement;
     /* `replace` asks for the bar with its replace row, which a surface that cannot replace draws without. */

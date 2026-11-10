@@ -3,7 +3,7 @@ import RuimteTransport
 import SwiftUI
 
 struct ChatScreen: View {
-    @AppStorage("ruimte.chat.streaming") private var streamingMode: ChatStreamingMode = .words
+    @AppStorage(Settings.chatStreaming) private var streamingMode
     @State private var model: ChatModel
     @State private var visible = false
     @State private var holdingChat = false
@@ -32,13 +32,13 @@ struct ChatScreen: View {
     @State private var showingBookmarks = false
     /// A rename asked for from the bookmark list, asked once the list has gone.
     @State private var renameAfterList: String?
-    /// The message whose bookmark is being named, with the name as typed.
     @State private var namingBookmark: String?
     @State private var bookmarkName = ""
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    /// Set in the content beside the iPad's sidebar, where a sub-agent opens in an inspector.
-    @Environment(\.padCells) private var padCells
+    @Environment(\.projectNavigator) private var navigator
+    /// The router that shows a sub-agent beside the chat; a chat pushed over a list opens it in its own stack.
+    private var inspector: (any ProjectNavigator)? { navigator?.placement == .beside ? navigator : nil }
     let title: String
     let isPrepared: Bool
     /// The project the chat stands in, which is what a fork's way back and a summary's way to the fork need.
@@ -112,7 +112,8 @@ struct ChatScreen: View {
         .tint(MobileStyle.accent)
         .navigationTitle(title)
         .modifier(
-            ChatForkTitle(subtitle: forkSubtitle, plain: subtitle) { Section(forkLine ?? "") { forkBackItems } })
+            ChatForkTitle(subtitle: forkSubtitle, plain: subtitle) { Section(forkLine ?? "") { forkBackItems } }
+        )
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityAction(.escape) { composerFocused = false }
         .toolbar {
@@ -201,7 +202,7 @@ struct ChatScreen: View {
             item: Binding(
                 get: { model.presentation.forkRequest }, set: { model.presentation.forkRequest = $0 })
         ) { request in
-            let origin = workspace.flatMap { ChatForking.origin(in: $0.views, chatID: model.chatID) }
+            let origin = workspace.flatMap { ChatForking.origin(in: $0.storedViews, chatID: model.chatID) }
             ChatForkSheet(
                 model: model, turnID: request.turnID, originalTitle: origin?.title ?? title, origin: origin?.shape,
                 forked: openFork)
@@ -243,7 +244,7 @@ struct ChatScreen: View {
         }
         .navigationDestination(
             item: Binding(
-                get: { padCells == nil ? model.presentation.conversationRequest : nil },
+                get: { inspector == nil ? model.presentation.conversationRequest : nil },
                 set: { model.presentation.conversationRequest = $0 })
         ) { crumb in
             SubagentConversationPage(model: model, crumb: crumb, session: machineSession)
@@ -254,9 +255,9 @@ struct ChatScreen: View {
             }
         }
         .onChange(of: model.presentation.conversationRequest) { _, crumb in
-            guard let crumb, let padCells else { return }
+            guard let crumb, let inspector else { return }
             model.presentation.conversationRequest = nil
-            padCells.inspectSubagent(PadSubagentPane(model: model, crumb: crumb, session: machineSession))
+            inspector.inspect(PadSubagentPane(model: model, crumb: crumb, session: machineSession))
         }
         .onAppear {
             chatPresentationLog.notice("chat appeared \(model.chatID, privacy: .public)")
@@ -295,8 +296,7 @@ struct ChatScreen: View {
                 let snapshot = clearDraft
                 clearDraft = nil
                 Task {
-                    if await model.perform("chat.clear", ["force": .bool(true)]), let snapshot, model.draft == snapshot
-                    {
+                    if await model.perform(.chatClear, ["force": .bool(true)]), let snapshot, model.draft == snapshot {
                         model.draft = ""
                     }
                 }
@@ -337,7 +337,7 @@ struct ChatScreen: View {
         model.presentation.agentSources = ChatAgentSources(
             tasks: machineSession?.tasks, attention: machineSession?.attention
         ) { [weak chat] provider in
-            chat?.providers.first { $0.text("kind") == provider }?["models"]?.arrayValue ?? []
+            chat?.providers.first { $0.kind == provider }?.models ?? []
         }
         model.presentation.chatModels = { [weak chat] in chat?.models ?? [] }
         if let workspace {
@@ -347,22 +347,21 @@ struct ChatScreen: View {
                 items: { [weak workspace, weak chat] in
                     guard let workspace else { return [] }
                     return ChatReferables.withReached(
-                        ChatReferables.project(views: workspace.views, chatID: chatID),
-                        ownID: workspace.projectID, ownName: workspace.summary.text("name"),
+                        ChatReferables.project(views: workspace.storedViews, chatID: chatID),
+                        ownID: workspace.projectID, ownName: workspace.summary?.name ?? "",
                         reached: chat?.reachedProjects ?? [])
                 },
                 viewReferences: { [weak session] in session?.icons.viewReferences ?? false })
             // Up front as well as at a `#`, so a chip of a message already sent shows where it points.
             Task { await chat.refreshReachedProjects() }
             model.presentation.places = ChatPlaces(
-                title: { ChatForking.origin(in: workspace.views, chatID: $0)?.title },
-                shape: { ChatForking.origin(in: workspace.views, chatID: $0)?.shape },
+                title: { ChatForking.origin(in: workspace.storedViews, chatID: $0)?.title },
+                shape: { ChatForking.origin(in: workspace.storedViews, chatID: $0)?.shape },
                 waitingChild: { [weak session] id in
-                    guard ChatForking.origin(in: workspace.views, chatID: id) == nil,
-                        let task = session?.tasks.childTask(id), task.text("parentId") == chatID,
-                        task.text("status") == TaskStatus.open.rawValue
+                    guard ChatForking.origin(in: workspace.storedViews, chatID: id) == nil,
+                        let task = session?.tasks.childTask(id), task.parentId == chatID, task.status == .open
                     else { return nil }
-                    return task.text("title")
+                    return task.title
                 },
                 arrival: { await workspace.arrival(of: $0) })
         }
@@ -430,7 +429,7 @@ struct ChatScreen: View {
         }
         Section {
             forkItem
-            if workspace.map({ ChatForking.origin(in: $0.views, chatID: model.chatID) != nil }) == true {
+            if workspace.map({ ChatForking.origin(in: $0.storedViews, chatID: model.chatID) != nil }) == true {
                 Button(String(localized: "Rename"), lucideIcon: "pencil") {
                     renameText = title
                     renaming = true
@@ -508,7 +507,7 @@ struct ChatScreen: View {
             let refusal = ChatForking.summaryRefusal(
                 info: model.info, originalPresent: workspace == nil || originalTitle != nil)
             Button {
-                Task { await model.perform("chat.summarize") }
+                Task { await model.perform(.chatSummarize) }
             } label: {
                 Label(String(localized: "Summarize for the original"), lucideIcon: "message-square-share")
                 Text(refusal ?? originalTitle ?? "")
@@ -649,7 +648,7 @@ struct ChatScreen: View {
 
     private var stopButton: some View {
         Menu {
-            Button(String(localized: "Stop turn"), lucideIcon: "square") { Task { await model.perform("chat.cancel") } }
+            Button(String(localized: "Stop turn"), lucideIcon: "square") { Task { await model.perform(.chatCancel) } }
             Button(
                 String(localized: "Stop with sub-agents"), lucideIcon: "square", role: .destructive,
                 action: stopWithSubagents)
@@ -669,7 +668,7 @@ struct ChatScreen: View {
         let model = model
         Task {
             let agents = await ChatSubagents.agentsEnded(with: [model.chatID], client: model.client)
-            let run = { _ = await model.perform("chat.cancel", ["subagents": .bool(true)]) }
+            let run = { _ = await model.perform(.chatCancel, ["subagents": .bool(true)]) }
             if agents == 0 {
                 await run()
             } else {
@@ -697,7 +696,7 @@ struct ChatScreen: View {
             Task {
                 model.sending = true
                 defer { model.sending = false }
-                let action = command == "/stop" ? "chat.cancel" : "chat.compact"
+                let action: WireRequest = command == "/stop" ? .chatCancel : .chatCompact
                 if await model.perform(action), model.draft == snapshot { model.draft = "" }
             }
         default: Task { await model.send() }

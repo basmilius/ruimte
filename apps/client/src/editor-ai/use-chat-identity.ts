@@ -1,9 +1,8 @@
 import { useProviders } from '@adecore/agents-react/state';
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
-import { chooserChats } from '@/chat/chat-chooser';
-import { useSidebarSource } from '@/shell/sidebar-source';
+import { chooserChats } from '@/language/chat-chooser';
+import { useProjectSource } from '@/project/project-source';
 
-/* The chat that wrote something, as the project shows it now. */
 interface ChatIdentity {
     /* False once the chat is gone from the project, which leaves the card without a way to open it. */
     exists: boolean;
@@ -11,7 +10,7 @@ interface ChatIdentity {
 }
 
 export function useChatIdentity(chatId: string): ChatIdentity {
-    const source = useSidebarSource();
+    const source = useProjectSource();
     const chat = chooserChats(source.views, source.nodesOf).find((candidate) => candidate.id === chatId);
     return { exists: chat !== undefined, title: chat?.title ?? null };
 }

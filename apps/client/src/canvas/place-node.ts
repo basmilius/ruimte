@@ -1,4 +1,4 @@
-import { GRID, intersects, snapToGrid, type Point, type Rect } from '@/canvas/math';
+import { GRID, intersects, snapToGrid, type Point, type Rect } from '@/canvas-model/math';
 
 const GAP = GRID * 5;
 /* Spots tried inside the view, so a canvas zoomed far out does not test tens of thousands of them. */

@@ -4,8 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { GitChangedEvent, GitStatusEvent } from '@ruimte/contracts';
-import { SharedWatch } from '../fs/shared-watch.ts';
-import { FolderWatcher, MAX_CHANGED_PATHS } from '../fs/watch.ts';
+import { MAX_CHANGED_PATHS } from '../disk/shared-watch.ts';
+import { SharedWatch } from '../disk/shared-watch.ts';
+import { FolderWatcher } from '../fs/watch.ts';
 import * as runner from './run.ts';
 import { GitStatusWatcher } from './status-watcher.ts';
 import { forgetBase, readStatus } from './status.ts';
@@ -307,7 +308,7 @@ describe('GitStatusWatcher', () => {
     });
 
     test('a repository inside a folder the file tree watches rides on its platform watcher', async () => {
-        const shared = new SharedWatch({ platform: 'darwin', seams: fake, forget: () => undefined });
+        const shared = new SharedWatch({ platform: 'darwin', seams: fake });
         const files = new FolderWatcher('darwin', shared, 0);
         unsubscribe();
         watcher = new GitStatusWatcher('darwin', shared, () => clock, readStatus);

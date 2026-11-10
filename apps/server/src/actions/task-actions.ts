@@ -1,10 +1,10 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers } from '@ruimte/actions';
-import { clipText, isAgentKind, isCanvasView, type ProjectContent, type ProjectNode, type Task } from '@ruimte/contracts';
-import { MAX_TITLE_LENGTH, field, orNote } from '../tools/host.ts';
-import { ownViewOf, refuseOwnView } from '../tools/own-view.ts';
-import { readPromptFile, readResultFile } from '../tools/project-paths.ts';
-import { MAX_RESULT_LENGTH, MAX_TASK_PROMPT_LENGTH, requireChatParent, taskLine } from '../tools/tasks.ts';
+import { deriveNodeTitle, isAgentKind, isCanvasView, type ProjectContent, type ProjectNode, type Task } from '@ruimte/contracts';
+import { field, orNote } from '../canvas/host.ts';
+import { ownViewOf, refuseOwnView } from '../canvas/own-view.ts';
+import { readPromptFile, readResultFile } from '../canvas/project-paths.ts';
+import { MAX_RESULT_LENGTH, MAX_TASK_PROMPT_LENGTH, requireChatParent, taskLine } from '../canvas/tasks.ts';
 import type { ServerActionContext } from './context.ts';
 
 const NEEDS_RESULT = 'result needs what came of the task, in quotes';
@@ -18,11 +18,6 @@ const NEEDS_PROMPT = 'prompt needs what the task asks, in quotes';
  */
 function isCurrentTask(task: Task, nodeId: string): boolean {
     return task.status === 'open' || (task.parentId === nodeId && task.wake === 'pending');
-}
-
-/* The title of a task nobody named: its first line, cut to what a name on the canvas fits. */
-function titleFromPrompt(prompt: string): string {
-    return clipText(field(prompt.split('\n').find((line) => line.trim() !== '') ?? prompt).trim(), MAX_TITLE_LENGTH);
 }
 
 /* A node of this project, on whatever canvas it sits: a task travels by lineage, not over a canvas. */
@@ -146,7 +141,7 @@ export const taskActions: ActionHandlers<ServerActionContext> = {
             projectId: place.projectId,
             parentId: caller,
             childId: nodeId,
-            title: title ?? titleFromPrompt(text),
+            title: title ?? deriveNodeTitle(text) ?? 'Task',
             prompt: text
         });
         return { output: { taskId: task.id, nodeId, at: state === 'running' ? 'waiting' : 'now' } };

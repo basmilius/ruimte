@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { CanvasHost } from '../canvas/host.ts';
 import { initRepo } from '../git/test-repo.ts';
-import type { CanvasHost } from './host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 async function call(host: CanvasHost): Promise<string[]> {

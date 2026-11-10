@@ -16,7 +16,7 @@ import {
     ZoomIn
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { fitAction, historyAction } from '@/actions/client-actions';
+import { fitAction, historyAction } from '@/action-port/person-actions';
 import { copyDrawing, cutSelection, deleteSelection, duplicateSelection, pasteInto, reorderSelection, toggleLockSelection } from '@/drawing/drawing-actions';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { useDrawing, useDrawingStore } from '@/state/drawing';

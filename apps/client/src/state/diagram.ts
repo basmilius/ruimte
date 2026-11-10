@@ -1,7 +1,7 @@
 import { layoutOf, type DiagramLayout } from '@adecore/diagram';
 import { EMPTY_DIAGRAM, type DiagramContent, type DiagramDocument, type DiagramNode, type ProjectViewLocal } from '@ruimte/contracts';
 import { createStore, type StoreApi } from 'zustand';
-import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
+import { createCameraSlice, type CameraSlice } from '@/canvas-model/camera-slice';
 import { editorBindings } from '@/state/editor-bindings';
 import { createEditorRegistry, finishLoad, savedFileSetters, type SavedFileSetters } from '@/state/editors';
 
@@ -29,7 +29,6 @@ export interface DiagramState extends CameraSlice, SavedFileSetters<DiagramDocum
     replaceContent(content: DiagramContent): void;
     /* `first` says this is the first step of a drag, which is the one that goes into the history. */
     moveNode(id: string, pos: [number, number], first: boolean): void;
-    /* Hands a dragged node back to the layout. */
     resetPosition(id: string): void;
     undo(): void;
     redo(): void;
@@ -51,7 +50,6 @@ const EMPTY_CONTENT = contentOf(EMPTY_DIAGRAM);
 
 export const DIAGRAM_HISTORY_LIMIT = 100;
 
-/* The client saves on the edit counter. */
 function changed(state: DiagramState, content: DiagramContent, first = true): Partial<DiagramState> {
     return {
         content,
@@ -234,7 +232,6 @@ export function createDiagramStore(frame: (callback: () => void) => void = nextF
 
 const defaultDiagramStore = createDiagramStore();
 
-/* Its blank editor is the store this module made. */
 export const defaultDiagrams = createEditorRegistry(createDiagramStore, defaultDiagramStore);
 
 export const {

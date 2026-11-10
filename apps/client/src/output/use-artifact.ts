@@ -2,8 +2,8 @@ import type { ArtifactGetResult } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { holdArtifacts, useArtifactRevision } from '@/output/artifacts';
 import { machineTransport } from '@/transport';
+import { isConnectionError } from '@/transport-api/transport';
 import { useEndpointConnection } from '@/transport/status';
-import { isConnectionError } from '@/transport/transport';
 
 type ArtifactState =
     | { status: 'loading' }
@@ -12,7 +12,6 @@ type ArtifactState =
     | { status: 'gone' }
     | { status: 'unreachable' };
 
-/* One artifact with every version, read again whenever the machine says it changed. */
 export function useArtifact(endpointId: string, artifactId: string, answers: boolean): ArtifactState {
     const revision = useArtifactRevision(endpointId, artifactId);
     const [held, setHeld] = useState<{ key: string; state: ArtifactState } | null>(null);

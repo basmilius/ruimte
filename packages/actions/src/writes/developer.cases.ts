@@ -233,17 +233,17 @@ export const cases: WriteCases = {
         refused: { 'no launch': { command: 'bun run dev' }, 'an empty command': { launch: 'dev', command: ' ' } }
     },
     'launch.start': {
-        actors: ['person', 'agent'],
+        actors: ['person', 'agent', 'extension'],
         input: { launch: 'dev' },
         refused: { 'a blank launch': { launch: ' ' } }
     },
     'launch.restart': {
-        actors: ['person', 'agent'],
+        actors: ['person', 'agent', 'extension'],
         input: { launch: 'Dev server' },
         refused: { 'no launch': {} }
     },
     'launch.stop': {
-        actors: ['person', 'agent'],
+        actors: ['person', 'agent', 'extension'],
         input: { launch: 'dev' },
         refused: { 'an empty launch': { launch: '' } }
     },
@@ -266,17 +266,17 @@ export const cases: WriteCases = {
         }
     },
     'routine.pause': {
-        actors: ['person', 'agent'],
+        actors: ['person', 'agent', 'extension'],
         input: { routineId: 'weekly-report' },
         refused: { 'an empty routine': { routineId: '' } }
     },
     'routine.resume': {
-        actors: ['person', 'agent'],
+        actors: ['person', 'agent', 'extension'],
         input: { routineId: 'weekly-report' },
         refused: { 'no routine': {} }
     },
     'routine.run': {
-        actors: ['person', 'agent'],
+        actors: ['person', 'agent', 'extension'],
         input: { routineId: 'weekly-report' },
         refused: { 'an empty routine': { routineId: '' } }
     },

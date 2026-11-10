@@ -7,13 +7,16 @@ import { endpointKey } from '@/state/keys';
 import { defaultProjectStore } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { watchPool } from '@/transport/pool-watch';
 
 function readDocument(endpointId: string, projectId: string): void {
-    void transportFor(endpointId)
-        ?.request('launches.read', { projectId })
-        .then((document) => useLaunches.getState().setDocument(endpointId, projectId, document))
-        .catch(() => undefined);
+    void fireAndForget(
+        'launches.read',
+        transportFor(endpointId)
+            ?.request('launches.read', { projectId })
+            .then((document) => useLaunches.getState().setDocument(endpointId, projectId, document))
+    );
 }
 
 const FAILED_TOAST = 'launch-failed:';
@@ -75,9 +78,10 @@ export function startLaunchWatch(): () => void {
     const offPool = watchPool((link, endpointId) => ({
         onOpen: () => {
             // A failed ask leaves the list as it was; the next open link asks again.
-            link.request('launch.list', {})
-                .then((result) => useLaunches.getState().setList(endpointId, result.launches))
-                .catch(() => undefined);
+            void fireAndForget(
+                'launch.list',
+                link.request('launch.list', {}).then((result) => useLaunches.getState().setList(endpointId, result.launches))
+            );
             const open = projectOnScreen();
             if (open !== null && open.endpointId === endpointId) {
                 readDocument(endpointId, open.projectId);

@@ -1,17 +1,16 @@
 import { Icon, Menu } from '@adecore/ui';
 import { ArrowLeft, ArrowRight, ArrowRightToLine, Columns3, ListX, PanelRight, Pin, PinOff, SquareX, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { closeTabAction, closeTabsAction } from '@/actions/client-actions';
+import { closeTabAction, closeTabsAction } from '@/action-port/person-actions';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';
-import { RowKbd } from '@/shell/RowKbd';
-import { canSplit, cellAt, locateView } from '@/shell/split';
-import { SplitItems } from '@/shell/ViewMenuItems';
+import { canSplit, cellAt, locateView } from '@/layout/split';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { setTabPinned, tabsToClose } from '@/state/tab-close';
 import { useCurrentProjectKey, useViewPins } from '@/state/view-pins';
+import { RowKbd } from '@/surface/RowKbd';
+import { SplitItems } from '@/view-menu/ViewMenuItems';
 
-/* Whether a tab of a host is pinned, for a loose tab in the pool and for a view of the project in this client's pins. */
 function usePinnedOf(): (id: string) => boolean {
     const loose = useFiles((s) => s.tabs);
     const pins = useViewPins((s) => s.pins);

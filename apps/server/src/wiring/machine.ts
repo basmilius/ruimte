@@ -2,10 +2,12 @@ import { AuthStore } from '../auth/auth-store.ts';
 import { Handshake } from '../auth/handshake.ts';
 import { readOrCreateLocalSecret } from '../auth/local-secret.ts';
 import type { ServerConfig } from '../config.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { readOrCreateEndpointIdentity, type EndpointIdentity } from '../endpoint-id.ts';
-import { MachineHome } from '../fs/machine-home.ts';
-import { PeerKey } from '../remote/peer-key.ts';
-import { PendingAdmissions } from '../remote/pending-admissions.ts';
+import { PeerKey } from '../peer/giver/peer-key.ts';
+import { PendingAdmissions } from '../peer/giver/pending-admissions.ts';
+import type { DaemonBundles } from './bundles.ts';
+import type { Later } from './later.ts';
 
 /* Who the machine is and who may reach it. */
 export interface MachineBundle {
@@ -21,10 +23,13 @@ export interface MachineBundle {
     pendingAdmissions: PendingAdmissions;
 }
 
-export async function wireMachine(config: ServerConfig): Promise<MachineBundle> {
+export async function wireMachine(config: ServerConfig, later: Later<Pick<DaemonBundles, 'settingPorts'>>): Promise<MachineBundle> {
     // `--label` and `RUIMTE_LABEL` are the name a machine nobody has named yet answers to; a name
     // typed in a client wins over both, or renaming from another machine would not survive a restart.
-    const [identity, localSecret] = await Promise.all([readOrCreateEndpointIdentity(config.home, config.label), readOrCreateLocalSecret(config.home)]);
+    const [identity, localSecret] = await Promise.all([
+        readOrCreateEndpointIdentity(config.home, config.label, later.settingPorts),
+        readOrCreateLocalSecret(config.home)
+    ]);
     const auth = new AuthStore(config.home);
     const handshake = new Handshake(auth, identity);
     return {

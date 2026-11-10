@@ -6,7 +6,6 @@
 export interface KeepAwakeRequest {
     /* Hold the block on battery as well. Off, the block holds on the power adapter only. */
     onBattery: boolean;
-    /* Keep the display on too, rather than only the system. */
     display: boolean;
 }
 

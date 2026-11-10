@@ -7,14 +7,13 @@ import RuimteTransport
 /// with `session.kill`, so its shell and whatever runs in it end. The agents they opened go with them. A turn only stops
 /// with `chat.cancel`, and the chat stays.
 enum SessionEnding {
-    /// The nodes that go with a view or a node: the item itself, or the nodes of that kind on a canvas.
-    static func sessions(in item: JSONValue, kind: String) -> [String] {
-        if item.text("kind") == kind { return [item.stableID] }
-        return item.list("nodes").filter { $0.text("kind") == kind }.map(\.stableID)
+    static func sessions(in item: ProjectItem, kind: String) -> [String] {
+        if item.kind == kind { return [item.id] }
+        return item.nodes.filter { $0.kind == kind }.map(\.id)
     }
 
-    static func chats(in item: JSONValue) -> [String] { sessions(in: item, kind: "chat") }
-    static func terminals(in item: JSONValue) -> [String] { sessions(in: item, kind: "terminal") }
+    static func chats(in item: ProjectItem) -> [String] { sessions(in: item, kind: "chat") }
+    static func terminals(in item: ProjectItem) -> [String] { sessions(in: item, kind: "terminal") }
 
     /// What a delete says about the sessions going with it, ahead of what it says about the rest; nil without any.
     static func warning(chats: Int, terminals: Int = 0, agents: Int) -> String? {
@@ -37,8 +36,7 @@ enum SessionEnding {
         var warning: String?
     }
 
-    /// The question before a delete that takes sessions along, with the agents they opened counted.
-    @MainActor static func question(for item: JSONValue, client: any MachineRequesting) async -> Question {
+    @MainActor static func question(for item: ProjectItem, client: any MachineRequesting) async -> Question {
         let chats = chats(in: item)
         let terminals = terminals(in: item)
         guard !chats.isEmpty || !terminals.isEmpty else { return Question() }

@@ -17,7 +17,7 @@ import {
 } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 import { filesBetweenCommits, linesAtHead, linesInTree, MAX_TEXT_BYTES, repositoryOf } from './file-versions.ts';
 import { hashLines, sameLines } from './line-hash.ts';
 import { ProvenanceStore } from './provenance-store.ts';
@@ -352,7 +352,6 @@ export class ProvenanceService {
         return base !== null && !sameLines(base, checkpoint);
     }
 
-    /* Whether the file on disk is exactly what the commit holds. */
     private async matchesCommit(top: string, commit: string, file: string): Promise<boolean> {
         const [working, committed] = await Promise.all([readLines(join(top, file)), linesInTree(top, commit, file)]);
         return working !== null && committed !== null && sameLines(working.lines, committed);

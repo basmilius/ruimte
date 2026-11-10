@@ -84,9 +84,9 @@ import UIKit
         _ machine: Machine, _ id: String, name: String, color: String? = nil, scratch: Bool = false,
         connected: Bool = true
     ) -> UnifiedProjectRow {
-        var summary: [String: JSONValue] = ["projectId": .string(id), "name": .string(name)]
-        if let color { summary["color"] = .string(color) }
-        if scratch { summary["scratch"] = .bool(true) }
-        return UnifiedProjectRow(machine: machine, summary: .object(summary), connected: connected)
+        UnifiedProjectRow(
+            machine: machine,
+            summary: ProjectRowWire.summary(id, name: name, scratch: scratch, color: color ?? "").projectSummary,
+            connected: connected)
     }
 }

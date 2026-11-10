@@ -1,29 +1,23 @@
 import { writeMentionDrag } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
 import { ContextMenu, DocumentTab, TabStrip as CoreTabStrip } from '@adecore/ui';
-import type { AgentStatus, ProjectView } from '@ruimte/contracts';
+import { sessionStatus, type AgentStatus, type ProjectView } from '@ruimte/contracts';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { closeTabAction } from '@/actions/client-actions';
+import { closeTabAction } from '@/action-port/person-actions';
 import { WaitingCount } from '@/attention/WaitingCount';
 import { useBrowserDisplayTitle } from '@/browser/title';
-import { PATHS_DRAG_TYPE } from '@/canvas/drop';
-import { StatusDot } from '@/canvas/NodeFrame';
 import { useDatabaseConnectionList } from '@/database/connections';
-import { databaseTabTitle } from '@/database/tab-look';
+import { splitSentence } from '@/files/change-size';
+import { FileMenuItems } from '@/files/FileMenuItems';
+import { LooseGlyph } from '@/files/LooseGlyph';
+import { isSameCell, type CellAt } from '@/layout/split';
+import { basenameOf } from '@/paths/file-path';
 import { ViewGlyph } from '@/project/ViewGlyph';
-import { isLooseView, viewGlyphOf, type LooseCellView } from '@/shell/cell-view';
-import { splitSentence } from '@/shell/change-size';
-import { FileMenuItems } from '@/shell/panels/FileMenuItems';
-import { basenameOf } from '@/shell/panels/files-tree';
-import { LooseGlyph } from '@/shell/panels/LooseGlyph';
-import { useKeyOf } from '@/shell/shortcut-overrides';
-import { isSameCell, type CellAt } from '@/shell/split';
 import { TabMenuItems } from '@/shell/TabMenuItems';
 import { useCellView } from '@/shell/use-cell-view';
-import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
-import { ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useWaitingCount } from '@/state/attention';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import {
     isArtifactTab,
@@ -37,25 +31,29 @@ import {
     type SessionTab
 } from '@/state/files';
 import { useGit } from '@/state/git';
-import { endpointKey, useEndpointId } from '@/state/keys';
-import { sessionStatus, useSessionRow } from '@/state/sessions';
+import { endpointKey } from '@/state/keys';
+import { useSessionRow } from '@/state/sessions';
 import { setTabPinned } from '@/state/tab-close';
 import { isUnsavedDraft, useTextDrafts } from '@/state/text-drafts';
 import { useViewPinned } from '@/state/view-pins';
+import { PATHS_DRAG_TYPE } from '@/surface/canvas/drop';
+import { isLooseView, viewGlyphOf, type LooseCellView } from '@/surface/cell-view';
+import { useKeyOf } from '@/surface/shortcut-overrides';
+import { StatusDot } from '@/surface/StatusDot';
+import { databaseTabTitle } from '@/surface/tab-look';
+import { setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
+import { ViewMenuItems } from '@/view-menu/ViewMenuItems';
 
 interface TabShellProps {
     id: string;
     label: string;
     hint: string;
     glyph: ReactNode;
-    /* Something to say after the name: the lines a diff changed. */
     detail?: ReactNode;
-    /* A file with changes nobody saved, or a table with edits nobody submitted. */
     unsavedLabel?: string;
     pinned?: boolean;
     /* Written beside the view payload for a drop that wants more of the tab, such as a file for a composer. */
     onDragData?: (transfer: DataTransfer) => void;
-    /* A mark that says the view needs the person, which must be seen from a tab in the background. */
     attention?: ReactNode;
     onDoubleClick?: () => void;
     onClose: () => void;
@@ -85,7 +83,6 @@ function TabShell({ id, label, hint, glyph, detail, unsavedLabel, pinned = false
                         closeShortcut={closeKey}
                         onDoubleClick={onDoubleClick}
                         onDragStart={(_, event) => onDragStart(event)}
-                        onDragEnd={() => setDragging(null)}
                     />
                 }
                 onContextMenu={(event) => event.stopPropagation()}
@@ -98,7 +95,6 @@ function TabShell({ id, label, hint, glyph, detail, unsavedLabel, pinned = false
     );
 }
 
-/* A loose tab pins on a double click and closes out of the pool. */
 function looseControls(key: string, pinned: boolean): Pick<TabShellProps, 'pinned' | 'onDoubleClick' | 'onClose'> {
     return { pinned, onDoubleClick: () => useFiles.getState().setPinned(key, !pinned), onClose: () => useFiles.getState().close(key) };
 }
@@ -158,7 +154,6 @@ function FileTabItem({ tab, tabKey, label }: { tab: FileTab; tabKey: string; lab
     );
 }
 
-/* The tab names the table; its tooltip says where that table is, as a file's says its path. */
 function DatabaseTabItem({ tab }: { tab: DatabaseTab }) {
     const { t } = useTranslation('databases');
     const connections = useDatabaseConnectionList();
@@ -213,7 +208,6 @@ function ViewAttention({ id }: { id: string }) {
     return <WaitingCount count={useWaitingCount(id)} />;
 }
 
-/* A view of the project as a tab: its mark and its name, its own menu, and a close that only takes it off the screen. */
 function ProjectTabItem({ view }: { view: ProjectView }) {
     const { t: td } = useTranslation('databases');
     const title = useBrowserDisplayTitle(view.id, view.name ?? '', 'titleSource' in view ? view.titleSource : undefined);
@@ -252,11 +246,6 @@ function StripTab({ id }: { id: string }) {
     return isLooseView(view) ? <LooseTabItem view={view} /> : <ProjectTabItem view={view} />;
 }
 
-/*
- * The views of a tab host as a strip of tabs, in the bar of its cell. A double-click pins a loose tab,
- * a right click offers the menu of what the tab holds, and a pinned tab shows the pin next to its close
- * button. The active tab is marked and kept in sight.
- */
 export function TabStrip({ at, ids, active }: { at: CellAt; ids: readonly string[]; active: string }) {
     const focused = useDocument((s) => s.layout !== null && isSameCell(s.layout.focus, at));
     return (

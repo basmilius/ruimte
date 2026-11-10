@@ -7,13 +7,9 @@ import XCTest
 final class GitConflictTests: XCTestCase {
     private func answer(
         path: String = "a.ts", base: String? = "a\nb\nc\n", ours: String? = "a\nours\nc\n",
-        theirs: String? = "a\ntheirs\nc\n", kind: String = "text", hash: String = "h1"
-    ) -> JSONValue {
-        .object([
-            "path": .string(path), "kind": .string(kind), "base": base.map { .string($0) } ?? .null,
-            "ours": ours.map { .string($0) } ?? .null, "theirs": theirs.map { .string($0) } ?? .null,
-            "hash": .string(hash),
-        ])
+        theirs: String? = "a\ntheirs\nc\n", kind: GitConflictKind = .text, hash: String = "h1"
+    ) -> GitConflictDetail {
+        GitConflictDetail(path: path, kind: kind, base: base, ours: ours, theirs: theirs, hash: hash)
     }
 
     func testAFileStartsWithEveryConflictOpenAndOurSideInPlace() {
@@ -44,8 +40,8 @@ final class GitConflictTests: XCTestCase {
     }
 
     func testAFileWithoutTwoTextSidesIsAChoiceBetweenWholeSides() {
-        XCTAssertTrue(GitConflictFile(answer: answer(ours: nil, kind: "deleted-by-us")).whole)
-        XCTAssertTrue(GitConflictFile(answer: answer(kind: "binary")).whole)
+        XCTAssertTrue(GitConflictFile(answer: answer(ours: nil, kind: .deletedByUs)).whole)
+        XCTAssertTrue(GitConflictFile(answer: answer(kind: .binary)).whole)
         XCTAssertTrue(GitConflictFile(answer: answer(theirs: nil)).whole)
     }
 
@@ -55,13 +51,10 @@ final class GitConflictTests: XCTestCase {
         let usable = GitConflictModel.usable(
             file,
             answers: [
-                .object(["index": .number(1), "fingerprint": .string(print), "lines": .array([.string("merged")])]),
-                .object(["index": .number(1), "fingerprint": .string("00000000"), "lines": .array([.string("stale")])]),
-                .object([
-                    "index": .number(0), "fingerprint": .string(ThreeWayMerge.fingerprint(file.blocks[0])),
-                    "lines": .array([]),
-                ]),
-                .object(["index": .number(9), "fingerprint": .string(print), "lines": .array([])]),
+                GitResolveAiBlock(index: 1, fingerprint: print, lines: ["merged"]),
+                GitResolveAiBlock(index: 1, fingerprint: "00000000", lines: ["stale"]),
+                GitResolveAiBlock(index: 0, fingerprint: ThreeWayMerge.fingerprint(file.blocks[0]), lines: []),
+                GitResolveAiBlock(index: 9, fingerprint: print, lines: []),
             ])
         XCTAssertEqual(usable.map(\.index), [1])
         XCTAssertEqual(usable.first?.lines, ["merged"])
@@ -179,7 +172,7 @@ final class GitConflictTests: XCTestCase {
         XCTAssertEqual(session.ready, ["a.ts"])
         let saved = await session.save(client: machine, paths: ["a.ts"])
         XCTAssertTrue(saved)
-        let resolve = machine.sent.first { $0.type == "git.resolve" }?.payload
+        let resolve = machine.sent.first { $0.type == .gitResolve }?.payload
         XCTAssertEqual(resolve?["hash"], .string("h1"))
         XCTAssertEqual(resolve?["content"], .string("a\ntheirs\nc\n"))
         XCTAssertNil(resolve?["take"])
@@ -194,7 +187,7 @@ final class GitConflictTests: XCTestCase {
         XCTAssertEqual(session.ready, ["a.ts"])
         let saved = await session.save(client: machine, paths: ["a.ts"])
         XCTAssertTrue(saved)
-        let resolve = machine.sent.first { $0.type == "git.resolve" }?.payload
+        let resolve = machine.sent.first { $0.type == .gitResolve }?.payload
         XCTAssertEqual(resolve?["content"], .string("a\nboth\nc\n"))
         XCTAssertEqual(resolve?["hash"], .string("h1"))
     }
@@ -220,7 +213,7 @@ final class GitConflictTests: XCTestCase {
         await session.load(client: machine)
         await session.ask(client: machine, paths: ["a.ts"])
         XCTAssertEqual(session.draft("a.ts").answers[1], GitBlockAnswer(lines: ["merged"], byAgent: true))
-        XCTAssertFalse(machine.sent.contains { $0.type == "git.resolve" })
+        XCTAssertFalse(machine.sent.contains { $0.type == .gitResolve })
         XCTAssertNil(session.agentRun)
     }
 
@@ -234,41 +227,41 @@ final class GitConflictTests: XCTestCase {
         let done = await session.finish(client: machine, action: "continue")
         XCTAssertTrue(done)
         XCTAssertEqual(session.note, "The merge is finished.")
-        XCTAssertEqual(machine.sent.first { $0.type == "git.operation" }?.payload["action"], .string("continue"))
-        XCTAssertEqual(Array(machine.sent.dropFirst(before)).map(\.type), ["git.operation", "git.conflicts"])
+        XCTAssertEqual(machine.sent.first { $0.type == .gitOperation }?.payload["action"], .string("continue"))
+        XCTAssertEqual(Array(machine.sent.dropFirst(before)).map(\.type), [.gitOperation, .gitConflicts])
         XCTAssertEqual(session.operation, "merge")
         XCTAssertEqual(session.entries.map(\.path), ["next.ts"])
     }
 }
 
 @MainActor private final class ConflictMachine: MachineRequesting {
-    var sent: [(type: String, payload: JSONValue)] = []
+    var sent: [(type: WireRequest, payload: JSONValue)] = []
     var files = ["a.ts"]
     var hash = "h1"
     var refuseResolve = false
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
         switch type {
-        case "git.conflicts":
+        case .gitConflicts:
             return .object([
                 "operation": files.isEmpty ? .null : .string("merge"), "ours": .string("main"),
                 "theirs": .string("lexer"),
                 "files": .array(files.map { .object(["path": .string($0), "kind": .string("text")]) }),
             ])
-        case "git.conflict":
+        case .gitConflict:
             return .object([
                 "path": .string("a.ts"), "kind": .string("text"), "base": .string("a\nb\nc\n"),
                 "ours": .string("a\nours\nc\n"), "theirs": .string("a\ntheirs\nc\n"), "hash": .string(hash),
             ])
-        case "git.resolve":
+        case .gitResolve:
             if refuseResolve {
                 throw MachineClientError.server(
                     code: "git-failed", message: "a.ts changed on disk while it was being resolved.")
             }
             files = []
             return .object(["remaining": .number(0)])
-        case "git.resolveAi":
+        case .gitResolveAi:
             let block = MergeBlock(kind: .conflict, base: ["b"], ours: ["ours"], theirs: ["theirs"])
             return .object([
                 "blocks": .array([
@@ -278,7 +271,7 @@ final class GitConflictTests: XCTestCase {
                     ])
                 ])
             ])
-        case "git.operation":
+        case .gitOperation:
             return .object([
                 "actionId": payload["actionId"] ?? .null, "summary": .string("Finished the merge."),
                 "output": .string(""),
@@ -288,5 +281,5 @@ final class GitConflictTests: XCTestCase {
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

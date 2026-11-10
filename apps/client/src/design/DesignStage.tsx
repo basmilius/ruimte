@@ -5,9 +5,8 @@ import { ChevronDown, FileCode2, MessageSquarePlus, MousePointer2, PenLine, Send
 import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
-import { focusCellOfView } from '@/browser/guest-focus';
-import { designCameraKey, useDesignChat } from '@/design/design-chat';
+import { perform } from '@/action-port/perform';
+import { useFolderWatch } from '@/controllers/fs-watch';
 import { editsCss, editsOf, withEdits, withTweakValues, type DesignEdits } from '@/design/design-file';
 import { runtimeAssets } from '@/design/design-inline';
 import { bakePrompt, commentsPrompt, drawPrompt, textEditPrompt, type DesignComment } from '@/design/design-messages';
@@ -39,19 +38,19 @@ import { DesignDrawLayer } from '@/design/DesignDrawLayer';
 import { DesignEditPanel } from '@/design/DesignEditPanel';
 import { DesignPageFrame } from '@/design/DesignPageFrame';
 import { DesignTweaks } from '@/design/DesignTweaks';
-import { NodeNotice } from '@/nodes/NodeNotice';
-import { useFolderWatch } from '@/state/fs-watch';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { designCameraKey, useDesignChat } from '@/state/design-chat';
 import { useToasts } from '@/state/toasts';
 import { CellViewContext } from '@/state/workspace-stores';
-import { useTransport } from '@/transport/context';
+import { focusCellOfView } from '@/surface/guest-focus';
+import { NodeNotice } from '@/surface/nodes/NodeNotice';
 import { DesignScene } from '@/ui/EmptyScenes';
+import { useTransport } from '@/workspace/context';
 
 const MINUTE_MS = 60_000;
 
 const TOOL_ICONS = { view: MousePointer2, comment: MessageSquarePlus, edit: SquareMousePointer, draw: PenLine } as const;
 
-/* The comments waiting to be sent, as the numbered pins the page draws on their elements. */
 function pinsOf(comments: readonly DesignComment[]): { selector: string; number: number }[] {
     return comments.map((comment, index) => ({ selector: comment.element.selector, number: index + 1 }));
 }

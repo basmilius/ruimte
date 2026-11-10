@@ -4,22 +4,21 @@ import { CodedError } from '@adecore/agents';
 import { field } from '@adecore/agents/context';
 import type { DatabaseError, RowsResult, SchemaInfo, StatementResult, TableInfo, TableStructure } from '@adecore/database/protocol';
 import { isWithin } from '@adecore/utils/path';
-import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts';
+import { startDatabaseOf, type DatabaseAgentAccess, type DatabaseConnection } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import { realOrSelf } from '../fs/real-path.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import { realOrSelf } from '../disk/real-path.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import type { DatabaseAccessStore } from './agent-access.ts';
 import type { DatabasePasswords } from './agent-passwords.ts';
 import { inOwnedSession, type DatabaseCalls, type SessionCall } from './owned-session.ts';
 
 /* How long one tool may keep its session; past it the call is cancelled and its session closed. */
-export const AGENT_DATABASE_LIMIT_MS = 120_000;
+const AGENT_DATABASE_LIMIT_MS = 120_000;
 
 /* The longest text or binary value a row prints whole; a longer one prints its start and its length. */
-export const AGENT_CELL_LIMIT = 256;
+const AGENT_CELL_LIMIT = 256;
 
-/* How many rows `execute` prints of a statement that reads. */
-export const EXECUTE_ROW_LIMIT = 100;
+const EXECUTE_ROW_LIMIT = 100;
 
 class DatabaseAgentError extends CodedError {}
 
@@ -65,7 +64,6 @@ interface AgentExecution {
     inTransaction: boolean;
 }
 
-/* What the agents reach a project's databases through, the tools' side of `AgentDatabases`. */
 export type DatabaseAgentHost = Pick<AgentDatabases, 'list' | 'tables' | 'describe' | 'query' | 'execute' | 'tableOf'>;
 
 interface AgentDatabasesOptions {
@@ -89,15 +87,6 @@ function refuse(code: string, message: string, lines: string[] = []): never {
 export function connectionTarget(config: DatabaseConnection['config']): string {
     const { password: _password, readOnly: _readOnly, database: _database, create: _create, ...rest } = config as Record<string, unknown>;
     return JSON.stringify(Object.entries(rest).sort(([a], [b]) => a.localeCompare(b)));
-}
-
-/* The database a connection starts in: `main` for a SQLite file, the configured one of a server, or null for a server that starts in none. */
-export function startDatabaseOf(connection: DatabaseConnection): string | null {
-    if (connection.config.engine === 'sqlite') {
-        return 'main';
-    }
-    const database = (connection.config as MysqlConfig).database;
-    return typeof database === 'string' && database !== '' ? database : null;
 }
 
 function describeTarget(config: DatabaseConnection['config']): string {
@@ -166,7 +155,6 @@ export class AgentDatabases {
         return this.sinks.subscribe(clientId, sink);
     }
 
-    /* What a client of the project reads in its connections dialog. */
     async accessFor(projectId: string, clientId: string): Promise<{ access: Record<string, DatabaseAgentAccess> }> {
         this.requireHolder(projectId, clientId);
         return { access: await this.levels(projectId) };
@@ -198,7 +186,6 @@ export class AgentDatabases {
         return { access: levels };
     }
 
-    /* What agents may do with a connection as it points now. */
     async levelOf(projectId: string, connection: DatabaseConnection): Promise<DatabaseAgentAccess> {
         return this.options.access.levelOf(projectId, connection.id, await this.destinationOf(connection));
     }

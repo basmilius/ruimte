@@ -6,10 +6,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatProvider } from '@adecore/agents/providers';
 import type { ServerFrame } from '@ruimte/contracts';
-import type { ClientConnection, Dispatcher } from '../dispatcher.ts';
+import type { Dispatcher } from '../dispatcher.ts';
 import type { ExtensionHost } from '../extensions/extension-host.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
-import { registerExtensionHandlers, type ExtensionHandlerDeps } from './extensions.ts';
+import type { ClientConnection } from '../wire.ts';
+import { extensionsArea, type ExtensionHandlerDeps } from './extensions.ts';
 
 type Handler = (payload: unknown, client: unknown) => Promise<unknown>;
 
@@ -43,7 +44,7 @@ function handlersFor(script: string): { stream(client: Client, runId?: string): 
         folderOf: () => null
     } as unknown as ExtensionHandlerDeps;
 
-    registerExtensionHandlers(dispatcher, {} as ExtensionHost, deps);
+    extensionsArea({ host: {} as ExtensionHost, ...deps, readChat: async () => '' }).handlers?.(dispatcher);
 
     return {
         stream: (client, runId = 'run-1') => (handlers.get('extension.agentStream') as Handler)({ runId, prompt: 'Hi', projectId: 'project-1' }, client),

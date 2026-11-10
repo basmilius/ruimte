@@ -13,15 +13,15 @@ import type { StoreApi } from 'zustand';
 import { asksFirst } from '@/actions/developer-actions';
 import { asRefusal, refusing } from '@/actions/refusal';
 import { plural } from '@/actions/words';
-import type { ProjectClient } from '@/project/project-client';
-import { sessionNodesOf } from '@/project/project-sessions';
+import type { ProjectClient } from '@/clients/project/project-client';
+import { sessionNodesOf } from '@/clients/project/project-sessions';
 import type { SwitchOutcome } from '@/project/project-switch';
+import { currentEndpointId } from '@/state/current-endpoint';
 import type { DocumentState } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
-import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
-import { windowWorkspace } from '@/state/window';
+import { windowWorkspace } from '@/workspace/window';
 
 export interface ListedProject {
     endpointId: string;
@@ -52,11 +52,9 @@ export interface ProjectMachine {
     chooseIcon(project: ListedProject, icon: ProjectIconChoice | null): Promise<void>;
     uploadIcon(project: ListedProject, mime: string, base64: string): Promise<void>;
     useFolderIcon(project: ListedProject): Promise<void>;
-    /* Moves a chat of Chats into a project, and shows it there. */
     moveChat(endpointId: string, payload: ChatMovePayload): Promise<ChatMoveResult>;
 }
 
-/* Every project of the union this window knows, with the name of its machine. */
 export function listedProjects(): ListedProject[] {
     const current = useProject.getState();
     const endpoints = useEndpoints.getState().endpoints;

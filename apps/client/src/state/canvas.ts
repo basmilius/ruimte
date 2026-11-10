@@ -1,14 +1,12 @@
 import type { ProjectCanvasLine, ProjectCanvasView, ProjectLayout, ProjectViewLocal, NodeAccent, NodeKind, NodeTitleSource } from '@ruimte/contracts';
 import { DEFAULT_TITLES, NODE_SIZE, isAgentKind } from '@ruimte/contracts';
 import { createStore, useStore, type StoreApi } from 'zustand';
-import type { ArrangeRefusal } from '@/canvas/arrange-group';
-import { createCameraSlice, onlyCameraMoved, type CameraSlice } from '@/canvas/camera-slice';
-import { textRect } from '@/canvas/edge-lines';
-import { lineBounds } from '@/canvas/line-geometry';
-import { isMeasured, unionOf, type Point, type Rect } from '@/canvas/math';
-import type { DerivedFrame } from '@/canvas/node-body';
-import type { NodeDirection } from '@/canvas/node-navigation';
-import type { CanvasPatch } from '@/project/merge';
+import { createCameraSlice, onlyCameraMoved, type CameraSlice } from '@/canvas-model/camera-slice';
+import type { DerivedFrame } from '@/canvas-model/derived-frame';
+import { lineBounds } from '@/canvas-model/line-geometry';
+import { isMeasured, unionOf, type Point, type Rect } from '@/canvas-model/math';
+import type { NodeDirection } from '@/canvas-model/node-navigation';
+import type { ArrangeRefusal } from '@/state/arrange-group';
 import { withCameraHistory } from '@/state/canvas-camera-history';
 import { createCanvasContentSlice } from '@/state/canvas-content-slice';
 import { createCanvasEdgesSlice } from '@/state/canvas-edges-slice';
@@ -32,12 +30,14 @@ import { createCanvasNavigationSlice } from '@/state/canvas-navigation-slice';
 import { createCanvasNodesSlice } from '@/state/canvas-nodes-slice';
 import { createCanvasSelectionSlice } from '@/state/canvas-selection-slice';
 import { createCanvasTextsSlice } from '@/state/canvas-texts-slice';
+import { textRect } from '@/state/edge-lines';
 import { editorBindings } from '@/state/editor-bindings';
 import { createEditorRegistry } from '@/state/editors';
 import type { EditorHook } from '@/state/workspace-stores';
+import type { CanvasPatch } from './canvas-model';
 
 export type { AgentStatus, NodeKind } from '@ruimte/contracts';
-export type { CameraRequest, Viewport } from '@/canvas/camera-slice';
+export type { CameraRequest, Viewport } from '@/canvas-model/camera-slice';
 export { setCameraClock } from '@/state/canvas-camera-history';
 export {
     carriedByGroups,
@@ -174,7 +174,6 @@ export interface CanvasState extends CameraSlice {
         at?: Point
     ): string | null;
     updateExtensionNode(id: string, patch: Record<string, unknown>): void;
-    /* Wraps the selected nodes in a group; answers null when nothing is selected. */
     groupSelection(): string | null;
     /* Tidies the members that stand directly in a group into a grid, as one undo step; the ids of what moved, or why not. */
     arrangeGroup(id: string): { moved: string[] } | { refused: ArrangeRefusal };
@@ -228,7 +227,6 @@ export interface CanvasState extends CameraSlice {
 
 export { DEFAULT_TITLES, NODE_SIZE, isAgentKind };
 
-/* One canvas editor, for one view on screen. */
 export function createCanvasStore(): StoreApi<CanvasState> {
     return createStore<CanvasState>((set, get) => {
         const slice = createCameraSlice<CanvasState>(set, get, {
@@ -297,7 +295,6 @@ export function createCanvasStore(): StoreApi<CanvasState> {
 /* The blank canvas of the window: what a view that is not a canvas reads, and what a unit test reads. */
 export const defaultCanvasStore = createCanvasStore();
 
-/* The canvas editors of the window; its blank editor is the store this module made. */
 export const defaultCanvases = createEditorRegistry(createCanvasStore, defaultCanvasStore);
 
 /*
@@ -408,7 +405,6 @@ export function canvasSettled(viewId: string): Promise<boolean> {
     });
 }
 
-/* Every canvas on screen, which is what a watcher about the whole project walks over. */
 export function liveCanvases(): [string, CanvasState][] {
     return defaultCanvases.live().map(([viewId, store]) => [viewId, store.getState()]);
 }

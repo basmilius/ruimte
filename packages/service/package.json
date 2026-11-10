@@ -4,16 +4,21 @@
     "version": "0.0.0",
     "type": "module",
     "exports": {
-        "./host": "./src/host.ts"
+        "./health": "./src/health.ts",
+        "./home": "./src/home.ts",
+        "./host": "./src/host.ts",
+        "./runtime": "./src/runtime.ts"
     },
     "scripts": {
         "typecheck": "bun check --no-script"
     },
     "devDependencies": {
+        "@ruimte/pulsar": "workspace:*",
         "@types/bun": "^1.4.4",
         "typescript": "^7.0.2"
     },
     "dependencies": {
-        "@adecore/service": "catalog:"
+        "@adecore/service": "catalog:",
+        "@ruimte/contracts": "workspace:*"
     }
 }

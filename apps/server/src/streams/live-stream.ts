@@ -1,4 +1,5 @@
 import type { LiveStreamFormat, LiveStreamFrame } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 
 export interface LiveFrameSource {
     readonly format?: LiveStreamFormat;
@@ -30,7 +31,7 @@ export class LiveStreamHub {
             }
             this.entries.delete(id);
             entry.viewers.clear();
-            void this.reconcile(entry).catch(() => undefined);
+            void bestEffort('reconcile', this.reconcile(entry));
         };
     }
 
@@ -72,7 +73,7 @@ export class LiveStreamHub {
             }
             subscribed = false;
             entry.viewers.delete(viewer);
-            void this.reconcile(entry).catch(() => undefined);
+            void bestEffort('reconcile', this.reconcile(entry));
         };
     }
 

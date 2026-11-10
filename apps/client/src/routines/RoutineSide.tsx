@@ -7,9 +7,9 @@ import { OutputProjectGlyph } from '@/output/look';
 import { awaitingApproval, runsWaiting } from '@/routines/agenda';
 import { useRoutineApproval } from '@/routines/routine-approval';
 import { useRoutineWhat } from '@/routines/routine-what';
-import { showRoutine } from '@/routines/stage';
 import { scheduleWords, weekdayClock } from '@/routines/words';
 import { endpointKey } from '@/state/keys';
+import { showRoutine } from '@/state/routines-stage';
 
 /*
  * The right column of the week, only while something waits on this machine, in any project: routines for

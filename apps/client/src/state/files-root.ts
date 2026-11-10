@@ -16,7 +16,7 @@ export const useFilesRoot = create<FilesRootStore>((set, get) => ({
     }
 }));
 
-export interface FilesRoot {
+interface FilesRoot {
     /* The folder the tree lists. */
     root: string;
     /* The worktree that folder is, or null for the project folder. */

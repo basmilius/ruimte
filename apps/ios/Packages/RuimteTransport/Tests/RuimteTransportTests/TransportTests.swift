@@ -230,7 +230,7 @@ final class BrokerAndLifecycleTests: XCTestCase {
                     ])))
         }
         let result = try await client.request(
-            "chat.send", payload: .object(["chatId": .string("chat"), "text": .string("Hello")]))
+            .chatSend, payload: .object(["chatId": .string("chat"), "text": .string("Hello")]))
         XCTAssertEqual(result["queued"], .bool(false))
         XCTAssertEqual(sends, 1)
         XCTAssertEqual(links.all.count, 1)

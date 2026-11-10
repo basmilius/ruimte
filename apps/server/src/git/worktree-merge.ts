@@ -1,6 +1,5 @@
-import type { GitActionPhase, WorktreeMergePayload, WorktreeMergeResult } from '@ruimte/contracts';
+import { PROJECT_DIR, type GitActionPhase, type WorktreeMergePayload, type WorktreeMergeResult } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
-import { PROJECT_DIR } from '../projects/project-files.ts';
 import { countUsage } from '../stats/usage-stats.ts';
 import { Job, type ProgressSink } from './actions.ts';
 import { abortOperation, conflictedFiles, dropSquashMessage, existingGitPaths, hasStaged, operationOf, squashWaits } from './conflict.ts';
@@ -8,10 +7,8 @@ import { GitError, git, readGit, runGit, streamGit, verifyRev } from './run.ts';
 import { resolveBase } from './status.ts';
 import type { Worktrees } from './worktrees.ts';
 
-/* One agent whose folder is inside a worktree. */
 export interface WorktreeAgent {
     nodeId: string;
-    /* In a turn right now. */
     working: boolean;
     /* A CLI or shell is running for it, in a turn or not. */
     live: boolean;
@@ -54,6 +51,9 @@ interface MergeLimits {
 
 // A step that runs this long says so, beside the cancel; nothing ends it without a person.
 const WAIT_NOTICE_MS = 20_000;
+
+/* How git words a merge it refuses over a changed file of the person's; the one place its text is read, so the client branches on a code. */
+const WOULD_OVERWRITE = /would be overwritten by merge|commit your changes or stash them/i;
 
 export const STILL_WAITING = 'Still waiting on git. A hook or a prompt may be holding it up; cancel to stop it.';
 
@@ -241,7 +241,10 @@ export class WorktreeMerge {
                 const moved = (await git(['rev-parse', 'HEAD'], target.path))?.trim() !== head;
                 if (conflicts.length === 0 && !waiting && !moved) {
                     // Refused before touching anything, such as over a changed file of the person's the merge would overwrite.
-                    throw new GitError('git-failed', merged.text || `Merging ${branch} into ${into} failed.`);
+                    throw new GitError(
+                        WOULD_OVERWRITE.test(merged.text) ? 'merge-would-overwrite' : 'git-failed',
+                        merged.text || `Merging ${branch} into ${into} failed.`
+                    );
                 }
                 if (limits.abortOnConflict === true) {
                     await this.abort(target.path).catch((e: unknown) => console.warn(`Taking back the merge in ${target.path} failed:`, errorText(e)));

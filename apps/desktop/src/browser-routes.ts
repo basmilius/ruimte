@@ -1,6 +1,6 @@
 import type { BrowserRouteBinding, BrowserRouteBlocked } from '@ruimte/desktop-bridge';
 import { browserDestinationAllowed, parseBrowserRoute } from './browser-route-policy';
-import { electron } from './main/electron';
+import { electron } from './electron';
 import type { PortTunnels } from './port-tunnel/tunnel-session';
 import { allowGuestPermission, BROWSER_PARTITION, hardenGuestPreferences } from './web-guards';
 

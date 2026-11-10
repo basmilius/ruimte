@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { CodedError } from '@adecore/agents';
 import type { TunnelOrigin, TunnelRow } from '@ruimte/contracts';
 
 const LABEL = '[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?';
@@ -6,17 +7,10 @@ const HOSTNAME = new RegExp(`^${LABEL}(\\.${LABEL})+$`);
 const MACHINE_NAME_MAX = 40;
 const MACHINE_SUFFIX_LENGTH = 4;
 
-export class TunnelConfigError extends Error {
-    readonly code: string;
-
-    constructor(code: string, message: string) {
-        super(message);
-        this.code = code;
-    }
-}
+export class TunnelConfigError extends CodedError {}
 
 /* A hostname as Cloudflare takes it: lowercase labels, at least two, no wildcard and no port. Throws a `TunnelConfigError` otherwise. */
-export function normalizedHostname(raw: string): string {
+function normalizedHostname(raw: string): string {
     const hostname = raw.trim().toLowerCase().replace(/\.$/, '');
 
     if (hostname.length > 253 || !HOSTNAME.test(hostname)) {
@@ -154,7 +148,7 @@ export function normalizedOrigin(origin: TunnelOrigin | undefined): TunnelOrigin
     return Object.keys(kept).length === 0 ? undefined : kept;
 }
 
-export interface IngressInput {
+interface IngressInput {
     readonly rows: readonly TunnelRow[];
     /* Where the external listener is; the MCP row has no ingress without one. */
     readonly listenerPort: number | null;

@@ -8,9 +8,8 @@ import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { browserStorage } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
-import { useConnection } from '@/transport/context';
+import { useConnection } from '@/workspace/context';
 
-/* The news of a database view, such as an export that finished, among the app's other toasts. */
 function showNotice(notice: DatabaseNotice): void {
     useToasts.getState().show({
         kind: notice.tone,

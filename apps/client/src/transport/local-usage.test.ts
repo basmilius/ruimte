@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+import type { Transport, TransportStatus } from '../transport-api/transport';
 import { linkUsage, localUsage } from './local-usage';
-import type { Transport, TransportStatus } from './transport';
 
 function fakeLink(status: TransportStatus, features: string[]) {
     const asked: { type: string; payload: unknown }[] = [];

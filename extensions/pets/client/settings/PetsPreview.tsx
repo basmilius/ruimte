@@ -16,7 +16,6 @@ const MOOD_MS = 3200;
 /* The words of a mood, from the states a figure of your own has a strip for. */
 const MOOD_STATES: Partial<Record<PetMood, PetPose>> = { waiting: 'wait', working: 'work', idle: 'sleep', stopped: 'stopped' };
 
-/* Two nodes of a canvas, a Claude chat and a Codex terminal, each with the pet it would have. */
 const SLOTS = [
     { agent: 'claude', left: '8%' },
     { agent: 'codex', left: '56%' }

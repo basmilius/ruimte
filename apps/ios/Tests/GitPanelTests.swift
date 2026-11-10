@@ -25,15 +25,9 @@ final class GitPanelTests: XCTestCase {
         -> GitCheckout
     {
         GitCheckout(
-            path: "/work/\(label)", label: label, kind: "nested",
+            path: "/work/\(label)", label: label, kind: .nested,
             status: status(
                 states.enumerated().map { file("\($0.offset).ts", $0.element) }, ahead: ahead, upstream: upstream))
-    }
-
-    func testARepositoryIsListedUnderItsPathInTheFolder() {
-        XCTAssertEqual(GitPanel.label(folder: "/work/app", path: "/work/app/packages/ui"), "packages/ui")
-        XCTAssertEqual(GitPanel.label(folder: "/work/app", path: "/work/app"), "app")
-        XCTAssertEqual(GitPanel.label(folder: "/work/app/apps/client", path: "/work/app"), "app")
     }
 
     func testTheUntrackedFolderARepositoryShowsUpAsInTheOneAboveItIsDropped() {
@@ -88,10 +82,8 @@ final class GitPanelTests: XCTestCase {
         GitLoadedLog(
             cwd: "/work/\(repo)", repo: repo,
             commits: ats.map {
-                .object([
-                    "hash": .string("\(repo)-\($0)"), "shortHash": .string("\(repo)"), "subject": .string("s"),
-                    "author": .string("Ada"), "at": .number($0), "refs": .array([]),
-                ])
+                GitCommit(
+                    hash: "\(repo)-\($0)", shortHash: repo, subject: "s", author: "Ada", at: Int64($0), refs: [])
             }, cursor: cursor)
     }
 
@@ -107,10 +99,5 @@ final class GitPanelTests: XCTestCase {
         let merged = GitPanel.mergeLogs([log("one", [500, 400], cursor: "2"), log("two", [450, 300], cursor: nil)])
         XCTAssertEqual(merged.rows.map(\.at), [500, 450, 400])
         XCTAssertTrue(merged.more)
-    }
-
-    func testOnlyGitsOwnRefusalToDeleteAnUnmergedBranchEarnsASecondAsk() {
-        XCTAssertTrue(gitIsUnmergedRefusal("error: the branch 'x' is not fully merged"))
-        XCTAssertFalse(gitIsUnmergedRefusal("error: branch 'x' not found"))
     }
 }

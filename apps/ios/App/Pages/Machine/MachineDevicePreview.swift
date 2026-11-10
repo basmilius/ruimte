@@ -10,7 +10,6 @@ import UIKit
 @MainActor @Observable
 final class MachineDevicePreview {
     private(set) var image: UIImage?
-    /// Why there is no picture, once the machine said so.
     private(set) var unavailable: String?
     @ObservationIgnored private let client: any MachineRequesting
     @ObservationIgnored private let device: MachineDevice
@@ -40,8 +39,10 @@ final class MachineDevicePreview {
         lastAccepted = nil
         let deviceID = device.deviceID
         let backendID = device.backendID
-        unsubscribe = client.subscribe(.deviceFrame) { [weak self] frame in
-            guard frame.text("deviceId") == deviceID, frame.text("backendId") == backendID else { return }
+        unsubscribe = client.subscribe(.deviceFrame) { [weak self] payload in
+            guard let frame = try? payload.decoded(as: DeviceFrameEvent.self), frame.deviceId == deviceID,
+                frame.backendId == backendID
+            else { return }
             self?.draw(frame)
         }
         do {
@@ -51,7 +52,7 @@ final class MachineDevicePreview {
                     "formats", .array([.string("jpeg")])))
             opened = true
         } catch {
-            if case .server(let code, _) = error as? MachineClientError, code == "device-format-unsupported" {
+            if error.machineCode == .deviceFormatUnsupported {
                 unavailable = String(localized: "Open it as a view to see its screen.")
             } else {
                 unavailable = error.localizedDescription
@@ -70,12 +71,12 @@ final class MachineDevicePreview {
         Task { _ = try? await client.request(.deviceDetach, payload: target) }
     }
 
-    private func draw(_ frame: JSONValue) {
-        guard unsubscribe != nil, frame.text("format", fallback: "jpeg") == "jpeg" else { return }
+    private func draw(_ frame: DeviceFrameEvent) {
+        guard unsubscribe != nil, (frame.format ?? .jpeg) == .jpeg else { return }
         let instant = now()
         guard lastAccepted.map({ instant - $0 >= Self.frameGap }) ?? true else { return }
         lastAccepted = instant
-        frames.submit(frame.text("data"))
+        frames.submit(frame.data)
     }
 }
 

@@ -1,10 +1,11 @@
 import { resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import {
-    absoluteOf,
-    isPathBelow,
-    relativeTo,
+    bindingDatabaseOf,
+    choiceFor,
+    consoleFolderOf,
     resolveStoredPath,
+    startDatabaseOf,
     storedPathOf,
     type DatabaseAgentAccess,
     type DatabaseConnection,
@@ -18,80 +19,14 @@ import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import type { FileChange } from '../language/file-watch.ts';
 import type { ProjectSqlSettings } from '../language/profiles.ts';
-import { CONSOLES_DIR, PRIVATE_DIR, PROJECT_DIR } from '../projects/project-files.ts';
+import type { SnapshotFacts, SqlFileContext } from '../language/sql-file-context.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
-import type { SessionSink } from '../sessions/manager.ts';
-import { startDatabaseOf } from './agent-databases.ts';
-import type { SchemaSnapshots, SnapshotFacts, SnapshotTarget } from './schema-snapshots.ts';
+import type { SessionSink } from '../wire.ts';
+import type { SchemaSnapshots, SnapshotTarget } from './schema-snapshots.ts';
 
 type SqlAnalysisErrorCode = 'project-not-found' | 'unknown-connection' | 'bad-path' | 'snapshot-failed';
 
 class SqlAnalysisError extends CodedError<SqlAnalysisErrorCode> {}
-
-function consolesFolderOf(folder: string): string {
-    return absoluteOf(folder, `${PROJECT_DIR}/${PRIVATE_DIR}/${CONSOLES_DIR}`);
-}
-
-/* Where a project keeps a person's consoles, the folder of each connection under it; the same as the client's `consoleFolderOf`. */
-export function consoleFolderOf(folder: string, connectionId: string): string {
-    return absoluteOf(consolesFolderOf(folder), encodeURIComponent(connectionId));
-}
-
-/* The connection a console file belongs to by the folder it is in, or null for any other file. */
-export function consoleConnectionOf(folder: string, path: string): string | null {
-    const root = consolesFolderOf(folder);
-    if (!isPathBelow(root, path) || !path.toLowerCase().endsWith('.sql')) {
-        return null;
-    }
-    const [segment, name, ...deeper] = relativeTo(root, path).split('/');
-    if (segment === undefined || segment === '' || name === undefined || name === '' || deeper.length > 0) {
-        return null;
-    }
-    try {
-        return decodeURIComponent(segment);
-    } catch {
-        return null;
-    }
-}
-
-/* What the SQL of one file is read against, and why: its own choice, the folder of a console, or the project's default. */
-export type SqlChoice =
-    | { source: 'file' | 'console' | 'default'; connection: DatabaseConnection; database: string | null }
-    | { source: 'none' }
-    // A file a person set to no connection.
-    | { source: 'unbound' };
-
-/* The database a choice reads: the one it names, else the one its connection starts in. */
-function databaseOf(binding: SqlBinding, connection: DatabaseConnection): string | null {
-    return binding.database ?? startDatabaseOf(connection);
-}
-
-/* What a file's SQL is read against. `path` is absolute. */
-export function choiceFor(folder: string, sql: ProjectSql | undefined, connections: readonly DatabaseConnection[], path: string): SqlChoice {
-    const byId = (id: string): DatabaseConnection | undefined => connections.find((connection) => connection.id === id);
-    const own = sql?.files?.[storedPathOf(folder, path)];
-    const console = consoleConnectionOf(folder, path);
-    if (console !== null) {
-        const connection = byId(console);
-        return connection === undefined
-            ? { source: 'none' }
-            : { source: 'console', connection, database: own?.connectionId === console ? databaseOf(own, connection) : startDatabaseOf(connection) };
-    }
-    if (own !== undefined) {
-        if (own.connectionId === null) {
-            return { source: 'unbound' };
-        }
-        const connection = byId(own.connectionId);
-        if (connection !== undefined) {
-            return { source: 'file', connection, database: databaseOf(own, connection) };
-        }
-    }
-    const fallback = sql?.default;
-    const connection = fallback?.connectionId == null ? undefined : byId(fallback.connectionId);
-    return fallback === undefined || connection === undefined
-        ? { source: 'none' }
-        : { source: 'default', connection, database: databaseOf(fallback, connection) };
-}
 
 /* The targets the person's choices read, each once: the default and every file that names a connection. */
 export function boundTargets(sql: ProjectSql | undefined, connections: readonly DatabaseConnection[]): SnapshotTarget[] {
@@ -99,7 +34,7 @@ export function boundTargets(sql: ProjectSql | undefined, connections: readonly 
     for (const binding of [...(sql?.default ? [sql.default] : []), ...Object.values(sql?.files ?? {})]) {
         const connection = connections.find((candidate) => candidate.id === binding.connectionId);
         if (connection !== undefined) {
-            const target = { connectionId: connection.id, database: databaseOf(binding, connection) };
+            const target = { connectionId: connection.id, database: bindingDatabaseOf(binding, connection) };
             targets.set(JSON.stringify(target), target);
         }
     }
@@ -143,7 +78,7 @@ export function sqlSettingsOf(input: SqlSettingsInput): ProjectSqlSettings {
     const byId = (id: string | null): DatabaseConnection | undefined => connections.find((connection) => connection.id === id);
     const settingsFor = (binding: SqlBinding): Record<string, unknown> | null => {
         const connection = byId(binding.connectionId);
-        return connection === undefined ? null : choiceSettings(connection, snapshotOf(connection.id, databaseOf(binding, connection)));
+        return connection === undefined ? null : choiceSettings(connection, snapshotOf(connection.id, bindingDatabaseOf(binding, connection)));
     };
     const top = sql?.default === undefined ? null : settingsFor(sql.default);
     const overrides: Record<string, unknown>[] = connections.map((connection) => ({
@@ -169,15 +104,6 @@ export function sqlSettingsOf(input: SqlSettingsInput): ProjectSqlSettings {
     return { sql: settings, php: settings, unbound };
 }
 
-/* What the tools tell an agent about the SQL of a file. */
-export interface SqlFileContext {
-    choice: SqlChoice;
-    /* The snapshot the file is read against, when one was taken. */
-    snapshot: SnapshotFacts | null;
-    /* What agents may do with the connection; `read` for a file read against none. */
-    access: DatabaseAgentAccess;
-}
-
 interface SqlAnalysisOptions {
     projects: {
         folderOf(projectId: string): string | null;
@@ -188,15 +114,12 @@ interface SqlAnalysisOptions {
     connections: { connectionsOf(projectId: string): Promise<DatabaseConnection[]> };
     snapshots: SchemaSnapshots;
     access: { levelOf(projectId: string, connection: DatabaseConnection): Promise<DatabaseAgentAccess> };
-    /* The language servers, which read the settings this makes. */
     listeners: SqlListeners;
     /* Where a snapshot taken in the background that failed is told; the console by default. */
     warn?: (line: string) => void;
 }
 
-/* What the language servers have to hear of the project's SQL. */
 interface SqlListeners {
-    /* The settings of the project changed. */
     sqlChanged(projectId: string): Promise<void>;
     /* A snapshot file was written; a server that watches it reads it again. */
     outsideFilesChanged(changes: readonly FileChange[]): Promise<void>;
@@ -310,7 +233,6 @@ export class SqlAnalysis {
         await this.changed(projectId);
     }
 
-    /* The settings of the project's servers as the choices, the connections and the snapshots stand. */
     async settingsOf(projectId: string): Promise<ProjectSqlSettings | null> {
         const folder = this.options.projects.folderOf(projectId);
         if (folder === null) {

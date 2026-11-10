@@ -6,6 +6,7 @@ import {
     fileUriToPath,
     LspError,
     LspSession,
+    lspLanguageId,
     pathToFileUri,
     StaleResultError,
     vueServerOrder,
@@ -50,7 +51,6 @@ import {
     componentServes,
     initializationOptionsOf,
     KIND_PROFILES,
-    lspLanguageId,
     pinnedNativeTypescript,
     pinnedTypescriptLib,
     resolveNativeTypescript,
@@ -64,7 +64,6 @@ import type { LanguageChild, LanguageExit, LanguageRuntime, SpawnLanguageProcess
 
 const SHIPPED_COMPONENTS = new Set(Object.values(KIND_PROFILES).flatMap((kind) => kind.components.map((component) => component.name)));
 
-// How long a stopped process may take to go before it is killed.
 export const STOP_GRACE_MS = 3_000;
 
 // How long a server beside the first has to answer a request that merges the answers of several, after which it is left out.
@@ -149,7 +148,6 @@ export interface LanguageServerOptions {
     /* The time in milliseconds, which only the decision to start a crashed process again reads. */
     now?: () => number;
     exists(path: string): Promise<boolean>;
-    /* The text of a file, or null when it cannot be read. */
     readText?: (path: string) => Promise<string | null>;
     realPath?: (path: string) => Promise<string>;
     /* False for a project folder made from another machine's work, whose own TypeScript is never run; the pinned one is. */
@@ -183,7 +181,7 @@ interface WorkspacePull {
 }
 
 /* The problems a process holds for a file, as a whole-project pull left them. `fresh` is false for a file the process found unchanged. */
-export interface WorkspaceProblemsReport {
+interface WorkspaceProblemsReport {
     server: string;
     uri: string;
     diagnostics: Diagnostic[];
@@ -320,7 +318,6 @@ export class LanguageServer {
         return this.phase;
     }
 
-    /* What a failure of the server calls it. */
     private get label(): string {
         return this.options.profile.components[0]?.title ?? this.kind;
     }
@@ -356,7 +353,6 @@ export class LanguageServer {
         this.notify();
     }
 
-    /* The sidecars of the kind and how they are doing, for a status. */
     get sidecars(): Array<{ name: string; title: string; state: 'idle' | 'starting' | 'ready' | 'crashed'; message?: string }> {
         return this.options.profile.components
             .filter((profile) => profile.sidecar === true)
@@ -409,7 +405,6 @@ export class LanguageServer {
         );
     }
 
-    /* Asks every process that is asked for its diagnostics for those of the document now, and settles once each answered. */
     async pullNow(document: SharedDocument): Promise<void> {
         await Promise.all(this.components.map((component) => this.pull(component, document)));
     }
@@ -424,12 +419,10 @@ export class LanguageServer {
             .map((component) => component.profile.name);
     }
 
-    /* Whether a process of this server reads the project's settings (`ComponentProfile.settings`). */
     readsSettings(): boolean {
         return this.options.profile.components.some((component) => component.settings !== undefined);
     }
 
-    /* Whether this server serves a document of the language at all. */
     serves(languageId: string): boolean {
         const id = lspLanguageId(languageId);
         return this.options.profile.components.some((component) => component.languages.includes(id));
@@ -491,7 +484,6 @@ export class LanguageServer {
         await this.start();
     }
 
-    /* Forwards a change of the shared text to every process that has the document open. */
     async change(document: SharedDocument, changes: readonly ContentChange[]): Promise<void> {
         await Promise.all(
             this.components.map(async (component) => {
@@ -658,7 +650,6 @@ export class LanguageServer {
         return { files: [...touched.values()].filter((kind) => kind === 'full').length, touched };
     }
 
-    /* Whether a process of this server could answer `method` for the document right now. */
     canAnswer(document: SharedDocument, method: string, params?: object, hint?: string): boolean {
         if (this.phase !== 'ready') {
             return false;
@@ -670,7 +661,6 @@ export class LanguageServer {
         return answers || (hint === undefined && this.sidecarFor(document, method, params ?? {}) !== undefined);
     }
 
-    /* Whether one of the processes of this server goes by this name. */
     hasComponent(name: string): boolean {
         return this.options.profile.components.some((component) => component.name === name);
     }
@@ -1372,7 +1362,6 @@ export class LanguageServer {
         this.notify();
     }
 
-    /* Lets go of the processes of a run that ended, and of what they reported. */
     private teardown(): void {
         const components = this.components;
         this.components = [];

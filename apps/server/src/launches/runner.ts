@@ -4,12 +4,11 @@ import { KeyedSerializer } from '@adecore/utils/async';
 import type { LaunchConfigKind, LaunchHeld, LaunchStartResult, LaunchState, LaunchStatus } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
-import type { SessionSink } from '../sessions/manager.ts';
 import { countUsage } from '../stats/usage-stats.ts';
 import { realTimers } from '../timers.ts';
+import type { SessionSink } from '../wire.ts';
 import { LaunchError, type LaunchStore, type ResolvedLaunch } from './store.ts';
 
-// How long a stop waits after the interrupt before it sends SIGTERM.
 export const STOP_GRACE_MS = 5_000;
 // How often a service that has not answered yet is asked again.
 export const PROBE_INTERVAL_MS = 500;
@@ -34,7 +33,6 @@ interface LaunchClock {
 
 const realClock: LaunchClock = { now: () => Date.now(), ...realTimers };
 
-/* Whether something takes a connection on this port. */
 type LaunchProbe = (host: string, port: number) => Promise<boolean>;
 
 // A server that binds 0.0.0.0 or only one of the two loopbacks answers on one of these.

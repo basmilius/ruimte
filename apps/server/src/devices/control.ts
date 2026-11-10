@@ -1,10 +1,11 @@
 import type { DeviceAgentStep, DeviceControlMode, DeviceInfo, DeviceOperated } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import { PERSON_HOLD_CODES, type PersonHold } from '../person-hold.ts';
 import { realTimers, type Timers } from '../timers.ts';
+import type { SessionSink } from '../wire.ts';
 import { AGENT_HOLD_IDLE_MS, deviceKey, type AgentStep, type DeviceGate } from './agent-driver.ts';
 
-type Mode = 'running' | 'paused' | 'takenOver';
+type Mode = 'running' | PersonHold;
 
 type Target = Pick<DeviceInfo, 'backendId' | 'deviceId'>;
 
@@ -20,17 +21,15 @@ interface Entry {
 }
 
 /* The person holds the device. The words steer the agent to wait or to stop, never to find another way in. */
-function heldWords(mode: Exclude<Mode, 'running'>, name: string): string {
+function heldWords(mode: PersonHold, name: string): string {
     return mode === 'paused'
         ? `The person paused you on ${name}. Wait a while and call again, which works once they resume, and take a shot first: they may have changed the screen. Or stop here and tell them what is left`
         : `The person took over ${name} and operates it by hand. Wait a while and call again, which works once they hand it back, and take a shot first: they may have changed the screen. Or stop here and tell them what is left`;
 }
 
-const HELD_CODES: Record<Exclude<Mode, 'running'>, string> = { paused: 'paused', takenOver: 'taken-over' };
-
-function held(mode: Exclude<Mode, 'running'>, device: DeviceInfo): { code: string; message: string } {
+function held(mode: PersonHold, device: DeviceInfo): { code: string; message: string } {
     return {
-        code: HELD_CODES[mode],
+        code: PERSON_HOLD_CODES[mode],
         message: heldWords(mode, device.name)
     };
 }

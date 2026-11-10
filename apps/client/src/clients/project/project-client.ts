@@ -1,0 +1,879 @@
+import { messageOf } from '@adecore/ui';
+import {
+    PROJECT_VERSION,
+    type ProjectContent,
+    type ProjectDocument,
+    type ProjectAccounts,
+    type ProjectFlags,
+    type ProjectIconChoice,
+    type ProjectLocal,
+    type ProjectSummary,
+    type ProjectView
+} from '@ruimte/contracts';
+import i18next from 'i18next';
+import type { StoreApi } from 'zustand';
+import type { LooseStrip } from '@/layout/legacy-files-cell';
+import { openableViewIds } from '@/layout/split';
+import type { CanvasPatch } from '@/state/canvas-model';
+import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+import { stripOf } from '@/state/panel-state';
+import { browserStorage } from '@/state/stored-json';
+import { useToasts } from '@/state/toasts';
+import { fireAndForget, orNull } from '@/transport-api/transport';
+import { forgetClosedProject, rememberClosedProject } from '../../state/closed-projects';
+import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../../transport-api/transport';
+import { overlayLocal, readClientLocal, withoutClientBrowserState, writeClientLocal } from './client-local';
+import { readDeletedViews, writeDeletedViews } from './deleted-views';
+import { restoreDesignFolders } from './design-folder-refusal';
+import { projectIconAppearance } from './icon-appearance';
+import { rememberProject, type LastProjectStorage } from './last-project';
+import { mergeProject } from './merge';
+import type { PanelsPort } from './panels-port';
+import { dropProjectDraft, readProjectDraft, writeProjectDraft } from './project-draft';
+import { withoutSessionLayout } from './session-local';
+
+type SaveOutcome = 'saved' | 'offline' | 'failed';
+
+/* The slice of a canvas editor the client reads; the real store has more. */
+interface CanvasSlice {
+    nodes: Record<string, unknown>;
+    texts: Record<string, unknown>;
+    lines?: Record<string, unknown>;
+    edges: unknown[];
+    order: string[];
+    camera: { x: number; y: number; zoom: number };
+    bodyFocusId: string | null;
+    loading: boolean;
+    merging: boolean;
+}
+
+/*
+ * Every canvas on screen, not the one that has the focus. With a grid of cells a save has to follow
+ * an edit in any of them. The registry names the view an edit happened in, which the client does not
+ * need to know, because what it saves is the whole document either way.
+ */
+interface CanvasesAccess {
+    subscribe(listener: (viewId: string, state: CanvasSlice, previous: CanvasSlice) => void): () => void;
+}
+
+/* The slice of the document store the client reads and writes; the real store has more. */
+interface DocumentAccess {
+    getState(): {
+        views: ProjectView[];
+        shared: string[];
+        flags: ProjectFlags;
+        trashed: ReadonlyArray<{ view: ProjectView }>;
+        takeAccounts(accounts: ProjectAccounts): void;
+        activeViewId: string | null;
+        layout: unknown;
+        edits: number;
+        loading: boolean;
+        load(document: ProjectDocument | null, local: ProjectLocal | null, loose?: LooseStrip): void;
+        reload(document: ProjectDocument, local: ProjectLocal | null): void;
+        applyMerge(views: ProjectView[], canvases: Record<string, CanvasPatch>, shared: string[], flags: ProjectFlags): void;
+        heldNodeIds(): Set<string>;
+        exportViews(): ProjectView[];
+        fileViews(): ProjectView[];
+        deleteView(id: string): void;
+        purgeTrash(): void;
+        moveNodeToView(nodeId: string, viewId: string): void;
+        openAsView(nodeId: string): string | null;
+        putOnCanvas(viewId: string, canvasViewId: string): boolean;
+        setShared(id: string, shared: boolean): void;
+        exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views' | 'layout' | 'emptyLayout'>;
+    };
+    subscribe: StoreApi<DocumentAccess extends { getState(): infer S } ? S : never>['subscribe'];
+}
+
+export interface ProjectSink {
+    /* What this endpoint lists; the store folds it into the union with the other machines'. */
+    setProjects(projects: ProjectSummary[]): void;
+    /* One row of this endpoint's list, without touching what the other machines listed. */
+    patchProject(summary: ProjectSummary): void;
+    setCurrent(current: ProjectSummary | null, rev: number): void;
+    setRev(rev: number): void;
+    setChosenIcon(chosenIcon: ProjectIconChoice | null): void;
+    /* Replaces what is shown for the current project without touching the save state. */
+    setSummary(summary: ProjectSummary): void;
+    setDirty(dirty: boolean): void;
+    setConflict(conflict: ProjectDocument | null): void;
+    setError(error: string | null): void;
+    setSwitching(switching: boolean): void;
+    getState(): {
+        current: ProjectSummary | null;
+        rev: number;
+        chosenIcon: ProjectIconChoice | null;
+        dirty: boolean;
+        conflict: ProjectDocument | null;
+    };
+}
+
+/* The slice of a drawing editor the client watches. Its camera is local state like the canvas's. */
+interface DrawingSlice {
+    camera: { x: number; y: number; zoom: number };
+    loading: boolean;
+}
+
+interface DrawingsAccess {
+    subscribe(listener: (viewId: string, state: DrawingSlice, previous: DrawingSlice) => void): () => void;
+}
+
+interface ProjectClientOptions {
+    saveDelayMs?: number;
+    localDelayMs?: number;
+    storage?: LastProjectStorage;
+    /* Which daemon the client is talking to; what it remembers about a project is that daemon's. */
+    endpointId?: () => string;
+    drawings?: DrawingsAccess;
+    /* A diagram keeps its camera in its own editor the way a drawing does. */
+    diagrams?: DrawingsAccess;
+    /* Runs before the project is left for another one, so the drawing on screen reaches its own file first. */
+    beforeLeave?: () => Promise<void>;
+    /* Runs in the tick the opened project reaches the stores, so the window shows it with nothing in between. A throw stops the open before the stores take it. */
+    onLoad?: (summary: ProjectSummary) => void;
+    forgetSessions?: (endpointId: string, views: readonly ProjectView[]) => void;
+    /* Runs once the project is open on the daemon again after the link came back, so the drawings on screen can follow. */
+    afterResume?: () => Promise<void>;
+    /* The copy of this project's remote nodes on the machines they run on, which is let go of with the project. */
+    remote?: { close(): Promise<void>; release(): void };
+    /* Left out in tests, where there is no window to listen on. */
+    window?: Pick<Window, 'addEventListener' | 'removeEventListener'> | null;
+    /* When a held `project.changed` is taken in; null takes every one in as it comes, which is what a test without a window gets. */
+    nextFrame?: ((run: () => void) => () => void) | null;
+}
+
+/* The next frame, or a moment later in a window that is not drawing frames (hidden or minimized). */
+function nextFrame(run: () => void): () => void {
+    let done = false;
+    const once = (): void => {
+        if (!done) {
+            done = true;
+            window.cancelAnimationFrame(frame);
+            window.clearTimeout(timer);
+            run();
+        }
+    };
+    const frame = window.requestAnimationFrame(once);
+    const timer = window.setTimeout(once, 100);
+    return () => {
+        done = true;
+        window.cancelAnimationFrame(frame);
+        window.clearTimeout(timer);
+    };
+}
+
+/* A document without what wraps it. The version and the rev are the daemon's, not the person's. */
+function contentOf(document: ProjectDocument): ProjectContent {
+    const { version: _version, rev: _rev, ...content } = document;
+    return content;
+}
+
+/*
+ * Synchronizes one workspace with its project file. Shared edits debounce to the daemon, local view
+ * state saves separately, and incoming revisions merge unless both sides changed the same field.
+ */
+export class ProjectClient {
+    private readonly transport: Transport;
+    private readonly documents: DocumentAccess;
+    private readonly panels: PanelsPort;
+    private readonly sink: ProjectSink;
+    private readonly storage: LastProjectStorage | null;
+    private readonly endpointId: () => string;
+    private readonly saveDelayMs: number;
+    private readonly localDelayMs: number;
+    private readonly beforeLeave: () => Promise<void>;
+    private readonly onLoad: (summary: ProjectSummary) => void;
+    private readonly forgetSessions: (endpointId: string, views: readonly ProjectView[]) => void;
+    private readonly afterResume: () => Promise<void>;
+    private readonly remote: NonNullable<ProjectClientOptions['remote']>;
+    private readonly unsubscribe: Array<() => void> = [];
+    private saveTimer: ReturnType<typeof setTimeout> | null = null;
+    private localTimer: ReturnType<typeof setTimeout> | null = null;
+    private saving: Promise<SaveOutcome> | null = null;
+    private resuming: Promise<void> | null = null;
+    /*
+     * Its own project reached the stores. Until then the stores may still hold the project this client
+     * replaces, and an edit there is not this client's to save on its machine.
+     */
+    private opened = false;
+    /* What the daemon's file holds at the rev this client is on, which a merge measures against. */
+    private base: ProjectContent | null = null;
+    private baseRev = 0;
+    private baseShared: string[] = [];
+    private locallyDrafted = false;
+    /* Views that left the trash for good but may still be in the file, until a save without them lands. */
+    private purging = new Set<string>();
+    private readonly nextFrame: ((run: () => void) => () => void) | null;
+    /*
+     * The newest document that came in, held until the next frame. An agent adding nodes in a loop
+     * writes once per node, and every event is the whole project, so the newest one says everything
+     * the ones before it did and the canvas merges and draws once for all of them.
+     */
+    private heldChange: { projectId: string; document: ProjectDocument } | null = null;
+    private cancelHeld: (() => void) | null = null;
+
+    constructor(
+        transport: Transport,
+        canvases: CanvasesAccess,
+        documents: DocumentAccess,
+        panels: PanelsPort,
+        sink: ProjectSink,
+        options: ProjectClientOptions = {}
+    ) {
+        this.transport = transport;
+        this.documents = documents;
+        this.panels = panels;
+        this.sink = sink;
+        this.storage = options.storage ?? browserStorage();
+        this.endpointId = options.endpointId ?? (() => LOCAL_ENDPOINT_ID);
+        this.saveDelayMs = options.saveDelayMs ?? 400;
+        this.localDelayMs = options.localDelayMs ?? 1000;
+        this.beforeLeave = options.beforeLeave ?? (() => Promise.resolve());
+        this.onLoad = options.onLoad ?? ((): void => undefined);
+        this.forgetSessions = options.forgetSessions ?? ((): void => undefined);
+        this.afterResume = options.afterResume ?? (() => Promise.resolve());
+        this.remote = options.remote ?? { close: () => Promise.resolve(), release: (): void => undefined };
+        this.nextFrame = options.nextFrame === undefined ? (typeof window === 'undefined' ? null : nextFrame) : options.nextFrame;
+        this.unsubscribe.push(
+            transport.on('project.changed', ({ projectId, document }) => this.holdChange(projectId, document)),
+            transport.on('project.summary', ({ summary }) => this.applySummary(summary)),
+            transport.subscribeStatus((status) => this.onStatus(status)),
+            canvases.subscribe((_viewId, state, previous) => this.onCanvas(state, previous)),
+            documents.subscribe((state, previous) => this.onDocument(state, previous)),
+            panels.subscribe(() => this.scheduleLocal()),
+            ...[options.drawings, options.diagrams].flatMap((editors) =>
+                editors
+                    ? [
+                          editors.subscribe((_viewId, state, previous) => {
+                              if (!state.loading && !previous.loading && state.camera !== previous.camera) {
+                                  this.scheduleLocal();
+                              }
+                          })
+                      ]
+                    : []
+            )
+        );
+        const host = options.window === undefined ? (typeof window === 'undefined' ? null : window) : options.window;
+        if (host) {
+            /* localStorage is synchronous, so a page on its way out still keeps where it stood. A view
+               still waiting on its undo goes for good, and the save is on the wire before the page is
+               gone; so is an edit still waiting on the save clock, as when a window closes right after it. */
+            const onLeave = (): void => {
+                this.flushLocal();
+                if (!this.opened) {
+                    return;
+                }
+                this.remote.release();
+                const trashed = this.documents.getState().trashed.length > 0;
+                if (trashed) {
+                    this.documents.getState().purgeTrash();
+                }
+                if (trashed || this.saveTimer !== null || this.sink.getState().dirty) {
+                    void fireAndForget('flush', this.flush());
+                }
+            };
+            host.addEventListener('pagehide', onLeave);
+            this.unsubscribe.push(() => host.removeEventListener('pagehide', onLeave));
+        }
+    }
+
+    async refreshList(): Promise<ProjectSummary[]> {
+        const { projects } = await this.transport.request('project.list', {});
+        this.sink.setProjects(projects);
+        return projects;
+    }
+
+    async openProject(projectId: string): Promise<void> {
+        await this.open({ projectId });
+    }
+
+    /* Creating is browse mode's business. Everywhere else a folder that is gone stays gone. */
+    async openFolder(folder: string, createFolder = false): Promise<void> {
+        await this.open({ folder, createFolder });
+    }
+
+    /*
+     * Lets go of the project for another one. What is on screen is written first, and the daemon is told
+     * the project is released rather than closed, since switching away does not put it under Recent.
+     * The stores keep what they hold, for the next client to load over.
+     */
+    async leave(): Promise<void> {
+        this.takeHeldChange();
+        const current = this.opened ? this.sink.getState().current : null;
+        if (current) {
+            this.documents.getState().purgeTrash();
+        }
+        await this.beforeLeave();
+        await this.flush();
+        this.flushLocal();
+        this.opened = false;
+        this.remote.release();
+        if (current && this.transport.status === 'open' && !this.locallyDrafted) {
+            await fireAndForget('project.release', this.transport.request('project.release', { projectId: current.projectId }));
+        }
+    }
+
+    /*
+     * Puts this project away. What is on screen is written first, so the daemon counts and ends the
+     * sessions of the document as it stands. Whether anything ends is the daemon's call: another
+     * client with the same project open keeps it running. Closing is this client's either way, so
+     * the row moves under Recent here even while the machine still has the project in use.
+     */
+    async closeProject(): Promise<void> {
+        this.takeHeldChange();
+        const current = this.sink.getState().current;
+        if (this.opened) {
+            this.documents.getState().purgeTrash();
+        }
+        await this.beforeLeave();
+        await this.flush();
+        this.flushLocal();
+        await this.remote.close();
+        if (current) {
+            this.forgetSessions(this.endpointId(), this.documents.getState().exportViews());
+            if (this.transport.status === 'open' && !this.locallyDrafted) {
+                await fireAndForget('project.close', this.transport.request('project.close', { projectId: current.projectId }));
+            }
+            rememberClosedProject(this.endpointId(), current.projectId, this.storage);
+            this.sink.patchProject({ ...current, closedAt: Date.now() });
+        }
+        this.remember(null);
+        this.opened = false;
+        this.base = null;
+        this.documents.getState().load(null, null);
+        this.panels.load(null, undefined);
+        this.sink.setCurrent(null, 0);
+    }
+
+    async rename(name: string, color?: string): Promise<void> {
+        const current = this.sink.getState().current;
+        if (!current) {
+            return;
+        }
+        this.sink.setCurrent({ ...current, name, color: color ?? current.color }, this.sink.getState().rev);
+        this.sink.setDirty(true);
+        this.scheduleSave();
+    }
+
+    /* The color lives in the shared file beside the name, so a save carries it like a rename. */
+    async setColor(color: string): Promise<void> {
+        const current = this.sink.getState().current;
+        if (!current || current.color === color) {
+            return;
+        }
+        await this.rename(current.name, color);
+    }
+
+    /* A Lucide name goes into the shared file; null means "use what the folder declares". */
+    async setChosenIcon(icon: ProjectIconChoice | null): Promise<void> {
+        const current = this.sink.getState().current;
+        if (!current) {
+            return;
+        }
+        this.sink.setChosenIcon(icon);
+        // The choice is what the daemon would resolve too, so the glyph does not wait for a round trip.
+        if (icon) {
+            this.sink.setSummary({ ...current, icon });
+        }
+        this.sink.setDirty(true);
+        await this.flush();
+        if (!icon) {
+            await this.resolveFolderIcon(current.projectId);
+        }
+    }
+
+    /* Writes `<folder>/.ruimte/icon.<ext>` and lets the folder be what the glyph shows. */
+    async uploadIcon(mime: string, base64: string): Promise<void> {
+        await this.writeIconFile({ mime, base64 });
+    }
+
+    /* Drops the choice and the file the app wrote, so the rest of the folder gets its turn again. */
+    async useFolderIcon(): Promise<void> {
+        await this.writeIconFile(null);
+    }
+
+    async resolveConflict(choice: 'theirs' | 'mine'): Promise<void> {
+        const { conflict, current } = this.sink.getState();
+        if (!conflict || !current) {
+            return;
+        }
+        this.sink.setConflict(null);
+        this.setBase(conflict);
+        if (choice === 'theirs') {
+            this.documents.getState().reload(conflict, this.localOfScreen());
+            this.sink.setChosenIcon(conflict.icon ?? null);
+            this.sink.setCurrent({ ...current, name: conflict.name, color: conflict.color, icon: conflict.icon ?? current.icon }, conflict.rev);
+            return;
+        }
+        this.sink.setRev(conflict.rev);
+        this.sink.setDirty(true);
+        await this.flush();
+    }
+
+    async flush(): Promise<void> {
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+            this.saveTimer = null;
+        }
+        if (!this.opened) {
+            return;
+        }
+        if (this.sink.getState().conflict) {
+            throw new Error(i18next.t('project:error.projectNotSaved'));
+        }
+        while (this.saving || this.sink.getState().dirty) {
+            const outcome = await (this.saving ?? this.save());
+            if (outcome === 'offline') {
+                this.keepDraft();
+                return;
+            }
+            if (outcome === 'failed') {
+                throw new Error(i18next.t('project:error.projectNotSaved'));
+            }
+        }
+    }
+
+    /* Settles once the project is open on the daemon again after the link came back, at once when no reopen is on its way. */
+    whenOpen(): Promise<void> {
+        return this.resuming ?? Promise.resolve();
+    }
+
+    /* Lets go of the machine. No more events, and no timer that would write to a daemon the client left. */
+    dispose(): void {
+        this.cancelHeld?.();
+        this.cancelHeld = null;
+        this.heldChange = null;
+        for (const off of this.unsubscribe) {
+            off();
+        }
+        this.unsubscribe.length = 0;
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+            this.saveTimer = null;
+        }
+        if (this.localTimer) {
+            clearTimeout(this.localTimer);
+            this.localTimer = null;
+        }
+    }
+
+    private async writeIconFile(image: { mime: string; base64: string } | null): Promise<void> {
+        const current = this.sink.getState().current;
+        if (!current) {
+            return;
+        }
+        await this.setChosenIcon(null);
+        const { summary } = await this.transport.request('project.setIcon', { projectId: current.projectId, image });
+        this.applySummary(summary);
+        const { color } = await projectIconAppearance(this.transport, summary);
+        if (color !== null && this.sink.getState().current?.projectId === current.projectId) {
+            await this.setColor(color);
+            await this.flush();
+        }
+    }
+
+    private setBase(document: ProjectDocument): void {
+        this.base = contentOf(document);
+        this.baseRev = document.rev;
+        this.baseShared = [...(document.shared ?? [])];
+    }
+
+    /* What is open on this endpoint now; the other endpoints keep what they had. */
+    private remember(projectId: string | null): void {
+        rememberProject(this.endpointId(), projectId, this.storage);
+    }
+
+    private async open(payload: { projectId?: string; folder?: string; name?: string; createFolder?: boolean }): Promise<void> {
+        if (this.opened) {
+            await this.leave();
+        }
+        this.sink.setSwitching(true);
+        try {
+            const result = await this.transport.request('project.open', payload);
+            const draft = readProjectDraft(this.storage, this.endpointId(), result.summary.projectId);
+            forgetClosedProject(this.endpointId(), result.summary.projectId, this.storage);
+            this.setBase(draft?.base ?? result.document);
+            this.locallyDrafted = draft !== null;
+            const local = overlayLocal(result.local, readClientLocal(this.storage, this.endpointId(), result.summary.projectId));
+            this.onLoad(result.summary);
+            this.opened = true;
+            this.documents.getState().load(draft?.document ?? result.document, local, stripOf(local.panels));
+            // In the same tick as the canvas, so the panels never paint the project that just left.
+            this.panels.load(result.summary.projectId, local.panels);
+            this.sink.setChosenIcon(draft?.document.icon ?? result.document.icon ?? null);
+            this.sink.setCurrent(result.summary, this.baseRev);
+            if (draft) {
+                this.sink.setSummary({ ...result.summary, name: draft.document.name, color: draft.document.color });
+                this.sink.setDirty(true);
+                if (result.document.rev !== draft.base.rev) {
+                    this.takeHeldChange();
+                    this.onChanged(result.summary.projectId, result.document);
+                }
+                this.scheduleSave();
+            }
+            this.remember(result.summary.projectId);
+            this.finishDeletions(result.summary.projectId, result.document);
+            // The project is open whatever the list says; a list that did not come is asked again when the link opens.
+            void fireAndForget('refreshList', this.refreshList());
+        } finally {
+            this.sink.setSwitching(false);
+        }
+    }
+
+    private onCanvas(state: CanvasSlice, previous: CanvasSlice): void {
+        if (state.loading || previous.loading || !this.opened || !this.sink.getState().current) {
+            return;
+        }
+        // What a merge brings in is on disk already.
+        if (
+            !state.merging &&
+            (state.nodes !== previous.nodes ||
+                state.texts !== previous.texts ||
+                state.lines !== previous.lines ||
+                state.edges !== previous.edges ||
+                state.order !== previous.order)
+        ) {
+            this.sink.setDirty(true);
+            this.scheduleSave();
+        }
+        // Where the keyboard sits is what the local file keeps as the view's focused node.
+        if (state.camera !== previous.camera || state.bodyFocusId !== previous.bodyFocusId) {
+            this.scheduleLocal();
+        }
+    }
+
+    /*
+     * Views coming and going are edits; switching between them is not, which is why the store counts
+     * the first kind. The view that is open and where its camera stood belong to this client.
+     */
+    private onDocument(state: ReturnType<DocumentAccess['getState']>, previous: ReturnType<DocumentAccess['getState']>): void {
+        const current = this.sink.getState().current;
+        if (state.loading || previous.loading || !this.opened || !current) {
+            return;
+        }
+        if (state.trashed !== previous.trashed) {
+            // One that left the trash without coming back into the list is purged, or deleted by another writer.
+            for (const entry of previous.trashed) {
+                if (!state.trashed.some((kept) => kept.view.id === entry.view.id) && !state.views.some((view) => view.id === entry.view.id)) {
+                    this.purging.add(entry.view.id);
+                }
+            }
+            this.rememberDeletions(current.projectId);
+        }
+        if (state.edits !== previous.edits) {
+            this.sink.setDirty(true);
+            this.scheduleSave();
+        }
+        // A tab that closed or moved in a host changes the layout and nothing else.
+        if (state.activeViewId !== previous.activeViewId || state.layout !== previous.layout) {
+            this.scheduleLocal();
+        }
+    }
+
+    private rememberDeletions(projectId: string): void {
+        const viewIds = new Set([...this.documents.getState().trashed.map((entry) => entry.view.id), ...this.purging]);
+        writeDeletedViews(this.endpointId(), projectId, [...viewIds], this.storage);
+    }
+
+    /* A page that went while a deletion waited on its undo or its save leaves it here, to be done now. */
+    private finishDeletions(projectId: string, document: ProjectDocument): void {
+        this.purging = new Set(
+            readDeletedViews(this.endpointId(), projectId, this.storage).filter((viewId) => document.views.some((view) => view.id === viewId))
+        );
+        for (const viewId of this.purging) {
+            this.documents.getState().deleteView(viewId);
+        }
+        this.rememberDeletions(projectId);
+    }
+
+    private scheduleSave(): void {
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+        }
+        this.saveTimer = setTimeout(() => {
+            this.saveTimer = null;
+            void this.save();
+        }, this.saveDelayMs);
+    }
+
+    private scheduleLocal(): void {
+        if (this.localTimer) {
+            clearTimeout(this.localTimer);
+        }
+        this.localTimer = setTimeout(() => {
+            this.localTimer = null;
+            this.saveLocal();
+        }, this.localDelayMs);
+    }
+
+    /* Writes what is pending now, so a project that is on its way out takes its own state with it. */
+    private flushLocal(): void {
+        if (!this.localTimer) {
+            return;
+        }
+        clearTimeout(this.localTimer);
+        this.localTimer = null;
+        this.saveLocal();
+    }
+
+    private saveLocal(): void {
+        const current = this.sink.getState().current;
+        if (!this.opened || !current) {
+            return;
+        }
+        const local = withoutSessionLayout(this.localOfScreen(), this.panels.sessionIds(), openableViewIds(this.documents.getState().views));
+        // This client's own copy first, so the machine only has to be where a client that never saw the project starts.
+        writeClientLocal(this.storage, this.endpointId(), current.projectId, local);
+        if (this.transport.status === 'open') {
+            void fireAndForget(
+                'project.save-local',
+                this.transport.request('project.save-local', { projectId: current.projectId, local: withoutClientBrowserState(local) })
+            );
+        }
+    }
+
+    private localOfScreen(): ProjectLocal {
+        return { ...this.documents.getState().exportLocal(), panels: this.panels.export() };
+    }
+
+    private keepDraft(): void {
+        const { current, rev } = this.sink.getState();
+        if (!this.opened || !current || !this.base) {
+            return;
+        }
+        writeProjectDraft(
+            this.storage,
+            this.endpointId(),
+            current.projectId,
+            { version: PROJECT_VERSION, ...this.base, rev: this.baseRev, shared: this.baseShared },
+            { version: PROJECT_VERSION, ...this.contentOfScreen(), rev, shared: [...this.documents.getState().shared] }
+        );
+        this.locallyDrafted = true;
+    }
+
+    private save(): Promise<SaveOutcome> {
+        // A save goes against the newest rev this client heard of, never one a held change already moved past.
+        this.takeHeldChange();
+        if (this.saving) {
+            // One write at a time; the edits made meanwhile ride the next one.
+            return this.saving.then((outcome) => (outcome === 'saved' && this.sink.getState().dirty ? this.save() : outcome));
+        }
+        const { current, rev, conflict } = this.sink.getState();
+        if (!this.opened || !current) {
+            return Promise.resolve('saved');
+        }
+        if (conflict) {
+            return Promise.resolve('failed');
+        }
+        // A link that is down keeps the edit dirty for the resume to write, rather than a request that can only fail.
+        if (this.transport.status !== 'open') {
+            return Promise.resolve('offline');
+        }
+        const content = this.contentOfScreen();
+        const shared = [...this.documents.getState().shared];
+        this.sink.setDirty(false);
+        this.saving = this.transport
+            .request('project.save', { projectId: current.projectId, baseRev: rev, content, shared })
+            .then((result) => {
+                // The file now holds what went out, which is what the next merge measures against.
+                this.base = content;
+                this.baseRev = result.rev;
+                this.baseShared = shared;
+                this.sink.setRev(result.rev);
+                this.sink.setError(null);
+                dropProjectDraft(this.storage, this.endpointId(), current.projectId);
+                this.locallyDrafted = false;
+                const landed = [...this.purging].filter((viewId) => !content.views.some((view) => view.id === viewId));
+                if (landed.length > 0) {
+                    for (const viewId of landed) {
+                        this.purging.delete(viewId);
+                    }
+                    this.rememberDeletions(current.projectId);
+                }
+                return 'saved' as const;
+            })
+            .catch((e: unknown) => {
+                this.sink.setDirty(true);
+                if (e instanceof TransportError && e.code === 'rev-conflict') {
+                    this.takeHeldChange();
+                    /* A change that landed while this save was on its way has already been merged in,
+                       rev and all, so the write only has to be made again against it. If the rev has
+                       not moved the watcher's event is still coming, and carries what to merge with. */
+                    if (this.sink.getState().rev === rev) {
+                        return 'failed' as const;
+                    }
+                    this.scheduleSave();
+                    return 'saved' as const;
+                }
+                if (isConnectionError(e)) {
+                    return 'offline' as const;
+                }
+                /* The machine refuses the whole document, so the next save would be refused the same way.
+                   Taking the design back where the last save had it lets that one through instead. */
+                if (
+                    e instanceof TransportError &&
+                    e.code === 'design-folder-taken' &&
+                    this.base !== null &&
+                    restoreDesignFolders({ views: this.base.views, shared: this.baseShared }, this.documents)
+                ) {
+                    useToasts.getState().show({ kind: 'error', title: i18next.t('project:error.projectNotSaved'), description: e.message });
+                    return 'failed' as const;
+                }
+                this.sink.setError(messageOf(e, i18next.t('project:error.projectNotSaved')));
+                return 'failed' as const;
+            })
+            .finally(() => {
+                this.saving = null;
+            });
+        return this.saving;
+    }
+
+    private holdChange(projectId: string, document: ProjectDocument): void {
+        if (this.nextFrame === null) {
+            this.onChanged(projectId, document);
+            return;
+        }
+        // Another project's document is no newer version of the held one, so that one goes in first.
+        if (this.heldChange !== null && this.heldChange.projectId !== projectId) {
+            this.takeHeldChange();
+        }
+        this.heldChange = { projectId, document };
+        this.cancelHeld ??= this.nextFrame(() => {
+            this.cancelHeld = null;
+            this.takeHeldChange();
+        });
+    }
+
+    /* Takes in the document still held, before anything reads the rev or the base it moves on. */
+    private takeHeldChange(): void {
+        this.cancelHeld?.();
+        this.cancelHeld = null;
+        const held = this.heldChange;
+        this.heldChange = null;
+        if (held !== null) {
+            this.onChanged(held.projectId, held.document);
+        }
+    }
+
+    private onChanged(projectId: string, document: ProjectDocument): void {
+        const { current, dirty } = this.sink.getState();
+        if (!this.opened || !current || current.projectId !== projectId) {
+            return;
+        }
+        /* A merge now would move the rev under the open dialog, and "Keep mine" would then write
+           against a rev that is gone. The dialog answers the newest document instead. */
+        if (this.sink.getState().conflict) {
+            this.sink.setConflict(document);
+            return;
+        }
+        /* Merged first on a clean screen too. A load swaps every editor out and blanks the canvas
+           until it is measured, which a view renamed in another client should not cost. */
+        if (this.adopt(document)) {
+            return;
+        }
+        if (dirty || this.saving) {
+            this.sink.setConflict(document);
+            return;
+        }
+        this.setBase(document);
+        this.documents.getState().reload(document, this.localOfScreen());
+        this.sink.setChosenIcon(document.icon ?? null);
+        this.sink.setCurrent({ ...current, name: document.name, color: document.color, icon: document.icon ?? current.icon }, document.rev);
+    }
+
+    /*
+     * Takes in what another writer changed, beside this client's own edits. An agent adding a node or
+     * a second client moving one is not something to ask a person about. The rev goes along, so the
+     * next save is made against the file as it now stands; a real conflict answers false and gets the
+     * dialog (or, on a clean screen, the whole document).
+     */
+    private adopt(document: ProjectDocument): boolean {
+        if (!this.base) {
+            return false;
+        }
+        const merge = mergeProject(this.base, this.contentOfScreen(), contentOf(document), this.documents.getState().heldNodeIds());
+        if (!merge.ok) {
+            console.debug(`[project] the canvas could not take in rev ${document.rev}: ${merge.reason}`);
+            return false;
+        }
+        this.setBase(document);
+        this.sink.setRev(document.rev);
+        /* Which file a view is in is the folder's answer and not this screen's. A colleague's pull
+           can share one, and nothing here may argue with what the daemon just read off disk. */
+        this.documents.getState().applyMerge(merge.content.views, merge.changes.canvases, document.shared ?? [], merge.content.flags ?? {});
+        this.documents.getState().takeAccounts(document.accounts ?? {});
+        return true;
+    }
+
+    /* The project as it stands on this screen, unsaved edits and the views still waiting on an undo included: what a save writes and a merge holds. */
+    private contentOfScreen(): ProjectContent {
+        const { current, chosenIcon } = this.sink.getState();
+        return {
+            name: current?.name ?? '',
+            color: current?.color ?? '',
+            ...(chosenIcon ? { icon: chosenIcon } : {}),
+            views: this.documents.getState().fileViews(),
+            // Always sent, empty too: a save without flags keeps the ones on disk, so taking the last one off has to say so.
+            flags: this.documents.getState().flags
+        };
+    }
+
+    /* The daemon saw a project's icon, name or color change; only the breadcrumb has to follow. */
+    private applySummary(summary: ProjectSummary): void {
+        const { current } = this.sink.getState();
+        this.sink.patchProject(summary);
+        if (this.opened && current?.projectId === summary.projectId) {
+            this.sink.setSummary(summary);
+        }
+    }
+
+    private async resolveFolderIcon(projectId: string): Promise<void> {
+        const projects = await orNull('refreshList', this.refreshList());
+        const summary = projects?.find((project) => project.projectId === projectId);
+        if (summary) {
+            this.applySummary(summary);
+        }
+    }
+
+    private onStatus(status: TransportStatus): void {
+        if (status === 'open' && this.opened && this.sink.getState().current) {
+            const resuming = this.resume().finally(() => {
+                if (this.resuming === resuming) {
+                    this.resuming = null;
+                }
+            });
+            this.resuming = resuming;
+        }
+    }
+
+    /*
+     * The link came back with a project on screen. The daemon is asked for it again, since one that
+     * restarted holds nothing open, but its document only reaches the screen when the file moved on
+     * meanwhile, through the same path as any change from disk. The editors, the grid and the cameras
+     * stay as they are, and the edits made while the link was down go out now.
+     */
+    private async resume(): Promise<void> {
+        const current = this.sink.getState().current;
+        if (!current) {
+            return;
+        }
+        try {
+            const result = await this.transport.request('project.open', { projectId: current.projectId });
+            if (this.sink.getState().current?.projectId !== current.projectId) {
+                return;
+            }
+            this.takeHeldChange();
+            if (result.document.rev !== this.sink.getState().rev) {
+                this.onChanged(current.projectId, result.document);
+            }
+            await this.flush();
+            this.saveLocal();
+            await this.afterResume();
+            await this.refreshList();
+        } catch (e) {
+            if (!isConnectionError(e)) {
+                this.sink.setError(messageOf(e, i18next.t('project:error.reopenFailed')));
+            }
+        }
+    }
+}

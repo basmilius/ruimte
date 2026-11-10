@@ -5,7 +5,6 @@
 export interface DatabaseSecretsBridge {
     /* Rejects for a secret that is kept but cannot be decrypted. */
     read(key: string): Promise<string | null>;
-    /* Null deletes the secret. */
     write(key: string, secret: string | null): Promise<void>;
     /* False while the system offers no encryption: the shell then keeps them in memory until it quits.
        Optional, since a shell that is already running carries the preload it started with. */

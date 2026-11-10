@@ -1,0 +1,159 @@
+import { ToolRefusal } from '@adecore/agents/context';
+import { isWithin } from '@adecore/utils/path';
+import {
+    PROJECT_ICON_NAMES,
+    PROJECT_VIEW_KINDS,
+    emptyCanvasView,
+    isHiddenCanvasView,
+    storedPathOf,
+    type ProjectContent,
+    type ProjectIconChoice,
+    type ProjectView,
+    type ProjectViewKind
+} from '@ruimte/contracts';
+import type { IndexedPlace } from '../projects/project-index.ts';
+import { field } from './host.ts';
+
+/*
+ * A ceiling on the sidebar, not a budget: a project with this many rows is one nobody can read any
+ * more, and the number is here to stop an agent in a loop long before that.
+ */
+export const MAX_PROJECT_VIEWS = 100;
+
+/*
+ * A device view needs a local discovery result, so agents may inspect it but cannot invent one. An
+ * artifact view is a person's pick from this machine's Output.
+ */
+// A design is made by a person for now: its folder and its chat's CLI are theirs to pick.
+export const VIEW_KINDS = PROJECT_VIEW_KINDS.filter(
+    (kind): kind is Exclude<(typeof PROJECT_VIEW_KINDS)[number], 'device' | 'artifact' | 'design'> =>
+        kind !== 'device' && kind !== 'artifact' && kind !== 'design'
+);
+
+type ViewField = 'path' | 'url';
+
+// The fields that only mean something on one kind; every kind takes after.
+export const VIEW_KIND_FIELDS: Partial<Record<ProjectViewKind, ViewField>> = { file: 'path', browser: 'url' };
+
+/* The prefix a fresh id gets, the same one the client's own `nextId` uses for that kind: a chat,
+   terminal or browser view is a session under its own id, so it carries its kind in the id. */
+export const ID_PREFIX: Partial<Record<ProjectViewKind, string>> = {
+    chat: 'chat',
+    terminal: 'terminal',
+    browser: 'browser',
+    separator: 'separator',
+    subheader: 'subheader'
+};
+
+export function viewKindsFor(flag: ViewField): string {
+    return VIEW_KINDS.filter((kind) => VIEW_KIND_FIELDS[kind] === flag)
+        .map((kind) => `${kind} (required)`)
+        .join(', ');
+}
+
+/* The views a refusal offers instead; the caller passes the ones its tool would actually take. */
+export function viewLines(views: readonly ProjectView[]): string[] {
+    return views.filter((view) => !isHiddenCanvasView(view)).map((view) => `view\t${view.id}\t${view.kind}\t${field(view.name ?? '')}`);
+}
+
+/*
+ * Whether `view_delete` would remove this view for this caller, and why: one it made itself, or any
+ * view at all on a machine that says so. A view the caller is standing in is never deletable, since
+ * the tool would end the session that is asking. The reason is what the `view_list` column prints, so a
+ * `yes` on a machine that frees everything does not read as a mistake to a caller that made none of them.
+ */
+export function deleteReason(view: ProjectView, call: { caller: string; place: IndexedPlace; anyView: boolean }): { may: boolean; why: string } {
+    if (isHiddenCanvasView(view)) {
+        return { may: false, why: 'another machine draws it' };
+    }
+    if (view.id === call.caller || view.id === call.place.canvasId) {
+        return { may: false, why: 'you are in it' };
+    }
+    if (view.createdBy === call.caller) {
+        return { may: true, why: 'yours' };
+    }
+    if (call.anyView) {
+        return { may: true, why: 'this machine frees every view' };
+    }
+    return { may: false, why: view.createdBy === undefined ? 'a person made it' : `${view.createdBy} made it` };
+}
+
+/* The icon names in rows of ten: one per line they would bury the refusal they belong to. */
+const ICON_NAME_LINES = Array.from({ length: Math.ceil(PROJECT_ICON_NAMES.length / 10) }, (_, row) =>
+    ['icons', ...PROJECT_ICON_NAMES.slice(row * 10, row * 10 + 10)].join('\t')
+);
+
+/* A Lucide name from the closed set. Anything else is refused with the set, which is the answer to
+   both a typo and a mark of one's own: a view wears one of these names or the mark of its kind. */
+export function iconChoice(value: string): ProjectIconChoice {
+    if ((PROJECT_ICON_NAMES as readonly string[]).includes(value)) {
+        return { kind: 'lucide', value: value as (typeof PROJECT_ICON_NAMES)[number] };
+    }
+    throw new ToolRefusal('unknown-icon', `${value} is not one of the ${PROJECT_ICON_NAMES.length} Lucide names a view picks from`, ICON_NAME_LINES);
+}
+
+export function viewNamed(content: ProjectContent, id: string, flag: string): ProjectView {
+    const view = content.views.find((candidate) => candidate.id === id);
+    if (!view || isHiddenCanvasView(view)) {
+        throw new ToolRefusal('unknown-view', `${id} is not a view of this project`, [
+            ...viewLines(content.views),
+            `note\t${flag} takes a view id, never a name`
+        ]);
+    }
+    return view;
+}
+
+export function storedFilePath(folder: string, path: string): string {
+    return isWithin(folder, path) ? storedPathOf(folder, path) : path;
+}
+
+export interface TableParts {
+    connectionId: string;
+    schema: string;
+    table: string;
+    mode: 'data' | 'structure';
+    where?: string;
+}
+
+export function madeView(
+    kind: (typeof VIEW_KINDS)[number],
+    id: string,
+    name: string,
+    createdBy: string,
+    parts: { url?: string; path?: string; table?: TableParts }
+): ProjectView {
+    if (kind === 'canvas') {
+        return { ...emptyCanvasView(id, name), createdBy };
+    }
+    if (kind === 'separator' || kind === 'subheader') {
+        return { kind, id, name, createdBy };
+    }
+    if (kind === 'chat' || kind === 'terminal') {
+        return { kind, id, name, node: {}, createdBy };
+    }
+    if (kind === 'browser') {
+        return { kind, id, name, url: parts.url!, createdBy };
+    }
+    if (kind === 'file') {
+        return { kind, id, name, path: parts.path!, createdBy };
+    }
+    if (kind === 'database') {
+        return { kind, id, name, ...parts.table!, createdBy };
+    }
+    return { kind, id, name, createdBy };
+}
+
+/* Why this view stays. Every sentence names the way out, since the caller cannot read the machine. */
+export function refuseUndeletable(view: ProjectView, call: { caller: string; place: IndexedPlace; anyView: boolean }): void {
+    if (deleteReason(view, call).may) {
+        return;
+    }
+    if (view.id === call.caller || view.id === call.place.canvasId) {
+        throw new ToolRefusal('deletes-caller', `You are in ${view.id}, so removing it would end the session asking`);
+    }
+    throw new ToolRefusal('not-yours', `${view.id} was made by ${view.createdBy ?? 'a person'} and view delete only removes a view you made yourself`, [
+        `made by\t${view.createdBy ?? 'a person'}`,
+        `you\t${call.caller}`,
+        "setting\tagentsDeleteAnyView in this machine's endpoint.json frees every view; a person turns it on from the Machines pane"
+    ]);
+}

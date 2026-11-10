@@ -43,7 +43,6 @@ const EDGE = 8;
 export const FLOOR_LEVEL = 4;
 // The paint's bottom row is the outline under its feet, which lies on the dock's top edge.
 const FEET_ROW = 2;
-/* How far the feet stay in from either end of the dock. */
 const LEDGE_INSET = 6;
 const WALK_STEP = 4;
 const HOP_TICKS = 5;
@@ -65,7 +64,6 @@ const KID_STEP = 6;
 /* How far up a row a kid looks for its pet, more than the kids a pet takes along. */
 const MAX_ROW = 8;
 
-/* Where pets may stand in a layer this wide, around these obstacles. */
 export function groundOf(width: number, obstacles: readonly Obstacle[]): Ground {
     const reach = FLOOR_LEVEL + FIGURE.h;
     const walls = obstacles.filter((obstacle) => obstacle.bottom < reach).sort((a, b) => a.left - b.left);
@@ -149,7 +147,6 @@ interface Roamer {
     stepped: boolean;
 }
 
-/* Whether it walks or jumps on this beat, or is about to. */
 function moving(roamer: Roamer): boolean {
     return roamer.hop !== null || roamer.route.length > 0 || roamer.stepped;
 }
@@ -198,7 +195,6 @@ export class Roam {
         });
     }
 
-    /* A kid of a sub-agent at work, which walks behind `leader`: its pet, or the kid ahead of it in the row. */
     follow(id: string, leader: string): void {
         const roamer = this.#roamers.get(id);
         if (roamer !== undefined) {
@@ -561,7 +557,6 @@ export class Roam {
         return span !== null && span !== undefined && inSpan(span, x) ? x : null;
     }
 
-    /* A walk to somewhere it can reach, over the dock when that is the way. */
     #plan(roamer: Roamer): Step[] {
         const place = this.#placeOf(roamer);
         if (place === null) {
@@ -626,7 +621,6 @@ export class Roam {
         });
     }
 
-    /* Whether it rests inside another pet that rests too. */
     #crowded(roamer: Roamer): boolean {
         return [...this.#roamers.values()].some(
             (other) =>

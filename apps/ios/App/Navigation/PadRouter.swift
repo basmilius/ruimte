@@ -81,13 +81,10 @@ final class PadRouter {
         if detail == .project { detail = .now }
     }
 
-    /// Shows a view of the project in the sidebar in the content.
     func show(view id: String) {
         guard let project else { return }
         closeSubagentPane()
-        // A node opens on its own; what the project remembers as open is the canvas it stands on.
-        let canvas = project.workspace.views.first { $0.list("nodes").contains { $0.stableID == id } }
-        project.workspace.select(canvas?.stableID ?? id)
+        project.workspace.select(project.workspace.rememberedView(opening: id))
         project.selectedViewID = id
         file = nil
         subagent = nil

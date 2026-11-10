@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 
 /*
@@ -103,3 +104,22 @@ export const PortEndEventSchema = z.object({
     message: z.string().max(300).optional()
 });
 export type PortEndEvent = z.infer<typeof PortEndEventSchema>;
+
+export const PORT_REQUEST_SCHEMAS = {
+    // A development port shared through the machine connection. Any client of the account reads the grants and opens streams; sharing and revoking are the local secret's, or an agent's while the machine allows it.
+    'port.list': { payload: EmptySchema, result: PortListResultSchema },
+    'port.share': { payload: PortSharePayloadSchema, result: PortShareResultSchema },
+    'port.revoke': { payload: PortRevokePayloadSchema, result: EmptySchema },
+    'port.open': { payload: PortOpenPayloadSchema, result: PortOpenResultSchema },
+    'port.write': { payload: PortWritePayloadSchema, result: PortWriteResultSchema },
+    'port.credit': { payload: PortCreditPayloadSchema, result: EmptySchema },
+    'port.close': { payload: PortClosePayloadSchema, result: EmptySchema }
+} as const;
+
+export const PORT_EVENT_SCHEMAS = {
+    // A port was shared or revoked, to every client, which asks `port.list` again.
+    'port.changed': EmptySchema,
+    // The bytes of a stream and its end, to the one client that opened it.
+    'port.data': PortDataEventSchema,
+    'port.end': PortEndEventSchema
+} as const;

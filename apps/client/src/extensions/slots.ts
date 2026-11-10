@@ -3,11 +3,11 @@ import { extensionAgentStatus, type ExtensionAgentStatus, type ProjectNode, type
 import type { LucideIcon } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { useContributions, type SlotEntry, type SlotName } from '@/extensions/registry';
 import { canvasOfNode, focusedCanvas, useCanvas, type CanvasState } from '@/state/canvas';
 import { membersOf } from '@/state/canvas-model';
+import { currentEndpointId, useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { currentEndpointId, useEndpointId } from '@/state/keys';
+import { useContributions, type SlotEntry, type SlotName } from '@/state/extension-registry';
 import { useProject } from '@/state/project';
 import { nodeProvider, nodeStatus, nodeWaitAsk, useSessions, type SessionsByKey } from '@/state/sessions';
 
@@ -44,7 +44,7 @@ export interface BaseContext {
 }
 
 /* What a node's info is read from. In a render each comes from a hook, so a compiled component never keeps an old one. */
-export interface NodeSources {
+interface NodeSources {
     canvas: Pick<CanvasState, 'nodes' | 'edges' | 'viewId'>;
     sessions: SessionsByKey;
     chats: ChatStatuses;
@@ -188,7 +188,7 @@ export function baseContext(): BaseContext {
     return contextOf(useProject.getState().current, views, activeViewId, currentEndpointId(), pageTheme());
 }
 
-export function useBaseContext(): BaseContext {
+function useBaseContext(): BaseContext {
     const current = useProject((state) => state.current);
     const views = useDocument((state) => state.views);
     const activeViewId = useDocument((state) => state.activeViewId);

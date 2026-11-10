@@ -4,8 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { NODE_SIZE } from '@ruimte/contracts';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
-import { LENT_NOTHING, lendNothing } from './endpoint-id-test-helpers.ts';
+import { LENT_NOTHING, NO_SETTING_PORTS } from './endpoint-id-test-helpers.ts';
 import { readOrCreateEndpointIdentity as readIdentity } from './endpoint-id.ts';
+import type { SettingPorts } from './machine-settings.ts';
 
 let home: string;
 
@@ -17,9 +18,9 @@ afterEach(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
-/* The identity of a home, lent what the daemon would lend it. */
-async function readOrCreateEndpointIdentity(folder: string, defaultName?: string) {
-    return lendNothing(await readIdentity(folder, defaultName));
+/* The identity of a home, lent what the daemon would lend it unless a test lends something of its own. */
+function readOrCreateEndpointIdentity(folder: string, defaultName?: string, ports: Partial<SettingPorts> = {}) {
+    return readIdentity(folder, defaultName, () => ({ ...NO_SETTING_PORTS, ...ports }));
 }
 
 async function readWritten(): Promise<Record<string, unknown>> {
@@ -191,13 +192,11 @@ describe('readOrCreateEndpointIdentity', () => {
     });
 
     test('the door on the local network starts open, and a closed one stays closed across a restart', async () => {
-        const identity = await readOrCreateEndpointIdentity(home);
-        expect(identity.lanDoor).toBe(true);
         const applied: boolean[] = [];
-        identity.attachLanDoor({ apply: () => applied.push(identity.lanDoor), describe: () => ({ lan: null, lanDoorFixed: false }) });
+        const identity = await readOrCreateEndpointIdentity(home, undefined, { lanDoorChanged: () => applied.push(identity.lanDoor) });
+        expect(identity.lanDoor).toBe(true);
         await identity.setIdentity(null, null, { lanDoor: false });
         expect(applied).toEqual([false]);
-        // A rename is not the switch, so the door is left alone.
         await identity.setIdentity('Studio', null);
         expect(applied).toEqual([false]);
         expect((await readOrCreateEndpointIdentity(home)).lanDoor).toBe(false);
@@ -268,7 +267,7 @@ describe('readOrCreateEndpointIdentity', () => {
 
     test('a start folder is trimmed, survives a restart, and empty clears it from the file', async () => {
         const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
-        expect(identity.startFolder).toBeNull();
+        expect(identity.startFolder).toBe('');
         const heard: unknown[] = [];
         identity.subscribe('client', (event) => heard.push(event));
 
@@ -279,7 +278,7 @@ describe('readOrCreateEndpointIdentity', () => {
         expect((await readOrCreateEndpointIdentity(home, 'the-hostname')).startFolder).toBe('D:\\Work');
 
         await identity.setStartFolder('');
-        expect(identity.startFolder).toBeNull();
+        expect(identity.startFolder).toBe('');
         expect((await readWritten()).startFolder).toBeUndefined();
         expect(heard.at(-1)).toMatchObject({ payload: { startFolder: '' } });
     });
@@ -290,17 +289,17 @@ describe('readOrCreateEndpointIdentity', () => {
         await writeFile(join(home, 'endpoint.json'), JSON.stringify({ ...written, startFolder: 42 }));
         const again = await readOrCreateEndpointIdentity(home, 'the-hostname');
         expect(again.id).toBe(identity.id);
-        expect(again.startFolder).toBeNull();
+        expect(again.startFolder).toBe('');
     });
 
     test('keep awake is off by default, each part set on its own survives a restart, and off writes nothing', async () => {
         const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
-        expect(identity.keepAwake).toEqual({ mode: 'off', onBattery: false, display: false, lidClosed: false });
+        expect(identity.keepAwakeSetting).toEqual({ mode: 'off', onBattery: false, display: false, lidClosed: false });
 
         await identity.setIdentity(null, null, { keepAwake: 'always', keepAwakeDisplay: true });
         await identity.setIdentity(null, null, { keepAwakeOnBattery: true });
         await identity.setIdentity(null, null, { keepAwakeLidClosed: true });
-        expect((await readOrCreateEndpointIdentity(home, 'the-hostname')).keepAwake).toEqual({
+        expect((await readOrCreateEndpointIdentity(home, 'the-hostname')).keepAwakeSetting).toEqual({
             mode: 'always',
             onBattery: true,
             display: true,
@@ -318,15 +317,16 @@ describe('readOrCreateEndpointIdentity', () => {
     });
 
     test('a switch set on its own keeps the name and icon, and an announcement carries the closed-lid rule as described', async () => {
-        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
-        await identity.setIdentity('Studio', { kind: 'lucide', value: 'server' });
         let rule = false;
-        identity.attachClosedLid({ describe: () => ({ keepAwakeLidRule: rule }) });
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname', {
+            describe: () => ({ ...NO_SETTING_PORTS.describe(), keepAwakeLidRule: rule })
+        });
+        await identity.setIdentity('Studio', { kind: 'lucide', value: 'server' });
         const heard: unknown[] = [];
         identity.subscribe('c1', (event) => heard.push(event));
 
         await identity.setSwitches({ keepAwakeLidClosed: true });
-        expect([identity.label, identity.icon, identity.keepAwake.lidClosed]).toEqual(['Studio', { kind: 'lucide', value: 'server' }, true]);
+        expect([identity.label, identity.icon, identity.keepAwakeLidClosed]).toEqual(['Studio', { kind: 'lucide', value: 'server' }, true]);
         rule = true;
         identity.announce();
         expect(heard).toMatchObject([
@@ -336,24 +336,21 @@ describe('readOrCreateEndpointIdentity', () => {
     });
 
     test('the broker setting survives a restart, is applied before clients hear it, and a default one is not written', async () => {
-        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        const applied: string[] = [];
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname', {
+            brokerChanged: async () => {
+                applied.push(identity.broker.mode);
+            }
+        });
         expect(identity.broker).toEqual({ mode: 'default' });
         const events: unknown[] = [];
         identity.subscribe('c1', (event) => events.push(event));
-        const applied: string[] = [];
-        identity.attachBroker({
-            apply: async () => {
-                applied.push(identity.broker.mode);
-            },
-            describe: () => ({ brokerUrl: null, brokerFixed: false })
-        });
 
         await identity.setIdentity(null, null, { broker: { mode: 'off' } });
         expect(applied).toEqual(['off']);
         expect(events.at(-1)).toMatchObject({ payload: { broker: { mode: 'off' }, brokerUrl: null, brokerFixed: false } });
         expect((await readOrCreateEndpointIdentity(home, 'the-hostname')).broker).toEqual({ mode: 'off' });
 
-        // A rename does not touch the relay.
         await identity.setIdentity('Studio', null);
         expect(applied).toEqual(['off']);
 

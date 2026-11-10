@@ -14,15 +14,14 @@ import i18next from 'i18next';
 import { create } from 'zustand';
 import { currentClientLabel } from '@/endpoint/client-label';
 import { useUi } from '@/state/ui';
+import type { AccountStatus } from '@/station';
+import { fireAndForget, orNull } from '@/transport-api/transport';
 import { offeredProviders } from './account-name';
 import { confirmAccount, dismissAccountConfirmation, linkedConfirmation, signedInConfirmation } from './confirmation';
 import { desktopPulsar, type PulsarPlatform } from './desktop';
 import { linkIdentity, signIn } from './login';
 import { AccessTokens } from './session';
 import { beginWebLogin, completeWebLogin, webPulsar } from './web';
-
-/* `unavailable` is a page with no platform to sign in on: a browser on an origin the address book does not send a login back to. */
-export type AccountStatus = 'unavailable' | 'loading' | 'signed-out' | 'signing-in' | 'signed-in';
 
 interface AccountState {
     status: AccountStatus;
@@ -35,13 +34,10 @@ interface AccountState {
     notice: string | null;
     /* What the address book can sign in with. GitHub until it says otherwise, so a slow answer never hides the only choice there was. */
     providers: ProviderId[];
-    /* The ways to sign in to this account, once asked for; null before that and when signed out. */
     identities: Identity[] | null;
-    /* The provider being added to the account while its login is open. */
     linking: ProviderId | null;
 }
 
-/* Who this client is signed in as on the address book. */
 export const usePulsarAccount = create<AccountState>(() => ({
     status: 'loading',
     account: null,
@@ -116,7 +112,7 @@ async function finishWebSignIn(given: PulsarPlatform, web: NonNullable<PulsarPla
             openAccountSection();
         }
     } catch (e) {
-        const restored = await given.keeper.restore().catch(() => null);
+        const restored = await orNull('given.keeper.restore', given.keeper.restore());
         usePulsarAccount.setState({ status: restored ? 'signed-in' : 'signed-out', account: restored?.account ?? null, error: messageOf(e), notice: null });
         if (confirm) {
             openAccountSection();
@@ -126,7 +122,7 @@ async function finishWebSignIn(given: PulsarPlatform, web: NonNullable<PulsarPla
 
 /* The page came back from adding a provider: the session it left with trades the code, and stays signed in whatever the answer. */
 async function finishWebLink(given: PulsarPlatform, provider: ProviderId, payload: IdentityLinkCompletePayload): Promise<void> {
-    const restored = await given.keeper.restore().catch(() => null);
+    const restored = await orNull('given.keeper.restore', given.keeper.restore());
     if (!restored) {
         signedOut(null, sessionEnded());
         return;
@@ -152,7 +148,6 @@ async function loadProviders(): Promise<void> {
     }
 }
 
-/* Reads who is signed in from the platform's keeper, without asking the address book. */
 export async function startPulsarAccount(given: PulsarPlatform | null = desktopPulsar() ?? webPulsar()): Promise<void> {
     platform = given;
     book = null;
@@ -226,7 +221,6 @@ export async function signInToPulsar(provider: ProviderId = 'github', options: {
     }
 }
 
-/* The ways to sign in to this account, and how the account is shown now that they may have changed. */
 export async function refreshPulsarIdentities(): Promise<void> {
     try {
         applyAccountResult(await withAccessToken((client, token) => client.account(token)));
@@ -277,14 +271,14 @@ export async function unlinkPulsarProvider(provider: ProviderId): Promise<void> 
 }
 
 export async function cancelPulsarSignIn(): Promise<void> {
-    await platform?.redirect?.cancel().catch(() => undefined);
+    await fireAndForget('platform.redirect.cancel', platform?.redirect?.cancel());
 }
 
 export async function signOutOfPulsar(): Promise<void> {
     if (!platform) {
         return;
     }
-    await platform.keeper.signOut().catch(() => undefined);
+    await fireAndForget('platform.keeper.signOut', platform.keeper.signOut());
     dismissAccountConfirmation();
     signedOut(null);
 }

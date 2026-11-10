@@ -1,3 +1,4 @@
+import type { Area } from '../area.ts';
 import { isOwner } from '../auth/access.ts';
 import type { AgentDatabases } from '../database/agent-databases.ts';
 import type { DatabaseConnectionStore } from '../database/connection-store.ts';
@@ -5,15 +6,46 @@ import type { DatabaseService } from '../database/database-service.ts';
 import type { SqlAnalysis } from '../database/sql-analysis.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 
+interface DatabaseDeps {
+    service: DatabaseService;
+    connections: DatabaseConnectionStore;
+    agents: Pick<AgentDatabases, 'accessFor' | 'setAccess' | 'handPasswords' | 'subscribe' | 'close'>;
+    sql: Pick<SqlAnalysis, 'state' | 'bind' | 'refresh' | 'passwordsHanded' | 'subscribe'>;
+}
+
 /* A client is its own owner of database sessions, so one socket never reaches another's. */
-export function registerDatabaseHandlers(
-    dispatcher: Dispatcher,
-    service: DatabaseService,
-    connections: DatabaseConnectionStore,
-    agents: Pick<AgentDatabases, 'accessFor' | 'setAccess' | 'handPasswords'>,
-    sql?: Pick<SqlAnalysis, 'state' | 'bind' | 'refresh' | 'passwordsHanded'>
-): void {
-    dispatcher.register('database.request', (payload, client) => service.handle(payload, client.id, isOwner(client.access)));
+export function databaseArea(deps: DatabaseDeps): Area {
+    const { service, connections, agents, sql } = deps;
+
+    return {
+        name: 'database',
+        sources: [connections, agents, sql],
+        handlers: (dispatcher) => registerRequests(dispatcher, deps),
+        closed: (clientId) => service.release(clientId),
+        stop: [
+            { phase: 'end', label: 'Closing database agents', run: () => agents.close() },
+            { phase: 'end', label: 'Stopping the database helper', run: () => service.dispose() }
+        ]
+    };
+}
+
+/* The saved connections close before the templates, and the database agents after them, in main's order. */
+export function databaseConnectionsLifecycle(connections: Pick<DatabaseConnectionStore, 'closeAll'>): Area {
+    return {
+        name: 'database connections',
+        stop: [{ phase: 'end', label: 'Closing database connections', run: () => connections.closeAll() }]
+    };
+}
+
+/* The wire leaves the payload of `database.request` opaque (the package's own protocol), so only its `method` is looked at. */
+function isExecute(payload: unknown): boolean {
+    return typeof payload === 'object' && payload !== null && 'method' in payload && payload.method === 'execute';
+}
+
+function registerRequests(dispatcher: Dispatcher, { service, connections, agents, sql }: DatabaseDeps): void {
+    dispatcher.register('database.request', (payload, client) => service.handle(payload, client.id, isOwner(client.access)), {
+        count: (payload) => (isExecute(payload) ? ['actions.database', 'database.queries'] : ['actions.database'])
+    });
 
     dispatcher.register('database.connections', (payload, client) => connections.read(payload.projectId, client.id));
 
@@ -28,13 +60,9 @@ export function registerDatabaseHandlers(
 
     dispatcher.register('database.passwords', async (payload, client) => {
         await agents.handPasswords(payload.projectId, client.id, payload.passwords);
-        sql?.passwordsHanded(payload.projectId);
+        sql.passwordsHanded(payload.projectId);
         return {};
     });
-
-    if (sql === undefined) {
-        return;
-    }
 
     dispatcher.register('language.sql', (payload, client) => sql.state(payload.projectId, client.id));
 

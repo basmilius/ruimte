@@ -5,7 +5,6 @@ import RuimteTransport
 import SwiftUI
 import UIKit
 
-/// What a device view shows, from finding the device a project names to its screen.
 enum DeviceViewPhase: Equatable {
     case noReference
     case finding
@@ -33,51 +32,51 @@ enum DeviceView {
     static let knownButtons: Set<String> = ["home", "back", "swipeHome", "appSwitcher", "lock", "siri"]
 
     /// A reference names a device the way a person does, since the machine's id means nothing on another machine.
-    static func matches(_ device: JSONValue, _ reference: JSONValue) -> Bool {
-        ["platform", "kind", "name", "runtime"].allSatisfy { device.text($0) == reference.text($0) }
+    static func matches(_ device: DeviceInfo, _ reference: StoredDeviceViewDevice) -> Bool {
+        device.platform == reference.platform && device.kind == reference.kind && device.name == reference.name
+            && device.runtime == reference.runtime
     }
 
-    static func resolve(_ reference: JSONValue, in devices: [JSONValue]) -> JSONValue? {
+    static func resolve(_ reference: StoredDeviceViewDevice, in devices: [DeviceInfo]) -> DeviceInfo? {
         devices.first { matches($0, reference) }
     }
 
-    static func target(_ device: JSONValue) -> [String: JSONValue] {
+    static func target(_ device: DeviceInfo) -> [String: JSONValue] {
         [
-            "deviceId": .string(device.text("deviceId")), "backendId": .string(device.text("backendId")),
-            "platform": .string(device.text("platform")),
+            "deviceId": .string(device.deviceId), "backendId": .string(device.backendId),
+            "platform": .string(device.platform.rawValue),
         ]
     }
 
     /// The buttons the device announces that this version knows; a device that announces none, such as a physical
     /// iPhone, has an iPhone's.
-    static func buttons(_ device: JSONValue) -> [String] {
-        guard let announced = device["capabilities"]?["buttons"]?.arrayValue else { return iosButtons }
-        return announced.compactMap(\.stringValue).filter(knownButtons.contains)
+    static func buttons(_ device: DeviceInfo) -> [String] {
+        guard let announced = device.capabilities.buttons else { return iosButtons }
+        return announced.filter(knownButtons.contains)
     }
 
     /// What a device in the list means for the page; `starting` for one that is booted and can be shown.
-    static func phase(for device: JSONValue) -> DeviceViewPhase {
-        switch device.text("state") {
-        case "booted":
-            device["capabilities"]?["stream"]?.boolValue == true
+    static func phase(for device: DeviceInfo) -> DeviceViewPhase {
+        switch device.state {
+        case .booted:
+            device.capabilities.stream
                 ? .starting : .noStream(String(localized: "This machine cannot show this device's screen."))
-        case "transitioning": .starting
-        default: .stopped
+        case .transitioning: .starting
+        case .shutdown: .stopped
         }
     }
 
-    static func canBoot(_ device: JSONValue) -> Bool {
-        device.text("state") == "shutdown" && device["capabilities"]?["boot"]?.boolValue == true
+    static func canBoot(_ device: DeviceInfo) -> Bool {
+        device.state == .shutdown && device.capabilities.boot
     }
 
-    /// What a refusal of `device.open` means for the page.
     static func phase(forOpenError error: Error) -> DeviceViewPhase {
-        if case MachineClientError.server(let code, let message) = error {
-            switch code {
-            case "device-format-unsupported": return .unsupportedFormat
-            case "device-not-booted": return .stopped
-            case "device-not-found": return .notOnMachine
-            case "device-capture-unavailable", "platform-unavailable": return .noStream(message)
+        if case MachineClientError.server(_, let message) = error {
+            switch error.machineCode {
+            case .deviceFormatUnsupported: return .unsupportedFormat
+            case .deviceNotBooted: return .stopped
+            case .deviceNotFound: return .notOnMachine
+            case .deviceCaptureUnavailable, .platformUnavailable: return .noStream(message)
             default: return .failed(message)
             }
         }
@@ -92,7 +91,6 @@ enum DeviceView {
             y: min(1, max(0, (point.y - screen.minY) / screen.height)))
     }
 
-    /// The rectangle a picture of this size takes when it fits inside `bounds`, centered.
     static func fitted(_ size: CGSize, in bounds: CGRect) -> CGRect {
         guard size.width > 0, size.height > 0 else { return .zero }
         let scale = min(bounds.width / size.width, bounds.height / size.height)
@@ -117,13 +115,31 @@ enum DeviceView {
 @MainActor @Observable
 final class DeviceViewModel {
     let client: any MachineRequesting
-    let reference: JSONValue?
+    let reference: StoredDeviceViewDevice?
     private(set) var phase: DeviceViewPhase
-    private(set) var device: JSONValue?
+    private(set) var device: DeviceInfo?
     private(set) var frame: UIImage?
     private(set) var booting = false
-    @ObservationIgnored private var subscriptions: [() -> Void] = []
-    @ObservationIgnored private var poll: Task<Void, Never>?
+    // A machine that takes `device.watch` says when the list changed; one from before it is read every two seconds
+    // while the view waits and every five while it shows.
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.deviceFrame, as: DeviceFrameEvent.self) { [weak self] frame in self?.receive(frame) },
+            .reread(.deviceChanged),
+        ],
+        watch: .area(.deviceWatch, gated: true),
+        poll: { [weak self] in self?.phase == .streaming ? 5_000 : 2_000 },
+        connection: { [weak self] connected in
+            guard let self else { return }
+            if connected {
+                if phase == .offline { phase = .finding }
+            } else {
+                frames.reset()
+                opened = nil
+                if frame != nil || phase == .streaming { phase = .offline }
+            }
+        }, read: { [weak self] in await self?.refresh() })
     @ObservationIgnored private var opened: [String: JSONValue]?
     @ObservationIgnored private var lastSequence = -1
     @ObservationIgnored private let decode: DeviceFrameDecoder.Decode
@@ -136,7 +152,7 @@ final class DeviceViewModel {
     @ObservationIgnored private var gestureFromBottom = false
 
     init(
-        client: any MachineRequesting, reference: JSONValue?,
+        client: any MachineRequesting, reference: StoredDeviceViewDevice?,
         decode: @escaping DeviceFrameDecoder.Decode = DeviceFrameDecoder.image
     ) {
         self.client = client
@@ -146,13 +162,13 @@ final class DeviceViewModel {
     }
 
     var buttons: [String] { device.map(DeviceView.buttons) ?? [] }
-    var takesInput: Bool { phase == .streaming && device?["capabilities"]?["input"]?.boolValue == true }
+    var takesInput: Bool { phase == .streaming && device?.capabilities.input == true }
     var canBoot: Bool { device.map(DeviceView.canBoot) ?? false }
     var canStop: Bool {
-        device?.text("state") == "booted" && device?["capabilities"]?["shutdown"]?.boolValue == true
+        device?.state == .booted && device?.capabilities.shutdown == true
     }
     var title: String {
-        reference.map { "\($0.text("name")) · \($0.text("runtime"))" } ?? String(localized: "Device")
+        reference.map { "\($0.name) · \($0.runtime)" } ?? String(localized: "Device")
     }
     var tools: [String] { device.map(DeviceTools.tools) ?? [] }
     /// A hardware keyboard types on the device while its screen shows, as the desktop's does with the focus there.
@@ -161,28 +177,12 @@ final class DeviceViewModel {
     private(set) var erasing = false
 
     func start() {
-        guard reference != nil, subscriptions.isEmpty else { return }
-        subscriptions.append(client.subscribe(.deviceFrame) { [weak self] payload in self?.receive(payload) })
-        subscriptions.append(
-            client.observeConnection { [weak self] connected in
-                guard let self else { return }
-                if connected {
-                    if phase == .offline { phase = .finding }
-                    startPolling()
-                } else {
-                    frames.reset()
-                    opened = nil
-                    poll?.cancel()
-                    if frame != nil || phase == .streaming { phase = .offline }
-                }
-            })
+        guard reference != nil else { return }
+        live.start()
     }
 
     func stop() {
-        poll?.cancel()
-        poll = nil
-        for unsubscribe in subscriptions { unsubscribe() }
-        subscriptions.removeAll()
+        live.stop()
         detach()
     }
 
@@ -192,6 +192,7 @@ final class DeviceViewModel {
         defer { booting = false }
         do {
             self.device = try await client.request(.deviceBoot, payload: .object(DeviceView.target(device)))
+                .decoded(as: DeviceInfo.self)
             phase = .starting
             await refresh()
         } catch {
@@ -204,6 +205,7 @@ final class DeviceViewModel {
         detach()
         do {
             self.device = try await client.request(.deviceShutdown, payload: .object(DeviceView.target(device)))
+                .decoded(as: DeviceInfo.self)
             frame = nil
             phase = .stopped
         } catch {
@@ -215,7 +217,7 @@ final class DeviceViewModel {
         frames.reset()
         opened = nil
         phase = .finding
-        startPolling()
+        Task { await live.refresh() }
     }
 
     func press(_ button: String) { send(.object(["kind": .string("button"), "button": .string(button)])) }
@@ -247,7 +249,7 @@ final class DeviceViewModel {
         guard let device, canErase, !erasing else { return }
         erasing = true
         defer { erasing = false }
-        let running = device.text("state") == "booted"
+        let running = device.state == .booted
         do {
             if canStop {
                 detach()
@@ -255,7 +257,7 @@ final class DeviceViewModel {
                 _ = try await client.request(.deviceShutdown, payload: .object(DeviceView.target(device)))
             }
             _ = try await client.request(.deviceAction, payload: DeviceTools.action(device, "erase"))
-            if running && device.text("platform") == "ios" && device["capabilities"]?["boot"]?.boolValue == true {
+            if running && device.platform == .ios && device.capabilities.boot {
                 _ = try await client.request(.deviceBoot, payload: .object(DeviceView.target(device)))
             }
             phase = .finding
@@ -288,23 +290,11 @@ final class DeviceViewModel {
         Task { _ = try? await client.request(.deviceInput, payload: .object(payload)) }
     }
 
-    private func startPolling() {
-        poll?.cancel()
-        poll = Task { [weak self] in
-            while !Task.isCancelled {
-                guard let self else { return }
-                await refresh()
-                let streaming = phase == .streaming
-                do { try await Task.sleep(for: .seconds(streaming ? 5 : 2)) } catch { return }
-            }
-        }
-    }
-
     func refresh() async {
         guard let reference else { return }
         do {
-            let result = try await client.request(.deviceList)
-            guard let found = DeviceView.resolve(reference, in: result.list("devices")) else {
+            let result = try await client.request(.deviceList).decoded(as: DeviceListResult.self)
+            guard let found = DeviceView.resolve(reference, in: result.devices) else {
                 device = nil
                 frame = nil
                 detach()
@@ -313,7 +303,7 @@ final class DeviceViewModel {
             }
             device = found
             let next = DeviceView.phase(for: found)
-            guard found.text("state") == "booted", next == .starting else {
+            guard found.state == .booted, next == .starting else {
                 detach()
                 frame = nil
                 phase = next
@@ -336,7 +326,7 @@ final class DeviceViewModel {
         }
     }
 
-    private func open(_ device: JSONValue) async {
+    private func open(_ device: DeviceInfo) async {
         frames.reset()
         if phase != .streaming { phase = .starting }
         var payload = DeviceView.target(device)
@@ -344,8 +334,10 @@ final class DeviceViewModel {
         payload["formats"] = .array([.string("jpeg")])
         do {
             let info = try await client.request(.deviceOpen, payload: .object(payload))
-            opened = DeviceView.target(info)
-            self.device = info
+                .decoded(as: DeviceOpenResult.self)
+            let opened = DeviceInfo(info)
+            self.opened = DeviceView.target(opened)
+            self.device = opened
             lastSequence = -1
             phase = .streaming
         } catch {
@@ -360,14 +352,14 @@ final class DeviceViewModel {
         Task { [client] in _ = try? await client.request(.deviceDetach, payload: .object(opened)) }
     }
 
-    private func receive(_ payload: JSONValue) {
-        guard let opened, payload.text("deviceId") == opened["deviceId"]?.stringValue,
-            payload.text("backendId") == opened["backendId"]?.stringValue
+    private func receive(_ frame: DeviceFrameEvent) {
+        guard let opened, frame.deviceId == opened["deviceId"]?.stringValue,
+            frame.backendId == opened["backendId"]?.stringValue
         else { return }
-        let sequence = Int(payload.number("sequence"))
-        guard payload.text("format", fallback: "jpeg") == "jpeg", sequence != lastSequence else { return }
+        let sequence = Int(frame.sequence)
+        guard (frame.format ?? .jpeg) == .jpeg, sequence != lastSequence else { return }
         lastSequence = sequence
-        frames.submit(payload.text("data"))
+        frames.submit(frame.data)
     }
 }
 
@@ -376,7 +368,7 @@ struct DeviceViewPage: View {
     @State private var showsTools = false
     @State private var confirmsErase = false
 
-    init(client: any MachineRequesting, reference: JSONValue?) {
+    init(client: any MachineRequesting, reference: StoredDeviceViewDevice?) {
         _model = State(initialValue: DeviceViewModel(client: client, reference: reference))
     }
 
@@ -450,7 +442,7 @@ struct DeviceViewPage: View {
         .sheet(isPresented: $showsTools) {
             if let device = model.device { DeviceToolsSheet(client: model.client, device: device) }
         }
-        .alert(Text("Erase \(model.reference?.text("name") ?? "")?"), isPresented: $confirmsErase) {
+        .alert(Text("Erase \(model.reference?.name ?? "")?"), isPresented: $confirmsErase) {
             Button(String(localized: "Erase"), role: .destructive) { Task { await model.erase() } }
             Button(String(localized: "Cancel"), role: .cancel) {}
         } message: {
@@ -491,7 +483,7 @@ struct DeviceViewPage: View {
     }
 
     @ViewBuilder private var message: some View {
-        let name = model.reference?.text("name") ?? String(localized: "The device")
+        let name = model.reference?.name ?? String(localized: "The device")
         switch model.phase {
         case .noReference:
             ContentUnavailableView(
@@ -504,7 +496,7 @@ struct DeviceViewPage: View {
                     .font(.subheadline).foregroundStyle(MobileStyle.muted)
             }
         case .notOnMachine:
-            let runtime = model.reference?.text("runtime") ?? String(localized: "this runtime")
+            let runtime = model.reference?.runtime ?? String(localized: "this runtime")
             ContentUnavailableView(
                 String(localized: "Not on this machine"), lucideIcon: "smartphone",
                 description: Text("\(name) with \(runtime) is not installed on this machine."))
@@ -521,7 +513,7 @@ struct DeviceViewPage: View {
                 Label(String(localized: "\(name) is stopped"), lucideIcon: "smartphone", iconSize: 48)
             } description: {
                 Text(
-                    model.device?.text("kind") == "physical"
+                    model.device?.kind == .physical
                         ? "Connect and unlock it, then it shows here." : "Start it to see its screen.")
             } actions: {
                 if model.canBoot {

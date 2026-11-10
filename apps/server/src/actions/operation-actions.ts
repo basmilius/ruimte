@@ -1,7 +1,8 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { OPERATION_ACTIONS, type ActionHandlers, type ActionOutput, type OperationStatus } from '@ruimte/actions';
 import type { Task } from '@ruimte/contracts';
-import { type AgentState, type AgentStateHost, type CanvasHost } from '../tools/host.ts';
+import type { AgentState, AgentStateHost } from '../agents/agent-state.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 type OperationAction = (typeof OPERATION_ACTIONS)[number];
@@ -16,7 +17,7 @@ export function operationIdOf(action: OperationAction, nodeIds: readonly string[
     return `${action}:${nodeIds.join(',')}`;
 }
 
-export const OPERATION_FORMS: readonly string[] = [
+const OPERATION_FORMS: readonly string[] = [
     'operation\tagent.start:<id>\tthe start of one agent, under the id of its node',
     'operation\tteam.start:<id>,<id>\tthe start of a team, under the ids of its roles in the order they were made'
 ];

@@ -1,13 +1,14 @@
 import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
-import { chatWaitAsk, terminalWaitAsk, type WaitAsk } from '@ruimte/contracts';
+import { chatWaitAsk, sessionStatus, terminalWaitAsk, type WaitAsk } from '@ruimte/contracts';
 import { create } from 'zustand';
-import { projectNodes, subscribeViewNodes } from '@/project/view-nodes';
 import { groupAttention, useAttention } from '@/state/attention';
-import { currentEndpointId, endpointKey, endpointOfNode } from '@/state/keys';
+import { endpointKey, endpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { sessionStatus, useSessions, type SessionsByKey, type StatusOf } from '@/state/sessions';
+import { useSessions, type SessionsByKey, type StatusOf } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { useTasks } from '@/state/tasks';
+import { projectNodes, subscribeViewNodes } from '@/state/view-nodes';
+import { currentEndpointId } from './current-endpoint';
 import { waitDate } from './waiting-date';
 
 /*

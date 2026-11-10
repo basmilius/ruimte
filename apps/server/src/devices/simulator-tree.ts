@@ -1,7 +1,8 @@
 import { existsSync } from 'node:fs';
+import { bestEffort } from '../best-effort.ts';
 import { realTimers, type Timers } from '../timers.ts';
+import { DeviceError } from './device-error.ts';
 import { SimulatorTreeReplySchema, type SimulatorTreeReply } from './device-tree.ts';
-import { DeviceError } from './manager.ts';
 
 /* How long the bridge may take to load its frameworks and find the simulator. */
 const READY_MS = 15_000;
@@ -36,28 +37,29 @@ export function createTreeLauncher(bridge: string): TreeLauncher | null {
     return (udid, events) => {
         const child = Bun.spawn([bridge, 'simulator-accessibility', '--udid', udid], { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
         const stderr = new Response(child.stderr).text().catch(() => '');
-        void (async () => {
-            const decoder = new TextDecoder();
-            let buffered = '';
-            for await (const chunk of child.stdout) {
-                buffered += decoder.decode(chunk, { stream: true });
-                let end = buffered.indexOf('\n');
-                while (end !== -1) {
-                    events.line(buffered.slice(0, end));
-                    buffered = buffered.slice(end + 1);
-                    end = buffered.indexOf('\n');
+        void bestEffort(
+            'read the tree helper output',
+            (async () => {
+                const decoder = new TextDecoder();
+                let buffered = '';
+                for await (const chunk of child.stdout) {
+                    buffered += decoder.decode(chunk, { stream: true });
+                    let end = buffered.indexOf('\n');
+                    while (end !== -1) {
+                        events.line(buffered.slice(0, end));
+                        buffered = buffered.slice(end + 1);
+                        end = buffered.indexOf('\n');
+                    }
                 }
-            }
-        })()
-            .catch(() => undefined)
-            .then(async () => events.exit(await child.exited, (await stderr).slice(-4096)));
+            })()
+        ).then(async () => events.exit(await child.exited, (await stderr).slice(-4096)));
         return {
             // A pipe the bridge closed rejects; its exit already reaches `events.exit` with what it said.
             write: (line) => {
-                Promise.all([child.stdin.write(line), child.stdin.flush()]).catch(() => undefined);
+                void bestEffort('Promise.all', Promise.all([child.stdin.write(line), child.stdin.flush()]));
             },
             end: () => {
-                Promise.resolve(child.stdin.end()).catch(() => undefined);
+                void bestEffort('Promise.resolve', Promise.resolve(child.stdin.end()));
             },
             kill: () => child.kill('SIGKILL')
         };

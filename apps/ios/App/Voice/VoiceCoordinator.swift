@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import RuimteVoice
 
@@ -14,13 +15,6 @@ struct VoiceTarget: Equatable {
     var viewID: String?
     var machineName: String?
 }
-
-/// The requests a machine names in `endpoint.info`. `MachineClient` reads them; a test machine says what it answers.
-@MainActor protocol MachineFeatures: AnyObject {
-    func answers(_ type: WireRequest) -> Bool
-}
-
-extension MachineClient: MachineFeatures {}
 
 /// A line of what Voice did on the machine, as `voice.activity` reports it.
 struct VoiceActivityLine: Identifiable, Equatable {
@@ -43,11 +37,31 @@ struct VoiceQuestion: Equatable {
     let title: String
     let consequences: [String]
 
-    init?(_ value: JSONValue?) {
-        guard let value, let token = value["token"]?.stringValue, !token.isEmpty else { return nil }
-        self.token = token
-        title = value.text("title")
-        consequences = value["consequences"]?.arrayValue?.compactMap(\.stringValue) ?? []
+    init?(_ confirmation: VoiceActivityConfirmation?) {
+        guard let confirmation, !confirmation.token.isEmpty else { return nil }
+        token = confirmation.token
+        title = confirmation.title
+        consequences = confirmation.consequences
+    }
+}
+
+/// A `voice.status` or `voice.activity` event, which share one order by `seq`.
+private enum VoiceEvent {
+    case status(VoiceStatusEvent)
+    case activity(VoiceActivityEvent)
+
+    var sceneID: String {
+        switch self {
+        case .status(let event): event.sceneId
+        case .activity(let event): event.sceneId
+        }
+    }
+
+    var sessionID: String {
+        switch self {
+        case .status(let event): event.sessionId
+        case .activity(let event): event.sessionId
+        }
     }
 }
 
@@ -93,7 +107,6 @@ final class VoiceCoordinator {
     static let linkScene = "voice"
 
     private(set) var phase = Phase.idle
-    /// The scene that holds Voice, while a session starts or runs.
     private(set) var owner: String?
     /// The scene the last session ran in, which shows how it ended.
     private(set) var lastScene: String?
@@ -102,7 +115,6 @@ final class VoiceCoordinator {
     private(set) var sessionID: String?
     private(set) var transcript = VoiceTranscript()
     private(set) var activity: [VoiceActivityLine] = []
-    /// The tokens of questions whose answer is on its way to the machine.
     private(set) var answering: Set<String> = []
     /// The last conversation of `lastScene` ended, and its timeline stays until the next start.
     private(set) var ended = false
@@ -114,7 +126,6 @@ final class VoiceCoordinator {
     private(set) var bands = VoiceWaveformBands.silent
     @ObservationIgnored private var personMeter = VoiceWaveformMeter()
     @ObservationIgnored private var voiceMeter = VoiceWaveformMeter()
-    /// Where the reply plays, as iOS names the route.
     private(set) var route: String?
     /// Per machine, whether it holds an OpenAI key for Voice, as `voice.keyStatus` last said.
     private(set) var keys: [String: Bool] = [:]
@@ -141,11 +152,10 @@ final class VoiceCoordinator {
     @ObservationIgnored private var media: (any VoiceMedia)?
     @ObservationIgnored private var startID: String?
     @ObservationIgnored private var seq = -1
-    @ObservationIgnored private var early: [JSONValue] = []
+    @ObservationIgnored private var early: [VoiceEvent] = []
     @ObservationIgnored private var subscriptions: [() -> Void] = []
     @ObservationIgnored private var cancelDeadline: (() -> Void)?
     @ObservationIgnored private var cancelSpeaking: (() -> Void)?
-    /// What the Live Activity shows now; nil while there is none.
     @ObservationIgnored private var shown: VoiceLiveContent?
     /// Per machine, the `voice.preferences` event this phone follows.
     @ObservationIgnored private var preferenceWatches: [String: () -> Void] = [:]
@@ -196,7 +206,8 @@ final class VoiceCoordinator {
         }
         do {
             let result = try WireRequest.voiceKeyStatus.validateResult(try await client.request(.voiceKeyStatus))
-            keys[machineID] = result["present"]?.boolValue == true
+                .decoded(as: VoiceKeyStatus.self)
+            keys[machineID] = result.present
         } catch {
             keys[machineID] = nil
         }
@@ -223,11 +234,13 @@ final class VoiceCoordinator {
             return
         }
         preferenceWatches[machineID] = client.subscribe(.voicePreferences) { [weak self] state in
+            guard let state = try? state.decoded(as: VoicePreferencesState.self) else { return }
             self?.adopt(state, machineID: machineID)
         }
         do {
             adopt(
-                try WireRequest.voicePreferences.validateResult(try await client.request(.voicePreferences)),
+                try WireRequest.voicePreferences.validateResult(try await client.request(.voicePreferences))
+                    .decoded(as: VoicePreferencesState.self),
                 machineID: machineID)
         } catch {
             // What the machine stores stays unknown until the next read or event.
@@ -242,27 +255,25 @@ final class VoiceCoordinator {
         do {
             adopt(
                 try WireRequest.voiceSetPreferences.validateResult(
-                    try await client.request(.voiceSetPreferences, payload: payload)), machineID: machineID)
+                    try await client.request(.voiceSetPreferences, payload: payload))
+                    .decoded(as: VoicePreferencesState.self), machineID: machineID)
         } catch {
             stored[machineID] = before
         }
     }
 
-    private func adopt(_ state: JSONValue, machineID: String) {
-        guard let language = state["preferences"]?["language"]?.stringValue,
-            let voice = state["preferences"]?["voice"]?.stringValue
-        else {
+    private func adopt(_ state: VoicePreferencesState, machineID: String) {
+        guard let preferences = state.preferences else {
             stored[machineID] = nil
             return
         }
-        stored[machineID] = VoicePreferences(language: language, voice: voice)
+        stored[machineID] = VoicePreferences(language: preferences.language.rawValue, voice: preferences.voice.rawValue)
     }
 
     // MARK: Who holds it
 
     func isOwner(_ scene: String) -> Bool { owner == scene }
 
-    /// Voice runs, in a scene other than this one.
     func runsElsewhere(than scene: String) -> Bool { owner != nil && owner != scene }
 
     /// What a scene shows of the last session that ran in it.
@@ -336,8 +347,9 @@ final class VoiceCoordinator {
             if let projectID = target.projectID { payload["projectId"] = .string(projectID) }
             if let viewID = target.viewID { payload["viewId"] = .string(viewID) }
             let result = try WireRequest.voiceStart.validateResult(
-                try await client.request(.voiceStart, payload: .object(payload)))
-            let sessionID = result.text("sessionId")
+                try await client.request(.voiceStart, payload: .object(payload))
+            ).decoded(as: VoiceStartResult.self)
+            let sessionID = result.sessionId
             guard current == attempt else {
                 // Stopped while the machine started it: the stop by start id may have come too late for this one.
                 Self.stop(client: client, scene: scene, field: "sessionId", id: sessionID)
@@ -346,11 +358,11 @@ final class VoiceCoordinator {
             self.sessionID = sessionID
             cancelDeadline?()
             cancelDeadline = nil
-            if let status = result["status"] { apply(status: status) }
-            for event in early where event.text("sessionId") == sessionID { received(event) }
+            apply(status: result.status)
+            for event in early where event.sessionID == sessionID { received(event) }
             early = []
             guard current == attempt else { return }
-            try await media.accept(answer: result.text("sdp"))
+            try await media.accept(answer: result.sdp)
             guard current == attempt else { return }
             try audio.activate(owner: scene)
             route = (audio as? AudioRouteNaming)?.route
@@ -362,13 +374,11 @@ final class VoiceCoordinator {
         }
     }
 
-    /// Stops the session `scene` started, or the start it has on its way.
     func stop(scene: String) {
         guard owner == scene else { return }
         end(nil, tellMachine: true)
     }
 
-    /// A scene that closes ends the session it owns.
     func sceneClosed(_ scene: String) { stop(scene: scene) }
 
     /// Turns the microphone off or on again; the session and the reply go on either way.
@@ -410,7 +420,6 @@ final class VoiceCoordinator {
         }
     }
 
-    /// The person's answer to an action that asked first.
     func confirm(scene: String, token: String, decision: String) async -> Bool {
         guard owner == scene, let sessionID, let client else { return false }
         let payload: JSONValue = .object([
@@ -418,9 +427,9 @@ final class VoiceCoordinator {
             "decision": .string(decision),
         ])
         guard let result = try? await client.request(.voiceConfirm, payload: payload),
-            let checked = try? WireRequest.voiceConfirm.validateResult(result)
+            let checked = try? WireRequest.voiceConfirm.validateResult(result).decoded(as: VoiceConfirmResult.self)
         else { return false }
-        return checked["accepted"]?.boolValue == true
+        return checked.accepted
     }
 
     // MARK: What comes in
@@ -429,8 +438,14 @@ final class VoiceCoordinator {
     /// this call. Each subscription is kept as soon as it is made, so that end cancels it, and the one made after the
     /// end is cancelled here.
     private func listen(to client: any MachineRequesting, attempt current: Int) {
-        subscriptions.append(client.subscribe(.voiceStatus) { [weak self] in self?.received($0) })
-        subscriptions.append(client.subscribe(.voiceActivity) { [weak self] in self?.received($0) })
+        subscriptions.append(
+            client.subscribe(.voiceStatus) { [weak self] in
+                if let event = try? $0.decoded(as: VoiceStatusEvent.self) { self?.received(.status(event)) }
+            })
+        subscriptions.append(
+            client.subscribe(.voiceActivity) { [weak self] in
+                if let event = try? $0.decoded(as: VoiceActivityEvent.self) { self?.received(.activity(event)) }
+            })
         let connection = client.observeConnection { [weak self] connected in
             guard let self, !connected, owner != nil else { return }
             let message = String(localized: "The connection to the machine dropped, so Voice stopped.")
@@ -444,28 +459,34 @@ final class VoiceCoordinator {
     }
 
     /// A `voice.status` or `voice.activity` event, taken only for the owner's scene and session, in `seq` order.
-    private func received(_ event: JSONValue) {
-        guard let owner, event.text("sceneId") == owner else { return }
+    private func received(_ event: VoiceEvent) {
+        guard let owner, event.sceneID == owner else { return }
         guard let sessionID else {
             if early.count < Self.keptEarlyEvents { early.append(event) }
             return
         }
-        guard event.text("sessionId") == sessionID, let seq = event["seq"]?.numberValue.map(Int.init),
-            seq > self.seq
-        else { return }
-        if let entry = event["entry"] {
+        guard event.sessionID == sessionID else { return }
+        switch event {
+        case .activity(let activity):
+            let seq = Int(activity.seq)
+            guard seq > self.seq else { return }
             self.seq = seq
-            note(entry)
-        } else {
-            apply(status: event)
+            note(activity.entry)
+        case .status(let status):
+            apply(status: status)
         }
     }
 
-    private func apply(status: JSONValue) {
-        guard let seq = status["seq"]?.numberValue.map(Int.init), seq > self.seq else { return }
+    private func apply(status: VoiceStatusEvent) {
+        let seq = Int(status.seq)
+        guard seq > self.seq else { return }
         self.seq = seq
-        if let project = status["project"] { follow(project) }
-        switch status.text("phase") {
+        switch status.project {
+        case .missing: break
+        case .null: follow(nil)
+        case .value(let project): follow(project)
+        }
+        switch status.phase {
         case "starting": phase = .connecting
         case "active":
             phase = .active
@@ -475,7 +496,7 @@ final class VoiceCoordinator {
             end(nil, tellMachine: false)
             return
         case "failed":
-            let said = status["error"]?.text("message") ?? ""
+            let said = status.error?.message ?? ""
             let message = said.isEmpty ? String(localized: "Voice stopped on the machine.") : said
             end(.message(message), tellMachine: false)
             return
@@ -486,10 +507,10 @@ final class VoiceCoordinator {
 
     /// The project the machine says Voice works in now; null for none. The canvas on screen belongs to the project
     /// the start named, so it goes once Voice moves on.
-    private func follow(_ project: JSONValue) {
+    private func follow(_ project: VoiceProject?) {
         guard let target else { return }
-        let projectID = project["id"]?.stringValue
-        let name = project["name"]?.stringValue
+        let projectID = project?.id
+        let name = project?.name
         if target.projectID == projectID {
             self.target?.projectName = name
         } else {
@@ -498,11 +519,10 @@ final class VoiceCoordinator {
         }
     }
 
-    private func note(_ entry: JSONValue) {
+    private func note(_ entry: VoiceActivityEntry) {
         var line = VoiceActivityLine(
-            id: entry.text("id"), kind: entry.text("kind"), status: entry.text("status"), label: entry.text("label"),
-            detail: entry.text("detail"), question: VoiceQuestion(entry["confirmation"]),
-            after: transcript.lines.last?.id)
+            id: entry.id, kind: entry.kind, status: entry.status, label: entry.label, detail: entry.detail,
+            question: VoiceQuestion(entry.confirmation), after: transcript.lines.last?.id)
         if let index = activity.firstIndex(where: { $0.id == line.id }) {
             line.after = activity[index].after
             activity[index] = line
@@ -650,7 +670,6 @@ final class VoiceCoordinator {
     }
 }
 
-/// An audio session that can say where the reply plays.
 @MainActor protocol AudioRouteNaming {
     var route: String? { get }
 }

@@ -2,12 +2,10 @@ import type { NavigationVerdict } from '@adecore/shell';
 import { EXTENSION_FILES_PATH, VISUAL_HOST_PATH } from '@ruimte/csp';
 
 /*
- * What the shell lets a page do, as pure decisions, so `main.ts` only wires them to Electron's events.
+ * What the shell lets a page do, as pure decisions, so `entry.ts` only wires them to Electron's events.
  * The app's page carries the whole bridge (the local secret included) and a browser node carries any
  * site on the web, so each rule here is a security boundary.
  */
-
-export { isExternalLink, isWebLink } from '@adecore/shell';
 
 // The partitions a `<webview>` may name: a browser node's (`apps/client/src/browser/registry.ts`), a sealed preview's and a tunnel's that the shell made.
 export const BROWSER_PARTITION = 'persist:ruimte';
@@ -26,8 +24,7 @@ export function isSystemSettingsPane(url: string): boolean {
     return SYSTEM_SETTINGS_PANES.has(url);
 }
 
-/* The part of a frame the guards read, up through its parents. */
-export interface FrameInPage {
+interface FrameInPage {
     readonly url: string;
     readonly parent: FrameInPage | null;
 }
@@ -40,12 +37,10 @@ function isVisualHost(url: string, isAppUrl: (url: string) => boolean): boolean 
     return isAppUrl(url) && URL.parse(url)?.pathname === VISUAL_HOST_PATH;
 }
 
-/* A page an extension draws in a frame of its own, from its own files. */
 function isExtensionFrame(url: string, isAppUrl: (url: string) => boolean): boolean {
     return isAppUrl(url) && (URL.parse(url)?.pathname ?? '').startsWith(EXTENSION_FILES_PATH);
 }
 
-/* Whether the frame sits inside a visual: below a frame of the app's page that shows the sandbox host page. */
 function insideVisual(frame: FrameInPage | null, isAppUrl: (url: string) => boolean): boolean {
     const chain: FrameInPage[] = [];
     for (let at = frame; at !== null; at = at.parent) {
@@ -87,14 +82,13 @@ export function allowGuestPermission(permission: string): boolean {
  */
 const APP_PERMISSIONS: ReadonlySet<string> = new Set(['notifications', 'clipboard-read', 'clipboard-sanitized-write', 'fullscreen']);
 
-export interface AppPermissionAsk {
+interface AppPermissionAsk {
     readonly permission: string;
     /* Whether the asking page is the main frame of one of the app's windows; a subframe (a visual, an extension's frame) never is. */
     readonly appMainFrame: boolean;
     readonly mediaTypes: readonly string[];
 }
 
-/* What the default session grants, refusing anything the app's page does not use and every subframe. */
 export function allowAppPermission(ask: AppPermissionAsk): boolean {
     if (!ask.appMainFrame) {
         return false;

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { voiceToolsFor } from '@ruimte/actions';
 import type { ProjectView } from '@ruimte/contracts';
-import { nodesOfView } from '@/project/view-nodes';
+import { nodesOfView } from '@/state/view-nodes';
 import { kindsIn, voiceDomainsFor } from '@/voice/domains';
 
 const NOTHING = { sessions: false, content: false, pages: false, folder: false, repository: false };

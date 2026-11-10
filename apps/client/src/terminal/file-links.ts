@@ -1,6 +1,6 @@
 import { linkLineBounds, type TerminalLinkBounds } from '@adecore/terminal';
 import type { ILink, Terminal } from '@xterm/xterm';
-import { parseFileRef, resolveFileRef, type FileRef } from '@/shell/panels/file-links';
+import { parseFileRef, resolveFileRef, type FileRef } from '@/surface/panels/file-links';
 
 const SUFFIX = String.raw`(?::\d+(?::\d+)?(?:-\d+)?|#L\d+(?:C\d+)?(?:-L?\d+)?)`;
 const CANDIDATES = new RegExp(

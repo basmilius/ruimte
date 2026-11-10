@@ -3,7 +3,6 @@ import type { RoutineEntry } from '@ruimte/contracts';
 import { useReferables } from '@/chat/referables';
 import { useProject } from '@/state/project';
 
-/* A routine's instructions as a message of a person reads, with the files, skills and views picked in it as chips. */
 export function RoutinePrompt({ endpointId, entry }: { endpointId: string; entry: RoutineEntry }) {
     const openProjectId = useProject((s) => s.current?.projectId ?? null);
     const referables = useReferables(endpointId, '');

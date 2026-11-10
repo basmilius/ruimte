@@ -1,4 +1,5 @@
 import { EXTENSION_ACTIONS } from './extension-permissions.ts';
+import { EXTENSION_SLOT_NAMES } from './extension-vocabularies.generated.ts';
 
 /*
  * What the client host of an extension decides without drawing anything: the places of its slots and the permission
@@ -6,44 +7,8 @@ import { EXTENSION_ACTIONS } from './extension-permissions.ts';
  * with no import that needs zod.
  */
 
-/* Every place an extension may put an action, a menu or a widget: the `SlotName` of `@ruimte/extension/client`. */
-export const EXTENSION_SLOT_NAMES = [
-    'selectionBar',
-    'nodeHeader',
-    'nodeMenu',
-    'canvasMenu',
-    'lineMenu',
-    'viewToolbar',
-    'viewMenu',
-    'panelHeader',
-    'commandPalette',
-    'projectMenu',
-    'sidebarFooter',
-    'editorStatusBar',
-    'sidebarRow',
-    'tabMenu',
-    'emptyCanvas',
-    'startScreen',
-    'projectBanner',
-    'threadHeader',
-    'emptyThread',
-    'toolActions',
-    'fileRowBadge',
-    'fileBreadcrumb',
-    'terminalMenu',
-    'browserMenu',
-    'textMenu',
-    'noteToolbar',
-    'routineMenu',
-    'composer',
-    'messageActions',
-    'fileMenu',
-    'editorToolbar',
-    'editorMenu',
-    'diffToolbar',
-    'terminalToolbar',
-    'browserToolbar'
-] as const;
+/* Every place an extension may put an action, a menu or a widget: the `SlotName` of `@ruimte/extension/client`, read from its `.d.ts`. */
+export { EXTENSION_SLOT_NAMES };
 export type ExtensionSlotName = (typeof EXTENSION_SLOT_NAMES)[number];
 
 export function isExtensionSlotName(name: string): name is ExtensionSlotName {
@@ -109,7 +74,34 @@ export const EXTENSION_CLIENT_PERMISSIONS: Readonly<Record<string, string>> = {
     ...Object.fromEntries(Object.entries(EXTENSION_ACTIONS).map(([action, permission]) => [extensionActionCall(action), permission]))
 };
 
-/* The permission a call of the client API needs, or null for one that needs none. */
+/*
+ * The calls of `@ruimte/extension/client` and `/server` that need no permission, named so that a call in neither list is a
+ * failing test (`extension-client.test.ts`) rather than an unguarded one. `machine.run` checks the permission of the action it runs.
+ */
+export const EXTENSION_CALLS_WITHOUT_PERMISSION: readonly string[] = [
+    'host.busy',
+    'host.notify',
+    'host.pickFolder',
+    'host.openSettings',
+    'host.confirm',
+    'host.prompt',
+    'host.pick',
+    'host.openUrl',
+    'host.copy',
+    'files.open',
+    'views.open',
+    'canvas.select',
+    'canvas.reveal',
+    'storage.get',
+    'storage.set',
+    'storage.delete',
+    'secrets.get',
+    'secrets.set',
+    'machine.run',
+    'log.info',
+    'log.error'
+];
+
 export function extensionCallPermission(call: string): string | null {
     return Object.hasOwn(EXTENSION_CLIENT_PERMISSIONS, call) ? (EXTENSION_CLIENT_PERMISSIONS[call] ?? null) : null;
 }

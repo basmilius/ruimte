@@ -4,10 +4,9 @@ import { basename, dirname, join, relative, sep } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { KeyedSerializer } from '@adecore/utils/async';
 import { isWithin } from '@adecore/utils/path';
-import { FS_READ_MAX_TEXT_BYTES, type FsWriteResult } from '@ruimte/contracts';
-import { isRuimteState } from '../projects/project-files.ts';
+import { FS_READ_MAX_TEXT_BYTES, isRuimteState, type FsWriteResult } from '@ruimte/contracts';
+import { realOrNull } from '../disk/real-path.ts';
 import { ReadError, UTF8_BOM, inspect } from './read.ts';
-import { realOrNull } from './real-path.ts';
 
 type WriteErrorCode = 'stale' | 'too-large' | 'not-text' | 'ruimte-state' | 'not-writable';
 
@@ -18,9 +17,7 @@ class BoundaryError extends CodedError<'outside-project' | 'git-state' | 'ruimte
 /* Keyed on dev and inode, so a hard link to a file shares the queue of the file itself. */
 const saves = new KeyedSerializer();
 
-/* Where a save from one client may land. */
 export interface WriteBoundary {
-    // The folders of the projects the client has open.
     folders: string[];
     // Every worktree of the repository a folder is in, as git lists them.
     worktreesOf: (folder: string) => Promise<string[]>;
@@ -95,7 +92,6 @@ export function rootOf(roots: readonly string[], real: string, path: string): st
     return root;
 }
 
-/* Throws the `stateRefusal` of a real path below `root`. */
 export function assertOpenGround(root: string, real: string, path: string, verb: string): void {
     const refused = stateRefusal(relative(root, real).split(sep), path, verb);
     if (refused !== null) {

@@ -2,7 +2,7 @@ import { dlopen, FFIType, read, type Pointer } from 'bun:ffi';
 import { closeSync, constants, fstatSync, mkdirSync, openSync, realpathSync, statSync, type Stats } from 'node:fs';
 import { join, parse, relative, sep } from 'node:path';
 
-export interface CreateParent {
+interface CreateParent {
     open(name: string, flags: number, mode: number): number;
     mkdir(name: string): Stats;
 }

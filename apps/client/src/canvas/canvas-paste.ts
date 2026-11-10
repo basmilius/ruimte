@@ -1,4 +1,4 @@
-import type { Point } from '@/canvas/math';
+import type { Point } from '@/canvas-model/math';
 
 /* What answering a paste on the canvas reaches; a test hands in a fake of each. */
 export interface CanvasPasteReach {

@@ -2,11 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { lstat, mkdir, opendir, readdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
 import { isBelow, isWithin } from '@adecore/utils/path';
+import { bestEffort } from '../best-effort.ts';
 import type { Reclaimed } from '../maintenance/maintenance.ts';
 import { realTimers, type Timers } from '../timers.ts';
 import type { PhpCache } from './host.ts';
 
-export const PHP_CACHE_BUDGET_BYTES = 512 * 1024 * 1024;
+const PHP_CACHE_BUDGET_BYTES = 512 * 1024 * 1024;
 
 const SIGHTINGS_FORMAT = 1;
 const SIGHTINGS_MIN_COUNT = 3;
@@ -31,7 +32,6 @@ export interface CacheEntry {
 
 /* The owner manifest a PHP server of format 1 writes beside its caches. */
 export interface CacheOwner {
-    /* The name of the manifest file in the cache folder. */
     manifest: string;
     kind: 'project' | 'stubs';
     path: string;
@@ -40,8 +40,7 @@ export interface CacheOwner {
     lastUsedMs: number;
 }
 
-/* A root seen missing: when it first was, when it last was, and how many passes saw it. */
-export interface Sighting {
+interface Sighting {
     firstMs: number;
     lastMs: number;
     count: number;
@@ -65,7 +64,7 @@ export interface EvictionInput {
     budget: number;
 }
 
-export type GroupReason = 'stubs' | 'vanished' | 'emptied' | 'abandoned' | 'budget';
+type GroupReason = 'stubs' | 'vanished' | 'emptied' | 'abandoned' | 'budget';
 
 /* The files that go together, and the manifest that goes last. */
 export interface Group {
@@ -75,7 +74,7 @@ export interface Group {
     bytes: number;
 }
 
-export interface EvictionPlan {
+interface EvictionPlan {
     remove: Group[];
     sightings: Sightings;
 }
@@ -293,7 +292,7 @@ function ownerOf(manifest: string, text: string): CacheOwner | null {
 }
 
 /* One `opendir` of the top level, bounded; never a recursive scan. */
-export async function listCache(folder: string, signal?: AbortSignal): Promise<Listing> {
+async function listCache(folder: string, signal?: AbortSignal): Promise<Listing> {
     const listing: Listing = { entries: [], owners: [], unreadableOwner: false };
     let directory;
 
@@ -406,7 +405,7 @@ export async function sweepPhpCache(options: PhpCacheSweepOptions, now: number, 
             budget: options.budget ?? PHP_CACHE_BUDGET_BYTES
         });
 
-        await writeSightings(options.sightingsFile, plan.sightings).catch(() => undefined);
+        await bestEffort('writeSightings', writeSightings(options.sightingsFile, plan.sightings));
 
         const sizes = new Map(listing.entries.map((entry) => [entry.name, entry.size]));
         let removals = 0;

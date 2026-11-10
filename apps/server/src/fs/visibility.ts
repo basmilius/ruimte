@@ -80,9 +80,7 @@ export function isBuildOutput(name: string): boolean {
 }
 
 interface ClassifyOptions {
-    /* What `git check-ignore` said about this entry. */
     ignored?: boolean;
-    /* Whether the directory it sits in is inside a checkout at all. */
     inRepository?: boolean;
 }
 

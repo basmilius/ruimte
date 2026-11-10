@@ -1,4 +1,4 @@
-import { rendersAtZoom, type RenderDistance } from '@/canvas/render-distance';
+import { rendersAtZoom, type RenderDistance } from '@/canvas-model/render-distance';
 
 /* How long the camera stays past the line before a page lets go of the screen, so a zoom that only passes it never flickers. */
 export const FAR_AFTER_MS = 400;

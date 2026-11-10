@@ -1,8 +1,8 @@
 import type { ProjectView } from '@ruimte/contracts';
 import { useEffect, useRef } from 'react';
 import { shallow } from 'zustand/shallow';
-import { useViewNodes, type NodesOfView } from '@/project/view-nodes';
 import { endpointById, endpointIdOfMachine, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { useViewNodes, type NodesOfView } from '@/state/view-nodes';
 import { pool } from '@/transport';
 
 /* The machines other than the workspace's that a node of the project runs on, each once. */
@@ -24,7 +24,7 @@ function machinesOfNodes(views: readonly ProjectView[], nodesOf: NodesOfView, wo
  * workspace lives. A node draws from its own machine, so its link has to be up while the node is on
  * the canvas, whichever view is in front. Nothing else may keep a link up for a node.
  */
-export class RemoteHolds {
+class RemoteHolds {
     private readonly take: (endpoint: Endpoint) => () => void;
     private readonly held = new Map<string, () => void>();
 

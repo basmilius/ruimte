@@ -4,6 +4,7 @@ import {
     lanDoorMessage,
     randomToken,
     signalMessage,
+    signedByMachine,
     type LanDoorClientFrame,
     type LanDoorMachineFrame,
     type SignalAccess
@@ -15,8 +16,7 @@ import { closeQuietly, withAccess, type SignalingOpener } from './signaling';
 // 24 random bytes, comfortably above the 16 the door asks for.
 const NONCE_BYTES = 24;
 
-export interface LanSignalingOptions {
-    /* The socket URL of one door address the machine reported (`lanDoorUrl`). */
+interface LanSignalingOptions {
     url: string;
     /* The machine's key this row pinned. The door has to sign the client's nonce with it before anything else happens. */
     machineKey: string;
@@ -86,7 +86,7 @@ export function lanSignaling(options: LanSignalingOptions): SignalingOpener {
             if (frame.envelope.connectionId !== connectionId) {
                 return;
             }
-            if (!(await options.verify(options.machineKey, signalMessage(options.machineKey, clientKey, frame.envelope), frame.signature))) {
+            if (!(await signedByMachine(options.verify, options.machineKey, clientKey, frame.envelope, frame.signature))) {
                 fail(i18next.t('machines:lan.unsignedSignal'));
                 return;
             }

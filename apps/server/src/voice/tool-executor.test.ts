@@ -3,9 +3,9 @@ import { voiceToolDefinitions, type ActionCall, type ActionName, type ActionResu
 import type { ProjectContent } from '@ruimte/contracts';
 import { daemonVoiceTools } from '@ruimte/voice';
 import { voiceActionCall, type ServerActionContext, type VoiceCaller } from '../actions/context.ts';
-import { serverActions } from '../actions/server-actions.ts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import type { CanvasHost } from '../tools/host.ts';
 import { voicePolicy, type VoicePolicy } from './action-policy.ts';
 import { MAX_CALLS_PER_SESSION, VoiceToolExecutor, type VoiceActionRunner } from './tool-executor.ts';
 import { settle } from './voice-fakes.ts';

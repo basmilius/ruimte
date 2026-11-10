@@ -1,10 +1,12 @@
-import { desktop, isApplePlatform, type DesktopBridge, type WindowPoint } from '@/desktop/bridge';
+import { isApplePlatform } from '@adecore/ui';
+import { desktop, type DesktopBridge, type WindowPoint } from '@/desktop/bridge';
 import { confirmLeavingConflict } from '@/project/leave-conflict';
 import { detachWindowTab, dropWindowTab, restoreWindowTabs, tabAfterClosing, useWindowTabs } from '@/project/window-tabs';
 import { endpointKey, splitKey } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { windowWorkspace } from '@/state/window';
-import { leaveWorkspace, showStart } from '@/transport/connections';
+import { fireAndForget } from '@/transport-api/transport';
+import { leaveWorkspace, showStart } from '@/workspace/connections';
+import { windowWorkspace } from '@/workspace/window';
 
 /* Whether this app opens windows of its own. The desktop shell does; a browser tab has its own ways. */
 export function canOpenWindows(shell: Pick<DesktopBridge, 'openWindow'> | null = desktop()): boolean {
@@ -15,12 +17,10 @@ export function canMoveToNewWindow(shell: Pick<DesktopBridge, 'moveToNewWindow'>
     return typeof shell?.moveToNewWindow === 'function';
 }
 
-/* A window on the start screen. */
 export function openNewWindow(): void {
     desktop()?.openWindow?.(null);
 }
 
-/* A project in a window of its own, or the window that already has it, brought to the front. */
 export function openInNewWindow(endpointId: string, projectId: string, at?: WindowPoint): void {
     desktop()?.openWindow?.(endpointKey(endpointId, projectId), undefined, at);
 }
@@ -34,7 +34,6 @@ export function wantsNewWindow(
     return canOpenWindows(shell) && (apple ? event.metaKey : event.ctrlKey);
 }
 
-/* The pieces a test stands in for; the app passes none of them. */
 export interface MoveDeps {
     shell: Pick<DesktopBridge, 'moveToNewWindow'> | null;
     hasProject(): boolean;
@@ -42,9 +41,7 @@ export interface MoveDeps {
     flush(): Promise<void>;
     leave(): Promise<void>;
     toStart(): void;
-    /* The project on screen, as its tab key. */
     shownKey(): string | null;
-    /* Shows another tab of the window, which leaves the project on screen on its way. */
     showTab(key: string): Promise<void>;
 }
 
@@ -89,7 +86,7 @@ export async function moveToNewWindow({ at, ...overrides }: Partial<MoveDeps> & 
         return false;
     }
     // A conflict the person chose to leave behind cannot be written, and the new window reads the file as it is.
-    await deps.flush().catch(() => undefined);
+    await fireAndForget('deps.flush', deps.flush());
     const key = deps.shownKey();
     const next = key === null ? null : tabAfterClosing(key);
     if (!(await (at === undefined ? move() : move(at)))) {
@@ -99,10 +96,10 @@ export async function moveToNewWindow({ at, ...overrides }: Partial<MoveDeps> & 
         dropWindowTab(key);
     }
     if (next !== null) {
-        await deps.showTab(next).catch(() => undefined);
+        await fireAndForget('deps.showTab', deps.showTab(next));
         return true;
     }
-    await deps.leave().catch(() => undefined);
+    await fireAndForget('deps.leave', deps.leave());
     deps.toStart();
     return true;
 }
@@ -123,7 +120,6 @@ export async function tearOffTab(key: string, at: WindowPoint): Promise<void> {
     openInNewWindow(endpointId, id, at);
 }
 
-/* Whether the shell can tear a tab off into a window that follows the pointer. */
 export function canDragTabs(shell: Pick<DesktopBridge, 'tabDrag'> | null = desktop()): boolean {
     return typeof shell?.tabDrag === 'function';
 }
@@ -142,7 +138,6 @@ export function tearOutTab(key: string, grab: WindowPoint, tabWidth: number, ove
     return started;
 }
 
-/* The pieces a test stands in for, with the shell that follows the pointer. */
 export type TearOutDeps = Omit<MoveDeps, 'shell'> & { shell: Pick<DesktopBridge, 'tabDrag'> | null };
 
 async function startTearOut(key: string, grab: WindowPoint, tabWidth: number, deps: TearOutDeps): Promise<boolean> {
@@ -156,22 +151,21 @@ async function startTearOut(key: string, grab: WindowPoint, tabWidth: number, de
     const before = useWindowTabs.getState().tabs;
     detachWindowTab(key);
     if (shown) {
-        await deps.flush().catch(() => undefined);
+        await fireAndForget('deps.flush', deps.flush());
     }
     if (!(await drag('start', key, grab, false, tabWidth).catch(() => false))) {
         restoreWindowTabs(before);
         return false;
     }
     if (next !== null) {
-        await deps.showTab(next).catch(() => undefined);
+        await fireAndForget('deps.showTab', deps.showTab(next));
     } else if (shown) {
-        await deps.leave().catch(() => undefined);
+        await fireAndForget('deps.leave', deps.leave());
         deps.toStart();
     }
     return true;
 }
 
-/* The only tab of the window was pressed and moved: the window itself follows the pointer. */
 export function startWindowDrag(key: string, grab: WindowPoint): Promise<boolean> {
     const started = desktop()?.tabDrag?.('start', key, grab, true) ?? Promise.resolve(false);
     dragStarting = started.catch(() => undefined);
@@ -182,9 +176,7 @@ export function startWindowDrag(key: string, grab: WindowPoint): Promise<boolean
 export async function endTabDrag(key: string, whole: boolean): Promise<void> {
     await dragStarting;
     if (whole) {
-        await flushWorkspace().catch(() => undefined);
+        await fireAndForget('flushWorkspace', flushWorkspace());
     }
-    await desktop()
-        ?.tabDrag?.('end', key, { x: 0, y: 0 }, whole)
-        .catch(() => undefined);
+    await fireAndForget('desktop', desktop()?.tabDrag?.('end', key, { x: 0, y: 0 }, whole));
 }

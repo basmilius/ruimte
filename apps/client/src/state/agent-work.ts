@@ -1,4 +1,5 @@
 import type { ChatState, ChatStatuses } from '@adecore/agents-react/state';
+import { chatActivity } from '@ruimte/contracts';
 import { openChildTasks } from '@/state/delegation';
 import { endpointKey, endpointOfNode } from '@/state/keys';
 import type { SessionState, SessionsByKey, StatusOf } from '@/state/sessions';
@@ -15,12 +16,12 @@ export function sessionWorking(session: SessionState | undefined): boolean {
 
 /* The same question of a chat, which carries the status on its thread rather than on a session. */
 export function chatWorking(chat: Pick<ChatState, 'info'> | undefined): boolean {
-    return chat?.info.status === 'running';
+    return chat !== undefined && chatActivity(chat.info) === 'working';
 }
 
 /* A chat between turns whose CLI still runs subagents or a workflow in the background. Waiting on a person outranks it. */
 function chatDelegating(chat: Pick<ChatState, 'info'> | undefined): boolean {
-    return chat?.info.status === 'idle' && chat.info.delegating === true;
+    return chat !== undefined && chatActivity(chat.info) === 'delegating';
 }
 
 /*
@@ -32,10 +33,11 @@ function chatWaitsOnWork(chat: Pick<ChatState, 'info'> | undefined, openChildren
         return false;
     }
 
-    return chatDelegating(chat) || (chat.info.background?.length ?? 0) > 0 || openChildren > 0;
+    const activity = chatActivity(chat.info);
+
+    return activity === 'delegating' || activity === 'background' || openChildren > 0;
 }
 
-/* Whether any agent is working, over every machine this window is watching. */
 export function agentsWorking(sessions: SessionsByKey, chats: ChatStatuses): boolean {
     return Object.values(sessions).some(sessionWorking) || Object.values(chats).some((chat) => chatWorking(chat) || chatDelegating(chat));
 }
@@ -64,7 +66,6 @@ export function nodeWork(node: StatusOf, sessions: SessionsByKey, chats: ChatSta
     return chatWaitsOnWork(chat, openChildTasks(tasks, node.id).length) ? 'delegating' : null;
 }
 
-/* Whether this node has an agent at work in it, its own turn or only its subagents. */
 export function nodeWorking(node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): boolean {
     return nodeWork(node, sessions, chats, endpointId) !== null;
 }

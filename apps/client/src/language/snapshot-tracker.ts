@@ -1,4 +1,5 @@
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
+import { fireAndForget } from '@/transport-api/transport';
 
 /*
  * What a machine says about its language servers, as a snapshot a store reads with
@@ -21,7 +22,7 @@ export abstract class SnapshotTracker<T> {
                     this.linkWasDown = true;
                 } else if (this.linkWasDown) {
                     this.linkWasDown = false;
-                    void this.refresh().catch(() => undefined);
+                    void fireAndForget('refresh', this.refresh());
                 }
             })
         );
@@ -55,7 +56,6 @@ export abstract class SnapshotTracker<T> {
     }
 }
 
-/* The list with `item` in place of the entry `same` finds, or added at the end. */
 export function upsert<T>(list: readonly T[], item: T, same: (candidate: T) => boolean): T[] {
     return list.some(same) ? list.map((candidate) => (same(candidate) ? item : candidate)) : [...list, item];
 }

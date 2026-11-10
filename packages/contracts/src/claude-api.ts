@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { NanoGptSettingsSchema } from './nanogpt.ts';
 
@@ -40,3 +41,8 @@ export const ClaudeApiConfigurePayloadSchema = z.object({
     settings: ClaudeApiSettingsSchema.partial().optional()
 });
 export type ClaudeApiConfigurePayload = z.infer<typeof ClaudeApiConfigurePayloadSchema>;
+
+export const CLAUDE_API_REQUEST_SCHEMAS = {
+    'anthropic.status': { payload: EmptySchema, result: ClaudeApiStatusSchema },
+    'anthropic.configure': { payload: ClaudeApiConfigurePayloadSchema, result: ClaudeApiStatusSchema }
+} as const;

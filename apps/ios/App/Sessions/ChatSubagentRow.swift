@@ -207,7 +207,7 @@ private struct ChatTaskLine: View {
         .accessibilityElement(children: .combine)
     }
 
-    @ViewBuilder private func stateLine(_ state: TaskRowState, task: JSONValue?) -> some View {
+    @ViewBuilder private func stateLine(_ state: TaskRowState, task: AgentTask?) -> some View {
         switch state {
         case .running:
             ChatLiveLabel(text: ChatSubagents.taskStateText(state, task: task, now: .now))
@@ -264,20 +264,20 @@ struct ChatProviderMark: View {
     var size: CGFloat = 14
 
     var body: some View {
-        if let mark = Self.assets[provider] {
-            Image(mark.asset)
+        if let asset = Self.assets[provider] {
+            Image(asset)
                 .renderingMode(.template).resizable().scaledToFit()
                 .frame(width: size, height: size)
-                .accessibilityLabel(mark.name)
+                .accessibilityLabel(AgentDirectory.shared.name(provider))
         } else {
             Image(lucide: "bot", size: size)
         }
     }
 
     // The Claude API's mark keeps its even-odd holes in its SVG, so the label shows through.
-    private static let assets: [String: (asset: String, name: String)] = [
-        "claude": ("ClaudeMark", "Claude"),
-        "codex": ("CodexMark", "Codex"),
-        "anthropic-claude-api": ("ClaudeApiMark", "Claude API"),
+    private static let assets = [
+        "claude": "ClaudeMark",
+        "codex": "CodexMark",
+        "anthropic-claude-api": "ClaudeApiMark",
     ]
 }

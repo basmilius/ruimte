@@ -2,12 +2,12 @@ import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bu
 import { useProvidersStore } from '@adecore/agents-react/state';
 import { REQUEST_SCHEMAS, type ArtifactFile, type ArtifactGetResult, type ArtifactSummary, type ArtifactVersion, type RequestType } from '@ruimte/contracts';
 import { act } from 'react';
-import { visibleRect } from '@/canvas/math';
+import { visibleRect } from '@/canvas-model/math';
 import { liveCanvas } from '@/state/canvas';
 import { artifactTabKey, useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import { clickOn, mount, openSubmenu, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
@@ -76,12 +76,10 @@ function infoRow(label: string): string | undefined {
     return term?.nextElementSibling?.textContent ?? undefined;
 }
 
-/* A control of the artifact view's bar, named by its label. */
 function barButton(label: string): HTMLElement | null {
     return page.host.querySelector<HTMLElement>(`button[aria-label="${label}"]`);
 }
 
-/* The pair a diff runs between, as a screen reader names it. */
 function compareRange(): string | null {
     return page.host.querySelector('[role="group"][aria-label^="From v"]')?.getAttribute('aria-label') ?? null;
 }
@@ -96,7 +94,6 @@ async function openVersions(): Promise<void> {
     await until(() => document.querySelectorAll('[role="menu"] [role="menuitemradio"]').length > 0);
 }
 
-/* The rows of the menu that is open, as they read. */
 function radioRows(): string[] {
     return [...document.querySelectorAll('[role="menu"] [role="menuitemradio"]')].map((row) => row.textContent ?? '');
 }
@@ -124,7 +121,6 @@ async function openFilters(): Promise<void> {
     await until(() => document.querySelector('[role="menu"]') !== null);
 }
 
-/* Every filter sits behind the one button in the panel's header, a submenu per filter. */
 async function filterBy(title: string, choice: string): Promise<void> {
     await openFilters();
     await openSubmenu(title);
@@ -136,7 +132,6 @@ async function filterBy(title: string, choice: string): Promise<void> {
     }
 }
 
-/* What a right click does: the menu opens at the pointer. */
 async function rightClick(target: Element | null | undefined): Promise<void> {
     expect(target ?? null).not.toBeNull();
     await act(async () => {
@@ -157,7 +152,6 @@ function panelRow(title: string): HTMLElement | undefined {
     return ([...page.host.querySelectorAll('section button')] as HTMLElement[]).find((button) => button.textContent?.startsWith(title));
 }
 
-/* The confirm of the question that is open. */
 async function confirmDialog(label: string): Promise<void> {
     await until(() => document.querySelector('[role="dialog"]') !== null);
     const dialog = document.querySelector('[role="dialog"]')!;
@@ -207,11 +201,9 @@ describe('the Output panel', () => {
         expect(text()).not.toContain('Beacon build');
         expect(text()).toContain('2 shown');
 
-        // Where the panel starts says nothing about filters.
         expect(buttonWithText('Reset')).toBeNull();
         await openFilters();
         await openSubmenu('Project');
-        // This project or all of them; another single project is never a choice.
         expect([...document.querySelectorAll('[role="menuitemradio"]')].map((item) => item.textContent?.trim())).toEqual(['This project', 'All projects']);
         while (document.querySelector('[role="menu"]') !== null) {
             const menus = document.querySelectorAll('[role="menu"]');
@@ -362,7 +354,6 @@ describe('the artifact view', () => {
         const range = document.querySelector('[role="group"][aria-label="From v2 to v3"]')!;
         expect(range.textContent).toBe('v2v3');
         expect(range.querySelector('svg')).not.toBeNull();
-        // v3 added a line to v2, so that is what the counts say.
         expect(text()).toContain('+1');
         expect(text()).toContain('-0');
         delete REPORTS['v-more'];

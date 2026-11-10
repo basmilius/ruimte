@@ -64,10 +64,7 @@
                     "key": "form",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "elements",
-                        "image"
-                    ],
+                    "enum": ["elements", "image"],
                     "required": false
                 },
                 {
@@ -118,16 +115,7 @@
                     "key": "topic",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "diagram",
-                        "drawing",
-                        "models",
-                        "nodes",
-                        "notes",
-                        "plan",
-                        "roles",
-                        "schedule"
-                    ],
+                    "enum": ["diagram", "drawing", "models", "nodes", "notes", "plan", "roles", "schedule"],
                     "required": true
                 }
             ]
@@ -465,12 +453,7 @@
                     "key": "mode",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "auto",
-                        "auto-accept-edits",
-                        "full-access",
-                        "supervised"
-                    ],
+                    "enum": ["auto", "auto-accept-edits", "full-access", "supervised"],
                     "required": false
                 },
                 {
@@ -591,12 +574,7 @@
                     "key": "mode",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "auto",
-                        "auto-accept-edits",
-                        "full-access",
-                        "supervised"
-                    ],
+                    "enum": ["auto", "auto-accept-edits", "full-access", "supervised"],
                     "required": false
                 },
                 {
@@ -714,10 +692,7 @@
                     "key": "form",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "elements",
-                        "image"
-                    ],
+                    "enum": ["elements", "image"],
                     "required": false
                 },
                 {
@@ -824,16 +799,7 @@
                     "key": "topic",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "diagram",
-                        "drawing",
-                        "models",
-                        "nodes",
-                        "notes",
-                        "plan",
-                        "roles",
-                        "schedule"
-                    ],
+                    "enum": ["diagram", "drawing", "models", "nodes", "notes", "plan", "roles", "schedule"],
                     "required": true
                 }
             ]
@@ -974,11 +940,7 @@
                     "key": "layout",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "column",
-                        "grid",
-                        "row"
-                    ],
+                    "enum": ["column", "grid", "row"],
                     "required": false
                 },
                 {
@@ -1233,18 +1195,7 @@
                     "key": "kind",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "artifact",
-                        "browser",
-                        "chat",
-                        "device",
-                        "diagram",
-                        "drawing",
-                        "file",
-                        "note",
-                        "routine",
-                        "terminal"
-                    ],
+                    "enum": ["artifact", "browser", "chat", "device", "diagram", "drawing", "file", "note", "routine", "terminal"],
                     "required": false
                 },
                 {
@@ -1749,28 +1700,14 @@
                     "key": "kind",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "browser",
-                        "canvas",
-                        "chat",
-                        "database",
-                        "diagram",
-                        "drawing",
-                        "file",
-                        "separator",
-                        "subheader",
-                        "terminal"
-                    ],
+                    "enum": ["browser", "canvas", "chat", "database", "diagram", "drawing", "file", "separator", "subheader", "terminal"],
                     "required": false
                 },
                 {
                     "key": "mode",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "data",
-                        "structure"
-                    ],
+                    "enum": ["data", "structure"],
                     "required": false
                 },
                 {
@@ -2071,12 +2008,7 @@
                     "key": "mode",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "auto",
-                        "auto-accept-edits",
-                        "full-access",
-                        "supervised"
-                    ],
+                    "enum": ["auto", "auto-accept-edits", "full-access", "supervised"],
                     "required": false
                 },
                 {
@@ -2197,12 +2129,7 @@
                     "key": "mode",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "auto",
-                        "auto-accept-edits",
-                        "full-access",
-                        "supervised"
-                    ],
+                    "enum": ["auto", "auto-accept-edits", "full-access", "supervised"],
                     "required": false
                 },
                 {
@@ -2364,12 +2291,7 @@
                     "key": "action",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "back",
-                        "forward",
-                        "reload",
-                        "stop"
-                    ],
+                    "enum": ["back", "forward", "reload", "stop"],
                     "required": true
                 },
                 {
@@ -2473,14 +2395,7 @@
                     "key": "action",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "click",
-                        "drag",
-                        "key",
-                        "scroll",
-                        "set-value",
-                        "type"
-                    ],
+                    "enum": ["click", "drag", "key", "scroll", "set-value", "type"],
                     "required": true
                 },
                 {
@@ -2494,10 +2409,7 @@
                     "key": "button",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "left",
-                        "right"
-                    ],
+                    "enum": ["left", "right"],
                     "required": false
                 },
                 {
@@ -2518,12 +2430,7 @@
                     "key": "direction",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "down",
-                        "left",
-                        "right",
-                        "up"
-                    ],
+                    "enum": ["down", "left", "right", "up"],
                     "required": false
                 },
                 {
@@ -2607,10 +2514,7 @@
                     "key": "state",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "full",
-                        "on"
-                    ],
+                    "enum": ["full", "on"],
                     "required": false
                 },
                 {
@@ -2754,10 +2658,7 @@
                     "key": "state",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "full",
-                        "on"
-                    ],
+                    "enum": ["full", "on"],
                     "required": false
                 },
                 {
@@ -2829,10 +2730,7 @@
                     "key": "state",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "full",
-                        "on"
-                    ],
+                    "enum": ["full", "on"],
                     "required": false
                 },
                 {
@@ -3041,10 +2939,7 @@
                     "key": "state",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "full",
-                        "on"
-                    ],
+                    "enum": ["full", "on"],
                     "required": false
                 },
                 {
@@ -3088,10 +2983,7 @@
                     "key": "form",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "elements",
-                        "image"
-                    ],
+                    "enum": ["elements", "image"],
                     "required": false
                 },
                 {
@@ -3313,10 +3205,7 @@
                     "key": "action",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "launch",
-                        "terminate"
-                    ],
+                    "enum": ["launch", "terminate"],
                     "required": true
                 },
                 {
@@ -3388,10 +3277,7 @@
                     "key": "sensor",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "face",
-                        "finger"
-                    ],
+                    "enum": ["face", "finger"],
                     "required": false
                 },
                 {
@@ -3444,12 +3330,7 @@
                     "key": "action",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "button",
-                        "swipe",
-                        "tap",
-                        "type"
-                    ],
+                    "enum": ["button", "swipe", "tap", "type"],
                     "required": true
                 },
                 {
@@ -3602,18 +3483,7 @@
                     "key": "name",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "calendar",
-                        "camera",
-                        "contacts",
-                        "faceid",
-                        "location",
-                        "media-library",
-                        "microphone",
-                        "motion",
-                        "photos",
-                        "reminders"
-                    ],
+                    "enum": ["calendar", "camera", "contacts", "faceid", "location", "media-library", "microphone", "motion", "photos", "reminders"],
                     "required": false
                 },
                 {
@@ -3717,10 +3587,7 @@
                     "key": "appearance",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "dark",
-                        "light"
-                    ],
+                    "enum": ["dark", "light"],
                     "required": false
                 },
                 {
@@ -3769,22 +3636,14 @@
                     "key": "status_bar",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "clean",
-                        "default"
-                    ],
+                    "enum": ["clean", "default"],
                     "required": false
                 },
                 {
                     "key": "text_size",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "default",
-                        "extra-large",
-                        "large",
-                        "small"
-                    ],
+                    "enum": ["default", "extra-large", "large", "small"],
                     "required": false
                 }
             ]
@@ -3932,16 +3791,7 @@
                     "key": "topic",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "diagram",
-                        "drawing",
-                        "models",
-                        "nodes",
-                        "notes",
-                        "plan",
-                        "roles",
-                        "schedule"
-                    ],
+                    "enum": ["diagram", "drawing", "models", "nodes", "notes", "plan", "roles", "schedule"],
                     "required": true
                 }
             ]
@@ -3957,11 +3807,7 @@
                     "key": "action",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "restart",
-                        "start",
-                        "stop"
-                    ],
+                    "enum": ["restart", "start", "stop"],
                     "required": true
                 },
                 {
@@ -4093,11 +3939,7 @@
                     "key": "kind",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "group",
-                        "service",
-                        "task"
-                    ],
+                    "enum": ["group", "service", "task"],
                     "required": true
                 },
                 {
@@ -4303,11 +4145,7 @@
                     "key": "layout",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "column",
-                        "grid",
-                        "row"
-                    ],
+                    "enum": ["column", "grid", "row"],
                     "required": false
                 },
                 {
@@ -4562,18 +4400,7 @@
                     "key": "kind",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "artifact",
-                        "browser",
-                        "chat",
-                        "device",
-                        "diagram",
-                        "drawing",
-                        "file",
-                        "note",
-                        "routine",
-                        "terminal"
-                    ],
+                    "enum": ["artifact", "browser", "chat", "device", "diagram", "drawing", "file", "note", "routine", "terminal"],
                     "required": false
                 },
                 {
@@ -4861,11 +4688,7 @@
                     "key": "kind",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "agent",
-                        "command",
-                        "launch"
-                    ],
+                    "enum": ["agent", "command", "launch"],
                     "required": false
                 },
                 {
@@ -4879,12 +4702,7 @@
                     "key": "mode",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "auto",
-                        "auto-accept-edits",
-                        "full-access",
-                        "supervised"
-                    ],
+                    "enum": ["auto", "auto-accept-edits", "full-access", "supervised"],
                     "required": false
                 },
                 {
@@ -4898,10 +4716,7 @@
                     "key": "per_run",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "continue",
-                        "new"
-                    ],
+                    "enum": ["continue", "new"],
                     "required": false
                 },
                 {
@@ -4996,11 +4811,7 @@
                     "key": "kind",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "agent",
-                        "command",
-                        "launch"
-                    ],
+                    "enum": ["agent", "command", "launch"],
                     "required": false
                 },
                 {
@@ -5014,12 +4825,7 @@
                     "key": "mode",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "auto",
-                        "auto-accept-edits",
-                        "full-access",
-                        "supervised"
-                    ],
+                    "enum": ["auto", "auto-accept-edits", "full-access", "supervised"],
                     "required": false
                 },
                 {
@@ -5033,10 +4839,7 @@
                     "key": "per_run",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "continue",
-                        "new"
-                    ],
+                    "enum": ["continue", "new"],
                     "required": false
                 },
                 {
@@ -5103,10 +4906,7 @@
                     "key": "action",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "pause",
-                        "resume"
-                    ],
+                    "enum": ["pause", "resume"],
                     "required": true
                 },
                 {
@@ -5434,28 +5234,14 @@
                     "key": "kind",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "browser",
-                        "canvas",
-                        "chat",
-                        "database",
-                        "diagram",
-                        "drawing",
-                        "file",
-                        "separator",
-                        "subheader",
-                        "terminal"
-                    ],
+                    "enum": ["browser", "canvas", "chat", "database", "diagram", "drawing", "file", "separator", "subheader", "terminal"],
                     "required": false
                 },
                 {
                     "key": "mode",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "data",
-                        "structure"
-                    ],
+                    "enum": ["data", "structure"],
                     "required": false
                 },
                 {
@@ -5649,10 +5435,7 @@
                     "key": "decision",
                     "type": "string",
                     "items": null,
-                    "enum": [
-                        "allow",
-                        "deny"
-                    ],
+                    "enum": ["allow", "deny"],
                     "required": false
                 },
                 {

@@ -1,7 +1,8 @@
 import Foundation
 import RuimtePulsar
 
-/// A kind of push a machine sends (`PushNotifyKindSchema`).
+/// A kind of push a machine sends (`PushNotifyKindSchema`). A test holds the cases against
+/// `WireVocabulary.pushNotifyKinds`.
 enum PushNotifyKind: String, CaseIterable, Codable, Sendable {
     case needsYou = "needs-you"
     case turn
@@ -100,7 +101,6 @@ struct NotificationPreferences: Equatable, Codable, Sendable {
     /// Nil until a person looks at it, which reads as off.
     var quietHours: QuietHours?
 
-    /// The hours as the page edits them.
     var quiet: QuietHours {
         get { quietHours ?? QuietHours() }
         set { quietHours = newValue }

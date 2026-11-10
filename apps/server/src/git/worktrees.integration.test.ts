@@ -3,7 +3,8 @@ import { mkdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises
 import { join } from 'node:path';
 import { fileExists } from '@adecore/utils/fs';
 import type { Worktree } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import { MachineHome } from '../disk/machine-home.ts';
+import type { SessionEvent } from '../wire.ts';
 import { checkpointIndexFile, Checkpoints } from './checkpoints.ts';
 import * as runner from './run.ts';
 import { forgetBase } from './status.ts';
@@ -311,7 +312,7 @@ describe('Worktrees', () => {
         await gitIn(worktree.path, ['commit', '--quiet', '--message', 'work']);
         const tip = (await gitIn(worktree.path, ['rev-parse', 'HEAD'])).trim();
         await writeFile(join(worktree.path, 'more.md'), 'more');
-        await new Checkpoints(home).take(worktree.path);
+        await new Checkpoints(home, new MachineHome(home)).take(worktree.path);
         const index = join(home, 'checkpoints', checkpointIndexFile(worktree.path));
         expect(await fileExists(index)).toBe(true);
 

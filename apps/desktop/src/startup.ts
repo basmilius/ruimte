@@ -5,7 +5,6 @@ export interface StartupDeps {
     startMachine(): Promise<boolean>;
     /* Moves what the page kept under its old origin; the answer closes the window that did it. */
     moveStorage(): Promise<() => void>;
-    /* The windows of the last session, or one on the start screen. */
     restoreWindows(): void;
     startUpdater(): void;
     /* From here on the page may have the local secret, and a pending restart is watched. */
@@ -78,7 +77,7 @@ async function openWindows(deps: StartupDeps, stopped: () => boolean): Promise<b
     return true;
 }
 
-export interface SecretGate {
+interface SecretGate {
     open(): void;
     /* Settles only once the gate opened, so a window that opened early waits rather than hands the secret to an unproven daemon. */
     read(): Promise<string | null>;

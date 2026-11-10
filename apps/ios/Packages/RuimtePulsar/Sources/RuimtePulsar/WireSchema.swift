@@ -145,6 +145,9 @@ public enum WireSchema {
         try? schemas.get()[name]
     }
 
+    /// Every generated schema by name, for tests that hold what the app implements to what the schemas stamp.
+    static var all: [String: JSONValue] { (try? schemas.get())?.objectValue ?? [:] }
+
     @discardableResult
     public static func validate(_ name: String, _ value: JSONValue) throws -> JSONValue {
         guard let schema = try schemas.get()[name] else { throw WireValidationError.invalid("Unknown schema: \(name)") }
@@ -266,27 +269,43 @@ public enum WireSchema {
                     throw WireValidationError.invalid("Missing \(path).\(key)")
                 }
             }
-            if schema["x-message-content"] == .bool(true) {
-                guard
-                    !(result["text"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
-                        || !(result["attachments"]?.arrayValue?.isEmpty ?? true)
-                else { throw fail() }
-            }
-            if schema["x-follow-dimensions"] == .bool(true) {
-                let hasColumns = result["cols"] != nil
-                let hasRows = result["rows"] != nil
-                guard hasColumns == hasRows, hasColumns || result["follow"] == .bool(true) else { throw fail() }
-            }
-            if let lifetime = schema["x-statement-lifetime-ms"]?.numberValue {
-                guard let issuedAt = result["issuedAt"]?.numberValue, let expiresAt = result["expiresAt"]?.numberValue,
-                    expiresAt > issuedAt, expiresAt - issuedAt <= lifetime
-                else { throw fail() }
+            for refinement in schema["x-refinements"]?.arrayValue ?? [] {
+                guard refinementHolds(refinement, result) else { throw fail() }
             }
             return schema["x-output-null"] == .bool(true) ? .null : .object(result)
         case nil: break
         default: throw WireValidationError.invalid("Unsupported generated schema at \(path)")
         }
         return value
+    }
+
+    /// The refinements the phone runs, by the name `packages/contracts/scripts/refinements.ts` stamps as
+    /// `x-refinements`. A stamped name missing here fails `WireSchemaTests`, so the table cannot fall behind.
+    public static let enforcedRefinements: [String: @Sendable ([String: JSONValue], JSONValue) -> Bool] = [
+        "message-content": { result, _ in
+            !(result["text"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+                || !(result["attachments"]?.arrayValue?.isEmpty ?? true)
+        },
+        "follow-dimensions": { result, _ in
+            let hasColumns = result["cols"] != nil
+            let hasRows = result["rows"] != nil
+            return hasColumns == hasRows && (hasColumns || result["follow"] == .bool(true))
+        },
+        "statement-lifetime": { result, parameters in
+            guard let lifetime = parameters["lifetimeMs"]?.numberValue, let issuedAt = result["issuedAt"]?.numberValue,
+                let expiresAt = result["expiresAt"]?.numberValue
+            else { return false }
+            return expiresAt > issuedAt && expiresAt - issuedAt <= lifetime
+        },
+        "voice-stop-target": { result, _ in (result["sessionId"] == nil) != (result["startId"] == nil) },
+        "project-id-or-folder": { result, _ in
+            !(result["projectId"]?.stringValue?.isEmpty ?? true) || !(result["folder"]?.stringValue?.isEmpty ?? true)
+        },
+    ]
+
+    private static func refinementHolds(_ refinement: JSONValue, _ result: [String: JSONValue]) -> Bool {
+        guard let name = refinement["name"]?.stringValue, let check = enforcedRefinements[name] else { return false }
+        return check(result, refinement)
     }
 
     private static let literalKeys = ["kind", "type", "ok", "action"]

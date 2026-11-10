@@ -1,9 +1,8 @@
-import type { LanDoor } from '@ruimte/contracts';
-import { lanDoorUrl } from '@ruimte/pulsar';
+import { lanDoorUrl, type LanDoor } from '@ruimte/pulsar';
 import i18next from 'i18next';
+import type { SignalRoute } from '../transport-api/transport';
 import type { LinkOpener } from './link-transport';
 import type { Signaling, SignalingOpener } from './signaling';
-import type { SignalRoute } from './transport';
 
 /* How long the doors on the local network have to themselves before the broker is asked as well. */
 export const LAN_HEAD_START_MS = 1_000;
@@ -23,7 +22,7 @@ const systemClock: RaceClock = {
     }
 };
 
-export interface RaceOptions {
+interface RaceOptions {
     /* One opener per door address the machine reported; empty where the local network is not tried. */
     lan: readonly SignalingOpener[];
     broker: SignalingOpener | null;
@@ -217,7 +216,7 @@ export function lanDoorUrls(lan: LanDoor | null | undefined, station: boolean): 
     return station || !lan ? [] : lan.addresses.map((address) => lanDoorUrl(address, lan.port));
 }
 
-export interface RoutedLinkOptions {
+interface RoutedLinkOptions {
     /* The machine's own id, which the doors are skipped under. */
     machineId: string;
     lan: readonly SignalingOpener[];

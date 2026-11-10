@@ -1,5 +1,5 @@
 import type { TaskCoordinator } from '@adecore/agents/coordination';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 
 const TERMINAL_ENDED = 'It ended without a result: a terminal reports back with task_done.';
 

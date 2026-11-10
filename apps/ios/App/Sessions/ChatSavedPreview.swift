@@ -16,18 +16,17 @@ enum ChatSavedPreview: Equatable {
     /// Past this a file read whole is read only when a person opens it, so a long thread never pulls megabytes.
     static let maxBytes: Double = 256 * 1024
 
-    /// The images of a version the thread shows at most.
     static let maxImages = 4
 
     /// The first file there is something to show of, by what the file is, or nil when the version stays a row. What
     /// a person saved from the thread is already in it.
     static func of(_ version: OutputVersion) -> ChatSavedPreview? {
-        guard version.provenance.maker != "person" else { return nil }
+        guard version.provenance.maker != .person else { return nil }
         for (index, file) in version.files.enumerated() {
             let view = OutputFileView(file)
             guard view.inline else { continue }
             // An image is drawn lazily; everything else is read whole.
-            if view != .image && file.size > maxBytes { return nil }
+            if view != .image && file.bytes > maxBytes { return nil }
             switch view {
             case .page: return .page(file: index)
             case .markdown: return .markdown(file: index)
@@ -74,7 +73,7 @@ enum OutputFileView: Equatable {
             self = .pdf
         } else if Self.models.contains(mime) {
             self = .model
-        } else if !(mime.hasPrefix("text/") || Self.texts.contains(mime)) || file.size > WireConstants.bytesReadMaxBytes {
+        } else if !(mime.hasPrefix("text/") || Self.texts.contains(mime)) || file.bytes > WireConstants.bytesReadMaxBytes {
             self = .none
         } else if mime == "text/html" || ["html", "htm"].contains(extensionName) {
             self = .page
@@ -119,7 +118,6 @@ struct ChatSavedPreviewView: View {
     }
 }
 
-/// Folds or unfolds a preview, under it.
 private struct ChatSavedShowAll: View {
     @Binding var open: Bool
 
@@ -206,7 +204,7 @@ private struct ChatSavedPage: View {
     var body: some View {
         if !failed {
             ChatVisualContent(
-                visual: ChatVisual(id: "saved-\(entry.version.id)", title: entry.title, at: entry.version.createdAt),
+                visual: ChatVisual(id: "saved-\(entry.version.id)", title: entry.title, at: entry.version.created),
                 failed: $failed, read: { try await read(file) },
                 onHeight: { measured, _ in
                     height = min(ChatVisualContract.maxHeight, max(ChatVisualContract.minHeight, measured))

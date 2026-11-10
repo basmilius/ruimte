@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import RuimteIntelligentUI
 import RuimtePulsar
+import RuimteShared
 
 @MainActor @Observable
 final class ChatItemState: Identifiable {
@@ -49,7 +50,7 @@ final class ChatItemState: Identifiable {
 struct ChatAgentSources {
     var tasks: TaskStore?
     var attention: AttentionStore?
-    var models: (String) -> [JSONValue] = { _ in [] }
+    var models: (String) -> [ProviderModel] = { _ in [] }
 }
 
 struct ChatTimelineEntry: Identifiable, Equatable {
@@ -77,7 +78,7 @@ struct ChatTimelineEntry: Identifiable, Equatable {
 }
 
 /// A sub-agent's row: the work the thread kept of it, and the agents it opened in turn, each a row of its own under
-/// it, as `SubagentBranch` in the desktop's `chat/logic/timeline.ts`.
+/// it, as `SubagentBranch` in `chat/logic/timeline.ts` of `@adecore/agents-react`.
 struct ChatSubagentBranch: Equatable {
     // Deeper than the CLI forwards any call; it also ends a chain of rows that would name each other.
     static let maxNesting = 8
@@ -255,18 +256,15 @@ final class ChatPresentation {
     private(set) var referenced: [String] = []
     @ObservationIgnored var agentSources: ChatAgentSources?
     /// The catalog of the chat's own CLI, which names the models and efforts a selection switch moved between.
-    @ObservationIgnored var chatModels: () -> [JSONValue] = { [] }
-    /// The messages a person marked, by item id, as the machine last said.
+    @ObservationIgnored var chatModels: () -> [ProviderModel] = { [] }
     private(set) var bookmarks: [String: ChatBookmark] = [:]
     /// A row asked to place, name or take away a bookmark; the screen carries it out.
     var bookmarkRequest: ChatBookmarkRequest?
     var uiChoiceRequest: UiChoiceJump?
     var uiChoiceHighlight: UiChoiceJump?
-    /// The pages agents published in the chat, as the machine last said.
     private(set) var visuals: [ChatVisual] = []
     /// A card asked to open its visual large or to remove it; the screen carries it out.
     var visualRequest: ChatVisualRequest?
-    /// What the chat saved to Output, as the machine last said.
     private(set) var saved: [ChatSavedVersion] = []
     /// A card asked to open an item of Output; the screen pushes it.
     var outputRequest: ChatOutputOpen?
@@ -282,7 +280,6 @@ final class ChatPresentation {
     /// A quote asked to lead back to the reply it quotes; the screen carries it out, since that reply may be on a page
     /// this thread has not read yet.
     private(set) var quoteRequest: ChatQuoteJump?
-    /// The messages whose quoted reply is no longer in the thread.
     private(set) var goneQuotes: Set<String> = []
     /// The calls that wait on a person's answer to an approval of them, by tool use id.
     private(set) var awaitingApproval: Set<String> = []
@@ -395,7 +392,9 @@ final class ChatPresentation {
     }
 
     func forkRefusal(turnID: String) -> String? {
-        ChatForking.refusal(info: info, turn: records[turnID]?.item)
+        ChatForking.refusal(
+            info: info, turn: records[turnID]?.item,
+            cliCanFork: info.map { AgentDirectory.shared.canFork($0.provider) } ?? true)
     }
 
     /// Scrolls the timeline to an entry, as the message index asks; a jump that searched for it lights it up.
@@ -547,12 +546,14 @@ final class ChatPresentation {
             rows += shown(rowsFor(Array(conversation[..<split]), children: children))
             let work = Array(conversation[split...])
             let workRows = rowsFor(work, children: children)
-            // The closing answer stays in sight; the work after the last input folds behind the label. A turn the
-            // machine ended mid-call has none, but what it last said is still the most a person can read of it.
+            // The closing answer stays in sight; the work after the last input folds behind the label.
+            // A turn the machine ended mid-call has no closing answer, but what it last said is still the most a person
+            // can read of it.
             let cutShort = turnItem.state == .aborted && Self.abortedByMachine(turnItem, items: items.map(\.item))
             let answer =
                 Self.closingAnswer(workRows)
-                ?? (cutShort ? workRows.lastIndex { $0.kind == .message && $0.items.first?.item.assistantItem != nil } : nil)
+                ?? (cutShort
+                    ? workRows.lastIndex { $0.kind == .message && $0.items.first?.item.assistantItem != nil } : nil)
             let before = Array(workRows[..<(answer ?? workRows.count)])
             let standing = before.filter(Self.stands)
             let standingIDs = Set(standing.map(\.id))
@@ -573,10 +574,11 @@ final class ChatPresentation {
             rows += expandable && expandedTurns.contains(turnID) ? visible : standing
             let edits = conversation.filter {
                 guard case .tool(let tool) = $0.item else { return false }
-                return tool.state == .done && ChatToolPresentation.isFileChange(tool.name)
+                return tool.state == .done && ChatToolPresentation.changesFiles(tool.name)
                     && ChatFileChanges.hasChanges(tool)
             }
-            if turnItem.checkpointDiff.map({ !$0.files.isEmpty }) ?? !edits.isEmpty {
+            let changed = turnItem.checkpointDiff.map { !$0.files.isEmpty } ?? !edits.isEmpty
+            if changed {
                 rows.append(ChatTimelineEntry(id: "files-\(turnID)", kind: .changedFiles, items: [turn] + edits))
             }
             if let answer { rows += workRows[answer...] }
@@ -588,7 +590,7 @@ final class ChatPresentation {
         let itemTimes = all.map(\.item.createdAt)
         // Output survives a clear; only versions from the conversation still in this thread belong here.
         let from = itemTimes.min() ?? .infinity
-        let visibleSaved = saved.filter { $0.version.createdAt >= from }
+        let visibleSaved = saved.filter { $0.version.created >= from }
         let groups = ChatOutputCards.groups(visibleSaved, itemTimes: itemTimes)
         let cards = groups.map(ChatOutputCard.init(saved:))
         rows = ChatVisuals.placed(rows, visuals: visuals, cards: cards, heldFrom: heldFrom)
@@ -680,6 +682,7 @@ final class ChatPresentation {
     /// compaction is never folded away, so a turn that only compacted shows its divider and no fold.
     private static func stands(_ row: ChatTimelineEntry) -> Bool {
         switch row.items.first?.item {
+        case .compaction? where row.kind == .message: true
         case .tool(let tool)? where row.kind == .message:
             UiGeneratedImage.isGeneration(tool) || tool.workflow != nil && tool.state == .running
         case .compaction? where row.kind == .message: true
@@ -774,9 +777,9 @@ final class ChatPresentation {
                 ? String(localized: "Woken by \(messages) messages")
                 : String(localized: "Woken by \(messages) messages: \(label)")
         }
-        guard !label.isEmpty else { return String(localized: "Continued on its own") }
-        // The machine names the sub-agent row a wake is about; Claude Code also wakes the agent for a command, a
-        // monitor or a workflow it ran in the background, which has no such row.
+        if label.isEmpty { return String(localized: "Continued on its own") }
+        // The machine names the sub-agent row a wake is about; the CLI also wakes the agent for a command, a monitor or a
+        // workflow it ran in the background, which has no such row.
         return turn.taskToolUseId == nil
             ? String(localized: "Background task finished: \(label)") : String(localized: "Sub-agent finished: \(label)")
     }
@@ -787,14 +790,16 @@ enum ChatToolPresentation {
 
     /// What a call is about, also for one that is only asked for, as an approval names it.
     static func summary(name: String, input: JSONValue) -> String {
-        // A tool nobody named shows whatever string it was called with, as chat/logic/tools.ts does. That reads the
-        // input in the order the CLI wrote it; a decoded object has no order, so the keys decide instead.
-        let keys = summaryKeys[name] ?? (input.objectValue ?? [:]).keys.sorted()
-        return keys.compactMap { input[$0]?.stringValue }.first ?? ""
+        guard let fields = input.objectValue else { return "" }
+        guard let keys = summaryKeys[name] else {
+            // A tool nobody named shows whatever string it was called with, as chat/logic/tools.ts does. That reads
+            // the input in the order the CLI wrote it; a decoded object has no order, so the keys decide instead.
+            return fields.keys.sorted().compactMap { fields[$0]?.stringValue }.first ?? ""
+        }
+        return keys.compactMap { fields[$0]?.stringValue }.first ?? ""
     }
 
-    /// The input keys that say what a call is about, best first, as `TOOL_CATALOG` in the desktop's
-    /// `chat/logic/tool-catalog.ts` has them. A plan and a workflow's script have no line to lift out.
+    // The input keys that hold the line saying what a call is about, best first: `TOOL_CATALOG` in ADE CORE.
     private static let summaryKeys: [String: [String]] = [
         "Read": ["file_path"], "NotebookRead": ["file_path", "notebook_path"], "Edit": ["file_path"],
         "Write": ["file_path"], "MultiEdit": ["file_path"], "NotebookEdit": ["file_path", "notebook_path"],
@@ -807,12 +812,11 @@ enum ChatToolPresentation {
     static func summaryIsPath(_ tool: ChatToolItem) -> Bool { summaryIsPath(name: tool.name, input: tool.input) }
 
     static func summaryIsPath(name: String, input: JSONValue) -> Bool {
-        let key = summaryKeys[name]?.first { input[$0]?.stringValue != nil }
+        guard let keys = summaryKeys[name], input.objectValue != nil,
+            let key = keys.first(where: { input[$0]?.stringValue != nil })
+        else { return false }
         return key == "file_path" || key == "notebook_path"
     }
-
-    /// Whether a call writes to a file, which is what the changed files card and a run's sentence count.
-    static func isFileChange(_ name: String) -> Bool { fileChanges.contains(name) }
 
     /// The detail on a call's line. A live call that names nothing in its input says what its progress reports.
     static func lineDetail(_ tool: ChatToolItem) -> String {
@@ -821,7 +825,7 @@ enum ChatToolPresentation {
         return tool.progress?.description ?? ""
     }
 
-    /// The mark of a call, as `toolIcon` in the desktop's chat draws it; a tool nobody named gets the wrench.
+    /// The mark of a call, as `toolIcon` in `@adecore/agents-react` draws it; a tool nobody named gets the wrench.
     static func icon(_ name: String) -> String {
         switch name {
         case "Read", "NotebookRead": "eye"
@@ -919,6 +923,9 @@ enum ChatToolPresentation {
     }
 
     private static let fileChanges: Set<String> = ["Edit", "Write", "MultiEdit", "ApplyPatch"]
+
+    /// Whether a call by this name writes to a file, which is what a mixed run of calls is named after.
+    static func changesFiles(_ name: String) -> Bool { fileChanges.contains(name) }
 
     /// A file change that failed or was refused changed nothing: it counts as a call, never as an edit.
     private static func failedFileChange(_ tool: ChatToolItem) -> Bool {

@@ -8,7 +8,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 /* How long one turn of a tile takes: the thing it shows happens, holds a moment, and goes again. */
 const TURN_MS = 2600;
 
-/* The size of a tile, square beside the words of its row. */
 const TILE = 44;
 
 /* Where a figure in a tile stands: the line its feet rest on, from the bottom of the tile, so what stands on it sits in the middle. */
@@ -22,7 +21,6 @@ const KID_CELL = 0.5;
 const FIGURE_WIDTH = 26 * FIGURE_CELL;
 const KID_WIDTH = 26 * KID_CELL;
 
-/* Where a row of things, each this wide with a gap between, starts so the row sits in the middle of a tile. */
 function centered(widths: readonly number[], gap: number): number[] {
     const total = widths.reduce((sum, width) => sum + width, 0) + gap * (widths.length - 1);
     let left = Math.round((TILE - total) / 2);
@@ -98,7 +96,6 @@ export function SubagentsTile() {
     );
 }
 
-/* The node a visitor drops by, a small card on the ground. */
 const VISITED = { width: 12, height: 16 } as const;
 
 /* A node, and every other turn a pet that drops by beside it while Visitor is on. */
@@ -125,7 +122,6 @@ export function VisitorTile() {
     );
 }
 
-/* The figures of a set side by side in one tile, as the tiles of the rows above show theirs. */
 export function FigureTile({ looks }: { looks: readonly PetLook[] }) {
     // A figure leaves empty columns at either side, so two of them overlap there to fit the tile.
     const lefts = centered(

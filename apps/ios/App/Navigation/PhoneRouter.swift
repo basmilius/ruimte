@@ -22,7 +22,6 @@ enum PhoneRoute: Hashable {
     /// A notification still finding the project that holds its node.
     case notification(NotificationDestination)
     case recentProjects
-    /// A machine, by its id.
     case machine(String)
     case file(ProjectFileTarget)
     /// A routine or one of its runs, over Scheduled.

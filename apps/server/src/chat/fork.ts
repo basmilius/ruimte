@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import { forkThreadOnce, ChatError as AgentChatError } from '@adecore/agents/chat';
+import { ChatError as AgentChatError, type ForkKept } from '@adecore/agents/chat';
 import type { AgentLineageStore } from '@adecore/agents/coordination';
-import { narrowerMode, AccountError, storedAccount, codexServiceTier, codexThreadOptions } from '@adecore/agents/providers';
+import { narrowerMode, AccountError, storedAccount, codexServiceTier, codexThreadOptions, type ChatProvider } from '@adecore/agents/providers';
 import {
     chatHostOf,
     clipText,
@@ -22,7 +22,6 @@ import {
     type ChatInfo,
     type ChatItem,
     type ChatTurnItem,
-    type ChatVisual,
     type ModelSelection,
     type RuntimeMode,
     type ProjectCanvasView,
@@ -33,85 +32,23 @@ import {
     type ProjectView,
     type Worktree
 } from '@ruimte/contracts';
-import type { HiddenAgent, HiddenAgentStore } from '../agents/hidden-agents.ts';
+import { agentNode } from '../canvas/agents.ts';
+import type { CanvasHost, MachineHost, ProjectHost } from '../canvas/host.ts';
+import { MAX_CANVAS_NODES, newId } from '../canvas/nodes.ts';
+import { placeFree } from '../canvas/placement.ts';
+import { branchSlug } from '../canvas/worktree.ts';
 import { errorText } from '../error-text.ts';
 import type { Checkpoints } from '../git/checkpoints.ts';
 import { git } from '../git/run.ts';
+import type { WorktreeWant } from '../git/worktree-host.ts';
 import { freeBranch, type Worktrees } from '../git/worktrees.ts';
+import type { HiddenAgent, HiddenAgentStore } from '../projects/hidden-agents.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
-import { agentNode, nameOf } from '../tools/agents.ts';
-import type { CanvasHost, MachineHost, ProjectHost, WorktreeWant } from '../tools/host.ts';
-import { MAX_CANVAS_NODES, newId } from '../tools/nodes.ts';
-import { placeFree } from '../tools/placement.ts';
-import { branchSlug } from '../tools/worktree.ts';
 import type { ChatManager } from './chat-manager.ts';
 import { forkClaudeTranscript, type TranscriptCutPoint } from './claude-fork.ts';
 import { ChatError } from './errors.ts';
 import { handoffBudget, handoffText } from './handoff.ts';
-
-/* Where a Codex fork goes on after (the turn Codex named, the n-th turn when it named none, or all of it). */
-type ThreadCutPoint = { turnId: string } | { turns: number } | null;
-
-export interface ChatForkDeps {
-    /* The chat as it stands, loaded or on disk; null when this machine has no such chat. */
-    source(chatId: string): Promise<{ info: ChatInfo; items: ChatItem[] } | null>;
-    installed(): Promise<AgentKind[]>;
-    /* Whether the chat is on its way to another folder, which a copy of its conversation would race. */
-    relocating?(chatId: string): boolean;
-    /* The model and mode a chat of this CLI starts with (the one named, else the newest composer pick). */
-    startingPoint(provider: AgentKind, selection?: ModelSelection): { selection: ModelSelection; runtimeMode?: RuntimeMode; contextWindow: number | null };
-    locate(id: string): IndexedPlace | null;
-    titleFor(id: string): string | null;
-    read: ProjectHost['read'];
-    mutate: ProjectHost['mutate'];
-    depthOf(nodeId: string): number;
-    nodeSize: MachineHost['nodeSize'];
-    /* With a ceiling the fork is a child the agent `openedBy` opened; without one a sibling a person made beside the original `openedBy`. */
-    recordFork(record: { projectId: string; nodeId: string; openedBy: string; depth: number; ceiling?: RuntimeMode }): Promise<void>;
-    /* Keeps the fork of a hidden agent hidden as well, belonging to the agent that forked it. */
-    hideFork?(agent: HiddenAgent): Promise<void>;
-    /* Writes the cut transcript under the new session id and answers how to take it back. */
-    forkClaude(input: { source: ChatInfo; at: TranscriptCutPoint; newSessionId: string; cwd: string }): Promise<{ undo(): Promise<void> }>;
-    /* Forks the thread in Codex into the fork's folder and answers the new thread's id. */
-    forkCodex(input: { source: ChatInfo; at: ThreadCutPoint; cwd: string }): Promise<string>;
-    /* The local branches of the repository a folder is in, or null outside one. */
-    branchesOf(folder: string): Promise<string[] | null>;
-    /* A worktree on a new branch for the fork, with the folder in it that matches the original's, and how to take it back. */
-    addWorktree(input: {
-        cwd: string;
-        want: WorktreeWant;
-        projectId: string;
-        nodeId: string;
-    }): Promise<{ worktree: Worktree; cwd: string; undo(): Promise<void> }>;
-    treeExists(cwd: string, tree: string): Promise<boolean>;
-    /* The tree of a folder as it is now, or null when git cannot take one. */
-    takeTree(cwd: string): Promise<string | null>;
-    restoreTree(cwd: string, tree: string): Promise<void>;
-    writeRecord(chatId: string, info: ChatInfo, items: ChatItem[], preambles: string[]): Promise<void>;
-    deleteRecord(chatId: string): Promise<void>;
-    /* Copies the plans of the original under the fork's id; `deleteRecord` takes them back. */
-    copyPlans(fromChatId: string, toChatId: string): Promise<void>;
-    /* Copies the bookmarks of the original that sit on these items; `deleteRecord` takes them back too. */
-    copyBookmarks(fromChatId: string, toChatId: string, itemIds: ReadonlySet<string>): Promise<void>;
-    /* Copies the visuals of the original `keep` picks, each with a page of its own; `deleteRecord` takes them back too. */
-    copyVisuals(fromChatId: string, toChatId: string, keep: (visual: ChatVisual) => boolean): Promise<void>;
-    /* Copies the images the original's agent attached under the same ids, so the blocks the fork copied still show them. */
-    copyAgentImages(fromChatId: string, toChatId: string): Promise<void>;
-    newSessionId(): string;
-    now(): number;
-    /* The accounts a fork may go on under; without them only a CLI's default account. */
-    accounts?: {
-        /* Throws for an account a CLI of this kind cannot start under on this machine. */
-        require(kind: AgentKind, account: string | undefined): void;
-        /* Where a start the chat makes goes, given the account it names: its project's choice, else the order of the accounts. Throws for one its project turned off. */
-        opening?(chatId: string, kind: AgentKind, named: string | undefined): string | undefined;
-        canContinue(kind: AgentKind, from: string | undefined, to: string | undefined): boolean;
-        label(kind: AgentKind, account: string | undefined): string;
-    };
-}
-
-const MAX_TITLE = 120;
 
 /*
  * The agent that forks a chat it opened itself. The fork becomes its child: one deeper than the agent,
@@ -134,6 +71,64 @@ export interface AgentForkInput {
     branch?: string;
 }
 
+/* Forks a chat an agent opened into a child of that agent; absent on a host that forks none. */
+export interface AgentForkHost {
+    fork(input: AgentForkInput, opener: ForkOpener): Promise<ChatForkResult & { title: string }>;
+}
+
+/* Where a Codex fork goes on after (the turn Codex named, the n-th turn when it named none, or all of it). */
+type ThreadCutPoint = { turnId: string } | { turns: number } | null;
+
+export interface ChatForkDeps {
+    /* The chat as it stands, loaded or on disk; null when this machine has no such chat. */
+    source(chatId: string): Promise<{ info: ChatInfo; items: ChatItem[] } | null>;
+    installed(): Promise<AgentKind[]>;
+    provider(kind: AgentKind): ChatProvider;
+    /* Whether the chat is on its way to another folder, which a copy of its conversation would race. */
+    relocating?(chatId: string): boolean;
+    /* The model and mode a chat of this CLI starts with (the one named, else the newest composer pick). */
+    startingPoint(provider: AgentKind, selection?: ModelSelection): { selection: ModelSelection; runtimeMode?: RuntimeMode; contextWindow: number | null };
+    locate(id: string): IndexedPlace | null;
+    titleFor(id: string): string | null;
+    read: ProjectHost['read'];
+    mutate: ProjectHost['mutate'];
+    depthOf(nodeId: string): number;
+    nodeSize: MachineHost['nodeSize'];
+    /* With a ceiling the fork is a child the agent `openedBy` opened; without one a sibling a person made beside the original `openedBy`. */
+    recordFork(record: { projectId: string; nodeId: string; openedBy: string; depth: number; ceiling?: RuntimeMode }): Promise<void>;
+    /* Keeps the fork of a hidden agent hidden as well, belonging to the agent that forked it. */
+    hideFork?(agent: HiddenAgent): Promise<void>;
+    forkClaude(input: { source: ChatInfo; at: TranscriptCutPoint; newSessionId: string; cwd: string }): Promise<{ undo(): Promise<void> }>;
+    forkCodex(input: { source: ChatInfo; at: ThreadCutPoint; cwd: string }): Promise<string>;
+    branchesOf(folder: string): Promise<string[] | null>;
+    /* A worktree on a new branch for the fork, with the folder in it that matches the original's, and how to take it back. */
+    addWorktree(input: {
+        cwd: string;
+        want: WorktreeWant;
+        projectId: string;
+        nodeId: string;
+    }): Promise<{ worktree: Worktree; cwd: string; undo(): Promise<void> }>;
+    treeExists(cwd: string, tree: string): Promise<boolean>;
+    takeTree(cwd: string): Promise<string | null>;
+    restoreTree(cwd: string, tree: string): Promise<void>;
+    writeRecord(chatId: string, info: ChatInfo, items: ChatItem[], preambles: string[]): Promise<void>;
+    deleteRecord(chatId: string): Promise<void>;
+    /* Gives the fork what the original keeps beside its record (plans, bookmarks, visuals, the images its agent attached); `deleteRecord` takes it back. */
+    copySidecars(fromChatId: string, toChatId: string, kept: ForkKept): Promise<void>;
+    newSessionId(): string;
+    now(): number;
+    /* The accounts a fork may go on under; without them only a CLI's default account. */
+    accounts?: {
+        require(kind: AgentKind, account: string | undefined): void;
+        /* Where a start the chat makes goes, given the account it names: its project's choice, else the order of the accounts. Throws for one its project turned off. */
+        opening?(chatId: string, kind: AgentKind, named: string | undefined): string | undefined;
+        canContinue(kind: AgentKind, from: string | undefined, to: string | undefined): boolean;
+        label(kind: AgentKind, account: string | undefined): string;
+    };
+}
+
+const MAX_TITLE = 120;
+
 /* The items up to and including a turn (its own and those of every turn before it), plus what belonged to no turn before its end. */
 export function itemsThrough(items: readonly ChatItem[], turnId: string): ChatItem[] {
     const kept = new Set<string>();
@@ -153,7 +148,7 @@ export function itemsThrough(items: readonly ChatItem[], turnId: string): ChatIt
  * Whether a visual belongs to what a fork copied: one a copied turn published, or one published
  * between turns no later than the end of the turn the fork was cut at.
  */
-function visualKept(copied: readonly ChatItem[], turn: ChatTurnItem): (visual: ChatVisual) => boolean {
+function visualKept(copied: readonly ChatItem[], turn: ChatTurnItem): ForkKept['visual'] {
     const turnIds = new Set(copied.flatMap((item) => (item.kind === 'turn' ? [item.id] : [])));
     const end = turn.endedAt ?? copied.reduce((latest, item) => Math.max(latest, item.createdAt), turn.createdAt);
     return (visual) => (visual.turnId === undefined ? visual.at <= end : turnIds.has(visual.turnId));
@@ -213,8 +208,13 @@ function forkNotes(cut: Cut, original: { id: string; title: string; view: boolea
     return { note, preamble };
 }
 
-/* The CLIs with a chat that can be forked and go on a fork. */
-const CHAT_CLIS: ReadonlySet<AgentKind> = new Set(['claude', 'codex']);
+function nameOf(deps: Pick<ChatForkDeps, 'provider'>, kind: AgentKind): string {
+    return deps.provider(kind).name;
+}
+
+function forkable(deps: Pick<ChatForkDeps, 'provider'>, kind: AgentKind): boolean {
+    return deps.provider(kind).capabilities.fork === true;
+}
 
 /* What the person reads under the copied history of a fork that goes on with another CLI, after "Forked". */
 function switchNote(cut: Cut, original: { title: string }, files: ForkFiles, handoff: { to: string; turns: number; all: boolean }): string {
@@ -265,7 +265,7 @@ export async function readForkInfo(deps: ChatForkDeps, payload: ChatForkInfoPayl
     }
     const tree = treeAfterTurn(turns, index);
     const filesAfterTurn = tree === null ? index === turns.length - 1 : await deps.treeExists(info.cwd, tree);
-    const title = `${deps.titleFor(payload.chatId) ?? nameOf(info.provider)} (fork)`;
+    const title = `${deps.titleFor(payload.chatId) ?? nameOf(deps, info.provider)} (fork)`;
     return { repository: true, branches, branch: freeBranch(branchSlug(title), new Set(branches)), filesAfterTurn };
 }
 
@@ -273,9 +273,9 @@ export async function readForkInfo(deps: ChatForkDeps, payload: ChatForkInfoPayl
 export async function readHandoff(deps: ChatForkDeps, payload: ChatHandoffPayload): Promise<ChatHandoffResult> {
     const { info, items, turns, index, turn } = await forkSource(deps, payload.chatId, payload.turnId);
     return handoffText(itemsThrough(items, turn.id), {
-        fromName: nameOf(info.provider),
+        fromName: nameOf(deps, info.provider),
         originalId: payload.chatId,
-        originalTitle: deps.titleFor(payload.chatId) ?? nameOf(info.provider),
+        originalTitle: deps.titleFor(payload.chatId) ?? nameOf(deps, info.provider),
         view: deps.locate(payload.chatId)?.canvasId === null,
         turnNumber: index + 1,
         totalTurns: turns.length,
@@ -286,7 +286,6 @@ export async function readHandoff(deps: ChatForkDeps, payload: ChatHandoffPayloa
     });
 }
 
-/* Steps taken back in reverse when a later one is refused. */
 class UndoSteps {
     private readonly steps: Array<() => Promise<void>> = [];
 
@@ -300,7 +299,6 @@ class UndoSteps {
         }
     }
 
-    /* Runs `work`, and takes every step back before its error goes on. */
     async guard<T>(work: () => Promise<T>, refusal: (error: unknown) => unknown = (error) => error): Promise<T> {
         try {
             return await work();
@@ -351,7 +349,7 @@ async function forkFolder(
 
 /* The CLI's own copy of the conversation up to the cut, and the session id the fork resumes it under. */
 async function copyConversation(deps: ChatForkDeps, info: ChatInfo, cut: Cut, native: string | undefined, cwd: string, undo: UndoSteps): Promise<string> {
-    if (info.provider === 'codex') {
+    if (deps.provider(info.provider).threads !== undefined) {
         return deps.forkCodex({ source: info, at: native !== undefined ? { turnId: native } : cut.last ? null : { turns: cut.number }, cwd });
     }
     const agentSessionId = deps.newSessionId();
@@ -392,23 +390,23 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
     // Another CLI, or an account that cannot read the original's transcripts, reads the conversation as text instead.
     const handoff = switching || (!sameAccount && deps.accounts?.canContinue(provider, info.account, account) !== true);
     // A handoff copies only the thread, so a chat on a provider this machine lost can go on elsewhere.
-    if (!CHAT_CLIS.has(provider) || (!handoff && !CHAT_CLIS.has(info.provider))) {
-        throw new ChatError('chat-unsupported', `${nameOf(CHAT_CLIS.has(provider) ? info.provider : provider)} has no chat that can be forked`);
+    if (!forkable(deps, provider) || (!handoff && !forkable(deps, info.provider))) {
+        throw new ChatError('chat-unsupported', `${nameOf(deps, forkable(deps, provider) ? info.provider : provider)} has no chat that can be forked`);
     }
     if (!(await deps.installed()).includes(provider)) {
-        throw new ChatError('provider-not-installed', `${nameOf(provider)} is not installed on this machine`);
+        throw new ChatError('provider-not-installed', `${nameOf(deps, provider)} is not installed on this machine`);
     }
     if (info.agentSessionId === null && !handoff) {
-        throw new ChatError('transcript-missing', `${nameOf(info.provider)} never started a conversation in this chat, so there is nothing to fork`);
+        throw new ChatError('transcript-missing', `${nameOf(deps, info.provider)} never started a conversation in this chat, so there is nothing to fork`);
     }
     const place = deps.locate(payload.chatId);
     if (place === null) {
         throw new ChatError('chat-not-found', `${payload.chatId} is in no project this machine knows`);
     }
 
-    const native = info.provider === 'codex' ? turn.native?.turnId : turn.native?.lastUuid;
+    const native = deps.provider(info.provider).threads !== undefined ? turn.native?.turnId : turn.native?.lastUuid;
     const cut: Cut = { turn, number: index + 1, total: turns.length, last: index === turns.length - 1, exact: native !== undefined };
-    const originalTitle = deps.titleFor(payload.chatId) ?? nameOf(info.provider);
+    const originalTitle = deps.titleFor(payload.chatId) ?? nameOf(deps, info.provider);
     const title = clipText(payload.title ?? `${originalTitle} (fork)`, MAX_TITLE);
     const forkId = newId('chat', await deps.read(place.projectId));
 
@@ -426,7 +424,7 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
         const text = handoffText(
             copied,
             {
-                fromName: nameOf(info.provider),
+                fromName: nameOf(deps, info.provider),
                 originalId: payload.chatId,
                 originalTitle,
                 view: original.view,
@@ -438,7 +436,7 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
             },
             handoffBudget(start.contextWindow)
         );
-        const to = switching ? nameOf(provider) : `${nameOf(provider)} under the account '${deps.accounts?.label(provider, account) ?? account}'`;
+        const to = switching ? nameOf(deps, provider) : `${nameOf(deps, provider)} under the account '${deps.accounts?.label(provider, account) ?? account}'`;
         notes = { note: switchNote(cut, original, files, { to, turns: text.turns, all: text.all }), preamble: text.text };
     }
     const forkInfo = forkInfoOf(info, {
@@ -467,10 +465,8 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
     undo.push(() => deps.deleteRecord(forkId));
     await undo.guard(async () => {
         await deps.writeRecord(forkId, forkInfo, items, [notes.preamble]);
-        await deps.copyPlans(payload.chatId, forkId);
-        await deps.copyBookmarks(payload.chatId, forkId, new Set(copied.map((item) => item.id)));
-        await deps.copyVisuals(payload.chatId, forkId, visualKept(copied, turn));
-        await deps.copyAgentImages(payload.chatId, forkId);
+        const copiedIds = new Set(copied.map((item) => item.id));
+        await deps.copySidecars(payload.chatId, forkId, { item: (itemId) => copiedIds.has(itemId), visual: visualKept(copied, turn) });
     });
     return undo.guard(() =>
         deps.mutate(place.projectId, (content) =>
@@ -479,7 +475,6 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
     );
 }
 
-/* An agent's fork of a chat it opened, after the turn it names or the last one that finished. */
 export async function forkForAgent(deps: ChatForkDeps, input: AgentForkInput, opener: ForkOpener): Promise<ChatForkResult & { title: string }> {
     const source = await deps.source(input.chatId);
     if (source === null) {
@@ -616,7 +611,16 @@ async function landFork(
         );
     // A hidden agent stands in no view, so its fork stands in none either and is the forking agent's, as hidden.
     if (opener !== undefined && deps.hideFork !== undefined && place.canvasId === null && !content.views.some((view) => view.id === payload.chatId)) {
-        const node = agentNode({ id: forkId, chat: true, kind: provider, title, rect: { x: 0, y: 0, ...deps.nodeSize('chat') }, cwd: nodeCwd, account });
+        const node = agentNode({
+            id: forkId,
+            chat: true,
+            kind: provider,
+            kindName: nameOf(deps, provider),
+            title,
+            rect: { x: 0, y: 0, ...deps.nodeSize('chat') },
+            cwd: nodeCwd,
+            account
+        });
         await deps.hideFork({ projectId: place.projectId, openedBy: opener.id, node: { ...node, kind: 'chat' } });
         await landed();
         return { content: null, result: { info: forkInfo, nodeId: forkId, viewId: forkId, edgeId: null, ...answer } };
@@ -674,7 +678,7 @@ async function landFork(
     }
     const anchor = place.canvasId === null ? null : (canvas.nodes.find((node) => node.id === payload.chatId) ?? null);
     const rect = placeFree(canvas.nodes, deps.nodeSize('chat'), anchor);
-    const node = agentNode({ id: forkId, chat: true, kind: provider, title, rect, cwd: nodeCwd, account });
+    const node = agentNode({ id: forkId, chat: true, kind: provider, kindName: nameOf(deps, provider), title, rect, cwd: nodeCwd, account });
     const edge: ProjectEdge | null = anchor ? { id: newId('edge', content, [forkId]), from: anchor.id, to: forkId, label: 'context' } : null;
     return {
         content: {
@@ -788,11 +792,10 @@ function forkCanvas(content: ProjectContent, place: IndexedPlace, payload: ChatF
     return canvas;
 }
 
-/* The daemon's pieces a fork is made of, wired once for `daemon.ts` and the test daemon alike. */
 export function chatForkDeps(wiring: {
     chats: ChatManager;
     host: {
-        starts: Pick<CanvasHost['starts'], 'installedAgents'>;
+        starts: Pick<CanvasHost['starts'], 'installedAgents' | 'provider'>;
         projects: Pick<ProjectHost, 'locate' | 'read' | 'mutate'>;
         machine: Pick<MachineHost, 'nodeSize'>;
     };
@@ -804,10 +807,11 @@ export function chatForkDeps(wiring: {
 }): ChatForkDeps {
     const { hiddenAgents } = wiring;
     return {
-        source: (chatId) => wiring.chats.forkSource(chatId),
+        source: (chatId) => wiring.chats.core.readChat(chatId),
         installed: () => wiring.host.starts.installedAgents(),
-        relocating: (chatId) => wiring.chats.isRelocating(chatId),
-        startingPoint: (provider, selection) => wiring.chats.startingPoint(provider, selection),
+        provider: (kind) => wiring.host.starts.provider(kind),
+        relocating: (chatId) => wiring.chats.core.isRelocating(chatId),
+        startingPoint: (provider, selection) => wiring.chats.core.startingPoint(provider, selection),
         locate: (id) => wiring.host.projects.locate(id),
         titleFor: (id) => wiring.titleFor(id),
         read: (projectId) => wiring.host.projects.read(projectId),
@@ -818,7 +822,7 @@ export function chatForkDeps(wiring: {
         ...(hiddenAgents ? { hideFork: (agent: HiddenAgent) => hiddenAgents.put(agent) } : {}),
         forkClaude: ({ source, at, newSessionId, cwd }) =>
             forkClaudeTranscript({
-                projectsDir: wiring.chats.claudeProjectsDirOf(source),
+                projectsDir: wiring.chats.core.claudeProjectsDirOf(source),
                 cwd: source.cwd,
                 sessionId: source.agentSessionId ?? '',
                 at,
@@ -827,7 +831,11 @@ export function chatForkDeps(wiring: {
             }),
         forkCodex: ({ source, at, cwd }) => {
             const tier = codexServiceTier(source.selection);
-            return forkThreadOnce(wiring.chats.codexProcess(source), {
+            const threads = wiring.host.starts.provider(source.provider).threads;
+            if (threads === undefined) {
+                throw new ChatError('chat-unsupported', `${source.provider} keeps no threads that can be forked`);
+            }
+            return threads.fork(wiring.chats.core.threadProcess(source), {
                 threadId: source.agentSessionId ?? '',
                 at,
                 options: {
@@ -865,21 +873,18 @@ export function chatForkDeps(wiring: {
             }
             await wiring.checkpoints.restore(cwd, tree);
         },
-        writeRecord: (chatId, info, items, preambles) => wiring.chats.writeRecord(chatId, info, items, preambles),
+        writeRecord: (chatId, info, items, preambles) => wiring.chats.core.writeRecord(chatId, info, items, preambles),
         deleteRecord: async (chatId) => {
-            await wiring.chats.deleteRecord(chatId);
+            await wiring.chats.core.deleteRecord(chatId);
         },
-        copyPlans: (fromChatId, toChatId) => wiring.chats.copyPlans(fromChatId, toChatId),
-        copyBookmarks: (fromChatId, toChatId, itemIds) => wiring.chats.copyBookmarks(fromChatId, toChatId, itemIds),
-        copyVisuals: (fromChatId, toChatId, keep) => wiring.chats.copyVisuals(fromChatId, toChatId, keep),
-        copyAgentImages: (fromChatId, toChatId) => wiring.chats.copyAgentImages(fromChatId, toChatId),
+        copySidecars: (fromChatId, toChatId, kept) => wiring.chats.core.copySidecars(fromChatId, toChatId, kept),
         newSessionId: () => randomUUID(),
         now: () => Date.now(),
         accounts: {
-            require: (kind, account) => wiring.chats.requireAccount(kind, account),
-            opening: (chatId, kind, named) => wiring.chats.openingAccount(chatId, kind, named),
-            canContinue: (kind, from, to) => wiring.chats.canContinue(kind, from, to),
-            label: (kind, account) => wiring.chats.accountLabel(kind, account)
+            require: (kind, account) => wiring.chats.core.requireAccount(kind, account),
+            opening: (chatId, kind, named) => wiring.chats.core.openingAccount(chatId, kind, named),
+            canContinue: (kind, from, to) => wiring.chats.core.canContinue(kind, from, to),
+            label: (kind, account) => wiring.chats.core.accountLabel(kind, account)
         }
     };
 }

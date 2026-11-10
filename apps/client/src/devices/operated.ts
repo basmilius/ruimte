@@ -2,6 +2,7 @@ import type { DeviceAgentStep, DeviceControlMode, DeviceInfo, DeviceOperated, De
 import i18next from 'i18next';
 import { create } from 'zustand';
 import { pool } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { watchPool, type WatchablePool } from '@/transport/pool-watch';
 
 type Target = Pick<DeviceInfo, 'backendId' | 'deviceId'>;
@@ -134,9 +135,10 @@ export function startDeviceOperatedWatch(source: WatchablePool = pool): () => vo
         (link, endpointId) => ({
             onOpen: () => {
                 // A failed ask leaves the strip as it was; the next open link asks again.
-                link.request('device.operations', {})
-                    .then((result) => useDeviceOperated.getState().setAll(endpointId, result.devices))
-                    .catch(() => undefined);
+                void fireAndForget(
+                    'device.operations',
+                    link.request('device.operations', {}).then((result) => useDeviceOperated.getState().setAll(endpointId, result.devices))
+                );
             },
             subscriptions: [
                 link.on('device.operated', (payload) => useDeviceOperated.getState().receive(endpointId, payload)),

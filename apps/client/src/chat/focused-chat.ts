@@ -1,7 +1,7 @@
 import { isInFloatingLayer } from '@adecore/ui';
 import { isCanvasView, isChatHostView, isDesignView, type ProjectView } from '@ruimte/contracts';
-import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
 import { focusedCanvas } from '@/state/canvas';
+import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/state/design-chat';
 import { activeViewOf, useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';

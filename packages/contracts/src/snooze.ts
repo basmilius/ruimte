@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 
 /*
@@ -17,3 +18,15 @@ export const SnoozeListSchema = z.object({ snoozes: z.array(SnoozeSchema).max(10
 // The machine finds the project the node is in; `node-not-found` when it is in none.
 export const SnoozeSetPayloadSchema = SnoozeSchema.pick({ nodeId: true, until: true });
 export const SnoozeClearPayloadSchema = SnoozeSchema.pick({ nodeId: true });
+
+export const SNOOZE_REQUEST_SCHEMAS = {
+    'snooze.list': { payload: EmptySchema, result: SnoozeListSchema },
+    // Setting a moment already past ends the snooze, as clearing it does.
+    'snooze.set': { payload: SnoozeSetPayloadSchema, result: EmptySchema },
+    'snooze.clear': { payload: SnoozeClearPayloadSchema, result: EmptySchema }
+} as const;
+
+export const SNOOZE_EVENT_SCHEMAS = {
+    // Every snooze the machine holds, to every client, whenever one is set, cleared or ends.
+    'snooze.changed': SnoozeListSchema
+} as const;

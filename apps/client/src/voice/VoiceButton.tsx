@@ -2,8 +2,9 @@ import { IconButton } from '@adecore/ui';
 import { Mic } from 'lucide-react';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useKeyOf } from '@/shell/shortcut-overrides';
 import { useUi } from '@/state/ui';
+import { useKeyOf } from '@/surface/shortcut-overrides';
+import { fireAndForget } from '@/transport-api/transport';
 import { refreshVoiceCredential, useVoice, useVoicePanelOpen } from '@/voice/state';
 
 export function VoiceButton() {
@@ -14,7 +15,7 @@ export function VoiceButton() {
     const key = useKeyOf('voice-control');
 
     useEffect(() => {
-        void refreshVoiceCredential().catch(() => undefined);
+        void fireAndForget('refreshVoiceCredential', refreshVoiceCredential());
     }, []);
 
     if (!configured) {

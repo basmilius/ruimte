@@ -4,16 +4,17 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { EventMap, EventType, RequestMap, RequestType, ServerFrame } from '@ruimte/contracts';
-import { DiagramClient } from '../diagram/diagram-client';
-import { DrawingClient } from '../drawing/drawing-client';
-import { TransportError, type Transport } from '../transport/transport';
+import { projectOverlays } from '../../../server/src/projects/overlays.ts';
+import { DiagramClient } from '../clients/diagram/diagram-client';
+import { DrawingClient } from '../clients/drawing/drawing-client';
+import { TransportError, type Transport } from '../transport-api/transport';
 import { createWorkspaceStores } from './workspace';
 
 // Runtime fixtures keep the daemon's dependency graph out of the browser typecheck.
 const serverSource = '../../../server/src/';
 const { Dispatcher } = await import(`${serverSource}dispatcher.ts`);
-const { registerDrawingHandlers } = await import(`${serverSource}handlers/drawing.ts`);
-const { registerDiagramHandlers } = await import(`${serverSource}handlers/diagram.ts`);
+const { drawingArea } = await import(`${serverSource}handlers/drawing.ts`);
+const { diagramArea } = await import(`${serverSource}handlers/diagram.ts`);
 const { ProjectStore } = await import(`${serverSource}projects/project-store.ts`);
 const { DrawingStore } = await import(`${serverSource}projects/drawing-store.ts`);
 const { DiagramStore } = await import(`${serverSource}projects/diagram-store.ts`);
@@ -93,15 +94,20 @@ for (const kind of ['drawing', 'diagram'] as const) {
                 const folder = join(root, 'repo');
                 await mkdir(folder);
                 const watch = new FakeWatch();
-                const projects = new ProjectStore(join(root, 'home'), projectLinks({ viewFiles: () => [drawings, diagrams] }), watch);
+                const projects = new ProjectStore(
+                    join(root, 'home'),
+                    projectLinks({ viewFiles: () => [drawings, diagrams] }),
+                    projectOverlays(join(root, 'home')),
+                    watch
+                );
                 const drawings = new DrawingStore(projects, watch);
                 const diagrams = new DiagramStore(projects, watch);
                 const opened = await projects.openProject({ folder });
                 const projectId = opened.summary.projectId;
                 await projects.save(projectId, 0, { name: 'repo', color: '#353e53', views: [{ kind, id: 'view', name: 'View' }] });
                 const dispatcher = new Dispatcher();
-                registerDrawingHandlers(dispatcher, drawings);
-                registerDiagramHandlers(dispatcher, diagrams);
+                drawingArea({ store: drawings }).handlers?.(dispatcher);
+                diagramArea({ store: diagrams }).handlers?.(dispatcher);
                 const store = kind === 'drawing' ? drawings : diagrams;
                 const first = new StoreTransport(dispatcher, 'first');
                 const second = new StoreTransport(dispatcher, 'second');

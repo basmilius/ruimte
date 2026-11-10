@@ -1,5 +1,6 @@
 import Observation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import SwiftUI
 
@@ -22,11 +23,12 @@ import SwiftUI
         for checkout in sources {
             do {
                 let answer = try await client.request(
-                    "git.log", payload: .object(["cwd": .string(checkout.path), "limit": .number(Double(Self.page))]))
+                    .gitLog, payload: .object(["cwd": .string(checkout.path), "limit": .number(Double(Self.page))]
+                    )
+                ).decoded(as: GitLogResult.self)
                 loaded.append(
                     GitLoadedLog(
-                        cwd: checkout.path, repo: checkout.label, commits: answer.list("commits"),
-                        cursor: answer["cursor"]?.stringValue))
+                        cwd: checkout.path, repo: checkout.label, commits: answer.commits, cursor: answer.cursor))
             } catch is CancellationError {
                 return
             } catch {
@@ -51,13 +53,13 @@ import SwiftUI
             }
             var updated = log
             if let answer = try? await client.request(
-                "git.log",
+                .gitLog,
                 payload: .object([
                     "cwd": .string(log.cwd), "limit": .number(Double(Self.page)), "cursor": .string(cursor),
-                ]))
-            {
-                updated.commits += answer.list("commits")
-                updated.cursor = answer["cursor"]?.stringValue
+                ])
+            ).decoded(as: GitLogResult.self) {
+                updated.commits += answer.commits
+                updated.cursor = answer.cursor
             } else {
                 updated.cursor = nil
             }
@@ -91,31 +93,37 @@ struct GitHistoryRows: View {
         }
         ForEach(merged.rows) { row in
             Button {
-                onOpen(GitDiffTarget(cwd: row.cwd, path: nil, staged: false, commit: row.commit.text("hash")))
+                onOpen(GitDiffTarget(cwd: row.cwd, path: nil, staged: false, commit: row.commit.hash))
             } label: {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(row.commit.text("subject")).lineLimit(2)
+                    Text(row.commit.subject).lineLimit(2)
                     HStack(spacing: 8) {
                         if named {
                             Text(row.repo).font(.caption).foregroundStyle(MobileStyle.faint).lineLimit(1)
                         }
-                        Text(row.commit.text("author")).font(.caption).foregroundStyle(MobileStyle.muted)
+                        Text(row.commit.author).font(.caption).foregroundStyle(MobileStyle.muted)
                         Text(gitRelativeTime(row.at)).font(.caption).foregroundStyle(MobileStyle.muted)
                         Spacer(minLength: 0)
-                        Text(row.commit.text("shortHash")).font(.caption.monospaced()).foregroundStyle(MobileStyle.faint)
+                        Text(row.commit.shortHash).font(.caption.monospaced()).foregroundStyle(
+                            MobileStyle.faint)
                     }
                 }.modifier(MobileSidebarLabel(disclosure: true))
             }
             .modifier(MobileSidebarRow())
             .contextMenu {
-                Button(String(localized: "Copy hash"), lucideIcon: "copy") { UIPasteboard.general.string = row.commit.text("hash") }
-                Button(String(localized: "Copy subject"), lucideIcon: "copy") { UIPasteboard.general.string = row.commit.text("subject") }
+                Button(String(localized: "Copy hash"), lucideIcon: "copy") {
+                    UIPasteboard.general.string = row.commit.hash
+                }
+                Button(String(localized: "Copy subject"), lucideIcon: "copy") {
+                    UIPasteboard.general.string = row.commit.subject
+                }
             }
         }
         if merged.more {
             HStack {
                 if history.paging {
-                    Spinner(size: 14, label: String(localized: "Loading more commits")).foregroundStyle(MobileStyle.muted)
+                    Spinner(size: 14, label: String(localized: "Loading more commits")).foregroundStyle(
+                        MobileStyle.muted)
                 } else {
                     Button("Load more") { Task { await history.loadMore(client: client) } }
                 }
@@ -124,7 +132,6 @@ struct GitHistoryRows: View {
     }
 }
 
-/// The history of one repository of the folder, from that repository's own page.
 struct GitLogPage: View {
     let client: any MachineRequesting
     let repositories: GitRepositories
@@ -149,7 +156,6 @@ struct GitLogPage: View {
     }
 }
 
-/// How long ago a commit was written, short enough for the end of a row.
 func gitRelativeTime(_ at: Double, now: Date = Date()) -> String {
     let date = Date(timeIntervalSince1970: at)
     let seconds = max(0, now.timeIntervalSince(date))

@@ -4,10 +4,10 @@ import SwiftUI
 
 /// The mark a repository row carries: a module git tracks for the project reads apart from one that
 /// only happens to sit beside it.
-func gitRepoIcon(_ kind: String) -> String {
+func gitRepoIcon(_ kind: GitRepoKind) -> String {
     switch kind {
-    case "submodule": "boxes"
-    default: "folder-git-2"
+    case .submodule: "boxes"
+    case .root, .nested: "folder-git-2"
     }
 }
 
@@ -116,20 +116,20 @@ struct GitPage: View {
         }
         .task(id: folder) {
             await RemotePageLifecycle.run(
-                client: client, events: ["git.worktrees"], load: { await projectWorktrees.load(client: client) })
+                client: client, events: [.gitWorktrees], load: { await projectWorktrees.load(client: client) })
         }
         .task(id: checkouts.first?.path) {
             guard let probe = checkouts.first?.path else { return }
-            let answer = try? await client.request("git.capabilities", payload: .object(["cwd": .string(probe)]))
-            canPullRequest = answer?["gh"] == .bool(true)
+            let answer = try? await client.request(.gitCapabilities, payload: .object(["cwd": .string(probe)]))
+                .decoded(as: GitCapabilitiesResult.self)
+            canPullRequest = answer?.gh == true
         }
         .presentationDetents([.medium, .large], selection: $detent)
     }
 
-    /// Where the project stands, and the way to its worktrees and its repositories.
     private var pill: some View {
         Menu {
-            let worktrees = projectWorktrees.worktrees.filter { !$0.missing }
+            let worktrees = projectWorktrees.worktrees.filter { !$0.isMissing }
             if !worktrees.isEmpty {
                 Section("Checkout") {
                     Button {
@@ -180,7 +180,9 @@ struct GitPage: View {
                 Button(String(localized: "Pull all"), lucideIcon: "arrow-down") {
                     Task { await repositories.actAll(client: client, kind: "pull") }
                 }
-                Button(String(localized: "Push all"), lucideIcon: "arrow-up") { Task { await repositories.pushAll(client: client) } }
+                Button(String(localized: "Push all"), lucideIcon: "arrow-up") {
+                    Task { await repositories.pushAll(client: client) }
+                }
                 Button(String(localized: "Sync all"), lucideIcon: "refresh-cw") {
                     Task { await repositories.actAll(client: client, kind: "sync") }
                 }
@@ -194,7 +196,9 @@ struct GitPage: View {
                 Button(String(localized: "Fetch"), lucideIcon: "cloud-download") { act(only, "fetch") }
                 if canPullRequest && only.branch != nil {
                     Divider()
-                    Button(String(localized: "Create pull request"), lucideIcon: "git-pull-request") { pullRequest = only.path }
+                    Button(String(localized: "Create pull request"), lucideIcon: "git-pull-request") {
+                        pullRequest = only.path
+                    }
                 }
                 Divider()
                 Button(String(localized: "Repository"), lucideIcon: "folder-git-2") { repositoryPage = only.path }
@@ -253,7 +257,6 @@ struct GitAheadBehind: View {
     }
 }
 
-/// One group of changes, with what stages or unstages the whole of it.
 struct GitGroupHeader: View {
     let group: String
     let count: Int
@@ -283,7 +286,6 @@ struct GitGroupHeader: View {
     }
 }
 
-/// The repository a stretch of a group belongs to, drawn only while the folder holds more than one.
 struct GitRepoHeaderRow: View {
     let checkout: GitCheckout
     let count: Int
@@ -307,8 +309,6 @@ struct GitRepoHeaderRow: View {
     }
 }
 
-/// A checkout that stopped halfway: what waits in it, the way to its conflicts, and finishing or taking
-/// the operation back without opening them.
 struct GitHaltedRows: View {
     let client: any MachineRequesting
     let repositories: GitRepositories
@@ -342,7 +342,10 @@ struct GitHaltedRows: View {
                 Spacer(minLength: 0)
             }
             .buttonStyle(.mobileCapsuleSmall)
-            .modifier(GitAbortConfirmation(operation: operation, isPresented: $confirmAbort) { Task { await finish("abort") } })
+            .modifier(
+                GitAbortConfirmation(operation: operation, isPresented: $confirmAbort) {
+                    Task { await finish("abort") }
+                })
         }
         if session.busy {
             GitBusyRow(text: session.progress ?? String(localized: "Working"))

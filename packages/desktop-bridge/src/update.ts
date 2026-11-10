@@ -11,7 +11,6 @@ export interface AgentActivity {
     attention: number;
 }
 
-/* One published release. */
 export interface Release {
     /* Without the `v` of the tag. */
     version: string;

@@ -25,7 +25,6 @@ export function lookOf(choice: PetChoice, agent: AgentKind | undefined, sprites:
     return { kind: 'drawn', sprite: builtInSprite(choice.kind === 'built-in' ? choice.set : 'buddies', agent, nodeId) };
 }
 
-/* The sets the settings pool holds, the ones a person removed since left out. */
 export function usePetPool(): PetChoice[] {
     const setting = usePetSettings((s) => s.petsSets);
     const sprites = usePetSprites((s) => s.sprites);
@@ -36,7 +35,6 @@ export function usePetPool(): PetChoice[] {
     );
 }
 
-/* The look of a node's pet: from the set its agent was given, or else the one the settings pool gives that node. */
 export function usePetLook(agent: AgentKind | undefined, nodeId: string): PetLook {
     const sprites = usePetSprites((s) => s.sprites);
     const byAgent = usePetSettings((s) => s.petsByAgent);

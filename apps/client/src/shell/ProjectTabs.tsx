@@ -2,12 +2,14 @@ import { ContextMenu, Icon, Menu, Tabs, tabDropIndex, Tooltip, useTabDrag } from
 import { ArrowLeft, ArrowRight, Pin, PinOff } from 'lucide-react';
 import { useEffect, useState, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { openProjectAction } from '@/actions/client-actions';
 import { WaitingCount } from '@/attention/WaitingCount';
 import { desktop } from '@/desktop/bridge';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';
+import { MachineGlyph } from '@/machines/MachineGlyph';
+import { openProjectAction } from '@/project/open-actions';
+import { useProjectMenu } from '@/project/project-menu-model';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
+import { ProjectAddMenu } from '@/project/ProjectMenu';
 import {
     dragsWindow,
     landingOf,
@@ -20,8 +22,6 @@ import {
     useWindowTabs
 } from '@/project/window-tabs';
 import { canDragTabs, canOpenWindows, endTabDrag, openInNewWindow, startWindowDrag, tearOffTab, tearOutTab, wantsNewWindow } from '@/project/windows';
-import { useProjectMenu } from '@/shell/project-menu-model';
-import { ProjectAddMenu } from '@/shell/ProjectMenu';
 import { sidebarWaitingCount, useWaitingCount } from '@/state/attention';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { splitKey } from '@/state/keys';
@@ -29,13 +29,12 @@ import { useProject } from '@/state/project';
 import { useProjectList, type ProjectRow } from '@/state/project-list';
 import { useServers } from '@/state/server';
 import { useSnoozes } from '@/state/snooze';
-import { useSidebarMachines } from './sidebar-projects';
+import { useSidebarMachines } from '../project/sidebar-projects';
 
 function CurrentProjectAttention() {
     return <WaitingCount count={useWaitingCount()} />;
 }
 
-/* The tab under a right-click, read off the element the press landed in. */
 function tabKeyOf(event: MouseEvent<HTMLElement>): string | null {
     const target = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-tab-key]') : null;
     return target?.dataset.tabKey ?? null;

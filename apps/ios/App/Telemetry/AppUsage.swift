@@ -46,7 +46,7 @@ import UIKit
         }
     }
 
-    private static var platform: String { UIDevice.current.userInterfaceIdiom == .pad ? "ipados" : "ios" }
+    private static var platform: String { MobileDevice.isPad ? "ipados" : "ios" }
 
     private static var arch: String {
         #if arch(arm64)

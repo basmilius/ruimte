@@ -25,10 +25,10 @@ import SwiftUI
     private(set) var sessionID = AccountLoginModel.newSessionID()
     private(set) var phase = Phase.starting
     /// The account as it read until this login started, which is what a landing has to differ from.
-    private var before: JSONValue?
+    private var before: AccountStatus?
     private var started = false
     private(set) var finishing = false
-    private var subscriptions: [() -> Void] = []
+    @ObservationIgnored private var live: LiveResource?
 
     /// A grid a login prints its address and its prompts into; the phone follows it like any other terminal.
     static let cols = 80
@@ -45,38 +45,48 @@ import SwiftUI
     private static func newSessionID() -> String { "login-\(UUID().uuidString.lowercased())" }
 
     /// What the CLI said, without the moment it said it, which a recheck moves without anything changing.
-    private static func reading(_ status: JSONValue) -> JSONValue { status.setting("checkedAt", .number(0)) }
+    private static func reading(_ status: AccountStatus) -> AccountStatus {
+        AccountStatus(
+            id: status.id, kind: status.kind, state: status.state, email: status.email, plan: status.plan,
+            organization: status.organization, home: status.home, transcripts: status.transcripts,
+            message: status.message, checkedAt: 0)
+    }
 
     /// Whether a login landed: the account reads logged in, and not the way it read before the login started.
-    static func landed(before: JSONValue?, now: JSONValue?) -> Bool {
-        guard let now, now.text("state") == "ready" else { return false }
+    static func landed(before: AccountStatus?, now: AccountStatus?) -> Bool {
+        guard let now, now.state == .ready else { return false }
         guard let before else { return true }
         return reading(before) != reading(now)
     }
 
-    private func status(in accounts: JSONValue) -> JSONValue? {
-        accounts.list("statuses").first { $0.text("id") == accountID }
+    private func status(in accounts: AccountsSnapshot) -> AccountStatus? {
+        accounts.statuses.first { $0.id == accountID }
     }
 
     func begin() async {
         stopWatching()
-        subscriptions.append(
-            client.subscribe("accounts.changed") { [weak self] payload in
-                guard let self, !silent, phase == .running else { return }
-                let now = status(in: payload)
-                if Self.landed(before: before, now: now) { phase = .landed(email: now?["email"]?.stringValue) }
-            })
-        subscriptions.append(
-            client.subscribe("session.exit") { [weak self] payload in
-                guard let self, payload.text("sessionId") == sessionID, phase == .running else { return }
-                phase = .ended(dropped: false)
-            })
-        subscriptions.append(
-            client.observeConnection { [weak self] available in
+        // A login lives on one link: reading anything again after a new one would show a terminal that is gone.
+        let live = LiveResource(
+            client: client,
+            events: [
+                .apply(.accountsChanged, as: AccountsSnapshot.self) { [weak self] snapshot in
+                    guard let self, !silent, phase == .running else { return }
+                    let now = status(in: snapshot)
+                    if Self.landed(before: before, now: now) { phase = .landed(email: now?.email) }
+                },
+                .apply(.sessionExit, as: SessionExitEvent.self) { [weak self] event in
+                    guard let self, event.sessionId == sessionID, phase == .running else { return }
+                    phase = .ended(dropped: false)
+                },
+            ],
+            connection: { [weak self] available in
                 guard let self, !available, phase == .running else { return }
                 phase = .ended(dropped: true)
             })
-        before = (try? await client.request(.accountsList)).flatMap { status(in: $0) }
+        self.live = live
+        live.start()
+        before = (try? await client.request(.accountsList).decoded(as: AccountsSnapshot.self))
+            .flatMap { status(in: $0) }
         do {
             started = true
             _ = try await client.request(
@@ -96,7 +106,6 @@ import SwiftUI
         }
     }
 
-    /// Another attempt in a session of its own; the one before ends first.
     func retry() async {
         await end()
         sessionID = Self.newSessionID()
@@ -122,8 +131,8 @@ import SwiftUI
     }
 
     private func stopWatching() {
-        subscriptions.forEach { $0() }
-        subscriptions.removeAll()
+        live?.stop()
+        live = nil
     }
 
     var notice: String? {
@@ -141,14 +150,16 @@ import SwiftUI
 
 struct AccountLoginSheet: View {
     @State private var model: AccountLoginModel
-    let cli: String
+    private let kind: String
     @Environment(\.dismiss) private var dismiss
+
+    private var cli: String { AgentDirectory.shared.name(kind) }
 
     init(client: any MachineRequesting, kind: String, accountID: String, name: String, silent: Bool = false) {
         _model = State(
             initialValue: AccountLoginModel(
                 client: client, kind: kind, accountID: accountID, name: name, silent: silent))
-        cli = ProcessesText.agentName(kind)
+        self.kind = kind
     }
 
     var body: some View {

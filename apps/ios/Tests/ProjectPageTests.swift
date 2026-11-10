@@ -4,22 +4,23 @@ import XCTest
 @testable import Ruimte
 
 final class ProjectListLogicTests: XCTestCase {
-    private func node(_ id: String, kind: String = "chat") -> JSONValue {
-        .object(["id": .string(id), "kind": .string(kind), "title": .string(id)])
+    private func node(_ id: String, kind: String = "chat") -> ProjectItem {
+        ProjectWire.nodeItem(.object(["id": .string(id), "kind": .string(kind), "title": .string(id)]))
     }
 
-    private let canvas = JSONValue.object([
-        "id": .string("canvas"), "kind": .string("canvas"), "name": .string("Main canvas"),
-        "nodes": .array([
-            .object(["id": .string("api"), "kind": .string("chat"), "title": .string("API design")]),
-            .object(["id": .string("logs"), "kind": .string("terminal"), "title": .string("logs")]),
-            .object(["id": .string("note"), "kind": .string("note"), "title": .string("Note")]),
-        ]),
-    ])
+    private let canvas = ProjectWire.item(
+        .object([
+            "id": .string("canvas"), "kind": .string("canvas"), "name": .string("Main canvas"),
+            "nodes": .array([
+                .object(["id": .string("api"), "kind": .string("chat"), "title": .string("API design")]),
+                .object(["id": .string("logs"), "kind": .string("terminal"), "title": .string("logs")]),
+                .object(["id": .string("note"), "kind": .string("note"), "title": .string("Note")]),
+            ]),
+        ]))
 
     func testACanvasListsOnlyTheNodesThatRun() {
-        XCTAssertEqual(ProjectListLogic.nodes(of: canvas).map(\.stableID), ["api", "logs"])
-        XCTAssertTrue(ProjectListLogic.nodes(of: node("chat")).isEmpty)
+        XCTAssertEqual(ProjectListLogic.nodes(of: canvas).map(\.id), ["api", "logs"])
+        XCTAssertTrue(ProjectListLogic.nodes(of: ProjectWire.item(.object(["id": .string("chat"), "kind": .string("chat")]))).isEmpty)
     }
 
     func testACanvasSpeaksForItsNodesAndKeepsTheirDraftsAndSnoozesOnTheirOwnRows() {
@@ -41,7 +42,7 @@ final class ProjectListLogicTests: XCTestCase {
     }
 
     func testAStandaloneChatCarriesItsOwnMarks() {
-        let chat = JSONValue.object(["id": .string("chat"), "kind": .string("chat"), "node": .object([:])])
+        let chat = ProjectWire.item(.object(["id": .string("chat"), "kind": .string("chat")]))
         let marks = ProjectListLogic.marks(
             view: chat, sources: ProjectMarkSources(statuses: ["chat": .needsYou], drafts: ["chat"], shared: ["chat"]))
         XCTAssertTrue(marks.needsYou)
@@ -52,21 +53,26 @@ final class ProjectListLogicTests: XCTestCase {
     }
 
     func testALongPressOffersWhatAppliesToTheRow() {
-        let claude = JSONValue.object([
-            "id": .string("c"), "kind": .string("chat"), "node": .object(["provider": .string("claude")]),
-        ])
+        let claude = ProjectWire.item(
+            .object(["id": .string("c"), "kind": .string("chat"), "node": .object(["provider": .string("claude")])]))
         XCTAssertEqual(
-            ProjectListLogic.actions(for: claude, isView: true, status: .running),
+            ProjectListLogic.actions(for: claude, isView: true, status: .running, canFork: true),
             [.rename, .icon, .settings, .fork, .snooze, .stopTurn, .delete])
         XCTAssertEqual(
-            ProjectListLogic.actions(for: claude, isView: true, status: .idle),
+            ProjectListLogic.actions(for: claude, isView: true, status: .idle, canFork: true),
             [.rename, .icon, .settings, .fork, .snooze, .delete])
-        let gemini = JSONValue.object(["id": .string("g"), "kind": .string("chat"), "provider": .string("gemini")])
-        XCTAssertEqual(ProjectListLogic.actions(for: gemini, isView: false, status: .running), [.snooze, .stopTurn])
+        let gemini = ProjectWire.nodeItem(
+            .object(["id": .string("g"), "kind": .string("chat"), "provider": .string("gemini")]))
         XCTAssertEqual(
-            ProjectListLogic.actions(for: canvas, isView: true, status: nil), [.rename, .icon, .settings, .delete])
+            ProjectListLogic.actions(for: gemini, isView: false, status: .running, canFork: false),
+            [.snooze, .stopTurn])
         XCTAssertEqual(
-            ProjectListLogic.actions(for: .object(["id": .string("u"), "kind": .string("unknown")]), isView: true, status: nil),
+            ProjectListLogic.actions(for: canvas, isView: true, status: nil, canFork: false),
+            [.rename, .icon, .settings, .delete])
+        XCTAssertEqual(
+            ProjectListLogic.actions(
+                for: ProjectWire.item(.object(["id": .string("u"), "kind": .string("unknown"), "raw": .object([:])])), isView: true,
+                status: nil, canFork: false),
             [.delete])
     }
 
@@ -145,11 +151,14 @@ final class ProjectSettingsTests: XCTestCase {
     }
 
     func testTheMarkFollowsTheIcon() {
-        XCTAssertEqual(ProjectSettingsLogic.mark(of: .object([:])), .initial)
+        func mark(_ icon: JSONValue?) -> ProjectSettingsLogic.Mark {
+            ProjectSettingsLogic.mark(of: ProjectRowWire.summary(icon: icon).projectSummary)
+        }
+        XCTAssertEqual(ProjectSettingsLogic.mark(of: nil), .initial)
+        XCTAssertEqual(mark(nil), .initial)
+        XCTAssertEqual(mark(.object(["kind": .string("lucide"), "value": .string("rocket")])), .icon)
         XCTAssertEqual(
-            ProjectSettingsLogic.mark(of: .object(["icon": .object(["kind": .string("lucide")])])), .icon)
-        XCTAssertEqual(
-            ProjectSettingsLogic.mark(of: .object(["icon": .object(["kind": .string("image")])])), .image)
+            mark(.object(["kind": .string("image"), "value": .string("icon.png"), "version": .string("1")])), .image)
         XCTAssertTrue(ProjectSettingsLogic.sameColor("#C4573A", "#c4573a"))
     }
 
@@ -169,16 +178,12 @@ final class ProjectSettingsTests: XCTestCase {
 
 final class LaunchListTests: XCTestCase {
     private func view(_ phase: LaunchPhase, port: Int? = nil, ended: Double? = nil, exit: Int? = nil) -> LaunchView {
-        let status = LaunchStatus(
-            json: .object([
-                "projectId": .string("p"), "launchId": .string("dev"), "sessionId": .string("launch:dev"),
-                "kind": .string("service"), "state": .string(ended == nil ? "running" : "exited"),
-                "exitCode": exit.map { .number(Double($0)) } ?? .null, "startedAt": .number(0),
-                "endedAt": ended.map(JSONValue.number) ?? .null, "port": .null, "url": .null, "stopped": .bool(false),
-            ]))
+        let status = LaunchWire.status(
+            "dev", project: "p", state: ended == nil ? "running" : "exited", exit: exit, endedAt: ended
+        ).launchStatus
         return LaunchView(
-            launch: LaunchEntry(raw: .object(["id": .string("dev"), "name": .string("dev")])), phase: phase,
-            live: phase == .running, status: status, exitCode: exit, port: port)
+            launch: LaunchWire.entry("dev").launchEntry, phase: phase, live: phase == .running, status: status,
+            exitCode: exit, port: port)
     }
 
     func testTheStateLineSaysWhatTheLaunchDoes() {
@@ -195,7 +200,7 @@ final class LaunchListTests: XCTestCase {
             ("package-json", "package.json"), ("package-json", "package.json"), ("package-json", "package.json"),
             ("run-xml", ".run/Docker.run.xml"),
         ].map { source, path in
-            LaunchSuggestion(json: .object(["launch": .object([:]), "source": .string(source), "path": .string(path)]))
+            LaunchWire.suggestion(LaunchWire.entry("dev"), source: source, path: path).launchSuggestion
         }
         XCTAssertEqual(
             LaunchEditing.foundRows(suggestions).map(\.text),

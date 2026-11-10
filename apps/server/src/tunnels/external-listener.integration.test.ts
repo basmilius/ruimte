@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import type { CanvasHost } from '../tools/host.ts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
+import type { CanvasHost } from '../canvas/host.ts';
+import { catalog } from '../mcp/catalog-test-helpers.ts';
+import { externalCallerOf, handleExternalMcpRequest } from '../mcp/external-route.ts';
 import { ConsentBook } from './consent-book.ts';
 import { CredentialStore } from './credential-store.ts';
 import { FailureLimiter, refuseTunnelled } from './external-gate.ts';
@@ -25,7 +28,8 @@ function start(host: Partial<CanvasHost> = {}): Running {
         credentials,
         consent: new ConsentBook({ now: Date.now, random, pick: (limit) => counter++ % limit, changed: () => undefined }),
         limiter: new FailureLimiter(Date.now),
-        mcp: { host: host as CanvasHost },
+        serve: (request, credential, client) =>
+            handleExternalMcpRequest(request, externalCallerOf(credential, client), { host: host as CanvasHost, actions: serverActions, tools: catalog() }),
         fetchMetadata: () => Promise.reject(new Error('no clients in this test')),
         now: Date.now,
         port: () => listener.port

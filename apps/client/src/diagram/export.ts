@@ -1,7 +1,7 @@
 import { toSvg } from '@adecore/diagram';
 import { absoluteOf } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
-import { readCanvasBackground, readFontStacks, readPalette, readPaper } from '@/drawing/palette';
+import { readCanvasBackground, readFontStacks, readPalette, readPaper } from '@/canvas-model/drawing-palette';
 import type { DiagramState } from '@/state/diagram';
 import { useProject } from '@/state/project';
 
@@ -36,7 +36,6 @@ export async function diagramPng(store: DiagramSource): Promise<Blob | null> {
     }
 }
 
-/* Where the file of a diagram view sits, or null when no project is open. */
 export function diagramJsonPath(viewId: string): string | null {
     const folder = useProject.getState().current?.folder ?? null;
     return folder === null ? null : absoluteOf(folder, `.ruimte/diagrams/${encodeURIComponent(viewId)}.json`);

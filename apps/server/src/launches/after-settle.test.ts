@@ -75,7 +75,7 @@ function deps(): AfterSettleDeps {
         folderOf: (projectId) => (projectId === 'p1' ? '/repo' : null),
         worktreesOf: async () => worktrees,
         repoRootOf: async () => '/repo',
-        entries: () => entries,
+        ofKind: () => entries as RunAfterSettleEntry[],
         enqueue: async (projectId: string, target: string, work: OutboxWork) => {
             entries.push({ ...work, id: `entry-${entries.length}`, projectId, target, createdAt: now, attempts: 0, notBefore: now } as OutboxEntry);
         }

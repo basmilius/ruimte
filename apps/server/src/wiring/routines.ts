@@ -1,13 +1,14 @@
 import { chatOpener } from '@adecore/agents/chat';
 import { WatchedSinks } from '@adecore/agents/host';
 import type { RoutinePicked, RoutineSkillsPayload, RoutineSkillsResult } from '@ruimte/contracts';
-import { attachedReferences, type Reference } from '../context/references.ts';
 import { errorText } from '../error-text.ts';
+import { routineOpener } from '../opener.ts';
+import { attachedReferences, type Reference } from '../projects/references.ts';
 import { runCommand } from '../routines/command-run.ts';
 import { RoutineAuthorStore, RoutineRunStore } from '../routines/routine-runs.ts';
 import { RoutineError, RoutineStore } from '../routines/routine-store.ts';
-import { routineOpener, Routines } from '../routines/routines.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import { Routines } from '../routines/routines.ts';
+import type { SessionEvent } from '../wire.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { ArtifactsBundle } from './artifacts.ts';
 import type { LaunchesBundle } from './launches.ts';
@@ -73,7 +74,7 @@ export async function wireRoutines({ home, machineId, stores, agents, projects, 
         projects: async () => (await project.known()).filter((known) => project.index.has(known.projectId)),
         outbox: {
             enqueue: (projectId, target, work, notBefore) => outboxLink.enqueue(projectId, target, work, notBefore),
-            list: () => stores.outbox.list(),
+            ofKind: (kind) => stores.outbox.ofKind(kind),
             remove: (id) => stores.outbox.remove(id)
         },
         agents: {
@@ -100,18 +101,21 @@ export async function wireRoutines({ home, machineId, stores, agents, projects, 
                 });
             },
             info: (chatId) => chats.get(chatId)?.info,
-            starting: (chatId) => stores.outbox.list().some((entry) => entry.kind === 'start-agent' && entry.target === chatId),
+            starting: (chatId) => stores.outbox.owes('start-agent', chatId),
             continueIn: async (chatId, { prompt, brief }, routine) => {
                 const chat = await openChat(chatId);
                 if (chat === null || chat.relocating?.() === true) {
                     return false;
                 }
                 const { mentions, skills } = routine.picked ?? {};
-                return chats.withBrief(
-                    chatId,
-                    continuedBrief(brief, routine.picked, (id) => project.index.referenceBeside(chatId, id)),
-                    () => chat.wake({ text: prompt, label: routine.title, taskIds: [], ...(mentions ? { mentions } : {}), ...(skills ? { skills } : {}) })
-                );
+                return chat.wake({
+                    text: prompt,
+                    label: routine.title,
+                    taskIds: [],
+                    brief: continuedBrief(brief, routine.picked, (id) => project.index.referenceBeside(chatId, id)),
+                    ...(mentions ? { mentions } : {}),
+                    ...(skills ? { skills } : {})
+                });
             },
             // Opens a stored chat as well, so what it ran before is known before the run's turn opens.
             exists: async (chatId) => placed(chatId) && (await openChat(chatId)) !== null
@@ -175,6 +179,7 @@ export async function wireRoutines({ home, machineId, stores, agents, projects, 
         timeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
         onChanged: (projectId) => watchers.changed(projectId)
     });
+    outboxLink.worker.handle('routine-run', (entry) => routines.handle(entry));
     store.onOutsideChange = (projectId) => {
         void routines
             .schedule(projectId)

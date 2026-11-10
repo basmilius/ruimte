@@ -1,7 +1,7 @@
-import type { OutboxClock } from '@adecore/agents/coordination';
+import type { Clock } from '@adecore/agents/coordination';
 import { quietState, type PushNotifyKind, type QuietHours } from '@ruimte/contracts';
 import type { PushAlertContent } from '@ruimte/pulsar';
-import { wakefulClock } from '../outbox/wakeful-clock.ts';
+import { wakefulClock } from '../timers.ts';
 
 /* An alert a device in quiet hours did not get, kept to announce when they end. */
 export interface WithheldAlert {
@@ -25,7 +25,7 @@ export interface QuietRelease {
 }
 
 interface QuietHoldOptions {
-    clock?: OutboxClock;
+    clock?: Clock;
     now: () => number;
     subscriptions(): Promise<Array<{ sessionId: string; quietHours?: QuietHours }>>;
     release(sessionId: string, released: QuietRelease): void;
@@ -49,7 +49,7 @@ function keyOf(content: PushAlertContent): string {
  */
 export class QuietHold {
     private readonly sessions = new Map<string, Held>();
-    private readonly clock: OutboxClock;
+    private readonly clock: Clock;
     private readonly options: QuietHoldOptions;
     private timer: unknown = null;
 

@@ -140,7 +140,6 @@ export class SecretRequests {
         this.cancelOf(nodeId);
     }
 
-    /* The chat stopped running or is gone. */
     forget(nodeId: string): void {
         this.cancelOf(nodeId);
         for (const key of [...this.settled.keys()]) {

@@ -12,7 +12,7 @@ interface StaleChunkWatch {
      * Where a lazy surface a person opened says it failed to load. That is always theirs, even while a
      * prefetch runs, so it reloads where `vite:preloadError` cannot tell the two apart.
      */
-    failedOpens?: readonly ((listener: () => void) => () => void)[];
+    failedOpen?: (listener: () => void) => () => void;
 }
 
 /*
@@ -20,7 +20,7 @@ interface StaleChunkWatch {
  * lazy surface that page opens after it fails to load. One reload fetches the new build. The flag
  * stops there: a build whose own chunks fail would otherwise reload forever.
  */
-export function reloadOnStaleChunk({ target, storage, reload, build, prefetching = () => false, failedOpens = [] }: StaleChunkWatch): () => void {
+export function reloadOnStaleChunk({ target, storage, reload, build, prefetching = () => false, failedOpen }: StaleChunkWatch): () => void {
     const claimReload = (): boolean => {
         try {
             if (storage.getItem(RELOADED_KEY) === build) {
@@ -44,11 +44,9 @@ export function reloadOnStaleChunk({ target, storage, reload, build, prefetching
         }
     };
     target.addEventListener('vite:preloadError', onPreloadError);
-    const stops = failedOpens.map((subscribe) => subscribe(onFailedOpen));
+    const stopFailedOpen = failedOpen?.(onFailedOpen);
     return () => {
         target.removeEventListener('vite:preloadError', onPreloadError);
-        for (const stop of stops) {
-            stop();
-        }
+        stopFailedOpen?.();
     };
 }

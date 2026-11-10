@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// What runs in the background of a chat's CLI, as `info.background` lists it: its shells and its monitors.
@@ -96,7 +97,7 @@ struct ChatActivityChips: View {
         }
     }
 
-    private func task(of item: ChatSubagentItem) -> JSONValue? {
+    private func task(of item: ChatSubagentItem) -> AgentTask? {
         ChatSubagents.taskID(item).flatMap { tasks?.task($0) }
     }
 
@@ -196,7 +197,7 @@ struct ChatActivityChips: View {
         Task {
             do {
                 _ = try await model.client.request(
-                    "chat.stopTask", payload: model.target(["taskId": .string(task.id)]))
+                    .chatStopTask, payload: model.target(["taskId": .string(task.id)]))
             } catch {
                 failure = ChatActivityFailure(
                     title: String(localized: "Could not stop the task"), message: error.localizedDescription)
@@ -214,6 +215,7 @@ struct ChatActivityChips: View {
     private static func icon(_ word: SubagentStatusWord) -> String {
         switch word {
         case .running: "loader-circle"
+        case .paused: "circle-pause"
         case .done: "circle-check"
         case .failed: "circle-x"
         case .cancelled: "circle-slash"

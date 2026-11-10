@@ -4,7 +4,6 @@ import SwiftUI
 /// `apps/client/src/styles.css`), in points for its pixels.
 struct EclipseScene {
     enum Sky {
-        /// A sky over the whole view.
         case full
         /// A sky that runs out into the page under it, for a scene at the head of a page.
         case fade

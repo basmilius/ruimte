@@ -59,9 +59,6 @@ export function parseRelease(json: unknown): Release | null {
     };
 }
 
-/**
- * The download link of a platform in a release, or null when that build is missing from it.
- */
 export function assetUrl(release: Release, platform: Platform): string | null {
     const { suffix } = PLATFORMS[platform];
     return release.assets.find((asset) => asset.name.startsWith('Ruimte-') && asset.name.endsWith(suffix))?.url ?? null;

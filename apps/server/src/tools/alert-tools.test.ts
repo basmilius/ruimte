@@ -1,13 +1,21 @@
-import { describe, expect, test } from 'bun:test';
-import { canvasFixture, alerts, invoke } from './canvas-test-fixture.ts';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { canvasFixture, type CanvasFixture } from './canvas-fixture-test-helpers.ts';
 
-canvasFixture();
+let fx: CanvasFixture;
+
+beforeEach(async () => {
+    fx = await canvasFixture();
+});
+
+afterEach(async () => {
+    await fx.dispose();
+});
 
 describe('alert', () => {
     test('notifies from the authenticated caller, including a standalone chat', async () => {
-        expect(await invoke('alert', { text: 'The build is ready.' })).toMatchObject({ status: 200, lines: ['alerted\tterm-1'] });
-        expect(await invoke('alert', { text: 'The review is ready.' }, 'chat')).toMatchObject({ status: 200, lines: ['alerted\tchat-1'] });
-        expect(alerts).toEqual([
+        expect(await fx.invoke('alert', { text: 'The build is ready.' })).toMatchObject({ status: 200, lines: ['alerted\tterm-1'] });
+        expect(await fx.invoke('alert', { text: 'The review is ready.' }, 'chat')).toMatchObject({ status: 200, lines: ['alerted\tchat-1'] });
+        expect(fx.alerts).toEqual([
             { nodeId: 'term-1', text: 'The build is ready.' },
             { nodeId: 'chat-1', text: 'The review is ready.' }
         ]);
@@ -15,8 +23,8 @@ describe('alert', () => {
 
     test('rejects empty, oversized messages and another session as a destination', async () => {
         for (const input of [{}, { text: '   ' }, { text: 'x'.repeat(501) }, { id: 'term-2', text: 'Done' }]) {
-            expect((await invoke('alert', input)).status).toBe(422);
+            expect((await fx.invoke('alert', input)).status).toBe(422);
         }
-        expect(alerts).toEqual([]);
+        expect(fx.alerts).toEqual([]);
     });
 });

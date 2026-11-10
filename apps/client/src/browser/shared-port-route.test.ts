@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import type { PortGrant } from '@ruimte/contracts';
+import { browserRouteAvailable } from '@/clients/browser/owner-route';
+import { browserRegistry } from '@/clients/browser/registry';
 import { usePortGrants } from '@/port-tunnel/grants';
 import { portTunnelPages, usePortTunnelPartitions } from '@/port-tunnel/tunnel-pages';
 import { useEndpoints } from '@/state/endpoints';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { browserRouteAvailable } from './owner-route';
-import { browserRegistry } from './registry';
 
 const originalGlobals = new Map(['window', 'document'].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
 const originalEndpoints = useEndpoints.getState();

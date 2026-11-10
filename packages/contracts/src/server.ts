@@ -18,3 +18,8 @@ export const ServerPingPayloadSchema = z.object({});
 export const ServerPingResultSchema = z.object({
     time: z.number()
 });
+
+export const SERVER_REQUEST_SCHEMAS = {
+    'server.hello': { payload: ServerHelloPayloadSchema, result: ServerHelloResultSchema },
+    'server.ping': { payload: ServerPingPayloadSchema, result: ServerPingResultSchema }
+} as const;

@@ -4,10 +4,11 @@ import { lstat, mkdir, rmdir, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { isWithin } from '@adecore/utils/path';
-import { retryingRename } from './busy-retry.ts';
+import { bestEffort } from '../best-effort.ts';
+import { retryingRename } from '../disk/busy-retry.ts';
+import { renameNoReplace } from '../disk/no-replace-rename.ts';
+import { realOrNull } from '../disk/real-path.ts';
 import { deepestEntry } from './create.ts';
-import { renameNoReplace } from './no-replace-rename.ts';
-import { realOrNull } from './real-path.ts';
 import { trashPath } from './trash.ts';
 import { assertOpenGround, realEntryPath, realRoots, rootOf, type WriteBoundary } from './write.ts';
 
@@ -32,7 +33,6 @@ async function realSource(path: string): Promise<string> {
     return real;
 }
 
-/* The real place the folder of a new path will have: the deepest folder that exists along it, with the names below it that do not yet. */
 async function realTarget(path: string): Promise<string> {
     const { at, missing } = await deepestEntry(dirname(path), (place) => lstat(place).catch(() => null), path);
     const base = await realOrNull(at);
@@ -97,7 +97,6 @@ async function throughSpareName(source: string, target: string, move: Rename): P
     }
 }
 
-/* The device of the deepest folder that exists along `path`, which is where a move to it lands. */
 async function deviceOfPlace(path: string): Promise<number> {
     return (await deepestEntry(dirname(path), (place) => stat(place).catch(() => null), path)).entry.dev;
 }
@@ -106,7 +105,6 @@ function trashReplaced(path: string, original: string): Promise<void> {
     return trashPath(path, undefined, undefined, undefined, original);
 }
 
-/* A move that passed every check; `run` makes it. */
 interface RenamePlan {
     run(): Promise<void>;
 }
@@ -188,7 +186,7 @@ async function replace(source: string, target: string, trash: Trash, move: Renam
     try {
         await move(target, aside);
     } catch (e) {
-        await rmdir(holder).catch(() => undefined);
+        await bestEffort('rmdir', rmdir(holder));
         throw e;
     }
     try {
@@ -198,7 +196,7 @@ async function replace(source: string, target: string, trash: Trash, move: Renam
         await move(aside, target).catch((restoreError: unknown) => {
             console.warn(`Could not put ${target} back from ${aside}`, restoreError);
         });
-        await rmdir(holder).catch(() => undefined);
+        await bestEffort('rmdir', rmdir(holder));
         throw e;
     }
     try {

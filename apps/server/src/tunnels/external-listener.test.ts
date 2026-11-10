@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import type { CanvasHost } from '../tools/host.ts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
+import type { CanvasHost } from '../canvas/host.ts';
+import { catalog } from '../mcp/catalog-test-helpers.ts';
+import { externalCallerOf, handleExternalMcpRequest } from '../mcp/external-route.ts';
 import { ClientMetadataError } from './client-metadata.ts';
 import { challengeOf, ConsentBook } from './consent-book.ts';
 import { CredentialStore } from './credential-store.ts';
@@ -32,7 +35,8 @@ function setup(): {
         credentials,
         consent,
         limiter: new FailureLimiter(() => clock.now),
-        mcp: { host },
+        serve: (request, credential, client) =>
+            handleExternalMcpRequest(request, externalCallerOf(credential, client), { host, actions: serverActions, tools: catalog() }),
         fetchMetadata: async (clientId) => {
             if (clientId !== CLIENT_ID) {
                 throw new ClientMetadataError();

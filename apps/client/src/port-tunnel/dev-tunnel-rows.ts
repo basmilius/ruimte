@@ -1,6 +1,7 @@
 import type { TunnelRow } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { transportFor } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { useEndpointConnection } from '@/transport/status';
 
 /*
@@ -18,10 +19,12 @@ export function useDevTunnelRows(endpointId: string, enabled: boolean): readonly
         }
 
         const load = (): void => {
-            transportFor(endpointId)
-                ?.request('tunnel.state', {})
-                .then((state) => setRows(state.rows.filter((row) => row.kind === 'dev')))
-                .catch(() => undefined);
+            void fireAndForget(
+                'tunnel.state',
+                transportFor(endpointId)
+                    ?.request('tunnel.state', {})
+                    .then((state) => setRows(state.rows.filter((row) => row.kind === 'dev')))
+            );
         };
 
         load();
@@ -32,7 +35,6 @@ export function useDevTunnelRows(endpointId: string, enabled: boolean): readonly
     return rows;
 }
 
-/* The address a visitor outside Ruimte uses for the port, or null while no running hostname points at it. */
 export function publicAddressOf(rows: readonly TunnelRow[], port: number): string | null {
     const row = rows.find((entry) => entry.port === port && entry.enabled);
 

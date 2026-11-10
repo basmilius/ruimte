@@ -1,11 +1,12 @@
 import { desktop, type SystemIdleState } from '@/desktop/bridge';
-import type { Transport } from './transport';
+import { fireAndForget } from '@/transport-api/transport';
+import type { Transport } from '../transport-api/transport';
 
 // Well within the machine's lease of a minute, so one lost report never reads as leaving.
 const REPORT_MS = 20_000;
 const IDLE_SECONDS = 120;
 
-export interface PresenceSources {
+interface PresenceSources {
     /* Null outside the desktop app, where only the page's own focus says anything. */
     idleState: (() => Promise<SystemIdleState>) | null;
     focused: () => boolean;
@@ -49,7 +50,7 @@ export function reportPresence(
             return;
         }
         reported = present;
-        await transport.request('presence.report', { present }).catch(() => undefined);
+        await fireAndForget('presence.report', transport.request('presence.report', { present }));
     };
     const onChange = (): void => {
         void report();

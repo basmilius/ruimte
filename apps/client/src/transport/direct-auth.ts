@@ -1,30 +1,16 @@
-import {
-    clientChannelMessage,
-    daemonChannelMessage,
-    localSecretChannelMessage,
-    PROTOCOL_VERSION,
-    type DirectChallengeFrame,
-    type DirectProofFrame
-} from '@ruimte/contracts';
-import { toBase64Url } from '@ruimte/pulsar';
+import { daemonProvedItself, keyProofFrame, secretProofFrame, type DirectChallengeFrame, type DirectProofFrame } from '@ruimte/contracts';
 import { verifySignature } from '@ruimte/pulsar/verify-web';
 import i18next from 'i18next';
 import { clientKey, type ClientKey } from '@/endpoint/client-key';
-import { localSecretOf } from '@/endpoint/credentials';
 import { endpointById } from '@/state/endpoints';
+import { localSecretOf } from '@/transport-api/credentials';
 
-export interface ProofCredentials {
+interface ProofCredentials {
     /* The daemon this row pinned; null for the row of the machine this app runs on, which holds the local secret instead. */
     pinned: { publicKey: string; daemonId: string | null } | null;
     key: ClientKey | null;
     secret: string | null;
     label: string;
-}
-
-async function hmac(secret: string, message: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    return toBase64Url(await crypto.subtle.sign('HMAC', key, encoder.encode(message)));
 }
 
 /*
@@ -37,30 +23,20 @@ export async function proveChallenge(credentials: ProofCredentials, challenge: D
     const { daemon } = challenge;
     const { pinned } = credentials;
     if (pinned !== null) {
-        const identical = daemon.publicKey === pinned.publicKey && (pinned.daemonId === null || pinned.daemonId === daemon.id);
-        if (!identical || !(await verifySignature(pinned.publicKey, daemonChannelMessage(daemon.id, challenge.challenge, binding), daemon.signature))) {
+        if (!(await daemonProvedItself(pinned, challenge, binding, verifySignature))) {
             throw new Error(i18next.t('machines:direct.notProven', { label: credentials.label }));
         }
         if (credentials.key === null) {
             throw new Error(i18next.t('machines:direct.noKey'));
         }
-        const signature = await credentials.key.sign(
-            clientChannelMessage(pinned.daemonId ?? daemon.id, challenge.challenge, credentials.key.publicKey, binding)
-        );
-        return { type: 'direct.key', protocol: PROTOCOL_VERSION, challenge: challenge.challenge, publicKey: credentials.key.publicKey, signature };
+        return keyProofFrame(credentials.key, pinned.daemonId ?? daemon.id, challenge.challenge, binding);
     }
     if (credentials.secret !== null) {
-        return {
-            type: 'direct.secret',
-            protocol: PROTOCOL_VERSION,
-            challenge: challenge.challenge,
-            proof: await hmac(credentials.secret, localSecretChannelMessage(daemon.id, challenge.challenge, binding))
-        };
+        return secretProofFrame(credentials.secret, daemon.id, challenge.challenge, binding);
     }
     throw new Error(i18next.t('machines:direct.needsPairedKey'));
 }
 
-/* The proof for one row, with what this client holds for it right now. */
 export async function directProof(endpointId: string, challenge: DirectChallengeFrame, binding: string): Promise<DirectProofFrame> {
     const endpoint = endpointById(endpointId);
     if (!endpoint) {

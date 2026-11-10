@@ -1,21 +1,20 @@
 import { isCanvasView, type Artifact, type ArtifactVersion } from '@ruimte/contracts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { createNodeAction } from '@/actions/client-actions';
+import { createNodeAction } from '@/action-port/person-actions';
 import { useLinkedMachines } from '@/output/linked-machines';
 import { openArtifact } from '@/output/open';
 import { showView } from '@/project/views';
 import { canvasSettled } from '@/state/canvas';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
-import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { machineTransport } from '@/transport';
+import { TransportError } from '@/transport-api/transport';
 import { useMachineAnswers } from '@/transport/features';
-import { TransportError } from '@/transport/transport';
 
-/* The canvases of the window's project an artifact can be pinned to. */
 export function usePinCanvases() {
     const views = useDocument((s) => s.views);
     return views.filter((view) => isCanvasView(view) && view.hidden !== true);
@@ -51,7 +50,6 @@ const COPY_FAILURES: Readonly<Record<string, string>> = {
 
 interface MachineCopy {
     copying: boolean;
-    /* What the copy does, for a tooltip. */
     tip: string;
     copy(version: ArtifactVersion): void;
 }

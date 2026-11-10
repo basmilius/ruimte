@@ -1,7 +1,9 @@
 import { dirname, resolve } from 'node:path';
-import type { AgentKind, GitActionPhase } from '@ruimte/contracts';
-import { RequestError, sendEvent, type ClientConnection, type Dispatcher } from '../dispatcher.ts';
-import type { MachineHome } from '../fs/machine-home.ts';
+import { CodedError } from '@adecore/agents';
+import type { AgentKind, GitActionKind, GitActionPhase } from '@ruimte/contracts';
+import type { Area } from '../area.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
+import { type Dispatcher, type UsageCount } from '../dispatcher.ts';
 import { GitActions } from '../git/actions.ts';
 import { authorPictures } from '../git/author-pictures.ts';
 import { blameFile } from '../git/blame.ts';
@@ -29,64 +31,95 @@ import { mergeBaseWith } from '../git/status.ts';
 import type { WorktreeMerge } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import type { PrWatchStore } from '../github/pr-watch.ts';
-import type { OneShotPlace } from '../peering/one-shot-place.ts';
+import type { OneShotPlace } from '../peer/worker/one-shot-place.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { ShortTextModels } from '../short-text/model.ts';
+import { sendEvent, type ClientConnection } from '../wire.ts';
 
-/* What writing and taking in a bundle needs from the rest of the daemon. */
-interface BundleHost {
+export interface GitDeps {
+    worktrees: Worktrees;
+    merges: WorktreeMerge;
+    statuses: GitStatusWatcher;
+    providers: ProviderRegistry;
+    prWatches: PrWatchStore;
+    placeOf(id: string): { projectId: string } | null;
+    machineHome: Pick<MachineHome, 'refuse' | 'refuseHolding' | 'stateWithin'>;
     bundles: BundleStore;
     checkpoints: Pick<CheckpointService, 'take' | 'head'>;
     folderOf(projectId: string): Promise<string | null>;
     /* Whether a checkout lies in a folder made from another machine's work. */
-    untrusted?(path: string): boolean;
+    untrusted(path: string): boolean;
     /* Writes down a folder this machine never vouched for, before git makes it. */
-    untrustFolder?(path: string, branch: string): Promise<void>;
+    untrustFolder(path: string, branch: string): Promise<void>;
+    oneShotPlace: Pick<OneShotPlace, 'cwdFor'>;
+    /* The machine's text model, which writes commit messages and conflict proposals when it has a pick. */
+    textModels: Pick<ShortTextModels, 'choice' | 'prepare'>;
 }
 
 interface AgentRunOptions {
     provider?: AgentKind;
     writer?: TextWriter;
     onSpawn(kill: () => void): void;
-    cwdFor?(folder: string): Promise<string>;
+    cwdFor(folder: string): Promise<string>;
 }
 
-/* Streams an action's progress to the client that asked, under the action id it chose. */
+const GIT_ACTION_COUNTERS: Readonly<Partial<Record<GitActionKind, readonly UsageCount[]>>> = {
+    commit: ['git.commits'],
+    'commit-push': ['git.commits', 'git.pushes'],
+    push: ['git.pushes'],
+    'force-push': ['git.pushes'],
+    publish: ['git.pushes'],
+    pull: ['git.pulls'],
+    sync: ['git.pulls', 'git.pushes']
+};
+
 function progressTo(client: ClientConnection, cwd: string, actionId: string) {
     return (phase: GitActionPhase, line: string): void => {
         sendEvent(client, 'git.progress', { cwd, actionId, phase, line });
     };
 }
 
-export function registerGitHandlers(
-    dispatcher: Dispatcher,
-    worktrees: Worktrees,
-    merges: WorktreeMerge,
-    statuses: GitStatusWatcher,
-    providers: ProviderRegistry,
-    prWatches?: PrWatchStore,
-    placeOf?: (id: string) => { projectId: string } | null,
-    machineHome?: Pick<MachineHome, 'refuse' | 'refuseHolding' | 'stateWithin'>,
-    bundleHost?: BundleHost,
-    oneShotPlace?: Pick<OneShotPlace, 'cwdFor'>,
-    textModels?: Pick<ShortTextModels, 'choice' | 'prepare'>
-): void {
+export function gitArea(deps: GitDeps): Area {
+    const { statuses, worktrees, prWatches } = deps;
+
+    return {
+        name: 'git',
+        sources: [statuses, worktrees, prWatches],
+        holders: [statuses],
+        handlers: (dispatcher) => registerRequests(dispatcher, deps),
+        stop: [{ phase: 'halt', label: 'Closing the pull request watches', run: () => prWatches.close() }]
+    };
+}
+
+function registerRequests(dispatcher: Dispatcher, deps: GitDeps): void {
+    const {
+        worktrees,
+        merges,
+        statuses,
+        providers,
+        prWatches,
+        placeOf,
+        machineHome,
+        bundles,
+        checkpoints,
+        folderOf,
+        untrusted,
+        untrustFolder,
+        oneShotPlace,
+        textModels
+    } = deps;
     // A checkout may hold the home, so what runs over all of it leaves the machine's state out and keeps the open folders.
-    const leftOut: LeftOut = async (top) => (await machineHome?.stateWithin(top)) ?? [];
+    const leftOut: LeftOut = (top) => machineHome.stateWithin(top);
     const actions = new GitActions(leftOut);
     const identities = new IdentityReader();
 
     // Judged before any git runs, like the file requests: a client asks about folders, never about the machine's own state.
     const refuse = async (...folders: string[]): Promise<void> => {
-        await Promise.all(folders.map((folder) => machineHome?.refuse(folder)));
+        await Promise.all(folders.map((folder) => machineHome.refuse(folder)));
     };
 
     // A file is named relative to the root of its checkout, which may hold the home, so each is judged where it really lies.
     const refuseFiles = async (cwd: string, paths: readonly string[]): Promise<void> => {
-        if (machineHome === undefined) {
-            return;
-        }
-
         await machineHome.refuse(cwd);
         const top = await toplevel(cwd);
         await Promise.all(paths.map((path) => machineHome.refuseHolding(resolve(top, path))));
@@ -161,7 +194,7 @@ export function registerGitHandlers(
             return await diffCheckout(payload.cwd, await mergeBaseWith(payload.cwd, payload.base), leftOut);
         }
         if (payload.path === undefined) {
-            throw new RequestError('bad-request', 'A diff of this scope needs a path.');
+            throw new CodedError('bad-request', 'A diff of this scope needs a path.');
         }
         const options = {
             scope: payload.scope,
@@ -197,34 +230,30 @@ export function registerGitHandlers(
         return identities.read(payload.paths);
     });
 
-    if (bundleHost !== undefined) {
-        const { bundles, checkpoints, folderOf, untrusted, untrustFolder } = bundleHost;
-
-        // A person's handoff is theirs to vouch for, except for work this machine never vouched for itself: that stays so where it goes.
-        dispatcher.register('git.bundle', async (payload, client) => {
-            await machineHome?.refuse(payload.path);
-            const id = crypto.randomUUID();
-            bundles.admit(client.id, id);
-            const made = await makeBundle(bundles, checkpoints, payload, id).catch(async (error: unknown) => {
-                await bundles.discard(id);
-                throw error;
-            });
-            await bundles.keep(made.bundleId, client.id);
-            return untrusted?.(payload.path) === true ? { ...made, untrusted: true } : made;
+    // A person's handoff is theirs to vouch for, except for work this machine never vouched for itself: that stays so where it goes.
+    dispatcher.register('git.bundle', async (payload, client) => {
+        await machineHome.refuse(payload.path);
+        const id = crypto.randomUUID();
+        bundles.admit(client.id, id);
+        const made = await makeBundle(bundles, checkpoints, payload, id).catch(async (error: unknown) => {
+            await bundles.discard(id);
+            throw error;
         });
+        await bundles.keep(made.bundleId, client.id);
+        return untrusted(payload.path) ? { ...made, untrusted: true } : made;
+    });
 
-        dispatcher.register('git.bundlePut', async (payload) => ({
-            received: await bundles.receive(payload.bundleId, payload.offset, Buffer.from(payload.data, 'base64'), payload.total)
-        }));
+    dispatcher.register('git.bundlePut', async (payload) => ({
+        received: await bundles.receive(payload.bundleId, payload.offset, Buffer.from(payload.data, 'base64'), payload.total)
+    }));
 
-        dispatcher.register('git.fetchBundle', async (payload) => {
-            const folder = await folderOf(payload.projectId);
-            if (folder === null) {
-                throw new RequestError('project-not-found', `No project ${payload.projectId} is on this machine`);
-            }
-            return fetchBundle(bundles, worktrees, folder, payload, payload.untrusted === true ? untrustFolder : undefined);
-        });
-    }
+    dispatcher.register('git.fetchBundle', async (payload) => {
+        const folder = await folderOf(payload.projectId);
+        if (folder === null) {
+            throw new CodedError('project-not-found', `No project ${payload.projectId} is on this machine`);
+        }
+        return fetchBundle(bundles, worktrees, folder, payload, payload.untrusted === true ? untrustFolder : undefined);
+    });
 
     dispatcher.register('git.stage', async (payload) => {
         await refuseFiles(payload.cwd, payload.paths);
@@ -270,25 +299,23 @@ export function registerGitHandlers(
         };
     });
 
-    const watching = (): PrWatchStore => {
-        if (!prWatches) {
-            throw new GitError('gh-failed', 'This machine does not watch pull requests');
-        }
-        return prWatches;
-    };
-    dispatcher.register('git.pr-watch', async (payload) => {
-        // A client names the project and the chat, so the machine checks that the project really holds the chat.
-        if (placeOf?.(payload.chatId)?.projectId !== payload.projectId) {
-            throw new GitError('pr-watch-refused', 'That chat is not part of this project.');
-        }
-        await refuse(payload.cwd);
-        return { watch: await watching().start(payload.projectId, payload.chatId, payload.cwd, payload.number) };
-    });
+    dispatcher.register(
+        'git.pr-watch',
+        async (payload) => {
+            // A client names the project and the chat, so the machine checks that the project really holds the chat.
+            if (placeOf(payload.chatId)?.projectId !== payload.projectId) {
+                throw new GitError('pr-watch-refused', 'That chat is not part of this project.');
+            }
+            await refuse(payload.cwd);
+            return { watch: await prWatches.start(payload.projectId, payload.chatId, payload.cwd, payload.number) };
+        },
+        { count: ['prWatches.started'] }
+    );
     dispatcher.register('git.pr-unwatch', async (payload) => {
-        await watching().stop(payload.chatId);
+        await prWatches.stop(payload.chatId);
         return {};
     });
-    dispatcher.register('git.pr-watches', (payload) => ({ watches: watching().list(payload.projectId) }));
+    dispatcher.register('git.pr-watches', (payload) => ({ watches: prWatches.list(payload.projectId) }));
 
     dispatcher.register('git.ref-commit', async (payload) => {
         await refuse(payload.cwd);
@@ -310,20 +337,23 @@ export function registerGitHandlers(
         return { authors: await authorPictures.authorsOf(payload.cwd) };
     });
 
-    dispatcher.register('git.capabilities', () => readCapabilities(providers, Date.now(), textModels?.choice()?.provider));
+    dispatcher.register('git.capabilities', () => readCapabilities(providers, Date.now(), textModels.choice()?.provider));
 
-    /* Progress streams while the git runs; the reply lands after. */
-    dispatcher.register('git.action', async (payload, client) => {
-        await refuse(payload.cwd);
-        return await actions.run(payload, progressTo(client, payload.cwd, payload.actionId));
-    });
+    dispatcher.register(
+        'git.action',
+        async (payload, client) => {
+            await refuse(payload.cwd);
+            return await actions.run(payload, progressTo(client, payload.cwd, payload.actionId));
+        },
+        { count: (payload) => GIT_ACTION_COUNTERS[payload.kind] ?? [] }
+    );
 
     /*
      * A person's client putting a project on this machine: the folder is judged like a file request's
      * path, before git makes it. Not on a peer's list, and no agent reaches it.
      */
     dispatcher.register('git.clone', async (payload, client) => {
-        await Promise.all([machineHome?.refuse(payload.path), machineHome?.refuse(dirname(payload.path))]);
+        await Promise.all([machineHome.refuse(payload.path), machineHome.refuse(dirname(payload.path))]);
         const slot = actions.claim(payload.actionId);
         let canceled = false;
         try {
@@ -368,10 +398,14 @@ export function registerGitHandlers(
         return await readConflict(payload.cwd, payload.path);
     });
 
-    dispatcher.register('git.resolve', async (payload) => {
-        await refuseFiles(payload.cwd, [payload.path]);
-        return { remaining: await resolveConflict(payload) };
-    });
+    dispatcher.register(
+        'git.resolve',
+        async (payload) => {
+            await refuseFiles(payload.cwd, [payload.path]);
+            return { remaining: await resolveConflict(payload) };
+        },
+        { count: ['git.conflictsResolved'] }
+    );
 
     dispatcher.register('git.operation', async (payload, client) => {
         await refuse(payload.cwd);
@@ -383,12 +417,12 @@ export function registerGitHandlers(
         const job = actions.claim(actionId);
         try {
             // The machine's pick answers when it has one; a hint that disagrees is refused there.
-            const writer = await textModels?.prepare(provider);
+            const writer = await textModels.prepare(provider);
 
             return await run({
                 ...(provider ? { provider } : {}),
                 ...(writer ? { writer } : {}),
-                ...(oneShotPlace ? { cwdFor: (folder: string) => oneShotPlace.cwdFor(folder) } : {}),
+                cwdFor: (folder: string) => oneShotPlace.cwdFor(folder),
                 onSpawn: (kill) => job.hold(kill)
             });
         } finally {

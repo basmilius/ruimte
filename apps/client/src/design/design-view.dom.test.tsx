@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import type { FsEntry, ProjectView } from '@ruimte/contracts';
 import { act } from 'react';
-import { useDesignChat } from '@/design/design-chat';
 import { DESIGN_METHODS } from '@/design/design-protocol';
+import { useDesignChat } from '@/state/design-chat';
 import { useDocument } from '@/state/document';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, layOutChat, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
@@ -57,7 +57,6 @@ afterEach(async () => {
     restoreLayout();
 });
 
-/* The name of the page the stage shows, as its switcher reads it. */
 function shownPage(): string | null {
     const trigger = mounted.host.querySelector<HTMLButtonElement>('button[aria-label^="Page: "]');
 

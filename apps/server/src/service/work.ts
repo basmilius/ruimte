@@ -1,9 +1,9 @@
-import type { AgentInfo, AgentStatus, MachineWork } from '@ruimte/contracts';
+import { chatActivity, type AgentInfo, type AgentStatus, type ChatInfo, type MachineWork } from '@ruimte/contracts';
 
 interface WorkFacts {
     /* `launch` is a session a launch runs in, whose shell execs the command and so has no child to count. */
     sessions: readonly { pid: number; exited: boolean; agent?: AgentInfo | null; launch?: boolean }[];
-    chats: readonly { activeTurnId: string | null }[];
+    chats: readonly Pick<ChatInfo, 'status' | 'activeTurnId' | 'delegating' | 'background' | 'requests' | 'goal' | 'queue'>[];
     /* How many processes have this pid as their parent; null where the process table cannot be read. */
     children: ((pid: number) => number) | null;
 }
@@ -27,14 +27,14 @@ export function workOf(facts: WorkFacts): MachineWork {
         }
     }
     for (const chat of facts.chats) {
-        if (chat.activeTurnId !== null) {
+        // A chat waiting on a person or on its subagents is mid-work too: an update would cut it off.
+        if (['working', 'waiting', 'delegating'].includes(chatActivity(chat))) {
             agents += 1;
         }
     }
     return { terminals, agents };
 }
 
-/* A child count over one reading of the process table. */
 export function childCounter(processes: readonly { pid: number; ppid: number; path?: string | null }[]): (pid: number) => number {
     const byPid = new Map(processes.map((entry) => [entry.pid, entry]));
     // Git for Windows's `bin\bash.exe` only starts `usr\bin\bash.exe`, the real shell, so that one is not work and what it runs counts for the launcher.

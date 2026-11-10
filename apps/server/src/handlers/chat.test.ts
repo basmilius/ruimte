@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'bun:test';
+import type { ChatCore } from '@adecore/agents/chat';
 import type { ServerFrame } from '@ruimte/contracts';
-import type { ChatManager } from '../chat/chat-manager.ts';
-import { type ClientAccess, Dispatcher } from '../dispatcher.ts';
+import { Dispatcher } from '../dispatcher.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
-import { registerChatHandlers } from './chat.ts';
+import type { ClientAccess } from '../wire.ts';
+import { chatArea } from './chat.ts';
 import { askOnce } from './test-helpers.ts';
 
 function register(started: string[]): Dispatcher {
@@ -21,10 +22,19 @@ function register(started: string[]): Dispatcher {
             started.push(chatId);
             return `whole output of ${itemId}`;
         }
-    } as unknown as ChatManager;
-    registerChatHandlers(dispatcher, manager, {} as ProviderRegistry, undefined, undefined, undefined, undefined, undefined, (nodeId) =>
-        nodeId === 'remote' ? 'machine-b' : null
-    );
+    } as unknown as ChatCore;
+    const noMoves = (): Promise<never> => Promise.reject(new Error('Not under test'));
+    chatArea({
+        manager,
+        providers: {} as ProviderRegistry,
+        beforeKill: async () => undefined,
+        stopNode: async () => undefined,
+        forks: { fork: noMoves, info: noMoves, handoff: noMoves, summarize: noMoves, continueOn: noMoves },
+        killed: async () => undefined,
+        moves: { info: noMoves, move: noMoves },
+        machineOf: (nodeId) => (nodeId === 'remote' ? 'machine-b' : null),
+        starting: () => false
+    }).handlers?.(dispatcher);
     return dispatcher;
 }
 

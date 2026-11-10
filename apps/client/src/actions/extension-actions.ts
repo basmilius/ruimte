@@ -1,5 +1,5 @@
 import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
-import { useContributions } from '@/extensions/registry';
+import { useContributions } from '@/state/extension-registry';
 
 export function extensionVoiceActions(): ActionHandlers<void> {
     return {

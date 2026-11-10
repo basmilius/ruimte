@@ -2,9 +2,9 @@ import { constants } from 'node:fs';
 import { open, realpath, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { isWithin } from '@adecore/utils/path';
+import { isMachineStatePath, type MachineHomePolicy } from '../disk/machine-home.ts';
+import { realOrNull, realOrSelf } from '../disk/real-path.ts';
 import { MAX_FILE_BYTES } from './grep-lines.ts';
-import { isMachineStatePath, type MachineHomePolicy } from './machine-home.ts';
-import { realOrNull, realOrSelf } from './real-path.ts';
 
 // Windows has neither flag; there the check on the opened file below is all the guard.
 const OPEN_FLAGS = constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0);

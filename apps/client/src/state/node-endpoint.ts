@@ -1,7 +1,8 @@
-import { nodesOfView } from '@/project/view-nodes';
 import type { CanvasNode } from '@/state/canvas';
 import { useDocument } from '@/state/document';
-import { currentEndpointId, endpointOfNode } from '@/state/keys';
+import { endpointOfNode } from '@/state/keys';
+import { nodesOfView } from '@/state/view-nodes';
+import { currentEndpointId } from './current-endpoint';
 
 /*
  * The machine a node or a view of the open project runs on, for code that has no subtree to ask:

@@ -2,8 +2,8 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join, posix, win32 } from 'node:path';
 import { fileExists } from '@adecore/utils/fs';
 import { isBelow } from '@adecore/utils/path';
-import type { GitRepo, GitReposResult } from '@ruimte/contracts';
-import { parseSharedFile, PROJECT_DIR, PROJECT_FILE } from '../projects/project-files.ts';
+import { PROJECT_DIR, type GitRepo, type GitReposResult } from '@ruimte/contracts';
+import { parseSharedFile, PROJECT_FILE } from '../projects/project-files.ts';
 import { readIdeaName } from '../projects/project-identity.ts';
 import { ignoredPaths } from './ignore.ts';
 import { git, repositoryRoot, rootAsAsked } from './run.ts';
@@ -64,7 +64,6 @@ async function declaredName(path: string): Promise<string | undefined> {
     return (await readIdeaName(path)) ?? undefined;
 }
 
-/* The folder's own repository first, then the rest by the name a person reads. */
 function inOrder(repos: readonly GitRepo[]): GitRepo[] {
     return [...repos].sort((left, right) => {
         if ((left.kind === 'root') !== (right.kind === 'root')) {

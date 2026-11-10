@@ -40,7 +40,7 @@ import XCTest
             _ = try await model.prepare(provider: "claude", project: project)
             XCTFail("An off account must refuse")
         } catch { XCTAssertEqual(error.localizedDescription, "Off in this project") }
-        XCTAssertFalse(machine.sent.contains { $0.0 == "project.newChat" })
+        XCTAssertFalse(machine.sent.contains { $0.0 == .projectNewChat })
         XCTAssertEqual(model.choices["claude"], "work")
     }
 
@@ -63,7 +63,7 @@ import XCTest
         let place = await model.start(provider: "claude")
         XCTAssertNil(place)
         XCTAssertEqual(model.choices["claude"], "work")
-        XCTAssertFalse(machine.sent.contains { $0.0 == "project.newChat" })
+        XCTAssertFalse(machine.sent.contains { $0.0 == .projectNewChat })
     }
 
     func testAFailedGrokProbeStillAllowsAutomaticAndNamedChats() async {
@@ -203,10 +203,10 @@ import XCTest
         let before = machine.accounts["work"]!
         let result1 = await model.save(id: "work", kind: "claude", label: " Renamed ", enabled: nil)
         XCTAssertTrue(result1)
-        let payload = machine.sent.last { $0.0 == "accounts.save" }!.1
+        let payload = machine.sent.last { $0.0 == .accountsSave }!.1
         XCTAssertEqual(payload["accounts"]?["added-on-desktop"], machine.accounts["added-on-desktop"])
         XCTAssertEqual(payload["accounts"]?["work"], before.setting("label", .string("Renamed")))
-        XCTAssertEqual(machine.sent.suffix(2).map(\.0), ["accounts.list", "accounts.save"])
+        XCTAssertEqual(machine.sent.suffix(2).map(\.0), [.accountsList, .accountsSave])
         let result2 = await model.save(id: "work", kind: "claude", label: "", enabled: false)
         XCTAssertTrue(result2)
         XCTAssertNil(machine.accounts["work"]?["label"])
@@ -231,10 +231,10 @@ import XCTest
         await model.load()
         let result3 = await model.create(kind: "claude", label: " New account ")
         XCTAssertTrue(result3)
-        XCTAssertEqual(machine.sent.last?.0, "accounts.create")
+        XCTAssertEqual(machine.sent.last?.0, .accountsCreate)
         XCTAssertEqual(machine.sent.last?.1, .object(["kind": .string("claude"), "label": .string("New account")]))
         XCTAssertTrue(model.agents.first?.accounts.contains { $0.id == "new-account" } == true)
-        XCTAssertFalse(machine.sent.contains { $0.0.hasPrefix("session.") })
+        XCTAssertFalse(machine.sent.contains { $0.0.rawValue.hasPrefix("session.") })
     }
 
     func testUnsupportedOperationsSendNoMutationAndARefusedSaveKeepsTheAccount() async {
@@ -248,7 +248,7 @@ import XCTest
         XCTAssertFalse(result5)
         await model.refresh()
         XCTAssertFalse(
-            machine.sent.contains { ["accounts.create", "accounts.save", "accounts.refresh"].contains($0.0) })
+            machine.sent.contains { [.accountsCreate, .accountsSave, .accountsRefresh].contains($0.0) })
         machine.features = AccountFlowMachine.supported
         machine.refuseSave = true
         let result6 = await model.save(id: "work", kind: "claude", label: "Keep the form", enabled: nil)
@@ -313,7 +313,7 @@ import XCTest
         "accounts.create", "accounts.save", "accounts.refresh", "accounts.reorder", "session.login",
     ]
     var features = supported
-    var sent: [(String, JSONValue)] = []
+    var sent: [(WireRequest, JSONValue)] = []
     var status: String? = "ready"
     var providerKind = "claude"
     var statusID = "work"
@@ -345,24 +345,17 @@ import XCTest
     private var snapshot: JSONValue {
         .object([
             "accounts": .object(accounts), "loginCommands": .object(["claude": .string("claude auth login")]),
-            "statuses": .array(status.map { [.object(["id": .string(statusID), "state": .string($0)])] } ?? []),
+            "statuses": .array(status.map { [AccountsWire.status(statusID, kind: providerKind, state: $0)] } ?? []),
             "silentLogins": .array(silentLogins.map(JSONValue.string)),
         ])
     }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
         switch type {
-        case "provider.list":
-            return .object([
-                "providers": .array([
-                    .object([
-                        "kind": .string(providerKind), "name": .string("Agent"), "installed": .bool(true),
-                        "capabilities": .object(["chat": .bool(true)]),
-                    ])
-                ])
-            ])
-        case "accounts.list":
+        case .providerList:
+            return ProviderWire.list([ProviderWire.provider(providerKind, name: "Agent")])
+        case .accountsList:
             let value = snapshot
             if holdList {
                 holdList = false
@@ -372,18 +365,18 @@ import XCTest
                 }
             }
             return value
-        case "accounts.save":
+        case .accountsSave:
             if refuseSave { throw MachineClientError.invalid("Save refused") }
             accounts = payload["accounts"]!.objectValue!
             return snapshot
-        case "accounts.create":
+        case .accountsCreate:
             accounts["new-account"] = .object(["kind": .string("claude"), "label": payload["label"]!])
             return snapshot.setting("id", .string("new-account"))
-        case "project.newChat":
-            return .object(["summary": .object(["projectId": .string("chats")]), "viewId": .string("chat")])
-        case "accounts.refresh": return snapshot
+        case .projectNewChat:
+            return .object(["summary": ProjectRowWire.summary("chats", scratch: true), "viewId": .string("chat")])
+        case .accountsRefresh: return snapshot
         default: return .object([:])
         }
     }
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

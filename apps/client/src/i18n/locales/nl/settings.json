@@ -198,13 +198,6 @@
                     "description": "Voegt er bij opslaan een toe als die ontbreekt."
                 }
             },
-            "documentation": {
-                "title": "Documentatie",
-                "render": {
-                    "label": "Documentatiecommentaar renderen",
-                    "description": "Als opgemaakte tekst. De boekknop naast een commentaar zet het terug."
-                }
-            },
             "codeVision": {
                 "title": "Code vision",
                 "usages": {

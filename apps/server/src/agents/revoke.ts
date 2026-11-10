@@ -2,8 +2,8 @@ import { readFile, rm } from 'node:fs/promises';
 import { isNotFound } from '@adecore/utils/errors';
 import { isRecord } from '@adecore/utils/record';
 import type { AgentIntegrationReport, AgentKind } from '@ruimte/contracts';
+import { realOrSelf } from '../disk/real-path.ts';
 import { errorText } from '../error-text.ts';
-import { realOrSelf } from '../fs/real-path.ts';
 import {
     CODEX_RULES,
     HOOK_FILE_RETRIES,
@@ -29,7 +29,6 @@ export interface LedgerEntry {
 
 interface HooksRemoval {
     config: Record<string, unknown>;
-    // Ruimte hooks taken out.
     removed: number;
     // Hooks that carry Ruimte's marker but are not what Ruimte writes: a person changed them, so they stay.
     keptEdited: number;

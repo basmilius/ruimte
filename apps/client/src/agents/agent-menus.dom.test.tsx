@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { useProviderAccountsStore } from '@adecore/agents-react/state';
 import type { EventMap, ProjectNode } from '@ruimte/contracts';
 import { act } from 'react';
-import { windowWorkspace } from '@/state/window';
+import { windowWorkspace } from '@/workspace/window';
 import { clickOn, mount, openSubmenu, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { fakeProvider } from '../../testing/fake-provider';
@@ -45,7 +45,6 @@ async function start(answer: () => ProviderAccounts | Promise<ProviderAccounts> 
     await page.renderApp();
 }
 
-/* What the machine announces when a person turns an account on or off in Providers. */
 async function accountsChange(accounts: Accounts): Promise<void> {
     await act(async () => machine.emit('accounts.changed', { accounts, statuses: [] }));
 }
@@ -61,7 +60,6 @@ function labelOf(item: HTMLElement): string {
     return (hint?.tagName === 'SPAN' ? text.slice(0, text.length - (hint.textContent ?? '').length) : text).trim();
 }
 
-/* The rows of the submenu that is open, the last menu on the page. */
 function submenuRows(): HTMLElement[] {
     const menu = [...document.querySelectorAll('[role="menu"]')].at(-1);
     return menu === undefined ? [] : ([...menu.querySelectorAll('[role="menuitem"]')] as HTMLElement[]);
@@ -79,7 +77,6 @@ function menuItem(text: string): HTMLElement | null {
     return submenuRows().find((item) => labelOf(item) === text) ?? menuItems().find((item) => item.textContent?.trim() === text) ?? null;
 }
 
-/* The account rows under one CLI's name. */
 function groupRows(provider: string): string[] {
     const group = [...document.querySelectorAll('[role="menu"] [role="group"]')].find((candidate) => candidate.textContent?.startsWith(provider));
     return group === undefined ? [] : ([...group.querySelectorAll('[role="menuitem"]')] as HTMLElement[]).map(labelOf);

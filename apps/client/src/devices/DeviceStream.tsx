@@ -1,4 +1,4 @@
-import { EmptyState, Icon, messageOf } from '@adecore/ui';
+import { EmptyState, Icon, messageOf, isApplePlatform } from '@adecore/ui';
 import { deviceTools, liveStreamFormatOf, type DeviceInfo, type DeviceInput } from '@ruimte/contracts';
 import clsx from 'clsx';
 import i18next from 'i18next';
@@ -13,7 +13,6 @@ import {
     type WheelEvent as ReactWheelEvent
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isApplePlatform } from '@/desktop/bridge';
 import { routeDeviceKey } from '@/devices/device-keys';
 import {
     approachGestureTotal,
@@ -27,11 +26,11 @@ import {
 import { DeviceTapPing } from '@/devices/DeviceOperatedStrip';
 import { hidUsageOf } from '@/devices/hid-usages';
 import { videoFrameDecoder } from '@/devices/video-decoder';
-import { followLiveStream } from '@/endpoint/live-stream-fetch';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpoints } from '@/state/endpoints';
-import { useEndpointId } from '@/state/keys';
-import { deviceClientFor } from '@/transport/connections';
 import { FramePainter } from '@/transport/live-stream';
+import { followLiveStream } from '@/transport/live-stream-fetch';
+import { deviceClientFor } from '@/workspace/connections';
 
 const BOTTOM_EDGE_START = 0.92;
 const TRACKPAD_DRAG_GAIN = 0.42;
@@ -264,7 +263,6 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
             releaseOnNextFrame();
         }
     };
-    /* Lets go a frame after the last move landed, unless the gesture went on meanwhile. */
     const releaseOnNextFrame = (): void => {
         const state = trackpad.current;
         state.frame = window.requestAnimationFrame(() => {

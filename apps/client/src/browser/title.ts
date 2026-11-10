@@ -1,7 +1,6 @@
-import type { NodeTitleSource } from '@ruimte/contracts';
+import { deriveNodeTitle, type NodeTitleSource } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { useBrowserRow } from '@/browser/registry';
-import { deriveNodeTitle } from '@/chat/title';
+import { useBrowserRow } from '@/clients/browser/registry';
 
 /* A person's name belongs to the project. A page's name belongs to the browser session of this client. */
 export function browserDisplayTitle(sharedTitle: string, source: NodeTitleSource | undefined, pageTitle: string | undefined, failed = false): string {

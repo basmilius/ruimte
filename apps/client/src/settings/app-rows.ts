@@ -1,0 +1,107 @@
+import { sortHasGroups } from '@/canvas-model/node-sort';
+import { canSwipeBetweenPages } from '@/desktop/bridge';
+import { settingsRow as row, type SettingsSearchRow } from '@/registry/settings-sections';
+import { FOLDING_GROUPS } from '@/settings/folding-rows';
+import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+import { hasLocalMachine } from '@/state/local-machine';
+import { serverInfoOf, useServers } from '@/state/server';
+import { useSettings } from '@/state/settings';
+
+export const APP_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
+    row('general.language'),
+    row('general.region'),
+    row('general.projects'),
+    row('general.sidebar'),
+    row('general.needsYou'),
+    row('general.dock'),
+    row('appearance.theme'),
+    row('appearance.palette'),
+    row('appearance.accent'),
+    row('appearance.accentFollowsProject'),
+    row('appearance.interface.layout'),
+    row('appearance.projectGlow'),
+    row('appearance.scrollBounce'),
+    row('appearance.font.interface'),
+    row('appearance.font.interfaceSize'),
+    row('editor.colors.light'),
+    row('editor.colors.dark'),
+    row('editor.general.font.family'),
+    row('editor.general.font.size'),
+    row('editor.general.font.lineHeight'),
+    row('editor.general.font.ligatures'),
+    row('editor.general.display.wrap'),
+    row('editor.general.display.indentGuides'),
+    row('editor.general.display.whitespace'),
+    row('editor.general.display.stickyScroll'),
+    row('editor.general.display.rightMargin'),
+    row('editor.general.navigation.camelHumps'),
+    row('editor.general.saving.trailingWhitespace'),
+    row('editor.general.saving.ensureFinalNewline'),
+    row('editor.general.codeVision.usages'),
+    row('editor.general.codeVision.authors'),
+    row('editor.folding.outline'),
+    ...FOLDING_GROUPS.flatMap((group) => group.rows.map((folding) => row(`editor.folding.${group.id}.${folding.words}`))),
+    row('editor.ai.inlineAgent'),
+    row('editor.ai.agentChanges'),
+    row('editor.ai.attribution'),
+    row('editor.ai.assist.help'),
+    row('editor.ai.assist.ghost'),
+    row('editor.smartKeys.pairBrackets'),
+    row('editor.smartKeys.pairQuotes'),
+    row('editor.smartKeys.surroundSelection'),
+    row('editor.smartKeys.tabOut'),
+    row('editor.smartKeys.smartEnter'),
+    row('editor.smartKeys.indentOnPaste'),
+    row('editor.smartKeys.smartSemicolon'),
+    row('editor.smartKeys.smartArrow'),
+    row('editor.templates.live'),
+    row('editor.templates.postfix'),
+    row('editor.templates.postfixInCompletion'),
+    { id: 'editor.servers', section: 'editor', label: 'settings:editor.servers.title', description: 'settings:editor.servers.description' },
+    { id: 'editor.servers.own', section: 'editor', label: 'settings:editor.servers.own.title', description: 'settings:editor.servers.own.description' },
+    row('terminal.font.family'),
+    row('terminal.font.size'),
+    row('terminal.font.lineHeight'),
+    row('terminal.links'),
+    {
+        id: 'views.nodeSizes',
+        section: 'views',
+        label: 'settings:views.nodeSizes.searchLabel',
+        description: 'settings:views.nodeSizes.description',
+        available: () => Object.keys(useServers.getState().byEndpoint).length > 0
+    },
+    row('views.canvas.minimap'),
+    row('views.canvas.sidebarSort'),
+    row('views.canvas.sidebarSortThen', () => sortHasGroups(useSettings.getState().sidebarNodeSort)),
+    row('views.canvas.renderDistance'),
+    row('views.drawing.snap'),
+    row('views.browser.swipe', canSwipeBetweenPages),
+    row('files.files.openFiles'),
+    row('files.files.hidden'),
+    row('files.git.layout'),
+    row('files.git.whitespace'),
+    {
+        id: 'files.worktreeFolder',
+        section: 'files',
+        label: 'settings:machine.worktreeFolder.label',
+        description: 'settings:machine.worktreeFolder.description',
+        available: hasLocalMachine
+    },
+    {
+        id: 'terminal.shell',
+        section: 'terminal',
+        label: 'settings:machine.terminalShell.label',
+        description: 'settings:machine.terminalShell.description',
+        available: () => hasLocalMachine() && serverInfoOf(LOCAL_ENDPOINT_ID).platform === 'win32'
+    },
+    {
+        id: 'agents.integrations',
+        section: 'terminal',
+        label: 'settings:agents.integrations.title',
+        description: 'settings:agents.integrations.search',
+        available: hasLocalMachine
+    },
+    row('about.updates.auto'),
+    row('about.updates.track'),
+    { id: 'about.onboarding', section: 'about', label: 'onboarding:about.label', description: 'onboarding:about.description', available: hasLocalMachine }
+];

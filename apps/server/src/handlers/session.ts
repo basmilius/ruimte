@@ -1,8 +1,10 @@
 import type { AgentKind, SessionInfo } from '@ruimte/contracts';
-import type { ClientConnection, Dispatcher } from '../dispatcher.ts';
-import { refuseBoundNode, type MachineOfNode } from '../remote/bound-nodes.ts';
+import type { Area } from '../area.ts';
+import type { Dispatcher } from '../dispatcher.ts';
+import { refuseBoundNode, type MachineOfNode } from '../peer/giver/bound-nodes.ts';
 import { SessionError, type SessionManager } from '../sessions/manager.ts';
 import { recordTiming } from '../stats/usage-stats.ts';
+import type { ClientConnection } from '../wire.ts';
 
 /* Owes ending the agents a session's node opened, before that session goes; a shell that already exited ends nothing, so a restart does not. */
 export type BeforeKill = (nodeId: string) => Promise<unknown>;
@@ -13,13 +15,28 @@ export interface LoginCommands {
     nameOf(kind: AgentKind): string;
 }
 
-export function registerSessionHandlers(
-    dispatcher: Dispatcher,
-    manager: SessionManager,
-    beforeKill?: BeforeKill,
-    logins?: LoginCommands,
-    machineOf?: MachineOfNode
-): void {
+export interface SessionDeps {
+    manager: SessionManager;
+    beforeKill: BeforeKill;
+    logins: LoginCommands;
+    machineOf: MachineOfNode;
+}
+
+/* Sessions are the last to be ended on a shutdown, after the chats and what they started. */
+export function sessionArea(deps: SessionDeps): Area {
+    const { manager } = deps;
+
+    return {
+        name: 'session',
+        sources: [manager],
+        holders: [manager],
+        handlers: (dispatcher) => registerRequests(dispatcher, deps),
+        connect: ({ client, gate }) => [manager.observeScreens(client.id, (sessionId) => gate.screenTaken(sessionId))],
+        stop: [{ phase: 'drain', label: 'Ending terminals', run: () => manager.killAllSettled() }]
+    };
+}
+
+function registerRequests(dispatcher: Dispatcher, { manager, beforeKill, logins, machineOf }: SessionDeps): void {
     // A shell or a login lives for its client, whose leaving while it started ended the others before this one was there.
     const keptForClient = async (client: ClientConnection, created: SessionInfo): Promise<SessionInfo> => {
         if (client.closed) {
@@ -45,9 +62,9 @@ export function registerSessionHandlers(
     /* No `cwd`, so the shell starts in the home folder. The default account is named outright, since a
        launch without one would take the person's pick for new agents instead. */
     dispatcher.register('session.login', async (payload, client) => {
-        const command = logins?.commandOf(payload.kind);
-        if (logins === undefined || command === undefined) {
-            throw new SessionError('login-unavailable', `${logins?.nameOf(payload.kind) ?? payload.kind} has no login of its own`);
+        const command = logins.commandOf(payload.kind);
+        if (command === undefined) {
+            throw new SessionError('login-unavailable', `${logins.nameOf(payload.kind)} has no login of its own`);
         }
         const created = await manager.create({
             sessionId: payload.sessionId,
@@ -93,7 +110,7 @@ export function registerSessionHandlers(
 
     dispatcher.register('session.kill', async (payload) => {
         if (manager.get(payload.sessionId)?.exited === false) {
-            await beforeKill?.(payload.sessionId);
+            await beforeKill(payload.sessionId);
         }
         await manager.kill(payload.sessionId);
         return {};

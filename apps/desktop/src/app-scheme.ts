@@ -1,6 +1,7 @@
 import { createAppScheme, type AppScheme } from '@adecore/shell';
-import { DESKTOP_APP_ORIGIN, DESKTOP_APP_SCHEME, VISUAL_HOST_PAGE } from '@ruimte/contracts';
-import { cspString, EXTENSION_FILES_PATH, VISUAL_HOST_HEADERS, VISUAL_HOST_PATH } from '@ruimte/csp';
+import { DESKTOP_APP_ORIGIN, DESKTOP_APP_SCHEME } from '@ruimte/contracts';
+import { cspString, EXTENSION_FILES_PATH } from '@ruimte/csp';
+import { VISUAL_HOST, visualHostResponse } from '@ruimte/csp/visual-host';
 import type { ClientExtensions } from './main/extensions';
 
 export const STORAGE_MOVE_PATH = '/__ruimte-storage';
@@ -29,8 +30,8 @@ export function answerAppRequest(scheme: AppScheme, request: Request, extensions
         if (extensions !== undefined && pathname.startsWith(EXTENSION_FILES_PATH)) {
             return extensions.answer(pathname, DESKTOP_APP_ORIGIN);
         }
-        if (pathname === VISUAL_HOST_PATH) {
-            return new Response(VISUAL_HOST_PAGE, { headers: VISUAL_HOST_HEADERS });
+        if (pathname === VISUAL_HOST.path) {
+            return visualHostResponse();
         }
     }
     return scheme.handle(request);

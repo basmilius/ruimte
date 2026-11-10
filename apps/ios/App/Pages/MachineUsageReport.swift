@@ -1,5 +1,6 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 
 enum UsagePeriod: String, CaseIterable, Identifiable, Sendable {
     case today, week, month, quarter
@@ -34,7 +35,6 @@ enum UsagePeriod: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// What the page counts in: the money of a currency, or tokens.
 enum UsageMetric: String, CaseIterable, Identifiable, Sendable {
     case euro, dollar, tokens
 
@@ -67,12 +67,12 @@ struct UsageTokens: Equatable, Sendable {
 
     init() {}
 
-    init(_ value: JSONValue?) {
-        calls = value?.number("calls") ?? 0
-        input = value?.number("input") ?? 0
-        cacheRead = value?.number("cacheRead") ?? 0
-        cacheWrite = value?.number("cacheWrite") ?? 0
-        output = value?.number("output") ?? 0
+    init(_ totals: UsageTotals) {
+        calls = Double(totals.calls)
+        input = Double(totals.input)
+        cacheRead = Double(totals.cacheRead)
+        cacheWrite = Double(totals.cacheWrite)
+        output = Double(totals.output)
     }
 
     var total: Double { input + cacheRead + cacheWrite + output }
@@ -133,7 +133,6 @@ struct UsageReport: Equatable, Sendable {
 
     let hourly: Bool
     let slots: [Slot]
-    /// Every CLI that did anything, dearest first.
     let providers: [ProviderTotal]
     let total: UsageAmount
     let cacheSavingsUsd: Double
@@ -144,8 +143,8 @@ struct UsageReport: Equatable, Sendable {
     /// Whether some model had no price, which leaves it out of every cost.
     let unpriced: Bool
 
-    init(_ summary: JSONValue, calendar: Calendar = .current) {
-        hourly = summary.text("resolution") == "hour"
+    init(_ summary: UsageSummary, calendar: Calendar = .current) {
+        hourly = summary.resolution == .hour
         let keys = Self.slots(summary, calendar: calendar)
         var slots = keys.map { Slot(id: $0.0, date: $0.1, byProvider: [:]) }
         let index = Dictionary(uniqueKeysWithValues: slots.enumerated().map { ($1.id, $0) })
@@ -153,10 +152,10 @@ struct UsageReport: Equatable, Sendable {
         var days: [String: (amount: UsageAmount, providers: Set<String>)] = [:]
         var total = UsageAmount()
         var savings = 0.0
-        for bucket in summary.list("buckets") {
-            let provider = bucket.text("provider")
-            let amount = UsageAmount(costUsd: bucket["costUsd"]?.numberValue ?? 0, tokens: UsageTokens(bucket["totals"]))
-            let slot = bucket.text("slot")
+        for bucket in summary.buckets {
+            let provider = bucket.provider
+            let amount = UsageAmount(costUsd: bucket.costUsd ?? 0, tokens: UsageTokens(bucket.totals))
+            let slot = bucket.slot
             if let position = index[String(slot.prefix(hourly ? 13 : 10))] {
                 slots[position].byProvider[provider, default: UsageAmount()].add(amount)
             }
@@ -165,30 +164,28 @@ struct UsageReport: Equatable, Sendable {
             days[day, default: (UsageAmount(), [])].amount.add(amount)
             days[day]?.providers.insert(provider)
             total.add(amount)
-            savings += bucket.number("cacheSavingsUsd")
+            savings += bucket.cacheSavingsUsd
         }
         self.slots = slots
         self.providers = providers.map { ProviderTotal(provider: $0.key, amount: $0.value) }
             .sorted { ($0.amount.costUsd, $1.provider) > ($1.amount.costUsd, $0.provider) }
         self.total = total
         cacheSavingsUsd = savings
-        sessions = summary.number("sessions")
-        let models = summary.list("models")
-        unpriced = models.contains { $0["costUsd"] == .null }
+        sessions = Double(summary.sessions)
+        let models = summary.models
+        unpriced = models.contains { $0.costUsd == nil }
         self.models = models.map { model in
-            let tokens = UsageTokens(model["totals"])
+            let tokens = UsageTokens(model.totals)
             return Row(
-                id: "\(model.text("provider")) \(model.text("model")) \(model.text("account"))",
-                title: ModelName.fromSlug(model.text("model")), detail: usageProviderName(model.text("provider")),
-                provider: model.text("provider"), costUsd: model["costUsd"]?.numberValue, tokens: tokens.total,
-                calls: tokens.calls)
+                id: "\(model.provider) \(model.model) \(model.account ?? "")",
+                title: ModelName.fromSlug(model.model), detail: usageProviderName(model.provider),
+                provider: model.provider, costUsd: model.costUsd, tokens: tokens.total, calls: tokens.calls)
         }
-        projects = summary.list("projects").map { project in
-            let tokens = UsageTokens(project["totals"])
+        projects = summary.projects.map { project in
+            let tokens = UsageTokens(project.totals)
             return Row(
-                id: project.text("folder"), title: project.text("name", fallback: project.text("folder")),
-                detail: Self.shortPath(project.text("folder")), provider: nil, costUsd: project.number("costUsd"),
-                tokens: tokens.total, calls: tokens.calls)
+                id: project.folder, title: project.name, detail: Self.shortPath(project.folder), provider: nil,
+                costUsd: project.costUsd, tokens: tokens.total, calls: tokens.calls)
         }
         self.days = days.sorted { $0.key > $1.key }.map { day in
             Row(
@@ -198,10 +195,8 @@ struct UsageReport: Equatable, Sendable {
         }
     }
 
-    /// The CLIs that did anything, in the order the chart stacks them.
     var stacked: [String] { providers.map(\.provider).sorted() }
 
-    /// The rows of a breakdown, biggest first in what the page counts.
     func rows(_ breakdown: UsageBreakdown, metric: UsageMetric) -> [Row] {
         switch breakdown {
         case .models: models.sorted { $0.value(metric) > $1.value(metric) }
@@ -210,7 +205,6 @@ struct UsageReport: Equatable, Sendable {
         }
     }
 
-    /// A row's part of the period, nil where the total says nothing.
     func share(_ row: Row, metric: UsageMetric) -> Double? {
         let whole = total.value(metric)
         guard whole > 0, metric == .tokens || row.costUsd != nil else { return nil }
@@ -218,13 +212,13 @@ struct UsageReport: Equatable, Sendable {
     }
 
     /// Every slot of the period, whether anything happened in it or not, so a quiet day keeps its place on the axis.
-    private static func slots(_ summary: JSONValue, calendar: Calendar) -> [(String, Date)] {
-        guard let from = date(summary.text("from"), calendar: calendar), let to = date(summary.text("to"), calendar: calendar)
+    private static func slots(_ summary: UsageSummary, calendar: Calendar) -> [(String, Date)] {
+        guard let from = date(summary.from, calendar: calendar), let to = date(summary.to, calendar: calendar)
         else { return [] }
-        if summary.text("resolution") == "hour" {
+        if summary.resolution == .hour {
             return (0..<24).compactMap { hour in
                 calendar.date(byAdding: .hour, value: hour, to: to).map {
-                    ("\(summary.text("to"))T\(String(format: "%02d", hour))", $0)
+                    ("\(summary.to)T\(String(format: "%02d", hour))", $0)
                 }
             }
         }
@@ -249,7 +243,6 @@ struct UsageReport: Equatable, Sendable {
         return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
     }
 
-    /// Enough of the tail of a folder to tell two checkouts apart, without the home folder.
     static func shortPath(_ path: String) -> String {
         let parts = path.split(separator: "/")
         return parts.count <= 3 ? path : "…/" + parts.suffix(3).joined(separator: "/")

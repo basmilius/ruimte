@@ -1,7 +1,7 @@
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 
 interface ChangingProviders {
     onChange(listener: (kind: AgentKind) => void): () => void;

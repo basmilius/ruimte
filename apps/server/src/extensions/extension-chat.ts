@@ -1,11 +1,11 @@
 import type { ActionRegistry } from '@ruimte/actions';
-import { voiceActionCall, type ServerActionContext } from '../actions/context.ts';
-import type { CanvasHost } from '../tools/host.ts';
+import { extensionActionCall, type ServerActionContext } from '../actions/context.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import type { ExtensionHostOptions } from './extension-host.ts';
 import { outputOf } from './machine-actions.ts';
 import { ExtensionRefusal } from './refusal.ts';
 
-export interface ExtensionChatDeps {
+interface ExtensionChatDeps {
     host: CanvasHost;
     actions: Pick<ActionRegistry<ServerActionContext>, 'execute'>;
     folderOf(projectId: string): string | null;
@@ -15,7 +15,7 @@ export interface ExtensionChatDeps {
 }
 
 /*
- * As Voice starts one: under the person's own CLI, an AI Chat and no wider than supervised, and with no canvas a view
+ * Started as Voice starts one, by the extension actor: under the person's own CLI, an AI Chat and no wider than supervised, and with no canvas a view
  * of its own. `check` goes along into the action, which calls it after each of its own awaits, so a turn off while it
  * waits makes nothing. With a `folder` it starts in the project the machine knows there, as a view of that project,
  * since an extension is trusted code that a person chose to run.
@@ -52,16 +52,7 @@ export function extensionChatStarter({
 
         check();
 
-        const call = voiceActionCall(
-            host,
-            { projectId, folder, canvasId: viewId ?? null },
-            {
-                sessionId: `extension-${id}`,
-                owner: { clientId: 'extension', sceneId: id },
-                projectId,
-                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-            }
-        );
+        const call = extensionActionCall(host, { projectId, folder, canvasId: viewId ?? null }, id);
 
         call.context.stillAllowed = check;
 

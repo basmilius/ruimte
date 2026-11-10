@@ -2,12 +2,12 @@ import { ToolRefusal } from '@adecore/agents/context';
 import { NODE_ACCENT_NAMES, isCanvasView, isNodeAccent, type NodeAccent } from '@ruimte/contracts';
 import { z } from 'zod';
 import { COLOR_LINES } from '../actions/node-actions.ts';
+import { field, placeOf, requiredField, titleField } from '../canvas/host.ts';
+import { JSON_NODE_KINDS, NODE_NEW_KINDS, kindLine } from '../canvas/node-kinds.ts';
+import { idList } from '../canvas/nodes.ts';
+import { ARRANGE_LAYOUTS, type ArrangeLayout } from '../canvas/placement.ts';
 import { canvasIdFor, defineActionTool, pointedCanvas, runAction } from './action-tool.ts';
 import { ONE_WRITE, idsInput, jsonBatch, oneWrite } from './batch.ts';
-import { field, placeOf, requiredField, titleField } from './host.ts';
-import { JSON_NODE_KINDS, NODE_NEW_KINDS, kindLine } from './node-kinds.ts';
-import { idList } from './nodes.ts';
-import { ARRANGE_LAYOUTS, type ArrangeLayout } from './placement.ts';
 import { defineTool, defineToolkit, PROJECT_INPUT, REVISION_INPUT, VIEW_INPUT } from './tool.ts';
 
 const OFF_CANVAS = 'This session is not on a canvas; name one with view';
@@ -17,10 +17,8 @@ const OPENING_OFF_CANVAS =
 
 const KIND_MESSAGE = `node_new needs a kind: ${NODE_NEW_KINDS.join(', ')}`;
 
-/* The word that takes a node's color away. */
 const NO_COLOR = 'none';
 
-/* One node of a `json` call: the kind and the fields a single call takes. */
 const JsonNodeSchema = z.strictObject({
     // An artifact or a routine node is left out: it names what it shows with fields of its own.
     kind: z.enum(JSON_NODE_KINDS, { error: `node_new needs a kind: ${JSON_NODE_KINDS.join(', ')}` }),
@@ -37,7 +35,6 @@ const JsonNodeSchema = z.strictObject({
 
 const NODES_EXAMPLE = '[{"kind":"note","title":"Idea","text":"Body","color":"teal"},{"kind":"browser","url":"https://example.com"}]';
 
-/* One note of a `json` call: its id and the body. */
 const JsonEditSchema = z.strictObject({
     id: z.string({ error: 'id needs the id of a note' }).min(1, 'id needs the id of a note'),
     text: z.string({ error: 'text needs the body to write' }),

@@ -2,7 +2,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, expect, setDefaultTimeout, 
 import { chmod, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { BYTES_CHUNK_MAX } from '@ruimte/contracts';
-import { sha256Of } from '../artifacts/artifact-fs.ts';
+import { sha256Of } from '../disk/hash.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { BundleStore, fetchBundle, makeBundle } from './bundles.ts';
 import { Checkpoints } from './checkpoints.ts';
 import { listRefs } from './refs.ts';
@@ -32,7 +33,7 @@ async function machine(name: string): Promise<Machine> {
         home,
         repo: join(root, name),
         bundles: new BundleStore(home),
-        checkpoints: new Checkpoints(home),
+        checkpoints: new Checkpoints(home, new MachineHome(home)),
         worktrees: new Worktrees(home, NO_WORKTREE_AGENTS)
     };
 }

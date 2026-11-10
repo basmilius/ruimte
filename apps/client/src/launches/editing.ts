@@ -1,29 +1,15 @@
-import { isAbsolutePath, type GitRepo, type LaunchConfigEntry, type LaunchConfigKind, type LaunchesDocument, type LaunchSuggestion } from '@ruimte/contracts';
+import {
+    freeSlug,
+    isAbsolutePath,
+    launchGap,
+    type GitRepo,
+    type LaunchConfigEntry,
+    type LaunchConfigKind,
+    type LaunchesDocument,
+    type LaunchSuggestion
+} from '@ruimte/contracts';
 import i18next from 'i18next';
-import { basenameOf } from '@/shell/panels/files-tree';
-
-/* The daemon's import writes ids the same way, so an imported launch and a typed one read alike. */
-export function slugOf(name: string): string {
-    return (
-        name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '') || 'launch'
-    );
-}
-
-export function uniqueId(name: string, taken: ReadonlySet<string>): string {
-    const base = slugOf(name);
-    if (!taken.has(base)) {
-        return base;
-    }
-    for (let i = 2; ; i += 1) {
-        const candidate = `${base}-${i}`;
-        if (!taken.has(candidate)) {
-            return candidate;
-        }
-    }
-}
+import { basenameOf } from '@/paths/file-path';
 
 export interface EnvRow {
     /* Holds a row in place while its key is typed and a row above it goes. */
@@ -97,7 +83,7 @@ export function savedLaunches(drafts: readonly LaunchDraft[]): LaunchConfigEntry
     const rename = new Map<string, string>();
     for (const draft of drafts) {
         if (draft.fresh) {
-            const id = uniqueId(draft.entry.name, taken);
+            const id = freeSlug(draft.entry.name, 'launch', taken);
             taken.add(id);
             rename.set(draft.entry.id, id);
         }
@@ -113,8 +99,9 @@ export function draftProblem(drafts: readonly LaunchDraft[]): { id: string; prob
         if (entry.name.trim() === '') {
             return { id: entry.id, problem: 'name' };
         }
-        if (entry.kind === 'group' ? (entry.launches ?? []).length === 0 : (entry.command ?? '').trim() === '') {
-            return { id: entry.id, problem: entry.kind === 'group' ? 'members' : 'command' };
+        const gap = launchGap(entry);
+        if (gap !== null) {
+            return { id: entry.id, problem: gap };
         }
     }
     return null;
@@ -136,7 +123,6 @@ export function folderRoots(repos: readonly GitRepo[]): string[] {
     return ['', ...repos.filter((repo) => repo.kind !== 'root' && !isAbsolutePath(repo.label) && !repo.label.startsWith('..')).map((repo) => repo.label)];
 }
 
-/* A launch's folder as the checkout it is in and the path below that. */
 export function splitFolder(cwd: string | undefined, roots: readonly string[]): { root: string; sub: string } {
     const folder = (cwd ?? '').trim().replace(/^\.\/?/, '');
     const root = roots
@@ -209,7 +195,7 @@ export function driftOf(launch: LaunchConfigEntry, suggestions: readonly LaunchS
 export function importedLaunches(suggestions: readonly LaunchSuggestion[], share: boolean, document: Pick<LaunchesDocument, 'launches'>): LaunchConfigEntry[] {
     const taken = new Set(document.launches.map((launch) => launch.id));
     return suggestions.map((suggestion) => {
-        const id = uniqueId(suggestion.launch.id, taken);
+        const id = freeSlug(suggestion.launch.id, 'launch', taken);
         taken.add(id);
         return { ...suggestion.launch, id, shared: share && !suggestion.private, origin: originOf(suggestion) };
     });
@@ -221,7 +207,6 @@ export function importedIds(saved: readonly LaunchConfigEntry[], document: Pick<
     return saved.filter((launch) => launch.origin !== undefined && !known.has(launch.id)).map((launch) => launch.id);
 }
 
-/* The drafts of a save that an import added, by the id they are saved under. */
 export function importedDraftIds(drafts: readonly LaunchDraft[]): string[] {
     return drafts.filter((draft) => draft.imported === true).map((draft) => draft.entry.id);
 }
@@ -271,7 +256,6 @@ export function foundText(suggestions: readonly LaunchSuggestion[]): string | nu
     return parts.length === 1 ? i18next.t('launches:found.one', { first: parts[0] }) : i18next.t('launches:found.both', { first: parts[0], second: parts[1] });
 }
 
-/* Where a suggestion came from, as the import dialog writes it beside the name. */
 export function suggestionSource(suggestion: LaunchSuggestion): string {
     if (readsAsRunConfiguration(suggestion)) {
         return suggestion.detail;

@@ -56,11 +56,11 @@ final class SessionWorkspaceTests: XCTestCase {
         let opening = Task { try await subscriptions.open("project") }
         await gate.waitForOpen()
         let closing = subscriptions.release("project", connected: true)
-        XCTAssertEqual(gate.requests, ["project.open"])
+        XCTAssertEqual(gate.requests, [.projectOpen])
         gate.completeOpen()
         _ = try await opening.value
         await closing.value
-        XCTAssertEqual(gate.requests, ["project.open", "project.release"])
+        XCTAssertEqual(gate.requests, [.projectOpen, .projectRelease])
     }
 
     @MainActor func testAnotherWindowRetainsProjectSubscription() async throws {
@@ -71,11 +71,11 @@ final class SessionWorkspaceTests: XCTestCase {
         let opening = Task { try await subscriptions.open("project") }
         await gate.waitForOpen()
         await subscriptions.release("project", connected: true).value
-        XCTAssertEqual(gate.requests, ["project.open"])
+        XCTAssertEqual(gate.requests, [.projectOpen])
         gate.completeOpen()
         _ = try await opening.value
         await subscriptions.release("project", connected: true).value
-        XCTAssertEqual(gate.requests, ["project.open", "project.release"])
+        XCTAssertEqual(gate.requests, [.projectOpen, .projectRelease])
     }
 
     @MainActor func testASaveThatConflictedGoesOutAgainOnceMerged() async throws {
@@ -108,6 +108,51 @@ final class SessionWorkspaceTests: XCTestCase {
         XCTAssertNil(workspace.problem)
     }
 
+    @MainActor func testWhatThisAppCannotReadSurvivesASaveAndStillReadsAsUnknown() async throws {
+        let runtime = AppRuntime(connections: MachineConnections(monitorPaths: false))
+        let machine = Machine(
+            id: "unknown-\(UUID().uuidString)", name: "Mac", icon: nil, publicKey: DeviceKey().publicKey,
+            brokerUrl: nil, lastSeenAt: nil)
+        let session = runtime.session(for: machine)
+        let wire = ConflictWire()
+        wire.remote = wire.remote.setting(
+            "views",
+            .array([
+                .object(["id": .string("holo"), "kind": .string("hologram"), "name": .string("Holo"), "depth": .number(3)]),
+                ProjectWire.view(
+                    .object([
+                        "id": .string("main"), "kind": .string("canvas"),
+                        "nodes": .array([
+                            .object(["id": .string("gizmo"), "kind": .string("gizmo"), "tilt": .number(12)]),
+                            .object(["id": .string("chat"), "kind": .string("chat"), "future": .bool(true)]),
+                        ]),
+                    ])),
+            ]))
+        session.rpc = wire.client
+        let workspace = MobileWorkspace(session: session, projectID: "project")
+        defer {
+            workspace.stop()
+            wire.client.shutdown()
+            runtime.connections.shutdown()
+            UserDefaults.standard.removeObject(forKey: workspace.storageKey)
+        }
+        workspace.start()
+        await workspace.open()
+        XCTAssertTrue(workspace.ready, workspace.problem ?? "The project did not open")
+
+        guard case .unknown(let holo) = workspace.storedViews[0] else { return XCTFail("An unknown view stays unknown") }
+        XCTAssertEqual(holo.raw["depth"], .number(3))
+        XCTAssertEqual(workspace.storedViews[1].nodes.map(\.kind), [.unknown, .chat])
+
+        await workspace.edit { $0.setting("name", .string("Renamed")) }
+
+        let saved = try XCTUnwrap(wire.saves.last?["content"])
+        XCTAssertEqual(saved["views"], workspace.document["views"])
+        XCTAssertEqual(saved["views"]?.arrayValue?[0]["raw"]?["depth"], .number(3))
+        XCTAssertEqual(saved["views"]?.arrayValue?[1]["nodes"]?.arrayValue?[0]["raw"]?["tilt"], .number(12))
+        XCTAssertEqual(saved["views"]?.arrayValue?[1]["nodes"]?.arrayValue?[1]["future"], .bool(true))
+    }
+
     @MainActor func testAProjectHasTheTitleAndKindOfItsRowBeforeItOpens() {
         let runtime = AppRuntime(connections: MachineConnections(monitorPaths: false))
         let machine = Machine(
@@ -116,7 +161,7 @@ final class SessionWorkspaceTests: XCTestCase {
         defer { runtime.connections.shutdown() }
         let workspace = MobileWorkspace(
             session: runtime.session(for: machine), projectID: "chats",
-            summary: .object(["name": .string("Chats"), "scratch": .bool(true)]))
+            summary: ProjectRowWire.summary("chats", name: "Chats", scratch: true).projectSummary)
 
         XCTAssertFalse(workspace.ready)
         XCTAssertEqual(workspace.title, "Chats")
@@ -344,8 +389,8 @@ final class SessionWorkspaceTests: XCTestCase {
         let frame = try JSONValue.decode(Data(text.utf8))
         let id = frame["id"] ?? .null
         let reply: JSONValue
-        switch frame.text("type") {
-        case "project.open":
+        switch WireRequest(rawValue: frame.text("type")) {
+        case .projectOpen:
             reply = .object([
                 "id": id, "ok": .bool(true),
                 "result": .object([
@@ -353,19 +398,19 @@ final class SessionWorkspaceTests: XCTestCase {
                     "local": .object(["activeViewId": .null, "views": .object([:])]),
                 ]),
             ])
-        case "project.save" where conflicts > 0:
+        case .projectSave where conflicts > 0:
             conflicts -= 1
             saves.append(frame["payload"] ?? .null)
             reply = .object([
                 "id": id, "ok": .bool(false),
                 "error": .object(["code": .string("rev-conflict"), "message": .string("The project changed.")]),
             ])
-        case "project.save":
+        case .projectSave:
             saves.append(frame["payload"] ?? .null)
             let rev = remote.number("rev") + 1
             remote = (frame["payload"]?["content"] ?? remote).setting("rev", .number(rev))
             reply = .object(["id": id, "ok": .bool(true), "result": .object(["rev": .number(rev)])])
-        case "project.save-local":
+        case .projectSaveLocal:
             localSaves.append(frame["payload"] ?? .null)
             reply = .object(["id": id, "ok": .bool(true), "result": .object([:])])
         default:
@@ -384,12 +429,12 @@ final class SessionWorkspaceTests: XCTestCase {
 }
 
 @MainActor private final class WorkspaceRequestGate {
-    var requests: [String] = []
+    var requests: [WireRequest] = []
     private var openContinuation: CheckedContinuation<JSONValue, Error>?
     private var waiting: CheckedContinuation<Void, Never>?
-    func request(_ type: String, _ payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, _ payload: JSONValue) async throws -> JSONValue {
         requests.append(type)
-        if type == "project.open" {
+        if type == .projectOpen {
             return try await withCheckedThrowingContinuation { continuation in
                 openContinuation = continuation
                 waiting?.resume()

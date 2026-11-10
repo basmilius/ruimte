@@ -2,8 +2,9 @@ import { ToolRefusal } from '@adecore/agents/context';
 import { isWithin } from '@adecore/utils/path';
 import { worktreeDiffOutput, type ActionHandlers } from '@ruimte/actions';
 import { designNodeChats, isCanvasView, isChatNode, type ProjectContent, type Worktree } from '@ruimte/contracts';
+import { field, orNote, type CanvasHost } from '../canvas/host.ts';
 import { GitError } from '../git/run.ts';
-import { field, orNote, type CanvasHost, type WorktreeHost } from '../tools/host.ts';
+import type { WorktreeHost } from '../git/worktree-host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 function worktreeHostOf(context: ServerActionContext): WorktreeHost {

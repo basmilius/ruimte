@@ -4,7 +4,6 @@ import { BUILD_FOLDER, STAGING_PREFIX } from './pack.ts';
 
 const LEFT_OUT = new Set([BUILD_FOLDER, 'node_modules', '.git']);
 
-/* Whether a path in the project, as a watcher names it, is outside what a save changes: its first segment says. */
 export function isLeftOut(path: string): boolean {
     const first = path.split(/[\\/]/)[0] ?? '';
 

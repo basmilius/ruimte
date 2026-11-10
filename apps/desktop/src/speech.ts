@@ -154,7 +154,6 @@ export class SpeechService<Owner = never> {
         return new Promise((resolve, reject) => child.stdin.write(`${JSON.stringify(value)}\n`, (error) => (error ? reject(error) : resolve())));
     }
 
-    /* The page the running dictation belongs to; undefined while none runs. */
     get owner(): Owner | undefined {
         return this.#run?.owner;
     }

@@ -1,6 +1,5 @@
 import type { DesignElement } from '@/design/design-protocol';
 
-/* A comment waiting to be sent, on the element a person picked. */
 export interface DesignComment {
     element: DesignElement;
     text: string;
@@ -35,7 +34,6 @@ export function textEditPrompt(file: string, element: DesignElement, before: str
     ].join('\n');
 }
 
-/* A drawing over the canvas, with what it was drawn over. */
 export function drawPrompt(file: string, elements: readonly DesignElement[], note: string): string {
     const over = elements.length === 0 ? 'the canvas' : elements.map(where).join('; ');
 
@@ -57,7 +55,6 @@ export function bakePrompt(file: string, css: string): string {
     ].join('\n');
 }
 
-/* The first message of a chat that builds a design into the project. */
 export function implementPrompt(path: string, file: string): string {
     return `Implement the design in \`${path}/${file}\` in this project, with its own components, styles and conventions rather than the design's HTML. Read the project first, follow what it already does, and ask before you choose between options the design leaves open.`;
 }

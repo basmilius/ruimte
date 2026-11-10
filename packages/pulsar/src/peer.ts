@@ -17,7 +17,6 @@ export interface BrokerPeerEvents {
     relayed(frame: BrokerRelayed): void;
     /* The broker refused something: a relay (the frame carries its id) or the socket itself. */
     refused(frame: BrokerError | BrokerRateLimited): void;
-    /* The broker wrote a relay to the receiver's socket. */
     delivered?(id: string): void;
     /* The answer to `ice`, with the id it returned. */
     ice?(frame: BrokerIce): void;
@@ -33,6 +32,21 @@ export interface BrokerPeerOptions {
     sign(message: string): string | Promise<string>;
     send(frame: string): void;
     events: BrokerPeerEvents;
+}
+
+/*
+ * Whether the machine this peer dialed signed a signal for this peer's key. Over the broker or at its
+ * door, an end that dials a machine believes a signal from it on this check alone, whichever way its
+ * own crypto verifies.
+ */
+export function signedByMachine<Verdict extends boolean | Promise<boolean>>(
+    verify: (publicKey: string, message: string, signature: string) => Verdict,
+    machineKey: string,
+    ownKey: string,
+    envelope: SignalEnvelope,
+    signature: string
+): Verdict {
+    return verify(machineKey, signalMessage(machineKey, ownKey, envelope), signature);
 }
 
 /* `host[:port]` of a broker URL, which is what a broker names in its challenge. */

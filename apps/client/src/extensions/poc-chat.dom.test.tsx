@@ -3,7 +3,7 @@ import { assertShortcut, matchesExtensionShortcut } from '@/extensions/action-sh
 import { wantsLoading } from '@/extensions/activation';
 import type { LoadedExtension } from '@/extensions/host/client-api';
 import { useInstalledExtensions } from '@/extensions/loader';
-import { useContributions } from '@/extensions/registry';
+import { useContributions } from '@/state/extension-registry';
 import { useToasts } from '@/state/toasts';
 import { loadPoc } from '../../testing/poc';
 

@@ -1,7 +1,7 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { z } from 'zod';
+import { field } from '../canvas/host.ts';
 import { accepted, scopedProjects } from './external-reach.ts';
-import { field } from './host.ts';
 import { defineTool, type ToolCall } from './tool.ts';
 
 function externalOf(call: ToolCall): NonNullable<ToolCall['external']> {

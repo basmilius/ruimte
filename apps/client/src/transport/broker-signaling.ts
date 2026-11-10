@@ -2,7 +2,7 @@ import { messageOf } from '@adecore/ui';
 import {
     BrokerPeer,
     brokerHostOf,
-    signalMessage,
+    signedByMachine,
     type BrokerError,
     type IceServer,
     type BrokerRateLimited,
@@ -30,7 +30,7 @@ interface Shared {
     iceRequestId: string | null;
 }
 
-export interface BrokerMembership {
+interface BrokerMembership {
     relay(to: string, envelope: SignalEnvelope): Promise<string | null>;
     leave(): void;
 }
@@ -173,7 +173,7 @@ export class BrokerSockets {
 
 const brokerSockets = new BrokerSockets();
 
-export interface BrokerSignalingOptions {
+interface BrokerSignalingOptions {
     brokerUrl: string;
     /* The machine's key this row pinned from the account list. A signal is believed only from this key. */
     machineKey: string;
@@ -213,7 +213,7 @@ export function brokerSignaling(options: BrokerSignalingOptions): SignalingOpene
             if (frame.from !== options.machineKey || frame.envelope.connectionId !== connectionId) {
                 return;
             }
-            if (!(await options.verify(options.machineKey, signalMessage(options.machineKey, clientKey, frame.envelope), frame.signature))) {
+            if (!(await signedByMachine(options.verify, options.machineKey, clientKey, frame.envelope, frame.signature))) {
                 fail(i18next.t('machines:direct.unsignedSignal'));
                 return;
             }

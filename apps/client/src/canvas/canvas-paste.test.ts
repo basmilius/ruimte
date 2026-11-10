@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import type { Point } from '../canvas-model/math';
 import { answerCanvasPaste, type CanvasPasteReach } from './canvas-paste';
-import type { Point } from './math';
 
 interface Pasted {
     prevented: boolean;

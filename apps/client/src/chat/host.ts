@@ -1,12 +1,14 @@
-import { type AgentMark, configureAgentMarks, configureChatStorage, type ChatActions, type ChatHost, setLazyPrefetch } from '@adecore/agents-react';
+import { type AgentMark, configureChatStorage, type ChatActions, type ChatHostLayer } from '@adecore/agents-react';
 import { useChats } from '@adecore/agents-react/state';
-import { prefetcher, messageOf } from '@adecore/ui';
+import { messageOf } from '@adecore/ui';
 import { type AgentKind, CHAT_MODEL_MAX_BYTES } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createElement } from 'react';
-import { perform, PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
+import { PERSON_PROMPT_CLIENTS } from '@/action-port/person-actions';
 import { askBeforeStoppingSubagents, askBeforeStoppingTask } from '@/agents/end-children';
-import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel, type AccentId } from '@/canvas/accents';
+import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel, type AccentId } from '@/canvas-model/accents';
+import { providerCommandDialog } from '@/chat/dialog-state';
 import DiffSyntaxWorker from '@/chat/diff-syntax.worker?worker';
 import { searchFiles } from '@/chat/file-search';
 import { openLogin } from '@/chat/login';
@@ -18,15 +20,16 @@ import { gitStatusConcernsChat } from '@/chat/ui-refresh';
 import { useMapSource } from '@/chat/use-map-source';
 import { visualHostFor } from '@/chat/visuals';
 import { codeHighlighter } from '@/code-highlighter';
-import { desktop, isApplePlatform } from '@/desktop/bridge';
+import { CODE_THEMES } from '@/code-themes';
+import { desktop } from '@/desktop/bridge';
 import { downloadBlob } from '@/download';
 import { renderEmptyThread, renderMessageActions, renderToolActions, renderToolResult, useExpandingCommands } from '@/extensions/chat-seams';
 import { renderCodeFence } from '@/extensions/code-fences';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
-import { CODE_THEMES } from '@/shell/panels/code-themes';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
-import { currentEndpointId, endpointKey } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { isScratchProject, useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
@@ -37,10 +40,10 @@ import { useTheme } from '@/state/theme';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { transportFor, type Transport } from '@/transport';
+import { readPiece } from '@/transport-api/piece';
 import { readResource } from '@/transport/byte-transfer';
 import { useMachineAnswers } from '@/transport/features';
 import { useMachineUrl } from '@/transport/machine-url';
-import { readPiece } from '@/transport/piece';
 import { RuimteMark } from '@/ui/RuimteMark';
 
 /* Every action goes through the registry as the person who clicked, the same door Voice uses. */
@@ -105,25 +108,22 @@ const AGENT_MARKS: Partial<Record<AgentKind, AgentMark>> = {
     }
 };
 
-/* The stores every chat view shares, set up before the first render. */
 export function configureChat(): void {
     configureChatStorage({ namespace: 'ruimte' });
-    configureAgentMarks(AGENT_MARKS);
-    setLazyPrefetch((load) => prefetcher.register(load));
 }
 
 /*
  * What the chat takes from Ruimte that the start screen may already need. What only a workspace draws
  * is in `workspace-host.ts`, so none of it reaches the first chunk.
  */
-export const CHAT_HOST: Partial<ChatHost> = {
+export const CHAT_HOST: ChatHostLayer = {
+    agentMarks: AGENT_MARKS,
     accents: {
         all: NODE_ACCENTS,
         featured: FEATURED_ACCENTS,
         label: (id) => accentLabel(id as AccentId),
         current: () => useSettings.getState().accent
     },
-    isApplePlatform,
     renderCodeFence,
     renderEmptyThread,
     renderMessageActions,
@@ -205,7 +205,7 @@ export const CHAT_HOST: Partial<ChatHost> = {
             try {
                 const transport = requireTransport(endpointId);
                 // The dialog and its folder tree belong to a workspace, so the start screen loads none of it.
-                const { requestImageSave } = await import('@/chat/image-save');
+                const { requestImageSave } = await import('@/surface/image-save');
                 return await requestImageSave(transport, chatId, attachmentId);
             } catch (error) {
                 useToasts.getState().show({
@@ -225,7 +225,7 @@ export const CHAT_HOST: Partial<ChatHost> = {
         highlighter: codeHighlighter,
         syntaxWorker: () => new DiffSyntaxWorker(),
         editor: async () => {
-            const { loadEditorEngine } = await import('@/shell/panels/editor-engine');
+            const { loadEditorEngine } = await import('@/surface/panels/editor-engine');
             return loadEditorEngine();
         }
     },
@@ -263,7 +263,7 @@ export const CHAT_HOST: Partial<ChatHost> = {
     openSettings: (section) => useUi.getState().setSettings({ open: true, section }),
     useMachineLabel: (endpointId) => useEndpoints((s) => s.endpoints.find((endpoint) => endpoint.id === endpointId)?.label ?? null),
     // A shell of its own over the settings, so it works with no project open; the command waits for the person's Enter.
-    runProviderCommand: (endpointId, kind, command) => useUi.getState().setProviderCommand({ endpointId, kind, command }),
+    runProviderCommand: (endpointId, kind, command) => providerCommandDialog.set({ endpointId, kind, command }),
     useMachinePlatform,
     providerKeyNote: () => i18next.t('settings:providers.keyNote'),
     useResumeAtReset: (endpointId) => useServers((s) => s.byEndpoint[endpointId]?.resumeAtReset === true),
@@ -275,7 +275,6 @@ export const CHAT_HOST: Partial<ChatHost> = {
         return endpointId === currentEndpointId() ? accounts : null;
     },
     // A chat on screen belongs to the project the window shows, and the Chats project shows none of its folders.
-    useHidesFolder: () => useProject((s) => isScratchProject(s.current)),
     // A chat of the Chats project is a conversation of its own, so it opens the way one does.
     useWelcome: () => useProject((s) => isScratchProject(s.current)),
     commandLooks: RUIMTE_COMMAND_LOOKS,

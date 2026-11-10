@@ -6,14 +6,13 @@ import SwiftUI
 struct PhoneProjectList: View {
     let workspace: MobileWorkspace
     let state: ProjectListState
-    let views: [JSONValue]
+    let views: [ProjectItem]
     /// The open view, which keeps its row while a chat nobody wrote in would otherwise leave the list.
     let selectedID: String?
     let open: (String) -> Void
-    let act: (ProjectRowAction, JSONValue) -> Void
+    let act: (ProjectRowAction, ProjectItem) -> Void
     /// The rows above the views in the iPad's sidebar: the project's name.
     var header: AnyView?
-    /// The row whose view the iPad shows beside the sidebar.
     var highlightedID: String?
 
     var body: some View {
@@ -39,7 +38,7 @@ struct PhoneProjectList: View {
                         .allowsHitTesting(false)
                         .accessibilityHidden(section.title == nil)
                     }
-                    ForEach(section.items, id: \.stableID) { item in
+                    ForEach(section.items) { item in
                         ProjectListCell(
                             workspace: workspace, item: item, state: state, sources: sources,
                             highlightedID: highlightedID, open: open, act: act)
@@ -67,12 +66,12 @@ struct PhoneProjectList: View {
             statuses: attention.statuses, unseen: attention.unseen,
             delegating: attention.delegating.union(workspace.session.tasks.parentsWithOpenTasks),
             drafts: state.drafts, warnings: state.warnings,
-            shared: Set(workspace.document.list("shared").compactMap(\.stringValue)),
+            shared: Set(workspace.header?.shared ?? []),
             snoozes: workspace.session.snoozes.standing)
     }
 
     private func move(section: WorkspaceViewSection, from indices: IndexSet, to destination: Int) {
-        let expectedIDs = section.items.map(\.stableID)
+        let expectedIDs = section.items.map(\.id)
         let selectedID = selectedID
         Task {
             await workspace.edit { document in
@@ -92,34 +91,34 @@ struct PhoneProjectList: View {
 /// it in the same row, so dragging a canvas takes its nodes along.
 private struct ProjectListCell: View {
     let workspace: MobileWorkspace
-    let item: JSONValue
+    let item: ProjectItem
     let state: ProjectListState
     let sources: ProjectMarkSources
     let highlightedID: String?
     let open: (String) -> Void
-    let act: (ProjectRowAction, JSONValue) -> Void
+    let act: (ProjectRowAction, ProjectItem) -> Void
 
     var body: some View {
         let nodes = ProjectListLogic.nodes(of: item)
         let marks = ProjectListLogic.marks(view: item, sources: sources)
-        let expanded = !nodes.isEmpty && state.isExpanded(item.stableID)
+        let expanded = !nodes.isEmpty && state.isExpanded(item.id)
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 Button {
-                    open(item.stableID)
+                    open(item.id)
                 } label: {
                     HStack(spacing: 10) {
                         WorkspaceViewIcon(item: item, size: 15).foregroundStyle(MobileStyle.muted)
-                        Text(title(item)).foregroundStyle(MobileStyle.text).lineLimit(1).truncationMode(.tail)
+                        Text(item.title).foregroundStyle(MobileStyle.text).lineLimit(1).truncationMode(.tail)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                        ProjectRowMarksView(marks: marks, task: workspace.session.tasks.childTask(item.stableID))
+                        ProjectRowMarksView(marks: marks, task: workspace.session.tasks.childTask(item.id))
                     }
                     .modifier(MobileSidebarLabel())
                     .accessibilityElement(children: .combine)
                 }
-                .buttonStyle(MobileSidebarButtonStyle(selected: highlightedID == item.stableID))
-                .accessibilityAddTraits(highlightedID == item.stableID ? .isSelected : [])
-                .accessibilityIdentifier("workspace.view.\(item.stableID)")
+                .buttonStyle(MobileSidebarButtonStyle(selected: highlightedID == item.id))
+                .accessibilityAddTraits(highlightedID == item.id ? .isSelected : [])
+                .accessibilityIdentifier("workspace.view.\(item.id)")
                 .contextMenu {
                     ProjectRowMenu(item: item, isView: true, status: marks.status, workspace: workspace, act: act)
                 } preview: {
@@ -130,18 +129,18 @@ private struct ProjectListCell: View {
                         // Without an animation: a row that grows inside a list moved its neighbors oddly.
                         var transaction = Transaction(animation: nil)
                         transaction.disablesAnimations = true
-                        withTransaction(transaction) { state.toggle(item.stableID) }
+                        withTransaction(transaction) { state.toggle(item.id) }
                     } label: {
                         Image(lucide: expanded ? "chevron-down" : "chevron-right", size: 15)
                             .foregroundStyle(MobileStyle.muted)
                             .frame(width: 44, height: 44).contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(expanded ? "Fold \(title(item))" : "Unfold \(title(item))")
+                    .accessibilityLabel(expanded ? "Fold \(item.title)" : "Unfold \(item.title)")
                 }
             }
             if expanded {
-                ForEach(nodes, id: \.stableID) { node in
+                ForEach(nodes) { node in
                     nodeRow(node)
                 }
             }
@@ -149,34 +148,29 @@ private struct ProjectListCell: View {
         .modifier(MobileSidebarRow())
     }
 
-    private func nodeRow(_ node: JSONValue) -> some View {
+    private func nodeRow(_ node: ProjectItem) -> some View {
         let marks = ProjectListLogic.marks(node: node, sources: sources)
         return Button {
-            open(node.stableID)
+            open(node.id)
         } label: {
             HStack(spacing: 10) {
                 WorkspaceViewIcon(item: node, size: 14).foregroundStyle(MobileStyle.muted)
-                Text(title(node)).foregroundStyle(MobileStyle.muted).lineLimit(1).truncationMode(.tail)
+                Text(node.title).foregroundStyle(MobileStyle.muted).lineLimit(1).truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                ProjectRowMarksView(marks: marks, task: workspace.session.tasks.childTask(node.stableID))
+                ProjectRowMarksView(marks: marks, task: workspace.session.tasks.childTask(node.id))
             }
             .padding(.leading, 25)
             .modifier(MobileSidebarLabel())
             .accessibilityElement(children: .combine)
         }
-        .buttonStyle(MobileSidebarButtonStyle(selected: highlightedID == node.stableID))
-        .accessibilityAddTraits(highlightedID == node.stableID ? .isSelected : [])
-        .accessibilityIdentifier("workspace.node.\(node.stableID)")
+        .buttonStyle(MobileSidebarButtonStyle(selected: highlightedID == node.id))
+        .accessibilityAddTraits(highlightedID == node.id ? .isSelected : [])
+        .accessibilityIdentifier("workspace.node.\(node.id)")
         .contextMenu {
             ProjectRowMenu(item: node, isView: false, status: marks.status, workspace: workspace, act: act)
         } preview: {
             ProjectRowPreview(workspace: workspace, item: node, marks: marks, nodes: [], sources: sources)
         }
-    }
-
-    private func title(_ row: JSONValue) -> String {
-        let name = row.text("name", fallback: row.text("title"))
-        return name.isEmpty ? NewViewFactory.kindTitle(row.text("kind")) : name
     }
 }
 
@@ -184,7 +178,7 @@ private struct ProjectListCell: View {
 /// the shared mark and the draft dot, then the status.
 struct ProjectRowMarksView: View {
     let marks: ProjectRowMarks
-    var task: JSONValue?
+    var task: AgentTask?
 
     var body: some View {
         HStack(spacing: 8) {
@@ -215,16 +209,17 @@ struct ProjectRowMarksView: View {
     }
 }
 
-/// What a long press on a row offers: what the view is, how to get another one, its session, and the delete.
 private struct ProjectRowMenu: View {
-    let item: JSONValue
+    let item: ProjectItem
     let isView: Bool
     let status: AgentStatus?
     let workspace: MobileWorkspace
-    let act: (ProjectRowAction, JSONValue) -> Void
+    let act: (ProjectRowAction, ProjectItem) -> Void
 
     var body: some View {
-        let actions = ProjectListLogic.actions(for: item, isView: isView, status: status)
+        let actions = ProjectListLogic.actions(
+            for: item, isView: isView, status: status,
+            canFork: AgentDirectory.shared.canFork(ProjectListLogic.provider(of: item)))
         Section {
             if actions.contains(.rename) {
                 Button(String(localized: "Rename"), lucideIcon: "pencil") { act(.rename, item) }
@@ -244,10 +239,10 @@ private struct ProjectRowMenu: View {
             }
             if actions.contains(.snooze) {
                 let snoozes = workspace.session.snoozes
-                SnoozeMenu(until: snoozes.until(item.stableID)) {
-                    snoozes.snooze(item.stableID, until: $0)
+                SnoozeMenu(until: snoozes.until(item.id)) {
+                    snoozes.snooze(item.id, until: $0)
                 } wake: {
-                    snoozes.clear(item.stableID)
+                    snoozes.clear(item.id)
                 }
             }
             if actions.contains(.stopTurn) {
@@ -266,17 +261,16 @@ private struct ProjectRowMenu: View {
 /// the machine's attention without attaching the session.
 private struct ProjectRowPreview: View {
     let workspace: MobileWorkspace
-    let item: JSONValue
+    let item: ProjectItem
     let marks: ProjectRowMarks
-    let nodes: [JSONValue]
+    let nodes: [ProjectItem]
     let sources: ProjectMarkSources
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 WorkspaceViewIcon(item: item, size: 14)
-                let kind = NewViewFactory.kindTitle(item.text("kind"))
-                Text(item.text("name", fallback: item.text("title", fallback: kind)))
+                Text(item.name)
                     .font(.footnote.weight(.semibold)).lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 ProjectRowMarksView(marks: marks)
@@ -287,10 +281,10 @@ private struct ProjectRowPreview: View {
                 if nodes.isEmpty {
                     Text(line).foregroundStyle(MobileStyle.text.opacity(0.85))
                 } else {
-                    ForEach(nodes.prefix(6), id: \.stableID) { node in
+                    ForEach(nodes.prefix(6)) { node in
                         HStack(spacing: 8) {
                             WorkspaceViewIcon(item: node, size: 12).foregroundStyle(MobileStyle.muted)
-                            Text(node.text("title", fallback: NewViewFactory.kindTitle(node.text("kind")))).lineLimit(1)
+                            Text(node.name).lineLimit(1)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             ProjectRowMarksView(marks: ProjectListLogic.marks(node: node, sources: sources))
                         }
@@ -306,7 +300,7 @@ private struct ProjectRowPreview: View {
     }
 
     private var line: String {
-        let id = item.stableID
+        let id = item.id
         if let wait = workspace.session.attention.waits[id],
             let request = wait.requests.compactMap(NowRequest.init).first
         {
@@ -324,9 +318,9 @@ private struct ProjectRowPreview: View {
         default: break
         }
         if marks.delegating { return String(localized: "Work it started still runs.") }
-        switch item.text("kind") {
-        case "browser": return item.text("url", fallback: String(localized: "No address yet."))
-        case "file": return item.text("path")
+        switch item.kind {
+        case "browser": return item.url ?? String(localized: "No address yet.")
+        case "file": return item.path ?? ""
         default:
             return marks.draft
                 ? String(localized: "A message is waiting to be sent.") : String(localized: "Nothing is running.")

@@ -1,11 +1,12 @@
 import { mkdir, rmdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { claudeProjectSlug, findClaudeSession } from '@adecore/agents/chat';
+import { bestEffort } from '../best-effort.ts';
+import { isDirectory } from '../disk/is-directory.ts';
+import { renameNoReplace } from '../disk/no-replace-rename.ts';
+import { isPathSegment } from '../disk/path-segment.ts';
+import { realOrSelf } from '../disk/real-path.ts';
 import { errorText } from '../error-text.ts';
-import { isDirectory } from '../fs/browse.ts';
-import { renameNoReplace } from '../fs/no-replace-rename.ts';
-import { isPathSegment } from '../fs/path-segment.ts';
-import { realOrSelf } from '../fs/real-path.ts';
 import { ChatError } from './errors.ts';
 
 interface MovedTranscript {
@@ -58,7 +59,7 @@ export async function moveClaudeTranscript(options: MoveTranscriptOptions): Prom
             }
         }
         if (created !== undefined) {
-            await rmdir(targetDir).catch(() => undefined);
+            await bestEffort('rmdir', rmdir(targetDir));
         }
         if (failure !== null) {
             throw new ChatError('move-failed', `The conversation could not be put back where it was: ${errorText(failure)}`);
@@ -77,7 +78,7 @@ export async function moveClaudeTranscript(options: MoveTranscriptOptions): Prom
             moved.push(part);
         }
     } catch (e) {
-        await undo().catch(() => undefined);
+        await bestEffort('undo', undo());
         throw new ChatError('move-failed', `The conversation could not be moved: ${errorText(e)}`);
     }
     return { undo };

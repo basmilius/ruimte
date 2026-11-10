@@ -1,0 +1,207 @@
+import { isRecentProject, type ProjectSummary } from '@ruimte/contracts';
+import { z } from 'zod';
+import { useEndpoints, type Endpoint } from '@/state/endpoints';
+import { endpointKey } from '@/state/keys';
+import { useProjectList, type ProjectRow } from '@/state/project-list';
+import { browserStorage, storedJson, type KeyValueStorage, type StoredValue } from '@/state/stored-json';
+import { pool, transportFor, type ConnectionState } from '@/transport/index';
+import { watchPool } from '@/transport/pool-watch';
+import { rememberClosedProject } from '../../state/closed-projects';
+import { readLastProject, rememberProject } from './last-project';
+
+const CACHE_PREFIX = 'ruimte.projects.';
+/* Enough to hold every project a machine is likely to have; a list this long is scrolled, not read. */
+const CACHE_LIMIT = 50;
+
+/* The rows as the machine last sent them; a row a later version reads differently is replaced at its next answer. */
+const CachedListSchema = z.array(z.custom<ProjectSummary>());
+
+function cachedList(endpointId: string): StoredValue<ProjectSummary[]> {
+    return storedJson(`${CACHE_PREFIX}${endpointId}`, CachedListSchema);
+}
+
+/*
+ * The last answer of a machine, so a laptop that is asleep still lists what is on it. The rows are
+ * shown as not connected until that machine answers again, which is the moment they are replaced.
+ */
+export function readCachedList(endpointId: string, storage?: KeyValueStorage | null): ProjectSummary[] {
+    return cachedList(endpointId).read(storage) ?? [];
+}
+
+export function writeCachedList(endpointId: string, summaries: ProjectSummary[], storage?: KeyValueStorage | null): void {
+    const kept = [...summaries].sort((a, b) => b.lastOpenedAt - a.lastOpenedAt).slice(0, CACHE_LIMIT);
+    cachedList(endpointId).write(kept, storage);
+}
+
+export function forgetCachedList(endpointId: string, storage?: KeyValueStorage | null): void {
+    cachedList(endpointId).remove(storage);
+}
+
+export function foldList(endpointId: string, summaries: ProjectSummary[]): void {
+    useProjectList.getState().setProjects(endpointId, summaries);
+    writeCachedList(endpointId, summaries);
+}
+
+function foldSummary(endpointId: string, summary: ProjectSummary): void {
+    useProjectList.getState().patchProject(endpointId, summary);
+    const projects = useProjectList
+        .getState()
+        .projects.filter((row) => row.endpointId === endpointId)
+        .map((row) => row.summary);
+    writeCachedList(endpointId, projects);
+}
+
+export function closeListedProjectLocally(endpointId: string, summary: ProjectSummary): void {
+    rememberClosedProject(endpointId, summary.projectId);
+    foldSummary(endpointId, { ...summary, closedAt: Date.now() });
+    const last = readLastProject(browserStorage());
+    if (last?.endpointId === endpointId && last.projectId === summary.projectId) {
+        rememberProject(endpointId, null);
+    }
+}
+
+/* `project.list` on one endpoint over the link it already has, folded into the union. A machine without one lists nothing new. */
+export async function listProjects(endpointId: string): Promise<ProjectRow[]> {
+    const transport = transportFor(endpointId);
+    if (!transport) {
+        return [];
+    }
+    const { projects } = await transport.request('project.list', {});
+    foldList(endpointId, projects);
+    return projects.map((summary) => ({ endpointId, summary }));
+}
+
+/* Re-asks every machine whose socket is up and folds the answers in. A machine that is not there keeps its remembered list. */
+async function refreshAllLists(): Promise<void> {
+    const open = openEndpointIds();
+    await Promise.all(open.map((endpointId) => listProjects(endpointId).catch(() => [])));
+}
+
+export function primeCachedLists(storage?: KeyValueStorage | null): void {
+    const state = useProjectList.getState();
+    for (const endpoint of useEndpoints.getState().endpoints) {
+        if (state.projects.some((row) => row.endpointId === endpoint.id)) {
+            continue;
+        }
+        const cached = readCachedList(endpoint.id, storage);
+        if (cached.length > 0) {
+            state.setProjects(endpoint.id, cached);
+        }
+    }
+}
+
+function openEndpointIds(): string[] {
+    return pool.ids().filter((endpointId) => pool.statusOf(endpointId).status === 'open');
+}
+
+export interface ProjectMenuRow {
+    endpointId: string;
+    /* What the machine this project sits on is called; a flat list puts it behind the name. */
+    machineLabel: string;
+    /* False when this client has no open socket to that machine; the row is what it last answered. */
+    connected: boolean;
+    summary: ProjectSummary;
+}
+
+interface ProjectMenuRows {
+    /* The projects in use, most recently opened first. */
+    open: ProjectMenuRow[];
+    /* The ones a person closed, most recently closed first. */
+    recent: ProjectMenuRow[];
+}
+
+/* The rows of the union this client can still open, each with its machine's name. A row of a machine this client no longer knows has nothing to open it on. */
+function knownRows(rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRow[] {
+    const known = new Map(endpoints.map((endpoint) => [endpoint.id, endpoint]));
+    return rows.flatMap((row) => {
+        const endpoint = known.get(row.endpointId);
+        if (!endpoint) {
+            return [];
+        }
+        return [{ endpointId: row.endpointId, machineLabel: endpoint.label, connected: connected.includes(row.endpointId), summary: row.summary }];
+    });
+}
+
+/* A machine's Chats project has a place of its own and never stands among the projects. */
+function projectRows(rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRow[] {
+    return knownRows(rows, endpoints, connected).filter((row) => row.summary.scratch !== true);
+}
+
+export function chatsProjects(rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRow[] {
+    const order = endpoints.map((endpoint) => endpoint.id);
+    return knownRows(rows, endpoints, connected)
+        .filter((row) => row.summary.scratch === true)
+        .sort((a, b) => order.indexOf(a.endpointId) - order.indexOf(b.endpointId));
+}
+
+export function menuProjects(rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRows {
+    const listed = projectRows(rows, endpoints, connected);
+    return {
+        open: listed.filter((row) => !isRecentProject(row.summary)).sort((a, b) => b.summary.lastOpenedAt - a.summary.lastOpenedAt),
+        recent: listed.filter((row) => isRecentProject(row.summary)).sort((a, b) => (b.summary.closedAt ?? 0) - (a.summary.closedAt ?? 0))
+    };
+}
+
+function touchedAt(summary: ProjectSummary): number {
+    return Math.max(summary.lastOpenedAt, summary.closedAt ?? 0);
+}
+
+/*
+ * The start screen's one list, open and closed projects together, newest touch first, so the project
+ * that was just closed sits on top and a wrong click is one click back.
+ */
+export function recentProjects(rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRow[] {
+    return projectRows(rows, endpoints, connected).sort((a, b) => touchedAt(b.summary) - touchedAt(a.summary));
+}
+
+/* The rows worth offering. A project whose file its machine no longer finds cannot be opened. The
+   one that is open keeps its row, or its settings and the way to close it would go with it. */
+export function openableRows(rows: readonly ProjectMenuRow[], currentKey: string | null = null): ProjectMenuRow[] {
+    return rows.filter((row) => row.summary.available || endpointKey(row.endpointId, row.summary.projectId) === currentKey);
+}
+
+/* What the list reads of the pool, so a test can hand it one of its own. */
+export interface OpenListSource {
+    ids(): string[];
+    statusOf(endpointId: string): ConnectionState;
+    subscribe(handler: () => void): () => void;
+}
+
+/*
+ * Asks again whenever the set of open links changes. It only reads the pool, so a machine without a
+ * link keeps the list it last answered, and gets asked the moment its link opens for any other reason.
+ */
+export function watchOpenLists(source: OpenListSource, refresh: () => void): () => void {
+    const openOf = (): string =>
+        source
+            .ids()
+            .filter((endpointId) => source.statusOf(endpointId).status === 'open')
+            .join(',');
+    let open = openOf();
+    refresh();
+    return source.subscribe(() => {
+        const next = openOf();
+        if (next === open) {
+            return;
+        }
+        open = next;
+        refresh();
+    });
+}
+
+/*
+ * Keeps the union in step with the machines that are up. A link that opens answers with its list;
+ * one that closes leaves the rows it last gave behind, dimmed. Nothing here opens a link.
+ */
+export function startProjectList(): () => void {
+    primeCachedLists();
+    const offLists = watchOpenLists(pool, () => void refreshAllLists());
+    // Another window or device that opens, closes or renames a project on a machine tells every socket of it.
+    const offSummaries = watchPool((link, endpointId) => ({
+        subscriptions: [link.on('project.summary', ({ summary }) => foldSummary(endpointId, summary))]
+    }));
+    return () => {
+        offLists();
+        offSummaries();
+    };
+}

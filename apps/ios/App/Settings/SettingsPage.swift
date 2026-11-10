@@ -9,10 +9,10 @@ struct MobileSettings: View {
     let runtime: AppRuntime
     let projects: UnifiedProjects
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("ruimte.ios.appearance") private var appearance = "system"
-    @AppStorage("ruimte.ios.terminalFontSize") private var fontSize = 14.0
-    @AppStorage("ruimte.ios.showHiddenFiles") private var hiddenFiles = false
-    @AppStorage("ruimte.chat.streaming") private var streaming: ChatStreamingMode = .words
+    @AppStorage(Settings.appearance) private var appearance
+    @AppStorage(Settings.terminalFontSize) private var fontSize
+    @AppStorage(Settings.showHiddenFiles) private var hiddenFiles
+    @AppStorage(Settings.chatStreaming) private var streaming
     @AppStorage(UiMapSetting.key) private var mapTiles = true
     @AppStorage(ChatToolCallsSetting.key) private var hidesToolCalls = false
 
@@ -146,7 +146,6 @@ private struct AccountCard: View {
     }
 }
 
-/// The account's picture in a circle of its own size, else its initial, else the person mark.
 struct AccountPicture: View {
     let account: Account?
     let size: CGFloat

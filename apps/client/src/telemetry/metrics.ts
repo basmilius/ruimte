@@ -1,5 +1,13 @@
-import type { LinkMeter } from '@/transport/link-transport';
-import type { SignalRoute } from '@/transport/transport';
+import type { SignalRoute } from '@/transport-api/transport';
+
+/* How long links take to open or fail, why a new one opens, and how long a request waits for its answer: for the page's metrics. */
+export interface LinkMeter {
+    /* From the start of an attempt until the protocol check passed, or until the attempt failed. */
+    connected(link: { relayed: boolean; signaled: SignalRoute | null }, outcome: LinkOutcome, ms: number): void;
+    reconnecting(reason: ReconnectReason): void;
+    /* A request the link answered, measured only where its wait is the link's (`measuredRequest`), over the link it went. */
+    answered(link: { relayed: boolean; signaled: SignalRoute | null }, ms: number): void;
+}
 
 /*
  * The fixed values of the page's metrics, which Observatory's Connections dashboard filters on. Every attribute is one
@@ -7,7 +15,7 @@ import type { SignalRoute } from '@/transport/transport';
  */
 
 type LinkPath = 'local' | 'lan' | 'direct' | 'turn';
-export type LinkOutcome = 'ok' | 'failed';
+type LinkOutcome = 'ok' | 'failed';
 
 /*
  * Why the transport opens a new link: the open one dropped, an attempt failed, the machine refused it at the protocol

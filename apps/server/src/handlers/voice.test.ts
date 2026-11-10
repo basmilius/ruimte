@@ -1,14 +1,18 @@
 import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
-import { connectionOpener, type ClientChannel, type ConnectionServices } from '../connection.ts';
-import { Dispatcher, type ClientAccess, type ClientConnection } from '../dispatcher.ts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
+import type { CanvasHost } from '../canvas/host.ts';
+import { connectionHostOf } from '../connection-test-helpers.ts';
+import { connectionOpener } from '../connection.ts';
+import { Dispatcher } from '../dispatcher.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
-import type { CanvasHost } from '../tools/host.ts';
 import { VoiceKeyStore } from '../voice/key-store.ts';
+import { openAiLive } from '../voice/openai-live.ts';
 import { VoicePreferencesStore } from '../voice/preferences-store.ts';
+import type { ClientAccess, ClientConnection, ClientChannel } from '../wire.ts';
 import { wireVoice } from '../wiring/voice.ts';
-import { registerVoiceHandlers, type VoiceHandlerDeps } from './voice.ts';
+import { voiceArea, type VoiceDeps } from './voice.ts';
 
 const KEY = 'sk-test-voice-0123456789abcdef';
 const OWNER: ClientAccess = { reachability: 'loopback', sessionId: null };
@@ -32,15 +36,17 @@ async function ask(dispatcher: Dispatcher, client: ClientConnection & { frames: 
 
 function voiceDispatcher(): Dispatcher {
     const dispatcher = new Dispatcher();
-    const sessions: VoiceHandlerDeps['sessions'] = {
+    const sessions: VoiceDeps['sessions'] = {
         start: async (client, payload) => {
             started.push(`${client.id} ${payload.sceneId}`);
             return { sessionId: 'session-1', sdp: 'answer', status: { sessionId: 'session-1', sceneId: payload.sceneId, seq: 1, phase: 'active' } };
         },
         stop: async (client, payload) => ({ stopped: client.id === 'phone' && payload.sceneId === 'scene-1' }),
-        confirm: async () => ({ accepted: false })
+        confirm: async () => ({ accepted: false }),
+        channelClosed: () => undefined,
+        stopAll: async () => undefined
     };
-    registerVoiceHandlers(dispatcher, { keys, preferences, sessions });
+    voiceArea({ keys, preferences, sessions }).handlers?.(dispatcher);
     return dispatcher;
 }
 
@@ -98,10 +104,12 @@ describe('the voice requests', () => {
             projects: { hold: () => undefined, letGo: () => undefined, index: { folderOf: () => null, viewsOf: () => null } } as never,
             machine: { id: 'machine-1', label: 'Studio' },
             canvasHost: {} as CanvasHost,
-            chats: { observe: () => () => undefined, get: () => undefined }
+            actions: serverActions,
+            chats: { observe: () => () => undefined, get: () => undefined },
+            live: openAiLive()
         });
         const dispatcher = new Dispatcher();
-        registerVoiceHandlers(dispatcher, wired);
+        voiceArea(wired).handlers?.(dispatcher);
         const owner = connection('owner', OWNER);
         expect(await ask(dispatcher, owner, 'voice.setKey', { key: KEY })).toMatchObject({ ok: true, result: { present: true } });
         expect(await new VoiceKeyStore(home).read()).toBe(KEY);
@@ -155,11 +163,13 @@ describe('the voice requests', () => {
                 projects: { hold: () => undefined, letGo: () => undefined, index: { folderOf: () => null, viewsOf: () => null } } as never,
                 machine: { id: 'machine-1', label: 'Studio' },
                 canvasHost: {} as CanvasHost,
-                chats: { observe: () => () => undefined, get: () => undefined }
+                actions: serverActions,
+                chats: { observe: () => () => undefined, get: () => undefined },
+                live: openAiLive()
             });
             expect(log).not.toHaveBeenCalled();
             const dispatcher = new Dispatcher();
-            registerVoiceHandlers(dispatcher, wired);
+            voiceArea(wired).handlers?.(dispatcher);
             expect(
                 dispatcher
                     .types()
@@ -209,22 +219,7 @@ describe('the preferences of Voice', () => {
 
     test('a change goes to every client of the machine, and to no other machine', async () => {
         const dispatcher = voiceDispatcher();
-        const source = () => ({ subscribe: () => () => undefined, detachAll: () => undefined });
-        const open = connectionOpener({
-            dispatcher,
-            sessions: { ...source(), get: () => undefined },
-            chats: source(),
-            identity: source(),
-            projects: source(),
-            drawings: source(),
-            diagrams: source(),
-            folders: source(),
-            statuses: source(),
-            usage: source(),
-            limits: source(),
-            processes: source(),
-            voicePreferences: preferences
-        } as unknown as ConnectionServices);
+        const open = connectionOpener(connectionHostOf(dispatcher, [{ name: 'voice', sources: [preferences] }]));
         const phone = channel();
         const desktop = channel();
         const peer = channel();

@@ -1,9 +1,9 @@
 import { dirname, join } from 'node:path';
+import { documentLanguageId as lspDocumentLanguageId, lspLanguageId, SCRIPT_LANGUAGE_IDS } from '@adecore/lsp';
 import { matchesFilePattern, type LanguageServerId, type LanguageServerKind } from '@ruimte/contracts';
 import { nativeStorageOf, nativeStubsOf } from './native.ts';
 import { toolchainPath } from './toolchain.ts';
 
-/* What a component needs to know about where it runs. */
 export interface LaunchContext {
     /* `$RUIMTE_HOME/language-servers/<kind>`, with the pinned packages in its `node_modules`. */
     installDirectory: string;
@@ -22,7 +22,6 @@ export interface LaunchContext {
     buildHeld?: boolean;
 }
 
-/* The settings of the project's SQL as each server that reads it takes them. */
 export interface ProjectSqlSettings {
     /* `sqlLanguageServer` of the SQL server. */
     sql: Record<string, unknown>;
@@ -106,12 +105,9 @@ export interface KindProfile {
 /* Where the TypeScript 6 SDK of the `typescript` kind sits beside its TypeScript 7 package, under an alias of the same npm package. */
 const SIDECAR_SDK_PACKAGE = 'typescript-6';
 
-const SCRIPT_LANGUAGES = ['typescript', 'typescriptreact', 'javascript', 'javascriptreact'] as const;
-
 /* `sql` names no dialect; the others name the one the SQL server reads a document in when its settings do not. */
 const SQL_LANGUAGES = ['sql', 'mysql', 'mariadb', 'postgres', 'sqlite'] as const;
 
-/* The server's `logVerbosity` that keeps warnings and errors only. */
 const LOG_VERBOSITY_WARNING = 4;
 
 const TYPESCRIPT_PREFERENCES = {
@@ -155,7 +151,7 @@ function tsserverOptions(context: LaunchContext): Record<string, unknown> {
 function nativeTypescriptComponent(): ComponentProfile {
     return {
         name: 'typescript',
-        languages: SCRIPT_LANGUAGES,
+        languages: SCRIPT_LANGUAGE_IDS,
         entry: NATIVE_ENTRY,
         native: true,
         args: () => ['--lsp', '--stdio'],
@@ -174,7 +170,7 @@ function typescriptActionsComponent(): ComponentProfile {
     return {
         name: 'typescript-actions',
         title: 'TypeScript 6',
-        languages: SCRIPT_LANGUAGES,
+        languages: SCRIPT_LANGUAGE_IDS,
         entry: 'typescript-language-server/lib/cli.mjs',
         sidecar: true,
         sdkPackage: SIDECAR_SDK_PACKAGE,
@@ -187,7 +183,7 @@ function typescriptActionsComponent(): ComponentProfile {
 function vueTypescriptComponent(): ComponentProfile {
     return {
         name: 'typescript',
-        languages: [...SCRIPT_LANGUAGES, 'vue'],
+        languages: [...SCRIPT_LANGUAGE_IDS, 'vue'],
         entry: 'typescript-language-server/lib/cli.mjs',
         args: () => ['--stdio'],
         initializationOptions: (context) => ({
@@ -515,7 +511,7 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
         components: [
             {
                 name: 'eslint',
-                languages: [...SCRIPT_LANGUAGES, 'vue'],
+                languages: [...SCRIPT_LANGUAGE_IDS, 'vue'],
                 entry: extractedScript('eslint'),
                 args: () => ['--stdio'],
                 initializationOptions: () => ({}),
@@ -633,7 +629,7 @@ export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
         components: [
             {
                 name: 'tailwind',
-                languages: ['html', 'css', 'scss', 'less', ...SCRIPT_LANGUAGES, 'vue', 'php'],
+                languages: ['html', 'css', 'scss', 'less', ...SCRIPT_LANGUAGE_IDS, 'vue', 'php'],
                 entry: '@tailwindcss/language-server/bin/tailwindcss-language-server',
                 args: () => ['--stdio'],
                 initializationOptions: () => ({}),
@@ -666,42 +662,14 @@ export function initializationOptionsOf(kind: KindProfile, component: ComponentP
     return off === undefined || !isRecord(options) ? options : mergeOptions(options, off);
 }
 
-/* The names a client may use for a language, by the id LSP gives it. */
-const LANGUAGE_ALIASES: Record<string, string> = {
-    ts: 'typescript',
-    tsx: 'typescriptreact',
-    js: 'javascript',
-    jsx: 'javascriptreact',
-    mjs: 'javascript',
-    cjs: 'javascript',
-    mts: 'typescript',
-    cts: 'typescript',
-    sh: 'shellscript',
-    bash: 'shellscript',
-    zsh: 'shellscript',
-    docker: 'dockerfile',
-    yml: 'yaml',
-    py: 'python'
-};
-
-export function lspLanguageId(languageId: string): string {
-    return LANGUAGE_ALIASES[languageId] ?? languageId;
-}
-
-/* Files that are JSON with comments and trailing commas: a JSON server reports both as errors in a plain `json` document. */
-const JSONC_FILES =
-    /(^|\/)(tsconfig(\..+)?\.json|jsconfig(\..+)?\.json|\.eslintrc(\.json)?|\.babelrc(\.json)?|\.swcrc|devcontainer\.json|\.devcontainer\/.+\.json|\.vscode\/.+\.json|.+\.jsonc)$/;
-
 /* The files gopls tells apart by the language id of the document, not by its name. */
 const GO_FILES: Record<string, string> = { 'go.mod': 'go.mod', 'go.work': 'go.work' };
 
-/* The language id a document opens with: the client's, except for a JSON file that allows comments and the module files of Go. */
+/* The language id a document opens with: the module files of Go by their own id, any other file as `@adecore/lsp` decides. */
 export function documentLanguageId(languageId: string, storedPath: string): string {
-    const id = lspLanguageId(languageId);
-    return id === 'json' && JSONC_FILES.test(storedPath) ? 'jsonc' : (GO_FILES[storedPath.slice(storedPath.lastIndexOf('/') + 1)] ?? id);
+    return GO_FILES[storedPath.slice(storedPath.lastIndexOf('/') + 1)] ?? lspDocumentLanguageId(languageId, storedPath);
 }
 
-/* Whether a process serves a document, by its language or by its path. */
 export function componentServes(component: ComponentProfile, languageId: string, storedPath: string): boolean {
     return component.languages.includes(lspLanguageId(languageId)) || servesPath(component, storedPath) || servesAlongside(component, storedPath);
 }
@@ -778,7 +746,6 @@ export function alongsideKindsForPath(storedPath: string): Array<[CatalogKind, {
 /* What a project says about itself, as far as an addition needs to know. */
 export interface ProjectFacts {
     folder: string;
-    /* The text of the `package.json` in the folder, or null without one. */
     packageJson: string | null;
     exists(path: string): Promise<boolean>;
     /* The files of a name in the folder and the folders below it, `depth` folders down (`manifests.ts`). */
@@ -787,7 +754,6 @@ export interface ProjectFacts {
 
 const DEPENDENCY_FIELDS = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
 
-/* Whether a parsed `package.json` names a package that matches, in any kind of dependency. */
 function dependsOn(manifest: Record<string, unknown>, pattern: RegExp): boolean {
     return DEPENDENCY_FIELDS.some((field) => {
         const dependencies = manifest[field];
@@ -848,7 +814,6 @@ export function pinnedTypescriptLib(installDirectory: string, sdkPackage = 'type
     return join(installDirectory, 'node_modules', sdkPackage, 'lib');
 }
 
-/* What the lookup of a project's own TypeScript reads from the file system. */
 interface NativeLookupFiles {
     exists(path: string): Promise<boolean>;
     readText(path: string): Promise<string | null>;

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { Handshake } from '../auth/handshake.ts';
-import type { ConnectionServices, OpenConnection } from '../connection.ts';
-import type { ClientAccess } from '../dispatcher.ts';
+import type { ConnectionHost, OpenConnection } from '../connection.ts';
+import type { ClientAccess } from '../wire.ts';
 import { wireClients, type DirectConnection } from './clients.ts';
 
 interface Closed {
@@ -25,7 +25,7 @@ function directClient(access: ClientAccess): { state: DirectConnection; closed: 
 describe('disconnecting a session', () => {
     test('closes the direct channel of a machine that works here, and no channel of another session', () => {
         const revoked: string[] = [];
-        const clients = wireClients({ revoke: (sessionId: string) => revoked.push(sessionId) } as unknown as Handshake, {} as ConnectionServices);
+        const clients = wireClients({ revoke: (sessionId: string) => revoked.push(sessionId) } as unknown as Handshake, {} as ConnectionHost);
         const peer = directClient({ reachability: 'lan', sessionId: 'peer-session', peer: { machineId: 'machine-a' } });
         const other = directClient({ reachability: 'lan', sessionId: 'other-session' });
         clients.direct.add(peer.state);
@@ -42,7 +42,7 @@ describe('disconnecting a session', () => {
 describe('registering a direct channel', () => {
     test('refuses a grant revoked while the channel opened, and registers one that still holds', () => {
         const handshake = { granted: (sessionId: string) => sessionId !== 'revoked-session' } as unknown as Handshake;
-        const clients = wireClients(handshake, {} as ConnectionServices);
+        const clients = wireClients(handshake, { areas: [] } as unknown as ConnectionHost);
         // Machines that work here, which subscribe to nothing, so the opener needs no services.
         const revokedAccess = { reachability: 'lan' as const, sessionId: 'revoked-session', peer: { machineId: 'machine-a' } };
         const keptAccess = { reachability: 'lan' as const, sessionId: 'kept-session', peer: { machineId: 'machine-b' } };

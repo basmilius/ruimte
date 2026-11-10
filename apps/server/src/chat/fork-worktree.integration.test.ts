@@ -5,12 +5,14 @@ import { join } from 'node:path';
 import { ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
 import { ManualClock } from '@adecore/agents/testing';
 import type { ChatInfo, ChatTurnItem, ProjectCanvasView } from '@ruimte/contracts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { gitIn, initRepo, repoTemplate, type RepoTemplate, NO_WORKTREE_AGENTS } from '../git/test-repo.ts';
 import { Worktrees } from '../git/worktrees.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
 import { turnsOf } from './chat-test-helpers.ts';
 import { leadProject, removeNodes, sayAndSettle, writeLeadTranscript } from './lead-chat-test-helpers.ts';
 
@@ -34,7 +36,7 @@ beforeEach(async () => {
     root = await template.copy();
     folder = join(root, 'repo');
     home = join(root, 'home');
-    store = new ProjectStore(home, projectLinks());
+    store = new ProjectStore(home, projectLinks(), projectOverlays(home));
     const opened = await store.openProject({ folder });
     projectId = opened.summary.projectId;
     await store.save(projectId, opened.document.rev, leadProject());
@@ -43,7 +45,7 @@ beforeEach(async () => {
         home,
         store,
         clock: new ManualClock(),
-        checkpoints: new Checkpoints(home),
+        checkpoints: new Checkpoints(home, new MachineHome(home)),
         worktrees: new Worktrees(home, NO_WORKTREE_AGENTS)
     });
 });
@@ -58,7 +60,6 @@ function turnsIn(chatId: string): ChatTurnItem[] {
     return turnsOf(daemon.chats.get(chatId)?.thread.list() ?? []);
 }
 
-/* Sends and waits until the turn settled with the tree of where it left the files. */
 function say(chatId: string, text: string): Promise<void> {
     return sayAndSettle(daemon, chatId, text, (turn) => turn.checkpointAfter !== undefined);
 }
@@ -113,7 +114,6 @@ test('a fork after turn 1 in a worktree holds the files after turn 1, with the i
     expect(existsSync(join(path, 'second.txt'))).toBe(false);
     expect(await gitIn(path, ['diff', '--cached', '--name-only'])).toBe('');
     expect(await gitIn(path, ['status', '--porcelain'])).toBe('?? .ruimte/\n?? first.txt\n');
-    // The person's checkout keeps both files.
     expect(existsSync(join(folder, 'second.txt'))).toBe(true);
 
     const record = (await new ChatStore(home).read(nodeId))!;

@@ -1,8 +1,9 @@
-import { Dispatcher, type ClientConnection } from '../../apps/server/src/dispatcher.ts';
-import { registerPortHandlers } from '../../apps/server/src/handlers/ports.ts';
+import { Dispatcher } from '../../apps/server/src/dispatcher.ts';
+import { portsArea } from '../../apps/server/src/handlers/ports.ts';
 import { connectLoopback } from '../../apps/server/src/ports/port-connect.ts';
 import { PortGrants, portsStore } from '../../apps/server/src/ports/port-grants.ts';
 import { PortStreams } from '../../apps/server/src/ports/port-streams.ts';
+import type { ClientConnection } from '../../apps/server/src/wire.ts';
 
 /*
  * The machine side of the port bridge measurement: the real dispatcher, grants and streams behind a WebSocket
@@ -33,7 +34,7 @@ const streams = new PortStreams({
 });
 const dispatcher = new Dispatcher();
 
-registerPortHandlers(dispatcher, grants, streams);
+portsArea({ grants, streams, changes: { subscribe: () => () => undefined } }).handlers?.(dispatcher);
 
 function later(work: () => void): void {
     if (rtt === 0) {

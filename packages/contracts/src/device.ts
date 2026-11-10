@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 
 const DeviceIdSchema = z.string().min(1).max(256);
@@ -137,7 +138,7 @@ export const DevicePermissionSchema = z.enum([
 ]);
 
 const DeviceLiquidGlassSchema = z.enum(['clear', 'tinted']);
-const DevicePermissionDecisionSchema = z.enum(['grant', 'revoke', 'reset']);
+export const DevicePermissionDecisionSchema = z.enum(['grant', 'revoke', 'reset']);
 
 export const DeviceStatusBarSchema = z.enum(['clean', 'default']);
 export const DeviceFoldPoseSchema = z.enum(['closed', 'tent', 'tabletop', 'book', 'open']);
@@ -378,7 +379,7 @@ function known<Value extends string>(schema: z.ZodEnum<Record<Value, Value>>, an
 
 const IOS_BUTTONS: readonly DeviceButton[] = ['home', 'swipeHome', 'appSwitcher', 'lock', 'siri'];
 /* What a simulator could do before a daemon announced its tools; one that announces them says the rest. */
-const IOS_SIMULATOR_TOOLS: readonly DeviceTool[] = [
+export const IOS_SIMULATOR_TOOLS: readonly DeviceTool[] = [
     'openUrl',
     'launchApp',
     'terminateApp',
@@ -439,3 +440,31 @@ export type DeviceSettings = z.infer<typeof DeviceSettingsSchema>;
 export type DeviceState = z.infer<typeof DeviceStateSchema>;
 export type DeviceTextSize = z.infer<typeof DeviceTextSizeSchema>;
 export type DeviceToggleSetting = z.infer<typeof DeviceToggleSettingSchema>;
+
+export const DEVICE_REQUEST_SCHEMAS = {
+    'device.list': { payload: EmptySchema, result: DeviceListResultSchema },
+    // `device.changed` whenever the devices or a battery change, until `device.unwatch` or the channel closes; the client reads `device.list` and `device.power` then.
+    'device.watch': { payload: EmptySchema, result: EmptySchema },
+    'device.unwatch': { payload: EmptySchema, result: EmptySchema },
+    'device.boot': { payload: DeviceTargetPayloadSchema, result: DeviceInfoSchema },
+    'device.shutdown': { payload: DeviceTargetPayloadSchema, result: DeviceInfoSchema },
+    'device.open': { payload: DeviceOpenPayloadSchema, result: DeviceOpenResultSchema },
+    'device.detach': { payload: DeviceTargetPayloadSchema, result: EmptySchema },
+    'device.input': { payload: DeviceInputPayloadSchema, result: EmptySchema },
+    'device.detail': { payload: DeviceDetailPayloadSchema, result: DeviceDetailSchema },
+    'device.action': { payload: DeviceActionPayloadSchema, result: DeviceDetailSchema },
+    'device.operations': { payload: EmptySchema, result: DeviceOperationsResultSchema },
+    'device.control': { payload: DeviceControlPayloadSchema, result: DeviceOperatedSchema },
+    'device.capture': { payload: DeviceTargetPayloadSchema, result: DeviceCaptureResultSchema },
+    'device.importCapture': { payload: DeviceImportCapturePayloadSchema, result: DeviceCaptureResultSchema },
+    'device.record': { payload: DeviceRecordPayloadSchema, result: DeviceRecordResultSchema },
+    'device.clipboard': { payload: DeviceClipboardPayloadSchema, result: DeviceClipboardResultSchema },
+    'device.power': { payload: DeviceTargetPayloadSchema, result: DevicePowerResultSchema }
+} as const;
+
+export const DEVICE_EVENT_SCHEMAS = {
+    'device.frame': DeviceFrameSchema,
+    'device.operated': DeviceOperatedSchema,
+    // Only to the clients that asked with `device.watch`.
+    'device.changed': EmptySchema
+} as const;

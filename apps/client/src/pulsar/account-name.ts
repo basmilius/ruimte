@@ -9,7 +9,6 @@ import i18next from 'i18next';
 // The order sign-in choices are drawn in, whatever order an address book lists them.
 export const PROVIDER_ORDER: readonly ProviderId[] = ['github', 'apple'];
 
-/* The person's name when a provider told it, else "someone" for a GitHub login, else "your Apple ID". */
 export function accountName(account: Account): string {
     return account.displayName ?? account.login ?? i18next.t(`machines:account.yours.${account.provider}`);
 }
@@ -21,12 +20,10 @@ export function signedInLabel(account: Account): string {
         : i18next.t('machines:account.signedInAsLogin', { login: account.login });
 }
 
-/* The line under an identity's row: its login, or what it is when there is none. */
 export function identityDetail(identity: Identity): string {
     return identity.login ?? i18next.t(`machines:account.noun.${identity.provider}`);
 }
 
-/* The warning under a signed-in account, naming every identity that opens it. */
 export function takeoverWarning(providers: readonly ProviderId[]): string {
     const names = PROVIDER_ORDER.filter((provider) => providers.includes(provider)).map((provider) => i18next.t(`machines:account.this.${provider}`));
     return i18next.t('machines:account.takeover.warning', { names: names.join(` ${i18next.t('machines:account.takeover.or')} `) });

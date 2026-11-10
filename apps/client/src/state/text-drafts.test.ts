@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import type { FsReadResult, FsWriteResult } from '@ruimte/contracts';
-import { bindDraftEditor, mountDraftEditor } from '@/shell/panels/draft-editor';
+import { bindDraftEditor, mountDraftEditor } from '@/files/draft-editor';
 import { AUTOSAVE_DELAY_MS, type DraftLink, TextDrafts, useTextDrafts } from '@/state/text-drafts';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 
 const MACHINE = 'm1';
 const PATH = '/repo/a.ts';
@@ -51,7 +51,6 @@ class FakeLink implements DraftLink {
         return Promise.resolve();
     }
 
-    /* The last write lands on disk at the given mtime. */
     async land(mtime: number): Promise<void> {
         const write = this.writes.at(-1)!;
         this.disk = { text: write.text, mtime };

@@ -8,21 +8,20 @@ import SwiftUI
 /// read. A resolution is written over exactly that digest.
 struct GitConflictFile: Equatable, Sendable {
     let path: String
-    /// `text`, `binary`, `deleted-by-us`, `deleted-by-them` or `submodule`, as `git.conflict` reports it.
-    let kind: String
+    let kind: GitConflictKind
     let blocks: [MergeBlock]
     let shape: MergeTextShape
     private(set) var hash: String
     /// Set when there is nothing to merge line by line: the file is a choice between whole sides.
     let whole: Bool
 
-    init(answer: JSONValue) {
-        path = answer.text("path")
-        kind = answer.text("kind", fallback: "text")
-        let base = answer["base"]?.stringValue
-        let ours = answer["ours"]?.stringValue
-        let theirs = answer["theirs"]?.stringValue
-        whole = kind != "text" || ours == nil || theirs == nil
+    init(answer: GitConflictDetail) {
+        path = answer.path
+        kind = answer.kind
+        let base = answer.base
+        let ours = answer.ours
+        let theirs = answer.theirs
+        whole = kind != .text || ours == nil || theirs == nil
         blocks =
             whole
             ? []
@@ -31,7 +30,7 @@ struct GitConflictFile: Equatable, Sendable {
                 theirs: ThreeWayMerge.splitLines(theirs ?? ""))
         // Our side decides the shape: the result goes on the branch the checkout is on.
         shape = ThreeWayMerge.shapeOf(ours ?? theirs ?? base ?? "")
-        hash = answer.text("hash")
+        hash = answer.hash
     }
 
     var conflictIndexes: [Int] { blocks.indices.filter { blocks[$0].kind == .conflict } }
@@ -52,7 +51,6 @@ struct GitConflictFile: Equatable, Sendable {
     }
 }
 
-/// What a person, or an agent on their behalf, made of one stretch.
 struct GitBlockAnswer: Equatable {
     var lines: [String]
     /// A proposal stays a proposal until it is written, and reads as one so a person checks it first.
@@ -74,7 +72,6 @@ struct GitConflictDraft: Equatable {
         file.blocks.indices.flatMap { lines(of: $0, in: file) }
     }
 
-    /// The merged file as it goes to disk, in the file's own line endings.
     func content(of file: GitConflictFile) -> String {
         let merged = lines(in: file)
         // The desktop editor holds an empty file and a single empty line as the same text.
@@ -120,7 +117,8 @@ struct GitConflictDraft: Equatable {
         for index in file.blocks.indices.dropLast() {
             at += before[index].count
             let toEarlier = file.blocks[index].kind == .conflict || file.blocks[index + 1].kind != .conflict
-            bounds.append(min(max(Self.map(at, through: changes, toEarlier: toEarlier), bounds[bounds.count - 1]), edited.count))
+            bounds.append(
+                min(max(Self.map(at, through: changes, toEarlier: toEarlier), bounds[bounds.count - 1]), edited.count))
         }
         bounds.append(edited.count)
         var next = GitConflictDraft()
@@ -166,13 +164,13 @@ enum GitConflictModel {
     /// The proposals that still fit the file in front of us. An answer whose fingerprint does not match
     /// was written for another version of the stretch and is dropped rather than put somewhere it was
     /// never meant.
-    static func usable(_ file: GitConflictFile, answers: [JSONValue]) -> [(index: Int, lines: [String])] {
+    static func usable(_ file: GitConflictFile, answers: [GitResolveAiBlock]) -> [(index: Int, lines: [String])] {
         answers.compactMap { answer in
-            let index = Int(answer.number("index", fallback: -1))
+            let index = Int(answer.index)
             guard file.blocks.indices.contains(index), file.blocks[index].kind == .conflict,
-                ThreeWayMerge.fingerprint(file.blocks[index]) == answer.text("fingerprint")
+                ThreeWayMerge.fingerprint(file.blocks[index]) == answer.fingerprint
             else { return nil }
-            return (index, answer.list("lines").compactMap(\.stringValue))
+            return (index, answer.lines)
         }
     }
 
@@ -209,15 +207,15 @@ enum GitConflictModel {
         }
     }
 
-    static func wholeDetail(kind: String, ours: String, theirs: String) -> String {
+    static func wholeDetail(kind: GitConflictKind, ours: String, theirs: String) -> String {
         switch kind {
-        case "binary": String(localized: "This file is not text. Keep one side whole or drop it.")
-        case "deleted-by-them":
+        case .binary: String(localized: "This file is not text. Keep one side whole or drop it.")
+        case .deletedByThem:
             String(localized: "\(theirs) deleted this file while it changed on \(ours).", comment: "Both are git refs")
-        case "deleted-by-us":
+        case .deletedByUs:
             String(localized: "\(ours) deleted this file while it changed on \(theirs).", comment: "Both are git refs")
-        case "submodule": String(localized: "Submodule. Pick the commit of one side.")
-        default: String(localized: "Pick a side for this file.")
+        case .submodule: String(localized: "Submodule. Pick the commit of one side.")
+        case .text: String(localized: "Pick a side for this file.")
         }
     }
 
@@ -232,17 +230,12 @@ enum GitConflictModel {
     }
 }
 
-func gitRefusalCode(_ error: any Error) -> String? {
-    if case MachineClientError.server(let code, _) = error { return code }
-    return nil
-}
-
 /// Every file a checkout waiting halfway holds, and what a person made of each so far. It outlives the
 /// pages that draw it, so walking from one file to the next and back lands on the same half-finished work.
 @MainActor @Observable final class GitConflictSession {
     struct Entry: Equatable, Identifiable {
         let path: String
-        let kind: String
+        let kind: GitConflictKind
         var id: String { path }
     }
 
@@ -280,16 +273,16 @@ func gitRefusalCode(_ error: any Error) -> String? {
         return draft(path).open(in: file).count
     }
 
-    /// The text files whose every conflict is answered, which are ready to be written.
     var ready: [String] { entries.map(\.path).filter { openCount($0) == 0 } }
 
     func load(client: any MachineRequesting) async {
         do {
-            let answer = try await client.request("git.conflicts", payload: .object(["cwd": .string(cwd)]))
-            operation = answer["operation"]?.stringValue
-            ours = answer.text("ours", fallback: "ours")
-            theirs = answer.text("theirs", fallback: "theirs")
-            entries = answer.list("files").map { Entry(path: $0.text("path"), kind: $0.text("kind", fallback: "text")) }
+            let answer = try await client.request(.gitConflicts, payload: .object(["cwd": .string(cwd)]))
+                .decoded(as: GitConflictsResult.self)
+            operation = answer.operation?.rawValue
+            ours = answer.ours
+            theirs = answer.theirs
+            entries = answer.files.map { Entry(path: $0.path, kind: $0.kind) }
             let listed = Set(entries.map(\.path))
             files = files.filter { listed.contains($0.key) }
             drafts = drafts.filter { listed.contains($0.key) }
@@ -301,7 +294,6 @@ func gitRefusalCode(_ error: any Error) -> String? {
         loaded = true
     }
 
-    /// Reads a file once; a file already read keeps what was made of it.
     func open(client: any MachineRequesting, path: String) async {
         guard files[path] == nil else { return }
         do {
@@ -325,7 +317,6 @@ func gitRefusalCode(_ error: any Error) -> String? {
         drafts[path, default: GitConflictDraft()].answers[block] = nil
     }
 
-    /// Every open conflict of the file that needs no choice, closed in one go.
     func wand(_ path: String) {
         guard let file = files[path] else { return }
         var draft = draft(path)
@@ -347,7 +338,7 @@ func gitRefusalCode(_ error: any Error) -> String? {
             let content = draft(path).content(of: file)
             do {
                 _ = try await client.request(
-                    "git.resolve",
+                    .gitResolve,
                     payload: .object([
                         "cwd": .string(cwd), "path": .string(path), "content": .string(content),
                         "hash": .string(file.hash),
@@ -378,7 +369,7 @@ func gitRefusalCode(_ error: any Error) -> String? {
         var payload: [String: JSONValue] = ["cwd": .string(cwd), "path": .string(path), "take": .string(side)]
         if let hash = files[path]?.hash { payload["hash"] = .string(hash) }
         do {
-            _ = try await client.request("git.resolve", payload: .object(payload))
+            _ = try await client.request(.gitResolve, payload: .object(payload))
             files[path] = nil
             drafts[path] = nil
             problem = nil
@@ -409,12 +400,13 @@ func gitRefusalCode(_ error: any Error) -> String? {
                 if files[path] == nil { files[path] = try await read(client: client, path: path) }
                 guard let file = files[path], !file.whole else { continue }
                 let result = try await client.request(
-                    "git.resolveAi",
-                    payload: .object(["cwd": .string(cwd), "path": .string(path), "actionId": .string(actionId)]))
-                let usable = GitConflictModel.usable(file, answers: result.list("blocks"))
+                    .gitResolveAi,
+                    payload: .object(["cwd": .string(cwd), "path": .string(path), "actionId": .string(actionId)])
+                ).decoded(as: GitResolveAiResult.self)
+                let usable = GitConflictModel.usable(file, answers: result.blocks)
                 drafts[path, default: GitConflictDraft()].propose(usable)
                 answered += usable.count
-                if let line = result["note"]?.stringValue, !line.isEmpty { notes.append(line) }
+                if let line = result.note, !line.isEmpty { notes.append(line) }
             }
             problem = nil
             let summary =
@@ -430,7 +422,7 @@ func gitRefusalCode(_ error: any Error) -> String? {
 
     func cancelAgent(client: any MachineRequesting) async {
         guard let run = agentRun else { return }
-        _ = try? await client.request("git.cancel", payload: .object(["actionId": .string(run.actionId)]))
+        _ = try? await client.request(.gitCancel, payload: .object(["actionId": .string(run.actionId)]))
     }
 
     /// Finishing or taking back the operation that waits. True once nothing waits in the checkout any more.
@@ -443,18 +435,20 @@ func gitRefusalCode(_ error: any Error) -> String? {
         }
         if !loaded { await load(client: client) }
         let actionId = UUID().uuidString
-        let cancel = client.subscribe("git.progress") { [weak self] payload in
-            guard payload.text("actionId") == actionId else { return }
-            let line = payload.text("line")
-            self?.progress = line.isEmpty ? nil : line
+        let cancel = client.subscribe(.gitProgress) { [weak self] payload in
+            guard let event = try? payload.decoded(as: GitProgressEvent.self), event.actionId == actionId else {
+                return
+            }
+            self?.progress = event.line.isEmpty ? nil : event.line
         }
         defer { cancel() }
         let waiting = operation ?? "merge"
         do {
             let result = try await client.request(
-                "git.operation",
-                payload: .object(["cwd": .string(cwd), "actionId": .string(actionId), "action": .string(action)]))
-            let left = result.list("conflicts").count
+                .gitOperation,
+                payload: .object(["cwd": .string(cwd), "actionId": .string(actionId), "action": .string(action)])
+            ).decoded(as: GitActionResult.self)
+            let left = result.conflicts?.count ?? 0
             files = [:]
             drafts = [:]
             problem = nil
@@ -495,7 +489,9 @@ func gitRefusalCode(_ error: any Error) -> String? {
 
     /// The split runs off the main actor: a long file with many changes takes a moment to walk.
     private func read(client: any MachineRequesting, path: String) async throws -> GitConflictFile {
-        let answer = try await client.request("git.conflict", payload: .object(["cwd": .string(cwd), "path": .string(path)]))
+        let answer = try await client.request(
+            .gitConflict, payload: .object(["cwd": .string(cwd), "path": .string(path)])
+        ).decoded(as: GitConflictDetail.self)
         return await Task.detached { GitConflictFile(answer: answer) }.value
     }
 
@@ -507,7 +503,8 @@ func gitRefusalCode(_ error: any Error) -> String? {
         } else {
             files[path] = after
             drafts[path] = draft(path).carried(from: before, to: after)
-            note = String(localized: "The file changed on the machine. Ruimte read it again and kept the answers that still fit.")
+            note = String(
+                localized: "The file changed on the machine. Ruimte read it again and kept the answers that still fit.")
         }
     }
 }

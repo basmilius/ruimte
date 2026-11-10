@@ -13,8 +13,8 @@ import {
 import type { ActionOutput } from '@ruimte/actions';
 import { PLAN_LIMITS, PlanChecksSchema, PlanKindSchema, PlanStepStateSchema, type PlanItem } from '@ruimte/contracts';
 import { z } from 'zod';
+import { field } from '../canvas/host.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { field } from './host.ts';
 import { fieldLines } from './schema-lines.ts';
 import { defineTool, defineToolkit, type GuideTopic } from './tool.ts';
 
@@ -58,7 +58,7 @@ const SECTION_FIELDS: Record<keyof typeof PlanDraftSectionSchema.shape, string> 
 };
 
 /* A document that passes, so an agent has one shape to start from; a test holds it to the schema. */
-export const PLAN_EXAMPLE = JSON.stringify({
+const PLAN_EXAMPLE = JSON.stringify({
     meta: { title: 'Test the split placement', kind: 'test', checks: 'person' },
     items: [
         {

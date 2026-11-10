@@ -1,6 +1,6 @@
 import { CHAT_MODEL_MAX_BYTES } from '@ruimte/contracts';
-import { sniffMime } from '../fs/sniff.ts';
-import { imageType, VISUAL_IMAGE_BYTES } from '../mcp/visual-images.ts';
+import { imageType, VISUAL_IMAGE_BYTES } from '../agent-files/visual-images.ts';
+import { sniffMime } from '../disk/sniff.ts';
 
 /*
  * What an agent may attach to its chat, read off the bytes and never the name. The daemon checks
@@ -17,7 +17,6 @@ export const AGENT_IMAGE_TYPES: Readonly<Record<string, string>> = {
     'image/heif': 'heif'
 };
 
-/* The 3D formats a Model block draws. */
 export const AGENT_MODEL_TYPES: Readonly<Record<string, string>> = {
     'model/gltf-binary': 'glb',
     'model/vnd.usdz+zip': 'usdz',
@@ -50,7 +49,6 @@ export function agentAttachmentType(bytes: Uint8Array): AgentAttachmentType | nu
     return sniffed !== null && AGENT_MODEL_TYPES[sniffed] !== undefined ? { kind: 'model', mime: sniffed } : null;
 }
 
-/* The most bytes an attachment of this kind may take. */
 export function agentAttachmentBytes(kind: AgentAttachmentKind): number {
     return kind === 'image' ? AGENT_IMAGE_BYTES : AGENT_MODEL_BYTES;
 }

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { settle } from '@adecore/editor-react/testing';
 import { useToasts, type Toast } from '@/state/toasts';
 import { FakeLanguageTransport } from './fake-daemon';
 import { watchServerPrompts } from './server-prompts';
-import { settleLanguage as settle } from './settle.test';
 
 const folder = '/work/app';
 

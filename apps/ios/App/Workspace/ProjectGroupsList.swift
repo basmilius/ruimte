@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// The iPhone's open projects under the machine each is on, with how that machine is reached, and the machine's Chats
@@ -288,7 +289,7 @@ struct ProjectCardRow: View {
 /// A project's mark at the size of a list row: its initial on its own color, the symbol picked for it, or the image
 /// its folder declares.
 struct ProjectBadge: View {
-    let summary: JSONValue
+    let summary: ProjectSummary
     let session: SharedMachineSession
     var chats = false
     var size: CGFloat = 26
@@ -300,18 +301,17 @@ struct ProjectBadge: View {
     }
 
     private var bare: some View {
-        let icon = summary["icon"]
-        return Group {
+        Group {
             if chats {
                 Image(lucide: "messages-square", size: size)
-            } else if icon?.text("kind") == "image" {
+            } else if case .image = summary.icon {
                 ProjectArtwork(session: session, project: summary, size: size, inset: 0)
-            } else if icon?.text("kind") == "lucide" {
-                Image(lucide: icon?.text("value") ?? "folder", size: size)
+            } else if case .lucide(let icon) = summary.icon {
+                Image(lucide: icon.value, size: size)
             } else {
                 Text(initial)
                     .font(.system(size: (size * 0.8).rounded(), weight: .bold))
-                    .foregroundStyle(Color(projectHex: summary.text("color")) ?? MobileStyle.accent)
+                    .foregroundStyle(Color(projectHex: summary.color) ?? MobileStyle.accent)
             }
         }
         .frame(width: size, height: size)
@@ -320,24 +320,23 @@ struct ProjectBadge: View {
     }
 
     private var tiled: some View {
-        let icon = summary["icon"]
         let corner = (size * 0.27).rounded()
         return Group {
             if chats {
                 LucideIcon(name: "messages-square", size: (size * 0.54).rounded())
                     .frame(width: size, height: size).background(MobileStyle.hover, in: .rect(cornerRadius: corner))
-            } else if icon?.text("kind") == "image" {
+            } else if case .image = summary.icon {
                 ProjectArtwork(session: session, project: summary, size: size)
                     .background(MobileStyle.hover, in: .rect(cornerRadius: corner))
-            } else if icon?.text("kind") == "lucide" {
-                LucideIcon(name: icon?.text("value") ?? "folder", size: (size * 0.54).rounded())
+            } else if case .lucide(let icon) = summary.icon {
+                LucideIcon(name: icon.value, size: (size * 0.54).rounded())
                     .frame(width: size, height: size).background(MobileStyle.hover, in: .rect(cornerRadius: corner))
             } else {
                 Text(initial)
                     .font(.system(size: (size * 0.5).rounded(), weight: .bold)).foregroundStyle(.white)
                     .frame(width: size, height: size)
                     .background(
-                        Color(projectHex: summary.text("color")) ?? MobileStyle.accent, in: .rect(cornerRadius: corner))
+                        Color(projectHex: summary.color) ?? MobileStyle.accent, in: .rect(cornerRadius: corner))
             }
         }
         .foregroundStyle(MobileStyle.text)
@@ -345,7 +344,8 @@ struct ProjectBadge: View {
     }
 
     private var initial: String {
-        let picked = summary["icon"]?.text("kind") == "initial" ? summary["icon"]?.text("value") ?? "" : ""
-        return picked.isEmpty ? String(summary.text("name", fallback: "?").prefix(1)).uppercased() : picked
+        let picked: String
+        if case .initial(let icon) = summary.icon { picked = icon.value } else { picked = "" }
+        return picked.isEmpty ? String(summary.name.prefix(1)).uppercased() : picked
     }
 }

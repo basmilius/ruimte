@@ -25,7 +25,6 @@ export interface PetStrip {
     frames: number;
 }
 
-/* Every state but standing, whose strip is the sprite's own. */
 export type StripPose = Exclude<PetPose, 'stand'>;
 
 /*
@@ -40,7 +39,6 @@ export interface CustomPetSprite extends PetStrip {
 
 export type SheetProblem = 'type' | 'bytes' | 'unreadable' | 'frame-small' | 'frame-large' | 'frames-whole' | 'frames-many' | 'full' | 'room' | 'storage';
 
-/* The states with a strip of their own to give, in the order a person reads them. */
 export const STRIP_POSES = PET_POSES.filter((pose): pose is StripPose => pose !== 'stand');
 
 const StripSchema = z.object({
@@ -157,7 +155,6 @@ export function storedSpriteOf(entry: unknown): CustomPetSprite | null {
     return { id: sprite.id, name: sprite.name.slice(0, SHEET_LIMITS.nameLength), ...own, ...(Object.keys(strips).length > 0 && { strips }) };
 }
 
-/* The bytes every strip of a sprite takes, as an import counts them. */
 export function spriteBytes(sprite: CustomPetSprite): number {
     return [sprite, ...Object.values(sprite.strips ?? {})].reduce((sum, strip) => sum + (imageFacts(strip.image)?.bytes ?? 0), 0);
 }
@@ -181,7 +178,6 @@ function keptSprites(entries: readonly unknown[]): CustomPetSprite[] {
 
 const storedSprites = storedJson<CustomPetSprite[]>(PET_SPRITES_STORAGE_KEY, z.array(z.unknown()).transform(keptSprites));
 
-/* The strip a state plays: its own, or the one the sprite stands in. */
 export function stripFor(sprite: CustomPetSprite, pose: PetPose): { pose: PetPose; strip: PetStrip } {
     const own = pose === 'stand' ? undefined : sprite.strips?.[pose];
     return own === undefined ? { pose: 'stand', strip: sprite } : { pose, strip: own };
@@ -298,7 +294,6 @@ export async function readPetStrip(file: SheetFile, reader: SheetReader): Promis
 /* The strips a person gave in the dialog, one per state, standing among them. */
 export type PetStrips = Partial<Record<PetPose, PetStrip>>;
 
-/* A sprite's strips by state, to start the dialog from. */
 export function stripsOf(sprite: CustomPetSprite): PetStrips {
     return { stand: { image: sprite.image, frameSize: sprite.frameSize, frames: sprite.frames }, ...sprite.strips };
 }
@@ -311,7 +306,6 @@ export function previewSpriteOf(id: string, strips: PetStrips): CustomPetSprite 
     return spriteOf(`${id}:preview`, '', strips);
 }
 
-/* The sprite the dialog's strips make, or null while it has none to stand in. */
 export function spriteOf(id: string, name: string, strips: PetStrips): CustomPetSprite | null {
     const { stand, ...others } = strips;
     if (stand === undefined) {
@@ -336,7 +330,6 @@ export function savePetSprite(sprite: CustomPetSprite): { sprite: CustomPetSprit
     return usePetSprites.getState().put(sprite) ? { sprite } : { problem: 'storage' };
 }
 
-/* The browser's own reading of a picked file and of the image in it. */
 export const browserSheetReader: SheetReader = {
     dataUrl(file) {
         return new Promise((resolve, reject) => {

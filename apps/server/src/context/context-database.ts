@@ -6,7 +6,6 @@ function quoted(name: string): string {
     return `\`${name.replaceAll('`', '``')}\``;
 }
 
-/* The tool call that reads what the view shows, ready to make: its rows, or for a structure view the columns. */
 function readCommand(view: ProjectDatabaseTarget, connection: string): string {
     const schema = view.schema === '' ? {} : { schema: view.schema };
     if (view.mode === 'structure') {

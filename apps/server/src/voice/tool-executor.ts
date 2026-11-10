@@ -1,8 +1,19 @@
+import { Serializer } from '@adecore/utils/async';
 import { ACTION_DEFINITIONS, VOICE_CONTROL_TOOL, type ActionCall, type ActionName, type ActionResult, type VoiceToolDefinition } from '@ruimte/actions';
-import { actionInput, confirmationOf, objectArguments, voiceReplyOf, type VoiceReplyWords } from '@ruimte/voice';
+import {
+    actionInput,
+    confirmationOf,
+    confirmationRequestOutput,
+    failedActionOutput,
+    objectArguments,
+    refusedOutput,
+    toolErrorOutput,
+    voiceReplyOf,
+    type VoiceReplyWords,
+    type VoiceToolOutput
+} from '@ruimte/voice';
+import { bestEffort } from '../best-effort.ts';
 import type { VoicePolicy } from './action-policy.ts';
-
-type VoiceToolOutput = Record<string, unknown>;
 
 /* The registry as the executor reaches it: the daemon's `serverActions`, or a fake in a test. */
 export interface VoiceActionRunner<Context> {
@@ -48,7 +59,6 @@ interface VoiceToolExecutorOptions<Context> {
     observer?: VoiceToolObserver;
 }
 
-/* A question this session asked, by the call that asked it and where the project stood then. */
 interface PendingConfirmation {
     callId: string;
     name: ActionName;
@@ -65,14 +75,12 @@ const CALL_MEMORY = 256;
 // Confirmations this session handed out and may still be answered.
 const CONFIRMATION_MEMORY = 32;
 
-// What the registry calls a failure no handler coded: its message is that of whatever was thrown.
-const UNCODED_FAILURE = 'action-failed';
-
 /* The words of a reply only reach the model, so they stay English; the timeline takes its label from the catalog. */
 const REPLY_WORDS: VoiceReplyWords = { activity: () => '', machine: (endpointId) => endpointId, color: (accent) => accent ?? '' };
 
-function refused(code: string, message: string): VoiceToolOutput {
-    return { ok: false, code, message };
+/* The id a Voice start is claimed under, so a repeated call is the same start. Another namespace than an opener, which shares its prefix. */
+function voiceStartRequestId(sessionId: string, callId: string): string {
+    return `voice:${sessionId}:${callId}`;
 }
 
 /* What each tool reaches, read from the tools themselves, so the executor offers exactly what the model was given. */
@@ -87,7 +95,6 @@ function offeredActions(tools: readonly VoiceToolDefinition[]): Map<string, Read
     return offered;
 }
 
-/* A counted gate: at most `size` of what it runs go at once. */
 class Gate {
     readonly #size: number;
     #running = 0;
@@ -122,7 +129,7 @@ export class VoiceToolExecutor<Context> {
     readonly #calls = new Map<string, Promise<VoiceToolOutput>>();
     readonly #confirmations = new Map<string, PendingConfirmation>();
     readonly #reads = new Gate(PARALLEL_READS);
-    #changes: Promise<unknown> = Promise.resolve();
+    readonly #changes = new Serializer();
     #count = 0;
 
     constructor(options: VoiceToolExecutorOptions<Context>) {
@@ -151,7 +158,7 @@ export class VoiceToolExecutor<Context> {
     async confirm(token: string, approved: boolean): Promise<VoiceToolOutput> {
         const pending = this.#confirmations.get(token);
         if (pending === undefined || !this.#options.live()) {
-            return refused('unknown-confirmation', 'This confirmation is no longer available.');
+            return refusedOutput('unknown-confirmation', 'This confirmation is no longer available.');
         }
         this.#confirmations.delete(token);
         const output = await this.#answer(token, pending, approved);
@@ -163,13 +170,13 @@ export class VoiceToolExecutor<Context> {
         const refusal = this.#options.policy.check(pending.name, pending.input);
         if (refusal !== null) {
             this.#decline(token);
-            return Promise.resolve(refused(refusal.code, refusal.message));
+            return Promise.resolve(refusedOutput(refusal.code, refusal.message));
         }
         const run = async (): Promise<VoiceToolOutput> => {
             // Checked in the queue, right before the answer runs, so no change Voice made in between slips by.
             if (approved && pending.state !== null && (await this.#state()) !== pending.state) {
                 this.#decline(token);
-                return refused('confirmation-stale', 'The project changed since this was asked, so the question no longer holds; ask the user again.');
+                return refusedOutput('confirmation-stale', 'The project changed since this was asked, so the question no longer holds; ask the user again.');
             }
             return this.#runner(pending.name, () => this.#options.runner.confirm(token, approved, this.#options.call()));
         };
@@ -184,7 +191,7 @@ export class VoiceToolExecutor<Context> {
 
     /* A token this session will never use is taken back from the registry too, as a cancel. */
     #decline(token: string): void {
-        this.#options.runner.confirm(token, false, this.#options.call()).catch(() => undefined);
+        void bestEffort('#options.runner.confirm', this.#options.runner.confirm(token, false, this.#options.call()));
     }
 
     async #state(): Promise<string | null> {
@@ -198,31 +205,31 @@ export class VoiceToolExecutor<Context> {
     async #run(tool: string, rawArguments: string, callId: string): Promise<VoiceToolOutput> {
         this.#count += 1;
         if (this.#count > MAX_CALLS_PER_SESSION) {
-            return refused('voice-call-limit', 'This Voice session made too many calls; start a new one.');
+            return refusedOutput('voice-call-limit', 'This Voice session made too many calls; start a new one.');
         }
         const args = objectArguments(rawArguments);
         if (args === null) {
-            return refused('invalid-arguments', 'The tool arguments are not a JSON object.');
+            return refusedOutput('invalid-arguments', 'The tool arguments are not a JSON object.');
         }
         if (tool === VOICE_CONTROL_TOOL) {
             const answer = confirmationOf(args);
             if (answer === null) {
-                return refused('invalid-confirmation', 'Choose confirm or cancel and provide the confirmation token.');
+                return refusedOutput('invalid-confirmation', 'Choose confirm or cancel and provide the confirmation token.');
             }
             return this.confirm(answer.token, answer.approved);
         }
         const name = typeof args.action === 'string' ? args.action : '';
         if (!this.#offered.get(tool)?.has(name)) {
-            return refused('not-offered', `The tool ${tool} offers no action “${name}”.`);
+            return refusedOutput('not-offered', `The tool ${tool} offers no action “${name}”.`);
         }
         const input = actionInput(name as ActionName, args);
         const refusal = this.#options.policy.check(name, input);
         if (refusal !== null) {
-            return refused(refusal.code, refusal.message);
+            return refusedOutput(refusal.code, refusal.message);
         }
         if (name === 'agent.start') {
             // The model's own id is never trusted: one per call, so a repeated call is the same start and a new call a new one.
-            input.requestId = `voice:${this.#options.sessionId}:${callId}`;
+            input.requestId = voiceStartRequestId(this.#options.sessionId, callId);
             // Voice starts an AI Chat in the folder of its session, so these are fixed and never the model's to state.
             input.terminal = false;
             input.worktree = null;
@@ -253,20 +260,18 @@ export class VoiceToolExecutor<Context> {
         if (ACTION_DEFINITIONS[name].effect === 'read') {
             return this.#reads.run(run);
         }
-        const next = this.#changes.then(run, run);
-        this.#changes = next.catch(() => undefined);
-        return next;
+        return this.#changes.run(run);
     }
 
     async #runner(name: ActionName, run: () => Promise<ActionResult>): Promise<VoiceToolOutput> {
         if (!this.#options.live()) {
-            return refused('voice-ended', 'This Voice session has ended.');
+            return refusedOutput('voice-ended', 'This Voice session has ended.');
         }
         try {
             return this.#outputOf(await run());
         } catch {
             // The message of an unexpected error may quote what it failed on, so the model hears only that it failed.
-            return refused('tool-error', `“${name}” failed on this machine.`);
+            return toolErrorOutput(name);
         }
     }
 
@@ -280,28 +285,10 @@ export class VoiceToolExecutor<Context> {
             case 'running':
                 return { ok: true, status: result.status, operationId: result.operationId, ...(result.output as Record<string, unknown>) };
             case 'needs_confirmation':
-                return {
-                    ok: false,
-                    message: 'Ask the user to confirm or cancel this action before continuing.',
-                    needs_confirmation: true,
-                    confirmation_token: result.confirmationToken,
-                    confirmation: result.confirmation
-                };
+                return confirmationRequestOutput(result);
             case 'failed':
-                return this.#failedOutput(result.action, result.error);
+                return failedActionOutput(result);
         }
-    }
-
-    /*
-     * A refusal the daemon coded says what to do instead and is meant to be heard. The registry turns any
-     * other error into `action-failed` with that error's own message, which may quote a path or what it
-     * failed on, so the model hears only that it failed.
-     */
-    #failedOutput(action: ActionName | null, error: { code: string; message: string }): VoiceToolOutput {
-        if (error.code === UNCODED_FAILURE) {
-            return refused('tool-error', `“${action ?? 'The action'}” failed on this machine.`);
-        }
-        return refused(error.code, error.message);
     }
 
     #remember(token: string, callId: string, name: ActionName, input: Record<string, unknown>, state: string | null): void {

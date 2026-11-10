@@ -1,7 +1,7 @@
 import type { EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
 import type { Endpoint } from '@/state/endpoints';
+import type { ConnectionState, TransportStatus } from '@/transport-api/transport';
 import type { PooledTransport } from '@/transport/pool';
-import type { ConnectionState, TransportStatus } from '@/transport/transport';
 
 export function endpoint(id: string): Endpoint {
     return {

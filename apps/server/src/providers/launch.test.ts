@@ -1,6 +1,35 @@
 import { describe, expect, test } from 'bun:test';
 import type { CliMcpServer } from '@adecore/agents/providers';
-import { freshCommand, hookTellsTools, probeCodexNoDaemon, resumeCommand, noteOnLine, resumeOrFreshCommand, terminalCommand } from './launch.ts';
+import type { AgentLaunch } from '@ruimte/contracts';
+import * as launchLines from './launch.ts';
+import { ProviderRegistry } from './registry.ts';
+
+// The lines are built from the providers of the table; a Codex whose help names the flag is made apart.
+const providers = new ProviderRegistry();
+
+function terminalCommand(launch: AgentLaunch, firstPrompt?: string, note?: string, mcp?: CliMcpServer, from: launchLines.LaunchProviders = providers): string {
+    return launchLines.terminalCommand(from, launch, firstPrompt, note, mcp);
+}
+
+function resumeCommand(launch: AgentLaunch, agentSessionId: string, mcp?: CliMcpServer, from: launchLines.LaunchProviders = providers): string {
+    return launchLines.resumeCommand(from, launch, agentSessionId, mcp);
+}
+
+function freshCommand(launch: AgentLaunch, note?: string, mcp?: CliMcpServer): string {
+    return launchLines.freshCommand(providers, launch, note, mcp);
+}
+
+function resumeOrFreshCommand(launch: AgentLaunch, agentSessionId: string, note?: string, mcp?: CliMcpServer): string {
+    return launchLines.resumeOrFreshCommand(providers, launch, agentSessionId, note, mcp);
+}
+
+function noteOnLine(kind: string, launch: AgentLaunch | null | undefined): boolean {
+    return launchLines.noteOnLine(providers.get(kind), launch);
+}
+
+function hookTellsTools(kind: string, launch: AgentLaunch | null | undefined): boolean {
+    return launchLines.hookTellsTools(providers.get(kind), launch);
+}
 
 // How the launch line quotes the flag that lets Ruimte's MCP tools through.
 const ALLOW = `'--allowedTools=mcp__ruimte'`;
@@ -103,32 +132,36 @@ describe('terminalCommand', () => {
     });
 
     test('keeps Codex out of its shared background server once the installed Codex offers the flag', async () => {
-        await probeCodexNoDaemon(async () => '  --no-daemon  Run without the shared background server');
-        try {
-            expect(terminalCommand({ kind: 'codex', runtimeMode: 'auto' })).toBe('codex --no-daemon --ask-for-approval on-request --sandbox workspace-write');
-            expect(resumeCommand({ kind: 'codex', runtimeMode: 'auto' }, 'abc-123')).toBe(
-                "codex resume --no-daemon --ask-for-approval on-request --sandbox workspace-write 'abc-123'"
-            );
-            expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' })).toBe(`claude ${ALLOW} --permission-mode default`);
-        } finally {
-            await probeCodexNoDaemon(async () => '');
-        }
-        expect(terminalCommand({ kind: 'codex', runtimeMode: 'auto' })).toBe('codex --ask-for-approval on-request --sandbox workspace-write');
+        const withFlag = new ProviderRegistry({ commands: { codexHelp: async () => '  --no-daemon  Run without the shared background server' } });
+        const without = new ProviderRegistry({ commands: { codexHelp: async () => '' } });
+        await withFlag.get('codex').terminal?.prepare?.();
+        await without.get('codex').terminal?.prepare?.();
+        expect(terminalCommand({ kind: 'codex', runtimeMode: 'auto' }, undefined, undefined, undefined, withFlag)).toBe(
+            'codex --no-daemon --ask-for-approval on-request --sandbox workspace-write'
+        );
+        expect(resumeCommand({ kind: 'codex', runtimeMode: 'auto' }, 'abc-123', undefined, withFlag)).toBe(
+            "codex resume --no-daemon --ask-for-approval on-request --sandbox workspace-write 'abc-123'"
+        );
+        expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' }, undefined, undefined, undefined, withFlag)).toBe(
+            `claude ${ALLOW} --permission-mode default`
+        );
+        expect(terminalCommand({ kind: 'codex', runtimeMode: 'auto' }, undefined, undefined, undefined, without)).toBe(
+            'codex --ask-for-approval on-request --sandbox workspace-write'
+        );
     });
 
-    test('a Codex that never answers its help is stopped and counts as one without the flag', async () => {
-        let stopped = false;
-        await probeCodexNoDaemon(
-            (signal) =>
-                new Promise<string>(() => {
-                    signal.addEventListener('abort', () => {
-                        stopped = true;
-                    });
-                }),
-            0
+    test('a Codex whose help fails counts as one without the flag', async () => {
+        const failing = new ProviderRegistry({
+            commands: {
+                codexHelp: async () => {
+                    throw new Error('codex is not here');
+                }
+            }
+        });
+        await failing.get('codex').terminal?.prepare?.();
+        expect(terminalCommand({ kind: 'codex', runtimeMode: 'auto' }, undefined, undefined, undefined, failing)).toBe(
+            'codex --ask-for-approval on-request --sandbox workspace-write'
         );
-        expect(stopped).toBe(true);
-        expect(terminalCommand({ kind: 'codex', runtimeMode: 'auto' })).toBe('codex --ask-for-approval on-request --sandbox workspace-write');
     });
 
     test('says which launches carried the note, so their start hook leaves it out', () => {

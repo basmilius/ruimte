@@ -145,12 +145,10 @@ const FIGURES: ReadonlyMap<string, DrawnSprite> = new Map(
     [...PET_PACKS.flatMap((pack) => pack.figures as readonly DrawnSprite[]), ...EXTRA_FIGURES].map((figure) => [figure.id, figure])
 );
 
-/* The figures of a pack, in the order it holds them. */
 export function packFigures(id: PetPackId): readonly DrawnSprite[] {
     return PET_PACKS.find((pack) => pack.id === id)?.figures ?? [];
 }
 
-/* A built-in figure by its id, while there is one by that id. */
 export function petFigure(id: string): DrawnSprite | undefined {
     return FIGURES.get(id);
 }

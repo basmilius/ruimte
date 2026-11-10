@@ -9,7 +9,6 @@ import {
     initializationOptionsOf,
     KIND_PROFILES,
     kindForLanguage,
-    lspLanguageId,
     resolveNativeTypescript,
     resolveTypescriptLib,
     usesVue,
@@ -46,8 +45,6 @@ describe('server profiles', () => {
         expect(kindForLanguage('twig')).toBe('php-native');
         expect(kindForLanguage('blade')).toBe('php-native');
         expect(kindForLanguage('plaintext', {}, 'templates/base.html.twig')).toBe('php-native');
-        expect(lspLanguageId('tsx')).toBe('typescriptreact');
-        expect(lspLanguageId('php')).toBe('php');
     });
 
     it('keeps ESLint and Tailwind out of the kind of a language, and offers them beside it', () => {

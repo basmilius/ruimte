@@ -1,27 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { isAddressInUse, portInUseMessage, runningMachineFrom } from './fatal.ts';
+import { isAddressInUse, portInUseMessage } from './fatal.ts';
 
 describe('isAddressInUse', () => {
     test('reads the code Bun puts on a failed listen', () => {
         expect(isAddressInUse(Object.assign(new Error('Failed to start server. Is port 4210 in use?'), { code: 'EADDRINUSE' }))).toBe(true);
         expect(isAddressInUse(Object.assign(new Error('denied'), { code: 'EACCES' }))).toBe(false);
         expect(isAddressInUse(null)).toBe(false);
-    });
-});
-
-describe('runningMachineFrom', () => {
-    test('reads a health answer', () => {
-        expect(runningMachineFrom({ ok: true, version: '0.4.0', build: 'x', service: true })).toEqual({ version: '0.4.0', service: true });
-    });
-
-    test('an older machine does not say whether it is the service', () => {
-        expect(runningMachineFrom({ ok: true, version: '0.3.0' })).toEqual({ version: '0.3.0', service: null });
-    });
-
-    test('anything else is no Ruimte', () => {
-        expect(runningMachineFrom({ status: 'up' })).toBeNull();
-        expect(runningMachineFrom('ok')).toBeNull();
-        expect(runningMachineFrom(null)).toBeNull();
     });
 });
 
@@ -41,6 +25,13 @@ describe('portInUseMessage', () => {
         const message = portInUseMessage(4210, { version: '0.4.0', service: false });
         expect(message).toStartWith('A Ruimte machine is already running on port 4210 (version 0.4.0).\n');
         expect(message).not.toContain('service status');
+    });
+
+    test('a machine that is still starting is not another program', () => {
+        const message = portInUseMessage(4290, { version: '0.4.0', service: null, starting: true });
+        expect(message).toStartWith('A Ruimte machine is already starting on port 4290 (version 0.4.0)');
+        expect(message).toContain('`ruimte status --port 4290`');
+        expect(message).not.toContain('another program');
     });
 
     test('another port rides along with every command', () => {

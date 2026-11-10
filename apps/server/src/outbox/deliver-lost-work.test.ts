@@ -4,9 +4,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fakeClaude, ManualClock } from '@adecore/agents/testing';
 import type { ChatTurnItem, ProjectContent } from '@ruimte/contracts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
 
 const CHAT = 'chat-watcher';
 const LEAD = 'chat-lead';
@@ -43,7 +44,7 @@ beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-deliver-lost-work-'));
     folder = join(root, 'repo');
     await mkdir(folder, { recursive: true });
-    store = new ProjectStore(join(root, 'home'), projectLinks());
+    store = new ProjectStore(join(root, 'home'), projectLinks(), projectOverlays(join(root, 'home')));
 
     const opened = await store.openProject({ folder });
 
@@ -80,7 +81,6 @@ async function restartWhileWatching(before?: (daemon: TestDaemon) => Promise<voi
     running = [];
 
     const second = await boot();
-    second.worker.start();
     await second.chats.recoverInterrupted();
 
     return second;
@@ -108,7 +108,6 @@ describe('background commands a restart took', () => {
         await daemon.stop();
         running = [];
         const again = await boot();
-        again.worker.start();
         await again.chats.recoverInterrupted();
         await again.worker.settled();
 
@@ -139,7 +138,6 @@ describe('background commands a restart took', () => {
         running = [];
 
         const daemon = await boot();
-        daemon.worker.start();
         await daemon.chats.recoverInterrupted();
         await daemon.worker.settled();
 

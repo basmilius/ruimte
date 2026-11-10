@@ -3,21 +3,24 @@ import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
+import { Serializer } from '@adecore/utils/async';
 import { isNotFound } from '@adecore/utils/errors';
+import { writeAtomic } from '@adecore/utils/fs';
 import {
-    clashingPackPath,
     EXTENSION_API_VERSION,
     EXTENSION_PACK_MAX_UNPACKED_BYTES,
     ExtensionManifestSchema,
-    ExtensionPackSchema,
-    extensionPermissionProblems,
-    isSafePackPath,
+    extensionManifestProblem,
+    readExtensionPack,
+    type ApiRefusal,
     type ExtensionManifest
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';
 
-export class ExtensionPackError extends Error {
+const THIS_MACHINE: ApiRefusal = (manifest) => `${manifest.id} needs API ${manifest.api}; this machine has ${EXTENSION_API_VERSION}`;
+
+class ExtensionPackError extends Error {
     readonly code: 'pack-unreadable' | 'pack-manifest' | 'pack-api' | 'pack-path' | 'extension-unknown' | 'store-damaged';
 
     constructor(code: ExtensionPackError['code'], message: string) {
@@ -96,10 +99,8 @@ async function readJson<T>(path: string, schema: z.ZodType<T>, fallback: T): Pro
     return parsed.data;
 }
 
-/* How the store writes its JSON files, handed in so a test can fail one as a full disk would. */
-export type ExtensionStoreWrite = (file: string, text: string) => Promise<void>;
-
-const NODE_WRITE: ExtensionStoreWrite = (file, text) => writeFile(file, text);
+/* How the store writes a JSON file whole, handed in so a test can fail one as a full disk would. */
+type ExtensionStoreWrite = (file: string, text: string) => Promise<void>;
 
 /*
  * What a machine has installed, under `$RUIMTE_HOME/extensions`: every version of an extension in a
@@ -110,38 +111,20 @@ export class ExtensionStore {
     private readonly root: string;
     private readonly revisions = new Map<string, number>();
     private readonly write: ExtensionStoreWrite;
-    private changes: Promise<unknown> = Promise.resolve();
+    /*
+     * One change at a time, from read to rename: two windows that install at once would otherwise both read the old
+     * `installed.json` and keep only one of them.
+     */
+    private readonly changes = new Serializer();
 
-    constructor(home: string, write: ExtensionStoreWrite = NODE_WRITE) {
+    constructor(home: string, write: ExtensionStoreWrite = (file, text) => writeAtomic(file, text)) {
         this.root = join(home, 'extensions');
         this.write = write;
     }
 
     private async writeJson(path: string, value: unknown): Promise<void> {
         await mkdir(dirname(path), { recursive: true });
-
-        const temporary = `${path}.${randomUUID()}.tmp`;
-
-        try {
-            await this.write(temporary, JSON.stringify(value, null, 2));
-            await rename(temporary, path);
-        } catch (e) {
-            await rm(temporary, { force: true });
-
-            throw e;
-        }
-    }
-
-    /*
-     * One change at a time, from read to rename: two windows that install at once would otherwise both read the old
-     * `installed.json` and keep only one of them.
-     */
-    private change<Value>(work: () => Promise<Value>): Promise<Value> {
-        const next = this.changes.then(work, work);
-
-        this.changes = next.catch(() => undefined);
-
-        return next;
+        await this.write(path, JSON.stringify(value, null, 2));
     }
 
     dataFolder(id: string): string {
@@ -251,12 +234,11 @@ export class ExtensionStore {
      */
     async install(pack: string): Promise<StoredExtension> {
         const bytes = Buffer.from(pack, 'base64');
-        const files = unpack(bytes);
-        const manifest = manifestOf(files);
+        const { manifest, files } = readPack(bytes);
         const hash = createHash('sha256').update(bytes).digest('hex');
         const folder = this.versionFolder(manifest.id, hash);
 
-        return this.change(async () => {
+        return this.changes.run(async () => {
             // A folder of this hash holds exactly this pack, so one that cannot be read is unpacked again rather than refused.
             if ((await this.manifestIn(folder).catch(() => null)) === null) {
                 const unpacking = `${folder}.${randomUUID()}.tmp`;
@@ -266,7 +248,7 @@ export class ExtensionStore {
                         const target = join(unpacking, path);
 
                         await mkdir(dirname(target), { recursive: true });
-                        await writeFile(target, content);
+                        await writeFile(target, Buffer.from(content, 'base64'));
                     }
 
                     const unpacked = await readdir(unpacking, { recursive: true, withFileTypes: true });
@@ -295,7 +277,7 @@ export class ExtensionStore {
 
     /* `data/` and a dev link go with it: a person who removes an extension means all of it. */
     remove(id: string): Promise<void> {
-        return this.change(async () => {
+        return this.changes.run(async () => {
             const ids = await this.installedIds();
             const { [id]: _gone, ...links } = await this.links();
 
@@ -312,7 +294,7 @@ export class ExtensionStore {
 
     /* Of what runs: the dev link while there is one, and the installed version beside it, so neither turns on when the other ends. */
     setEnabled(id: string, enabled: boolean): Promise<void> {
-        return this.change(async () => {
+        return this.changes.run(async () => {
             const linked = (await this.links())[id] !== undefined;
             const current = await this.current(id);
 
@@ -338,13 +320,13 @@ export class ExtensionStore {
             throw new ExtensionPackError('pack-manifest', `No valid manifest.json in ${folder}`);
         }
 
-        if (manifest.api !== EXTENSION_API_VERSION) {
-            throw new ExtensionPackError('pack-api', `${manifest.id} needs API ${manifest.api}; this machine has ${EXTENSION_API_VERSION}`);
+        const problem = extensionManifestProblem(manifest, { refusesApi: THIS_MACHINE });
+
+        if (problem !== null) {
+            throw new ExtensionPackError(problem.code, problem.message);
         }
 
-        refuseUnknownPermissions(manifest);
-
-        return this.change(async () => {
+        return this.changes.run(async () => {
             const { id } = manifest;
             const links = await this.links();
             const { [id]: previous = {}, ...owners } = await this.linkOwners();
@@ -373,7 +355,7 @@ export class ExtensionStore {
      * before or after it.
      */
     unlink(id: string, owner?: string): Promise<boolean> {
-        return this.change(async () => {
+        return this.changes.run(async () => {
             if (owner !== undefined && (await this.linkOwner(id)) !== owner) {
                 return false;
             }
@@ -395,69 +377,17 @@ export class ExtensionStore {
     }
 }
 
-function unpack(bytes: Buffer): Record<string, Buffer> {
-    let parsed: unknown;
+function readPack(bytes: Buffer): { manifest: ExtensionManifest; files: Readonly<Record<string, string>> } {
+    const reading = readExtensionPack(bytes, (packed) => gunzipSync(packed, { maxOutputLength: EXTENSION_PACK_MAX_UNPACKED_BYTES }), THIS_MACHINE);
 
-    try {
-        parsed = JSON.parse(gunzipSync(bytes, { maxOutputLength: EXTENSION_PACK_MAX_UNPACKED_BYTES }).toString('utf8'));
-    } catch (e) {
-        if ((e as NodeJS.ErrnoException).code === 'ERR_BUFFER_TOO_LARGE') {
-            throw new ExtensionPackError('pack-unreadable', 'This pack unpacks to more than an extension may hold');
-        }
-
-        throw new ExtensionPackError('pack-unreadable', 'This is not an extension pack');
+    if (!reading.ok) {
+        throw new ExtensionPackError(reading.code, reading.message);
     }
 
-    const pack = ExtensionPackSchema.safeParse(parsed);
-
-    if (!pack.success) {
-        throw new ExtensionPackError('pack-unreadable', 'This is not an extension pack');
-    }
-
-    const clash = clashingPackPath(Object.keys(pack.data.files));
-
-    if (clash !== null) {
-        throw new ExtensionPackError('pack-path', `The pack names ${clash} twice, in another case`);
-    }
-
-    return Object.fromEntries(
-        Object.entries(pack.data.files).map(([path, content]) => {
-            if (!isSafePackPath(path)) {
-                throw new ExtensionPackError('pack-path', `The pack names a path outside itself: ${path}`);
-            }
-
-            return [path, Buffer.from(content, 'base64')];
-        })
-    );
+    return reading;
 }
 
 /* What a pack installs as, checked whole, so a caller can order the install among the other changes of that id. */
 export function manifestOfPack(pack: string): ExtensionManifest {
-    return manifestOf(unpack(Buffer.from(pack, 'base64')));
-}
-
-// Refused when it comes in, never when it loads, so one already installed keeps working on a Ruimte that knows less.
-function refuseUnknownPermissions(manifest: ExtensionManifest): void {
-    const problems = extensionPermissionProblems(manifest.permissions);
-
-    if (problems.length > 0) {
-        throw new ExtensionPackError('pack-manifest', `${manifest.id}: ${problems.join('; ')}`);
-    }
-}
-
-function manifestOf(files: Record<string, Buffer>): ExtensionManifest {
-    const raw = files['manifest.json'];
-    const manifest = raw === undefined ? null : ExtensionManifestSchema.safeParse(JSON.parse(raw.toString('utf8')));
-
-    if (manifest === null || !manifest.success) {
-        throw new ExtensionPackError('pack-manifest', 'The pack has no valid manifest.json');
-    }
-
-    if (manifest.data.api !== EXTENSION_API_VERSION) {
-        throw new ExtensionPackError('pack-api', `${manifest.data.id} needs API ${manifest.data.api}; this machine has ${EXTENSION_API_VERSION}`);
-    }
-
-    refuseUnknownPermissions(manifest.data);
-
-    return manifest.data;
+    return readPack(Buffer.from(pack, 'base64')).manifest;
 }

@@ -1,7 +1,7 @@
 import type { RoutineRun } from '@ruimte/contracts';
-import { COLUMN_W, GUTTER, LINE_H, OPEN_H, OPEN_MIN_H, STACK_GAP } from '@/canvas/beside-metrics';
-import { GRID, snapToGrid, type Rect } from '@/canvas/math';
-import type { CardSize } from '@/routines/output-size';
+import { GRID, snapToGrid, type Rect } from '@/canvas-model/math';
+import { COLUMN_W, GUTTER, LINE_H, OPEN_H, OPEN_MIN_H, STACK_GAP } from '@/surface/canvas/beside-metrics';
+import type { CardSize } from '@/surface/canvas/output-size';
 
 /* What a person or the open run's thread set beside the layout's own sizes; null keeps the layout's. */
 interface BesideSizes {
@@ -9,11 +9,9 @@ interface BesideSizes {
     runsWidth?: number | null;
     /* Each run's header and thread as last measured open, kept between the minimum and maximum; one not measured yet starts at the minimum. */
     openHeights?: Readonly<Record<string, number>>;
-    /* Only the Output, in the first column at the newest version, with its line from the node. */
     runsHidden?: boolean;
 }
 
-/* The run cards beside a routine node, the open one included; the rest wait behind the line under them. */
 const BESIDE_RUNS = 4;
 
 const OLDER_H = 28;

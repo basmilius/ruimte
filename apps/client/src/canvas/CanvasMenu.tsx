@@ -1,19 +1,19 @@
 import { Icon, Kbd, ContextMenu } from '@adecore/ui';
 import { Maximize, Minus, Scan, SquareDashedMousePointer, Type } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { createNodeAction, createTextAction, fitAction, groupSelectionAction, selectAllAction } from '@/actions/client-actions';
+import { createNodeAction, createTextAction, fitAction, groupSelectionAction, selectAllAction } from '@/action-port/person-actions';
 import { AgentSubmenus } from '@/agents/AgentMenus';
-import type { Point } from '@/canvas/math';
-import { NODE_KIND_ICONS } from '@/canvas/node-icons';
+import type { Point } from '@/canvas-model/math';
 import { RemoteMachineItems } from '@/canvas/RemoteMachineItems';
-import { ADD_NODE_ROWS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { DesignAddItem } from '@/design/DesignAddItem';
 import { ExtensionNodesSubmenu, SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { RoutineAddItems } from '@/routines/RoutineAddItems';
-import { RowKbd } from '@/shell/RowKbd';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
+import { NODE_KIND_ICONS } from '@/surface/canvas/node-icons';
+import { ADD_NODE_ROWS, CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { RowKbd } from '@/surface/RowKbd';
 
 function AddItem({ kind, at }: { kind: keyof typeof ADD_NODE_ROWS; at: () => Point }) {
     const { t } = useTranslation('canvas');

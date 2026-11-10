@@ -41,7 +41,7 @@ const RenderedPageSchema = z.object({
 });
 export type RenderedPage = z.infer<typeof RenderedPageSchema>;
 
-export const RenderAnswerSchema = z.discriminatedUnion('ok', [
+const RenderAnswerSchema = z.discriminatedUnion('ok', [
     // The widths that finished within the budget, which may be fewer than were asked.
     z.object({ ok: z.literal(true), pages: z.array(RenderedPageSchema) }),
     z.object({ ok: z.literal(false), code: z.enum(['browser-unavailable', 'render-failed']), message: z.string() })
@@ -52,11 +52,10 @@ export type RenderAnswer = z.infer<typeof RenderAnswerSchema>;
  * A line the child writes before its answer: the port of the SOCKS proxy it started on loopback, so the daemon
  * keeps that port out of anything it shares while the child runs.
  */
-export const RenderProxyNoticeSchema = z.object({ proxyPort: z.number().int().min(1).max(65535) });
+const RenderProxyNoticeSchema = z.object({ proxyPort: z.number().int().min(1).max(65535) });
 
-export type RenderLine = { kind: 'proxy'; port: number } | { kind: 'answer'; answer: RenderAnswer };
+type RenderLine = { kind: 'proxy'; port: number } | { kind: 'answer'; answer: RenderAnswer };
 
-/* What one line of the child's stdout is, or null for a line that is neither. */
 export function classifyRenderLine(line: string): RenderLine | null {
     let json: unknown;
 

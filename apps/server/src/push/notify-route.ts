@@ -1,7 +1,7 @@
-import { MachineNotifyRequestSchema } from '@ruimte/contracts';
+import { MACHINE_NOTIFY_MAX_TEXT, MachineNotifyRequestSchema } from '@ruimte/contracts';
 import { decideAccess, isOwner, type AccessOptions } from '../auth/access.ts';
+import type { MessageHost } from '../canvas/host.ts';
 import { errorText } from '../error-text.ts';
-import type { MessageHost } from '../tools/host.ts';
 
 /* `ruimte notify`: only the local secret, since a process that holds it is a person on this machine. */
 export async function handleMachineNotify(
@@ -19,7 +19,7 @@ export async function handleMachineNotify(
     }
     const parsed = MachineNotifyRequestSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
-        return new Response('Expected a node id and a text of at most 500 characters', { status: 400 });
+        return new Response(`Expected a node id and a text of at most ${MACHINE_NOTIFY_MAX_TEXT} characters`, { status: 400 });
     }
     try {
         messages.alert(parsed.data.nodeId, parsed.data.text);

@@ -1,15 +1,15 @@
 import type { DeviceCaptureResult, DeviceInfo } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { createViewAction, placeViewOnCanvasAction } from '@/actions/client-actions';
+import { createViewAction, placeViewOnCanvasAction } from '@/action-port/person-actions';
 import { base64Of } from '@/base64';
-import { recordingKey, useDevices } from '@/devices/state';
+import { recordingKey, useDevices } from '@/clients/devices/state';
 import { downloadBlob } from '@/download';
 import { canvasInReach } from '@/state/canvas-target';
 import { useDocument } from '@/state/document';
-import { windowWorkspace } from '@/state/window';
-import { deviceClientFor } from '@/transport/connections';
 import { machineAnswers } from '@/transport/features';
 import { readMachineFile } from '@/transport/machine-url';
+import { deviceClientFor } from '@/workspace/connections';
+import { windowWorkspace } from '@/workspace/window';
 
 const SCREENSHOT_MAX_BYTES = 64 * 1024 * 1024;
 const RECORDING_MAX_BYTES = 1024 * 1024 * 1024;

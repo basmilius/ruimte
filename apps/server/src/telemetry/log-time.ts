@@ -12,7 +12,6 @@ export function stamped(at: Date, data: readonly unknown[]): unknown[] {
     return [time, ...data];
 }
 
-/* Puts the time in front of every line the serving daemon writes to its log. */
 export function stampConsole(target: Pick<Console, (typeof METHODS)[number]> = console, now: () => Date = () => new Date()): void {
     for (const method of METHODS) {
         const original: LogMethod = target[method].bind(target);

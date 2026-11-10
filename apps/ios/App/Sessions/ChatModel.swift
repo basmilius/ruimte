@@ -42,11 +42,11 @@ final class ChatModel {
         get { composition.skills }
         set { composition.skills = newValue }
     }
-    var providers: [JSONValue] = []
+    var providers: [ProviderInfo] = []
     /// Nil from a machine before accounts.
     var accounts: ProviderAccountList?
     /// The machine's plan windows per account, `usage.limits`; nil until something on screen asked for them.
-    var limits: JSONValue?
+    var limits: UsageLimits?
     var continuing = false
     /// When the chat's snooze runs out, epoch ms; nil while it has none.
     var snoozedUntil: Double?
@@ -69,7 +69,6 @@ final class ChatModel {
     @ObservationIgnored var referenceSource = ChatReferenceSource()
     /// The other open projects a `#` may point at, while the machine lets agents reach them.
     var reachedProjects: [JSONValue] = []
-    /// What `#` offers in this chat now.
     var referables: [ChatReferable] { referenceSource.items() }
     /// A machine from before `viewReferences` drops `references`, so its `#` reaches chats only.
     var chatsOnly: Bool { !referenceSource.viewReferences() }
@@ -93,7 +92,61 @@ final class ChatModel {
     @ObservationIgnored private var historyRevision = 0
     var sending = false
     var revision = 0
-    @ObservationIgnored private var unsubscribe: [() -> Void] = []
+    // Only the events and the link: the attach below resumes from `since` and rebuilds the thread, which no re-read
+    // of a resource does.
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.chatEvent, raw: { [weak self] payload in
+                guard let self, !self.loading, let envelope = try? payload.decoded(as: ChatEventEnvelope.self),
+                    envelope.chatId == self.chatID
+                else { return }
+                self.apply(envelope.event)
+                if let seq = envelope.seq { self.lastSeq = Int(seq) }
+            }),
+            .apply(.accountsChanged, as: AccountsSnapshot.self) { [weak self] snapshot in
+                self?.accounts = ProviderAccountList(snapshot)
+            },
+            .apply(.chatBookmarks, raw: { [weak self] payload in
+                guard let self, payload["chatId"]?.stringValue == self.chatID else { return }
+                self.presentation.setBookmarks(ChatBookmarks.parse(payload["bookmarks"]?.arrayValue ?? []))
+            }),
+            .apply(.chatVisuals, raw: { [weak self] payload in
+                guard let self, payload["chatId"]?.stringValue == self.chatID else { return }
+                self.presentation.setVisuals(ChatVisuals.parse(payload.list("visuals")))
+            }),
+            .apply(.snoozeChanged, raw: { [weak self] payload in
+                guard let self else { return }
+                self.snoozedUntil = ChatSnooze.until(of: self.chatID, in: payload)
+            }),
+            .apply(.usageLimitsChanged, as: UsageLimits.self) { [weak self] limits in
+                guard let self, self.limits != nil else { return }
+                self.limits = limits
+            },
+            .rejected(.chatEvent) { [weak self] payload in
+                guard let self, payload["chatId"]?.stringValue == self.chatID, !self.loading,
+                    !self.reattachedOverRejectedEvent
+                else { return }
+                self.reattachedOverRejectedEvent = true
+                // With `since` the machine would answer with the very event this app could not read.
+                self.lastSeq = nil
+                self.attach()
+            },
+        ],
+        connection: { [weak self] available in
+            guard let self else { return }
+            self.connected = available
+            self.presentation.setConnected(available)
+            if available {
+                self.attach()
+            } else {
+                self.reattachedOverRejectedEvent = false
+                self.generation += 1
+                self.attachTask?.cancel()
+                self.loading = false
+                error = nil
+            }
+        })
     @ObservationIgnored private var attachTask: Task<Void, Never>?
     @ObservationIgnored private var attachment: MachineAttachment?
     @ObservationIgnored private lazy var output = ChatOutputWatch(client: client, chatID: chatID) {
@@ -145,7 +198,7 @@ final class ChatModel {
         if continuable != continuableTurn { continuableTurn = continuable }
         let turn = info.flatMap {
             ChatResume.offerableTurn(
-                info: $0, compaction: capabilities["compaction"]?.stringValue, items: items, dismissed: keptHistoryFor)
+                info: $0, compaction: capabilities?.compaction.rawValue, items: items, dismissed: keptHistoryFor)
         }
         if turn?.id != compactionTurn?.id || turn?.endedAt != compactionTurn?.endedAt { compactionTurn = turn }
     }
@@ -178,7 +231,7 @@ final class ChatModel {
         defer { sending = false }
         do {
             _ = try await client.request(
-                "chat.send",
+                .chatSend,
                 payload: target([
                     "text": .string(ChatResume.continuePrompt), "mentions": .array([]), "skills": .array([]),
                     "chats": .array([]), "attachments": .array([]),
@@ -203,74 +256,18 @@ final class ChatModel {
     }
 
     /// The machine's entry for the chat's CLI in `provider.list`.
-    private var providerEntry: JSONValue? {
+    private var providerEntry: ProviderInfo? {
         guard let info else { return nil }
-        return providers.first { $0["kind"]?.stringValue == info.provider }
+        return providers.first { $0.kind == info.provider }
     }
 
-    var models: [JSONValue] { providerEntry?["models"]?.arrayValue ?? [] }
+    var models: [ProviderModel] { providerEntry?.models ?? [] }
 
     func start() {
-        guard unsubscribe.isEmpty else { return }
-        attachment = client.acquireAttachment("chat", id: chatID)
+        guard !live.isStarted else { return }
+        attachment = client.acquireAttachment(.chat, id: chatID)
         output.start()
-        unsubscribe.append(
-            client.subscribe("chat.event") { [weak self] payload in
-                guard let self, !self.loading, let envelope = try? payload.decoded(as: ChatEventEnvelope.self),
-                    envelope.chatId == self.chatID
-                else { return }
-                self.apply(envelope.event)
-                if let seq = envelope.seq { self.lastSeq = Int(seq) }
-            })
-        unsubscribe.append(
-            client.subscribe(.accountsChanged) { [weak self] payload in
-                self?.accounts = ProviderAccountList(payload)
-            })
-        unsubscribe.append(
-            client.subscribe(.chatBookmarks) { [weak self] payload in
-                guard let self, payload["chatId"]?.stringValue == self.chatID else { return }
-                self.presentation.setBookmarks(ChatBookmarks.parse(payload["bookmarks"]?.arrayValue ?? []))
-            })
-        unsubscribe.append(
-            client.subscribe(.chatVisuals) { [weak self] payload in
-                guard let self, payload["chatId"]?.stringValue == self.chatID else { return }
-                self.presentation.setVisuals(ChatVisuals.parse(payload.list("visuals")))
-            })
-        unsubscribe.append(
-            client.subscribe(.snoozeChanged) { [weak self] payload in
-                guard let self else { return }
-                self.snoozedUntil = ChatSnooze.until(of: self.chatID, in: payload)
-            })
-        unsubscribe.append(
-            client.subscribe(.usageLimitsChanged) { [weak self] payload in
-                guard let self, self.limits != nil else { return }
-                self.limits = payload
-            })
-        unsubscribe.append(
-            client.subscribeRejected("chat.event") { [weak self] payload in
-                guard let self, payload["chatId"]?.stringValue == self.chatID, !self.loading,
-                    !self.reattachedOverRejectedEvent
-                else { return }
-                self.reattachedOverRejectedEvent = true
-                // With `since` the machine would answer with the very event this app could not read.
-                self.lastSeq = nil
-                self.attach()
-            })
-        unsubscribe.append(
-            client.observeConnection { [weak self] available in
-                guard let self else { return }
-                self.connected = available
-                self.presentation.setConnected(available)
-                if available {
-                    self.attach()
-                } else {
-                    self.reattachedOverRejectedEvent = false
-                    self.generation += 1
-                    self.attachTask?.cancel()
-                    self.loading = false
-                    error = nil
-                }
-            })
+        live.start()
     }
 
     func stop() {
@@ -279,8 +276,7 @@ final class ChatModel {
         attachTask?.cancel()
         uiModels.imageSave.stop()
         output.stop()
-        for cancel in unsubscribe { cancel() }
-        unsubscribe.removeAll()
+        live.stop()
         loading = false
         let held = attachment
         attachment = nil
@@ -310,7 +306,7 @@ final class ChatModel {
                 guard !Task.isCancelled, generation == current else { return }
                 let result = try await providerResult
                 guard !Task.isCancelled, generation == current else { return }
-                providers = result["providers"]?.arrayValue ?? []
+                providers = result.providers
                 refreshResume()
                 accounts = await accountResult.map(ProviderAccountList.init)
                 await refreshForks()
@@ -323,13 +319,15 @@ final class ChatModel {
         }
     }
 
-    private func loadProviders() async throws -> JSONValue {
-        try await client.request("provider.list", payload: .object([:]))
+    private func loadProviders() async throws -> ProviderListResult {
+        let result = try await client.request(.providerList, payload: .object([:])).decoded(as: ProviderListResult.self)
+        AgentDirectory.shared.learn(result.providers)
+        return result
     }
 
     /// Nil from a machine before accounts, which does not know the request.
-    private func loadAccounts() async -> JSONValue? {
-        try? await client.request(.accountsList)
+    private func loadAccounts() async -> AccountsSnapshot? {
+        try? await client.request(.accountsList).decoded(as: AccountsSnapshot.self)
     }
 
     /// Applies what came after `since` when the machine still held all of it, and its snapshot otherwise.
@@ -427,7 +425,7 @@ final class ChatModel {
     /// Finds the forks after each turn among the chats the machine has loaded; a machine that cannot say leaves
     /// the turns unmarked.
     func refreshForks() async {
-        guard let chats = try? await client.request("chat.list", payload: .object([:])) else { return }
+        guard let chats = try? await client.request(.chatList, payload: .object([:])) else { return }
         presentation.setForks(ChatForking.forks(chats: chats.list("chats"), chatID: chatID))
     }
 
@@ -455,7 +453,7 @@ final class ChatModel {
         defer { if currentHistory == historyRevision { loadingHistory = false } }
         do {
             _ = try await client.request(
-                "chat.history", payload: target(["cursor": .string(cursor), "limit": .number(60)])
+                .chatHistory, payload: target(["cursor": .string(cursor), "limit": .number(60)])
             ) { [weak self] page in
                 guard let self, self.generation == current, self.historyRevision == currentHistory,
                     let page = try? page.decoded(as: ChatHistoryResult.self)
@@ -471,7 +469,7 @@ final class ChatModel {
             }
         } catch {
             guard generation == current, historyRevision == currentHistory else { return }
-            if case MachineClientError.server(code: "history-expired", message: _) = error {
+            if error.machineCode == .historyExpired {
                 lastSeq = nil
                 attach()
             } else {
@@ -500,7 +498,7 @@ final class ChatModel {
     }
 
     @discardableResult
-    func perform(_ name: String, _ values: [String: JSONValue] = [:]) async -> Bool {
+    func perform(_ name: WireRequest, _ values: [String: JSONValue] = [:]) async -> Bool {
         do {
             _ = try await client.request(name, payload: target(values))
             error = nil
@@ -511,9 +509,9 @@ final class ChatModel {
         }
     }
 
-    var capabilities: JSONValue { providerEntry?["capabilities"] ?? .null }
-    var canAttach: Bool { capabilities["attachments"]?.boolValue != false }
-    var canMention: Bool { capabilities["mentions"]?.boolValue != false }
+    var capabilities: ProviderCapabilities? { providerEntry?.capabilities }
+    var canAttach: Bool { capabilities?.attachments != false }
+    var canMention: Bool { capabilities?.mentions != false }
 
     /// The `@`, `$`, `/` or `#` word the caret is in, unless it is already a chip or `#` has nothing to offer.
     var draftQuery: ChatDraftQuery? {
@@ -573,7 +571,7 @@ final class ChatModel {
                 "attachments": .array(payloads),
             ]
             if !references.isEmpty { values["references"] = .array(references.map(JSONValue.string)) }
-            _ = try await client.request("chat.send", payload: target(values))
+            _ = try await client.request(.chatSend, payload: target(values))
             AppUsage.count(.messageSent)
             sendUncertain = false
             if draft == snapshot.text && mentions == snapshot.mentions && skills == snapshot.skills
@@ -625,7 +623,7 @@ final class ChatModel {
         configuring = true
         defer { configuring = false }
         do {
-            _ = try await client.request("chat.configure", payload: target(values))
+            _ = try await client.request(.chatConfigure, payload: target(values))
             settingsProblem = nil
             return true
         } catch {
@@ -667,7 +665,7 @@ final class ChatModel {
             }
             requestedRemoval = !sendNow
             _ = try await client.request(
-                sendNow ? "chat.sendNow" : "chat.unqueue", payload: target(["messageId": .string(message.id)]))
+                sendNow ? .chatSendNow : .chatUnqueue, payload: target(["messageId": .string(message.id)]))
             if !sendNow, let info {
                 self.info = info.with(queue: queue.filter { $0.id != message.id })
             }
@@ -696,7 +694,7 @@ final class ChatModel {
     /// What the machine offers of its other open projects; none when it cannot tell or does not answer.
     func refreshReachedProjects() async {
         guard (client as? MachineFeatures)?.answers(.projectReferables) == true else { return }
-        reachedProjects = (try? await client.request("project.referables"))?.list("projects") ?? []
+        reachedProjects = (try? await client.request(.projectReferables))?.list("projects") ?? []
     }
 
     func search(_ kind: String, query: String) async {
@@ -715,7 +713,8 @@ final class ChatModel {
             case "#":
                 await refreshReachedProjects()
                 // Only what is still in the text: a pick a person deleted would stay out of the list for good.
-                let exclude = [chatID] + ChatDraftSyntax.presentReferences(in: composition.text, references: composition.picked)
+                let exclude =
+                    [chatID] + ChatDraftSyntax.presentReferences(in: composition.text, references: composition.picked)
                 found = ChatReferables.suggestions(referables, chatsOnly: chatsOnly, query: query, exclude: exclude)
                     .map {
                         ChatSuggestion(
@@ -727,12 +726,13 @@ final class ChatModel {
                 if canMention {
                     do {
                         let result = try await client.request(
-                            "fs.search",
+                            .fsSearch,
                             payload: .object([
                                 "cwd": .string(info?.cwd ?? ""), "query": .string(String(query.prefix(256))),
                                 "limit": .number(20),
-                            ]))
-                        found += result.list("files").compactMap(\.stringValue).map {
+                            ])
+                        ).decoded(as: FsSearchResult.self)
+                        found += result.files.map {
                             ChatSuggestion(kind: "@", value: $0, title: ($0 as NSString).lastPathComponent, detail: $0)
                         }
                     } catch is CancellationError {
@@ -743,17 +743,15 @@ final class ChatModel {
                     }
                 }
             case "$":
-                let result = try await client.request("skills.list", payload: target())
-                found = result.list("skills").filter {
-                    query.isEmpty || $0.text("name").localizedCaseInsensitiveContains(query)
+                let result = try await client.request(.skillsList, payload: target())
+                    .decoded(as: SkillsListResult.self)
+                found = result.skills.filter {
+                    query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)
                 }
-                .map {
-                    ChatSuggestion(
-                        kind: "$", value: $0.text("name"), title: $0.text("name"), detail: $0.text("description"))
-                }
+                .map { ChatSuggestion(kind: "$", value: $0.name, title: $0.name, detail: $0.description) }
             default:
                 var local = ["clear", "stop", "model"]
-                if capabilities.text("compaction") != "none" { local.append("compact") }
+                if capabilities?.compaction != ProviderCompaction.none { local.append("compact") }
                 found = Array(Set(local + (info?.slashCommands ?? [])))
                     .filter {
                         !ChatSuggestion.terminalOnly.contains($0)
@@ -809,14 +807,12 @@ struct ChatSuggestion: Identifiable {
     let value: String
     let title: String
     let detail: String
-    /// What a `#` suggestion points at.
     var referable: ChatReferable?
     /// The heading of an `@` row below the files, `Models` or `Accounts`; nil for a file.
     var section: String? = nil
     /// The CLI whose mark a model or account row wears.
     var provider: String? = nil
 
-    /// The heading over the suggestions a sigil opens.
     static func heading(_ kind: String) -> String {
         switch kind {
         case "@": String(localized: "Files")
@@ -883,25 +879,19 @@ enum ChatTagSuggestions {
         return installed.lexicographicallyPrecedes(needed)
     }
 
-    private static func chatting(_ providers: [JSONValue]) -> [JSONValue] {
-        providers.filter { $0["installed"]?.boolValue == true && $0["capabilities"]?["chat"]?.boolValue == true }
-    }
-
-    static func models(providers: [JSONValue], accounts: ProviderAccountList?, query: String) -> [ChatSuggestion] {
+    static func models(providers: [ProviderInfo], accounts: ProviderAccountList?, query: String) -> [ChatSuggestion] {
         guard !query.isEmpty else { return [] }
-        let found = chatting(providers).filter { signedIn(accounts, kind: $0.text("kind")) }.flatMap {
+        let found = AgentCatalog.installedChats(providers).filter { signedIn(accounts, kind: $0.kind) }.flatMap {
             provider -> [(legacy: Bool, row: ChatSuggestion)] in
-            let kind = provider.text("kind")
-            return (provider["models"]?.arrayValue ?? []).compactMap { model in
-                let slug = model.text("slug")
-                let name = model.text("name")
-                guard startsAWord(name, query) || startsAWord(slug, query),
-                    !tooOld(provider["version"]?.stringValue, minimum: model["minCliVersion"]?.stringValue)
+            let kind = provider.kind
+            return provider.models.compactMap { model in
+                guard startsAWord(model.name, query) || startsAWord(model.slug, query),
+                    !tooOld(provider.version, minimum: model.minCliVersion)
                 else { return nil }
                 return (
-                    model["legacy"]?.boolValue == true,
+                    model.legacy,
                     ChatSuggestion(
-                        kind: "@", value: "model:\(kind)/\(slug)", title: name, detail: slug,
+                        kind: "@", value: "model:\(kind)/\(model.slug)", title: model.name, detail: model.slug,
                         section: String(localized: "Models"), provider: kind)
                 )
             }
@@ -910,16 +900,16 @@ enum ChatTagSuggestions {
     }
 
     /// The accounts that are ready, of a CLI with a choice of account. The machine refuses one the project turned off.
-    static func accounts(providers: [JSONValue], accounts: ProviderAccountList?, query: String) -> [ChatSuggestion] {
+    static func accounts(providers: [ProviderInfo], accounts: ProviderAccountList?, query: String) -> [ChatSuggestion] {
         guard !query.isEmpty, let accounts else { return [] }
-        let found = chatting(providers).flatMap { provider -> [ChatSuggestion] in
-            let kind = provider.text("kind")
+        let found = AgentCatalog.installedChats(providers).flatMap { provider -> [ChatSuggestion] in
+            let kind = provider.kind
             guard accounts.hasChoice(kind) else { return [] }
             return accounts.accounts(of: kind).filter { $0.enabled && $0.state == "ready" }.compactMap { entry in
-                let name = entry.name(provider: provider.text("name"))
+                let name = entry.name(provider: provider.name)
                 guard startsAWord(name, query) else { return nil }
                 return ChatSuggestion(
-                    kind: "@", value: "account:\(kind)/\(entry.id)", title: name, detail: provider.text("name"),
+                    kind: "@", value: "account:\(kind)/\(entry.id)", title: name, detail: provider.name,
                     section: String(localized: "Accounts"), provider: kind)
             }
         }

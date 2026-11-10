@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, writeFile } from
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
+import { sha256, tarGz, zip } from '../disk/test-archives.ts';
 import luaDescriptor from './lua-native-release.json' with { type: 'json' };
 import markdownDescriptor from './markdown-native-release.json' with { type: 'json' };
 import {
@@ -24,7 +25,6 @@ import {
 } from './native.ts';
 import descriptor from './php-native-release.json' with { type: 'json' };
 import sqlDescriptor from './sql-native-release.json' with { type: 'json' };
-import { sha256, tarGz, zip } from './test-archives.ts';
 import tomlDescriptor from './toml-native-release.json' with { type: 'json' };
 
 let folder = '';

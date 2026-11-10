@@ -1,10 +1,10 @@
 import Foundation
 import Observation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import SwiftUI
 
-/// How a machine is reached, as the heading over its projects says it.
 enum MachineLinkState: Equatable {
     case connected(relayed: Bool)
     /// Not answered yet, and no try to reach it failed.
@@ -27,7 +27,6 @@ enum MachineLinkState: Equatable {
 struct ProjectActivity: Equatable {
     /// The views that stand in the list, dividers left out.
     var views = 0
-    /// Of those, the chats, which is what the Chats project counts.
     var chats = 0
     /// Nodes waiting on a person that nobody snoozed.
     var needsYou = 0
@@ -37,7 +36,8 @@ struct ProjectActivity: Equatable {
     /// The state in words, as in "2 waiting · 1 working"; nil while nothing waits or works.
     var words: String? {
         let parts = [
-            needsYou > 0 ? String(localized: "\(needsYou) waiting", comment: "Views of a project that wait on you") : nil,
+            needsYou > 0
+                ? String(localized: "\(needsYou) waiting", comment: "Views of a project that wait on you") : nil,
             working > 0 ? String(localized: "\(working) working", comment: "Views of a project that work") : nil,
         ]
         let line = parts.compactMap { $0 }.joined(separator: " · ")
@@ -45,7 +45,6 @@ struct ProjectActivity: Equatable {
     }
 }
 
-/// The branch a project's folder is on and what changed in it, from `git.status`.
 struct ProjectGitLine: Equatable {
     /// Nil on a detached head.
     let branch: String?
@@ -55,13 +54,11 @@ struct ProjectGitLine: Equatable {
 
     var branchName: String { branch ?? String(localized: "Detached", comment: "Git, a checkout that is on no branch") }
 
-    /// The lines added and removed, as in "+126 −4"; nil while no line changed.
     var diff: String? {
         guard added + deleted > 0 else { return nil }
         return "+\(Format.number(Double(added))) \u{2212}\(Format.number(Double(deleted)))"
     }
 
-    /// Nil while nothing changed.
     var changedText: String? {
         changed == 0 ? nil : String(localized: "\(changed) changed", comment: "Files changed in a git checkout")
     }
@@ -82,10 +79,10 @@ struct ProjectOverviewRow: Identifiable {
     var activity: ProjectActivity?
     var git: ProjectGitLine?
     var id: UnifiedProjectRow.ID { row.id }
-    var isChats: Bool { NewChat.isChats(row.summary) }
+    var isChats: Bool { row.summary.isChats }
 
     var title: String {
-        isChats ? String(localized: "Chats") : row.summary.text("name", fallback: String(localized: "Untitled project"))
+        isChats ? String(localized: "Chats") : row.summary.name
     }
 
     var accessibilityID: String {
@@ -116,14 +113,13 @@ struct ProjectMachineGroup: Identifiable {
     var id: String { machine.id }
 }
 
-/// The open projects of every machine grouped under their machine, as the iPhone's Projects tab lists them.
 enum ProjectOverview {
-    static func activity(views: [JSONValue], attention: NowAttention, snoozed: Set<String>) -> ProjectActivity {
+    static func activity(views: [ProjectSidebarView], attention: NowAttention, snoozed: Set<String>) -> ProjectActivity {
         var activity = ProjectActivity()
-        for view in views where !WorkspaceViewSections.isDivider(view) {
+        for view in views where !view.isDivider {
             activity.views += 1
-            if view.text("kind") == "chat" { activity.chats += 1 }
-            for id in [view.text("id")] + view.list("nodes").map({ $0.text("id") }) where !id.isEmpty {
+            if view.kind == .chat { activity.chats += 1 }
+            for id in [view.id] + view.nodes.map(\.id) where !id.isEmpty {
                 let status = attention.statuses[id]
                 // A child that waits by its own status is counted as itself, so its parent is not counted again.
                 let childWaits = attention.waitingChildren[id].map { attention.statuses[$0] != .needsYou } ?? false
@@ -164,10 +160,10 @@ final class ProjectGitLines {
     func line(_ id: UnifiedProjectRow.ID) -> ProjectGitLine? { lines[id] }
 
     func refresh(_ rows: [UnifiedProjectRow], session: (Machine) -> SharedMachineSession) async {
-        let asked = rows.filter { $0.connected && !NewChat.isChats($0.summary) }
+        let asked = rows.filter { $0.connected && !$0.summary.isChats }
         let tasks = asked.map { row in
             let client = session(row.machine).rpc
-            let folder = row.summary.text("folder")
+            let folder = row.summary.folder
             return Task { await refresh(row.id, folder: folder, client: client) }
         }
         for task in tasks { await task.value }
@@ -177,7 +173,7 @@ final class ProjectGitLines {
         guard !folder.isEmpty, !asking.contains(id) else { return }
         asking.insert(id)
         defer { asking.remove(id) }
-        guard let answer = try? await client.request("git.status", payload: .object(["cwd": .string(folder)])),
+        guard let answer = try? await client.request(.gitStatus, payload: .object(["cwd": .string(folder)])),
             let status = try? answer.decoded(as: GitStatus.self)
         else { return }
         lines[id] = ProjectGitLine(status: status)

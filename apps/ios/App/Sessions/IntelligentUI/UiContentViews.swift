@@ -1,6 +1,7 @@
 import ImageIO
 import RuimteIntelligentUI
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// The thread's own code view; the highlighter follows the text as it grows, so nothing jumps when the node closes.
@@ -260,7 +261,6 @@ struct UiCompareView: View {
     }
 }
 
-/// An attachment of the chat as a picture, read through the chat's resources.
 enum UiPicture {
     case loading
     case image(UIImage)

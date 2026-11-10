@@ -1,14 +1,13 @@
 import type { ProjectClosingResult, ProjectSummary } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useStore } from 'zustand';
+import { dropClientLocal } from '@/clients/project/client-local';
+import { readLastProject, type LastProjectStorage } from '@/clients/project/last-project';
+import { closeListedProjectLocally, listProjects } from '@/clients/project/list';
+import { closingCount } from '@/clients/project/project-sessions';
+import { claimWindow } from '@/clients/project/window-claim';
 import { desktop } from '@/desktop/bridge';
-import { claimWindow } from '@/desktop/window-claim';
-import { ensureMachine } from '@/endpoint/reach';
-import { dropClientLocal } from '@/project/client-local';
-import { readLastProject, type LastProjectStorage } from '@/project/last-project';
 import { confirmLeavingConflict } from '@/project/leave-conflict';
-import { closeListedProjectLocally, listProjects } from '@/project/list';
-import { closingCount } from '@/project/project-sessions';
 import { ProjectSwitch, type SwitchOutcome, type SwitchRun, type SwitchState, type SwitchTarget } from '@/project/project-switch';
 import { showViewOnceThere } from '@/project/show-view-once';
 import { isOnlyTab, tabAfterClosing } from '@/project/window-tabs';
@@ -19,17 +18,17 @@ import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useSettings } from '@/state/settings';
 import { browserStorage } from '@/state/stored-json';
-import { useWindow, windowWorkspace } from '@/state/window';
 import { pageWindowTarget, type WindowTarget } from '@/state/window-target';
 import { transportFor } from '@/transport';
-import { enterWorkspace, leaveWorkspace, machineFor, showStart, type OpenRequest } from '@/transport/connections';
+import { fireAndForget, orNull } from '@/transport-api/transport';
+import { enterWorkspace, leaveWorkspace, machineFor, showStart, type OpenRequest } from '@/workspace/connections';
+import { ensureMachine } from '@/workspace/reach';
+import { useWindow, windowWorkspace } from '@/workspace/window';
 
-/* Where the window is going. */
 export type SwitchPlan =
     | { kind: 'project'; endpointId: string; projectId: string }
     | { kind: 'folder'; endpointId: string; folder: string; createFolder: boolean };
 
-/* The project the window had open when a switch began, which is what going back opens again. */
 export interface Whereabouts {
     endpointId: string;
     projectId: string;
@@ -38,11 +37,9 @@ export interface Whereabouts {
 /* The pieces a test stands in for; every call site in the app passes none of them. */
 export interface SwitchDeps {
     ensure(endpointId: string, signal: AbortSignal): Promise<string>;
-    /* The project on screen, or null on the start screen. */
     current(): Whereabouts | null;
     leave(): Promise<void>;
     enter(endpointId: string, request: OpenRequest): Promise<void>;
-    /* The start screen, which lets go of the project the window had with the shell as well. */
     toStart(): void;
     /* Asks the shell for this window to show a project (`claimWindow`); false while another window has it. */
     claim(project: Whereabouts | null): Promise<boolean>;
@@ -168,7 +165,6 @@ function targetOf(plan: SwitchPlan): SwitchTarget {
     };
 }
 
-/* Every way into a project passes here, so the window can say what it is waiting on. */
 async function begin(plan: SwitchPlan): Promise<SwitchOutcome> {
     const stays = plan.kind === 'project' && isOpenHere(plan.endpointId, plan.projectId);
     if (!stays && !(await confirmLeavingConflict())) {
@@ -258,7 +254,7 @@ export async function closeProjectOn(endpointId: string, summary: ProjectSummary
     }
     const transport = transportFor(endpointId);
     if (transport?.status === 'open') {
-        await transport.request('project.close', { projectId: summary.projectId }).catch(() => undefined);
+        await fireAndForget('project.close', transport.request('project.close', { projectId: summary.projectId }));
     }
     // Closing is this client's, whatever the machine does with it: the row moves here either way.
     closeListedProjectLocally(endpointId, summary);
@@ -273,11 +269,10 @@ export async function closingProject(endpointId: string, summary: ProjectSummary
     if (transport?.status !== 'open') {
         return null;
     }
-    const closing = await transport.request('project.closing', { projectId: summary.projectId }).catch(() => null);
+    const closing = await orNull('project.closing', transport.request('project.closing', { projectId: summary.projectId }));
     return closing === null ? null : closingCount(closing, local);
 }
 
-/* Removes a project from its machine. The open one is closed first, so its sessions end with it. */
 export async function deleteProject(endpointId: string, projectId: string, removeFiles: boolean): Promise<void> {
     // Deleting takes the unsaved edits of an open conflict with it, which the person already agreed to.
     if (isOpenHere(endpointId, projectId)) {
@@ -290,7 +285,7 @@ export async function deleteProject(endpointId: string, projectId: string, remov
     await machine.transport.request('project.delete', { projectId, removeFiles });
     // After the close, which wrote this client's copy on its way out.
     dropClientLocal(browserStorage(), endpointId, projectId);
-    await listProjects(endpointId).catch(() => undefined);
+    await fireAndForget('listProjects', listProjects(endpointId));
 }
 
 function untilFocused(): Promise<void> {

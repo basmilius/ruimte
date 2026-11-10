@@ -3,15 +3,15 @@
 A small figure on every agent's node of a canvas, and on a chat or a terminal open as a view of its
 own, which a person turns on in Settings, Pets. Off to start with.
 
-What a pet is and how it is drawn lives here, in `src/pets`: the figures, the paint, the shared beat,
+What a pet is and how it is drawn lives here, in `extensions/pets/client`: the figures, the paint, the shared beat,
 the sets, the kids, the strips a person added, and the pets of views (`ViewPet.tsx`). Where a pet
 stands on a canvas, along the bottom of the screen, and the visitor live in
-`src/canvas/pets`. Everything here is the client's: what a pet shows comes from the state the client
+`canvas` beside it. Everything here is the client's: what a pet shows comes from the state the client
 already holds (`chat.status`, a terminal's `session.status` from the CLI's hooks), and nothing reads
 the file system, the daemon's folders or a project file.
 
 - Which nodes have one: a chat, a design (through the chat under its own id, as its status dot), and a
-  terminal whose CLI reported through its hooks (`petNodeKey` in `canvas/pets/placement.ts`, `petOf` in `pet-state.ts`). A node
+  terminal whose CLI reported through its hooks (`petNodeKey` in `canvas/placement.ts`, `petOf` in `pet-state.ts`). A node
   a collapsed group hides has none.
 - What it shows: working, waiting on you, idle or stopped. Waiting is the "needs you" every count
   reads (`groupAttention`). A waiting pet has a black speech bubble with an orange exclamation mark
@@ -63,7 +63,7 @@ still have them, so a node a collapsed group hides has none here either.
   passes under. A walk ends only where no other pet rests or is headed, and one put down in another
   walks off at once.
 - The floor runs between what stands on it: the dock, the minimap and a prompt card low enough to
-  touch a pet (`PET_LEDGE_ATTRIBUTE` and `PET_WALL_ATTRIBUTE` in `attributes.ts`, the prompt stack by
+  touch a pet (`OVERLAY_LEDGE_ATTRIBUTE` and `OVERLAY_WALL_ATTRIBUTE` in `canvas/overlay-attributes.ts` of the client, the prompt stack by
   its own attribute). A pet hops onto the dock and off again at its ends; the minimap it only walks
   up to. A dock that hides, or a prompt card that comes up over it, sends the pets on it to the floor
   beside it.

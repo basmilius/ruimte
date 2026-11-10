@@ -94,7 +94,6 @@ function packageSources(starts: readonly string[]): string[] {
     return [...found].map((folder) => join(folder, 'src')).filter((source) => existsSync(source));
 }
 
-/* The folder of `name` that Node's lookup finds from `folder`, the nearest `node_modules` up that holds it. */
 function installedFrom(folder: string, name: string): string | null {
     for (let current = folder; ; current = dirname(current)) {
         const candidate = join(current, 'node_modules', name);

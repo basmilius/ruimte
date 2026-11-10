@@ -7,10 +7,11 @@ import { RenderSceneResultSchema, type ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
 import { DiagramStore } from '../projects/diagram-store.ts';
 import { DrawingStore } from '../projects/drawing-store.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { registerDiagramHandlers } from './diagram.ts';
-import { registerDrawingHandlers } from './drawing.ts';
+import { diagramArea } from './diagram.ts';
+import { drawingArea } from './drawing.ts';
 import { askOnce } from './test-helpers.ts';
 
 let root: string;
@@ -25,7 +26,7 @@ beforeEach(async () => {
     const folder = join(root, 'repo');
     await mkdir(folder);
     const watch = new FakeWatch();
-    projects = new ProjectStore(join(root, 'home'), projectLinks({ viewFiles: () => [drawings, diagrams] }), watch);
+    projects = new ProjectStore(join(root, 'home'), projectLinks({ viewFiles: () => [drawings, diagrams] }), projectOverlays(join(root, 'home')), watch);
     drawings = new DrawingStore(projects, watch);
     diagrams = new DiagramStore(projects, watch);
     const opened = await projects.openProject({ folder });
@@ -39,8 +40,8 @@ beforeEach(async () => {
         ]
     });
     dispatcher = new Dispatcher();
-    registerDrawingHandlers(dispatcher, drawings);
-    registerDiagramHandlers(dispatcher, diagrams);
+    drawingArea({ store: drawings }).handlers?.(dispatcher);
+    diagramArea({ store: diagrams }).handlers?.(dispatcher);
 });
 
 afterEach(async () => {

@@ -3,7 +3,9 @@ import { isAbsolute, resolve } from 'node:path';
 import { narrowerMode } from '@adecore/agents/providers';
 import { isWithin } from '@adecore/utils/path';
 import {
+    chatActivity,
     dueTimesBetween,
+    isDeclined,
     nextDue,
     ROUTINE_LIMITS,
     type AgentRoutine,
@@ -24,7 +26,7 @@ import {
 } from '@ruimte/contracts';
 import { PUBLISHED_INLINE_NOTE } from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';
-import type { OutboxEntry, OutboxWork, RoutineRunEntry } from '../outbox/outbox.ts';
+import type { OutboxWork, RoutineRunEntry } from '../outbox/outbox.ts';
 import type { RoutineAuthorStore, RoutineRunStore } from './routine-runs.ts';
 import { RoutineError, type RoutinesDocument, type RoutineStore, type StoredRoutine } from './routine-store.ts';
 
@@ -47,7 +49,6 @@ export interface AgentRunStart {
     brief?: string;
 }
 
-/* The project folder a command runs in, and what it printed when it ended. */
 export interface CommandResult {
     exitCode: number;
     output: Uint8Array;
@@ -62,13 +63,12 @@ interface RoutineDeps {
     projects(): Promise<Array<{ projectId: string; name: string; folder: string }>>;
     outbox: {
         enqueue(projectId: string, target: string, work: OutboxWork, notBefore?: number): Promise<void>;
-        list(): OutboxEntry[];
+        ofKind(kind: 'routine-run'): RoutineRunEntry[];
         remove(id: string): Promise<void>;
     };
     agents: {
         start(start: AgentRunStart): Promise<void>;
         info(chatId: string): ChatInfo | undefined;
-        /* Whether a start of this chat is still owed. */
         starting(chatId: string): boolean;
         /* Opens a turn in a chat a person already has; false while it is in one, or gone. */
         continueIn(chatId: string, message: RunMessage, routine: AgentRoutine): Promise<boolean>;
@@ -93,17 +93,9 @@ interface RoutineDeps {
     log?: (line: string) => void;
 }
 
+/* The outbox target of a routine's runs. Not an opener, though it shares the prefix. */
 function routineTarget(projectId: string, routineId: string): string {
     return `routine:${projectId}:${routineId}`;
-}
-
-/* The id a run's chat is opened by, which keeps it in the project without a canvas and outlives the routine. */
-export function routineOpener(routineId: string): string {
-    return `routine:${routineId}`;
-}
-
-export function isRoutineOpener(openedBy: string): boolean {
-    return openedBy.startsWith('routine:');
 }
 
 /* Everything an approval covers, so a change to any of it asks again. Title and output key only label the run. */
@@ -131,6 +123,7 @@ export function digestOf(routine: Routine): string {
         .slice(0, 32);
 }
 
+/* The key of a routine's approval under `$RUIMTE_HOME/command-approvals`. Not an opener, though it shares the prefix. */
 function approvalKey(routineId: string): string {
     return `routine:${routineId}`;
 }
@@ -151,10 +144,11 @@ const RESTARTED = 'The machine restarted during the run';
 
 /* The state of an agent run as its chat says it now; idle before the run's turn ended is still the start. */
 function chatState(info: ChatInfo, run: Pick<RoutineRun, 'state' | 'turnsBefore'>): { state: RoutineRunState; limitUntil?: number; error?: string } {
-    if (info.status === 'needs-you') {
+    const activity = chatActivity(info);
+    if (activity === 'waiting') {
         return { state: 'needs-you' };
     }
-    if (info.status === 'running' || info.delegating === true || (info.background?.length ?? 0) > 0) {
+    if (activity === 'working' || activity === 'delegating' || activity === 'background') {
         return { state: 'running' };
     }
     if (info.limit !== undefined) {
@@ -210,14 +204,6 @@ function runBrief(
         );
     }
     return lines.join('\n');
-}
-
-/*
- * The brief goes beside the prompt, except after a slash command: a CLI hears nothing in front of one,
- * so it rides in the message as the command's arguments.
- */
-export function runMessage(prompt: string, brief: string): RunMessage {
-    return prompt.startsWith('/') ? { prompt: `${prompt}\n\n---\n${brief}` } : { prompt, brief };
 }
 
 /*
@@ -480,7 +466,7 @@ export class Routines {
     /* Owes the next time of every routine of a project that runs here, and drops what is owed for one that no longer does. */
     async schedule(projectId: string): Promise<void> {
         const document = await this.deps.store.fresh(projectId);
-        const owed = this.deps.outbox.list().filter((entry) => entry.kind === 'routine-run' && entry.projectId === projectId);
+        const owed = this.deps.outbox.ofKind('routine-run').filter((entry) => entry.projectId === projectId);
         const known = new Set(document.routines.map((stored) => routineTarget(projectId, stored.routine.id)));
         for (const entry of owed) {
             if (!known.has(entry.target)) {
@@ -501,10 +487,10 @@ export class Routines {
     private async owe(projectId: string, folder: string, stored: StoredRoutine, handled?: string): Promise<void> {
         const target = routineTarget(projectId, stored.routine.id);
         const now = this.deps.now();
-        const owed = this.deps.outbox.list().filter((entry) => entry.kind === 'routine-run' && entry.target === target && entry.id !== handled);
+        const owed = this.deps.outbox.ofKind('routine-run').filter((entry) => entry.target === target && entry.id !== handled);
         const next = this.nextOf(folder, stored, now);
         // A time that passed while the machine was off or asleep is still owed, so it runs once now.
-        const pending = owed.find((entry) => entry.kind === 'routine-run' && entry.payload.due <= now);
+        const pending = owed.find((entry) => entry.payload.due <= now);
         if (pending !== undefined && next !== null) {
             for (const entry of owed) {
                 if (entry !== pending) {
@@ -513,7 +499,7 @@ export class Routines {
             }
             return;
         }
-        if (owed.length === 1 && owed[0]!.kind === 'routine-run' && owed[0]!.payload.due === next) {
+        if (owed.length === 1 && owed[0]!.payload.due === next) {
             return;
         }
         for (const entry of owed) {
@@ -539,7 +525,6 @@ export class Routines {
         return this.deps.approvals.has(folder, approvalKey(stored.routine.id), digestOf(stored.routine));
     }
 
-    /* Whether the newest run that started still runs or waits on a person. */
     private busy(projectId: string, routineId: string): boolean {
         const latest = this.deps.runs.of(projectId, routineId).find((run) => run.state !== 'skipped');
         return latest !== undefined && LIVE.has(this.liveState(latest).state);
@@ -607,7 +592,7 @@ export class Routines {
 
     private async beginAgent(projectId: string, folder: string, stored: StoredRoutine, routine: AgentRoutine, base: RoutineRun): Promise<RoutineRun> {
         const previous = this.deps.output.latest(projectId, routine.outputKey);
-        const message = runMessage(routine.prompt, runBrief(routine, formatDue(base.due, this.deps.timeZone()), previous, base.kind));
+        const message: RunMessage = { prompt: routine.prompt, brief: runBrief(routine, formatDue(base.due, this.deps.timeZone()), previous, base.kind) };
         if (routine.perRun === 'continue') {
             const last = this.deps.runs.of(projectId, routine.id).find((run) => run.chatId !== undefined);
             if (last?.chatId !== undefined && (await this.deps.agents.exists(last.chatId))) {
@@ -691,7 +676,6 @@ export class Routines {
                 };
             });
         const latest = this.deps.output.latest(projectId, routine.outputKey);
-        const declined = local.declined === digest;
         return {
             routine,
             projectId,
@@ -700,7 +684,7 @@ export class Routines {
             local,
             digest,
             approved,
-            ...(approved || declined ? {} : { held: madeBy === undefined ? ('outside' as const) : ('agent' as const) }),
+            ...(approved || isDeclined({ local, digest }) ? {} : { held: madeBy === undefined ? ('outside' as const) : ('agent' as const) }),
             ...(madeBy === undefined ? {} : { madeBy }),
             next: this.nextOf(folder, stored, this.deps.now()),
             runs,

@@ -1,5 +1,5 @@
 import { desktop } from '@/desktop/bridge';
-import { FALLBACK_LANGUAGE, LANGUAGE_SYSTEM, languageOf, type AppLanguage } from '@/i18n/languages';
+import { FALLBACK_LANGUAGE, LANGUAGE_SYSTEM, languageOf, type AppLanguage } from '@/state/languages';
 import { useSettings } from '@/state/settings';
 
 /*

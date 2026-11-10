@@ -15,7 +15,6 @@ import {
     savedLaunches,
     splitFolder,
     suggestionSource,
-    uniqueId,
     withImported,
     withoutDraft
 } from './editing.ts';
@@ -83,7 +82,6 @@ describe('saving', () => {
         const draft = newDraft('new:1', 'task');
         draft.entry = { ...draft.entry, name: 'Dev', command: 'bun run dev' };
         expect(savedLaunches([draftOf(launch('dev')), draft]).map((entry) => entry.id)).toEqual(['dev', 'dev-2']);
-        expect(uniqueId('!!!', new Set())).toBe('launch');
     });
 
     test('the first launch the dialog cannot save', () => {

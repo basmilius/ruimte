@@ -3,6 +3,7 @@ import { dirname, extname, join } from 'node:path';
 import { writeAtomic } from '@adecore/utils/fs';
 import { isRecord } from '@adecore/utils/record';
 import { designFolderOf, designPlaces, isSharedDesign, type DesignPlace, type ProjectView } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 
 /*
  * The moves this daemon started and has not settled yet, under `private` so git never sees it. Only a
@@ -15,14 +16,13 @@ async function exists(path: string): Promise<boolean> {
     return (await lstat(path).catch(() => null)) !== null;
 }
 
-/* A document as far as where its designs go: its views, and which of them are shared. */
 export interface DesignSides {
     views: readonly ProjectView[];
     shared: readonly string[];
 }
 
 /* A design whose folder goes from one side to the other, both relative to the project folder. */
-export interface DesignMove {
+interface DesignMove {
     id: string;
     name: string;
     from: string;
@@ -78,7 +78,6 @@ function movableOf({ views }: DesignSides): DesignPlace[] {
     return designPlaces(views).filter((design) => !design.path.includes('/'));
 }
 
-/* The designs of `after` whose folder is on another side than in `before`. */
 function movesOf(before: DesignSides, after: DesignSides): DesignMove[] {
     const was = new Map(movableOf(before).map((design) => [design.id, designFolderOf(design, isSharedDesign(design, before.shared))]));
 
@@ -205,7 +204,7 @@ async function mergeFolder(from: string, to: string): Promise<void> {
         }
     }
 
-    await rmdir(from).catch(() => undefined);
+    await bestEffort('rmdir', rmdir(from));
 }
 
 /*

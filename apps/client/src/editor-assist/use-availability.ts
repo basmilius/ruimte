@@ -1,6 +1,6 @@
 import type { EditorAssistStatusResult } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useSettings } from '@/state/settings';
 import { transportFor } from '@/transport';
 import { editorAssistClientFor } from './client';

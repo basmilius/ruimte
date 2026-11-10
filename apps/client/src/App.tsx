@@ -1,101 +1,35 @@
-import { ErrorBoundary, ShortcutHints, UIProvider, lazyDialog, lazyNamed, prefetcher, LazyBoundary } from '@adecore/ui';
+import { ErrorBoundary, ShortcutHints, UIProvider, lazyNamed, prefetcher, LazyBoundary } from '@adecore/ui';
 import i18next from 'i18next';
 import { useEffect, type ReactNode } from 'react';
+import { loadClientActionsWithWorkspace } from '@/action-port/client-action-loader';
+import { startMachineUpdate } from '@/controllers/machine-update';
 import { desktop, machineMode } from '@/desktop/bridge';
-import { HostDialogs, HostOverlays } from '@/extensions/host/host-dialogs';
 import '@/extensions/built-in';
 import { startExtensions } from '@/extensions/watch';
-import { formatSource } from '@/format/source';
 import { useProjectSwitch } from '@/project/open';
-import { closeLinkRequest, useLinkRequest } from '@/pulsar/link-request';
+import { DormantScreen, ProjectSwitchScreen } from '@/project/ProjectSwitchScreen';
+import { windowDialogs } from '@/registry/dialogs';
+import { allSettingsSections } from '@/settings/sections';
 import { useAppShortcuts } from '@/shell/app-shortcuts';
-import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
-import { MachineUpdateDialog } from '@/shell/MachineUpdateDialog';
 import { useNativeMenu } from '@/shell/menu/native-menu';
-import { DormantScreen, ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
-import { allSettingsSections } from '@/shell/settings/sections';
 import { StartScreen } from '@/shell/StartScreen';
-import { FLOATING_FAILURE, failed } from '@/shell/surface-failure';
-import { Toasts } from '@/shell/Toasts';
-import { watchDrags } from '@/shell/view-drag';
-import { useConsent } from '@/state/consent';
 import { useProject } from '@/state/project';
-import { useReleaseNotes } from '@/state/release-notes';
 import { useSettings } from '@/state/settings';
 import { useUi, type SettingsSectionId } from '@/state/ui';
 import { startUpdates } from '@/state/updates';
-import { useWindow } from '@/state/window';
-import { ChatScopeProvider } from '@/transport/ChatScopeProvider';
+import { FLOATING_FAILURE, failed } from '@/surface/surface-failure';
+import { watchDrags } from '@/surface/view-drag';
+import { fireAndForget } from '@/transport-api/transport';
+import { ChatScopeProvider } from '@/workspace/ChatScopeProvider';
+import { useWindow } from '@/workspace/window';
 
-const WorkspaceShell = lazyNamed(() => import('@/shell/WorkspaceShell'), 'WorkspaceShell');
+const WorkspaceShell = lazyNamed(async () => {
+    const [{ installWorkspace }] = await Promise.all([import('@/wiring/workspace'), loadClientActionsWithWorkspace()]);
+    installWorkspace();
+
+    return import('@/shell/WorkspaceShell');
+}, 'WorkspaceShell');
 const FirstRunScreen = lazyNamed(() => import('@/onboarding/FirstRunScreen'), 'FirstRunScreen');
-const CommandPalette = lazyDialog(
-    () => import('@/shell/CommandPalette'),
-    'CommandPalette',
-    useUi,
-    (s) => s.paletteOpen
-);
-const SettingsDialog = lazyDialog(
-    () => import('@/shell/SettingsDialog'),
-    'SettingsDialog',
-    useUi,
-    (s) => s.settings.open
-);
-const UsageDialog = lazyDialog(
-    () => import('@/shell/usage/UsageDialog'),
-    'UsageDialog',
-    useUi,
-    (s) => s.usageOpen
-);
-const ModelsDialog = lazyDialog(
-    () => import('@/shell/models/ModelsDialog'),
-    'ModelsDialog',
-    useUi,
-    (s) => s.modelsOpen
-);
-const LoginDialog = lazyDialog(
-    () => import('@/chat/LoginDialog'),
-    'LoginDialog',
-    useUi,
-    (s) => s.login !== null
-);
-const ConsentDialog = lazyDialog(
-    () => import('@/shell/tunnels/ConsentDialog'),
-    'ConsentDialog',
-    useConsent,
-    (s) => s.requests.length > 0
-);
-const ProviderCommandDialog = lazyDialog(
-    () => import('@/chat/ProviderCommandDialog'),
-    'ProviderCommandDialog',
-    useUi,
-    (s) => s.providerCommand !== null
-);
-const TemplateRequestDialog = lazyDialog(
-    () => import('@/language/TemplateDialog'),
-    'TemplateRequestDialog',
-    useUi,
-    (s) => s.templateRequest !== null
-);
-const OnboardingDialog = lazyDialog(
-    () => import('@/onboarding/OnboardingDialog'),
-    'OnboardingDialog',
-    useUi,
-    (s) => s.onboarding !== null
-);
-const AgentIntegrationsDialog = lazyDialog(
-    () => import('@/shell/AgentIntegrationsDialog'),
-    'AgentIntegrationsDialog',
-    useUi,
-    (s) => s.agentIntegrations
-);
-const ReleaseNotesDialog = lazyDialog(
-    () => import('@/shell/ReleaseNotesDialog'),
-    'ReleaseNotesDialog',
-    useReleaseNotes,
-    (s) => s.open
-);
-
 const BLANK = <div className="h-full w-full bg-bg" />;
 
 /* The start screen, or the blank frame before it while a cold start is still trying the last project. */
@@ -107,7 +41,7 @@ function WindowContent() {
     // A requested workspace loads beside its connection; an idle start screen only prefetches it.
     useEffect(() => {
         if (opening) {
-            void WorkspaceShell.preload().catch(() => undefined);
+            void fireAndForget('WorkspaceShell.preload', WorkspaceShell.preload());
         } else if (onStartScreen) {
             void prefetcher.prefetch(WorkspaceShell.preload);
         }
@@ -138,13 +72,6 @@ function WindowContent() {
     );
 }
 
-/* The approval a `/link` address opened, outside every workspace. The web client shows it before a machine is picked. */
-function LinkRequestDialog() {
-    const open = useLinkRequest((s) => s.open);
-    const code = useLinkRequest((s) => s.code);
-    return <LinkMachineDialog open={open} initialCode={code} onOpenChange={(next) => (next ? undefined : closeLinkRequest())} />;
-}
-
 /* A surface that floats over the window, so its failure is a card and the rest stays usable. */
 function Floating({ surface, children }: { surface: string; children: ReactNode }) {
     return (
@@ -158,6 +85,7 @@ export function App() {
     const name = useProject((s) => s.current?.name ?? null);
     useAppShortcuts();
     useNativeMenu();
+    const dialogs = windowDialogs.useAll();
 
     // The Electron window has no title of its own, so this names it as well.
     useEffect(() => {
@@ -165,7 +93,7 @@ export function App() {
     }, [name]);
 
     // Once, with the preference as it stands. The shell reads it again from About.
-    useEffect(() => startUpdates(useSettings.getState().updatesAutoDownload, useSettings.getState().updatesTrack) ?? undefined, []);
+    useEffect(() => startUpdates(useSettings.getState().updatesAutoDownload, useSettings.getState().updatesTrack, startMachineUpdate) ?? undefined, []);
 
     // Every embedded page steps aside while a drag lasts, so it never swallows a drop meant for the cell under it.
     useEffect(() => watchDrags(), []);
@@ -182,50 +110,21 @@ export function App() {
     );
 
     return (
-        <UIProvider i18n={i18next} formatSource={formatSource}>
+        <UIProvider i18n={i18next}>
             <ChatScopeProvider>
                 {/* The last resort, for a failure outside every view, node and panel. It unmounts the
                 parked browser pages as well, which is why everything below carries a boundary of its own. */}
                 <ErrorBoundary label={i18next.t('common:state.error')} className="fixed inset-0 bg-bg" reload>
                     <WindowContent />
-                    <Floating surface="palette">
-                        <CommandPalette />
-                    </Floating>
-                    <Floating surface="settings">
-                        <SettingsDialog />
-                    </Floating>
-                    <UsageDialog />
-                    <ModelsDialog />
-                    <Floating surface="toasts">
-                        <Toasts />
-                        <HostDialogs />
-                        <HostOverlays />
-                    </Floating>
-                    <ReleaseNotesDialog />
-                    <Floating surface="machineUpdate">
-                        <MachineUpdateDialog />
-                    </Floating>
-                    <Floating surface="link">
-                        <LinkRequestDialog />
-                    </Floating>
-                    <Floating surface="onboarding">
-                        <OnboardingDialog />
-                    </Floating>
-                    <Floating surface="agentIntegrations">
-                        <AgentIntegrationsDialog />
-                    </Floating>
-                    <Floating surface="login">
-                        <LoginDialog />
-                    </Floating>
-                    <Floating surface="consent">
-                        <ConsentDialog />
-                    </Floating>
-                    <Floating surface="providerCommand">
-                        <ProviderCommandDialog />
-                    </Floating>
-                    <Floating surface="templateRequest">
-                        <TemplateRequestDialog />
-                    </Floating>
+                    {dialogs.map((dialog) =>
+                        dialog.surface === null ? (
+                            <dialog.component key={dialog.id} />
+                        ) : (
+                            <Floating key={dialog.id} surface={dialog.surface}>
+                                <dialog.component />
+                            </Floating>
+                        )
+                    )}
                     <Floating surface="shortcutHints">
                         <ShortcutHints />
                     </Floating>

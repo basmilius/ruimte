@@ -1,14 +1,10 @@
 import Foundation
 import Observation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 
-/// When a machine keeps itself from sleeping, as `endpoint.info` names it.
-enum KeepAwakeMode: String, CaseIterable, Identifiable, Sendable {
-    case off, working, always
-
-    var id: Self { self }
-
+extension KeepAwakeMode {
     var label: String {
         switch self {
         case .off: String(localized: "Off", comment: "Keep awake setting")
@@ -36,11 +32,7 @@ struct MachineClosedLid: Equatable, Sendable {
     var ruleInstalled: Bool
 }
 
-/// What a restart of the app on a machine would end, from `endpoint.installUpdate`.
-struct MachineWork: Equatable, Sendable {
-    let terminals: Int
-    let agents: Int
-
+extension MachineWork {
     var idle: Bool { terminals == 0 && agents == 0 }
 
     var summary: String {
@@ -53,40 +45,15 @@ struct MachineWork: Equatable, Sendable {
     }
 }
 
-extension MachineWork {
-    init(_ value: JSONValue?) {
-        self.init(
-            terminals: Int(value?["terminals"]?.numberValue ?? 0), agents: Int(value?["agents"]?.numberValue ?? 0))
-    }
-}
-
-/// Where the desktop app on a machine stands with its next version. The status is read as a plain string, so a step
-/// a newer app adds reads as nothing to act on instead of hiding the machine.
-struct MachineUpdate: Equatable, Sendable {
-    let status: String
-    let version: String?
-    let currentVersion: String?
-    let percent: Double?
-    let error: String?
-    /// False while no app on the machine reports, which is when the update has to be done on the computer itself.
-    let app: Bool
-
-    init?(_ value: JSONValue?) {
-        guard let value, let status = value["status"]?.stringValue else { return nil }
-        self.status = status
-        version = value["version"]?.stringValue
-        currentVersion = value["currentVersion"]?.stringValue
-        percent = value["percent"]?.numberValue
-        error = value["error"]?.stringValue
-        app = value["app"]?.boolValue ?? false
-    }
-
+/// Where the desktop app on a machine stands with its next version. The status is a plain string, so a step a newer
+/// app adds reads as nothing to act on instead of hiding the machine. `app` is false while no app on the machine
+/// reports, which is when the update has to be done on the computer itself.
+extension EndpointUpdate {
     /// The steps the machine takes an install for; it downloads first where it has not yet.
     var installable: Bool { ["available", "downloading", "ready"].contains(status) }
 
     private var named: String { version.map { "Ruimte \($0)" } ?? String(localized: "A new version of Ruimte") }
 
-    /// The line over a machine's page, nil when there is nothing to tell.
     var headline: String? {
         switch status {
         case "available": String(localized: "\(named) is available on this machine.")
@@ -98,13 +65,12 @@ struct MachineUpdate: Equatable, Sendable {
             }
         case "ready": String(localized: "\(named) is ready on this machine.")
         case "error":
-            error.map { String(localized: "Could not update: \($0)") }
+            error.present.map { String(localized: "Could not update: \($0)") }
                 ?? String(localized: "Could not update this machine.")
         default: nil
         }
     }
 
-    /// What installing does from here; nil when it cannot happen from a phone.
     var action: String? {
         guard installable, app else { return nil }
         return status == "ready"
@@ -112,13 +78,11 @@ struct MachineUpdate: Equatable, Sendable {
             : String(localized: "Update", comment: "Button that installs an update")
     }
 
-    /// Said under the headline when the app is not there to install it.
     var note: String? {
         installable && !app ? String(localized: "Open Ruimte on the machine to install it there.") : nil
     }
 
-    /// What the person reads before the restart: what installs and what that ends on the machine right now.
-    static func restartQuestion(update: MachineUpdate?, work: MachineWork, machine: String) -> String {
+    static func restartQuestion(update: EndpointUpdate?, work: MachineWork, machine: String) -> String {
         let named = update?.version.map { "Ruimte \($0)" } ?? String(localized: "The update")
         let installs =
             update?.status == "ready"
@@ -134,12 +98,9 @@ struct MachineUpdate: Equatable, Sendable {
     }
 }
 
-/// Where installing an update stands, from the first question to the restart.
 enum MachineInstallStep: Equatable, Sendable {
     case idle
-    /// Asking the machine what a restart would end.
     case asking
-    /// Waiting for the person, with what ends.
     case confirming(MachineWork)
     case installing
     /// The app was asked to install; the machine goes away and comes back on the new version.
@@ -151,19 +112,16 @@ enum MachineInstallStep: Equatable, Sendable {
 /// page shows it. It also sets keep awake, the door, the name and the icon, and runs the two asks of an update install.
 @MainActor @Observable
 final class MachineEndpoint {
-    private(set) var info: JSONValue?
-    private(set) var update: MachineUpdate?
-    /// Nil on a machine that cannot hold a block on sleep.
+    private(set) var info: EndpointInfo?
+    private(set) var update: EndpointUpdate?
     private(set) var keepAwake: MachineKeepAwake?
     /// Nil where the machine does not offer keep awake with the lid closed, which only a Mac does.
     private(set) var closedLid: MachineClosedLid?
-    /// The last round trip in milliseconds, nil while unmeasured or after a failed one.
     private(set) var latency: Int?
     private(set) var lastConnected: Date?
     private(set) var install = MachineInstallStep.idle
     private(set) var savingKeepAwake = false
     private(set) var savingLanDoor = false
-    /// Why the last action failed, until the next one.
     var problem: String?
     @ObservationIgnored private let client: any MachineRequesting
     @ObservationIgnored private let machineID: String
@@ -171,8 +129,16 @@ final class MachineEndpoint {
     @ObservationIgnored private let clock: @MainActor () -> Date
     @ObservationIgnored private let learnedLan: @MainActor (LanDoorAddress?) -> Void
     @ObservationIgnored private let heardUsage: @MainActor (Bool) -> Void
-    @ObservationIgnored private var subscriptions: [() -> Void] = []
-    @ObservationIgnored private var reading: Task<Void, Never>?
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.endpointChanged, raw: { [weak self] value in self?.merge(value) }),
+            .apply(.endpointUpdateChanged, as: EndpointUpdateChangedEvent.self) { [weak self] event in
+                self?.update = event.update
+            },
+        ],
+        connection: { [weak self] connected in self?.connectionChanged(connected) },
+        read: { [weak self] in await self?.refresh() })
     @ObservationIgnored private var connected = false
     @ObservationIgnored private var generation = 0
 
@@ -196,72 +162,47 @@ final class MachineEndpoint {
 
     private var lastConnectedKey: String { "ruimte.ios.machine.lastConnected.\(machineID)" }
 
-    var version: String? { info?["version"]?.stringValue }
-    var label: String? { info?["label"]?.stringValue }
-    var icon: MachineIcon? {
-        guard let value = info?["icon"], value != .null, let kind = value["kind"]?.stringValue,
-            let name = value["value"]?.stringValue
-        else { return nil }
-        return MachineIcon(kind: kind, value: name)
-    }
-    /// Whether this machine hands out browser and device pictures.
-    var streamingAllowed: Bool { info?["streamingAllowed"]?.boolValue ?? true }
+    var version: String? { info?.version }
+    var label: String? { info?.label }
+    var icon: MachineIcon? { info?.icon.present }
+    var streamingAllowed: Bool { info?.streamingAllowed ?? true }
     /// Whether a person keeps the door on the local network open, which it is unless the machine says otherwise; nil
     /// while nothing was read.
-    var lanDoor: Bool? { info.map { $0["lanDoor"]?.boolValue ?? true } }
+    var lanDoor: Bool? { info.map { $0.lanDoor ?? true } }
     /// A flag the machine started with decides the door, so the switch changes nothing.
-    var lanDoorFixed: Bool { info?["lanDoorFixed"]?.boolValue == true }
+    var lanDoorFixed: Bool { info?.lanDoorFixed == true }
     /// `win32`, `darwin` or `linux`: the style of the paths the machine writes.
-    var platform: String? { info?["platform"]?.stringValue }
+    var platform: String? { info?.platform }
     /// Where browsing starts on the machine, as a person wrote it; nil while unset, which is its home folder.
     var startFolder: String? {
-        let folder = info?["startFolder"]?.stringValue ?? ""
+        let folder = info?.startFolder ?? ""
         return folder.isEmpty ? nil : folder
     }
     /// A machine from before the start folder has no request to set it, and the row stays away.
     var canSetStartFolder: Bool { (client as? MachineFeatures)?.answers(.endpointSetStartFolder) == true }
 
-    func start() {
-        guard subscriptions.isEmpty else { return }
-        subscriptions = [
-            client.subscribe(.endpointChanged) { [weak self] value in
-                self?.merge(value)
-            },
-            client.subscribe(.endpointUpdateChanged) { [weak self] value in
-                guard let self, let update = MachineUpdate(value["update"]) else { return }
-                self.update = update
-            },
-            client.observeConnection { [weak self] connected in
-                self?.connectionChanged(connected)
-            },
-        ]
-    }
+    func start() { live.start() }
 
     func stop() {
-        subscriptions.forEach { $0() }
-        subscriptions.removeAll()
-        reading?.cancel()
-        reading = nil
+        live.stop()
         generation += 1
         connected = false
     }
 
-    /// Reads `endpoint.info` again; the page calls it on a pull, the connection on every link.
     func refresh() async {
         generation += 1
         let operation = generation
-        guard let value = try? await client.request(.endpointInfo), operation == generation else { return }
-        apply(value)
+        guard let value = try? await client.request(.endpointInfo), operation == generation,
+            let next = try? value.decoded(as: EndpointInfo.self)
+        else { return }
+        apply(next)
     }
 
     private func connectionChanged(_ connected: Bool) {
         self.connected = connected
         remember()
-        reading?.cancel()
         latency = nil
-        guard connected else { return }
-        if install == .started { install = .idle }
-        reading = Task { [weak self] in await self?.refresh() }
+        if connected, install == .started { install = .idle }
     }
 
     private func remember() {
@@ -271,40 +212,48 @@ final class MachineEndpoint {
     }
 
     private func apply(_ value: JSONValue) {
-        info = value
-        update = MachineUpdate(value["update"])
-        keepAwake = Self.keepAwake(in: value)
-        closedLid = Self.closedLid(in: value)
-        learnedLan(LanDoorAddress(value["lan"]))
-        heardUsage(Self.usageStats(in: value))
+        guard let next = try? value.decoded(as: EndpointInfo.self) else { return }
+        apply(next)
+    }
+
+    private func apply(_ next: EndpointInfo) {
+        info = next
+        update = next.update
+        keepAwake = Self.keepAwake(in: next)
+        closedLid = Self.closedLid(in: next)
+        learnedLan(LanDoorAddress(next.lan.present))
+        heardUsage(Self.usageStats(in: next))
     }
 
     /// Absent reads as on, as `EndpointInfoSchema` has it.
-    static func usageStats(in value: JSONValue) -> Bool { value["usageStats"]?.boolValue ?? true }
+    static func usageStats(in info: EndpointInfo) -> Bool { info.usageStats ?? true }
 
-    /// An event leaves out what it does not change, and never carries whether keep awake is available.
+    private static func patched(_ info: EndpointInfo, with changes: [String: JSONValue]) -> EndpointInfo? {
+        guard var fields = (try? JSONValue(encoding: info))?.objectValue else { return nil }
+        for (key, change) in changes { fields[key] = change }
+        return try? JSONValue.object(fields).decoded(as: EndpointInfo.self)
+    }
+
+    /// An event leaves out what it does not change, and never carries whether keep awake is available or the update.
     private func merge(_ value: JSONValue) {
-        guard var merged = info?.objectValue, let changes = value.objectValue else { return }
-        for (key, change) in changes { merged[key] = change }
-        apply(.object(merged).setting("update", info?["update"]))
+        guard let info, var changes = value.objectValue else { return }
+        changes["update"] = nil
+        guard let merged = Self.patched(info, with: changes) else { return }
+        apply(merged)
     }
 
-    static func keepAwake(in value: JSONValue) -> MachineKeepAwake? {
-        guard value["keepAwakeAvailable"]?.boolValue == true,
-            let mode = value["keepAwake"]?.stringValue.flatMap(KeepAwakeMode.init(rawValue:))
-        else { return nil }
+    static func keepAwake(in info: EndpointInfo) -> MachineKeepAwake? {
+        guard info.keepAwakeAvailable == true, let mode = info.keepAwake else { return nil }
         return MachineKeepAwake(
-            mode: mode, onBattery: value["keepAwakeOnBattery"]?.boolValue ?? false,
-            display: value["keepAwakeDisplay"]?.boolValue ?? false,
-            lidClosed: value["keepAwakeLidClosed"]?.boolValue ?? false)
+            mode: mode, onBattery: info.keepAwakeOnBattery ?? false, display: info.keepAwakeDisplay ?? false,
+            lidClosed: info.keepAwakeLidClosed ?? false)
     }
 
-    static func closedLid(in value: JSONValue) -> MachineClosedLid? {
-        guard value["keepAwakeLidAvailable"]?.boolValue == true else { return nil }
-        return MachineClosedLid(ruleInstalled: value["keepAwakeLidRule"]?.boolValue == true)
+    static func closedLid(in info: EndpointInfo) -> MachineClosedLid? {
+        guard info.keepAwakeLidAvailable == true else { return nil }
+        return MachineClosedLid(ruleInstalled: info.keepAwakeLidRule == true)
     }
 
-    /// Times `server.ping` every interval for as long as the calling task runs, which is as long as a page shows it.
     func followLatency(every interval: Duration = .seconds(10)) async {
         while !Task.isCancelled {
             await measureLatency()
@@ -329,8 +278,13 @@ final class MachineEndpoint {
     /// The name a write sends back: a machine nobody named answers to its default, and sending that back would make
     /// it a chosen one.
     private var currentName: JSONValue {
-        guard info?["nameSource"]?.stringValue == "chosen", let label else { return .null }
+        guard info?.nameSource == .chosen, let label else { return .null }
         return .string(label)
+    }
+
+    private var currentIcon: JSONValue {
+        guard let icon, let value = try? JSONValue(encoding: icon) else { return .null }
+        return value
     }
 
     func setKeepAwake(_ next: MachineKeepAwake) async {
@@ -339,7 +293,7 @@ final class MachineEndpoint {
         savingKeepAwake = true
         defer { savingKeepAwake = false }
         var payload: [String: JSONValue] = [
-            "name": currentName, "icon": info?["icon"] ?? .null,
+            "name": currentName, "icon": currentIcon,
             "keepAwake": .string(next.mode.rawValue), "keepAwakeOnBattery": .bool(next.onBattery),
             "keepAwakeDisplay": .bool(next.display),
         ]
@@ -357,13 +311,13 @@ final class MachineEndpoint {
 
     func setLanDoor(_ open: Bool) async {
         guard let previous = info, lanDoor != open, !savingLanDoor else { return }
-        info = previous.setting("lanDoor", .bool(open))
+        info = Self.patched(previous, with: ["lanDoor": .bool(open)]) ?? previous
         savingLanDoor = true
         defer { savingLanDoor = false }
         do {
             let answer = try await client.request(
                 .endpointSetIdentity,
-                payload: .object(["name": currentName, "icon": previous["icon"] ?? .null, "lanDoor": .bool(open)]))
+                payload: .object(["name": currentName, "icon": currentIcon, "lanDoor": .bool(open)]))
             apply(answer)
             problem = nil
         } catch {
@@ -392,13 +346,12 @@ final class MachineEndpoint {
         apply(answer)
     }
 
-    /// The first ask, which only learns what a restart would end.
     func askToInstall() async {
         guard install != .asking, install != .installing else { return }
         install = .asking
         do {
             let answer = try await client.request(.endpointInstallUpdate, payload: .object(["confirm": .bool(false)]))
-            install = .confirming(MachineWork(answer["ending"]))
+            install = .confirming(try answer.decoded(as: EndpointInstallUpdateResult.self).ending)
             problem = nil
         } catch {
             install = .idle
@@ -410,13 +363,12 @@ final class MachineEndpoint {
         if case .confirming = install { install = .idle }
     }
 
-    /// The second ask, after the person saw what ends.
     func confirmInstall() async {
         guard case .confirming = install else { return }
         install = .installing
         do {
             let answer = try await client.request(.endpointInstallUpdate, payload: .object(["confirm": .bool(true)]))
-            install = answer["started"]?.boolValue == true ? .started : .idle
+            install = try answer.decoded(as: EndpointInstallUpdateResult.self).started ? .started : .idle
             problem = nil
         } catch {
             install = .idle
@@ -425,13 +377,10 @@ final class MachineEndpoint {
     }
 
     static func installProblem(_ error: Error) -> String {
-        guard case .server(let code, let message) = error as? MachineClientError else {
-            return error.localizedDescription
-        }
-        switch code {
-        case "update-no-app": return String(localized: "Ruimte is not open on this machine. Install the update there.")
-        case "update-none": return String(localized: "There is no update to install on this machine.")
-        default: return message
+        switch error.machineCode {
+        case .updateNoApp: String(localized: "Ruimte is not open on this machine. Install the update there.")
+        case .updateNone: String(localized: "There is no update to install on this machine.")
+        default: error.localizedDescription
         }
     }
 }
@@ -446,7 +395,6 @@ extension LinkRoute {
     }
 }
 
-/// How a machine is reached, in the line under its name.
 enum MachineReach {
     static func line(
         connected: Bool, connecting: Bool, route: LinkRoute?, latency: Int?, problem: String?, lastSeen: Date?
@@ -468,7 +416,6 @@ enum MachineReach {
     }
 }
 
-/// One account of a CLI on a machine's card: its five hour window above its week, or why it has no numbers.
 struct MachineLimitLine: Identifiable, Equatable {
     struct Bar: Equatable {
         let label: String
@@ -479,14 +426,12 @@ struct MachineLimitLine: Identifiable, Equatable {
         /// The session window a person hits within a day and the week the account has; either is nil when the CLI
         /// reports none.
         case bars(session: Bar?, week: Bar?)
-        /// What the machine says about an account it cannot read, in place of numbers that may be old.
         case status(String)
     }
 
     let kind: String
     let accountID: String
     let name: String
-    /// Whether the CLI has more than one account on the card, which is when a row wears the account's dot.
     let named: Bool
     let color: String?
     let content: Content
@@ -503,7 +448,6 @@ struct MachineLimits: Equatable {
     /// States in which an account's numbers no longer say anything, so the state stands in their place.
     private static let quiet: Set<String> = ["signed-out", "failed", "folder-missing", "unavailable"]
 
-    /// What the card of a machine shows: the reading of this connection, or the saved snapshot before there is one.
     @MainActor static func card(_ recorder: UsageWidgetRecorder, now: Date = .now) -> MachineLimits {
         if let limits = recorder.limits {
             return of(limits: limits, accounts: recorder.accounts, now: now)
@@ -514,12 +458,10 @@ struct MachineLimits: Equatable {
     /// Every account the machine reads and every one that is on, per CLI in the machine's order, the default account
     /// first and the rest as the account list has them. An account that is off, not installed or without a
     /// subscription has no row, as on the usage page.
-    @MainActor static func of(limits: JSONValue, accounts: UsageAccounts, now: Date = .now) -> MachineLimits {
-        let entries = limits.list("providers")
-        let readings = zip(UsageWidgetRecorder.providers(limits), entries).map { provider, entry in
+    @MainActor static func of(limits: UsageLimits, accounts: UsageAccounts, now: Date = .now) -> MachineLimits {
+        let readings = zip(UsageWidgetRecorder.providers(limits), limits.providers).map { provider, entry in
             Reading(
-                provider: provider, checkedAt: entry["checkedAt"]?.numberValue,
-                unavailable: entry["unavailable"]?["reason"]?.stringValue)
+                provider: provider, checkedAt: Double(entry.checkedAt), unavailable: entry.unavailable?.reason.rawValue)
         }
         return of(readings, accounts: accounts, now: now)
     }
@@ -588,8 +530,7 @@ struct MachineLimits: Equatable {
         account: ProviderAccountEntry?, reading: Reading?, now: Date
     ) -> MachineLimitLine.Content? {
         if let state = account?.state, quiet.contains(state) {
-            let status = account?.message.map { JSONValue.object(["message": .string($0)]) }
-            return .status(MachineAgentsModel.detail(state: state, status: status))
+            return .status(MachineAgentsModel.detail(state: state, message: account?.message))
         }
         let windows = reading?.provider.windows ?? []
         let session = windows.first { $0.kind == "session" }

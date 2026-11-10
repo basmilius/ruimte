@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { fromBase64Url, toBase64Url } from './base64url.ts';
-import { mapsTicketBytes } from './signing.ts';
+import { mapsTicketBytes, SIGNING_PURPOSES } from './signing.ts';
 
 // How long a ticket admits requests to the maps service; a client asks for a new one a little before.
 export const MAPS_TICKET_LIFETIME_MS = 3_600_000;
@@ -8,9 +8,7 @@ export const MAPS_TICKET_LIFETIME_MS = 3_600_000;
 // The secret is 32 random bytes in base64url; anything shorter would make every ticket cheaper to forge.
 const MAPS_SECRET_MIN_BYTES = 32;
 
-const SUBJECT_KEY_PURPOSE = 'pulsar-maps-ticket-subject-v1';
-const PATH_KEY_PURPOSE = 'pulsar-maps-path-key-v1';
-const PATH_MAC_PREFIX = 'pulsar-maps-path-v1\n';
+const PATH_MAC_PREFIX = `${SIGNING_PURPOSES.mapsPath}\n`;
 
 /*
  * `<subject>.<expiresAt>.<mac>`: the subject is a keyed digest of the account in base64url, the expiry is epoch
@@ -55,7 +53,7 @@ function secretOf(secret: string): Uint8Array<ArrayBuffer> {
  */
 export async function mapsTicketSubject(secret: string, accountId: string): Promise<string> {
     return toBase64Url(
-        await crypto.subtle.sign('HMAC', await derivedKey(secret, SUBJECT_KEY_PURPOSE, 'sign'), new TextEncoder().encode(`account:${accountId}`))
+        await crypto.subtle.sign('HMAC', await derivedKey(secret, SIGNING_PURPOSES.mapsTicketSubject, 'sign'), new TextEncoder().encode(`account:${accountId}`))
     );
 }
 
@@ -71,7 +69,7 @@ async function derivedKey(secret: string, purpose: string, usage: 'sign' | 'veri
  */
 export async function signMapsPath(secret: string, text: string): Promise<string> {
     return toBase64Url(
-        await crypto.subtle.sign('HMAC', await derivedKey(secret, PATH_KEY_PURPOSE, 'sign'), new TextEncoder().encode(`${PATH_MAC_PREFIX}${text}`))
+        await crypto.subtle.sign('HMAC', await derivedKey(secret, SIGNING_PURPOSES.mapsPathKey, 'sign'), new TextEncoder().encode(`${PATH_MAC_PREFIX}${text}`))
     );
 }
 
@@ -81,7 +79,7 @@ export async function verifyMapsPath(secret: string, text: string, mac: string):
     }
     return crypto.subtle.verify(
         'HMAC',
-        await derivedKey(secret, PATH_KEY_PURPOSE, 'verify'),
+        await derivedKey(secret, SIGNING_PURPOSES.mapsPathKey, 'verify'),
         fromBase64Url(mac),
         new TextEncoder().encode(`${PATH_MAC_PREFIX}${text}`)
     );
@@ -127,5 +125,15 @@ export const MapsErrorCodeSchema = z.enum([
     'internal'
 ]);
 export type MapsErrorCode = z.infer<typeof MapsErrorCodeSchema>;
+
+export const MAPS_ERROR_STATUS: Readonly<Record<MapsErrorCode, number>> = {
+    'maps-unconfigured': 503,
+    'bad-ticket': 401,
+    'rate-limited': 429,
+    'not-found': 404,
+    'bad-request': 400,
+    upstream: 502,
+    internal: 500
+};
 
 export const MapsErrorSchema = z.object({ error: z.object({ code: MapsErrorCodeSchema, message: z.string().max(512) }) });

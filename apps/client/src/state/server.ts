@@ -11,7 +11,7 @@ import type {
 } from '@ruimte/contracts';
 import type { BrokerSetting } from '@ruimte/pulsar';
 import { create } from 'zustand';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from './current-endpoint';
 
 export interface ServerInfo {
     /* The daemon's platform (`darwin`, `win32`, `linux`); null until the first hello. */
@@ -33,15 +33,12 @@ export interface ServerInfo {
     reachOpenProjects: boolean;
     /* Whether an agent on this machine may share a development port with the person's other devices. The daemon enforces it. */
     agentsSharePorts: boolean;
-    /* Whether the daemon permits browser and device streaming. */
     streamingAllowed: boolean;
     /* Whether a chat that stopped on a limit may be taken up again on a clock. */
     resumeAtReset: boolean;
-    /* Whether an agent may show a page above its reply. */
     visualReplies: boolean;
     /* The model that writes the machine's short texts; null is Automatic, undefined a machine that predates the setting. */
     textModel?: TextModelChoice | null;
-    /* When the machine keeps itself awake. */
     keepAwake: KeepAwakeMode;
     keepAwakeOnBattery: boolean;
     keepAwakeDisplay: boolean;
@@ -55,7 +52,6 @@ export interface ServerInfo {
     keepAwakeLidRule: boolean;
     /* Where the update of the desktop app on the machine stands; null while it reports none. */
     update: MachineUpdate | null;
-    /* The broker a person picked for this machine. */
     broker: BrokerSetting;
     /* Whether a flag or the environment on the machine decides the broker, which leaves the setting without effect. */
     brokerFixed: boolean;
@@ -204,7 +200,6 @@ interface ServersStore {
     ): void;
     /* The update of the desktop app on the machine moved on, from `endpoint.updateChanged`. */
     setUpdate(endpointId: string, update: MachineUpdate): void;
-    /* A machine that is forgotten takes what it said about itself with it. */
     forget(endpointId: string): void;
 }
 

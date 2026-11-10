@@ -1,15 +1,10 @@
-import { channelBinding, DIRECT_CHANNEL_LABEL } from '@ruimte/contracts';
+import { channelBinding, DIRECT_ATTEMPT_TIMEOUT_MS, DIRECT_CHANNEL_LABEL, ICE_GATHER_TIMEOUT_MS } from '@ruimte/contracts';
 import type { IceServer, SignalEnvelope } from '@ruimte/pulsar';
 import type { RTCPeerConnection } from 'werift';
-import type { ClientAccess } from '../dispatcher.ts';
+import { bestEffort } from '../best-effort.ts';
 import { errorText } from '../error-text.ts';
+import type { ClientAccess } from '../wire.ts';
 import { directChannel, fromWerift, type DirectChannel } from './data-channel.ts';
-
-// Offer to open channel, handshake included; a peer that has not got that far by then is not coming.
-const ATTEMPT_TIMEOUT_MS = 30_000;
-
-// ICE is gathered whole before the answer goes out; a STUN server that does not answer costs this much, not the attempt.
-const GATHER_TIMEOUT_MS = 5_000;
 
 // Attempts that have not opened their channel yet, over every caller together.
 const MAX_OPEN_ATTEMPTS = 32;
@@ -23,7 +18,6 @@ interface DirectPeersOptions {
     hostAddresses: string[];
     /* The handshake on a channel that just opened; null refuses it. */
     authenticate(channel: DirectChannel, binding: string, remoteAddress: string | null): Promise<ClientAccess | null>;
-    /* A channel that passed the handshake, for the connection opener. */
     open(channel: DirectChannel, access: ClientAccess): void;
     attemptTimeoutMs?: number;
     log?: Pick<Console, 'log' | 'warn'>;
@@ -74,9 +68,14 @@ export class DirectPeers {
                 const attempt = this.attempts.get(connectionId);
                 // An empty candidate only says the other side is done trickling; everything this side needs is already in.
                 if (attempt && signal.candidate !== '') {
-                    void attempt.peer
-                        .addIceCandidate({ candidate: signal.candidate, sdpMid: signal.sdpMid ?? undefined, sdpMLineIndex: signal.sdpMLineIndex ?? undefined })
-                        .catch(() => undefined);
+                    void bestEffort(
+                        'attempt.peer.addIceCandidate',
+                        attempt.peer.addIceCandidate({
+                            candidate: signal.candidate,
+                            sdpMid: signal.sdpMid ?? undefined,
+                            sdpMLineIndex: signal.sdpMLineIndex ?? undefined
+                        })
+                    );
                 }
                 return;
             }
@@ -116,7 +115,7 @@ export class DirectPeers {
             icePortRange: this.options.portRange ?? undefined,
             iceAdditionalHostAddresses: this.options.hostAddresses.length > 0 ? this.options.hostAddresses : undefined
         });
-        const timeoutMs = this.options.attemptTimeoutMs ?? ATTEMPT_TIMEOUT_MS;
+        const timeoutMs = this.options.attemptTimeoutMs ?? DIRECT_ATTEMPT_TIMEOUT_MS;
         const attempt: Attempt = {
             peer,
             channel: null,
@@ -207,7 +206,7 @@ export class DirectPeers {
             clearTimeout(attempt.timer);
         }
         attempt.channel?.close(1000, 'Connection ended');
-        void attempt.peer.close().catch(() => undefined);
+        void bestEffort('attempt.peer.close', attempt.peer.close());
     }
 }
 
@@ -231,7 +230,7 @@ function gathered(peer: RTCPeerConnection): Promise<void> {
         const timer = setTimeout(() => {
             subscription.unSubscribe();
             resolve();
-        }, GATHER_TIMEOUT_MS);
+        }, ICE_GATHER_TIMEOUT_MS);
         const subscription = peer.iceGatheringStateChange.subscribe((state) => {
             if (state === 'complete') {
                 clearTimeout(timer);

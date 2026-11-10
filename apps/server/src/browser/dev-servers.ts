@@ -1,4 +1,5 @@
 import { clipText, type DevServer, type PortHost } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 
 /* As much of `fetch` as a probe uses, so a test can hand it an answer. */
 type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
@@ -42,7 +43,7 @@ async function readStart(response: Response): Promise<string> {
             html += decoder.decode(value, { stream: true });
         }
     } finally {
-        await reader.cancel().catch(() => undefined);
+        await bestEffort('reader.cancel', reader.cancel());
     }
     return html;
 }
@@ -54,7 +55,7 @@ async function probePort(port: number, request: Fetch, host: PortHost): Promise<
         const origin = host === '::1' ? `http://[::1]:${port}/` : `http://127.0.0.1:${port}/`;
         const response = await request(origin, { redirect: 'manual', signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
         if (!(response.headers.get('content-type') ?? '').includes('text/html')) {
-            await response.body?.cancel().catch(() => undefined);
+            await bestEffort('response.body.cancel', response.body?.cancel());
             return { port };
         }
         const title = titleOfHtml(await readStart(response));

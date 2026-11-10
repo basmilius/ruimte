@@ -1,6 +1,6 @@
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { climbsOut } from '@adecore/utils/path';
-import { realOrNull } from '../fs/real-path.ts';
+import { realOrNull } from '../disk/real-path.ts';
 import { nativePath } from './native-path.ts';
 import { runGit } from './run.ts';
 

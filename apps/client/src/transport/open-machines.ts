@@ -1,11 +1,10 @@
-import type { ConnectionState } from './transport';
+import type { ConnectionState } from '../transport-api/transport';
 
 /* What the watch reads of the pool, so a test can hand it a pool in memory. */
 export interface OpenMachineSource {
     ids(): string[];
     statusOf(endpointId: string): ConnectionState;
     subscribe(handler: () => void): () => void;
-    /* Listens for `endpoint.changed` on a machine's link; null when it has none. */
     onChanged(endpointId: string, handler: () => void): (() => void) | null;
 }
 

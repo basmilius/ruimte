@@ -19,7 +19,6 @@ import {
     type Stoppable
 } from './closed-lid.ts';
 
-/* Where a home notes that it turned sleep off, kept beside nothing a client can read. */
 function closedLidMarkerPath(home: string): string {
     return join(home, 'power', 'closed-lid-held');
 }

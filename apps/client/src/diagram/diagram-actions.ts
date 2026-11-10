@@ -1,5 +1,5 @@
 import type { StoreApi } from 'zustand';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
+import { ignoreRefusal, perform } from '@/action-port/perform';
 import { diagramJsonPath } from '@/diagram/export';
 import type { DiagramState } from '@/state/diagram';
 

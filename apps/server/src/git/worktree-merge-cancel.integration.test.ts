@@ -3,7 +3,7 @@ import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { processAlive } from '../process-test-helpers.ts';
-import { expectProcessTerminated, installHangingHook, killFromPidFile } from './test-process.ts';
+import { expectProcessTerminated, installHangingHook, killFromPidFile } from './process-test-helpers.ts';
 import { gitIn, initRepo, NO_WORKTREE_AGENTS } from './test-repo.ts';
 import { STILL_WAITING, WorktreeMerge } from './worktree-merge.ts';
 import { Worktrees } from './worktrees.ts';

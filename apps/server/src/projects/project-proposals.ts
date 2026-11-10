@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { ProjectProposal } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { realTimers, type Timers } from '../timers.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 
 /* A card is a suggestion to think over, so it outlasts the turn that raised it; a day without a new ask takes it down. */
 export const PROPOSAL_CARD_MS = 24 * 60 * 60_000;
@@ -48,7 +48,7 @@ function holdKeyOf(proposalId: string): string {
 }
 
 /* The turn that tells the chat how the person answered its card; a confirm is the move that ran through. */
-export function proposalWake(name: string, outcome: 'confirmed' | 'declined'): { text: string; label: string } {
+function proposalWake(name: string, outcome: 'confirmed' | 'declined'): { text: string; label: string } {
     return outcome === 'confirmed'
         ? { text: `Confirmed: this chat is now the project ${name}.`, label: 'Project: confirmed' }
         : { text: `Declined: make this chat the project ${name}. Nothing changed.`, label: 'Project: declined' };

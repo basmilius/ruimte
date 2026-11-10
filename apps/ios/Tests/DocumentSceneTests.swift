@@ -21,7 +21,7 @@ final class DocumentSceneTests: XCTestCase {
         let result = try await DocumentSceneLoader.load(
             client: client, projectID: "project", viewID: "view", kind: "drawing")
         XCTAssertEqual(result, client.scene)
-        XCTAssertEqual(client.requests.map(\.0), ["drawing.paths"])
+        XCTAssertEqual(client.requests.map(\.0), [.drawingPaths])
     }
 
     @MainActor func testAccessErrorsAreNotRetriedThroughAnotherEndpoint() async {
@@ -34,7 +34,7 @@ final class DocumentSceneTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? MachineClientError, client.failure)
         }
-        XCTAssertEqual(client.requests.map(\.0), ["drawing.paths"])
+        XCTAssertEqual(client.requests.map(\.0), [.drawingPaths])
     }
 
     func testDocumentTextCannotExecuteJavaScript() async throws {
@@ -62,7 +62,7 @@ final class DocumentSceneTests: XCTestCase {
 }
 
 @MainActor private final class DocumentSceneClient: MachineRequesting {
-    var requests: [(String, JSONValue)] = []
+    var requests: [(WireRequest, JSONValue)] = []
     var failure: MachineClientError?
     var document: JSONValue = .object(["version": .number(1), "rev": .number(0), "elements": .array([])])
     let scene: JSONValue = .object([
@@ -70,12 +70,12 @@ final class DocumentSceneTests: XCTestCase {
         "elements": .array([]),
     ])
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
-        if type.hasSuffix(".open") { return .object(["document": document]) }
+        if type.rawValue.hasSuffix(".open") { return .object(["document": document]) }
         if let failure { throw failure }
         return scene
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

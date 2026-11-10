@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises';
 import { ManualClock } from '@adecore/agents/testing';
 import type { ChatTurnItem, ProjectContent } from '@ruimte/contracts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, releasedProject, invokeTool, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, releasedProject, invokeTool, type TestDaemon } from '../testing/test-daemon.ts';
 
 function content(): ProjectContent {
     return {
@@ -60,6 +60,8 @@ function firstTurnDone(chatId: string): boolean {
 }
 
 test('a start with a task is queued until the outbox runs it, running while the task is open, and completed once it is done', async () => {
+    // Held, so the start stays owed long enough to be read.
+    daemon.worker.stop();
     const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', terminal: true, task: 'Lexer', prompt: 'fix the lexer' });
     const [child, , , , , taskId] = line!.split('\t');
     const id = `agent.start:${child}`;
@@ -84,7 +86,6 @@ test('a start without a task is completed once the agent ran its first turn', as
     const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', prompt: 'say hello' });
     const child = line!.split('\t')[0]!;
 
-    daemon.worker.start();
     await daemon.worker.settled();
     await daemon.until(() => firstTurnDone(child));
 
@@ -99,7 +100,6 @@ test('a cancelled start reads cancelled once its turn stopped, and not completed
     const child = line!.split('\t')[0]!;
     const id = `agent.start:${child}`;
 
-    daemon.worker.start();
     await daemon.worker.settled();
     await daemon.until(() => daemon.chats.get(child)?.info.status === 'running');
 
@@ -114,6 +114,8 @@ test('a cancelled start reads cancelled once its turn stopped, and not completed
 });
 
 test('a team is one operation over its roles, and only the one who started it may follow it', async () => {
+    // Held, so the starts stay owed long enough to be read.
+    daemon.worker.stop();
     const roles = [
         { title: 'One', prompt: 'a', provider: 'claude', terminal: true },
         { title: 'Two', prompt: 'b', provider: 'claude', terminal: true }
@@ -132,6 +134,8 @@ test('a team is one operation over its roles, and only the one who started it ma
 });
 
 test('a node that is no agent the caller started names no operation, even one the caller made', async () => {
+    // Held, so the agent's start stays owed long enough to be read.
+    daemon.worker.stop();
     const [note] = (await invokeTool(daemon, 'chat-lead', 'node_new', { kind: 'note', text: 'hi' }))[0]!.split('\t');
     const [terminal] = (await invokeTool(daemon, 'chat-lead', 'node_new', { kind: 'terminal' }))[0]!.split('\t');
     const [agent] = (await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', terminal: true, prompt: 'a' }))[0]!.split('\t');

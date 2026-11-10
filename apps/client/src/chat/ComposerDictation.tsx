@@ -2,7 +2,6 @@ import type { ComposerDictationProps } from '@adecore/agents-react';
 import { DictationControl } from '@/dictation/DictationControl';
 import { captureEditor } from '@/dictation/editor';
 
-/* Dictation beside the composer, its preview drawn inside the editor, which is also where the text goes. */
 export function ComposerDictation({ targetRef, buttonContainer, disabled, editor }: ComposerDictationProps) {
     return (
         <DictationControl

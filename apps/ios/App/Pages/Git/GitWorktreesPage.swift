@@ -12,7 +12,8 @@ struct GitWorktreesPage: View {
     @State private var state: GitWorktreesState
     @State private var diff: GitDiffTarget?
 
-    init(client: any MachineRequesting, repositories: GitRepositories, repo: String, workspace: MobileWorkspace? = nil) {
+    init(client: any MachineRequesting, repositories: GitRepositories, repo: String, workspace: MobileWorkspace? = nil)
+    {
         self.client = client
         self.repositories = repositories
         self.repo = repo
@@ -37,7 +38,9 @@ struct GitWorktreesPage: View {
                     ForEach(state.worktrees) { worktree in
                         GitWorktreeRow(
                             client: client, state: state, worktree: worktree,
-                            occupants: workspace.flatMap { GitWorktreeOccupants.line(in: $0.views, path: worktree.path) }
+                            occupants: workspace.flatMap {
+                                GitWorktreeOccupants.line(in: $0.storedViews, path: worktree.path)
+                            }
                         ) { diff = $0 }
                     }
                 }
@@ -55,14 +58,14 @@ struct GitWorktreesPage: View {
             }
         }
         .task(id: repo) {
-            await RemotePageLifecycle.run(client: client, events: ["git.worktrees"], load: { await state.load(client: client) })
+            await RemotePageLifecycle.run(
+                client: client, events: [.gitWorktrees], load: { await state.load(client: client) })
         }
         .refreshable { await state.load(client: client) }
         .modifier(GitWorktreeDialogs(client: client, state: state))
     }
 }
 
-/// What the worktrees of a repository are doing right now: a merge at work, what went wrong, what went through.
 struct GitWorktreeStatusRows: View {
     let client: any MachineRequesting
     let state: GitWorktreesState
@@ -82,8 +85,6 @@ struct GitWorktreeStatusRows: View {
     }
 }
 
-/// One worktree: its branch, where it came from and what it holds, who works in it, and merging it back or
-/// removing it with the questions of `GitWorktreeText`.
 struct GitWorktreeRow: View {
     let client: any MachineRequesting
     let state: GitWorktreesState
@@ -98,16 +99,16 @@ struct GitWorktreeRow: View {
 
     var body: some View {
         Button {
-            guard !worktree.missing else { return }
+            guard !worktree.isMissing else { return }
             onDiff(diffTarget)
         } label: {
             HStack(spacing: 10) {
-                Image(lucide: worktree.missing ? "folder-x" : "folder-git-2", size: 15)
+                Image(lucide: worktree.isMissing ? "folder-x" : "folder-git-2", size: 15)
                     .foregroundStyle(MobileStyle.muted)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text((worktree.path as NSString).lastPathComponent).lineLimit(1).truncationMode(.middle)
-                        if worktree.locked {
+                        if worktree.isLocked {
                             Image(lucide: "lock", size: 12).foregroundStyle(MobileStyle.muted)
                                 .accessibilityLabel("Locked")
                         }
@@ -117,26 +118,28 @@ struct GitWorktreeRow: View {
                     let detail = GitWorktreeText.rowDetail(worktree)
                     if !detail.isEmpty {
                         Text(detail).font(.caption)
-                            .foregroundStyle(worktree.work?.operation != nil ? MobileStyle.statusNeedsYou : MobileStyle.muted)
+                            .foregroundStyle(
+                                worktree.work?.operation != nil ? MobileStyle.statusNeedsYou : MobileStyle.muted
+                            )
                             .lineLimit(2)
                     }
                 }
                 Spacer(minLength: 8)
             }
-            .modifier(MobileSidebarLabel(disclosure: !worktree.missing))
+            .modifier(MobileSidebarLabel(disclosure: !worktree.isMissing))
         }
         .modifier(MobileSidebarRow())
         .disabled(state.busy)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button("Remove", role: .destructive) { Task { await state.ask(client: client, remove: worktree) } }
                 .tint(MobileStyle.swipeDestructive)
-            if !worktree.missing {
+            if !worktree.isMissing {
                 Button("Merge") { Task { await state.ask(client: client, merge: worktree) } }
                     .tint(MobileStyle.swipeAction)
             }
         }
         .contextMenu {
-            if !worktree.missing {
+            if !worktree.isMissing {
                 Button(String(localized: "View changes"), lucideIcon: "eye") { onDiff(diffTarget) }
                 Button(
                     worktree.fromBranch.map { String(localized: "Merge into \($0)…") } ?? String(localized: "Merge…"),
@@ -150,8 +153,6 @@ struct GitWorktreeRow: View {
     }
 }
 
-/// How a worktree merge ended when it did not simply go through: conflicts to resolve or take back, or a
-/// refusal with the one thing a person can do about it.
 struct GitWorktreeOutcomeSection: View {
     let client: any MachineRequesting
     let repositories: GitRepositories
@@ -171,27 +172,27 @@ struct GitWorktreeOutcomeSection: View {
                 } label: {
                     Label(String(localized: "Resolve"), lucideIcon: "file-exclamation-point")
                 }
-                Button(String(localized: "Abort merge"), lucideIcon: "ban", role: .destructive) { state.confirmAbort = cwd }
-                    .disabled(state.busy)
+                Button(String(localized: "Abort merge"), lucideIcon: "ban", role: .destructive) {
+                    state.confirmAbort = cwd
+                }
+                .disabled(state.busy)
             } header: {
                 Text("The merge waits for you")
             }
-        case .refused(let code, let message, let request):
+        case .refused(let code, let message, let request, let folderBranch):
             Section {
                 Label(message, lucideIcon: "triangle-alert").foregroundStyle(MobileStyle.statusError)
                 if let hint = GitWorktreeText.refusalHint(code) {
                     Text(hint).font(.caption).foregroundStyle(MobileStyle.muted)
                 }
-                if code == "target-not-checked-out", let branch = GitWorktreeText.checkedOutBranch(message),
-                    branch != request.worktree.branch
-                {
+                if let branch = folderBranch, branch != request.worktree.branch {
                     Button(String(localized: "Merge into \(branch) instead"), lucideIcon: "git-merge") {
                         var retry = request
                         retry.into = branch
                         Task { await state.merge(client: client, request: retry) }
                     }.disabled(state.busy)
                 }
-                if GitWorktreeText.isOverwriteRefusal(code: code, message: message) {
+                if code == .mergeWouldOverwrite {
                     Text(
                         "Stash and retry moves your own changes in the target checkout into a stash named \"\(GitWorktreeText.stashMessage(request.worktree.branch))\" and runs the merge again."
                     ).font(.caption).foregroundStyle(MobileStyle.muted)
@@ -199,7 +200,7 @@ struct GitWorktreeOutcomeSection: View {
                         Task { await state.stashAndRetry(client: client, request: request) }
                     }.disabled(state.busy)
                 }
-                if code == "agent-working" {
+                if code == .agentWorking {
                     Button(String(localized: "Stop the agents and merge"), lucideIcon: "git-merge") {
                         var retry = request
                         retry.stopAgent = true
@@ -214,7 +215,6 @@ struct GitWorktreeOutcomeSection: View {
     }
 }
 
-/// The questions of the worktree actions, put on a page once.
 struct GitWorktreeDialogs: ViewModifier {
     let client: any MachineRequesting
     @Bindable var state: GitWorktreesState
@@ -245,7 +245,7 @@ struct GitWorktreeDialogs: ViewModifier {
                 Button(pending.confirmLabel, role: .destructive) {
                     Task { state.removal = await state.remove(client: client, removal: pending) }
                 }
-                if pending.force && !pending.worktree.missing {
+                if pending.force && !pending.worktree.isMissing {
                     Button("Merge first") { state.merging = pending.worktree }
                 }
                 Button("Cancel", role: .cancel) {}
@@ -279,7 +279,8 @@ struct GitWorktreeMergeSheet: View {
     private var chosen: GitMergeStrategy { GitMergeStrategy(rawValue: strategy) ?? .squash }
     private var needsMessage: Bool { (worktree.hasLooseWork && commitFirst) || chosen == .squash }
     private var blocked: Bool {
-        (worktree.hasLooseWork && !commitFirst) || (needsMessage && subject.trimmingCharacters(in: .whitespaces).isEmpty)
+        (worktree.hasLooseWork && !commitFirst)
+            || (needsMessage && subject.trimmingCharacters(in: .whitespaces).isEmpty)
     }
 
     var body: some View {
@@ -324,7 +325,8 @@ struct GitWorktreeMergeSheet: View {
             }
             .navigationTitle(
                 worktree.fromBranch.map { String(localized: "Merge \(worktree.branch) into \($0)") }
-                    ?? String(localized: "Merge \(worktree.branch)"))
+                    ?? String(localized: "Merge \(worktree.branch)")
+            )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel", action: onCancel) }

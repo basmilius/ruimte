@@ -101,7 +101,6 @@ class FakeHost implements ScrcpyHost {
         this.video?.(opening.slice(5));
     }
 
-    /* The server's acknowledgement of the clipboard write with this sequence. */
     acknowledge(sequence: bigint) {
         const message = new DataView(new ArrayBuffer(9));
         message.setUint8(0, 1);
@@ -109,7 +108,6 @@ class FakeHost implements ScrcpyHost {
         this.controlData?.(new Uint8Array(message.buffer));
     }
 
-    /* The device clipboard, as the server sends it when asked. */
     sendClipboard(text: string) {
         const bytes = new TextEncoder().encode(text);
         const message = new Uint8Array(5 + bytes.byteLength);

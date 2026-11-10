@@ -13,81 +13,58 @@ final class MachineIconState {
     /// `endpoint.info`; without it a `#` reaches chats only.
     private(set) var viewReferences = false
     @ObservationIgnored private let client: any MachineRequesting
-    @ObservationIgnored private var unsubscribe: (() -> Void)?
-    @ObservationIgnored private var unobserve: (() -> Void)?
-    @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var revision = 0
     @ObservationIgnored private var connected = false
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.endpointChanged, as: EndpointChangedEvent.self) { [weak self] event in
+                guard let self, connected else { return }
+                revision += 1
+                apply(event)
+            }
+        ],
+        connection: { [weak self] connected in
+            self?.connected = connected
+            self?.revision += 1
+        }, read: { [weak self] in await self?.read() })
 
     init(client: any MachineRequesting, fallback: MachineIcon?) {
         self.client = client
         icon = fallback
     }
 
-    func start() {
-        guard unobserve == nil else { return }
-        unsubscribe = client.subscribe(.endpointChanged) { [weak self] value in
-            guard let self, connected,
-                let endpoint = try? WireEvent.endpointChanged.validatePayload(value)
-            else { return }
-            cancelRefresh()
-            apply(endpoint, complete: false)
-        }
-        unobserve = client.observeConnection { [weak self] connected in
-            guard let self else { return }
-            self.connected = connected
-            cancelRefresh()
-            guard connected else { return }
-            let operation = revision
-            task = Task { [weak self] in
-                guard let self else { return }
-                do {
-                    let endpoint = try await client.request(.endpointInfo)
-                    guard !Task.isCancelled, self.connected, revision == operation else { return }
-                    apply(try WireRequest.endpointInfo.validateResult(endpoint), complete: true)
-                } catch {
-                    // An unavailable icon must not hide projects or change the connection's error state.
-                }
-            }
-        }
-    }
+    func start() { live.start() }
 
     func stop() {
         connected = false
-        cancelRefresh()
-        unsubscribe?()
-        unobserve?()
-        unsubscribe = nil
-        unobserve = nil
-    }
-
-    private func cancelRefresh() {
         revision += 1
-        task?.cancel()
-        task = nil
+        live.stop()
     }
 
-    /// `complete` is an answer to `endpoint.info`, where an absent switch is off; an event leaves out what it does not
-    /// change.
-    private func apply(_ endpoint: JSONValue, complete: Bool) {
-        if let resume = endpoint["resumeAtReset"]?.boolValue {
-            resumeAtReset = resume
-        } else if complete {
-            resumeAtReset = false
-        }
-        if complete { viewReferences = endpoint["viewReferences"]?.boolValue == true }
-        guard let value = endpoint["icon"] else { return }
-        if value == .null {
-            icon = nil
-        } else if let data = try? value.encoded(), let decoded = try? JSONDecoder().decode(MachineIcon.self, from: data)
-        {
-            icon = decoded
+    private func read() async {
+        let operation = revision
+        // An unavailable icon must not hide projects or change the connection's error state.
+        guard let answer = try? await client.request(.endpointInfo),
+            let info = try? answer.decoded(as: EndpointInfo.self), !Task.isCancelled, connected,
+            revision == operation
+        else { return }
+        apply(info)
+    }
+
+    private func apply(_ info: EndpointInfo) {
+        resumeAtReset = info.resumeAtReset ?? false
+        viewReferences = info.viewReferences == true
+        switch info.icon {
+        case .missing: break
+        case .null: icon = nil
+        case .value(let value): icon = value
         }
     }
 
-    isolated deinit {
-        task?.cancel()
-        unsubscribe?()
-        unobserve?()
+    /// An event leaves out the switches it does not change.
+    private func apply(_ event: EndpointChangedEvent) {
+        if let resume = event.resumeAtReset { resumeAtReset = resume }
+        icon = event.icon
     }
 }

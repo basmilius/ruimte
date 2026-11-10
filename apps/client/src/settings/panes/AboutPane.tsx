@@ -1,0 +1,373 @@
+import { Segmented, Select, Switch, Button, copyText, Icon } from '@adecore/ui';
+import { formatDayWithYear, useFormatLocale } from '@adecore/ui/format';
+import { SettingsRow, TopIcon } from '@adecore/ui/settings';
+import type { UpdateTrack } from '@ruimte/desktop-bridge';
+import i18next from 'i18next';
+import { ArrowDown, ArrowRight, ArrowUpRight, CircleAlert, CircleCheck, Copy, LoaderCircle, RefreshCw, type LucideIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
+import { desktop, isDesktop, type Release, type UpdateState } from '@/desktop/bridge';
+import { SettingsSection } from '@/machines/SettingsSection';
+import { openOnboarding } from '@/onboarding/open';
+import { hasLocalMachine } from '@/state/local-machine';
+import { canShowReleaseNotes, ensureReleaseNotes, notesView, openReleaseNotes, releasesOnTrack, SPONSOR_PAGE, useReleaseNotes } from '@/state/release-notes';
+import { useServers, type ServerInfo } from '@/state/server';
+import { useSettings } from '@/state/settings';
+import { previewUpdate, type UpdatePreview } from '@/state/update-preview';
+import { describeUpdate, setAutoDownload, setUpdateTrack, updateTrackOf, useUpdates } from '@/state/updates';
+import { BrandSymbol } from '@/ui/Brand';
+import { Eclipse, type EclipseOrbit } from '@/ui/Eclipse';
+import { useFocusedMachine } from '@/workspace/connections';
+
+/* The links, each with its words under `about.links.<id>`. */
+const LINKS = [
+    { id: 'website', href: 'https://ruimte.app' },
+    { id: 'source', href: 'https://github.com/basmilius/ruimte' },
+    { id: 'report', href: 'https://github.com/basmilius/ruimte/issues/new' },
+    { id: 'sponsor', href: SPONSOR_PAGE }
+];
+
+const AUTHOR_PAGE = 'https://bas.dev';
+
+const ABOUT_ORBITS: readonly EclipseOrbit[] = [
+    { size: 230, alpha: 0.1 },
+    { size: 350, alpha: 0.07, spin: 140 },
+    { size: 520, alpha: 0.05 },
+    { size: 720, alpha: 0.04, spin: -200 },
+    { size: 980, alpha: 0.03 }
+];
+
+const PLATFORM_NAMES: Record<string, string> = { darwin: 'macOS', win32: 'Windows', linux: 'Linux' };
+
+interface Detail {
+    label: string;
+    value: string;
+    description?: string;
+    mono?: boolean;
+}
+
+/* The rows under the header, in the order a bug report wants them. The shell's versions are missing
+   in a browser and in a shell that started before it passed them on. */
+function detailsOf(server: ServerInfo | undefined): Detail[] {
+    const versions = desktop()?.versions;
+    const machine = server?.label ?? server?.model ?? i18next.t('settings:about.details.notConnected');
+    const rows: Detail[] = [
+        {
+            label: i18next.t('settings:about.details.machine.label'),
+            value: server?.version ? `${machine}, ${server.version}` : machine,
+            description: i18next.t('settings:about.details.machine.description')
+        }
+    ];
+    if (versions) {
+        rows.push({ label: 'Electron', value: versions.electron }, { label: 'Chromium', value: versions.chrome }, { label: 'Node', value: versions.node });
+    }
+    const platform = server?.platform ?? null;
+    const unknown = i18next.t('settings:about.details.unknown');
+    rows.push(
+        { label: i18next.t('settings:about.details.platform'), value: platform ? (PLATFORM_NAMES[platform] ?? platform) : unknown },
+        {
+            label: i18next.t('settings:about.details.dataFolder.label'),
+            value: server?.home ?? unknown,
+            description: i18next.t('settings:about.details.dataFolder.description'),
+            mono: true
+        }
+    );
+    return rows;
+}
+
+const STATUS_ICONS: Record<UpdateState['status'], { icon: LucideIcon; className: string }> = {
+    unsupported: { icon: CircleCheck, className: 'text-text-faint' },
+    idle: { icon: CircleCheck, className: 'text-status-idle' },
+    current: { icon: CircleCheck, className: 'text-status-idle' },
+    checking: { icon: LoaderCircle, className: 'animate-spin text-text-muted' },
+    available: { icon: ArrowDown, className: 'text-accent' },
+    downloading: { icon: ArrowDown, className: 'text-accent' },
+    ready: { icon: RefreshCw, className: 'text-accent' },
+    error: { icon: CircleAlert, className: 'text-status-error' }
+};
+
+function releasedOn(releases: readonly Release[] | undefined, version: string | undefined): string | null {
+    const published = releases?.find((release) => release.version === version)?.publishedAt;
+    const at = published ? new Date(published) : null;
+    return at === null || Number.isNaN(at.getTime()) ? null : formatDayWithYear(at);
+}
+
+/* The version this window runs. A browser has no app version of its own: it runs the client the machine serves. */
+function useShownVersion(): string | undefined {
+    const endpointId = useFocusedMachine().endpointId;
+    const machineVersion = useServers((s) => s.byEndpoint[endpointId]?.version);
+    const currentVersion = useUpdates((s) => s.currentVersion);
+    return isDesktop() && currentVersion ? currentVersion : (machineVersion ?? undefined);
+}
+
+export function AboutHero() {
+    const { t } = useTranslation('settings');
+    const version = useShownVersion();
+    return (
+        <header className="relative z-0">
+            <Eclipse
+                sky="fade"
+                center={132}
+                glows={[360, 170]}
+                rings={[112, 144]}
+                orbits={ABOUT_ORBITS}
+                stars={{ density: 1, seed: 132 }}
+                className="h-[400px]"
+            />
+            {/* The icon sits on the eclipse, whose point is 132px down. */}
+            <div className="relative flex flex-col items-center px-8 pt-[96px] pb-1.5 text-center">
+                <div className="flex flex-col items-center gap-1.5">
+                    <BrandSymbol size={72} className="mb-2 rounded-[17px] shadow-float" />
+                    <h3 className="text-lg font-semibold text-text">Ruimte</h3>
+                    <p className="text-xs text-text-muted">{t('about.tagline')}</p>
+                    <p className="mt-2.5 text-xs text-text-muted tabular-nums">{t('about.version', { version: version ?? t('about.unknownVersion') })}</p>
+                    <p className="-mt-1 text-2xs text-text-faint">
+                        <Trans
+                            t={t}
+                            i18nKey="about.byline"
+                            components={{
+                                author: <a href={AUTHOR_PAGE} target="_blank" rel="noreferrer" className="hover:text-text-muted hover:underline" />
+                            }}
+                        />
+                    </p>
+                </div>
+            </div>
+        </header>
+    );
+}
+
+const UPDATE_TRACKS: readonly UpdateTrack[] = ['stable', 'prerelease'];
+
+export function AboutPane() {
+    const { t } = useTranslation('settings');
+    const endpointId = useFocusedMachine().endpointId;
+    const server = useServers((s) => s.byEndpoint[endpointId]);
+    const updates = useUpdates();
+    const autoDownload = useSettings((s) => s.updatesAutoDownload);
+    const track = updateTrackOf(
+        useSettings((s) => s.updatesTrack),
+        updates.currentVersion
+    );
+    const update = useSettings((s) => s.update);
+    const details = detailsOf(server);
+    const version = useShownVersion();
+    const allReleases = useReleaseNotes((s) => s.notes?.releases);
+    const releases = allReleases && releasesOnTrack(allReleases, track, updates.currentVersion);
+    const previousSeen = useReleaseNotes((s) => s.previousSeen);
+    const withNotes = updates.supported && canShowReleaseNotes();
+    const notesLink = withNotes ? notesView(releases ?? [], updates.currentVersion, updates, previousSeen).link : null;
+
+    useEffect(() => {
+        if (withNotes) {
+            ensureReleaseNotes();
+        }
+    }, [withNotes]);
+
+    const setAuto = (checked: boolean): void => {
+        update({ updatesAutoDownload: checked });
+        void setAutoDownload(checked);
+    };
+
+    const chooseTrack = (chosen: UpdateTrack): void => {
+        update({ updatesTrack: chosen });
+        void setUpdateTrack(chosen);
+    };
+
+    const copyDetails = (): void => {
+        const lines = [`Ruimte ${version ?? t('about.unknownVersion')}`, ...details.map((row) => `${row.label}: ${row.value}`)];
+        copyText(lines.join('\n'));
+    };
+
+    return (
+        <div className="relative z-0 flex flex-col gap-7">
+            {updates.supported && (
+                <SettingsSection title={t('about.updates.title')}>
+                    <UpdateStatusRow releases={releases} notesVersion={notesLink?.version ?? null} />
+                    <SettingsRow
+                        searchId="about.updates.auto"
+                        label={t('about.updates.auto.label')}
+                        description={t('about.updates.auto.description')}
+                        control={<Switch checked={autoDownload} onCheckedChange={setAuto} label={t('about.updates.auto.label')} />}
+                    />
+                    <SettingsRow
+                        searchId="about.updates.track"
+                        label={t('about.updates.track.label')}
+                        description={t('about.updates.track.description')}
+                        control={
+                            <Select<UpdateTrack>
+                                value={track}
+                                label={t('about.updates.track.label')}
+                                align="end"
+                                items={UPDATE_TRACKS.map((value) => ({ value, label: t(`about.updates.track.options.${value}`) }))}
+                                onValueChange={chooseTrack}
+                            />
+                        }
+                    />
+                </SettingsSection>
+            )}
+            <SettingsSection title={t('about.links.title')}>
+                {LINKS.map((link) => (
+                    <SettingsRow
+                        key={link.href}
+                        label={t(`about.links.${link.id}.label`)}
+                        description={t(`about.links.${link.id}.description`)}
+                        control={
+                            <Button variant="secondary" size="sm" href={link.href}>
+                                {t('common:action.open')} <Icon icon={ArrowUpRight} size={12} />
+                            </Button>
+                        }
+                    />
+                ))}
+            </SettingsSection>
+            <SettingsSection
+                title={t('about.details.title')}
+                action={
+                    <Button variant="secondary" onClick={copyDetails}>
+                        <Icon icon={Copy} size={12} /> {t('about.details.copy')}
+                    </Button>
+                }
+            >
+                {details.map((row) => (
+                    <SettingsRow
+                        key={row.label}
+                        label={row.label}
+                        description={row.description}
+                        control={
+                            <span className={row.mono ? 'max-w-72 truncate font-mono text-code text-text-muted' : 'text-xs text-text-muted'}>{row.value}</span>
+                        }
+                    />
+                ))}
+            </SettingsSection>
+            {hasLocalMachine() && (
+                <SettingsSection>
+                    <SettingsRow
+                        searchId="about.onboarding"
+                        label={t('onboarding:about.label')}
+                        description={t('onboarding:about.description')}
+                        control={
+                            <Button variant="secondary" onClick={() => openOnboarding()}>
+                                {t('common:action.open')}
+                            </Button>
+                        }
+                    />
+                </SettingsSection>
+            )}
+            {import.meta.env.DEV && <UpdatePreviewBar />}
+            <p className="text-center text-xs text-text-faint">FSL-1.1-MIT · Copyright 2026 Bas Milius</p>
+        </div>
+    );
+}
+
+interface UpdateStatusRowProps {
+    releases: readonly Release[] | undefined;
+    /* The version the notes open on, or null where there are none to open. They never show here. */
+    notesVersion: string | null;
+}
+
+function UpdateStatusRow({ releases, notesVersion }: UpdateStatusRowProps) {
+    const { t } = useTranslation('settings');
+    const updates = useUpdates();
+    useFormatLocale();
+    const { headline, detail } = describeUpdate(updates);
+    const status = STATUS_ICONS[updates.status];
+    const percent = Math.min(100, Math.max(0, updates.percent ?? 0));
+    const released = updates.status === 'available' ? releasedOn(releases, updates.version) : null;
+    const line = released === null ? detail : t('about.updates.released', { date: released });
+
+    return (
+        <div className="flex min-w-0 flex-col gap-3 px-4.5 py-3.5">
+            <div className="flex min-w-0 flex-wrap items-start gap-x-3 gap-y-2">
+                <div className="flex min-w-0 grow basis-60 items-start gap-3">
+                    <TopIcon icon={status.icon} size={20} className={status.className} />
+                    <div className="min-w-0 grow">
+                        <div className="text-sm text-text">{headline}</div>
+                        {line && <div className="mt-0.5 text-xs text-text-muted tabular-nums">{line}</div>}
+                        {notesVersion !== null && (
+                            <button
+                                type="button"
+                                className="mt-1.5 inline-flex items-center gap-1 text-xs text-accent hover:underline"
+                                onClick={() => openReleaseNotes(notesVersion)}
+                            >
+                                {t('about.updates.whatsNew', { version: notesVersion })}
+                                <Icon icon={ArrowRight} size={12} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+                <UpdateAction />
+            </div>
+            {updates.status === 'downloading' && (
+                <div
+                    role="progressbar"
+                    aria-label={headline}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(percent)}
+                    className="ml-8 h-1 overflow-hidden rounded-full bg-surface-sunken"
+                >
+                    <div className="h-full rounded-full bg-accent" style={{ width: `${percent}%` }} />
+                </div>
+            )}
+        </div>
+    );
+}
+
+export function UpdateAction() {
+    const { t } = useTranslation('settings');
+    const status = useUpdates((s) => s.status);
+    const check = useUpdates((s) => s.check);
+    const download = useUpdates((s) => s.download);
+    const install = useUpdates((s) => s.install);
+
+    if (status === 'ready') {
+        return (
+            <Button variant="positive" onClick={install}>
+                {t('about.updates.install')}
+            </Button>
+        );
+    }
+    if (status === 'available') {
+        return (
+            <Button variant="primary" onClick={() => void download()}>
+                {t('about.updates.download')}
+            </Button>
+        );
+    }
+    return (
+        <Button variant="secondary" disabled={status === 'checking' || status === 'downloading'} onClick={() => void check()}>
+            {status === 'checking' ? t('about.updates.checking') : t('about.updates.check')}
+        </Button>
+    );
+}
+
+const PREVIEWS: readonly { id: UpdatePreview; label: string }[] = [
+    { id: 'off', label: 'Off' },
+    { id: 'current', label: 'Up to date' },
+    { id: 'available', label: 'Available' },
+    { id: 'downloading', label: 'Downloading' },
+    { id: 'ready', label: 'Ready' },
+    { id: 'error', label: 'Failed' }
+];
+
+/* Dev only, and in English only: steps About through the update states a checkout never reaches. */
+function UpdatePreviewBar() {
+    const [preview, setPreview] = useState<UpdatePreview>('off');
+
+    // The preview names the newest release, so the notes have to be in before the first pick.
+    useEffect(() => {
+        if (canShowReleaseNotes()) {
+            ensureReleaseNotes();
+        }
+    }, []);
+
+    const choose = (next: UpdatePreview): void => {
+        setPreview(next);
+        previewUpdate(next);
+    };
+    return (
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-border-strong px-4 py-2.5">
+            <span className="text-xs text-text-muted">Preview update state (dev only)</span>
+            <Segmented value={preview} options={PREVIEWS} onValueChange={choose} label="Preview update state" />
+        </div>
+    );
+}

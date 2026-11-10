@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { layoutPoint, strokesBox, type Point, type Rect } from '@/design/design-page';
 
-/* Every stroke on the canvas, in the color of the pen, at the pixels of its layout. */
 function paintStrokes(element: HTMLCanvasElement, strokes: readonly (readonly Point[])[]): void {
     const context = element.getContext('2d');
 

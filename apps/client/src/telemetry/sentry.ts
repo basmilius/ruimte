@@ -1,8 +1,8 @@
 import {
     createDailyDedupe,
     createScrubber,
+    privateSentryOptions,
     startQuarterMeter,
-    TELEMETRY_DATA_COLLECTION,
     TELEMETRY_DSN,
     telemetryRelease,
     type QuarterMeter
@@ -19,13 +19,12 @@ import {
     withScope
 } from '@sentry/browser';
 import { useProjectList } from '@/state/project-list';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import { CLIENT_TAGS, connectionEvent, storageDedupeStore, type ConnectionProblem } from './events';
 import type { PageMetric } from './metrics';
 
 interface ReporterOptions {
     readonly surface: 'desktop' | 'station' | 'bench';
-    /* The version a release build was stamped with. */
     readonly version: string;
     /* What the desktop shell says it runs on; null on the station. */
     readonly platform: string | null;
@@ -44,32 +43,27 @@ export function startReporter(options: ReporterOptions): void {
     });
     const dedupe = createDailyDedupe({ store: storageDedupeStore(() => window.localStorage) });
     init({
-        dsn: TELEMETRY_DSN[options.surface],
-        release: telemetryRelease(options.version),
-        environment: 'production',
-        dataCollection: TELEMETRY_DATA_COLLECTION,
-        defaultIntegrations: false,
+        ...privateSentryOptions({
+            dsn: TELEMETRY_DSN[options.surface],
+            release: telemetryRelease(options.version),
+            beforeSend: (event) => {
+                const scrubbed = scrubber.scrubEvent(event);
+                return scrubbed !== null && dedupe.admit(scrubbed) ? scrubbed : null;
+            }
+        }),
         integrations: [
             functionToStringIntegration(),
             linkedErrorsIntegration(),
             dedupeIntegration(),
             ...(options.surface === 'desktop' ? [] : [browserSessionIntegration()])
         ],
-        attachStacktrace: false,
-        maxBreadcrumbs: 0,
-        sendClientReports: false,
         initialScope: {
             tags: {
                 surface: options.surface,
                 ...(options.surface === 'desktop' ? { process: 'renderer' } : {}),
                 ...(options.platform === null ? {} : { platform: options.platform })
             }
-        },
-        beforeSend: (event) => {
-            const scrubbed = scrubber.scrubEvent(event);
-            return scrubbed !== null && dedupe.admit(scrubbed) ? scrubbed : null;
-        },
-        beforeBreadcrumb: () => null
+        }
     });
 }
 

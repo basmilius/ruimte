@@ -1,4 +1,4 @@
-import { noteJump, noteMove, settle, step } from '@/canvas/camera-history';
+import { noteJump, noteMove, settle, step } from '@/canvas-model/camera-history';
 import { historyOf, setHistory } from '@/state/camera-history';
 import type { CanvasState } from '@/state/canvas';
 import { zoomNodeTargetOf, type CanvasGet, type CanvasSet } from '@/state/canvas-model';
@@ -28,7 +28,6 @@ export function cameraHistoryStep(state: CanvasState, direction: -1 | 1): Return
     return viewId === null ? null : step(historyOf(viewId), direction, camera, (id) => nodes[id] !== undefined);
 }
 
-/* The camera's jumps and bursts, recorded per view around the actions that move it. */
 export function withCameraHistory(base: Omit<CanvasState, 'stepCamera'>, set: CanvasSet, get: CanvasGet): CanvasState {
     /* Records the camera a jump left and where it landed; `target` names the node it landed on, if any. */
     const jumping =
@@ -41,7 +40,6 @@ export function withCameraHistory(base: Omit<CanvasState, 'stepCamera'>, set: Ca
                 setHistory(viewId, noteJump(historyOf(viewId), from, state.camera, target(state, args)));
             }
         };
-    /* A pan or zoom joins the burst it belongs to. */
     const moving =
         <TArgs extends unknown[]>(action: (...args: TArgs) => void) =>
         (...args: TArgs): void => {

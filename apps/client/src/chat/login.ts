@@ -1,6 +1,6 @@
 import { providerAccountsOf } from '@adecore/agents-react/state';
 import type { AgentKind } from '@ruimte/contracts';
-import { useUi } from '@/state/ui';
+import { loginDialog } from '@/chat/dialog-state';
 
 /*
  * Runs the CLI's own login in the account's environment, in a dialog over whatever asked (the settings,
@@ -10,5 +10,5 @@ export async function openLogin(endpointId: string, kind: AgentKind, id: string,
     if (providerAccountsOf(endpointId).accounts?.loginCommands?.[kind] === undefined) {
         return;
     }
-    useUi.getState().setLogin({ endpointId, kind, accountId: id, name });
+    loginDialog.set({ endpointId, kind, accountId: id, name });
 }

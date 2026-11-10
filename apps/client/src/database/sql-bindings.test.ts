@@ -1,48 +1,17 @@
 import { describe, expect, test } from 'bun:test';
-import type { DatabaseConnection, LanguageSqlChangedEvent, LanguageSqlState } from '@ruimte/contracts';
-import { choiceOf, createSqlBindings, snapshotOf, startDatabaseOf } from './sql-bindings.ts';
-
-const SHOP: DatabaseConnection = { id: 'shop', name: 'Shop', shared: true, config: { engine: 'mysql', host: 'db', user: 'app', database: 'shop' } };
-const WIDE: DatabaseConnection = { id: 'wide', name: 'Wide', shared: false, config: { engine: 'mysql', host: 'db', user: 'root' } };
-const LOCAL: DatabaseConnection = { id: 'local', name: 'Local', shared: false, config: { engine: 'sqlite', path: '/repo/local.sqlite' } };
+import type { LanguageSqlChangedEvent, LanguageSqlState } from '@ruimte/contracts';
+import { createSqlBindings, snapshotOf } from './sql-bindings.ts';
 
 /* Lets every pending promise run, without a timer. */
 function drained(): Promise<void> {
     return new Promise((resolve) => setImmediate(resolve));
 }
 
-describe('what a .sql file reads', () => {
-    const sql = {
-        default: { connectionId: 'shop' },
-        files: { 'a.sql': { connectionId: 'local' }, 'b.sql': { connectionId: null }, 'c.sql': { connectionId: 'wide', database: 'stats' } }
-    };
-    const connections = [SHOP, WIDE, LOCAL];
-
-    test('follows the rules the machine applies', () => {
-        expect(choiceOf(sql, connections, '/repo', '/repo/.ruimte/private/consoles/wide/Wide 1.sql', '.ruimte/private/consoles/wide/Wide 1.sql')).toEqual({
-            source: 'console',
-            connectionId: 'wide',
-            database: null
-        });
-        expect(choiceOf(sql, connections, '/repo', '/repo/a.sql', 'a.sql')).toEqual({ source: 'file', connectionId: 'local', database: 'main' });
-        expect(choiceOf(sql, connections, '/repo', '/repo/b.sql', 'b.sql')).toEqual({ source: 'unbound' });
-        expect(choiceOf(sql, connections, '/repo', '/repo/c.sql', 'c.sql')).toEqual({ source: 'file', connectionId: 'wide', database: 'stats' });
-        expect(choiceOf(sql, connections, '/repo', '/repo/d.sql', 'd.sql')).toEqual({ source: 'default', connectionId: 'shop', database: 'shop' });
-        expect(choiceOf({}, connections, '/repo', '/repo/d.sql', 'd.sql')).toEqual({ source: 'none' });
-    });
-
-    test('the database a connection starts in, and the snapshot of a choice', () => {
-        expect([SHOP, WIDE, LOCAL].map(startDatabaseOf)).toEqual(['shop', null, 'main']);
+describe('the snapshot of a choice', () => {
+    test('is the one taken for that connection and database', () => {
         const snapshot = { connectionId: 'wide', database: null, dialect: 'mysql', takenAt: '2026-10-07T09:00:00.000Z', tables: 2 };
         expect(snapshotOf([snapshot], 'wide', null)).toBe(snapshot);
         expect(snapshotOf([snapshot], 'wide', 'stats')).toBeNull();
-    });
-
-    test('a console reads its selected database instead of the connection default', () => {
-        const path = '/repo/.ruimte/private/consoles/shop/Shop 1.sql';
-        const stored = path.slice('/repo/'.length);
-        const sql = { files: { [stored]: { connectionId: 'shop', database: 'pool_transvita' } } };
-        expect(choiceOf(sql, [SHOP], '/repo', path, stored)).toEqual({ source: 'console', connectionId: 'shop', database: 'pool_transvita' });
     });
 });
 

@@ -1,20 +1,26 @@
 import { describe, expect, test } from 'bun:test';
 import { generateKeyPairSync, sign, verify } from 'node:crypto';
 import {
-    EXTENSION_STORE_PURPOSE,
     SIGNING_PURPOSES,
     accessRequestMessage,
     accessStatementMessage,
     accessStatementV2Message,
     brokerHelloMessage,
+    clientAuthMessage,
+    clientChannelMessage,
+    daemonChallengeMessage,
+    daemonChannelMessage,
     deviceLinkStartMessage,
     extensionStoreMessage,
     lanDoorMessage,
+    localSecretChannelMessage,
+    machineProofMessage,
     machineRegistrationMessage,
     mapsTicketBytes,
     peerAccessRequestMessage,
     peerStatementMessage,
     pushMessage,
+    pushRoutingMessage,
     sessionKeyMessage,
     sessionRefreshMessage,
     signalMessage,
@@ -29,8 +35,11 @@ const nonce = 'n'.repeat(22);
 const routing = { machineId: 'machine-1', handle: key, id: otherKey, issuedAt: 0, expiresAt: 120_000, collapseId: key };
 const alert: PushEnvelope = { ...routing, pushType: 'alert', ephemeralKey: key, nonce: 'n'.repeat(16), ciphertext: 'c'.repeat(22), signature: 's'.repeat(86) };
 
+// Purposes that key a derivation or salt a key instead of opening a signed message.
+type DerivationPurpose = 'pushEncryption' | 'mapsTicketSubject' | 'mapsPathKey' | 'mapsPath';
+
 // One call per purpose over the same values, so only the purpose can make two of them differ.
-function everyPurpose(): Record<keyof typeof SIGNING_PURPOSES, string> {
+function everyPurpose(): Record<Exclude<keyof typeof SIGNING_PURPOSES, DerivationPurpose>, string> {
     return {
         brokerHello: brokerHelloMessage('machine-1', 'machine', key, nonce),
         signal: signalMessage(key, otherKey, { connectionId: 'machine-1', signal: { kind: 'close', reason: 'done' } }),
@@ -45,7 +54,15 @@ function everyPurpose(): Record<keyof typeof SIGNING_PURPOSES, string> {
         lanDoor: lanDoorMessage(nonce, 'machine-1', key),
         mapsTicketMac: mapsTicketBytes(key, 3_600_000),
         peerAccessRequest: peerAccessRequestMessage('machine-1', key, 'machine-2', nonce),
-        peerStatement: peerStatementMessage('machine-1', key, 'account-1', otherKey, 'machine-2', key, nonce, 0, 600_000)
+        peerStatement: peerStatementMessage('machine-1', key, 'account-1', otherKey, 'machine-2', key, nonce, 0, 600_000),
+        pushRouting: pushRoutingMessage(alert),
+        extensionStore: extensionStoreMessage('{}'),
+        daemonChallenge: daemonChallengeMessage('machine-1', nonce),
+        clientAuth: clientAuthMessage('machine-1', nonce, key),
+        daemonChannel: daemonChannelMessage('machine-1', nonce, '[]'),
+        clientChannel: clientChannelMessage('machine-1', nonce, key, '[]'),
+        localChannel: localSecretChannelMessage('machine-1', nonce, '[]'),
+        machineProof: machineProofMessage(4210, nonce)
     };
 }
 
@@ -55,14 +72,17 @@ describe('signed bytes', () => {
         for (const [purpose, message] of Object.entries(messages)) {
             expect(message.split('\n')[0]).toBe(SIGNING_PURPOSES[purpose as keyof typeof SIGNING_PURPOSES]);
         }
-        expect(new Set(Object.values(SIGNING_PURPOSES)).size).toBe(Object.keys(SIGNING_PURPOSES).length);
         expect(new Set(Object.values(messages)).size).toBe(Object.keys(messages).length);
     });
 
-    test('no prefix is the daemon handshake one', () => {
-        for (const prefix of Object.values(SIGNING_PURPOSES)) {
-            expect(prefix.startsWith('ruimte-')).toBe(false);
+    test('no two prefixes are alike and none starts another, so no message can pass for one of another purpose', () => {
+        const prefixes = Object.values(SIGNING_PURPOSES);
+        expect(new Set(prefixes).size).toBe(prefixes.length);
+        for (const prefix of prefixes) {
             expect(prefix.includes('\n')).toBe(false);
+            for (const other of prefixes) {
+                expect(prefix === other || !other.startsWith(prefix)).toBe(true);
+            }
         }
     });
 
@@ -129,7 +149,6 @@ describe('signed bytes', () => {
 
     test("the extension store's index signs the very bytes it signed before it moved here", () => {
         expect(extensionStoreMessage('{"extensions":[]}')).toBe('ruimte-extension-store-v1\n{"extensions":[]}');
-        expect(Object.values(SIGNING_PURPOSES)).not.toContain(EXTENSION_STORE_PURPOSE);
     });
 
     test('a statement binds its expiry', () => {

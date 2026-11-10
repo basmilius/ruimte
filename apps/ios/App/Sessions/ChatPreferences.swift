@@ -9,8 +9,6 @@ import RuimteTransport
 final class ChatPreferences {
     static let shared = ChatPreferences()
     static let storageKey = "ruimte.chat.preferences"
-    static let runtimeModes = ["supervised", "auto-accept-edits", "auto", "full-access"]
-    static let providers = ["claude", "codex", "antigravity", "copilot", "grok"]
 
     private(set) var runtimeMode = "full-access"
     private(set) var selections: [String: JSONValue] = [:]
@@ -26,14 +24,16 @@ final class ChatPreferences {
         guard let data = defaults.data(forKey: Self.storageKey), let stored = try? JSONValue.decode(data) else {
             return
         }
-        if let mode = stored["runtimeMode"]?.stringValue, Self.runtimeModes.contains(mode) { runtimeMode = mode }
+        if let mode = stored["runtimeMode"]?.stringValue, WireVocabulary.runtimeModes.contains(mode) {
+            runtimeMode = mode
+        }
         for (provider, selection) in stored["selections"]?.objectValue ?? [:]
-        where Self.providers.contains(provider) && Self.isSelection(selection) {
+        where Self.isAgentKind(provider) && Self.isSelection(selection) {
             selections[provider] = selection
         }
         for (machine, picks) in stored["accountByMachine"]?.objectValue ?? [:] {
             let valid = (picks.objectValue ?? [:]).compactMapValues(\.stringValue).filter {
-                Self.providers.contains($0.key) && !$0.value.isEmpty
+                Self.isAgentKind($0.key) && !$0.value.isEmpty
             }
             if !valid.isEmpty { accounts[machine] = valid }
         }
@@ -71,14 +71,14 @@ final class ChatPreferences {
     }
 
     func rememberSelection(_ selection: JSONValue, provider: String, now: Date = .now) {
-        guard Self.providers.contains(provider), Self.isSelection(selection) else { return }
+        guard Self.isAgentKind(provider), Self.isSelection(selection) else { return }
         selections[provider] = selection
         write(now)
     }
 
     /// The default account is what an absent pick means, so picking it takes the pick away.
     func rememberAccount(_ account: String?, provider: String, machineID: String, now: Date = .now) {
-        guard Self.providers.contains(provider) else { return }
+        guard Self.isAgentKind(provider) else { return }
         var picks = accounts[machineID] ?? [:]
         if let account, account != provider, !account.isEmpty {
             picks[provider] = account
@@ -91,7 +91,7 @@ final class ChatPreferences {
     }
 
     func rememberRuntimeMode(_ mode: String, now: Date = .now) {
-        guard Self.runtimeModes.contains(mode) else { return }
+        guard WireVocabulary.runtimeModes.contains(mode) else { return }
         runtimeMode = mode
         write(now)
     }
@@ -109,10 +109,10 @@ final class ChatPreferences {
             // Only asked when there is a pick to check against what the machine has.
             let list =
                 picked
-                ? (try? await client.request(.accountsList)).map(
+                ? (try? await client.request(.accountsList).decoded(as: AccountsSnapshot.self)).map(
                     ProviderAccountList.init) : nil
             _ = try? await client.request(
-                "chat.setPreferences", payload: payload(machineID: machineID, accounts: list))
+                .chatSetPreferences, payload: payload(machineID: machineID, accounts: list))
         }
     }
 
@@ -123,6 +123,15 @@ final class ChatPreferences {
             if let data = try? JSONValue.object(stored).encoded() { defaults.set(data, forKey: Self.storageKey) }
         }
         for listener in Array(listeners.values) { listener() }
+    }
+
+    /// Any kind the wire accepts as a key of `selections`, not a list of the CLIs this release knows, so a provider a
+    /// machine adds keeps its remembered model and account without an update of the app.
+    private static func isAgentKind(_ kind: String) -> Bool {
+        let probe = JSONValue.object([
+            "selections": .object([kind: .object(["model": .string("model"), "options": .object([:])])])
+        ])
+        return (try? WireSchema.validate("request.chat.setPreferences.payload", probe)) != nil
     }
 
     private static func isSelection(_ value: JSONValue) -> Bool {

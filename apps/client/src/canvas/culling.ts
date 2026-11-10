@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { Viewport } from '@/canvas/camera-slice';
-import { intersects, isMeasured, visibleRect, type Camera } from '@/canvas/math';
-import { rendersAtZoom } from '@/canvas/render-distance';
+import type { Viewport } from '@/canvas-model/camera-slice';
+import { intersects, isMeasured, visibleRect, type Camera } from '@/canvas-model/math';
+import { rendersAtZoom } from '@/canvas-model/render-distance';
 import { maximizedNodeOf, useCanvasCamera, type CanvasNode, type CanvasState } from '@/state/canvas';
 import { memoByIdentity } from '@/state/identity-memo';
 import { useSettings } from '@/state/settings';

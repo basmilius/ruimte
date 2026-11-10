@@ -1,5 +1,3 @@
-/* The pure half of the recorder: samples in, the numbers a report quotes out. */
-
 interface Distribution {
     n: number;
     p50: number;
@@ -72,7 +70,6 @@ export function heapSummary(samples: readonly HeapSample[]): HeapSummary | null 
     };
 }
 
-/* Input samples by event type, each a distribution of milliseconds. */
 export function byType(samples: readonly { type: string; ms: number }[]): Record<string, Distribution> {
     const grouped = new Map<string, number[]>();
     for (const sample of samples) {

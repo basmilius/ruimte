@@ -3,8 +3,8 @@ import { PROTOCOL_VERSION, REQUEST_SCHEMAS, encodeBytesReply, encodeLiveFrame } 
 import i18next from 'i18next';
 import type { LinkProblem } from '@/telemetry/events';
 import { linkMetrics, type PageMetric } from '@/telemetry/metrics';
+import type { SignalRoute, TransportError, TransportStatus } from '../transport-api/transport';
 import { LinkTransport, type Link, type LinkEvents } from './link-transport';
-import type { SignalRoute, TransportError, TransportStatus } from './transport';
 
 class FakeLink implements Link {
     // The frames of requests; the protocol check the transport sends on its own lands in `checks`.
@@ -34,7 +34,6 @@ function answerCheck(link: FakeLink, features: readonly string[]): void {
     link.events.message(JSON.stringify({ id: 'protocol', ok: true, result: { protocol: PROTOCOL_VERSION, features } }));
 }
 
-// Opens the link and answers the transport's protocol check, the way a current machine does.
 function open(link: FakeLink, signaled?: SignalRoute, features: readonly string[] = Object.keys(REQUEST_SCHEMAS)): void {
     link.events.open(signaled);
     answerCheck(link, features);

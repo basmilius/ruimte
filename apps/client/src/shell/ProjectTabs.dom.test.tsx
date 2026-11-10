@@ -81,7 +81,6 @@ function pointer(type: string, x: number, y: number): PointerEvent {
     return new PointerEvent(type, { pointerId: 1, button: 0, clientX: x, clientY: y, bubbles: true, cancelable: true });
 }
 
-/* A press on a tab carried down and out of the strip, the way a person tears a tab off. */
 async function dragOut(element: HTMLElement): Promise<void> {
     const at = (type: string, y: number) => pointer(type, 10, y);
     await act(async () => {

@@ -3,21 +3,22 @@ import type { PromptSubject } from '@adecore/agents-react/prompts';
 import { useChats } from '@adecore/agents-react/state';
 import { nodeChats } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
-import { onlyCameraMoved } from '@/canvas/camera-slice';
-import { canvasPrompts, samePrompts, type CanvasPrompt } from '@/canvas/prompts';
+import { canvasPrompts, samePrompts, type CanvasPrompt } from '@/attention/canvas-prompts';
+import { onlyCameraMoved } from '@/canvas-model/camera-slice';
+import { computerApprovalsOf, useComputer } from '@/computer/computer';
+import { proposalsOf, useProposals } from '@/proposals/proposals';
+import { secretRequestsOf, useSecrets } from '@/secrets/secrets';
 import { useCanvasStore } from '@/state/canvas';
 import { subscribeChatThreads } from '@/state/chats';
-import { computerApprovalsOf, useComputer } from '@/state/computer';
-import { endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
-import { proposalsOf, useProposals } from '@/state/proposals';
-import { secretRequestsOf, useSecrets } from '@/state/secrets';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointKey, endpointOfNode } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { tunnelProposalsOf, useTunnelProposals } from '@/state/tunnel-proposals';
 import { useWaitingSince } from '@/state/waiting';
-import { chatScopeOf } from '@/transport/chat-scope';
+import { chatScopeOf } from '@/workspace/chat-scope';
 
-export interface StackPrompts {
+interface StackPrompts {
     prompts: CanvasPrompt[];
     /* The prompts of snoozed nodes, kept out of the stack until the snooze ends or a person ends it. */
     snoozed: CanvasPrompt[];

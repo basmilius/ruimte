@@ -1,11 +1,10 @@
 import type { ChatInfo, ChatItem } from '@ruimte/contracts';
-import type { LiveEvent, LiveSessionAnswer } from '@ruimte/voice';
+import { liveSessionBody, type LiveEvent, type LiveSessionAnswer, type LiveSessionRequest } from '@ruimte/voice';
 import type { VoiceClock } from './clock.ts';
 import { LiveError, type OpenAiLive } from './openai-live.ts';
 import { LiveSideband, type LiveSocket, type SidebandHandlers } from './sideband.ts';
 import type { VoiceChatEvent, VoiceFollowChats } from './voice-follower.ts';
 
-/* A clock a test moves by hand, so every deadline runs without waiting. */
 export class FakeClock implements VoiceClock {
     #now = 1_000_000;
     #timers: { at: number; run: () => void; cancelled: boolean }[] = [];
@@ -140,9 +139,9 @@ export class FakeLive implements OpenAiLive {
         this.clock = clock;
     }
 
-    mint(key: string, body: Record<string, unknown>, signal: AbortSignal): Promise<LiveSessionAnswer> {
+    mint(key: string, request: LiveSessionRequest, signal: AbortSignal): Promise<LiveSessionAnswer> {
         const pending = deferred<LiveSessionAnswer>();
-        this.mints.push({ key, body, signal, pending });
+        this.mints.push({ key, body: liveSessionBody(request, 'phone'), signal, pending });
         const due = this.#mintWaiters.filter((waiter) => waiter.count <= this.mints.length);
         this.#mintWaiters = this.#mintWaiters.filter((waiter) => !due.includes(waiter));
         for (const waiter of due) {

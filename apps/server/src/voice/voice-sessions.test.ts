@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ChatItem, ProjectContent, ProjectSummary, ServerFrame, VoicePreferences, VoiceStartPayload } from '@ruimte/contracts';
 import type { LiveEvent } from '@ruimte/voice';
-import { serverActions } from '../actions/server-actions.ts';
-import type { ClientConnection } from '../dispatcher.ts';
-import type { CanvasHost } from '../tools/host.ts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
+import type { CanvasHost } from '../canvas/host.ts';
+import type { ClientConnection } from '../wire.ts';
 import { LiveError } from './openai-live.ts';
 import { FakeChats, FakeClock, FakeLive, settle, type FakeSocket } from './voice-fakes.ts';
 import { VOICE_CLOCK_MS, VOICE_CONTEXT_DEBOUNCE_MS, VOICE_START_DEADLINE_MS } from './voice-session.ts';
@@ -88,7 +88,6 @@ function functionCall(callId: string, args: Record<string, unknown>, tool = 'com
     };
 }
 
-/* The output the daemon sent for a call. */
 function outputOf(attach: { socket: { sentOf(type: string): LiveEvent[] } }, callId: string): Record<string, unknown> {
     const sent = attach.socket.sentOf('response.item.create').find((event) => (event.item as { call_id?: string }).call_id === callId);
     return JSON.parse(String((sent!.item as { output: string }).output)) as Record<string, unknown>;

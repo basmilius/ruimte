@@ -3,7 +3,7 @@ import { link, mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, symlink, w
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileExists } from '@adecore/utils/fs';
-import { renameNoReplace } from './no-replace-rename.ts';
+import { renameNoReplace } from '../disk/no-replace-rename.ts';
 import { planRename } from './rename.ts';
 import { codeOf, projectBoundary } from './test-boundary.ts';
 import type { WriteBoundary } from './write.ts';

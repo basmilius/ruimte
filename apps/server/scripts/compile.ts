@@ -3,6 +3,7 @@ import { chmod, copyFile, mkdir, readdir, readFile, rm, writeFile } from 'node:f
 import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { BUILD_FILE } from '@ruimte/service/runtime';
 import { downloadScrcpyServer } from '../src/devices/scrcpy-server.ts';
 import { placeDatabaseHelper } from './database-helper.ts';
 
@@ -189,7 +190,7 @@ if (values.os === 'mac' || values.os === 'linux') {
     await downloadScrcpyServer(nativeDir);
 }
 
-await writeFile(join(outDir, 'ruimte.build'), `${buildId}\n`);
+await writeFile(join(outDir, BUILD_FILE), `${buildId}\n`);
 console.log(`Compiled ${binary}`);
 
 /*
@@ -222,7 +223,6 @@ async function sourceMap(): Promise<number> {
     }
 }
 
-/* Runs one build step and settles with its exit code. */
 async function run(command: string[], cwd: string, stdout: 'inherit' | 'ignore' = 'inherit'): Promise<number> {
     const child = Bun.spawn(command, { cwd, stdio: ['ignore', stdout, 'inherit'] });
     return await child.exited;

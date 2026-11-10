@@ -8,7 +8,6 @@ interface FrameSubscription {
     release: (() => void) | null;
 }
 
-/* Two ids as one key, for a stream a pair of ids names. */
 export function streamKeyOf(...parts: string[]): string {
     return JSON.stringify(parts);
 }

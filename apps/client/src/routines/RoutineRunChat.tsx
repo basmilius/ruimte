@@ -4,12 +4,12 @@ import { useChatRow } from '@adecore/agents-react/state';
 import { LazyBoundary, messageOf } from '@adecore/ui';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
-import { ConnectionNotice, NodeNotice } from '@/nodes/NodeNotice';
+import { perform } from '@/action-port/perform';
 import { OutputChatContext } from '@/output/chat-scope';
-import { useEndpointId } from '@/state/keys';
-import { chatClientFor } from '@/transport/connections';
+import { useEndpointId } from '@/state/current-endpoint';
+import { ConnectionNotice, NodeNotice } from '@/surface/nodes/NodeNotice';
 import { useTransportStatus } from '@/transport/status';
+import { chatClientFor } from '@/workspace/connections';
 
 const RETRY_FIRST_MS = 2000;
 const RETRY_MAX_MS = 30_000;

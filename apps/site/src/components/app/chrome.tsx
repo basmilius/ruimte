@@ -82,7 +82,7 @@ function atTop(size: number): CSSProperties {
     return { width: size, height: size, margin: `-${size / 2}px 0 0 -${size / 2}px` };
 }
 
-/** `SidebarGlow` in `shell/Sidebar.tsx`. */
+/** `SidebarGlow` in `sidebar/Sidebar.tsx`. */
 function SidebarGlow() {
     return (
         <div aria-hidden className="sidebar-glow">
@@ -95,7 +95,7 @@ function SidebarGlow() {
 }
 
 /**
- * `shell/Sidebar.tsx`: the wordmark past the traffic lights, what waits on you, then the views. An
+ * `sidebar/Sidebar.tsx`: the wordmark past the traffic lights, what waits on you, then the views. An
  * extension's cards stand at its foot (`SidebarCards.tsx`), and its `sidebarFooter` slot opens the footer.
  */
 export function Sidebar({
@@ -207,7 +207,7 @@ export function TopRow({
     );
 }
 
-/** The panels with a button in the rail (`shell/panels.ts`, `toolbar: true`). */
+/** The panels with a button in the rail (`wiring/panels.ts`, `toolbar: true`). */
 export type RailPanel = 'files' | 'git' | 'databases' | 'devices' | 'output';
 
 function RailSeparator() {

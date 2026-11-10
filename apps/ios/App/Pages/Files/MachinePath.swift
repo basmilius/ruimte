@@ -1,4 +1,5 @@
 import Foundation
+import RuimtePulsar
 import RuimteTransport
 
 /// How a machine writes an absolute path. A Windows machine writes a drive and backslashes (`C:\Users\bas`), any other
@@ -25,7 +26,6 @@ struct MachinePath: Equatable, Sendable {
 
     var separator: String { style == .windows ? "\\" : "/" }
 
-    /// An example of a folder in the machine's style, for a field that asks for one.
     var example: String { style == .windows ? "C:\\Projects" : "~/projects" }
 
     /// The last segment, or the root itself for a root.
@@ -83,17 +83,18 @@ extension MachinePath {
     /// home. The machine names its own home: `fs.browse` answers `~/` as an absolute folder, where `server.hello` calls
     /// Ruimte's data folder home, which a client may not read.
     @MainActor static func startFolder(client: any MachineRequesting) async throws -> String {
-        let info = try? await client.request("endpoint.info", payload: .object([:]))
-        let kept = info?.text("startFolder").trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let info = try? await client.request(.endpointInfo).decoded(as: EndpointInfo.self)
+        let kept = info?.startFolder?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if !kept.isEmpty {
-            let separator = MachinePath(platform: info?.text("platform")).separator
+            let separator = MachinePath(platform: info?.platform).separator
             let listing = try? await client.request(
-                "fs.browse", payload: .object(["partialPath": .string(kept.hasSuffix(separator) ? kept : kept + separator)]))
-            if let listing, listing["exists"]?.boolValue != false, !listing.text("parentPath").isEmpty {
-                return listing.text("parentPath")
+                .fsBrowse, payload: .object(["partialPath": .string(kept.hasSuffix(separator) ? kept : kept + separator)])
+            ).decoded(as: FsBrowseResult.self)
+            if let listing, listing.exists != false, !listing.parentPath.isEmpty {
+                return listing.parentPath
             }
         }
-        let home = try await client.request("fs.browse", payload: .object(["partialPath": .string("~/")]))
-        return home.text("parentPath")
+        return try await client.request(.fsBrowse, payload: .object(["partialPath": .string("~/")]))
+            .decoded(as: FsBrowseResult.self).parentPath
     }
 }

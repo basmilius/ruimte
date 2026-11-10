@@ -10,7 +10,6 @@ public enum SignalingRoute: Equatable, Sendable {
 /// One way to signal a machine for one attempt. It hands over only signals the machine signed for this attempt.
 @MainActor public protocol SignalingPath: AnyObject {
     func start() throws
-    /// Signs one envelope for the machine and sends it.
     func send(_ envelope: JSONValue) throws
     func close()
 }
@@ -273,7 +272,6 @@ public enum SignalingRoute: Equatable, Sendable {
         self.openDoor = openDoor
     }
 
-    /// The race for one attempt, not yet started.
     public func race(connectionID: String, scheduler: any TransportScheduling, events: SignalingRace.Events) throws
         -> SignalingRace
     {

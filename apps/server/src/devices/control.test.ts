@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { DeviceOperated } from '@ruimte/contracts';
 import { ManualTimers } from '../computer/computer-test-helpers.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { AGENT_HOLD_IDLE_MS, DeviceDriver } from './agent-driver.ts';
 import { DeviceControl, describeStep } from './control.ts';
 import { RecordingBackend, SIMULATOR } from './device-test-helpers.ts';

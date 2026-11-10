@@ -47,6 +47,7 @@ import {
 import { useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { FileToolbarToggle } from '@/files/FileToolbar';
 import { pinArtifact, useCanRemove, useCopyToThisMachine, usePinCanvases } from '@/output/artifact-actions';
 import { canDownload, downloadArtifactFile, useArtifactText, type ArtifactFileRef } from '@/output/artifact-bytes';
 import { comparable } from '@/output/artifact-list';
@@ -57,13 +58,13 @@ import { showChat, useChatName } from '@/output/kinds';
 import { selectArtifactVersion, useArtifactSelection } from '@/output/open';
 import { RemoveArtifactDialog, type RemoveArtifactRequest } from '@/output/RemoveArtifactDialog';
 import { useArtifact } from '@/output/use-artifact';
-import { showRoutine } from '@/routines/stage';
-import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
-import { FileToolbarToggle } from '@/shell/panels/FileToolbar';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpointIdOfMachine, useEndpoints } from '@/state/endpoints';
 import { artifactTabKey } from '@/state/files';
-import { endpointKey, useEndpointId } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
+import { showRoutine } from '@/state/routines-stage';
 import { useToasts } from '@/state/toasts';
+import { useFileToolbarSlot } from '@/surface/panels/file-toolbar-slot';
 import { useMachineAnswers } from '@/transport/features';
 import { useMachineUrl } from '@/transport/machine-url';
 
@@ -244,7 +245,6 @@ function ArtifactBody({
     );
 }
 
-/* The version Compare sets beside the one picked: the one a person chose, or the one before it. */
 function baseFor(versions: readonly ArtifactVersion[], version: ArtifactVersion | null, baseId: string | null): ArtifactVersion | null {
     if (version === null) {
         return null;
@@ -288,7 +288,6 @@ function ShrinkingLabel({ children }: { children: ReactNode }) {
     );
 }
 
-/* The version on screen as the bar's first control, and every version behind it, newest first. */
 function VersionsMenu({
     versions,
     selected,
@@ -298,7 +297,6 @@ function VersionsMenu({
     versions: readonly ArtifactVersion[];
     selected: ArtifactVersion | null;
     onPick(version: ArtifactVersion): void;
-    /* Set where a person may remove a version, which each row then offers. */
     onRemove?: (version: ArtifactVersion) => void;
 }) {
     const { t } = useTranslation('output');
@@ -344,7 +342,6 @@ function VersionsMenu({
     );
 }
 
-/* In Compare, the version the one on screen is set beside. */
 function BaseMenu({
     versions,
     version,
@@ -626,7 +623,6 @@ function FileRows({ endpointId, artifact, version }: { endpointId: string; artif
     );
 }
 
-/* Where the version on screen came from, as the machine recorded it, with its files, behind the bar's info button. */
 function OriginPopover({
     endpointId,
     artifact,

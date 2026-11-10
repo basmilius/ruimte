@@ -32,11 +32,8 @@ export interface Harness {
     env: Env;
     now: number;
     upstream: Upstream[];
-    /* What the cache holds, by the URL it was keyed under. */
     cached: Map<string, Response>;
-    /* The subjects the rate limit counted. */
     limited: string[];
-    /* Makes the rate limit refuse. */
     refuse: boolean;
     /* The answers of the fake upstream, one per call; the last one repeats. */
     answers: Array<(request: Upstream) => Response>;

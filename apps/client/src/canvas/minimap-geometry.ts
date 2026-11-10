@@ -1,6 +1,6 @@
-import type { Viewport } from '@/canvas/camera-slice';
-import { unionOf, type Camera, type Point, type Rect } from '@/canvas/math';
-import type { DerivedFrame } from '@/canvas/node-body';
+import type { Viewport } from '@/canvas-model/camera-slice';
+import type { DerivedFrame } from '@/canvas-model/derived-frame';
+import { unionOf, type Camera, type Point, type Rect } from '@/canvas-model/math';
 import { membersOf, type CanvasNode } from '@/state/canvas-model';
 
 /* The map itself, in screen pixels inside its card. */
@@ -115,7 +115,6 @@ export function worldOnMap(map: MinimapScale, point: Point): Point {
     return { x: (point.x - map.x) / map.scale, y: (point.y - map.y) / map.scale };
 }
 
-/* The camera that looks at a world point from the middle of the viewport, at the zoom it had. */
 export function cameraLookingAt(camera: Camera, viewport: Viewport, world: Point): Camera {
     return { zoom: camera.zoom, x: viewport.w / 2 - world.x * camera.zoom, y: viewport.h / 2 - world.y * camera.zoom };
 }

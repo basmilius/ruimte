@@ -3,7 +3,6 @@ import { DEFAULT_BROKER_URL, type BrokerOverride, type BrokerSetting } from '@ru
 import type { Relay } from '../auth/relay.ts';
 import { BrokerSwitch } from './broker-switch.ts';
 
-/* A relay that only records what happened to it. */
 class RecordingRelay implements Relay {
     readonly url: string;
     published = false;
@@ -13,9 +12,8 @@ class RecordingRelay implements Relay {
         this.url = url;
     }
 
-    async publish(): Promise<string | null> {
+    async publish(): Promise<void> {
         this.published = true;
-        return null;
     }
 
     async stop(): Promise<void> {
@@ -53,7 +51,6 @@ describe('BrokerSwitch', () => {
     test('starts on the default broker with nothing set', async () => {
         const { broker, relays } = setup(null);
         expect(broker.describe()).toEqual({ brokerUrl: DEFAULT_BROKER_URL, brokerFixed: false });
-        // Nothing is dialed before the daemon listens.
         expect(relays).toHaveLength(0);
         await broker.publish(LOCAL);
         expect(relays.map((relay) => [relay.url, relay.published])).toEqual([[DEFAULT_BROKER_URL, true]]);
@@ -73,7 +70,6 @@ describe('BrokerSwitch', () => {
         ]);
         expect(broker.describe().brokerUrl).toBe('wss://mine.example.com');
 
-        // The same URL again changes nothing.
         await broker.apply();
         expect(relays).toHaveLength(2);
 

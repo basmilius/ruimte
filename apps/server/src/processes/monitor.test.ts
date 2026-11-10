@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { FINE_POINTS } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { COARSE_INTERVAL_MS, ProcessMonitor } from './monitor.ts';
 import { type ProcessSampler, type RawProcess, type RawSample } from './sampler.ts';
 import { STUCK_THRESHOLDS } from './stuck.ts';
@@ -24,7 +24,6 @@ function proc(pid: number, ppid: number, cpuNs: number, overrides: Partial<RawPr
     };
 }
 
-/* A machine whose clock and CPU move only when the test says so. */
 class FakeSampler implements ProcessSampler {
     at = 1_800_000_000_000;
     awake = 0;

@@ -85,7 +85,7 @@ private final class Heard: Sendable {
     @Test func aReadWithoutAnAnswerIsATimeout() async {
         let clock = FakeScheduler()
         let client = MachineClient(send: { _ in clock.advance() }, scheduler: clock, connected: true)
-        let heard = await problemsAwaiting { _ = try? await client.request("server.ping") }
+        let heard = await problemsAwaiting { _ = try? await client.request(.serverPing) }
         #expect(heard == [.timeout(request: "server.ping")])
     }
 

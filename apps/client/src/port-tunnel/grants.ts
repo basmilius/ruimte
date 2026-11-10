@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { create } from 'zustand';
 import { useProject } from '@/state/project';
 import { transportFor } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 import { useEndpointConnection } from '@/transport/status';
 
@@ -28,7 +29,6 @@ export const usePortGrants = create<GrantStore>((set) => ({
 
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
-/* The port a page asks for when its address is one of the loopback spellings over http, else null. */
 export function loopbackPort(url: string): number | null {
     const parsed = URL.parse(url);
 
@@ -61,7 +61,7 @@ export function currentProjectId(): string | null {
 }
 
 /* Reads the grants again; a machine that cannot list them has none to use. */
-export function loadPortGrants(endpointId: string): void {
+function loadPortGrants(endpointId: string): void {
     const transport = transportFor(endpointId);
 
     if (transport === null || !machineAnswers(transport.connection, 'port.list')) {
@@ -70,10 +70,10 @@ export function loadPortGrants(endpointId: string): void {
         return;
     }
 
-    transport
-        .request('port.list', {})
-        .then(({ grants }) => usePortGrants.getState().set(endpointId, grants))
-        .catch(() => undefined);
+    void fireAndForget(
+        'port.list',
+        transport.request('port.list', {}).then(({ grants }) => usePortGrants.getState().set(endpointId, grants))
+    );
 }
 
 /*

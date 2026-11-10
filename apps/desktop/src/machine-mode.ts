@@ -26,7 +26,7 @@ export interface MachineModeFacts {
     smoke: boolean;
 }
 
-export interface MachineModeDecision {
+interface MachineModeDecision {
     mode: MachineMode;
     /* What to store: `local` for a recognized earlier install, so an update never asks, and `ask` for a new one, so the next start asks again whatever the first left behind. */
     write: 'local' | 'ask' | null;
@@ -87,7 +87,6 @@ export function hasInstallTraces(exists: (name: string) => boolean): boolean {
     return INSTALL_TRACES.some(exists);
 }
 
-/* Without a machine the local secret stays shut, even when a daemon answers on the port. */
 export async function secretFor(mode: MachineMode, read: () => Promise<string | null>): Promise<string | null> {
     return mode === 'local' ? read() : null;
 }

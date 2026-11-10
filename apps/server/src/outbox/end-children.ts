@@ -1,8 +1,8 @@
+import type { ChatCore } from '@adecore/agents/chat';
 import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { endChildren } from '@adecore/agents/coordination';
-import { isVoiceActor } from '../actions/context.ts';
-import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
+import { isPlaceless, openerOf } from '../opener.ts';
 import type { SessionManager } from '../sessions/manager.ts';
 import type { EndChildrenEntry, OutboxEntry, OutboxStore, OutboxWork } from './outbox.ts';
 
@@ -16,7 +16,7 @@ interface EndChildrenWiringDeps {
     lineage: AgentLineageStore;
     outbox: OutboxStore;
     tasks: TaskStore;
-    chats: Pick<ChatManager, 'get' | 'stop'>;
+    chats: Pick<ChatCore, 'get' | 'stop'>;
     sessions: Pick<SessionManager, 'get' | 'end'>;
     enqueue(projectId: string, target: string, work: OutboxWork): Promise<void>;
     now?: () => number;
@@ -90,7 +90,10 @@ export function wireEndChildren({
         for (const openedBy of new Set(
             lineage
                 .orphans(projectId, ids)
-                .filter((orphan) => lineage.peerOf(orphan.nodeId) === null && !isVoiceActor(orphan.openedBy) && !placedElsewhere(orphan.openedBy, projectId))
+                .filter(
+                    (orphan) =>
+                        lineage.peerOf(orphan.nodeId) === null && !isPlaceless(openerOf(orphan.openedBy)) && !placedElsewhere(orphan.openedBy, projectId)
+                )
                 .map((orphan) => orphan.openedBy)
         )) {
             void owe(openedBy).catch((e: unknown) => log(`Owing the end of the agents ${openedBy} opened failed: ${errorText(e)}`));

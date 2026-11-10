@@ -18,7 +18,8 @@ import { generateKeyPair, signMessage } from '../auth/keys.ts';
 import { admitClient } from '../auth/test-admit.ts';
 import { HIGH_WATER_MARK } from '../backpressure.ts';
 import { connectionOpener } from '../connection.ts';
-import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
+import { Dispatcher } from '../dispatcher.ts';
+import type { ClientAccess } from '../wire.ts';
 import { authenticateChannel } from './channel-auth.ts';
 import { AUTHENTICATED_FRAME_CHARS, type DirectChannel } from './data-channel.ts';
 import { DirectClient, type DirectCredential } from './direct-client.ts';
@@ -26,7 +27,7 @@ import { LanDoor } from './lan-door.ts';
 import { DirectPeers } from './peers.ts';
 import { SignalGate } from './signal-gate.ts';
 import { StatementGate } from './statement.ts';
-import { servicesWith, signedSignal } from './test-helpers.ts';
+import { hostWith, signedSignal } from './test-helpers.ts';
 
 /*
  * Both ends of a direct connection in one process, over real ICE, DTLS and SCTP on loopback: the
@@ -60,7 +61,7 @@ beforeAll(async () => {
         'endpoint.info',
         (_payload, client) => ({ reachability: client.access?.reachability, authenticated: client.access?.sessionId !== null }) as never
     );
-    const openConnection = connectionOpener(servicesWith(dispatcher));
+    const openConnection = connectionOpener(hostWith(dispatcher));
     peers = new DirectPeers({
         iceServers: () => [],
         portRange: null,
@@ -419,8 +420,8 @@ describe('a machine of the account working here as a peer', () => {
         expect(access?.sessionId).not.toBeNull();
 
         expect(await client.request<{ serverTime: number }>('server.ping', {})).toMatchObject({ serverTime: expect.any(Number) });
-        await expect(client.request('endpoint.info', {})).rejects.toThrow(/forbidden/);
-        await expect(client.request('fs.read', { path: '/etc/passwd' })).rejects.toThrow(/forbidden/);
+        await expect(client.request('endpoint.info', {})).rejects.toMatchObject({ code: 'forbidden' });
+        await expect(client.request('fs.read', { path: '/etc/passwd' })).rejects.toMatchObject({ code: 'forbidden' });
     }, 20_000);
 
     test('proves its key from then on without a statement, until a person revokes it', async () => {
@@ -432,15 +433,15 @@ describe('a machine of the account working here as a peer', () => {
 
         const sessionId = (await store.sessionForPublicKey(key.publicKey))!;
         await store.revoke(sessionId);
-        await expect(viaGate(key, null).open()).rejects.toThrow(/does not know this device|not-paired/);
-        await expect(viaGate(key, statementFor(key.publicKey, 'third-peer-nonce'.padEnd(22, 'n'))).open()).rejects.toThrow(/not-paired/);
+        await expect(viaGate(key, null).open()).rejects.toMatchObject({ code: 'not-paired' });
+        await expect(viaGate(key, statementFor(key.publicKey, 'third-peer-nonce'.padEnd(22, 'n'))).open()).rejects.toMatchObject({ code: 'not-paired' });
     }, 40_000);
 
     test('a statement for another key lets nobody in', async () => {
         const key = generateKeyPair();
         const thief = generateKeyPair();
         const count = opened.length;
-        await expect(viaGate(thief, statementFor(key.publicKey, 'stolen-peer-nonce'.padEnd(22, 'n'))).open()).rejects.toThrow(/not-paired/);
+        await expect(viaGate(thief, statementFor(key.publicKey, 'stolen-peer-nonce'.padEnd(22, 'n'))).open()).rejects.toMatchObject({ code: 'not-paired' });
         expect(opened.length).toBe(count);
     }, 20_000);
 });

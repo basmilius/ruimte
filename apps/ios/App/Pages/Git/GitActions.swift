@@ -2,7 +2,6 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
-/// What a person can be asked to confirm before it runs, and what the sheet for it says.
 enum GitConfirmation: Identifiable {
     case discard(cwd: String, path: String)
     case forcePush(cwd: String)
@@ -34,7 +33,11 @@ enum GitConfirmation: Identifiable {
     var detail: String {
         switch self {
         case .discard: String(localized: "The file goes back to what it was, and git keeps a stash to undo it with.")
-        case .forcePush: String(localized: "Overwrites the remote branch, so commits only the remote has are lost. Stops if someone pushed since the last fetch.")
+        case .forcePush:
+            String(
+                localized:
+                    "Overwrites the remote branch, so commits only the remote has are lost. Stops if someone pushed since the last fetch."
+            )
         case .deleteBranch(_, _, let force):
             force
                 ? String(localized: "This branch has not been merged anywhere. Its commits are only reachable by hash.")
@@ -64,7 +67,7 @@ extension GitRepositories {
     /// push says where it is instead of freezing a button.
     @discardableResult func act(
         client: any MachineRequesting, cwd: String, kind: String, extra: [String: JSONValue] = [:]
-    ) async -> JSONValue? {
+    ) async -> GitActionResult? {
         guard !busy else { return nil }
         busy = true
         defer {
@@ -72,7 +75,13 @@ extension GitRepositories {
             progress = nil
         }
         let outcome = await perform(client: client, cwd: cwd, kind: kind, extra: extra)
-        if case .failure(let error) = outcome { problem = error.localizedDescription } else { problem = nil }
+        if case .failure(let error) = outcome {
+            problem = error.localizedDescription
+            refusal = error.machineCode
+        } else {
+            problem = nil
+            refusal = nil
+        }
         await refresh(client: client, cwd: cwd)
         return try? outcome.get()
     }
@@ -125,14 +134,13 @@ extension GitRepositories {
         return failed.isEmpty
     }
 
-    /// Moves paths of one repository in or out of its index.
     func stage(client: any MachineRequesting, cwd: String, paths: [String], staged: Bool) async {
         guard !busy, !paths.isEmpty else { return }
         busy = true
         defer { busy = false }
         do {
             _ = try await client.request(
-                "git.stage",
+                .gitStage,
                 payload: .object([
                     "cwd": .string(cwd), "paths": .array(paths.map { .string($0) }), "staged": .bool(staged),
                 ]))
@@ -151,8 +159,9 @@ extension GitRepositories {
         var stash: String?
         do {
             let answer = try await client.request(
-                "git.discard", payload: .object(["cwd": .string(cwd), "paths": .array([.string(path)])]))
-            stash = answer["stash"]?.stringValue
+                .gitDiscard, payload: .object(["cwd": .string(cwd), "paths": .array([.string(path)])])
+            ).decoded(as: GitDiscardResult.self)
+            stash = answer.stash
             problem = nil
         } catch {
             problem = error.localizedDescription
@@ -163,12 +172,13 @@ extension GitRepositories {
 
     private func perform(
         client: any MachineRequesting, cwd: String, kind: String, extra: [String: JSONValue]
-    ) async -> Result<JSONValue, any Error> {
+    ) async -> Result<GitActionResult, any Error> {
         let actionId = UUID().uuidString
-        let cancel = client.subscribe("git.progress") { [weak self] payload in
-            guard payload.text("actionId") == actionId else { return }
-            let line = payload.text("line")
-            self?.progress = line.isEmpty ? payload.text("phase") : line
+        let cancel = client.subscribe(.gitProgress) { [weak self] payload in
+            guard let event = try? payload.decoded(as: GitProgressEvent.self), event.actionId == actionId else {
+                return
+            }
+            self?.progress = event.line.isEmpty ? event.phase.rawValue : event.line
         }
         defer {
             cancel()
@@ -177,12 +187,9 @@ extension GitRepositories {
         let fields: [String: JSONValue] = ["cwd": .string(cwd), "actionId": .string(actionId), "kind": .string(kind)]
             .merging(extra) { $1 }
         do {
-            return .success(try await client.request("git.action", payload: .object(fields)))
+            return .success(try await client.request(.gitAction, payload: .object(fields)).decoded(as: GitActionResult.self))
         } catch {
             return .failure(error)
         }
     }
 }
-
-/// Git refuses to delete a branch it has not merged anywhere; only that refusal earns a second ask.
-func gitIsUnmergedRefusal(_ message: String) -> Bool { message.contains("not fully merged") }

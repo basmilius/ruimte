@@ -5,7 +5,8 @@ import { wait } from '@adecore/utils/async';
 import type { DeviceInput, LiveStreamFrame } from '@ruimte/contracts';
 import { z } from 'zod';
 import { runCommand } from './command.ts';
-import { DeviceError, type DeviceSource } from './manager.ts';
+import { DeviceError } from './device-error.ts';
+import { type DeviceSource } from './manager.ts';
 
 export type PhysicalFrameCapture = (deviceId: string, sequence: number, directory: string, signal: AbortSignal) => Promise<LiveStreamFrame>;
 
@@ -19,7 +20,6 @@ const CaptureResultSchema = z.object({
     })
 });
 
-/* A png of the screen written to `png`, and the size devicectl says it has. */
 async function capturePng(deviceId: string, png: string, signal?: AbortSignal): Promise<{ width: number; height: number }> {
     const captured = await runCommand(
         [
@@ -66,7 +66,6 @@ export async function capturePhysicalFrame(deviceId: string, sequence: number, d
 
 export type PhysicalScreenshot = (deviceId: string) => Promise<Uint8Array>;
 
-/* Resolves after `ms`, or at once when the signal is raised. */
 export type Pause = (ms: number, signal: AbortSignal) => Promise<void>;
 
 /* One png of the screen at the phone's own resolution, for an agent, beside whatever preview runs. */

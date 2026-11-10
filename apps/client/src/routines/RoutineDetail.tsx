@@ -2,7 +2,7 @@ import { runtimeModeLabel } from '@adecore/agents-react/chat';
 import { AgentModelLabel } from '@adecore/agents-react/providers';
 import { Button, EmptyState, ErrorBoundary, FormError, Icon, IconButton, KeyValueList, Pill, ScrollArea, SectionLabel, Segmented } from '@adecore/ui';
 import { formatDateTime } from '@adecore/ui/format';
-import type { RoutineEntry, RoutineRun } from '@ruimte/contracts';
+import { isDeclined, type RoutineEntry, type RoutineRun } from '@ruimte/contracts';
 import { Ban, CircleCheck, Hand, SquareArrowOutUpRight } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,13 +15,12 @@ import { useRoutineApproval } from '@/routines/routine-approval';
 import { useRoutineWhat } from '@/routines/routine-what';
 import { RoutinePrompt } from '@/routines/RoutinePrompt';
 import { RoutineRunChat } from '@/routines/RoutineRunChat';
-import { leaveRoutines, showRoutine } from '@/routines/stage';
 import { dayClockWords, dayWords, runWords, scheduleWords, weekdayClock } from '@/routines/words';
-import { FileToolbarSlotProvider, fixedSlot } from '@/shell/panels/file-toolbar-slot';
 import { useEndpoints } from '@/state/endpoints';
 import { isThisMachine } from '@/state/local-machine';
+import { leaveRoutines, showRoutine } from '@/state/routines-stage';
+import { FileToolbarSlotProvider, fixedSlot } from '@/surface/panels/file-toolbar-slot';
 
-/* A routine opened inside Routines: its definition and runs on the left, the run picked on the right. */
 export function RoutineDetail({ endpointId, entry, runId, timeZone }: { endpointId: string; entry: RoutineEntry; runId: string | null; timeZone: string }) {
     const { t } = useTranslation('routines');
     const run = entry.runs.find((candidate) => candidate.runId === runId) ?? entry.runs.find((candidate) => candidate.state !== 'skipped') ?? null;
@@ -58,7 +57,7 @@ function Definition({ endpointId, entry }: { endpointId: string; entry: RoutineE
     const machine = useEndpoints((s) => s.endpoints.find((candidate) => candidate.id === endpointId)?.label ?? '');
     return (
         <section className="flex flex-col gap-3 border-b border-border p-4" aria-label={t('detail.definition')}>
-            {(entry.held !== undefined || entry.local.declined === entry.digest) && <ApprovalBanner endpointId={endpointId} entry={entry} />}
+            {(entry.held !== undefined || isDeclined(entry)) && <ApprovalBanner endpointId={endpointId} entry={entry} />}
             {routine.kind === 'agent' && (
                 <div className="flex flex-col gap-1.5">
                     <SectionLabel render={<h3 />}>{t('detail.instructions')}</SectionLabel>
@@ -228,7 +227,7 @@ function ApprovalBanner({ endpointId, entry }: { endpointId: string; entry: Rout
     const { t } = useTranslation('routines');
     const { origin, busy, failure, approve, decline } = useRoutineApproval(endpointId, entry);
     // A denial stands until the routine changes; approving it here is the way back.
-    const declined = entry.local.declined === entry.digest;
+    const declined = isDeclined(entry);
     return (
         <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-raised bg-clip-padding p-3" role="status">
             <span className="flex items-center gap-2 text-sm font-medium text-text">

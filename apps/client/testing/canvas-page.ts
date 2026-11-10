@@ -25,7 +25,6 @@ export async function openCanvasPage(machine: FakeMachine, views: ProjectCanvasV
     };
 }
 
-/* The nodes of a canvas in the last save that went over the wire. */
 export function savedNodes(machine: FakeMachine, viewId = 'main'): ProjectNode[] {
     const saved = machine
         .requests('project.save')

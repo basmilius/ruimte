@@ -1,21 +1,13 @@
 import { formatClock, formatDateTime, formatDay, formatDuration, formatElapsedShort } from '@adecore/ui/format';
-import type { CronProblem, RoutineEntry, RoutineRun, RoutineSchedule } from '@ruimte/contracts';
+import { isDeclined, type CronProblem, type RoutineEntry, type RoutineRun, type RoutineSchedule } from '@ruimte/contracts';
 import i18next from 'i18next';
+import { weekdayWords } from '@/format/weekday';
 import { awaitsApproval, type AgendaBlock, type CellItem } from '@/routines/agenda';
 
 /* A time of a schedule, `HH:MM` on the machine's clock, written the way the region writes a clock. */
 export function clockWords(time: string): string {
     const [hour, minute] = time.split(':').map(Number);
     return formatClock(Date.UTC(2000, 0, 3, hour ?? 0, minute ?? 0), 'UTC');
-}
-
-// 3 January 2000 was a Monday, so an ISO weekday is that date plus the weekday less one.
-function weekdayAt(weekday: number): number {
-    return Date.UTC(2000, 0, 2 + weekday, 12, 0);
-}
-
-export function weekdayWords(weekday: number, width: 'short' | 'long' = 'short'): string {
-    return formatDateTime(weekdayAt(weekday), { weekday: width, timeZone: 'UTC' });
 }
 
 const WEEKDAYS = [1, 2, 3, 4, 5];
@@ -25,12 +17,10 @@ function sameDays(days: readonly number[], expected: readonly number[]): boolean
     return days.length === expected.length && expected.every((day) => days.includes(day));
 }
 
-/* A schedule's days without repeats, Monday first. */
 function sortedDays(days: readonly number[]): number[] {
     return [...new Set(days)].sort((left, right) => left - right);
 }
 
-/* The word a set of days has of its own, or null for any other set. */
 function daysGroup(days: readonly number[]): 'daily' | 'weekdays' | 'weekends' | null {
     if (days.length === 7) {
         return 'daily';
@@ -101,7 +91,6 @@ export function cronProblemWords(problem: CronProblem): string {
     }
 }
 
-/* What a block in the week says in its chip: when a run started and how long it took, or what became of it. */
 export function blockWords(block: AgendaBlock, timeZone: string): string {
     const t = (key: string, values?: Record<string, string>): string => i18next.t(`routines:chip.${key}`, values);
     const run = block.run;
@@ -155,7 +144,6 @@ export function dayClockWords(at: number, timeZone: string): string {
     return formatDateTime(at, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone });
 }
 
-/* What a row says under its title: when it runs next, that it is paused, or that it waits for you. */
 export function rowStatus(entry: RoutineEntry, timeZone: string): { tone: 'needs' | 'muted'; text: string } {
     const waiting = entry.runs.find((run) => run.state === 'needs-you');
     if (waiting !== undefined) {
@@ -164,7 +152,7 @@ export function rowStatus(entry: RoutineEntry, timeZone: string): { tone: 'needs
     if (awaitsApproval(entry)) {
         return { tone: 'needs', text: i18next.t('routines:row.held') };
     }
-    if (entry.local.declined === entry.digest) {
+    if (isDeclined(entry)) {
         return { tone: 'muted', text: i18next.t('routines:row.declined') };
     }
     if (entry.local.pausedAt !== undefined) {
@@ -176,7 +164,6 @@ export function rowStatus(entry: RoutineEntry, timeZone: string): { tone: 'needs
     return { tone: 'muted', text: i18next.t('routines:row.ended') };
 }
 
-/* A run in the timeline, as a sentence. */
 export function runWords(run: RoutineRun, timeZone: string): string {
     const t = (key: string, values?: Record<string, string>): string => i18next.t(`routines:run.${key}`, values);
     const took = (): string => formatDuration(Math.max(0, (run.endedAt ?? run.at) - run.at));

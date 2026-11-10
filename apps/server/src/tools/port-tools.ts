@@ -1,11 +1,11 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { PORT_HOSTS } from '@ruimte/contracts';
 import { z } from 'zod';
+import { placeOf } from '../canvas/host.ts';
 import { PortGrantError } from '../ports/port-grants.ts';
-import { placeOf } from './host.ts';
-import { defineTool } from './tool.ts';
+import { defineTool, defineToolkit } from './tool.ts';
 
-export const portShare = defineTool('browser', {
+const portShare = defineTool('browser', {
     name: 'port_share',
     description: "Shares a dev server's port with the person's other devices, or stops a share you made. Needs the machine's Agents setting.",
     input: z.object({
@@ -73,3 +73,5 @@ export const portShare = defineTool('browser', {
         }
     }
 });
+
+export const portToolkit = defineToolkit('browser', [portShare]);

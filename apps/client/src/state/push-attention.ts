@@ -1,5 +1,5 @@
 import type { PushAttentionEntry } from '@ruimte/contracts';
-import { readOnEveryOpen, type Transport } from '@/transport/transport';
+import { readOnEveryOpen, type Transport, fireAndForget } from '@/transport-api/transport';
 
 const changeListeners = new Set<() => void>();
 
@@ -47,13 +47,12 @@ export class PushAttentionSync {
             return;
         }
         this.pending.add(key);
-        void this.transport
-            .request('push.read', { nodeId, issuedAt: entry.issuedAt })
-            .then(() => {
+        void fireAndForget(
+            'push.read',
+            this.transport.request('push.read', { nodeId, issuedAt: entry.issuedAt }).then(() => {
                 this.receive({ ...entry, readThrough: entry.issuedAt });
             })
-            .catch(() => undefined)
-            .finally(() => this.pending.delete(key));
+        ).finally(() => this.pending.delete(key));
     }
 
     /* The nodes the machine holds something unread for. A turn that ended or a task that failed, whether or not a client was there. */

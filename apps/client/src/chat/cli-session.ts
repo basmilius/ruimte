@@ -5,8 +5,9 @@ import { typeWhenReady } from '@/chat/provider-command';
 import { useEndpoints } from '@/state/endpoints';
 import { bindTerminalKeys } from '@/terminal/xterm';
 import { transportFor, type Transport } from '@/transport';
-import { sessionClientFor } from '@/transport/connections';
+import { fireAndForget } from '@/transport-api/transport';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
+import { sessionClientFor } from '@/workspace/connections';
 
 type CliPhase =
     | { kind: 'starting' }
@@ -83,7 +84,7 @@ export function useCliSession({ endpointId, sessionPrefix, start, typed, onStart
             offs.forEach((off) => off());
             // The session is this dialog's alone; a retry starts another.
             if (started.current) {
-                void sessions.kill(sessionId).catch(() => undefined);
+                void fireAndForget('sessions.kill', sessions.kill(sessionId));
             }
         };
     }, [endpointId, sessionId, typed]);

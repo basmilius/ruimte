@@ -3,23 +3,56 @@ import Observation
 import RuimtePulsar
 import RuimteTransport
 
+extension ProjectSummary {
+    var isChats: Bool { scratch == true }
+
+    static func placeholder(projectID: String, name: String = "", color: String = "") -> ProjectSummary {
+        ProjectSummary(
+            projectId: projectID, name: name, color: color, folder: "", lastOpenedAt: 0, available: true,
+            icon: .initial(ProjectInitialIcon(value: "")), nameSource: .folder)
+    }
+
+    func naming(_ name: String, color: String) -> ProjectSummary {
+        ProjectSummary(
+            projectId: projectId, name: name, color: color, folder: folder, lastOpenedAt: lastOpenedAt,
+            closedAt: closedAt, available: available, icon: icon, nameSource: nameSource, scratch: scratch)
+    }
+}
+
+extension ProjectIcon {
+    var kind: String {
+        switch self {
+        case .lucide(let icon): icon.kind
+        case .image(let icon): icon.kind
+        case .initial(let icon): icon.kind
+        }
+    }
+
+    var value: String {
+        switch self {
+        case .lucide(let icon): icon.value
+        case .image(let icon): icon.value
+        case .initial(let icon): icon.value
+        }
+    }
+}
+
 struct UnifiedProjectRow: Identifiable {
     struct ID: Hashable {
         let machineID: String
         let projectID: String
     }
     let machine: Machine
-    let summary: JSONValue
+    let summary: ProjectSummary
     let connected: Bool
-    var id: ID { ID(machineID: machine.id, projectID: summary.text("projectId")) }
-    var recent: Bool { summary["closedAt"] != nil && summary["closedAt"] != .null }
+    var id: ID { ID(machineID: machine.id, projectID: summary.projectId) }
+    var recent: Bool { summary.closedAt.present != nil }
 
     func matches(_ search: String) -> Bool {
-        search.isEmpty || summary.text("name").localizedCaseInsensitiveContains(search)
+        search.isEmpty || summary.name.localizedCaseInsensitiveContains(search)
             || machine.name.localizedCaseInsensitiveContains(search)
     }
 
-    /// The project on its machine's shared session, ready to open.
     @MainActor func workspace(_ runtime: AppRuntime) -> MobileWorkspace {
         MobileWorkspace(session: runtime.session(for: machine), projectID: id.projectID, summary: summary)
     }
@@ -41,16 +74,16 @@ final class UnifiedProjects {
 
     init(defaults: UserDefaults = .standard) { self.defaults = defaults }
 
-    var open: [UnifiedProjectRow] { ordered(projectRows.filter { !$0.recent }, by: "lastOpenedAt") }
-    var recent: [UnifiedProjectRow] { ordered(projectRows.filter(\.recent), by: "closedAt") }
+    var open: [UnifiedProjectRow] { ordered(projectRows.filter { !$0.recent }, by: \.lastOpenedAt) }
+    var recent: [UnifiedProjectRow] { ordered(projectRows.filter(\.recent), by: { $0.closedAt.present ?? 0 }) }
     /// The Chats project of every machine that has one, by machine name; it has a place of its own and never stands
     /// among the projects.
     var chats: [UnifiedProjectRow] {
-        rows.filter { NewChat.isChats($0.summary) }.sorted {
+        rows.filter { $0.summary.isChats }.sorted {
             $0.machine.name == $1.machine.name ? $0.machine.id < $1.machine.id : $0.machine.name < $1.machine.name
         }
     }
-    private var projectRows: [UnifiedProjectRow] { rows.filter { !NewChat.isChats($0.summary) } }
+    private var projectRows: [UnifiedProjectRow] { rows.filter { !$0.summary.isChats } }
     var loading: Bool { entries.values.contains { $0.loading } }
     var hasConnectedMachine: Bool { entries.values.contains { $0.connected } }
     var problems: [String: String] {
@@ -118,29 +151,43 @@ final class UnifiedProjects {
             let connection = connect(machine)
             entry.connection = connection
             let binding = entry.binding
-            entry.unsubscribe = connection.client.subscribe("project.summary") {
-                [weak self, weak entry] event in
-                guard let self, let entry, entry.binding == binding, current(entry), entry.connected
-                else { return }
-                if let valid = try? WireEvent.projectSummary.validatePayload(event)["summary"] {
-                    entry.summaries.removeAll { $0.text("projectId") == valid.text("projectId") }
-                    entry.summaries.append(valid)
-                    if entry.task != nil { entry.changedSummaries[valid.text("projectId")] = valid }
-                    writeCache(entry)
-                    return
-                }
-                _ = beginLoad(entry)
-            }
-            entry.unobserve = connection.client.observeConnection {
-                [weak self, weak entry] connected in
-                guard let self, let entry, entry.binding == binding, current(entry) else { return }
-                entry.operation += 1
-                entry.task?.cancel()
-                entry.task = nil
-                entry.loading = false
-                entry.connected = connected
-                if connected { _ = beginLoad(entry) }
-            }
+            // A machine that takes `project.watch` also says when a project nobody holds changed on disk.
+            let live = LiveResource(
+                client: connection.client,
+                events: [
+                    .apply(
+                        .projectSummary,
+                        raw: { [weak self, weak entry] event in
+                            guard let self, let entry, entry.binding == binding, current(entry), entry.connected
+                            else { return }
+                            if let valid = try? WireEvent.projectSummary.validatePayload(event)
+                                .decoded(as: ProjectSummaryEvent.self).summary
+                            {
+                                entry.summaries.removeAll { $0.projectId == valid.projectId }
+                                entry.summaries.append(valid)
+                                if entry.task != nil { entry.changedSummaries[valid.projectId] = valid }
+                                writeCache(entry)
+                                return
+                            }
+                            _ = beginLoad(entry)
+                        }),
+                    .reread(.projectListChanged),
+                ],
+                watch: .area(.projectWatch, gated: true),
+                connection: { [weak self, weak entry] connected in
+                    guard let self, let entry, entry.binding == binding, current(entry) else { return }
+                    entry.operation += 1
+                    entry.task?.cancel()
+                    entry.task = nil
+                    entry.loading = false
+                    entry.connected = connected
+                },
+                read: { [weak self, weak entry] in
+                    guard let self, let entry, entry.binding == binding, current(entry), entry.connected else { return }
+                    await beginLoad(entry).value
+                })
+            entry.live = live
+            live.start()
             connection.retain()
         }
         self.contextID = contextID
@@ -159,16 +206,16 @@ final class UnifiedProjects {
         entries.values.flatMap { entry -> [UnifiedProjectRow] in
             guard entry.connection?.isCurrent() != false else { return [] }
             // A project whose folder its machine no longer finds cannot be opened, so it is left out, as on the desktop.
-            return entry.summaries.filter { $0["available"] != .bool(false) }.map {
+            return entry.summaries.filter(\.available).map {
                 UnifiedProjectRow(machine: entry.machine, summary: $0, connected: entry.connected)
             }
         }
     }
 
-    private func ordered(_ rows: [UnifiedProjectRow], by key: String) -> [UnifiedProjectRow] {
+    private func ordered(_ rows: [UnifiedProjectRow], by key: (ProjectSummary) -> Double) -> [UnifiedProjectRow] {
         rows.sorted {
-            if $0.summary.number(key) != $1.summary.number(key) {
-                return $0.summary.number(key) > $1.summary.number(key)
+            if key($0.summary) != key($1.summary) {
+                return key($0.summary) > key($1.summary)
             }
             if $0.machine.id != $1.machine.id { return $0.machine.id < $1.machine.id }
             return $0.id.projectID < $1.id.projectID
@@ -200,10 +247,11 @@ final class UnifiedProjects {
                 let response = try await connection.client.request(.projectList)
                 guard !Task.isCancelled, entry.operation == operation, current(entry), entry.connected else { return }
                 let validated = try WireRequest.projectList.validateResult(response)
+                    .decoded(as: ProjectListResult.self)
                 // Events received during this request are newer than its snapshot.
                 entry.summaries = unique(
-                    validated.list("projects").map {
-                        entry.changedSummaries[$0.text("projectId")] ?? $0
+                    validated.projects.map {
+                        entry.changedSummaries[$0.projectId] ?? $0
                     } + Array(entry.changedSummaries.values))
                 entry.changedSummaries.removeAll()
                 entry.problem = nil
@@ -218,24 +266,23 @@ final class UnifiedProjects {
         return task
     }
 
-    private func unique(_ summaries: [JSONValue]) -> [JSONValue] {
+    private func unique(_ summaries: [ProjectSummary]) -> [ProjectSummary] {
         Array(
             Dictionary(
-                summaries.map { ($0.text("projectId"), $0) },
+                summaries.map { ($0.projectId, $0) },
                 uniquingKeysWith: { _, latest in latest }
             ).values)
     }
 
-    private func cacheKey(_ id: String) -> String { "ruimte.ios.projects.\(id)" }
-
     private func forgetCache(_ id: String) {
-        defaults.removeObject(forKey: cacheKey(id))
-        defaults.removeObject(forKey: cacheKey(id) + ".publicKey")
+        defaults.removeObject(forKey: ProjectsCache.key(machineID: id))
+        defaults.removeObject(forKey: ProjectsCache.publicKeyKey(machineID: id))
     }
 
-    private func readCache(_ machine: Machine) -> [JSONValue] {
-        let key = cacheKey(machine.id)
-        if let publicKey = defaults.string(forKey: key + ".publicKey"), publicKey != machine.publicKey {
+    private func readCache(_ machine: Machine) -> [ProjectSummary] {
+        let key = ProjectsCache.key(machineID: machine.id)
+        let publicKeyKey = ProjectsCache.publicKeyKey(machineID: machine.id)
+        if let publicKey = defaults.string(forKey: publicKeyKey), publicKey != machine.publicKey {
             forgetCache(machine.id)
             return []
         }
@@ -244,22 +291,21 @@ final class UnifiedProjects {
         else {
             return []
         }
-        defaults.set(machine.publicKey, forKey: key + ".publicKey")
-        CrashRedactions.remember(array.flatMap { [$0.text("name"), $0.text("folder")] })
-        return unique(
-            array.compactMap { summary in
-                try? WireEvent.projectSummary.validatePayload(.object(["summary": summary]))[
-                    "summary"]
-            })
+        defaults.set(machine.publicKey, forKey: publicKeyKey)
+        let summaries = array.compactMap { summary in
+            try? WireEvent.projectSummary.validatePayload(.object(["summary": summary]))
+                .decoded(as: ProjectSummaryEvent.self).summary
+        }
+        CrashRedactions.remember(summaries.flatMap { [$0.name, $0.folder] })
+        return unique(summaries)
     }
 
     private func writeCache(_ entry: UnifiedProjectMachine) {
-        CrashRedactions.remember(entry.summaries.flatMap { [$0.text("name"), $0.text("folder")] })
-        let kept = entry.summaries.sorted { $0.number("lastOpenedAt") > $1.number("lastOpenedAt") }
-            .prefix(50)
-        if let data = try? JSONValue.array(Array(kept)).encoded() {
-            defaults.set(data, forKey: cacheKey(entry.machine.id))
-            defaults.set(entry.machine.publicKey, forKey: cacheKey(entry.machine.id) + ".publicKey")
+        CrashRedactions.remember(entry.summaries.flatMap { [$0.name, $0.folder] })
+        let kept = entry.summaries.sorted { $0.lastOpenedAt > $1.lastOpenedAt }.prefix(50)
+        if let data = try? JSONEncoder().encode(Array(kept)) {
+            defaults.set(data, forKey: ProjectsCache.key(machineID: entry.machine.id))
+            defaults.set(entry.machine.publicKey, forKey: ProjectsCache.publicKeyKey(machineID: entry.machine.id))
         }
     }
 
@@ -271,19 +317,18 @@ final class UnifiedProjects {
 @MainActor @Observable
 private final class UnifiedProjectMachine {
     var machine: Machine
-    var summaries: [JSONValue]
+    var summaries: [ProjectSummary]
     var connected = false
     var loading = false
     var problem: String?
     @ObservationIgnored var connection: UnifiedProjectConnection?
     @ObservationIgnored var binding = UUID()
-    @ObservationIgnored var changedSummaries: [String: JSONValue] = [:]
+    @ObservationIgnored var changedSummaries: [String: ProjectSummary] = [:]
     @ObservationIgnored var operation = 0
     @ObservationIgnored var task: Task<Void, Never>?
-    @ObservationIgnored var unsubscribe: (() -> Void)?
-    @ObservationIgnored var unobserve: (() -> Void)?
+    @ObservationIgnored var live: LiveResource?
 
-    init(machine: Machine, summaries: [JSONValue]) {
+    init(machine: Machine, summaries: [ProjectSummary]) {
         self.machine = machine
         self.summaries = summaries
     }
@@ -293,10 +338,8 @@ private final class UnifiedProjectMachine {
         operation += 1
         task?.cancel()
         task = nil
-        unsubscribe?()
-        unobserve?()
-        unsubscribe = nil
-        unobserve = nil
+        live?.stop()
+        live = nil
         connection?.release()
         connection = nil
         connected = false

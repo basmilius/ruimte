@@ -1,9 +1,9 @@
 import type { UsageCountPayload, UsageTimingPayload } from '@ruimte/contracts';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
-import type { ReconnectReason } from '@/telemetry/metrics';
+import type { LinkMeter, ReconnectReason } from '@/telemetry/metrics';
+import { fireAndForget } from '@/transport-api/transport';
+import type { Transport } from '../transport-api/transport';
 import { machineAnswers } from './features';
-import type { LinkMeter } from './link-transport';
-import type { Transport } from './transport';
 
 /*
  * What only this app sees, handed to the machine it runs for that machine's anonymous usage counts: a dictation, how
@@ -16,7 +16,7 @@ export function localUsage(localLink: () => Transport | null) {
         if (link === null || link.status !== 'open' || !machineAnswers(link.connection, type)) {
             return;
         }
-        void (link.request as (type: T, payload: unknown) => Promise<unknown>)(type, payload).catch(() => undefined);
+        void fireAndForget('as', (link.request as (type: T, payload: unknown) => Promise<unknown>)(type, payload));
     };
     return {
         count: (counter: UsageCountPayload['counter']) => send('usage.count', { counter }),
@@ -24,7 +24,7 @@ export function localUsage(localLink: () => Transport | null) {
     };
 }
 
-export type LocalUsage = ReturnType<typeof localUsage>;
+type LocalUsage = ReturnType<typeof localUsage>;
 
 // Why an attempt failed, in the report's words; a link that dropped while open or a switch of route is no failed connect.
 const FAILURE_OF: Partial<Record<ReconnectReason, UsageCountPayload['counter']>> = {

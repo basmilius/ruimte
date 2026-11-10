@@ -3,13 +3,14 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
-import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
-import { MachineHome } from '../fs/machine-home.ts';
+import { MachineHome } from '../disk/machine-home.ts';
+import { Dispatcher } from '../dispatcher.ts';
 import { CustomLanguageServers } from '../language/custom.ts';
 import { LanguageHost } from '../language/host.ts';
 import { KIND_PROFILES } from '../language/profiles.ts';
 import { fakeSpawner } from '../language/test-fakes.ts';
-import { registerLanguageHandlers } from './language.ts';
+import type { ClientAccess } from '../wire.ts';
+import { languageArea } from './language.ts';
 import { askOnce } from './test-helpers.ts';
 
 let root: string;
@@ -36,7 +37,7 @@ beforeEach(async () => {
         })
     });
     host.subscribe('client-1', () => undefined);
-    registerLanguageHandlers(dispatcher, host);
+    languageArea({ host }).handlers?.(dispatcher);
 });
 
 afterEach(async () => {
@@ -128,7 +129,6 @@ describe('language handlers', () => {
         const peer: ClientAccess = { reachability: 'lan', sessionId: 'peer-session', peer: { machineId: 'machine-a' } };
         expect(await call('language.worktreeBuild', { projectId: 'p1', on: true }, peer)).toMatchObject({ ok: false, error: { code: 'forbidden' } });
         expect(dispatcher.peerTypes()).not.toContain('language.worktreeBuild');
-        // The owner is told when the project has no repository to turn it on for.
         expect(await call('language.worktreeBuild', { projectId: 'p1', on: true }, OWNER)).toMatchObject({
             ok: false,
             error: { code: 'language-unavailable' }

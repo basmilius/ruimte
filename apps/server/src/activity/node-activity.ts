@@ -1,7 +1,7 @@
 import { NodeActivityListSchema, type AgentStatus, type NodeActivity } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { JsonFileStore } from '../json-file-store.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 
 const MAX_ENTRIES = 5000;
 
@@ -40,7 +40,6 @@ function isActivity(status: AgentStatus, previous: AgentStatus | undefined): boo
  */
 export class NodeActivityStore {
     private readonly entries = new Map<string, NodeActivity>();
-    /* The last status seen per node since the daemon started. */
     private readonly statuses = new Map<string, AgentStatus>();
     private readonly sinks = new ClientSinks();
     private readonly file: JsonFileStore<{ activity: NodeActivity[] }>;

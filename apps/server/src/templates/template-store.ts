@@ -5,6 +5,7 @@ import { CodedError, SYSTEM_WATCH, settled, type DirectoryWatcher, type Settled,
 import { Serializer } from '@adecore/utils/async';
 import { writeAtomic } from '@adecore/utils/fs';
 import {
+    PROJECT_DIR,
     BUILT_IN_LIVE_TEMPLATE_KEYS,
     BUILT_IN_POSTFIX_TEMPLATE_KEYS,
     LiveTemplateSchema,
@@ -28,7 +29,6 @@ import {
 } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import {
-    PROJECT_DIR,
     WATCH_SETTLE_MS,
     closeLoaded,
     readJsonDocument,
@@ -39,7 +39,7 @@ import {
     type JsonDocumentParse,
     type JsonDocumentRead
 } from '../projects/project-files.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { problemInLiveTemplate, problemInPostfixTemplate } from './template-check.ts';
 import {
     EMPTY_TEMPLATES,
@@ -66,13 +66,13 @@ type TemplateErrorCode =
     | 'template-not-found'
     | 'template-key-taken';
 
-export class TemplateError extends CodedError<TemplateErrorCode> {}
+class TemplateError extends CodedError<TemplateErrorCode> {}
 
 /* The templates a save or an agent's add carries, in the shape a client sends them. */
 export type TemplateDraft = { kind: 'live'; template: LiveTemplateInput } | { kind: 'postfix'; template: PostfixTemplateInput };
 
 /* A template an agent can see: where it comes from, and its body unless the daemon does not hold it (a built-in one). */
-export interface AgentTemplateRow {
+interface AgentTemplateRow {
     id: string;
     kind: TemplateKind;
     key: string;

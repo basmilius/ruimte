@@ -3,7 +3,6 @@ import { kindIcon } from '@/output/kinds';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { useProjectList } from '@/state/project-list';
 
-/* The square mark of a kind at the start of a row or a chip. */
 export function KindTile({ kind, size = 'md' }: { kind: string; size?: 'sm' | 'md' }) {
     return (
         <span

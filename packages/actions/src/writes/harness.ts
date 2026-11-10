@@ -53,7 +53,6 @@ function fakeHost(): { handlers: ActionHandlers<Context>; calls: HostCall[] } {
     return { handlers: Object.fromEntries(ACTION_NAMES.map((name) => [name, handlerFor(name)])) as ActionHandlers<Context>, calls };
 }
 
-/* Whether a field of an input carries actors of its own, on itself or on a member of its union. */
 function isRestricted(schema: z.ZodType): boolean {
     if (fieldActors(schema) !== null) {
         return true;

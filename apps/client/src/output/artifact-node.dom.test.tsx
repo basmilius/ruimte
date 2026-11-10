@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ArtifactGetResult, ArtifactVersion, ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { act } from 'react';
 import { useFiles } from '@/state/files';
-import { windowWorkspace } from '@/state/window';
+import { windowWorkspace } from '@/workspace/window';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
@@ -87,7 +87,6 @@ describe('an artifact node', () => {
 
         await clickOn(button(frame, 'Latest'));
         await until(() => versionItems().length > 0);
-        // Every version is offered, newest first, each with its number beside the time it was saved.
         expect(versionItems().map((item) => item.textContent?.split(',')[0])).toEqual(['Follow the latest', 'Version 2', 'Version 1']);
         await clickOn(versionItems().find((item) => item.textContent?.startsWith('Version 1,')) ?? null);
         await until(() => versionItems().length === 0 && button(frame, 'v1') !== null && (frame.textContent ?? '').includes('Two red'));

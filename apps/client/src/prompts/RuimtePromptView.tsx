@@ -7,8 +7,8 @@ import { TriangleAlert } from 'lucide-react';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isRuimteApp } from '@/computer/ruimte-app';
+import { moveChatDialog } from '@/project/dialogs';
 import { computerButtons, SECRET_ANSWER_FIELD, SECRET_DECLINE, TUNNEL_CONFIRM, tunnelProposalHeading, type RuimtePrompt } from '@/prompts/ruimte-prompts';
-import { useUi } from '@/state/ui';
 
 /* A card of Ruimte's own, drawn the way a chat draws its prompts: a waiting terminal, the machine asking to let an agent into an app, or an agent asking for a launch's secret. */
 export function RuimtePromptView({ prompt, props }: { prompt: RuimtePrompt; props: PromptViewProps }) {
@@ -137,7 +137,7 @@ function ProposalCard({ proposal, props }: { proposal: ProjectProposal; props: P
     const { t } = useTranslation('prompts');
 
     const review = (): void => {
-        useUi.getState().setMoveChatDialog({
+        moveChatDialog.set({
             chatId: proposal.chatId,
             mode: 'make',
             projectId: null,
@@ -159,7 +159,6 @@ function ProposalCard({ proposal, props }: { proposal: ProjectProposal; props: P
     );
 }
 
-/* How a dev server is reached once a tunnel suggestion is confirmed, beyond its port: https and the `Host` header. */
 function originLine(proposal: TunnelProposal, t: TFunction<'prompts'>): string | null {
     const parts = [
         ...(proposal.origin?.https === true ? ['https'] : []),

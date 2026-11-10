@@ -4,10 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./visual-host": "./src/visual-host.ts"
   },
   "scripts": {
     "typecheck": "bun check --no-script"
+  },
+  "dependencies": {
+    "@adecore/agent-contracts": "catalog:"
   },
   "devDependencies": {
     "@ruimte/telemetry": "workspace:*",

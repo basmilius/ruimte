@@ -15,11 +15,28 @@ import {
     type ViewLocks
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
-import { textRect } from '@/canvas/edge-lines';
-import { lineBounds } from '@/canvas/line-geometry';
-import type { Point, Rect } from '@/canvas/math';
-import type { CanvasPatch } from '@/project/merge';
+import { lineBounds } from '@/canvas-model/line-geometry';
+import type { Point, Rect } from '@/canvas-model/math';
 import type { CanvasState } from '@/state/canvas';
+import { textRect } from '@/state/edge-lines';
+
+/*
+ * What one canvas this client has to take in from the other side, in the shape the editor takes it
+ * in. Everything in here is already on disk, so the editor applies it as a load and not as an edit.
+ */
+export interface CanvasPatch {
+    /* Whole entries to put in by id: the ones that arrived, and the ones that took a field from the other side. */
+    nodes: ProjectNode[];
+    texts: ProjectText[];
+    lines?: ProjectCanvasLine[];
+    edges: ProjectEdge[];
+    /* Ids the other side deleted while this client left them as they were. */
+    removed: { nodes: string[]; texts: string[]; edges: string[]; lines?: string[] };
+    /* The stacking order of the merged canvas, which is this client's unless only the other side moved it. */
+    order: string[];
+    /* The arrangements, when only the other side changed them; null keeps this client's. */
+    layouts: ProjectLayout[] | null;
+}
 
 export type CanvasSet = StoreApi<CanvasState>['setState'];
 export type CanvasGet = () => CanvasState;
@@ -161,7 +178,6 @@ export function membersOf(
     return members;
 }
 
-/* A group carries what sits inside it, and a group inside it carries its own members in turn. */
 export function carriedByGroups(
     nodes: Record<string, CanvasNode>,
     texts: Record<string, TextElement>,
@@ -188,7 +204,6 @@ export function carriedByGroups(
     return carried;
 }
 
-/* The frame of a node, a text or a line on the canvas; none for an id that is none of those. */
 export function boundsOfElement(
     id: string,
     nodes: Record<string, CanvasNode>,
@@ -379,12 +394,10 @@ export function patchSnapshot(snapshot: Snapshot, patch: CanvasPatch, groups: re
     return { ...snapshot, nodes, order, texts, lines, edges: edges.filter((edge) => holds(edge.from) && holds(edge.to)) };
 }
 
-/* Remembers the placement before a change; called by every action that changes it. */
 export function remember(s: CanvasState): Pick<CanvasState, 'past' | 'future'> {
     return { past: [...s.past.slice(-(HISTORY_LIMIT - 1)), snapshotOf(s)], future: [] };
 }
 
-/* The maximized node, while it is still on the canvas and not folded away in a group. */
 export function maximizedNodeOf(s: Pick<CanvasState, 'maximizedId' | 'nodes' | 'hidden'>): string | null {
     return s.maximizedId !== null && s.nodes[s.maximizedId] !== undefined && !s.hidden.has(s.maximizedId) ? s.maximizedId : null;
 }

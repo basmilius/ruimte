@@ -1,7 +1,7 @@
 import type { ChatStatuses } from '@adecore/agents-react/state';
-import type { Task } from '@ruimte/contracts';
+import { sessionStatus, type Task } from '@ruimte/contracts';
 import { endpointKey, endpointOfNode } from '@/state/keys';
-import { sessionStatus, type SessionsByKey } from '@/state/sessions';
+import type { SessionsByKey } from '@/state/sessions';
 import type { TasksById } from '@/state/tasks';
 import { waitDate } from '@/state/waiting-date';
 

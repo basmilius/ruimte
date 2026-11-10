@@ -13,7 +13,7 @@ const STEPS = [1800, 2000, 400, 4200] as const;
 const CHOICES = ['Keep for 30 days', 'Clear on sign-out'] as const;
 
 /*
- * The Needs you section of `shell/Sidebar.tsx`: a node row per waiting agent (`NodeRow` in `SidebarListRows.tsx`),
+ * The Needs you section of `sidebar/Sidebar.tsx`: a node row per waiting agent (`NodeRow` in `SidebarListRows.tsx`),
  * with the name of its view in faint text, oldest first. The two others wait in other views of the project.
  */
 const OTHERS: readonly SidebarRow[] = [

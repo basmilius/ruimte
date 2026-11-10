@@ -1,4 +1,5 @@
 import { wait } from '@adecore/utils/async';
+import { MACHINE_LINK_PATH, MACHINE_REGISTRATION_PATH } from '@ruimte/contracts';
 import {
     AddressBookClient,
     AddressBookRequestError,
@@ -11,8 +12,9 @@ import {
     type DeviceLinkStartResult
 } from '@ruimte/pulsar';
 import type { z } from 'zod';
+import { bestEffort } from '../best-effort.ts';
 import { describeError } from '../error-text.ts';
-import { commandIo, homeSecret, otherHome, startFirst, tooOld, type LocalDaemonOptions } from './local-daemon.ts';
+import { askLocalDaemon, commandIo, homeSecret, otherHome, startFirst, tooOld, type LocalDaemonOptions } from './local-daemon.ts';
 import { readMachineStatus, reachSentence } from './machine-status.ts';
 
 export interface LoginOptions extends LocalDaemonOptions {
@@ -76,11 +78,7 @@ export async function runLogin(options: LoginOptions): Promise<number> {
     }
 
     const askDaemon = async <T>(path: string, schema: z.ZodType<T>, body?: unknown): Promise<T> => {
-        const response = await fetcher(`http://127.0.0.1:${options.port}${path}`, {
-            method: 'POST',
-            headers: { authorization: `Bearer ${secret}`, 'content-type': 'application/json' },
-            body: body === undefined ? undefined : JSON.stringify(body)
-        }).catch(() => null);
+        const response = await askLocalDaemon({ port: options.port, fetch: fetcher }, secret, path, { method: 'POST', body });
         if (!response) {
             throw new LoginFailure(`No daemon answers on port ${options.port}. ${startFirst(options.port)}`);
         }
@@ -103,14 +101,14 @@ export async function runLogin(options: LoginOptions): Promise<number> {
     let link: DeviceLinkStartResult | null = null;
     const withdraw = async (): Promise<number> => {
         if (link !== null) {
-            await book.cancelDeviceLink({ deviceCode: link.deviceCode }).catch(() => undefined);
+            await bestEffort('book.cancelDeviceLink', book.cancelDeviceLink({ deviceCode: link.deviceCode }));
         }
         err('Stopped. The code no longer works.');
         return 130;
     };
 
     try {
-        const request = await askDaemon('/machine/link-request', DeviceLinkStartPayloadSchema);
+        const request = await askDaemon(MACHINE_LINK_PATH, DeviceLinkStartPayloadSchema);
         link = await book.startDeviceLink(request);
         if (options.signal?.aborted) {
             return await withdraw();
@@ -155,9 +153,9 @@ export async function runLogin(options: LoginOptions): Promise<number> {
                     }
                     const approved = link;
                     // A machine that refuses the account leaves the approval unused, so the code stops working on the page too.
-                    const registration = await askDaemon('/machine/registration', RegisterMachinePayloadSchema, { accountId: poll.account.id }).catch(
+                    const registration = await askDaemon(MACHINE_REGISTRATION_PATH, RegisterMachinePayloadSchema, { accountId: poll.account.id }).catch(
                         async (e: unknown) => {
-                            await book.cancelDeviceLink({ deviceCode: approved.deviceCode }).catch(() => undefined);
+                            await bestEffort('book.cancelDeviceLink', book.cancelDeviceLink({ deviceCode: approved.deviceCode }));
                             throw e;
                         }
                     );

@@ -3,6 +3,7 @@ import { connect as connectTcp, type Socket } from 'node:net';
 import { connect as connectTls } from 'node:tls';
 import type { ReachProbe } from '@ruimte/contracts';
 import type { IceServer } from '@ruimte/pulsar';
+import { bestEffort } from '../best-effort.ts';
 import { errorText } from '../error-text.ts';
 import {
     STUN_ATTRIBUTE,
@@ -38,7 +39,6 @@ export interface IceTarget {
     credential?: string;
 }
 
-/* Every URL of the servers as one target each; a URL this cannot read is left out. */
 export function iceTargets(servers: readonly IceServer[]): IceTarget[] {
     return servers.flatMap((server) =>
         (Array.isArray(server.urls) ? server.urls : [server.urls]).flatMap((url) => {
@@ -75,7 +75,6 @@ export function parseIceUrl(url: string): IceTarget | null {
     return { kind, transport, host, port, url: url.trim() };
 }
 
-/* One request and its answer over one transport; a probe is a short conversation over a single exchanger. */
 export interface StunExchange {
     ask(request: Uint8Array, transactionId: Uint8Array): Promise<StunMessage>;
     close(): void;
@@ -227,7 +226,7 @@ async function bind(exchange: StunExchange): Promise<Outcome> {
 async function allocate(exchange: StunExchange, target: IceTarget): Promise<Outcome> {
     let answer = await ask(exchange, STUN_METHOD.allocate, [requestedTransportUdp()]);
     if (answer.kind === 'success') {
-        await ask(exchange, STUN_METHOD.refresh, [lifetime(0)]).catch(() => undefined);
+        await bestEffort('ask', ask(exchange, STUN_METHOD.refresh, [lifetime(0)]));
         return { outcome: 'ok' };
     }
     if (errorCodeOf(answer) !== 401) {
@@ -246,7 +245,7 @@ async function allocate(exchange: StunExchange, target: IceTarget): Promise<Outc
         ];
         answer = await ask(exchange, STUN_METHOD.allocate, [requestedTransportUdp(), ...credentials], key);
         if (answer.kind === 'success') {
-            await ask(exchange, STUN_METHOD.refresh, [lifetime(0), ...credentials], key).catch(() => undefined);
+            await bestEffort('ask', ask(exchange, STUN_METHOD.refresh, [lifetime(0), ...credentials], key));
             return { outcome: 'ok' };
         }
         // 438 is a stale nonce, which comes with a fresh one.

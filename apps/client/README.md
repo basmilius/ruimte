@@ -31,7 +31,7 @@ A session browser saves its owning machine with the URL. Reopening, navigating a
 
 ## Model comparison
 
-The models dialog (`src/shell/models`) shares one set of model, provider, legacy and reasoning filters across its score/cost comparison, speed chart and bar charts. Metrics are the Intelligence, Coding and Agentic indices, cost per task, total benchmark cost and output speed. A selected reference and comparison point keep their model and effort across views.
+The models dialog (`src/models`) shares one set of model, provider, legacy and reasoning filters across its score/cost comparison, speed chart and bar charts. Metrics are the Intelligence, Coding and Agentic indices, cost per task, total benchmark cost and output speed. A selected reference and comparison point keep their model and effort across views.
 
 Missing data stays missing and never becomes zero. The dialog shows the source and age of the snapshot. Benchmark costs describe benchmark tasks, not a Ruimte session.
 
@@ -39,7 +39,7 @@ Missing data stays missing and never becomes zero. The dialog shows the source a
 
 The editor lives in ADE CORE (`@adecore/editor-core`, `@adecore/editor`, `@adecore/editor-react`). Ruimte owns the language adapters in `src/language`, the AI actions in `src/editor-ai` and the editor model client in `src/editor-assist`. Language servers run behind the daemon; see the [daemon README](../server/README.md#language-servers).
 
-`RUIMTE_EDITOR_KEYMAP` in `src/shell/editor-keymap.ts` holds editor shortcuts and the keys shown in menus, the palette and settings. `editor-keymap.test.ts` checks collisions with application shortcuts. Reformat is Option+Cmd+L; selection to chat is Option+Cmd+K (Ctrl+Alt+K elsewhere). Code colors live in `src/shell/panels/code-themes.ts`, with contrast checks in `code-themes.test.ts`. The code font sits under Appearance because terminals share it.
+`RUIMTE_EDITOR_KEYMAP` in `src/surface/editor-keymap.ts` holds editor shortcuts and the keys shown in menus, the palette and settings. `editor-keymap.test.ts` checks collisions with application shortcuts. Reformat is Option+Cmd+L; selection to chat is Option+Cmd+K (Ctrl+Alt+K elsewhere). Code colors live in `src/code-themes.ts`, with contrast checks in `code-themes.test.ts`. The code font sits under Appearance because terminals share it.
 
 Code vision shows usages from language-server references and authors from `git.blame`, mapped onto unsaved text. Uncommitted lines have no author. Each has its own setting.
 

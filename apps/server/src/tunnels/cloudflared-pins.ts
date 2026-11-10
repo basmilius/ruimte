@@ -3,10 +3,9 @@
  * the sha256 pinned here before it runs. A bump downloads each asset and computes the sha256 itself
  * (`bun apps/server/scripts/cloudflared-pins.ts <version>`), so a changed asset on the release page never goes unnoticed.
  */
-export const CLOUDFLARED_VERSION = '2026.10.7';
+const CLOUDFLARED_VERSION = '2026.10.7';
 
-export interface CloudflaredAsset {
-    /* The file name on the release page. */
+interface CloudflaredAsset {
     readonly name: string;
     readonly sha256: string;
     /* A macOS build ships in a tarball that holds the binary. */
@@ -41,7 +40,6 @@ const ASSETS: Readonly<Record<string, CloudflaredAsset>> = {
     }
 };
 
-/* The build for a platform, or null where Cloudflare ships none. */
 export function cloudflaredAsset(platform: string, arch: string): CloudflaredAsset | null {
     return ASSETS[`${platform}-${arch}`] ?? null;
 }

@@ -1,8 +1,7 @@
-import { formatShortcut, Icon, shortcut } from '@adecore/ui';
+import { formatShortcut, Icon, shortcut, isApplePlatform } from '@adecore/ui';
 import { Cpu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { isApplePlatform } from '@/desktop/bridge';
-import { useKeyOf } from '@/shell/shortcut-overrides';
+import { useKeyOf } from '@/surface/shortcut-overrides';
 
 const TAB = shortcut('Tab');
 const ESCAPE = shortcut('Escape');

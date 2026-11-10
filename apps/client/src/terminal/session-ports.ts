@@ -1,5 +1,5 @@
 import { SESSION_PORT_VERIFY_MAX_AGE_MS, type SessionPort, type SessionPortsResult, type SessionPortVerification } from '@ruimte/contracts';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 
 export interface PortWatchOptions {
     transport: Pick<Transport, 'request' | 'on'>;

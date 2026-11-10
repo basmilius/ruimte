@@ -1,16 +1,15 @@
 import { isOpenableView, type ProjectShowViewEvent } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
-import { backOffer, goOffer, showMoveToast } from '@/project/show-toast';
 import { callerName, showViewNotice } from '@/project/show-view';
 import { showViewOnceThere } from '@/project/show-view-once';
-import { nodesOfView } from '@/project/view-nodes';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
-import { windowWorkspace } from '@/state/window';
+import { backOffer, goOffer, showMoveToast } from '@/state/show-toast';
+import { nodesOfView } from '@/state/view-nodes';
 import { watchPool } from '@/transport/pool-watch';
+import { windowWorkspace } from '@/workspace/window';
 
-/* The answer of the open project, on the cell the person was last in. */
 function showInWorkspace(payload: ProjectShowViewEvent): void {
     const state = useDocument.getState();
     const view = state.views.find((candidate) => candidate.id === payload.viewId);

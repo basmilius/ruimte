@@ -6,14 +6,14 @@ import { CodedError } from '@adecore/agents';
 import { FakeWatch } from '@adecore/agents/testing';
 import { pathToFileUri } from '@adecore/lsp';
 import { LANGUAGE_ERROR_CODES, type LanguageServerKind } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import { sha256, tarGz } from '../disk/test-archives.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import type { SessionEvent } from '../wire.ts';
 import { LanguageChoices } from './choices.ts';
 import { CustomLanguageServers } from './custom.ts';
 import { LanguageHost } from './host.ts';
 import { NativePolicy, nativeProgramFile, type Download } from './native.ts';
 import { KIND_PROFILES, type CatalogKind, type ProjectSqlSettings } from './profiles.ts';
-import { sha256, tarGz } from './test-archives.ts';
 import { FULL_CAPABILITIES, fakeSpawner, makeAlternatives, ManualClock, settle, type FakeProcess, type FakeSpawner } from './test-fakes.ts';
 import { LANGUAGE_KIND_PACKAGES, pinnedVersionsOf, versionOf, type NpmKind } from './versions.ts';
 import { BUILD_HELD_MESSAGE, WorktreeBuildChoices } from './worktree-build.ts';
@@ -23,7 +23,6 @@ let root = '';
 const WORK = resolve('/work');
 const MACHINE_STATE = resolve('/home/.ruimte');
 
-/* The URI a server knows a file of the project by. */
 function uri(path: string): string {
     return pathToFileUri(join(WORK, path));
 }
@@ -49,7 +48,6 @@ interface Rig {
     events: Record<string, SessionEvent[]>;
     installs: LanguageServerKind[];
     clock: ManualClock;
-    /* The project's file watching, and the paths that exist on the fake disk. */
     watch: FakeWatch;
     disk: Set<string>;
 }
@@ -294,7 +292,6 @@ async function openReady(host: LanguageHost, path = 'src/a.ts', text = 'let a = 
 const open = (host: LanguageHost, path = 'src/a.ts', text = 'let a = 1;\n', clientId = 'client-1', languageId = 'typescript') =>
     host.open(clientId, { projectId: 'p1', path, languageId, text });
 
-/* The id a client answers a `language.edit` with. */
 function editIdOf(event: SessionEvent | undefined): string {
     return (event as { payload: { editId: string } }).payload.editId;
 }

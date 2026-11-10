@@ -9,7 +9,7 @@ export interface TunnelGuestContents {
     setWebRTCIPHandlingPolicy(policy: 'disable_non_proxied_udp'): void;
 }
 
-export interface TunnelGuestOptions {
+interface TunnelGuestOptions {
     /* Whether the guest sits in the window that made the tunnel. */
     owned(): boolean;
     port: number;

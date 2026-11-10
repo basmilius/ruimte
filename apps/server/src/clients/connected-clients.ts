@@ -1,8 +1,7 @@
 import { WatchedSinks } from '@adecore/agents/host';
 import type { ConnectedClient, EndpointInfoPayload } from '@ruimte/contracts';
 import { isOwner } from '../auth/access.ts';
-import type { ClientAccess } from '../dispatcher.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { ClientAccess, SessionEvent } from '../wire.ts';
 
 type ClientDetails = Pick<ConnectedClient, 'client' | 'version' | 'os' | 'osVersion' | 'device'>;
 

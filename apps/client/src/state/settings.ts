@@ -2,6 +2,7 @@ import type { EditorFoldOutline, EditorSmartKeys } from '@adecore/editor';
 import { FORMAT_LANGUAGE, formatRegionFrom } from '@adecore/ui/format';
 import {
     DEFAULT_PROJECT_COLOR,
+    DEFAULT_VOICE_PREFERENCES,
     EditorAssistAgentSchema,
     type EditorAssistAgent,
     isLiveVoice,
@@ -16,11 +17,10 @@ import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
 import { bundledThemesInfo } from 'shiki/themes';
 import { z } from 'zod';
 import { create } from 'zustand';
-import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
-import { renderDistanceFrom, type RenderDistance } from '@/canvas/render-distance';
-import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
-import { CODE_THEMES } from '@/shell/panels/code-themes';
-import { nodeSortFrom, nodeSortThenFrom, type NodeSort, type NodeSortThen } from '@/shell/sidebar-node-sort';
+import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas-model/accents';
+import { nodeSortFrom, nodeSortThenFrom, type NodeSort, type NodeSortThen } from '@/canvas-model/node-sort';
+import { renderDistanceFrom, type RenderDistance } from '@/canvas-model/render-distance';
+import { CODE_THEMES } from '@/code-themes';
 import { accentContrast, THEME_SURFACE } from '@/state/accent-contrast';
 import {
     agentChangesModeFrom,
@@ -35,6 +35,7 @@ import {
 } from '@/state/ai-settings';
 import { type CodeFolding, codeFoldingFrom, DEFAULT_CODE_FOLDING } from '@/state/code-folding';
 import { useExtensionTheme } from '@/state/extension-theme';
+import { LANGUAGE_SYSTEM, languageFrom } from '@/state/languages';
 import { applyPalette, isHexColor, type PaletteSide, type PaletteSideInput } from '@/state/palette';
 import { palettePresetFrom, presetTokens, type PalettePreset } from '@/state/palette-presets';
 import {
@@ -77,15 +78,14 @@ export const MONO_FONTS = [
     { id: 'menlo', label: 'Menlo', stack: 'Menlo, ui-monospace, monospace' }
 ] as const;
 
-export type MonoFontId = (typeof MONO_FONTS)[number]['id'];
+type MonoFontId = (typeof MONO_FONTS)[number]['id'];
 
-export type TerminalFontId = MonoFontId | 'editor';
+type TerminalFontId = MonoFontId | 'editor';
 
 export function monoFontStack(id: MonoFontId): string {
     return (MONO_FONTS.find((entry) => entry.id === id) ?? MONO_FONTS[0]).stack;
 }
 
-/* The face the terminals draw in: their own pick, or the editor's while the pick is `editor`. */
 export function terminalFontOf(settings: Pick<Settings, 'font' | 'terminalFont'>): MonoFontId {
     return settings.terminalFont === 'editor' ? settings.font : settings.terminalFont;
 }
@@ -99,7 +99,7 @@ export const INTERFACE_FONTS = [
     { id: 'helvetica', label: 'Helvetica Neue', stack: '"Helvetica Neue", Helvetica, Arial, sans-serif' }
 ] as const;
 
-export type InterfaceFontId = (typeof INTERFACE_FONTS)[number]['id'];
+type InterfaceFontId = (typeof INTERFACE_FONTS)[number]['id'];
 
 const WORKTREE_MERGE_STRATEGIES: readonly WorktreeMergeStrategy[] = WorktreeMergeStrategySchema.options;
 
@@ -107,7 +107,7 @@ const WORKTREE_MERGE_STRATEGIES: readonly WorktreeMergeStrategy[] = WorktreeMerg
  * How a reply appears while it is written: a word at a time, a block at a time once each block is
  * closed, or whole once it is done.
  */
-export type ChatStreamingMode = 'words' | 'blocks' | 'whole';
+type ChatStreamingMode = 'words' | 'blocks' | 'whole';
 
 const CHAT_STREAMING_MODES: readonly ChatStreamingMode[] = ['words', 'blocks', 'whole'];
 
@@ -119,7 +119,6 @@ function chatStreamingFrom(stored: unknown): ChatStreamingMode {
     return CHAT_STREAMING_MODES.find((mode) => mode === stored) ?? 'words';
 }
 
-/* When this computer stays awake: never, while an agent works, or all the time. */
 export type KeepAwakeMode = 'off' | 'working' | 'always';
 
 const KEEP_AWAKE_MODES: readonly KeepAwakeMode[] = ['off', 'working', 'always'];
@@ -133,7 +132,7 @@ function keepAwakeFrom(stored: unknown, legacy: unknown): KeepAwakeMode {
     return legacy === true ? 'working' : 'off';
 }
 
-export interface CodeThemeInfo {
+interface CodeThemeInfo {
     readonly id: string;
     readonly displayName: string;
     readonly type: 'light' | 'dark';
@@ -147,7 +146,6 @@ export function codeThemesOf(mode: 'light' | 'dark'): readonly CodeThemeInfo[] {
     ];
 }
 
-/* A stored code theme id, if it is still one of ours or one Shiki bundles for that mode. */
 function codeThemeFrom(stored: unknown, mode: 'light' | 'dark', fallback: string): string {
     return codeThemesOf(mode).find((info) => info.id === stored)?.id ?? fallback;
 }
@@ -168,7 +166,6 @@ export function codeLineHeight(size: number, ratio: number): number {
 export interface Settings {
     sidebarScope: 'current' | 'all-open';
     panelLayout: 'standard' | 'roomy';
-    /* How the toolbar moves between projects: the switcher, or a tab per project this window opened. */
     projectNavigation: 'switcher' | 'tabs';
     /* "Needs you" lists what waits in every open project, not only the one on screen. The combined sidebar always does. */
     needsYouAllProjects: boolean;
@@ -180,7 +177,6 @@ export interface Settings {
     palette: PalettePreset;
     /* The glow at the top of the sidebar, and of the toolbar while the sidebar is closed, in the color of the project. */
     projectGlow: boolean;
-    /* A scroller bounces at its end, as macOS does, with a trackpad or mouse. */
     scrollBounce: boolean;
     interfaceFont: InterfaceFontId;
     font: MonoFontId;
@@ -213,8 +209,6 @@ export interface Settings {
     codeWhitespace: boolean;
     /* Whether the editor pins the lines that open the scopes around the top line while scrolling. */
     codeStickyScroll: boolean;
-    /* Whether documentation comments are drawn as formatted text in place of their lines. */
-    codeRenderDocs: boolean;
     /* Whether the editor says above a declaration how many times it is used. */
     codeVisionUsages: boolean;
     /* Whether the editor says above a declaration who wrote it, by git. */
@@ -231,7 +225,6 @@ export interface Settings {
     /* Whether the hover explains code and rename suggests names, both with the chosen editor model. */
     aiCodeHelp: boolean;
     aiAssistAgent: EditorAssistAgent | null;
-    /* When the editor asks the chosen editor model for ghost text. */
     aiGhostText: GhostTextMode;
     /* Whether a font draws `=>` or `!==` as one glyph. Off sets the whole document, since the diffs draw in a shadow root that only inheritance reaches. */
     codeLigatures: boolean;
@@ -327,7 +320,6 @@ export interface Settings {
     sidebarNodeSortThen: NodeSortThen;
 }
 
-/* What `RTCPeerConnection` takes for the servers in the setting; none for an empty field. */
 export function iceServersFrom(value: string): RTCIceServer[] {
     const urls = value.split(/[\s,]+/).filter((url) => url !== '');
     return urls.length === 0 ? [] : [{ urls }];
@@ -368,7 +360,6 @@ const DEFAULT_SETTINGS: Settings = {
     codeIndentGuides: true,
     codeWhitespace: false,
     codeStickyScroll: true,
-    codeRenderDocs: false,
     codeVisionUsages: true,
     codeVisionAuthors: true,
     codeFolding: { ...DEFAULT_CODE_FOLDING },
@@ -392,7 +383,7 @@ const DEFAULT_SETTINGS: Settings = {
     chatSteerByDefault: false,
     chatHideToolCalls: false,
     voiceLanguage: 'nl',
-    liveVoice: 'marin',
+    liveVoice: DEFAULT_VOICE_PREFERENCES.voice,
     voiceInputDeviceId: 'default',
     voiceConfirmDestructiveActions: true,
     updatesAutoDownload: true,
@@ -451,7 +442,6 @@ function measuresFrom(
     };
 }
 
-/* The settings alone, without the store's version and methods. */
 function settingsOf(state: Settings): Settings {
     return Object.fromEntries(Object.keys(DEFAULT_SETTINGS).map((key) => [key, state[key as keyof Settings]])) as unknown as Settings;
 }
@@ -480,7 +470,6 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         codeIndentGuides: stored.codeIndentGuides !== false,
         codeWhitespace: stored.codeWhitespace === true,
         codeStickyScroll: stored.codeStickyScroll !== false,
-        codeRenderDocs: stored.codeRenderDocs === true,
         codeVisionUsages: stored.codeVisionUsages !== false,
         codeVisionAuthors: stored.codeVisionAuthors !== false,
         codeFolding: codeFoldingFrom(stored.codeFolding),
@@ -518,7 +507,7 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
             ? stored.liveVoice
             : (stored as Partial<Settings> & { voiceGender?: unknown }).voiceGender === 'male'
               ? 'cedar'
-              : 'marin',
+              : DEFAULT_SETTINGS.liveVoice,
         voiceInputDeviceId:
             typeof stored.voiceInputDeviceId === 'string' && stored.voiceInputDeviceId.trim() !== ''
                 ? stored.voiceInputDeviceId

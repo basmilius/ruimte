@@ -3,9 +3,9 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AgentStatus, ServerFrame } from '@ruimte/contracts';
-import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
-import { registerActivityHandlers } from '../handlers/activity.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import { Dispatcher } from '../dispatcher.ts';
+import { activityArea } from '../handlers/activity.ts';
+import type { ClientConnection, SessionEvent } from '../wire.ts';
 import { NodeActivityStore } from './node-activity.ts';
 
 const PLACES: Record<string, string> = { alpha: 'atlas', bravo: 'atlas', charlie: 'atlas' };
@@ -115,7 +115,7 @@ describe('the activity requests', () => {
 
     test('touch a node, list every node and refuse a node in no project', async () => {
         const dispatcher = new Dispatcher();
-        registerActivityHandlers(dispatcher, open());
+        activityArea({ activity: open() }).handlers?.(dispatcher);
         const frames: ServerFrame[] = [];
         const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
 

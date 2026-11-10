@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { NODE_ACCENTS } from '@/canvas/accents';
+import { NODE_ACCENTS } from '@/canvas-model/accents';
 import { accentContrast, contrastOf, THEME_SURFACE } from './accent-contrast';
 
 const WHITE = '#ffffff';

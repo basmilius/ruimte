@@ -1,15 +1,19 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { HoverInfo } from '@adecore/editor-react';
+import { settle } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
+import { installWorkspaceRegistries } from '@/wiring/workspace-registries';
 import { innermostFunction, innermostSymbol } from './explain';
 import { FakeLanguageTransport } from './fake-daemon';
-import { EditorLanguage } from './ruimte-editor-language';
-import { ProjectLanguage } from './ruimte-project-language';
-import { settleLanguage as settle } from './settle.test';
+import { createEditorLanguage, type EditorLanguage } from './ruimte-editor-language';
+import { RuimteProject } from './ruimte-project';
+
+// An editor is drawn only in a workspace, whose chunk installs this before it draws one (`App.tsx`).
+installWorkspaceRegistries();
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });
@@ -30,9 +34,9 @@ async function setup(options: { available?: boolean; symbols?: unknown } = {}) {
         server: 'typescript',
         version: 1
     }));
-    const project = new ProjectLanguage(transport, 'p1', '/work/app');
+    const project = new RuimteProject(transport, 'p1', '/work/app');
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: TEXT, theme: 'light' });
-    const language = new EditorLanguage(project, editor, uri, 'typescript');
+    const language = createEditorLanguage(project, editor, uri, 'typescript');
     await language.document.ready;
     return { transport, model, editor, language };
 }
@@ -47,7 +51,7 @@ function infoOf(signature: string): HoverInfo {
 }
 
 function showCard(language: EditorLanguage, info: HoverInfo | null): void {
-    language.popups.setState({ hover: { anchor: at(3, 14), position: at(3, 14), subject: range(3, 14, 26), problems: [], info } });
+    language.popups.slot('hover').set({ anchor: at(3, 14), position: at(3, 14), subject: range(3, 14, 26), problems: [], info });
 }
 
 beforeEach(() => {
@@ -59,33 +63,33 @@ describe('explain in the hover card', () => {
     test('offers Explain on a function once the machine says it has the model', async () => {
         const { language } = await setup();
         showCard(language, infoOf('function skillOverlap(have: string[], need: string[]): number'));
-        expect(language.explain.store.getState().offered).toBe(false);
+        expect(language.app.explain.store.getState().offered).toBe(false);
         await settle();
-        expect(language.explain.store.getState()).toMatchObject({ offered: true, phase: 'idle' });
+        expect(language.app.explain.store.getState()).toMatchObject({ offered: true, phase: 'idle' });
     });
 
     test('offers Explain on any symbol that has something to explain it from, and on nothing else', async () => {
         const value = await setup();
         showCard(value.language, infoOf('const share: number'));
         await settle();
-        expect(value.language.explain.store.getState().offered).toBe(true);
+        expect(value.language.app.explain.store.getState().offered).toBe(true);
 
         const bare = await setup();
         showCard(bare.language, { text: { signatures: [], markdown: 'Docs.' }, definition: null, word: 'share', references: null });
         await settle();
-        expect(bare.language.explain.store.getState().offered).toBe(false);
+        expect(bare.language.app.explain.store.getState().offered).toBe(false);
 
         const noInfo = await setup();
         showCard(noInfo.language, null);
         await settle();
-        expect(noInfo.language.explain.store.getState().offered).toBe(false);
+        expect(noInfo.language.app.explain.store.getState().offered).toBe(false);
     });
 
     test('asks for a symbol, not a function, when the card is of a class or a value', async () => {
         const { language, model } = await setup();
         showCard(language, infoOf('class SkillSet'));
         await settle();
-        void language.explain.explainCard();
+        void language.app.explain.explainCard();
         await settle();
         expect(model.last.prompt.split('\n')[0]).toBe('Explain this symbol.');
         expect(model.last.prompt).toContain('Signature: class SkillSet');
@@ -96,23 +100,23 @@ describe('explain in the hover card', () => {
         const off = await setup();
         showCard(off.language, infoOf('function f(): void'));
         await settle();
-        expect(off.language.explain.store.getState().offered).toBe(false);
+        expect(off.language.app.explain.store.getState().offered).toBe(false);
         expect(off.transport.callsOf('editor.status')).toHaveLength(0);
 
         useSettings.setState({ aiCodeHelp: true });
         const missing = await setup({ available: false });
         showCard(missing.language, infoOf('function f(): void'));
         await settle();
-        expect(missing.language.explain.store.getState().offered).toBe(false);
+        expect(missing.language.app.explain.store.getState().offered).toBe(false);
     });
 
     test('streams the explanation into the card, from the function source and its signature and documentation', async () => {
         const { language, model } = await setup();
         showCard(language, infoOf('function skillOverlap(have: string[], need: string[]): number'));
         await settle();
-        const running = language.explain.explainCard();
+        const running = language.app.explain.explainCard();
         await settle();
-        expect(language.explain.store.getState()).toMatchObject({ offered: false, phase: 'running', text: '' });
+        expect(language.app.explain.store.getState()).toMatchObject({ offered: false, phase: 'running', text: '' });
         expect(model.last.purpose).toBe('explain');
         expect(model.last.stream).toBe(true);
         expect(model.last.prompt).toContain('Answer in English.');
@@ -121,34 +125,34 @@ describe('explain in the hover card', () => {
         expect(model.last.prompt).toContain('return need.length === 0 ? 1 : 0;');
         expect(model.last.prompt).not.toContain('const share');
         model.stream('Returns the share');
-        expect(language.explain.store.getState().text).toBe('Returns the share');
+        expect(language.app.explain.store.getState().text).toBe('Returns the share');
         model.answer('Returns the share of skills.\n');
         await running;
-        expect(language.explain.store.getState()).toMatchObject({ phase: 'done', text: 'Returns the share of skills.' });
+        expect(language.app.explain.store.getState()).toMatchObject({ phase: 'done', text: 'Returns the share of skills.' });
     });
 
     test('keeps the card up while it explains', async () => {
         const { language } = await setup();
         showCard(language, infoOf('function f(): void'));
         await settle();
-        void language.explain.explainCard();
+        void language.app.explain.explainCard();
         await settle();
         language.hover.holdCard(false);
-        expect(language.popups.getState().hover).not.toBeNull();
+        expect(language.popups.slot('hover').get()).not.toBeNull();
         language.hover.hide();
-        expect(language.popups.getState().hover).toBeNull();
+        expect(language.popups.slot('hover').get()).toBeNull();
     });
 
     test('cancels the request when the card goes, and forgets the explanation', async () => {
         const { language, model } = await setup();
         showCard(language, infoOf('function f(): void'));
         await settle();
-        void language.explain.explainCard();
+        void language.app.explain.explainCard();
         await settle();
-        language.popups.setState({ hover: null });
+        language.popups.slot('hover').set(null);
         await settle();
         expect(model.cancels).toEqual([model.last.id]);
-        expect(language.explain.store.getState()).toMatchObject({ phase: 'idle', text: '', offered: false });
+        expect(language.app.explain.store.getState()).toMatchObject({ phase: 'idle', text: '', offered: false });
     });
 
     test('says why when the model fails', async () => {
@@ -158,8 +162,8 @@ describe('explain in the hover card', () => {
         });
         showCard(language, infoOf('function f(): void'));
         await settle();
-        await language.explain.explainCard();
-        expect(language.explain.store.getState()).toMatchObject({ phase: 'error', error: 'The editor model could not answer.' });
+        await language.app.explain.explainCard();
+        expect(language.app.explain.store.getState()).toMatchObject({ phase: 'error', error: 'The editor model could not answer.' });
     });
 });
 
@@ -167,25 +171,25 @@ describe('explain the selection', () => {
     test('opens a card of its own over the selection and explains exactly that text', async () => {
         const { language, editor, model } = await setup();
         editor.setSelection(range(1, 4, 37));
-        void language.explain.explainHere();
+        void language.app.explain.explainHere();
         await settle();
-        const hover = language.popups.getState().hover!;
+        const hover = language.popups.slot('hover').get()!;
         expect(hover.info).toBeNull();
         expect(hover.subject).toEqual(range(1, 4, 37));
         expect(model.last.prompt.startsWith('Explain this code.')).toBe(true);
         expect(model.last.prompt.endsWith('Code:\nreturn need.length === 0 ? 1 : 0;')).toBe(true);
         model.answer('Returns one for an empty list.');
         await settle();
-        expect(language.explain.store.getState()).toMatchObject({ phase: 'done', text: 'Returns one for an empty list.' });
+        expect(language.app.explain.store.getState()).toMatchObject({ phase: 'done', text: 'Returns one for an empty list.' });
     });
 
     test('without a selection explains the function around the caret', async () => {
         const symbols = [{ name: 'skillOverlap', kind: 12, range: lines(0, 2), selectionRange: range(0, 9, 21) }];
         const { language, editor, model } = await setup({ symbols });
         editor.moveCaret(at(1, 6));
-        void language.explain.explainHere();
+        void language.app.explain.explainHere();
         await settle();
-        expect(language.popups.getState().hover!.subject).toEqual(lines(0, 2));
+        expect(language.popups.slot('hover').get()!.subject).toEqual(lines(0, 2));
         expect(model.last.prompt).toContain('function skillOverlap(have: string[], need: string[]): number {');
     });
 
@@ -193,16 +197,16 @@ describe('explain the selection', () => {
         const symbols = [{ name: 'share', kind: 14, range: range(3, 0, 36), selectionRange: range(3, 6, 11) }];
         const { language, editor, model } = await setup({ symbols });
         editor.moveCaret(at(3, 8));
-        void language.explain.explainHere();
+        void language.app.explain.explainHere();
         await settle();
-        expect(language.popups.getState().hover!.subject).toEqual(range(3, 0, 36));
+        expect(language.popups.slot('hover').get()!.subject).toEqual(range(3, 0, 36));
         expect(model.last.prompt).toContain('const share = skillOverlap([], []);');
     });
 
     test('says there is nothing to explain without a selection or a symbol', async () => {
         const { language, editor, model } = await setup();
         editor.moveCaret(at(3, 3));
-        await language.explain.explainHere();
+        await language.app.explain.explainHere();
         expect(model.requests).toEqual([]);
         expect(useToasts.getState().toasts.at(-1)?.title).toContain('Select code');
     });
@@ -210,7 +214,7 @@ describe('explain the selection', () => {
     test('says where to turn it on when the setting is off', async () => {
         useSettings.setState({ aiCodeHelp: false });
         const { language, model } = await setup();
-        await language.explain.explainHere();
+        await language.app.explain.explainHere();
         expect(model.requests).toEqual([]);
         expect(useToasts.getState().toasts.at(-1)?.title).toContain('Explain is off');
     });

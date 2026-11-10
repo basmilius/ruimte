@@ -1,15 +1,14 @@
 import type { SubagentStep, SubagentTrail } from '@adecore/agents-react/chat';
 import { create } from 'zustand';
 
-/* What a person chose for one workflow beside a chat node. */
-export interface WorkflowSelection {
+interface WorkflowSelection {
     /* Undefined follows the live phase, null keeps every phase closed, a key keeps that phase open. */
     openPhase?: string | null;
     /* The agent whose conversation is open beside the phases, by its index in the workflow, with the way down from it. */
     agent?: { index: number; trail: SubagentTrail };
 }
 
-export interface WorkflowBesideState {
+interface WorkflowBesideState {
     /* The workflow a person switched to; absent shows the newest that runs. */
     picked?: string;
     /* The workflows a person put away, so a new one still shows. */
@@ -95,7 +94,6 @@ export function pruneWorkflowBeside(key: string, workflowIds: readonly string[])
     });
 }
 
-/* Drops what was held for the nodes the canvas no longer has. */
 export function forgetWorkflowBeside(matches: (key: string) => boolean): void {
     useBesideStore.setState((s) => {
         const kept = Object.entries(s.byKey).filter(([key]) => !matches(key));

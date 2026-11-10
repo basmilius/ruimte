@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// The line under a block, only when it has something to say: live, answered, repaired or shown as text, in that

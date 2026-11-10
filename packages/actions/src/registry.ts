@@ -50,7 +50,6 @@ export type ActionCompleted<Name extends ActionName> = {
     action: Name;
     output: ActionOutput<Name>;
     undoToken?: string;
-    /* The output of a dry run: what the action would have done, with nothing done. */
     dryRun?: true;
 };
 
@@ -162,7 +161,6 @@ export function revisionConflictMessage(document: string, expected: number, curr
     return `${document} is at revision ${current}, and this call was decided on ${expected}; read it again and decide anew.`;
 }
 
-/* The refusal of a write decided on a revision the document has moved on from. */
 export function revisionConflict(document: string, expected: number, current: number): ActionRefusal {
     return new ActionRefusal(REVISION_CONFLICT, revisionConflictMessage(document, expected, current));
 }
@@ -183,7 +181,6 @@ function remember<Value>(entries: Map<string, Value>, token: string, value: Valu
     entries.set(token, value);
 }
 
-/* Whether this actor may give this value, down to a member of a union that only some actors may pick. */
 function mayGive(schema: z.ZodType, value: unknown, actor: ActionActorKind): boolean {
     const actors = fieldActors(schema);
     if (actors !== null && !actors.includes(actor)) {
@@ -194,6 +191,9 @@ function mayGive(schema: z.ZodType, value: unknown, actor: ActionActorKind): boo
     }
     return true;
 }
+
+/* What the registry calls a failure no handler coded: its message is that of whatever was thrown, so a reader who must not hear it checks for this. */
+export const UNCODED_FAILURE_CODE = 'action-failed';
 
 function failure(action: ActionName | null, code: string, message: string, details?: unknown): ActionFailed {
     return {
@@ -384,6 +384,6 @@ export class ActionRegistry<Context> {
         if (refusal) {
             return failure(action, refusal.code, refusal.message, refusal.details);
         }
-        return failure(action, 'action-failed', error instanceof Error ? error.message : `The action “${action}” failed.`);
+        return failure(action, UNCODED_FAILURE_CODE, error instanceof Error ? error.message : `The action “${action}” failed.`);
     }
 }

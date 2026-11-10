@@ -1,9 +1,7 @@
+import type { Area } from '../area.ts';
 import { reachabilityOf } from '../auth/access.ts';
 import type { ServerConfig } from '../config.ts';
-import type { Dispatcher } from '../dispatcher.ts';
-import type { IdentityLanDoor } from '../endpoint-id.ts';
-import { registerDirectHandlers } from '../handlers/direct.ts';
-import { registerReachHandlers } from '../handlers/reach.ts';
+import type { SettingDescription } from '../machine-settings.ts';
 import { BrokerRelay } from '../pulsar/broker-relay.ts';
 import { BrokerSwitch } from '../pulsar/broker-switch.ts';
 import { authenticateChannel } from '../pulsar/channel-auth.ts';
@@ -15,10 +13,11 @@ import { DirectPeers } from '../pulsar/peers.ts';
 import { ReachChecker } from '../pulsar/reach-check.ts';
 import { SignalGate } from '../pulsar/signal-gate.ts';
 import { StatementGate, TEST_STATEMENT_KEY_VARIABLE, trustedStatementKeys } from '../pulsar/statement.ts';
-import { guardWeriftTurn } from '../pulsar/turn-guard.ts';
-import { reportFatal } from '../telemetry/reporter.ts';
-import type { ClientsBundle } from './clients.ts';
+import type { DaemonBundles } from './bundles.ts';
+import type { Later } from './later.ts';
 import type { MachineBundle } from './machine.ts';
+
+type LanDoorDescription = Pick<SettingDescription, 'lan' | 'lanDoorFixed'>;
 
 /* How a client away from this machine reaches it: a direct channel, signaled over the broker or the door on the local network. */
 export interface NetworkBundle {
@@ -28,7 +27,7 @@ export interface NetworkBundle {
     lanDoor: LanDoor;
     /* Open unless a person closed it or `--no-lan` keeps it closed. */
     lanDoorWanted(): boolean;
-    describeLanDoor: IdentityLanDoor['describe'];
+    describeLanDoor(): LanDoorDescription;
     /* Whether other devices reach this machine, for `endpoint.reach` and `ruimte status`. */
     reach: ReachChecker;
 }
@@ -37,16 +36,9 @@ export function wireNetwork(
     config: ServerConfig,
     compiled: boolean,
     machine: MachineBundle,
-    dispatcher: Dispatcher,
-    later: {
-        clients(): ClientsBundle;
-        /* The broker took this machine, which is the sign the network is there again. */
-        brokerSettled(): void;
-    }
+    later: Later<Pick<DaemonBundles, 'clients' | 'tunnels'>>
 ): NetworkBundle {
     const { identity, auth, handshake, access } = machine;
-    // A TURN server that restarts under an allocation must not take the daemon with it; any other crash is reported on the way out.
-    guardWeriftTurn(process, console, (code, error) => void reportFatal(error).finally(() => process.exit(code)));
     // A direct channel gets its access from its own handshake, never from the socket its signals came over.
     const peers = new DirectPeers({
         // The broker's TURN credentials are asked for per attempt, since they expire and the broker can change.
@@ -69,7 +61,6 @@ export function wireNetwork(
             }
         }
     });
-    registerDirectHandlers(dispatcher, peers);
     const statementKeys = trustedStatementKeys(process.env, compiled);
     if (statementKeys.length === 1 && statementKeys[0] === process.env[TEST_STATEMENT_KEY_VARIABLE]?.trim()) {
         console.warn(`Believing statements signed by the test key in ${TEST_STATEMENT_KEY_VARIABLE} instead of the address book`);
@@ -101,11 +92,11 @@ export function wireNetwork(
                 gate,
                 onSettled: () => {
                     reach.brokerSettled();
-                    later.brokerSettled();
+                    // The broker took this machine, which is the sign the network is there again.
+                    later.tunnels().service.networkBack();
                 }
             })
     });
-    identity.attachBroker(brokerSwitch);
 
     // The addresses are read per answer, so a machine that moved to another network says so without a timer.
     const lanDoor = new LanDoor({
@@ -114,20 +105,10 @@ export function wireNetwork(
         gate
     });
     const lanDoorWanted = (): boolean => !config.lanDoorOff && identity.lanDoor;
-    const describeLanDoor: IdentityLanDoor['describe'] = () => {
+    const describeLanDoor = (): LanDoorDescription => {
         const port = lanDoor.port;
         return { lan: port === null ? null : { port, addresses: lanAddresses() }, lanDoorFixed: config.lanDoorOff };
     };
-    identity.attachLanDoor({
-        apply: () => {
-            if (lanDoorWanted()) {
-                lanDoor.start();
-            } else {
-                lanDoor.stop();
-            }
-        },
-        describe: describeLanDoor
-    });
     const reach = new ReachChecker({
         broker: () => ({ url: brokerSwitch.describe().brokerUrl, connected: brokerSwitch.isReady }),
         iceServers: () => [...config.stun.map((urls) => ({ urls })), ...brokerSwitch.grantedIceServers()],
@@ -140,6 +121,16 @@ export function wireNetwork(
         }),
         tunnel: () => readTunnel()
     });
-    registerReachHandlers(dispatcher, reach);
     return { peers, brokerSwitch, lanDoor, lanDoorWanted, describeLanDoor, reach };
+}
+
+/* The direct channels close with `handlers/direct.ts`; the door and the broker are left after them. */
+export function networkLifecycle({ lanDoor, brokerSwitch }: NetworkBundle): Area {
+    return {
+        name: 'door and broker',
+        stop: [
+            { phase: 'last', label: 'Stopping the local network door', run: () => lanDoor.stop() },
+            { phase: 'last', label: 'Leaving the broker', run: () => brokerSwitch.stop() }
+        ]
+    };
 }

@@ -20,26 +20,27 @@ import {
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
+import { applyLayoutAction, createNodeAction, createTextAction, deleteLayoutAction, fitAction, setLocksAction } from '@/action-port/person-actions';
 import { centerWorld } from '@/actions/action-reach';
-import { applyLayoutAction, createNodeAction, createTextAction, deleteLayoutAction, fitAction, setLocksAction } from '@/actions/client-actions';
 import { AgentSubmenus } from '@/agents/AgentMenus';
+import { StatusSummary } from '@/attention/StatusSummary';
+import type { Point } from '@/canvas-model/math';
+import { layoutDialog } from '@/canvas/dialogs';
 import { LOCK_KEYS, lockHint, lockLabel } from '@/canvas/locks';
-import type { Point } from '@/canvas/math';
 import { OVERLAY_LEDGE_ATTRIBUTE } from '@/canvas/overlay-attributes';
 import { RemoteMachineItems } from '@/canvas/RemoteMachineItems';
-import { ADD_NODE_ROWS } from '@/canvas/shortcuts';
 import { DesignAddItem } from '@/design/DesignAddItem';
 import { useDictation } from '@/dictation/controller';
 import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
 import { RoutineAddItems } from '@/routines/RoutineAddItems';
-import { RowKbd } from '@/shell/RowKbd';
-import { useKeyOf } from '@/shell/shortcut-overrides';
-import { StatusSummary } from '@/shell/StatusSummary';
 import { maximizedNodeOf, useCanvas, useCanvasCamera, useCanvasStore } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
+import { ADD_NODE_ROWS } from '@/surface/canvas/shortcuts';
+import { RowKbd } from '@/surface/RowKbd';
+import { useKeyOf } from '@/surface/shortcut-overrides';
 
 /*
  * The canvas's own controls: zoom, locks, layouts and the plus that adds a node. A view of its own
@@ -195,7 +196,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                             </Menu.Row>
                         ))}
                         <Menu.Separator />
-                        <Menu.Item onClick={() => useUi.getState().setLayoutDialogOpen(true)}>
+                        <Menu.Item onClick={() => layoutDialog.set(true)}>
                             <Icon icon={Save} size={14} /> {t('dock.saveLayout')}
                         </Menu.Item>
                     </Menu.Popup>

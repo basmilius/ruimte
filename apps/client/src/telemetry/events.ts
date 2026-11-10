@@ -1,9 +1,7 @@
 import type { DedupeStore } from '@ruimte/telemetry';
 
-/* This client's own machine, or one of the account. */
 export type MachineKind = 'local' | 'remote';
 
-/* A WebSocket, or a DataChannel whose signals went another way. */
 export type LinkKind = 'socket' | 'direct';
 
 /* What a link to a machine went through, as the transport sees it. Never a payload, an address or a machine's name. */

@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DarwinListenerProbe } from '../processes/listeners.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
-import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { SessionManager } from './manager.ts';
+import { OPEN_BOUNDS } from './open-bounds-test-helpers.ts';
 import { SessionPorts } from './ports.ts';
 import { waitFor, waitForAsync } from './test-helpers.ts';
 

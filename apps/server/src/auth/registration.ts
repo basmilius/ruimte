@@ -1,5 +1,5 @@
 import { CodedError } from '@adecore/agents';
-import { clipText } from '@ruimte/contracts';
+import { clipText, type ProjectIconChoice } from '@ruimte/contracts';
 import {
     MachineIconSchema,
     deviceLinkStartMessage,
@@ -7,10 +7,15 @@ import {
     type DeviceLinkStartPayload,
     type RegisterMachinePayload
 } from '@ruimte/pulsar';
-import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { AccountChange } from './auth-store.ts';
 
-type SigningIdentity = Pick<EndpointIdentity, 'id' | 'publicKey' | 'label' | 'icon' | 'sign'>;
+interface SigningIdentity {
+    readonly id: string;
+    readonly publicKey: string;
+    readonly label: string;
+    readonly icon: ProjectIconChoice | null;
+    sign(message: string): string;
+}
 
 /*
  * What the machine tells the address book about itself. The name is signed as the machine calls itself,

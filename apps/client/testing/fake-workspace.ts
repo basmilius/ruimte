@@ -1,9 +1,9 @@
 import type { ProjectDocument, ProjectLocal, ProjectSummary } from '@ruimte/contracts';
-import { dropClientLocal } from '@/project/client-local';
-import { forgetCachedList } from '@/project/list';
+import { dropClientLocal } from '@/clients/project/client-local';
+import { forgetCachedList } from '@/clients/project/list';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
-import { dropMachine, enterWorkspace, showStart } from '@/transport/connections';
+import { dropMachine, enterWorkspace, showStart } from '@/workspace/connections';
 import { connectFakeMachine, type FakeMachine } from './fake-machine';
 import { closedAfterTest } from './test-scope';
 

@@ -1,11 +1,12 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { TUNNEL_PROPOSAL_ACTIONS, TUNNEL_PROPOSAL_LIMITS, type TunnelOrigin, type TunnelRow, type TunnelState } from '@ruimte/contracts';
 import { z } from 'zod';
+import { ANSWER_WAKES_NOTE, field, orNote } from '../canvas/host.ts';
+import type { TunnelAgentHost } from '../tunnels/agent-host.ts';
 import { TunnelConfigError } from '../tunnels/tunnel-config.ts';
 import type { TunnelChange, TunnelProposalAsk } from '../tunnels/tunnel-proposals.ts';
 import type { StoredRow } from '../tunnels/tunnel-store.ts';
-import { ANSWER_WAKES_NOTE, field, orNote, type TunnelAgentHost } from './host.ts';
-import { defineTool, type ToolCall } from './tool.ts';
+import { defineTool, defineToolkit, type ToolCall } from './tool.ts';
 
 function tunnelsOf(call: ToolCall): TunnelAgentHost {
     const tunnels = call.host.tunnels;
@@ -264,4 +265,4 @@ const tunnelPropose = defineTool('browser', {
     }
 });
 
-export const tunnelTools = [tunnelList, tunnelPropose];
+export const tunnelToolkit = defineToolkit('browser', [tunnelList, tunnelPropose]);

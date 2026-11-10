@@ -1,5 +1,25 @@
-import type { RoutineAgentHost } from '../tools/host.ts';
+import type { Routine, RoutineListResult, RoutineRunNowResult, RuntimeMode } from '@ruimte/contracts';
 import type { Routines } from './routines.ts';
+
+/*
+ * The routines of a project as an agent reaches them. Its save never approves and is narrowed to its
+ * mode ceiling, with the caller written down as its maker; a run starts only one a person approved.
+ */
+export interface RoutineAgentHost {
+    list(projectId: string): Promise<RoutineListResult>;
+    /* `shared` places a new routine; one that exists stays in the file it is in. */
+    save(
+        projectId: string,
+        routine: Routine,
+        ceiling: RuntimeMode,
+        caller: string,
+        shared: boolean,
+        title?: string
+    ): Promise<{ routine: Routine; shared: boolean }>;
+    pause(projectId: string, routineId: string): Promise<void>;
+    resume(projectId: string, routineId: string): Promise<void>;
+    runNow(projectId: string, routineId: string): Promise<RoutineRunNowResult>;
+}
 
 /*
  * The routines as the tools reach them. Every save goes through `saveByAgent`, which never approves,

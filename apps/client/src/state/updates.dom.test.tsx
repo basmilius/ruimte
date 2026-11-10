@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import { startMachineUpdate } from '@/controllers/machine-update';
 import type { UpdateState } from '@/desktop/bridge';
 import { setUpdateTrack, startUpdates } from '@/state/updates';
 import { until } from '../../testing/dom';
@@ -28,7 +29,7 @@ describe('the update track', () => {
         ['0.29.0', 'prerelease', 'prerelease']
     ] as const)('on %s with %s chosen, the first check follows %s', async (version, chosen, expected) => {
         const asked = shellOn(version);
-        const stop = startUpdates(true, chosen);
+        const stop = startUpdates(true, chosen, startMachineUpdate);
         await until(() => asked.includes('check'));
         stop?.();
         expect(asked).toEqual(['auto', expected, 'check']);

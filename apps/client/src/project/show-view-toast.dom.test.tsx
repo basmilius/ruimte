@@ -24,7 +24,6 @@ function onScreen(text: string): boolean {
     return document.body.textContent?.includes(text) === true;
 }
 
-/* An agent's `view open`, the way the machine passes it on to the clients with the project open. */
 function agentOpens(viewId: string): void {
     act(() => machine.emit('project.showView', { projectId: 'project-atlas', viewId, by: 'term-1' }));
 }

@@ -5,28 +5,22 @@ import type { ComputerSetupPhase } from '@/computer/setup';
 
 export type OnboardingTask = 'intro' | 'providers' | 'computer';
 
-/* A task, or the end of the walk, which says what is done. */
 export type OnboardingPlace = OnboardingTask | 'done';
 
 const ORDER: readonly OnboardingTask[] = ['intro', 'providers', 'computer'];
 
-/* An installed agent CLI as the providers task lists it. */
 export interface CliRow {
     provider: ProviderInfo;
     /* Whether the CLI has a login of its own, which is also the only way Ruimte can tell who is logged in. */
     canLogIn: boolean;
-    /* The first account of it that is logged in. */
     loggedIn: AccountEntry | null;
     /* The account a Log in starts: the default one, unless that one is turned off. */
     loginAccount: AccountEntry | null;
 }
 
-/* What the tasks are measured against, read off the local machine and this client. */
 export interface OnboardingFacts {
     introSeen: boolean;
-    /* The CLIs with an account logged in, by name, in the order the machine lists them. */
     loggedIn: readonly string[];
-    /* The CLIs that could log in and have nobody logged in yet. */
     notLoggedIn: readonly string[];
     computer: ComputerSetupPhase;
 }
@@ -56,7 +50,6 @@ export function cliRowsOf(providers: readonly ProviderInfo[], accounts: Provider
         });
 }
 
-/* The CLIs the machine knows of and did not find, which the providers task names in one row. */
 export function missingClisOf(providers: readonly ProviderInfo[]): string[] {
     return providers.filter((provider) => !provider.installed && isCli(provider)).map((provider) => provider.name);
 }
@@ -90,12 +83,10 @@ export function doneCount(tasks: readonly OnboardingTask[], facts: OnboardingFac
     return tasks.filter((task) => isDone(task, facts)).length;
 }
 
-/* Where the hub opens: the first task not done yet, or the end once every one is. */
 export function firstPlace(tasks: readonly OnboardingTask[], facts: OnboardingFacts): OnboardingPlace {
     return tasks.find((task) => !isDone(task, facts)) ?? 'done';
 }
 
-/* Where leaving a task leads: the next one not done yet, then the earlier ones, and the end once no other is left. */
 export function placeAfter(tasks: readonly OnboardingTask[], current: OnboardingTask, facts: OnboardingFacts): OnboardingPlace {
     const index = tasks.indexOf(current);
     const others = [...tasks.slice(index + 1), ...tasks.slice(0, Math.max(0, index))];
@@ -106,12 +97,10 @@ function t(key: string, values?: Record<string, unknown>): string {
     return i18next.t(`onboarding:${key}`, values ?? {});
 }
 
-/* Names as a sentence lists them: `Antigravity and Copilot`, `A, B and C`. */
 export function joinNames(names: readonly string[]): string {
     return names.length <= 1 ? (names[0] ?? '') : t('list', { rest: names.slice(0, -1).join(', '), last: names.at(-1) });
 }
 
-/* The line under a task in the list, which says how far it is. */
 export function taskLine(task: OnboardingTask, facts: OnboardingFacts): string {
     if (!isDone(task, facts)) {
         return t(`tasks.${task}.sub`);
@@ -119,7 +108,6 @@ export function taskLine(task: OnboardingTask, facts: OnboardingFacts): string {
     return task === 'providers' ? t('tasks.providers.done', { clis: joinNames(facts.loggedIn) }) : t(`tasks.${task}.done`);
 }
 
-/* What the end of the walk says: what is done, then what is left and where it waits. */
 export function summaryOf(tasks: readonly OnboardingTask[], facts: OnboardingFacts): string {
     const offersComputer = tasks.includes('computer');
     const computerOn = offersComputer && facts.computer === 'ready';

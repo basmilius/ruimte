@@ -1,11 +1,12 @@
 import { afterAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import type { ProjectCanvasView } from '@ruimte/contracts';
-import { dismissClose, useUnsavedClose } from '@/shell/panels/unsaved-close';
-import { cellViewIds } from '@/shell/split';
+import { cellViewIds } from '@/layout/split';
+import { dismissClose, useUnsavedClose } from '@/state/unsaved-close';
 import { closeCellGuarded, closeCellsRightOfGuarded, closeOtherCellsGuarded } from './cell-close.ts';
+import { currentEndpointId } from './current-endpoint';
 import { useDocument } from './document.ts';
 import { useFiles, type DatabaseTab } from './files.ts';
-import { currentEndpointId, endpointKey } from './keys.ts';
+import { endpointKey } from './keys.ts';
 import { textDrafts, useTextDrafts } from './text-drafts.ts';
 
 const ORDERS: DatabaseTab = { key: 'database:orders', kind: 'table', pinned: false, connectionId: 'shop', schema: 'shop', table: 'orders' };
@@ -48,7 +49,6 @@ describe('closing cells through the guards of their loose tabs', () => {
         useDocument
             .getState()
             .load({ version: 3, rev: 1, name: 'p', color: '#000', views: [canvas('a'), canvas('b'), canvas('c')] }, { activeViewId: 'a', views: {} });
-        // Cells: a, then a host with two files.
         useDocument.getState().splitFocused('right', 'b');
         useFiles.getState().open('/p/one.ts', 5);
         useFiles.getState().open('/p/two.ts', 5);

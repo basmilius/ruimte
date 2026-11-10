@@ -12,21 +12,41 @@ final class ChatForkingTests: XCTestCase {
 
     func testRefusesATurnThatCannotBeForkedYet() {
         let turn = self.turn("t1", state: "done").chatItem
-        XCTAssertNil(ChatForking.refusal(info: chat(info), turn: turn))
-        XCTAssertEqual(ChatForking.refusal(info: nil, turn: turn), "This turn is not in the conversation")
-        XCTAssertEqual(ChatForking.refusal(info: chat(info), turn: nil), "This turn is not in the conversation")
+        XCTAssertNil(ChatForking.refusal(info: chat(info), turn: turn, cliCanFork: true))
         XCTAssertEqual(
-            ChatForking.refusal(info: chat(info.setting("provider", .string("gemini"))), turn: turn),
+            ChatForking.refusal(info: nil, turn: turn, cliCanFork: true), "This turn is not in the conversation")
+        XCTAssertEqual(
+            ChatForking.refusal(info: chat(info), turn: nil, cliCanFork: true), "This turn is not in the conversation")
+        XCTAssertEqual(
+            ChatForking.refusal(info: chat(info), turn: turn, cliCanFork: false),
             "This agent cannot fork its conversation")
         XCTAssertEqual(
-            ChatForking.refusal(info: chat(info.setting("agentSessionId", .null)), turn: turn),
+            ChatForking.refusal(info: chat(info.setting("agentSessionId", .null)), turn: turn, cliCanFork: true),
             "Nothing to fork yet. Send a message first.")
         XCTAssertEqual(
-            ChatForking.refusal(info: chat(info), turn: self.turn("t2", state: "running").chatItem),
+            ChatForking.refusal(
+                info: chat(info), turn: self.turn("t2", state: "running").chatItem, cliCanFork: true),
             "Wait for the turn to end")
         XCTAssertEqual(
-            ChatForking.refusal(info: chat(info.setting("activeTurnId", .string("t2"))), turn: turn),
+            ChatForking.refusal(
+                info: chat(info.setting("activeTurnId", .string("t2"))), turn: turn, cliCanFork: true),
             "Wait for the turn to end")
+    }
+
+    @MainActor func testOnlyACLIThatReportsTheForkCapabilityForks() {
+        let directory = AgentDirectory()
+        XCTAssertTrue(directory.canFork("anything"), "Nothing refuses for the CLI before a machine answered")
+        directory.learn([
+            ProviderWire.provider("newcli", name: "New CLI", capabilities: ["fork": .bool(true)]).providerInfo,
+            ProviderWire.provider("plain", name: "Plain").providerInfo,
+        ])
+        XCTAssertTrue(directory.canFork("newcli"))
+        XCTAssertFalse(directory.canFork("plain"))
+        XCTAssertFalse(directory.canFork("gone"))
+        XCTAssertEqual(directory.name("newcli"), "New CLI")
+        XCTAssertEqual(directory.name("gone"), "gone")
+        XCTAssertTrue(ChatForking.canFork(ProviderWire.provider("a", capabilities: ["fork": .bool(true)]).providerInfo))
+        XCTAssertFalse(ChatForking.canFork(ProviderWire.provider("a").providerInfo))
     }
 
     func testANoteAChildLeftWhileItWaitsLeadsToAnswering() {
@@ -105,9 +125,9 @@ final class ChatForkingTests: XCTestCase {
                 "nodes": .array([.object(["id": .string("node"), "kind": .string("chat"), "title": .string("Build")])]),
             ]),
         ]
-        XCTAssertEqual(ChatForking.origin(in: views, chatID: "chat-view")?.shape, .view)
-        XCTAssertEqual(ChatForking.origin(in: views, chatID: "node")?.title, "Build")
-        XCTAssertNil(ChatForking.origin(in: views, chatID: "gone"))
+        XCTAssertEqual(ChatForking.origin(in: ProjectWire.stored(views), chatID: "chat-view")?.shape, .view)
+        XCTAssertEqual(ChatForking.origin(in: ProjectWire.stored(views), chatID: "node")?.title, "Build")
+        XCTAssertNil(ChatForking.origin(in: ProjectWire.stored(views), chatID: "gone"))
         XCTAssertEqual(ChatForking.branchRefusal("  ", taken: []), "Name the branch")
         XCTAssertEqual(ChatForking.branchRefusal("main ", taken: ["main"]), "Name already taken")
         XCTAssertNil(ChatForking.branchRefusal("fork", taken: ["main"]))
@@ -201,8 +221,8 @@ final class ChatForkingTests: XCTestCase {
 @MainActor private final class ForkListMachine: MachineRequesting {
     var fails = false
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
-        XCTAssertEqual(type, "chat.list")
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
+        XCTAssertEqual(type, .chatList)
         if fails { throw MachineClientError.server(code: "internal", message: "Failed") }
         return .object([
             "chats": .array([
@@ -214,5 +234,5 @@ final class ChatForkingTests: XCTestCase {
         ])
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

@@ -1,0 +1,273 @@
+import { Button, Input, messageOf, Select, Spinner } from '@adecore/ui';
+import { ConfirmDialog, SettingsRow } from '@adecore/ui/settings';
+import type { TunnelExisting, TunnelState } from '@ruimte/contracts';
+import clsx from 'clsx';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { openInSystemBrowser } from '@/desktop/bridge';
+import { transportFor } from '@/transport';
+import { CLOUDFLARE_TOKEN_URL } from '@/tunnels/cloudflare-token-link';
+import type { TunnelChange } from '@/tunnels/use-tunnels';
+
+const NEW_TUNNEL = 'new';
+
+type Tone = 'running' | 'idle' | 'error';
+
+const DOT = { running: 'bg-status-running', idle: 'bg-status-idle', error: 'bg-status-error' } as const;
+
+export function CloudflareRows({ state, endpointId, change }: { state: TunnelState; endpointId: string; change: TunnelChange }) {
+    if (state.stage === 'not-installed' || state.stage === 'installing' || state.stage === 'cannot-install') {
+        return <InstallRow state={state} change={change} />;
+    }
+
+    // Without a working token the tunnel still shows, so Stop using stays in reach.
+    const showsTunnel = state.hasToken || state.tunnel !== null || state.stage === 'failed';
+
+    return (
+        <>
+            <TokenRow state={state} change={change} />
+            {showsTunnel && <TunnelRow state={state} endpointId={endpointId} change={change} />}
+        </>
+    );
+}
+
+function InstallRow({ state, change }: { state: TunnelState; change: TunnelChange }) {
+    const { t } = useTranslation('settings');
+
+    return (
+        <SettingsRow
+            label={t(`tunnels.stage.${state.stage}`)}
+            description={state.stage === 'cannot-install' ? (state.message ?? undefined) : undefined}
+            control={state.stage === 'not-installed' ? <Button onClick={() => void change('tunnel.install')}>{t('tunnels.install.action')}</Button> : undefined}
+        />
+    );
+}
+
+/* A field and a link to make a token while there is none; once Cloudflare accepted it, what it reaches and Remove. */
+function TokenRow({ state, change }: { state: TunnelState; change: TunnelChange }) {
+    const { t } = useTranslation('settings');
+    const [token, setToken] = useState('');
+    // Cloudflare takes a while to check a token, and the field is empty again by then.
+    const [checking, setChecking] = useState(false);
+
+    const check = async (): Promise<void> => {
+        setChecking(true);
+        setToken('');
+        await change('tunnel.setToken', { token: token.trim() });
+        setChecking(false);
+    };
+
+    if (state.hasToken) {
+        return (
+            <SettingsRow
+                label={t('tunnels.token.label')}
+                description={
+                    state.account === null
+                        ? t('tunnels.token.reachesAccounts', { count: state.zoneCount ?? 0, accounts: state.accounts.length })
+                        : t('tunnels.token.reaches', { count: state.zones.length, account: state.account.name })
+                }
+                control={<Button onClick={() => void change('tunnel.clearToken')}>{t('tunnels.token.remove')}</Button>}
+            />
+        );
+    }
+
+    return (
+        <SettingsRow
+            label={t('tunnels.token.label')}
+            description={t('tunnels.token.description')}
+            control={
+                <>
+                    <Input
+                        type="password"
+                        autoComplete="off"
+                        spellCheck={false}
+                        aria-label={t('tunnels.token.label')}
+                        placeholder={t('tunnels.token.placeholder')}
+                        value={token}
+                        disabled={checking}
+                        onChange={(e) => setToken(e.target.value)}
+                    />
+                    <Button onClick={() => openInSystemBrowser(CLOUDFLARE_TOKEN_URL)}>{t('tunnels.token.make')}</Button>
+                    <Button variant="primary" disabled={checking || token.trim().length < 10} onClick={() => void check()}>
+                        {checking && <Spinner size={14} />}
+                        {t('tunnels.token.check')}
+                    </Button>
+                </>
+            }
+        />
+    );
+}
+
+function StatusLine({ tone, children }: { tone: Tone; children: string }) {
+    return (
+        <span className="flex min-w-0 items-center gap-1.5">
+            <span aria-hidden className={clsx('size-1.5 shrink-0 rounded-full', DOT[tone])} />
+            <span className="min-w-0 break-words">{children}</span>
+        </span>
+    );
+}
+
+/* The tunnel once it is linked, the reason it failed, or the choice of one while there is none. */
+function TunnelRow({ state, endpointId, change }: { state: TunnelState; endpointId: string; change: TunnelChange }) {
+    const { t } = useTranslation('settings');
+    const [confirming, setConfirming] = useState(false);
+    // Unlinking clears the tunnel before the confirmation has faded out, so the title keeps the last name.
+    const [name, setName] = useState(state.tunnel?.name ?? '');
+
+    if (state.tunnel !== null && state.tunnel.name !== name) {
+        setName(state.tunnel.name);
+    }
+
+    return (
+        <>
+            <TunnelLine state={state} endpointId={endpointId} change={change} onUnlink={() => setConfirming(true)} />
+            <ConfirmDialog
+                open={confirming}
+                onOpenChange={setConfirming}
+                title={t('tunnels.unlink.title', { name })}
+                description={t('tunnels.unlink.description')}
+                confirmLabel={t('tunnels.unlink.action')}
+                onConfirm={() => change('tunnel.unlink')}
+            />
+        </>
+    );
+}
+
+function TunnelLine({ state, endpointId, change, onUnlink }: { state: TunnelState; endpointId: string; change: TunnelChange; onUnlink: () => void }) {
+    const { t } = useTranslation('settings');
+    const { tunnel } = state;
+
+    if (state.stage === 'checking') {
+        return <SettingsRow label={t('tunnels.tunnel.label')} description={t('tunnels.stage.checking')} control={<Spinner size={12} />} />;
+    }
+
+    if (state.stage === 'no-tunnel' || (tunnel === null && state.stage !== 'failed')) {
+        return <PickTunnel state={state} endpointId={endpointId} change={change} />;
+    }
+
+    const status =
+        state.stage === 'no-token' ? null : state.stage === 'failed' ? (
+            <StatusLine tone="error">{state.message ?? t('tunnels.stage.failed')}</StatusLine>
+        ) : state.stage === 'starting' ? (
+            <StatusLine tone="idle">{t('tunnels.stage.starting')}</StatusLine>
+        ) : tunnel?.runner === 'ruimte' ? (
+            <StatusLine tone="running">{t('tunnels.tunnel.runner.ruimte')}</StatusLine>
+        ) : tunnel?.runner === 'other' ? (
+            <StatusLine tone="running">{t('tunnels.tunnel.runner.other')}</StatusLine>
+        ) : (
+            <StatusLine tone="idle">{t('tunnels.tunnel.runner.none')}</StatusLine>
+        );
+
+    return (
+        <SettingsRow
+            label={t('tunnels.tunnel.label')}
+            description={
+                <>
+                    {tunnel !== null && <span className="block text-text">{tunnel.name}</span>}
+                    {status}
+                </>
+            }
+            control={
+                <>
+                    {(state.stage === 'failed' ||
+                        (state.stage === 'running' && (state.mcp.failure !== undefined || state.rows.some((row) => row.reason !== undefined)))) && (
+                        <Button onClick={() => void change('tunnel.retry')}>{t('tunnels.retry')}</Button>
+                    )}
+                    {tunnel !== null && <Button onClick={onUnlink}>{t('tunnels.unlink.action')}</Button>}
+                </>
+            }
+        />
+    );
+}
+
+/*
+ * The account, then a tunnel already on it or a new one. Only a tunnel whose settings live in the Cloudflare dashboard can
+ * take Ruimte's hostnames, so the list leaves the others out.
+ */
+function PickTunnel({ state, endpointId, change }: { state: TunnelState; endpointId: string; change: TunnelChange }) {
+    const { t } = useTranslation('settings');
+    const [picked, setPicked] = useState<string | null>(null);
+    const [tunnels, setTunnels] = useState<TunnelExisting[]>([]);
+    const [chosen, setChosen] = useState(NEW_TUNNEL);
+    const [failure, setFailure] = useState<string | null>(null);
+    const [listing, setListing] = useState(false);
+    const account = picked ?? state.account?.id ?? null;
+    // A second press while the first one works would make or pick a tunnel the first one no longer needs.
+    const starting = state.stage === 'starting';
+
+    useEffect(() => {
+        setTunnels([]);
+        setChosen(NEW_TUNNEL);
+        setFailure(null);
+        setListing(false);
+
+        const transport = transportFor(endpointId);
+
+        if (account === null || !transport) {
+            return;
+        }
+
+        let current = true;
+
+        setListing(true);
+        transport
+            .request('tunnel.list', { account })
+            .then((found) => current && setTunnels(found.tunnels.filter((tunnel) => tunnel.usable)))
+            .catch((e: unknown) => current && setFailure(messageOf(e, t('tunnels.tunnel.loadFailed'))))
+            .finally(() => current && setListing(false));
+
+        return () => {
+            current = false;
+        };
+        // oxlint-disable-next-line react-hooks/exhaustive-deps
+    }, [endpointId, account]);
+
+    const use = (): void => {
+        if (account === null) {
+            return;
+        }
+
+        void (chosen === NEW_TUNNEL ? change('tunnel.setup', { account }) : change('tunnel.link', { account, tunnel: chosen }));
+    };
+
+    return (
+        <SettingsRow
+            label={t('tunnels.tunnel.label')}
+            description={failure ?? undefined}
+            control={
+                <>
+                    {state.accounts.length > 1 && (
+                        <Select<string>
+                            label={t('tunnels.tunnel.account')}
+                            variant="outlined"
+                            value={account ?? ''}
+                            disabled={starting}
+                            placeholder={t('tunnels.tunnel.pickAccount')}
+                            items={state.accounts.map((entry) => ({ value: entry.id, label: entry.name }))}
+                            onValueChange={setPicked}
+                        />
+                    )}
+                    {listing && <Spinner size={12} label={t('tunnels.tunnel.listing')} />}
+                    <Select<string>
+                        label={t('tunnels.tunnel.pick')}
+                        variant="outlined"
+                        value={chosen}
+                        disabled={account === null || starting}
+                        items={[
+                            { value: NEW_TUNNEL, label: t('tunnels.tunnel.new') },
+                            ...tunnels.map((tunnel) => ({
+                                value: tunnel.id,
+                                label: tunnel.name,
+                                description: t(tunnel.running ? 'tunnels.tunnel.running' : 'tunnels.tunnel.idle')
+                            }))
+                        ]}
+                        onValueChange={setChosen}
+                    />
+                    <Button variant="primary" disabled={account === null || starting} onClick={use}>
+                        {t('tunnels.tunnel.use')}
+                    </Button>
+                </>
+            }
+        />
+    );
+}

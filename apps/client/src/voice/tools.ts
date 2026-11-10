@@ -2,6 +2,8 @@ import { VOICE_CONTROL_TOOL, VOICE_TOOL_ACTIONS, type ActionName, type ActionOut
 import {
     actionInput,
     confirmationOf,
+    confirmationRequestOutput,
+    failedActionOutput,
     objectArguments,
     voiceReplyOf,
     type VoiceChatFollowUp,
@@ -9,11 +11,11 @@ import {
     type VoiceWatchedSession
 } from '@ruimte/voice';
 import i18next from 'i18next';
-import { clientActions } from '@/actions/client-action-registry';
-import { VOICE_ACTION_CALL } from '@/actions/client-actions';
-import { accentLabel } from '@/canvas/accents';
+import { clientRegistry, VOICE_ACTION_CALL } from '@/action-port/perform';
+import { accentLabel } from '@/canvas-model/accents';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useEndpoints } from '@/state/endpoints';
-import { currentEndpointId, endpointKey } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
@@ -56,15 +58,14 @@ function failed(message: string, data: Record<string, unknown> = {}): VoiceToolE
 }
 
 function failureOf(result: ActionResult): VoiceToolExecution {
-    return result.status === 'needs_confirmation'
-        ? failed('Ask the user to confirm or cancel this action before continuing.', {
-              needs_confirmation: true,
-              confirmation_token: result.confirmationToken,
-              confirmation: result.confirmation
-          })
-        : failed(result.status === 'failed' ? result.error.message : 'The action could not be completed.', {
-              code: result.status === 'failed' ? result.error.code : result.status
-          });
+    switch (result.status) {
+        case 'needs_confirmation':
+            return { output: confirmationRequestOutput(result) };
+        case 'failed':
+            return { output: failedActionOutput(result) };
+        default:
+            return failed('The action could not be completed.', { code: result.status });
+    }
 }
 
 function completed(name: ActionName, output: Record<string, unknown>, undoToken: string | undefined, endpointId: string): VoiceToolExecution {
@@ -74,7 +75,7 @@ function completed(name: ActionName, output: Record<string, unknown>, undoToken:
         execution.action = { ...reply.entry };
         if (undoToken) {
             execution.action.undo = () => {
-                void clientActions.undo(undoToken, VOICE_ACTION_CALL);
+                void clientRegistry().then((actions) => actions.undo(undoToken, VOICE_ACTION_CALL));
             };
         }
     }
@@ -86,7 +87,7 @@ function completed(name: ActionName, output: Record<string, unknown>, undoToken:
 
 async function executed(name: ActionName, input: Record<string, unknown>): Promise<ActionResult> {
     const revision = voiceWorkspaceRevision();
-    const result = await clientActions.execute(name, input, VOICE_ACTION_CALL);
+    const result = await (await clientRegistry()).execute(name, input, VOICE_ACTION_CALL);
     if (result.status !== 'needs_confirmation') {
         return result;
     }
@@ -100,7 +101,7 @@ async function executed(name: ActionName, input: Record<string, unknown>): Promi
     if (!DELETIONS.has(name) || useSettings.getState().voiceConfirmDestructiveActions) {
         return result;
     }
-    return clientActions.confirm(result.confirmationToken, true, VOICE_ACTION_CALL);
+    return (await clientRegistry()).confirm(result.confirmationToken, true, VOICE_ACTION_CALL);
 }
 
 /* Every prompt Voice sends is followed, since the speech model only asked for a report when a person happened to say so. */
@@ -167,7 +168,7 @@ async function controlAction(args: Record<string, unknown>): Promise<VoiceToolEx
         return failed('Choose confirm or cancel and provide the confirmation token.', { code: 'invalid-confirmation' });
     }
     const endpointId = currentEndpointId();
-    const result = await clientActions.confirm(answer.token, answer.approved, VOICE_ACTION_CALL);
+    const result = await (await clientRegistry()).confirm(answer.token, answer.approved, VOICE_ACTION_CALL);
     return result.status === 'completed' ? completed(result.action, result.output as Record<string, unknown>, result.undoToken, endpointId) : failureOf(result);
 }
 

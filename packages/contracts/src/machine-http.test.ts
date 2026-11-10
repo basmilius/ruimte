@@ -36,6 +36,7 @@ describe('localProofOf', () => {
         const proof = await localProofOf('the-secret', 4210, 'nonce-of-the-shell');
         expect(proof).toMatch(/^[A-Za-z0-9_-]{43}$/);
         expect(await localProofOf('the-secret', 4210, 'nonce-of-the-shell')).toBe(proof);
+        expect(proof).toBe('reh8IrOqRUz1pMPEoxQbB8SDG0rkGl1WHXmxVyY7ySs');
         expect(await localProofOf('another-secret', 4210, 'nonce-of-the-shell')).not.toBe(proof);
         expect(await localProofOf('the-secret', 4300, 'nonce-of-the-shell')).not.toBe(proof);
         expect(await localProofOf('the-secret', 4210, 'another-nonce')).not.toBe(proof);

@@ -1,3 +1,4 @@
+export * from './chat-turn.ts';
 export * from './chunks.ts';
 export * from './delivery.ts';
 export * from './follow-up.ts';
@@ -5,8 +6,12 @@ export * from './live-event.ts';
 export * from './matrix.ts';
 export * from './mint.ts';
 export * from './names.ts';
+export * from './preferences.ts';
+export * from './prompts.ts';
 export * from './replies.ts';
 export * from './session-watch.ts';
+export * from './time-context.ts';
 export * from './tool-arguments.ts';
 export * from './tool-events.ts';
 export * from './tool-loop.ts';
+export * from './tool-output.ts';

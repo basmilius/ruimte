@@ -1,6 +1,7 @@
 import ActivityKit
 import Foundation
 import RuimtePulsar
+import RuimteShared
 
 /// Voice's Live Activity on this phone. The app starts, updates and ends it itself; no push token is asked for.
 /// `Activity` is not sendable, so only its id stays on the main actor and every change finds it again by that id.

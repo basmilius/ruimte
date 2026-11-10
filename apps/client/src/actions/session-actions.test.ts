@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ChatState } from '@adecore/agents-react/state';
 import { applyPlanOps } from '@adecore/plan';
 import { ActionRegistry } from '@ruimte/actions';
-import type { ChatForkResult, ChatInfo, ChatItem, Plan, PlanPersonOp, RequestMap, RequestType } from '@ruimte/contracts';
+import type { ChatForkResult, ChatInfo, ChatItem, Plan, PlanPersonOp, ProviderInfo, RequestMap, RequestType } from '@ruimte/contracts';
+import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from '@/action-port/perform';
 import { useDocument } from '@/state/document';
 import type { SessionState } from '@/state/sessions';
-import { TransportError, type Transport } from '@/transport/transport';
+import { TransportError, type Transport } from '@/transport-api/transport';
 import { fakeProvider } from '../../testing/fake-provider';
 import { confirmed, questionOf } from './action-support';
-import { createClientActionRegistry } from './client-action-registry';
-import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
+import { createClientActionRegistry } from './client-actions';
 import { sessionActions, sessionTitle, type SessionMachine } from './session-actions';
 
 type Answers = { [Type in RequestType]?: (payload: RequestMap[Type]['payload']) => RequestMap[Type]['result'] | Promise<RequestMap[Type]['result']> };
@@ -159,8 +159,9 @@ const claude = fakeProvider('claude', 'Claude Code', {
             ]
         },
         { slug: 'opus', name: 'Opus', legacy: false, isDefault: false, options: [] }
-    ]
-});
+    ],
+    capabilities: { chat: true, terminal: true, fork: true }
+} as Partial<ProviderInfo>);
 const codex = fakeProvider('codex', 'Codex', { models: [{ slug: 'gpt', name: 'GPT', legacy: false, isDefault: true, options: [] }] });
 
 interface Fake {
@@ -227,6 +228,7 @@ function fake(answers: Answers = {}, machine: Partial<SessionMachine> = {}): Fak
             terminal: () => ({ attached: true }) as SessionState,
             screen: () => ['$ bun test', ...Array.from({ length: 60 }, (_, i) => `line ${i}`)],
             providers: () => [claude, codex],
+            providersLoaded: () => true,
             providerFixed: () => false,
             retarget: async (chatId, provider) => {
                 retargeted.push(`${chatId}:${provider}`);

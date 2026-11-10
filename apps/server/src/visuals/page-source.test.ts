@@ -6,7 +6,6 @@ const PAGE = ['<!doctype html>', '<html>', '<head>', '<title>Bars</title>', '</h
     '\n'
 );
 
-/* The 1-based line and column of `needle` in `text`. */
 function placeOf(text: string, needle: string): { line: number; column: number } {
     const offset = text.indexOf(needle);
     const before = text.slice(0, offset);

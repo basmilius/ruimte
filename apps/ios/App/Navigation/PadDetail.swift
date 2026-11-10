@@ -80,7 +80,7 @@ struct PadDetailColumn: View {
             }
         case .notification(let destination):
             NavigationStack {
-                PadNotificationPage(runtime: runtime, now: now, destination: destination, open: open)
+                NotificationRoutePage(runtime: runtime, now: now, destination: destination, open: open)
                     .toolbar { toolbar }
             }
             .id(destination.id)
@@ -253,11 +253,7 @@ private struct PadProjectCell<Bar: ToolbarContent>: View {
                 .toolbar(content: toolbar)
         }
         .id(shownKey)
-        .environment(
-            \.padCells,
-            PadCellActions(
-                openSubagent: { router.show(subagent: $0) }, inspectSubagent: { router.inspect($0) })
-        )
+        .environment(\.projectNavigator, router)
         .opacity(machineLost ? 0.3 : 1)
         .allowsHitTesting(!machineLost)
         .overlay {
@@ -309,49 +305,6 @@ private struct PadProjectCell<Bar: ToolbarContent>: View {
             connected: workspace.session.connected, failedAttempts: workspace.session.failedAttempts,
             problem: workspace.session.problem)
     }
-}
-
-/// A notification's chat or terminal, opened in its project once Now says which one holds it, which pushes that
-/// project in the sidebar. A node no open project holds opens on its own, as it always did.
-private struct PadNotificationPage: View {
-    let runtime: AppRuntime
-    let now: NowModel
-    let destination: NotificationDestination
-    let open: (ProjectViewTarget) -> Void
-    @State private var searched = false
-
-    var body: some View {
-        Group {
-            if searched {
-                NotificationSessionPage(runtime: runtime, destination: destination)
-            } else {
-                MobileLoadingRow(String(localized: "Finding the conversation")).modifier(MobilePageSurface())
-            }
-        }
-        .task {
-            guard !searched else { return }
-            let machineID = destination.machineID
-            let tasks = runtime.session(machineID: machineID)?.tasks
-            if let target = await destination.answeredAt(
-                parentOf: { tasks?.childTask($0)?.text("parentId") },
-                locate: { await now.locate(machineID: machineID, itemID: $0) })
-            {
-                open(target)
-            } else {
-                searched = true
-            }
-        }
-    }
-}
-
-/// What the iPad's content offers the page in it: a sub-agent as a view of its own, or beside it in the inspector.
-struct PadCellActions {
-    let openSubagent: (PadSubagent) -> Void
-    let inspectSubagent: (PadSubagentPane) -> Void
-}
-
-extension EnvironmentValues {
-    @Entry var padCells: PadCellActions?
 }
 
 /// A sub-agent opened as a view of its own: its conversation, holding its chat while it shows.

@@ -4,10 +4,11 @@ import { copyText, messageOf } from '@adecore/ui';
 import { isCanvasView, isChatHostView, type Plan, type PlanStepState } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
-import { focusNodeAction, perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
+import { focusNodeAction } from '@/action-port/person-actions';
+import { viewIdsIn } from '@/layout/split';
 import { foldableIds, resultsText, revealOptions, type PlanFilter } from '@/plan/plan-view';
 import { revealNode, showView } from '@/project/views';
-import { viewIdsIn } from '@/shell/split';
 import { liveCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
@@ -74,7 +75,6 @@ export const usePlanReveal = create<PlanReveal>((set, get) => ({
     }
 }));
 
-/* Opens what hides a step in the list, then asks the list to bring it into view. */
 export function revealPlanStep(planKey: string, plan: Pick<Plan, 'items'>, stepId: string): void {
     const prefs = usePlanViewPrefs.getState();
     const current = { filter: prefs.filter, collapseDone: prefs.collapseDone, collapsed: new Set(collapsedOf(prefs.collapsed, planKey)) };
@@ -95,7 +95,6 @@ export function collapsedOf(collapsed: PlanViewPrefs['collapsed'], planKey: stri
     return collapsed[planKey] ?? NO_IDS;
 }
 
-/* The keyboard and the eye to a chat: its cell when it stands in one, else the camera to its node. */
 export function focusChat(chatId: string): void {
     const { views, layout, setActiveView } = useDocument.getState();
     if (views.some((view) => isChatHostView(view) && view.id === chatId)) {

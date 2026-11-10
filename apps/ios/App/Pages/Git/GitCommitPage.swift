@@ -27,11 +27,7 @@ import SwiftUI
     /// A message is written from one repository's staged diff; over two there is no one diff to read.
     var writeFrom: String? { plan.targets.count == 1 ? plan.targets[0].path : nil }
     var providerName: String {
-        switch provider {
-        case "claude": "Claude"
-        case "codex": "Codex"
-        default: provider ?? String(localized: "an agent")
-        }
+        provider.map { AgentDirectory.shared.name($0) } ?? String(localized: "an agent")
     }
 
     /// A file that goes in, with the repository it goes into. Two repositories can each hold the same relative path,
@@ -52,8 +48,11 @@ import SwiftUI
 
     func loadProvider(client: any MachineRequesting) async {
         guard let probe = repositories.checkouts.first?.path else { return }
-        let answer = try? await client.request("git.capabilities", payload: .object(["cwd": .string(probe)]))
-        provider = answer?["messageProvider"]?.stringValue
+        let answer = try? await client.request(.gitCapabilities, payload: .object(["cwd": .string(probe)]))
+            .decoded(as: GitCapabilitiesResult.self)
+        provider = answer?.messageProvider
+        // The machine's own name for the CLI, in case nothing else has asked for the list yet.
+        if provider != nil { _ = try? await AgentCatalog.load(client) }
     }
 
     /// Asks the machine's CLI for a message over the staged diff; asked again while it writes, it stops.
@@ -61,7 +60,7 @@ import SwiftUI
         guard let cwd = writeFrom else { return }
         if writing {
             if let running = writingID {
-                _ = try? await client.request("git.cancel", payload: .object(["actionId": .string(running)]))
+                _ = try? await client.request(.gitCancel, payload: .object(["actionId": .string(running)]))
             }
             return
         }
@@ -75,13 +74,14 @@ import SwiftUI
         var payload: [String: JSONValue] = ["cwd": .string(cwd), "actionId": .string(actionID)]
         if let provider { payload["provider"] = .string(provider) }
         do {
-            let suggestion = try await client.request("git.suggestMessage", payload: .object(payload))
-            subject = suggestion.text("subject")
-            body = suggestion.text("body")
+            let suggestion = try await client.request(.gitSuggestMessage, payload: .object(payload))
+                .decoded(as: GitSuggestMessageResult.self)
+            subject = suggestion.subject
+            body = suggestion.body
             repositories.problem = nil
         } catch is CancellationError {
         } catch {
-            if gitRefusalCode(error) != "cancelled" {
+            if error.machineCode != .cancelled {
                 repositories.problem = error.localizedDescription
             }
         }
@@ -221,7 +221,6 @@ struct GitCommitPage: View {
     }
 }
 
-/// The lines a change adds and takes away, green and red as every diff draws them.
 struct GitLineCounts: View {
     let file: GitStatusFile
 

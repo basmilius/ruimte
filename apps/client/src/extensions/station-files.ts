@@ -1,3 +1,4 @@
+import { KeyedSerializer } from '@adecore/utils/async';
 import type { ExtensionInfo } from '@ruimte/contracts';
 import { EXTENSION_FILE_TYPES, EXTENSION_FILES_PATH } from '@ruimte/csp';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
@@ -201,8 +202,8 @@ async function read(link: Link, root: string): Promise<{ answer: MachineExtensio
     }
 }
 
-// By machine root, the last fill of this window, for a page without locks; it never rejects.
-const fills = new Map<string, Promise<unknown>>();
+// The fills of this window by machine root, for a page without locks.
+const fills = new KeyedSerializer();
 
 /*
  * One fill of a machine's files at a time across the page's windows, so one window never drops what another just put
@@ -215,14 +216,7 @@ async function exclusively<T>(root: string, work: () => Promise<T>): Promise<T> 
         return locks.request(`${FILL_LOCK_PREFIX}${root}`, { mode: 'exclusive' }, work);
     }
 
-    const run = (fills.get(root) ?? Promise.resolve()).then(work);
-
-    fills.set(
-        root,
-        run.catch(() => undefined)
-    );
-
-    return run;
+    return fills.run(root, work);
 }
 
 /*
@@ -247,7 +241,7 @@ function keptFrom(
     });
 }
 
-export interface MachineSync {
+interface MachineSync {
     // What this window runs now, of which an extension whose files did not come keeps its version.
     previous?: readonly InstalledClientExtension[];
     // False once a newer sync began, which then holds and drops instead.

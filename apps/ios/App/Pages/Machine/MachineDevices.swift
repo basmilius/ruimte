@@ -3,60 +3,57 @@ import Observation
 import RuimtePulsar
 import RuimteTransport
 
-/// A simulator, an emulator or a phone on a machine, from `device.list`.
 struct MachineDevice: Identifiable, Equatable, Sendable {
     let deviceID: String
     let backendID: String
-    let platform: String
-    let kind: String
+    let platform: DevicePlatform
+    let kind: DeviceKind
     let name: String
     let runtime: String
-    let state: String
+    let state: DeviceState
     let reason: String?
     let canBoot: Bool
     let canShutdown: Bool
     let canStream: Bool
     let canInput: Bool
 
-    init?(_ value: JSONValue) {
-        guard let deviceID = value["deviceId"]?.stringValue, let backendID = value["backendId"]?.stringValue,
-            let platform = value["platform"]?.stringValue
-        else { return nil }
-        self.deviceID = deviceID
-        self.backendID = backendID
-        self.platform = platform
-        kind = value.text("kind", fallback: "simulator")
-        name = value.text("name", fallback: "Device")
-        runtime = value.text("runtime")
-        state = value.text("state", fallback: "shutdown")
-        reason = value["reason"]?.stringValue
-        let capabilities = value["capabilities"]
-        canBoot = capabilities?["boot"]?.boolValue ?? false
-        canShutdown = capabilities?["shutdown"]?.boolValue ?? false
-        canStream = capabilities?["stream"]?.boolValue ?? false
-        canInput = capabilities?["input"]?.boolValue ?? false
+    init(_ device: DeviceInfo) {
+        deviceID = device.deviceId
+        backendID = device.backendId
+        platform = device.platform
+        kind = device.kind
+        name = device.name
+        runtime = device.runtime
+        state = device.state
+        reason = device.reason
+        canBoot = device.capabilities.boot
+        canShutdown = device.capabilities.shutdown
+        canStream = device.capabilities.stream
+        canInput = device.capabilities.input
     }
 
     var id: String { "\(backendID):\(deviceID)" }
 
     /// What a request about this device names, `DeviceTargetPayloadSchema`.
     var target: JSONValue {
-        .object(["deviceId": .string(deviceID), "backendId": .string(backendID), "platform": .string(platform)])
+        .object([
+            "deviceId": .string(deviceID), "backendId": .string(backendID), "platform": .string(platform.rawValue),
+        ])
     }
 
     /// How a project file names the device, the way a person does, since the id is the machine's own.
     var reference: JSONValue {
         .object([
-            "platform": .string(platform), "kind": .string(kind), "name": .string(name), "runtime": .string(runtime),
+            "platform": .string(platform.rawValue), "kind": .string(kind.rawValue), "name": .string(name),
+            "runtime": .string(runtime),
         ])
     }
 
-    /// A simulator or emulator that runs, the kind the desktop groups apart.
-    var active: Bool { kind == "simulator" && state == "booted" }
-    var booted: Bool { state == "booted" }
+    var active: Bool { kind == .simulator && state == .booted }
+    var booted: Bool { state == .booted }
 
     var displayRuntime: String {
-        guard platform == "ios", runtime.lowercased().hasPrefix("ios ") else { return runtime }
+        guard platform == .ios, runtime.lowercased().hasPrefix("ios ") else { return runtime }
         return String(runtime.dropFirst(4))
     }
 
@@ -66,17 +63,17 @@ struct MachineDevice: Identifiable, Equatable, Sendable {
         case "offline": return String(localized: "Offline")
         default: break
         }
-        if kind == "physical" {
+        if kind == .physical {
             switch state {
-            case "booted": return platform == "android" ? String(localized: "Connected") : String(localized: "Paired")
-            case "shutdown": return String(localized: "Unavailable")
-            default: return String(localized: "Connecting")
+            case .booted: return platform == .android ? String(localized: "Connected") : String(localized: "Paired")
+            case .shutdown: return String(localized: "Unavailable")
+            case .transitioning: return String(localized: "Connecting")
             }
         }
         switch state {
-        case "booted": return String(localized: "Running")
-        case "shutdown": return String(localized: "Stopped")
-        default: return String(localized: "Changing state")
+        case .booted: return String(localized: "Running")
+        case .shutdown: return String(localized: "Stopped")
+        case .transitioning: return String(localized: "Changing state")
         }
     }
 
@@ -88,14 +85,14 @@ struct MachineDevice: Identifiable, Equatable, Sendable {
 struct MachineDeviceGroup: Identifiable, Equatable, Sendable {
     let id: String
     let title: String
-    let platform: String
+    let platform: DevicePlatform
     let active: Bool
     var devices: [MachineDevice]
 
     static func groups(_ devices: [MachineDevice]) -> [MachineDeviceGroup] {
         var groups: [MachineDeviceGroup] = []
         for device in devices {
-            let key = "\(device.active ? "active" : "available"):\(device.platform):\(device.kind)"
+            let key = "\(device.active ? "active" : "available"):\(device.platform.rawValue):\(device.kind.rawValue)"
             if let index = groups.firstIndex(where: { $0.id == key }) {
                 groups[index].devices.append(device)
             } else {
@@ -109,34 +106,36 @@ struct MachineDeviceGroup: Identifiable, Equatable, Sendable {
     }
 
     private static func title(_ device: MachineDevice) -> String {
-        let ios = device.platform == "ios"
+        let ios = device.platform == .ios
         if device.active {
             return ios ? String(localized: "Running iOS simulators") : String(localized: "Running Android emulators")
         }
-        if device.kind == "physical" {
+        if device.kind == .physical {
             return ios ? String(localized: "iOS devices") : String(localized: "Android devices")
         }
         return ios ? String(localized: "iOS simulators") : String(localized: "Android emulators")
     }
 }
 
-/// The devices of one machine while a page shows them: read with `device.list` and again every few seconds, since a
-/// machine announces no change, and started or shut down with `device.boot` and `device.shutdown`.
+/// The devices of one machine while a page shows them: read with `device.list` and again when the machine says with
+/// `device.changed`, or every three seconds on a machine from before `device.watch`, and started or shut down with
+/// `device.boot` and `device.shutdown`.
 @MainActor @Observable
 final class MachineDevices {
     private(set) var devices: [MachineDevice] = []
-    /// One line per kind of device the machine could not look for.
     private(set) var notes: [String] = []
     private(set) var loaded = false
     private(set) var loading = false
     /// The machine turned browser and device streaming off, which closes every device request.
     private(set) var streamingOff = false
     private(set) var problem: String?
-    /// Per device id, the action on its way.
-    private(set) var changing: [String: String] = [:]
+    private(set) var changing: [String: WireRequest] = [:]
     @ObservationIgnored let client: any MachineRequesting
     @ObservationIgnored private let platform: () -> String?
     @ObservationIgnored private var reads = 0
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client, events: [.reread(.deviceChanged)], watch: .area(.deviceWatch, gated: true), poll: { 3_000 },
+        read: { [weak self] in await self?.load() })
 
     /// `platform` is the machine's own, for the line that says iOS needs a Mac instead of asking for Xcode.
     init(client: any MachineRequesting, platform: @escaping () -> String? = { nil }) {
@@ -155,16 +154,16 @@ final class MachineDevices {
         loading = !loaded
         defer { if attempt == reads { loading = false } }
         do {
-            let result = try await client.request(.deviceList)
+            let result = try await client.request(.deviceList).decoded(as: DeviceListResult.self)
             guard attempt == reads else { return }
-            devices = result.list("devices").compactMap(MachineDevice.init)
-            notes = Self.notes(result.list("unavailable"), platform: platform())
+            devices = result.devices.map(MachineDevice.init)
+            notes = Self.notes(result.unavailable ?? [], platform: platform())
             streamingOff = false
             problem = nil
             loaded = true
         } catch {
             guard attempt == reads, !(error is CancellationError) else { return }
-            if case .server(let code, _) = error as? MachineClientError, code == "streaming-disabled" {
+            if error.machineCode == .streamingDisabled {
                 streamingOff = true
                 devices = []
                 problem = nil
@@ -175,47 +174,42 @@ final class MachineDevices {
         }
     }
 
-    /// Reads the list again every interval for as long as the calling task runs.
-    func watch(every interval: Duration = .seconds(3)) async {
-        while !Task.isCancelled {
-            await load()
-            try? await Task.sleep(for: interval)
-        }
-    }
+    func watch() async { await live.run() }
 
-    func boot(_ device: MachineDevice) async { await control(device, action: "boot") }
-    func shutdown(_ device: MachineDevice) async { await control(device, action: "shutdown") }
+    func boot(_ device: MachineDevice) async { await control(device, action: .deviceBoot) }
+    func shutdown(_ device: MachineDevice) async { await control(device, action: .deviceShutdown) }
 
-    private func control(_ device: MachineDevice, action: String) async {
+    private func control(_ device: MachineDevice, action: WireRequest) async {
         guard changing[device.id] == nil else { return }
         changing[device.id] = action
         defer { changing[device.id] = nil }
         do {
-            let answer = try await client.request("device.\(action)", payload: device.target)
-            if let updated = MachineDevice(answer), let index = devices.firstIndex(where: { $0.id == updated.id }) {
+            let answer = try await client.request(action, payload: device.target).decoded(as: DeviceInfo.self)
+            let updated = MachineDevice(answer)
+            if let index = devices.firstIndex(where: { $0.id == updated.id }) {
                 devices[index] = updated
             }
             problem = nil
         } catch {
             problem =
-                action == "boot"
+                action == .deviceBoot
                 ? String(localized: "Could not start \(device.name). \(error.localizedDescription)")
                 : String(localized: "Could not shut down \(device.name). \(error.localizedDescription)")
         }
     }
 
     /// Away from macOS a missing Xcode is nothing to install, so the iOS lines give way to one that says iOS needs a Mac.
-    static func notes(_ unavailable: [JSONValue], platform: String?) -> [String] {
+    static func notes(_ unavailable: [DeviceUnavailable], platform: String?) -> [String] {
         let notMac = platform != nil && platform != "darwin"
         var notes: [String] = []
-        for entry in unavailable where !(notMac && entry.text("platform") == "ios") {
+        for entry in unavailable where !(notMac && entry.platform == .ios) {
             let note: String
-            switch entry.text("code") {
+            switch entry.code {
             case "adb-unavailable":
                 note = String(localized: "Install the Android SDK to use Android emulators and devices.")
             case "simctl-unavailable", "devicectl-unavailable":
                 note = String(localized: "Install Xcode to use iOS simulators and iPhones.")
-            default: note = entry.text("message", fallback: entry.text("code"))
+            default: note = entry.message
             }
             if !notes.contains(note) { notes.append(note) }
         }

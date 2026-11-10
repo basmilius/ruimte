@@ -2,28 +2,33 @@ import { ToolRefusal } from '@adecore/agents/context';
 import { cancellableTimeout } from '@adecore/utils/async';
 import { Server, WebStandardStreamableHTTPServerTransport, type CallToolResult } from '@modelcontextprotocol/server';
 import type { Credential } from '@ruimte/contracts';
+import type { ServerActions } from '../actions/server-actions.ts';
+import { AgentFiles } from '../agent-files/files.ts';
+import type { ArtifactUploads } from '../agent-files/uploads.ts';
+import { externalActorId, type ExternalCaller } from '../canvas/external-caller.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { externalPlace } from '../tools/external-reach.ts';
-import type { CanvasHost } from '../tools/host.ts';
+import type { Tool as KitTool } from '../tools/tool.ts';
 import { VERSION } from '../version.ts';
-import { externalActorId, type ExternalCaller } from './caller.ts';
 import type { Tool, ToolContext } from './catalog.ts';
 import { visibleExternalTools } from './external-catalog.ts';
 import { EXTERNAL_INSTRUCTIONS } from './external-instructions.ts';
 import { MACHINE_WIDE_TOOLS } from './external-tiers.ts';
-import { AgentFiles } from './files.ts';
 import { callTool, refusalResult } from './mcp-route.ts';
-import type { ArtifactUploads } from './uploads.ts';
 
 /* Cloudflare cuts proxied traffic that reads nothing for 125 seconds, so a tool answers before that or hands back what to poll. */
-export const EXTERNAL_TOOL_BUDGET_MS = 100_000;
+const EXTERNAL_TOOL_BUDGET_MS = 100_000;
 
-export interface ExternalMcpDeps {
+interface ExternalMcpDeps {
     host: CanvasHost;
+    actions: ServerActions;
+    /* Every tool of the daemon, which `buildCatalog` made from its features. */
+    tools: readonly Tool[];
     uploads?: ArtifactUploads;
     callerFolders?(caller: string): string[];
     shotFolders?: readonly string[];
     /* Tools beyond the catalog's, such as the approval tools. */
-    extraTools?: readonly Tool[];
+    extraTools?: readonly KitTool[];
     budgetMs?: number;
 }
 
@@ -83,6 +88,7 @@ export async function callExternalTool(
     const context: ToolContext = {
         caller: caller.id,
         host: deps.host,
+        actions: deps.actions,
         external: caller,
         ...(reached === undefined ? {} : { reached }),
         uploads: deps.uploads,
@@ -123,7 +129,7 @@ export async function callExternalTool(
  */
 export async function handleExternalMcpRequest(request: Request, caller: ExternalCaller, deps: ExternalMcpDeps): Promise<Response> {
     const server = new Server({ name: 'ruimte', version: VERSION }, { capabilities: { tools: {} }, instructions: EXTERNAL_INSTRUCTIONS });
-    const tools = (): Tool[] => visibleExternalTools(caller, deps.host, deps.extraTools);
+    const tools = (): Tool[] => visibleExternalTools(caller, deps.host, deps.tools, deps.extraTools);
 
     server.setRequestHandler('tools/list', async () => ({
         tools: tools().map((tool) => ({ name: tool.name, description: tool.description, inputSchema: tool.inputSchema, annotations: tool.annotations }))

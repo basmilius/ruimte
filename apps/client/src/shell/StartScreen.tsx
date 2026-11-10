@@ -4,37 +4,38 @@ import clsx from 'clsx';
 import { FolderOpen, LogIn, MessageSquarePlus, MessagesSquare, MonitorSmartphone, RotateCw } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { openProjectAction, openProjectClickAction } from '@/actions/client-actions';
+import { chatsProjects, openableRows, recentProjects, type ProjectMenuRow } from '@/clients/project/list';
+import { runCommand } from '@/commands/key-dispatch';
 import { isDesktop } from '@/desktop/bridge';
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { chatsProjects, openableRows, recentProjects, type ProjectMenuRow } from '@/project/list';
+import { AddMachineDialog } from '@/machine-ui/AddMachineDialog';
+import { LinkMachineDialog } from '@/machine-ui/LinkMachineDialog';
+import { SignInButtons } from '@/machine-ui/SignInButtons';
+import { useMachineIcon } from '@/machines/machine-icon';
+import { nameOf, type MachineEntry } from '@/machines/machine-list';
+import { MachineGlyph } from '@/machines/MachineGlyph';
+import { useMachineEntries } from '@/machines/use-machine-entries';
+import { linkDot, linkHint, machineLink } from '@/palette/palette-browse';
 import { newChat, useOffersNewChat } from '@/project/new-chat';
 import { openProject } from '@/project/open';
+import { openProjectAction, openProjectClickAction } from '@/project/open-actions';
+import { ProjectPlaceActions } from '@/project/ProjectActions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { usePulsarAccount } from '@/pulsar/account';
-import { usePulsarMachines } from '@/pulsar/machines';
-import { runAppShortcut } from '@/shell/app-shortcuts';
-import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
-import { linkDot, linkHint, machineLink } from '@/shell/palette-browse';
-import { ProjectPlaceActions } from '@/shell/ProjectActions';
-import { RowKbd } from '@/shell/RowKbd';
-import { AddMachineDialog } from '@/shell/settings/AddMachineDialog';
-import { useMachineIcon } from '@/shell/settings/machine-icon';
-import { mergeMachines, nameOf, type MachineEntry } from '@/shell/settings/machine-list';
-import { useKeyOf } from '@/shell/shortcut-overrides';
-import { SignInButtons } from '@/shell/SignInButtons';
 import { useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine, startScreenMachine } from '@/state/local-machine';
 import { useProjectList } from '@/state/project-list';
+import { usePulsarMachines } from '@/state/pulsar-machines';
 import { canShowReleaseNotes, openReleaseNotes } from '@/state/release-notes';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { useUpdates } from '@/state/updates';
-import { useWindow, type BootFailure } from '@/state/window';
 import { stationBoot } from '@/station';
+import { RowKbd } from '@/surface/RowKbd';
+import { useKeyOf } from '@/surface/shortcut-overrides';
 import { useEndpointConnection, useMachineHold, useOpenEndpoints } from '@/transport/status';
 import { BrandIntro } from '@/ui/Brand';
+import { useWindow, type BootFailure } from '@/workspace/window';
 
 const ROW = 'flex min-h-10 w-full min-w-0 items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-surface-hover disabled:opacity-50';
 
@@ -49,14 +50,12 @@ function Section({ label, children }: { label: string; children: ReactNode }) {
     );
 }
 
-/* One machine, with the line of state the palette's machines step shows; picking it browses its folders. */
 function MachineRow({ entry }: { entry: MachineEntry }) {
     const endpointId = entry.endpoint?.id ?? entry.id;
     const connection = useEndpointConnection(endpointId);
     const icon = useMachineIcon(entry);
     const link = machineLink(entry, connection, null);
     const hint = linkHint(link);
-    /* No menu of its own: browsing its folders is the only thing this row does. */
     return (
         <button className={ROW} onClick={() => useUi.getState().openFolderBrowser(endpointId)}>
             <MachineGlyph icon={icon} size={16} className="shrink-0 text-text-muted" />
@@ -126,7 +125,6 @@ function RecentRowMenu({ row }: { row: ProjectMenuRow }) {
     );
 }
 
-/* The project the cold start could not open, on top of Recent with why, one click from trying again. */
 function FailedRow({ failure, row }: { failure: BootFailure; row: ProjectMenuRow | null }) {
     const { t } = useTranslation(['shell', 'common']);
     const machine = useEndpoints((s) => s.endpoints.find((endpoint) => endpoint.id === failure.endpointId)?.label ?? t('start.anotherMachine'));
@@ -175,17 +173,16 @@ function SignInCard({ description }: { description: string }) {
 
 const FOOTER_BUTTON = 'flex items-center gap-1.5 rounded-sm hover:text-text';
 
-/* The keys that work from here, and which Ruimte this is. */
 function Footer() {
     const { t } = useTranslation('shell');
     const currentVersion = useUpdates((s) => s.currentVersion);
     const version = isDesktop() && currentVersion ? currentVersion : null;
     return (
         <footer className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-linear-to-t from-bg from-40% to-transparent px-8 pt-10 pb-4 text-xs text-text-faint *:pointer-events-auto">
-            <button className={FOOTER_BUTTON} onClick={() => runAppShortcut('palette')}>
+            <button className={FOOTER_BUTTON} onClick={() => runCommand('palette')}>
                 <RowKbd row="palette" variant="inline" /> {t('start.commandPalette')}
             </button>
-            <button className={FOOTER_BUTTON} onClick={() => runAppShortcut('settings')}>
+            <button className={FOOTER_BUTTON} onClick={() => runCommand('settings')}>
                 <RowKbd row="settings" variant="inline" /> {t('settingsDialog.title')}
             </button>
             {version && <span>{t('connection.version', { version })}</span>}
@@ -214,7 +211,7 @@ function StartContent() {
     const boot = stationBoot({ withoutMachine: !hasLocalMachine(), accountStatus, machines: accountMachines });
     const recent = recentProjects(rows, endpoints, connected);
     const chats = openableRows(chatsProjects(rows, endpoints, connected));
-    const machines = mergeMachines({ endpoints, accountMachines: accountStatus === 'signed-in' ? accountMachines : null, showLocal: hasLocalMachine() });
+    const machines = useMachineEntries();
     const failedRow =
         failure === null ? null : (recent.find((row) => row.endpointId === failure.endpointId && row.summary.projectId === failure.projectId) ?? null);
     /* The row that failed is already on top with its reason, and one nobody can open is left out. */

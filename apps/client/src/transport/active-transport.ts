@@ -1,7 +1,7 @@
 import type { BytesReadPayload, EventMap, EventType, LiveFrameEvent, RequestMap, RequestType } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { readPiece, type BytesPiece } from './piece';
-import { TransportError, type ConnectionState, type LiveFrameHandler, type Transport, type TransportStatus } from './transport';
+import { readPiece, type BytesPiece } from '../transport-api/piece';
+import { TransportError, type ConnectionState, type LiveFrameHandler, type Transport, type TransportStatus } from '../transport-api/transport';
 
 /* What the facade needs of the pool: the socket of one endpoint, and word when any of them changes. */
 export interface ActiveSource {
@@ -10,7 +10,7 @@ export interface ActiveSource {
     subscribe(handler: () => void): () => void;
 }
 
-export interface ActiveTransportOptions {
+interface ActiveTransportOptions {
     source: ActiveSource;
     activeId(): string;
     subscribeActive(handler: () => void): () => void;
@@ -18,7 +18,6 @@ export interface ActiveTransportOptions {
 
 interface Registration {
     bind(transport: Transport): () => void;
-    /* How to take this handler off the socket it is on now; null while there is no socket. */
     off: (() => void) | null;
 }
 

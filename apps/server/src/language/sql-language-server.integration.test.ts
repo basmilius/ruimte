@@ -8,13 +8,13 @@ import type { DatabaseConnection, LanguageRequestResult, ProjectContent } from '
 import { DatabaseService, databaseHelperPath } from '../database/database-service.ts';
 import { SchemaSnapshots } from '../database/schema-snapshots.ts';
 import { SqlAnalysis } from '../database/sql-analysis.ts';
-import { MachineHome } from '../fs/machine-home.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import { MachineHome } from '../disk/machine-home.ts';
+import { tarGz } from '../disk/test-archives.ts';
+import type { SessionEvent } from '../wire.ts';
 import { AgentLanguage } from './agent-language.ts';
 import { LanguageHost } from './host.ts';
 import { cargoCommand, NativePolicy, phpLanguageServerCheckout, sqlLanguageServerCheckout, type Download } from './native.ts';
 import { spawnLanguageProcess } from './runtime.ts';
-import { tarGz } from './test-archives.ts';
 import { eventually, positionOf } from './test-integration.ts';
 
 /*

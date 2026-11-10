@@ -1,9 +1,9 @@
 import type { ChatMovePayload, ChatMoveResult } from '@ruimte/contracts';
-import { ensureMachine } from '@/endpoint/reach';
-import { listProjects } from '@/project/list';
+import { listProjects } from '@/clients/project/list';
 import { showChatIn } from '@/project/new-chat';
 import { transportFor } from '@/transport';
-import { TransportError } from '@/transport/transport';
+import { TransportError, fireAndForget } from '@/transport-api/transport';
+import { ensureMachine } from '@/workspace/reach';
 
 /*
  * Asks a machine to move a chat of Chats into a project and follows it only after the answer, along
@@ -16,7 +16,7 @@ export async function moveChatOn(endpointId: string, payload: ChatMovePayload): 
         throw new TransportError('not-connected', 'This machine cannot be reached');
     }
     const result = await transport.request('chat.move', payload);
-    void listProjects(id).catch(() => undefined);
+    void fireAndForget('listProjects', listProjects(id));
     await showChatIn(id, result.summary.projectId, result.viewId);
     return result;
 }

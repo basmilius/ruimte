@@ -1,17 +1,24 @@
 import { useChatHost } from '@adecore/agents-react';
 import { pageKey, answerPrompt, promptCreatedAt, useFocusAfterAnswer, usePromptSession, PROMPT_SURFACE, PromptView } from '@adecore/agents-react/prompts';
 import { useProviders } from '@adecore/agents-react/state';
-import { formatClock } from '@adecore/agents-react/usage';
-import { ButtonGroup, ErrorBoundary, Icon, IconButton, Menu, Pill, Tooltip } from '@adecore/ui';
-import { formatMoment } from '@adecore/ui/format';
+import { ButtonGroup, ErrorBoundary, Icon, IconButton, Menu, Pill, Tooltip, isApplePlatform } from '@adecore/ui';
+import { formatClock, formatMoment } from '@adecore/ui/format';
 import clsx from 'clsx';
 import { AlarmClock, AlarmClockOff, ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { focusNodeAction, PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
-import { isTypingTarget } from '@/canvas/canvas-shortcuts';
-import { StatusDot } from '@/canvas/NodeFrame';
+import { focusNodeAction, PERSON_PROMPT_CLIENTS } from '@/action-port/person-actions';
+import { stackFront, type CanvasPrompt } from '@/attention/canvas-prompts';
+import { useCanvasPrompts } from '@/canvas/use-canvas-prompts';
+import { agentName } from '@/processes/format';
+import { designChatInFront } from '@/project/views';
+import { promptHeadline } from '@/prompts/prompt-headline';
+import { useCanvas, useCanvasStore } from '@/state/canvas';
+import { useNodeStatus } from '@/state/chats';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointOfNode } from '@/state/keys';
+import { snoozeOf, useSnoozes } from '@/state/snooze';
 import {
     bringPromptToFront,
     leavePromptStack,
@@ -20,18 +27,10 @@ import {
     usePromptFold,
     usePromptFront,
     useSnoozedList
-} from '@/canvas/prompt-stack';
-import { stackFront, type CanvasPrompt } from '@/canvas/prompts';
-import { useCanvasPrompts } from '@/canvas/use-canvas-prompts';
-import { isApplePlatform } from '@/desktop/bridge';
-import { agentName } from '@/processes/format';
-import { designChatInFront } from '@/project/views';
-import { promptHeadline } from '@/prompts/prompt-headline';
-import { SnoozeButton } from '@/shell/Snooze';
-import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { useNodeStatus } from '@/state/chats';
-import { endpointOfNode, useEndpointId } from '@/state/keys';
-import { snoozeOf, useSnoozes } from '@/state/snooze';
+} from '@/surface/canvas/prompt-stack';
+import { isTypingTarget } from '@/surface/canvas/typing-target';
+import { SnoozeButton } from '@/surface/Snooze';
+import { StatusDot } from '@/surface/StatusDot';
 import { useTransportStatus } from '@/transport/status';
 
 /* Marks the chevron that folds or opens the stack, which keeps the keyboard across the change. */
@@ -136,7 +135,6 @@ function SnoozedMenu({
     );
 }
 
-/* The status of the node that asks, for the dot beside its title. */
 function useAskingStatus(prompt: CanvasPrompt) {
     const node = useCanvas((s) => s.nodes[prompt.sourceNodeId ?? prompt.subject.nodeId]);
     return useNodeStatus(node ?? { id: prompt.sourceNodeId ?? prompt.subject.nodeId, kind: prompt.surface });

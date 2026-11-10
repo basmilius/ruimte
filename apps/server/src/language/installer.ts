@@ -2,7 +2,8 @@ import { lstat, mkdir, readdir, readFile, readlink, rename, rm, symlink, unlink,
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileExists } from '@adecore/utils/fs';
 import { LanguageServerKindSchema, type LanguageServerKind } from '@ruimte/contracts';
-import { downloadFile, sha256 } from '../artifacts/artifact-fs.ts';
+import { downloadFile } from '../disk/download.ts';
+import { sha256 } from '../disk/hash.ts';
 import { errorText } from '../error-text.ts';
 import { LanguageLog } from './log.ts';
 import {
@@ -41,7 +42,6 @@ const SELECTION = 'current.json';
 const VERSIONS = 'versions';
 /* The install from before installs had a folder each: the packages, the program and the marker in the kind's own folder. */
 const LEGACY = 'legacy';
-/* What a legacy install left in the kind's folder, beside the storage that every install shares. */
 const LEGACY_ENTRIES = [MARKER, 'package.json', 'bun.lock', 'bun.lockb', 'node_modules', 'bin'];
 /* A checkout builds into itself, so it has one install that a build replaces. */
 const DEV = 'dev';
@@ -80,7 +80,6 @@ interface Marker {
     stubs?: string;
     /* What a person reads as the version of the install; a legacy marker has none. */
     version?: string;
-    /* Native kinds: the file the install runs. */
     executable?: string;
     /* A checkout: the revision it was built at (`CheckoutRevision`). */
     revision?: string;
@@ -95,7 +94,6 @@ interface Selection {
     previous?: string;
 }
 
-/* One install of a kind: which it is, the folder it is in and what its marker says. */
 interface Install {
     id: string;
     directory: string;
@@ -154,7 +152,6 @@ export class LanguageInstaller {
     private readonly store: PackageStore;
     /* What each kind has installed, as last read, for the answers that cannot wait for the disk. */
     private readonly known = new Map<CatalogKind, Installs>();
-    /* The revision of the checkout a native kind builds from, as last read. */
     private readonly revisions = new Map<NativeKind, string | null>();
     /* The program of a toolchain kind this machine has, as last looked for; null when it has none. */
     private readonly toolchains = new Map<ToolchainKind, { executable: string; version: string } | null>();
@@ -170,7 +167,6 @@ export class LanguageInstaller {
         return this.options.now ?? Date.now;
     }
 
-    /* Reads what every kind has installed, and looks for the programs the toolchains bring. */
     async load(): Promise<void> {
         await this.store.recover();
         await this.adoptInstalls();
@@ -261,7 +257,6 @@ export class LanguageInstaller {
         return [known?.current?.marker.stubs, known?.previous?.marker.stubs].filter((commit) => commit !== undefined);
     }
 
-    /* The version a step back goes to, or null when there is none. */
     previousOf(kind: CatalogKind): string | null {
         const previous = this.known.get(kind)?.previous;
         return previous ? (previous.marker.version ?? this.legacyVersionOf(kind, previous.marker)) : null;
@@ -346,7 +341,6 @@ export class LanguageInstaller {
         this.options.onSwitched?.(kind);
     }
 
-    /* What an install of the kind brings now, into its own folder. */
     private pinnedPlanOf(kind: NativeKind): NativePlan | null {
         return this.native.plan(kind, this.directoryOf(kind));
     }
@@ -359,7 +353,6 @@ export class LanguageInstaller {
         return this.options.checkoutRevision ?? gitRevision;
     }
 
-    /* The folder of an install, which for the legacy one is the kind's own. */
     private folderOf(kind: CatalogKind, id: string): string {
         return id === LEGACY ? this.directoryOf(kind) : join(this.directoryOf(kind), VERSIONS, id);
     }

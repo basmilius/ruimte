@@ -1,11 +1,11 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ExternalGrant } from '@ruimte/contracts';
+import type { CanvasHost } from '../canvas/host.ts';
+import { reachableLines, recentLines, type ReachableProject } from '../canvas/reach.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import type { CanvasHost } from './host.ts';
-import { reachableLines, recentLines, type ReachableProject } from './reach.ts';
 
 /* Whether the credential's scope names this project; a scope of null names them all. */
-export function inScope(grant: ExternalGrant, projectId: string): boolean {
+function inScope(grant: ExternalGrant, projectId: string): boolean {
     return grant.projects === null || grant.projects.includes(projectId);
 }
 

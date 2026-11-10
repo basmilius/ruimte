@@ -1,5 +1,5 @@
 import type { Server } from 'bun';
-import { externalCallerOf, handleExternalMcpRequest, type ExternalMcpDeps } from '../mcp/external-route.ts';
+import type { Credential } from '@ruimte/contracts';
 import type { ClientMetadata } from './client-metadata.ts';
 import type { ConsentBook } from './consent-book.ts';
 import type { CredentialStore } from './credential-store.ts';
@@ -7,21 +7,21 @@ import { doorOf, FailureLimiter, gateRequest } from './external-gate.ts';
 import { handleOAuthRequest, OAUTH_PROTECTED_RESOURCE_PATH } from './oauth.ts';
 
 /* The one route, beside the fixed OAuth paths. Nothing else answers on the listener. */
-export const EXTERNAL_MCP_PATH = '/mcp';
+const EXTERNAL_MCP_PATH = '/mcp';
 
 // Tools answer within 100 seconds; the connection outlives that by a little.
 const REQUEST_TIMEOUT_S = 115;
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
 const HOSTNAME = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
 
-export interface ExternalListenerDeps {
+interface ExternalListenerDeps {
     credentials: CredentialStore;
     consent: ConsentBook;
     limiter: FailureLimiter;
-    mcp: ExternalMcpDeps;
+    /* The MCP route for a credential the gate let in; the listener knows nothing of the tools behind it. `client` is the name a person reads it by. */
+    serve(request: Request, credential: Credential, client: string): Promise<Response>;
     fetchMetadata(clientId: string): Promise<ClientMetadata>;
     now(): number;
-    /* The port the listener answers on now. */
     port(): number | null;
 }
 
@@ -48,9 +48,7 @@ export function externalHandler(deps: ExternalListenerDeps): (request: Request) 
         if (url.pathname === EXTERNAL_MCP_PATH) {
             const gated = gateRequest(request, deps.port(), deps.credentials, deps.limiter, `${baseOf(request)}${OAUTH_PROTECTED_RESOURCE_PATH}`);
 
-            return gated.ok
-                ? handleExternalMcpRequest(request, externalCallerOf(gated.credential.credential, gated.credential.client), deps.mcp)
-                : gated.response;
+            return gated.ok ? deps.serve(request, gated.credential.credential, gated.credential.client) : gated.response;
         }
 
         const oauth = await handleOAuthRequest(request, url, {

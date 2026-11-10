@@ -41,7 +41,6 @@ export function parseWorktreeList(output: string): Listed[] {
     return entries;
 }
 
-/* The path of the checkout each branch is out in. */
 export function parseWorktreeBranches(output: string): Map<string, string> {
     return new Map(parseWorktreeList(output).flatMap((entry) => (entry.branch === null ? [] : [[entry.branch, entry.path] as const])));
 }

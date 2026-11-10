@@ -1,5 +1,5 @@
 import type { Highlighter } from 'shiki';
-import { CODE_THEMES } from '@/shell/panels/code-themes';
+import { CODE_THEMES } from '@/code-themes';
 
 let loading: Promise<Highlighter> | undefined;
 

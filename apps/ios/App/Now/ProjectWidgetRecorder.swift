@@ -1,5 +1,6 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 import WidgetKit
 
 /// Writes the views of every open project with their state into the app group for the project widget.

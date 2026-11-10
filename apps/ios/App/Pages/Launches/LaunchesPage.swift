@@ -2,9 +2,7 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
-/// What the launches page opens on top of itself.
 enum LaunchSheet: Identifiable, Equatable {
-    /// The editor on a launch; nil is a new one.
     case edit(String?)
     case importing
 
@@ -124,7 +122,6 @@ struct LaunchesPage: View {
         }
     }
 
-    /// What the machine finds in the project that is no launch yet, so the next ones need no typing.
     @ViewBuilder private var foundSection: some View {
         let rows = found.map(LaunchEditing.foundRows) ?? []
         if !rows.isEmpty {
@@ -191,7 +188,6 @@ struct LaunchesPage: View {
     }
 }
 
-/// The phase of a launch as an icon in the color of its state, with a spinner while it starts or stops.
 struct LaunchStatusIcon: View {
     let phase: LaunchPhase
 
@@ -213,8 +209,6 @@ struct LaunchStatusIcon: View {
     }
 }
 
-/// A launch's state as a dot in its color: green while it runs, amber while it waits for an approval, red once it
-/// failed.
 struct LaunchStateDot: View {
     let phase: LaunchPhase
 
@@ -287,7 +281,6 @@ struct LaunchButtons: View {
     }
 }
 
-/// The same buttons as menu items, for a long-press and the output page.
 struct LaunchMenuItems: View {
     let store: ProjectLaunches
     let view: LaunchView
@@ -309,8 +302,6 @@ struct LaunchMenuItems: View {
     }
 }
 
-/// The questions a start can come back with: approving a command from the project file, or stopping the launch that
-/// holds the port.
 struct LaunchAskModifier: ViewModifier {
     @Bindable var store: ProjectLaunches
 
@@ -378,7 +369,7 @@ struct LaunchApprovalSheet: View {
                 .foregroundStyle(MobileStyle.muted)
                 ForEach(held) { entry in
                     VStack(alignment: .leading, spacing: 2) {
-                        ForEach(entry.env.sorted { $0.key < $1.key }, id: \.key) { variable in
+                        ForEach((entry.env ?? [:]).sorted { $0.key < $1.key }, id: \.key) { variable in
                             Text("\(Text("\(variable.key)=").foregroundStyle(MobileStyle.faint))\(variable.value)")
                         }
                         Text("\(Text("\(entry.cwd) $ ").foregroundStyle(MobileStyle.faint))\(entry.command)")

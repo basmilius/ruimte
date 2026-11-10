@@ -1,5 +1,6 @@
+import { RuntimeModeSchema } from '@adecore/agent-contracts/model';
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
-import { RuntimeModeSchema } from './model.ts';
 
 /* How far an external MCP client reaches: read what is there, work on canvases and agents, or also run the machine's own features. */
 export const EXTERNAL_TIERS = ['read', 'work', 'machine'] as const;
@@ -286,3 +287,40 @@ export const TunnelProposalAnswerPayloadSchema = z.object({ proposalId: TunnelPr
 
 // False when the card was gone already: another client was first, the chat stopped or it expired.
 export const TunnelProposalAnswerResultSchema = z.object({ accepted: z.boolean() });
+
+export const TUNNEL_REQUEST_SCHEMAS = {
+    // Tunnels run `cloudflared` for a tunnel on the person's own Cloudflare account, managed through an API token they typed. Any client reads the state; every other request is the local secret's.
+    'tunnel.state': { payload: EmptySchema, result: TunnelStateSchema },
+    'tunnel.discover': { payload: EmptySchema, result: TunnelDiscoverResultSchema },
+    'tunnel.install': { payload: EmptySchema, result: TunnelStateSchema },
+    'tunnel.setToken': { payload: TunnelSetTokenPayloadSchema, result: TunnelStateSchema },
+    'tunnel.clearToken': { payload: EmptySchema, result: TunnelStateSchema },
+    'tunnel.setup': { payload: TunnelSetupPayloadSchema, result: TunnelStateSchema },
+    'tunnel.list': { payload: TunnelListPayloadSchema, result: TunnelListResultSchema },
+    // Uses a tunnel already on the account; unlinking forgets it, with Ruimte's own hostnames, and never deletes it at Cloudflare.
+    'tunnel.link': { payload: TunnelLinkPayloadSchema, result: TunnelStateSchema },
+    'tunnel.unlink': { payload: EmptySchema, result: TunnelStateSchema },
+    'tunnel.add': { payload: TunnelAddPayloadSchema, result: TunnelStateSchema },
+    'tunnel.update': { payload: TunnelUpdatePayloadSchema, result: TunnelStateSchema },
+    'tunnel.remove': { payload: TunnelRemovePayloadSchema, result: TunnelStateSchema },
+    'tunnel.retry': { payload: EmptySchema, result: TunnelStateSchema },
+    'tunnel.setMcp': { payload: TunnelSetMcpPayloadSchema, result: TunnelStateSchema },
+    // The cards in which an agent suggests a change to a hostname. Any client reads and declines one; only the local secret confirms, which is the change the screen makes.
+    'tunnel.proposals': { payload: EmptySchema, result: TunnelProposalsSchema },
+    'tunnel.proposalConfirm': { payload: TunnelProposalAnswerPayloadSchema, result: TunnelProposalAnswerResultSchema },
+    'tunnel.proposalDecline': { payload: TunnelProposalAnswerPayloadSchema, result: TunnelProposalAnswerResultSchema },
+    'credential.list': { payload: EmptySchema, result: CredentialListResultSchema },
+    'credential.create': { payload: CredentialCreatePayloadSchema, result: CredentialCreateResultSchema },
+    'credential.update': { payload: CredentialUpdatePayloadSchema, result: z.object({ credential: CredentialSchema }) },
+    'credential.revoke': { payload: CredentialRevokePayloadSchema, result: EmptySchema },
+    'consent.list': { payload: EmptySchema, result: ConsentListResultSchema },
+    'consent.answer': { payload: ConsentAnswerPayloadSchema, result: ConsentAnswerResultSchema }
+} as const;
+
+export const TUNNEL_EVENT_SCHEMAS = {
+    // Tunnels or the external MCP changed, or a credential was used after a minute of quiet; every client reloads what it shows.
+    'tunnel.changed': EmptySchema,
+    // Every card of an agent's tunnel suggestion, to every client, whenever the list or a card's staleness changes.
+    'tunnel.proposals': TunnelProposalsSchema,
+    'consent.changed': EmptySchema
+} as const;

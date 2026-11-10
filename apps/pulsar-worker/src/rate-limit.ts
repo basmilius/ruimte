@@ -26,7 +26,6 @@ export async function overAnyLimit(env: Env, checks: ReadonlyArray<readonly [buc
     return results.find((result) => result !== null) ?? null;
 }
 
-/* The body of a request from an address within a route's limit, or the answer that turns it down. */
 export async function bodyWithinLimit<T>(
     request: Request,
     env: Env,
@@ -37,7 +36,6 @@ export async function bodyWithinLimit<T>(
     return limited ? { response: limited } : readBody(request, schema);
 }
 
-/* The session of a signed-in request within a route's limit for its account and for its address, or the answer that turns it down. */
 export async function sessionWithinLimits(
     request: Request,
     env: Env,

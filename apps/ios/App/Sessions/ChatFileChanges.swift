@@ -43,14 +43,17 @@ enum ChatFileChanges {
             omitted: file.omitted?.rawValue)
     }
 
+    /// The file an `Edit`, `Write` or `MultiEdit` call changes, from its input, as `toolFileEdit` in
+    /// `@adecore/agent-contracts` reads it: nothing for another tool and for a call that names no `file_path` or, for
+    /// `MultiEdit`, no `edits` list.
     private static func fromInput(name: String, input: JSONValue) -> [ChatFileChange] {
-        let path = input.text("file_path")
-        guard !path.isEmpty else { return [] }
+        guard input.objectValue != nil, let path = input["file_path"]?.stringValue else { return [] }
         switch name {
         case "Edit": return [replacement(path: path, before: input.text("old_string"), after: input.text("new_string"))]
         case "Write": return [replacement(path: path, before: "", after: input.text("content"))]
         case "MultiEdit":
-            return input.list("edits").map {
+            guard let edits = input["edits"]?.arrayValue else { return [] }
+            return edits.filter { $0.objectValue != nil }.map {
                 replacement(path: path, before: $0.text("old_string"), after: $0.text("new_string"))
             }
         default: return []
@@ -115,13 +118,16 @@ struct ChatDiffView: View {
                             .font(.system(.caption, design: .monospaced)).textSelection(.enabled)
                             .fixedSize(horizontal: true, vertical: false)
                             .foregroundStyle(
-                                line.hasPrefix("+") ? MobileStyle.positive : line.hasPrefix("-") ? MobileStyle.statusError : MobileStyle.muted
+                                line.hasPrefix("+")
+                                    ? MobileStyle.positive
+                                    : line.hasPrefix("-") ? MobileStyle.statusError : MobileStyle.muted
                             )
                             .padding(.horizontal, 12).padding(.vertical, 2)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(
                                 line.hasPrefix("+")
-                                    ? MobileStyle.positive.opacity(0.08) : line.hasPrefix("-") ? MobileStyle.statusError.opacity(0.08) : .clear
+                                    ? MobileStyle.positive.opacity(0.08)
+                                    : line.hasPrefix("-") ? MobileStyle.statusError.opacity(0.08) : .clear
                             )
                     }
                 }.fixedSize(horizontal: true, vertical: false)
@@ -318,7 +324,7 @@ struct ChatChangedFilesRow: View {
         guard stored == nil, !fetchedOnce, let item, item.checkpoint != nil, !work.loading else { return }
         await work.read { stillTheLatest in
             let result = try await client.request(
-                "chat.turnDiff",
+                .chatTurnDiff,
                 payload: .object(["chatId": .string(chatID), "turnId": .string(item.turnId ?? item.id)]))
             try stillTheLatest()
             // A turn whose diff is empty still counts as read: a second attempt would answer the same.

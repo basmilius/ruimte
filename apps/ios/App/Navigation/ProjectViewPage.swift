@@ -47,18 +47,20 @@ struct ProjectViewPage: View {
     }
 
     /// One expression for the preview and the opened row, so the page under them stays the same view.
-    private func shownItem(_ workspace: MobileWorkspace) -> JSONValue? {
+    private func shownItem(_ workspace: MobileWorkspace) -> ProjectItem? {
         if workspace.ready { return workspace.item(target.itemID) }
         return workspace.problem == nil ? preview?.item : nil
     }
 }
 
 /// A notification's chat or terminal, opened in its project once the machine says which one holds it. A node no
-/// open project holds opens on its own.
+/// open project holds opens on its own. With `open` the router takes the node it found, as the iPad's sidebar pushes
+/// its project; without, the page shows the node in place.
 struct NotificationRoutePage: View {
     let runtime: AppRuntime
     let now: NowModel
     let destination: NotificationDestination
+    var open: ((ProjectViewTarget) -> Void)?
     @State private var target: ProjectViewTarget?
     @State private var searched = false
 
@@ -76,10 +78,15 @@ struct NotificationRoutePage: View {
             guard !searched, target == nil else { return }
             let machineID = destination.machineID
             let tasks = runtime.session(machineID: machineID)?.tasks
-            target = await destination.answeredAt(
-                parentOf: { tasks?.childTask($0)?.text("parentId") },
+            let found = await destination.answeredAt(
+                parentOf: { tasks?.childTask($0)?.parentId },
                 locate: { await now.locate(machineID: machineID, itemID: $0) })
-            searched = true
+            if let found, let open {
+                open(found)
+            } else {
+                target = found
+                searched = true
+            }
         }
     }
 }

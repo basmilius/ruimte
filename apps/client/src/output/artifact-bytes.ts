@@ -6,13 +6,13 @@ import { desktop, type SaveFileStreamBridge } from '@/desktop/bridge';
 import { saveBlob } from '@/download';
 import { useToasts } from '@/state/toasts';
 import { machineTransport } from '@/transport';
+import { readPiece } from '@/transport-api/piece';
+import { fireAndForget } from '@/transport-api/transport';
 import { readResource, streamResource } from '@/transport/byte-transfer';
-import { readPiece } from '@/transport/piece';
 
 export interface ArtifactFileRef {
     artifactId: string;
     versionId: string;
-    /* The file's place in the version's manifest. */
     file: number;
 }
 
@@ -40,7 +40,6 @@ export async function downloadArtifactFile(endpointId: string, ref: ArtifactFile
 
 class Cancelled extends Error {}
 
-/* Each piece goes to disk as it arrives, under one toast that counts and can stop it. */
 async function saveInPieces(stream: SaveFileStreamBridge, endpointId: string, ref: ArtifactFileRef, file: ArtifactFile, name: string): Promise<void> {
     const id = await stream.begin(name, file.mime);
     if (id === null) {
@@ -81,7 +80,7 @@ async function saveInPieces(stream: SaveFileStreamBridge, endpointId: string, re
         const path = await stream.end(id);
         toasts.update(toastId, { kind: 'success', title: i18next.t('output:view.downloaded', { name }), description: path, action: undefined });
     } catch (error: unknown) {
-        await stream.abort(id).catch(() => undefined);
+        await fireAndForget('stream.abort', stream.abort(id));
         toasts.dismiss(toastId);
         if (!(error instanceof Cancelled)) {
             throw error;

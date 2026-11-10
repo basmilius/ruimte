@@ -1,20 +1,21 @@
 import { chatIsWorking } from '@ruimte/contracts';
-import { StartClaims } from '../actions/start-claims.ts';
-import type { ComputerUse } from '../computer/computer-use.ts';
+import { StartClaims } from '../canvas/start-claims.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import { errorText } from '../error-text.ts';
 import { isTrackedPath } from '../git/ignore.ts';
 import { DiagramStore } from '../projects/diagram-store.ts';
 import { DrawingStore } from '../projects/drawing-store.ts';
-import { ProjectStore } from '../projects/project-store.ts';
+import { projectOverlays } from '../projects/overlays.ts';
+import type { ProjectLinks, ProjectStore } from '../projects/project-store.ts';
 import { commandsSet } from '../sessions/command-approvals.ts';
 import { modesSet } from '../sessions/mode-approvals.ts';
 import { failTasksOfClosedProject } from '../tasks/closed-project.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { DatabasesBundle } from './databases.ts';
-import type { DevicesBundle } from './devices.ts';
 import type { LanguageBundle } from './language.ts';
 import type { LaunchesBundle } from './launches.ts';
+import type { DaemonSeams } from './seams.ts';
 import type { TemplatesBundle } from './templates.ts';
 
 const PROJECT_CLOSED_REASON = 'the project this chat is in was closed';
@@ -38,32 +39,29 @@ export interface ProjectsBundle {
 interface ProjectsInput {
     home: string;
     machineId: string;
+    machineHome: MachineHome;
     stores: AgentStores;
     agents: AgentsBundle;
-    computer: ComputerUse;
+    seams: Pick<DaemonSeams, 'projectStore'>;
     later: {
         launches(): LaunchesBundle;
         work(): AgentWorkBundle;
         databases(): DatabasesBundle;
         language(): LanguageBundle;
         templates(): TemplatesBundle;
-        devices(): DevicesBundle;
     };
 }
 
-export async function wireProjects({ home, machineId, stores, agents, computer, later }: ProjectsInput): Promise<ProjectsBundle> {
+export async function wireProjects({ home, machineId, machineHome, stores, agents, seams, later }: ProjectsInput): Promise<ProjectsBundle> {
     const { sessions, chats } = agents;
     const endChat = (nodeId: string, closing: boolean): Promise<void> => (closing ? chats.stop(nodeId, PROJECT_CLOSED_REASON) : chats.kill(nodeId));
 
     const endSession = async (kind: 'terminal' | 'chat', nodeId: string, closing = false): Promise<void> => {
-        computer.nodeClosed(nodeId);
-        later.devices().deviceDriver.nodeClosed(nodeId);
-        later.launches().secrets.nodeClosed(nodeId);
-        agents.proposals.forget(nodeId);
-        await later.work().endChildren.owe(nodeId);
+        await stores.lifecycle.emit('closed', nodeId);
         await (kind === 'terminal' ? sessions.kill(nodeId) : endChat(nodeId, closing)).catch(() => undefined);
     };
-    const store = new ProjectStore(home, {
+    const overlays = projectOverlays(home, machineHome);
+    const links: ProjectLinks = {
         tracked: isTrackedPath,
         endSession,
         personSaved: async (folder, before, after) => {
@@ -117,7 +115,8 @@ export async function wireProjects({ home, machineId, stores, agents, computer, 
 
             return session !== undefined && (session.busy || chatIsWorking(session.info));
         }
-    });
+    };
+    const store = seams.projectStore({ home, links, overlays });
     await store.hiddenAgents.load();
     await store.remote.load();
     await store.peers.load();

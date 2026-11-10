@@ -79,7 +79,7 @@ struct MachineIdentitySheet: View {
                 }
             }
             .task {
-                name = endpoint.info?["nameSource"]?.stringValue == "chosen" ? endpoint.label ?? "" : ""
+                name = endpoint.info?.nameSource == .chosen ? endpoint.label ?? "" : ""
                 icon = endpoint.icon?.value
             }
         }

@@ -21,11 +21,9 @@ export const PEER_STATEMENTS_PATH = '/v1/peer-statements';
 // How far a registration's `issuedAt` may lie from the address book's clock, either way.
 export const MACHINE_REGISTRATION_MAX_SKEW_MS = 600_000;
 
-// A provider is a way to sign in; an account holds one identity per provider.
 export const ProviderIdSchema = z.enum(['github', 'apple']);
 export type ProviderId = z.infer<typeof ProviderIdSchema>;
 
-// What a person reads for a provider, in a sentence or on a button.
 export const PROVIDER_NAMES: Record<ProviderId, string> = { github: 'GitHub', apple: 'Apple' };
 
 // 32 random bytes in base64url: access and refresh tokens, and the one-time login code.
@@ -349,7 +347,6 @@ const MachineNameSchema = z.string().min(1).max(80);
 export const MachineIconSchema = z.object({ kind: z.literal('lucide'), value: z.string().min(1).max(64) });
 export type MachineIcon = z.infer<typeof MachineIconSchema>;
 
-// The broker a machine announces itself to, as it hands the URL to its clients.
 export const BrokerUrlSchema = z
     .string()
     .max(512)
@@ -504,6 +501,25 @@ export const AddressBookErrorCodeSchema = z.enum([
     'internal'
 ]);
 export type AddressBookErrorCode = z.infer<typeof AddressBookErrorCodeSchema>;
+
+export const ADDRESS_BOOK_ERROR_STATUS: Readonly<Record<AddressBookErrorCode, number>> = {
+    'bad-request': 400,
+    unauthorized: 401,
+    'bad-signature': 403,
+    'not-found': 404,
+    removed: 409,
+    'machine-on-other-account': 409,
+    'identity-taken': 409,
+    'provider-linked': 409,
+    'last-identity': 409,
+    'confirmation-mismatch': 400,
+    'apple-revocation-failed': 502,
+    'rate-limited': 429,
+    'clock-skew': 400,
+    'not-configured': 503,
+    'no-benchmarks': 503,
+    internal: 500
+};
 
 export const AddressBookErrorSchema = z.object({
     error: z.object({

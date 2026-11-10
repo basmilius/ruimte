@@ -1,5 +1,4 @@
-import { VISUAL_HOST_PAGE } from '@ruimte/contracts';
-import { VISUAL_HOST_HEADERS, VISUAL_HOST_PATH } from '@ruimte/csp';
+import { VISUAL_HOST } from '@ruimte/csp/visual-host';
 import type { Plugin } from 'vite';
 
 /*
@@ -12,18 +11,18 @@ export function visualHostPage(): Plugin {
         name: 'ruimte-visual-host',
         configureServer: (server) => {
             server.middlewares.use((request, response, next) => {
-                if (request.url?.split('?')[0] !== VISUAL_HOST_PATH) {
+                if (request.url?.split('?')[0] !== VISUAL_HOST.path) {
                     next();
                     return;
                 }
-                for (const [name, value] of Object.entries(VISUAL_HOST_HEADERS)) {
+                for (const [name, value] of Object.entries(VISUAL_HOST.headers)) {
                     response.setHeader(name, value);
                 }
-                response.end(VISUAL_HOST_PAGE);
+                response.end(VISUAL_HOST.body);
             });
         },
         generateBundle() {
-            this.emitFile({ type: 'asset', fileName: `${VISUAL_HOST_PATH.slice(1)}index.html`, source: VISUAL_HOST_PAGE });
+            this.emitFile({ type: 'asset', fileName: `${VISUAL_HOST.path.slice(1)}index.html`, source: VISUAL_HOST.body });
         }
     };
 }

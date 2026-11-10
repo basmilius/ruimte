@@ -3,14 +3,15 @@ import { renderTranscript } from '@adecore/agents/context';
 import { renderPlanText } from '@adecore/plan';
 import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
 import type { PageReading } from '../browser/drive.ts';
-import { chatReadUsage, chatUsageLine, type ChatReadUsage, type ChatUsageInfo } from './chat-usage.ts';
+import type { ContextReading } from '../context/agent-host.ts';
+import type { Reference } from '../projects/references.ts';
+import { chatReadUsage, chatUsageLine, type ChatUsageInfo } from './chat-usage.ts';
 import { renderPage } from './context-browser.ts';
 import { renderDevice } from './context-device.ts';
 import { renderDiagram } from './context-diagram.ts';
 import { renderDrawing } from './context-drawing.ts';
 import { contextChangeNote } from './context-note.ts';
 import { readRefusal } from './read-refusal.ts';
-import type { Reference } from './references.ts';
 
 export const CONTEXT_PATH = '/context';
 
@@ -32,7 +33,6 @@ function asReading(text: string | null): ContextReading | null {
 /* A read that found nothing to answer, under the code and the sentence that say why. */
 export class ContextRefusal extends CodedError {}
 
-/* A `subagent` read that cannot be answered, with the sentence that says why. */
 export class SubagentUnreadable extends ContextRefusal {
     constructor(message: string) {
         super('unknown-subagent', message);
@@ -40,8 +40,8 @@ export class SubagentUnreadable extends ContextRefusal {
 }
 
 interface ContextReaders {
-    /* What an extension's `server/` says its node holds. */
-    extensionNode?(extension: string, type: string, data: unknown): Promise<string | null>;
+    /* What an extension's own node says. Required, so no store is made that reads every extension node as empty. */
+    extensionNode(extension: string, type: string, data: unknown): Promise<string | null>;
     /* What the agent under this id may read, derived from the project documents the daemon knows. */
     sources(targetId: string): ContextSource[];
     /* The views, nodes and chats a person pointed at in a message of this chat. Readable like a line, but
@@ -50,7 +50,6 @@ interface ContextReaders {
     /* The agent under `sourceId` when `targetId` opened it itself. Readable like a line and never listed,
        since the tool that opened it already named it. */
     opened?(targetId: string, sourceId: string): ContextSource | null;
-    /* The elements of a drawing view, or null when no open project has one under that id. */
     drawingElements(viewId: string): Promise<DrawingElement[] | null>;
     /* The diagram of a view in the project of the agent asking, or in `projectId` when given, whether or not anyone has that project open. */
     diagramDocument(targetId: string, viewId: string, projectId?: string): Promise<DiagramDocument | null>;
@@ -58,9 +57,7 @@ interface ContextReaders {
     artifactReport?(targetId: string, artifact: NonNullable<ContextSource['artifact']>, projectId?: string): Promise<string | null>;
     /* A routine node's routine and its newest runs, checked against the project of the one reading, or `projectId`; null when it is not there. */
     routineReport?(targetId: string, routineId: string, projectId?: string): Promise<string | null>;
-    /* The plain text of a terminal session's screen and scrollback, or null when there is none. */
     terminalText(sessionId: string): Promise<string | null>;
-    /* A chat's thread, or null when there is none. */
     chatItems(chatId: string): ChatItem[] | null | Promise<ChatItem[] | null>;
     /* The page under a browser node wherever it is open, here or in a client holding it; null when nobody has it open. */
     browserPage?(browserId: string): Promise<PageReading | null>;
@@ -76,14 +73,6 @@ interface ContextReaders {
     /* The model and usage of a chat, which a read of it starts with; null when there is none. */
     chatInfo?(chatId: string): ChatUsageInfo | null | Promise<ChatUsageInfo | null>;
     now?(): number;
-}
-
-/* A source as text, and for a chat the usage its first line says in words. */
-export interface ContextReading {
-    text: string;
-    usage?: ChatReadUsage;
-    /* The png a read in form image wrote. */
-    image?: string;
 }
 
 /*
@@ -122,11 +111,6 @@ export class ContextStore {
      * One source as text. `tail` is counted here rather than in the CLI, since only this side knows
      * what a line of each kind is, and the wire then carries fifteen lines instead of two thousand.
      */
-    /* Set once the extensions are up, which is after the agents. */
-    useExtensionNodes(read: NonNullable<ContextReaders['extensionNode']>): void {
-        this.readers.extensionNode = read;
-    }
-
     async read(targetId: string, sourceId: string, tail: number | null = null, subagent: string | null = null): Promise<string | null> {
         const source = this.sourceFor(targetId, sourceId);
         return source ? ((await this.reading(targetId, source, tail, subagent))?.text ?? null) : null;
@@ -189,9 +173,7 @@ export class ContextStore {
                 if (!source.extension) {
                     return null;
                 }
-                return asReading(
-                    lastLines((await this.readers.extensionNode?.(source.extension.id, source.extension.type, source.extension.data)) ?? '', tail)
-                );
+                return asReading(lastLines((await this.readers.extensionNode(source.extension.id, source.extension.type, source.extension.data)) ?? '', tail));
             }
             case 'routine': {
                 const text = source.routine ? ((await this.readers.routineReport?.(targetId, source.routine, projectId).catch(() => null)) ?? null) : null;
@@ -200,7 +182,6 @@ export class ContextStore {
         }
     }
 
-    /* What a person pointed this agent at in its messages, read again at every call. */
     referenced(targetId: string): Reference[] {
         return this.readers.referenced?.(targetId) ?? [];
     }

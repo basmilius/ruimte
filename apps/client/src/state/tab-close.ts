@@ -1,4 +1,4 @@
-import { cellAt, cellViewIds, locateView } from '@/shell/split';
+import { cellAt, cellViewIds, locateView } from '@/layout/split';
 import { asksOnClose } from '@/state/cell-close';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
@@ -33,7 +33,6 @@ export function setTabPinned(id: string, pinned: boolean): void {
     }
 }
 
-/* The tabs of the host `id` stands in, in their order; nothing for a view that is no tab. */
 function hostTabIds(id: string): string[] {
     const { layout } = useDocument.getState();
     const at = layout === null ? null : locateView(layout, id);

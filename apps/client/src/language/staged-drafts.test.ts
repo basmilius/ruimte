@@ -1,13 +1,17 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { settle } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import type { WorkspaceEdit } from '@adecore/lsp';
 import { TextDrafts, useTextDrafts, type DraftLink } from '@/state/text-drafts';
 import { useToasts } from '@/state/toasts';
+import { installWorkspaceRegistries } from '@/wiring/workspace-registries';
 import { FakeLanguageTransport } from './fake-daemon';
 import { draftFiles } from './project-files';
-import { EditorLanguage } from './ruimte-editor-language';
-import { ProjectLanguage } from './ruimte-project-language';
-import { settleLanguage } from './settle.test';
+import { createEditorLanguage } from './ruimte-editor-language';
+import { RuimteProject } from './ruimte-project';
+
+// An editor is drawn only in a workspace, whose chunk installs this before it draws one (`App.tsx`).
+installWorkspaceRegistries();
 
 const GREETING = '/work/app/src/greeting.ts';
 const MAIN = '/work/app/src/main.ts';
@@ -45,7 +49,7 @@ function setup() {
     const drafts = new TextDrafts(() => link);
     const transport = new FakeLanguageTransport();
     transport.answers.set('fs.read', ((payload: { path: string }) => ({ kind: 'text', path: payload.path, ...disk.get(payload.path)! })) as never);
-    const project = new ProjectLanguage(transport, 'p1', '/work/app', draftFiles('local', transport, 'p1', drafts));
+    const project = new RuimteProject(transport, 'p1', '/work/app', draftFiles('local', transport, 'p1', drafts));
     return { disk, drafts, transport, project };
 }
 
@@ -62,17 +66,17 @@ describe('a rename that changes a file no editor holds', () => {
     test('lets the servers read the unsaved text of that file, and a rename back leaves both files as they were', async () => {
         const { disk, drafts, transport, project } = setup();
         const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: greetingText('greetAll'), theme: 'light' });
-        const language = new EditorLanguage(project, editor, greetingUri, 'typescript');
+        const language = createEditorLanguage(project, editor, greetingUri, 'typescript');
         await language.document.ready;
 
-        expect(await project.applyWorkspaceEdit(renameEdit('greetAll', 'greetEveryone'))).toEqual({ applied: true });
-        await settleLanguage();
+        expect(await project.language.applyWorkspaceEdit(renameEdit('greetAll', 'greetEveryone'))).toEqual({ applied: true });
+        await settle();
         expect(drafts.draft('local', MAIN)?.text).toBe(mainText('greetEveryone'));
         expect(transport.documents.get('src/main.ts')?.text).toBe(mainText('greetEveryone'));
         expect(useToasts.getState().toasts).toHaveLength(1);
 
-        expect(await project.applyWorkspaceEdit(renameEdit('greetEveryone', 'greetAll'))).toEqual({ applied: true });
-        await settleLanguage();
+        expect(await project.language.applyWorkspaceEdit(renameEdit('greetEveryone', 'greetAll'))).toEqual({ applied: true });
+        await settle();
         expect(editor.getText()).toBe(greetingText('greetAll'));
         expect(drafts.isUnsaved('local', MAIN)).toBe(false);
         expect(disk.get(MAIN)!.text).toBe(mainText('greetAll'));
@@ -86,13 +90,13 @@ describe('a rename that changes a file no editor holds', () => {
     test('goes away from the toast once Save all wrote it, and the servers read it from disk again', async () => {
         const { disk, transport, project } = setup();
         const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: greetingText('greetAll'), theme: 'light' });
-        const language = new EditorLanguage(project, editor, greetingUri, 'typescript');
+        const language = createEditorLanguage(project, editor, greetingUri, 'typescript');
         await language.document.ready;
 
-        await project.applyWorkspaceEdit(renameEdit('greetAll', 'greetEveryone'));
-        await settleLanguage();
+        await project.language.applyWorkspaceEdit(renameEdit('greetAll', 'greetEveryone'));
+        await settle();
         useToasts.getState().toasts[0]!.action!.run();
-        await settleLanguage();
+        await settle();
 
         expect(disk.get(MAIN)!.text).toBe(mainText('greetEveryone'));
         expect(useToasts.getState().toasts).toEqual([]);
@@ -104,8 +108,8 @@ describe('a rename that changes a file no editor holds', () => {
 
     test('goes away from the toast when the file is saved some other way', async () => {
         const { drafts, project } = setup();
-        await project.applyWorkspaceEdit(renameEdit('greetAll', 'greetEveryone'));
-        await settleLanguage();
+        await project.language.applyWorkspaceEdit(renameEdit('greetAll', 'greetEveryone'));
+        await settle();
         expect(useToasts.getState().toasts).toHaveLength(1);
 
         await drafts.save('local', MAIN);

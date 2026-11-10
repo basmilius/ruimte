@@ -4,6 +4,8 @@ import { CodedError, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type Wat
 import { Serializer } from '@adecore/utils/async';
 import { isWithin } from '@adecore/utils/path';
 import {
+    PRIVATE_DIR,
+    PROJECT_DIR,
     DATABASES_VERSION,
     DatabasesPrivateFileSchema,
     DatabasesSharedFileSchema,
@@ -21,8 +23,6 @@ import {
 import { ClientSinks } from '../client-sinks.ts';
 import { PairedWriteRaced, PairedWriteStuck, recoverPaired, writePaired, type PairedFile } from '../projects/paired-write.ts';
 import {
-    PRIVATE_DIR,
-    PROJECT_DIR,
     PROJECT_FILE,
     parseVersioned,
     readJsonDocument,
@@ -35,7 +35,7 @@ import {
     type JsonDocumentRead
 } from '../projects/project-files.ts';
 import type { ProjectWriteIO } from '../projects/project-write.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 
 const DATABASES_FILE = 'databases.json';
 
@@ -281,7 +281,6 @@ export class DatabaseConnectionStore {
         }
     }
 
-    /* Finishes a save that was cut off between its two files. */
     private async recover(folder: string): Promise<void> {
         try {
             await recoverPaired(pendingPathIn(folder), { root: folder, paths: [sharedPathIn(folder), privatePathIn(folder)] }, this.io);
@@ -453,7 +452,6 @@ function documentOf(state: LoadedConnections): DatabaseConnections {
     return { rev: state.rev, connections: all.sort((a, b) => rankOf(a.id) - rankOf(b.id)) };
 }
 
-/* The first rule a list of connections breaks, or null. */
 export function problemIn(folder: string, connections: readonly DatabaseConnection[]): DatabaseConnectionError | null {
     const ids = new Set<string>();
     for (const connection of connections) {

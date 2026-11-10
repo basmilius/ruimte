@@ -1,9 +1,8 @@
-import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@adecore/ui';
+import { matchesShortcut, type Shortcut, isInFloatingLayer, isApplePlatform } from '@adecore/ui';
 import { useEffect } from 'react';
 import type { StoreApi } from 'zustand';
-import { fitAction, historyAction } from '@/actions/client-actions';
-import { GRID } from '@/canvas/math';
-import { isApplePlatform } from '@/desktop/bridge';
+import { fitAction, historyAction } from '@/action-port/person-actions';
+import { GRID } from '@/canvas-model/math';
 import {
     copyDrawing,
     cutSelection,
@@ -15,6 +14,7 @@ import {
     toggleLockSelection
 } from '@/drawing/drawing-actions';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
+import { anyDialogOpen } from '@/registry/dialog-state';
 import type { DrawingState, DrawingTool } from '@/state/drawing';
 import { useUi } from '@/state/ui';
 
@@ -51,10 +51,9 @@ function isTypingTarget(el: EventTarget | null): boolean {
     return el instanceof HTMLElement && (el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
 }
 
-/* Whether anything else on screen has a claim on the keyboard right now. */
 function somethingElseHasIt(target: EventTarget | null): boolean {
     const ui = useUi.getState();
-    return isTypingTarget(target) || isInFloatingLayer(target) || ui.settings.open || ui.paletteOpen || ui.viewDialog !== null || ui.layoutDialogOpen;
+    return isTypingTarget(target) || isInFloatingLayer(target) || ui.settings.open || ui.paletteOpen || anyDialogOpen();
 }
 
 /* What a shortcut with a modifier does to the drawing, in the order they are tried. */

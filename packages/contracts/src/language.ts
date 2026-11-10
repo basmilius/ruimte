@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { ProjectIdSchema } from './project.ts';
 
@@ -459,3 +460,47 @@ export const LanguageShowEventSchema = z
     })
     .refine((show) => (show.path === undefined) !== (show.url === undefined), { message: 'A shown document has a path or a url, not both' });
 export type LanguageShowEvent = z.infer<typeof LanguageShowEventSchema>;
+
+export const LANGUAGE_REQUEST_SCHEMAS = {
+    'language.status': { payload: LanguageStatusPayloadSchema, result: LanguageStatusResultSchema },
+    // Only a person's request installs: the daemon never installs a server on its own, and no verb does.
+    'language.install': { payload: LanguageInstallPayloadSchema, result: LanguageServerStatusResultSchema },
+    // The machine's choice between two servers of one language; any client may switch it, since both were installed by a person.
+    'language.prefer': { payload: LanguagePreferPayloadSchema, result: LanguageServerStatusResultSchema },
+    // A person's step back from an update; like an install, never the daemon's own or a verb's.
+    'language.rollback': { payload: LanguageRollbackPayloadSchema, result: LanguageServerStatusResultSchema },
+    'language.restart': { payload: LanguageServerTargetPayloadSchema, result: LanguageServerStatusResultSchema },
+    // Only the local secret turns build scripts and macros on in the worktrees of agents: it lets a server run what an agent just wrote.
+    'language.worktreeBuild': { payload: LanguageWorktreeBuildPayloadSchema, result: LanguageStatusResultSchema },
+    'language.log': { payload: LanguageServerTargetPayloadSchema, result: LanguageLogResultSchema },
+    'language.custom.list': { payload: EmptySchema, result: LanguageCustomListResultSchema },
+    // Only the local secret saves or removes a server of a person's own: starting what it names is what the save approves.
+    'language.custom.save': { payload: LanguageCustomSavePayloadSchema, result: LanguageCustomSaveResultSchema },
+    'language.custom.remove': { payload: LanguageCustomRemovePayloadSchema, result: EmptySchema },
+    'language.custom.check': { payload: LanguageCustomCheckPayloadSchema, result: LanguageCustomCheckResultSchema },
+    'language.document.open': { payload: LanguageDocumentOpenPayloadSchema, result: LanguageDocumentOpenResultSchema },
+    'language.document.change': { payload: LanguageDocumentChangePayloadSchema, result: LanguageDocumentChangeResultSchema },
+    'language.document.close': { payload: LanguageDocumentTargetPayloadSchema, result: EmptySchema },
+    'language.request': { payload: LanguageRequestPayloadSchema, result: LanguageRequestResultSchema },
+    'language.command': { payload: LanguageCommandPayloadSchema, result: LanguageCommandResultSchema },
+    'language.edit.answer': { payload: LanguageEditAnswerPayloadSchema, result: EmptySchema },
+    // Sent before a save writes; never holds the save up.
+    'language.willSave': { payload: LanguageWillSavePayloadSchema, result: EmptySchema },
+    // A whole-project pull on a person's press; the reports come as `language.diagnostics`.
+    'language.workspaceProblems': { payload: LanguageWorkspaceProblemsPayloadSchema, result: LanguageWorkspaceProblemsResultSchema },
+    'language.messageAnswer': { payload: LanguageMessageAnswerPayloadSchema, result: EmptySchema },
+    // A debugging switch like restart: any client of the machine may set it.
+    'language.trace': { payload: LanguageTracePayloadSchema, result: LanguageServerStatusResultSchema }
+} as const;
+
+export const LANGUAGE_EVENT_SCHEMAS = {
+    'language.diagnostics': LanguageDiagnosticsEventSchema,
+    'language.status': LanguageStatusEventSchema,
+    'language.custom.changed': LanguageCustomChangedEventSchema,
+    'language.providers': LanguageProvidersEventSchema,
+    'language.edit': LanguageEditEventSchema,
+    'language.message': LanguageMessageEventSchema,
+    'language.messageClosed': LanguageMessageClosedEventSchema,
+    // To the one client whose command runs on the server.
+    'language.show': LanguageShowEventSchema
+} as const;

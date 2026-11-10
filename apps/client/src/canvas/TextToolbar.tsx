@@ -3,10 +3,10 @@ import type { DrawingFont } from '@ruimte/contracts';
 import { AlignCenter, AlignLeft, AlignRight, Bold, ChevronDown, Italic, Palette, Strikethrough, Underline } from 'lucide-react';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { accentColor, accentLabel, NODE_ACCENTS } from '@/canvas/accents';
-import { textRect } from '@/canvas/edge-lines';
+import { accentColor, accentLabel, NODE_ACCENTS } from '@/canvas-model/accents';
 import { FONT_STACK } from '@/canvas/text-font';
 import { useCanvas, useCanvasCamera, useCanvasStore, type CanvasState } from '@/state/canvas';
+import { textRect } from '@/state/edge-lines';
 
 const FONTS: readonly DrawingFont[] = ['sans', 'hand', 'mono'];
 

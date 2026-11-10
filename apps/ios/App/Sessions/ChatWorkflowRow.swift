@@ -1,10 +1,11 @@
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import SwiftUI
 
 /// Where an agent of a workflow stands: the words of the wire, `waiting` for one that has not started yet and
 /// `stopped` for one still at work by the last report when the workflow ended.
-enum WorkflowAgentState: Equatable {
+enum WorkflowAgentState: String, Equatable {
     case running, done, failed, waiting, stopped
 }
 
@@ -38,7 +39,7 @@ struct WorkflowCounts: Equatable {
     var failed = 0
 }
 
-/// What a Workflow call runs, laid out as the desktop's `chat/logic/workflow.ts` does.
+/// What a Workflow call runs, laid out as `chat/logic/workflow.ts` of `@adecore/agents-react` does.
 enum ChatWorkflowLayout {
     static func state(_ agent: ChatToolItemWorkflowAgentsItem, workflowRunning: Bool) -> WorkflowAgentState {
         switch agent.status {
@@ -323,7 +324,7 @@ struct ChatWorkflowRow: View {
         Task {
             do {
                 _ = try await context.client.request(
-                    "chat.stopTask",
+                    .chatStopTask,
                     payload: .object(["chatId": .string(context.chatID), "taskId": .string(taskID)]))
             } catch {
                 failure = error.localizedDescription

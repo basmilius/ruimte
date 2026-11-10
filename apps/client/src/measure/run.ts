@@ -3,8 +3,8 @@ import i18next from 'i18next';
 import { startRecording, take } from '@/measure/recorder';
 import { measureScene, sceneFacts, type MeasureVariant } from '@/measure/scene';
 import { openFolderOn } from '@/project/open';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { serverInfoOf } from '@/state/server';
 import { useToasts } from '@/state/toasts';
@@ -99,7 +99,6 @@ export async function buildMeasureScene(variant: MeasureVariant): Promise<void> 
     }
 }
 
-/* Copies what was measured since the scene opened or the last copy, and starts counting afresh. */
 export function copyMeasurements(): void {
     const json = JSON.stringify(take(), null, 2);
     console.info(json);

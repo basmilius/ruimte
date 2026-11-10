@@ -1,0 +1,73 @@
+import { join } from 'node:path';
+import { RecordDirectory } from '@adecore/agents';
+import { ProjectNodeSchema } from '@ruimte/contracts';
+import { z } from 'zod';
+import { openerOf } from '../opener.ts';
+
+const HiddenAgentSchema = z.object({
+    projectId: z.string().min(1),
+    openedBy: z.string().min(1),
+    node: ProjectNodeSchema.extend({ kind: z.enum(['chat', 'terminal']) })
+});
+
+export type HiddenAgent = z.infer<typeof HiddenAgentSchema>;
+
+// Hidden sessions belong to their parent chat, so they never enter a project's views or shared file.
+export class HiddenAgentStore {
+    private readonly records: RecordDirectory<HiddenAgent>;
+    private loading: Promise<void> | null = null;
+    onChange: ((projectId: string) => void) | null = null;
+
+    constructor(home: string) {
+        this.records = new RecordDirectory({ dir: join(home, 'hidden-agents'), schema: HiddenAgentSchema, idOf: (agent) => agent.node.id });
+    }
+
+    load(): Promise<void> {
+        this.loading ??= this.records.load();
+        return this.loading;
+    }
+
+    get(id: string): HiddenAgent | undefined {
+        return this.records.get(id);
+    }
+
+    all(): HiddenAgent[] {
+        return this.records.all();
+    }
+
+    inProject(projectId: string): HiddenAgent[] {
+        return this.records.all().filter((agent) => agent.projectId === projectId);
+    }
+
+    async put(agent: HiddenAgent): Promise<void> {
+        await this.records.write(agent);
+        this.onChange?.(agent.projectId);
+    }
+
+    /* Forgets these agents, and tells each project they were in that it places them no more. */
+    async remove(ids: ReadonlySet<string>): Promise<void> {
+        const projectIds = new Set(this.records.all().flatMap((agent) => (ids.has(agent.node.id) ? [agent.projectId] : [])));
+        await this.records.prune((agent) => ids.has(agent.node.id));
+        for (const projectId of projectIds) {
+            this.onChange?.(projectId);
+        }
+    }
+
+    /* A routine's run chats stay without a place of their own, and outlive their routine. */
+    async pruneOrphans(projectId: string, placed: ReadonlySet<string>): Promise<void> {
+        const agents = this.inProject(projectId);
+        const kept = new Set([...placed, ...agents.flatMap((agent) => (openerOf(agent.openedBy).kind === 'routine' ? [agent.openedBy] : []))]);
+        let added = true;
+        while (added) {
+            added = false;
+            for (const agent of agents) {
+                if (kept.has(agent.openedBy) && !kept.has(agent.node.id)) {
+                    kept.add(agent.node.id);
+                    added = true;
+                }
+            }
+        }
+        await this.records.prune((agent) => agent.projectId === projectId && !kept.has(agent.node.id));
+        this.onChange?.(projectId);
+    }
+}

@@ -310,9 +310,12 @@ describe('untrackedNumstat', () => {
         try {
             await untrackedNumstat(root, name);
 
-            for (let index = 0; index < 511; index += 1) {
-                await counted(`evict-${index}.txt`, 'line\n');
-            }
+            // One at a time, 511 writes and counts took longer than a test may on a Windows runner. Only the order of
+            // `evict-0` matters: it is the oldest entry once the first file is counted again.
+            const names = Array.from({ length: 511 }, (_, index) => `evict-${index}.txt`);
+            await Promise.all(names.map((evicted) => writeFile(join(root, evicted), 'line\n')));
+            await untrackedNumstat(root, names[0]!);
+            await Promise.all(names.slice(1).map((evicted) => untrackedNumstat(root, evicted)));
 
             expect(await untrackedNumstat(root, name)).toMatchObject({ added: 1 });
             await counted('evict-newest.txt', 'line\n');

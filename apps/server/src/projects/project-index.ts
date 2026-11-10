@@ -23,8 +23,8 @@ import {
     type ViewSessionNode,
     viewChats
 } from '@ruimte/contracts';
-import type { HiddenAgentStore } from '../agents/hidden-agents.ts';
-import { resolveReference, type Reference } from '../context/references.ts';
+import type { HiddenAgentStore } from './hidden-agents.ts';
+import { resolveReference, type Reference } from './references.ts';
 
 /* Where an id sits: the project it belongs to, and the canvas it is a node on (null for a chat,
    terminal or browser that is a view of its own). */
@@ -59,7 +59,6 @@ function flaggedSources(sources: Map<string, ContextSource[]>, flags: ProjectFla
     return flagged;
 }
 
-/* Every id these views place, with the canvas it is a node on (null for a view of its own). */
 export function placesOf(views: readonly ProjectView[]): Map<string, string | null> {
     const places = new Map<string, string | null>();
     for (const view of views) {
@@ -129,7 +128,6 @@ export class ProjectIndex {
         return this.projects.get(projectId)?.folder ?? null;
     }
 
-    /* The project the daemon knows in this folder, open or not, or null for none. */
     projectOfFolder(folder: string): string | null {
         const wanted = resolve(folder);
 
@@ -142,7 +140,6 @@ export class ProjectIndex {
         return null;
     }
 
-    /* The folder of every project the daemon knows, open or not. */
     folders(): string[] {
         return [...this.projects.values()].map((project) => project.folder);
     }
@@ -151,7 +148,6 @@ export class ProjectIndex {
         return this.projects.get(projectId)?.content.views ?? null;
     }
 
-    /* Where the designs of the project go: its views, and which of them are shared. */
     designSidesOf(projectId: string): { views: readonly ProjectView[]; shared: readonly string[] } | null {
         const project = this.projects.get(projectId);
 
@@ -310,7 +306,6 @@ export class ProjectIndex {
         return [...this.projects].filter(([projectId, project]) => project.places.has(id) || hidden?.projectId === projectId).map(([projectId]) => projectId);
     }
 
-    /* Whether a view of any project holds this id, as a node on a canvas or as a view of its own. */
     placed(id: string): boolean {
         return [...this.projects.values()].some((project) => project.places.has(id));
     }
@@ -320,7 +315,6 @@ export class ProjectIndex {
         return this.placed(id) && !this.isHiddenChat(id);
     }
 
-    /* Whether a view of this id is a chat an inline edit runs in. */
     isHiddenChat(id: string): boolean {
         return [...this.projects.values()].some((project) => project.content.views.some((view) => view.id === id && isHiddenChatView(view)));
     }

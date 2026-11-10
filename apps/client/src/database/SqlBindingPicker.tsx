@@ -1,25 +1,17 @@
 import { Button, Icon, Menu } from '@adecore/ui';
 import { formatMoment } from '@adecore/ui/format';
-import { storedPathOf, type DatabaseConnection, type SqlBinding } from '@ruimte/contracts';
+import { choiceFor, startDatabaseOf, storedPathOf, type DatabaseConnection, type SqlBinding, type SqlChoice } from '@ruimte/contracts';
 import { ChevronDown, Database } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDatabasePanel } from '@/clients/database/state';
 import { databaseClientFor } from '@/database/client';
 import { asViewConnections, connectionName, ensureDatabaseConnections, useDatabaseConnectionList } from '@/database/connections';
-import {
-    choiceOf,
-    ensureSqlBindings,
-    refreshSqlSchemas,
-    snapshotOf,
-    sqlBindings,
-    startDatabaseOf,
-    useSqlBindings,
-    type SqlFileChoice
-} from '@/database/sql-bindings';
-import { useDatabasePanel } from '@/database/state';
+import { ensureSqlBindings, refreshSqlSchemas, snapshotOf, sqlBindings, useSqlBindings } from '@/database/sql-bindings';
 import { endpointKey } from '@/state/keys';
 import { shownFolderOf, useProject } from '@/state/project';
-import { useConnection } from '@/transport/context';
+import { fireAndForget } from '@/transport-api/transport';
+import { useConnection } from '@/workspace/context';
 
 /* The value of the choices that are no connection, which no connection id can be. */
 const DEFAULT = 'default:';
@@ -38,16 +30,17 @@ function useDatabases(connection: DatabaseConnection, open: boolean): string[] {
         }
         let live = true;
         const [view] = asViewConnections([connection]);
-        databaseClientFor(endpointKey(endpointId, projectId))
-            .session(view!, 'sql-choice')
-            .schemas()
-            .then((schemas) => {
-                if (live) {
-                    setDatabases(schemas.filter((schema) => !schema.system).map((schema) => schema.name));
-                }
-            })
-            // A connection that does not open here has no list to offer; the choice of the connection itself still stands.
-            .catch(() => undefined);
+        void fireAndForget(
+            'databaseClientFor',
+            databaseClientFor(endpointKey(endpointId, projectId))
+                .session(view!, 'sql-choice')
+                .schemas()
+                .then((schemas) => {
+                    if (live) {
+                        setDatabases(schemas.filter((schema) => !schema.system).map((schema) => schema.name));
+                    }
+                })
+        );
         return () => {
             live = false;
         };
@@ -75,12 +68,12 @@ export function SqlBindingPicker({ path }: { path: string }) {
     }, []);
 
     const stored = folder === null ? path : storedPathOf(folder, path);
-    const choice = choiceOf(sql, connections, folder, path, stored);
+    const choice = choiceFor(folder, sql, connections, path);
     if (choice.source === 'console') {
         return null;
     }
     const bound = choice.source === 'none' || choice.source === 'unbound' ? null : choice;
-    const connection = bound === null ? undefined : connections.find((entry) => entry.id === bound.connectionId);
+    const connection = bound?.connection;
     const label =
         connection === undefined || bound === null
             ? t('sql.none')
@@ -150,7 +143,7 @@ export function SqlBindingPicker({ path }: { path: string }) {
                 {connection !== undefined && bound !== null && (
                     <>
                         <Menu.Separator />
-                        <SnapshotStatus choice={bound} connection={connection} snapshots={snapshots} />
+                        <SnapshotStatus choice={bound} snapshots={snapshots} />
                     </>
                 )}
             </Menu.Popup>
@@ -205,17 +198,10 @@ function DatabaseSubmenu({
 }
 
 /* Whether the machine read the schema of the choice yet, and when; reading it again is one press. */
-function SnapshotStatus({
-    choice,
-    connection,
-    snapshots
-}: {
-    choice: Exclude<SqlFileChoice, { source: 'none' | 'unbound' }>;
-    connection: DatabaseConnection;
-    snapshots: Parameters<typeof snapshotOf>[0];
-}) {
+function SnapshotStatus({ choice, snapshots }: { choice: Exclude<SqlChoice, { source: 'none' | 'unbound' }>; snapshots: Parameters<typeof snapshotOf>[0] }) {
     const { t } = useTranslation('databases');
-    const snapshot = snapshotOf(snapshots, choice.connectionId, choice.database);
+    const { connection } = choice;
+    const snapshot = snapshotOf(snapshots, connection.id, choice.database);
 
     return (
         <Menu.Group>

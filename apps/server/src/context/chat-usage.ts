@@ -1,7 +1,5 @@
-import type { ActionOutput } from '@ruimte/actions';
 import type { ChatInfo } from '@ruimte/contracts';
-
-export type ChatReadUsage = NonNullable<ActionOutput<'context.read'>['usage']>;
+import type { ChatReadUsage } from './agent-host.ts';
 
 export type ChatUsageInfo = Pick<ChatInfo, 'provider' | 'model' | 'selection' | 'usage'>;
 
@@ -48,7 +46,6 @@ function cacheText(cache: ChatReadUsage['cache']): string {
         : `prompt cache warm for ${spanText(cache.expiresInMs)} more (until ${cache.expiresAt}${lifetime})`;
 }
 
-/* The one line a chat read starts with, above the plans and the thread. */
 export function chatUsageLine(usage: ChatReadUsage): string {
     // Right after a compaction without a size, 0 would read as an empty context.
     const context =

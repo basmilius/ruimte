@@ -9,15 +9,15 @@ import type {
     RequestMap,
     RequestType
 } from '@ruimte/contracts';
-import { DiagramClient } from '@/diagram/diagram-client';
-import { DrawingClient } from '@/drawing/drawing-client';
+import { DiagramClient } from '@/clients/diagram/diagram-client';
+import { DrawingClient } from '@/clients/drawing/drawing-client';
 import type { DiagramState } from '@/state/diagram';
 import type { DrawingState } from '@/state/drawing';
 import type { EditorRegistry } from '@/state/editors';
 import type { FileEditorClient, FileEditorClientOptions } from '@/state/file-editor-client';
 import { createWorkspaceStores } from '@/state/workspace';
 import type { WorkspaceStores } from '@/state/workspace-stores';
-import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
+import { TransportError, type Transport, type TransportStatus } from '@/transport-api/transport';
 
 type Call = { type: RequestType; payload: unknown };
 
@@ -137,7 +137,6 @@ class FakeTransport implements Transport {
         this.document = document;
     }
 
-    /* Holds every `action` request for one view until the function it hands back is called. */
     hold(action: 'open' | 'save', viewId: string): () => void {
         let release = (): void => undefined;
         this.gates.set(`${action}:${viewId}`, new Promise((resolve) => (release = resolve)));

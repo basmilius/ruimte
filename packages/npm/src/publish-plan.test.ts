@@ -14,7 +14,6 @@ function registry(...entries: string[]) {
             asked.push(`${name}@${version}`);
             return entries.includes(`${name}@${version}`);
         },
-        // What `latest` points at: the newest stable version of the name on the registry.
         latest: async (name: string): Promise<string | null> => {
             const versions = entries
                 .filter((entry) => entry.startsWith(`${name}@`))

@@ -28,7 +28,7 @@ import {
 import { windowProjectFollower } from '@/database/window-project';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
-import { isConnectionError, TransportError, type Transport } from '@/transport/transport';
+import { isConnectionError, TransportError, type Transport, fireAndForget } from '@/transport-api/transport';
 
 export type ConnectionsStatus = 'idle' | 'loading' | 'ready' | 'failed';
 
@@ -36,7 +36,6 @@ interface DatabaseConnectionsState {
     /* The machine and the project these are of (`endpointKey`); null while nothing asked for any. */
     key: string | null;
     status: ConnectionsStatus;
-    /* Why the list could not be read. */
     error: string | null;
     rev: number;
     /* As the machine last answered. */
@@ -51,7 +50,6 @@ interface DatabaseConnectionsState {
     agentAccess: Record<string, DatabaseAgentAccess>;
 }
 
-/* The project the connections are of, on the machine that keeps them. */
 export interface ConnectionsTarget {
     endpointId: string;
     projectId: string;
@@ -223,7 +221,7 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         }
         handed = text;
         // A failed hand-over leaves the agent without passwords; the next change of the list sends them again.
-        await of.transport.request('database.passwords', { projectId: of.projectId, passwords: listed }).catch(() => undefined);
+        await fireAndForget('database.passwords', of.transport.request('database.passwords', { projectId: of.projectId, passwords: listed }));
     };
 
     const readAgentAccess = async (of: ConnectionsTarget): Promise<void> => {

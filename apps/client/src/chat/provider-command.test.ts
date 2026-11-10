@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { typedLine, typeWhenReady, type Clock } from '@/chat/provider-command';
 
-/* Timers that run only when the test moves the time on. */
 function manualClock() {
     let now = 0;
     let next = 0;

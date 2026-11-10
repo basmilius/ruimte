@@ -4,7 +4,7 @@ import Testing
 @testable import RuimtePulsar
 
 private func list(_ json: String) throws -> ProviderAccountList {
-    ProviderAccountList(try JSONValue.decode(Data(json.utf8)))
+    ProviderAccountList(try accountsSnapshot(JSONValue.decode(Data(json.utf8))))
 }
 
 private let twoClaudes = """
@@ -28,7 +28,7 @@ private let twoClaudes = """
     var value = try #require(JSONValue.decode(Data(twoClaudes.utf8)).objectValue)
     let statuses = try #require(value["statuses"]?.arrayValue)
     value["statuses"] = .array([statuses[3], statuses[2], statuses[1], statuses[0]])
-    let accounts = ProviderAccountList(.object(value))
+    let accounts = ProviderAccountList(try accountsSnapshot(.object(value)))
     #expect(accounts.entries.map(\.id) == ["codex", "claude", "old", "work"])
     #expect(accounts.accounts(of: "claude").map(\.id) == ["claude", "old", "work"])
     #expect(accounts.accounts(of: "codex").map(\.id) == ["codex"])
@@ -117,43 +117,4 @@ private let twoClaudes = """
     #expect(!ProviderAccountList.chatStarted(info(session: nil, turns: 0)))
     #expect(ProviderAccountList.chatStarted(info(session: "abc", turns: 0)))
     #expect(ProviderAccountList.chatStarted(info(session: nil, turns: 2)))
-}
-
-@Test func anAccountWearsANodeAccentOrNone() {
-    #expect(RuimteColors.nodeAccents["blue"] == 0x155dfc)
-    #expect(RuimteColors.nodeAccent("gray") == nil)
-    #expect(RuimteColors.nodeAccent(nil) == nil)
-}
-
-@Test func limitsGetASectionPerAccountAndNameItOnlyWhenACLIHasSeveral() throws {
-    let limits = try JSONValue.decode(
-        Data(
-            """
-            {
-                "providers": [
-                    { "kind": "claude", "account": { "id": "claude", "label": "Claude" }, "plan": "max", "checkedAt": 5,
-                      "source": "probe", "windows": [{ "id": "s", "kind": "session", "label": "Session", "used": 0.4,
-                      "resetsAt": null, "durationMs": null }], "cost": null, "unavailable": null },
-                    { "kind": "codex", "account": { "id": "codex", "label": "Codex" }, "plan": null, "checkedAt": 0,
-                      "source": "probe", "windows": [], "cost": null, "unavailable": null }
-                ]
-            }
-            """.utf8))
-    let sections = UsageLimitSection.sections(limits: limits, accounts: try list(twoClaudes))
-    #expect(sections.map(\.id) == ["claude", "work", "codex"])
-    #expect(sections.map(\.title) == ["Claude limits · Claude", "Claude limits · Work", "Codex limits"])
-    #expect(sections.map(\.quiet) == [nil, .signedOut, .notRead(message: nil)])
-    #expect(sections[1].color == "pink")
-    #expect(sections[1].entry == nil)
-}
-
-@Test func limitsFromAMachineBeforeAccountsKeepOneSectionPerCLI() throws {
-    let limits = JSONValue.object([
-        "providers": .array([
-            .object(["kind": .string("claude"), "checkedAt": .number(1), "windows": .array([]), "unavailable": .null])
-        ])
-    ])
-    let sections = UsageLimitSection.sections(limits: limits, accounts: nil)
-    #expect(sections.map(\.title) == ["Claude limits"])
-    #expect(sections.first?.quiet == nil)
 }

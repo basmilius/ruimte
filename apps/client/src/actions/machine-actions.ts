@@ -1,8 +1,8 @@
 import { dayOf, useUsageStore } from '@adecore/agents-react/state';
-import { evenPace } from '@adecore/agents-react/usage';
 import { localTimeZone } from '@adecore/ui/format';
 import { ActionRefusal, type ActionHandlers, type ActionOutput } from '@ruimte/actions';
 import {
+    evenPace,
     totalTokensOf,
     type ComputerUseStatus,
     type DeviceOperated,
@@ -16,15 +16,15 @@ import {
     type UsageSummaryResult
 } from '@ruimte/contracts';
 import { refusing, type Requester } from '@/actions/refusal';
+import { useComputer } from '@/computer/computer';
 import { useDeviceOperated } from '@/devices/operated';
-import { projectNodes } from '@/project/view-nodes';
-import { useComputer } from '@/state/computer';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useProcesses, useProcessWarnings } from '@/state/processes';
 import { serverInfoOf } from '@/state/server';
+import { projectNodes } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
-import { machineFor } from '@/transport/connections';
-import { adoptEndpointInfo } from '@/transport/server-info';
+import { machineFor } from '@/workspace/connections';
+import { adoptEndpointInfo } from '@/workspace/server-info';
 
 /* What the process and usage actions reach outside the document; a test hands in a fake of each. */
 export interface MachineReach {

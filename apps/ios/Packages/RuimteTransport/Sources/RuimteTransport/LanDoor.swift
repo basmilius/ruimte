@@ -11,14 +11,11 @@ public struct LanDoorAddress: Codable, Equatable, Sendable {
         self.addresses = addresses
     }
 
-    /// Nil for a missing or null `lan`, which is a door that is closed.
-    public init?(_ value: JSONValue?) {
-        guard let port = value?["port"]?.numberValue, port == port.rounded(), (1...65_535).contains(port),
-            let list = value?["addresses"]?.arrayValue
-        else { return nil }
-        let addresses = list.compactMap(\.stringValue).filter { !$0.isEmpty && $0.count <= 64 }
-        guard !addresses.isEmpty else { return nil }
-        self.init(port: Int(port), addresses: Array(addresses.prefix(16)))
+    /// Nil for a missing or null `lan`, and for a door with no address, which is a door that is closed. The schema
+    /// holds the port and the address lengths, and the frame was validated before it got here.
+    public init?(_ door: LanDoor?) {
+        guard let door, !door.addresses.isEmpty else { return nil }
+        self.init(port: Int(door.port), addresses: door.addresses)
     }
 
     /// One socket address per reported address, as `lanDoorUrl` in `packages/pulsar/src/lan-door.ts` builds them.
@@ -111,7 +108,6 @@ public struct LanDoorPeer {
     }
 }
 
-/// One attempt's socket at one address of a machine's door.
 @MainActor final class LanDoorSignaling: SignalingPath {
     private var peer: LanDoorPeer
     private let socket: any SignalSocket

@@ -16,6 +16,13 @@ function folderWith(permissions: Record<string, string>): string {
     return folder;
 }
 
+test('pack refuses another API version in the words of the manifest, before it builds anything', () => {
+    const folder = mkdtempSync(join(root, 'extension-'));
+    writeFileSync(join(folder, 'manifest.json'), JSON.stringify({ id: 'acme.pack', name: 'Pack', version: '0.1.0', api: EXTENSION_API_VERSION + 1 }));
+
+    expect(() => readManifest(folder)).toThrow(`manifest.json asks for API ${EXTENSION_API_VERSION + 1}; this Ruimte has ${EXTENSION_API_VERSION}`);
+});
+
 test('pack refuses a permission this Ruimte does not know, before it builds anything', () => {
     expect(() => readManifest(folderWith({ 'chat.send': 'Sends' }))).toThrow('manifest.json: chat.send is not a permission this Ruimte knows');
     expect(() => readManifest(folderWith({ 'net:a.com; frame-src https:': 'Calls' }))).toThrow('does not name a host');

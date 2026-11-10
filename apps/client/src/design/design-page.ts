@@ -1,7 +1,6 @@
 import { isPathBelow, type FsEntry } from '@ruimte/contracts';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 
-/* What one read of a design folder came to: its entries, a folder that is not there yet, or a read that failed. */
 export type DesignRead = { kind: 'listed'; entries: FsEntry[] } | { kind: 'missing' } | { kind: 'failed'; reason: string };
 
 /*
@@ -9,7 +8,7 @@ export type DesignRead = { kind: 'listed'; entries: FsEntry[] } | { kind: 'missi
  * last read failed. A failed read leaves the entries as they were, so a refresh that failed never turns
  * the pages shown into an empty design.
  */
-export interface DesignListing {
+interface DesignListing {
     entries: FsEntry[] | null;
     problem: string | null;
 }
@@ -23,7 +22,6 @@ export function designReadFailed(error: unknown): DesignRead {
     return { kind: 'failed', reason: error instanceof Error ? error.message : String(error) };
 }
 
-/* The listing after a read of the folder. */
 export function listingAfter(before: DesignListing, read: DesignRead): DesignListing {
     switch (read.kind) {
         case 'listed':
@@ -45,7 +43,6 @@ export function designScope(endpointId: string, folder: string): string {
     return JSON.stringify([endpointId, folder]);
 }
 
-/* The listing of `scope`, none for a listing of another folder. */
 export function listingOf(scoped: ScopedListing | null, scope: string): DesignListing | null {
     return scoped !== null && scoped.scope === scope ? scoped.listing : null;
 }
@@ -73,7 +70,6 @@ export function pagesByChange(entries: readonly FsEntry[]): string[] {
     return designFiles(entries).sort((one, other) => changed.get(other)! - changed.get(one)!);
 }
 
-/* When a page of the folder was last written, as the listing says; null for a page it does not hold. */
 export function pageMtime(entries: readonly FsEntry[], file: string): number | null {
     return entries.find((entry) => entry.kind === 'file' && entry.name === file)?.mtime ?? null;
 }
@@ -119,7 +115,6 @@ export function layoutPoint(
     return { x: (client.x - box.left) * scaleX, y: (client.y - box.top) * scaleY };
 }
 
-/* The box around every stroke of a drawing, with room around it, inside the layer it was drawn on. */
 export function strokesBox(strokes: readonly (readonly Point[])[], size: { width: number; height: number }): Rect | null {
     const points = strokes.flat();
 
@@ -135,7 +130,6 @@ export function strokesBox(strokes: readonly (readonly Point[])[], size: { width
     return { x: left, y: top, width: Math.max(1, right - left), height: Math.max(1, bottom - top) };
 }
 
-/* A page as a person names it: its file without the extension. */
 export function pageName(file: string): string {
     return file.replace(/\.html?$/i, '');
 }
@@ -209,7 +203,6 @@ const ATTRIBUTE_REFERENCE = /\b(src|href|poster)\s*=\s*(["'])([^"']*)\2/gi;
 const CSS_REFERENCE = /url\(\s*(["']?)([^"')]+)\1\s*\)/gi;
 const PAGE_URL_PREFIX = 'data:text/html;charset=utf-8,';
 
-/* Every file of the folder a page in `from` pulls in through an attribute or a CSS `url()`, once each. */
 export function assetReferences(html: string, from = ''): string[] {
     const found = new Set<string>();
 
@@ -233,7 +226,6 @@ export interface Room {
     left: number;
 }
 
-/* Takes `bytes` from the room, or none when they do not fit. */
 export function takeRoom(room: Room, bytes: number): boolean {
     if (bytes > room.left) {
         return false;
@@ -246,7 +238,6 @@ export function takeRoom(room: Room, bytes: number): boolean {
 
 const ENCODER = new TextEncoder();
 
-/* What text weighs as the bytes of a page. */
 export function byteLength(text: string): number {
     return ENCODER.encode(text).length;
 }
@@ -300,12 +291,10 @@ function isNameChar(code: number): boolean {
     return isWordChar(code) || code === 37 || code === 46 || code === 47 || code === 45;
 }
 
-/* A character of `\w`. */
 function isWordChar(code: number): boolean {
     return (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code === 95;
 }
 
-/* Whether the characters at `at` spell `letters` (lowercase) in either case. */
 function spells(html: string, at: number, letters: string): boolean {
     for (let i = 0; i < letters.length; i++) {
         if ((html.charCodeAt(at + i) | 0x20) !== letters.charCodeAt(i)) {
@@ -461,7 +450,6 @@ export function withFramedPages(html: string, from: string, pages: ReadonlyMap<s
     return atHeadStart(html, framedPagesElement(inlineJson(Object.fromEntries(pages)), from));
 }
 
-/* The page with `element` first in its head, before any script of its own runs. */
 export function atHeadStart(html: string, element: string): string {
     const opening = /<head(?:\s[^>]*)?>/i.exec(html) ?? /<html(?:\s[^>]*)?>/i.exec(html) ?? /<!doctype[^>]*>/i.exec(html);
     const at = opening === null ? 0 : opening.index + opening[0].length;

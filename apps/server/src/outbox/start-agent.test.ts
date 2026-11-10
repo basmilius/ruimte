@@ -2,27 +2,30 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, readdir, rm, symlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { AttachmentStore, ChatStore } from '@adecore/agents/chat';
-import { AgentLineageStore, OutboxWorker, type OutboxClock } from '@adecore/agents/coordination';
+import { AgentLineageStore, OutboxWorker, type Clock } from '@adecore/agents/coordination';
 import { fakeClaude, fakeCodex, inProcess, type InProcessCli } from '@adecore/agents/testing';
 import { NODE_SIZE, type ChatItem, type ProjectContent } from '@ruimte/contracts';
-import { PendingPromptStore } from '../agents/pending-prompts.ts';
+import type { AgentStart, CanvasHost } from '../canvas/host.ts';
+import { PendingPromptStore } from '../canvas/pending-prompts.ts';
+import { startCwdGuard } from '../canvas/project-paths.ts';
+import { testChatManager } from '../chat/chat-manager-test-helpers.ts';
 import { ChatManager } from '../chat/chat-manager.ts';
+import { errorText } from '../error-text.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import { SessionManager } from '../sessions/manager.ts';
-import { releasedProject } from '../tasks/test-daemon.ts';
-import type { AgentStart, CanvasHost } from '../tools/host.ts';
-import { startCwdGuard } from '../tools/project-paths.ts';
+import { OPEN_BOUNDS } from '../sessions/open-bounds-test-helpers.ts';
+import { releasedProject } from '../testing/test-daemon.ts';
 import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { untilChecked } from '../until-test-helpers.ts';
-import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
+import { outboxRetries } from './kinds/index.ts';
 import { refusingHandlers } from './outbox-test-helpers.ts';
 import { OutboxStore, type OutboxWork, type StartAgentEntry } from './outbox.ts';
 import { HEADLESS_TERMINAL, nodeMode, startAgentHandler, startAgentWork, type StartAgentDeps } from './start-agent.ts';
 
 /* Nothing here fails, so no retry is ever timed; the clock only has to say one moment. */
-const stillClock: OutboxClock = { now: () => 1, setTimeout: () => null, clearTimeout: () => undefined };
+const stillClock: Clock = { now: () => 1, setTimeout: () => null, clearTimeout: () => undefined };
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
@@ -121,7 +124,7 @@ async function boot(): Promise<Daemon> {
         checkCwd
     });
     const attachments = new AttachmentStore(home);
-    const chats = new ChatManager({
+    const chats = testChatManager({
         ...OPEN_BOUNDS,
         providers,
         store: new ChatStore(home, { attachments: attachments }),
@@ -136,18 +139,19 @@ async function boot(): Promise<Daemon> {
     const worker = new OutboxWorker({
         store: outbox,
         clock: stillClock,
+        retries: outboxRetries(),
+        onParked: (entry, error) => logged.push(`Starting the agent of ${entry.target} failed: ${errorText(error)}`),
         handlers: refusingHandlers({
             'start-agent': startAgentHandler({
                 placed: (nodeId) => store.index.locate(nodeId) !== null,
-                hasChat: (chatId) => chats.get(chatId) !== undefined,
-                createChat: (payload) => chats.create(payload),
-                composerPreference: (provider) => chats.composerPreferences.for(provider),
-                killChat: (chatId) => chats.kill(chatId),
+                hasChat: (chatId) => chats.core.get(chatId) !== undefined,
+                createChat: (payload) => chats.core.create(payload),
+                composerPreference: (provider) => chats.core.composerPreferences.for(provider),
+                killChat: (chatId) => chats.core.kill(chatId),
                 hasSession: (sessionId) => sessions.get(sessionId) !== undefined,
                 createSession: (options) => sessions.create(options),
                 killSession: (sessionId) => sessions.kill(sessionId),
-                checkCwd,
-                log: (line) => logged.push(line)
+                checkCwd
             })
         })
     });
@@ -158,13 +162,13 @@ async function boot(): Promise<Daemon> {
 
     const { until, recheck } = untilChecked();
     sessions.observe(recheck);
-    chats.observe(recheck);
+    chats.core.observe(recheck);
 
     const unused = (): never => {
         throw new Error('not used by agent and team');
     };
     const modes = {
-        chatMode: (id: string) => chats.get(id)?.info.runtimeMode,
+        chatMode: (id: string) => chats.core.get(id)?.info.runtimeMode,
         launch: (id: string) => sessions.get(id)?.launch,
         reportedMode: (id: string) => sessions.get(id)?.reportedMode,
         ceiling: (id: string) => lineage.ceilingOf(id)
@@ -187,11 +191,13 @@ async function boot(): Promise<Daemon> {
         },
         starts: {
             installedAgents: async () => ['claude', 'codex'],
+            provider: (kind) => providers.get(kind),
+            offeredKinds: () => providers.kinds(),
             holdPrompt: (id, nodeId, prompt) => prompts.put(id, nodeId, prompt),
             startAgent: (start: AgentStart) => worker.enqueue(start.projectId, start.nodeId, startAgentWork(start, modes)),
             modeOf: nodeMode(modes),
-            terminalModePreference: () => chats.composerPreferences.terminalMode(),
-            preferredSelection: (kind) => chats.composerPreferences.for(kind).selection,
+            terminalModePreference: () => chats.core.composerPreferences.terminalMode(),
+            preferredSelection: (kind) => chats.core.composerPreferences.for(kind).selection,
             openedCount: (callerId) => lineage.openedCount(callerId)
         },
         lineage,
@@ -218,9 +224,9 @@ async function boot(): Promise<Daemon> {
         retire: async () => {
             worker.stop();
             sessions.killAll();
-            await chats.shutdown();
-            for (const info of chats.list()) {
-                chats.get(info.chatId)?.dispose();
+            await chats.core.shutdown();
+            for (const info of chats.core.list()) {
+                chats.core.get(info.chatId)?.dispose();
             }
         }
     };
@@ -228,7 +234,6 @@ async function boot(): Promise<Daemon> {
     return daemon;
 }
 
-/* A team the lead chat opens with `agent_team`. */
 async function openTeam(daemon: Daemon, extra: Record<string, unknown> = {}): Promise<string[]> {
     const { refused, lines } = await toolAnswer('agent_team', { label: 'Crew', roles: JSON.stringify(TEAM), ...extra }, toolCall('chat-lead', daemon.host));
     expect(refused).toBe(false);
@@ -242,7 +247,7 @@ function userTexts(items: readonly ChatItem[]): string[] {
 
 function firstTurnDone(daemon: Daemon, chatId: string) {
     return (): boolean => {
-        const info = daemon.chats.get(chatId)?.info;
+        const info = daemon.chats.core.get(chatId)?.info;
         return info !== undefined && info.usage.turns === 1 && info.activeTurnId === null;
     };
 }
@@ -255,7 +260,7 @@ describe('a team the daemon starts on its own', () => {
     test('all three agents run their first turn with the view open in no window, and a client that mounts later joins them', async () => {
         const daemon = await boot();
         // The lead chat runs supervised, which is the mode a chat it opens inherits.
-        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, runtimeMode: 'supervised' });
+        await daemon.chats.core.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, runtimeMode: 'supervised' });
         daemon.worker.start();
 
         const [lexer, parser, docs] = await openTeam(daemon);
@@ -275,16 +280,16 @@ describe('a team the daemon starts on its own', () => {
 
         await daemon.until(firstTurnDone(daemon, parser!));
         await daemon.until(firstTurnDone(daemon, docs!));
-        expect(daemon.chats.get(docs!)!.info.runtimeMode).toBe('supervised');
-        expect(daemon.chats.get(parser!)!.info.cwd).toBe(folder);
+        expect(daemon.chats.core.get(docs!)!.info.runtimeMode).toBe('supervised');
+        expect(daemon.chats.core.get(parser!)!.info.cwd).toBe(folder);
 
         expect(daemon.outbox.list()).toEqual([]);
         expect(await readdir(join(home, 'prompts')).catch(() => [])).toEqual([]);
 
         // A client opens the view. Its mounts attach to what runs and deliver no second prompt.
-        expect((await daemon.chats.create({ chatId: docs!, provider: 'claude', cwd: folder })).usage.turns).toBe(1);
-        expect(userTexts(daemon.chats.attach(docs!, 'client-1').items)).toEqual(['write the docs']);
-        expect(userTexts(daemon.chats.attach(parser!, 'client-1').items)).toEqual(['fix the parser']);
+        expect((await daemon.chats.core.create({ chatId: docs!, provider: 'claude', cwd: folder })).usage.turns).toBe(1);
+        expect(userTexts(daemon.chats.core.attach(docs!, 'client-1').items)).toEqual(['write the docs']);
+        expect(userTexts(daemon.chats.core.attach(parser!, 'client-1').items)).toEqual(['fix the parser']);
         expect(daemon.claude.started).toHaveLength(1);
         expect(daemon.codex.started).toHaveLength(1);
 
@@ -303,7 +308,7 @@ describe('a team the daemon starts on its own', () => {
         const ids = await openTeam(before);
         await before.retire();
         expect(before.adapter.spawned).toEqual([]);
-        expect(before.chats.list()).toEqual([]);
+        expect(before.chats.core.list()).toEqual([]);
 
         const after = await boot();
         after.worker.start();
@@ -317,14 +322,14 @@ describe('a team the daemon starts on its own', () => {
         again.worker.start();
         await again.worker.settled();
         expect(again.adapter.spawned).toEqual([]);
-        expect(again.chats.list()).toEqual([]);
+        expect(again.chats.core.list()).toEqual([]);
         expect(again.claude.started).toEqual([]);
     });
 
     test('a child whose project file asks for more than its opener has starts at the ceiling, after a restart too', async () => {
         const before = await boot();
         // The lead runs supervised, so that is the most any agent it opens may run in.
-        await before.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, runtimeMode: 'supervised' });
+        await before.chats.core.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, runtimeMode: 'supervised' });
         const [lexer, , docs] = await openTeam(before);
         await before.retire();
 
@@ -347,10 +352,10 @@ describe('a team the daemon starts on its own', () => {
         // A client mounts them on the daemon that came back, the way it mounts any node.
         const after = await boot();
         await after.sessions.create({ sessionId: lexer!, cols: 80, rows: 24, cwd: folder, agent: { kind: 'claude', runtimeMode: node(lexer!).runtimeMode } });
-        await after.chats.create({ chatId: docs!, provider: 'claude', cwd: folder, runtimeMode: node(docs!).runtimeMode });
+        await after.chats.core.create({ chatId: docs!, provider: 'claude', cwd: folder, runtimeMode: node(docs!).runtimeMode });
         expect(after.sessions.get(lexer!)?.launch?.runtimeMode).toBe('supervised');
         expect(after.adapter.forSession(lexer!).typed).not.toContain('bypassPermissions');
-        expect(after.chats.get(docs!)?.info.runtimeMode).toBe('supervised');
+        expect(after.chats.core.get(docs!)?.info.runtimeMode).toBe('supervised');
     });
 
     test('a cwd whose symlink moved outside the project after the tool checked it is refused at the start', async () => {
@@ -366,21 +371,20 @@ describe('a team the daemon starts on its own', () => {
         await daemon.worker.settled();
 
         expect(daemon.adapter.spawned).toEqual([]);
-        expect(daemon.chats.list()).toEqual([]);
+        expect(daemon.chats.core.list()).toEqual([]);
         expect(daemon.logged.filter((line) => line.includes('is outside'))).toHaveLength(3);
         // A client mounting one later is refused the same way, with the code the tool uses.
         await expect(daemon.sessions.create({ sessionId: lexer!, cols: 80, rows: 24, cwd: join(folder, 'w') })).rejects.toMatchObject({
             code: 'cwd-outside-project'
         });
-        await expect(daemon.chats.create({ chatId: parser!, provider: 'codex', cwd: join(folder, 'w') })).rejects.toMatchObject({
+        await expect(daemon.chats.core.create({ chatId: parser!, provider: 'codex', cwd: join(folder, 'w') })).rejects.toMatchObject({
             code: 'cwd-outside-project'
         });
         expect(daemon.adapter.spawned).toEqual([]);
 
-        // Pointed back inside, the same node starts.
         await link(join(folder, 'w'), join(folder, 'inside'));
-        await daemon.chats.create({ chatId: docs!, provider: 'claude', cwd: join(folder, 'w') });
-        expect(daemon.chats.get(docs!)).toBeDefined();
+        await daemon.chats.core.create({ chatId: docs!, provider: 'claude', cwd: join(folder, 'w') });
+        expect(daemon.chats.core.get(docs!)).toBeDefined();
     });
 
     test('a node deleted before its start is never started, and what was owed for it goes', async () => {
@@ -397,7 +401,7 @@ describe('a team the daemon starts on its own', () => {
         await daemon.worker.settled();
 
         expect(daemon.adapter.spawned.map((pty) => pty.options.env.RUIMTE_SESSION_ID)).toEqual([lexer]);
-        expect(daemon.chats.get(parser!)).toBeUndefined();
+        expect(daemon.chats.core.get(parser!)).toBeUndefined();
         await daemon.until(firstTurnDone(daemon, docs!));
         expect(daemon.codex.started).toEqual([]);
         expect(daemon.outbox.list()).toEqual([]);
@@ -435,7 +439,6 @@ describe('the start of one agent node', () => {
             killSession: async (sessionId) => {
                 calls.push(`kill session ${sessionId}`);
             },
-            log: (line) => calls.push(`log ${line}`),
             ...overrides
         };
         return { calls, deps };
@@ -570,7 +573,7 @@ describe('the start of one agent node', () => {
         expect(calls).toEqual(['kill session terminal-1']);
     });
 
-    test('a client that made the session first is no failure, and a real failure is logged without a throw', async () => {
+    test('a client that made the session first is no failure, and a real failure reaches the worker, which gives up at once', async () => {
         const exists = fakeDeps({
             createSession: async () => {
                 throw Object.assign(new Error('Session terminal-1 already exists'), { code: 'session-exists' });
@@ -584,7 +587,7 @@ describe('the start of one agent node', () => {
                 throw new Error('spawn failed');
             }
         });
-        await startAgentHandler(broken.deps)(entry('chat'));
-        expect(broken.calls).toEqual(['log Starting the agent of chat-1 failed: spawn failed']);
+        await expect(startAgentHandler(broken.deps)(entry('chat'))).rejects.toThrow('spawn failed');
+        expect(broken.calls).toEqual([]);
     });
 });

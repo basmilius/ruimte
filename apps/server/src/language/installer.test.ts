@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { lstat, mkdir, readdir, readFile, readlink, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
+import { sha256, tarGz } from '../disk/test-archives.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { LanguageInstaller, type CheckoutRevision } from './installer.ts';
 import { NativePolicy, nativeProgramFile, nativeStubsOf, type Download, type NativeRelease } from './native.ts';
 import { PackageStore } from './package-store.ts';
 import { KIND_PROFILES, type CatalogKind } from './profiles.ts';
 import type { LanguageProcessSpec, RunCommand } from './runtime.ts';
-import { sha256, tarGz } from './test-archives.ts';
 import { pinnedVersionsOf, versionOf, type NpmKind } from './versions.ts';
 
 let root = '';
@@ -20,7 +20,6 @@ beforeEach(async () => {
 
 const runtime = { command: '/ruimte', args: [], env: { BUN_BE_BUN: '1' } };
 
-/* The folder of the install a kind runs, as its `current.json` names it. */
 async function currentFolder(kind: CatalogKind): Promise<string> {
     const { current } = JSON.parse(await readFile(join(root, kind, 'current.json'), 'utf8')) as { current: string };
     return current === 'legacy' ? join(root, kind) : join(root, kind, 'versions', current);
@@ -40,7 +39,6 @@ function installing(kind: CatalogKind, calls: { cwd: string; args: string[]; env
     };
 }
 
-/* The set an install links to. */
 async function setOf(folder: string): Promise<string> {
     const { packages } = JSON.parse(await readFile(join(folder, 'installed.json'), 'utf8')) as { packages: string };
     return packages;

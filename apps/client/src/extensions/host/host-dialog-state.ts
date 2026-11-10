@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 import { create } from 'zustand';
 
-export interface DialogRequest {
+interface DialogRequest {
     title: string;
     body?: string;
     danger?: boolean;

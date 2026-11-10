@@ -1,6 +1,6 @@
 import { chatNameOf, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import i18next from 'i18next';
-import type { NodesOfView } from '@/project/view-nodes';
+import type { NodesOfView } from '@/state/view-nodes';
 
 /*
  * What to call the caller, out of the document this client already has: the title of its node, or
@@ -21,10 +21,8 @@ export function callerName(views: readonly ProjectView[], nodesOf: NodesOfView<P
     return chatNameOf(views, by);
 }
 
-export interface ShowViewNotice {
-    /* One line, the title of the toast. Its button already says the rest. */
+interface ShowViewNotice {
     message: string;
-    /* The way out it offers: over to the view, back out of the one that was shown, or nothing at all. */
     action: 'go' | 'back' | null;
 }
 

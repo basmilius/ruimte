@@ -1,9 +1,9 @@
 import Observation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import SwiftUI
 
-/// One client connected to a machine now, from `client.list`, as it told of itself.
 struct ConnectedMachineClient: Identifiable, Equatable {
     let id: String
     /// `local`, `account`, `machine` or `mcp`; a newer kind reads as an unknown app.
@@ -19,19 +19,19 @@ struct ConnectedMachineClient: Identifiable, Equatable {
     let lastRequestAt: Date?
     let current: Bool
 
-    init(_ value: JSONValue) {
-        id = value.text("id")
-        access = value.text("access")
-        label = value["label"]?.stringValue
-        client = value["client"]?.stringValue
-        version = value["version"]?.stringValue
-        os = value["os"]?.stringValue
-        osVersion = value["osVersion"]?.stringValue
-        device = value["device"]?.stringValue
-        reachability = value["reachability"]?.stringValue
-        connectedAt = Date(timeIntervalSince1970: value.number("connectedAt") / 1000)
-        lastRequestAt = value["lastRequestAt"]?.numberValue.map { Date(timeIntervalSince1970: $0 / 1000) }
-        current = value["current"]?.boolValue == true
+    init(_ value: ConnectedClient) {
+        id = value.id
+        access = value.access
+        label = value.label
+        client = value.client
+        version = value.version
+        os = value.os
+        osVersion = value.osVersion
+        device = value.device
+        reachability = value.reachability?.rawValue
+        connectedAt = Date(timeIntervalSince1970: value.connectedAt / 1000)
+        lastRequestAt = value.lastRequestAt.map { Date(timeIntervalSince1970: $0 / 1000) }
+        current = value.current
     }
 
     /// The desktop's `clientIcon`: the device goes before the app, so Station on a phone draws a phone.
@@ -63,7 +63,6 @@ struct ConnectedMachineClient: Identifiable, Equatable {
         }
     }
 
-    /// The fields that tell two connections apart beyond their id and time.
     fileprivate var groupKey: [String?] {
         access == "mcp" ? [id] : [access, label, client, version, os, osVersion, device, reachability]
     }
@@ -139,63 +138,39 @@ final class MachineClients {
     private(set) var answers: Bool?
     private(set) var problem: String?
     @ObservationIgnored private let client: any MachineRequesting
-    @ObservationIgnored private var stops: [() -> Void] = []
-    @ObservationIgnored private var lease: MachineSubscription?
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client, events: [.reread(.clientChanged)], watch: .area(.clientWatch, gated: true),
+        prepare: { [weak self] in
+            guard let self else { return }
+            answers = (client as? MachineFeatures)?.answers(.clientList) == true
+            if answers != true { groups = [] }
+        }, read: { [weak self] in await self?.load() })
 
     init(client: any MachineRequesting) {
         self.client = client
     }
 
-    func start() {
-        guard stops.isEmpty else { return }
-        stops.append(client.subscribe(.clientChanged) { [weak self] _ in Task { await self?.load() } })
-        stops.append(
-            client.observeConnection { [weak self] connected in
-                guard let self, connected else { return }
-                Task { await self.linked() }
-            })
-    }
+    func start() { live.start() }
 
-    func stop() {
-        stops.forEach { $0() }
-        stops.removeAll()
-        let lease = lease
-        self.lease = nil
-        Task { await lease?.release() }
-    }
+    func stop() { live.stop() }
 
     /// An external MCP client goes quiet without a word from the machine, so its row is read again while one shows.
     var showsExternal: Bool { groups.contains { $0.client.access == "mcp" } }
 
-    func load() async {
+    func refresh() async { await live.refresh() }
+
+    private func load() async {
         guard answers == true else { return }
         do {
-            let result = try await client.request(.clientList)
-            groups = ConnectedClientGroup.groups(result.list("clients").map(ConnectedMachineClient.init))
+            let result = try await client.request(.clientList).decoded(as: ClientListResult.self)
+            groups = ConnectedClientGroup.groups(result.clients.map(ConnectedMachineClient.init))
             problem = nil
         } catch {
             problem = error.localizedDescription
         }
     }
-
-    private func linked() async {
-        answers = (client as? MachineFeatures)?.answers(.clientList) == true
-        guard answers == true else {
-            groups = []
-            return
-        }
-        let lease =
-            lease
-            ?? client.acquireSubscription(
-                start: WireRequest.clientWatch.rawValue, stop: WireRequest.clientUnwatch.rawValue,
-                payload: .object([:]), stopPayload: .object([:]))
-        self.lease = lease
-        _ = try? await lease.refresh()
-        await load()
-    }
 }
 
-/// The desktop's Connected now, above the clients with access: the iPhone's sheet and the iPad's both show it.
 struct MachineClientsSection: View {
     @State private var model: MachineClients
 
@@ -228,7 +203,7 @@ struct MachineClientsSection: View {
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(60))
-                if model.showsExternal { await model.load() }
+                if model.showsExternal { await model.refresh() }
             }
         }
     }

@@ -4,10 +4,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AgentEvent } from '@adecore/agents/host';
 import type { ServerFrame } from '@ruimte/contracts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { MachineHome } from '../fs/machine-home.ts';
 import { ProvenanceService } from '../provenance/provenance-service.ts';
-import { registerProvenanceHandlers } from './provenance.ts';
+import { provenanceArea } from './provenance.ts';
 import { askOnce } from './test-helpers.ts';
 
 let root: string;
@@ -66,7 +66,7 @@ beforeEach(async () => {
         })
     });
     dispatcher = new Dispatcher();
-    registerProvenanceHandlers(dispatcher, service, new MachineHome(home));
+    provenanceArea({ provenance: service, machineHome: new MachineHome(home) }).handlers?.(dispatcher);
 });
 
 afterEach(async () => {
@@ -115,7 +115,7 @@ describe('provenance.read', () => {
             repositoryOf: async () => null
         });
         dispatcher = new Dispatcher();
-        registerProvenanceHandlers(dispatcher, service, new MachineHome(home));
+        provenanceArea({ provenance: service, machineHome: new MachineHome(home) }).handlers?.(dispatcher);
         await writeFile(join(home, 'local.key'), 'secret');
         expect(await request('provenance.read', { projectId: 'p1', path: join(home, 'local.key') })).toMatchObject({
             ok: false,

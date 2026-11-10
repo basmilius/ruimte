@@ -1,12 +1,11 @@
-import { lineBounds } from '@/canvas/line-geometry';
-import { intersects } from '@/canvas/math';
-import { cameraToReveal } from '@/canvas/node-navigation';
+import { lineBounds } from '@/canvas-model/line-geometry';
+import { intersects } from '@/canvas-model/math';
+import { cameraToReveal } from '@/canvas-model/node-navigation';
 import type { CanvasState } from '@/state/canvas';
 import { maximizedNodeOf, type CanvasGet, type CanvasSet } from '@/state/canvas-model';
 import { announceActivation } from '@/state/node-activation';
 import { mergeSelection } from '@/state/selection';
 
-/* What is selected, which node has the keyboard and which one fills the canvas. */
 export function createCanvasSelectionSlice(
     set: CanvasSet,
     get: CanvasGet

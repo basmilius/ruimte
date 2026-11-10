@@ -58,13 +58,11 @@ final class DesignPlaceTests: XCTestCase {
     }
 
     func testPagesComeNewestFirstAndAChangeReachesTheFolder() {
-        let entries: [JSONValue] = [
-            .object(["name": .string("b.html"), "kind": .string("file"), "mtime": .number(1)]),
-            .object(["name": .string("a.HTM"), "kind": .string("file"), "mtime": .number(2)]),
-            .object(["name": .string("style.css"), "kind": .string("file"), "mtime": .number(3)]),
-            .object(["name": .string("c.html"), "kind": .string("directory"), "mtime": .number(4)]),
+        let entries = [
+            Self.entry("b.html", mtime: 1), Self.entry("a.HTM", mtime: 2), Self.entry("style.css", mtime: 3),
+            Self.entry("c.html", kind: .directory, mtime: 4),
         ]
-        XCTAssertEqual(DesignFiles.pages(entries).map { $0.text("name") }, ["a.HTM", "b.html"])
+        XCTAssertEqual(DesignFiles.pages(entries).map(\.name), ["a.HTM", "b.html"])
         XCTAssertEqual(DesignFiles.pageName("a.HTM"), "a")
         XCTAssertTrue(DesignFiles.changeReaches("/p/.ruimte/private/designs/site/x", folder: "/p/.ruimte/private/designs/site", found: true))
         XCTAssertFalse(DesignFiles.changeReaches("/p/.ruimte/private", folder: "/p/.ruimte/private/designs/site", found: true))
@@ -86,7 +84,11 @@ final class DesignPlaceTests: XCTestCase {
         XCTAssertTrue(page.contains(#"href="other.html""#))
     }
 
-    private let kept = DesignFiles.Listing(pages: [.object(["name": .string("a.html"), "kind": .string("file")])], found: true)
+    private static func entry(_ name: String, kind: FsEntryKind = .file, mtime: Double = 0) -> FsEntry {
+        FsEntry(name: name, path: "/p/" + name, kind: kind, size: nil, mtime: mtime, hidden: false, ignored: false)
+    }
+
+    private let kept = DesignFiles.Listing(pages: [DesignPlaceTests.entry("a.html")], found: true)
     private let dropped = MachineClientError.disconnected
 
     func testAMissingFolderIsADesignWithoutPages() {
@@ -119,9 +121,8 @@ final class DesignPlaceTests: XCTestCase {
 
     func testAReadThatWorksClearsTheError() {
         let failed = kept.after(.failure(dropped))
-        let entries: [JSONValue] = [.object(["name": .string("b.html"), "kind": .string("file")])]
-        let next = failed.after(.success(entries))
-        XCTAssertEqual(next.pages?.map { $0.text("name") }, ["b.html"])
+        let next = failed.after(.success([Self.entry("b.html")]))
+        XCTAssertEqual(next.pages?.map(\.name), ["b.html"])
         XCTAssertTrue(next.found)
         XCTAssertNil(next.problem)
     }

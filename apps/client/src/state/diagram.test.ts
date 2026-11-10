@@ -79,7 +79,6 @@ function doc(rev: number, ...nodes: DiagramNode[]): DiagramDocument {
     };
 }
 
-/* A store with a small graph loaded, the way the client hands one to a cell. */
 function loaded() {
     const store = createDiagramStore();
     store.getState().load('view-1', doc(3, { id: 'a', label: 'Client' }, { id: 'b', label: 'Daemon' }), null);

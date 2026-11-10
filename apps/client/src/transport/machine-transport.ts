@@ -1,5 +1,5 @@
+import type { Transport } from '../transport-api/transport';
 import { ActiveTransport, type ActiveSource } from './active-transport';
-import type { Transport } from './transport';
 
 interface Followed {
     transport: Transport;

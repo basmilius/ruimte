@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ArtifactProvenance } from '@ruimte/contracts';
 import { readBytes } from '../bytes/read-bytes.ts';
-import { MachineHome } from '../fs/machine-home.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { NODE_ARTIFACT_FS, type ArtifactFs } from './artifact-fs.ts';
 import { ArtifactStore, type CommitInput } from './artifact-store.ts';
 import { Artifacts } from './artifacts.ts';

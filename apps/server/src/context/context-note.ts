@@ -1,10 +1,9 @@
 import { uiSessionNote } from '@adecore/intelligent-ui/text';
 import type { ContextSource } from '@ruimte/contracts';
-import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
-import { uiSourceExamples } from '../chat/ui-source-args.ts';
-import { BUILT_IN_KINDS } from '../providers/kinds.ts';
-import { MAX_AGENT_DEPTH, MAX_TEAM_DEPTH } from '../tools/depth.ts';
-import { NODE_NEW_KINDS } from '../tools/node-kinds.ts';
+import { MAX_AGENT_DEPTH, MAX_TEAM_DEPTH } from '../canvas/depth.ts';
+import { NODE_NEW_KINDS } from '../canvas/node-kinds.ts';
+import { tableKinds } from '../providers/table.ts';
+import { uiSourceExamples } from './ui-source-args.ts';
 
 /*
  * Each rule is said once, where the agent decides; what a tool's description, schema, refusal or result
@@ -12,7 +11,7 @@ import { NODE_NEW_KINDS } from '../tools/node-kinds.ts';
  */
 
 /* Asked for a CLI by name, a model that has not read the names reports that this machine has none. */
-const CLI_NAMES = BUILT_IN_KINDS.join(', ');
+const CLI_NAMES = tableKinds().join(', ');
 
 /* Told only that it places "nodes", a model asked for a note writes a file and the canvas stays empty. */
 const NODE_KINDS = NODE_NEW_KINDS.join(', ');
@@ -78,13 +77,17 @@ const UI_DETAIL_HINT = '`ui_catalog` gives props and rules';
  * The catalog of UI blocks and how to use it, said only to an agent a person reads in a thread: a
  * hidden task child's answer reaches its parent as text, where a block would be source.
  */
-function uiNote(databases: boolean): string {
+function uiNote(databases: boolean, uiFence: string | undefined): string {
+    // The default name of the library would teach a fence the chat core does not compile.
+    if (uiFence === undefined) {
+        throw new Error('A chat told about UI blocks needs the fence its core compiles them under (ChatCore.uiFence)');
+    }
     const sources = uiSourceExamples(databases)
         .map(({ name, args }) => `${name} ${args}`)
         .join(', ');
     // The note ends its example with the closing fence on a line of its own, which the rest must not join.
     return (
-        uiSessionNote({ fenceLanguage: RUIMTE_UI_FENCE, catalog: 'names', detailHint: UI_DETAIL_HINT }) +
+        uiSessionNote({ fenceLanguage: uiFence, catalog: 'names', detailHint: UI_DETAIL_HINT }) +
         [
             'Write a block when the answer has structure a person scans or acts on (numbers to compare, rows, steps, a status, shortcuts after finished work); what a sentence or a short list says stays prose.',
             'Children sit in their parent: Stat in Stats, Column in Table, Option in Segmented or Select, Item in Checklist, Choice in Choices, Step in Steps, Event in Timeline, Place in Map, Image in Gallery, Entry in EntityList, Tab in Tabs, Section in Sections, Source in Sources.',
@@ -97,12 +100,12 @@ function uiNote(databases: boolean): string {
 }
 
 /* What an AI chat is told while visual replies are on; `ui` adds the block catalog, which keeps pages for what it cannot draw. */
-function visualNote(ui: boolean, databases: boolean): string {
+function visualNote(ui: boolean, databases: boolean, uiFence: string | undefined): string {
     const page = ui
         ? 'Keep an HTML visual for what the catalog cannot draw (a free diagram, a collage, a mockup, local images): show a self-contained page above your reply'
         : 'When a chart, a table, a diagram, a collage of images or a mockup would say more than prose, show a self-contained HTML page above your reply';
     return [
-        ...(ui ? [uiNote(databases)] : []),
+        ...(ui ? [uiNote(databases, uiFence)] : []),
         `${page} with \`visual_show\`, and let the reply add only what the page does not say.`,
         VISUAL_FILES_NOTE,
         VISUAL_LAYOUT_NOTE
@@ -141,7 +144,8 @@ export function toolsNote({
     device = false,
     visuals = false,
     databases = false,
-    reach = false
+    reach = false,
+    uiFence
 }: {
     depth: number;
     standalone?: boolean;
@@ -151,12 +155,15 @@ export function toolsNote({
     visuals?: boolean;
     databases?: boolean;
     reach?: boolean;
+
+    /* The fence the chat core compiles UI blocks under; a chat with visuals is told about blocks, so it needs it. */
+    uiFence?: string;
 }): string {
     // A task child at any depth answers its parent, never a person reading blocks.
     const ui = depth === 0;
     const closing = [
         ...(reach ? [REACH_NOTE] : []),
-        ...(visuals ? [visualNote(ui, databases)] : []),
+        ...(visuals ? [visualNote(ui, databases, uiFence)] : []),
         ...(databases ? [databaseNote(visuals && ui)] : []),
         ...(computer ? [COMPUTER_NOTE] : []),
         ...(device ? [DEVICE_NOTE] : []),
@@ -264,20 +271,17 @@ const DESIGN_FORMS_ON_CANVAS = [
  * canvas meta, the option ids, the tweaks and the overrides block) is spelled out, since the view
  * finds an option, a tweak or an edit only by them.
  */
-export function designNote(path: string, onCanvas = false): string {
+function designNote(path: string, onCanvas = false): string {
     return [
         `You are a designer working with the person on a design in the folder \`${path}\`, also when you run in another checkout. They see each HTML page of that folder beside this chat, pick one at a time, and every write shows at once.`,
         'They answer with the tools of the view: a comment on an element, text they changed in place, styles they set by hand, a drawing over the page, or tweaks. Each reaches you as a message that names the page, the option, a CSS selector and a piece of the markup; change exactly that element and leave the rest of the design as it is.',
-        // The process.
         "Work like a designer. When a request starts something new or leaves the audience, the content, the look or the number of options open, ask first, in one round: put every question you need into one call of your CLI's own question tool, each with a few concrete options and your default first, and skip what the request already settles.",
         'Then gather context before you draw: the theme and tokens, components, screens, copy and brand of this project or of what the person points you at, and copy the assets you need into `assets/` beside the page. A design rooted in what exists is better than one from scratch; invent colors, type and patterns only where there is nothing to follow.',
         ...(onCanvas ? DESIGN_FORMS_ON_CANVAS : DESIGN_FORMS_IN_VIEW),
         'Give three or more options that differ on axes you can name (layout, density, tone, hierarchy, interaction, metaphor), from the expected to the bolder; never shades of one idea. Keep to what was asked: no filler sections, decoration or content nobody requested, and where you lack an icon, image or component, draw a clear placeholder rather than a poor attempt.',
-        // What the view reads and writes.
         'Tweaks are declared in the page as `<script type="application/json" id="ruimte-tweaks">` holding an object of entries such as `"accent": {"label": "Accent", "type": "color", "options": ["#5b5bd6", "#e5484d"], "value": "#5b5bd6"}`, with the types color, range (`min`, `max`, `step`, `unit`), select (`options`), toggle and text. The view draws their controls and saves a person\'s values into `value`. Read them as `var(--tweak-accent)` in CSS, as `[data-tweak-nav="tabs"]` on the root element, or from `window.ruimteTweaks` and the `ruimte:tweaks` event. Add two or three for what editing in place cannot do (a layout variant, a flag that changes many elements, density), never for a single color or a piece of copy.',
         'A `<style id="ruimte-edits">` block holds the styles a person set by hand, as rules with `!important`. Leave it alone, except that a rule for an element you change goes with that change, and when they ask you to fold it in, move each rule into the source of its element and remove the block.',
         'Use text the person gives you word for word; style it, but rewrite it only when they ask. For a small request, change only what was asked; for a significant revision, copy the page and change the copy (`Onboarding v2.html`).',
-        // Files and checking.
         'Write each page as one self-contained HTML file in that folder with a descriptive name, such as `Onboarding.html`, assets by relative path and libraries from a public CDN; these files are the exception to keeping visual sources outside the project. Never show a design with `visual_show`, since the view shows the folder.',
         'Before you end a turn, check every page you changed with `visual_preview` at its width and fix what the console reports; a board draws without its pan and zoom there. Then reply in a sentence or two: what you made and what to look at.'
     ].join(' ');
@@ -292,13 +296,15 @@ export interface ChatPromptOptions {
     databases?: boolean;
     reach?: boolean;
 
-    /* The folder of the design the chat works on, and whether that design stands on a canvas. */
+    /* The fence the chat core compiles UI blocks under (`ChatCore.uiFence`), which the note about blocks teaches. */
+    uiFence?: string;
+
     design?: { folder: string; onCanvas: boolean } | null;
 }
 
 /* The part of a chat's prompt that is about Ruimte's tools, without the names of what is linked. */
-export function chatNote({ sources, depth, standalone, computer, visuals, databases, reach, design }: ChatPromptOptions): string {
-    const tools = toolsNote({ depth, standalone, computer, device: linksDevice(sources), visuals, databases, reach });
+export function chatNote({ sources, depth, standalone, computer, visuals, databases, reach, uiFence, design }: ChatPromptOptions): string {
+    const tools = toolsNote({ depth, standalone, computer, device: linksDevice(sources), visuals, databases, reach, uiFence });
 
     return design === null || design === undefined ? tools : `${tools} ${designNote(design.folder, design.onCanvas)}`;
 }

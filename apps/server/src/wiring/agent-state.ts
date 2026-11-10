@@ -1,0 +1,80 @@
+import type { ChatCore } from '@adecore/agents/chat';
+import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
+import type { AgentStateHost } from '../agents/agent-state.ts';
+import type { OutboxStore } from '../outbox/outbox.ts';
+import type { HiddenAgentStore } from '../projects/hidden-agents.ts';
+import type { SessionManager } from '../sessions/manager.ts';
+
+export interface AgentStateSources {
+    outbox: Pick<OutboxStore, 'owes'>;
+    lineage: Pick<AgentLineageStore, 'endedAt' | 'startedBy'>;
+    chats: Pick<ChatCore, 'get' | 'hasStored' | 'cancel' | 'lastTurn'>;
+    sessions: Pick<SessionManager, 'get'>;
+}
+
+/*
+ * Reads an agent node's state off what the daemon already keeps for it, so an operation has no store
+ * of its own: the outbox owes its start, the chat or the terminal says what it does, and the lineage
+ * says whether ending the node that opened it ended it too.
+ */
+export function agentStates(sources: AgentStateSources): AgentStateHost {
+    return {
+        stateOf: async (nodeId) => {
+            if (sources.outbox.owes('start-agent', nodeId)) {
+                return 'owed';
+            }
+            if (sources.lineage.endedAt(nodeId) !== null) {
+                return 'ended';
+            }
+            const chat = sources.chats.get(nodeId);
+            const session = chat === undefined ? sources.sessions.get(nodeId) : undefined;
+            if (session) {
+                // A CLI whose hooks have not spoken yet is one that just started.
+                return session.exited ? 'exited' : (session.agent?.status ?? 'running');
+            }
+            // A chat nobody has loaded is idle: its thread is on disk and a turn opens on it.
+            const status = chat?.info.status ?? ((await sources.chats.hasStored(nodeId)) ? 'idle' : 'none');
+            // A stopped turn leaves a chat as idle as a finished one; only the turn itself tells them apart.
+            if (status === 'idle' && (await sources.chats.lastTurn(nodeId))?.state === 'aborted') {
+                return 'stopped';
+            }
+            return status;
+        },
+        startedBy: (nodeId) => sources.lineage.startedBy(nodeId),
+        cancelTurn: (nodeId) => {
+            const status = sources.chats.get(nodeId)?.info.status;
+            if (status !== 'running' && status !== 'needs-you') {
+                return false;
+            }
+            sources.chats.cancel(nodeId);
+            return true;
+        }
+    };
+}
+
+/* The agents a caller holds open: a hidden one counts only while it still runs, has an open task or is owed work. */
+export function openedAgentCount(
+    deps: {
+        lineage: AgentLineageStore;
+        hiddenAgents: HiddenAgentStore;
+        tasks: TaskStore;
+        outbox: Pick<OutboxStore, 'ofTarget'>;
+        chats: Pick<ChatCore, 'get'>;
+        sessions: Pick<SessionManager, 'get'>;
+    },
+    caller: string
+): number {
+    return deps.lineage.openedCount(caller, (id) => {
+        if (deps.hiddenAgents.get(id) === undefined) {
+            return true;
+        }
+        const status = deps.chats.get(id)?.info.status;
+        return (
+            status === 'running' ||
+            status === 'needs-you' ||
+            deps.sessions.get(id)?.exited === false ||
+            deps.tasks.involving(id).some((task) => task.childId === id && task.status === 'open') ||
+            deps.outbox.ofTarget(id).length > 0
+        );
+    });
+}

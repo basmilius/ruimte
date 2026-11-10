@@ -2,8 +2,8 @@ import { messageOf } from '@adecore/ui';
 import { BytesReadPayloadSchema } from '@ruimte/contracts';
 import { endpointById } from '@/state/endpoints';
 import { transportFor } from '@/transport';
+import { readPiece, type BytesPiece } from '../transport-api/piece';
 import { BYTES_WORKER_SCRIPT } from './bytes-stream';
-import { readPiece, type BytesPiece } from './piece';
 
 type PieceAnswer = { ok: true; result: BytesPiece } | { ok: false; message: string };
 

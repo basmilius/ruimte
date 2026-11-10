@@ -1,3 +1,4 @@
+import { fireAndForget } from '@/transport-api/transport';
 /*
  * What making a node on another machine takes, in the order that leaves nothing half made. The
  * machine is linked to the project first, the project then has the node, and only then does the
@@ -13,7 +14,6 @@ export interface RemoteNodeSteps {
     linkHere(): Promise<void>;
     /* A worktree of the checkout on the other machine, when the person asked for one; its folder is where the node works. */
     makeWorktree(): Promise<string | null>;
-    /* Puts the node on the canvas and answers its id. */
     addNode(cwd: string | null): string | null;
     removeNode(nodeId: string): void;
     /* Writes the project, which refuses a node that cannot run there. */
@@ -40,7 +40,7 @@ export async function createRemoteNode(steps: RemoteNodeSteps): Promise<string> 
     } catch (e) {
         if (nodeId !== null) {
             steps.removeNode(nodeId);
-            await steps.save().catch(() => undefined);
+            await fireAndForget('steps.save', steps.save());
         }
         throw e;
     } finally {

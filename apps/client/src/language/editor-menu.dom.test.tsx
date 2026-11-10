@@ -13,10 +13,13 @@ let workspace: FakeWorkspace;
 let page: Mounted;
 let explained = 0;
 
+// Ruimte's features sit on `app`, beside the shared language.
 const language = {
-    inlineEdit: { start: () => undefined },
-    selectionChat: { choose: () => undefined, askAbout: () => undefined },
-    explain: { explainHere: async () => void explained++ }
+    app: {
+        inlineEdit: { start: () => undefined },
+        selectionChat: { choose: () => undefined, askAbout: () => undefined },
+        explain: { explainHere: async () => void explained++ }
+    }
 } as unknown as EditorLanguage;
 
 function items(): string[] {

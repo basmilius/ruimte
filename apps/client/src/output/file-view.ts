@@ -10,8 +10,8 @@ import {
     type FsReadBinary
 } from '@ruimte/contracts';
 import type { ArtifactFileRef } from '@/output/artifact-bytes';
-import { extensionOf, isHtmlName, isMarkdownName } from '@/shell/panels/file-kind';
-import type { FileSource } from '@/shell/panels/file-source';
+import { extensionOf, isHtmlName, isMarkdownName } from '@/surface/panels/file-kind';
+import type { FileSource } from '@/surface/panels/file-source';
 
 /*
  * How a file of a version is drawn, decided by what the file is and never by the artifact's kind: an
@@ -55,13 +55,11 @@ export function fileViewOf(file: Pick<ArtifactFile, 'name' | 'mime' | 'size'>): 
     return 'code';
 }
 
-/* The file a version opens on: the first one there is something to show of. */
 export function firstShownFile(version: ArtifactVersion): number {
     const index = version.files.findIndex((file) => fileViewOf(file) !== 'none');
     return index === -1 ? 0 : index;
 }
 
-/* The bytes of one file of Output, for the renderers the files panel draws a binary file with. */
 export function artifactSource(endpointId: string, reference: ArtifactFileRef): FileSource {
     return { kind: 'artifact', endpointId, ...reference };
 }

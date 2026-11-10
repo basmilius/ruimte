@@ -26,6 +26,7 @@ import { icons, Package, type LucideIcon } from 'lucide-react';
 import { createContext, createElement, lazy, Suspense, use, useContext, useEffect, useRef, useState, useSyncExternalStore, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
+import { folderWatches } from '@/controllers/fs-watch';
 import { databaseConnections } from '@/database/connections';
 import { desktop } from '@/desktop/bridge';
 import { runAction, trackRun, useActionRuns } from '@/extensions/action-runs';
@@ -40,6 +41,12 @@ import { ExtensionChat } from '@/extensions/host/ExtensionChat';
 import { askHost, openOverlay, type OpenOverlay } from '@/extensions/host/host-dialog-state';
 import { useMachineStorage } from '@/extensions/host/machine-storage';
 import { extensionRequest } from '@/extensions/machine-request';
+import { baseContext, nodeInfoIn, useNodeSources, type NodeInfo } from '@/extensions/slots';
+import { isUnderFolder } from '@/paths/file-path';
+import { revealNode } from '@/project/views';
+import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
+import { currentEndpointId, useEndpointId } from '@/state/current-endpoint';
+import { useDocument } from '@/state/document';
 import {
     contribute,
     useContributions,
@@ -48,24 +55,19 @@ import {
     type SettingGroup,
     type SlotEntry,
     type SlotName
-} from '@/extensions/registry';
-import { baseContext, nodeInfoIn, useNodeSources, type NodeInfo } from '@/extensions/slots';
-import { revealNode } from '@/project/views';
-import { openFileLink } from '@/shell/panels/file-links';
-import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
-import { useDocument } from '@/state/document';
-import { folderWatches, isUnderFolder } from '@/state/fs-watch';
-import { currentEndpointId } from '@/state/keys';
-import { endpointKey, useEndpointId } from '@/state/keys';
+} from '@/state/extension-registry';
+import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { nodeStatus, nodeWaitAsk, useSessions } from '@/state/sessions';
 import { useTheme as useUiTheme } from '@/state/theme';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { IS_STATION } from '@/station';
+import { openFileLink } from '@/surface/panels/file-links';
 import { machineTransport, TransportError, type Transport } from '@/transport';
-import { useFocusedMachine } from '@/transport/connections';
+import { fireAndForget, orNull } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
+import { useFocusedMachine } from '@/workspace/connections';
 import type * as PublicClient from '../../../../../packages/extension/client';
 
 export interface LoadedExtension {
@@ -1244,7 +1246,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
 
                     assertBoundedFiles(scope.link);
 
-                    const existing = await scope.link.request('fs.read', { path: full, within }).catch(() => null);
+                    const existing = await orNull('fs.read', scope.link.request('fs.read', { path: full, within }));
 
                     // The path and mtime are of the first machine's file; written on another, they could overwrite a file there.
                     assertScope(scope);
@@ -1490,7 +1492,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 });
 
                 let stopped = false;
-                const stopRun = (): void => void extensionRequest(link, 'extension.agentStop', { runId }).catch(() => undefined);
+                const stopRun = (): void => void fireAndForget('extensionRequest', extensionRequest(link, 'extension.agentStop', { runId }));
                 // A run stopped says no more, also of a piece the machine sent before it heard so.
                 const abort = (): void => {
                     stopped = true;

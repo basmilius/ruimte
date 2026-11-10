@@ -1,9 +1,9 @@
 import { Button, Tooltip } from '@adecore/ui';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { RowKbd } from '@/shell/RowKbd';
-import { cellCount, cellViewIds, isSameCell, type CellAt } from '@/shell/split';
+import { cellCount, cellViewIds, isSameCell, type CellAt } from '@/layout/split';
 import { useDocument } from '@/state/document';
+import { RowKbd } from '@/surface/RowKbd';
 
 /*
  * What stands in for the cells a maximized one hides: their shape, how many there are, and the way back.

@@ -35,12 +35,12 @@ final class TerminalCompatibilityTests: XCTestCase {
 
     @MainActor func testModernAttachOnlyFollowsAndDeliversOneSnapshot() async throws {
         let client = TerminalCompatibilityClient()
-        let attachment = client.acquireAttachment("session", id: "terminal")
+        let attachment = client.acquireAttachment(.session, id: "terminal")
         var snapshots: [JSONValue] = []
         let result = try await TerminalSnapshot.load(attachment: attachment, sessionID: "terminal") {
             snapshots.append($0)
         }
-        XCTAssertEqual(client.requests.map(\.0), ["session.attach"])
+        XCTAssertEqual(client.requests.map(\.0), [.sessionAttach])
         XCTAssertEqual(client.requests[0].1, .object(["sessionId": .string("terminal"), "follow": .bool(true)]))
         XCTAssertEqual(snapshots, [result])
     }
@@ -48,26 +48,26 @@ final class TerminalCompatibilityTests: XCTestCase {
     @MainActor func testARefusedAttachmentIsNotRetried() async {
         let client = TerminalCompatibilityClient()
         client.rejection = .server(code: "bad-request", message: "Invalid payload for session.attach")
-        let attachment = client.acquireAttachment("session", id: "terminal")
+        let attachment = client.acquireAttachment(.session, id: "terminal")
         do {
             _ = try await TerminalSnapshot.load(attachment: attachment, sessionID: "terminal") { _ in }
             XCTFail("The request should have failed")
         } catch {
             XCTAssertEqual(error as? MachineClientError, client.rejection)
         }
-        XCTAssertEqual(client.requests.map(\.0), ["session.attach"])
+        XCTAssertEqual(client.requests.map(\.0), [.sessionAttach])
     }
 }
 
 @MainActor private final class TerminalCompatibilityClient: MachineRequesting {
-    var requests: [(String, JSONValue)] = []
+    var requests: [(WireRequest, JSONValue)] = []
     var rejection: MachineClientError?
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
         if let rejection { throw rejection }
         return .object(["screen": .string("screen"), "cols": .number(173), "rows": .number(51), "exited": .bool(false)])
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import SwiftUI
 import UIKit
@@ -16,13 +17,13 @@ struct DeviceToolsSheet: View {
     @State private var charging = false
     @State private var shared: DrawingShare?
 
-    init(client: any MachineRequesting, device: JSONValue) {
+    init(client: any MachineRequesting, device: DeviceInfo) {
         _model = State(initialValue: DeviceToolsModel(client: client, device: device))
     }
 
     private var app: String { appID.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var appPlaceholder: String {
-        model.device.text("platform") == "android" ? String(localized: "Package name") : String(localized: "Bundle ID")
+        model.device.platform == .android ? String(localized: "Package name") : String(localized: "Bundle ID")
     }
     private var idle: Bool { !model.pending && model.settings != nil }
 
@@ -99,7 +100,7 @@ struct DeviceToolsSheet: View {
                 }
             }
             ForEach(DeviceTools.toggles.filter(model.has), id: \.self) { setting in
-                Toggle(Self.toggleName(setting), isOn: toggle(setting)).disabled(model.setting(setting) == nil)
+                Toggle(Self.toggleName(setting), isOn: toggle(setting)).disabled(model.settings?.toggle(setting) == nil)
             }
         }
     }
@@ -129,16 +130,16 @@ struct DeviceToolsSheet: View {
                 .buttonStyle(.mobileCapsuleSmall)
             }
         }
-        .onChange(of: model.setting("battery")) { _, value in
+        .onChange(of: model.settings?.battery) { _, value in
             guard let value else { return }
-            battery = value.number("level", fallback: battery)
-            charging = value["charging"]?.boolValue ?? charging
+            battery = Double(value.level)
+            charging = value.charging
         }
     }
 
     private var biometricSection: some View {
         Section("Biometrics") {
-            let ios = model.device.text("platform") == "ios"
+            let ios = model.device.platform == .ios
             if ios {
                 Toggle("Enrolled", isOn: enrolled)
             }
@@ -198,7 +199,7 @@ struct DeviceToolsSheet: View {
                     ForEach(DeviceTools.permissions(model.device), id: \.self) { Text(Self.permissionName($0)).tag($0) }
                 }
                 HStack {
-                    ForEach(["grant", "revoke", "reset"], id: \.self) { decision in
+                    ForEach(WireVocabulary.devicePermissionDecisions, id: \.self) { decision in
                         Button(Self.decisionName(decision)) {
                             Task {
                                 await model.act(
@@ -234,20 +235,20 @@ struct DeviceToolsSheet: View {
 
     private func choice(_ key: String, fallback: String, action: String) -> Binding<String> {
         Binding(
-            get: { model.setting(key)?.stringValue ?? fallback },
+            get: { model.settings?.choice(key) ?? fallback },
             set: { value in Task { await model.act(action, ["value": .string(value)]) } })
     }
 
     private func toggle(_ setting: String) -> Binding<Bool> {
         Binding(
-            get: { model.setting(setting)?.boolValue ?? false },
+            get: { model.settings?.toggle(setting) ?? false },
             set: { value in Task { await model.act("setToggle", ["setting": .string(setting), "value": .bool(value)]) }
             })
     }
 
     private var enrolled: Binding<Bool> {
         Binding(
-            get: { model.setting("biometricEnrolled")?.boolValue ?? false },
+            get: { model.settings?.toggle("biometricEnrolled") ?? false },
             set: { value in
                 Task {
                     await model.act(

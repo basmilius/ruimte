@@ -1,5 +1,5 @@
 import type { StoreApi } from 'zustand';
-import { toWorld, type Point } from '@/canvas/math';
+import { toWorld, type Point } from '@/canvas-model/math';
 import type { CanvasState } from '@/state/canvas';
 
 /* Kept beside the store and not in it, since every move of the pointer would wake whatever reads the canvas. */

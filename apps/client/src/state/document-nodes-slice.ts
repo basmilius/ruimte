@@ -12,7 +12,7 @@ import {
     type ProjectView,
     type SplitLayout
 } from '@ruimte/contracts';
-import { activateTab, closeTab, locateView, replaceViewId } from '@/shell/split';
+import { activateTab, closeTab, locateView, replaceViewId } from '@/layout/split';
 import type { DocumentState } from '@/state/document';
 import { centerOfView, withRenamedNode, type DocumentKit } from '@/state/document-model';
 import { defaultNodeSize, machineNodeSizes } from '@/state/node-size';
@@ -46,7 +46,6 @@ function canvasHolding(views: readonly ProjectView[], nodeId: string): ProjectCa
     return views.filter(isCanvasView).find((view) => view.nodes.some((node) => node.id === nodeId));
 }
 
-/* Nodes moving between views: to another canvas, off a canvas into a view of their own, and back. */
 export function createDocumentNodesSlice({
     set,
     get,

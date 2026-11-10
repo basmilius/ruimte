@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
 
@@ -27,7 +28,6 @@ export const AgentIntegrationFileSchema = z.object({
     // `rules` is a rules file of an earlier release for `ruimte-context`, listed while it is still there.
     kind: z.enum(['hooks', 'rules']),
     present: z.boolean(),
-    // Whether the file holds an entry Ruimte wrote.
     ours: z.boolean()
 });
 export type AgentIntegrationFile = z.infer<typeof AgentIntegrationFileSchema>;
@@ -57,3 +57,8 @@ export const AgentIntegrationSetResultSchema = z.object({
     summary: AgentIntegrationsSummarySchema,
     report: z.array(AgentIntegrationReportSchema)
 });
+
+export const AGENT_INTEGRATIONS_REQUEST_SCHEMAS = {
+    'endpoint.agentIntegrations': { payload: EmptySchema, result: AgentIntegrationsResultSchema },
+    'endpoint.setAgentIntegration': { payload: AgentIntegrationSetPayloadSchema, result: AgentIntegrationSetResultSchema }
+} as const;

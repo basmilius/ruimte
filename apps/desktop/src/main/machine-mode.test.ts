@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import type { AppIpc } from '@adecore/shell';
 import type { MachineMode } from '@ruimte/desktop-bridge';
 import type { MachineModeFile } from '../machine-mode';
+import type { DesktopIpc } from './ipc';
 import { installMachineMode } from './machine-mode';
 
 interface Rig {
@@ -14,7 +14,7 @@ function rig(mode: MachineMode, options: { writeFails?: boolean; removeFails?: b
     const events: string[] = [];
     const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
     const later: Array<() => void> = [];
-    const ipc = { handle: (channel, handler) => void handlers.set(channel, handler as never) } as AppIpc;
+    const ipc = { handle: (channel: string, handler: unknown) => void handlers.set(channel, handler as never) } as unknown as DesktopIpc;
     const store: MachineModeFile = {
         read: () => null,
         write(next) {

@@ -71,7 +71,6 @@ export function petKidsOf(
     return petKidMoods(chats[endpointKey(machine, node.id)], ownPets, tasks[machine]).join(' ');
 }
 
-/* The moods `petKidsOf` gave, one per kid. */
 export function kidMoodsOf(kids: string): PetMood[] {
     return kids === '' ? [] : (kids.split(' ') as PetMood[]);
 }

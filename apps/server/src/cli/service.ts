@@ -3,8 +3,10 @@ import { homedir, userInfo } from 'node:os';
 import { join } from 'node:path';
 import { definitionRunsProgram, diskFiles, serviceDefinition, type ServiceFiles, type ServiceManager } from '@adecore/service';
 import { replaceSync, tempNameFor } from '@adecore/utils/fs';
-import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
+import type { BuildIdentity } from '@ruimte/contracts';
+import { probeHealth } from '@ruimte/service/health';
 import { commandLineServiceProgram, daemonServiceSpec, pathsOf, platformServiceManager, type HostEnvironment } from '@ruimte/service/host';
+import { BUILD_FILE } from '@ruimte/service/runtime';
 import { describeError } from '../error-text.ts';
 import { buildFileOf, readBuildFile } from '../service/self-update.ts';
 
@@ -18,9 +20,9 @@ import { buildFileOf, readBuildFile } from '../service/self-update.ts';
 /* What travels with the daemon: `ruimte.build` is how an update is seen. */
 function binaryFiles(platform: NodeJS.Platform): string[] {
     if (platform === 'win32') {
-        return ['ruimte.exe', 'ruimte.build'];
+        return ['ruimte.exe', BUILD_FILE];
     }
-    return ['ruimte', 'ruimte.build'];
+    return ['ruimte', BUILD_FILE];
 }
 
 /* What an earlier release copied and this one no longer does; a copy left behind would answer in place of the new one. */
@@ -101,8 +103,8 @@ export interface ServiceDeps {
     files: ServiceFiles;
     copyBinaries(from: string, to: string): void;
     removeBinaries(dir: string): string[];
-    health(port: number): Promise<BuildIdentity | null>;
-    /* The build id beside the binary in a folder, null when there is none. */
+    /* `starting` is a daemon that holds the port and has not finished wiring itself. */
+    health(port: number): Promise<(BuildIdentity & { starting?: boolean }) | null>;
     readBuild(dir: string): string | null;
     user: string;
     out(line: string): void;
@@ -196,13 +198,18 @@ async function status(facts: ServiceFacts, plan: ServicePlan, deps: ServiceDeps)
         deps.out(`Binary: ${plan.program} (build ${deps.readBuild(plan.binDir) ?? 'unknown'})`);
     }
     const running = await deps.health(facts.port);
-    deps.out(running ? `Running: version ${running.version} on port ${facts.port}` : `Not running on port ${facts.port}`);
+    const ready = running !== null && running.starting !== true;
+    if (running === null) {
+        deps.out(`Not running on port ${facts.port}`);
+    } else {
+        deps.out(ready ? `Running: version ${running.version} on port ${facts.port}` : `Starting on port ${facts.port}`);
+    }
     if (deps.manager.linger) {
         deps.out(
             `Lingering: ${deps.manager.linger.enabled() ? 'on, it keeps running after you log out' : `off, it stops when you log out (loginctl enable-linger ${deps.user})`}`
         );
     }
-    return owner !== 'none' && running ? 0 : 1;
+    return owner !== 'none' && ready ? 0 : 1;
 }
 
 export async function runServiceAction(action: string, facts: ServiceFacts, deps: ServiceDeps): Promise<number> {
@@ -247,7 +254,7 @@ export function copyServiceBinaries(from: string, to: string, platform: NodeJS.P
         const target = join(to, name);
         const temporary = tempNameFor(target);
         copyFileSync(join(from, name), temporary);
-        chmodSync(temporary, name === 'ruimte.build' ? 0o644 : 0o755);
+        chmodSync(temporary, name === BUILD_FILE ? 0o644 : 0o755);
         if (platform === 'win32' && name.endsWith('.exe') && existsSync(target)) {
             renameSync(target, `${tempNameFor(target)}${RETIRED_SUFFIX}`);
         }
@@ -289,15 +296,6 @@ export function removeServiceBinaries(dir: string, platform: NodeJS.Platform = p
     return existsSync(dir) ? readdirSync(dir).filter((entry) => entry.endsWith(RETIRED_SUFFIX)) : [];
 }
 
-async function health(port: number): Promise<BuildIdentity | null> {
-    try {
-        const response = await fetch(`http://127.0.0.1:${port}${MACHINE_HEALTH_PATH}`, { signal: AbortSignal.timeout(2000) });
-        return buildIdentityOf(await response.json());
-    } catch {
-        return null;
-    }
-}
-
 export async function runService(args: string[], options: { port: number; ruimteHome: string; compiled: boolean }): Promise<number> {
     const manager = platformServiceManager(process.platform);
     if (manager === null) {
@@ -322,7 +320,7 @@ export async function runService(args: string[], options: { port: number; ruimte
             files: diskFiles,
             copyBinaries: copyServiceBinaries,
             removeBinaries: removeServiceBinaries,
-            health,
+            health: (port) => probeHealth(port, { timeoutMs: 2000 }),
             readBuild: (dir) => readBuildFile(buildFileOf(join(dir, 'ruimte'))),
             user: userInfo().username,
             out: (line) => console.log(line),

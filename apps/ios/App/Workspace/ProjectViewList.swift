@@ -3,7 +3,6 @@ import Observation
 import RuimtePulsar
 import RuimteTransport
 
-/// What a row of a project's list wears beside its name, the marks the desktop's sidebar rows carry.
 struct ProjectRowMarks: Equatable {
     /// The heaviest status of what the row holds: a canvas speaks for its nodes.
     var status: AgentStatus?
@@ -22,7 +21,6 @@ struct ProjectRowMarks: Equatable {
     var working: Bool { !needsYou && (status == .running || delegating) }
 }
 
-/// Everything the marks of one project's rows are read from.
 struct ProjectMarkSources {
     var statuses: [String: AgentStatus] = [:]
     var unseen: Set<String> = []
@@ -42,24 +40,24 @@ enum ProjectListLogic {
     private static let weight: [AgentStatus: Int] = [.needsYou: 3, .error: 2, .exited: 2, .running: 1, .idle: 0]
 
     /// The nodes a canvas lists under it. Groups, notes and drawings are frames and paper; the list is about what runs.
-    static func nodes(of view: JSONValue) -> [JSONValue] {
-        guard view.text("kind") == "canvas" else { return [] }
-        return view.list("nodes").filter { ["terminal", "chat", "browser", "device"].contains($0.text("kind")) }
+    static func nodes(of view: ProjectItem) -> [ProjectItem] {
+        guard view.kind == "canvas" else { return [] }
+        return view.nodes.filter { ProjectKinds.runs($0.kind) }
     }
 
     static func heaviest(_ statuses: [AgentStatus?]) -> AgentStatus? {
         statuses.compactMap { $0 }.max { weight[$0, default: 0] < weight[$1, default: 0] }
     }
 
-    static func marks(view: JSONValue, sources: ProjectMarkSources) -> ProjectRowMarks {
-        let id = view.stableID
+    static func marks(view: ProjectItem, sources: ProjectMarkSources) -> ProjectRowMarks {
+        let id = view.id
         let nodes = nodes(of: view)
         guard !nodes.isEmpty else {
             var marks = marks(node: view, sources: sources)
             marks.shared = sources.shared.contains(id)
             return marks
         }
-        let ids = nodes.map(\.stableID)
+        let ids = nodes.map(\.id)
         // A canvas keeps the draft dot and the snooze on the row of the node itself.
         let waking = ids.filter { sources.snoozes[$0] == nil }
         return ProjectRowMarks(
@@ -70,35 +68,43 @@ enum ProjectListLogic {
             shared: sources.shared.contains(id))
     }
 
-    static func marks(node: JSONValue, sources: ProjectMarkSources) -> ProjectRowMarks {
-        let id = node.stableID
+    static func marks(node: ProjectItem, sources: ProjectMarkSources) -> ProjectRowMarks {
+        let id = node.id
         return ProjectRowMarks(
             status: sources.statuses[id], delegating: sources.delegating.contains(id),
             unseen: sources.unseen.contains(id),
-            draft: node.text("kind") == "chat" && sources.drafts.contains(id),
+            draft: node.kind == "chat" && sources.drafts.contains(id),
             warning: sources.warnings.contains(id), snoozedUntil: sources.snoozes[id])
     }
 
     /// The actions a view offers; a node of a canvas only offers what acts on its session.
-    static func actions(for item: JSONValue, isView: Bool, status: AgentStatus?) -> [ProjectRowAction] {
-        let kind = item.text("kind")
+    static func actions(for item: ProjectItem, isView: Bool, status: AgentStatus?, canFork: Bool) -> [ProjectRowAction] {
+        let kind = item.kind
         var actions: [ProjectRowAction] = []
         if isView && kind != "unknown" { actions += [.rename, .icon, .settings] }
-        if kind == "chat" && ChatForking.forkable(provider: provider(of: item)) { actions.append(.fork) }
+        if kind == "chat" && canFork { actions.append(.fork) }
         if kind == "chat" || kind == "terminal" { actions.append(.snooze) }
         if kind == "chat" && status == .running { actions.append(.stopTurn) }
         if isView { actions.append(.delete) }
         return actions
     }
 
-    /// The CLI a chat runs: on a view it sits in its node, on a canvas node on the node itself.
-    static func provider(of item: JSONValue) -> String {
-        item["node"]?["provider"]?.stringValue ?? item["provider"]?.stringValue ?? ""
+    /// A view the list leaves out, as `isUnlistedView` in `packages/contracts` has it: a chat an extension draws or
+    /// nobody wrote in yet, and a hidden chat or canvas (an inline edit, or the canvas another machine draws its nodes
+    /// on). `emptyChatStays` keeps the empty chat that is open.
+    static func isUnlisted(_ view: ProjectItem, emptyChatStays: Bool = false) -> Bool {
+        let kind = view.kind
+        guard kind == "chat" || kind == "canvas" else { return false }
+        if view.hidden { return true }
+        guard kind == "chat" else { return false }
+        return view.drawnBy != nil || (view.empty && !emptyChatStays)
     }
 
-    /// The chats of the project, views and nodes, which are the rows that can carry a draft.
-    static func chatIDs(_ views: [JSONValue]) -> [String] {
-        views.flatMap { [$0] + nodes(of: $0) }.filter { $0.text("kind") == "chat" }.map(\.stableID)
+    /// The CLI a chat runs: on a view it sits in its node, on a canvas node on the node itself.
+    static func provider(of item: ProjectItem) -> String { item.provider ?? "" }
+
+    static func chatIDs(_ views: [ProjectItem]) -> [String] {
+        views.flatMap { [$0] + nodes(of: $0) }.filter { $0.kind == "chat" }.map(\.id)
     }
 }
 
@@ -109,8 +115,7 @@ final class ProjectListState {
     private(set) var expanded: Set<String> = []
     private(set) var drafts: Set<String> = []
     private(set) var warnings: Set<String> = []
-    @ObservationIgnored private var stops: [() -> Void] = []
-    @ObservationIgnored private var client: (any MachineRequesting)?
+    @ObservationIgnored private var live: LiveResource?
 
     func isExpanded(_ id: String) -> Bool { expanded.contains(id) }
 
@@ -118,7 +123,6 @@ final class ProjectListState {
         if expanded.contains(id) { expanded.remove(id) } else { expanded.insert(id) }
     }
 
-    /// Reads which chats hold a draft on this phone; the composer writes one as it is typed.
     func readDrafts(machineID: String, chatIDs: [String]) {
         drafts = Set(
             chatIDs.filter { id in
@@ -129,28 +133,24 @@ final class ProjectListState {
 
     /// Follows the machine's process warnings, which it pushes to every client whether or not it watches processes.
     func watchWarnings(_ client: any MachineRequesting) {
-        guard stops.isEmpty else { return }
-        self.client = client
-        stops.append(client.subscribe("processes.alerts") { [weak self] payload in self?.receive(payload) })
-        stops.append(
-            client.observeConnection { [weak self] connected in
-                guard connected else { return }
-                Task { await self?.readWarnings() }
+        guard live == nil else { return }
+        let live = LiveResource(
+            client: client, events: [.apply(.processesAlerts, as: ProcessesAlerts.self) { [weak self] in self?.receive($0) }],
+            read: { [weak self] in
+                guard let list = try? await client.request(.processesListAlerts).decoded(as: ProcessesAlerts.self)
+                else { return }
+                self?.receive(list)
             })
+        self.live = live
+        live.start()
     }
 
     func stopWatching() {
-        stops.forEach { $0() }
-        stops.removeAll()
-        client = nil
+        live?.stop()
+        live = nil
     }
 
-    private func readWarnings() async {
-        guard let client, let result = try? await client.request(.processesListAlerts) else { return }
-        receive(result)
-    }
-
-    private func receive(_ payload: JSONValue) {
-        warnings = Set(payload.list("alerts").compactMap { $0["nodeId"]?.stringValue })
+    private func receive(_ list: ProcessesAlerts) {
+        warnings = Set(list.alerts.compactMap(\.nodeId))
     }
 }

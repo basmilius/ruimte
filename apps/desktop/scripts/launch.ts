@@ -3,6 +3,8 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { MACHINE_HEALTH_PATH } from '@ruimte/contracts';
+import { DEV_PORT } from '@ruimte/service/runtime';
 import { LAUNCHER_PIPE_VARIABLE } from '../src/launcher-pipe';
 import { prepareMacDevelopmentApp } from './mac-dev-app';
 
@@ -21,7 +23,7 @@ delete env.ELECTRON_RUN_AS_NODE;
 await waitForDevServer(process.env.RUIMTE_DEV_URL);
 // The built-client run waits out native daemon preparation before opening a window that needs it.
 if (process.env.RUIMTE_DEV_WAIT_FOR_DAEMON === '1') {
-    await waitForDevServer(`http://127.0.0.1:${process.env.RUIMTE_PORT ?? '4211'}/health`, 50);
+    await waitForDevServer(`http://127.0.0.1:${process.env.RUIMTE_PORT ?? DEV_PORT}${MACHINE_HEALTH_PATH}`, 50);
 }
 
 // The fourth descriptor is a pipe Electron watches: it quits the moment this script is gone, however it went.

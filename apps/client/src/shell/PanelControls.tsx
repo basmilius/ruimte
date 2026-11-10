@@ -1,12 +1,12 @@
 import { IconButton, WorkspaceRailSeparator } from '@adecore/ui';
 import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useFolderInRepo } from '@/controllers/git-repos';
+import { useGitStatus } from '@/controllers/git-watch';
 import { useRoutineList } from '@/routines/routine-list';
 import { RoutinesButton } from '@/routines/RoutinesButton';
 import { useToolbarPanels, type PanelGroup } from '@/shell/panels';
-import { useFolderInRepo } from '@/state/git-repos';
-import { useGitStatus } from '@/state/git-watch';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { isThisMachine } from '@/state/local-machine';
 import { isScratchProject, useProject } from '@/state/project';
 import { useShownPanel, useUi } from '@/state/ui';
@@ -40,13 +40,19 @@ export function PanelControls() {
                     {index > 0 && <WorkspaceRailSeparator />}
                     {group.entries.map((entry) => {
                         const dirty = entry.kind === 'git' && changes > 0;
-                        const badge = 'badge' in entry ? (entry.badge?.() ?? null) : null;
+                        const badge = entry.badge?.() ?? null;
 
                         return (
                             <IconButton
                                 key={entry.kind}
                                 icon={entry.icon}
-                                label={dirty ? t('panel.gitChanges', { count: changes }) : 'label' in entry ? entry.label() : t(`panel.names.${entry.kind}`)}
+                                label={
+                                    dirty
+                                        ? t('panel.gitChanges', { count: changes })
+                                        : entry.label !== undefined
+                                          ? entry.label()
+                                          : t(`panel.names.${entry.kind}`)
+                                }
                                 tooltipSide="left"
                                 active={panel.open && panel.kind === entry.kind}
                                 className={dirty || badge !== null ? 'relative' : undefined}

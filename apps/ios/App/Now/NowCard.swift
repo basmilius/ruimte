@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// A session waiting on a person, as a card of its own, on Now and for a routine run on Scheduled. A chat's oldest
@@ -9,7 +10,7 @@ struct NowCard: View {
     /// Where it stands and how long it waits, or for a routine run, when it was due.
     let subtitle: String
     let connected: Bool
-    let task: JSONValue?
+    let task: AgentTask?
     let open: () -> Void
     @FocusState private var replyFocused: Bool
 

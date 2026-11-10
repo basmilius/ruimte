@@ -41,7 +41,7 @@ private final class MediaWorkLifetime: Sendable {
     }
     init(size: Int) { bytes = Data((0..<size).map { UInt8($0 % 251) }) }
     init(bytes: Data) { self.bytes = bytes }
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         let offset = Int(payload["offset"]!.numberValue!)
         let length = Int(payload["length"]!.numberValue!)
         asked.append((offset, length))
@@ -61,14 +61,16 @@ private final class MediaWorkLifetime: Sendable {
             refuse = max(refuse - 1, 0)
             throw MachineClientError.server(code: "busy", message: "Try again")
         }
-        guard offset <= bytes.count else { throw MachineClientError.server(code: "bad-offset", message: "Past the end") }
+        guard offset <= bytes.count else {
+            throw MachineClientError.server(code: "bad-offset", message: "Past the end")
+        }
         let slice = bytes.subdata(in: offset..<min(offset + length, bytes.count))
         return .object([
             "mime": .string("video/mp4"), "size": .number(Double(bytes.count)), "version": .string(version),
             "offset": .number(Double(offset)), "data": .string(slice.base64EncodedString()),
         ])
     }
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
     func observeConnection(_ handler: @escaping @MainActor @Sendable (Bool) -> Void) -> () -> Void {
         handler(connection.isEmpty ? true : connection.removeFirst())
         return {}
@@ -321,7 +323,8 @@ private final class MediaWorkLifetime: Sendable {
         let machine = MediaMachine(size: 1_000)
         let source = MachineMediaSource(client: machine, path: "/v.mp4", chunkBytes: 10, ahead: 2)
         let task = Task { @MainActor in
-            try await source.read(offset: 0, length: 500, info: { _ in }) { _ in withUnsafeCurrentTask { $0?.cancel() } }
+            try await source.read(offset: 0, length: 500, info: { _ in }) { _ in withUnsafeCurrentTask { $0?.cancel() }
+            }
         }
         await #expect(throws: CancellationError.self) { try await task.value }
         #expect(machine.asked.count == 3)

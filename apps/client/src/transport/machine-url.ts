@@ -2,14 +2,14 @@ import { imageForDisplay } from '@adecore/agents-react/images';
 import { BYTES_READ_MAX_BYTES, CHAT_MODEL_MAX_BYTES, type ByteResource } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useEffect, useState } from 'react';
-import { credentialFor } from '@/endpoint/credentials';
 import { endpointById, useEndpoints } from '@/state/endpoints';
 import { transportFor } from '@/transport';
+import { credentialFor } from '@/transport-api/credentials';
+import { readPiece } from '../transport-api/piece';
 import { BlobCache, type BlobLease, type BlobState } from './blob-cache';
 import { fileTooLarge, readResource } from './byte-transfer';
 import { bytesStreamUrl } from './bytes-stream';
 import { bytesWorkerReady } from './bytes-worker-host';
-import { readPiece } from './piece';
 import { useEndpointConnection } from './status';
 
 /*
@@ -29,7 +29,7 @@ export type MachineResource = (
     | { kind: 'artifact'; artifactId: string; versionId: string; file: number }
 ) & { mime?: string };
 
-export type MachineUrl = BlobState;
+type MachineUrl = BlobState;
 
 // Enough for a chat full of screenshots to scroll back without a refetch; what is on screen does not count.
 const IDLE_BYTES = 64 * 1024 * 1024;

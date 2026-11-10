@@ -26,7 +26,24 @@ export function homeSecret(options: LocalDaemonOptions): Promise<string | null> 
     return (options.readSecret ?? readLocalSecret)(options.home).catch(() => null);
 }
 
-/* What a command tells a person whose daemon is not running. */
+/* One ask of the daemon on this computer under the local secret, with a JSON body when there is one; null when nothing answers. */
+export function askLocalDaemon(
+    options: Pick<LocalDaemonOptions, 'port' | 'fetch'>,
+    secret: string,
+    path: string,
+    request: { method?: 'GET' | 'POST'; body?: unknown } = {}
+): Promise<Response | null> {
+    const headers: Record<string, string> = { authorization: `Bearer ${secret}` };
+    if (request.body !== undefined) {
+        headers['content-type'] = 'application/json';
+    }
+    return (options.fetch ?? fetch)(`http://127.0.0.1:${options.port}${path}`, {
+        method: request.method ?? 'GET',
+        headers,
+        body: request.body === undefined ? undefined : JSON.stringify(request.body)
+    }).catch(() => null);
+}
+
 export function startFirst(port: number): string {
     const flag = portFlag(port);
     return `Start it with \`ruimte service install${flag}\`, or with \`ruimte${flag}\` in another terminal.`;

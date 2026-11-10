@@ -4,7 +4,7 @@ import type { DrawingElement } from '@ruimte/contracts';
 import { PenTool } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cameraToFit } from '@/canvas/math';
+import { cameraToFit } from '@/canvas-model/math';
 import { loadDrawingFont } from '@/drawing/fonts';
 import { useDrawingMirror } from '@/drawing/mirror';
 import { applyCamera, paintElements, paintOptions } from '@/drawing/paint';

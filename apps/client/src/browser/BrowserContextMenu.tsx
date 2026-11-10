@@ -4,8 +4,8 @@ import { buildBrowserMenu, buildPreviewMenu, type BrowserMenuAction, type Browse
 import { menuPointFor } from '@/browser/menu-point';
 import { openLinkBeside } from '@/browser/open-beside';
 import { drivePage } from '@/browser/open-page';
-import { previewGuestOf } from '@/browser/preview-guests';
-import { browserRegistry, useBrowser } from '@/browser/registry';
+import { previewGuestOf } from '@/clients/browser/preview-guests';
+import { browserRegistry, useBrowser } from '@/clients/browser/registry';
 import { desktop, type BrowserContextAction } from '@/desktop/bridge';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { splitKey } from '@/state/keys';

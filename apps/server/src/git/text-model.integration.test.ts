@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ProviderRegistry, providerFor } from '../providers/registry.ts';
+import { ProviderRegistry } from '../providers/registry.ts';
 import { readCapabilities } from './capabilities.ts';
 import { suggestMessage } from './message.ts';
 import { gitIn, initRepo } from './test-repo.ts';
@@ -19,7 +19,7 @@ test('a commit message comes from the prepared writer and leaves the staged diff
         const before = await gitIn(home, ['diff', '--cached']);
         const result = await suggestMessage(home, {} as never, {
             writer: {
-                provider: providerFor('codex'),
+                provider: new ProviderRegistry({ providers: [] }).get('codex'),
                 run: async (_cwd, prompt) => {
                     prompts.push(prompt);
 

@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { ProjectIdSchema, ProjectSqlSchema, SqlBindingSchema } from './project.ts';
 
@@ -48,3 +49,15 @@ export const LanguageSqlChangedEventSchema = LanguageSqlStateSchema.extend({
     projectId: ProjectIdSchema
 });
 export type LanguageSqlChangedEvent = z.infer<typeof LanguageSqlChangedEventSchema>;
+
+export const SQL_BINDING_REQUEST_SCHEMAS = {
+    'language.sql': { payload: LanguageSqlPayloadSchema, result: LanguageSqlStateSchema },
+    // A person's choice of the connection a file, or the project, reads its SQL against; kept in their private project file.
+    'language.sql.bind': { payload: LanguageSqlBindPayloadSchema, result: LanguageSqlStateSchema },
+    // Takes schema snapshots again with the passwords the clients handed over; answers once they are taken.
+    'database.snapshot.refresh': { payload: DatabaseSnapshotRefreshPayloadSchema, result: EmptySchema }
+} as const;
+
+export const SQL_BINDING_EVENT_SCHEMAS = {
+    'language.sql.changed': LanguageSqlChangedEventSchema
+} as const;

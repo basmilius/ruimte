@@ -5,10 +5,10 @@ import { z } from 'zod';
 import { JsonFileStore } from '../json-file-store.ts';
 import { deniedPortReason } from '../tunnels/tunnel-config.ts';
 
-export const PORTS_DIR = 'ports';
+const PORTS_DIR = 'ports';
 
 /* More than a person shares by hand, and few enough that the list stays one request. */
-export const MAX_PORT_GRANTS = 256;
+const MAX_PORT_GRANTS = 256;
 
 const StoredPortsSchema = z.object({ version: z.literal(1), grants: z.array(PortGrantSchema).max(MAX_PORT_GRANTS) });
 type StoredPorts = z.infer<typeof StoredPortsSchema>;
@@ -19,13 +19,12 @@ export function portsStore(home: string | undefined): JsonFileStore<StoredPorts>
     return new JsonFileStore(home === undefined ? undefined : join(home, PORTS_DIR, 'grants.json'), StoredPortsSchema, 'no port is shared');
 }
 
-export interface PortGrantsOptions {
+interface PortGrantsOptions {
     store: JsonFileStore<StoredPorts>;
     /* The ports Ruimte listens on, which no grant may name; read again at every open. */
     deniedPorts(): readonly number[];
     random(bytes: number): string;
     now(): number;
-    /* Tells every client the list moved. */
     changed(): void;
 }
 

@@ -1,0 +1,26 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Converted to euros at the ECB rate of %@." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Omgerekend naar euro's tegen de ECB-koers van %@."
+          }
+        }
+      }
+    },
+    "Showing US dollars until a euro exchange rate is available." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bedragen staan in Amerikaanse dollars tot er een wisselkoers voor de euro is."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

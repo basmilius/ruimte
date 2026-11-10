@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, setSystemTime, test } from 'bun:test';
 import type { EventMap, EventType, RequestMap, RequestType, Snooze } from '@ruimte/contracts';
-import type { Transport, TransportStatus } from '@/transport/transport';
+import type { Transport, TransportStatus } from '@/transport-api/transport';
 import { isSnoozed, snoozeOf, nextWake, snoozeUntil, startSnoozeClock, useSnoozes, watchSnoozes, withoutExpired } from './snooze';
 
 function at(year: number, month: number, day: number, hour: number, minute = 0): number {

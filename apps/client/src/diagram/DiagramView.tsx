@@ -6,18 +6,18 @@ import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
-import { groundPlacement, type Point } from '@/canvas/math';
-import { useWheelCamera } from '@/canvas/use-wheel-camera';
+import { ignoreRefusal, perform } from '@/action-port/perform';
+import { groundPlacement, type Point } from '@/canvas-model/math';
 import { copyDiagram, openDiagramJson } from '@/diagram/diagram-actions';
 import { DiagramDock } from '@/diagram/DiagramDock';
 import { DiagramScene } from '@/diagram/DiagramScene';
 import { Swatches } from '@/drawing/DrawingDock';
 import { useViewportSize } from '@/drawing/use-viewport-size';
 import { askAgentAboutDiagram } from '@/project/views';
-import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
 import { useProject } from '@/state/project';
+import { useWheelCamera } from '@/surface/canvas/use-wheel-camera';
+import { useFileToolbarSlot } from '@/surface/panels/file-toolbar-slot';
 import { EmptyDiagramScene } from '@/ui/EmptyScenes';
 
 function isChrome(target: EventTarget | null): boolean {
@@ -115,7 +115,6 @@ function RenameField({ id, onDone }: { id: string; onDone: () => void }) {
     );
 }
 
-/* What a right-click on a node offers: its label, its tone and the way back to where the layout puts it. */
 function NodeMenuPopup({ id, onRename }: { id: string; onRename: () => void }) {
     const { t } = useTranslation('drawing');
     const store = useDiagramStore();

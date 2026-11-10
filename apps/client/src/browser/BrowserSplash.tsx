@@ -11,12 +11,13 @@ import { isDesktop } from '@/desktop/bridge';
 import { useDevTunnelRows, publicAddressOf } from '@/port-tunnel/dev-tunnel-rows';
 import { currentProjectId, usePortGrants, usePortGrantWatch } from '@/port-tunnel/grants';
 import { portTunnelPages } from '@/port-tunnel/tunnel-pages';
+import { useEndpointId } from '@/state/current-endpoint';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
-import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { useOptionalConnection } from '@/transport/context';
+import { fireAndForget } from '@/transport-api/transport';
 import { useMachineAnswers } from '@/transport/features';
+import { useOptionalConnection } from '@/workspace/context';
 
 /* How often the machine is asked again, so a server started after this node was opened shows up. */
 const REFRESH_MS = 5_000;
@@ -52,14 +53,14 @@ export function BrowserSplash({ id, className }: { id: string; className?: strin
         }
         let alive = true;
         const ask = (): void => {
-            transport
-                .request('browser.devServers', { ports: DEV_SERVER_PROBE_PORTS })
-                .then((answer) => {
+            void fireAndForget(
+                'browser.devServers',
+                transport.request('browser.devServers', { ports: DEV_SERVER_PROBE_PORTS }).then((answer) => {
                     if (alive) {
                         setRunning(answer.servers);
                     }
                 })
-                .catch(() => undefined);
+            );
         };
         ask();
         const timer = setInterval(ask, REFRESH_MS);

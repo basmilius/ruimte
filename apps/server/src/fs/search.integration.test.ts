@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { MachineHome } from '../disk/machine-home.ts';
 import { gitIn } from '../git/test-repo.ts';
-import { MachineHome } from './machine-home.ts';
 import { forgetSearchCache, listSearchableFiles, searchFiles } from './search.ts';
 
 describe('searchFiles in a repository', () => {

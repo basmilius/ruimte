@@ -1,5 +1,5 @@
 import type { SplitLayout } from '@ruimte/contracts';
-import { cellAt, cellViewIds, locateView, type CellAt } from '@/shell/split';
+import { cellAt, cellViewIds, locateView, type CellAt } from '@/layout/split';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 

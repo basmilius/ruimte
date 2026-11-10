@@ -1,19 +1,15 @@
 import type { EditorPosition } from '@adecore/editor';
-import { shikiLanguageOf } from '@adecore/editor-react';
-import { endOfInsertion } from '@adecore/editor-react/models';
+import { shikiLanguageOf, type EditorLanguage, type InlineSuggestion, type InlineSuggestionRequest, type InlineSuggestionSource } from '@adecore/editor-react';
 import { messageOf } from '@adecore/ui';
+import { cleanGhost, ghostPrompt } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createElement } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
-import { editorAssistClientFor, type EditorAssistClient } from '@/editor-assist/client';
-import { cleanGhost, firstWord } from '@/editor-assist/ghost-model';
-import { ghostPrompt } from '@/editor-assist/prompts';
-import { keyOf } from '@/shell/shortcut-overrides';
+import { createRoot } from 'react-dom/client';
+import { type EditorAssistClient } from '@/editor-assist/client';
+import { promptFileName } from '@/editor-assist/prompt-file';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { GhostHint } from './GhostHint';
-import { promptFileName, type HostLanguage as EditorLanguage } from './host-language';
-import { isShortcut } from './shortcut-keys';
 
 const TOAST_ID = 'language-ghost';
 const PROGRESS_OWNER = 'ghost-progress';
@@ -28,117 +24,84 @@ function samePosition(one: EditorPosition, other: EditorPosition): boolean {
     return one.line === other.line && one.character === other.character;
 }
 
-interface Suggestion {
-    readonly position: EditorPosition;
-    readonly text: string;
+/* Fills the element after a line with the hint, returning what takes it away again. */
+export type GhostHintMount = (container: HTMLElement, phase: 'progress' | 'ready') => () => void;
+
+function mountGhostHint(container: HTMLElement, phase: 'progress' | 'ready'): () => void {
+    const root = createRoot(container);
+    root.render(createElement(GhostHint, { phase }));
+
+    // The editor may take the element away while React renders, which a synchronous unmount refuses.
+    return () => queueMicrotask(() => root.unmount());
 }
 
 /*
- * Ghost text on request: Option+\ asks the model on the machine for a continuation at the caret and draws
- * it after the caret, where Tab takes all of it, Option+] a word of it and anything else puts it away. It
- * takes two to three seconds, so nothing is ever asked for while typing.
+ * Ghost text on request: Option+\ asks the model on the machine for a continuation at the caret. The editor's
+ * inline completion draws it after the caret, where Tab takes all of it, Option+] a word of it and anything else
+ * puts it away. It takes two to three seconds, so nothing is ever asked for while typing.
  */
-export class GhostTextFeature {
+export class GhostTextFeature implements InlineSuggestionSource {
+    readonly automatic = false;
     private readonly language: EditorLanguage;
     private readonly client: EditorAssistClient;
-    private suggestion: Suggestion | null = null;
-    private controller: AbortController | null = null;
-    /* Counts the edits of the text, so an answer for text that has changed since is dropped. */
-    private revision = 0;
-    private accepting = false;
-    private hints: Root[] = [];
+    private readonly mountHint: GhostHintMount;
+    private requesting: AbortSignal | null = null;
 
-    constructor(language: EditorLanguage, client: EditorAssistClient = editorAssistClientFor(language.project.transport), listenForKeys = true) {
+    constructor(language: EditorLanguage, client: EditorAssistClient, mountHint: GhostHintMount = mountGhostHint) {
         this.language = language;
         this.client = client;
-        const { editor } = language;
-        const offs = [
-            ...(listenForKeys ? [editor.onKeyDown((event) => this.handleKey(event))] : []),
-            editor.onTextChange(() => {
-                if (!this.accepting) {
-                    this.revision++;
-                    this.dismiss();
-                }
-            }),
-            editor.onCaret((position) => {
-                const shown = this.suggestion?.position;
-                if (shown !== undefined && !samePosition(shown, position) && !this.accepting) {
-                    this.dismiss();
-                }
-            })
-        ];
-        language.onDispose(() => {
-            for (const off of offs) {
-                off();
-            }
-            this.dismiss();
-        });
+        this.mountHint = mountHint;
+        // Ahead of the language servers' suggestions, which a person's own key asks for only when this is off.
+        language.onDispose(language.inlineCompletion.addSource(this, 100));
     }
 
     get active(): boolean {
-        return this.suggestion !== null;
+        return this.language.inlineCompletion.holds(this);
     }
 
     get busy(): boolean {
-        return this.controller !== null;
+        return this.requesting !== null;
+    }
+
+    get enabled(): boolean {
+        return this.language.served && this.setting;
     }
 
     // Ghost text sends code to the editor model as Explain does, so it waits for the same opt-in.
-    private get enabled(): boolean {
+    private get setting(): boolean {
         const { aiCodeHelp, aiGhostText } = useSettings.getState();
 
         return aiCodeHelp && aiGhostText === 'request';
     }
 
-    handleKey(event: KeyboardEvent): boolean {
-        if (isShortcut(keyOf('suggestInline'), event)) {
-            if (!this.enabled) {
-                return false;
-            }
-            void this.request();
-            return true;
-        }
-        if (event.key === 'Escape' && (this.suggestion !== null || this.controller !== null)) {
-            this.dismiss();
-            return true;
-        }
-        if (this.suggestion === null) {
-            return false;
-        }
-        if (event.key === 'Tab' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
-            this.accept();
-            return true;
-        }
-        if (isShortcut(keyOf('acceptGhostWord'), event)) {
-            this.acceptWord();
-            return true;
-        }
-        return false;
-    }
-
     /* Asks for a continuation at the caret and shows it when it comes, if the caret and the text are where they were. */
     async request(): Promise<void> {
-        if (!this.enabled) {
+        if (!this.setting) {
             this.tell(say('off'));
             return;
         }
+        await this.language.inlineCompletion.triggerSource(this);
+    }
+
+    async suggest({ caret, signal }: InlineSuggestionRequest): Promise<readonly InlineSuggestion[]> {
         const { editor } = this.language;
         const selection = editor.getSelection();
         if (!samePosition(selection.start, selection.end)) {
-            return;
+            return [];
         }
-        this.dismiss();
         const status = await this.client.availability();
         if (!status.available) {
             this.tell(status.reason ?? say('unavailable'));
-            return;
+            return [];
         }
-        const controller = new AbortController();
-        this.controller = controller;
-        const position = editor.getCaret();
-        const revision = this.revision;
-        const { before, after, restOfLine } = this.around(position);
-        this.showProgress(position);
+        const { before, after, restOfLine } = this.around(caret);
+        const stop = (): void => {
+            this.requesting = null;
+            this.finishProgress();
+        };
+        signal.addEventListener('abort', stop, { once: true });
+        this.requesting = signal;
+        this.showProgress(caret);
         try {
             const result = await this.client.generate(
                 {
@@ -150,90 +113,32 @@ export class GhostTextFeature {
                         after
                     })
                 },
-                controller.signal
+                signal
             );
-            if (this.controller !== controller) {
-                return;
-            }
-            this.finishProgress();
-            this.controller = null;
-            const caret = editor.getCaret();
-            if (result.state !== 'done' || revision !== this.revision || !samePosition(caret, position)) {
-                return;
+            if (signal.aborted || result.state !== 'done' || !samePosition(editor.getCaret(), caret)) {
+                return [];
             }
             const cleaned = cleanGhost(result.text, before, after);
             // Text after the caret on the line stays where it is, so the suggestion is only the rest of this line.
             const text = restOfLine.trim() === '' ? cleaned : (cleaned.split('\n')[0] ?? '');
             if (text.trim() === '') {
                 this.tell(say('none'));
-                return;
+                return [];
             }
-            this.show({ position, text });
+            return [{ text, range: { start: caret, end: caret }, rest: text, words: true, accessory: (container) => this.mountHint(container, 'ready') }];
         } catch (error) {
-            if (this.controller === controller) {
-                this.finishProgress();
-                this.controller = null;
+            if (!signal.aborted) {
                 this.tell(messageOf(error));
             }
-        }
-    }
-
-    /* Takes all of the suggestion into the text, as one step of the undo history. */
-    accept(): void {
-        const suggestion = this.suggestion;
-        if (suggestion !== null) {
-            this.insert(suggestion, suggestion.text);
-        }
-    }
-
-    /* Takes the first word of the suggestion, and the rest stays as the suggestion after it. */
-    acceptWord(): void {
-        const suggestion = this.suggestion;
-        if (suggestion !== null) {
-            this.insert(suggestion, firstWord(suggestion.text));
-        }
-    }
-
-    /* Puts the suggestion away, and ends a request that is still out. */
-    dismiss(): void {
-        this.controller?.abort();
-        this.controller = null;
-        this.finishProgress();
-        if (this.suggestion !== null) {
-            this.suggestion = null;
-            this.language.editor.setGhostText(null);
-            this.unmountHints();
-        }
-    }
-
-    private insert(suggestion: Suggestion, inserted: string): void {
-        const { editor } = this.language;
-        const rest = suggestion.text.slice(inserted.length);
-        this.accepting = true;
-        try {
-            editor.applyEdits([{ range: { start: suggestion.position, end: suggestion.position }, text: inserted }]);
+            return [];
         } finally {
-            this.accepting = false;
-        }
-        this.suggestion = null;
-        this.unmountHints();
-        const next = endOfInsertion(suggestion.position, inserted);
-        editor.setCaret(next);
-        if (rest.trim() !== '') {
-            this.show({ position: next, text: rest });
+            signal.removeEventListener('abort', stop);
+            if (this.requesting === signal) {
+                stop();
+            }
         }
     }
 
-    private show(suggestion: Suggestion): void {
-        this.suggestion = suggestion;
-        this.language.editor.setGhostText({
-            position: suggestion.position,
-            text: suggestion.text,
-            accessory: (container) => this.mountHint(container, 'ready')
-        });
-    }
-
-    /* The text a model reads on each side of the caret, and what is left of the caret's line after it. */
     private around(position: EditorPosition): { before: string; after: string; restOfLine: string } {
         const { editor } = this.language;
         const last = Number.MAX_SAFE_INTEGER;
@@ -251,19 +156,6 @@ export class GhostTextFeature {
 
     private finishProgress(): void {
         this.language.editor.setLineActions([], PROGRESS_OWNER);
-        this.unmountHints();
-    }
-
-    private mountHint(container: HTMLElement, phase: 'progress' | 'ready'): void {
-        const root = createRoot(container);
-        root.render(createElement(GhostHint, { phase }));
-        this.hints.push(root);
-    }
-
-    private unmountHints(): void {
-        for (const root of this.hints.splice(0)) {
-            queueMicrotask(() => root.unmount());
-        }
     }
 
     private tell(title: string): void {

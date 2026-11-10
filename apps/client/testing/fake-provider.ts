@@ -15,7 +15,11 @@ export function fakeProvider(kind: string, name: string, patch: Partial<Provider
     } as unknown as ProviderInfo;
 }
 
-/* Claude Code as the tests know it: installed, with the capabilities a test gives it. */
+/* Claude Code as the tests know it: installed, with the capabilities a test gives it, and a conversation that can be forked as the real one's can. */
 export function claudeProvider(capabilities: Record<string, unknown> = { chat: true, terminal: true }): ProviderInfo {
-    return fakeProvider('claude', 'Claude Code', { version: '2.1.0', capabilities, resumeCommand: 'claude --resume {id}' } as Partial<ProviderInfo>);
+    return fakeProvider('claude', 'Claude Code', {
+        version: '2.1.0',
+        capabilities: { fork: true, ...capabilities },
+        resumeCommand: 'claude --resume {id}'
+    } as Partial<ProviderInfo>);
 }

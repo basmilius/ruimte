@@ -11,15 +11,16 @@ import {
     type EventType,
     type LiveFrameEvent,
     type RequestMap,
+    REQUEST_TIMEOUT_MS,
     type RequestType
 } from '@ruimte/contracts';
 import i18next from 'i18next';
 import type { LinkProblem } from '@/telemetry/events';
-import type { LinkOutcome, ReconnectReason } from '@/telemetry/metrics';
-import type { BytesPiece } from './piece';
+import type { LinkMeter, ReconnectReason } from '@/telemetry/metrics';
+import type { BytesPiece } from '../transport-api/piece';
+import { TransportError, type ConnectionState, type LiveFrameHandler, type SignalRoute, type TransportStatus } from '../transport-api/transport';
 import type { PooledTransport } from './pool';
 import { protocolGate } from './protocol';
-import { TransportError, type ConnectionState, type LiveFrameHandler, type SignalRoute, type TransportStatus } from './transport';
 
 const RECONNECT_MIN_MS = 500;
 const RECONNECT_MAX_MS = 10_000;
@@ -30,8 +31,6 @@ const ADDRESS_TIMEOUT_MS = 20_000;
 // A machine that accepted the link but has not answered the protocol check by then is an attempt that failed.
 const GATE_TIMEOUT_MS = 20_000;
 
-// A request with no answer by then fails, so a handler that hangs is an error and not a spinner forever.
-const REQUEST_TIMEOUT_MS = 60_000;
 // A drop the reconnect mends within this time (a daemon restart, a Mac waking) is only a metric, not a report.
 const DROP_GRACE_MS = 30_000;
 
@@ -101,7 +100,7 @@ export interface LinkEvents {
 /* Opens a link on an address the transport resolved for this attempt. The transport runs the protocol check on whatever it returns. */
 export type LinkOpener = (url: string, events: LinkEvents) => Link;
 
-export interface LinkTransportOptions {
+interface LinkTransportOptions {
     addressTimeoutMs?: number;
     gateTimeoutMs?: number;
     requestTimeoutMs?: number;
@@ -113,15 +112,6 @@ export interface LinkTransportOptions {
     /* A link that dropped while open and stayed down, a request without an answer in time, a machine refused at the check: for a crash report. */
     report?: (problem: LinkProblem) => void;
     meter?: LinkMeter;
-}
-
-/* How long links take to open or fail, why a new one opens, and how long a request waits for its answer: for the page's metrics. */
-export interface LinkMeter {
-    /* From the start of an attempt until the protocol check passed, or until the attempt failed. */
-    connected(link: { relayed: boolean; signaled: SignalRoute | null }, outcome: LinkOutcome, ms: number): void;
-    reconnecting(reason: ReconnectReason): void;
-    /* A request the link answered, measured only where its wait is the link's (`measuredRequest`), over the link it went. */
-    answered(link: { relayed: boolean; signaled: SignalRoute | null }, ms: number): void;
 }
 
 const NO_METER: LinkMeter = { connected: () => undefined, reconnecting: () => undefined, answered: () => undefined };
@@ -203,7 +193,6 @@ export class LinkTransport implements PooledTransport {
         this.address = address;
     }
 
-    /* Points the transport at another address of the same daemon; it closes and comes back there. */
     switchTo(address: SocketAddress): void {
         if (address === this.address) {
             return;
@@ -212,7 +201,6 @@ export class LinkTransport implements PooledTransport {
         this.reconnect();
     }
 
-    /* Drops the link and opens a new one straight away, on whatever the opener picks now. */
     reconnect(): void {
         if (this.disposed) {
             return;

@@ -1,8 +1,13 @@
-import type { Server } from 'bun';
+import type { Server, WebSocketHandler } from 'bun';
 import {
+    EXTENSION_LINK_PATH,
+    EXTENSION_UNLINK_PATH,
     MACHINE_HEALTH_PATH,
+    MACHINE_LEAVE_ACCOUNT_PATH,
+    MACHINE_LINK_PATH,
     MACHINE_NOTIFY_PATH,
     MACHINE_PROOF_PATH,
+    MACHINE_REGISTRATION_PATH,
     MACHINE_STATUS_CHECK_QUERY,
     MACHINE_SHUTDOWN_PATH,
     MACHINE_STATUS_PATH,
@@ -17,31 +22,34 @@ import {
 } from '@ruimte/contracts';
 import { AccountSchema } from '@ruimte/pulsar';
 import { z } from 'zod';
-import { callerFolders } from '../agents/caller-folders.ts';
-import { HOOKS_PATH, handleHookRequest } from '../agents/hook-receiver.ts';
+import type { ServerActions } from '../actions/server-actions.ts';
 import { crossOriginHeaders, decideAccess, handleLocalTicketRequest, isOwner, preflightHeaders, withHeaders } from '../auth/access.ts';
 import { handleLocalProofRequest } from '../auth/local-proof.ts';
 import { MachineAccountError, signForAccount, signLinkRequest } from '../auth/registration.ts';
 import { SOCKET_BACKPRESSURE_LIMIT } from '../backpressure.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from '../chat/attachment-route.ts';
+import type { ServerConfig } from '../config.ts';
 import { socketChannel } from '../connection.ts';
 import { hookContext } from '../context/context-note.ts';
-import type { ClientAccess } from '../dispatcher.ts';
+import { chatFolders, shotFolders } from '../disk/agent-folders.ts';
 import { errorText } from '../error-text.ts';
 import type { ExtensionHost } from '../extensions/extension-host.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from '../fs/file-route.ts';
 import { PAIRING_REMOVED } from '../handlers/auth.ts';
 import { answerRoute, type Route } from '../http-routes.ts';
+import type { Tool } from '../mcp/catalog.ts';
 import { handleMcpRequest, MCP_PATH, MCP_REQUEST_TIMEOUT_S } from '../mcp/mcp-route.ts';
 import { handleProjectRequest, PROJECTS_PATH } from '../projects/icon-route.ts';
 import { hookTellsTools } from '../providers/launch.ts';
+import type { ProviderRegistry } from '../providers/registry.ts';
 import { handleMachineNotify } from '../push/notify-route.ts';
-import { shotFolders } from '../shots.ts';
+import { HOOKS_PATH, handleHookRequest } from '../sessions/hook-receiver.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from '../streams/http-stream.ts';
-import type { CanvasHost } from '../tools/host.ts';
 import { refuseTunnelled } from '../tunnels/external-gate.ts';
 import { BUILD, VERSION } from '../version.ts';
 import { handleVoiceKeyRequest } from '../voice/key-route.ts';
+import type { ClientAccess } from '../wire.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { ArtifactsBundle } from './artifacts.ts';
 import type { ClientsBundle } from './clients.ts';
@@ -54,13 +62,6 @@ import type { ProjectsBundle } from './projects.ts';
 import type { DaemonRuntime } from './runtime.ts';
 import type { VoiceBundle } from './voice.ts';
 
-// What `ruimte login` has the machine sign; local secret only, like the work.
-const MACHINE_LINK_PATH = '/machine/link-request';
-const EXTENSION_LINK_PATH = '/extensions/link';
-const EXTENSION_UNLINK_PATH = '/extensions/unlink';
-const MACHINE_REGISTRATION_PATH = '/machine/registration';
-// What `ruimte logout` asks: the machine leaves its account, as `endpoint.leaveAccount` does for the app.
-const MACHINE_LEAVE_ACCOUNT_PATH = '/machine/leave-account';
 // Where a client of before account-only paired and signed for a ticket over HTTP; each answers that pairing links are gone.
 const LEGACY_PAIRING_PATHS = ['/auth/pair', '/auth/pairing-token', '/auth/challenge', '/auth/ticket'];
 const RegistrationRequestSchema = z.object({ accountId: AccountSchema.shape.id });
@@ -75,12 +76,13 @@ const MAX_MCP_BODY_BYTES = 72 * 1024 * 1024;
 
 export type SocketData = ClientAccess & { protocolRefused: boolean; ticket: string | null };
 
-interface HttpInput {
+export interface HttpInput {
     requestStop: () => void;
     runtime: DaemonRuntime;
     machine: MachineBundle;
     stores: AgentStores;
     agents: AgentsBundle;
+    providers: ProviderRegistry;
     projects: ProjectsBundle;
     devices: DevicesBundle;
     processes: ProcessesBundle;
@@ -88,6 +90,8 @@ interface HttpInput {
     network: NetworkBundle;
     clients: ClientsBundle;
     canvasHost: CanvasHost;
+    actions: ServerActions;
+    tools: readonly Tool[];
     voice: VoiceBundle;
     artifacts: ArtifactsBundle;
     extensions: ExtensionHost;
@@ -95,11 +99,11 @@ interface HttpInput {
 
 /* Every HTTP route and the upgrade, before the cross-origin headers the desktop app's page needs. */
 function daemonRoutes(input: HttpInput): Route<SocketData>[] {
-    const { runtime, machine, stores, agents, projects, devices, processes, power, network, clients, canvasHost, voice } = input;
+    const { runtime, machine, stores, agents, providers, projects, devices, processes, power, network, clients, canvasHost, voice } = input;
     const { config } = runtime;
     const { extensions } = input;
     const { identity, auth, handshake, access, machineHome } = machine;
-    const { sessions, chats, context } = agents;
+    const { sessions, chatManager, context } = agents;
     const { brokerSwitch } = network;
     // What a route only the local secret reaches answers before it does anything: null to go on.
     const refuseUnlessOwner = async (request: Request, remote: string, method: 'GET' | 'POST'): Promise<Response | null> => {
@@ -178,10 +182,10 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                     broker: { url: brokerSwitch.describe().brokerUrl, connected: brokerSwitch.isReady },
                     ...network.describeLanDoor(),
                     keepAwake: {
-                        mode: identity.keepAwake.mode,
-                        onBattery: identity.keepAwake.onBattery,
+                        mode: identity.keepAwake,
+                        onBattery: identity.keepAwakeOnBattery,
                         holding: keepAwake.holding,
-                        lid: closedLid.available ? { on: identity.keepAwake.lidClosed, rule: await closedLid.refreshRule(), holding: closedLid.holding } : null
+                        lid: closedLid.available ? { on: identity.keepAwakeLidClosed, rule: await closedLid.refreshRule(), holding: closedLid.holding } : null
                     },
                     reach
                 } satisfies MachineStatus);
@@ -260,7 +264,7 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
         },
         {
             below: ATTACHMENTS_PATH,
-            handle: ({ request, url, remote }) => handleAttachmentRequest(request, url, remote, access, (chatId, id) => chats.findAttachment(chatId, id))
+            handle: ({ request, url, remote }) => handleAttachmentRequest(request, url, remote, access, (chatId, id) => chatManager.findAttachment(chatId, id))
         },
         { below: PROJECTS_PATH, handle: ({ request, url, remote }) => handleProjectRequest(request, url, remote, access, projects.store) },
         { exact: [FS_FILE_PATH], handle: ({ request, url, remote }) => handleFsFileRequest(request, url, remote, access, machineHome) },
@@ -279,7 +283,7 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                     // Asked on every event that can carry an answer, so the memory of what this
                     // agent was told keeps up with its turns even where nothing is printed.
                     const changed = context.changeSince(sessionId);
-                    const tools = hookTellsTools(kind, sessions.get(sessionId)?.launch);
+                    const tools = hookTellsTools(providers.get(kind), sessions.get(sessionId)?.launch);
                     return hookContext(event, context.list(sessionId), {
                         changed,
                         messages: agents.messagesFor(sessionId),
@@ -299,8 +303,10 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                 return handleMcpRequest(request, {
                     targetForToken: agents.targetForToken,
                     host: canvasHost,
+                    actions: input.actions,
+                    tools: input.tools,
                     uploads: input.artifacts.artifacts,
-                    callerFolders: (caller) => callerFolders(config.home, caller),
+                    callerFolders: (caller) => chatFolders(config.home, caller),
                     shotFolders: shotFolders(config.home)
                 });
             }
@@ -308,24 +314,86 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
     ];
 }
 
-/* Starts answering on the daemon's port: every HTTP route, and every client socket from its upgrade to its close. */
-export function serveDaemon(input: HttpInput): Server<SocketData> {
-    const { config } = input.runtime;
-    const { handshake } = input.machine;
-    const { sockets, open } = input.clients;
-    const routes = daemonRoutes(input);
-    return Bun.serve<SocketData>({
+type DoorwayServer = Server<SocketData>;
+
+interface DoorwayHandlers {
+    /* Undefined once a socket took the request over, which is an answer of its own and never the starting one. */
+    fetch(request: Request, server: DoorwayServer): Promise<Response | undefined>;
+    websocket: Required<Pick<WebSocketHandler<SocketData>, 'open' | 'drain' | 'message' | 'close'>>;
+}
+
+/*
+ * What the port answers while the daemon wires itself. The health path says this is a Ruimte machine
+ * that is starting, so a second `ruimte` or the desktop app waits for it instead of taking the port
+ * for another program; every other path is plain `503`.
+ */
+export function startingResponse(request: Request): Response {
+    if (request.method === 'GET' && new URL(request.url).pathname === MACHINE_HEALTH_PATH) {
+        return Response.json({ ok: true, version: VERSION, build: BUILD, starting: true } satisfies HealthResult, { status: 503 });
+    }
+
+    return new Response('The machine is starting', { status: 503 });
+}
+
+/*
+ * The daemon's port, held from the first moment of boot, so that every URL an agent or a hook is
+ * told is known before anything is wired. It answers `503` until `answer` hands it the routes, and
+ * a socket cannot upgrade before then.
+ */
+interface Doorway {
+    readonly server: DoorwayServer;
+    readonly port: number;
+    readonly hostname: string;
+    answer(input: HttpInput): void;
+}
+
+/*
+ * The API is never a tunnel target, also not while it starts: a request Cloudflare's edge forwarded carries
+ * these headers, and they only ever refuse, before the routes or the starting answer say anything.
+ */
+export function answerDoorway(handlers: DoorwayHandlers | null, request: Request, server: DoorwayServer): Response | undefined | Promise<Response | undefined> {
+    const tunnelled = refuseTunnelled(request);
+
+    if (tunnelled !== null) {
+        return tunnelled;
+    }
+
+    return handlers === null ? startingResponse(request) : handlers.fetch(request, server);
+}
+
+export function listenFirst(config: ServerConfig): Doorway {
+    let handlers: DoorwayHandlers | null = null;
+    const server = Bun.serve<SocketData>({
         hostname: config.host,
         port: config.port,
         maxRequestBodySize: MAX_MCP_BODY_BYTES,
+        fetch: (request, server) => answerDoorway(handlers, request, server),
+        websocket: {
+            backpressureLimit: SOCKET_BACKPRESSURE_LIMIT,
+            closeOnBackpressureLimit: true,
+            open: (ws) => handlers?.websocket.open(ws),
+            drain: (ws) => handlers?.websocket.drain(ws),
+            message: (ws, message) => handlers?.websocket.message(ws, message),
+            close: (ws, code, reason) => handlers?.websocket.close(ws, code, reason)
+        }
+    });
+    return {
+        server,
+        port: server.port ?? config.port,
+        hostname: server.hostname ?? config.host,
+        answer(input) {
+            handlers = daemonHandlers(input);
+        }
+    };
+}
+
+/* Every HTTP route, and every client socket from its upgrade to its close. */
+function daemonHandlers(input: HttpInput): DoorwayHandlers {
+    const { handshake } = input.machine;
+    const { sockets, open } = input.clients;
+    const routes = daemonRoutes(input);
+    return {
         async fetch(request, server) {
-            // The API is never a tunnel target. A request Cloudflare's edge forwarded carries these headers, and they only ever refuse.
-            const tunnelled = refuseTunnelled(request);
-
-            if (tunnelled !== null) {
-                return tunnelled;
-            }
-
             const cors = crossOriginHeaders(request);
             if (cors !== null && request.method === 'OPTIONS') {
                 return new Response(null, { status: 204, headers: preflightHeaders(cors) });
@@ -334,8 +402,6 @@ export function serveDaemon(input: HttpInput): Server<SocketData> {
             return cors === null || response === undefined ? response : withHeaders(response, cors);
         },
         websocket: {
-            backpressureLimit: SOCKET_BACKPRESSURE_LIMIT,
-            closeOnBackpressureLimit: true,
             open(ws) {
                 if (ws.data.protocolRefused) {
                     ws.close(PROTOCOL_REFUSED_CLOSE_CODE, protocolRefusalReason());
@@ -363,5 +429,5 @@ export function serveDaemon(input: HttpInput): Server<SocketData> {
                 state.channel.closed();
             }
         }
-    });
+    };
 }

@@ -15,7 +15,7 @@ final class ProjectFilesTests: XCTestCase {
 
     func testARowCarriesTheLetterOfItsChangeAndAFolderOneForWhatChangedUnderIt() {
         let checkout = GitCheckout(
-            path: "/work/app", label: "app", kind: "root",
+            path: "/work/app", label: "app", kind: .root,
             status: GitWire.status([
                 "root": .string("/work/app"),
                 "files": .array([
@@ -42,7 +42,7 @@ final class ProjectFilesTests: XCTestCase {
 
     func testAStagedAdditionWithLaterEditsReadsAsNew() {
         let checkout = GitCheckout(
-            path: "/w", label: "w", kind: "root",
+            path: "/w", label: "w", kind: .root,
             status: GitWire.status([
                 "root": .string("/w"),
                 "files": .array([change("a.ts", "unstaged", "M"), change("a.ts", "staged", "A")]),
@@ -95,7 +95,7 @@ final class ProjectFilesTests: XCTestCase {
         XCTAssertEqual(model.change(at: 2), .modified)
         XCTAssertEqual(model.diff?.scope, "base")
         XCTAssertEqual(model.diff?.base, "HEAD")
-        let asked = machine.sent.first { $0.type == "git.diff" }
+        let asked = machine.sent.first { $0.type == .gitDiff }
         XCTAssertEqual(asked?.payload["path"], .string("src/pool.ts"))
         XCTAssertEqual(asked?.payload["cwd"], .string("/work/app"))
 
@@ -125,7 +125,7 @@ final class ProjectFilesTests: XCTestCase {
             ]),
             .object(["id": .string("two"), "kind": .string("chat"), "name": .string("Shopping list")]),
         ]
-        let chats = FilesMention.chats(in: views, current: "two")
+        let chats = FilesMention.chats(in: ProjectWire.stored(views), current: "two")
         XCTAssertEqual(chats.map(\.title), ["Shopping list", "Refactor", "Review"])
         XCTAssertEqual(chats.map(\.current), [true, false, false])
     }
@@ -146,19 +146,11 @@ final class ProjectFilesTests: XCTestCase {
     }
 
     func testFindInFilesGroupsTheHitsPerFileAndCutsTheLineAtTheHit() {
-        let matches: [JSONValue] = [
-            .object([
-                "path": .string("src/a.ts"), "line": .number(3), "column": .number(6), "length": .number(7),
-                "text": .string("const backoff = 1"),
-            ]),
-            .object([
-                "path": .string("src/b.ts"), "line": .number(1), "column": .number(0), "length": .number(7),
-                "text": .string("backoff()"),
-            ]),
-            .object([
-                "path": .string("src/a.ts"), "line": .number(9), "column": .number(2), "length": .number(7),
-                "text": .string("🙂 backoff"),
-            ]),
+        let matches = [
+            FsGrepMatch(
+                path: "src/a.ts", line: 3, column: 6, length: 7, text: "const backoff = 1", before: [], after: []),
+            FsGrepMatch(path: "src/b.ts", line: 1, column: 0, length: 7, text: "backoff()", before: [], after: []),
+            FsGrepMatch(path: "src/a.ts", line: 9, column: 2, length: 7, text: "🙂 backoff", before: [], after: []),
         ]
         let groups = FileGrepModel.group(matches)
         XCTAssertEqual(groups.map(\.path), ["src/a.ts", "src/b.ts"])
@@ -175,7 +167,7 @@ final class ProjectFilesTests: XCTestCase {
         model.query = "  backoff "
         model.wholeWord = true
         await model.search(client: machine)
-        let asked = machine.sent.first { $0.type == "fs.grep" }
+        let asked = machine.sent.first { $0.type == .fsGrep }
         XCTAssertEqual(asked?.payload["query"], .string("backoff"))
         XCTAssertEqual(asked?.payload["wholeWord"], .bool(true))
         XCTAssertNil(asked?.payload["regex"])
@@ -196,7 +188,7 @@ final class ProjectFilesTests: XCTestCase {
         let saved = await edit.save(client: machine, path: "/work/app/a.ts")
         XCTAssertTrue(saved)
         XCTAssertFalse(edit.editing)
-        let write = machine.sent.first { $0.type == "fs.write" }
+        let write = machine.sent.first { $0.type == .fsWrite }
         XCTAssertEqual(write?.payload["expectedMtime"], .number(1000))
         XCTAssertEqual(write?.payload["text"], .string("two"))
         XCTAssertEqual(edit.mtime, 2000)
@@ -210,7 +202,7 @@ final class ProjectFilesTests: XCTestCase {
         machine.whileWriting = { edit.text = "three" }
         let saved = await edit.save(client: machine, path: "/work/app/a.ts")
         XCTAssertTrue(saved)
-        XCTAssertEqual(machine.sent.first { $0.type == "fs.write" }?.payload["text"], .string("two"))
+        XCTAssertEqual(machine.sent.first { $0.type == .fsWrite }?.payload["text"], .string("two"))
         XCTAssertTrue(edit.editing)
         XCTAssertTrue(edit.changed)
         XCTAssertEqual(edit.text, "three")
@@ -232,15 +224,15 @@ final class ProjectFilesTests: XCTestCase {
 }
 
 @MainActor private final class FilesMachine: MachineRequesting {
-    var sent: [(type: String, payload: JSONValue)] = []
+    var sent: [(type: WireRequest, payload: JSONValue)] = []
     var stale = false
     /// Runs while `fs.write` is unanswered, as a person typing during the save.
     var whileWriting: (() -> Void)?
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
         switch type {
-        case "git.status":
+        case .gitStatus:
             return GitWire.json(
                 GitWire.status([
                     "root": .string("/work/app"),
@@ -255,19 +247,22 @@ final class ProjectFilesTests: XCTestCase {
                         ]),
                     ]),
                 ]))
-        case "git.diff":
-            return .object(["path": .string("src/pool.ts"), "diff": .string("@@ -1,2 +1,2 @@\n a\n-b\n+B\n")])
-        case "fs.grep":
+        case .gitDiff:
+            return .object([
+                "path": .string("src/pool.ts"), "diff": .string("@@ -1,2 +1,2 @@\n a\n-b\n+B\n"), "added": .number(1),
+                "deleted": .number(1), "binary": .bool(false),
+            ])
+        case .fsGrep:
             return .object([
                 "matches": .array([
                     .object([
                         "path": .string("a.ts"), "line": .number(1), "column": .number(0), "length": .number(7),
-                        "text": .string("backoff"),
+                        "text": .string("backoff"), "before": .array([]), "after": .array([]),
                     ])
                 ]),
                 "files": .number(1), "truncated": .bool(false),
             ])
-        case "fs.write":
+        case .fsWrite:
             if stale {
                 throw MachineClientError.server(code: "stale", message: "That file changed on disk since it was read")
             }
@@ -278,5 +273,5 @@ final class ProjectFilesTests: XCTestCase {
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

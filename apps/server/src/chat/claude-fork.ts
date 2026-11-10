@@ -102,7 +102,6 @@ interface ClaudeForkInput {
     newSessionId: string;
 }
 
-/* Writes the fork's transcript and answers how to take it back when a later step of the fork is refused. */
 export async function forkClaudeTranscript(input: ClaudeForkInput): Promise<{ path: string; undo(): Promise<void> }> {
     if (input.projectsDir === '' || /[/\\]|\.\./.test(input.sessionId)) {
         throw new ChatError('transcript-missing', 'Claude Code keeps no conversations on this machine');

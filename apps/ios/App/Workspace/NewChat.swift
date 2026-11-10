@@ -10,7 +10,6 @@ struct NewChatPlace: Equatable {
     let viewID: String
 }
 
-/// The machine a new chat is being started on, as a sheet presents it.
 struct NewChatTarget: Identifiable, Equatable {
     let machineID: String
     var id: String { machineID }
@@ -22,15 +21,13 @@ struct NewChatTarget: Identifiable, Equatable {
 final class NewChatModel {
     let client: any MachineRequesting
     let machineID: String
-    /// The installed CLIs that open as a chat; nil until the machine answered.
-    private(set) var agents: [JSONValue]?
+    private(set) var agents: [ProviderInfo]?
     private(set) var accounts: ProviderAccountList?
-    private(set) var providers: [JSONValue]?
-    private(set) var limits: JSONValue?
+    private(set) var providers: [ProviderInfo]?
+    private(set) var limits: UsageLimits?
     private(set) var accountsProblem: String?
     private(set) var choices: [String: String] = [:]
     @ObservationIgnored private var reads = 0
-    /// The CLI a chat is being made for.
     private(set) var starting: String?
     var problem: String?
     @ObservationIgnored private let preferences: ChatPreferences
@@ -48,17 +45,19 @@ final class NewChatModel {
             let providers = try await AgentCatalog.load(client)
             let listed: ProviderAccountList?
             var accountFailure: String?
-            do { listed = ProviderAccountList(try await client.request(.accountsList)) } catch {
+            do {
+                listed = ProviderAccountList(try await client.request(.accountsList).decoded(as: AccountsSnapshot.self))
+            } catch {
                 listed = nil
                 accountFailure = error.localizedDescription
             }
             let limits =
                 (client as? MachineFeatures)?.answers(.usageLimits) == true
-                ? try? await client.request(.usageLimits) : nil
+                ? try? await client.request(.usageLimits).decoded(as: UsageLimits.self) : nil
             try Task.checkCancellation()
             guard attempt == reads else { return }
             self.providers = providers
-            agents = AgentCatalog.installed(providers, target: "chat")
+            agents = AgentCatalog.installedChats(providers)
             accounts = listed
             accountsProblem = accountFailure
             self.limits = limits
@@ -117,7 +116,7 @@ final class NewChatModel {
         if let picked = choices[provider] {
             reads += 1
             let attempt = reads
-            let listed = try await client.request(.accountsList)
+            let listed = try await client.request(.accountsList).decoded(as: AccountsSnapshot.self)
             try Task.checkCancellation()
             guard choices[provider] == picked else { throw CancellationError() }
             let snapshot = ProviderAccountList(listed)
@@ -153,12 +152,12 @@ final class NewChatModel {
             let result = try await client.request(
                 .projectNewChat,
                 payload: NewChat.payload(provider: provider, account: try await prepare(provider: provider)))
-            guard let projectID = result["summary"]?["projectId"]?.stringValue,
-                let viewID = result["viewId"]?.stringValue
-            else { throw MachineClientError.invalid(String(localized: "The machine did not say where the chat is.")) }
+            guard let placed = try? result.decoded(as: ProjectNewChatResult.self) else {
+                throw MachineClientError.invalid(String(localized: "The machine did not say where the chat is."))
+            }
             AppUsage.count(.chatStarted)
             problem = nil
-            return NewChatPlace(projectID: projectID, viewID: viewID)
+            return NewChatPlace(projectID: placed.summary.projectId, viewID: placed.viewId)
         } catch {
             problem = NewChat.message(for: error)
             return nil
@@ -173,9 +172,8 @@ enum NewChat {
         return .object(values)
     }
 
-    /// The refusal a machine gives that a person can do something about, in their own words.
     static func message(for error: Error) -> String {
-        if case MachineClientError.server(code: "scratch-unavailable", message: _) = error {
+        if error.machineCode == .scratchUnavailable {
             return String(
                 localized:
                     "This machine keeps its Ruimte folder inside a git checkout, so it cannot hold chats outside a project."
@@ -184,11 +182,9 @@ enum NewChat {
         return error.localizedDescription
     }
 
-    /// The Chats project of a machine among its projects, which the lists show apart from the projects.
-    static func isChats(_ summary: JSONValue) -> Bool { summary["scratch"]?.boolValue == true }
+    static func isChats(_ summary: ProjectSummary) -> Bool { summary.isChats }
 }
 
-/// Picks the agent for a chat outside any project, the way an empty canvas offers its agents, and opens the chat.
 struct NewChatSheet: View {
     let session: SharedMachineSession
     let opened: (NewChatPlace) -> Void
@@ -212,7 +208,7 @@ struct NewChatSheet: View {
                             Text("Install a CLI or add an account in Ruimte on the machine itself, under Agents.")
                                 .foregroundStyle(MobileStyle.muted)
                         }
-                        ForEach(agents, id: \.agentKind) { agent in row(agent) }
+                        ForEach(agents, id: \.kind) { agent in row(agent) }
                     } else if model.problem == nil {
                         MobileLoadingRow(
                             session.connected
@@ -237,7 +233,7 @@ struct NewChatSheet: View {
         }
         .disabled(model.starting != nil)
         .task { if lease == nil { lease = MachineNavigationLease(session) } }
-        .task { await RemotePageLifecycle.run(client: session.rpc, events: ["accounts.changed"], load: model.load) }
+        .task { await RemotePageLifecycle.run(client: session.rpc, events: [.accountsChanged], load: model.load) }
         .mobileSheet(isPresented: $chosenProvider.isPresent()) {
             if let kind = chosenProvider {
                 NewChatAccountSheet(
@@ -256,9 +252,9 @@ struct NewChatSheet: View {
         }
     }
 
-    private func row(_ agent: JSONValue) -> some View {
-        let kind = agent.agentKind
-        let name = agent["name"]?.stringValue ?? kind
+    private func row(_ agent: ProviderInfo) -> some View {
+        let kind = agent.kind
+        let name = agent.name
         let account = model.account(for: kind).flatMap { id in
             model.accounts?.entries.first { $0.id == id }?.name(provider: name) ?? id
         }
@@ -287,14 +283,8 @@ struct NewChatSheet: View {
     }
 }
 
-extension JSONValue {
-    var agentKind: String { self["kind"]?.stringValue ?? "" }
-}
-
-/// "New chat" in a list of projects: one button for one machine, a menu of the machines for several.
 struct NewChatRow: View {
     let machines: [Machine]
-    /// A capsule beside Recently closed, as the iPhone's Projects tab draws it, instead of a row of the sidebar.
     var capsule = false
     let start: (Machine) -> Void
 
@@ -345,7 +335,6 @@ private struct NewChatRowStyle: ViewModifier {
     }
 }
 
-/// The label of one of the two equal capsules under the projects.
 struct ProjectsCapsuleLabel: View {
     let title: String
     let icon: String

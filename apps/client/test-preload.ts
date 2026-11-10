@@ -4,18 +4,20 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AGENTS_LOCALES } from '@adecore/agents-react/locales';
 import { CHARTS_NAMESPACE, CHARTS_RESOURCES } from '@adecore/charts';
-import editorWords from '@adecore/editor-react/locales/en.json' with { type: 'json' };
+import editorWords from '@adecore/editor-react/locales/en';
 import { UI_NAMESPACE, UI_RESOURCES } from '@adecore/ui';
 import i18next from 'i18next';
-import './src/extensions/built-in';
+import { connectPlatform } from './src/desktop/bridge';
 import { connectFormat } from './src/format/source';
-import { FALLBACK_LANGUAGE } from './src/i18n/languages';
 import { defaultCanvases, focusedCanvas } from './src/state/canvas';
+import './src/extensions/built-in';
 import { defaultDiagrams } from './src/state/diagram';
 import { useDocument } from './src/state/document';
 import { defaultDrawings } from './src/state/drawing';
 import { useEndpoints } from './src/state/endpoints';
+import { FALLBACK_LANGUAGE } from './src/state/languages';
 import { useToasts } from './src/state/toasts';
+import { installClientHooks } from './src/wiring/client-hooks';
 
 /*
  * The English words, in memory, before the first test runs, so a pure function that builds a label
@@ -45,7 +47,6 @@ const extensionResources = Object.fromEntries(
 
 const agentsWords = await AGENTS_LOCALES[FALLBACK_LANGUAGE]!();
 
-// Awaited, so the first test already has the words.
 await i18next.init({
     lng: FALLBACK_LANGUAGE,
     fallbackLng: FALLBACK_LANGUAGE,
@@ -63,8 +64,12 @@ await i18next.init({
     }
 });
 
+// The window's wiring, as `main.tsx` installs it; a workspace's comes only with a test that opens one.
+installClientHooks();
+
 // The formatters of @adecore/ui read the client's settings, which the tests set.
 connectFormat();
+connectPlatform();
 
 /*
  * Files share a worker under `--no-isolate`, and a preload's `afterAll` only runs when the worker ends,

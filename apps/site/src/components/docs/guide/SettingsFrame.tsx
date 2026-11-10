@@ -29,7 +29,7 @@ interface NavItem {
     readonly icon: LucideIcon;
 }
 
-/* `shell/settings/sections.ts`: the groups and their sections, About and Account at the foot. */
+/* `settings/sections.ts`: the groups and their sections, About and Account at the foot. */
 const GROUPS: readonly { readonly label: string | null; readonly items: readonly NavItem[] }[] = [
     {
         label: null,

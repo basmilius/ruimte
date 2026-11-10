@@ -9,7 +9,7 @@ export interface BrowserContextAction {
 }
 
 /* A sealed preview only reads: nothing it is asked to do may download, inspect or leave for the system browser. */
-export const PREVIEW_ACTIONS: ReadonlySet<string> = new Set(['copy', 'select-all', 'copy-image']);
+const PREVIEW_ACTIONS: ReadonlySet<string> = new Set(['copy', 'select-all', 'copy-image']);
 
 /*
  * Whether the shell does `action` for a guest. A page shared through a port also never hands an address to
@@ -34,7 +34,7 @@ function menuLabel(text: string): string {
     return line.length > 24 ? `${line.slice(0, 24)}…` : line;
 }
 
-export interface EditableMenuActions {
+interface EditableMenuActions {
     replaceMisspelling: (word: string) => void;
     lookUp: () => void;
     /* Absent where the guest may not hand an address to the system browser. */
@@ -69,7 +69,6 @@ export function editableMenuTemplate(
         { role: 'copy', enabled: flags.canCopy },
         { role: 'paste', enabled: flags.canPaste }
     );
-    // Only a rich field has a style to drop.
     if (flags.canEditRichly) {
         template.push({ role: 'pasteAndMatchStyle', enabled: flags.canPaste });
     }
@@ -89,7 +88,6 @@ export function editableMenuTemplate(
     return template;
 }
 
-/* What the client draws its own menu from: where the click landed and nothing more. */
 export function contextMenuPayload(webContentsId: number, guest: GuestKind, params: Electron.ContextMenuParams, external = true) {
     return {
         webContentsId,

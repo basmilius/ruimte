@@ -1,5 +1,5 @@
-import { rectFromPoints } from '@adecore/drawing';
-import { toWorld, type Camera, type Point, type Rect } from '@/canvas/math';
+import { rectFromPoints } from '@adecore/utils/geometry';
+import { toWorld, type Camera, type Point, type Rect } from '@/canvas-model/math';
 
 export interface BoxSelection {
     origin: Point;

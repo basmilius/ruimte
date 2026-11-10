@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { ServiceSupport } from '@ruimte/desktop-bridge';
 
-export interface SupportFacts {
+interface SupportFacts {
     packaged: boolean;
     platform: NodeJS.Platform;
     /* `APPIMAGE`, which the AppImage runtime sets to the image's own path. */

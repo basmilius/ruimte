@@ -2,8 +2,9 @@ import { resolveStoredPath } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { openInSystemBrowser } from '@/desktop/bridge';
 import { useToasts } from '@/state/toasts';
+import type { Transport } from '@/transport-api/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
-import type { Transport } from '@/transport/transport';
 import { nameOf } from './status-view';
 
 /* Type 1 and 2 of LSP's `MessageType` are the error and the warning. */
@@ -25,7 +26,7 @@ export function watchServerPrompts(
 
     const answer = (messageId: string, action: string | null): void => {
         if (machineAnswers(transport.connection, 'language.messageAnswer')) {
-            void transport.request('language.messageAnswer', { projectId, messageId, action }).catch(() => undefined);
+            void fireAndForget('language.messageAnswer', transport.request('language.messageAnswer', { projectId, messageId, action }));
         }
     };
 

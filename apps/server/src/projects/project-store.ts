@@ -38,18 +38,18 @@ import {
     type ProjectSummary,
     type ProjectView
 } from '@ruimte/contracts';
-import { HiddenAgentStore } from '../agents/hidden-agents.ts';
+import { bestEffort } from '../best-effort.ts';
 import { ClientSinks } from '../client-sinks.ts';
-import { referablesOfViews } from '../context/references.ts';
+import { isDirectory } from '../disk/is-directory.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import { errorText } from '../error-text.ts';
-import { isDirectory } from '../fs/browse.ts';
-import { MachineHome } from '../fs/machine-home.ts';
-import { PeerLinks, withHiddenCanvases } from '../peering/links.ts';
-import { RemoteStore, idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines } from '../remote/remote-store.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { moveDesignFolders, settleDesignFolders, takenDesignFolders, type DesignAtWork, type DesignSides } from './design-folders.ts';
 import { folderToOpen } from './folder-to-open.ts';
+import type { HiddenAgentStore } from './hidden-agents.ts';
 import { splitLegacy, type LoadedFiles, type TrackedProbe } from './legacy-split.ts';
+import type { ProjectOverlays } from './overlays.ts';
+import { withHiddenCanvases, type PeerLinks } from './peer-links.ts';
 import { ProjectError } from './project-error.ts';
 import {
     diagramsDirOf,
@@ -71,6 +71,7 @@ import {
     PROJECT_FILE,
     WATCH_SETTLE_MS
 } from './project-files.ts';
+import { ProjectFolderWatch, type FolderChange } from './project-folder-watch.ts';
 import { ProjectHolds } from './project-holds.ts';
 import { readIdeaName } from './project-identity.ts';
 import { placesOf, ProjectIndex, type IndexedPlace } from './project-index.ts';
@@ -78,7 +79,9 @@ import { ProjectRegistry, type RegistryEntry } from './project-registry.ts';
 import { isIconFile, sameIcon, ProjectSummaries } from './project-summaries.ts';
 import { ProjectWakes } from './project-wakes.ts';
 import { PROJECT_WRITE_IO, ProjectWriteRaced, ProjectWriteStuck, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
-import { scratchFolderOf } from './scratch-project.ts';
+import { referablesOfViews } from './references.ts';
+import { idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines, type RemoteStore } from './remote-store.ts';
+import { scratchFolderOf } from './scratch-folder.ts';
 
 function asProjectError(e: unknown): unknown {
     if (e instanceof ProjectWriteRaced) {
@@ -111,7 +114,6 @@ function identityChanged(entry: RegistryEntry, content: ProjectContent): boolean
  * interface rather than the class so the files do not import each other.
  */
 export interface ProjectViewFiles {
-    /* Which views own its files. */
     readonly noun: 'drawing' | 'diagram';
     /* Deletes every file whose view is not in `keep`. The project need not be open, so its file's path comes along. */
     removeOrphans(projectId: string, documentPath: string, keep: Set<string>): Promise<void>;
@@ -160,7 +162,6 @@ interface ProjectBindings {
     started(nodeId: string): Promise<boolean>;
 }
 
-/* What a change hands back: the whole new content, and whatever the caller wants to answer with. */
 export interface ProjectMutation<T> {
     /* Null when nothing changed, which is what a dry run leaves behind: it runs every check under
        the same lock a write takes, so what it answers is what the write would have done. */
@@ -179,7 +180,6 @@ export interface ProjectMutation<T> {
     landed?: () => Promise<void>;
 }
 
-/* What a change reads of the document besides its content. */
 interface MutationContext {
     overlayFields: readonly string[];
 }
@@ -221,7 +221,6 @@ type SessionEnder = (kind: 'terminal' | 'chat', nodeId: string, closing?: boolea
 /* Told what a person's save changed, with the views as they were before it and as it wrote them. */
 type SaveListener = (folder: string, before: readonly ProjectView[], after: readonly ProjectView[]) => Promise<void>;
 
-/* What the store tells or asks of the services beside it, every one handed over when the store is made. */
 export interface ProjectLinks {
     tracked: TrackedProbe;
     /* The store knows which sessions a project holds; the managers know how to stop one. */
@@ -283,6 +282,9 @@ export class ProjectStore {
        every other client hears a change of the document as the rows of its sidebar (`announceChange`). */
     private readonly holds = new ProjectHolds();
     private readonly wakes = new ProjectWakes();
+    /* The clients that asked with `project.watch`, who hear a project change that no client holds. */
+    private readonly listWatchers = new Set<string>();
+    private readonly folderWatch: ProjectFolderWatch;
     private readonly registry: ProjectRegistry;
     private readonly summaries: ProjectSummaries;
     // One project's reads and writes run one after the other, and never wait on another project's.
@@ -297,15 +299,17 @@ export class ProjectStore {
     private readonly seams: WatchSeams;
     private readonly writeIO: ProjectWriteIO;
 
-    constructor(home: string, links: ProjectLinks, seams: WatchSeams = SYSTEM_WATCH, writeIO: ProjectWriteIO = PROJECT_WRITE_IO) {
+    constructor(home: string, links: ProjectLinks, overlays: ProjectOverlays, seams: WatchSeams = SYSTEM_WATCH, writeIO: ProjectWriteIO = PROJECT_WRITE_IO) {
         this.home = home;
-        this.hiddenAgents = new HiddenAgentStore(home);
-        this.remote = new RemoteStore(home);
-        this.peers = new PeerLinks(home);
+        this.hiddenAgents = overlays.hiddenAgents;
+        this.remote = overlays.remote;
+        this.peers = overlays.peers;
         this.index = new ProjectIndex(this.hiddenAgents);
         this.scratchFolder = scratchFolderOf(home);
         this.registry = new ProjectRegistry(home);
-        this.machineHome = new MachineHome(home);
+        this.registry.onUpdate(() => void this.watchFolders());
+        this.folderWatch = new ProjectFolderWatch(seams, (projectId, change) => void this.heardOutside(projectId, change));
+        this.machineHome = overlays.machineHome;
         this.summaries = new ProjectSummaries(this.scratchFolder);
         this.links = links;
         this.seams = seams;
@@ -414,7 +418,49 @@ export class ProjectStore {
         }
     }
 
+    /* The client hears `project.listChanged` for every project of the machine until it unwatches or its socket goes. */
+    watchList(clientId: string): void {
+        this.listWatchers.add(clientId);
+        void this.watchFolders();
+    }
+
+    unwatchList(clientId: string): void {
+        this.listWatchers.delete(clientId);
+        if (this.listWatchers.size === 0) {
+            this.folderWatch.close();
+        }
+    }
+
+    private async watchFolders(): Promise<void> {
+        if (this.listWatchers.size === 0) {
+            return;
+        }
+        const entries = await this.registry.load();
+        if (this.listWatchers.size > 0) {
+            this.folderWatch.sync(new Map(entries.map((entry) => [entry.projectId, entry.folder])));
+        }
+    }
+
+    /* A project a client holds has its own watcher, which tells the clients itself. */
+    private async heardOutside(projectId: string, change: FolderChange): Promise<void> {
+        if (this.open.has(projectId)) {
+            return;
+        }
+        if (change === 'icon') {
+            // The list a client asks for next reads the folder again, not the icon the cache still holds.
+            const entry = (await this.registry.load()).find((candidate) => candidate.projectId === projectId);
+            if (entry === undefined) {
+                return;
+            }
+            this.summaries.invalidate(entry.folder);
+        }
+        for (const clientId of this.listWatchers) {
+            this.sinks.to(clientId, { event: 'project.listChanged', payload: { projectId } });
+        }
+    }
+
     private dropClient(clientId: string): void {
+        this.unwatchList(clientId);
         for (const projectId of this.holds.dropClient(clientId)) {
             this.release(projectId);
         }
@@ -428,6 +474,18 @@ export class ProjectStore {
     async heldFolders(clientId: string): Promise<string[]> {
         const held = new Set(this.holds.projectsOf(clientId));
         return (await this.registry.load()).filter((entry) => held.has(entry.projectId)).map((entry) => entry.folder);
+    }
+
+    /*
+     * Whether this client has the project at `folder` on screen. The scratch project holds the folders of
+     * the chats that belong to no project, so a caller that writes into a project's files turns `refuseScratch` on.
+     */
+    async holdsFolder(clientId: string, folder: string, options: { refuseScratch?: boolean } = {}): Promise<boolean> {
+        if (options.refuseScratch === true && folder === this.scratchFolder) {
+            return false;
+        }
+
+        return (await this.heldFolders(clientId)).includes(folder);
     }
 
     /* What closing would do, for the confirmation that asks before it. */
@@ -1244,7 +1302,7 @@ export class ProjectStore {
         await rm(gitignorePathOf(path), { force: true });
         await rm(path, { force: true });
         // An icon or a file a person put in `.ruimte` keeps it, and `rmdir` says so by failing.
-        await rmdir(dirname(path)).catch(() => undefined);
+        await bestEffort('rmdir', rmdir(dirname(path)));
     }
 
     /*
@@ -1275,6 +1333,8 @@ export class ProjectStore {
 
     /* The daemon is going down: it lets go of every project without closing any of them. */
     closeAll(): void {
+        this.listWatchers.clear();
+        this.folderWatch.close();
         for (const projectId of [...this.open.keys()]) {
             this.release(projectId);
         }

@@ -1,21 +1,29 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ActionResult } from '@ruimte/actions';
 import { serverActionCall } from '../actions/context.ts';
-import { serverActions } from '../actions/server-actions.ts';
-import { canvasFixture, root, store, projectId, pointAt, host, invoke } from './canvas-test-fixture.ts';
-import { type CanvasHost } from './host.ts';
-import { projectReach, reachedPlace } from './reach.ts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
+import { type CanvasHost } from '../canvas/host.ts';
+import { projectReach, reachedPlace } from '../canvas/reach.ts';
+import { canvasFixture, type CanvasFixture } from './canvas-fixture-test-helpers.ts';
 
-canvasFixture();
+let fx: CanvasFixture;
+
+beforeEach(async () => {
+    fx = await canvasFixture();
+});
+
+afterEach(async () => {
+    await fx.dispose();
+});
 
 describe('reading what a # points at in another form', () => {
-    async function read(caller: string, input: { sourceId: string; form?: 'elements' | 'image' | null }, hostValue: CanvasHost = host()) {
+    async function read(caller: string, input: { sourceId: string; form?: 'elements' | 'image' | null }, hostValue: CanvasHost = fx.host()) {
         return serverActions.execute(
             'context.read',
             { tail: null, subagent: null, viewId: null, ...input },
-            serverActionCall(hostValue, store.locate(caller), caller)
+            serverActionCall(hostValue, fx.store.locate(caller), caller)
         );
     }
 
@@ -24,7 +32,7 @@ describe('reading what a # points at in another form', () => {
     }
 
     test('a canvas reads as an overview of its nodes, texts and lines', async () => {
-        await pointAt('chat-1', ['main']);
+        await fx.pointAt('chat-1', ['main']);
         expect(textOf(await read('chat-1', { sourceId: 'main' }))).toBe(
             [
                 '# Canvas "Canvas"',
@@ -46,8 +54,8 @@ describe('reading what a # points at in another form', () => {
     });
 
     test('a drawing reads as its revision and its elements', async () => {
-        await pointAt('chat-1', ['sketch-1']);
-        await invoke(
+        await fx.pointAt('chat-1', ['sketch-1']);
+        await fx.invoke(
             'view_drawing',
             { view_id: 'sketch-1', revision: '0', edit: '{"add":[{"kind":"note","x":1,"y":2,"w":3,"h":4,"text":"Hi","fillColor":"yellow"}]}' },
             'chat'
@@ -57,12 +65,12 @@ describe('reading what a # points at in another form', () => {
         expect(json.elements).toEqual([
             { id: expect.stringMatching(/^el-/), kind: 'note', box: { x: 1, y: 2, w: 3, h: 4 }, stroke: 'ink', fillColor: 'yellow', text: 'Hi' }
         ]);
-        await pointAt('chat-1', ['sketch-1', 'main']);
+        await fx.pointAt('chat-1', ['sketch-1', 'main']);
         expect(textOf(await read('chat-1', { sourceId: 'main', form: 'elements' }))).toBe('failed bad-arguments');
     });
 
     test('a database view names its table and the command that reads it, or says its connection is not here', async () => {
-        await store.mutate(projectId, (current) => ({
+        await fx.store.mutate(fx.projectId, (current) => ({
             content: {
                 ...current,
                 views: [
@@ -82,7 +90,7 @@ describe('reading what a # points at in another form', () => {
             },
             result: null
         }));
-        await pointAt('chat-1', ['orders', 'far']);
+        await fx.pointAt('chat-1', ['orders', 'far']);
         const orders = textOf(await read('chat-1', { sourceId: 'orders' }));
         expect(orders).toContain('connection: Shop (shop-1, mysql, read)');
         expect(orders).toContain('filter: total > 10');
@@ -91,12 +99,12 @@ describe('reading what a # points at in another form', () => {
     });
 
     test('an image is drawn through the preview into the chat, and only a chat has a folder for it', async () => {
-        await pointAt('chat-1', ['sketch-1']);
-        await pointAt('term-1', ['sketch-1']);
+        await fx.pointAt('chat-1', ['sketch-1']);
+        await fx.pointAt('term-1', ['sketch-1']);
         expect(textOf(await read('term-1', { sourceId: 'sketch-1', form: 'image' }))).toBe('failed visual-needs-chat');
         const previews: { chatId: string; width: number; html: string }[] = [];
         const drawing: CanvasHost = {
-            ...host(),
+            ...fx.host(),
             visuals: {
                 enabled: () => false,
                 publish: () => Promise.reject(new Error('nothing is shown')),
@@ -123,11 +131,11 @@ describe('reaching another open project', () => {
 
     beforeEach(async () => {
         reachOn = true;
-        other = join(root, 'other');
+        other = join(fx.root, 'other');
         await mkdir(other);
-        const opened = await store.openProject({ folder: other });
+        const opened = await fx.store.openProject({ folder: other });
         otherId = opened.summary.projectId;
-        await store.save(otherId, opened.document.rev, {
+        await fx.store.save(otherId, opened.document.rev, {
             name: 'other',
             color: '#654321',
             views: [
@@ -143,14 +151,14 @@ describe('reaching another open project', () => {
                 { kind: 'chat', id: 'chat-b', name: 'Their chat', node: {} }
             ]
         });
-        store.hold('client-1', otherId);
-        store.letGo('client-1', otherId);
+        fx.store.hold('client-1', otherId);
+        fx.store.letGo('client-1', otherId);
     });
 
     function reaching(): CanvasHost {
         return {
-            ...host(),
-            reach: projectReach(store, () => reachOn)
+            ...fx.host(),
+            reach: projectReach(fx.store, () => reachOn)
         };
     }
 
@@ -158,12 +166,12 @@ describe('reaching another open project', () => {
         const reader: CanvasHost = {
             ...reaching(),
             context: {
-                ...host().context!,
+                ...fx.host().context!,
                 answerSource: async (_target, source, _tail, _subagent, project) => ({ text: `${source.id} in ${project}` })
             }
         };
         const reached = await reachedPlace(reader, 'term-1', otherId);
-        const call = serverActionCall(reader, reached, 'term-1', false, undefined, store.locate('term-1')!);
+        const call = serverActionCall(reader, reached, 'term-1', false, undefined, fx.store.locate('term-1')!);
         const read = (sourceId: string, viewId: string | null = null) =>
             serverActions.execute('context.read', { sourceId, tail: null, subagent: null, viewId, form: null }, call);
         expect(await read('note-b')).toMatchObject({ status: 'completed', output: { text: `note-b in ${otherId}` } });

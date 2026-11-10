@@ -2,6 +2,7 @@ import type { ExtensionManifest } from '@ruimte/contracts';
 import type { LucideIcon } from 'lucide-react';
 import { lazy, type ComponentType } from 'react';
 import { z } from 'zod';
+import { extensionsInSafeMode } from '@/extensions/safe-mode';
 import {
     contribute,
     type BuiltInThemeContribution,
@@ -11,8 +12,7 @@ import {
     type SharedStorageContribution,
     type ViewAccessoryContribution,
     type ViewAccessoryProps
-} from '@/extensions/registry';
-import { extensionsInSafeMode } from '@/extensions/safe-mode';
+} from '@/state/extension-registry';
 import { storedJson } from '@/state/stored-json';
 
 /*

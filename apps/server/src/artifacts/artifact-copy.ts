@@ -3,6 +3,7 @@ import { lstat, mkdir, open, rm, rmdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { isNotFound } from '@adecore/utils/errors';
 import type { ArtifactFile } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { isDiskFull } from './artifact-fs.ts';
 import { ArtifactError, relativeSegments } from './artifact-names.ts';
 
@@ -97,7 +98,7 @@ export async function copyVersionInto(folder: string, path: string, sources: rea
     } catch (e) {
         // Newest first, so a folder this made is empty by the time it goes; one that is not stays.
         for (const written of made.reverse()) {
-            await rm(written, { force: true }).catch(() => rmdir(written).catch(() => undefined));
+            await rm(written, { force: true }).catch(() => bestEffort('rmdir', rmdir(written)));
         }
         if (isDiskFull(e)) {
             throw new ArtifactError('disk-full', 'The disk is full; nothing was copied');

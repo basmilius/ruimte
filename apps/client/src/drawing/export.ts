@@ -1,10 +1,10 @@
 import { DEFAULT_SVG_MARGIN, approximateMeasure, boundsOfElements, toSvg } from '@adecore/drawing';
 import type { DrawingElement } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
+import { measureLineIn } from '@/canvas-model/drawing-measure';
+import { readCanvasBackground } from '@/canvas-model/drawing-palette';
 import { saveBlob } from '@/download';
-import { measureLineIn } from '@/drawing/measure';
 import { paintElements, paintOptions } from '@/drawing/paint';
-import { readCanvasBackground } from '@/drawing/palette';
 import type { DrawingState } from '@/state/drawing';
 
 /* A PNG is written at twice the size, so it still reads when it is dropped into a document. */

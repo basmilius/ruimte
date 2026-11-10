@@ -1,9 +1,9 @@
 import Charts
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import SwiftUI
 
-/// A machine the usage page can switch to from its title.
 struct UsageMachine: Identifiable {
     let id: String
     let name: String
@@ -17,8 +17,9 @@ struct MachineUsagePage: View {
     @State private var machineName: String?
     let machines: [UsageMachine]
     @State private var state = RemotePageState()
+    @State private var summary: UsageSummary?
     @State private var limitReads: UsageLimitsModel
-    private var limits: JSONValue? { limitReads.limits }
+    private var limits: UsageLimits? { limitReads.limits }
     private var accounts: ProviderAccountList? { limitReads.accounts }
     /// Per CLI, what the machine types to log in under an account; a CLI without one has no login to offer.
     private var loginCommands: [String: String] { limitReads.loginCommands }
@@ -39,9 +40,9 @@ struct MachineUsagePage: View {
     }
 
     private var metric: UsageMetric { UsageMetric(rawValue: chosenMetric) ?? .preferred(locale) }
-    private var report: UsageReport? { state.value.map { UsageReport($0) } }
+    private var report: UsageReport? { summary.map { UsageReport($0) } }
     private var money: UsageMoneyFormatter {
-        UsageMoneyFormatter(locale: locale, rate: state.value?["rate"], currency: metric.currency ?? "USD")
+        UsageMoneyFormatter(locale: locale, rate: summary?.rate, currency: metric.currency ?? "USD")
     }
 
     var body: some View {
@@ -88,12 +89,8 @@ struct MachineUsagePage: View {
         .task(id: "\(period.rawValue) \(ObjectIdentifier(client))") {
             let client = client
             await RemotePageLifecycle.run(
-                client: client, events: ["usage.changed", "usage.limitsChanged", "accounts.changed"],
-                subscription: {
-                    client.acquireSubscription(
-                        start: "usage.subscribe", stop: "usage.unsubscribe", payload: .object([:]),
-                        stopPayload: .object([:]))
-                }, load: load)
+                client: client, events: [.usageChanged, .usageLimitsChanged, .accountsChanged],
+                watch: { LiveWatch(start: .usageSubscribe, stop: .usageUnsubscribe) }, load: load)
         }
     }
 
@@ -102,6 +99,7 @@ struct MachineUsagePage: View {
         client = machine.client
         machineName = machine.name
         state = RemotePageState()
+        summary = nil
         limitReads.use(machine.client)
         selected = nil
     }
@@ -110,7 +108,6 @@ struct MachineUsagePage: View {
         metric == .tokens ? Format.tokens(value) : money.string(amount: value)
     }
 
-    /// A chart value in what the page counts in: tokens, or money in the page's currency.
     private func value(_ amount: UsageAmount) -> Double {
         metric == .tokens ? amount.tokens.total : money.amount(usd: amount.costUsd)
     }
@@ -312,7 +309,7 @@ struct MachineUsagePage: View {
                     )
                     .font(.callout.weight(.semibold))
                     Spacer()
-                    if let plan = section.entry?["plan"]?.stringValue {
+                    if let plan = section.entry?.plan {
                         Text(plan.capitalized).font(.caption).foregroundStyle(MobileStyle.muted)
                     }
                 }
@@ -341,26 +338,26 @@ struct MachineUsagePage: View {
                 .font(.callout).foregroundStyle(MobileStyle.muted)
         case nil:
             if let provider = section.entry {
-                if let unavailable = provider["unavailable"], unavailable != .null {
-                    Text(unavailable.text("message", fallback: unavailable.text("reason"))).font(.callout)
+                if let unavailable = provider.unavailable {
+                    Text(unavailable.message ?? unavailable.reason.rawValue).font(.callout)
                         .foregroundStyle(MobileStyle.muted)
                 }
-                ForEach(provider.list("windows"), id: \.stableID) { window in
+                ForEach(provider.windows, id: \.id) { window in
                     LimitBar(
-                        label: window.text("label"), used: window.number("used"),
-                        resetsAt: window["resetsAt"]?.numberValue.map { Date(timeIntervalSince1970: $0 / 1000) })
+                        label: window.label, used: window.used,
+                        resetsAt: window.resetsAt.map { Date(timeIntervalSince1970: Double($0) / 1000) })
                 }
             }
         }
     }
 
     @ViewBuilder private var provenance: some View {
-        if let summary = state.value {
-            let scan = summary["scan"]
-            let scanned = Date(timeIntervalSince1970: (scan?.number("at") ?? 0) / 1000)
-            let files = Int(scan?.number("files") ?? 0)
+        if let summary {
+            let scan = summary.scan
+            let scanned = Date(timeIntervalSince1970: scan.at / 1000)
+            let files = Int(scan.files)
             let prices =
-                summary["pricing"]?["fetchedAt"]?.numberValue.map {
+                summary.pricing.fetchedAt.map {
                     String(localized: "Prices of \(Format.day(Date(timeIntervalSince1970: $0 / 1000)))")
                 } ?? String(localized: "Bundled prices")
             let rate =
@@ -371,7 +368,7 @@ struct MachineUsagePage: View {
                         comment: "Appended to the usage provenance line; %@ is a date")
                 } ?? "" : ""
             VStack(spacing: 6) {
-                if scan?["failed"]?.boolValue == true {
+                if scan.failed {
                     Text("The latest scan failed. These are the last totals.").foregroundStyle(
                         MobileStyle.statusNeedsYou)
                 }
@@ -404,16 +401,17 @@ struct MachineUsagePage: View {
     private func load() async {
         let client = client
         let period = period
-        await state.load {
+        await state.read(loaded: summary != nil) { stillTheLatest in
             let result = try await client.request(.usageSummary, payload: period.payload())
+                .decoded(as: UsageSummary.self)
             guard self.client === client, !Task.isCancelled else { throw CancellationError() }
             await limitReads.load()
-            return result
+            try stillTheLatest()
+            summary = result
         }
     }
 }
 
-/// A plan window, amber once it comes close to its limit.
 struct LimitBar: View {
     let label: String
     let used: Double
@@ -448,7 +446,6 @@ struct LimitBar: View {
     }
 }
 
-/// A thin bar of a share, on the faint track every bar of the page shares.
 struct ShareBar: View {
     let fraction: Double
     let color: Color
@@ -466,7 +463,6 @@ struct ShareBar: View {
     }
 }
 
-/// A group of the usage page, straight on the page with its content on the page's margin.
 struct UsageCard: ViewModifier {
     func body(content: Content) -> some View {
         content.mobileCard(padding: 0).padding(.vertical, MobileSpacing.small)
@@ -491,7 +487,6 @@ private struct UsageMachineMenu: ViewModifier {
     }
 }
 
-/// A signed-out account a person asked to log in to.
 private struct UsageLogin: Identifiable {
     let kind: String
     let accountID: String
@@ -501,22 +496,19 @@ private struct UsageLogin: Identifiable {
 }
 
 struct UsageLimitProvenance: View {
-    let entry: JSONValue
+    let entry: UsageLimitsProvider
 
     var body: some View {
-        if !entry.list("windows").isEmpty,
-            entry["unavailable"] == nil || entry["unavailable"] == .null
-                || entry["unavailable"]?["reason"] == .string("failed")
-        {
+        if !entry.windows.isEmpty, entry.unavailable == nil || entry.unavailable?.reason == .failed {
             TimelineView(.periodic(from: .now, by: 60)) { context in
                 let age = UsageLimitSection.age(entry, now: context.date.timeIntervalSince1970 * 1000)
                 VStack(alignment: .leading, spacing: 3) {
-                    if entry["unavailable"]?["reason"] == .string("failed") {
+                    if entry.unavailable?.reason == .failed {
                         Text("Last known numbers")
                     }
                     if let age {
                         let when = age < 60_000 ? String(localized: "just now") : Format.ago(milliseconds: age)
-                        if entry["source"] == .string("event") {
+                        if entry.source == .event {
                             Text("Last updated · From a turn · \(when)")
                         } else {
                             Text("Last updated · \(when)")

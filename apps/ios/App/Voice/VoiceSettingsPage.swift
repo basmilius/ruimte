@@ -6,20 +6,15 @@ import SwiftUI
 /// How Voice talks on a machine, which keeps it for every client that starts Voice there. The languages and voices are
 /// the ones the machine takes, read from the generated schema, so the picker never offers what the machine refuses.
 struct VoicePreferences: Equatable {
-    static let defaultVoice = "marin"
+    static let defaultVoice = WireVocabulary.voiceDefaultVoice
 
     var language: String
     var voice: String
     // No switch for asking before a deletion: Voice on a machine deletes nothing yet. When it does, the choice rides on
     // `voice.start` and the machine's policy holds it, not this phone.
 
-    static var languages: [String] { options("language") }
-    static var voices: [String] { options("voice") }
-
-    private static func options(_ field: String) -> [String] {
-        WireSchema.schema("request.voice.setPreferences.payload")?["properties"]?[field]?["enum"]?.arrayValue?
-            .compactMap(\.stringValue) ?? []
-    }
+    static var languages: [String] { VoiceMachinePreferencesLanguage.allCases.map(\.rawValue) }
+    static var voices: [String] { VoiceMachinePreferencesVoice.allCases.map(\.rawValue) }
 
     /// The first language of the device Voice speaks, else English: what a machine that stores none starts with.
     static func defaultLanguage(preferred: [String] = Locale.preferredLanguages, offered: [String] = languages)
@@ -30,7 +25,7 @@ struct VoicePreferences: Equatable {
                 return code
             }
         }
-        return "en"
+        return WireVocabulary.voiceDefaultLanguage
     }
 
     /// A language in its own words, as the desktop's picker shows it.

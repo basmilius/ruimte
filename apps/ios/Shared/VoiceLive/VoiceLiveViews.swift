@@ -1,6 +1,7 @@
 import AppIntents
 import LucideSwift
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// The lock screen card of Voice's Live Activity. The widget extension draws it; the app compiles it too, so a test can

@@ -3,10 +3,11 @@ import type { RequestMap, RequestType } from '@ruimte/contracts';
 import type { LiveEvent } from '@ruimte/voice';
 import i18next from 'i18next';
 import { desktop, type OpenAiLivePreferences } from '@/desktop/bridge';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { machineTransport } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { voiceOnMachine } from '@/voice/route';
 
 function gatheringComplete(peer: RTCPeerConnection): Promise<void> {
@@ -92,7 +93,7 @@ export function machineRoute(request: MachineRequest = (type, payload) => machin
                 return;
             }
             const target = sessionId === null ? { sceneId, startId } : { sceneId, sessionId };
-            void request('voice.stop', target).catch(() => undefined);
+            void fireAndForget('request', request('voice.stop', target));
         }
     };
 }
@@ -147,7 +148,7 @@ export class LiveSession {
             const stream = event.streams[0] ?? new MediaStream([event.track]);
             this.#audio.srcObject = stream;
             this.#onOutputStream(stream);
-            void this.#audio.play().catch(() => undefined);
+            void fireAndForget('audio.play', this.#audio.play());
         });
         this.#events.addEventListener('message', (message) => {
             try {

@@ -4,7 +4,7 @@ import RuimteTransport
 
 @MainActor @Observable final class UsageLimitsModel {
     private(set) var client: any MachineRequesting
-    private(set) var limits: JSONValue?
+    private(set) var limits: UsageLimits?
     private(set) var accounts: ProviderAccountList?
     private(set) var loginCommands: [String: String] = [:]
     /// The CLIs whose login the machine runs without a terminal.
@@ -51,20 +51,20 @@ import RuimteTransport
         if !reading {
             limitReads += 1
             let attempt = limitReads
-            let snapshot = try? await client.request(.usageLimits)
+            let snapshot = try? await client.request(.usageLimits).decoded(as: UsageLimits.self)
             guard generation == self.generation, self.client === client, !Task.isCancelled else { return }
             if attempt == limitReads, let snapshot {
                 limits = snapshot
                 problem = nil
             }
         }
-        let accounts = try? await client.request(.accountsList)
+        let accounts = try? await client.request(.accountsList).decoded(as: AccountsSnapshot.self)
         guard generation == self.generation, accountAttempt == accountReads, self.client === client, !Task.isCancelled
         else { return }
         if let accounts {
             self.accounts = ProviderAccountList(accounts)
-            loginCommands = (accounts["loginCommands"]?.objectValue ?? [:]).compactMapValues(\.stringValue)
-            silentLogins = Set(accounts.list("silentLogins").compactMap(\.stringValue))
+            loginCommands = accounts.loginCommands ?? [:]
+            silentLogins = Set(accounts.silentLogins ?? [])
         }
     }
 
@@ -78,7 +78,7 @@ import RuimteTransport
         problem = nil
         defer { if generation == self.generation { reading = false } }
         do {
-            let snapshot = try await client.request(.usageRefreshLimits)
+            let snapshot = try await client.request(.usageRefreshLimits).decoded(as: UsageLimits.self)
             guard generation == self.generation, attempt == limitReads, self.client === client, !Task.isCancelled else {
                 return
             }

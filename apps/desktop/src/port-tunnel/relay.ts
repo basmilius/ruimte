@@ -1,4 +1,3 @@
-/* What a stream toward the shared port tells the proxy that holds it. */
 export interface TunnelStreamEvents {
     /* Bytes from the service. `consumed` says they were written on, which is what lets the next ones come. */
     data(bytes: Uint8Array, consumed: () => void): void;

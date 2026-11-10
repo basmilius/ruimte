@@ -5,11 +5,8 @@ import XCTest
 @testable import Ruimte
 
 @MainActor final class AccountLoginTests: XCTestCase {
-    private func status(_ state: String, email: String? = nil, checkedAt: Double = 1) -> JSONValue {
-        .object([
-            "id": .string("work"), "state": .string(state), "email": email.map(JSONValue.string) ?? .null,
-            "checkedAt": .number(checkedAt),
-        ])
+    private func status(_ state: String, email: String? = nil, checkedAt: Double = 1) -> AccountStatus {
+        AccountsWire.status("work", state: state, email: email, checkedAt: checkedAt).accountStatus
     }
 
     func testALoginLandsOnlyOnceTheAccountReadsDifferentlyLoggedIn() {
@@ -26,15 +23,18 @@ import XCTest
         let model = AccountLoginModel(client: machine, kind: "claude", accountID: "work", name: "Work")
         await model.begin()
         XCTAssertEqual(model.phase, .running)
-        let login = machine.sent.first { $0.0 == "session.login" }?.1
+        let login = machine.sent.first { $0.0 == .sessionLogin }?.1
         XCTAssertEqual(login?["sessionId"], .string(model.sessionID))
         XCTAssertEqual(login?["kind"], .string("claude"))
         XCTAssertEqual(login?["account"], .string("work"))
-        XCTAssertTrue(machine.sent.contains { $0.0 == "accounts.watchLogin" })
-        machine.emit("accounts.changed", .object(["statuses": .array([status("ready", email: "me@example.com")])]))
+        XCTAssertTrue(machine.sent.contains { $0.0 == .accountsWatchLogin })
+        machine.emit(
+            .accountsChanged,
+            AccountsWire.snapshot(
+                accounts: [:], statuses: [AccountsWire.status("work", state: "ready", email: "me@example.com")]))
         XCTAssertEqual(model.phase, .landed(email: "me@example.com"))
         await model.end()
-        XCTAssertEqual(machine.sent.last?.0, "session.kill")
+        XCTAssertEqual(machine.sent.last?.0, .sessionKill)
         XCTAssertEqual(machine.sent.last?.1["sessionId"], .string(model.sessionID))
     }
 
@@ -43,14 +43,14 @@ import XCTest
         let model = AccountLoginModel(client: machine, kind: "codex", accountID: "work", name: "Work")
         await model.begin()
         let first = model.sessionID
-        machine.emit("session.exit", .object(["sessionId": .string("someone-else")]))
+        machine.emit(.sessionExit, .object(["sessionId": .string("someone-else"), "exitCode": .number(0)]))
         XCTAssertEqual(model.phase, .running)
-        machine.emit("session.exit", .object(["sessionId": .string(first)]))
+        machine.emit(.sessionExit, .object(["sessionId": .string(first), "exitCode": .number(0)]))
         XCTAssertEqual(model.phase, .ended(dropped: false))
         await model.retry()
         XCTAssertNotEqual(model.sessionID, first)
         XCTAssertEqual(model.phase, .running)
-        XCTAssertTrue(machine.sent.contains { $0.0 == "session.kill" && $0.1["sessionId"] == .string(first) })
+        XCTAssertTrue(machine.sent.contains { $0.0 == .sessionKill && $0.1["sessionId"] == .string(first) })
     }
 
     func testARefusedLoginFailsAndNothingIsKilled() async {
@@ -60,19 +60,22 @@ import XCTest
         await model.begin()
         XCTAssertEqual(model.phase, .failed("forbidden"))
         await model.end()
-        XCTAssertFalse(machine.sent.contains { $0.0 == "session.kill" })
+        XCTAssertFalse(machine.sent.contains { $0.0 == .sessionKill })
     }
 
     func testASilentLoginNeedsAnExplicitFinishAndRechecksWithoutClaimingSuccess() async {
         let machine = LoginMachine()
         let model = AccountLoginModel(client: machine, kind: "claude", accountID: "work", name: "Work", silent: true)
         await model.begin()
-        XCTAssertFalse(machine.sent.contains { $0.0 == "accounts.watchLogin" })
-        machine.emit("accounts.changed", .object(["statuses": .array([status("ready", email: "me@example.com")])]))
+        XCTAssertFalse(machine.sent.contains { $0.0 == .accountsWatchLogin })
+        machine.emit(
+            .accountsChanged,
+            AccountsWire.snapshot(
+                accounts: [:], statuses: [AccountsWire.status("work", state: "ready", email: "me@example.com")]))
         XCTAssertEqual(model.phase, .running)
         await model.finish()
-        XCTAssertEqual(machine.sent.last?.0, "accounts.refresh")
-        XCTAssertTrue(machine.sent.contains { $0.0 == "session.kill" && $0.1["sessionId"] == .string(model.sessionID) })
+        XCTAssertEqual(machine.sent.last?.0, .accountsRefresh)
+        XCTAssertTrue(machine.sent.contains { $0.0 == .sessionKill && $0.1["sessionId"] == .string(model.sessionID) })
     }
 
     func testTheNativeOfferSendsTheV2AccessStatement() async throws {
@@ -159,24 +162,17 @@ import XCTest
     }
 }
 
-@MainActor private final class LoginMachine: MachineRequesting, MachineFeatures {
-    func answers(_ type: WireRequest) -> Bool { type == .accountsRefresh }
-
-    var sent: [(String, JSONValue)] = []
+@MainActor private final class LoginMachine: MachineRequesting {
+    var sent: [(WireRequest, JSONValue)] = []
     var refusal: String?
-    var handlers: [String: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
+    var handlers: [WireEvent: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
         switch type {
-        case "accounts.list":
-            return .object([
-                "accounts": .object([:]),
-                "statuses": .array([
-                    .object(["id": .string("work"), "state": .string("signed-out"), "checkedAt": .number(1)])
-                ]),
-            ])
-        case "session.login":
+        case .accountsList:
+            return AccountsWire.snapshot(accounts: [:], statuses: [AccountsWire.status("work", state: "signed-out")])
+        case .sessionLogin:
             if let refusal { throw MachineClientError.server(code: refusal, message: refusal) }
             return .object(["sessionId": payload["sessionId"] ?? .null])
         default:
@@ -184,11 +180,11 @@ import XCTest
         }
     }
 
-    func emit(_ event: String, _ payload: JSONValue) {
+    func emit(_ event: WireEvent, _ payload: JSONValue) {
         for handler in (handlers[event] ?? [:]).values { handler(payload) }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
         let id = UUID()
         handlers[event, default: [:]][id] = handler
         return { [weak self] in self?.handlers[event]?[id] = nil }

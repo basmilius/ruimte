@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import { isApplePlatform } from '@adecore/ui';
 import type { ProjectCanvasView, ProviderInfo } from '@ruimte/contracts';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
 import { focusedCanvas } from '@/state/canvas';
 import { chatInfoOf } from '../../testing/chat-info';
 import { mount, until, type Mounted } from '../../testing/dom';
@@ -112,7 +112,6 @@ describe('the reasoning effort of the chat that has the keyboard', () => {
         await page.renderApp();
         await until(() => machine.requests('chat.attach').some((request) => request.chatId === chatId));
         await until(() => composer() !== null);
-        // Clicking into the node's body hands it the keyboard.
         await act(async () => focusedCanvas().getState().setBodyFocus(chatId));
 
         await expectStepsFromComposer(chatId);

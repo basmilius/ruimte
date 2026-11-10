@@ -1,5 +1,5 @@
 /* How a set of ids meets what is already selected. */
-export type SelectionMode = 'replace' | 'add' | 'toggle';
+type SelectionMode = 'replace' | 'add' | 'toggle';
 
 /*
  * Shift-clicking something that is already selected takes it out again, which is what a person

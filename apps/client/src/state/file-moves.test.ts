@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { viewStateKey, viewStates } from '@adecore/editor-react';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 import { useDocument } from './document.ts';
 import { followMove, moveFile, saveBeforeMove } from './file-moves.ts';
 import { useFiles } from './files.ts';
@@ -9,7 +9,6 @@ import { useTextDrafts, type TextDraft, type TextDrafts } from './text-drafts.ts
 
 const row = (text: string): TextDraft => ({ disk: 'disk', mtime: 1, text, saving: false, problem: null });
 
-/* Saves what it is asked to and says which of them it could not. */
 function drafts(refuse: string[] = []): { fake: TextDrafts; saved: string[] } {
     const saved: string[] = [];
     const fake = {

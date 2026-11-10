@@ -59,7 +59,7 @@ export function fileLoginPathCache(file: string): LoginPathCache {
     };
 }
 
-export interface LoadedLoginPath {
+interface LoadedLoginPath {
     /* What this start uses: the answer of an earlier start, or the shell's own when there was none. */
     path: string | null;
     /* Settles once the shell answered and a changed answer is in the cache, which the next start uses. */

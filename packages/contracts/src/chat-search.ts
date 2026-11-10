@@ -1,4 +1,5 @@
 import { AgentKindSchema, ProviderAccountIdSchema } from '@adecore/agent-contracts';
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 
 const CHAT_SEARCH_MAX_HITS = 500;
@@ -55,3 +56,9 @@ export const ChatExternalResultSchema = z.object({
     failed: z.array(z.object({ provider: AgentKindSchema, reason: z.string() }))
 });
 export type ChatExternalResult = z.infer<typeof ChatExternalResultSchema>;
+
+export const CHAT_SEARCH_REQUEST_SCHEMAS = {
+    'chat.search': { payload: ChatSearchPayloadSchema, result: ChatSearchResultSchema },
+    'chat.searchCancel': { payload: ChatSearchCancelPayloadSchema, result: EmptySchema },
+    'chat.external': { payload: ChatExternalPayloadSchema, result: ChatExternalResultSchema }
+} as const;

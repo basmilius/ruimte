@@ -6,7 +6,7 @@ import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import { clickOn, mount, openSubmenu, pressKey, until, type Mounted } from '../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
@@ -49,7 +49,6 @@ function menuItemNamed(label: string): HTMLElement | null {
     return ([...document.querySelectorAll('[role="menuitem"]')] as HTMLElement[]).find((item) => item.textContent?.trim() === label) ?? null;
 }
 
-/* The artifact view's actions, behind the last button of its bar. */
 async function openMore(): Promise<void> {
     await until(() => barButton('Versions') !== null);
     await clickOn(barButton('More'));
@@ -182,7 +181,6 @@ describe('Output on a linked machine', () => {
         links = [];
         await act(async () => openArtifact('art-remote', 'Release notes', null, REMOTE));
         await until(() => barButton('Versions') !== null);
-        // Nothing is left to do with it here, so the bar has no actions button at all.
         expect(barButton('More')).toBeNull();
         expect(here.requests('artifact.importFrom')).toHaveLength(0);
     });

@@ -16,7 +16,7 @@ public enum ImageSaveFailure: Error, LocalizedError {
 
 @MainActor @Observable
 public final class ImageSaveModel {
-    public typealias Request = @MainActor @Sendable (String, JSONValue) async throws -> JSONValue
+    public typealias Request = @MainActor @Sendable (WireRequest, JSONValue) async throws -> JSONValue
     public let folder: String
     public let projectName: String
     public private(set) var directory = ""
@@ -87,7 +87,7 @@ public final class ImageSaveModel {
         checking = true
         defer { if checkID == id && !closed { checking = false } }
         do {
-            let target = try await request("chat.imageTarget", payload(["path": .string(path)]))
+            let target = try await request(.chatImageTarget, payload(["path": .string(path)]))
             guard checkID == id && !closed else { return }
             guard target["folder"]?.stringValue == folder, target["exists"]?.boolValue != nil,
                 target["revision"] == .null || target["revision"]?.stringValue != nil
@@ -107,7 +107,7 @@ public final class ImageSaveModel {
         pending = true
         error = nil
         do {
-            let result = try await request("chat.saveImage", payload(fields))
+            let result = try await request(.chatSaveImage, payload(fields))
             guard let savedPath = result["path"]?.stringValue, !savedPath.isEmpty else {
                 throw ImageSaveFailure.invalidTarget
             }
@@ -139,16 +139,18 @@ public final class ImageSaveModel {
         defer { loadingFolders.remove(directory) }
         do {
             let result = try await request(
-                "fs.list", .object(["path": .string(path(directory)), "depth": .number(1), "hidden": .bool(true)]))
+                .fsList, .object(["path": .string(path(directory)), "depth": .number(1), "hidden": .bool(true)])
+            ).decoded(as: FsListResult.self)
             guard !closed else { return }
             var seen: Set<String> = []
-            folders[directory] = (result["entries"]?.arrayValue ?? []).compactMap { entry in
-                guard entry["kind"] == .string("directory"), let name = entry["name"]?.stringValue,
+            folders[directory] = result.entries.compactMap { entry in
+                let name = entry.name
+                guard entry.kind == .directory,
                     Self.validFileName(name), name != ".git", name != ".ruimte", seen.insert(name).inserted
                 else { return nil }
                 return ImageSaveFolder(directory: directory.isEmpty ? name : "\(directory)/\(name)", name: name)
             }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-            if result["truncated"]?.boolValue == true { truncatedFolders.insert(directory) }
+            if result.truncated { truncatedFolders.insert(directory) }
         } catch {
             if !closed { folderErrors[directory] = error.localizedDescription }
         }

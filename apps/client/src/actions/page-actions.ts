@@ -1,14 +1,16 @@
 import { ActionRefusal, type ActionHandlers, type ActionOutput } from '@ruimte/actions';
+import { agentAddressProblem, normalizeUrl } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { refuseUnreachableBrowser } from '@/actions/action-reach';
 import { pageStateOf } from '@/browser/page-hold';
-import { browserRegistry, normalizeUrl, useBrowser, type BrowserState } from '@/browser/registry';
+import { browserRegistry, useBrowser, type BrowserState } from '@/clients/browser/registry';
 import { isDesktop } from '@/desktop/bridge';
-import { readNodeHost, updateHost } from '@/nodes/node-host';
-import { nodesOfView } from '@/project/view-nodes';
+import { currentEndpointId } from '@/state/current-endpoint';
 import type { DocumentState } from '@/state/document';
-import { currentEndpointId, endpointKey } from '@/state/keys';
-import { browserClientFor } from '@/transport/connections';
+import { endpointKey } from '@/state/keys';
+import { nodesOfView } from '@/state/view-nodes';
+import { readNodeHost, updateHost } from '@/surface/nodes/node-host';
+import { browserClientFor } from '@/workspace/connections';
 
 /* Only what a page's address and its own history do; a click, a keystroke and a scroll are never one of these. */
 export type PageDrive = { kind: 'go'; url: string } | { kind: 'back' } | { kind: 'forward' } | { kind: 'reload'; hard: boolean } | { kind: 'stop' };
@@ -125,7 +127,7 @@ export function pageActions(document: StoreApi<DocumentState>, overrides: Partia
             const { title, url: saved, browserOwner } = browserOf(nodeId);
             const address = normalizeUrl(url);
             refuseUnreachableBrowser('browser', address, browserOwner);
-            if (actor.kind !== 'person' && !/^https?:\/\//i.test(address)) {
+            if (actor.kind !== 'person' && agentAddressProblem(address) !== null) {
                 throw new ActionRefusal('bad-url', `“${url}” is not an http or https address.`);
             }
             if (saved === '') {

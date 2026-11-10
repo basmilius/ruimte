@@ -1,7 +1,6 @@
 import Foundation
 import RuimtePulsar
 
-/// Who said a caption: the person into the microphone, or the model in its reply.
 public enum VoiceSpeaker: String, Sendable, Equatable {
     case person
     case model
@@ -73,7 +72,6 @@ public struct VoiceTranscript: Sendable, Equatable {
 
     public init() {}
 
-    /// The line the caption bar shows: the one being spoken now.
     public var current: VoiceUtterance? { lines.last }
 
     public mutating func add(_ caption: LiveCaption) {

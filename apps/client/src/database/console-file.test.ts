@@ -1,15 +1,12 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { FsEntry } from '@ruimte/contracts';
 import { fileTabOf, useFiles, type DatabaseTab, type FileTab } from '@/state/files';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import {
     consoleBaseName,
-    consoleConnectionOf,
     consoleContext,
     consoleFileName,
     consoleFilesOf,
-    consoleFolderOf,
-    consolesFolderOf,
     createConsoleFile,
     isSqlPath,
     nextConsoleNumber,
@@ -18,28 +15,8 @@ import {
 import { consoleNameOf } from './console-folders.tsx';
 
 describe('the name of a console file', () => {
-    test('is the connection’s name with a number, in a folder of the connection in the private state of the project', () => {
-        expect(consolesFolderOf('/repo')).toBe('/repo/.ruimte/private/consoles');
-        expect(consoleFolderOf('/repo', 'shop')).toBe('/repo/.ruimte/private/consoles/shop');
-        expect(consoleFolderOf('/repo', 'a/b ü')).toBe('/repo/.ruimte/private/consoles/a%2Fb%20%C3%BC');
+    test('is the connection’s name with a number', () => {
         expect(consoleFileName(consoleBaseName('Shop (local)'), 2)).toBe('Shop (local) 2.sql');
-    });
-
-    test('says which connection a console runs on by its folder, and nothing for any other file', () => {
-        expect(consoleConnectionOf('/repo', '/repo/.ruimte/private/consoles/a%2Fb%20%C3%BC/q 1.sql')).toBe('a/b ü');
-        expect(consoleConnectionOf('/repo', '/repo/.ruimte/private/consoles/shop/notes.txt')).toBeNull();
-        expect(consoleConnectionOf('/repo', '/repo/.ruimte/private/consoles/q 1.sql')).toBeNull();
-        expect(consoleConnectionOf('/repo', '/repo/.ruimte/private/consoles/shop/old/q 1.sql')).toBeNull();
-        expect(consoleConnectionOf('/repo', '/repo/queries/q 1.sql')).toBeNull();
-        expect(consoleConnectionOf('/repo', '/repo/.ruimte/private/consoles/%E0%A4/q.sql')).toBeNull();
-    });
-
-    test('knows a console on a Windows machine by its folder', () => {
-        expect(consolesFolderOf('C:\\repo')).toBe('C:\\repo\\.ruimte\\private\\consoles');
-        expect(consoleFolderOf('C:\\repo', 'shop')).toBe('C:\\repo\\.ruimte\\private\\consoles\\shop');
-        expect(consoleConnectionOf('C:\\repo', 'C:\\repo\\.ruimte\\private\\consoles\\shop\\q 1.sql')).toBe('shop');
-        expect(consoleConnectionOf('C:\\repo', 'C:\\repo\\.ruimte\\private\\consoles\\shop\\old\\q 1.sql')).toBeNull();
-        expect(consoleConnectionOf('C:\\repo', 'C:\\repo2\\.ruimte\\private\\consoles\\shop\\q 1.sql')).toBeNull();
     });
 
     test('groups a listing of the consoles by connection', () => {

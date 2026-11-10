@@ -14,8 +14,10 @@ import type {
 } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { NodeLifecycle } from '../node-lifecycle.ts';
+import { PERSON_HOLD_CODES, personHoldOfCode, type PersonHoldCode } from '../person-hold.ts';
 import { realTimers, type Timers } from '../timers.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { APPROVAL_WAIT_MS, CALL_BUDGET_MS, ComputerApprovals, MAX_HOLD_MS, type AppRef, type CallerInfo } from './approvals.ts';
 import {
     ActionResultSchema,
@@ -36,7 +38,7 @@ import {
     type StateResult,
     type WaitResult
 } from './helper-protocol.ts';
-import { HelperFailure, helperDirectory, messageOf, type ComputerHelper } from './helper.ts';
+import { HelperFailure, helperDirectory, type ComputerHelper } from './helper.ts';
 import { overlayWords, presenceWords } from './overlay-words.ts';
 import { ComputerPresence, type LineOutcome, type PresenceShow } from './presence.ts';
 import { writeHelperFile, type ComputerUseStore } from './store.ts';
@@ -55,10 +57,8 @@ export const SESSION_POLL_MS = 2_000;
 /* The release and the dev build of the desktop app. */
 export const RUIMTE_BUNDLE_IDS: ReadonlySet<string> = new Set(['app.ruimte.desktop', 'app.ruimte.desktop.dev']);
 
-type HeldCode = 'paused' | 'taken-over';
-
 /* The person holds the Mac. Nothing the agent does changes that, so the words steer it away from trying. */
-const HELD_WORDS: Record<HeldCode, string> = {
+const HELD_WORDS: Record<PersonHoldCode, string> = {
     paused: 'The person paused the session. Call computer_state again with wait 40, which holds until they resume, and act only after it: they may have changed the window. Do not try to reach the app another way meanwhile',
     'taken-over':
         'The person took over the Mac. It comes back to you a few seconds after they let go: call computer_state again with wait 40, which holds until then, and go on from that state, since they may have changed the window. Do not try to reach the app another way meanwhile'
@@ -380,19 +380,31 @@ export class ComputerUse {
                     this.approvals.forget(sessionId);
                 }
             }
-        } else if (event.event === 'session.exit') {
-            this.approvals.forget(event.payload.sessionId);
-            this.presence.closed(event.payload.sessionId);
         } else if (event.event === 'chat.event') {
             const { chatId, event: chat } = event.payload;
-            if (chat.type === 'item' && chat.item.kind === 'turn' && chat.item.state !== 'running') {
-                this.approvals.turnEnded(chatId);
-                this.presence.turnEnded(chatId, chat.item.state);
-            } else if (chat.type === 'info') {
+            if (chat.type === 'info') {
                 this.approvals.agentStatus(chatId, chat.info.status);
                 this.presence.status(chatId, chat.info.status);
             }
         }
+    }
+
+    /* Hears the end of a turn, the exit of a terminal and the close of a node from the node lifecycle. */
+    follow(lifecycle: NodeLifecycle): void {
+        lifecycle.on('turnEnded', (chatId, state) => this.turnEnded(chatId, state));
+        lifecycle.on('exited', (nodeId) => this.exited(nodeId));
+        lifecycle.on('closed', (nodeId) => this.nodeClosed(nodeId));
+    }
+
+    /* A turn ending takes back what was given for it, and its agent stops being shown at work. */
+    turnEnded(chatId: string, state: 'done' | 'aborted' | 'error'): void {
+        this.approvals.turnEnded(chatId);
+        this.presence.turnEnded(chatId, state);
+    }
+
+    exited(nodeId: string): void {
+        this.approvals.forget(nodeId);
+        this.presence.closed(nodeId);
     }
 
     /* A chat or terminal goes; a chat says nothing to an observer when it does. */
@@ -419,7 +431,7 @@ export class ComputerUse {
             this.noteSession(doctor?.session ?? null);
             return this.setStatus(doctor === null ? notRunning : { ...runningStatus(doctor), enabled: this.store.enabled });
         } catch (error) {
-            return this.setStatus({ ...notRunning, problem: messageOf(error) });
+            return this.setStatus({ ...notRunning, problem: errorText(error) });
         }
     }
 
@@ -718,7 +730,7 @@ export class ComputerUse {
                 // This refusal is how the agent hears of the stop, so its next call is not refused for it again.
                 this.stopped.delete(callerId);
             }
-            if (code === 'paused' || code === 'taken-over') {
+            if (personHoldOfCode(code) !== null) {
                 // Never sent again: the person may have cut it off halfway, so the agent reads the state first.
                 await this.heldUntil(deadline);
             }
@@ -737,24 +749,23 @@ export class ComputerUse {
     }
 
     /* How the person still holds the Mac at the deadline, or null once they gave it back; asks the helper again every so often. */
-    private async heldUntil(deadline: number): Promise<HeldCode | null> {
+    private async heldUntil(deadline: number): Promise<PersonHoldCode | null> {
         for (let held = this.heldCode(); held !== null; held = this.heldCode()) {
             const left = deadline - this.now();
             if (left <= 0) {
                 return held;
             }
             await new Promise<void>((settle) => this.timers.set(settle, Math.min(HOLD_POLL_MS, left)));
-            const doctor = await this.helper.ask(DOCTOR, DoctorResultSchema).catch(() => null);
-            this.heard(doctor?.session ?? null);
+            await this.readSession();
         }
         return null;
     }
 
-    private heldCode(): HeldCode | null {
-        if (this.session?.active !== true) {
+    private heldCode(): PersonHoldCode | null {
+        if (this.session?.active !== true || this.session.mode === 'running') {
             return null;
         }
-        return this.session.mode === 'paused' ? 'paused' : this.session.mode === 'takenOver' ? 'taken-over' : null;
+        return PERSON_HOLD_CODES[this.session.mode];
     }
 
     /* `ours` is a session this machine ended itself, with `done` or `end`, which the holder already let go of. */
@@ -849,12 +860,12 @@ export class ComputerUse {
             if (!(error instanceof HelperFailure) || error.code !== 'helper-error') {
                 throw error;
             }
-            if (error.helperCode === 'paused' || error.helperCode === 'taken-over') {
-                this.heard({ active: true, mode: error.helperCode === 'paused' ? 'paused' : 'takenOver', stopped: false });
-                throw new ComputerRefusal(error.helperCode, HELD_WORDS[error.helperCode]);
+            const hold = personHoldOfCode(error.helperCode);
+            if (hold !== null) {
+                this.heard({ active: true, mode: hold, stopped: false });
+                throw new ComputerRefusal(PERSON_HOLD_CODES[hold], HELD_WORDS[PERSON_HOLD_CODES[hold]]);
             }
-            // A helper from before the codes worded a stop both ways.
-            if (error.helperCode === 'stopped' || /^stopped by the (user|person)\b/.test(error.message)) {
+            if (error.helperCode === 'stopped') {
                 this.heard({ active: false, mode: 'running', stopped: true });
                 throw new ComputerRefusal('stopped', STOPPED_WORDS);
             }
@@ -906,11 +917,14 @@ export class ComputerUse {
         }
         this.cancelPoll = this.timers.set(() => {
             this.cancelPoll = null;
-            void this.helper
-                .ask(DOCTOR, DoctorResultSchema)
-                .catch(() => null)
-                .then((doctor) => this.heard(doctor?.session ?? null));
+            void this.readSession();
         }, SESSION_POLL_MS);
+    }
+
+    /* Asks a running helper how its session stands; a helper that cannot be reached has no session. */
+    private async readSession(): Promise<void> {
+        const doctor = await this.helper.ask(DOCTOR, DoctorResultSchema).catch(() => null);
+        this.heard(doctor?.session ?? null);
     }
 
     private async writeOverlay(): Promise<void> {

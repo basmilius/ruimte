@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { lstat, mkdir, readdir, readFile, readlink, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
+import { Serializer, SingleFlight } from '@adecore/utils/async';
 import { fileExists } from '@adecore/utils/fs';
-import { sha256, sha256Of } from '../artifacts/artifact-fs.ts';
+import { sha256, sha256Of } from '../disk/hash.ts';
 import type { LanguageRuntime, RunCommand } from './runtime.ts';
 
 const SETS = 'packages';
@@ -15,7 +16,7 @@ const ASIDE = '.adopting';
 /* A set id is 16 hex digits; anything else in the folder is not Ruimte's to remove. */
 const SET_ID = /^[0-9a-f]{16}$/;
 
-export interface PackageStoreOptions {
+interface PackageStoreOptions {
     /* `$RUIMTE_HOME/language-servers`. */
     root: string;
     runtime: LanguageRuntime;
@@ -26,7 +27,7 @@ export interface PackageStoreOptions {
 }
 
 /* `set.json`: what a set was installed from, written last so a set without it was never finished. */
-export interface PackageSetRecord {
+interface PackageSetRecord {
     format: 1;
     dependencies: Record<string, string>;
     platform: string;
@@ -37,10 +38,10 @@ export interface PackageSetRecord {
 }
 
 /* What adoption did with the packages of an install that held its own: moved into a new set, replaced by a link to an identical set, or left alone because the set differs. */
-export type Adoption = 'moved' | 'linked' | 'kept';
+type Adoption = 'moved' | 'linked' | 'kept';
 
 /* A hold on a set: while it is out, `collect` leaves the set alone. */
-export interface Lease {
+interface Lease {
     readonly setId: string;
     /* The folder of the set, with its `package.json`, `bun.lock`, `node_modules` and `set.json`. */
     readonly folder: string;
@@ -58,9 +59,9 @@ export class PackageStore {
     private readonly platform: string;
     private readonly arch: string;
     private readonly leases = new Map<string, number>();
-    private readonly building = new Map<string, Promise<void>>();
+    private readonly building = new SingleFlight<void>();
     /* Serializes the check of a set against a collection, so `collect` never removes a set that `ensure` is about to hand out. */
-    private tail: Promise<unknown> = Promise.resolve();
+    private readonly exclusive = new Serializer();
 
     constructor(options: PackageStoreOptions) {
         this.options = options;
@@ -93,15 +94,8 @@ export class PackageStore {
         const lease = this.lease(setId);
 
         try {
-            if (!(await this.exclusive(() => this.isWhole(setId, entries)))) {
-                let build = this.building.get(setId);
-
-                if (build === undefined) {
-                    build = this.build(setId, dependencies, entries, log).finally(() => this.building.delete(setId));
-                    this.building.set(setId, build);
-                }
-
-                await build;
+            if (!(await this.exclusive.run(() => this.isWhole(setId, entries)))) {
+                await this.building.run(setId, () => this.build(setId, dependencies, entries, log));
 
                 if (!(await this.isWhole(setId, entries))) {
                     throw new Error(`The package set ${setId} does not hold every package this server needs`);
@@ -120,7 +114,7 @@ export class PackageStore {
      * null when the disk could not be read in full, and then nothing is removed.
      */
     collect(references: () => Promise<Set<string> | null>): Promise<string[]> {
-        return this.exclusive(async () => {
+        return this.exclusive.run(async () => {
             // Taken before the references are read. An install links its set before it releases the lease, so a lease gone by the time of this look is in the references; one looked at only after them may have been released by an install that linked too late for them.
             const held = new Set(this.leases.keys());
             const used = await references();
@@ -161,7 +155,7 @@ export class PackageStore {
             const setId = name.replace(/\.json$/, '');
 
             if (SET_ID.test(setId)) {
-                await this.exclusive(() => this.replay(setId));
+                await this.exclusive.run(() => this.replay(setId));
             }
         }
     }
@@ -172,7 +166,7 @@ export class PackageStore {
      * every file proved identical; a different one stays unshared and the next update shares it.
      */
     adopt(folder: string): Promise<Adoption | null> {
-        return this.exclusive(() => this.adoptFolder(folder));
+        return this.exclusive.run(() => this.adoptFolder(folder));
     }
 
     async readRecord(setId: string): Promise<PackageSetRecord | null> {
@@ -329,14 +323,6 @@ export class PackageStore {
         };
     }
 
-    private exclusive<T>(work: () => Promise<T>): Promise<T> {
-        const result = this.tail.then(work, work);
-
-        this.tail = result.catch(() => undefined);
-
-        return result;
-    }
-
     private async isWhole(setId: string, entries: readonly string[]): Promise<boolean> {
         const folder = this.folderOf(setId);
 
@@ -491,7 +477,6 @@ async function describeTree(folder: string): Promise<Map<string, string>> {
     return found;
 }
 
-/* Whether two trees hold the same paths, types, modes, link targets and bytes. */
 async function sameTree(left: string, right: string): Promise<boolean> {
     const [first, second] = await Promise.all([describeTree(left), describeTree(right)]);
 

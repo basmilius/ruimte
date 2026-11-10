@@ -5,22 +5,22 @@ import { ChevronRight, FileCode2, RotateCw, SwatchBook, TriangleAlert } from 'lu
 import { useEffect, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
-import { accentColor, accentHeaderStyle, accentShades } from '@/canvas/accents';
-import { DerivedSet, type DerivedCard } from '@/canvas/DerivedSet';
-import { KindIcon } from '@/canvas/KindIcon';
-import type { Rect } from '@/canvas/math';
-import type { ResizeEdge } from '@/canvas/resize-handles';
-import { activeDesignChat, useDesignChat } from '@/design/design-chat';
+import { accentColor, accentHeaderStyle, accentShades } from '@/canvas-model/accents';
+import type { ResizeEdge } from '@/canvas-model/derived-frame';
+import type { Rect } from '@/canvas-model/math';
 import { useDesignPages } from '@/design/design-files';
 import { arrangePages, pageName } from '@/design/design-page';
-import { useDesignFolder } from '@/design/design-places';
 import { DesignActions } from '@/design/DesignActions';
 import { DesignStage } from '@/design/DesignStage';
 import { ChatBody } from '@/nodes/ChatBody';
-import { NodeHeaderControls, NodePlate } from '@/nodes/node-chrome';
 import { useCanvas } from '@/state/canvas';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { activeDesignChat, useDesignChat } from '@/state/design-chat';
+import { useDesignFolder } from '@/state/design-places';
 import { storedJson } from '@/state/stored-json';
+import { DerivedSet, type DerivedCard } from '@/surface/canvas/DerivedSet';
+import { KindIcon } from '@/surface/canvas/KindIcon';
+import { NodeHeaderControls, NodePlate } from '@/surface/nodes/node-chrome';
 
 const FRAME = 'flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-clip-padding shadow-node';
 const HEADER = 'flex h-[39px] shrink-0 items-center gap-2 border-b border-border bg-surface-raised pr-1 pl-3 text-sm text-text';
@@ -35,7 +35,6 @@ const OPEN_MIN = { w: 360, h: 320 };
 /* The card is placed by its top-left corner beside the node, so only its right and bottom edges move. */
 const OPEN_EDGES: readonly ResizeEdge[] = ['e', 's', 'se'];
 
-/* Where each page stands: one column beside the node from its top, the open page at its size and every other one a line. */
 function pageRects(node: Rect, pages: readonly string[], open: string | null, size: { w: number; h: number }): Rect[] {
     const rects: Rect[] = [];
     for (const page of pages) {
@@ -46,7 +45,6 @@ function pageRects(node: Rect, pages: readonly string[], open: string | null, si
     return rects;
 }
 
-/* A design node as the place it is, null while it names no folder. */
 function placeOfNode(node: ProjectNode, canvasId: string): DesignPlace | null {
     return node.path === undefined || node.path === '' ? null : { id: node.id, name: node.title, path: node.path, chats: nodeChats(node), canvasId };
 }

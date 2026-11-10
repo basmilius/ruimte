@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { chmod, copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { helperFileName } from '@adecore/database/host';
 import { catalogOf, EXTENSION_DIR, extensionManifest, launcherManifest, platformManifest } from '../src/manifest';
 import { binaryNameOf, LAUNCHER_NAME, targetId, TARGETS } from '../src/targets';
 
@@ -81,7 +82,7 @@ for (const target of targets) {
     // The Android screen server and its license, which the daemon pushes onto a device from `bin/native`.
     await copyNative(source, dir, 'scrcpy-server');
     await copyNative(source, dir, 'scrcpy-server.LICENSE');
-    await copyNative(source, dir, target.os === 'win32' ? 'adecore-database.exe' : 'adecore-database', ['adecore-database.LICENSE'], true);
+    await copyNative(source, dir, helperFileName(target.os), ['adecore-database.LICENSE'], true);
 
     // An artifact download drops the mode, and npm packs the mode it finds.
     for (const name of files.filter((file) => file !== 'ruimte.build')) {

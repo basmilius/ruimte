@@ -1,23 +1,26 @@
 import { randomBytes } from 'node:crypto';
+import { CodedError } from '@adecore/agents';
 import { wait, withTimeout } from '@adecore/utils/async';
 import {
     ChannelLiveness,
     channelBinding,
+    DIRECT_ATTEMPT_TIMEOUT_MS,
     DIRECT_PING_TICK_MS,
+    ICE_GATHER_TIMEOUT_MS,
     directPingFrame,
-    clientChannelMessage,
-    daemonChannelMessage,
     DIRECT_CHANNEL_LABEL,
-    DirectChallengeFrameSchema,
-    PROTOCOL_VERSION,
-    DirectVerdictFrameSchema,
+    daemonProvedItself,
+    keyProofFrame,
+    parseHandshakeFrame,
+    secretProofFrame,
+    type DirectChallengeFrame,
     type DirectProofFrame
 } from '@ruimte/contracts';
 import type { IceServer, SignalEnvelope, SignalOfferAccess } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { RTCPeerConnection, type RTCDataChannel } from 'werift';
 import { signMessage } from '../auth/keys.ts';
-import { localSecretProof } from './channel-auth.ts';
+import { bestEffort } from '../best-effort.ts';
 import { AUTHENTICATED_FRAME_CHARS, directChannel, fromWerift, UNAUTHENTICATED_FRAME_CHARS, type DirectChannel } from './data-channel.ts';
 
 // How long a close waits for the channel's stream reset to be answered before the peer goes anyway.
@@ -57,7 +60,6 @@ interface Pending {
  */
 export class DirectClient {
     readonly connectionId = randomBytes(12).toString('base64url');
-    /* How long the channel took to open and to pass the handshake, once it has. */
     readonly timings = { channelOpenMs: 0, authenticatedMs: 0 };
     private readonly options: DirectClientOptions;
     private readonly peer: RTCPeerConnection;
@@ -102,17 +104,20 @@ export class DirectClient {
         const answer = new Promise<string>((resolve, reject) => {
             this.answered = resolve;
             // A machine that refuses the offer says so at once, so a refused attempt does not wait out the timeout.
-            this.refused = (reason) => reject(new Error(`The machine closed the attempt: ${reason}`));
+            this.refused = (reason) => reject(new CodedError(reason, `The machine closed the attempt: ${reason}`));
         });
         await this.peer.setLocalDescription(await this.peer.createOffer());
-        await waitFor(() => this.peer.iceGatheringState === 'complete', 5_000).catch(() => undefined);
+        await bestEffort(
+            'waitFor',
+            waitFor(() => this.peer.iceGatheringState === 'complete', ICE_GATHER_TIMEOUT_MS)
+        );
         this.offerSdp = this.peer.localDescription!.sdp;
         const offer = this.options.access
             ? { kind: 'offer' as const, sdp: this.offerSdp, access: this.options.access }
             : { kind: 'offer' as const, sdp: this.offerSdp };
         this.options.signal({ connectionId: this.connectionId, signal: offer });
 
-        const timeoutMs = this.options.timeoutMs ?? 30_000;
+        const timeoutMs = this.options.timeoutMs ?? DIRECT_ATTEMPT_TIMEOUT_MS;
         const answerSdp = await withTimeout(answer, timeoutMs, 'The machine did not answer the offer');
         await this.peer.setRemoteDescription({ type: 'answer', sdp: answerSdp });
         const binding = channelBinding(this.offerSdp, answerSdp);
@@ -205,7 +210,7 @@ export class DirectClient {
            stream reset the channel close starts is the only word the daemon gets. Taking the peer down
            before the reset is answered races it, and a daemon that loses that race waits 30 s for ICE consent. */
         const released = raw === null || raw.readyState === 'closed' ? Promise.resolve() : waitFor(() => raw.readyState === 'closed', CLOSE_GRACE_MS);
-        void released.catch(() => undefined).then(() => this.peer.close().catch(() => undefined));
+        void released.catch(() => undefined).then(() => bestEffort('peer.close', this.peer.close()));
     }
 
     private handshake(channel: DirectChannel, binding: string): Promise<{ ticket: string | null }> {
@@ -213,43 +218,35 @@ export class DirectClient {
         return new Promise((resolve, reject) => {
             channel.onClose(() => reject(new Error('The channel closed during the handshake')));
             channel.receiveWith((raw) => {
-                const json = JSON.parse(raw) as unknown;
-                const challenge = DirectChallengeFrameSchema.safeParse(json);
-                if (challenge.success) {
-                    const { daemon } = challenge.data;
+                const frame = parseHandshakeFrame(JSON.parse(raw));
+                if (frame === null) {
+                    reject(new Error(`The machine sent something other than a handshake: ${raw.slice(0, 120)}`));
+                    return;
+                }
+                if (frame.type === 'direct.challenge') {
                     if (credential.kind === 'none') {
                         channel.send(JSON.stringify({ id: 'unproven', type: 'endpoint.info', payload: {} }));
                         return;
                     }
-                    if (credential.kind === 'key' || credential.kind === 'signer') {
-                        const signedBy = daemon.publicKey === credential.daemonPublicKey && daemon.id === credential.daemonId;
-                        if (
-                            !signedBy ||
-                            !verifySignature(credential.daemonPublicKey, daemonChannelMessage(daemon.id, challenge.data.challenge, binding), daemon.signature)
-                        ) {
-                            reject(new Error('The other machine could not prove who it is'));
-                            channel.close(1000, 'imposter');
-                            return;
-                        }
-                    }
-                    void proofFor(credential, challenge.data.challenge, binding).then(
+                    void proofFor(credential, frame, binding).then(
                         (proof) => {
+                            if (proof === null) {
+                                reject(new Error('The other machine could not prove who it is'));
+                                channel.close(1000, 'imposter');
+                                return;
+                            }
                             channel.send(JSON.stringify(proof));
                         },
                         (e: unknown) => reject(e instanceof Error ? e : new Error(String(e)))
                     );
                     return;
                 }
-                const verdict = DirectVerdictFrameSchema.safeParse(json);
-                if (!verdict.success) {
-                    reject(new Error(`The machine sent something other than a handshake: ${raw.slice(0, 120)}`));
+                if (frame.type === 'direct.refused') {
+                    // A machine older than the `code` field says only the words.
+                    reject(new CodedError(frame.code ?? (frame.reason.includes('does not know this device') ? 'not-paired' : 'refused'), frame.reason));
                     return;
                 }
-                if (verdict.data.type === 'direct.refused') {
-                    reject(new Error(verdict.data.reason));
-                    return;
-                }
-                resolve({ ticket: verdict.data.ticket });
+                resolve({ ticket: frame.ticket });
             }, UNAUTHENTICATED_FRAME_CHARS);
         });
     }
@@ -271,28 +268,27 @@ export class DirectClient {
         if (frame.ok) {
             entry.resolve(frame.result);
         } else {
-            entry.reject(new Error(`${frame.error?.code}: ${frame.error?.message}`));
+            entry.reject(new CodedError(frame.error?.code ?? 'internal', frame.error?.message ?? 'The machine gave no reason'));
         }
     }
 }
 
-async function proofFor(credential: Exclude<DirectCredential, { kind: 'none' }>, challenge: string, binding: string): Promise<DirectProofFrame> {
-    if (credential.kind === 'key' || credential.kind === 'signer') {
-        const message = clientChannelMessage(credential.daemonId, challenge, credential.publicKey, binding);
-        return {
-            type: 'direct.key',
-            protocol: PROTOCOL_VERSION,
-            challenge,
-            publicKey: credential.publicKey,
-            signature: credential.kind === 'key' ? signMessage(credential.privateKey, message) : await credential.sign(message)
-        };
+/* The answer to a challenge, or null when the machine that sent it is not the one this credential pinned. */
+async function proofFor(
+    credential: Exclude<DirectCredential, { kind: 'none' }>,
+    frame: DirectChallengeFrame,
+    binding: string
+): Promise<DirectProofFrame | null> {
+    if (credential.kind === 'secret') {
+        return secretProofFrame(credential.secret, credential.daemonId, frame.challenge, binding);
     }
-    return {
-        type: 'direct.secret',
-        protocol: PROTOCOL_VERSION,
-        challenge,
-        proof: localSecretProof(credential.secret, credential.daemonId, challenge, binding)
-    };
+    const pinned = { publicKey: credential.daemonPublicKey, daemonId: credential.daemonId };
+    if (!(await daemonProvedItself(pinned, frame, binding, verifySignature))) {
+        return null;
+    }
+    const signer =
+        credential.kind === 'key' ? { publicKey: credential.publicKey, sign: (message: string) => signMessage(credential.privateKey, message) } : credential;
+    return keyProofFrame(signer, credential.daemonId, frame.challenge, binding);
 }
 
 async function waitFor(ready: () => boolean, timeoutMs: number): Promise<void> {

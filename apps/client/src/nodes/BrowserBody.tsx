@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, EmptyState, Icon, IconButton, Select, Tooltip, formatShortcut, KEY_SHORTCUTS } from '@adecore/ui';
+import { Button, ButtonGroup, EmptyState, Icon, IconButton, Select, Tooltip, formatShortcut, KEY_SHORTCUTS, isApplePlatform } from '@adecore/ui';
 import clsx from 'clsx';
 import { ArrowLeft, ArrowRight, Code, ExternalLink, Lock, RotateCw, Unplug, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -10,23 +10,23 @@ import { BrowserStream } from '@/browser/BrowserStream';
 import { ERROR_ICON } from '@/browser/error-icons';
 import { classifyLoadError } from '@/browser/load-error';
 import { drivePage, openPage } from '@/browser/open-page';
-import { browserRouteAvailable } from '@/browser/owner-route';
 import { usePageFar } from '@/browser/page-snapshots';
 import { prettyUrl } from '@/browser/pretty-url';
-import { browserRegistry, useBrowserRow } from '@/browser/registry';
 import { browserStreamScaleLimit, browserStreamScaleOptions, clampBrowserStreamScale, useBrowserStreamQuality } from '@/browser/stream-quality';
-import { useSwipeOverlay } from '@/browser/swipe-overlay';
-import { desktop, isApplePlatform, isDesktop } from '@/desktop/bridge';
+import { browserRouteAvailable } from '@/clients/browser/owner-route';
+import { browserRegistry, useBrowserRow } from '@/clients/browser/registry';
+import { useSwipeOverlay } from '@/clients/browser/swipe-overlay';
+import { desktop, isDesktop } from '@/desktop/bridge';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
-import { useNodeHost } from '@/nodes/node-host';
 import { useLocalDaemonId, usePage } from '@/nodes/use-page';
 import { usePortGrants } from '@/port-tunnel/grants';
 import { usePortTunnelPartitions } from '@/port-tunnel/tunnel-pages';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useEndpoints } from '@/state/endpoints';
-import { endpointKey, useEndpointId } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
+import { useNodeHost } from '@/surface/nodes/node-host';
 
-/* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
 export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }) {
     const { t } = useTranslation('canvas');
     const state = useBrowserRow(id, (row) => row);
@@ -37,7 +37,6 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
     const native = isDesktop();
     const command = (action: 'back' | 'forward' | 'reload' | 'stop', ignoreCache?: boolean): void => drivePage(id, action, ignoreCache);
     const [draft, setDraft] = useState<string | null>(null);
-    // The field reads short until someone puts the keyboard in it, and whole while they edit.
     const [editing, setEditing] = useState(false);
     const field = useRef<HTMLInputElement>(null);
     const host = useNodeHost(id);

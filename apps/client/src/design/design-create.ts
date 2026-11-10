@@ -1,12 +1,13 @@
 import { designPlaces, type ProviderInfo } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
-import { agentNodeOptions, type AgentSession } from '@/agents/nodes';
-import type { Point } from '@/canvas/math';
+import { agentNodeOptions } from '@/agents/nodes';
+import type { Point } from '@/canvas-model/math';
 import { freeDesignFolder } from '@/design/design-folder';
 import { designFoldersOnDisk } from '@/design/design-read';
+import type { AgentSession } from '@/state/agent-availability';
 import type { CanvasState } from '@/state/canvas';
+import { currentEndpointId, useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { currentEndpointId, useEndpointId } from '@/state/keys';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useMachineAnswers } from '@/transport/features';
 
@@ -18,7 +19,6 @@ export function useDesignOffered(): boolean {
     return hasFolder && supported;
 }
 
-/* "Design", then "Design 2", over every design of the project, a view of its own or a node on a canvas. */
 function freeDesignName(names: readonly string[]): string {
     const taken = new Set(names);
     let name = 'Design';

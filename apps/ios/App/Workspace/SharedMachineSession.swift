@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 
 @MainActor @Observable
@@ -14,7 +15,13 @@ final class SharedMachineSession {
     /// When the link this phone had last went down; nil while it never had one this launch.
     private(set) var lastConnectedAt: Date?
     private var lease: MachineLease?
-    @ObservationIgnored private var preferenceSubscriptions: [() -> Void] = []
+    /// The pick of account each new link tells the machine, and again whenever the pick changes.
+    @ObservationIgnored private lazy var preferences = LiveResource(
+        client: rpc, read: { [weak self] in
+            guard let self else { return }
+            ChatPreferences.shared.send(to: rpc, machineID: machine.id)
+        })
+    @ObservationIgnored private var stopPreferenceChanges: (() -> Void)?
     private var references = 0
     private var invalidated = false
     /// Moves whenever the link goes away. `hold` reports a connected link before it returns the lease, so `opened`
@@ -88,7 +95,8 @@ final class SharedMachineSession {
                 problem = error?.localizedDescription
                 discardIdleChats()
                 rpc.disconnected(error: error)
-            }, route: { [weak self] in
+            },
+            route: { [weak self] in
                 self?.route = $0
                 self?.rpc.setRoute($0)
             }, features: { [weak self] in self?.rpc.setFeatures($0) },
@@ -118,23 +126,18 @@ final class SharedMachineSession {
     }
 
     private func startPreferences() {
-        guard preferenceSubscriptions.isEmpty else { return }
-        let preferences = ChatPreferences.shared
-        preferenceSubscriptions = [
-            rpc.observeConnection { [weak self] connected in
-                guard let self, connected else { return }
-                preferences.send(to: rpc, machineID: machine.id)
-            },
-            preferences.observe { [weak self] in
-                guard let self, rpc.isConnected else { return }
-                preferences.send(to: rpc, machineID: machine.id)
-            },
-        ]
+        guard !preferences.isStarted else { return }
+        preferences.start()
+        stopPreferenceChanges = ChatPreferences.shared.observe { [weak self] in
+            guard let self, rpc.isConnected else { return }
+            ChatPreferences.shared.send(to: rpc, machineID: machine.id)
+        }
     }
 
     private func stopPreferences() {
-        preferenceSubscriptions.forEach { $0() }
-        preferenceSubscriptions.removeAll()
+        preferences.stop()
+        stopPreferenceChanges?()
+        stopPreferenceChanges = nil
     }
 
     func release() {
@@ -197,7 +200,6 @@ final class SharedMachineSession {
         return model.connected && !model.loading && model.info != nil && model.error == nil
     }
 
-    /// Lets go of a chat that ended on the machine, so nothing here attaches to it again.
     func forgetChat(_ id: String) { removeChat(id) }
 
     private func discardIdleChats(except retainedID: String? = nil) {
@@ -287,11 +289,11 @@ final class MachineNavigationLease {
 
 @MainActor
 final class ProjectSubscriptions {
-    private let request: (String, JSONValue) async throws -> JSONValue
+    private let request: (WireRequest, JSONValue) async throws -> JSONValue
     private var references: [String: Int] = [:]
     private var operations: [String: Task<JSONValue, Error>] = [:]
 
-    init(request: @escaping (String, JSONValue) async throws -> JSONValue) { self.request = request }
+    init(request: @escaping (WireRequest, JSONValue) async throws -> JSONValue) { self.request = request }
 
     func retain(_ id: String) { references[id, default: 0] += 1 }
 
@@ -302,7 +304,7 @@ final class ProjectSubscriptions {
         let task = Task {
             _ = try? await previous?.value
             guard references[id, default: 0] > 0 else { throw CancellationError() }
-            return try await request("project.open", .object(["projectId": .string(id)]))
+            return try await request(.projectOpen, .object(["projectId": .string(id)]))
         }
         operations[id] = task
         return try await task.value
@@ -316,7 +318,7 @@ final class ProjectSubscriptions {
             // The daemon registers a viewer only after its asynchronous open completes.
             _ = try? await previous?.value
             guard connected, references[id, default: 0] == 0 else { return JSONValue.object([:]) }
-            return try await request("project.release", .object(["projectId": .string(id)]))
+            return try await request(.projectRelease, .object(["projectId": .string(id)]))
         }
         operations[id] = task
         return Task { _ = try? await task.value }

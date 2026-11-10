@@ -159,7 +159,6 @@ struct UiMapView: View {
         .onAppear { reachability.start() }
     }
 
-    /// Why the base map is not there, or nil when it is.
     static func note(tiles: Bool, online: Bool) -> String? {
         if !tiles { return String(localized: "Map tiles are off.") }
         if !online { return String(localized: "No map tiles offline. The places stay listed.") }

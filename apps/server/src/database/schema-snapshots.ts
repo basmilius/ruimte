@@ -2,8 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { CheckInfo, ColumnInfo, SchemaInfo, ServerInfo, StatementResult, TableInfo, TableStructure, TriggerInfo } from '@adecore/database/protocol';
-import type { DatabaseConnection, SqlSnapshotInfo } from '@ruimte/contracts';
+import type { DatabaseConnection } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
+import type { SnapshotFacts } from '../language/sql-file-context.ts';
 import { openConfig } from './agent-databases.ts';
 import { inOwnedSession, type DatabaseCalls, type SessionCall } from './owned-session.ts';
 
@@ -20,11 +21,6 @@ const SNAPSHOT_LIMIT_MS = 120_000;
 export interface SnapshotTarget {
     connectionId: string;
     database: string | null;
-}
-
-/* What the settings of the servers need of a snapshot that is there. */
-export interface SnapshotFacts extends SqlSnapshotInfo {
-    path: string;
 }
 
 interface SchemaSnapshotsOptions {
@@ -105,7 +101,6 @@ function trigger(info: TriggerInfo, table: string): Record<string, unknown> {
     return { name: info.name, table, timing: info.timing.toLowerCase(), events: [info.event.toLowerCase()] };
 }
 
-/* A table as the snapshot holds it, from what the helper says of it. */
 export function tableOf(info: TableInfo, structure: TableStructure): Record<string, unknown> {
     const primary = structure.indexes.find((index) => index.primary);
     const unique = structure.indexes.filter((index) => index.unique && !index.primary);
@@ -199,7 +194,6 @@ export class SchemaSnapshots {
         return join(this.connectionFolder(projectId, target.connectionId), `${segmentOf(target.database ?? ALL_DATABASES)}.json`);
     }
 
-    /* The snapshots of a project that are there, read from their files. */
     async list(projectId: string): Promise<SnapshotFacts[]> {
         const folder = join(this.options.root, segmentOf(projectId));
         const connections = await readdir(folder).catch(() => [] as string[]);

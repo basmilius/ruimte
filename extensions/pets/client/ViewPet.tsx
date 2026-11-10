@@ -9,7 +9,7 @@ import { useTeleport, type Teleport } from '@extensions/pets/client/teleport';
 import { usePetLook } from '@extensions/pets/client/use-pet-look';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useSessions, type StatusOf } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { useTasks } from '@/state/tasks';
@@ -47,7 +47,6 @@ function useKids(node: StatusOf): ReturnType<typeof kidMoodsOf> {
     return kidMoodsOf(kidKey);
 }
 
-/* Where the composer card's top edge and right edge lie in the box around the composer, and whether the card is wide enough for a pet. */
 interface Ledge {
     top: number;
     right: number;
@@ -206,7 +205,6 @@ export function TerminalViewPet({ id, title, onPress, leaving }: { id: string; t
 
     const figure = <PetFigure look={look} mood={pet.mood} crowded small beam={beam} />;
 
-    // On its way out it is only a picture, which leads nowhere any more.
     if (beam === 'out') {
         return (
             <span data-pet-leaving="" className="relative shrink-0 self-end" style={{ width: KID_PAINT_WIDTH, height: KID_HEIGHT }} aria-hidden>

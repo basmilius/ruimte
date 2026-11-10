@@ -54,7 +54,6 @@ function entryIn(folder: string, entry: string | undefined): string | null {
     return ['index.ts', 'index.tsx'].map((name) => join(folder, 'client', name)).find((path) => existsSync(path)) ?? null;
 }
 
-/* What a test reads and drives of one host. */
 function publicHost(host: TestHost, api: ClientApi): PublicTesting.TestHost {
     const created = (): PublicClient.NodeInfo[] => host.createdIds.filter((id) => host.nodes.has(id)).map((id) => host.info(id));
 

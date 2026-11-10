@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { useDesignChat } from '@/design/design-chat';
 import { useDesignPages } from '@/design/design-files';
 import { DesignStage } from '@/design/DesignStage';
-import { ConnectionProvider } from '@/transport/ConnectionProvider';
-import { useWorkspace } from '@/transport/connections';
-import { TransportError } from '@/transport/transport';
+import { useDesignChat } from '@/state/design-chat';
+import { TransportError } from '@/transport-api/transport';
+import { ConnectionProvider } from '@/workspace/ConnectionProvider';
+import { useWorkspace } from '@/workspace/connections';
 import { chatInfoOf } from '../../testing/chat-info';
 import { layOutChat, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';

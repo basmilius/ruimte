@@ -152,7 +152,7 @@ const linkedCache = new Map<string, boolean>();
  * differs from the shared one. A submodule's do not, where a `.git` file alone would say yes. A root
  * stays what it is, so the answer is kept.
  */
-export async function isLinkedWorktree(root: string): Promise<boolean> {
+async function isLinkedWorktree(root: string): Promise<boolean> {
     const cached = linkedCache.get(root);
     if (cached !== undefined) {
         return cached;
@@ -236,7 +236,6 @@ export async function readStatus(cwd: string, now: number = Date.now()): Promise
     return root === null ? noRepository() : await readStatusAt(root, LEAVE_NOTHING_OUT, now);
 }
 
-// Read from here by a caller outside this folder.
 export { repositoryRoot };
 
 /* What a folder outside any repository reads as. */
@@ -244,7 +243,6 @@ export function noRepository(): GitStatus {
     return { ...EMPTY, files: [] };
 }
 
-/* `readStatus` for a root `repositoryRoot` already found. */
 export async function readStatusAt(root: string, leftOut: LeftOut = LEAVE_NOTHING_OUT, now: number = Date.now()): Promise<GitStatus> {
     const porcelain = await readGit(['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all', ...leavingOut(await leftOut(root))], root);
     if (porcelain === null) {

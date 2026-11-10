@@ -1,10 +1,10 @@
 import { VISUAL_LIMITS, VisualLayoutSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 import { visualRow, visualRows } from '../actions/visual-actions.ts';
-import { prepareVisualPage, type ImageFiles } from '../mcp/visual-images.ts';
+import { prepareVisualPage, type ImageFiles } from '../agent-files/visual-images.ts';
+import { field, requiredField } from '../canvas/host.ts';
 import { PREVIEW_WIDTH } from '../visuals/renderer.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { field, requiredField } from './host.ts';
 import { defineToolkit, type ToolCall } from './tool.ts';
 
 /* A model that is not told so describes the page in its reply as well, which the person then reads twice. */
@@ -61,7 +61,7 @@ const visualPreview = defineActionTool('visual', {
             .min(PREVIEW_WIDTH.min, `width is from ${PREVIEW_WIDTH.min} to ${PREVIEW_WIDTH.max} CSS pixels`)
             .max(PREVIEW_WIDTH.max, `width is from ${PREVIEW_WIDTH.min} to ${PREVIEW_WIDTH.max} CSS pixels`)
             .optional()
-            .describe('CSS pixels; the reply column is 768'),
+            .describe(`CSS pixels; the reply column is ${PREVIEW_WIDTH.default}`),
         appearance: z.enum(['dark', 'light'], { error: 'appearance is dark or light' }).optional(),
         html: z.string().optional()
     }),

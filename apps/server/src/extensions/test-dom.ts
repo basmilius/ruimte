@@ -38,7 +38,6 @@ function turn(module: ReactModule): Promise<void> {
     return step(module, () => new Promise((resolve) => setImmediate(resolve)));
 }
 
-/* Unmounts what every test drew, so the next one starts on an empty page. */
 export function unmountAll(): void {
     for (const unmount of [...mounted]) {
         unmount();

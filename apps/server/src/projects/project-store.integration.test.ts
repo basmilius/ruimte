@@ -2,7 +2,8 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
+import { projectOverlays } from './overlays.ts';
 import { projectLinks } from './project-file-test-helpers.ts';
 import { documentPathInFolder } from './project-files.ts';
 import { ProjectStore } from './project-store.ts';
@@ -19,7 +20,7 @@ beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-projects-watch-'));
     folder = join(root, 'repo');
     await mkdir(folder);
-    store = new ProjectStore(join(root, 'home'), projectLinks());
+    store = new ProjectStore(join(root, 'home'), projectLinks(), projectOverlays(join(root, 'home')));
     changed = [];
     store.subscribe('c1', (event) => {
         if (event.event === 'project.changed') {

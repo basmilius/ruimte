@@ -1,7 +1,7 @@
 import { LINE_HEIGHT, pathsOfElement, writingFrameOf, type ElementPath, type WrittenElement } from '@adecore/drawing';
 import type { DrawingElement, DrawingFont } from '@ruimte/contracts';
-import { fontOfElement, linesOn } from '@/drawing/measure';
-import { readEdge, readFontStacks, readPalette, readPaper, type DrawingPalette } from '@/drawing/palette';
+import { fontOfElement, linesOn } from '@/canvas-model/drawing-measure';
+import { readEdge, readFontStacks, readPalette, readPaper, type DrawingPalette } from '@/canvas-model/drawing-palette';
 
 interface PaintOptions {
     palette: DrawingPalette;
@@ -16,7 +16,6 @@ interface PaintOptions {
     writing?: string | null;
 }
 
-/* How faint an element goes while the eraser is on it. */
 const FADED = 0.3;
 
 interface CachedPaths {
@@ -132,7 +131,6 @@ export function paintElements(ctx: CanvasRenderingContext2D, elements: readonly 
     }
 }
 
-/* What the painter needs from the theme right now, for a caller that has no reason to know more. */
 export function paintOptions(): Pick<PaintOptions, 'palette' | 'paper' | 'edge' | 'fonts'> {
     return {
         palette: readPalette(),

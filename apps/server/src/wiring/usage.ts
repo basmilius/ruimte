@@ -3,20 +3,25 @@ import { limitAccountsOf, limitsFileIn, usageAccountsOf, usageRootsOf, UsageMoni
 import type { ServerConfig } from '../config.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { claudeApiUsageRoots } from '../providers/anthropic-claude-api-provider.ts';
-import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import { readGrokPlan } from '../usage/grok-plan.ts';
 import { followPlan } from '../usage/nanogpt-live.ts';
 import { sessionAccountsOf } from '../usage/session-accounts.ts';
 import type { AgentsBundle } from './agents.ts';
 import type { ProvidersBundle } from './providers.ts';
+import type { DaemonSeams } from './seams.ts';
 
-/* What the agents of this machine spent, and what their plans have left. */
 export interface UsageBundle {
     usage: UsageService;
     limits: UsageMonitor;
 }
 
-export function wireUsage(config: ServerConfig, providers: ProvidersBundle, agents: AgentsBundle, projects: ProjectStore): UsageBundle {
+export function wireUsage(
+    config: ServerConfig,
+    providers: ProvidersBundle,
+    agents: AgentsBundle,
+    projects: ProjectStore,
+    seams: Pick<DaemonSeams, 'clock' | 'usage'>
+): UsageBundle {
     const { sessions, chats } = agents;
     const usage = new UsageService({
         home: config.home,
@@ -43,7 +48,8 @@ export function wireUsage(config: ServerConfig, providers: ProvidersBundle, agen
     const limits = new UsageMonitor({
         providers: providers.providers,
         accounts: limitAccounts,
-        client: RUIMTE_CODEX_CLIENT,
+        now: () => seams.clock.now(),
+        ...(seams.usage.probe === null ? {} : { probe: seams.usage.probe }),
         file: limitsFileIn(config.home),
         plans: {
             nanogpt: () => providers.nanogpt.readPlan(),

@@ -5,18 +5,19 @@ import i18next from 'i18next';
 import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { App } from '@/App';
-import { CHAT_HOST, configureChat } from '@/chat/host';
-import { startFileReadPreparation } from '@/project/file-read-preparation';
-import { defaultDocumentStore } from '@/state/document';
-import { useFiles } from '@/state/files';
-import { folderWatches } from '@/state/fs-watch';
-import { defaultProjectStore } from '@/state/project';
-import { ChatScopeProvider } from '@/transport/ChatScopeProvider';
+import { CHAT_HOST } from '@/chat/host';
+import { configureClient } from '@/wiring/client-config';
+import { installClientHooks } from '@/wiring/client-hooks';
+import { ChatScopeProvider } from '@/workspace/ChatScopeProvider';
 import { closedAfterTest, currentTest, waitTurn } from './test-scope';
 
-// Once for the process, before any chat store is read, as `main.tsx` does it.
-configureChat();
-startFileReadPreparation(defaultProjectStore, defaultDocumentStore, folderWatches, useFiles);
+/*
+ * Once for the process, before any chat store is read: the wiring `wireClient` installs before its start steps. A
+ * workspace's wiring comes only with the `WorkspaceShell` chunk, as in the app. The start steps stay out, since they
+ * open the machines and the last project a test opens itself.
+ */
+installClientHooks();
+configureClient();
 
 /*
  * Lets what a fake machine answered and what React drew from it land. Bounded by turns of the event
@@ -91,7 +92,6 @@ function codeOf(key: string): string {
     return /^[0-9]$/.test(key) ? `Digit${key}` : key;
 }
 
-/* What a browser sends for a key, at the element that has the keyboard. */
 export async function pressKey(
     target: Element,
     key: string,
@@ -125,7 +125,6 @@ export async function openToolCall(host: Element, itemId: string): Promise<void>
     await until(() => row() !== null);
 }
 
-/* Opens the submenu behind the row that says `label` in a menu that is open, the way a click on its trigger does. */
 export async function openSubmenu(label: string): Promise<void> {
     const before = document.querySelectorAll('[role="menu"]').length;
     const trigger =

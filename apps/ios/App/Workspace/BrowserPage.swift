@@ -25,7 +25,6 @@ private final class BrowserState {
         problem = nil
         webView?.load(URLRequest(url: url))
     }
-    /// An edit left without going anywhere gives the bar back the page's own address.
     func restoreAddress() {
         if let url = webView?.url { address = url.absoluteString }
     }

@@ -2,11 +2,11 @@ import type { ReferenceIconProps } from '@adecore/agents-react';
 import { REFERENCE_ICONS } from '@adecore/agents-react/chat';
 import { Icon } from '@adecore/ui';
 import { useReachedReferables } from '@/chat/reached-referables';
+import { useProjectSource } from '@/project/project-source';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
-import { viewGlyphOf } from '@/shell/cell-view';
-import { useSidebarSource } from '@/shell/sidebar-source';
 import { useProject } from '@/state/project';
+import { viewGlyphOf } from '@/surface/cell-view';
 
 /*
  * The mark a `#` reference wears, the same as its row in the sidebar: a view with the icon a person picked
@@ -14,7 +14,7 @@ import { useProject } from '@/state/project';
  * only stores.
  */
 export function ReferenceGlyph({ id, kind, size, className }: ReferenceIconProps) {
-    const source = useSidebarSource();
+    const source = useProjectSource();
     const view = source.views.find((candidate) => candidate.id === id);
     const own = useProject((s) => s.current);
     const reached = useReachedReferables((s) => s.byEndpoint);

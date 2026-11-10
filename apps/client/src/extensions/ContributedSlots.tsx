@@ -1,7 +1,7 @@
 import { ErrorBoundary } from '@adecore/ui';
 import { createElement, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useContributions, type CanvasLayerContribution, type ViewAccessoryContribution, type ViewAccessoryProps } from '@/extensions/registry';
+import { useContributions, type CanvasLayerContribution, type ViewAccessoryContribution, type ViewAccessoryProps } from '@/state/extension-registry';
 
 /* What built-ins draw over the canvas, each behind a boundary of its own so one failure never takes the canvas along. */
 export function CanvasLayers({ place, z }: { place: CanvasLayerContribution['place']; z: number }) {

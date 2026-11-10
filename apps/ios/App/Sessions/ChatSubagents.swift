@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 
 /// One conversation below a chat: the call that opened it and what that call called it.
@@ -20,16 +21,15 @@ struct SubagentCrumb: Hashable, Identifiable {
     }
 }
 
-/// The list of a chat's sub-agents as its toolbar opens it.
 struct SubagentListRoute: Hashable, Identifiable {
     let chatID: String
     var id: String { chatID }
 }
 
-/// The state a sub-agent's entry shows in front of its title: the words of the wire, plus the cancelled that only a
-/// task's own record still tells apart from a failure.
+/// The state a sub-agent's entry shows in front of its title: the words of the wire, plus the cancelled and the paused
+/// that only a task's own record still tells apart from a failure and a run.
 enum SubagentStatusWord: String, CaseIterable {
-    case running, done, failed, cancelled
+    case running, paused, done, failed, cancelled
 
     /// Every word the wire has, so a status added to `ChatSubagentStatusSchema` stops compiling here.
     init(_ status: ChatSubagentStatus) {
@@ -43,6 +43,7 @@ enum SubagentStatusWord: String, CaseIterable {
     var title: String {
         switch self {
         case .running: String(localized: "Running")
+        case .paused: String(localized: "Paused")
         case .done: String(localized: "Done")
         case .failed: String(localized: "Failed")
         case .cancelled: String(localized: "Canceled")
@@ -54,14 +55,14 @@ enum SubagentStatusWord: String, CaseIterable {
         case .running: .running
         case .done: .done
         case .failed: .failed
-        case .cancelled: .stopped
+        case .paused, .cancelled: .stopped
         }
     }
 }
 
 /// What a task's row says its agent is doing: the task's own state, or that the agent waits on a person while the
 /// task runs.
-enum TaskRowState: Equatable {
+enum TaskRowState: String, Equatable {
     case running, waiting, paused, done, failed, cancelled
 
     var settled: Bool { self == .done || self == .failed || self == .cancelled }
@@ -105,8 +106,8 @@ enum ChatSubagents {
         items.compactMap(\.subagentItem).filter(canOpen)
     }
 
-    /// The sub-agents the composer's chip speaks for, as the desktop's `flyoutSubagents` picks them: every running
-    /// one, the ones since the person last wrote, and the rest of a turn that still has one running.
+    /// The sub-agents the composer's chip speaks for, as `activeSubagents` in `@adecore/agent-contracts` picks them:
+    /// every running one, the ones since the person last wrote, and the rest of a turn that still has one running.
     static func activity(_ items: [ChatItem]) -> [ChatSubagentItem] {
         let lastMessage = items.lastIndex { $0.userItem != nil } ?? -1
         let lastMessageAt = lastMessage < 0 ? nil : items[lastMessage].createdAt
@@ -119,68 +120,77 @@ enum ChatSubagents {
         }.map(\.1)
     }
 
-    /// The one state the chip shows for all of them: work in progress first, then whatever went wrong.
+    /// The one state the chip shows for all of them: work in progress first, then work held up, then whatever went wrong.
     static func summaryWord(_ words: [SubagentStatusWord]) -> SubagentStatusWord {
-        [.running, .failed, .cancelled].first { words.contains($0) } ?? .done
+        [.running, .paused, .failed, .cancelled].first { words.contains($0) } ?? .done
     }
 
-    /// The number on the chip: the ones still at work, and all of them once none is.
+    /// The number on the chip: the ones still at work, a paused one included, and all of them once none is.
     static func badgeCount(_ words: [SubagentStatusWord]) -> Int {
-        let active = words.count { $0 == .running }
+        let active = words.count { $0 == .running || $0 == .paused }
         return active > 0 ? active : words.count
     }
 
-    /// What the chip says: while more than one works and some still run, how far they got and how many need the person,
-    /// as `progressOf` in the desktop's `subagent-list.ts` counts them; otherwise how many there are.
+    /// How far delegated work is, as `progressOf` in `subagent-list.ts` of ADE CORE counts it: what settled as done,
+    /// what still runs or waits, and how many of those wait on a person.
+    static func progress(_ states: [TaskRowState]) -> (done: Int, total: Int, waiting: Int, active: Int) {
+        (
+            states.count { $0 == .done }, states.count, states.count { $0 == .waiting },
+            states.count { $0 == .running || $0 == .paused || $0 == .waiting }
+        )
+    }
+
+    /// What the chip says: while more than one works and some still run, how far they got and how many need the person;
+    /// otherwise how many there are.
     static func chipLabel(_ states: [TaskRowState], words: [SubagentStatusWord]) -> String {
-        let done = states.count { $0 == .done }
-        let waiting = states.count { $0 == .waiting }
-        let active = states.count { $0 == .running || $0 == .paused || $0 == .waiting }
-        guard active > 0, states.count > 1 else { return ChatBackground.subagents(badgeCount(words)) }
-        let progress = String(localized: "\(done) of \(states.count) sub-agents done")
-        return waiting > 0 ? "\(progress), \(String(localized: "\(waiting) need you"))" : progress
+        let counts = progress(states)
+        guard counts.active > 0, counts.total > 1 else { return ChatBackground.subagents(badgeCount(words)) }
+        let text = String(localized: "\(counts.done) of \(counts.total) sub-agents done")
+        return counts.waiting > 0 ? "\(text), \(String(localized: "\(counts.waiting) need you"))" : text
     }
 
-    /// The task a row stands for, whose id the daemon wrote into the row's own.
+    /// The task a row stands for, whose id the daemon wrote into the row's own, as `taskIdOfRow` reads it.
     static func taskID(_ agent: ChatSubagentItem) -> String? {
-        agent.origin == .ruimte && agent.id.hasPrefix("task-") ? String(agent.id.dropFirst(5)) : nil
+        taskID(id: agent.id, origin: agent.origin?.rawValue)
     }
 
-    /// Whether the chat a task's agent works in waits on a person, as the task's own row reads it.
+    static func taskID(id: String, origin: String?) -> String? {
+        guard origin == "ruimte", id.hasPrefix("task-") else { return nil }
+        let task = String(id.dropFirst(5))
+        return task.isEmpty ? nil : task
+    }
+
     @MainActor static func childWaiting(_ agent: ChatSubagentItem, attention: AttentionStore?) -> Bool {
         guard let id = agent.childId, let attention else { return false }
         return attention.needsYou(id) || attention.waits[id] != nil
     }
 
-    /// A cancelled task is a failed row on the wire, and only the task itself still says which it was.
-    static func statusWord(_ agent: ChatSubagentItem, task: JSONValue?) -> SubagentStatusWord {
-        if agent.status == .failed, TaskStatus(rawValue: task?.text("status") ?? "") == .cancelled { return .cancelled }
+    /// A cancelled task is a failed row on the wire and a paused one a running row, and only the task itself still says
+    /// which it is.
+    static func statusWord(_ agent: ChatSubagentItem, task: AgentTask?) -> SubagentStatusWord {
+        if agent.status == .failed, task?.status == .cancelled { return .cancelled }
+        if agent.status == .running, task?.status == .open, task?.paused != nil { return .paused }
         return SubagentStatusWord(agent.status)
     }
 
-    /// A paused task is still a running row on the wire, and only the task itself says it waits on a limit.
-    static func taskRowState(_ agent: ChatSubagentItem, task: JSONValue?, childWaiting: Bool) -> TaskRowState {
-        if agent.status == .running, TaskStatus(rawValue: task?.text("status") ?? "") == .open,
-            let paused = task?["paused"], paused != .null
-        {
-            return .paused
-        }
+    static func taskRowState(_ agent: ChatSubagentItem, task: AgentTask?, childWaiting: Bool) -> TaskRowState {
         switch statusWord(agent, task: task) {
         case .running: return childWaiting ? .waiting : .running
+        case .paused: return .paused
         case .done: return .done
         case .failed: return .failed
         case .cancelled: return .cancelled
         }
     }
 
-    static func taskStateText(_ state: TaskRowState, task: JSONValue?, now: Date, locale: FormatLocale = .current)
+    static func taskStateText(_ state: TaskRowState, task: AgentTask?, now: Date, locale: FormatLocale = .current)
         -> String
     {
         switch state {
         case .running: return String(localized: "Running")
         case .waiting: return String(localized: "Waiting for you")
         case .paused:
-            guard let until = task?["paused"]?["until"]?.numberValue else { return String(localized: "Paused") }
+            guard let until = task?.paused?.until else { return String(localized: "Paused") }
             let time = Format.moment(Date(timeIntervalSince1970: until / 1000), now: now, in: locale)
             return String(localized: "Paused until \(time)", comment: "%@ is a time, or a day and a time")
         case .done: return String(localized: "Done")
@@ -197,12 +207,12 @@ enum ChatSubagents {
     }
 
     /// When a task was given and settled. Its own record says so first; the row copies those, but may lag behind it.
-    static func taskSpan(_ agent: ChatSubagentItem, task: JSONValue?) -> (startedAt: Double, finishedAt: Double?) {
-        (task?["createdAt"]?.numberValue ?? agent.startedAt, task?["settledAt"]?.numberValue ?? agent.finishedAt)
+    static func taskSpan(_ agent: ChatSubagentItem, task: AgentTask?) -> (startedAt: Double, finishedAt: Double?) {
+        (task?.createdAt ?? agent.startedAt, task?.settledAt ?? agent.finishedAt)
     }
 
     /// How long a settled task took; nil while it runs and for one that knows no start or end.
-    static func taskDuration(_ agent: ChatSubagentItem, task: JSONValue?, state: TaskRowState) -> String? {
+    static func taskDuration(_ agent: ChatSubagentItem, task: AgentTask?, state: TaskRowState) -> String? {
         let span = taskSpan(agent, task: task)
         guard state.settled, span.startedAt > 0, let finishedAt = span.finishedAt, finishedAt >= span.startedAt
         else { return nil }
@@ -374,7 +384,7 @@ enum ChatSubagents {
 
     /// The time on the right of an entry: how long it has run so far, or when it ended, with the date once that was
     /// not today.
-    static func entryTime(_ agent: ChatSubagentItem, task: JSONValue?, now: Date, locale: FormatLocale = .current)
+    static func entryTime(_ agent: ChatSubagentItem, task: AgentTask?, now: Date, locale: FormatLocale = .current)
         -> String?
     {
         let (startedAt, finishedAt) = taskSpan(agent, task: task)
@@ -426,7 +436,7 @@ enum ChatSubagents {
     @MainActor static func agentsEnded(with nodeIDs: [String], client: any MachineRequesting) async -> Int {
         var ended = Set<String>()
         for nodeID in nodeIDs {
-            let result = try? await client.request("agent.children", payload: .object(["nodeId": .string(nodeID)]))
+            let result = try? await client.request(.agentChildren, payload: .object(["nodeId": .string(nodeID)]))
             for id in result?.list("nodeIds").compactMap(\.stringValue) ?? [] { ended.insert(id) }
         }
         return ended.subtracting(nodeIDs).count
@@ -495,7 +505,20 @@ final class SubagentConversation {
     @ObservationIgnored private let chatID: String
     @ObservationIgnored private let toolUseID: String
     @ObservationIgnored private let limit: Int
-    @ObservationIgnored private var subscriptions: [() -> Void] = []
+    // Only the event and the link: the watch is a flag of the read itself, counted by `SubagentWatches`, and the
+    // reads wait in their own queue.
+    @ObservationIgnored private lazy var feed = LiveResource(
+        client: client,
+        events: [
+            .apply(.chatSubagentChanged, as: ChatSubagentChangedEvent.self) { [weak self] event in
+                guard let self, event.chatId == chatID, event.toolUseId == toolUseID else { return }
+                refresh()
+            }
+        ],
+        connection: { [weak self] connected in
+            guard let self, connected else { return }
+            enqueue { await self.readNewest(watch: true) }
+        })
     @ObservationIgnored private var queue: Task<Void, Never>?
     @ObservationIgnored private var refreshWaiting = false
     @ObservationIgnored private var earlierWaiting = false
@@ -513,24 +536,14 @@ final class SubagentConversation {
     private var watchKey: String { SubagentWatches.key(client, chatID: chatID, toolUseID: toolUseID) }
 
     func start() {
-        guard subscriptions.isEmpty else { return }
+        guard !feed.isStarted else { return }
         holding = true
         SubagentWatches.acquire(watchKey)
-        subscriptions = [
-            client.subscribe("chat.subagentChanged") { [weak self] event in
-                guard let self, event.text("chatId") == chatID, event.text("toolUseId") == toolUseID else { return }
-                refresh()
-            },
-            client.observeConnection { [weak self] connected in
-                guard let self, connected else { return }
-                enqueue { await self.readNewest(watch: true) }
-            },
-        ]
+        feed.start()
     }
 
     func stop() {
-        subscriptions.forEach { $0() }
-        subscriptions.removeAll()
+        feed.stop()
         queue?.cancel()
         earlierWaiting = false
         guard holding else { return }
@@ -539,7 +552,7 @@ final class SubagentConversation {
         let payload = JSONValue.object([
             "chatId": .string(chatID), "toolUseId": .string(toolUseID), "limit": .number(1), "watch": .bool(false),
         ])
-        Task { [client] in _ = try? await client.request("chat.subagent", payload: payload) }
+        Task { [client] in _ = try? await client.request(.chatSubagent, payload: payload) }
     }
 
     /// The newest page again; calls that arrive while one waits become that one.
@@ -564,13 +577,13 @@ final class SubagentConversation {
             do {
                 let page = try await self.ask(cursor: cursor, limit: Self.pageSize, watch: nil)
                 guard !Task.isCancelled else { return }
-                let older = Self.items(of: page)
+                let older = page.items
                 self.items = older + self.items
                 self.readPending(page)
-                self.cursor = page["history"]?["cursor"]?.stringValue
-                self.live = page["live"]?.boolValue == true
+                self.cursor = page.history.cursor
+                self.live = page.live
                 self.onChange(.prepended(older))
-            } catch MachineClientError.server(code: "history-expired", message: _) {
+            } catch let error as MachineClientError where error.code == .historyExpired {
                 // The record was written again under this page; what it holds now is the only truth.
                 self.items = []
                 self.cursor = nil
@@ -587,14 +600,14 @@ final class SubagentConversation {
         do {
             let page = try await ask(cursor: nil, limit: limit, watch: watch ? true : nil)
             guard !Task.isCancelled, holding else { return }
-            let incoming = Self.items(of: page)
+            let incoming = page.items
             let previous = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { $1 })
             let merged = ChatSubagents.mergeNewest(
-                current: items, cursor: cursor, page: incoming, pageCursor: page["history"]?["cursor"]?.stringValue)
+                current: items, cursor: cursor, page: incoming, pageCursor: page.history.cursor)
             items = merged.items
             cursor = merged.cursor
             readPending(page)
-            live = page["live"]?.boolValue == true
+            live = page.live
             status = .ready
             error = nil
             failedCursor = nil
@@ -611,29 +624,25 @@ final class SubagentConversation {
         }
     }
 
-    private func ask(cursor: String?, limit: Int, watch: Bool?) async throws -> JSONValue {
+    private func ask(cursor: String?, limit: Int, watch: Bool?) async throws -> ChatSubagentPage {
         var payload: [String: JSONValue] = [
             "chatId": .string(chatID), "toolUseId": .string(toolUseID), "limit": .number(Double(limit)),
         ]
         if let cursor { payload["cursor"] = .string(cursor) }
         if let watch { payload["watch"] = .bool(watch) }
-        return try await client.request("chat.subagent", payload: .object(payload))
+        return try await client.request(.chatSubagent, payload: .object(payload))
+            .decoded(as: ChatSubagentPage.self)
     }
 
     /// Only a delegated chat answers its own requests; a request still waiting stays answerable after it left the
     /// newest page, which is why the machine names them apart.
-    private func readPending(_ page: JSONValue) {
-        let chatID = page["context"]?["chatId"]?.stringValue
-        let next = chatID.map { (chatID: $0, provider: page["context"]?.text("provider") ?? "") }
+    private func readPending(_ page: ChatSubagentPage) {
+        let chatID = page.context?.chatId
+        let next = chatID.map { (chatID: $0, provider: page.context?.provider ?? "") }
         if next?.chatID != delegatedChat?.chatID || next?.provider != delegatedChat?.provider { delegatedChat = next }
-        let listed = page["pending"]?.arrayValue.map { $0.compactMap { try? $0.decoded(as: ChatItem.self) } }
+        let listed = page.pending?.arrayValue.map { $0.compactMap { try? $0.decoded(as: ChatItem.self) } }
         let waiting = chatID == nil ? [] : listed ?? items.filter(\.isPending)
         if waiting != pending { pending = waiting }
-    }
-
-    /// The page's items are chat items like the thread's, which the machine validated with the rest of its answer.
-    private static func items(of page: JSONValue) -> [ChatItem] {
-        page.list("items").compactMap { try? $0.decoded(as: ChatItem.self) }
     }
 
     private func enqueue(_ work: @escaping @MainActor () async -> Void) {

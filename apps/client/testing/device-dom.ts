@@ -9,7 +9,6 @@ export function buttonWithText(text: string): HTMLElement | null {
     return [...document.body.querySelectorAll<HTMLElement>('button')].find((candidate) => candidate.textContent?.trim() === text) ?? null;
 }
 
-/* A canvas with the fake simulator on it as a node, optionally bound to another machine. */
 export function phoneCanvas(machine?: string): ProjectCanvasView {
     const phone: ProjectNode = {
         id: 'phone',

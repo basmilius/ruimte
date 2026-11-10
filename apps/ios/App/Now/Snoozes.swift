@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 
 /// The ways to put a node aside, in the order the desktop's snooze menu offers them.
@@ -117,7 +118,6 @@ struct SnoozeBook: Codable, Equatable {
         if outbox[node] == change { outbox[node] = nil }
     }
 
-    /// Every snooze the machine holds.
     mutating func receive(_ snoozes: [String: Double]) {
         listed = snoozes
     }
@@ -145,7 +145,17 @@ final class MachineSnoozes {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let storageKey: String
     @ObservationIgnored private let clock: () -> Date
-    @ObservationIgnored private var stops: [() -> Void] = []
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.snoozeChanged, raw: { [weak self] payload in
+                self?.update { $0.receive(Self.parse(payload)) }
+            })
+        ],
+        connection: { [weak self] connected in
+            self?.connected = connected
+            self?.generation += 1
+        }, read: { [weak self] in await self?.synchronize() })
     @ObservationIgnored private var timer: Task<Void, Never>?
     @ObservationIgnored private var connected = false
     @ObservationIgnored private var generation = 0
@@ -167,7 +177,6 @@ final class MachineSnoozes {
 
     isolated deinit { stop() }
 
-    /// Each node's snooze that still stands, by node id.
     var standing: [String: Date] {
         book.standing(at: Self.milliseconds(clock())).mapValues { Date(timeIntervalSince1970: $0 / 1000) }
     }
@@ -175,24 +184,13 @@ final class MachineSnoozes {
     func until(_ nodeID: String) -> Date? { standing[nodeID] }
 
     func start() {
-        guard stops.isEmpty else { return }
-        stops.append(
-            client.subscribe(.snoozeChanged) { [weak self] payload in
-                self?.update { $0.receive(Self.parse(payload)) }
-            })
-        stops.append(
-            client.observeConnection { [weak self] connected in
-                guard let self else { return }
-                self.connected = connected
-                generation += 1
-                if connected { Task { await self.synchronize() } }
-            })
+        guard !live.isStarted else { return }
+        live.start()
         arm()
     }
 
     func stop() {
-        stops.forEach { $0() }
-        stops.removeAll()
+        live.stop()
         timer?.cancel()
         timer = nil
         connected = false
@@ -270,7 +268,7 @@ final class MachineSnoozes {
     private func arm() {
         timer?.cancel()
         timer = nil
-        guard !stops.isEmpty else { return }
+        guard live.isStarted else { return }
         let now = Self.milliseconds(clock())
         guard let wake = book.nextWake(after: now) else { return }
         let delay = min(max(wake - now, 0) + 50, 60_000)

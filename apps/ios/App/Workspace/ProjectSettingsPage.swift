@@ -24,17 +24,16 @@ enum ProjectSettingsLogic {
     /// The daemon refuses a larger image.
     static let imageLimit = 256 * 1024
 
-    static func mark(of summary: JSONValue) -> Mark {
-        switch summary["icon"]?.text("kind") {
-        case "lucide": .icon
-        case "image": .image
+    static func mark(of summary: ProjectSummary?) -> Mark {
+        switch summary?.icon {
+        case .lucide: .icon
+        case .image: .image
         default: .initial
         }
     }
 
     static func sameColor(_ lhs: String, _ rhs: String) -> Bool { lhs.lowercased() == rhs.lowercased() }
 
-    /// The name to send, or nil when there is nothing to rename: empty, or what it already is.
     static func rename(_ typed: String, current: String) -> String? {
         let name = typed.trimmingCharacters(in: .whitespacesAndNewlines)
         return name.isEmpty || name == current ? nil : name
@@ -51,7 +50,8 @@ enum ProjectSettingsLogic {
         if sessions == 0 {
             return String(localized: "Nothing is running. It moves to Recent as you left it.")
         }
-        return String(localized: "Closing ends its \(sessions) running sessions. Terminals lose scrollback and agents stop.")
+        return String(
+            localized: "Closing ends its \(sessions) running sessions. Terminals lose scrollback and agents stop.")
     }
 
     /// A picked picture as a PNG the daemon takes, scaled down until it fits under the limit; nil when it cannot be
@@ -80,7 +80,7 @@ struct ProjectSettingsPage: View {
     let showLaunches: () -> Void
     let closed: () -> Void
     @Environment(\.dismiss) private var dismiss
-    @State private var summary: JSONValue
+    @State private var summary: ProjectSummary?
     @State private var name: String
     @State private var mark: ProjectSettingsLogic.Mark
     @State private var photo: PhotosPickerItem?
@@ -99,10 +99,10 @@ struct ProjectSettingsPage: View {
         _mark = State(initialValue: ProjectSettingsLogic.mark(of: workspace.summary))
     }
 
-    private var shown: JSONValue {
-        summary.setting("name", .string(workspace.title)).setting("color", .string(color))
+    private var shown: ProjectSummary {
+        (summary ?? .placeholder(projectID: workspace.projectID)).naming(workspace.title, color: color)
     }
-    private var color: String { workspace.document.text("color", fallback: summary.text("color")) }
+    private var color: String { workspace.header?.color ?? summary?.color ?? "" }
 
     var body: some View {
         NavigationStack {
@@ -149,7 +149,7 @@ struct ProjectSettingsPage: View {
                             .onSubmit { Task { await rename() } }
                     }
                     LabeledContent("Folder") {
-                        Text(summary.text("folder")).font(.footnote.monospaced()).lineLimit(1).truncationMode(.head)
+                        Text(summary?.folder ?? "").font(.footnote.monospaced()).lineLimit(1).truncationMode(.head)
                     }
                     LabeledContent("Machine", value: workspace.session.machine.name)
                 }
@@ -175,7 +175,7 @@ struct ProjectSettingsPage: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(isPresented: $pickingSymbol) {
                 IconChoiceGrid(
-                    selected: summary["icon"]?.text("value"), resetTitle: String(localized: "Use the initial")
+                    selected: summary?.icon.value, resetTitle: String(localized: "Use the initial")
                 ) { symbol in
                     pickingSymbol = false
                     let icon = symbol.map { JSONValue.object(["kind": .string("lucide"), "value": .string($0)]) }
@@ -252,7 +252,7 @@ struct ProjectSettingsPage: View {
         var payload: [String: JSONValue] = ["projectId": .string(workspace.projectID)]
         if let name { payload["name"] = .string(name) }
         if let icon { payload["icon"] = icon }
-        return await perform("project.setIdentity", payload)
+        return await perform(.projectSetIdentity, payload)
     }
 
     private func upload(_ item: PhotosPickerItem) async {
@@ -267,15 +267,15 @@ struct ProjectSettingsPage: View {
     }
 
     private func uploadImage(_ image: JSONValue?) async {
-        await perform("project.setIcon", ["projectId": .string(workspace.projectID), "image": image ?? .null])
+        await perform(.projectSetIcon, ["projectId": .string(workspace.projectID), "image": image ?? .null])
     }
 
-    @discardableResult private func perform(_ request: String, _ payload: [String: JSONValue]) async -> Bool {
+    @discardableResult private func perform(_ request: WireRequest, _ payload: [String: JSONValue]) async -> Bool {
         busy = true
         defer { busy = false }
         do {
             let result = try await workspace.client.request(request, payload: .object(payload))
-            if let updated = result["summary"] {
+            if let updated = try? result.decoded(as: ProjectSummaryResult.self).summary {
                 summary = updated
                 mark = ProjectSettingsLogic.mark(of: updated)
             }
@@ -290,7 +290,7 @@ struct ProjectSettingsPage: View {
     private func askClose() async {
         do {
             let answer = try await workspace.client.request(
-                "project.closing", payload: .object(["projectId": .string(workspace.projectID)]))
+                .projectClosing, payload: .object(["projectId": .string(workspace.projectID)]))
             closing = ProjectSettingsLogic.closing(
                 sessions: Int(answer.number("sessions")), otherClients: Int(answer.number("otherClients")))
         } catch {
@@ -299,6 +299,6 @@ struct ProjectSettingsPage: View {
     }
 
     private func close() async {
-        if await perform("project.close", ["projectId": .string(workspace.projectID)]) { closed() }
+        if await perform(.projectClose, ["projectId": .string(workspace.projectID)]) { closed() }
     }
 }

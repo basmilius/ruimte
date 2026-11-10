@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 
 /* Who has the Mac while a session runs: the agent, or the person, who paused it or took over with their own hand. */
@@ -151,3 +152,23 @@ export type ComputerRevokePayload = z.infer<typeof ComputerRevokePayloadSchema>;
 export const ComputerRevokeResultSchema = z.object({
     removed: z.boolean()
 });
+
+export const COMPUTER_REQUEST_SCHEMAS = {
+    'computer.status': { payload: EmptySchema, result: ComputerUseStatusSchema },
+    'computer.setEnabled': { payload: ComputerUseSetEnabledPayloadSchema, result: ComputerUseStatusSchema },
+    'computer.approvals': { payload: EmptySchema, result: ComputerApprovalsSchema },
+    'computer.answer': { payload: ComputerAnswerPayloadSchema, result: ComputerAnswerResultSchema },
+    // Quits the helper and starts it again, which is when macOS applies a Screen Recording grant.
+    'computer.restart': { payload: EmptySchema, result: ComputerUseStatusSchema },
+    'computer.control': { payload: ComputerControlPayloadSchema, result: ComputerUseStatusSchema },
+    'computer.requestGrant': { payload: ComputerRequestGrantPayloadSchema, result: ComputerRequestGrantResultSchema },
+    'computer.setLanguage': { payload: ComputerSetLanguagePayloadSchema, result: EmptySchema },
+    'computer.grants': { payload: EmptySchema, result: ComputerAppGrantsSchema },
+    'computer.revoke': { payload: ComputerRevokePayloadSchema, result: ComputerRevokeResultSchema }
+} as const;
+
+export const COMPUTER_EVENT_SCHEMAS = {
+    'computer.status': ComputerUseStatusSchema,
+    'computer.approvals': ComputerApprovalsSchema,
+    'computer.grants': ComputerAppGrantsSchema
+} as const;

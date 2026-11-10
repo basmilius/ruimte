@@ -13,7 +13,6 @@ export function downloadBlob(blob: Blob, name: string): void {
     setTimeout(() => URL.revokeObjectURL(url), REVOKE_AFTER_MS);
 }
 
-/* Saves a blob to this computer: the desktop app asks where it goes, a browser tab downloads it. */
 export async function saveBlob(blob: Blob, name: string, mime: string): Promise<void> {
     const bridge = desktop();
     if (bridge?.saveFile) {

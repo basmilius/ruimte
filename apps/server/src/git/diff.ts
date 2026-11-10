@@ -4,6 +4,7 @@ import { dirname, isAbsolute, join, relative } from 'node:path';
 import { missingSides, patchFits } from '@adecore/merge';
 import { climbsOut, isWithin } from '@adecore/utils/path';
 import type { ChatCheckpointDiff, ChatCheckpointFile, GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { readCommit } from './log.ts';
 import { nativePath } from './native-path.ts';
 import { git, leavingOut, runGit, runGitBytes, toplevel, verifyRev, GitError, LEAVE_NOTHING_OUT, type LeftOut } from './run.ts';
@@ -219,7 +220,6 @@ export interface DiffOptions {
     commit?: string;
     /* Worktree scope only: the index against HEAD instead of the working tree against the index. */
     staged: boolean;
-    /* Leaves changes that are whitespace alone out of the diff, counts included. */
     ignoreWhitespace: boolean;
 }
 
@@ -398,7 +398,6 @@ export async function diffFile(cwd: string, path: string, options: DiffOptions, 
 // The tree of a repository with nothing in it: what the first commit is diffed against.
 const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
-/* A commit's parent, or the empty tree for the first commit, which has none to compare with. */
 async function parentOf(top: string, commit: string): Promise<string> {
     return (await verifyRev(`${commit}^`, top)) ?? EMPTY_TREE;
 }
@@ -435,7 +434,6 @@ export async function diffCommits(top: string, from: string, to: string, leftOut
     return filesResult(diff);
 }
 
-/* A tree diff as the answer for many files at once, the counts summed over its files. */
 function filesResult(diff: ChatCheckpointDiff | null): GitDiffResult {
     const files: GitDiffFile[] = (diff?.files ?? []).map((file) => ({
         path: file.path,
@@ -472,7 +470,7 @@ export async function diffCheckout(cwd: string, from: string | null, leftOut: Le
         const own = (await git(['rev-parse', '--git-path', 'index'], top))?.trim();
         if (own) {
             // A checkout without an index yet starts from an empty one, and git then hashes every file.
-            await copyFile(isAbsolute(own) ? nativePath(own) : join(top, own), index).catch(() => undefined);
+            await bestEffort('copyFile', copyFile(isAbsolute(own) ? nativePath(own) : join(top, own), index));
         }
         const env = { GIT_INDEX_FILE: index };
         if ((await git(['add', '-A', ...leavingOut(paths)], top, env)) === null) {

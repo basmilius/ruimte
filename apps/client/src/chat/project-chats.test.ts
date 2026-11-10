@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectView } from '@ruimte/contracts';
 import { projectChats } from '@/chat/project-chats';
-import { nodesOfView } from '@/project/view-nodes';
+import { nodesOfView } from '@/state/view-nodes';
 
 const views: ProjectView[] = [
     {

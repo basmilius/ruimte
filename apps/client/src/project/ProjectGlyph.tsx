@@ -4,10 +4,10 @@ import type { ProjectIcon } from '@ruimte/contracts';
 import clsx from 'clsx';
 import { MessagesSquare } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { projectIconAppearance } from '@/project/icon-appearance';
-import { projectIconGlyphOf } from '@/project/project-icons';
+import { projectIconAppearance } from '@/clients/project/icon-appearance';
 import { useEndpoints } from '@/state/endpoints';
 import { useTheme } from '@/state/theme';
+import { projectIconGlyphOf } from '@/surface/project-icons';
 import { transportFor } from '@/transport';
 import { useMachineUrl } from '@/transport/machine-url';
 
@@ -23,7 +23,6 @@ interface ProjectGlyphProps {
     scratch?: boolean;
 }
 
-/* A project's icon at one size: what was picked, what the folder declares, or its initial. */
 export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, className, scratch = false }: ProjectGlyphProps) {
     const theme = useTheme((s) => s.resolved);
     const box = { width: size, height: size };

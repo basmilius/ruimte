@@ -2,13 +2,13 @@ import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { UNDO_MS } from '@adecore/ui';
 import type { ActionCall } from '@ruimte/actions';
 import type { ProjectCanvasView, ProjectDocument } from '@ruimte/contracts';
-import { createClientActionRegistry } from '@/actions/client-action-registry';
-import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from '@/actions/client-actions';
+import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from '@/action-port/perform';
+import { createClientActionRegistry } from '@/actions/client-actions';
+import { watchNodes } from '@/clients/terminal/lifecycle-watch';
 import { undoLatestDeletion } from '@/project/view-trash';
 import { focusedCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useToasts } from '@/state/toasts';
-import { watchNodes } from '@/terminal/lifecycle-watch';
 
 const board: ProjectCanvasView = {
     kind: 'canvas',

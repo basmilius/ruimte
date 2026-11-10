@@ -4,18 +4,18 @@ import type { RoutineEntry, RoutineRun } from '@ruimte/contracts';
 import { LayoutGrid, Pencil, Play, SquareArrowOutUpRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useArtifactText } from '@/output/artifact-bytes';
-import { isTextMime } from '@/output/artifact-list';
+import { isPlainTextMime } from '@/output/artifact-list';
 import { useArtifact } from '@/output/use-artifact';
-import { nodesOfView } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { lookOfRun } from '@/routines/agenda';
 import { openRoutineForm } from '@/routines/form-state';
 import { LookIcon } from '@/routines/look';
 import { runRoutineNow } from '@/routines/routine-commands';
-import { showRoutine } from '@/routines/stage';
 import { dayWords, runWords } from '@/routines/words';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
+import { showRoutine } from '@/state/routines-stage';
+import { nodesOfView } from '@/state/view-nodes';
 import { useMachineAnswers } from '@/transport/features';
 
 // The lines of a result the card shows; the rest is a click away in Routines.
@@ -27,7 +27,6 @@ export interface PickedRun {
     anchor: HTMLElement;
 }
 
-/* The card a block of the week opens: what the run did, and where to go from it. */
 export function RoutineRunPopover({
     endpointId,
     picked,
@@ -129,14 +128,13 @@ function RunCard({
     );
 }
 
-/* The first lines of the version the run delivered to Output, read the way the Output view reads it. */
 function RunResult({ endpointId, artifactId, versionId, fallback }: { endpointId: string; artifactId: string; versionId: string; fallback: string }) {
     const { t } = useTranslation('routines');
     const answers = useMachineAnswers(endpointId, 'artifact.get');
     const artifact = useArtifact(endpointId, artifactId, answers);
     const version = artifact.status === 'ready' ? artifact.result.versions.find((candidate) => candidate.versionId === versionId) : undefined;
     const file = version?.files[0];
-    const textual = file !== undefined && isTextMime(file.mime);
+    const textual = file !== undefined && isPlainTextMime(file.mime);
     const text = useArtifactText(endpointId, textual ? { artifactId, versionId, file: 0 } : null, textual ? file : null);
     const lines =
         text.status === 'ready'

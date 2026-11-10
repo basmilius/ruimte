@@ -12,14 +12,13 @@ import {
     type StandaloneNode
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
-import { cellAt, collapseTabHosts, focusedViewId, isTabHost, locateView, viewIdsIn } from '@/shell/split';
+import { cellAt, collapseTabHosts, focusedViewId, isTabHost, locateView, viewIdsIn } from '@/layout/split';
 import type { CanvasState } from '@/state/canvas';
 import type { DiagramState } from '@/state/diagram';
 import type { DocumentState } from '@/state/document';
 import type { DrawingState } from '@/state/drawing';
 import type { EditorRegistry } from '@/state/editors';
 
-/* A deleted view on its way out, with what it takes to put it back as it stood. */
 export interface TrashedView {
     view: ProjectView;
     index: number;
@@ -183,7 +182,6 @@ export function looseIdsOf(state: Pick<DocumentState, 'views' | 'layout'>): stri
     return state.layout === null ? [] : viewIdsIn(state.layout).filter((id) => !state.views.some((view) => view.id === id));
 }
 
-/* A project view that can stand in a cell, or a loose view that stands in one already. */
 export function canStandInCell(state: Pick<DocumentState, 'views' | 'layout'>, id: string): boolean {
     const view = cellViewOf(state, id);
     return view === null ? state.layout !== null && locateView(state.layout, id) !== null : isOpenableView(view);
@@ -194,13 +192,11 @@ export function cellViewOf(state: Pick<DocumentState, 'views'>, id: string | nul
     return state.views.find((view) => view.id === id) ?? null;
 }
 
-/* What every slice of the document works with: the store, the editors beside it and the two ways it changes. */
 export interface DocumentKit {
     set: StoreApi<DocumentState>['setState'];
     get: () => DocumentState;
     peers: DocumentPeers;
     commit(layout: SplitLayout | null): void;
-    /* Commits what `move` makes of the grid, when there is one and it moved. */
     change(move: (layout: SplitLayout) => SplitLayout | null): void;
     write(views: ProjectView[] | null): void;
 }

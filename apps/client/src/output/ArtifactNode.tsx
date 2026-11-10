@@ -3,12 +3,12 @@ import { formatDayClock } from '@adecore/ui/format';
 import type { ArtifactGetResult } from '@ruimte/contracts';
 import { ChevronDown, CircleAlert, Maximize2, Package, WifiOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { NodeHeaderControls, NodePlate } from '@/nodes/node-chrome';
 import { VersionBody } from '@/output/ArtifactView';
 import { openArtifact } from '@/output/open';
 import { useArtifact } from '@/output/use-artifact';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { NodeHeaderControls, NodePlate } from '@/surface/nodes/node-chrome';
 import { useMachineAnswers } from '@/transport/features';
 
 // A version id is the machine's and never empty, so the empty string is free to mean no version at all.
@@ -39,13 +39,10 @@ export function ArtifactNodeBody({ id }: { id: string }) {
 
 interface ArtifactOnCanvasProps {
     artifactId: string;
-    /* The version it shows; the latest when undefined. */
     version: string | undefined;
     /* How a person picks another version, with null for following the latest; without it the version is set elsewhere and offers no picker. */
     onPin: ((versionId: string | null) => void) | null;
-    /* Puts the artifact's title in the header beside the controls, for a header that has no title of its own. */
     titled?: boolean;
-    /* A line over the version, for what the surface around it has to say about which one it shows. */
     note?: string | null;
 }
 

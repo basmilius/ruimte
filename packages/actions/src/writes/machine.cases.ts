@@ -77,7 +77,7 @@ export const cases: WriteCases = {
         refused: { 'an empty app': { app: '' } }
     },
     'device.tap': {
-        actors: ['person', 'agent'],
+        actors: ['person', 'agent', 'extension'],
         input: { nodeId: 'device-1', x: 120, y: 340 },
         refused: { 'a negative element': { nodeId: 'device-1', element: -1 }, 'a fractional element': { nodeId: 'device-1', element: 1.5 } }
     },
@@ -101,7 +101,7 @@ export const cases: WriteCases = {
         refused: { 'nothing to type': { nodeId: 'device-1', text: '' }, 'past two thousand characters': { nodeId: 'device-1', text: 'x'.repeat(2001) } }
     },
     'device.launch': {
-        actors: ['person', 'agent'],
+        actors: ['person', 'agent', 'extension'],
         input: { nodeId: 'device-1', app: 'app.ruimte.ios' },
         refused: { 'a blank app': { nodeId: 'device-1', app: ' ' }, 'an app id past its limit': { nodeId: 'device-1', app: 'x'.repeat(257) } }
     },

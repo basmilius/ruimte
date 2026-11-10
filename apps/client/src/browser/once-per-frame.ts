@@ -1,4 +1,4 @@
-import { windowFrames, type FrameClock } from '@/canvas/pan-batch';
+import { windowFrames, type FrameClock } from '@/surface/canvas/pan-batch';
 
 interface FrameRun {
     request(): void;

@@ -7,7 +7,7 @@ import type { AgentKind } from '@ruimte/contracts';
 import { ChevronDown } from 'lucide-react';
 import { useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { availableAgents } from '@/agents/creation';
+import { availableAgents } from '@/state/agent-availability';
 import { editorAgentOn, inlineEditAgentOn } from '@/state/ai-settings';
 
 interface InlineAgent {

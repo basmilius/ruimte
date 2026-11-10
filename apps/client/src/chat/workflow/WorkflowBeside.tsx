@@ -24,14 +24,9 @@ import clsx from 'clsx';
 import { ArrowLeft, ChevronLeft, ChevronRight, CloudOff, MessageSquareText, Square, TriangleAlert, Workflow, X } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { accentColor, accentHeaderStyle, accentShades } from '@/canvas/accents';
-import { CHROME_H, FRAME, frameStyle, HEADER, HEADER_MIDDLE } from '@/canvas/derived-card-look';
-import { CardLine } from '@/canvas/DerivedCardLook';
-import { DerivedSet, type DerivedCard } from '@/canvas/DerivedSet';
-import { KindIcon } from '@/canvas/KindIcon';
-import type { Rect } from '@/canvas/math';
-import { derivedCardId } from '@/canvas/node-body';
-import type { ResizeEdge } from '@/canvas/resize-handles';
+import { accentColor, accentHeaderStyle, accentShades } from '@/canvas-model/accents';
+import type { ResizeEdge } from '@/canvas-model/derived-frame';
+import type { Rect } from '@/canvas-model/math';
 import { shownWorkflow, workflowCandidates, type WorkflowCandidate } from '@/chat/workflow/beside-workflows';
 import { phaseCardKey, workflowBesideLayout, type WorkflowBesideCard } from '@/chat/workflow/workflow-beside-layout';
 import {
@@ -46,10 +41,16 @@ import {
     useWorkflowBeside
 } from '@/chat/workflow/workflow-beside-state';
 import { AGENT_MIN, storedAgentSize } from '@/chat/workflow/workflow-size';
-import type { CardSize } from '@/routines/output-size';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { endpointKey, useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
+import { CHROME_H, FRAME, frameStyle, HEADER, HEADER_MIDDLE } from '@/surface/canvas/derived-card-look';
+import { CardLine } from '@/surface/canvas/DerivedCardLook';
+import { DerivedSet, type DerivedCard } from '@/surface/canvas/DerivedSet';
+import { KindIcon } from '@/surface/canvas/KindIcon';
+import { derivedCardId } from '@/surface/canvas/node-body';
+import type { CardSize } from '@/surface/canvas/output-size';
 import { useEndpointConnection } from '@/transport/status';
 
 const NONE: readonly WorkflowCandidate[] = [];
@@ -76,7 +77,6 @@ function PhaseDot({ state }: { state: WorkflowPhaseStateKind }) {
     return <span aria-hidden className={clsx('size-2 shrink-0 rounded-full', PHASE_DOT[state])} />;
 }
 
-/* How long a phase's agents were at work, counting on while one is. */
 function PhaseTime({ phase }: { phase: WorkflowPhaseView }) {
     const time = workflowPhaseTime(phase);
     if (time === null) {
@@ -139,7 +139,6 @@ export function WorkflowBeside({ id, z }: { id: string; z: number }) {
         focusAfterClose.current = null;
         const cardId = derivedCardId(id, phaseCardKey(target.phase));
         const card = document.querySelector(`[data-derived-card="${CSS.escape(cardId)}"]`);
-        // The agent's own line when its phase is open, or else the phase itself.
         const line = card?.querySelector<HTMLElement>(`[data-workflow-agent="${target.index}"]`) ?? card?.querySelector<HTMLElement>('button');
         if (line) {
             canvasStore.getState().focusCard(cardId);

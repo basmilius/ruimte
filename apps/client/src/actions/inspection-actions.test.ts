@@ -3,7 +3,7 @@ import { ActionRegistry } from '@ruimte/actions';
 import type { ChatInfo, ProjectCanvasView, SessionInfo } from '@ruimte/contracts';
 import { useDocument } from '@/state/document';
 import { pool } from '@/transport';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 import { inspectionActions } from './inspection-actions';
 
 const call = { actor: { kind: 'voice' as const, id: 'test' }, context: undefined };

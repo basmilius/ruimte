@@ -21,7 +21,6 @@ final class VoiceScene {
 
     init(id: String) { self.id = id }
 
-    /// Opens the sheet, proposing `target` as the place to talk about, else the project the scene shows.
     func showPanel(proposing target: Place? = nil) {
         proposal = target ?? openTarget()
         showsPanel = true

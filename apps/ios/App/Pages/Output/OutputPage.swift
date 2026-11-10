@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import SwiftUI
 
@@ -14,7 +15,7 @@ struct OutputContext {
         machineName = workspace.session.machine.name
         let session = workspace.session
         reconnect = { if !session.connected { session.reconnect() } }
-        chatName = { [weak workspace] chatID in workspace.flatMap { OutputContext.chatName($0.views, chatID: chatID) } }
+        chatName = { [weak workspace] chatID in workspace.flatMap { OutputContext.chatName($0.storedViews, chatID: chatID) } }
     }
 
     /// For a chat outside any project, which has no views to name a chat by.
@@ -25,11 +26,10 @@ struct OutputContext {
         chatName = { _ in nil }
     }
 
-    /// What the project calls a chat: a view of its own, or a node on one of its canvases. Empty for one without a name.
-    static func chatName(_ views: [JSONValue], chatID: String) -> String? {
+    static func chatName(_ views: [StoredView], chatID: String) -> String? {
         for view in views {
-            if view.stableID == chatID { return view.text("name") }
-            if let node = view.list("nodes").first(where: { $0.stableID == chatID }) { return node.text("title") }
+            if view.id == chatID { return view.name }
+            if let node = view.nodes.first(where: { $0.id == chatID }) { return node.title }
         }
         return nil
     }
@@ -129,7 +129,6 @@ struct OutputPage: View {
     }
 }
 
-/// The mark of a kind at the start of a row.
 struct OutputKindGlyph: View {
     let kind: String
 
@@ -144,7 +143,7 @@ struct OutputMakerIcon: View {
     var size: CGFloat = 14
 
     var body: some View {
-        if provenance.maker == "agent", let agent = provenance.agent {
+        if provenance.maker == .agent, let agent = provenance.agent {
             ChatProviderMark(provider: agent, size: size).accessibilityHidden(true)
         } else {
             Image(lucide: OutputKind.makerIcon(provenance.maker), size: size).accessibilityHidden(true)

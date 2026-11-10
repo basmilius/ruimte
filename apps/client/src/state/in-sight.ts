@@ -1,8 +1,8 @@
-import { isCanvasView, isDesignView, isSessionView, type ProjectNode, type ProjectView, type SplitLayout } from '@ruimte/contracts';
-import { intersects, isMeasured, visibleRect, type Camera, type Rect } from '@/canvas/math';
-import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
-import { shownViewIdsIn } from '@/shell/split';
+import { isCanvasView, isChatHostView, isDesignView, isSessionView, type ProjectNode, type ProjectView, type SplitLayout } from '@ruimte/contracts';
+import { intersects, isMeasured, visibleRect, type Camera, type Rect } from '@/canvas-model/math';
+import { shownViewIdsIn } from '@/layout/split';
 import { liveCanvas, maximizedNodeOf, type CanvasNode, type CanvasState } from '@/state/canvas';
+import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/state/design-chat';
 import { useDocument } from '@/state/document';
 
 /*
@@ -19,7 +19,6 @@ import { useDocument } from '@/state/document';
  */
 export const SEEN_ZOOM = 0.4;
 
-/* One canvas as a question about sight: where the camera is and what stands in front of it. */
 export interface CanvasSight {
     camera: Camera;
     viewport: { w: number; h: number };
@@ -54,7 +53,6 @@ export function readableNodes(canvas: CanvasSight): string[] {
     return visibleNodes(canvas, { readable: true });
 }
 
-/* An open canvas as the question about sight: a store keys its nodes, a sight lists them in order. */
 export function sightOf(canvas: CanvasState): CanvasSight & { nodes: readonly CanvasNode[] } {
     return {
         camera: canvas.camera,
@@ -75,54 +73,102 @@ function windowFocused(): boolean {
     return typeof document !== 'undefined' && document.hasFocus();
 }
 
-/* One canvas as a question about sight, with what a node needs to say which chat it shows. */
-export interface NodeSightCanvas extends CanvasSight {
+export interface SightCanvas extends CanvasSight {
     nodes: readonly (Rect & { id: string; kind: string; chats?: ProjectNode['chats'] })[];
 }
 
-/* What `nodesInSightOf` reads of a workspace, handed in so a test builds one without a store. */
-export interface NodeSightWorkspace {
+/* What the questions about sight read of a workspace, handed in so a test builds one without a store. */
+export interface SightWorkspace {
     views: readonly ProjectView[];
     layout: SplitLayout | null;
-    canvasOf(viewId: string): NodeSightCanvas | null;
+    canvasOf(viewId: string): SightCanvas | null;
 }
 
+type SightedView = { kind: 'design'; chat: string } | { kind: 'session'; view: ProjectView } | { kind: 'canvas'; canvas: SightCanvas };
+
 /*
- * All grid cells are visible; standalone sessions need no camera test, while canvases use `readableNodes`.
- * A design is in sight as the chat it shows, so a later chat is seen while it is in front and its
- * siblings behind the picker are not.
+ * The one walk over what is on screen, which the marks, the notifications and the plan panel all read.
+ * All grid cells are visible. A design is in sight as the chat it shows, so a later chat is seen while it
+ * is in front and its siblings behind the picker are not.
  */
-export function nodesInSightOf(workspace: NodeSightWorkspace): string[][] {
+function sightedViews(workspace: SightWorkspace): SightedView[] {
     const onScreen = new Set(workspace.layout === null ? [] : shownViewIdsIn(workspace.layout));
-    return workspace.views.flatMap((view) => {
+    return workspace.views.flatMap((view): SightedView[] => {
         if (!onScreen.has(view.id)) {
             return [];
         }
         if (isDesignView(view)) {
-            return [[activeDesignChat(placeOfView(view), useDesignChat.getState().picked)]];
+            return [{ kind: 'design', chat: activeDesignChat(placeOfView(view), useDesignChat.getState().picked) }];
         }
         if (isSessionView(view)) {
-            return [[view.id]];
+            return [{ kind: 'session', view }];
         }
         const canvas = isCanvasView(view) ? workspace.canvasOf(view.id) : null;
-        if (canvas === null) {
-            return [];
-        }
-        const nodes = new Map(canvas.nodes.map((node) => [node.id, node]));
-        return [readableNodes(canvas).map((id) => shownChatOfNode(nodes.get(id) ?? { id, kind: 'unknown' }) ?? id)];
+        return canvas === null ? [] : [{ kind: 'canvas', canvas }];
     });
 }
 
-export function nodesInSight(): string[][] {
+/* Standalone sessions need no camera test, while canvases use `readableNodes`. */
+export function nodesInSightOf(workspace: SightWorkspace): string[][] {
+    return sightedViews(workspace).map((sighted) => {
+        if (sighted.kind === 'design') {
+            return [sighted.chat];
+        }
+        if (sighted.kind === 'session') {
+            return [sighted.view.id];
+        }
+        const nodes = new Map(sighted.canvas.nodes.map((node) => [node.id, node]));
+        return readableNodes(sighted.canvas).map((id) => shownChatOfNode(nodes.get(id) ?? { id, kind: 'unknown' }) ?? id);
+    });
+}
+
+/*
+ * The chats on screen for the plan panel, which ignores zoom and window focus. It also uses the pre-panel
+ * viewport so opening the panel cannot push its own chat out of sight and immediately close it.
+ */
+export function chatsInSight(workspace: SightWorkspace, { planWidth }: { planWidth: number }): Set<string> {
+    const chats = new Set<string>();
+    for (const sighted of sightedViews(workspace)) {
+        if (sighted.kind === 'design') {
+            chats.add(sighted.chat);
+            continue;
+        }
+        if (sighted.kind === 'session') {
+            if (isChatHostView(sighted.view)) {
+                chats.add(sighted.view.id);
+            }
+            continue;
+        }
+        const { canvas } = sighted;
+        if (!isMeasured(canvas.viewport)) {
+            continue;
+        }
+        const rect = visibleRect(canvas.camera, { w: canvas.viewport.w + planWidth, h: canvas.viewport.h });
+        for (const node of canvas.nodes) {
+            const inFront = canvas.maximized ? node.id === canvas.maximized : canvas.hidden?.has(node.id) !== true && intersects(node, rect);
+            const shown = inFront ? shownChatOfNode(node) : null;
+            if (shown !== null) {
+                chats.add(shown);
+            }
+        }
+    }
+    return chats;
+}
+
+export function liveSight(): SightWorkspace {
     const { views, layout } = useDocument.getState();
-    return nodesInSightOf({
+    return {
         views,
         layout,
         canvasOf: (viewId) => {
             const canvas = liveCanvas(viewId);
             return canvas === null ? null : sightOf(canvas);
         }
-    });
+    };
+}
+
+export function nodesInSight(): string[][] {
+    return nodesInSightOf(liveSight());
 }
 
 /*

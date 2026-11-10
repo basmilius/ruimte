@@ -1,0 +1,109 @@
+import { formatAge } from '@adecore/ui/format';
+import type { Reachability } from '@ruimte/contracts';
+import i18next from 'i18next';
+import type { Endpoint } from '@/state/endpoints';
+import { listedEndpoints } from '@/state/local-machine';
+import type { ConnectionState } from '@/transport/index';
+
+/*
+ * How far away a machine is, in the words a row's tooltip and the About pane show. Each word is read
+ * when a row draws it, because this module is imported before `initI18n()` has run: a string fixed
+ * here would stay English for the life of the window.
+ */
+export function reachabilityLabel(reach: Reachability): string {
+    return i18next.t(`shell:connection.reachability.${reach}`);
+}
+
+interface MachineInfo {
+    /* What this client calls the daemon it points at (`endpoints.ts`). */
+    endpointLabel: string;
+    /* What the daemon calls itself, its hostname unless it was given a label. */
+    machineLabel: string | null;
+    reachability: Reachability | null;
+    platform: string | null;
+}
+
+/*
+ * Which way an open direct connection reaches the machine, as a label: its door on the local network,
+ * the broker, or a TURN relay the broker handed out. Null over a socket, which has no route to name.
+ */
+export function describeRoute(connection: ConnectionState): string | null {
+    if (connection.status !== 'open') {
+        return null;
+    }
+    if (connection.relayed === true) {
+        return i18next.t('shell:connection.route.relayed');
+    }
+    if (connection.signaled === 'lan') {
+        return i18next.t('shell:connection.route.lan');
+    }
+    return connection.signaled === 'broker' ? i18next.t('shell:connection.route.broker') : null;
+}
+
+/* The socket's state in the words the tooltip shows. The countdown needs a clock, so it comes in;
+   `now` as null leaves the countdown off, which is what a screen reader wants to hear. */
+export function describeConnection(connection: ConnectionState, now: number | null): string {
+    if (connection.status === 'open') {
+        if (connection.relayed === true) {
+            return i18next.t('shell:connection.relayed');
+        }
+        if (connection.signaled === 'lan') {
+            return i18next.t('shell:connection.overLan');
+        }
+        return connection.signaled === 'broker' ? i18next.t('shell:connection.viaBroker') : i18next.t('shell:connection.connected');
+    }
+    if (connection.noLink === true) {
+        return i18next.t('shell:connection.noLink');
+    }
+    if (connection.attempts === 0) {
+        return connection.status === 'connecting' ? i18next.t('shell:connection.connecting') : i18next.t('shell:connection.disconnected');
+    }
+    const attempt = i18next.t('shell:connection.reconnecting', { attempt: connection.attempts });
+    if (connection.status === 'connecting') {
+        return attempt;
+    }
+    if (connection.retryAt === null) {
+        return i18next.t('shell:connection.disconnected');
+    }
+    if (now === null) {
+        return attempt;
+    }
+    const seconds = Math.max(0, Math.ceil((connection.retryAt - now) / 1000));
+    return i18next.t('shell:connection.reconnectingIn', { attempt, seconds });
+}
+
+/*
+ * The machines the tooltip lists: every one with a link, in the order of the list. The local row of
+ * the web client is no machine, so it is left out even when something put it in the pool.
+ */
+export function tooltipMachines<T extends Pick<Endpoint, 'id'>>(endpoints: readonly T[], connected: readonly string[], local?: boolean): T[] {
+    return listedEndpoints(endpoints, local).filter((endpoint) => connected.includes(endpoint.id));
+}
+
+/* When a machine without a link last had one here; null when this client never reached it. */
+export function describeLastSeen(at: number | null, now: number): string | null {
+    return at === null ? null : i18next.t('shell:connection.lastSeen', { ago: formatAge(at, now) });
+}
+
+/* The machine on the other end. A daemon on this machine is named after the machine itself,
+   because "This machine · bas-mbp" says the same thing twice. */
+export function describeMachine(info: MachineInfo): string {
+    if (info.reachability === 'loopback') {
+        if (info.platform === 'darwin') {
+            return i18next.t('shell:connection.thisMac');
+        }
+        return info.machineLabel ?? info.endpointLabel;
+    }
+    if (!info.machineLabel || info.machineLabel === info.endpointLabel) {
+        return info.endpointLabel;
+    }
+    return `${info.endpointLabel} · ${info.machineLabel}`;
+}
+
+export function describeVersion(version: string | null): string {
+    return i18next.t('shell:connection.version', { version: version ?? '-' });
+}
+
+export function describePing(latency: number | null): string {
+    return i18next.t('shell:connection.ping', { latency: latency === null ? '-' : `${Math.round(latency)} ms` });
+}

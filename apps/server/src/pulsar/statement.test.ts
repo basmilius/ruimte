@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { PushSubscribePayloadSchema, clientChannelMessage } from '@ruimte/contracts';
+import { PushSubscribePayloadSchema } from '@ruimte/contracts';
 import {
     ACCESS_STATEMENT_LIFETIME_MS,
     PULSAR_STATEMENT_PUBLIC_KEYS,
     accessStatementMessage,
     accessStatementV2Message,
+    clientChannelMessage,
     peerStatementMessage,
     type AccessStatement,
     type PeerStatement,
@@ -17,7 +18,7 @@ import { z } from 'zod';
 import { AuthStore, PEER_ATTESTATION_TTL_MS } from '../auth/auth-store.ts';
 import { Handshake } from '../auth/handshake.ts';
 import { generateKeyPair, signMessage } from '../auth/keys.ts';
-import { PeerLinks } from '../peering/links.ts';
+import { PeerLinks } from '../projects/peer-links.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { SignalGate } from './signal-gate.ts';
 import { STATEMENT_CLOCK_SKEW_MS, StatementGate, TEST_STATEMENT_KEY_VARIABLE, checkPeerStatement, checkStatement, trustedStatementKeys } from './statement.ts';

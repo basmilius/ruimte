@@ -1,17 +1,17 @@
 import { beforeAll, beforeEach, describe, expect, test } from 'bun:test';
-import { loadClientActionRegistry } from '@/actions/client-action-loader';
-import { viewIdsIn } from '@/shell/split';
+import { clientRegistry } from '@/action-port/perform';
+import { viewIdsIn } from '@/layout/split';
 import { useDocument } from '@/state/document';
 import { useFiles, type DatabaseTab } from '@/state/files';
+import { useDatabasePanel } from '../clients/database/state.ts';
 import { actOnDatabase } from './open.ts';
-import { useDatabasePanel } from './state.ts';
 
 const ORDERS = { connectionId: 'shop', schema: 'shop', table: 'orders' };
 
 describe('a database view as a loose view', () => {
     // The workspace loads its registry before drawing these controls.
     beforeAll(async () => {
-        await loadClientActionRegistry();
+        await clientRegistry();
     });
 
     beforeEach(() => {

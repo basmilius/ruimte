@@ -26,7 +26,8 @@ import Testing
         ]
         let groups = OutputGroup.groups(items, now: Self.now, calendar: Self.calendar)
         #expect(groups.map(\.period) == [.today, .week, .earlier])
-        #expect(groups.map { $0.items.map(\.id) } == [["evening", "morning"], ["monday", "edge"], ["before", "old"]])
+        #expect(
+            groups.map { $0.items.map(\.id) } == [["evening", "morning"], ["monday", "edge"], ["before", "old"]])
     }
 
     @Test func aKindThisVersionDoesNotKnowDrawsAsAnExport() {
@@ -40,7 +41,7 @@ import Testing
         let store = ProjectOutput(client: machine, projectID: "p1")
         store.start()
         await waitForNativeState { store.items?.count == 1 }
-        #expect(machine.requests.first == "artifact.watch")
+        #expect(machine.requests.first == .artifactWatch)
         #expect(machine.listed == 1)
 
         machine.items.append(Self.summary("b", title: "E2E report"))
@@ -62,7 +63,7 @@ import Testing
         #expect(!store.reachable)
         machine.connection(true)
         await machine.lists.wait(for: 2)
-        #expect(machine.requests.filter { $0 == "artifact.watch" }.count == 2)
+        #expect(machine.requests.filter { $0 == .artifactWatch }.count == 2)
         await waitForNativeState { store.reachable }
         store.stop()
     }
@@ -121,7 +122,7 @@ import Testing
     }
 
     @Test func aVersionIsLabeledByItsNumberAndMoment() {
-        let version = OutputVersion(json: Self.version("v3", number: 3, at: 0))
+        let version = Self.version("v3", number: 3, at: 0).outputVersion
         #expect(version.label.hasPrefix("v3, "))
     }
 
@@ -130,73 +131,54 @@ import Testing
             .object(["id": .string("chat-1"), "kind": .string("chat"), "name": .string("Release")]),
             .object([
                 "id": .string("canvas"), "kind": .string("canvas"),
-                "nodes": .array([.object(["id": .string("chat-2"), "title": .string("Nightly")])]),
+                "nodes": .array([.object(["id": .string("chat-2"), "kind": .string("chat"), "title": .string("Nightly")])]),
             ]),
         ]
-        #expect(OutputContext.chatName(views, chatID: "chat-1") == "Release")
-        #expect(OutputContext.chatName(views, chatID: "chat-2") == "Nightly")
-        #expect(OutputContext.chatName(views, chatID: "chat-3") == nil)
+        #expect(OutputContext.chatName(ProjectWire.stored(views), chatID: "chat-1") == "Release")
+        #expect(OutputContext.chatName(ProjectWire.stored(views), chatID: "chat-2") == "Nightly")
+        #expect(OutputContext.chatName(ProjectWire.stored(views), chatID: "chat-3") == nil)
     }
 
     private func item(_ id: String, at date: Date) -> OutputItem {
-        OutputItem(
-            json: Self.summary(id, title: id, at: date.timeIntervalSince1970 * 1000))
+        Self.summary(id, title: id, at: date.timeIntervalSince1970 * 1000).outputItem
     }
 
     static func provenance(maker: String, agent: String? = nil, model: String? = nil) -> OutputProvenance {
-        var fields: [String: JSONValue] = ["maker": .string(maker), "machineId": .string("m1")]
-        if let agent { fields["agent"] = .string(agent) }
-        if let model { fields["model"] = .string(model) }
-        return OutputProvenance(json: .object(fields))
+        OutputWire.provenance(maker: maker, agent: agent, model: model).outputProvenance
     }
 
     static func version(_ id: String, number: Int, at: Double) -> JSONValue {
-        .object([
-            "versionId": .string(id), "number": .number(Double(number)), "createdAt": .number(at),
-            "files": .array([
-                .object([
-                    "name": .string("summary.md"), "mime": .string("text/markdown"), "size": .number(12),
-                    "sha256": .string("abc"),
-                ])
-            ]),
-            "bytes": .number(12),
-            "provenance": .object(["maker": .string("agent"), "machineId": .string("m1"), "chatId": .string("c1")]),
-            "copiedTo": .array([]),
-        ])
+        OutputWire.version(id, number: number, at: at)
     }
 
     static func summary(_ id: String, title: String, at: Double = 1_792_000_000_000) -> JSONValue {
-        .object([
-            "artifactId": .string(id), "projectId": .string("p1"), "projectName": .string("ruimte"),
-            "title": .string(title), "kind": .string("report"), "createdAt": .number(at),
-            "latest": version("\(id)-3", number: 3, at: at), "versionCount": .number(3), "totalBytes": .number(36),
-        ])
+        OutputWire.summary(id, title: title, at: at)
     }
 }
 
 @MainActor private final class OutputMachineFake: MachineRequesting {
     var items: [JSONValue]
     var failure: MachineClientError?
-    private(set) var requests: [String] = []
+    private(set) var requests: [WireRequest] = []
     private(set) var listed = 0
     let lists = NativeArrival()
     private var observers: [@MainActor @Sendable (Bool) -> Void] = []
-    private var handlers: [String: [@MainActor @Sendable (JSONValue) -> Void]] = [:]
+    private var handlers: [WireEvent: [@MainActor @Sendable (JSONValue) -> Void]] = [:]
 
     init(items: [JSONValue]) { self.items = items }
 
     func connection(_ connected: Bool) { for observer in observers { observer(connected) } }
-    func emit(_ payload: JSONValue) { for handler in handlers["artifact.changed"] ?? [] { handler(payload) } }
+    func emit(_ payload: JSONValue) { for handler in handlers[.artifactChanged] ?? [] { handler(payload) } }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append(type)
         switch type {
-        case "artifact.list":
+        case .artifactList:
             listed += 1
             lists.record()
             if let failure { throw failure }
             return .object(["artifacts": .array(items)])
-        case "artifact.get":
+        case .artifactGet:
             if let failure { throw failure }
             return .object([
                 "artifact": .object([
@@ -209,22 +191,18 @@ import Testing
                 ]),
                 "chatPresent": .bool(true),
             ])
-        case "provider.list":
-            return .object([
-                "providers": .array([
-                    .object([
-                        "kind": .string("claude"), "name": .string("Claude Code"),
-                        "models": .array([.object(["slug": .string("opus"), "name": .string("Claude Opus 5.5")])]),
-                    ]),
-                    .object(["kind": .string("codex"), "name": .string("Codex"), "models": .array([])]),
-                ])
+        case .providerList:
+            return ProviderWire.list([
+                ProviderWire.provider(
+                    "claude", name: "Claude Code", models: [ProviderWire.model("opus", name: "Claude Opus 5.5")]),
+                ProviderWire.provider("codex", name: "Codex"),
             ])
         default:
             return .object([:])
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
         handlers[event, default: []].append(handler)
         return {}
     }

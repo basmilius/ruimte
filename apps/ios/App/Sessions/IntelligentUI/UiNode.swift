@@ -1,4 +1,5 @@
 import Foundation
+import RuimteIntelligentUI
 import RuimtePulsar
 
 /// One evaluated node of a block, as the interpreter hands it over: props are already evaluated and validated, a
@@ -41,10 +42,8 @@ struct UiNode: Identifiable, Equatable {
     func bool(_ key: String) -> Bool? { props[key]?.boolValue }
     var tone: UiTone? { string("tone").flatMap(UiTone.init(rawValue:)) }
 
-    /// The current value of an input's binding, or nil for a node that is not bound.
     var boundValue: JSONValue? { bindings["value"]?["value"] }
 
-    /// What an input shows: its binding's value, else the value it was written with.
     var currentValue: JSONValue? { boundValue ?? props["value"] }
 
     /// Every `$text` below this node joined as written, such as the code of a CodeBlock.
@@ -56,7 +55,6 @@ struct UiNode: Identifiable, Equatable {
     /// The text written beside the children of a control, such as the label of a Select next to its Options.
     var ownLabel: String { Self.oneLine(children.filter(\.isText).map(\.text).joined()) }
 
-    /// The name a picture goes by: its `alt`, else its caption, else `fallback`.
     func altLabel(fallback: String) -> String {
         string("alt") ?? (label.isEmpty ? fallback : label)
     }
@@ -66,7 +64,6 @@ struct UiNode: Identifiable, Equatable {
             .trimmingCharacters(in: .whitespaces)
     }
 
-    /// Whether this node or anything below it could not be evaluated.
     var hasError: Bool { error != nil || children.contains { $0.hasError } }
 
     /// The label a Choice sends, or nil when it can never send: it failed, never closed, part of its label could not
@@ -99,15 +96,9 @@ enum UiTone: String {
 
 /// What the interpreter knows about the components of this version, so a newer one reads as unknown.
 enum UiCatalog {
-    static let version = 1
-    static let components: Set<String> = [
-        "Summary", "Callout", "Tag", "Progress", "Steps", "Step", "Stats", "Stat", "EntityList", "Entry", "Table",
-        "Column", "Chart", "Tabs", "Tab", "Sections", "Section", "CodeBlock", "Image", "Sources", "Source", "File",
-        "Diff", "Commit", "Node", "Checklist", "Item", "Switch", "Slider", "Segmented", "Option", "Show", "Each",
-        "Button", "Choices", "Choice", "Timeline", "Event", "Gallery", "Compare", "TextField", "Select",
-        "Map", "Place", "Model",
-    ]
-    static let links: Set<String> = ["File", "Diff", "Commit", "Node"]
+    static let version = UiCatalogData.version
+    static let components = UiCatalogData.components
+    static let links = UiCatalogData.links
     /// Parents whose text is read as written: code, a short tag and the labels of controls, whose accessible name
     /// and sent text are that same string.
     static let literalParents: Set<String> = [

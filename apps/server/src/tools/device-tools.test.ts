@@ -3,13 +3,13 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import type { DeviceInfo, ProjectContent, ProjectEdge, ProjectNode } from '@ruimte/contracts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { ManualTimers } from '../computer/computer-test-helpers.ts';
 import { DEVICE_READY_WAIT_MS, DeviceDriver } from '../devices/agent-driver.ts';
 import { DeviceControl } from '../devices/control.ts';
 import { ReadingBackend, RecordingBackend, SIMULATOR, pngOf } from '../devices/device-test-helpers.ts';
 import { DeviceManager } from '../devices/manager.ts';
 import { deviceToolkit } from './device-tools.ts';
-import type { CanvasHost } from './host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 const PHONE: ProjectNode = {

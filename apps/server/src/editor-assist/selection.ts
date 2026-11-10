@@ -1,7 +1,7 @@
 import { CodedError } from '@adecore/agents';
 import type { ChatProvider, ProviderAccountsService } from '@adecore/agents/providers';
 import prices from '@adecore/agents/usage/prices-snapshot.json' with { type: 'json' };
-import { EDITOR_ASSIST_PROVIDERS, type EditorAssistAgent, cheapestEditorModel } from '@ruimte/contracts';
+import { EDITOR_ASSIST_PROVIDER_LIST, EDITOR_ASSIST_PROVIDERS, type EditorAssistAgent, cheapestEditorModel } from '@ruimte/contracts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 
 export interface AssistProviders {
@@ -41,7 +41,7 @@ export interface AssistWording {
 
 const EDITOR_WORDING: AssistWording = {
     chosenUnavailable: 'The selected editor model is unavailable. Choose another model in Settings, Editor, AI.',
-    noneAvailable: 'No configured editor model is available. Sign in to Claude, Codex, Grok or Antigravity, or choose a model in Settings, Editor, AI.'
+    noneAvailable: `No configured editor model is available. Sign in to ${EDITOR_ASSIST_PROVIDER_LIST}, or choose a model in Settings, Editor, AI.`
 };
 
 /*

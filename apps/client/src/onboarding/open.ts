@@ -1,11 +1,11 @@
+import { onboardingDialog } from '@/onboarding/dialog';
 import { hasLocalMachine } from '@/state/local-machine';
 import { useSettings } from '@/state/settings';
-import { useUi } from '@/state/ui';
 
 /* The list of tasks, from About, the menu or the palette. Only a client with a machine of its own has one. */
 export function openOnboarding(local: boolean = hasLocalMachine()): void {
     if (local) {
-        useUi.getState().setOnboarding('hub');
+        onboardingDialog.set('hub');
     }
 }
 
@@ -15,7 +15,7 @@ export function closeOnboarding(): void {
     if (!onboardingSeen || onboardingSkipWelcome) {
         useSettings.getState().update({ onboardingSeen: true, onboardingSkipWelcome: false });
     }
-    useUi.getState().setOnboarding(null);
+    onboardingDialog.set(null);
 }
 
 /*
@@ -28,11 +28,11 @@ export function startOnboarding(local: boolean = hasLocalMachine()): () => void 
         return () => undefined;
     }
     if (!useSettings.getState().onboardingSeen) {
-        useUi.getState().setOnboarding(useSettings.getState().onboardingSkipWelcome ? 'hub' : 'welcome');
+        onboardingDialog.set(useSettings.getState().onboardingSkipWelcome ? 'hub' : 'welcome');
     }
     return useSettings.subscribe((state, before) => {
-        if (state.onboardingSeen && !before.onboardingSeen && useUi.getState().onboarding === 'welcome') {
-            useUi.getState().setOnboarding(null);
+        if (state.onboardingSeen && !before.onboardingSeen && onboardingDialog.get() === 'welcome') {
+            onboardingDialog.set(null);
         }
     });
 }

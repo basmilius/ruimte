@@ -31,7 +31,7 @@ import RuimtePulsar
     /// (`ClientIdentity`); a machine from before a field ignores it.
     public func start() {
         let frame = JSONValue.object([
-            "id": .string(Self.requestID), "type": .string("endpoint.info"),
+            "id": .string(Self.requestID), "type": .string(WireRequest.endpointInfo.rawValue),
             "payload": identity.payload,
         ])
         do { try send(String(decoding: try frame.encoded(), as: UTF8.self)) } catch { refuse(error) }

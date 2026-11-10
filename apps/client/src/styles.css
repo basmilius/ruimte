@@ -5,7 +5,7 @@
 @import '@adecore/agents-react/theme.css';
 @import '@adecore/editor/editor.css';
 @import '@adecore/editor-react/editor-react.css';
-@import './shell/panel-layout.css';
+@import './surface/panel-layout.css';
 @import './ui/empty-scenes.css';
 @import './chat/text-size.css';
 

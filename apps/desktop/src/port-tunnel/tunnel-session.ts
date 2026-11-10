@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { BrowserRouteBlocked, PortTunnelOpened } from '@ruimte/desktop-bridge';
-import { electron } from '../main/electron';
+import { electron } from '../electron';
 import { allowGuestPermission, TUNNEL_PARTITION_PREFIX } from '../web-guards';
 import { IpcRelay } from './ipc-relay';
 import { parseToShell, parseTunnelRequest } from './messages';

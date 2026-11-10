@@ -1,6 +1,6 @@
+import { ChatIdSchema } from '@adecore/agent-contracts/chat';
 import { PlanIdSchema, PlanSchema, PlanPersonOpSchema } from '@adecore/plan/protocol';
 import { z } from 'zod';
-import { ChatIdSchema } from './chat.ts';
 
 export {
     PLAN_LIMITS,
@@ -73,3 +73,14 @@ export const PlanRemovedEventSchema = z.object({ chatId: ChatIdSchema, planId: P
 
 // Only after a new plan; a client moves the panel's anchor on this and never on `plan.changed`.
 export const PlanCreatedEventSchema = z.object({ chatId: ChatIdSchema, planId: PlanIdSchema });
+
+export const PLAN_HOST_REQUEST_SCHEMAS = {
+    'plan.list': { payload: PlanListPayloadSchema, result: PlanListResultSchema },
+    'plan.apply': { payload: PlanApplyPayloadSchema, result: PlanApplyResultSchema }
+} as const;
+
+export const PLAN_HOST_EVENT_SCHEMAS = {
+    'plan.changed': PlanChangedEventSchema,
+    'plan.removed': PlanRemovedEventSchema,
+    'plan.created': PlanCreatedEventSchema
+} as const;

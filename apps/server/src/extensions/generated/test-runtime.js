@@ -6049,7 +6049,7 @@ function extensionActionPermission(action) {
   return Object.hasOwn(EXTENSION_ACTIONS, action) ? EXTENSION_ACTIONS[action] ?? null : null;
 }
 
-// packages/contracts/src/extension-client.ts
+// packages/contracts/src/extension-vocabularies.generated.ts
 var EXTENSION_SLOT_NAMES = [
   "selectionBar",
   "nodeHeader",
@@ -6087,6 +6087,8 @@ var EXTENSION_SLOT_NAMES = [
   "terminalToolbar",
   "browserToolbar"
 ];
+
+// packages/contracts/src/extension-client.ts
 function isExtensionSlotName(name) {
   return EXTENSION_SLOT_NAMES.includes(name);
 }

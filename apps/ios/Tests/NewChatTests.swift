@@ -21,7 +21,7 @@ import XCTest
         let machine = NewChatMachine()
         let model = NewChatModel(client: machine, machineID: "mac", preferences: preferences)
         await model.load()
-        XCTAssertEqual(model.agents?.map { $0.text("kind") }, ["claude"])
+        XCTAssertEqual(model.agents?.map(\.kind), ["claude"])
     }
 
     func testAChatStartsOnTheAgentAndTheAccountRememberedForThisMachine() async {
@@ -70,48 +70,37 @@ import XCTest
 }
 
 @MainActor private final class NewChatMachine: MachineRequesting, MachineFeatures {
-    var requests: [(String, JSONValue)] = []
+    var requests: [(WireRequest, JSONValue)] = []
     var refusal: String?
     var workEnabled = true
     var features: Set<String> = []
 
     func answers(_ type: WireRequest) -> Bool { features.contains(type.rawValue) }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
         if let refusal { throw MachineClientError.server(code: refusal, message: refusal) }
         switch type {
-        case "provider.list":
-            let chat = JSONValue.object(["chat": .bool(true)])
-            return .object([
-                "providers": .array([
-                    .object(["kind": .string("claude"), "installed": .bool(true), "capabilities": chat]),
-                    .object(["kind": .string("gemini"), "installed": .bool(false), "capabilities": chat]),
-                    .object([
-                        "kind": .string("codex"), "installed": .bool(true),
-                        "capabilities": .object(["chat": .bool(false), "terminal": .bool(true)]),
-                    ]),
-                ])
+        case .providerList:
+            return ProviderWire.list([
+                ProviderWire.provider("claude"), ProviderWire.provider("gemini", installed: false),
+                ProviderWire.provider("codex", capabilities: ["chat": .bool(false)]),
             ])
-        case "accounts.list":
-            return .object([
-                "accounts": .object([
-                    "claude": .object(["kind": .string("claude")]),
-                    "work": .object(["kind": .string("claude"), "enabled": .bool(workEnabled)]),
-                ]),
-                "statuses": .array([]),
+        case .accountsList:
+            return AccountsWire.snapshot(accounts: [
+                "claude": .object(["kind": .string("claude")]),
+                "work": .object(["kind": .string("claude"), "enabled": .bool(workEnabled)]),
             ])
-        case "project.newChat":
+        case .projectNewChat:
             return .object([
-                "summary": .object(["projectId": .string("chats"), "scratch": .bool(true)]),
-                "viewId": .string("chat-1"),
+                "summary": ProjectRowWire.summary("chats", scratch: true), "viewId": .string("chat-1"),
             ])
-        case "agent.children":
+        case .agentChildren:
             return .object(["nodeIds": .array([.string("c1"), .string("child")])])
         default:
             return .object([:])
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

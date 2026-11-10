@@ -91,7 +91,6 @@ export function encodeHeadedFrame(kind: number, head: unknown, bytes: Uint8Array
     return frame;
 }
 
-/* The JSON head and the bytes of a frame of that kind, or null for any other frame. */
 export function decodeHeadedFrame(frame: Uint8Array, kind: number): { head: unknown; bytes: Uint8Array<ArrayBuffer> } | null {
     if (frame.byteLength < HEADED_PREFIX_BYTES || frame[0] !== kind) {
         return null;
@@ -130,3 +129,7 @@ export function decodeBytesReply(frame: Uint8Array): BytesReply | null {
     const head = BytesReplyHeadSchema.safeParse(decoded.head);
     return head.success ? { id: head.data.id, result: head.data.result, bytes: decoded.bytes } : null;
 }
+
+export const BYTES_REQUEST_SCHEMAS = {
+    'bytes.read': { payload: BytesReadPayloadSchema, result: BytesReadResultSchema }
+} as const;

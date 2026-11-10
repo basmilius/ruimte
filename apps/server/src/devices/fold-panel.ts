@@ -19,7 +19,6 @@ export function panelOfAngle(degrees: number): FoldPanel {
     return degrees < 90 ? 'cover' : 'inner';
 }
 
-/* The panel a line of SpringBoard's display log names as primary, or null for any other line. */
 export function panelOfLine(line: string): FoldPanel | null {
     if (line.includes('.cover:pri')) {
         return 'cover';
@@ -121,7 +120,6 @@ export class FoldPanelMonitor {
         }
     }
 
-    /* Runs one log command to its end, telling `each` every panel it names; answers the last one. */
     private async read(command: readonly string[], each?: (panel: FoldPanel) => void): Promise<FoldPanel | null> {
         if (this.stopped) {
             return null;

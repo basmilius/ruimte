@@ -1,16 +1,15 @@
 import { FS_READ_MAX_TEXT_BYTES, FS_WRITE_MAX_BYTES, FS_WRITE_PIECE_BYTES, type FsWriteResult } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { base64Of } from '@/base64';
+import { TransportError, type Transport, fireAndForget } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
-import { TransportError, type Transport } from '@/transport/transport';
 
 // As many as `bytes.read` has on their way: enough to fill a slow line, and never a queue a terminal waits behind.
 const PIECES_IN_FLIGHT = 2;
 
 type WritingTransport = Pick<Transport, 'request' | 'connection'>;
 
-/* The largest text a save can carry to this machine. */
-export function textWriteLimit(answersPieces: boolean): number {
+function textWriteLimit(answersPieces: boolean): number {
     return answersPieces ? FS_WRITE_MAX_BYTES : FS_READ_MAX_TEXT_BYTES;
 }
 
@@ -41,7 +40,7 @@ export async function writeMachineText(transport: WritingTransport, path: string
     try {
         await Promise.all(Array.from({ length: PIECES_IN_FLIGHT }, sendPieces));
     } catch (error) {
-        void transport.request('fs.writeAbort', { uploadId }).catch(() => undefined);
+        void fireAndForget('fs.writeAbort', transport.request('fs.writeAbort', { uploadId }));
 
         throw error;
     }

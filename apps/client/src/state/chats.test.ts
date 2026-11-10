@@ -8,7 +8,6 @@ function info(status: AgentStatus): ChatState['info'] {
     return chatInfoOf('c1', { status, running: true });
 }
 
-/* A chat with a reply that is streaming, so a delta only grows its text. */
 function streaming(): void {
     useChats.getState().reset('local:c1', info('running'), [{ id: 'r', kind: 'assistant', createdAt: 0, turnId: null, text: 'Hello', streaming: true }]);
 }

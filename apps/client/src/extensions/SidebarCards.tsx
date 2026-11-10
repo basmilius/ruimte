@@ -1,5 +1,5 @@
 import { createElement } from 'react';
-import { useContributions } from '@/extensions/registry';
+import { useContributions } from '@/state/extension-registry';
 
 /* The cards extensions keep in view at the foot of the sidebar. Each brings its own boundary. */
 export function SidebarCards() {

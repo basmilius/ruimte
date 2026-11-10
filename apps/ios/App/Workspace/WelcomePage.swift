@@ -6,7 +6,6 @@ import UIKit
 struct WelcomePage: View {
     @Bindable var runtime: AppRuntime
     let window: UIWindow?
-    /// Called as a person signs in, before it starts.
     var begin: () -> Void = {}
     @State private var retrying = false
     @State private var chosen: ProviderId?
@@ -156,7 +155,6 @@ private struct ProviderAccountButton: View {
                 if signingIn {
                     ProgressView().tint(apple ? solidText : MobileStyle.text)
                 } else {
-                    // The provider marks of the desktop's sign-in buttons.
                     Image(apple ? "AppleMark" : "GitHubMark")
                         .renderingMode(.template).resizable().scaledToFit()
                         .frame(width: logoSize, height: logoSize)

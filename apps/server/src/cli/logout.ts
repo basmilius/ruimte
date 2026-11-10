@@ -1,5 +1,5 @@
-import { EndpointLeaveAccountResultSchema } from '@ruimte/contracts';
-import { commandIo, homeSecret, otherHome, tooOld, type LocalDaemonOptions } from './local-daemon.ts';
+import { EndpointLeaveAccountResultSchema, MACHINE_LEAVE_ACCOUNT_PATH } from '@ruimte/contracts';
+import { askLocalDaemon, commandIo, homeSecret, otherHome, tooOld, type LocalDaemonOptions } from './local-daemon.ts';
 
 export type LogoutOptions = LocalDaemonOptions;
 
@@ -8,16 +8,13 @@ export type LogoutOptions = LocalDaemonOptions;
  * for a machine without the app. Only the local secret may, so it runs where the daemon's home is.
  */
 export async function runLogout(options: LogoutOptions): Promise<number> {
-    const { fetcher, out, err } = commandIo(options);
+    const { out, err } = commandIo(options);
     const secret = await homeSecret(options);
     if (secret === null) {
         err(`No daemon has started with ${options.home} as its home; start one first.`);
         return 1;
     }
-    const response = await fetcher(`http://127.0.0.1:${options.port}/machine/leave-account`, {
-        method: 'POST',
-        headers: { authorization: `Bearer ${secret}` }
-    }).catch(() => null);
+    const response = await askLocalDaemon(options, secret, MACHINE_LEAVE_ACCOUNT_PATH, { method: 'POST' });
     if (!response) {
         err(`No daemon answers on port ${options.port}; start one first.`);
         return 1;

@@ -1,3 +1,4 @@
+import type { SplitCommand } from '@adecore/ui';
 import {
     isCanvasView,
     isDesignView,
@@ -20,9 +21,8 @@ import {
 } from '@ruimte/contracts';
 import { useContext } from 'react';
 import { createStore, type StoreApi } from 'zustand';
-import type { CanvasPatch } from '@/project/merge';
-import type { LooseStrip } from '@/shell/legacy-files-cell';
-import type { CellAt, ShownView, SplitDirection, SplitZone } from '@/shell/split';
+import type { LooseStrip } from '@/layout/legacy-files-cell';
+import type { CellAt, ShownView, SplitDirection, SplitZone } from '@/layout/split';
 import { defaultCanvases } from '@/state/canvas';
 import { defaultDiagrams } from '@/state/diagram';
 import { createDocumentContentSlice } from '@/state/document-content-slice';
@@ -33,6 +33,7 @@ import { createDocumentTabsSlice } from '@/state/document-tabs-slice';
 import { createDocumentViewsSlice } from '@/state/document-views-slice';
 import { defaultDrawings } from '@/state/drawing';
 import { CellViewContext, storeHook } from '@/state/workspace-stores';
+import type { CanvasPatch } from './canvas-model';
 
 export { canStandInCell, cellViewOf, type DocumentPeers, type StandaloneRequest, type TrashedView } from '@/state/document-model';
 
@@ -92,7 +93,6 @@ export interface DocumentState {
     takeAccounts(accounts: ProjectAccounts): void;
     /* Puts a view in the shared file or takes it back out. Only a person does this; see `SharedViewIdsSchema`. */
     setShared(id: string, shared: boolean): void;
-    /* Flags views and nodes in one color, or takes their flags off with null. */
     setFlags(ids: readonly string[], color: NodeAccent | null): void;
     /* The nodes a gesture holds in any canvas on screen, which a merge leaves under the person's hand. */
     heldNodeIds(): Set<string>;
@@ -121,7 +121,6 @@ export interface DocumentState {
     moveTab(viewId: string, delta: number): void;
     /* The tab leaves its host for a cell of its own to the right. False when it is the only tab or the grid has no room. */
     splitTabOff(viewId: string): boolean;
-    /* A host with a single tab becomes a plain cell again. */
     ungroupCell(at: CellAt): void;
     closeLoose(key: string): void;
     /* Closing a tab leaves the view available in the sidebar. */
@@ -134,24 +133,17 @@ export interface DocumentState {
     stepTab(delta: 1 | -1): void;
     /* A whole cell, tabs and all, lands in the zone of another: what dragging a bar does. */
     moveCellTo(from: CellAt, at: CellAt, zone: SplitZone): void;
-    /* Splits the focused cell and puts a view in the new one. */
     splitFocused(direction: SplitDirection, viewId: string): void;
     closeCellAt(at: CellAt): void;
     /* Every cell but this one; the views stay in the project, as with closing one. */
     closeOtherCells(at: CellAt): void;
-    /* The cells in the columns right of this one. */
     closeCellsRightOf(at: CellAt): void;
     focusCellAt(at: CellAt): void;
-    /* Fills the grid with the focused cell, or puts the grid back as it was. */
     toggleMaximized(): void;
     /* The focus one cell along, which is how a grid is navigated: by direction, never by number. */
     focusTowards(direction: SplitDirection): void;
-    /* A splitter dragged between columns or cells: every share on that axis, in order. */
-    resizeColumns(sizes: readonly number[]): void;
-    resizeCells(column: number, sizes: readonly number[]): void;
-    /* A double click on a splitter: its two neighbors even out, or with `all` every column, or every cell of the column. */
-    evenColumns(at: number, all: boolean): void;
-    evenCells(column: number, at: number, all: boolean): void;
+    /* What the split view itself asks: a pane takes the focus, a splitter is dragged or evened out. */
+    runSplitCommand(command: SplitCommand): void;
     setBodyFocused(focused: boolean): void;
     addCanvasView(name: string): string;
     /* A line in the sidebar with nothing behind it, to group the views around it. */

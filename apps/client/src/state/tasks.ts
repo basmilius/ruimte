@@ -1,7 +1,7 @@
 import type { Task } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from './current-endpoint';
 
 export type TasksById = Readonly<Record<string, Task>>;
 
@@ -46,7 +46,6 @@ export function childTask(tasks: TasksById | undefined, childId: string): Task |
     return newest(tasks, (task) => task.childId === childId);
 }
 
-/* The task a line stands for, the one its tail gave its head. */
 export function edgeTask(tasks: TasksById | undefined, from: string, to: string): Task | null {
     return newest(tasks, (task) => task.parentId === from && task.childId === to);
 }

@@ -13,7 +13,7 @@ export interface ScreenPoint {
     y: number;
 }
 
-export interface TabDragDeps<Window extends DragWindow> {
+interface TabDragDeps<Window extends DragWindow> {
     detach(window: Window, key: string, at: ScreenPoint): Window | null;
     transfer(key: string, window: Window): boolean;
     windowAt(point: ScreenPoint, except: Window): Window | null;
@@ -22,9 +22,7 @@ export interface TabDragDeps<Window extends DragWindow> {
     /* Where a window's page draws its tab strip, in its own coordinates, once it said so. */
     stripOf(window: Window): { x: number; y: number; height: number } | null;
     cursor(): ScreenPoint;
-    /* Runs `tick` on a steady beat until the answer is called. */
     every(tick: () => void): () => void;
-    /* Calls back when a window comes to the front, until the answer is called. */
     onFront(window: Window, listener: () => void): () => void;
 }
 

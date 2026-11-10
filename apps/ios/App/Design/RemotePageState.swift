@@ -46,7 +46,6 @@ import SwiftUI
         }
     }
 
-    /// One action, refused while another is still running.
     func perform(_ operation: () async throws -> Void) async {
         guard !busy else { return }
         busy = true
@@ -71,48 +70,24 @@ import SwiftUI
 
 @MainActor enum RemotePageLifecycle {
     static func run(
-        client: any MachineRequesting, events: [String] = [],
+        client: any MachineRequesting, events: [WireEvent] = [],
         matches: @escaping @MainActor @Sendable (JSONValue) -> Bool = { _ in true },
-        subscription: (() -> MachineSubscription)? = nil, start: @escaping () async throws -> Void = {},
-        stop: @escaping () async -> Void = {}, load: @escaping () async -> Void
+        watch: (@MainActor () -> LiveWatch)? = nil, start: @escaping @MainActor () async throws -> Void = {},
+        stop: @escaping @MainActor () async -> Void = {}, load: @escaping @MainActor () async -> Void
     ) async {
-        var lease: MachineSubscription?
-        // Reads coalesce, but a reconnect is kept apart from them: an event right behind it would otherwise take its
-        // place, and the page would read again without setting its watch again.
-        let reconnect = ReconnectFlag()
-        let (stream, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
-        let cancelConnection = client.observeConnection { connected in
-            guard connected else { return }
-            reconnect.pending = true
-            continuation.yield()
-        }
-        let cancelEvents = events.map { event in
-            client.subscribe(event) { if matches($0) { continuation.yield() } }
-        }
-        defer {
-            cancelConnection()
-            cancelEvents.forEach { $0() }
-            continuation.finish()
-            await withTaskCancellationShield {
-                await lease?.release()
-                await stop()
-            }
-        }
-        for await _ in stream {
-            if Task.isCancelled { break }
-            if reconnect.pending {
-                reconnect.pending = false
-                try? await start()
-                if lease == nil { lease = subscription?() }
-                _ = try? await lease?.refresh()
-            }
-            await load()
-        }
+        let live = LiveResource(
+            client: client, events: events.map { .reread($0, rejected: false, where: matches) }, watch: watch?(),
+            prepare: { try? await start() }, read: load)
+        await live.run()
+        await withTaskCancellationShield { await stop() }
     }
-}
 
-@MainActor private final class ReconnectFlag {
-    var pending = false
+    /// A test on an event as its generated type; a payload that does not decode matches nothing.
+    static func typed<Event: Decodable>(
+        _ type: Event.Type, _ matches: @escaping @MainActor @Sendable (Event) -> Bool
+    ) -> @MainActor @Sendable (JSONValue) -> Bool {
+        { payload in (try? payload.decoded(as: type)).map(matches) ?? false }
+    }
 }
 
 /// The spinner of a surface that is reading, with the one thing VoiceOver needs beside it: what is being read. Where

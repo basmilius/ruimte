@@ -28,19 +28,20 @@ import { chatClientOfNode, sessionClientOfNode } from '@/actions/node-machine';
 import { refusing, type Requester } from '@/actions/refusal';
 import { plural } from '@/actions/words';
 import { agentsEndedWith } from '@/agents/end-children';
-import { readNodeHost, updateHost, type NodeHost } from '@/nodes/node-host';
+import { screenOf } from '@/clients/terminal/registry';
+import { useComputer } from '@/computer/computer';
 import { PlanClient } from '@/plan/plan-client';
-import { nodesOfView } from '@/project/view-nodes';
+import { usePlans } from '@/plan/plans';
 import { revealForkWhenItLands, showViewWhenItLands } from '@/project/views';
 import { chatSinkFor } from '@/state/chats';
-import { useComputer } from '@/state/computer';
+import { currentEndpointId } from '@/state/current-endpoint';
 import type { DocumentState } from '@/state/document';
-import { currentEndpointId, endpointKey } from '@/state/keys';
+import { endpointKey } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
-import { usePlans } from '@/state/plans';
 import { useSessions, type SessionState } from '@/state/sessions';
-import { screenOf } from '@/terminal/registry';
-import { chatClientFor, machineFor } from '@/transport/connections';
+import { nodesOfView } from '@/state/view-nodes';
+import { readNodeHost, updateHost, type NodeHost } from '@/surface/nodes/node-host';
+import { chatClientFor, machineFor } from '@/workspace/connections';
 
 type Call = ActionCall<void> & { confirmed: boolean };
 
@@ -56,6 +57,8 @@ export interface SessionMachine {
     /* The lines of a terminal this window has drawn, oldest first; null for one it never drew. */
     screen(terminalId: string): string[] | null;
     providers(): readonly ProviderInfo[];
+    /* Whether the machine named its CLIs yet; until it did, no CLI is known to fork. */
+    providersLoaded(): boolean;
     providerFixed(chatId: string): boolean;
     /* False when nobody here has the chat open, since only an open chat can be registered again. */
     retarget(chatId: string, provider: AgentKind, selection: ModelSelection): Promise<boolean>;
@@ -86,6 +89,7 @@ const LIVE_MACHINE: SessionMachine = {
     terminal: (terminalId) => useSessions.getState().byKey[endpointKey(endpointOfNodeId(terminalId), terminalId)] ?? null,
     screen: (terminalId) => screenOf(endpointOfNodeId(terminalId), terminalId),
     providers: () => providersOf(currentEndpointId()).providers,
+    providersLoaded: () => providersOf(currentEndpointId()).loaded,
     providerFixed: (chatId) => readNodeHost(chatId)?.providerFixed === true,
     retarget: async (chatId, provider, selection) => {
         const chats = chatClientOfNode(chatId);
@@ -503,7 +507,7 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
                 throw new ActionRefusal('no-turn', `“${chat}” has no finished turn to fork after that this window knows of. Open it and try again.`);
             }
             if (call.actor.kind !== 'person') {
-                const refusal = forkRefusal(row?.info ?? null, row?.structure[turn]);
+                const refusal = forkRefusal(row?.info ?? null, row?.structure[turn], { providers: machine.providers(), loaded: machine.providersLoaded() });
                 if (refusal !== null) {
                     throw new ActionRefusal('cannot-fork', refusal);
                 }

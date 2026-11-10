@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import { BrowserPlate } from '@/browser/BrowserPlate';
 import { usePageSnapshots } from '@/browser/page-snapshots';
-import { useBrowser } from '@/browser/registry';
+import { useBrowser } from '@/clients/browser/registry';
 import { useEndpoints } from '@/state/endpoints';
 import { endpointKey } from '@/state/keys';
 import { mount, until, type Mounted } from '../../testing/dom';

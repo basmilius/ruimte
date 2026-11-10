@@ -4,7 +4,7 @@ import type { TerminalPreparePreview } from '@ruimte/contracts';
 import { SquareTerminal } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { preparableShell } from '@/chat/preparable-shell';
 import { endpointById } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';

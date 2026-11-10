@@ -2,7 +2,7 @@ import { ButtonGroup, Icon, IconButton, Menu, type shortcut } from '@adecore/ui'
 import { Copy, Download, MoreHorizontal, Redo2, Undo2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { historyAction } from '@/actions/client-actions';
+import { historyAction } from '@/action-port/person-actions';
 
 type ExportFormat = 'png' | 'svg';
 type Shortcut = ReturnType<typeof shortcut>;

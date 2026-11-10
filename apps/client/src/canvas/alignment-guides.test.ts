@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
+import { lineBounds } from '../canvas-model/line-geometry';
 import { alignmentGuides, gapGuides } from './alignment-guides';
-import { lineBounds } from './line-geometry';
 
 const rect = { x: 80, y: 160, w: 480, h: 320 };
 

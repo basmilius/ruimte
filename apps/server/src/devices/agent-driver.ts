@@ -1,4 +1,3 @@
-import { tmpdir } from 'node:os';
 import { CodedError } from '@adecore/agents';
 import {
     deviceTools,
@@ -10,7 +9,8 @@ import {
     type DeviceReference,
     type DeviceTool
 } from '@ruimte/contracts';
-import { callerFolders } from '../agents/caller-folders.ts';
+import { chatFolders, tempFolders } from '../disk/agent-folders.ts';
+import type { NodeLifecycle } from '../node-lifecycle.ts';
 import { captureFile, pngSize, writeShot } from '../shots.ts';
 import { realTimers, type Timers } from '../timers.ts';
 import { DeviceClaims } from './device-claims.ts';
@@ -29,7 +29,7 @@ const TAP_MS = 60;
 /* One move per frame of a 60 Hz screen, so a scroll view reads the speed a person's finger has. */
 const SWIPE_STEP_MS = 16;
 
-export const SWIPE_DEFAULT_MS = 300;
+const SWIPE_DEFAULT_MS = 300;
 
 export interface Pixel {
     x: number;
@@ -194,7 +194,7 @@ export class DeviceDriver {
         this.sleep = options.sleep ?? ((ms) => Bun.sleep(ms));
         this.gate = options.gate ?? OPEN_GATE;
         this.claims = options.claims ?? new DeviceClaims();
-        this.tempFolders = options.tempFolders ?? [...new Set([tmpdir(), '/tmp'])];
+        this.tempFolders = options.tempFolders ?? tempFolders();
     }
 
     list(): Promise<DeviceInfo[]> {
@@ -206,7 +206,12 @@ export class DeviceDriver {
         this.claims.take(caller, device);
     }
 
-    /* The terminal or chat behind `caller` ended, so the devices it claimed are free for another agent. */
+    /* The claim ends when the terminal of its holder exits or its chat or node closes, so the device is free for another agent. */
+    follow(lifecycle: NodeLifecycle): void {
+        lifecycle.on('exited', (caller) => this.nodeClosed(caller));
+        lifecycle.on('closed', (caller) => this.nodeClosed(caller));
+    }
+
     nodeClosed(caller: string): void {
         this.claims.release(caller);
     }
@@ -240,7 +245,7 @@ export class DeviceDriver {
 
     /* Where beside the project an agent may hand a device a file from: its chat's own folders and the system's temporary ones. */
     pathFolders(caller: string): string[] {
-        return [...callerFolders(this.home, caller), ...this.tempFolders];
+        return [...chatFolders(this.home, caller), ...this.tempFolders];
     }
 
     find(reference: DeviceReference): Promise<DeviceInfo | null> {
@@ -490,7 +495,6 @@ export class DeviceDriver {
         this.manager.closeTree(reading.device.backendId, reading.device.deviceId);
     }
 
-    /* A pixel of the last shot as the share of the screen the device takes, refused when there is no shot to count it in. */
     private normalized(device: DeviceInfo, at: Pixel): { x: number; y: number } {
         const size = this.screen(device);
         if (size === null) {
@@ -504,7 +508,6 @@ export class DeviceDriver {
         return { x: at.x / size.width, y: at.y / size.height };
     }
 
-    /* Holds the device for this caller, runs the gesture on it, and keeps the hold for a while after. */
     private async operate(
         caller: string,
         device: DeviceInfo,

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { LastProjectStorage } from '@/project/last-project';
+import type { LastProjectStorage } from '@/clients/project/last-project';
 import { expiredInlineEdits, forgetInlineEdit, inlineEditFor, readInlineEdits, saveInlineEdit, type InlineEditRecord } from './inline-edit-record';
 
 class MemoryStorage implements LastProjectStorage {

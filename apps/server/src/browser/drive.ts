@@ -6,7 +6,6 @@ import type { BrowserPages } from './pages.ts';
 export interface DriveOutcome {
     /* Where the page stands afterwards, null when whoever holds it answered without a state. */
     state: BrowserPageState | null;
-    /* The png of a shot. */
     image?: Uint8Array;
     /* What a text ask read off the page. */
     text?: string;

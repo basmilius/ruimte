@@ -1,17 +1,16 @@
 import type { ProviderInfo } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
 import { AgentSubmenu } from '@/agents/AgentMenus';
-import type { Point } from '@/canvas/math';
-import { NODE_KIND_ICONS } from '@/canvas/node-icons';
+import type { Point } from '@/canvas-model/math';
 import { addDesignNode, useDesignOffered } from '@/design/design-create';
 import { useCanvasStore } from '@/state/canvas';
+import { NODE_KIND_ICONS } from '@/surface/canvas/node-icons';
 
 function useAddDesign(at: () => Point): (provider: ProviderInfo, account?: string) => void {
     const canvasStore = useCanvasStore();
     return (provider, account) => void addDesignNode(canvasStore, provider, at(), account === undefined ? {} : { account });
 }
 
-/* A design node on the CLI a person picks, in every menu that adds to a canvas. */
 export function DesignAddItem({ at }: { at: () => Point }) {
     const { t } = useTranslation('canvas');
     const offered = useDesignOffered();

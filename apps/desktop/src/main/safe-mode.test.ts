@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import type { AppIpc } from '@adecore/shell';
+import type { DesktopIpc } from './ipc';
 import { inSafeMode, installSafeMode, startsInSafeMode } from './safe-mode';
 
 function restart(argv: string[], answer = true): { relaunched: string[][]; runLater(): void; ask(): unknown } {
     const handlers = new Map<string, (event: unknown) => unknown>();
     const later: Array<() => void> = [];
     const relaunched: string[][] = [];
-    const ipc = { handle: (channel, handler) => void handlers.set(channel, handler as never) } as AppIpc;
+    const ipc = { handle: (channel: string, handler: unknown) => void handlers.set(channel, handler as never) } as unknown as DesktopIpc;
     installSafeMode(ipc, {
         argv,
         relaunch: (args) => void relaunched.push(args),

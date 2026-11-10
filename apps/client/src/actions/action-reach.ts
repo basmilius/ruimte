@@ -1,16 +1,25 @@
-import { ActionRefusal, type ActionInput, type ActionOutput } from '@ruimte/actions';
-import { isCanvasView, isUnknownNode, isUnknownView, type AgentKind, type ProjectNode, type ProjectView, type ProviderInfo } from '@ruimte/contracts';
+import { ActionRefusal, type ActionOutput } from '@ruimte/actions';
+import {
+    isCanvasView,
+    isUnknownNode,
+    isUnknownView,
+    type AgentKind,
+    type ProjectNode,
+    type ProjectView,
+    type ProviderInfo,
+    storedPathOf
+} from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { listed } from '@/actions/words';
-import type { AgentSession, AgentTarget } from '@/agents/nodes';
-import { browserRouteAvailable } from '@/browser/owner-route';
-import { toWorld } from '@/canvas/math';
+import { toWorld } from '@/canvas-model/math';
+import { browserRouteAvailable } from '@/clients/browser/owner-route';
+import { locateView } from '@/layout/split';
+import { basenameOf } from '@/paths/file-path';
 import type { ViewDeletionFacts } from '@/project/view-deletion';
-import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
-import { locateView } from '@/shell/split';
+import type { AgentTarget, AgentSession } from '@/state/agent-availability';
 import { liveCanvas, type CanvasState } from '@/state/canvas';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument, type DocumentState } from '@/state/document';
-import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 
 /* What the canvas, view and layout actions share: finding what they act on, and refusing what they cannot. */
@@ -52,9 +61,6 @@ export function nodeOnScreen(document: StoreApi<DocumentState>, viewId: string, 
 export function canvasNow(document: StoreApi<DocumentState>, viewId: string): CanvasState {
     return canvasOnScreen(document, viewId).canvas;
 }
-
-export type CreatableViewKind = ActionInput<'view.create'>['kind'];
-export type CreatableNodeKind = ActionInput<'node.create'>['kind'];
 
 export function centerWorld(canvas: CanvasState) {
     return toWorld(canvas.camera, {

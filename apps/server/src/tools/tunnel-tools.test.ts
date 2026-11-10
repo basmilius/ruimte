@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { TunnelProposal } from '@ruimte/contracts';
+import { AGENT_TOOLKITS } from '../agent-features/list.ts';
+import { ANSWER_WAKES_NOTE, type CanvasHost } from '../canvas/host.ts';
 import { TIER_TOOLS } from '../mcp/external-tiers.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import type { TunnelAgentHost } from '../tunnels/agent-host.ts';
 import { TunnelProposals } from '../tunnels/tunnel-proposals.ts';
 import { TunnelService } from '../tunnels/tunnel-service.ts';
 import { tunnelStore } from '../tunnels/tunnel-store.ts';
 import { FakeCloudflare, FakeCloudflared, FAKE_API_TOKEN, MemoryTokenStore } from '../tunnels/tunnel-test-helpers.ts';
-import { ANSWER_WAKES_NOTE, type CanvasHost, type TunnelAgentHost } from './host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
-import { TOOLKITS } from './toolkits.ts';
 
 const homeOf = tempHomes('ruimte-tunnel-tools-');
 
@@ -319,7 +320,7 @@ describe('tunnel_propose', () => {
 
 describe('who gets the tools', () => {
     test('no external tier lists them, and only a chat proposes', () => {
-        const tools = TOOLKITS.flatMap((toolkit) => toolkit.tools);
+        const tools = AGENT_TOOLKITS.flatMap((toolkit) => toolkit.tools);
 
         for (const tier of Object.values(TIER_TOOLS)) {
             expect(tier.filter((name) => name.startsWith('tunnel_'))).toEqual([]);

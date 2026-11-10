@@ -7,7 +7,7 @@ import {
     visualHostContextMessage,
     visualThemeFragment,
     type VisualTheme
-} from '../../../packages/contracts/src/visual.ts';
+} from '../../../packages/contracts/src/index.ts';
 import { VISUAL_HOST_HEADERS } from '../../../packages/csp/src/index.ts';
 import { writeGenerated } from './generated.ts';
 

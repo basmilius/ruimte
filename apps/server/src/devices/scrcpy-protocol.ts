@@ -33,7 +33,6 @@ const ACTION_DOWN = 0;
 const ACTION_UP = 1;
 const ACTION_MOVE = 2;
 
-/* Android `KeyEvent` codes. */
 const KEYCODES = {
     home: 3,
     back: 4,
@@ -267,7 +266,6 @@ function encodeKeycode(action: typeof ACTION_DOWN | typeof ACTION_UP, keycode: n
     return new Uint8Array(message.buffer);
 }
 
-/* The Android meta state of the modifier usages held down. */
 export function metaStateOf(held: Iterable<number>): number {
     let state = 0;
     for (const usage of held) {

@@ -12,7 +12,6 @@ interface RouteRequest<Data> {
 type RouteHandler<Data> = (route: RouteRequest<Data>) => Promise<Response | undefined> | Response | undefined;
 
 export interface Route<Data> {
-    /* The paths answered as they are. */
     exact?: readonly string[];
     /* A prefix whose every path below it is answered; the prefix itself only when `exact` names it too. */
     below?: string;

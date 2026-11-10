@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
-import { contribute } from '@/extensions/registry';
+import { contribute } from '@/state/extension-registry';
 import { useFiles } from '@/state/files';
 import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';

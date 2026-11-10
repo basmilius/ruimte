@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { catalog } from './catalog.ts';
+import { catalog } from './catalog-test-helpers.ts';
 import BUDGET from './context-budget.json';
 import { MCP_INSTRUCTIONS } from './instructions.ts';
 

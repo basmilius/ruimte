@@ -1,14 +1,13 @@
 import type { EditorRange } from '@adecore/editor';
-import { shikiLanguageOf } from '@adecore/editor-react';
+import { shikiLanguageOf, type EditorLanguage } from '@adecore/editor-react';
 import type { Problem } from '@adecore/editor-react/models';
 import { fileUriToPath } from '@adecore/lsp';
 import { storedPathOf, type AgentKind } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { lineRangeLabel, offerSelection, selectionBlock, startLinkedChatOrTell, type SelectionOffer } from '@/chat/selection-to-chat';
-import { basenameOf } from '@/shell/panels/files-tree';
-import { keyOf } from '@/shell/shortcut-overrides';
+import { lineRangeLabel, offerSelection, selectionBlock, startLinkedChatOrTell, type SelectionOffer } from '@/language/selection-to-chat';
+import { basenameOf } from '@/paths/file-path';
 import { useProject } from '@/state/project';
-import type { HostLanguage as EditorLanguage } from './host-language';
+import { keyOf } from '@/surface/shortcut-overrides';
 import { isShortcut } from './shortcut-keys';
 
 const PLAIN_IDS = new Set(['plaintext', 'text']);
@@ -24,14 +23,15 @@ export class SelectionChatFeature {
 
     constructor(language: EditorLanguage) {
         this.language = language;
-        const off = language.editor.onKeyDown((event) => {
-            if (!language.served || !isShortcut(keyOf('selectionToChat'), event)) {
-                return false;
-            }
-            this.choose();
-            return true;
-        });
-        language.onDispose(off);
+        language.onDispose(
+            language.onServedKey((event) => {
+                if (!isShortcut(keyOf('selectionToChat'), event)) {
+                    return false;
+                }
+                this.choose();
+                return true;
+            })
+        );
     }
 
     /* The node this editor is drawn in; null for a tab or a view of its own. */

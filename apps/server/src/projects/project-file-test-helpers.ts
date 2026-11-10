@@ -1,10 +1,10 @@
 import { readFile, rm, writeFile } from 'node:fs/promises';
 import { writeAtomic } from '@adecore/utils/fs';
 import { PROJECT_VERSION, mergeFiles, migrateSharedFile, type ProjectChatView, type ProjectDocument, type ProjectPrivateFile } from '@ruimte/contracts';
+import type { ScratchChatOptions } from '../chat/scratch-project.ts';
 import { documentPathInFolder, parsePrivateFile, privatePathOf } from './project-files.ts';
 import type { ProjectLinks, ProjectStore } from './project-store.ts';
 import type { ProjectWriteIO } from './project-write.ts';
-import type { ScratchChatOptions } from './scratch-project.ts';
 
 /* A home the test made in the temp folder, which no checkout holds, without asking git. */
 export const OUTSIDE_CHECKOUT: ScratchChatOptions = { insideCheckout: async () => false };

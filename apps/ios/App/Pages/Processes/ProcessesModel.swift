@@ -1,182 +1,49 @@
 import Foundation
 import Observation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 
 /// One process as a sample lists it. With the pid, the start time names one process, since a pid is reused.
-struct ProcessRow: Equatable, Identifiable {
-    var pid: Int
-    var startTime: Double
-    var name: String
-    var readable: Bool
-    var cpu: Double?
-    var memory: Double?
-    var diskRead: Double?
-    var diskWrite: Double?
-    var family: String?
-    var depth: Int
-
-    var id: String { "\(pid):\(startTime)" }
-
-    init(json: JSONValue) {
-        pid = Int(json.number("pid"))
-        startTime = json.number("startTime")
-        name = json.text("name")
-        readable = json["readable"]?.boolValue ?? false
-        cpu = json["cpu"]?.numberValue
-        memory = json["memory"]?.numberValue
-        diskRead = json["diskRead"]?.numberValue
-        diskWrite = json["diskWrite"]?.numberValue
-        family = json["family"]?.stringValue
-        depth = Int(json.number("depth"))
-    }
+extension ProcessRow: Identifiable {
+    public var id: String { "\(pid):\(startTime)" }
 
     /// A process of another user has no start time here, and without one nothing can prove it is still the same one.
     var signalable: Bool { readable && startTime != 0 }
 }
 
 /// A terminal or chat node, the desktop app, the daemon with its own tasks, or everything else, with its processes.
-struct ProcessGroup: Equatable, Identifiable {
-    var id: String
-    var kind: String
-    var nodeID: String?
-    var label: String?
-    var projectID: String?
-    var cpu: Double?
-    var memory: Double?
-    var diskRead: Double?
-    var diskWrite: Double?
-    var processes: [ProcessRow]
-    var hidden: Int
-
-    init(json: JSONValue) {
-        id = json.text("id")
-        kind = json.text("kind", fallback: "other")
-        nodeID = json["nodeId"]?.stringValue
-        label = json["label"]?.stringValue
-        projectID = json["projectId"]?.stringValue
-        cpu = json["cpu"]?.numberValue
-        memory = json["memory"]?.numberValue
-        diskRead = json["diskRead"]?.numberValue
-        diskWrite = json["diskWrite"]?.numberValue
-        processes = json.list("processes").map(ProcessRow.init(json:))
-        hidden = Int(json.number("hidden"))
-    }
-
+extension ProcessGroup: Identifiable {
     /// The root of a node's group can be signaled as the desktop offers it; the app, the daemon and the rest cannot.
     var signalableRoot: ProcessRow? {
-        guard kind == "terminal" || kind == "chat", let root = processes.first, root.signalable else { return nil }
+        guard kind == .terminal || kind == .chat, let root = processes.first, root.signalable else { return nil }
         return root
     }
 }
 
-/// The groups of one project, or of none.
+extension ProcessAlert: Identifiable {}
+
 struct ProcessSection: Equatable, Identifiable {
-    /// The project's id; empty for the groups of no project.
     let id: String
     let title: String
     var groups: [ProcessGroup]
-}
-
-/// One point of the three charts: the machine as a line, the share of Ruimte as the area under it.
-struct ProcessPoint: Equatable {
-    var at: Double
-    var cpu: Double?
-    var cpuRuimte: Double?
-    var memory: Double?
-    var memoryRuimte: Double?
-    var disk: Double?
-    var diskRuimte: Double?
-
-    init(json: JSONValue) {
-        at = json.number("at")
-        cpu = json["cpu"]?.numberValue
-        cpuRuimte = json["cpuRuimte"]?.numberValue
-        memory = json["memory"]?.numberValue
-        memoryRuimte = json["memoryRuimte"]?.numberValue
-        disk = json["disk"]?.numberValue
-        diskRuimte = json["diskRuimte"]?.numberValue
-    }
-}
-
-struct ProcessMachine: Equatable {
-    var cpu: Double?
-    var memoryUsed: Double?
-    var memoryTotal: Double
-    var diskRead: Double?
-    var diskWrite: Double?
-    var diskFree: Double?
-
-    init(json: JSONValue) {
-        cpu = json["cpu"]?.numberValue
-        memoryUsed = json["memoryUsed"]?.numberValue
-        memoryTotal = json.number("memoryTotal")
-        diskRead = json["diskRead"]?.numberValue
-        diskWrite = json["diskWrite"]?.numberValue
-        diskFree = json["diskFree"]?.numberValue
-    }
-}
-
-struct ProcessSample: Equatable {
-    var at: Double
-    var scope: String
-    var machine: ProcessMachine
-    var groups: [ProcessGroup]
-    var fine: ProcessPoint?
-    var coarse: ProcessPoint?
-    var reset: Bool
-
-    init(json: JSONValue) {
-        at = json.number("at")
-        scope = json.text("scope")
-        machine = ProcessMachine(json: json["machine"] ?? .object([:]))
-        groups = json.list("groups").map(ProcessGroup.init(json:))
-        fine = json["fine"].flatMap { $0 == .null ? nil : ProcessPoint(json: $0) }
-        coarse = json["coarse"].flatMap { $0 == .null ? nil : ProcessPoint(json: $0) }
-        reset = json["reset"]?.boolValue ?? false
-    }
-}
-
-struct ProcessAlert: Equatable, Identifiable {
-    var id: String
-    var kind: String
-    var nodeID: String?
-    var pid: Int?
-    var startTime: Double?
-    var name: String?
-    var since: Double
-    var value: Double?
-
-    init(json: JSONValue) {
-        id = json.text("id")
-        kind = json.text("kind")
-        nodeID = json["nodeId"]?.stringValue
-        pid = json["pid"]?.numberValue.map { Int($0) }
-        startTime = json["startTime"]?.numberValue
-        name = json["name"]?.stringValue
-        since = json.number("since")
-        value = json["value"]?.numberValue
-    }
 }
 
 /// One process as a row of the iPad's table, with the node or task it belongs to and where that stands. Unreadable
 /// numbers sort below every reading.
 struct ProcessTableRow: Equatable, Identifiable {
     let process: ProcessRow
-    /// The node, launch or task the process runs under.
     let owner: String
-    /// The project of that owner, or Machine tasks.
     let place: String
-    let kind: String
+    let kind: ProcessGroupKind
 
     var id: String { process.id }
     var name: String { process.name }
-    var pid: Int { process.pid }
+    var pid: Int { Int(process.pid) }
     var cpu: Double { process.cpu ?? -1 }
     var memory: Double { process.memory ?? -1 }
     var disk: Double { (process.diskRead ?? 0) + (process.diskWrite ?? 0) }
 
-    /// Every process of every group, each named after its group and that group's project, in the sample's order.
     static func rows(_ groups: [ProcessGroup], titles: [String: String], projectNames: [String: String])
         -> [ProcessTableRow]
     {
@@ -191,7 +58,6 @@ struct ProcessTableRow: Equatable, Identifiable {
     }
 }
 
-/// The process a signal goes to, by the pid and start time the row showed.
 struct ProcessTarget: Equatable, Identifiable {
     var pid: Int
     var startTime: Double
@@ -202,7 +68,7 @@ struct ProcessTarget: Equatable, Identifiable {
 
 extension ProcessTarget {
     init(_ row: ProcessRow) {
-        self.init(pid: row.pid, startTime: row.startTime, name: row.name)
+        self.init(pid: Int(row.pid), startTime: row.startTime, name: row.name)
     }
 }
 
@@ -225,7 +91,6 @@ enum ProcessSignal: String {
     case kill = "SIGKILL"
 }
 
-/// The words and numbers of the processes page, as the desktop panel writes them.
 enum ProcessesText {
     /// A number that could not be read is shown as nothing rather than as zero, which is what it is not.
     static let unreadable = "-"
@@ -250,56 +115,45 @@ enum ProcessesText {
         read == nil && write == nil ? nil : (read ?? 0) + (write ?? 0)
     }
 
-    static func agentName(_ kind: String) -> String {
-        switch kind {
-        case "claude": "Claude Code"
-        case "codex": "Codex"
-        case "antigravity": "Antigravity"
-        case "copilot": "Copilot"
-        case "grok": "Grok"
-        default: kind.prefix(1).uppercased() + kind.dropFirst()
-        }
-    }
-
-    /// The warning in one sentence a person reads without knowing what a hook is.
-    static func alert(_ alert: ProcessAlert, now: Double) -> String {
+    @MainActor static func alert(_ alert: ProcessAlert, now: Double) -> String {
         let name = alert.name ?? String(localized: "A process")
         let duration = Format.elapsedShort(milliseconds: now - alert.since)
         switch alert.kind {
-        case "silent":
+        case .silent:
             return String(localized: "Working, but silent for \(duration)", comment: "%@ is a duration")
-        case "busy-after-turn":
+        case .busyAfterTurn:
             return String(localized: "\(name) still uses \(percent(alert.value)) of a core after its turn")
-        case "memory": return String(localized: "\(name) uses \(bytes(alert.value))", comment: "%@ is a process name, then an amount of memory")
-        case "agent-gone":
-            let agent = agentName(alert.name ?? String(localized: "The agent"))
+        case .memory:
+            return String(
+                localized: "\(name) uses \(bytes(alert.value))",
+                comment: "%@ is a process name, then an amount of memory")
+        case .agentGone:
+            let agent = AgentDirectory.shared.name(alert.name ?? String(localized: "The agent"))
             return String(localized: "\(agent) exited but shows as running")
-        case "orphan": return String(localized: "\(name) is still running after its terminal closed")
-        case "probe-hung":
+        case .orphan: return String(localized: "\(name) is still running after its terminal closed")
+        case .probeHung:
             return String(localized: "\(name), started by Ruimte, has run for \(duration)")
-        default: return name
         }
     }
 
     /// The button that fits the warning. None of them does anything until a person presses it.
     static func actions(_ alert: ProcessAlert) -> [ProcessAlertAction] {
         switch alert.kind {
-        case "silent": [.interrupt]
-        case "busy-after-turn": [.show, .terminate]
-        case "memory": [.show]
-        case "agent-gone": [.resume]
-        case "orphan", "probe-hung": [.terminate]
-        default: []
+        case .silent: [.interrupt]
+        case .busyAfterTurn: [.show, .terminate]
+        case .memory: [.show]
+        case .agentGone: [.resume]
+        case .orphan, .probeHung: [.terminate]
         }
     }
 
-    static func kindName(_ kind: String) -> String {
+    static func kindName(_ kind: ProcessGroupKind) -> String {
         switch kind {
-        case "terminal": String(localized: "Terminal")
-        case "chat": String(localized: "Chat")
-        case "app": String(localized: "Ruimte app")
-        case "daemon": String(localized: "Machine tasks")
-        default: String(localized: "Other processes")
+        case .terminal: String(localized: "Terminal")
+        case .chat: String(localized: "Chat")
+        case .app: String(localized: "Ruimte app")
+        case .daemon: String(localized: "Machine tasks")
+        case .other: String(localized: "Other processes")
         }
     }
 
@@ -307,13 +161,12 @@ enum ProcessesText {
     /// false for a node of a project this page does not know the nodes of.
     static func groupTitle(_ group: ProcessGroup, titles: [String: String]) -> (title: String, known: Bool) {
         if let label = group.label { return (label, true) }
-        if let node = group.nodeID, let title = titles[node] { return (title, true) }
-        return (kindName(group.kind), group.nodeID == nil)
+        if let node = group.nodeId, let title = titles[node] { return (title, true) }
+        return (kindName(group.kind), group.nodeId == nil)
     }
 
-    /// Where a warning is drawn: under the group of its node, under the group that holds its process, or above the list.
     static func placement(_ alert: ProcessAlert, groups: [ProcessGroup]) -> String? {
-        if let node = alert.nodeID, let group = groups.first(where: { $0.nodeID == node }) { return group.id }
+        if let node = alert.nodeId, let group = groups.first(where: { $0.nodeId == node }) { return group.id }
         guard let pid = alert.pid else { return nil }
         return groups.first { group in
             group.processes.contains { $0.pid == pid && $0.startTime == alert.startTime }
@@ -325,11 +178,13 @@ enum ProcessesText {
     static func sections(_ groups: [ProcessGroup], projectNames: [String: String]) -> [ProcessSection] {
         var sections: [ProcessSection] = []
         for group in groups {
-            let id = group.projectID ?? ""
+            let id = group.projectId ?? ""
             if let index = sections.firstIndex(where: { $0.id == id }) {
                 sections[index].groups.append(group)
             } else {
-                let title = group.projectID.map { projectNames[$0] ?? String(localized: "Another project") } ?? String(localized: "Machine tasks")
+                let title =
+                    group.projectId.map { projectNames[$0] ?? String(localized: "Another project") }
+                    ?? String(localized: "Machine tasks")
                 sections.append(ProcessSection(id: id, title: title, groups: [group]))
             }
         }
@@ -382,7 +237,6 @@ enum ProcessesText {
             Task { await subscribe() }
         }
     }
-    /// Nil until the machine answered; false on a platform without a sampler.
     private(set) var supported: Bool?
     private(set) var fine: [ProcessPoint] = []
     private(set) var coarse: [ProcessPoint] = []
@@ -394,7 +248,15 @@ enum ProcessesText {
     var problem: String?
     var opened: Set<String> = []
     var highlight: ProcessTarget?
-    private var subscriptions: [() -> Void] = []
+    // The read is also the ask for samples, so the machine's answer to it is applied, not a watch held beside it.
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.processesSample, as: ProcessSample.self) { [weak self] in self?.apply($0) },
+            .apply(.processesAlerts, as: ProcessesAlerts.self) { [weak self] in self?.alerts = $0.alerts },
+        ],
+        connection: { [weak self] available in self?.connected = available },
+        read: { [weak self] in await self?.subscribe() })
 
     init(client: any MachineRequesting, defaults: UserDefaults = .standard) {
         self.client = client
@@ -404,25 +266,10 @@ enum ProcessesText {
         sort = ["memory", "disk"].contains(stored) ? stored : "cpu"
     }
 
-    func start() {
-        guard subscriptions.isEmpty else { return }
-        subscriptions.append(
-            client.subscribe("processes.sample") { [weak self] payload in self?.apply(ProcessSample(json: payload)) })
-        subscriptions.append(
-            client.subscribe("processes.alerts") { [weak self] payload in
-                self?.alerts = payload.list("alerts").map(ProcessAlert.init(json:))
-            })
-        subscriptions.append(
-            client.observeConnection { [weak self] available in
-                guard let self else { return }
-                connected = available
-                if available { Task { await self.subscribe() } }
-            })
-    }
+    func start() { live.start() }
 
     func stop() {
-        subscriptions.forEach { $0() }
-        subscriptions.removeAll()
+        live.stop()
         let client = client
         Task { _ = try? await client.request(.processesUnsubscribe) }
     }
@@ -430,7 +277,8 @@ enum ProcessesText {
     func subscribe() async {
         do {
             let result = try await client.request(
-                .processesSubscribe, payload: .object(["scope": .string(scope), "sort": .string(sort)]))
+                .processesSubscribe, payload: .object(["scope": .string(scope), "sort": .string(sort)])
+            ).decoded(as: ProcessesSubscribeResult.self)
             receive(result)
             problem = nil
         } catch is CancellationError {
@@ -439,23 +287,23 @@ enum ProcessesText {
             problem = error.localizedDescription
             return
         }
-        if let result = try? await client.request(.processesListAlerts) {
-            alerts = result.list("alerts").map(ProcessAlert.init(json:))
+        if let list = try? await client.request(.processesListAlerts).decoded(as: ProcessesAlerts.self) {
+            alerts = list.alerts
         }
     }
 
-    func receive(_ result: JSONValue) {
-        supported = result["supported"]?.boolValue ?? false
-        fineInterval = result.number("fineIntervalMs", fallback: 2000)
-        coarseInterval = result.number("coarseIntervalMs", fallback: 300_000)
-        fine = result.list("fine").map(ProcessPoint.init(json:))
-        coarse = result.list("coarse").map(ProcessPoint.init(json:))
-        sample = result["sample"].flatMap { $0 == .null ? nil : ProcessSample(json: $0) }
+    func receive(_ result: ProcessesSubscribeResult) {
+        supported = result.supported
+        fineInterval = Double(result.fineIntervalMs)
+        coarseInterval = Double(result.coarseIntervalMs)
+        fine = result.fine
+        coarse = result.coarse
+        sample = result.sample
     }
 
     /// A sample of the scope before the one just asked for still adds its points, but not its rows.
     func apply(_ next: ProcessSample) {
-        if next.scope == scope { sample = next }
+        if next.scope.rawValue == scope { sample = next }
         fine = Self.capped(next.reset ? [] : fine, next.fine, ProcessesText.finePoints)
         coarse = Self.capped(next.reset ? [] : coarse, next.coarse, ProcessesText.coarsePoints)
     }
@@ -466,7 +314,9 @@ enum ProcessesText {
     }
 
     /// The `other` group starts open and every node's group closed, as on the desktop.
-    func isOpen(_ group: ProcessGroup) -> Bool { group.kind == "other" ? !opened.contains(group.id) : opened.contains(group.id) }
+    func isOpen(_ group: ProcessGroup) -> Bool {
+        group.kind == .other ? !opened.contains(group.id) : opened.contains(group.id)
+    }
 
     func toggle(_ group: ProcessGroup) {
         if opened.contains(group.id) { opened.remove(group.id) } else { opened.insert(group.id) }
@@ -495,18 +345,21 @@ enum ProcessesText {
     func act(_ alert: ProcessAlert, _ action: ProcessAlertAction) async {
         let groups = sample?.groups ?? []
         let target = alert.pid.flatMap { pid in
-            alert.startTime.map { ProcessTarget(pid: pid, startTime: $0, name: alert.name ?? String(localized: "The process")) }
+            alert.startTime.map {
+                ProcessTarget(pid: Int(pid), startTime: $0, name: alert.name ?? String(localized: "The process"))
+            }
         }
         switch action {
         case .show:
-            if let place = ProcessesText.placement(alert, groups: groups), let group = groups.first(where: { $0.id == place }),
+            if let place = ProcessesText.placement(alert, groups: groups),
+                let group = groups.first(where: { $0.id == place }),
                 !isOpen(group)
             {
                 toggle(group)
             }
             highlight = target
         case .resume:
-            guard let node = alert.nodeID else { return }
+            guard let node = alert.nodeId else { return }
             do {
                 _ = try await client.request(.agentResume, payload: .object(["sessionId": .string(node)]))
                 problem = nil
@@ -515,8 +368,8 @@ enum ProcessesText {
             }
         case .interrupt, .terminate:
             // A chat has a turn to cancel, which is the interrupt its CLI understands.
-            if action == .interrupt, let node = alert.nodeID,
-                groups.contains(where: { $0.kind == "chat" && $0.nodeID == node })
+            if action == .interrupt, let node = alert.nodeId,
+                groups.contains(where: { $0.kind == .chat && $0.nodeId == node })
             {
                 do {
                     _ = try await client.request(.chatCancel, payload: .object(["chatId": .string(node)]))

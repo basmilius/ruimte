@@ -1,6 +1,6 @@
-import { COLUMN_W, GUTTER, LINE_H, OPEN_H, OPEN_MIN_H, STACK_GAP } from '@/canvas/beside-metrics';
-import { GRID, snapToGrid, type Rect } from '@/canvas/math';
-import type { CardSize } from '@/routines/output-size';
+import { GRID, snapToGrid, type Rect } from '@/canvas-model/math';
+import { COLUMN_W, GUTTER, LINE_H, OPEN_H, OPEN_MIN_H, STACK_GAP } from '@/surface/canvas/beside-metrics';
+import type { CardSize } from '@/surface/canvas/output-size';
 
 /* The column of phases is narrow and fixed, so it leaves the canvas beside the chat as free as it can. */
 export const PHASES_W = 320;
@@ -10,16 +10,13 @@ export type WorkflowBesideCard =
     | { kind: 'phase'; key: string; phase: string; open: boolean; rect: Rect }
     | { kind: 'agent'; key: 'agent'; from: string; rect: Rect };
 
-export interface WorkflowBesideView {
-    /* Every phase's key, in the order the workflow shows them. */
+interface WorkflowBesideView {
     phases: readonly string[];
-    /* The one phase that is open, or none. */
     openPhase: string | null;
-    /* The phase of the agent whose conversation is open, or null with none open. */
     agentPhase: string | null;
 }
 
-export interface WorkflowBesideSizes {
+interface WorkflowBesideSizes {
     /* Each phase's header and agents as last measured open; one not measured yet starts at the minimum. */
     openHeights?: Readonly<Record<string, number>>;
     /* What a person gave the agent's card; null keeps the layout's. */

@@ -7,7 +7,7 @@ import {
     EXTENSION_API_VERSION,
     EXTENSION_ICON_PATH,
     ExtensionManifestSchema,
-    extensionPermissionProblems,
+    extensionManifestProblem,
     ExtensionThemeSchema,
     extensionThemeCssProblem,
     isSafePackPath,
@@ -35,7 +35,7 @@ const SERVER_HOSTED: Readonly<Record<string, string>> = { '@ruimte/extension/ser
 const MAX_ICON_BYTES = 64 * 1024;
 const COPIED_FOLDERS = ['locales', 'assets', 'views', 'themes'];
 
-export class ExtensionBuildError extends Error {}
+class ExtensionBuildError extends Error {}
 
 export function readManifest(folder: string): ExtensionManifest {
     const path = join(folder, 'manifest.json');
@@ -50,14 +50,13 @@ export function readManifest(folder: string): ExtensionManifest {
         throw new ExtensionBuildError(`manifest.json: ${parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')}`);
     }
 
-    if (parsed.data.api !== EXTENSION_API_VERSION) {
-        throw new ExtensionBuildError(`manifest.json asks for API ${parsed.data.api}; this Ruimte has ${EXTENSION_API_VERSION}`);
-    }
+    const problem = extensionManifestProblem(parsed.data, {
+        subject: 'manifest.json',
+        refusesApi: (manifest) => `manifest.json asks for API ${manifest.api}; this Ruimte has ${EXTENSION_API_VERSION}`
+    });
 
-    const problems = extensionPermissionProblems(parsed.data.permissions);
-
-    if (problems.length > 0) {
-        throw new ExtensionBuildError(`manifest.json: ${problems.join('; ')}`);
+    if (problem !== null) {
+        throw new ExtensionBuildError(problem.message);
     }
 
     return parsed.data;
@@ -273,7 +272,6 @@ async function buildInto(root: string, manifest: ExtensionManifest, outdir: stri
     checkIcon(outdir);
 }
 
-/* Each theme the manifest names, its thumbnail and its stylesheet, as paths inside the project. */
 function declaredFiles(root: string, manifest: ExtensionManifest): string[] {
     return (manifest.themes ?? []).flatMap((path) => {
         if (!isSafePackPath(path) || !existsSync(join(root, path))) {
@@ -337,7 +335,7 @@ function filesIn(folder: string, prefix = ''): string[] {
     });
 }
 
-export interface PackedExtension {
+interface PackedExtension {
     manifest: ExtensionManifest;
     path: string;
     bytes: number;

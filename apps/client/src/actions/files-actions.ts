@@ -1,16 +1,18 @@
 import { ActionRefusal, FILE_READ_MAX_LINES, type ActionActorKind, type ActionHandlers } from '@ruimte/actions';
+import { absoluteOf, isAbsolutePath, isPathBelow, relativeTo } from '@ruimte/contracts';
 import type { FileLocation } from '@ruimte/contracts';
 import { copyTextOrRefuse } from '@/actions/clipboard';
 import { refusing, type Requester } from '@/actions/refusal';
 import { desktop } from '@/desktop/bridge';
-import { canCopyFilesOn } from '@/shell/panels/file-copy';
-import { absoluteOf, basenameOf, isAbsolutePath, isPathBelow, relativeTo, revealableInFiles } from '@/shell/panels/files-tree';
+import { basenameOf } from '@/paths/file-path';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { forgetDeleted, moveFile } from '@/state/file-moves';
 import { useFiles } from '@/state/files';
-import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
-import { machineFor } from '@/transport/connections';
+import { canCopyFilesOn } from '@/surface/panels/file-copy';
+import { revealableInFiles } from '@/surface/panels/files-tree';
+import { machineFor } from '@/workspace/connections';
 
 /* What the file actions reach outside the document; a test hands in a fake of each. */
 export interface FilesMachine {
@@ -57,9 +59,7 @@ const LIVE_MACHINE: FilesMachine = {
         forgetDeleted(endpointId, path);
         if (current !== null && transport !== undefined) {
             // Loaded here and not at the top: the start screen reaches these actions and carries no editor code.
-            void import('@/language/ruimte-project-language').then(({ forgetDeletedEdits }) =>
-                forgetDeletedEdits(transport, current.projectId, current.folder, path)
-            );
+            void import('@/language/ruimte-project').then(({ forgetDeletedEdits }) => forgetDeletedEdits(transport, current.projectId, current.folder, path));
         }
     },
     move: async (from, to) => {
@@ -108,7 +108,6 @@ function resolvedPath(machine: FilesMachine, path: string, actor: ActionActorKin
     return projectPathOf(machine.folder(), path, actor);
 }
 
-/* The paths named, once each, without those inside a folder that is named too. */
 function outermostPaths(machine: FilesMachine, paths: readonly string[], actor: ActionActorKind): string[] {
     const absolutes = [...new Set(paths.map((path) => resolvedPath(machine, path, actor)))];
     return absolutes.filter((path) => !absolutes.some((other) => isPathBelow(other, path)));

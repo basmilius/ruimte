@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import RuimtePulsar
+import RuimteShared
 
 /// Which gestures a canvas refuses on this client. Commands from the dock always work. A phone neither moves nor
 /// resizes nodes, but it keeps those two as it read them, since the desktop writes the same local file.
@@ -38,7 +39,6 @@ struct CanvasStatus: Equatable {
 
     var isEmpty: Bool { needsYou.isEmpty && working == 0 }
 
-    /// The node a tap on the count opens: the one after the node opened last, so repeated taps visit them all.
     func next(after id: String?) -> String? {
         guard !needsYou.isEmpty else { return nil }
         guard let id, let index = needsYou.firstIndex(of: id) else { return needsYou.first }
@@ -53,7 +53,7 @@ enum CanvasNodeAction: Equatable {
     static func actions(for node: JSONValue) -> [CanvasNodeAction] {
         let kind = node.text("kind")
         // A kind this version does not know is kept as it is, so the menu only offers to take it away.
-        guard CanvasEditing.knownKinds.contains(kind) else { return [.delete] }
+        guard ProjectKinds.editsOnCanvas(kind) else { return [.delete] }
         var actions: [CanvasNodeAction] = []
         if CanvasEditing.opensAsView(kind) { actions.append(.openAsView) }
         actions.append(.linkAsContext)
@@ -70,15 +70,16 @@ enum CanvasNodeAction: Equatable {
 /// stay testable: grouping (`groupFrame` in `packages/contracts`), context links (`addEdge` in the client), layouts
 /// and the view a node becomes.
 enum CanvasEditing {
-    static let grid = 8.0
-    static let groupPadding = 32.0
-    static let groupHeader = 40.0
-    static let knownKinds: Set<String> = [
-        "terminal", "chat", "browser", "device", "group", "note", "drawing", "diagram", "file",
-    ]
+    static let grid = WireVocabulary.canvasGrid
+    static let groupPadding = WireVocabulary.groupPadding
+    static let groupHeader = WireVocabulary.groupHeader
 
-    static func isAgent(_ kind: String) -> Bool { kind == "chat" || kind == "terminal" }
-    static func opensAsView(_ kind: String) -> Bool { ["chat", "terminal", "browser", "device"].contains(kind) }
+    /// A node an agent works in, which reads what runs into it (`isAgentKind` in `packages/contracts`).
+    static func isAgent(_ kind: String) -> Bool { kind == "chat" || kind == "terminal" || kind == "design" }
+
+    /// A node folded to its header takes no new line, from or to it; the ones it has stay.
+    static func isFolded(_ node: JSONValue) -> Bool { node["collapsed"]?.boolValue == true }
+    static func opensAsView(_ kind: String) -> Bool { ProjectKinds.runs(kind) }
 
     /// `Math.round` of the desktop, which rounds a half up where Swift rounds it away from zero.
     static func snap(_ value: Double) -> Double { (value / grid + 0.5).rounded(.down) * grid }
@@ -183,7 +184,6 @@ enum CanvasEditing {
 
     // MARK: Context links
 
-    /// Whether a line may run from one node to another: never to itself and never twice the same way.
     static func canLink(_ edges: [JSONValue], from: String, to: String) -> Bool {
         from != to && !edges.contains { $0.text("from") == from && $0.text("to") == to }
     }
@@ -196,7 +196,7 @@ enum CanvasEditing {
             "nodes",
             .array(
                 canvas.list("nodes").map { node in
-                    guard node.stableID == id, knownKinds.contains(node.text("kind")) else { return node }
+                    guard node.stableID == id, ProjectKinds.editsOnCanvas(node.text("kind")) else { return node }
                     let colored = node.setting("accent", value)
                     return node.text("kind") == "note" ? colored.setting("color", nil) : colored
                 }))
@@ -207,10 +207,12 @@ enum CanvasEditing {
     static func linking(_ canvas: JSONValue, from source: String, to target: String, newID: () -> String) -> JSONValue {
         let nodes = Dictionary(
             canvas.list("nodes").map { ($0.stableID, $0) }, uniquingKeysWith: { first, _ in first })
-        guard let from = nodes[source], let to = nodes[target] else { return canvas }
+        guard let from = nodes[source], let to = nodes[target], !isFolded(from), !isFolded(to) else { return canvas }
+        var edges = canvas.list("edges")
+        // A line that already runs this way draws nothing, not even the way back that is missing.
+        guard canLink(edges, from: source, to: target) else { return canvas }
         var pairs = [(from, to)]
         if isAgent(from.text("kind")) && isAgent(to.text("kind")) { pairs.append((to, from)) }
-        var edges = canvas.list("edges")
         for (start, end) in pairs where canLink(edges, from: start.stableID, to: end.stableID) {
             var edge: [String: JSONValue] = [
                 "id": .string(newID()), "from": .string(start.stableID), "to": .string(end.stableID),
@@ -222,8 +224,8 @@ enum CanvasEditing {
     }
 
     /// A line an agent reads along: one into an agent, or one that says so in its role.
-    static func isContext(_ edge: JSONValue, nodes: [String: JSONValue]) -> Bool {
-        edge.text("role") == "context" || isAgent(nodes[edge.text("to")]?.text("kind") ?? "")
+    static func isContext(_ edge: StoredCanvasViewEdgesItem, nodes: [String: StoredNode]) -> Bool {
+        edge.role == "context" || isAgent(nodes[edge.to]?.kind.rawValue ?? "")
     }
 
     // MARK: Layouts

@@ -19,13 +19,13 @@ import { isOnScreen, unknownCanvas } from '@/actions/action-reach';
 import { clipboardOrRefuse, copyTextOrRefuse } from '@/actions/clipboard';
 import { asksFirst } from '@/actions/developer-actions';
 import { plural } from '@/actions/words';
+import { fitTextBox } from '@/canvas-model/drawing-measure';
 import { lineElement, noteElement, shapeElement, textElement } from '@/drawing/gestures';
-import { fitTextBox } from '@/drawing/measure';
-import { nodesOfView } from '@/project/view-nodes';
 import { liveCanvas, nextId, type CanvasState } from '@/state/canvas';
 import { defaultDiagrams, type DiagramState } from '@/state/diagram';
 import type { DocumentState } from '@/state/document';
 import { defaultDrawings, DUPLICATE_OFFSET, isWritten, newSeed, withStyle, type DrawingState, type DrawingStyle } from '@/state/drawing';
+import { nodesOfView } from '@/state/view-nodes';
 
 type Call = ActionCall<void> & { confirmed: boolean };
 
@@ -173,7 +173,6 @@ function summaryOf(element: DrawingElement): ActionOutput<'drawing.read'>['eleme
     };
 }
 
-/* What a JSON document of a drawing or a diagram holds, or a refusal that says what is wrong with it. */
 function parsedDocument<Schema extends z.ZodType>(document: string, schema: Schema, what: string): z.output<Schema> {
     let json: unknown;
     try {

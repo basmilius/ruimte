@@ -10,12 +10,10 @@ struct RenderDocumentPage: View {
     let kind: String
     /// The diagram's project, for asking an agent to change it; nil where there is no project to start a chat in.
     var agent: DiagramAgentTarget?
-    /// Opens the chat a question went to.
     var openChat: (String) -> Void = { _ in }
     @State private var work = RemotePageState()
     @State private var generation = 0
-    @State private var connection: (() -> Void)?
-    @State private var subscription: (() -> Void)?
+    @State private var live: LiveResource?
     @State private var zoom: SceneZoomRequest?
     @State private var agentModel: DiagramAgentModel?
     @State private var asking = false
@@ -80,11 +78,21 @@ struct RenderDocumentPage: View {
         .sensoryFeedback(.success, trigger: copied)
         .task {
             if agentModel == nil, let agent { agentModel = DiagramAgentModel(target: agent) }
-            if subscription == nil {
-                subscription = client.subscribe(kind + ".changed") { event in
-                    if event.text("projectId") == projectID && event.text("viewId") == viewID { generation += 1 }
-                }
-                connection = client.observeConnection { if $0 { generation += 1 } }
+            if live == nil {
+                // The page reads when its generation moves, so a change and a new link both move it.
+                let resource = LiveResource(
+                    client: client,
+                    events: [
+                        .apply(
+                            kind == "drawing" ? .drawingChanged : .diagramChanged,
+                            raw: { event in
+                                if event.text("projectId") == projectID && event.text("viewId") == viewID {
+                                    generation += 1
+                                }
+                            })
+                    ], read: { generation += 1 })
+                live = resource
+                resource.start()
             }
         }
         .task(id: generation) {
@@ -94,10 +102,8 @@ struct RenderDocumentPage: View {
             }
         }
         .onDisappear {
-            subscription?()
-            subscription = nil
-            connection?()
-            connection = nil
+            live?.stop()
+            live = nil
         }
     }
 
@@ -290,7 +296,6 @@ class SceneSurface: UIView {
         accessibilityTraits = .image
         drawing.setNeedsDisplay()
     }
-    /// The whole scene as a picture on the page's own surface color, at most 4096 pixels a side.
     func image() -> UIImage {
         let format = UIGraphicsImageRendererFormat()
         format.scale = max(0.05, min(3, 4096 / max(1, max(bounds.width, bounds.height))))
@@ -301,7 +306,6 @@ class SceneSurface: UIView {
             drawScene(renderer.cgContext, from: .zero)
         }
     }
-    /// Draws the scene with `origin` of the surface at the context's top left.
     private func drawScene(_ context: CGContext, from origin: CGPoint) {
         context.translateBy(
             x: 32 - (scene["bounds"]?.number("x") ?? 0) - origin.x,

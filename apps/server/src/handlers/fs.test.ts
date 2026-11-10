@@ -4,13 +4,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import { FS_WRITE_PIECE_BYTES, type FsListResult, type ServerFrame } from '@ruimte/contracts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { MachineHome } from '../fs/machine-home.ts';
 import { readServedFile } from '../fs/read.ts';
 import { FolderWatcher } from '../fs/watch.ts';
-import { registerBytesHandlers } from './bytes.ts';
-import { registerFsHandlers } from './fs.ts';
-import { askOnce } from './test-helpers.ts';
+import { bytesArea } from './bytes.ts';
+import { fsArea } from './fs.ts';
+import { askOnce, NO_LANGUAGE_SERVERS } from './test-helpers.ts';
 
 const GIF = new TextEncoder().encode('GIF89a and then some');
 
@@ -41,13 +41,13 @@ beforeEach(async () => {
     watches = new FakeWatch();
     folders = new FolderWatcher('darwin', watches, 0);
     const machineHome = new MachineHome(home);
-    registerFsHandlers(
-        dispatcher,
-        folders,
-        async () => ({ folders: [root], worktreesOf: async () => [], worktreesRoot: join(home, 'worktrees') }),
-        machineHome
-    );
-    registerBytesHandlers(dispatcher, { attachment: async () => null, projectIcon: async () => null, file: readServedFile }, machineHome);
+    fsArea({
+        watcher: folders,
+        boundaryOf: async () => ({ folders: [root], worktreesOf: async () => [], worktreesRoot: join(home, 'worktrees') }),
+        machineHome,
+        language: NO_LANGUAGE_SERVERS
+    }).handlers?.(dispatcher);
+    bytesArea({ sources: { attachment: async () => null, projectIcon: async () => null, file: readServedFile }, machineHome }).handlers?.(dispatcher);
 });
 
 afterEach(async () => {
@@ -313,13 +313,12 @@ describe('files that go past the language servers', () => {
             }
         };
         dispatcher = new Dispatcher();
-        registerFsHandlers(
-            dispatcher,
-            new FolderWatcher('linux', new FakeWatch(), 0),
-            async () => ({ folders: [root], worktreesOf: async () => [], worktreesRoot: join(home, 'worktrees') }),
-            new MachineHome(home),
-            language as never
-        );
+        fsArea({
+            watcher: new FolderWatcher('linux', new FakeWatch(), 0),
+            boundaryOf: async () => ({ folders: [root], worktreesOf: async () => [], worktreesRoot: join(home, 'worktrees') }),
+            machineHome: new MachineHome(home),
+            language: language as never
+        }).handlers?.(dispatcher);
         return { calls, edits };
     }
 

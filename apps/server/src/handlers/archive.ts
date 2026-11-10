@@ -1,18 +1,24 @@
 import type { ArchiveExtractResult } from '@ruimte/contracts';
 import { listArchive } from '../archive/archive.ts';
 import { planExtract } from '../archive/extract.ts';
+import type { Area } from '../area.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import type { Dispatcher } from '../dispatcher.ts';
-import type { MachineHome } from '../fs/machine-home.ts';
 import type { WriteBoundary } from '../fs/write.ts';
 import type { FileMove, LanguageHost } from '../language/host.ts';
 
+export interface ArchiveDeps {
+    boundaryOf(clientId: string): Promise<WriteBoundary>;
+    machineHome: Pick<MachineHome, 'refuse'>;
+    language: Pick<LanguageHost, 'createFiles'>;
+}
+
 /* An archive is read where `fs.read` reads and unpacked where `fs.create` makes files. */
-export function registerArchiveHandlers(
-    dispatcher: Dispatcher,
-    boundaryOf: (clientId: string) => Promise<WriteBoundary>,
-    machineHome: MachineHome,
-    language?: Pick<LanguageHost, 'createFiles'>
-): void {
+export function archiveArea(deps: ArchiveDeps): Area {
+    return { name: 'archive', handlers: (dispatcher) => registerRequests(dispatcher, deps) };
+}
+
+function registerRequests(dispatcher: Dispatcher, { boundaryOf, machineHome, language }: ArchiveDeps): void {
     dispatcher.register('archive.list', async (payload) => {
         await machineHome.refuse(payload.path);
         return listArchive(payload.path);
@@ -21,7 +27,7 @@ export function registerArchiveHandlers(
     dispatcher.register('archive.extract', async (payload, client) => {
         await Promise.all([machineHome.refuse(payload.path), machineHome.refuse(payload.to)]);
         const plan = await planExtract(payload, await boundaryOf(client.id));
-        if (payload.projectId === undefined || language === undefined) {
+        if (payload.projectId === undefined) {
             return plan.run();
         }
         let result: ArchiveExtractResult | undefined;

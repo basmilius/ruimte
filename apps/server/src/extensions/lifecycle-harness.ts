@@ -18,8 +18,7 @@ export interface Hold {
     release(): void;
 }
 
-/* Every step that waits for the test, in the order they arrived. */
-export class Gates {
+class Gates {
     readonly held: Hold[] = [];
     // Labels that pass at once, for the steps a test does not mean to order.
     readonly open = new Set<string>();
@@ -43,7 +42,6 @@ export class Gates {
         });
     }
 
-    /* The first held step of this label, and subject when given, once it arrives. */
     async next(label: string, subject?: string): Promise<Hold> {
         for (let turn = 0; turn < MAX_IDLE_TURNS; turn++) {
             const hold = this.held.find((each) => each.label === label && (subject === undefined || each.subject === subject));
@@ -87,7 +85,7 @@ export function turnOver(): Promise<void> {
 }
 
 /* A `server/` that does what the host tells it only once the test lets its steps go. */
-export class GatedChild extends EventEmitter {
+class GatedChild extends EventEmitter {
     readonly stdin = new PassThrough();
     readonly stdout = new PassThrough();
     readonly stderr = new PassThrough();
@@ -149,7 +147,7 @@ export interface Plan {
 }
 
 /* Files by their `/` path on every platform: the host joins the store's paths with the separator of the one it runs on. */
-export class FileMap extends Map<string, string> {
+class FileMap extends Map<string, string> {
     override get(path: string): string | undefined {
         return super.get(path.replaceAll('\\', '/'));
     }
@@ -167,7 +165,6 @@ export class FileMap extends Map<string, string> {
     }
 }
 
-/* The host and everything around it, each in memory and behind a gate. */
 export class GatedHost {
     readonly gates = new Gates();
     readonly host: ExtensionHost;

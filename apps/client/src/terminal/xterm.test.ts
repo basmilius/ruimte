@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { isApplePlatform } from '@adecore/ui';
 import type { Terminal } from '@xterm/xterm';
-import { isApplePlatform } from '@/desktop/bridge';
 import { bindTerminalKeys } from './xterm';
 
 type KeyHandler = (event: KeyboardEvent) => boolean;
@@ -12,7 +12,6 @@ function bind(keys: Partial<Parameters<typeof bindTerminalKeys>[1]>): KeyHandler
     return handler!;
 }
 
-/* The find key of the platform the test runs on, as the bits of a keydown the handler reads. */
 function findKey(): KeyboardEvent & { prevented: boolean } {
     const apple = isApplePlatform();
     const event = {

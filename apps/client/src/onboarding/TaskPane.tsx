@@ -8,14 +8,11 @@ interface TaskPaneProps {
     icon: LucideIcon;
     title: string;
     subtitle: string;
-    /* A control on the header line, before the close button. */
     action?: ReactNode;
-    /* The bar under the task: a note on the left, its buttons on the right. */
     footer: ReactNode;
     children: ReactNode;
 }
 
-/* The right side of the list: one task with its header, what it asks, and how to go on. */
 export function TaskPane({ icon, title, subtitle, action, footer, children }: TaskPaneProps) {
     const { t } = useTranslation('common');
     return (
@@ -39,7 +36,6 @@ export function TaskPane({ icon, title, subtitle, action, footer, children }: Ta
     );
 }
 
-/* The note at the top of a task: what it is about, before what it asks. */
 export function TaskNote({ children }: { children: ReactNode }) {
     return (
         <p className="flex gap-2.5 rounded-[10px] bg-accent/10 px-3.5 py-3 text-xs text-text">
@@ -49,7 +45,6 @@ export function TaskNote({ children }: { children: ReactNode }) {
     );
 }
 
-/* A square behind a mark at the start of a row. */
 export function RowTile({ children, size = 'md' }: { children: ReactNode; size?: 'sm' | 'md' }) {
     return (
         <span className={clsx('grid shrink-0 place-items-center bg-surface-hover', size === 'md' ? 'size-8 rounded-lg' : 'size-7 rounded-[7px]')}>

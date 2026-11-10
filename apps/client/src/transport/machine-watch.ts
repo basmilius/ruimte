@@ -1,7 +1,8 @@
 import type { RequestMap, RequestType } from '@ruimte/contracts';
 import { machineTransport, pool } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
-import type { Transport } from './transport';
+import type { Transport } from '../transport-api/transport';
 
 /* A request the machine takes with nothing in it, which is what a watch and its end are. */
 export type BareRequest = { [K in RequestType]: Record<string, never> extends RequestMap[K]['payload'] ? K : never }[RequestType];
@@ -18,7 +19,7 @@ export function startMachineWatch(
     const transport = machineTransport(endpointId);
     const ask = (): void => {
         if (transport.status === 'open' && machineAnswers(pool.statusOf(endpointId), watch)) {
-            transport.request(watch, {}).catch(() => undefined);
+            void fireAndForget('transport.request', transport.request(watch, {}));
         }
     };
     const offListen = listen(transport);
@@ -39,7 +40,7 @@ export function startMachineWatch(
         offStatus();
 
         if (transport.status === 'open' && machineAnswers(pool.statusOf(endpointId), unwatch)) {
-            transport.request(unwatch, {}).catch(() => undefined);
+            void fireAndForget('transport.request', transport.request(unwatch, {}));
         }
     };
 }

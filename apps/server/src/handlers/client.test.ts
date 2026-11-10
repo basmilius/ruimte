@@ -3,7 +3,7 @@ import type { AuthSession } from '@ruimte/contracts';
 import { ConnectedClients } from '../clients/connected-clients.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { ACTIVE_USE_MS, CredentialStore } from '../tunnels/credential-store.ts';
-import { registerClientHandlers } from './client.ts';
+import { clientArea } from './client.ts';
 import { askOnce } from './test-helpers.ts';
 
 const SESSION: AuthSession = { id: 'session-1', label: 'Station on a Pixel', origin: 'statement', createdAt: 1, lastSeenAt: 1, current: false };
@@ -15,7 +15,7 @@ function machine() {
     const connected = new ConnectedClients(() => clock.now);
     const credentials = new CredentialStore({ now: () => clock.now, random: (bytes) => 'x'.repeat(bytes) });
     const dispatcher = new Dispatcher();
-    registerClientHandlers(dispatcher, { connected, auth: { list: async () => [SESSION] }, external: () => credentials.active() });
+    clientArea({ connected, auth: { list: async () => [SESSION] }, external: () => credentials.active() }).handlers?.(dispatcher);
     connected.opened(PERSON.id, PERSON.access);
 
     return { clock, connected, credentials, dispatcher };

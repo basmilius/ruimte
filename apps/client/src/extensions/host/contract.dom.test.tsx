@@ -7,11 +7,11 @@ import { runAction } from '@/extensions/action-runs';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
 import { useHostDialog } from '@/extensions/host/host-dialog-state';
 import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
-import { useContributions } from '@/extensions/registry';
 import { baseContext, nodeInfoOf, resolveSlot } from '@/extensions/slots';
 import { defaultCanvases, focusedCanvas } from '@/state/canvas';
 import type { CanvasNode } from '@/state/canvas-model';
 import { useDocument } from '@/state/document';
+import { useContributions } from '@/state/extension-registry';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { TransportError } from '@/transport';
@@ -60,7 +60,6 @@ function contextOf(extra: object): Record<string, unknown> {
     return { ...baseContext(), ...Object.fromEntries(Object.entries(extra).map(([key, value]) => [key, nodes(value)])) };
 }
 
-/* What a person reads and presses of something drawn. */
 function screenOf(mounted: Mounted): ContractScreen {
     return {
         text: () => mounted.host.textContent ?? '',

@@ -10,21 +10,21 @@ final class GitWorktreeTests: XCTestCase {
         locked: Bool = false
     ) -> GitWorktree {
         GitWorktree(
-            path: "/wt/lexer", branch: "lexer", fromBranch: "main", fromCommit: "abc", missing: missing, locked: locked,
-            work: GitWorktree.Work(changed: changed, untracked: untracked, ahead: ahead, operation: operation))
+            path: "/wt/lexer", branch: "lexer", from: WorktreeFrom(branch: "main", commit: "abc"), missing: missing,
+            locked: locked,
+            work: WorktreeWork(
+                changed: Int64(changed), untracked: Int64(untracked), ahead: Int64(ahead), operation: operation))
     }
 
     func testAWorktreeIsReadFromTheList() {
-        let json: JSONValue = .object([
-            "path": .string("/wt/x"), "branch": .string("x"),
-            "from": .object(["branch": .string("main"), "commit": .string("c1")]), "locked": .bool(true),
-            "work": .object(["changed": .number(2), "untracked": .number(0), "ahead": .number(1), "behind": .number(3)]),
-        ])
-        let entry = GitWorktree(json: json)
+        let entry = WorktreeWire.entry(
+            "/wt/x", branch: "x", from: ("main", "c1"), locked: true,
+            work: WorktreeWire.work(changed: 2, ahead: 1, behind: 3)
+        ).worktree
         XCTAssertEqual(entry.fromBranch, "main")
         XCTAssertEqual(entry.base, "main")
-        XCTAssertTrue(entry.locked)
-        XCTAssertFalse(entry.missing)
+        XCTAssertTrue(entry.isLocked)
+        XCTAssertFalse(entry.isMissing)
         XCTAssertEqual(entry.work?.behind, 3)
         XCTAssertTrue(entry.hasWork)
         XCTAssertTrue(entry.hasLooseWork)
@@ -35,7 +35,9 @@ final class GitWorktreeTests: XCTestCase {
             GitWorktreeText.workSentence(worktree(changed: 3, untracked: 2, ahead: 1)),
             "3 uncommitted files, 2 new files and 1 commit that main lacks")
         XCTAssertEqual(GitWorktreeText.workSentence(worktree(operation: "rebase")), "a rebase that stopped halfway")
-        XCTAssertEqual(GitWorktreeText.mergeContents(worktree(changed: 1, untracked: 2, ahead: 2)), "2 commits and 3 uncommitted files")
+        XCTAssertEqual(
+            GitWorktreeText.mergeContents(worktree(changed: 1, untracked: 2, ahead: 2)),
+            "2 commits and 3 uncommitted files")
         XCTAssertEqual(GitWorktreeText.mergeContents(worktree()), "nothing yet")
     }
 
@@ -69,30 +71,35 @@ final class GitWorktreeTests: XCTestCase {
         XCTAssertEqual(payload["remove"], .bool(true))
     }
 
-    func testARefusalOverATargetCheckedOutNowhereNamesTheBranchToMergeInto() {
-        XCTAssertEqual(
-            GitWorktreeText.checkedOutBranch("main is not checked out anywhere; /work/app is on develop."), "develop")
-        XCTAssertNil(GitWorktreeText.checkedOutBranch("main is not checked out anywhere; /work/app is on a detached HEAD."))
-        XCTAssertNil(GitWorktreeText.checkedOutBranch("lexer cannot be merged into itself."))
-        XCTAssertNotNil(GitWorktreeText.refusalHint("target-not-checked-out"))
+    func testARefusalOverATargetCheckedOutNowhereHasAHint() {
+        XCTAssertNotNil(GitWorktreeText.refusalHint(.targetNotCheckedOut))
+        XCTAssertNil(GitWorktreeText.refusalHint(.mergeWouldOverwrite))
+        XCTAssertNil(GitWorktreeText.refusalHint(nil))
     }
 
     func testWhatARemovalLeftBehindIsSaid() {
         XCTAssertEqual(
-            GitWorktreeText.removed(branch: "lexer", result: .object(["branchDeleted": .bool(false)])),
+            GitWorktreeText.removed(
+                branch: "lexer", result: WorktreeWire.removed(branchDeleted: false).worktreeRemoved),
             "Removed worktree lexer. The branch lexer stays.")
         XCTAssertEqual(
             GitWorktreeText.removed(
-                branch: "lexer", result: .object(["branchDeleted": .bool(true), "branchCommit": .string("0123456789abcdef")])),
+                branch: "lexer",
+                result: WorktreeWire.removed(branchDeleted: true, branchCommit: "0123456789abcdef").worktreeRemoved),
             "Removed worktree lexer and its branch. \"git branch lexer 0123456789ab\" brings it back.")
     }
 
-    func testOnlyGitRefusingToOverwriteOffersAStash() {
-        let message = "error: Your local changes to the following files would be overwritten by merge:\n\ta.ts"
-        XCTAssertTrue(GitWorktreeText.isOverwriteRefusal(code: "git-failed", message: message))
-        XCTAssertTrue(GitWorktreeText.isOverwriteRefusal(code: "git-failed", message: "Please commit your changes or stash them before you merge."))
-        XCTAssertFalse(GitWorktreeText.isOverwriteRefusal(code: "target-dirty", message: message))
-        XCTAssertFalse(GitWorktreeText.isOverwriteRefusal(code: "git-failed", message: "fatal: refusing to merge unrelated histories"))
+    @MainActor func testARefusalKeepsTheCodeThatOffersAStash() async {
+        let machine = WorktreeMachine()
+        machine.refusal = ("merge-would-overwrite", "error: Your local changes would be overwritten by merge")
+        let state = GitWorktreesState(repo: "/repo")
+        let request = GitWorktreeMergeRequest(worktree: worktree(), strategy: .merge)
+        await state.merge(client: machine, request: request)
+        XCTAssertEqual(
+            state.outcome,
+            .refused(
+                code: .mergeWouldOverwrite, message: "error: Your local changes would be overwritten by merge",
+                request: request))
     }
 
     func testTheStashGoesToTheCheckoutThatHasTheTargetOut() {
@@ -100,31 +107,42 @@ final class GitWorktreeTests: XCTestCase {
             GitWorktree(path: "/wt/gone", branch: "develop", missing: true),
             GitWorktree(path: "/wt/develop", branch: "develop"),
         ]
-        XCTAssertEqual(GitWorktreeText.targetCheckout(folder: "/repo", folderBranch: "main", worktrees: others, into: "main"), "/repo")
-        XCTAssertEqual(GitWorktreeText.targetCheckout(folder: "/repo", folderBranch: "main", worktrees: others, into: "develop"), "/wt/develop")
-        XCTAssertNil(GitWorktreeText.targetCheckout(folder: "/repo", folderBranch: "main", worktrees: others, into: "release"))
-        XCTAssertNil(GitWorktreeText.targetCheckout(folder: "/repo", folderBranch: "main", worktrees: others, into: nil))
+        XCTAssertEqual(
+            GitWorktreeText.targetCheckout(folder: "/repo", folderBranch: "main", worktrees: others, into: "main"),
+            "/repo")
+        XCTAssertEqual(
+            GitWorktreeText.targetCheckout(folder: "/repo", folderBranch: "main", worktrees: others, into: "develop"),
+            "/wt/develop")
+        XCTAssertNil(
+            GitWorktreeText.targetCheckout(folder: "/repo", folderBranch: "main", worktrees: others, into: "release"))
+        XCTAssertNil(
+            GitWorktreeText.targetCheckout(folder: "/repo", folderBranch: "main", worktrees: others, into: nil))
     }
 
     @MainActor func testStashAndRetryParksTheTargetsChangesUnderTheMergesNameAndMergesAgain() async {
         let machine = WorktreeMachine()
         machine.conflicts = false
         let state = GitWorktreesState(repo: "/repo")
-        await state.stashAndRetry(client: machine, request: GitWorktreeMergeRequest(worktree: worktree(), strategy: .merge))
-        let stash = machine.sent.first { $0.type == "git.action" }?.payload
+        await state.stashAndRetry(
+            client: machine, request: GitWorktreeMergeRequest(worktree: worktree(), strategy: .merge))
+        let stash = machine.sent.first { $0.type == .gitAction }?.payload
         XCTAssertEqual(stash?["cwd"], .string("/repo"))
         XCTAssertEqual(stash?["kind"], .string("stash"))
         XCTAssertEqual(stash?["subject"], .string("Before merging lexer"))
-        XCTAssertEqual(machine.sent.map(\.type).filter { $0 == "git.worktree-merge" || $0 == "git.action" }, ["git.action", "git.worktree-merge"])
-        XCTAssertEqual(state.note, "Your changes in repo are in the stash \"Before merging lexer\".\nMerged lexer into main.")
+        XCTAssertEqual(
+            machine.sent.map(\.type).filter { $0 == .gitWorktreeMerge || $0 == .gitAction },
+            [.gitAction, .gitWorktreeMerge])
+        XCTAssertEqual(
+            state.note, "Your changes in repo are in the stash \"Before merging lexer\".\nMerged lexer into main.")
     }
 
     @MainActor func testNoStashIsMadeWhenNothingHasTheTargetOut() async {
         let machine = WorktreeMachine()
         machine.branch = "develop"
         let state = GitWorktreesState(repo: "/repo")
-        await state.stashAndRetry(client: machine, request: GitWorktreeMergeRequest(worktree: worktree(), strategy: .merge))
-        XCTAssertFalse(machine.sent.contains { $0.type == "git.action" || $0.type == "git.worktree-merge" })
+        await state.stashAndRetry(
+            client: machine, request: GitWorktreeMergeRequest(worktree: worktree(), strategy: .merge))
+        XCTAssertFalse(machine.sent.contains { $0.type == .gitAction || $0.type == .gitWorktreeMerge })
         XCTAssertEqual(state.problem, "main is not checked out anywhere.")
     }
 
@@ -138,12 +156,15 @@ final class GitWorktreeTests: XCTestCase {
     @MainActor func testATargetCheckedOutNowhereIsRefusedAndKeptToTryAgain() async {
         let machine = WorktreeMachine()
         machine.refusal = ("target-not-checked-out", "main is not checked out anywhere; /repo is on develop.")
+        machine.branch = "develop"
         let state = GitWorktreesState(repo: "/repo")
         let request = GitWorktreeMergeRequest(worktree: worktree(), strategy: .merge)
         await state.merge(client: machine, request: request)
         XCTAssertEqual(
             state.outcome,
-            .refused(code: "target-not-checked-out", message: "main is not checked out anywhere; /repo is on develop.", request: request))
+            .refused(
+                code: .targetNotCheckedOut, message: "main is not checked out anywhere; /repo is on develop.",
+                request: request, folderBranch: "develop"))
     }
 }
 
@@ -151,31 +172,27 @@ final class GitWorktreeTests: XCTestCase {
     var refusal: (code: String, message: String)?
     var conflicts = true
     var branch = "main"
-    var sent: [(type: String, payload: JSONValue)] = []
+    var sent: [(type: WireRequest, payload: JSONValue)] = []
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
         switch type {
-        case "git.status":
+        case .gitStatus:
             return GitWire.json(GitWire.status(["branch": .string(branch)]))
-        case "git.worktree-merge":
+        case .gitWorktreeMerge:
             if let refusal { throw MachineClientError.server(code: refusal.code, message: refusal.message) }
+            let actionId = payload["actionId"] ?? .null
             if !conflicts {
-                return .object([
-                    "actionId": payload["actionId"] ?? .null, "summary": .string("Merged lexer into main."),
-                    "output": .string(""), "cwd": .string("/repo"),
-                ])
+                return WorktreeWire.merged(actionId: actionId, summary: "Merged lexer into main.", cwd: "/repo")
             }
-            return .object([
-                "actionId": payload["actionId"] ?? .null, "summary": .string("1 file conflicts in /repo."),
-                "output": .string(""), "cwd": .string("/repo"), "conflicts": .array([.string("a.ts")]),
-            ])
-        case "git.worktree-list":
-            return .object(["worktrees": .array([])])
+            return WorktreeWire.merged(
+                actionId: actionId, summary: "1 file conflicts in /repo.", cwd: "/repo", conflicts: ["a.ts"])
+        case .gitWorktreeList:
+            return WorktreeWire.list()
         default:
             return .object([:])
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

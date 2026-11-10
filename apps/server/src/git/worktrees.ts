@@ -3,8 +3,9 @@ import { basename, join, resolve } from 'node:path';
 import { KeyedSerializer } from '@adecore/utils/async';
 import { fileExists } from '@adecore/utils/fs';
 import type { Worktree, WorktreeWork } from '@ruimte/contracts';
+import { homeFolder } from '@ruimte/service/home';
 import { ClientSinks } from '../client-sinks.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 import { checkpointIndexFile, folderKey } from './checkpoints.ts';
 import { existingGitPaths } from './conflict.ts';
 import { parseWorktreeList, type Listed } from './refs.ts';
@@ -75,7 +76,6 @@ function workSentence(branch: string, work: WorktreeWork, target: string | null)
     return `${branch} holds ${parts[0]}, ${parts[1]} and ${parts[2]}${operation}`;
 }
 
-/* The first of base, base-2, base-3 that is not taken yet. */
 export function freeBranch(base: string, taken: ReadonlySet<string>): string {
     if (!taken.has(base)) {
         return base;
@@ -130,8 +130,8 @@ export class Worktrees {
         this.agents = agents;
         this.foreign = foreign;
         this.checkoutRoot = checkoutRoot;
-        this.root = join(home, 'worktrees');
-        this.checkpointsRoot = join(home, 'checkpoints');
+        this.root = homeFolder(home, 'worktrees');
+        this.checkpointsRoot = homeFolder(home, 'checkpoints');
         this.now = now;
     }
 
@@ -164,7 +164,6 @@ export class Worktrees {
         }
     }
 
-    /* The register of a repository, by its main checkout. */
     registerOf(main: string): WorktreeRegister {
         return new WorktreeRegister(join(this.root, folderKey(main)));
     }

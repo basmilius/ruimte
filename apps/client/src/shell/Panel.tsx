@@ -1,49 +1,19 @@
-import { clampColumnSize, CloseButton, ErrorBoundary, SlidingColumn, lazyNamed, PanelHeader, SectionLabel, Separator, LazyBoundary } from '@adecore/ui';
+import { clampColumnSize, CloseButton, ErrorBoundary, SlidingColumn, PanelHeader, SectionLabel, Separator, LazyBoundary } from '@adecore/ui';
 import clsx from 'clsx';
-import { createElement, useState, type ComponentType } from 'react';
+import { createElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { SlotRow } from '@/extensions/SlotSurfaces';
-import { usePanelGap } from '@/shell/panel-layout';
-import { PanelHeaderProvider } from '@/shell/PanelHeaderSlot';
-import { closesFromRail, usePanelEntries, type CorePanel, type PanelEntry } from '@/shell/panels';
-import { DevicesPanel } from '@/shell/panels/DevicesPanel';
-import { FilesPanel } from '@/shell/panels/FilesPanel';
-import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
-import { useKeyOf } from '@/shell/shortcut-overrides';
-import { useInstantWidth } from '@/shell/useInstantWidth';
+import { closesFromRail, usePanelEntries } from '@/shell/panels';
 import { useShownPanel, useUi } from '@/state/ui';
-
-const GitPanel = lazyNamed(() => import('@/shell/panels/GitPanel'), 'GitPanel');
-const ProblemsPanel = lazyNamed(() => import('@/language/ProblemsPanel'), 'ProblemsPanel');
-const LaunchesPanel = lazyNamed(() => import('@/launches/LaunchesPanel'), 'LaunchesPanel');
-const DatabasesPanel = lazyNamed(() => import('@/database/DatabasesPanel'), 'DatabasesPanel');
-const OutputPanel = lazyNamed(() => import('@/output/OutputPanel'), 'OutputPanel');
-const VoicePanelBody = lazyNamed(() => import('@/voice/VoicePanelBody'), 'VoicePanelBody');
+import { usePanelGap } from '@/surface/panel-layout';
+import { PanelHeaderProvider } from '@/surface/PanelHeaderSlot';
+import { useKeyOf } from '@/surface/shortcut-overrides';
+import { useInstantWidth } from '@/surface/useInstantWidth';
 
 const DEFAULT_WIDTH = 540;
 // A drag stops here instead of squeezing the canvas away.
 const MIN_CANVAS_WIDTH = 360;
-
-const CORE_PANELS: Record<CorePanel['kind'], ComponentType> = {
-    files: FilesPanel,
-    git: GitPanel,
-    processes: ProcessesPanel,
-    devices: DevicesPanel,
-    launches: LaunchesPanel,
-    databases: DatabasesPanel,
-    output: OutputPanel,
-    problems: ProblemsPanel,
-    voice: VoicePanelBody
-};
-
-function bodyOf(entry: PanelEntry | undefined): ComponentType | null {
-    if (entry === undefined) {
-        return null;
-    }
-
-    return 'component' in entry ? entry.component : CORE_PANELS[entry.kind];
-}
 
 /* Keep the inner column at its stored width while the outer split animates, avoiding content reflow. */
 export function Panel() {
@@ -58,14 +28,14 @@ export function Panel() {
     const stored = useUi((s) => s.panelWidth);
     const planOpen = useUi((s) => s.planOpen);
     const entry = usePanelEntries().find((candidate) => candidate.kind === panel.kind);
-    const Body = bodyOf(entry);
+    const Body = entry?.component ?? null;
     const bounds = { min: entry?.minWidth ?? 240, max: () => window.innerWidth - MIN_CANVAS_WIDTH };
     // The project may have been on a wider window than this one, so its width is clamped on the way in.
     const width = clampColumnSize(bounds, stored ?? DEFAULT_WIDTH);
 
     const instant = useInstantWidth();
 
-    const label = entry === undefined ? t('panel.fallback') : 'label' in entry ? entry.label() : t(`panel.names.${entry.kind}`);
+    const label = entry === undefined ? t('panel.fallback') : entry.label !== undefined ? entry.label() : t(`panel.names.${entry.kind}`);
 
     return (
         <SlidingColumn

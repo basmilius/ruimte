@@ -1,6 +1,6 @@
-import type { Point, Rect } from '@adecore/drawing';
+import type { Point, Rect } from '@adecore/utils/geometry';
 import { DRAWING_TEXT_SIZE_MAX, DRAWING_TEXT_SIZE_MIN, type DrawingElement } from '@ruimte/contracts';
-import { snapToGrid } from '@/canvas/math';
+import { snapToGrid } from '@/canvas-model/math';
 import type { DrawingStyle, DrawingTool } from '@/state/drawing';
 
 export const DEFAULT_SHAPE = { w: 160, h: 96 };
@@ -10,7 +10,6 @@ export const DEFAULT_NOTE = { w: 180, h: 180 };
 /* Under this many world units a drag is a click, whatever the hand did. */
 export const DRAG_THRESHOLD = 3;
 
-/* A line snaps to this many degrees while Shift is held. */
 const ANGLE_STEP = Math.PI / 12;
 
 export function snapPoint(point: Point, snap: boolean): Point {

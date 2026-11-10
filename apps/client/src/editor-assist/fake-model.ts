@@ -1,5 +1,12 @@
-import type { EditorAssistGeneratePayload, EditorAssistGenerateResult } from '@ruimte/contracts';
-import type { FakeLanguageTransport } from '@/language/fake-daemon';
+import type { EditorAssistGeneratePayload, EditorAssistGenerateResult, EventMap } from '@ruimte/contracts';
+import type { ConnectionState } from '@/transport-api/transport';
+
+/* The part of a test's fake transport (`language/fake-daemon.ts`) that this model answers through. */
+interface AssistTransport {
+    connection: ConnectionState;
+    answers: Map<string, (payload: never) => unknown>;
+    emit(event: 'editor.text', payload: EventMap['editor.text']): void;
+}
 
 /*
  * The model of a machine as a test sees it: availability, the requests that came, and answers a test
@@ -9,9 +16,9 @@ export class FakeEditorAssistModel {
     readonly requests: EditorAssistGeneratePayload[] = [];
     readonly cancels: string[] = [];
     private readonly waiting = new Map<string, (result: EditorAssistGenerateResult) => void>();
-    private readonly transport: FakeLanguageTransport;
+    private readonly transport: AssistTransport;
 
-    constructor(transport: FakeLanguageTransport, options: { available?: boolean; reason?: string } = {}) {
+    constructor(transport: AssistTransport, options: { available?: boolean; reason?: string } = {}) {
         this.transport = transport;
         transport.connection = {
             ...transport.connection,
@@ -45,7 +52,6 @@ export class FakeEditorAssistModel {
         this.transport.emit('editor.text', { id: this.last.id, text });
     }
 
-    /* The last request is done with this text. */
     answer(text: string): void {
         this.waiting.get(this.last.id)?.({ state: 'done', text });
     }

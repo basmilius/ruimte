@@ -1,7 +1,7 @@
-import type { CanvasPatch } from '@/project/merge';
 import type { CanvasState } from '@/state/canvas';
 import { hiddenIn, patchSnapshot, snapshotOf, type CanvasGet, type CanvasNode, type CanvasSet } from '@/state/canvas-model';
 import { finishLoad } from '@/state/editors';
+import type { CanvasPatch } from './canvas-model';
 
 /* Spread over what the editor holds, so what only lives here (a browser's status) stays. */
 function mergedIn<T extends { id: string }>(held: Record<string, T>, removed: readonly string[], arrived: readonly T[]): Record<string, T> {
@@ -16,7 +16,6 @@ function mergedIn<T extends { id: string }>(held: Record<string, T>, removed: re
     return next;
 }
 
-/* The content as a whole: a view loaded in, a change of another writer taken in, the content handed back, and undo. */
 export function createCanvasContentSlice(set: CanvasSet, get: CanvasGet): Pick<CanvasState, 'loadView' | 'applyExternal' | 'exportContent' | 'undo' | 'redo'> {
     return {
         loadView(view, local) {

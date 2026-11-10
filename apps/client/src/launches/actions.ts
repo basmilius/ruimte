@@ -2,16 +2,16 @@ import { messageOf } from '@adecore/ui';
 import { deviceMatches, type DeviceInfo, type DeviceReference, type LaunchConfigEntry, type LaunchesDocument } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { OctagonX, Play, RotateCw, Square, type LucideIcon } from 'lucide-react';
-import { createNodeAction, createViewAction } from '@/actions/client-actions';
+import { createNodeAction, createViewAction } from '@/action-port/person-actions';
 import { chosenLaunch, type LaunchView } from '@/launches/model';
 import { useLaunches, type LaunchOwner } from '@/launches/state';
-import { nodesOfView } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
 import { defaultProjectStore } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
+import { nodesOfView } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
 
 interface Target {
@@ -41,7 +41,6 @@ function target(owner?: LaunchOwner): Target | null {
     return launchTarget(projectOnScreen(), owner);
 }
 
-/* The target with the link to its machine, or null when either is missing. */
 function linkedTarget(owner?: LaunchOwner): (Target & { link: NonNullable<ReturnType<typeof transportFor>> }) | null {
     const at = target(owner);
     const link = at === null ? null : transportFor(at.endpointId);
@@ -140,7 +139,6 @@ export function chooseLaunch(launchId: string): void {
     }
 }
 
-/* The launch on the chip, as its id. */
 export function chosenLaunchId(): string | null {
     const at = target();
     if (at === null) {

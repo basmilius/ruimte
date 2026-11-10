@@ -1,8 +1,8 @@
 import { PromptDialog } from '@adecore/ui';
 import { FolderOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { openFolderAction } from '@/actions/client-actions';
-import { useAgentFolderAsk } from '@/project/agent-project-watch';
+import { useAgentFolderAsk } from '@/project/agent-asks';
+import { openFolderAction } from '@/project/open-actions';
 
 /* The confirmation an agent's `project_open` of a folder raised; the person's answer is their own open of the folder. */
 export function AgentOpenFolderDialog() {

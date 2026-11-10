@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { FsEntry } from '@ruimte/contracts';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import {
     arrangePages,
     assetPathOf,

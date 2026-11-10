@@ -1,20 +1,22 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ActionRefusal, ActionRegistry, MAX_TITLE_LENGTH, type ActionInput } from '@ruimte/actions';
 import type { ProjectCanvasView, ProjectDocument, ProjectSummary } from '@ruimte/contracts';
-import { visibleRect } from '@/canvas/math';
+import { ignoreRefusal, performIn, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from '@/action-port/perform';
+import { createNodeAction, selectAllAction, toggleFlagAction } from '@/action-port/person-actions';
+import { visibleRect } from '@/canvas-model/math';
 import { liesWithin } from '@/canvas/place-node';
-import { viewIdsIn } from '@/shell/split';
+import { viewIdsIn } from '@/layout/split';
 import { defaultCanvases } from '@/state/canvas';
 import { defaultDiagrams } from '@/state/diagram';
 import { useDocument } from '@/state/document';
 import { defaultDrawings } from '@/state/drawing';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
+import { clientActions } from '../../testing/client-actions';
 import { fakeProvider } from '../../testing/fake-provider';
 import { emptyCanvas } from '../../testing/project-fixtures';
 import { completed, confirmed, expectQuestion, expectUndoable } from './action-support';
-import { clientActions, createClientActionRegistry } from './client-action-registry';
-import { createNodeAction, ignoreRefusal, performIn, PERSON_ACTION_CALL, selectAllAction, toggleFlagAction, VOICE_ACTION_CALL } from './client-actions';
+import { createClientActionRegistry } from './client-actions';
 
 const PROJECT: ProjectSummary = {
     projectId: 'atlas',

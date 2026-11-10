@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { CodedError } from '@adecore/agents';
 import type { ServerFrame } from '@ruimte/contracts';
-import { Dispatcher, RequestError, sendEvent, type ClientConnection } from './dispatcher.ts';
+import { Dispatcher } from './dispatcher.ts';
+import { sendEvent, type ClientConnection } from './wire.ts';
 
 class FakeSocket implements ClientConnection {
     readonly id = 'client-1';
@@ -27,6 +28,30 @@ function makeDispatcher(): Dispatcher {
 }
 
 describe('Dispatcher', () => {
+    test('tells its observers when a request starts and when it was answered', async () => {
+        const heard: string[] = [];
+        const dispatcher = makeDispatcher();
+        dispatcher.observe({
+            started: (type) => heard.push(`started ${type}`),
+            answered: (type, _ms, counts) => heard.push(`answered ${type} ${JSON.stringify(counts)}`)
+        });
+        await dispatcher.handle(new FakeSocket(), JSON.stringify({ id: 'r1', type: 'server.hello', payload: {} }));
+        expect(heard).toEqual(['started server.hello', 'answered server.hello []']);
+    });
+
+    test('hands the observers what a request registered to count, from its payload when that decides', async () => {
+        const heard: string[] = [];
+        const dispatcher = new Dispatcher();
+        dispatcher.register('server.hello', () => ({ version: '1', platform: 'test', home: '/tmp/home' }), { count: ['actions.device'] });
+        dispatcher.register('fs.read', () => ({ text: 'x' }) as never, {
+            count: (payload) => [{ counter: 'files.opened', once: payload.path }]
+        });
+        dispatcher.observe({ answered: (type, _ms, counts) => heard.push(`${type} ${JSON.stringify(counts)}`) });
+        await dispatcher.handle(new FakeSocket(), JSON.stringify({ id: 'r1', type: 'server.hello', payload: {} }));
+        await dispatcher.handle(new FakeSocket(), JSON.stringify({ id: 'r2', type: 'fs.read', payload: { path: '/work/a.ts' } }));
+        expect(heard).toEqual(['server.hello ["actions.device"]', 'fs.read [{"counter":"files.opened","once":"/work/a.ts"}]']);
+    });
+
     test('answers a known request with ok and the result', async () => {
         const socket = new FakeSocket();
         await makeDispatcher().handle(socket, JSON.stringify({ id: 'r1', type: 'server.hello', payload: {} }));
@@ -77,11 +102,11 @@ describe('Dispatcher', () => {
         expect(socket.last()).toMatchObject({ id: 'r6', ok: false, error: { code: 'bad-request' } });
     });
 
-    test('maps a RequestError to its code and anything else to internal', async () => {
+    test('maps a CodedError to its code and anything else to internal', async () => {
         const socket = new FakeSocket();
         const dispatcher = new Dispatcher();
         dispatcher.register('session.kill', () => {
-            throw new RequestError('session-not-found', 'No such session');
+            throw new CodedError('session-not-found', 'No such session');
         });
         dispatcher.register('session.detach', () => {
             throw new TypeError('boom');

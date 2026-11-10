@@ -1,6 +1,6 @@
 import { Markdown } from '@adecore/agents-react/chat/ui';
 import { useChatRow } from '@adecore/agents-react/state';
-import { effectiveChecks, planProgress } from '@adecore/plan';
+import { asksForNote, effectiveChecks, PLAN_PERSON_STATES, PLAN_TEST_OUTCOMES, planProgress, stepToMarkdown } from '@adecore/plan';
 import { copyText, EmptyState, Icon, IconButton, Menu, ScrollArea, TextArea, TextMenu, Tooltip, ContextMenu } from '@adecore/ui';
 import { formatMoment } from '@adecore/ui/format';
 import { PLAN_LIMITS, type Plan, type PlanStepState } from '@ruimte/contracts';
@@ -38,18 +38,7 @@ import {
     usePlanViewPrefs
 } from '@/plan/plan-actions';
 import { usePlanAgent } from '@/plan/plan-agent';
-import {
-    asksForNote,
-    PERSON_STATES,
-    planRows,
-    progressParts,
-    stateLabel,
-    stepMarkdown,
-    stepSetBy,
-    TEST_OUTCOMES,
-    toggledState,
-    type PlanRow
-} from '@/plan/plan-view';
+import { planRows, progressParts, stateLabel, stepSetBy, toggledState, type PlanRow } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
 import { PlanScene } from '@/ui/EmptyScenes';
 
@@ -305,7 +294,6 @@ function PlanRowView({ row, context }: { row: PlanRow; context: StepContext }) {
     return <StepRow row={row} context={context} />;
 }
 
-/* The text of a plan that is not a step, behind the same menu as any text, with the plan as a whole under it. */
 function PlanTextMenu({ plan, className, children }: { plan: Plan; className: string; children: ReactNode }) {
     const { t } = useTranslation('plan');
     return (
@@ -391,7 +379,7 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
                 {!parent && !locked && (
                     <>
                         <ContextMenu.Label>{t('step.menu.status')}</ContextMenu.Label>
-                        {PERSON_STATES.map((state) => (
+                        {PLAN_PERSON_STATES.map((state) => (
                             <ContextMenu.Item key={state} onClick={() => context.setState(step.id, state)}>
                                 <ContextMenu.Check kind="radio" checked={row.state === state} />
                                 <Icon icon={STATE_ICON[state]} size={14} className={STATE_TONE[state]} />
@@ -409,7 +397,7 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
                         <Icon icon={LockOpen} size={14} /> {t('step.menu.unlock')}
                     </ContextMenu.Item>
                 )}
-                <ContextMenu.Item onClick={() => copyText(stepMarkdown(plan.meta.kind, step))}>
+                <ContextMenu.Item onClick={() => copyText(stepToMarkdown(step, (state) => stateLabel(plan.meta.kind, state).toLowerCase()))}>
                     <Icon icon={Copy} size={14} /> {t('common:action.copy')}
                 </ContextMenu.Item>
             </ContextMenu.Popup>
@@ -417,7 +405,6 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
     );
 }
 
-/* What stands at the end of a step's row: the count of a parent, when a person set a step, and the lock of one only the agent sets. */
 function StepAside({
     row,
     context,
@@ -507,7 +494,7 @@ function StepMark({ row, context, locked, setBy }: { row: Extract<PlanRow, { typ
                 {glyph}
             </IconButton>
             <Menu.Popup sideOffset={4} className="min-w-40">
-                {TEST_OUTCOMES.map((outcome) => (
+                {PLAN_TEST_OUTCOMES.map((outcome) => (
                     <Menu.Item key={outcome} onClick={() => context.setState(row.item.id, outcome)}>
                         <Menu.Check kind="radio" checked={state === outcome} />
                         <Icon icon={STATE_ICON[outcome]} size={14} className={STATE_TONE[outcome]} />

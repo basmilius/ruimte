@@ -91,7 +91,7 @@ export function setPreviousSeenVersion(version: string | null): void {
     useReleaseNotes.setState({ previousSeen: version });
 }
 
-export type NoteRole = 'upcoming' | 'installed' | 'older';
+type NoteRole = 'upcoming' | 'installed' | 'older';
 
 export interface NoteEntry {
     release: Release;
@@ -102,7 +102,7 @@ export interface NoteEntry {
     isNew: boolean;
 }
 
-export interface NotesView {
+interface NotesView {
     entries: NoteEntry[];
     /* The link in About, with the version the dialog opens on. */
     link: { label: string; version: string } | null;

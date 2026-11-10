@@ -5,7 +5,8 @@ import clsx from 'clsx';
 import { Ban, Check, ChevronDown, ChevronUp, FileWarning, LoaderCircle, Sparkles, Wand2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cancelGitRunAction, perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
+import { cancelGitRunAction } from '@/action-port/person-actions';
 import {
     answerInto,
     conflictIndexes,
@@ -21,13 +22,14 @@ import {
 import { ConflictEditor, type EditorHandle } from '@/conflicts/ConflictEditor';
 import { ConflictSides } from '@/conflicts/ConflictSides';
 import type { ConflictDraft } from '@/conflicts/editor';
-import { DiffRowMenuItems } from '@/shell/panels/DiffRowMenuItems';
-import { basenameOf } from '@/shell/panels/files-tree';
-import { nextActionId } from '@/shell/panels/git-actions';
-import { useGitStatus } from '@/state/git-watch';
+import { useGitStatus } from '@/controllers/git-watch';
+import { DiffRowMenuItems } from '@/files/DiffRowMenuItems';
+import { basenameOf } from '@/paths/file-path';
 import { useToasts } from '@/state/toasts';
-import { useUi } from '@/state/ui';
-import { useTransport } from '@/transport/context';
+import { fireAndForget } from '@/transport-api/transport';
+import { useTransport } from '@/workspace/context';
+import { nextActionId } from '@/worktree-rules/git-actions';
+import { conflictsDialog } from '@/worktrees/dialogs';
 
 type Reading = { cwd: string; answer: GitConflictsResult } | { cwd: string; failure: string };
 
@@ -48,7 +50,7 @@ interface AiRun {
  */
 export function ConflictOverlay() {
     const { t } = useTranslation(['conflicts', 'common']);
-    const request = useUi((s) => s.conflicts);
+    const request = conflictsDialog.useRequest((request) => request);
     const cwd = request?.cwd ?? null;
     const transport = useTransport();
     const status = useGitStatus(cwd);
@@ -277,7 +279,6 @@ export function ConflictOverlay() {
         setOpen((previous) => Object.fromEntries(Object.entries(previous).filter(([key]) => key !== path)));
     };
 
-    /* The files whose conflicts are all answered, written in one go. */
     const save = async (paths: readonly string[]): Promise<void> => {
         setBusy(true);
         try {
@@ -310,7 +311,7 @@ export function ConflictOverlay() {
         } catch (error: unknown) {
             showFailure(t('save.failed'), errorText(error));
             if (files.current.has(path)) {
-                await rereadConflict(cache(), path, readerOf(cwd)).catch(() => undefined);
+                await fireAndForget('rereadConflict', rereadConflict(cache(), path, readerOf(cwd)));
                 showReread();
             }
         } finally {
@@ -331,7 +332,7 @@ export function ConflictOverlay() {
                 action === 'abort' ? t('finish.aborted', { operation }) : left > 0 ? t('finish.more', { count: left }) : t('finish.done', { operation });
             useToasts.getState().show({ title, kind: 'success' });
             if (left === 0) {
-                useUi.getState().setConflicts(null);
+                conflictsDialog.set(null);
             } else {
                 files.current.clear();
                 drafts.current.clear();
@@ -345,7 +346,7 @@ export function ConflictOverlay() {
         }
     };
 
-    const close = (): void => useUi.getState().setConflicts(null);
+    const close = (): void => conflictsDialog.set(null);
     const operation = answer?.operation ?? status?.operation ?? null;
     const left = list.length;
     const textFiles = list.filter((entry) => entry.kind === 'text').map((entry) => entry.path);
@@ -357,7 +358,6 @@ export function ConflictOverlay() {
             <Dialog.Popup
                 className="flex h-[760px] w-[min(1180px,94vw)] flex-col overflow-hidden p-0"
                 onKeyDown={(event) => {
-                    // Walking the conflicts from the keyboard, with a modifier, while the caret is in the file.
                     if (event.altKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
                         event.preventDefault();
                         go(event.key === 'ArrowDown' ? 1 : -1);

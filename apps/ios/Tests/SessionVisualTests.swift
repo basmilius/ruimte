@@ -25,7 +25,7 @@ final class SessionVisualTests: XCTestCase {
                 rootView: NavigationStack { ChatScreen(client: client, chatID: name, title: "Native iOS app") }
                     .tint(MobileStyle.accent).preferredColorScheme(dark ? .dark : .light).dynamicTypeSize(typeSize))
             let window = UIWindow.showing(host, size: size)
-            await client.waitFor("provider.list")
+            await client.waitFor(.providerList)
             // Capture after the highlighter's streaming coalescence window and native cell layout.
             await displayFrames(21)
             capture(window, name: name)
@@ -65,7 +65,7 @@ final class SessionVisualTests: XCTestCase {
             })
         let window = UIWindow.showing(controller, size: CGSize(width: 402, height: 874))
         defer { window.close() }
-        await client.waitFor("provider.list")
+        await client.waitFor(.providerList)
         await displayFrames(24)
         let timeline = try XCTUnwrap(controller.view.descendant(of: ChatTimelineCollection.self))
         timeline.beginUserScroll()
@@ -166,7 +166,7 @@ final class SessionVisualTests: XCTestCase {
             let image = capture(window, name: name)
             if !signedIn { assertLogoVisible(image, name: name) }
             if signedIn {
-                XCTAssertEqual(model.open.map { $0.summary.text("name") }, ["Ruimte", "Flux", "Homey dashboard"])
+                XCTAssertEqual(model.open.map(\.summary.name), ["Ruimte", "Flux", "Homey dashboard"])
                 let recentHost = UIHostingController(
                     rootView: NavigationStack { RecentProjectsPage(runtime: runtime, projects: model) }
                         .tint(MobileStyle.accent)
@@ -255,7 +255,7 @@ final class SessionVisualTests: XCTestCase {
                 TerminalScreen(client: client, sessionID: "terminal", title: "Project terminal")
             }.tint(MobileStyle.accent))
         let window = UIWindow.showing(host, size: CGSize(width: 402, height: 874))
-        await client.waitFor("session.list")
+        await client.waitFor(.sessionList)
         await displayFrames(2)
         capture(window, name: "terminal-iphone")
         XCTAssertTrue(host.view.recursiveContains(identifier: "terminal.screen"))
@@ -282,11 +282,12 @@ final class SessionVisualTests: XCTestCase {
                 "y": .number(400), "w": .number(480), "h": .number(280),
             ]),
         ]
-        let document: JSONValue = .object([
-            "nodes": .array(nodes),
-            "edges": .array([.object(["id": .string("link"), "from": .string("chat"), "to": .string("terminal")])]),
-            "texts": .array([]),
-        ])
+        let document = try! ProjectWire.view(
+            .object([
+                "id": .string("canvas"), "kind": .string("canvas"), "nodes": .array(nodes),
+                "edges": .array([.object(["id": .string("link"), "from": .string("chat"), "to": .string("terminal")])]),
+            ])
+        ).decoded(as: StoredCanvasView.self)
         canvas.update(document, camera: nil, fit: 0)
         canvas.setAttention(
             statuses: ["chat": .running, "terminal": .needsYou], unseen: [], needingYou: ["terminal"])
@@ -409,26 +410,26 @@ extension UIView {
 
 @MainActor private final class VisualSessionClient: MachineRequesting {
     var chatSnapshot: JSONValue?
-    private var counts: [String: Int] = [:]
-    private var waits: [String: CheckedContinuation<Void, Never>] = [:]
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    private var counts: [WireRequest: Int] = [:]
+    private var waits: [WireRequest: CheckedContinuation<Void, Never>] = [:]
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         counts[type, default: 0] += 1
         defer { waits.removeValue(forKey: type)?.resume() }
         switch type {
-        case "chat.attach": return try chatSnapshot ?? JSONValue.decode(Data(Self.chat.utf8))
-        case "provider.list": return .object(["providers": .array([])])
-        case "session.attach":
+        case .chatAttach: return try chatSnapshot ?? JSONValue.decode(Data(Self.chat.utf8))
+        case .providerList: return ProviderWire.list([])
+        case .sessionAttach:
             return .object([
                 "screen": .string(
                     "\u{1b}[2J\u{1b}[H\u{1b}[32mbas@studio\u{1b}[0m ~/Development/ruimte\r\n$ bun run check\r\n\r\n\u{1b}[32m✓\u{1b}[0m TypeScript workspaces\r\n\u{1b}[32m✓\u{1b}[0m Contract generation\r\n\u{1b}[32m✓\u{1b}[0m Lint\r\n\r\n$ "
                 ), "cols": .number(80), "rows": .number(24), "exited": .bool(false),
             ])
-        case "session.list": return .object(["sessions": .array([])])
+        case .sessionList: return .object(["sessions": .array([])])
         default: return .object([:])
         }
     }
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
-    func waitFor(_ type: String) async {
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func waitFor(_ type: WireRequest) async {
         if counts[type, default: 0] > 0 {
             counts[type] = 0
             return

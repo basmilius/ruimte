@@ -16,12 +16,9 @@ extension NowModel {
     /// The open projects of a machine, without its Chats, in the order Now reads them.
     func chatProjects(on machineID: String) -> [NowChatProject] {
         (feeds[machineID]?.projects ?? []).compactMap { project in
-            guard let summary = project["summary"], !NewChat.isChats(summary),
-                let projectID = summary["projectId"]?.stringValue
-            else { return nil }
-            return NowChatProject(
-                machineID: machineID, projectID: projectID,
-                name: summary.text("name", fallback: String(localized: "Untitled project")))
+            let summary = project.summary
+            guard !summary.isChats else { return nil }
+            return NowChatProject(machineID: machineID, projectID: summary.projectId, name: summary.name)
         }
     }
 }
@@ -68,7 +65,7 @@ final class NowNewChatModel {
         let loadingMachine = machineID
         await catalog.load()
         guard machineID == loadingMachine, self.catalog === catalog, !Task.isCancelled else { return }
-        let agents = (catalog.agents ?? []).map { $0.text("kind") }
+        let agents = (catalog.agents ?? []).map(\.kind)
         if provider.map({ !agents.contains($0) }) ?? true { provider = agents.first }
     }
 
@@ -101,9 +98,9 @@ final class NowNewChatModel {
         let workspace = MobileWorkspace(session: session, projectID: projectID)
         workspace.start()
         defer { workspace.stop() }
-        for _ in 0..<150 where !workspace.ready {
-            do { try await Task.sleep(for: .milliseconds(100)) } catch { return nil }
-        }
+        // A project that does not open within fifteen seconds is the failure the person is told about.
+        _ = await waitUntil(timeout: .seconds(15)) { workspace.ready }
+        if Task.isCancelled { return nil }
         guard workspace.ready else {
             problem = workspace.problem ?? String(localized: "The project did not open in time.")
             return nil
@@ -166,9 +163,9 @@ struct NowNewChatSheet: View {
                             Text("Install a CLI or add an account in Ruimte on the machine itself, under Agents.")
                                 .foregroundStyle(MobileStyle.muted)
                         }
-                        ForEach(agents, id: \.agentKind) { agent in
-                            let kind = agent.text("kind")
-                            choice(agent.text("name", fallback: kind), icon: "bot", picked: model.provider == kind) {
+                        ForEach(agents, id: \.kind) { agent in
+                            let kind = agent.kind
+                            choice(agent.name, icon: "bot", picked: model.provider == kind) {
                                 model.provider = kind
                             }
                         }
@@ -241,7 +238,7 @@ struct NowNewChatSheet: View {
         .task(id: "\(model.machineID):\(session?.generation ?? 0)") {
             guard let session, session.connected else { return }
             await RemotePageLifecycle.run(
-                client: session.rpc, events: ["accounts.changed"], load: { await model.load(session) })
+                client: session.rpc, events: [.accountsChanged], load: { await model.load(session) })
         }
     }
 

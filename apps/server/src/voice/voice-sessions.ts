@@ -1,8 +1,9 @@
+import { CodedError } from '@adecore/agents';
 import type { VoiceConfirmPayload, VoiceStartPayload, VoiceStartResult, VoiceStopPayload } from '@ruimte/contracts';
-import { sendEvent, RequestError, type ClientConnection } from '../dispatcher.ts';
+import { voicePlace } from '../actions/voice-project-reading.ts';
 import type { IndexedPlace, ProjectIndex } from '../projects/project-index.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { voicePlace } from './project-reading.ts';
+import { sendEvent, type ClientConnection } from '../wire.ts';
 import { VoiceSession, type VoiceSessionDeps } from './voice-session.ts';
 
 // Each session costs money by the minute and holds a sideband, so a machine runs a few at most.
@@ -36,8 +37,8 @@ function fingerprintOf(payload: VoiceStartPayload): string {
     return JSON.stringify(Object.entries(fields).sort(([left], [right]) => left.localeCompare(right)));
 }
 
-function notYours(): RequestError {
-    return new RequestError('forbidden', 'Another screen started this Voice session');
+function notYours(): CodedError {
+    return new CodedError('forbidden', 'Another screen started this Voice session');
 }
 
 /*
@@ -58,32 +59,32 @@ export class VoiceSessions {
     start(client: ClientConnection, payload: VoiceStartPayload): Promise<VoiceStartResult> {
         if (client.closed === true) {
             // Its channel's cleanup already ran, so nothing would end a session it started now.
-            return Promise.reject(new RequestError('voice-cancelled', 'The link that asked for Voice is gone'));
+            return Promise.reject(new CodedError('voice-cancelled', 'The link that asked for Voice is gone'));
         }
         const key = startKey(client.id, payload.sceneId, payload.startId);
         const fingerprint = fingerprintOf(payload);
         const known = this.#starts.get(key);
         if (known !== undefined) {
             if (known.fingerprint !== fingerprint && known.session !== null) {
-                return Promise.reject(new RequestError('voice-start-conflict', 'This start id was used for another start'));
+                return Promise.reject(new CodedError('voice-start-conflict', 'This start id was used for another start'));
             }
             if (known.answer === null) {
-                return Promise.reject(new RequestError('voice-cancelled', 'The Voice start was stopped'));
+                return Promise.reject(new CodedError('voice-cancelled', 'The Voice start was stopped'));
             }
             return known.answer;
         }
         const running = [...this.#sessions.values()].filter((session) => session.running);
         if (running.some((session) => session.owner.clientId === client.id && session.owner.sceneId === payload.sceneId)) {
-            return Promise.reject(new RequestError('voice-busy', 'Voice already runs on this screen'));
+            return Promise.reject(new CodedError('voice-busy', 'Voice already runs on this screen'));
         }
         if (running.length >= MAX_VOICE_SESSIONS) {
-            return Promise.reject(new RequestError('voice-busy', 'Voice already runs on as many screens as this machine allows'));
+            return Promise.reject(new CodedError('voice-busy', 'Voice already runs on as many screens as this machine allows'));
         }
         let place: IndexedPlace | null = null;
         if (payload.projectId !== undefined) {
             place = voicePlace(this.#deps.index, payload.projectId, payload.viewId);
             if (place === null) {
-                return Promise.reject(new RequestError('unknown-project', 'This machine has no project of that id'));
+                return Promise.reject(new CodedError('unknown-project', 'This machine has no project of that id'));
             }
         }
         const sessionId = (this.#deps.newId ?? (() => crypto.randomUUID()))();

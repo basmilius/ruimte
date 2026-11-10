@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import SwiftUI
 import UIKit
@@ -106,7 +107,7 @@ final class ChatSubagentsTests: XCTestCase {
         let row = agent("task-7", status: "failed", extra: ["origin": .string("ruimte")])
         XCTAssertEqual(ChatSubagents.taskID(row), "7")
         XCTAssertEqual(ChatSubagents.statusWord(row, task: nil), .failed)
-        XCTAssertEqual(ChatSubagents.statusWord(row, task: .object(["status": .string("cancelled")])), .cancelled)
+        XCTAssertEqual(ChatSubagents.statusWord(row, task: TaskWire.task(status: "cancelled")), .cancelled)
         XCTAssertNil(ChatSubagents.taskID(agent("task-7")))
     }
 
@@ -162,7 +163,7 @@ final class ChatSubagentsTests: XCTestCase {
         XCTAssertEqual(today, "11:00 AM")
         let earlier = ChatSubagents.entryTime(
             agent("d", status: "done", finished: nowMs - 86_400_000), task: nil, now: now, locale: locale)
-        XCTAssertEqual(earlier, "Jan 2, 12:00 PM")
+        XCTAssertEqual(earlier, "Jan 2 at 12:00 PM")
         XCTAssertNil(ChatSubagents.entryTime(agent("d", status: "done"), task: nil, now: now, locale: locale))
     }
 
@@ -282,23 +283,23 @@ final class ChatSubagentsTests: XCTestCase {
 
         session.releaseChat(model)
         await displayFrames(10)
-        XCTAssertFalse(machine.requests.contains("chat.detach"))
+        XCTAssertFalse(machine.requests.contains(.chatDetach))
 
         window.close()
         await displayFrames(10)
-        XCTAssertTrue(machine.requests.contains("chat.detach"))
+        XCTAssertTrue(machine.requests.contains(.chatDetach))
     }
 }
 
 @MainActor private final class HeldChatMachine: MachineRequesting {
-    var requests: [String] = []
+    var requests: [WireRequest] = []
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append(type)
         throw MachineClientError.disconnected
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }
 
 @MainActor private final class SubagentMachine: MachineRequesting {
@@ -306,8 +307,8 @@ final class ChatSubagentsTests: XCTestCase {
     var handlers: [@MainActor @Sendable (JSONValue) -> Void] = []
     private var waiters: [(Int, CheckedContinuation<Void, Never>)] = []
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
-        XCTAssertEqual(type, "chat.subagent")
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
+        XCTAssertEqual(type, .chatSubagent)
         payloads.append(payload)
         let reached = waiters.filter { payloads.count >= $0.0 }
         waiters.removeAll { payloads.count >= $0.0 }
@@ -318,8 +319,8 @@ final class ChatSubagentsTests: XCTestCase {
         ])
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
-        if event == "chat.subagentChanged" { handlers.append(handler) }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+        if event == .chatSubagentChanged { handlers.append(handler) }
         return {}
     }
 

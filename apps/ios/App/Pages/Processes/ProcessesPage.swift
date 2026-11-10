@@ -44,7 +44,7 @@ struct ProcessesPage: View {
     }
 
     /// An iPad beside its sidebar has the room for the desktop's table.
-    private var wide: Bool { UIDevice.current.userInterfaceIdiom == .pad && sizeClass == .regular }
+    private var wide: Bool { MobileDevice.isWide(sizeClass) }
 
     private var form: some View {
         List {
@@ -80,7 +80,6 @@ struct ProcessesPage: View {
         }
     }
 
-    /// The tiles and warnings over a table of every process, sorted by any column, with the signals in a row's menu.
     private var table: some View {
         VStack(spacing: 12) {
             scopePicker
@@ -246,7 +245,6 @@ struct ProcessesPage: View {
         }
     }
 
-    /// A project's name over its groups, with the names of the columns above the first.
     private func sectionHeading(_ section: ProcessSection, first: Bool) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: MobileSpacing.small) {
             Label(section.title, lucideIcon: section.id.isEmpty ? "server" : "folder")
@@ -289,7 +287,7 @@ struct ProcessesPage: View {
                             }
                         }
                         if !named.known {
-                            Text(group.projectID.flatMap { projectNames[$0] } ?? String(localized: "another project"))
+                            Text(group.projectId.flatMap { projectNames[$0] } ?? String(localized: "another project"))
                                 .font(.caption).foregroundStyle(MobileStyle.faint).lineLimit(1)
                         }
                     }
@@ -311,7 +309,7 @@ struct ProcessesPage: View {
     }
 
     private func processRow(_ process: ProcessRow) -> some View {
-        let highlighted = model.highlight?.pid == process.pid && model.highlight?.startTime == process.startTime
+        let highlighted = model.highlight?.pid == Int(process.pid) && model.highlight?.startTime == process.startTime
         return HStack(spacing: 6) {
             Text(process.name).foregroundStyle(process.readable ? MobileStyle.text : MobileStyle.faint)
                 .lineLimit(1)
@@ -334,8 +332,12 @@ struct ProcessesPage: View {
 
     @ViewBuilder private func signalMenu(_ target: ProcessTarget) -> some View {
         Section("\(target.name) (\(target.pid))") {
-            Button(String(localized: "Interrupt"), lucideIcon: "pause") { Task { await model.signal(target, .interrupt) } }
-            Button(String(localized: "Terminate"), lucideIcon: "circle-stop") { Task { await model.signal(target, .terminate) } }
+            Button(String(localized: "Interrupt"), lucideIcon: "pause") {
+                Task { await model.signal(target, .interrupt) }
+            }
+            Button(String(localized: "Terminate"), lucideIcon: "circle-stop") {
+                Task { await model.signal(target, .terminate) }
+            }
             Button(String(localized: "Force quit…"), lucideIcon: "octagon-x", role: .destructive) { forcing = target }
         }
     }
@@ -361,7 +363,6 @@ struct ProcessesPage: View {
         .padding(.vertical, MobileSpacing.small)
     }
 
-    /// The two columns of a row; a process that keeps a core busy reads amber.
     private func numbers(cpu: Double?, memory: Double?) -> some View {
         HStack(spacing: 0) {
             Text(ProcessesText.percent(cpu)).frame(width: 44, alignment: .trailing)
@@ -374,25 +375,28 @@ struct ProcessesPage: View {
         .accessibilityLabel("CPU \(ProcessesText.percent(cpu)), memory \(ProcessesText.bytes(memory))")
     }
 
-    private static func icon(_ kind: String) -> String {
+    private static func icon(_ kind: ProcessGroupKind) -> String {
         switch kind {
-        case "terminal": "terminal"
-        case "chat": "message-square"
-        case "app": "app-window"
-        case "daemon": "server"
-        default: "cpu"
+        case .terminal: "terminal"
+        case .chat: "message-square"
+        case .app: "app-window"
+        case .daemon: "server"
+        case .other: "cpu"
         }
     }
 
     /// A group of another project names that project, which the project list knows.
     private func readProjectNames() async {
-        guard let result = try? await model.client.request("project.list", payload: .object([:])) else { return }
+        guard
+            let result = try? await model.client.request(.projectList, payload: .object([:]))
+                .decoded(as: ProjectListResult.self)
+        else { return }
         projectNames = Dictionary(
-            result.list("projects").map { ($0.text("projectId"), $0.text("name")) }, uniquingKeysWith: { first, _ in first })
+            result.projects.map { ($0.projectId, $0.name) },
+            uniquingKeysWith: { first, _ in first })
     }
 }
 
-/// A tile of the machine as a line and the share of Ruimte as the area under it.
 private struct ProcessChart: View {
     let label: String
     let headline: String
@@ -430,7 +434,8 @@ private struct ProcessChart: View {
                 }
             }
             .chartXScale(
-                domain: Date(timeIntervalSince1970: (end - window) / 1000)...Date(timeIntervalSince1970: end / 1000))
+                domain: Date(timeIntervalSince1970: (end - window) / 1000)...Date(timeIntervalSince1970: end / 1000)
+            )
             .chartYScale(domain: 0...max(maximum, 1))
             .chartXAxis(.hidden)
             .chartYAxis(.hidden)

@@ -134,7 +134,6 @@ export function defaultShellArgs(shell: string): string[] {
     return LOGIN_CAPABLE.has(name) ? ['-l'] : [];
 }
 
-/* The shell's own name, without a folder in either separator or the `.exe` of Windows. */
 export function shellName(shell: string): string {
     return win32.basename(basename(shell)).replace(/\.exe$/i, '');
 }

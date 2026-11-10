@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { defineTheme } from '@/extensions/internal';
-import { contribute, type BuiltInThemeContribution } from '@/extensions/registry';
 import {
     activeExtensionTheme,
     applyStoredExtensionTheme,
@@ -10,9 +9,10 @@ import {
     refreshExtensionTheme,
     type ThemeChoice
 } from '@/extensions/themes';
-import { AppearancePane } from '@/shell/settings/panes/AppearancePane';
+import { AppearancePane } from '@/settings/panes/AppearancePane';
+import { startSharedStorage } from '@/shared-storage';
+import { contribute, type BuiltInThemeContribution } from '@/state/extension-registry';
 import { useSettings } from '@/state/settings';
-import { startSharedStorage } from '@/state/shared-storage';
 import { mount } from '../../testing/dom';
 
 const CHOICE: ThemeChoice = {

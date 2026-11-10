@@ -16,7 +16,6 @@ private struct DoorMachine {
     let id = "studio"
     let key = DeviceKey()
 
-    /// A client's peer for this machine, which greets it with a fixed nonce.
     func peer(signer: DeviceKey = DeviceKey()) -> LanDoorPeer {
         LanDoorPeer(machineID: id, machineKey: key.publicKey, signer: signer, nonce: String(repeating: "n", count: 43))
     }
@@ -115,16 +114,11 @@ final class LanDoorPeerTests: XCTestCase {
     }
 
     func testAddressesBecomeSocketsWithIPv6InBrackets() {
-        let door = LanDoorAddress(
-            .object([
-                "port": .number(4220), "addresses": .array([.string("192.168.1.20"), .string("fd7a:115c::1")]),
-            ]))
+        let door = LanDoorAddress(LanDoor(port: 4220, addresses: ["192.168.1.20", "fd7a:115c::1"]))
         XCTAssertEqual(
             door?.urls.map(\.absoluteString), ["ws://192.168.1.20:4220/signal", "ws://[fd7a:115c::1]:4220/signal"])
-        XCTAssertNil(LanDoorAddress(.null))
         XCTAssertNil(LanDoorAddress(nil))
-        XCTAssertNil(LanDoorAddress(.object(["port": .number(4220), "addresses": .array([])])))
-        XCTAssertNil(LanDoorAddress(.object(["port": .number(70_000), "addresses": .array([.string("10.0.0.2")])])))
+        XCTAssertNil(LanDoorAddress(LanDoor(port: 4220, addresses: [])))
     }
 }
 

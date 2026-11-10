@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { useProject } from '@/state/project';
 
-/* The question on screen, answered once: true leaves the project and its unsaved edits behind. */
 export const useLeaveConflict = create<{ answer: ((leave: boolean) => void) | null }>(() => ({ answer: null }));
 
 /*

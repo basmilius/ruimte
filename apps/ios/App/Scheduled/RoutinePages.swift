@@ -1,7 +1,7 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
-/// A page Scheduled pushes, on the iPhone's stack or in the iPad's content column.
 struct ScheduledDestination: View {
     let runtime: AppRuntime
     let model: ScheduledModel
@@ -94,7 +94,7 @@ struct RoutineDetailPage: View {
         if entry.waitingRun != nil {
             return String(localized: "A run waits for you. The next one is skipped until you answer.")
         }
-        if let next = entry.next {
+        if let next = entry.nextDate {
             return String(localized: "Runs next at \(Format.moment(next))", comment: "%@ is a moment, such as 08:30")
         }
         return String(localized: "Nothing more is scheduled.")
@@ -138,26 +138,26 @@ struct RoutineDetailPage: View {
                 MobileStatusGlyph(tone: tone(run), symbol: run.icon).centeredOnFirstLine(of: .body)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(Format.moment(run.due)).monospacedDigit()
+                    Text(Format.moment(run.dueDate)).monospacedDigit()
                     Text(run.words()).font(.caption).foregroundStyle(MobileStyle.muted)
-                    if let error = run.error, run.state == "failed" {
+                    if let error = run.failure, run.state == .failed {
                         Text(verbatim: error).font(.caption).foregroundStyle(MobileStyle.statusError).lineLimit(3)
                     }
                 }
             }
             Spacer(minLength: 8)
-            if run.chatID != nil {
+            if run.chatId != nil {
                 Image(lucide: "chevron-right", size: 14).foregroundStyle(MobileStyle.faint)
             }
         }
         .frame(minHeight: rowHeight)
         .contentShape(Rectangle())
-        if let chatID = run.chatID {
+        if let chatID = run.chatId {
             Button {
                 open(
                     .run(
                         RoutineRunTarget(
-                            machineID: target.machineID, chatID: chatID, title: entry.title, due: run.due)))
+                            machineID: target.machineID, chatID: chatID, title: entry.title, due: run.dueDate)))
             } label: {
                 label
             }
@@ -171,11 +171,11 @@ struct RoutineDetailPage: View {
 
     private func tone(_ run: RoutineRun) -> MobileTone {
         switch run.state {
-        case "needs-you", "limit": .waiting
-        case "starting", "running": .working
-        case "done": .done
-        case "failed": .error
-        default: .idle
+        case .needsYou, .limit: .waiting
+        case .starting, .running: .working
+        case .done: .done
+        case .failed: .error
+        case .skipped: .idle
         }
     }
 
@@ -183,11 +183,11 @@ struct RoutineDetailPage: View {
         guard let entry else { return }
         act {
             let outcome = try await feed?.runNow(entry)
-            if outcome == "held" {
+            if outcome == .held {
                 notice = RoutineNotice(
                     title: String(localized: "Not started"),
                     message: String(localized: "Approve this routine on \(machineName) first."))
-            } else if outcome == "busy" {
+            } else if outcome == .busy {
                 notice = RoutineNotice(
                     title: String(localized: "Not started"),
                     message: String(localized: "Its previous run is still going or waits for you."))

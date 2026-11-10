@@ -1,3 +1,4 @@
+import { AGENT_REQUEST_SCHEMAS } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
 
@@ -19,3 +20,16 @@ export type AgentServerStatus = z.infer<typeof AgentServerStatusSchema>;
 
 export const AgentServerPayloadSchema = z.object({ provider: AgentKindSchema });
 export const AgentServerResultSchema = z.object({ server: AgentServerStatusSchema });
+
+export const AGENT_SERVER_REQUEST_SCHEMAS = {
+    // The same list after the machine looked for its CLIs again, at most once every ten seconds; what a person coming back asks.
+    'provider.detect': AGENT_REQUEST_SCHEMAS['provider.list'],
+    // The chat server of a CLI that ships one apart (Antigravity), and a person's Install of it; the daemon never installs one itself.
+    'provider.server': { payload: AgentServerPayloadSchema, result: AgentServerResultSchema },
+    'provider.installServer': { payload: AgentServerPayloadSchema, result: AgentServerResultSchema }
+} as const;
+
+export const AGENT_SERVER_EVENT_SCHEMAS = {
+    // The list `provider.list` answers, to every client, whenever an agent reported models or abilities the machine did not know.
+    'provider.changed': AGENT_REQUEST_SCHEMAS['provider.list'].result
+} as const;

@@ -7,18 +7,19 @@ A native remote client for Ruimte machines, for iOS and iPadOS 27 (`project.yml`
 The app follows the desktop wherever a phone can. These are the deliberate differences and the rules a phone adds.
 
 - Project saves are three-way merges with explicit conflict resolution. An unknown view or node kind survives a save.
+- Live state is a `LiveResource` (`RuimteTransport`): the events a store listens to, one read on every new link and when an event says the state changed, the watch asked again on every link (`LiveWatch`, shared by its holders), and a clock only for a machine that does not answer the watch. A page that must outlive a push holds it through `LiveHolds`. Chat and terminal attach keep their own reads and take only the events and the link.
 - A visual reply is a `WKWebView` per card, loaded from memory under `ruimte-visual://` with the desktop sandbox host page's policy (`ChatVisualContract.swift`, generated from `packages/csp` by `Scripts/generate-visual.ts`). It runs on an opaque origin without files or storage, and its main frame never navigates away. Tapped links open in Safari.
 - New chat outside a project asks `project.newChat`, which hands back the agent's unused chat instead of making another.
 - Deleting a chat, terminal or a canvas holding one ends its session and the agents it opened (`chat.kill`, `session.kill`). The confirmation counts them.
 - A terminal attaches with `follow: true`, so a phone never resizes the desktop's PTY. An unapproved project command waits above the keys until someone taps Run (`session.runHeld`).
 - A file edit is written against the mtime it was read at (`fs.write` with `expectedMtime`). A file that changed on the machine refuses and keeps the edit. Mention adds `@path` to the chat's draft (`ChatDraftInbox` when the chat is open).
 - Update on a machine's page asks `endpoint.installUpdate` with `confirm: false` first, shows what a restart would end, and installs only after confirmation. Keep awake with the lid closed shows as unavailable until the sudoers rule is installed on the Mac.
-- A device on a machine's page is a read-only preview: `device.list` every three seconds while the page shows, `device.open` with JPEG frames only.
+- A device on a machine's page is a read-only preview: `device.list` again on `device.changed` while the page shows (`device.watch`), every three seconds on a machine from before it, `device.open` with JPEG frames only.
 - The phone is a person to the machine. An unapproved launch shows its command, folder and environment, and only Launch on that sheet sends `approve`. Saving launches writes the whole list against its rev.
 - Output is read-only and shows only while the machine names `artifact.list`. A saved page runs in the visual reply's sandbox, images open in Quick Look, and Share reads a file only once a person picks a destination. Without a link the page says the machine is unreachable and shows nothing kept.
 - Force quit asks first, and the machine refuses a pid that now names another process.
 - Git conflicts are resolved in the app, never through markers, with a Swift port of `@adecore/merge` that fingerprints as the daemon does. A merge into a branch checked out nowhere is refused.
-- `Format` in `RuimtePulsar` ports `@adecore/ui/format`: the iOS region writes the notation, the app language the words.
+- `Format` in `RuimteShared` ports `@adecore/ui/format`: the iOS region writes the notation, the app language the words.
 - Usage counts in euros in a EUR region (at the machine's ECB rate) and dollars elsewhere, until a person picks a currency.
 - Widgets never connect. They show what the app wrote into the app group (`NeedsYouWidgetRecorder`, `ProjectWidgetRecorder`), refreshed at most every half hour.
 
@@ -26,7 +27,7 @@ The app follows the desktop wherever a phone can. These are the deliberate diffe
 
 Five tabs (Now, Projects, Routines, Machines, Search) are the root of one stack (`PhoneHome`, `PhoneRouter`). Settings is a sheet from the avatar.
 
-Now reads each machine's open projects with `project.sidebar`, again on `project.changed`, `project.summary` and `session.list-changed` and every 15 seconds while it shows. `NowBoard` groups them into Needs you, Working, Finished and Coming up. A needs-you card answers the chat's oldest request in place; `request-not-found` counts as answered.
+Now reads each machine's open projects with `project.sidebar`, again on `project.changed`, `project.summary`, `project.listChanged` (`project.watch`) and `session.list-changed`, and every 15 seconds while it shows on a machine from before `project.watch`. `NowBoard` groups them into Needs you, Working, Finished and Coming up. A needs-you card answers the chat's oldest request in place; `request-not-found` counts as answered.
 
 Routines (`ScheduledPage`, `ScheduledBoard`) lists every machine's routines with `routine.list`, again on `routine.changed` (`routine.watch`, renewed after every reconnect). Making, changing and approving a routine happen on the machine.
 
@@ -42,7 +43,7 @@ The iPad keeps the iPhone's pages without tabs (`PadHome`, `PadRouter`): a sideb
 - A canvas only pans and zooms on a phone. Its move and resize locks are this phone's, in the project's local state.
 - A drawing lets only the Pencil draw once a Pencil touched the page, or with Only Draw with Apple Pencil on. Tool options are per phone.
 - Change with an agent on a diagram sends the question to a chat with `chat.send`, naming the `view_diagram` tool and the file (`DiagramAgentPrompt`).
-- A device view polls `device.list` every two seconds while it waits and every five while it shows. A booted simulator streams `device.frame` events in JPEG. A phone or Android emulator streams video, which the machine refuses for this format, so the page says it shows on the computer only.
+- A device view reads `device.list` again on `device.changed` (`device.watch`); on a machine from before it, it polls every two seconds while it waits and every five while it shows. A booted simulator streams `device.frame` events in JPEG. A phone or Android emulator streams video, which the machine refuses for this format, so the page says it shows on the computer only.
 - A device's tools sheet shows each tool the device announces (`DeviceTools`). Capture and clipboard also need `device.capture` and `device.clipboard` on the machine. Erase asks first; a phone is never erased.
 - With a hardware keyboard, a device that announces `keyboard` takes the keys (`DeviceKeyView`). ⌘V pastes this phone's clipboard into the device; other ⌘ chords stay the app's.
 
@@ -66,6 +67,8 @@ A reconnect offers the last applied `seq` as `since`. When the machine's log no 
 A design view or node shows its chat and the pages of its folder one at a time. A page opens in the sandbox a visual runs in, with the files of its folder inlined as the desktop does it (`DesignFiles.standalonePage`, held to the desktop's output by `Tests/Fixtures/designs.json`). The scripts that frame pages and show the files a script names while it runs are the desktop's own text (`DesignScripts.swift`, generated by `Scripts/generate-design.ts`); the page, which has no window above it, asks the app through `window.ruimteHost`, and only its main frame is answered. Comments, drawing, tweaks and export stay on the desktop.
 
 `@` offers files and `#` the project's views, as `ChatReferables` mirrors the desktop's `referables.ts`. `references` is sent only to a machine with `viewReferences` in `endpoint.info`. `Tests/Fixtures/view-references.json` holds iPhone, desktop and daemon to one payload.
+
+A rule the phone keeps a Swift copy of is held to `Tests/Fixtures/ports.json`, which `packages/contracts/scripts/generate-port-fixtures.ts` writes by calling the TypeScript rule on every case (`PortFixtureTests`): node titles, slugs, a launch's folder and gaps, a group's frame, the lines a link draws, a session's status and which views the sidebar lists. A new port adds its cases there. Signature prefixes come from the generated `SigningPurposes`, and every kind in `wire.json` must be built by the app or listed as the machines' own.
 
 A lost send acknowledgement keeps the draft and asks the person to check the conversation before retrying.
 
@@ -96,6 +99,7 @@ xcodebuild -project apps/ios/Ruimte.xcodeproj -scheme Ruimte -configuration Debu
 xcrun devicectl device install app --device <udid> \
     /tmp/ruimte-ios-xcode/Build/Products/Debug-iphoneos/Ruimte.app
 swift test --package-path apps/ios/Packages/RuimtePulsar --scratch-path /tmp/ruimte-ios-pulsar-build
+swift test --package-path apps/ios/Packages/RuimteShared --scratch-path /tmp/ruimte-ios-shared-build
 swift test --package-path apps/ios/Packages/RuimteTransport --scratch-path /tmp/ruimte-ios-transport-build
 bun run check
 ```
@@ -134,6 +138,7 @@ The system authorization sheet, with no browser callback and no web fallback. Th
 ## How the connection is built
 
 - `RuimtePulsar` owns the device key, Keychain store, PKCE, address-book API and session rotation. Every scene shares one `SessionVault` and ed25519 key. Keychain items use `AfterFirstUnlockThisDeviceOnly` without synchronization. Access tokens stay in memory.
+- `RuimteShared` holds what the app and the widget extension both draw: the colors, `Format`, the usage rows and sections, and the widget and Live Activity stores that carry data through the app group. It builds on `RuimtePulsar`, never the other way, and the Notification Service extension links only `RuimtePulsar`.
 - `RuimteTransport` shares each broker socket by URL and public key, waits for its ICE response before gathering, and refreshes expired credentials. One held connection per machine serves all scenes. The last release leaves a 30-second grace period; background closes links and foreground reconnects those still held. Liveness reads libwebrtc transport packets, not ping replies.
 - ICE prefers a direct route, with TURN as fallback. Relay-only exists only in Connection diagnostics, on its own link (`diagnostic:<machine id>`).
 - An attempt first signals at the machine's local door (`LanDoor.swift`, `Signaling.swift`), at every `lan` address from `endpoint.info` and `endpoint.changed`. The app sends a fresh nonce and says nothing about itself until the machine signed it with the pinned key (`pulsar-lan-door-v1`). The broker joins when no door is ready within 1000 ms, or at once when every door failed (also with Local Network permission refused). A door attempt gets STUN and no TURN. A door win that fails before its channel opens skips the local network for five minutes.

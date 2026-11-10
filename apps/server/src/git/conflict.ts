@@ -10,7 +10,7 @@ import type {
     GitOperation,
     GitResolvePayload
 } from '@ruimte/contracts';
-import { sha256 } from '../artifacts/artifact-fs.ts';
+import { sha256 } from '../disk/hash.ts';
 import type { ProgressSink } from './actions.ts';
 import { parseNumstat } from './diff.ts';
 import { nativePath } from './native-path.ts';
@@ -19,7 +19,6 @@ import { git, runGit, runGitBytes, streamGit, toplevel, GitError, type GitResult
 // A side larger than this is one nobody merges line by line; the file is then a choice between whole sides.
 const MAX_SIDE_BYTES = 1024 * 1024;
 
-/* The files git left unmerged in a checkout, one per path. */
 export async function conflictedFiles(cwd: string): Promise<string[]> {
     const output = await git(['diff', '--name-only', '--diff-filter=U', '-z'], cwd);
     return output === null ? [] : [...new Set(output.split('\0').filter((path) => path !== ''))];

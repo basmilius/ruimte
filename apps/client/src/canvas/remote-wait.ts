@@ -1,8 +1,8 @@
 import type { RemoteStatusEvent, Task } from '@ruimte/contracts';
+import { isUnstarted, isUntaken, useRemoteStatus } from '@/controllers/remote-status';
 import { useCanvas } from '@/state/canvas';
-import { isUnstarted, isUntaken, useRemoteStatus } from '@/state/remote-status';
 import { useTasks } from '@/state/tasks';
-import { useWorkspace } from '@/transport/connections';
+import { useWorkspace } from '@/workspace/connections';
 
 type TasksById = Readonly<Record<string, Task>>;
 type StatusByMachine = Readonly<Record<string, RemoteStatusEvent>> | undefined;
@@ -19,7 +19,7 @@ function openTaskOf(tasks: TasksById | undefined, childId: string): Task | null 
 }
 
 /* A machine a node waits for, and how many of its tasks wait on it. */
-export interface WaitedFor {
+interface WaitedFor {
     machine: string;
     count: number;
 }

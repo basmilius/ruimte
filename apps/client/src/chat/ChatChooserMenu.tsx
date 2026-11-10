@@ -1,12 +1,13 @@
 import { AgentIcon } from '@adecore/agents-react/providers';
 import { useProviders } from '@adecore/agents-react/state';
 import { ContextMenu, Kbd } from '@adecore/ui';
+import { separatesGroups } from '@ruimte/contracts';
 import { Plus } from 'lucide-react';
 import { Fragment, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { availableAgents, separatesGroups } from '@/agents/creation';
-import { useChatChooser, useChooserSections, type ChooserChat } from '@/chat/chat-chooser';
-import { linkedChatsOfNode, sendToChat, startLinkedChatOrTell, type SelectionOffer } from '@/chat/selection-to-chat';
+import { useChatChooser, useChooserSections, type ChooserChat } from '@/language/chat-chooser';
+import { linkedChatsOfNode, sendToChat, startLinkedChatOrTell, type SelectionOffer } from '@/language/selection-to-chat';
+import { availableAgents } from '@/state/agent-availability';
 import { useDetectProviders } from '@/transport/provider-detection';
 
 function ChatRows({
@@ -61,7 +62,6 @@ function ChooserMenu({ offer, x, y }: { offer: SelectionOffer; x: number; y: num
             onOpenChange={(open) => {
                 if (!open) {
                     useChatChooser.getState().close();
-                    // A pick brings its chat into focus; a dismissal gives the keyboard back to the text.
                     if (!picked.current) {
                         offer.returnFocus?.();
                     }

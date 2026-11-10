@@ -14,12 +14,12 @@ const PURPOSES: readonly OpenPathPurpose[] = ['import', 'database', 'identity'];
 /* The extensions a SQLite database is found under, with every file beside them for one named otherwise. */
 const DATABASE_EXTENSIONS = ['sqlite', 'sqlite3', 'db', 'db3'];
 
-export interface DialogFilter {
+interface DialogFilter {
     name: string;
     extensions: string[];
 }
 
-export interface OpenDialogPlan {
+interface OpenDialogPlan {
     filters: DialogFilter[];
     defaultPath?: string;
     /* An SSH key sits in a folder macOS and Linux hide. */
@@ -97,7 +97,6 @@ export function openDialogPlan(request: OpenPathRequest, home: string, allFiles:
     }
 }
 
-/* The filter a native dialog lists last, in the language of the interface. */
 export function allFilesLabel(language: string | undefined): string {
     return language?.startsWith('nl') === true ? 'Alle bestanden' : 'All files';
 }

@@ -1,5 +1,5 @@
 import { useChats } from '@adecore/agents-react/state';
-import { extensionAgentStatus, extensionChatOf, type ExtensionAgentStatus } from '@ruimte/contracts';
+import { extensionAgentStatus, extensionChatOf, sessionStatus, type ExtensionAgentStatus } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { nodeInfoOf, type NodeInfo } from '@/extensions/slots';
 import { defaultCanvases, focusedCanvas, type CanvasState } from '@/state/canvas';
@@ -7,7 +7,7 @@ import { useDocument } from '@/state/document';
 import { splitKey } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { useProject } from '@/state/project';
-import { useSessions, sessionStatus } from '@/state/sessions';
+import { useSessions } from '@/state/sessions';
 
 export interface ClientEvents {
     'node.added': { node: NodeInfo };

@@ -13,7 +13,6 @@ export function clipboardOrRefuse(): Clipboard {
     return navigator.clipboard;
 }
 
-/* Copies text, and refuses when it did not reach the clipboard, so whoever asked hears it. */
 export async function copyTextOrRefuse(text: string): Promise<void> {
     if (!(await copyText(text))) {
         throw noClipboard();

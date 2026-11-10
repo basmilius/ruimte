@@ -14,10 +14,11 @@ import {
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import { collect, type CommandResult } from './command.ts';
+import { DeviceError } from './device-error.ts';
 import { requireExtension, requireMedia } from './device-paths.ts';
 import { simulatorTree, type DeviceTree } from './device-tree.ts';
 import { DeviceHelperSource, type DeviceHelperLauncher } from './helper-source.ts';
-import { DeviceError, KEY_LEFT_COMMAND, KEY_V, PASTE_SETTLE_MS, typeInRuns, type DeviceBackend, type DeviceKeyboard, type DeviceSource } from './manager.ts';
+import { KEY_LEFT_COMMAND, KEY_V, PASTE_SETTLE_MS, typeInRuns, type DeviceBackend, type DeviceKeyboard, type DeviceSource } from './manager.ts';
 import { DeviceRecordings } from './recordings.ts';
 import { serveSimFile } from './serve-sim.ts';
 import type { SimulatorCamera } from './simulator-camera.ts';
@@ -99,7 +100,6 @@ const IOS_SIMULATOR_TOOLS: DeviceTool[] = [
     'addMedia'
 ];
 
-/* The status bar of a marketing shot. */
 const CLEAN_STATUS_BAR = [
     '--time',
     '9:41',
@@ -206,7 +206,6 @@ function axHelperPath(): string | null {
     return serveSimFile('serve-sim-ax-settings', 'simax');
 }
 
-/* The settings the accessibility helper reports, or none for an answer it cannot read. */
 function axSettingsOf(output: string | undefined): Record<string, string> {
     if (!output) {
         return {};

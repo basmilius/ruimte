@@ -3,10 +3,10 @@ import { ReviewGroup } from '@adecore/editor-react';
 import { ManualTimers } from '@adecore/editor-react/testing';
 import { type FakeEditor, FakeEditorEngine } from '@adecore/editor/fake';
 import type { ProvenanceReadResult, ProvenanceReviewState, ProvenanceRun } from '@ruimte/contracts';
+import { agentReviewOf } from '@/language/agent-review-registry';
 import { useReviewFocus } from '@/state/review-focus';
 import { AgentChanges } from './agent-changes';
 import { AgentReview, commentRowId, revertNote } from './agent-review';
-import { agentReviewOf } from './agent-review-registry';
 
 const DISK = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'].join('\n') + '\n';
 

@@ -23,6 +23,12 @@ public struct BrokerPeer {
 
     public var isReady: Bool { state == .ready }
 
+    /// What a client signs to answer the broker's challenge: `brokerHelloMessage` in `packages/pulsar/src/signing.ts`.
+    public static func helloMessage(broker: String, role: String, publicKey: String, nonce: JSONValue) throws -> String {
+        SigningPurposes.brokerHello + "\n"
+            + (try wireText(.array([.string(broker), .string(role), .string(publicKey), nonce])))
+    }
+
     public mutating func start() throws -> [Event] {
         guard state == .idle else { return [] }
         state = .announced
@@ -38,9 +44,8 @@ public struct BrokerPeer {
             guard try string(frame, "broker") == host else {
                 throw TransportFailure.invalid(String(localized: "Could not verify the connection service. Try again.", bundle: .module))
             }
-            let message = "pulsar-broker-hello-v1\n" + (try wireText(.array([
-                .string(host), .string("client"), .string(signer.publicKey), try field(frame, "nonce")
-            ])))
+            let message = try Self.helloMessage(
+                broker: host, role: "client", publicKey: signer.publicKey, nonce: try field(frame, "nonce"))
             return [.send(try outgoing(.object(["type": .string("prove"), "signature": .string(try signer.sign(message))])))]
         case "ready":
             guard state == .announced else { return [] }

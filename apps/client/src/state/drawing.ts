@@ -13,9 +13,9 @@ import type {
     ProjectViewLocal
 } from '@ruimte/contracts';
 import { createStore, type StoreApi } from 'zustand';
-import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
-import { intersects, type Rect } from '@/canvas/math';
-import { fitTextBox } from '@/drawing/measure';
+import { createCameraSlice, type CameraSlice } from '@/canvas-model/camera-slice';
+import { fitTextBox } from '@/canvas-model/drawing-measure';
+import { intersects, type Rect } from '@/canvas-model/math';
 import { editorBindings } from '@/state/editor-bindings';
 import { createEditorRegistry, finishLoad, savedFileSetters, type SavedFileSetters } from '@/state/editors';
 import { mergeSelection } from '@/state/selection';
@@ -77,7 +77,6 @@ export interface DrawingState extends CameraSlice, SavedFileSetters<DrawingDocum
     editingTextId: string | null;
     rev: number;
     dirty: boolean;
-    /* Counts changes to the elements, which is what the client saves on. */
     edits: number;
     loading: boolean;
     conflict: DrawingDocument | null;
@@ -425,7 +424,6 @@ export function createDrawingStore(): StoreApi<DrawingState> {
 
 const defaultDrawingStore = createDrawingStore();
 
-/* Its blank editor is the store this module made. */
 export const defaultDrawings = createEditorRegistry(createDrawingStore, defaultDrawingStore);
 
 export const {

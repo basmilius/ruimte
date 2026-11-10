@@ -5,29 +5,29 @@ import clsx from 'clsx';
 import { Archive, History, Package, SquareArrowOutUpRight } from 'lucide-react';
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { accentColor, accentHeaderStyle, accentShades } from '@/canvas/accents';
-import { OPEN_H } from '@/canvas/beside-metrics';
-import { CHROME_H, FRAME, frameStyle, HEADER, HEADER_MIDDLE } from '@/canvas/derived-card-look';
-import { CardLine } from '@/canvas/DerivedCardLook';
-import { DerivedSet, type DerivedCard } from '@/canvas/DerivedSet';
-import { KindIcon } from '@/canvas/KindIcon';
-import type { Rect } from '@/canvas/math';
-import type { ResizeEdge } from '@/canvas/resize-handles';
+import { accentColor, accentHeaderStyle, accentShades } from '@/canvas-model/accents';
+import type { ResizeEdge } from '@/canvas-model/derived-frame';
+import type { Rect } from '@/canvas-model/math';
 import { ArtifactOnCanvas } from '@/output/ArtifactNode';
 import { OutputShownBesideContext } from '@/output/chat-scope';
 import { lookOfRun, type BlockLook } from '@/routines/agenda';
 import { besideLayout, type BesideCard } from '@/routines/beside-layout';
 import { LookIcon } from '@/routines/look';
-import { OUTPUT_MIN, RUNS_MIN_W, storedOutputSize, storedRunsWidth, type CardSize } from '@/routines/output-size';
 import { useRoutineList } from '@/routines/routine-list';
 import { RoutineRunChat } from '@/routines/RoutineRunChat';
 import { useRunsHidden } from '@/routines/runs-hidden';
-import { showRoutine } from '@/routines/stage';
 import { dayWords, runWords } from '@/routines/words';
-import { FileToolbarSlotProvider, fixedSlot } from '@/shell/panels/file-toolbar-slot';
 import { useCanvas } from '@/state/canvas';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
+import { showRoutine } from '@/state/routines-stage';
+import { OPEN_H } from '@/surface/canvas/beside-metrics';
+import { CHROME_H, FRAME, frameStyle, HEADER, HEADER_MIDDLE } from '@/surface/canvas/derived-card-look';
+import { CardLine } from '@/surface/canvas/DerivedCardLook';
+import { DerivedSet, type DerivedCard } from '@/surface/canvas/DerivedSet';
+import { KindIcon } from '@/surface/canvas/KindIcon';
+import { OUTPUT_MIN, RUNS_MIN_W, storedOutputSize, storedRunsWidth, type CardSize } from '@/surface/canvas/output-size';
+import { FileToolbarSlotProvider, fixedSlot } from '@/surface/panels/file-toolbar-slot';
 
 /* The card is placed by its top-left corner beside the node, so only its right and bottom edges move. */
 const OUTPUT_EDGES: readonly ResizeEdge[] = ['e', 's', 'se'];
@@ -63,7 +63,6 @@ export function RoutineBeside({ id, z }: { id: string; z: number }) {
     const [picked, setPicked] = useState<string | null | undefined>(undefined);
     const [outputSize, setOutputSize] = useState<CardSize | null>(() => (viewId === null ? null : storedOutputSize(viewId, id).read()));
     const [runsWidth, setRunsWidth] = useState<number | null>(() => (viewId === null ? null : (storedRunsWidth(viewId, id).read()?.w ?? null)));
-    // What each run's header and thread measured while open, in memory, so a run opens again at its own height at once.
     const [openHeights, setOpenHeights] = useState<Readonly<Record<string, number>>>({});
     const runsHidden = useRunsHidden(viewId, id);
     // The version a person picked on the Output with the runs hidden, in memory; undefined follows the latest.
@@ -77,7 +76,6 @@ export function RoutineBeside({ id, z }: { id: string; z: number }) {
     }
     const timeZone = list.result.timeZone;
     const target = { projectId: entry.projectId, routineId: entry.routine.id };
-    // The color a person gave the node, which every card beside it wears as the node's own frame does.
     const accent = accentColor(nodeColorOf(node));
     const resizeOutput = ({ w, h }: Rect): void => {
         setOutputSize({ w, h });
@@ -171,7 +169,6 @@ export function RoutineBeside({ id, z }: { id: string; z: number }) {
     return <DerivedSet owner={id} z={z} cards={cards} lineDown={HEADER_MIDDLE} {...(accent === undefined ? {} : { stroke: accentShades(accent).line })} />;
 }
 
-/* What a run says beside its time: how long it took when it simply ran, and what became of it otherwise. */
 function RunMark({ run }: { run: RoutineRun }) {
     const { t } = useTranslation('routines');
     const look = lookOfRun(run);

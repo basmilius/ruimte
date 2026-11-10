@@ -1,5 +1,7 @@
+import { checkCwd } from '../canvas/project-paths.ts';
 import { toplevel } from '../git/run.ts';
 import { AfterSettleLaunches } from '../launches/after-settle.ts';
+import type { LaunchHost } from '../launches/agent-host.ts';
 import { agentLaunches } from '../launches/agent-host.ts';
 import { LaunchRunner } from '../launches/runner.ts';
 import { managerSessions } from '../launches/sessions.ts';
@@ -8,18 +10,16 @@ import { foregroundGroup } from '../processes/foreground.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { SecretService } from '../secrets/secret-service.ts';
 import { SecretStore } from '../secrets/secret-store.ts';
-import type { LaunchHost } from '../tools/host.ts';
-import { checkCwd } from '../tools/project-paths.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
-import type { GitBundle } from './git.ts';
+import type { DaemonBundles } from './bundles.ts';
+import type { Later } from './later.ts';
 
 /* A project's launches and the secrets they start with. */
 export interface LaunchesBundle {
     store: LaunchStore;
     runner: LaunchRunner;
     secrets: SecretService;
-    /* The launches as an agent's tool reaches them. */
     agentHost: LaunchHost;
     /* The one launch a person chose to run after a worktree chat settles. */
     afterSettle: AfterSettleLaunches;
@@ -31,7 +31,7 @@ interface LaunchesInput {
     agents: AgentsBundle;
     work: AgentWorkBundle;
     projects: ProjectStore;
-    later: { git(): GitBundle };
+    later: Later<Pick<DaemonBundles, 'git'>>;
 }
 
 export function wireLaunches({ home, stores, agents, work, projects, later }: LaunchesInput): LaunchesBundle {
@@ -54,6 +54,7 @@ export function wireLaunches({ home, stores, agents, work, projects, later }: La
         launches: store,
         chats: { hold: (nodeId, key) => void chats.holdForPerson(nodeId, key), release: (nodeId, key) => chats.releaseHold(nodeId, key) }
     });
+    secrets.follow(stores.lifecycle);
     const agentHost = agentLaunches(store, runner, (sessionId) => sessions.get(sessionId)?.plainText() ?? Promise.resolve(null));
     const afterSettle = new AfterSettleLaunches({
         store: work.afterSettleStore,
@@ -70,8 +71,9 @@ export function wireLaunches({ home, stores, agents, work, projects, later }: La
                 .then((list) => list.filter((worktree) => worktree.missing !== true).map((worktree) => worktree.path))
                 .catch(() => []),
         repoRootOf: (folder) => toplevel(folder),
-        entries: () => stores.outbox.list(),
+        ofKind: (kind) => stores.outbox.ofKind(kind),
         enqueue: (projectId, chatId, entryWork) => agents.outboxLink.enqueue(projectId, chatId, entryWork)
     });
+    agents.outboxLink.worker.handle('run-after-settle', (entry) => afterSettle.handle(entry));
     return { store, runner, secrets, agentHost, afterSettle };
 }

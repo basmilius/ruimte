@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ProjectSavePayloadSchema, storedViewsOf, type ProjectCanvasView, type ProjectDocument, type ProjectNode, type ProjectView } from '@ruimte/contracts';
-import type { CameraHistory } from '@/canvas/camera-history';
-import { viewIdsIn } from '@/shell/split';
+import type { CameraHistory } from '@/canvas-model/camera-history';
+import { viewIdsIn } from '@/layout/split';
 import { historyOf, setHistory } from './camera-history';
 import { focusedCanvas } from './canvas';
 import { useDocument } from './document';

@@ -26,12 +26,10 @@ public struct VoiceWaveformBands: Sendable, Equatable {
     /// Whether Voice speaks, as the desktop's label reads the output bands.
     public static func outputSpeaks(_ bands: [Double]) -> Bool { (bands.max() ?? 0) > 0.04 }
 
-    /// The share of the way a column moves toward its target in a frame that took `elapsedMs`.
     public static func response(elapsedMs: Double) -> Double {
         1 - exp(-elapsedMs / responseMs)
     }
 
-    /// Moves each column a `response` share of the way from where it is drawn toward `target`.
     public func eased(toward target: VoiceWaveformBands, response: Double) -> VoiceWaveformBands {
         func ease(_ current: [Double], _ target: [Double]) -> [Double] {
             (0..<Self.count).map { index in

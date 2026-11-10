@@ -1,5 +1,5 @@
 import { createElement, type ReactNode } from 'react';
-import { useContributions } from '@/extensions/registry';
+import { useContributions } from '@/state/extension-registry';
 
 /* A fenced block an extension draws. Every other language stays the chat's own code block. */
 export function renderCodeFence(language: string | undefined, code: string): ReactNode | null {

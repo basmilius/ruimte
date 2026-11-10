@@ -11,7 +11,6 @@ type RestoredSession = z.infer<typeof RestoredSessionSchema>;
 /* Whatever holds the refresh token for this client. The page asks it for access tokens and never sees what it keeps. */
 export interface SessionKeeper {
     exchange(payload: SessionLoginCode): Promise<SessionView>;
-    /* A fresh access token, or null when there is no session any more. */
     refresh(): Promise<SessionView | null>;
     restore(): Promise<RestoredSession | null>;
     signOut(): Promise<void>;
@@ -22,11 +21,9 @@ export const ACCESS_TOKEN_MARGIN_MS = 60_000;
 
 interface AccessTokensOptions {
     now?: () => number;
-    /* The keeper had no session left to refresh. */
     onSignedOut?(): void;
 }
 
-/* The access token this page is using, refreshed through the keeper when it is about to run out, one refresh at a time. */
 export class AccessTokens {
     private readonly keeper: SessionKeeper;
     private readonly now: () => number;

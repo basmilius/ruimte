@@ -1,5 +1,6 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 
 enum ChatVisualAppearance: String {
     case light, dark

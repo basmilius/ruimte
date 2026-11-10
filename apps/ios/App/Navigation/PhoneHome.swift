@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 import UIKit
 
@@ -128,7 +129,9 @@ struct PhoneHome: View {
     @ViewBuilder private func page(for route: PhoneRoute) -> some View {
         switch route {
         case .project(let navigation):
-            WorkspacePage(navigation: navigation, settingsLink: settingsLink, gitLines: gitLines, runtime: runtime)
+            WorkspacePage(
+                navigation: navigation, navigator: router, settingsLink: settingsLink, gitLines: gitLines,
+                runtime: runtime)
         case .view(let target):
             ProjectViewPage(runtime: runtime, target: target, preview: now.preview(of: target)).id(target.id)
         case .notification(let notification):
@@ -148,7 +151,7 @@ struct PhoneHome: View {
         guard let session = runtime.session(machineID: target.machineID) else { return nil }
         let id = UnifiedProjectRow.ID(machineID: target.machineID, projectID: target.projectID)
         let row = (projects.open + projects.chats).first { $0.id == id }
-        return MobileWorkspace(session: session, projectID: target.projectID, summary: row?.summary ?? .object([:]))
+        return MobileWorkspace(session: session, projectID: target.projectID, summary: row?.summary)
     }
 }
 

@@ -6,6 +6,7 @@ import {
     type ClaudeApiStatus,
     type ModelInfo
 } from '@ruimte/contracts';
+import { HOME_FOLDERS } from '@ruimte/service/home';
 import { z } from 'zod';
 import { KeyedApiService, type ApiFetch, type CatalogContent } from './keyed-api-service.ts';
 
@@ -101,7 +102,7 @@ const PageSchema = z.object({
 });
 
 /* The key goes in the header and nowhere else; with redirects as errors it never follows a `Location` to another host. */
-export function anthropicHeaders(key: string): Record<string, string> {
+function anthropicHeaders(key: string): Record<string, string> {
     return { 'x-api-key': key, 'anthropic-version': ANTHROPIC_VERSION, 'content-type': 'application/json' };
 }
 
@@ -138,14 +139,13 @@ export function defaultModelOf(models: AnthropicModel[]): string {
     return (newest(active.filter((model) => model.line === 'sonnet')) ?? newest(active) ?? models[0])?.id ?? '';
 }
 
-/* The Claude API of this machine: its key, the models it offers and how far a chat may go alone. */
 export class AnthropicClaudeApiService extends KeyedApiService<ClaudeApiSettings, AnthropicModel> {
     private readonly claude: ClaudeModels | null;
 
     /* `claude` is Claude Code's catalog, whose options these chats take, since they run in Claude Code too. */
     constructor(request: ApiFetch = fetch, claude: ClaudeModels | null = null) {
         super(request, {
-            folder: 'anthropic-claude-api',
+            folder: HOME_FOLDERS.anthropicClaudeApi,
             settingsSchema: ClaudeApiSettingsSchema,
             defaults: DEFAULT_CLAUDE_API_SETTINGS,
             words: {

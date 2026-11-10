@@ -1,9 +1,9 @@
 import type { Editor } from '@adecore/editor';
 import { createHolder } from '@adecore/editor-react';
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 import type { ConflictResolution } from './conflict-resolution';
 import { mountConflictResolution } from './conflict-wiring';
 

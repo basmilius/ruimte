@@ -1,19 +1,11 @@
-import { ErrorBoundary, lazyNamed, LazyBoundary } from '@adecore/ui';
-import { isArtifactView, isCanvasView, isDatabaseView, isDesignView, isFileView, type ProjectView } from '@ruimte/contracts';
-import { useEffect, useRef, useState } from 'react';
+import { ErrorBoundary } from '@adecore/ui';
+import { isCanvasView, type ProjectView } from '@ruimte/contracts';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Canvas } from '@/canvas/Canvas';
-import { DeviceBody } from '@/devices/DeviceBody';
-import { ExtensionViewBody } from '@/extensions/ExtensionNodeBody';
-import { extensionKeyOf } from '@/extensions/registry';
-import { BrowserFallback } from '@/nodes/BrowserBody';
-import { ChatBody } from '@/nodes/ChatBody';
-import { TerminalBody } from '@/nodes/TerminalBody';
-import { usePage } from '@/nodes/use-page';
+import { FileViewer } from '@/files/FileViewer';
 import { newChatOn } from '@/project/new-chat';
-import { isLooseView, type CellView } from '@/shell/cell-view';
-import { FileSurface } from '@/shell/panels/FileSurface';
-import { FileViewer } from '@/shell/panels/FileViewer';
+import { viewKindRegistry } from '@/registry/view-kinds';
 import { ProjectStartScreen } from '@/shell/ProjectStartScreen';
 import { SplitGrid } from '@/shell/SplitGrid';
 import { useDiagram } from '@/state/diagram';
@@ -21,14 +13,10 @@ import { useDocument } from '@/state/document';
 import { useDrawing } from '@/state/drawing';
 import { useFiles } from '@/state/files';
 import { isScratchProject, useProject } from '@/state/project';
-
-const DrawingView = lazyNamed(() => import('@/drawing/DrawingView'), 'DrawingView');
-const DiagramView = lazyNamed(() => import('@/diagram/DiagramView'), 'DiagramView');
-const DatabaseViewBody = lazyNamed(() => import('@/database/DatabaseViewBody'), 'DatabaseViewBody');
-const ArtifactViewBody = lazyNamed(() => import('@/output/ArtifactViewBody'), 'ArtifactViewBody');
-const DesignView = lazyNamed(() => import('@/design/DesignView'), 'DesignView');
+import { isLooseView, type CellView } from '@/surface/cell-view';
 
 function StandaloneView({ view }: { view: ProjectView }) {
+    const kinds = viewKindRegistry.useAll();
     // `bodyFocused` is one flag for the whole grid, so without the cell every chat and terminal would grab it.
     const focused = useDocument((s) => s.bodyFocused && s.activeViewId === view.id);
     return (
@@ -37,43 +25,9 @@ function StandaloneView({ view }: { view: ProjectView }) {
             // A press anywhere in the body is the way back in, the way clicking a node's body is.
             onPointerDownCapture={() => useDocument.getState().setBodyFocused(true)}
         >
-            {/* A thread that runs the whole window is unreadable, so a chat of its own keeps a column
-                of content as wide as the person's reading width, centered, with the surface filling
-                what is left beside it. The scroller itself stays the width of the column, so its
-                scrollbar sits at the column's own edge (`.chat-column` in `styles.css`). The type is
-                the app's own: a thread reads the same here as it does in a node on the canvas. */}
-            {view.kind === 'chat' && (
-                <div className="chat-column flex h-full w-full flex-col">
-                    <ChatBody id={view.id} focused={focused} accessories={{ title: view.name }} />
-                </div>
-            )}
-            {view.kind === 'terminal' && <TerminalBody id={view.id} focused={focused} />}
-            {view.kind === 'browser' && <BrowserViewSurface id={view.id} />}
-            {view.kind === 'device' && <DeviceBody id={view.id} />}
-            {view.kind === 'unknown' && extensionKeyOf(view.raw) !== null && <ExtensionViewBody raw={view.raw} />}
-            {view.kind === 'drawing' && (
-                <LazyBoundary>
-                    <DrawingView id={view.id} />
-                </LazyBoundary>
-            )}
-            {view.kind === 'diagram' && (
-                <LazyBoundary>
-                    <DiagramView id={view.id} />
-                </LazyBoundary>
-            )}
-            {/* No column around it: prose centers itself at 768px inside its own renderer, and
-                code wants every pixel the window has. */}
-            {isFileView(view) && <FileSurface path={view.path} on="view" />}
-            {isArtifactView(view) && (
-                <LazyBoundary>
-                    <ArtifactViewBody view={view} />
-                </LazyBoundary>
-            )}
-            {isDesignView(view) && (
-                <LazyBoundary>
-                    <DesignView view={view} focused={focused} />
-                </LazyBoundary>
-            )}
+            {kinds.map((kind) => (
+                <Fragment key={kind.id}>{kind.render(view, focused)}</Fragment>
+            ))}
         </div>
     );
 }
@@ -81,7 +35,6 @@ function StandaloneView({ view }: { view: ProjectView }) {
 /* A loose view keeps its file controls in the cell toolbar and its editor in the stable view host. */
 function FilesSurface({ tabKey, ids }: { tabKey: string | null; ids: readonly string[] }) {
     const { t } = useTranslation('shell');
-    /* Set by what was opened by hand, in the files panel, the git panel or the palette. */
     const focusRequest = useFiles((s) => s.focusRequest);
     const handled = useRef<number | null>(null);
     const bodyRef = useRef<HTMLDivElement>(null);
@@ -113,13 +66,6 @@ function FilesSurface({ tabKey, ids }: { tabKey: string | null; ids: readonly st
     );
 }
 
-/* The page of a browser view is the parked element, placed over this whole column by the layer. A
-   view without an address has no page yet, so what is left under it is the splash. */
-function BrowserViewSurface({ id }: { id: string }) {
-    usePage(id);
-    return <BrowserFallback id={id} className="h-full" />;
-}
-
 /* SplitView keeps this view mounted while tabs, pane positions and maximization change. */
 export function ViewSurface({ view }: { view: CellView }) {
     const { t } = useTranslation('shell');
@@ -128,19 +74,7 @@ export function ViewSurface({ view }: { view: CellView }) {
     const diagram = useDiagram((s) => s.content);
     return (
         <ErrorBoundary key={view.id} label={t('viewHost.failed')} resetKeys={[view.id, rev, drawing, diagram]}>
-            {isLooseView(view) ? (
-                <FilesSurface tabKey={view.id} ids={[view.id]} />
-            ) : isDatabaseView(view) ? (
-                <div className="absolute inset-0 bg-surface" onPointerDownCapture={() => useDocument.getState().setBodyFocused(true)}>
-                    <LazyBoundary>
-                        <DatabaseViewBody view={view} />
-                    </LazyBoundary>
-                </div>
-            ) : isCanvasView(view) ? (
-                <Canvas />
-            ) : (
-                <StandaloneView view={view} />
-            )}
+            {isLooseView(view) ? <FilesSurface tabKey={view.id} ids={[view.id]} /> : isCanvasView(view) ? <Canvas /> : <StandaloneView view={view} />}
         </ErrorBoundary>
     );
 }
@@ -165,7 +99,6 @@ function ChatsStart() {
     return failed ? <ProjectStartScreen /> : <div className="absolute inset-0 bg-surface" />;
 }
 
-/* The main column: the grid of cells of the open project. */
 export function ViewHost() {
     const { t } = useTranslation('shell');
     /* The layout answers this, not the list of views: a project whose only cell holds the files has

@@ -1,13 +1,15 @@
 import { homedir } from 'node:os';
-import type { ChatProvider } from '@adecore/agents/providers';
+import { cliExecutable, type ChatProvider } from '@adecore/agents/providers';
 import { isCanvasView, sourceOf, type ContextSource, type ExtensionDatabaseValue, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import { contextSelection } from '@ruimte/contracts/extension-context';
-import { sendEvent, type Dispatcher } from '../dispatcher.ts';
+import type { Area } from '../area.ts';
+import { type Dispatcher } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
 import type { ExtensionHost } from '../extensions/extension-host.ts';
 import { asExtensionRefusal, ExtensionRefusal } from '../extensions/refusal.ts';
 import { oneShotProvider, oneShotRun, runOneShot } from '../git/one-shot.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
+import { sendEvent } from '../wire.ts';
 
 const AGENT_RUN_TIMEOUT_MS = 180_000;
 const STDERR_TAIL_CHARS = 2_000;
@@ -18,6 +20,11 @@ export interface ExtensionHandlerDeps {
     readSource(source: ContextSource, projectId: string): Promise<string>;
     providers: ProviderRegistry;
     databaseQuery(projectId: string, connection: string, sql: string): Promise<{ columns: string[]; rows: ExtensionDatabaseValue[][]; hasMore: boolean }>;
+}
+
+interface ExtensionsDeps extends ExtensionHandlerDeps {
+    host: ExtensionHost;
+    readChat(chatId: string): Promise<string>;
 }
 
 function nodesIn(views: readonly ProjectView[], of: { nodeIds?: readonly string[] | undefined; viewId?: string | undefined }): ProjectNode[] {
@@ -46,10 +53,9 @@ class StreamStop {
  * The runs under way, each by the client that started it and its run id: a client chooses the id, so another client's
  * stop or a second run under the same id never reaches a run that is not its own.
  */
-export class AgentStreams {
+class AgentStreams {
     private readonly runs = new Map<string, StreamStop>();
 
-    /* Refused while the client has a run under that id. */
     claim(clientId: string, runId: string): StreamStop {
         const key = AgentStreams.keyOf(clientId, runId);
 
@@ -116,11 +122,22 @@ export async function runExtensionPrompt(
  * A list and a call are for any client let in. What changes what runs on this machine takes its owner. A request an
  * extension makes fails under an `ExtensionErrorCode`, which its client hands it as a Result.
  */
-export function registerExtensionHandlers(dispatcher: Dispatcher, host: ExtensionHost, deps: ExtensionHandlerDeps): void {
-    const extensionDispatcher = forExtension(dispatcher);
+export function extensionsArea(deps: ExtensionsDeps): Area {
+    const { host } = deps;
 
-    registerExtensionCalls(extensionDispatcher, host, deps);
-    registerExtensionAdmin(dispatcher, host);
+    return {
+        name: 'extensions',
+        sources: [host],
+        handlers: (dispatcher) => {
+            const extensionDispatcher = forExtension(dispatcher);
+
+            registerExtensionCalls(extensionDispatcher, host, deps);
+            registerExtensionAdmin(dispatcher, host);
+            // The text of one chat as `chats.read` gives it, so a chat in a view of its own reads as well.
+            dispatcher.register('extension.chatRead', async ({ chatId }) => ({ text: await deps.readChat(chatId) }));
+        },
+        stop: [{ phase: 'drain', label: 'Stopping extensions', run: () => host.stopAll() }]
+    };
 }
 
 /* Registers on `dispatcher` with every failure turned into an `ExtensionRefusal`. */
@@ -217,7 +234,7 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
             return {};
         }
 
-        const child = Bun.spawn([provider.command[0] as string, ...run.args], {
+        const child = Bun.spawn([cliExecutable(provider), ...run.args], {
             cwd: deps.folderOf(payload.projectId) ?? homedir(),
             stdin: run.stdin === undefined ? 'ignore' : new TextEncoder().encode(run.stdin),
             stdout: 'pipe',

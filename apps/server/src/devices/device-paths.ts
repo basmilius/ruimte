@@ -1,6 +1,6 @@
 import { extname } from 'node:path';
 import type { DeviceAction } from '@ruimte/contracts';
-import { DeviceError } from './manager.ts';
+import { DeviceError } from './device-error.ts';
 
 /* What the photos app of either platform imports. */
 const MEDIA_IMAGES: readonly string[] = ['.png', '.jpg', '.jpeg', '.heic', '.gif'];
@@ -20,7 +20,6 @@ export function actionPaths(action: DeviceAction): string[] {
     }
 }
 
-/* Refuses a path whose extension is not one of `allowed`, naming what this device takes instead. */
 export function requireExtension(path: string, allowed: readonly string[], takes: string): void {
     const extension = extname(path.replace(/\/+$/, '')).toLowerCase();
     if (!allowed.includes(extension)) {

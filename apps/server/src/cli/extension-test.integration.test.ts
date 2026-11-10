@@ -8,7 +8,6 @@ const MAIN = join(import.meta.dir, '..', 'main.ts');
 const EXTENSIONS = join(import.meta.dir, '../../../../extensions');
 const root = mkdtempSync(join(process.env.RUIMTE_INTEGRATION_FIXTURE_ROOT ?? tmpdir(), 'ruimte-extension-test-'));
 
-/* `ruimte extension test` in a folder, as an author runs it. */
 async function extensionTest(folder: string, files: readonly string[] = []): Promise<{ code: number; output: string }> {
     const child = Bun.spawn([process.execPath, MAIN, 'extension', 'test', ...files], { cwd: folder, stdout: 'pipe', stderr: 'pipe' });
     const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
@@ -16,7 +15,6 @@ async function extensionTest(folder: string, files: readonly string[] = []): Pro
     return { code, output: `${stdout}${stderr}` };
 }
 
-/* A new project as `ruimte extension create` writes it, with nothing installed. */
 function scaffolded(name: string): string {
     const folder = join(root, name);
     const files = scaffoldFiles({ name: "Bas's builds", id: 'acme.builds', description: '', parts: 'both', surface: 'panel', git: false });

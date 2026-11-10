@@ -3,18 +3,19 @@ import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { Pencil, Trash, X } from 'lucide-react';
 import { memo, useState, type Dispatch, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { EdgeLine } from '@/canvas/edge-lines';
+import type { Point, Rect } from '@/canvas-model/math';
 import { edgeLook, lineMeaning } from '@/canvas/edge-look';
-import { routeDraft, SIDE_NORMAL, type EdgeRoute, type Obstacle, type Side } from '@/canvas/edge-route';
-import { lineRoutes } from '@/canvas/line-routes';
 import { markerPath, type MarkerShape } from '@/canvas/marker-path';
-import type { Point, Rect } from '@/canvas/math';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { isAgentKind, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
+import { useEndpointId } from '@/state/current-endpoint';
+import type { EdgeLine } from '@/state/edge-lines';
 import { useEndpoints } from '@/state/endpoints';
-import { endpointOfNodeIn, useEndpointId } from '@/state/keys';
+import { endpointOfNodeIn } from '@/state/keys';
 import { edgeTask, taskEdgeLabel, useTasks } from '@/state/tasks';
+import { routeDraft, SIDE_NORMAL, type EdgeRoute, type Obstacle, type Side } from '@/surface/canvas/edge-route';
+import { lineRoutes } from '@/surface/canvas/line-routes';
 
 function EdgeLabel({
     ids,

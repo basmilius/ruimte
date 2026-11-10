@@ -1,8 +1,8 @@
 import type { GitRepo, Worktree } from '@ruimte/contracts';
-import { shownChatOfNode } from '@/design/design-chat';
-import { basenameOf } from '@/shell/panels/files-tree';
-import { workFolderOf, worktreeOfPath } from '@/shell/panels/worktree-rows';
+import { basenameOf } from '@/paths/file-path';
 import { carriedByGroups, type CanvasNode } from '@/state/canvas';
+import { shownChatOfNode } from '@/state/design-chat';
+import { workFolderOf, worktreeOfPath } from '@/worktree-rules/worktree-rows';
 
 export interface GitTarget {
     /* The checkout every request of the panel acts on; null when no project is open. */
@@ -103,7 +103,7 @@ export interface GitPick {
     from: string | null;
 }
 
-export interface GitPlace {
+interface GitPlace {
     /* The worktree the panel is in, or null for the repositories of the project folder. */
     worktree: GitTarget | null;
     /* True while the selection put the panel in that worktree and no pick of a person outranks it. */

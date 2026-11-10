@@ -30,7 +30,6 @@ const READ_PATH_FIELDS: Record<string, ReadonlyArray<{ field: string; folder: bo
 
 interface Touched {
     path: string;
-    /* The path is a folder a tool looked into, not a file. */
     folder: boolean;
 }
 

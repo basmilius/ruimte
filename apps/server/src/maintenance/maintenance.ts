@@ -54,7 +54,6 @@ export class Maintenance {
         this.run();
     }
 
-    /* Cancels the next pass, aborts one that runs and waits for it to let go of its file. */
     async stop(): Promise<void> {
         this.abort.abort();
         this.cancelNext?.();

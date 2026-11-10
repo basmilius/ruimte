@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { ChatCreatePayload, ProjectChatView } from '@ruimte/contracts';
 import { newInlineChat, removeInlineChat, showInlineChat, type InlineChatHost } from './inline-chat.ts';
+import { projectOverlays } from './overlays.ts';
 import { chatViewsOf, projectLinks } from './project-file-test-helpers.ts';
 import { ProjectStore } from './project-store.ts';
 
@@ -38,7 +39,7 @@ beforeEach(async () => {
     root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-inline-')));
     folder = join(root, 'project');
     await mkdir(folder);
-    store = new ProjectStore(join(root, 'home'), projectLinks(), new FakeWatch());
+    store = new ProjectStore(join(root, 'home'), projectLinks(), projectOverlays(join(root, 'home')), new FakeWatch());
     projectId = (await store.openProject({ folder })).summary.projectId;
     started = [];
     ended = [];

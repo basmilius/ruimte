@@ -198,13 +198,6 @@
                     "description": "Adds one on save when it is missing."
                 }
             },
-            "documentation": {
-                "title": "Documentation",
-                "render": {
-                    "label": "Render documentation comments",
-                    "description": "As formatted text. The book button beside a comment switches it back."
-                }
-            },
             "codeVision": {
                 "title": "Code vision",
                 "usages": {

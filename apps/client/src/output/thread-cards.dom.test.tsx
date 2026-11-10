@@ -206,7 +206,6 @@ describe('what a chat saved to Output', () => {
         await act(async () => machine.emit('artifact.changed', { artifactId: 'shot', projectId: 'project-atlas' }));
         await until(() => cards().length === 2);
         expect(cards().map((card) => card.getAttribute('aria-label'))).toEqual(['settings.png, Saved to Output', 'settings.png, Version 2 saved to Output']);
-        // Nothing in the thread began between the two, so they stand as one list.
         expect(cards()[0]!.parentElement).toBe(cards()[1]!.parentElement);
         expect(cards()[1]!.textContent).not.toContain('KB');
 
@@ -285,7 +284,6 @@ describe('what a chat saved to Output', () => {
     });
 });
 
-/* The machine the window's project is on, which is the scope a chat of it hands the host. */
 function workspaceEndpoint(): string {
     return useProject.getState().currentEndpointId ?? '';
 }

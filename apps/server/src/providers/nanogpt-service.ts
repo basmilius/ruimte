@@ -38,7 +38,6 @@ export function nanoHttpError(status: number): Error {
     return new Error(`NanoGPT request failed (HTTP ${status}).`);
 }
 
-/* The NanoGPT subscription of this machine: its key and the models it includes. */
 export class NanoGptService extends KeyedApiService<NanoGptSettings, NanoModel> {
     private readonly callListeners = new Set<() => void>();
 

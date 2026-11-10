@@ -1,19 +1,11 @@
 import clsx from 'clsx';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { HINT_HOT } from '@/canvas/port-hints';
-import {
-    handleRail,
-    heldHandle,
-    RESIZE_CORNER,
-    resizeHandle,
-    type HandleRail,
-    type ResizeCandidate,
-    type ResizeEdge,
-    type ResizeHandle
-} from '@/canvas/resize-handles';
-import { stackingOrder } from '@/canvas/stacking';
+import type { ResizeEdge } from '@/canvas-model/derived-frame';
 import { useWorldPointer } from '@/canvas/use-world-pointer';
 import { useCanvas, useCanvasCamera } from '@/state/canvas';
+import { HINT_HOT } from '@/surface/canvas/port-hints';
+import { handleRail, heldHandle, RESIZE_CORNER, resizeHandle, type HandleRail, type ResizeCandidate, type ResizeHandle } from '@/surface/canvas/resize-handles';
+import { stackingOrder } from '@/surface/canvas/stacking';
 
 const FOLDED_EDGES: readonly ResizeEdge[] = ['e', 'w'];
 

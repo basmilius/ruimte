@@ -1,7 +1,19 @@
 import { describe, expect, test } from 'bun:test';
 import { applyEvent, type ChatState } from '@adecore/agents-react/state';
 import type { ChatInfo, ChatItem } from '@ruimte/contracts';
-import { chatCompletion, chatWaits } from '@/voice/chat-follow-up';
+import { chatTurnProgress, FollowedTurn, type VoiceChatCompletion } from '@ruimte/voice';
+import { followedState } from '@/voice/chat-follow-up';
+
+/* How the controller reads a followed turn: what this window holds of the chat, through the shared progress of `@ruimte/voice`. */
+function chatCompletion(chat: ChatState | undefined, turnId: string): VoiceChatCompletion | null {
+    if (!chat) {
+        return null;
+    }
+
+    const progress = chatTurnProgress(followedState(chat, turnId), turnId);
+
+    return progress.kind === 'settled' ? progress.completion : null;
+}
 
 function state(items: ChatItem[]): ChatState {
     const byId = Object.fromEntries(items.map((item) => [item.id, item]));
@@ -77,7 +89,11 @@ describe('voice AI Chat follow-up in this window', () => {
             { id: 'done', kind: 'note', createdAt: 2, turnId: 't', level: 'info', text: 'Noted' }
         ]);
         chat.order = ['second', 'missing', 'ask', 'done'];
-        expect(chatWaits(chat)).toEqual(['question: Which branch?', 'question: Which file?']);
-        expect(chatWaits(undefined)).toEqual([]);
+        chat.info = { activeTurnId: 't', status: 'needs-you' } as ChatInfo;
+        expect(new FollowedTurn('t').observe(followedState(chat, 't'))).toEqual({
+            kind: 'waits',
+            count: 1,
+            waits: ['question: Which branch?', 'question: Which file?']
+        });
     });
 });

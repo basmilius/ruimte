@@ -1,21 +1,22 @@
 import { messageOf } from '@adecore/ui';
+import { absoluteOf, consoleConnectionOf, consoleFolderOf } from '@ruimte/contracts';
 import type { DatabaseConnection } from '@ruimte/contracts';
 import i18next from 'i18next';
+import { useDatabasePanel } from '@/clients/database/state';
 import { databaseConnections, ensureDatabaseConnections } from '@/database/connections';
 import { databaseStorageKey } from '@/database/environment';
-import { useDatabasePanel } from '@/database/state';
-import { extensionOf } from '@/shell/panels/file-kind';
-import { absoluteOf, basenameOf, isPathBelow, relativeTo } from '@/shell/panels/files-tree';
+import { basenameOf } from '@/paths/file-path';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { moveFile } from '@/state/file-moves';
 import { fileTabOf, isDatabaseTab, isFileTab, useFiles, type ConsoleBinding, type TabState } from '@/state/files';
-import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { storedText } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
-import { windowWorkspace } from '@/state/window';
-import { TransportError, type Transport } from '@/transport/transport';
+import { extensionOf } from '@/surface/panels/file-kind';
+import { TransportError, type Transport } from '@/transport-api/transport';
+import { windowWorkspace } from '@/workspace/window';
 
 /* A name past this many characters is the start of one; a file system takes 255 bytes and the number still has to fit. */
 const BASE_NAME_LENGTH = 80;
@@ -25,36 +26,6 @@ const CREATE_ATTEMPTS = 20;
 
 /* What a path would read as a separator, or a file system on one of the platforms refuses in a name. */
 const UNSAFE_CHARACTERS = new Set(['/', '\\', ':', '*', '?', '"', '<', '>', '|']);
-
-/* Where a project keeps a person's consoles: beside its private file, which the `.gitignore` of `.ruimte` keeps out of git. */
-export function consolesFolderOf(folder: string): string {
-    return absoluteOf(folder, '.ruimte/private/consoles');
-}
-
-/*
- * A console lives in a folder of its connection, so which connection a closed console runs on is where it is:
- * no second record to keep in step, and a rename or a delete of the file takes its binding along.
- */
-export function consoleFolderOf(folder: string, connectionId: string): string {
-    return absoluteOf(consolesFolderOf(folder), encodeURIComponent(connectionId));
-}
-
-/* The connection a console file belongs to by its folder, or null for any other file. */
-export function consoleConnectionOf(folder: string, path: string): string | null {
-    const consoles = consolesFolderOf(folder);
-    if (!isPathBelow(consoles, path) || !isSqlPath(path)) {
-        return null;
-    }
-    const [segment, name, ...deeper] = relativeTo(consoles, path).split('/');
-    if (segment === undefined || segment === '' || name === undefined || name === '' || deeper.length > 0) {
-        return null;
-    }
-    try {
-        return decodeURIComponent(segment);
-    } catch {
-        return null;
-    }
-}
 
 /* The console files of a listing of the consoles folder two levels deep, by connection id, in the order listed. */
 export function consoleFilesOf(folder: string, entries: readonly { path: string; kind: string }[]): Record<string, string[]> {
@@ -68,7 +39,6 @@ export function consoleFilesOf(folder: string, entries: readonly { path: string;
     return files;
 }
 
-/* Whether a `.sql` file can run as a console in its tab. */
 export function isSqlPath(path: string): boolean {
     return extensionOf(path) === 'sql';
 }

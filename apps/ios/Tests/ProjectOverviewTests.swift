@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import XCTest
 
 @testable import Ruimte
@@ -11,18 +12,17 @@ final class ProjectOverviewTests: XCTestCase {
     private func row(_ machine: Machine, _ id: String, scratch: Bool = false, available: Bool = true)
         -> UnifiedProjectRow
     {
-        var summary: [String: JSONValue] = [
-            "projectId": .string(id), "name": .string(id.capitalized), "available": .bool(available),
-        ]
-        if scratch { summary["scratch"] = .bool(true) }
-        return UnifiedProjectRow(machine: machine, summary: .object(summary), connected: true)
+        UnifiedProjectRow(
+            machine: machine,
+            summary: ProjectRowWire.summary(id, name: id.capitalized, available: available, scratch: scratch)
+                .projectSummary,
+            connected: true)
     }
 
-    private func view(_ id: String, kind: String, nodes: [String] = []) -> JSONValue {
-        .object([
-            "id": .string(id), "kind": .string(kind),
-            "nodes": .array(nodes.map { .object(["id": .string($0), "kind": .string("chat")]) }),
-        ])
+    private func view(_ id: String, kind: String, nodes: [String] = []) -> ProjectSidebarView {
+        try! ProjectRowWire.sidebarView(
+            id, kind: kind, nodes: nodes.map { ProjectRowWire.sidebarNode($0, kind: "chat", title: $0) }
+        ).decoded(as: ProjectSidebarView.self)
     }
 
     func testActivityCountsViewsAndWhatWaitsOutsideTheDividers() {

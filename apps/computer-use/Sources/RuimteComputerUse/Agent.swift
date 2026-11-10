@@ -92,7 +92,7 @@ final class Agent {
 
     func handle(_ data: Data) async -> Data {
         if let refusal = authenticate(data) {
-            return Response.failure(refusal)
+            return Response.failure(refusal, code: "home-refused")
         }
         let request: Request
         do {

@@ -1,52 +1,16 @@
-import type { AgentLineageStore } from '@adecore/agents/coordination';
-import type { ChatManager } from '../chat/chat-manager.ts';
-import type { OutboxStore } from '../outbox/outbox.ts';
-import type { SessionManager } from '../sessions/manager.ts';
-import type { AgentStateHost } from '../tools/host.ts';
-
-export interface AgentStateSources {
-    outbox: Pick<OutboxStore, 'list'>;
-    lineage: Pick<AgentLineageStore, 'endedAt' | 'startedBy'>;
-    chats: Pick<ChatManager, 'get' | 'hasStored' | 'cancel' | 'lastTurn'>;
-    sessions: Pick<SessionManager, 'get'>;
-}
+import type { AgentStatus } from '@ruimte/contracts';
 
 /*
- * Reads an agent node's state off what the daemon already keeps for it, so an operation has no store
- * of its own: the outbox owes its start, the chat or the terminal says what it does, and the lineage
- * says whether ending the node that opened it ended it too.
+ * What runs in an agent node as far as the daemon knows it: a start still owed in the outbox, the
+ * status its hooks or its chat report, ended along with the node that opened it, a chat at rest
+ * whose last turn was stopped before it finished, or nothing at all.
  */
-export function agentStates(sources: AgentStateSources): AgentStateHost {
-    return {
-        stateOf: async (nodeId) => {
-            if (sources.outbox.list().some((entry) => entry.kind === 'start-agent' && entry.target === nodeId)) {
-                return 'owed';
-            }
-            if (sources.lineage.endedAt(nodeId) !== null) {
-                return 'ended';
-            }
-            const chat = sources.chats.get(nodeId);
-            const session = chat === undefined ? sources.sessions.get(nodeId) : undefined;
-            if (session) {
-                // A CLI whose hooks have not spoken yet is one that just started.
-                return session.exited ? 'exited' : (session.agent?.status ?? 'running');
-            }
-            // A chat nobody has loaded is idle: its thread is on disk and a turn opens on it.
-            const status = chat?.info.status ?? ((await sources.chats.hasStored(nodeId)) ? 'idle' : 'none');
-            // A stopped turn leaves a chat as idle as a finished one; only the turn itself tells them apart.
-            if (status === 'idle' && (await sources.chats.lastTurn(nodeId))?.state === 'aborted') {
-                return 'stopped';
-            }
-            return status;
-        },
-        startedBy: (nodeId) => sources.lineage.startedBy(nodeId),
-        cancelTurn: (nodeId) => {
-            const status = sources.chats.get(nodeId)?.info.status;
-            if (status !== 'running' && status !== 'needs-you') {
-                return false;
-            }
-            sources.chats.cancel(nodeId);
-            return true;
-        }
-    };
+export type AgentState = 'owed' | 'ended' | 'stopped' | 'none' | AgentStatus;
+
+export interface AgentStateHost {
+    stateOf(nodeId: string): Promise<AgentState>;
+    /* The node that started this one as an agent through agent or team; null for any other node. */
+    startedBy(nodeId: string): string | null;
+    /* Stops the turn a chat node is working on; false when it is no chat or has no turn going. */
+    cancelTurn(nodeId: string): boolean;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ConnectionState, TransportStatus } from '../transport/transport';
+import type { ConnectionState, TransportStatus } from '../transport-api/transport';
 import { watchLastSeen, type LastSeenSource } from './last-seen';
 
 /* A pool in memory: which machines have a link, and in which state. */

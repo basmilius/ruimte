@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Diagnostic, Position } from '@adecore/lsp';
 import type { LanguageServerKind, LanguageRequestResult } from '@ruimte/contracts';
-import { MachineHome } from '../fs/machine-home.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import { MachineHome } from '../disk/machine-home.ts';
+import type { SessionEvent } from '../wire.ts';
 import { LanguageHost } from './host.ts';
 import { runCommand, spawnLanguageProcess, type LanguageExit, type LanguageProcessSpec, type LanguageRuntime } from './runtime.ts';
 import { eventually as settles, positionOf } from './test-integration.ts';
@@ -46,7 +46,6 @@ const FILES: Record<string, string> = {
     ].join('\n')
 };
 
-/* Files for the servers of the other languages, in the project that has Vue. */
 const OTHER_FILES: Record<string, string> = {
     'style.css': 'a { colr: red; }\n.b { color: #fffff; }\n',
     'page.html': '<!DOCTYPE html>\n<html>\n<body>\n<div class="x"><span></div>\n</body>\n</html>\n',
@@ -72,7 +71,6 @@ const PLAIN_FILES: Record<string, string> = {
     'src/a.ts': FILES['src/a.ts']
 };
 
-/* The Vue project's own script, which imports a component. */
 const SCRIPT_FILES: Record<string, string> = {
     'src/use-counter.ts': "import Counter from '../Counter.vue';\n\nexport const component = Counter;\nexport const wrong: string = 1;\n"
 };
@@ -111,7 +109,6 @@ async function waitReady(kind: LanguageServerKind, projectId = 'p1'): Promise<vo
     );
 }
 
-/* The folder of the install a kind runs, as its `current.json` names it. */
 async function installFolder(kind: LanguageServerKind): Promise<string> {
     const { current } = JSON.parse(await readFile(join(base, 'home', 'language-servers', kind, 'current.json'), 'utf8')) as { current: string };
     return join(base, 'home', 'language-servers', kind, 'versions', current);

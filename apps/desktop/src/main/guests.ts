@@ -1,20 +1,20 @@
-import { createGestureGate, type AppIpc } from '@adecore/shell';
+import { createGestureGate, isExternalLink } from '@adecore/shell';
+import { electron } from '../electron';
 import { editFrameOf, runGuestEdit } from '../guest-edit';
 import { contextMenuPayload, editableMenuTemplate, guestActionAllowed, type BrowserContextAction, type GuestKind } from '../guest-menu';
 import { isTunnelSession } from '../port-tunnel/tunnel-sessions';
-import { BROWSER_PARTITION, isExternalLink, PREVIEW_PARTITION } from '../web-guards';
-import { electron } from './electron';
+import { BROWSER_PARTITION, PREVIEW_PARTITION } from '../web-guards';
+import type { DesktopIpc } from './ipc';
 
 const { BrowserWindow, Menu, session, shell, webContents } = electron;
 
 const LOCAL_SCHEMES = ['file:', 'data:', 'blob:', 'about:'];
 
-export interface GuestsOptions {
-    /* The app window a guest page sits in, or null for a guest of no window of ours. */
+interface GuestsOptions {
     windowOf(contents: Electron.WebContents): Electron.BrowserWindow | null;
 }
 
-export interface Guests {
+interface Guests {
     contextMenu(contents: Electron.WebContents, params: Electron.ContextMenuParams, guest: GuestKind): void;
 }
 
@@ -63,13 +63,11 @@ export function routePreviewLinks(contents: Electron.WebContents): void {
     });
 }
 
-/* The pages of browser and preview nodes: their context menu, their inspector and a picture of them. */
-export function installGuests(ipc: AppIpc, options: GuestsOptions): Guests {
+export function installGuests(ipc: DesktopIpc, options: GuestsOptions): Guests {
     const devtoolsWindows = new Map<number, Electron.BrowserWindow>();
     // The frame each guest's last right-click landed in, so copy and select all act where the person pointed.
     const menuFrames = new WeakMap<Electron.WebContents, Electron.WebFrameMain>();
 
-    /* Opens the inspector for a guest page, on the element under `at` when a point comes with it. */
     const devTools = (id: number, at?: { x: number; y: number }): void => {
         const guest = webContents.fromId(id);
         if (!guest) {

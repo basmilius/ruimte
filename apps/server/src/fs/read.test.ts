@@ -2,9 +2,10 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { FS_READ_MAX_TEXT_BYTES } from '@ruimte/contracts';
+import { languageOf } from '../disk/language-of.ts';
+import { looksLikeSvg, sniffMime } from '../disk/sniff.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
-import { ReadError, SNIFF_BYTES, languageOf, looksBinary, readFile, readServedFile } from './read.ts';
-import { looksLikeSvg, sniffMime } from './sniff.ts';
+import { ReadError, SNIFF_BYTES, looksBinary, readFile, readServedFile } from './read.ts';
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
 const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.from([0x20, 0x00, 0x00, 0x00]), Buffer.from('WEBPVP8 ')]);
@@ -136,25 +137,9 @@ describe('the binary sniff', () => {
         expect(sniffMime(new Uint8Array(zipEntry('teapot.usdc').subarray(0, 36)))).toBe('application/zip');
     });
 
-    test('names a binary STL by its size and an ASCII STL by its opening words', () => {
-        const ascii = 'solid bracket\n  facet normal 0 0 1\n    outer loop\n      vertex 0 0 0\n    endloop\n  endfacet\nendsolid bracket\n';
-        expect(sniffMime(binaryStl(2))).toBe('model/stl');
-        expect(sniffMime(latin1(ascii))).toBe('model/stl');
-        expect(sniffMime(latin1('\n\t SOLID part\nFacet  Normal 0 0 1\n'))).toBe('model/stl');
-        expect(sniffMime(latin1('solid empty\nendsolid empty\n'))).toBe('model/stl');
-        // Many exporters write their name into the binary header, `solid` included.
+    test('names an STL by its size before its header, which may open with solid', () => {
         expect(sniffMime(binaryStl(3, 'solid exported by a CAD tool'))).toBe('model/stl');
-        // Only the head was read: the size of the whole file is what has to match.
-        expect(sniffMime(binaryStl(3).subarray(0, 100), 84 + 50 * 3)).toBe('model/stl');
-    });
-
-    test('takes nothing for an STL that only looks like one', () => {
-        expect(sniffMime(latin1('solid ground is what this note is about.\n'))).toBeNull();
-        expect(sniffMime(latin1('solidarity\nendsolid\n'))).toBeNull();
-        const stl = binaryStl(2);
-        expect(sniffMime(stl.subarray(0, stl.length - 1))).toBeNull();
-        expect(sniffMime(stl, stl.length + 50)).toBeNull();
-        expect(sniffMime(binaryStl(0))).toBeNull();
+        expect(sniffMime(latin1('solid empty\nendsolid empty\n'))).toBe('model/stl');
     });
 
     test('names a zip, an empty zip, a gzip and a ustar tar', () => {

@@ -1,5 +1,13 @@
 # Chats, forks and plans
 
+## The core and the manager
+
+- `ChatManager` (`chat-manager.ts`) holds a `ChatCore` from `@adecore/agents/chat` as `core` and gives it its hooks; it never extends it. The wiring hands out the core as `agents.chats` and the manager as `agents.chatManager`. Code that reads or drives a chat takes the core; only what Ruimte adds (forks, `findAttachment` with the agent images, the notes of a prompt) goes through the manager. The core writes the task rows (`taskRows` hook, `core.syncTaskRow`) and keeps the cleared ones, and a brief for one prompt travels with the wake or the send (`brief`), never through the manager.
+- Plans and agent images are sidecars of the core (`ChatManager` registers them): the core lists, removes and forks them with the bookmarks and visuals, and a fork copies them through `core.copySidecars`.
+- The UI fence name is `RUIMTE_UI_FENCE`, handed to the core once in `ChatManager`; notes read it back as `core.uiFence`, and tool text reads the constant.
+- What the daemon answers to the chat (depth, mode ceiling, linked context, the project a chat is in) is one required `ChatFacts` object built in `wiring/agents.ts`. A test builds a manager with `testChatManager` (`chat-manager-test-helpers.ts`), whose `quietFacts` answer nothing.
+- A change to a chat's start, its UI access or the deletion of its record is a hook of the core (`opening`, `admitUi`, `deleted`), never a method the manager overrides.
+
 ## Forks
 
 - A fork (`chat.fork`, `fork.ts`) copies the CLI's conversation at the click: a Claude transcript cut at `native.lastUuid` (format checked against Claude Code 2.1.273, refused otherwise), or Codex `thread/fork` at `native.turnId`.
@@ -34,8 +42,8 @@ Each of these goes with the chat or a clear, and a fork copies only what its cop
 
 ## Moving a chat out of Chats
 
-- A chat leaves Chats only through `chat.move` (`apps/server/src/projects/move-chat.ts`). It refuses what the Chats write would end or orphan (`projects/move-refusal.ts`), decided before it makes anything.
-- It moves the folder only once the CLI is gone, writes the target before Chats, so a project places the chat at every moment, and rehomes a fork's lineage between the two writes. Each step has an undo. A running move is recorded in `$RUIMTE_HOME/chat-moves` and finished at the next start before the outbox runs (`projects/move-repair.ts`).
+- A chat leaves Chats only through `chat.move` (`apps/server/src/chat/move-chat.ts`). It refuses what the Chats write would end or orphan (`chat/move-refusal.ts`), decided before it makes anything.
+- It moves the folder only once the CLI is gone, writes the target before Chats, so a project places the chat at every moment, and rehomes a fork's lineage between the two writes. Each step has an undo. A running move is recorded in `$RUIMTE_HOME/chat-moves` and finished at the next start before the outbox runs (`chat/move-repair.ts`).
 - An agent in Chats only proposes that its chat become a project (`project_propose`, `projects/project-proposals.ts`), refused outside Chats. Its card holds the chat at `needs-you`, which the move ignores for that card alone (`wiring/chat-move.ts`), releases before it makes anything, and restores if it fails. Any other wait refuses the move. A decline wakes the chat where it is; a move that ran through while the card stood is the confirm, and wakes the chat in the new project once the note of the move is in it (`src/outbox`).
 
 ## Product rules

@@ -1,0 +1,144 @@
+import type { ProjectPanels } from '@ruimte/contracts';
+import { faviconsOfProject, useBrowser } from '@/clients/browser/registry';
+import { useDatabasePanel } from '@/clients/database/state';
+import { shownViewIdsIn } from '@/layout/split';
+import { currentEndpointId } from '@/state/current-endpoint';
+import { useDocument } from '@/state/document';
+import { isSessionTab, useFiles, type Tab } from '@/state/files';
+import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE, useGit } from '@/state/git';
+import { parsePanels, serializePanels, type PanelsState } from '@/state/panel-state';
+import { PANEL_DEFAULTS, useUi } from '@/state/ui';
+
+function defaults(): PanelsState {
+    return {
+        ...PANEL_DEFAULTS,
+        tabs: [],
+        active: null,
+        expandedDirs: [],
+        gitScope: DEFAULT_SCOPE,
+        gitCollapsedDirs: [],
+        gitLogHeight: DEFAULT_LOG_HEIGHT,
+        gitHiddenRepos: [],
+        sidebarExpanded: null,
+        favicons: {}
+    };
+}
+
+/* The loose view in front: the one with the focus, else the one a cell shows, else the first opened. */
+function activeLoose(tabs: readonly Tab[]): string | null {
+    const { layout, activeViewId } = useDocument.getState();
+    const keys = new Set(tabs.map((tab) => tab.key));
+    if (activeViewId !== null && keys.has(activeViewId)) {
+        return activeViewId;
+    }
+    return (layout === null ? [] : shownViewIdsIn(layout)).find((id) => keys.has(id)) ?? tabs[0]?.key ?? null;
+}
+
+function read(): PanelsState {
+    const ui = useUi.getState();
+    const files = useFiles.getState();
+    return {
+        panel: ui.panel,
+        panelWidth: ui.panelWidth,
+        planAnchor: ui.planAnchor,
+        planWidth: ui.planWidth,
+        tabs: files.tabs,
+        active: activeLoose(files.tabs),
+        expandedDirs: files.expandedDirs,
+        gitScope: useGit.getState().scope,
+        gitCollapsedDirs: useGit.getState().collapsedDirs,
+        gitLogHeight: useGit.getState().logHeight,
+        gitHiddenRepos: useGit.getState().hiddenRepos,
+        sidebarExpanded: ui.sidebarExpanded,
+        favicons: faviconsOfProject(useBrowser.getState().byKey, currentEndpointId())
+    };
+}
+
+/*
+ * The panels on one side, the project's machine-local file on the other. It puts a project's panels
+ * on screen the moment it opens and reports every change made after that, so the client can write
+ * it. What it applies itself is never reported, since opening a project would otherwise save it back.
+ */
+export class PanelsPort {
+    private readonly listeners = new Set<() => void>();
+    private readonly unsubscribe: Array<() => void>;
+    private applying = false;
+    /* The panels as the listeners last saw them; the stores also carry state that is none of their
+       business, so a change is what the local file would hold differing, not any set at all. */
+    private snapshot: string;
+
+    constructor() {
+        const publish = (): void => this.publish();
+        this.unsubscribe = [useUi.subscribe(publish), useFiles.subscribe(publish), useGit.subscribe(publish), useBrowser.subscribe(publish)];
+        this.snapshot = this.stringify();
+    }
+
+    load(projectId: string | null, stored: ProjectPanels | undefined): void {
+        const state = parsePanels(stored, defaults());
+        this.applying = true;
+        try {
+            useUi.getState().setPanels(state);
+            useFiles.getState().load(projectId, { tabs: state.tabs, expandedDirs: state.expandedDirs });
+            useGit.getState().setScope(state.gitScope);
+            useGit.getState().setCollapsedDirs(state.gitCollapsedDirs);
+            useGit.getState().setLogHeight(state.gitLogHeight);
+            useGit.getState().setHiddenRepos(state.gitHiddenRepos);
+            useUi.getState().setSidebarExpanded(state.sidebarExpanded);
+            useBrowser.getState().loadFavicons(currentEndpointId(), state.favicons);
+            useDatabasePanel.getState().reset();
+        } finally {
+            this.applying = false;
+            this.snapshot = this.stringify();
+        }
+    }
+
+    /* The keys of the tabs that live in this session only, which the local file leaves out of the layout. */
+    sessionIds(): ReadonlySet<string> {
+        return new Set(
+            useFiles
+                .getState()
+                .tabs.filter(isSessionTab)
+                .map((tab) => tab.key)
+        );
+    }
+
+    export(): ProjectPanels {
+        return serializePanels(read());
+    }
+
+    subscribe(listener: () => void): () => void {
+        this.listeners.add(listener);
+        return () => {
+            this.listeners.delete(listener);
+        };
+    }
+
+    dispose(): void {
+        for (const off of this.unsubscribe) {
+            off();
+        }
+        this.unsubscribe.length = 0;
+        this.listeners.clear();
+    }
+
+    private publish(): void {
+        if (this.applying) {
+            return;
+        }
+        const next = this.stringify();
+        if (next === this.snapshot) {
+            return;
+        }
+        this.snapshot = next;
+        for (const listener of this.listeners) {
+            listener();
+        }
+    }
+
+    private stringify(): string {
+        return JSON.stringify(this.export());
+    }
+}
+
+/* The panels are the viewer's, not a daemon's, so every connection writes the same port. */
+export const panelsPort = new PanelsPort();

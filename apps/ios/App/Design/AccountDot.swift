@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// The dot an account of a CLI wears, in its node accent. An account without one takes the app's accent.

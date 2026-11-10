@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import type { BrowserState } from '../clients/browser/registry';
 import { pageStateOf } from './page-hold';
-import type { BrowserState } from './registry';
 
 function row(patch: Partial<BrowserState> = {}): BrowserState {
     return {

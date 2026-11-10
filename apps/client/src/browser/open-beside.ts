@@ -1,13 +1,13 @@
-import { createNodeAction, createViewAction } from '@/actions/client-actions';
-import { browserRegistry } from '@/browser/registry';
+import { createNodeAction, createViewAction } from '@/action-port/person-actions';
+import { browserRegistry } from '@/clients/browser/registry';
 import { canvasOfNode, type CanvasNode } from '@/state/canvas';
-import { currentEndpointId, splitKey } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
+import { splitKey } from '@/state/keys';
 import { defaultNodeSize } from '@/state/node-size';
 
 // The room between a node and the browser opened beside it, the same step a duplicate takes.
 const BESIDE_PX = 32;
 
-/* The center of a browser opened beside a node: to its right, top edges aligned. */
 export function browserBeside(source: Pick<CanvasNode, 'x' | 'y' | 'w'>): { x: number; y: number } {
     const size = defaultNodeSize('browser');
     return { x: source.x + source.w + BESIDE_PX + size.w / 2, y: source.y + size.h / 2 };

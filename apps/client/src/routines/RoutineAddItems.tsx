@@ -1,8 +1,8 @@
 import { Icon, Menu } from '@adecore/ui';
 import { CalendarClock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { createNodeAction } from '@/actions/client-actions';
-import type { Point } from '@/canvas/math';
+import { createNodeAction } from '@/action-port/person-actions';
+import type { Point } from '@/canvas-model/math';
 import { openRoutineForm } from '@/routines/form-state';
 import { useRoutineList } from '@/routines/routine-list';
 import { useProject } from '@/state/project';

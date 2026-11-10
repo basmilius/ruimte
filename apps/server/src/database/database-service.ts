@@ -1,18 +1,17 @@
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { createDatabaseHost, helperPath, spawnHelper, type DatabaseHost, type HelperProcess } from '@adecore/database/host';
+import { createDatabaseHost, helperFileName, helperPath, spawnHelper, type DatabaseHost, type HelperProcess } from '@adecore/database/host';
 import type { ConnectionConfig, DatabaseResponse } from '@adecore/database/protocol';
-import type { MachineHome } from '../fs/machine-home.ts';
+import { bestEffort } from '../best-effort.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
 import { reportHelperExit, StderrTail } from '../telemetry/reporter.ts';
-
-const HELPER_FILE = process.platform === 'win32' ? 'adecore-database.exe' : 'adecore-database';
 
 /* The database helper this daemon starts: the override, the one packaged beside the daemon, or what ADE CORE finds (its own override, the installed package's, a linked checkout's build). Null without one. */
 export function databaseHelperPath(): string | null {
     if (process.env.RUIMTE_DATABASE_HELPER) {
         return process.env.RUIMTE_DATABASE_HELPER;
     }
-    const packaged = join(dirname(process.execPath), 'native', HELPER_FILE);
+    const packaged = join(dirname(process.execPath), 'native', helperFileName());
     if (existsSync(packaged)) {
         return packaged;
     }
@@ -52,7 +51,6 @@ function startHelper(): HelperProcess {
 
 interface DatabaseServiceOptions {
     machineHome: Pick<MachineHome, 'refuse'>;
-    /* Starts the helper; the real one when left out. */
     start?: () => HelperProcess;
 }
 
@@ -88,7 +86,7 @@ export class DatabaseService {
 
     release(owner: string): Promise<void> {
         this.localOwners.delete(owner);
-        return this.host.release(owner).catch(() => undefined);
+        return bestEffort('host.release', this.host.release(owner));
     }
 
     dispose(): Promise<void> {

@@ -1,5 +1,6 @@
 import { dirname } from 'node:path';
-import { sha256, type ArtifactFs, type FileDigest } from './artifact-fs.ts';
+import { sha256, type FileDigest } from '../disk/hash.ts';
+import { type ArtifactFs } from './artifact-fs.ts';
 
 function coded(code: string): Error {
     return Object.assign(new Error(code), { code });

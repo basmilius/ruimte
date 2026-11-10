@@ -7,11 +7,12 @@ import { ACTION_DEFINITIONS } from '@ruimte/actions';
 import type { ChatTurnItem, ProjectContent, ServerFrame, VoiceStartPayload } from '@ruimte/contracts';
 import type { LiveEvent } from '@ruimte/voice';
 import { voiceActionCall } from '../actions/context.ts';
-import { serverActions } from '../actions/server-actions.ts';
-import type { ClientConnection } from '../dispatcher.ts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
+import type { ClientConnection } from '../wire.ts';
 import { FakeClock, FakeLive, settle, type FakeAttach } from './voice-fakes.ts';
 import { VoiceSessions } from './voice-sessions.ts';
 
@@ -59,7 +60,7 @@ beforeEach(async () => {
     bare = join(root, 'bare');
     await mkdir(folder, { recursive: true });
     await mkdir(bare, { recursive: true });
-    store = new ProjectStore(home, projectLinks());
+    store = new ProjectStore(home, projectLinks(), projectOverlays(home));
     for (const [path, name, withCanvas] of [
         [folder, 'Shop', true],
         [bare, 'Bare', false]
@@ -74,7 +75,6 @@ beforeEach(async () => {
         }
     }
     daemon = await bootTestDaemon({ home, store, clock: new ManualClock(), installed: ['claude', 'codex'] });
-    daemon.worker.start();
     voiceClock = new FakeClock();
     live = new FakeLive(voiceClock);
 });

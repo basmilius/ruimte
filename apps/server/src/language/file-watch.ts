@@ -11,7 +11,6 @@ export interface FileChange {
     type: 1 | 2 | 3;
 }
 
-/* What is at a path: a file, a directory, or nothing. */
 export type StatPath = (path: string) => Promise<'file' | 'directory' | null>;
 
 async function statPath(path: string): Promise<'file' | 'directory' | null> {

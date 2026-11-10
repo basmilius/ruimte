@@ -75,7 +75,7 @@ struct TypedWireTests {
             "id": .string("machine"), "label": .string("Mac"), "platform": .string("darwin"),
             "version": .string("1"), "reachability": .string("lan"), "authenticated": .bool(true),
             "textModel": .object(["provider": .string("future-cli"), "model": .null]),
-        ]).decoded(as: PairResultEndpoint.self)
+        ]).decoded(as: EndpointInfo.self)
         #expect(endpoint.id == "machine")
         #expect(endpoint.textModel != .missing)
     }

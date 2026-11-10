@@ -2,13 +2,14 @@ import { messageOf } from '@adecore/ui';
 import type { VoicePreferences } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useEffect, useState } from 'react';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useEndpoints } from '@/state/endpoints';
-import { currentEndpointId } from '@/state/keys';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { useWindow, workspaceOf } from '@/state/window';
 import { machineTransport, pool } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { machineAnswers, useMachineAnswers } from '@/transport/features';
+import { useWindow, workspaceOf } from '@/workspace/window';
 
 /*
  * How Voice talks is the machine's (`voice.preferences`), so the desktop and a phone that start Voice there
@@ -61,13 +62,14 @@ export function useMachineVoicePreferences(endpointId: string): MachineVoicePref
         let current = true;
         const link = machineTransport(endpointId);
         const off = link.on('voice.preferences', ({ preferences }) => setStored({ endpointId, preferences }));
-        link.request('voice.preferences', {})
-            .then(({ preferences }) => {
+        void fireAndForget(
+            'voice.preferences',
+            link.request('voice.preferences', {}).then(({ preferences }) => {
                 if (current) {
                     setStored({ endpointId, preferences });
                 }
             })
-            .catch(() => undefined);
+        );
         return () => {
             current = false;
             off();

@@ -1,4 +1,4 @@
-import type { ChatProvider } from '@adecore/agents/providers';
+import { cliExecutable, type ChatProvider } from '@adecore/agents/providers';
 import type { AgentKind } from '@ruimte/contracts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import { GitError, streamWithTimeout, type GitResult } from './run.ts';
@@ -62,7 +62,7 @@ export async function runOneShot(provider: ChatProvider, top: string, prompt: st
     if (run === null) {
         throw new GitError('git-failed', `${provider.name} cannot answer a single prompt.`);
     }
-    return await streamWithTimeout(provider.command[0]!, run.args, (await options.cwdFor?.(top)) ?? top, timeoutMs, {
+    return await streamWithTimeout(cliExecutable(provider), run.args, (await options.cwdFor?.(top)) ?? top, timeoutMs, {
         onSpawn: options.onSpawn,
         stdin: run.stdin
     });

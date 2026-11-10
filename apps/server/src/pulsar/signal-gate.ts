@@ -1,9 +1,7 @@
+import { SIGNAL_OWNER_TTL_MS } from '@ruimte/contracts';
 import { signalMessage, type SignalOfferAccess, type SignalEnvelope } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import type { StatementVerdict } from './statement.ts';
-
-// How long a connection id stays tied to the key that offered it; well past the attempt timeout in `DirectPeers`.
-const OWNER_TTL_MS = 60_000;
 
 // What became of one signal: passed on, answered with a refusal, or dropped for a signature that does not hold.
 type GateOutcome = 'passed' | 'refused' | 'dropped';
@@ -11,7 +9,6 @@ type GateOutcome = 'passed' | 'refused' | 'dropped';
 interface SignalGateOptions {
     /* The daemon's own key from `endpoint.json`, which every signal for this machine is signed to. */
     publicKey: string;
-    /* Whether a client key is one this machine already let in. */
     isPaired(publicKey: string): Promise<boolean>;
     /* What an offer from a key the machine does not know gets for the statement it carries (`StatementGate`); without it no statement is taken. */
     admitStatement?(publicKey: string, access: SignalOfferAccess): Promise<StatementVerdict>;
@@ -72,7 +69,7 @@ export class SignalGate {
             return 'refused';
         }
         if (!owner && signal.kind === 'offer') {
-            this.owners.set(envelope.connectionId, { publicKey: from, expiresAt: now + OWNER_TTL_MS });
+            this.owners.set(envelope.connectionId, { publicKey: from, expiresAt: now + SIGNAL_OWNER_TTL_MS });
         }
         this.options.receive(envelope, reply);
         return 'passed';

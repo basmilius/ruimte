@@ -7,8 +7,8 @@ import { isNotFound } from '@adecore/utils/errors';
 import { writeAtomic } from '@adecore/utils/fs';
 import { isRecord } from '@adecore/utils/record';
 import type { AgentKind } from '@ruimte/contracts';
+import { realOrSelf } from '../disk/real-path.ts';
 import { errorText } from '../error-text.ts';
-import { realOrSelf } from '../fs/real-path.ts';
 import { HOOK_EVENTS } from './hooks.ts';
 
 // The one string the installer recognizes its own hook by, across versions of the command.
@@ -220,12 +220,10 @@ function mergeNamedHook(config: unknown, kind: AgentKind): SettingsMerge {
     return { config: { ...config, [NAMED_HOOK]: wanted }, changed: true, refused: false };
 }
 
-/* Whether a named hook holds Ruimte's command under any of its events. */
 export function isOursNamed(value: unknown): boolean {
     return isRecord(value) && Object.values(value).some((entries) => Array.isArray(entries) && entries.some(isOurs));
 }
 
-/* Whether a hooks file of a CLI holds a hook of Ruimte's anywhere it would run. */
 export function holdsOurHook(config: unknown, kind: AgentKind): boolean {
     if (!isRecord(config)) {
         return false;

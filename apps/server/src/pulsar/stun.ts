@@ -136,7 +136,6 @@ export function attributeOf(message: StunMessage, type: number): Uint8Array | nu
     return message.attributes.find((attribute) => attribute.type === type)?.value ?? null;
 }
 
-/* The error code of an error response, 0 when it carries none. */
 export function errorCodeOf(message: StunMessage): number {
     const value = attributeOf(message, STUN_ATTRIBUTE.errorCode);
     if (value === null || value.length < 4) {

@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { homeFolder } from '@ruimte/service/home';
 import { pngOf } from './devices/device-test-helpers.ts';
-import { DEVICE_CAPTURES_FOLDER, keepCapture, pngSize, sweepDeviceCaptures, sweepScreenshots, writeCapture } from './shots.ts';
+import { keepCapture, pngSize, sweepDeviceCaptures, sweepScreenshots, writeCapture } from './shots.ts';
 import { tempHomes } from './temp-home-test-helpers.ts';
 
 describe('pngSize', () => {
@@ -40,7 +41,7 @@ describe('captures', () => {
         const passing = await writeCapture(home, 'phone', pngOf(1, 1), 1_000);
         const recent = await writeCapture(home, 'phone', pngOf(1, 1), 1_000 + WEEK_MS);
         const placed = await keepCapture(home, 'phone', pngOf(1, 1), 1_000);
-        const foreign = join(home, DEVICE_CAPTURES_FOLDER, 'notes.png');
+        const foreign = join(homeFolder(home, 'deviceCaptures'), 'notes.png');
         await writeFile(foreign, '');
         const reclaimed = await sweepDeviceCaptures(home, 1_000 + WEEK_MS + 1);
 

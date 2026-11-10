@@ -1,11 +1,11 @@
 import { Separator, DockShell, ZoomControls } from '@adecore/ui';
 import { useTranslation } from 'react-i18next';
-import { fitAction } from '@/actions/client-actions';
+import { fitAction } from '@/action-port/person-actions';
 import { copyDiagram, exportDiagram } from '@/diagram/diagram-actions';
 import { DockExportHistory } from '@/drawing/DockExportHistory';
-import { useKeyOf } from '@/shell/shortcut-overrides';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
 import { useSettings } from '@/state/settings';
+import { useKeyOf } from '@/surface/shortcut-overrides';
 
 /* Shaped like a drawing's dock. The JSON file's menu stays in the bar above the view, since it is about the file. */
 export function DiagramDock() {

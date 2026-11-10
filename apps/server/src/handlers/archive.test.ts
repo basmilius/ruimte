@@ -5,12 +5,12 @@ import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
 import { readArchiveEntry } from '../archive/archive.ts';
 import { buildZip } from '../archive/test-archives.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { MachineHome } from '../fs/machine-home.ts';
 import { readServedFile } from '../fs/read.ts';
-import { registerArchiveHandlers } from './archive.ts';
-import { registerBytesHandlers } from './bytes.ts';
-import { askOnce } from './test-helpers.ts';
+import { archiveArea } from './archive.ts';
+import { bytesArea } from './bytes.ts';
+import { askOnce, NO_LANGUAGE_SERVERS } from './test-helpers.ts';
 
 const ZIP = buildZip([{ name: 'docs/readme.md', data: '# Read me' }]);
 
@@ -31,12 +31,15 @@ beforeEach(async () => {
     await writeFile(join(project, 'site.zip'), ZIP);
     dispatcher = new Dispatcher();
     const machineHome = new MachineHome(home);
-    registerArchiveHandlers(dispatcher, async () => ({ folders: [project], worktreesOf: async () => [], worktreesRoot: join(home, 'worktrees') }), machineHome);
-    registerBytesHandlers(
-        dispatcher,
-        { attachment: async () => null, projectIcon: async () => null, file: readServedFile, archiveEntry: readArchiveEntry },
+    archiveArea({
+        boundaryOf: async () => ({ folders: [project], worktreesOf: async () => [], worktreesRoot: join(home, 'worktrees') }),
+        machineHome,
+        language: NO_LANGUAGE_SERVERS
+    }).handlers?.(dispatcher);
+    bytesArea({
+        sources: { attachment: async () => null, projectIcon: async () => null, file: readServedFile, archiveEntry: readArchiveEntry },
         machineHome
-    );
+    }).handlers?.(dispatcher);
 });
 
 afterEach(async () => {

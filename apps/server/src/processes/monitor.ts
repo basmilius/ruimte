@@ -16,7 +16,7 @@ import type {
 } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionSink } from '../wire.ts';
 import {
     identityOf,
     machineRate,
@@ -48,7 +48,6 @@ interface ProcessMonitorOptions {
     chats(): { id: string; pid: number; provider: AgentKind; status: AgentStatus; updatedAt: number }[];
     /* What this daemon's sessions carry as `RUIMTE_CONTEXT_URL`, so a stray of another daemon on the machine is not ours. */
     contextUrl(): string | null;
-    /* The project that places a terminal or chat node; null for a node no known project places. */
     projectOf?(nodeId: string): string | null;
     reportsEnd(kind: AgentKind): boolean;
     daemonPid?: number;

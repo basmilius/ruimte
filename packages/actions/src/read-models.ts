@@ -28,7 +28,6 @@ export function pendingRequestsOf(items: readonly ChatItem[]) {
     };
 }
 
-/* The output of `worktree.diff`: the files changed against the branch the worktree came from. */
 export function worktreeDiffOutput(branch: string, worktree: Pick<Worktree, 'from'>, diff: Pick<GitDiffResult, 'files'>) {
     return {
         branch,

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
+import { loginDialog } from '@/chat/dialog-state';
 import { useUi } from '@/state/ui';
 import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
@@ -30,7 +31,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-    act(() => useUi.getState().setLogin(null));
+    act(() => loginDialog.set(null));
     await page.unmount();
     workspace.close();
 });
@@ -40,7 +41,7 @@ function dialogText(): string {
 }
 
 async function openLogin(kind: 'claude' | 'grok', name: string, sentence: string): Promise<string> {
-    act(() => useUi.getState().setLogin({ endpointId: 'fake-machine', kind, accountId: kind, name }));
+    act(() => loginDialog.set({ endpointId: 'fake-machine', kind, accountId: kind, name }));
     await until(() => dialogText().includes(sentence));
     return dialogText();
 }

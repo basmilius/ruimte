@@ -1,6 +1,18 @@
 import type { GitActionPayload, GitActionPhase, GitActionResult } from '@ruimte/contracts';
 import { conflictedFiles } from './conflict.ts';
-import { LEAVE_NOTHING_OUT, READ_ONLY_GIT, git, leavingOut, runGit, streamCommand, toplevel, verifyRev, GitError, type LeftOut } from './run.ts';
+import {
+    LEAVE_NOTHING_OUT,
+    READ_ONLY_GIT,
+    git,
+    leavingOut,
+    runGit,
+    streamCommand,
+    toplevel,
+    verifyRev,
+    GitError,
+    type GitErrorCode,
+    type LeftOut
+} from './run.ts';
 import { stashStamp } from './stage.ts';
 
 // A push over a slow link is allowed to take this long before the daemon gives up on it.
@@ -32,7 +44,6 @@ export class Job {
 interface StepOptions {
     /* The executable to run; only the pull request step is not git itself. */
     command?: string;
-    /* Milliseconds a step that talks to a remote may take before the daemon ends it. */
     timeout?: number;
 }
 
@@ -130,9 +141,9 @@ export class GitActions {
             }
         };
 
-        const fail = (text: string, command: string, args: string[]): never => {
+        const fail = (text: string, command: string, args: string[], code: GitErrorCode = 'git-failed'): never => {
             sink('failed', text);
-            throw new GitError('git-failed', job.canceled ? 'The action was canceled.' : text || `${command} ${args[0]} failed`);
+            throw new GitError(code, job.canceled ? 'The action was canceled.' : text || `${command} ${args[0]} failed`);
         };
 
         const step: Step = async (phase, args, options = {}) => {
@@ -216,7 +227,11 @@ export class GitActions {
             }
             case 'delete-branch': {
                 const ref = operand(payload.ref, 'a branch to delete');
-                await step('branch', ['branch', '--delete', ...(payload.force === true ? ['--force'] : []), '--end-of-options', ref]);
+                const args = ['branch', '--delete', ...(payload.force === true ? ['--force'] : []), '--end-of-options', ref];
+                const deleted = await attempt('branch', args);
+                if (deleted.code !== 0) {
+                    fail(deleted.text, 'git', args, deleted.text.includes('not fully merged') ? 'branch-not-merged' : 'git-failed');
+                }
                 return done(`Deleted ${ref}.`);
             }
             case 'merge': {
@@ -353,13 +368,11 @@ async function checkoutArgs(top: string, ref: string): Promise<string[]> {
     return ['checkout', '--end-of-options', ref];
 }
 
-/* Whether the branch and its upstream have each gained commits the other lacks. */
 async function diverged(cwd: string): Promise<boolean> {
     const counts = (await git(['rev-list', '--left-right', '--count', '@{upstream}...HEAD'], cwd))?.trim().split(/\s+/);
     return Number.parseInt(counts?.[0] ?? '', 10) > 0 && Number.parseInt(counts?.[1] ?? '', 10) > 0;
 }
 
-/* Whether the working tree holds anything a checkout would have to carry over or lose. */
 export async function isDirty(cwd: string): Promise<boolean> {
     const { code, stdout } = await runGit(['status', '--porcelain'], cwd, { env: READ_ONLY_GIT });
     return code === 0 && stdout.trim() !== '';

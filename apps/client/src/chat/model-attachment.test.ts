@@ -9,6 +9,14 @@ function binaryStl(triangles: number): Uint8Array {
 
 const text = (value: string): Uint8Array => new TextEncoder().encode(value);
 
+function usdz(name: string): Uint8Array {
+    const bytes = new Uint8Array(30 + name.length);
+    bytes.set(text('PK\u0003\u0004'));
+    bytes[26] = name.length;
+    bytes.set(text(name), 30);
+    return bytes;
+}
+
 test('a model type the response names is taken as it is', () => {
     expect(modelMimeOf(text('anything'), 'model/stl')).toBe('model/stl');
 });
@@ -16,7 +24,7 @@ test('a model type the response names is taken as it is', () => {
 test('a blob without a type of its own is told apart by its bytes', () => {
     const octets = 'application/octet-stream';
     expect(modelMimeOf(text('glTF\u0002\u0000\u0000\u0000'), octets)).toBe('model/gltf-binary');
-    expect(modelMimeOf(text('PK\u0003\u0004 scene.usdc'), octets)).toBe('model/vnd.usdz+zip');
+    expect(modelMimeOf(usdz('scene.usdc'), octets)).toBe('model/vnd.usdz+zip');
     expect(modelMimeOf(binaryStl(3), octets)).toBe('model/stl');
     expect(modelMimeOf(text('  solid part\n facet normal 0 0 1'), octets)).toBe('model/stl');
 });

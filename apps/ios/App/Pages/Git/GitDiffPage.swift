@@ -29,31 +29,32 @@ struct GitDiffPage: View {
     let client: any MachineRequesting
     let target: GitDiffTarget
     @State private var state = RemotePageState()
+    @State private var diff: GitDiffResult?
 
     var body: some View {
         ScrollView([.horizontal, .vertical]) {
             VStack(alignment: .leading, spacing: 16) {
                 RemotePageStatus(state: state) { Task { await load() } }
-                if let diff = state.value {
-                    if let commit = diff["commit"] {
+                if let diff {
+                    if let commit = diff.commit {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(commit.text("subject")).font(.callout.weight(.medium))
-                            Text("\(commit.text("author")) · \(commit.text("shortHash"))")
+                            Text(commit.subject).font(.callout.weight(.medium))
+                            Text("\(commit.author) · \(commit.shortHash)")
                                 .font(.caption).foregroundStyle(MobileStyle.muted)
                         }
                     }
-                    let files = diff.list("files")
+                    let files = diff.files ?? []
                     if files.isEmpty {
-                        patch(diff)
+                        patch(diff.diff, omitted: diff.omitted)
                     } else {
-                        ForEach(files, id: \.stableID) { file in
+                        ForEach(files, id: \.path) { file in
                             VStack(alignment: .leading, spacing: 6) {
-                                Text(file.text("path")).font(.caption.monospaced()).foregroundStyle(MobileStyle.muted)
-                                patch(file)
+                                Text(file.path).font(.caption.monospaced()).foregroundStyle(MobileStyle.muted)
+                                patch(file.diff, omitted: file.omitted)
                             }
                         }
                     }
-                    if diff["truncated"] == .bool(true) {
+                    if diff.truncated == true {
                         Text("Some files of this commit were left out.")
                             .font(.caption).foregroundStyle(MobileStyle.muted)
                     }
@@ -69,18 +70,18 @@ struct GitDiffPage: View {
                 return
             }
             await RemotePageLifecycle.run(
-                client: client, events: ["git.status"], matches: { $0.text("cwd") == target.cwd },
-                subscription: { GitPanel.watch(client, cwd: target.cwd) }, load: load)
+                client: client, events: [.gitStatus], matches: RemotePageLifecycle.typed(GitStatusEvent.self) { $0.cwd == target.cwd },
+                watch: { GitPanel.watch(cwd: target.cwd) }, load: load)
         }
     }
 
-    @ViewBuilder private func patch(_ file: JSONValue) -> some View {
-        if let omitted = file["omitted"]?.stringValue {
+    @ViewBuilder private func patch(_ diff: String, omitted: GitDiffOmitted?) -> some View {
+        if let omitted {
             ContentUnavailableView(
-                omitted == "binary" ? String(localized: "Binary file") : String(localized: "Diff too large"),
+                omitted == .binary ? String(localized: "Binary file") : String(localized: "Diff too large"),
                 lucideIcon: "file-text")
         } else {
-            let lines = file.text("diff").components(separatedBy: "\n")
+            let lines = diff.components(separatedBy: "\n")
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(lines.enumerated()), id: \.offset) { item in
                     Text(item.element.isEmpty ? " " : item.element)
@@ -92,14 +93,16 @@ struct GitDiffPage: View {
     }
 
     private func load() async {
-        await state.load {
+        await state.read(loaded: diff != nil) { stillTheLatest in
             var fields: [String: JSONValue] = [
                 "cwd": .string(target.cwd), "scope": .string(target.scope), "staged": .bool(target.staged),
             ]
             if let path = target.path { fields["path"] = .string(path) }
             if let commit = target.commit { fields["commit"] = .string(commit) }
             if let base = target.base { fields["base"] = .string(base) }
-            return try await client.request("git.diff", payload: .object(fields))
+            let result = try await client.request(.gitDiff, payload: .object(fields)).decoded(as: GitDiffResult.self)
+            try stillTheLatest()
+            diff = result
         }
     }
 }

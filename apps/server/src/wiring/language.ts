@@ -1,8 +1,8 @@
 import { join } from 'node:path';
 import type { SqlAnalysis } from '../database/sql-analysis.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
+import type { SharedWatch } from '../disk/shared-watch.ts';
 import { EditorAssistModel } from '../editor-assist/model.ts';
-import type { MachineHome } from '../fs/machine-home.ts';
-import type { SharedWatch } from '../fs/shared-watch.ts';
 import { LanguageHost } from '../language/host.ts';
 import { NativePolicy, phpLanguageServerCheckout, sqlLanguageServerCheckout } from '../language/native.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
@@ -11,6 +11,7 @@ import { ProvenanceService } from '../provenance/provenance-service.ts';
 import type { AgentsBundle } from './agents.ts';
 import type { GitBundle } from './git.ts';
 import type { ProvidersBundle } from './providers.ts';
+import type { DaemonSeams } from './seams.ts';
 
 /* What the editor asks of the machine: the language servers, the editor model and who wrote which lines. */
 export interface LanguageBundle {
@@ -28,6 +29,7 @@ interface LanguageInput {
     sqlAnalysis: SqlAnalysis;
     agents: AgentsBundle;
     providers: ProvidersBundle;
+    seams: Pick<DaemonSeams, 'language' | 'git'>;
     git: Pick<GitBundle, 'worktrees'>;
 }
 
@@ -40,10 +42,13 @@ export async function wireLanguage({
     sqlAnalysis,
     agents,
     providers,
+    seams,
     git
 }: LanguageInput): Promise<LanguageBundle> {
     const host = new LanguageHost({
         root: join(home, 'language-servers'),
+        run: seams.language.run,
+        findProgram: seams.language.findProgram,
         watch: { seams: watches },
         folderOf: (projectId) => projects.index.folderOf(projectId),
         holders: (projectId) => projects.holdersOf(projectId),
@@ -58,6 +63,7 @@ export async function wireLanguage({
     const editorAssist = new EditorAssistModel({ home, registry: providers.providers, accounts: providers.accounts });
     const provenance = new ProvenanceService({
         home,
+        repositoryOf: seams.git.repositoryOf,
         locate: (chatId) => projects.index.locate(chatId),
         folderOf: (projectId) => projects.index.folderOf(projectId),
         holders: (projectId) => projects.holdersOf(projectId),

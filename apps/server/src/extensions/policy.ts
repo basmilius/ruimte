@@ -48,7 +48,6 @@ export function startsWithMachine(manifest: Pick<ExtensionManifest, 'autostart' 
     return manifest.autostart === true || permissionsOf(manifest).has('agents.tools');
 }
 
-/* Why `server/` may not follow this event, as its log says, or null when it may. */
 export function eventRefusal(name: string, permissions: ReadonlySet<string>): string | null {
     const event = serverEvent(name);
 
@@ -72,7 +71,6 @@ export function missingPermission(id: string, permission: string, permissions: R
     return { code: 'permission-denied', message: missingPermissionMessage(id, permission) };
 }
 
-/* An action of the machine, within `EXTENSION_ACTIONS` and the manifest. */
 export function actionRefusal(id: string, action: string, permissions: ReadonlySet<string>): Refusal | null {
     const permission = extensionActionPermission(action);
 
@@ -107,7 +105,6 @@ export function askRefusal(id: string, method: string, args: readonly unknown[],
 export const MAX_SENDS_PER_HOUR = 20;
 const HOUR_MS = 3_600_000;
 
-/* The sends of each extension to each chat in the last hour, on the clock it is given. */
 export class SendLimit {
     private readonly sends = new Map<string, number[]>();
     private readonly now: () => number;

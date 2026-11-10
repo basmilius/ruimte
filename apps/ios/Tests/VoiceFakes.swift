@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import RuimteVoice
 import Testing
@@ -12,7 +13,7 @@ import XCTest
     var features: Set<WireRequest> = [
         .voiceStart, .voiceStop, .voiceConfirm, .voiceKeyStatus, .voicePreferences, .voiceSetPreferences,
     ]
-    var requests: [(String, JSONValue)] = []
+    var requests: [(WireRequest, JSONValue)] = []
     var keyPresent = true
     /// What the machine stores of how Voice talks; null for none.
     var preferences: JSONValue = .null
@@ -25,20 +26,20 @@ import XCTest
     private var heldStart: CheckedContinuation<JSONValue, Error>?
     private let startArrival = NativeArrival()
     private var heldScene = ""
-    private var handlers: [String: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
+    private var handlers: [WireEvent: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
     private var connection: [UUID: @MainActor @Sendable (Bool) -> Void] = [:]
 
-    var stops: [JSONValue] { requests.filter { $0.0 == "voice.stop" }.map(\.1) }
+    var stops: [JSONValue] { requests.filter { $0.0 == .voiceStop }.map(\.1) }
 
-    func sent(_ type: String) -> Bool { requests.contains { $0.0 == type } }
+    func sent(_ type: WireRequest) -> Bool { requests.contains { $0.0 == type } }
 
     func answers(_ type: WireRequest) -> Bool { features.contains(type) }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
         switch type {
-        case "voice.keyStatus": return .object(["present": .bool(keyPresent)])
-        case "voice.start":
+        case .voiceKeyStatus: return .object(["present": .bool(keyPresent)])
+        case .voiceStart:
             let scene = payload.text("sceneId")
             guard holdStart else { return Self.answer(scene: scene) }
             heldScene = scene
@@ -46,14 +47,14 @@ import XCTest
                 heldStart = $0
                 startArrival.record()
             }
-        case "voice.stop": return .object(["stopped": .bool(true)])
-        case "voice.confirm": return .object(["accepted": .bool(acceptConfirm)])
-        case "voice.preferences": return .object(["preferences": preferences])
-        case "voice.setPreferences":
-            guard !refuseSet else { throw MachineClientError.invalid(type) }
+        case .voiceStop: return .object(["stopped": .bool(true)])
+        case .voiceConfirm: return .object(["accepted": .bool(acceptConfirm)])
+        case .voicePreferences: return .object(["preferences": preferences])
+        case .voiceSetPreferences:
+            guard !refuseSet else { throw MachineClientError.invalid(type.rawValue) }
             preferences = payload
             return .object(["preferences": payload])
-        default: throw MachineClientError.invalid(type)
+        default: throw MachineClientError.invalid(type.rawValue)
         }
     }
 
@@ -75,7 +76,7 @@ import XCTest
         ])
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
         let id = UUID()
         handlers[event, default: [:]][id] = handler
         return { [weak self] in self?.handlers[event]?.removeValue(forKey: id) }
@@ -88,7 +89,7 @@ import XCTest
         return { [weak self] in self?.connection.removeValue(forKey: id) }
     }
 
-    func emit(_ event: String, _ payload: JSONValue) {
+    func emit(_ event: WireEvent, _ payload: JSONValue) {
         for handler in Array(handlers[event]?.values ?? [:].values) { handler(payload) }
     }
 
@@ -96,7 +97,6 @@ import XCTest
         for handler in Array(connection.values) { handler(false) }
     }
 
-    /// Subscriptions still standing, events and the connection together.
     var listeners: Int { handlers.values.reduce(0) { $0 + $1.count } + connection.count }
 }
 
@@ -106,7 +106,6 @@ import XCTest
     var answer: String?
     var closed = false
     var offers = 0
-    /// What `samples()` reads.
     var reading = VoiceSamples.silent
 
     func offer() async throws -> String {
@@ -131,7 +130,6 @@ import XCTest
     func end(_ content: VoiceLiveContent) { ended.append(content) }
 }
 
-/// Whether the coordinator holds the machine links open, in the order it asked.
 @MainActor final class LinkHolds {
     var holds: [Bool] = []
 }

@@ -61,10 +61,11 @@ import type {
     LanguageTraceValue,
     LanguageWillSavePayload
 } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { ClientSinks } from '../client-sinks.ts';
+import { isDirectory } from '../disk/is-directory.ts';
 import { errorText } from '../error-text.ts';
-import { isDirectory } from '../fs/browse.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { LanguageChoices } from './choices.ts';
 import { CustomLanguageServers, customProfile, UnsavedRemoval } from './custom.ts';
 import { ProjectFileWatcher, type FileChange, type StatPath } from './file-watch.ts';
@@ -116,7 +117,6 @@ const AGENT_PUSH_MS = 3_000;
 export interface AgentDocument {
     storedPath: string;
     absolutePath: string;
-    /* The text the servers see. */
     text: string;
     /* Whether a client holds the file open with text that differs from what is on disk. */
     unsaved: boolean;
@@ -146,7 +146,6 @@ function catalogKindOf(kind: LanguageServerKind): CatalogKind {
 
 const HELD_MESSAGE = 'Its command was changed outside Ruimte. Open it and save it again to start it.';
 
-/* Whether a server of a person's own runs for the project: for every project, or for the folders it names. */
 function runsFor(server: CustomLanguageServer, folder: string): boolean {
     return server.projects === undefined || server.projects.includes(folder);
 }
@@ -167,7 +166,6 @@ interface LanguageHostOptions {
     clock?: LanguageClock;
     exists?: (path: string) => Promise<boolean>;
     isFolder?: (path: string) => Promise<boolean>;
-    /* The text of a file, or null when it cannot be read. */
     readText?: (path: string) => Promise<string | null>;
     now?: () => number;
     /* What the project's file watching reaches the platform and the clock through; the system's by default. */
@@ -184,7 +182,6 @@ interface LanguageHostOptions {
     worktreeBuild?: WorktreeBuildChoices;
     /* Native servers use a selected standalone checkout or the pinned release. */
     native?: NativePolicy;
-    /* How an install downloads a release or the stubs. */
     download?: Download;
     /* How the revision of a checkout a native kind builds from is read; git by default. */
     checkoutRevision?: CheckoutRevision;
@@ -199,7 +196,6 @@ export interface PhpCache {
     keptStubs: string[];
     liveFolders(): string[];
     liveStubsDirs(): string[];
-    /* Whether any PHP server runs or is starting, in any project. */
     anyLive(): boolean;
     hold<T>(work: () => Promise<T>): Promise<T>;
 }
@@ -240,7 +236,7 @@ interface PendingEdit {
 }
 
 /* The problems a server holds for one file of the project, as a whole-project pull left them. */
-export interface WorkspaceProblems {
+interface WorkspaceProblems {
     server: string;
     path: string;
     absolutePath: string;
@@ -255,7 +251,6 @@ interface PendingMessage {
     settle(item: MessageActionItem | null): void;
 }
 
-/* How long a client has to say whether it made an edit. */
 const EDIT_ANSWER_MS = 30_000;
 
 async function readTextOrNull(path: string): Promise<string | null> {
@@ -287,7 +282,6 @@ export interface FileMove {
     create(path: string, text: string): Promise<void>;
     /* Moves a file or folder a server's edit moves; `overwrite` replaces a file that is there. */
     rename(from: string, to: string, overwrite: boolean): Promise<void>;
-    /* Deletes a file or folder a server's edit deletes. */
     delete(path: string): Promise<void>;
 }
 
@@ -467,7 +461,6 @@ export class LanguageHost {
         };
     }
 
-    /* The program a native kind runs on this machine, or null while it is not installed. */
     programOf(kind: CatalogKind): string | null {
         return this.installer.launchOf(kind)?.executable ?? null;
     }
@@ -866,7 +859,6 @@ export class LanguageHost {
         }
     }
 
-    /* A client says whether it made an edit a server asked for. */
     answerEdit(clientId: string, payload: LanguageEditAnswerPayload): void {
         const pending = this.edits.get(payload.editId);
         if (pending && pending.clientId === clientId && pending.projectId === payload.projectId) {
@@ -956,7 +948,7 @@ export class LanguageHost {
                 diagnostics: () => this.diagnosticsFor(project, held)
             });
         } finally {
-            await this.release(project, held, request.owner).catch(() => undefined);
+            await bestEffort('release', this.release(project, held, request.owner));
         }
     }
 
@@ -1015,7 +1007,6 @@ export class LanguageHost {
         }
     }
 
-    /* The daemon is going down. */
     async close(): Promise<void> {
         await Promise.all([...this.projects.keys()].map((projectId) => this.end(projectId)));
     }
@@ -1149,7 +1140,6 @@ export class LanguageHost {
         return { held: roots.some((root) => isWithin(root, real)), allowed: false };
     }
 
-    /* Reads again where the project folder stands against the build rule. */
     private async refreshStanding(project: ProjectLanguage): Promise<{ held: boolean; allowed: boolean }> {
         const standing = await this.standingOf(project.folder, project.folder);
 
@@ -1329,7 +1319,7 @@ export class LanguageHost {
         for (const project of this.projects.values()) {
             for (const document of [...project.documents.values()]) {
                 if (document.clients.has(clientId)) {
-                    void this.release(project, document, clientId).catch(() => undefined);
+                    void bestEffort('release', this.release(project, document, clientId));
                 }
             }
         }
@@ -1783,7 +1773,6 @@ export class LanguageHost {
         return document !== undefined && document.clients.size > 0 ? document : undefined;
     }
 
-    /* Whether a client holds the file at the path, or a file inside it when it is a folder. */
     private holdsUnder(project: ProjectLanguage, path: string): boolean {
         return [...project.documents.values()].some(
             (document) => document.clients.size > 0 && (document.absolutePath === path || isPathBelow(path, document.absolutePath))
@@ -1982,18 +1971,21 @@ export class LanguageHost {
 
     /* An install began or ended. Every client hears of it, since it is the machine's; a project with documents waiting then starts. */
     private installChanged(kind: CatalogKind): void {
-        void (async () => {
-            this.sinks.emit({ event: 'language.status', payload: { projectId: null, status: await this.statusOf(null, kind) } });
-            if ((await this.installer.state(kind)) !== 'installed') {
-                return;
-            }
-            for (const project of this.projects.values()) {
-                const server = project.servers.get(kind);
-                if (server) {
-                    void server.ensureStarted().catch(() => undefined);
+        void bestEffort(
+            'tell the clients the server state',
+            (async () => {
+                this.sinks.emit({ event: 'language.status', payload: { projectId: null, status: await this.statusOf(null, kind) } });
+                if ((await this.installer.state(kind)) !== 'installed') {
+                    return;
                 }
-            }
-        })().catch(() => undefined);
+                for (const project of this.projects.values()) {
+                    const server = project.servers.get(kind);
+                    if (server) {
+                        void server.ensureStarted().catch(() => undefined);
+                    }
+                }
+            })()
+        );
     }
 
     /* A kind runs another install now, so every server of it that ran starts again on it. */
@@ -2001,7 +1993,7 @@ export class LanguageHost {
         for (const project of this.projects.values()) {
             const server = project.servers.get(kind);
             if (server && server.state !== 'stopped') {
-                void server.restart().catch(() => undefined);
+                void bestEffort('server.restart', server.restart());
             }
         }
     }

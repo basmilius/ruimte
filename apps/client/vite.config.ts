@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { dirname, join, normalize, sep } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 import babel from '@rolldown/plugin-babel';
+import { CLIENT_DEV_PORT, DEV_PORT } from '@ruimte/service/runtime';
 import tailwindcss from '@tailwindcss/vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import { build, defaultClientConditions, defineConfig, searchForWorkspaceRoot, type Plugin, type PluginOption } from 'vite';
@@ -14,16 +15,14 @@ import { shikiModules, shikiOnce } from './shiki-once.ts';
 import { startChunkGuard } from './start-chunk.ts';
 import { visualHostPage } from './visual-host.ts';
 
-// The dev daemon sits on 4211 so an installed Ruimte can keep 4210.
-const daemon = process.env.RUIMTE_DAEMON ?? 'ws://localhost:4211';
+const daemon = process.env.RUIMTE_DAEMON ?? `ws://localhost:${DEV_PORT}`;
 
 // Only a release reports its errors (`src/telemetry/report.ts`): CI sets both, and with them come the source maps it uploads and never ships.
 const telemetryVersion = process.env.RUIMTE_TELEMETRY === '1' ? (process.env.RUIMTE_VERSION ?? '') : '';
 // What a client tells a machine it is in its list of connected clients; CI sets it for every release, Station and bench build.
 const clientVersion = process.env.RUIMTE_VERSION ?? '';
 
-// Beside the daemons instead of Vite's 5173, which other projects on the same computer claim first.
-const port = 4212;
+const port = CLIENT_DEV_PORT;
 
 // Where the @adecore packages really live: a linked checkout sits outside this repository.
 const clientManifest = JSON.parse(readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf8')) as {
@@ -115,7 +114,7 @@ function bytesWorker(): Plugin {
  * What pdf.js fetches by folder and file name while it reads a PDF: the wasm decoders, the standard
  * fonts, the character maps and the color profile. Hashed names would break that lookup, so they keep
  * their own under a folder named after the version, served in dev and written beside the chunks. The
- * page builds the same path from pdf.js's `version` (`src/shell/panels/PdfFile.tsx`). QuickJS runs a
+ * page builds the same path from pdf.js's `version` (`src/files/PdfFile.tsx`). QuickJS runs a
  * PDF's own scripts, which this viewer never does, so it stays out.
  */
 function pdfjsAssets(): Plugin {

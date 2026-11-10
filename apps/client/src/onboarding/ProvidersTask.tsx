@@ -1,15 +1,17 @@
 import { accountStatusLine, ACCOUNT_TONE_CLASSES, CliMark } from '@adecore/agents-react/providers';
-import { useProviderAccountsStore, useProviders, useProvidersStore } from '@adecore/agents-react/state';
+import { useProviderAccountsStore, useProviders } from '@adecore/agents-react/state';
 import { Button, Icon, Pill } from '@adecore/ui';
 import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
 import { LogIn, RefreshCw, Sparkles } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { loginDialog } from '@/chat/dialog-state';
 import { RowTile, TaskNote, TaskPane } from '@/onboarding/TaskPane';
 import { joinNames, type CliRow } from '@/onboarding/tasks';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
-import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
+import { orNull } from '@/transport-api/transport';
+import { setMachineProviders } from '@/transport/machine-providers';
 
 interface ProvidersTaskProps {
     machine: string;
@@ -19,7 +21,6 @@ interface ProvidersTaskProps {
     next: { label: string; go(): void };
 }
 
-/* Asks the machine for its CLIs and who is logged in again, for a CLI installed or logged in from outside Ruimte. */
 async function checkAgain(): Promise<void> {
     const link = transportFor(LOCAL_ENDPOINT_ID);
     if (!link) {
@@ -28,15 +29,14 @@ async function checkAgain(): Promise<void> {
     const [{ providers }, accounts] = await Promise.all([
         link.request('provider.list', {}),
         // The accounts are secondary: a refresh that fails keeps the providers.
-        link.request('accounts.refresh', {}).catch(() => null)
+        orNull('accounts.refresh', link.request('accounts.refresh', {}))
     ]);
-    useProvidersStore.getState().setProviders(LOCAL_ENDPOINT_ID, providers);
+    setMachineProviders(LOCAL_ENDPOINT_ID, providers);
     if (accounts !== null) {
         useProviderAccountsStore.getState().set(LOCAL_ENDPOINT_ID, accounts);
     }
 }
 
-/* The agent CLIs of this machine: who is logged in where, a login for the ones nobody is, and what is missing. */
 export function ProvidersTask({ machine, rows, missing, done, next }: ProvidersTaskProps) {
     const { t } = useTranslation('onboarding');
     const loaded = useProviders((s) => s.loaded);
@@ -97,7 +97,6 @@ export function ProvidersTask({ machine, rows, missing, done, next }: ProvidersT
     );
 }
 
-/* One installed CLI: logged in and as whom, or why not and the login that fixes it. */
 function CliLoginRow({ row }: { row: CliRow }) {
     const { t } = useTranslation('onboarding');
     const { provider, canLogIn, loggedIn, loginAccount } = row;
@@ -121,7 +120,7 @@ function CliLoginRow({ row }: { row: CliRow }) {
             <Button
                 variant="secondary"
                 onClick={() =>
-                    useUi.getState().setLogin({
+                    loginDialog.set({
                         endpointId: LOCAL_ENDPOINT_ID,
                         kind: provider.kind,
                         accountId: loginAccount.id,

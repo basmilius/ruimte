@@ -4,8 +4,8 @@ import * as filesystem from 'node:fs/promises';
 import { mkdir, mkdtemp, realpath, rename, rm, symlink, writeFile, type FileReadResult } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { MachineHome } from '../disk/machine-home.ts';
 import { MAX_FILE_BYTES } from './grep-lines.ts';
-import { MachineHome } from './machine-home.ts';
 import { isOpenName, isOpenPath, readSearchable, searchRoot, type SearchRoot } from './searchable.ts';
 
 let root = '';

@@ -7,12 +7,12 @@ import { fileExists } from '@adecore/utils/fs';
 import { VISUAL_LIMITS, type ChatVisual } from '@ruimte/contracts';
 import { readBytes } from '../bytes/read-bytes.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
-import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
-import type { VisualHost } from '../tools/host.ts';
+import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../testing/test-daemon.ts';
 import { refusalCode } from '../tools/tool-test-helpers.ts';
 import { SHOWN_LINE } from '../tools/visual-tools.ts';
+import type { VisualHost } from '../visuals/agent-host.ts';
 import { VisualRenderError, type VisualPreview } from '../visuals/renderer.ts';
+import type { SessionEvent } from '../wire.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from './attachment-route.ts';
 import { turnsOf } from './chat-test-helpers.ts';
 import { leadAndShellProject, sayAndSettle } from './lead-chat-test-helpers.ts';
@@ -57,12 +57,10 @@ async function boot(
 
 async function bootWithChat(options: Parameters<typeof boot>[0] = {}): Promise<TestDaemon> {
     const daemon = await boot(options);
-    daemon.worker.start();
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     return daemon;
 }
 
-/* The events the client the test daemon answers requests for hears, once it attached to a chat. */
 function listen(daemon: TestDaemon): SessionEvent[] {
     const events: SessionEvent[] = [];
     daemon.chats.subscribe('client-1', (event) => events.push(event as SessionEvent));

@@ -1,12 +1,12 @@
 import type { TableKind } from '@adecore/database/protocol';
 import { isPathBelow, type FileLocation, type GitCompareMode, type GitDiffScope, type ProjectConsoleBinding, type ProjectFileTabView } from '@ruimte/contracts';
 import { create } from 'zustand';
-import { closeAfterSaving } from '@/shell/panels/unsaved-close';
-import { canDropAsTab, canSplit, cellAt, cellViewIds, locateView, viewIdsIn, type CellAt, type SplitZone } from '@/shell/split';
+import { canDropAsTab, canSplit, cellAt, cellViewIds, locateView, viewIdsIn, type CellAt, type SplitZone } from '@/layout/split';
 import { useDocument } from '@/state/document';
-import { currentEndpointId } from '@/state/keys';
 import { textDrafts } from '@/state/text-drafts';
 import { useUi } from '@/state/ui';
+import { closeAfterSaving } from '@/state/unsaved-close';
+import { currentEndpointId } from './current-endpoint';
 
 export type FileTabView = ProjectFileTabView;
 export type ConsoleBinding = ProjectConsoleBinding;
@@ -123,11 +123,10 @@ export function compareTabKey(cwd: string, from: string, to: string): string {
     return `compare:${JSON.stringify([cwd, from, to])}`;
 }
 
-export function snapshotTabKey(cwd: string, commit: string, path: string): string {
+function snapshotTabKey(cwd: string, commit: string, path: string): string {
     return `snapshot:${JSON.stringify([cwd, commit, path])}`;
 }
 
-/* The comparison under a key, or undefined for another kind of tab. */
 export function compareTabOf(state: TabPool, key: string | null): CompareTab | undefined {
     const tab = state.tabs.find((entry) => entry.key === key);
     return tab !== undefined && isSessionTab(tab) && tab.kind === 'compare' ? tab : undefined;
@@ -145,7 +144,6 @@ export function openCompareTab(state: TabPool, cwd: string, from: string, to: st
     return placeTab(state, { key, kind: 'compare', pinned: false, cwd, from, to, mode, refresh: 0 });
 }
 
-/* A snapshot that is open already comes to the front. */
 export function openSnapshotTab(state: TabPool, cwd: string, commit: string, branch: string, path: string): TabState {
     const key = snapshotTabKey(cwd, commit, path);
 
@@ -162,7 +160,6 @@ export function artifactTabKey(artifactId: string, machineId?: string): string {
     return machineId === undefined ? `${ARTIFACT_TAB_PREFIX}${artifactId}` : `${ARTIFACT_TAB_PREFIX}${machineId}/${artifactId}`;
 }
 
-/* The file tab under a key, or undefined for another kind of tab or a key that is not open. */
 export function fileTabOf(state: TabPool, key: string | null): FileTab | undefined {
     const tab = state.tabs.find((entry) => entry.key === key);
     return tab === undefined || !isFileTab(tab) ? undefined : tab;
@@ -176,7 +173,6 @@ export function isPromotableTab(tab: Tab | undefined): boolean {
     return isDatabaseTab(tab) ? tab.kind !== 'designer' : tab.view === undefined;
 }
 
-/* The artifact tab already open, or a new one at the end of the pool; either way in front. */
 export function openArtifactTab(state: TabPool, artifactId: string, title: string, machineId?: string): TabState {
     const key = artifactTabKey(artifactId, machineId);
     if (state.tabs.some((tab) => tab.key === key)) {
@@ -230,11 +226,10 @@ export function tabsOverLimit(tabs: readonly Tab[], limit: number, opened: strin
 }
 
 /* What opening a path did to the pool; `replaced` is the key of the diff tab it took over, which the layout has to rename. */
-export interface OpenedTab extends TabState {
+interface OpenedTab extends TabState {
     replaced?: string;
 }
 
-/* A tab per open file; one that is open already is the one that comes to the front. */
 export function openTab(state: TabPool, path: string, view?: FileTabView): OpenedTab {
     const key = tabKey(path, view);
     const open = fileTabOf(state, key);
@@ -292,21 +287,21 @@ export interface RevealLineRequest extends Omit<FileLocation, 'path'> {
     nonce: number;
 }
 
-export interface RevealRequest {
+interface RevealRequest {
     /* Absolute on the daemon's machine, the same path a tab carries. */
     path: string;
     /* Goes up on every ask, so revealing the same file twice is two reveals and not one. */
     nonce: number;
 }
 
-export interface CaretRequest {
+interface CaretRequest {
     /* The tab whose editor takes the keyboard; a file that is not the one up ignores it. */
     key: string;
     /* Goes up on every ask, so a file created twice under one name is two asks. */
     nonce: number;
 }
 
-export interface CreateRequest {
+interface CreateRequest {
     kind: 'file' | 'directory';
     /* Goes up on every ask, so asking for the same kind twice is two asks. */
     nonce: number;
@@ -375,7 +370,7 @@ export interface OpenOptions {
 }
 
 /* The tab whose body is asked to take the keyboard; `nonce` goes up on every ask, so the same tab twice is two asks. */
-export interface FocusRequest {
+interface FocusRequest {
     key: string;
     nonce: number;
 }
@@ -429,7 +424,6 @@ interface FilesStore extends TabPool {
     closeInOrder(keys: readonly string[]): Promise<boolean>;
     /* Takes the tab out of the pool without remembering it, for a tab that goes on as something else. */
     release(key: string): void;
-    /* The answer to that question. */
     confirmDiscard(): void;
     cancelDiscard(): void;
     setUnsubmitted(key: string, unsubmitted: boolean): void;

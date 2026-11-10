@@ -1,4 +1,4 @@
-import { ProviderLogo } from '@adecore/agents-react/providers';
+import { hasProviderLogo, ProviderLogo } from '@adecore/agents-react/providers';
 import type { Editor } from '@adecore/editor';
 import { Button, ButtonGroup, IconButton } from '@adecore/ui';
 import clsx from 'clsx';
@@ -7,7 +7,6 @@ import { useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardE
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
-import { hasProviderLogo } from '@/agents/provider-logo';
 import { focusChat } from '@/plan/plan-actions';
 import { useReviewFocus } from '@/state/review-focus';
 import { commentRowId, type AgentReview, type ReviewItem } from './agent-review';
@@ -183,7 +182,6 @@ export function ReviewLayer({ review, editor }: { review: AgentReview; editor: E
     );
 }
 
-/* The line over the editor that says how many changes wait, steps between them and answers them all. */
 export function ReviewBar({ review }: { review: AgentReview }) {
     const { t } = useTranslation('panels');
     const { items, current } = useStore(review.store, (state) => state);

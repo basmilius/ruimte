@@ -2,7 +2,7 @@ import { Button, ScrollArea } from '@adecore/ui';
 import { createElement, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fileInfoOf } from '@/extensions/file-info';
-import { useContributions } from '@/extensions/registry';
+import { useContributions } from '@/state/extension-registry';
 
 /* A file an extension knows, in its view, with Ruimte's own one click away so a broken viewer costs nobody the file. */
 export function ExtensionFileViewer({ path, name, text, children }: { path: string; name: string; text: string | null; children: ReactNode }) {

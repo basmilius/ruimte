@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 
 /*
@@ -17,3 +18,14 @@ export const NodeActivityListSchema = z.object({ activity: z.array(NodeActivityS
 
 // The machine finds the project the node is in; `node-not-found` when it is in none.
 export const NodeActivityTouchPayloadSchema = NodeActivitySchema.pick({ nodeId: true });
+
+export const ACTIVITY_REQUEST_SCHEMAS = {
+    'activity.list': { payload: EmptySchema, result: NodeActivityListSchema },
+    // A person opened the node, on the canvas or in the sidebar.
+    'activity.touch': { payload: NodeActivityTouchPayloadSchema, result: EmptySchema }
+} as const;
+
+export const ACTIVITY_EVENT_SCHEMAS = {
+    // The nodes whose last activity moved, to every client.
+    'activity.changed': NodeActivityListSchema
+} as const;

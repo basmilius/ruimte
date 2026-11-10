@@ -1,5 +1,6 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import SwiftUI
 
@@ -30,7 +31,6 @@ enum ChatLimits {
                 ?? resets.map { String(localized: "The limit resets at \($0).") })
     }
 
-    /// A time today as a clock, any other with its day.
     static func moment(_ milliseconds: Double, now: Date = .now) -> String {
         let date = Date(timeIntervalSince1970: milliseconds / 1000)
         return Format.isSameDay(date, now) ? Format.clock(date) : Format.weekdayClock(date)
@@ -95,14 +95,14 @@ extension ChatModel {
     /// while it is in use, so `unread` asks for the other accounts too, at most every five minutes per machine.
     func readLimits(unread: Bool = false, now: Date = .now) async {
         guard connected else { return }
-        if let snapshot = try? await client.request(.usageLimits) {
+        if let snapshot = try? await client.request(.usageLimits).decoded(as: UsageLimits.self) {
             limits = snapshot
         }
         guard unread, let accounts, accounts.hasChoice(provider),
             accounts.hasUnreadAccount(provider, current: info?.account, limits: limits),
             ChatLimitRefreshes.shared.allow(machineID, now: now)
         else { return }
-        if let snapshot = try? await client.request(.usageRefreshLimits) {
+        if let snapshot = try? await client.request(.usageRefreshLimits).decoded(as: UsageLimits.self) {
             limits = snapshot
         }
     }
@@ -127,7 +127,7 @@ extension ChatModel {
 
     func setResumeAtReset(_ on: Bool) async {
         do {
-            _ = try await client.request("chat.configure", payload: target(["resumeAtReset": .bool(on)]))
+            _ = try await client.request(.chatConfigure, payload: target(["resumeAtReset": .bool(on)]))
             error = nil
         } catch {
             self.error = error.localizedDescription

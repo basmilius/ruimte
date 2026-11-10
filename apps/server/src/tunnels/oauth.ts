@@ -4,14 +4,11 @@ import type { CredentialStore } from './credential-store.ts';
 import { challenge as unauthorized, FailureLimiter } from './external-gate.ts';
 
 export const OAUTH_PROTECTED_RESOURCE_PATH = '/.well-known/oauth-protected-resource';
-export const OAUTH_SERVER_METADATA_PATH = '/.well-known/oauth-authorization-server';
-export const OAUTH_AUTHORIZE_PATH = '/authorize';
-export const OAUTH_TOKEN_PATH = '/token';
+const OAUTH_SERVER_METADATA_PATH = '/.well-known/oauth-authorization-server';
+const OAUTH_AUTHORIZE_PATH = '/authorize';
+const OAUTH_TOKEN_PATH = '/token';
 
-/* The paths the listener answers beside the MCP route. They serve no data: metadata of the server itself, a consent page and tokens. */
-export const OAUTH_PATHS: readonly string[] = [OAUTH_PROTECTED_RESOURCE_PATH, OAUTH_SERVER_METADATA_PATH, OAUTH_AUTHORIZE_PATH, OAUTH_TOKEN_PATH];
-
-export interface OAuthDeps {
+interface OAuthDeps {
     credentials: CredentialStore;
     consent: ConsentBook;
     limiter: FailureLimiter;

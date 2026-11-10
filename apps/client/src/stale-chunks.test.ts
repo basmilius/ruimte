@@ -83,7 +83,7 @@ describe('a failed open beside a prefetch', () => {
 
     test('a surface a person opened reloads, even while a prefetch runs', () => {
         const opens = failedOpens();
-        const { counted, fail } = page({ prefetching: () => true, failedOpens: [opens.subscribe] });
+        const { counted, fail } = page({ prefetching: () => true, failedOpen: opens.subscribe });
         fail();
         opens.fail();
         expect(counted.reloads).toBe(1);
@@ -91,18 +91,17 @@ describe('a failed open beside a prefetch', () => {
 
     test('a failed open and its own preload error reload once', () => {
         const opens = failedOpens();
-        const { counted, fail } = page({ failedOpens: [opens.subscribe] });
+        const { counted, fail } = page({ failedOpen: opens.subscribe });
         fail();
         opens.fail();
         expect(counted.reloads).toBe(1);
     });
 
-    test('disposing stops listening to every source of failed opens', () => {
-        const app = failedOpens();
-        const chat = failedOpens();
-        const { stop } = page({ failedOpens: [app.subscribe, chat.subscribe] });
-        expect(app.listening() + chat.listening()).toBe(2);
+    test('disposing stops listening to failed opens', () => {
+        const opens = failedOpens();
+        const { stop } = page({ failedOpen: opens.subscribe });
+        expect(opens.listening()).toBe(1);
         stop();
-        expect(app.listening() + chat.listening()).toBe(0);
+        expect(opens.listening()).toBe(0);
     });
 });

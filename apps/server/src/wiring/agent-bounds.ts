@@ -1,7 +1,7 @@
 import type { RuntimeMode } from '@ruimte/contracts';
+import { startCwdGuard } from '../canvas/project-paths.ts';
 import type { CommandApprovals } from '../sessions/command-approvals.ts';
 import { SessionError, type CommandGate } from '../sessions/manager.ts';
-import { startCwdGuard } from '../tools/project-paths.ts';
 
 interface AgentBoundsDeps {
     commandApprovals: Pick<CommandApprovals, 'admit' | 'approve'>;

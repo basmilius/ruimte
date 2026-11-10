@@ -3,7 +3,7 @@ import { chmod, mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileExists } from '@adecore/utils/fs';
-import { MachineHome } from '../fs/machine-home.ts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { LanguageHost } from './host.ts';
 import { eventually } from './test-integration.ts';
 import { cargoBin, toolchainCandidates } from './toolchain.ts';

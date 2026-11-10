@@ -1,11 +1,11 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 import UIKit
 
 /// Searchable message index shown as a popover on iPad and a sheet on iPhone.
 struct ChatMessageIndex: View {
     let marks: [ChatMessageMark]
-    /// The timeline entries on screen when the index opened.
     let onScreen: Set<String>
     /// Where the page before starts; nil once the whole conversation is here.
     let olderCursor: String?

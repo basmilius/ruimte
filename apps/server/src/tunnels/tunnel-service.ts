@@ -40,7 +40,7 @@ const TOKEN_MASK = '[token]';
 const MAX_OTHER_RULES = 200;
 
 /* The lines `cloudflared` printed, cut to the one a person can read: the last, without its clock and level. */
-export function sentenceOf(lines: readonly string[], fallback: string): string {
+function sentenceOf(lines: readonly string[], fallback: string): string {
     const last = [...lines].reverse().find((line) => line.trim() !== '');
 
     if (last === undefined) {
@@ -55,7 +55,6 @@ export function sentenceOf(lines: readonly string[], fallback: string): string {
     return plain.slice(0, MAX_MESSAGE);
 }
 
-/* A rule someone else wrote, cut to what the screen shows. */
 function otherRuleOf(rule: CloudflareIngressRule): TunnelOtherRule {
     const text = (value: unknown, max: number): string | null => (typeof value === 'string' && value !== '' ? value.slice(0, max) : null);
 
@@ -122,7 +121,6 @@ export interface TunnelPorts {
     discover(): Promise<Array<{ port: number; session: string | null }>>;
     /* Tells every client the state moved. */
     changed(): void;
-    /* A string of random hex digits, `bytes` bytes long. */
     random(bytes: number): string;
     log(line: string): void;
     /* Waits for the child to end after a stop; a test resolves it at once. */
@@ -442,7 +440,6 @@ export class TunnelService {
         return [this.token, ...secrets].reduce<string>((safe, secret) => (secret === null || secret === '' ? safe : safe.replaceAll(secret, TOKEN_MASK)), text);
     }
 
-    /* Starts a job in the background, behind the one before it, and tells the clients when it ended. */
     private start(busy: Exclude<Busy, null>, work: () => Promise<void>): void {
         if (this.stopped) {
             return;
@@ -591,7 +588,6 @@ export class TunnelService {
         return account;
     }
 
-    /* Makes this machine's tunnel on the account, with its hostnames kept in Cloudflare. */
     async setup(accountId?: string): Promise<TunnelState> {
         const account = this.accountForNewTunnel(accountId);
 
@@ -1751,7 +1747,6 @@ export class TunnelService {
         this.keepRecord(row.id, record.id);
     }
 
-    /* Saves the record a row leads to, which a later write may serve. */
     private keepRecord(rowId: string, recordId: string): void {
         this.unrecorded.delete(rowId);
 

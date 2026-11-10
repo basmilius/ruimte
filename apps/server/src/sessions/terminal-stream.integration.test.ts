@@ -8,12 +8,15 @@ import { join } from 'node:path';
 import { EVENT_SCHEMAS, REQUEST_SCHEMAS, parseServerFrame, type RequestMap, type RequestType } from '@ruimte/contracts';
 import { Terminal } from '@xterm/headless';
 import { SOCKET_BACKPRESSURE_LIMIT } from '../backpressure.ts';
-import { connectionOpener, socketChannel, type ConnectionServices, type OpenConnection, type SocketChannel } from '../connection.ts';
-import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
-import { registerSessionHandlers } from '../handlers/session.ts';
+import { connectionHostOf } from '../connection-test-helpers.ts';
+import { connectionOpener, socketChannel, type OpenConnection, type SocketChannel } from '../connection.ts';
+import { Dispatcher } from '../dispatcher.ts';
+import { sessionArea } from '../handlers/session.ts';
+import { sessionDepsWith } from '../handlers/test-helpers.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
-import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
+import type { ClientAccess } from '../wire.ts';
 import { SessionManager } from './manager.ts';
+import { OPEN_BOUNDS } from './open-bounds-test-helpers.ts';
 import { testPath, testShell, waitFor } from './test-helpers.ts';
 
 /*
@@ -382,7 +385,6 @@ async function replay(segment: Pick<Segment, 'screen' | 'output'>): Promise<numb
     return lines.filter((line) => /^\d+$/.test(line)).map(Number);
 }
 
-/* Every place a run of numbers skips or repeats one. */
 function breaksIn(numbers: number[]): string[] {
     const found: string[] = [];
     for (let i = 1; i < numbers.length; i++) {
@@ -422,28 +424,23 @@ const clients: WireClient[] = [];
 const outputFrames = new Map<string, number>();
 const pushedBackAt = new Map<string, Map<string, number>>();
 
-const noSource = { subscribe: () => () => undefined, detachAll: () => undefined };
-
 beforeAll(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-stream-'));
     manager = new SessionManager({ ...OPEN_BOUNDS, adapter: new BunPtyAdapter(), env: { PATH: testPath, HOME: home } });
     const dispatcher = new Dispatcher();
-    registerSessionHandlers(dispatcher, manager);
-    const services: ConnectionServices = {
-        dispatcher,
-        sessions: manager,
-        chats: noSource,
-        identity: noSource,
-        projects: noSource,
-        drawings: noSource,
-        diagrams: noSource,
-        folders: noSource,
-        statuses: noSource,
-        usage: noSource,
-        limits: noSource,
-        processes: noSource
-    };
-    const openConnection = connectionOpener(services);
+    sessionArea(sessionDepsWith(manager)).handlers?.(dispatcher);
+    const openConnection = connectionOpener(
+        connectionHostOf(dispatcher, [{ name: 'sessions', sources: [manager], holders: [manager] }], {
+            screenOf: (clientId, sessionId, deliver) => {
+                const session = manager.get(sessionId);
+                if (!session?.isAttached(clientId)) {
+                    return false;
+                }
+                session.snapshotFor(clientId, deliver);
+                return true;
+            }
+        })
+    );
     const connections = new Map<ServerWebSocket<ClientAccess & { name: string }>, { channel: SocketChannel; connection: OpenConnection }>();
     const watch = (channel: SocketChannel, name: string): SocketChannel => ({
         ...channel,

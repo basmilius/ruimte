@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { SessionEvent } from '../sessions/manager.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import type { SessionEvent } from '../wire.ts';
 import { VoicePreferencesStore, voicePreferencesFor } from './preferences-store.ts';
 
 let home: string;

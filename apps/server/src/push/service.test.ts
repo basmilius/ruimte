@@ -3,7 +3,7 @@ import { createDecipheriv, createPublicKey, diffieHellman, generateKeyPairSync, 
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { OutboxClock } from '@adecore/agents/coordination';
+import type { Clock } from '@adecore/agents/coordination';
 import { ManualClock } from '@adecore/agents/testing';
 import type { AgentRequest, AgentStatus, ChatRequestSummary, ChatTurnLimit, ProcessAlert, PushSubscribePayload, ServerFrame } from '@ruimte/contracts';
 import {
@@ -20,7 +20,7 @@ import { AuthStore } from '../auth/auth-store.ts';
 import { generateKeyPair, signMessage } from '../auth/keys.ts';
 import { admitClient } from '../auth/test-admit.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { registerPushHandlers } from '../handlers/push.ts';
+import { pushArea } from '../handlers/push.ts';
 import { makeHarness } from '../sessions/test-helpers.ts';
 import { PushService } from './service.ts';
 import { SnoozeStore } from './snoozes.ts';
@@ -285,7 +285,7 @@ describe('offline push delivery', () => {
     test('subscriptions survive restarts and cannot be assigned to the local secret or a client the machine does not know', async () => {
         expect(await new AuthStore(home).pushSubscriptions()).toEqual([{ sessionId, subscription }]);
         const dispatcher = new Dispatcher();
-        registerPushHandlers(dispatcher, auth);
+        pushArea({ auth, push: {} as PushService, changed: () => undefined }).handlers?.(dispatcher);
         for (const owner of [null, 'missing']) {
             const replies: ServerFrame[] = [];
             await dispatcher.handle(
@@ -907,7 +907,7 @@ describe('what a device chose to hear of', () => {
 
     test('a kind this machine does not know is dropped, and the rest of the subscription stands', async () => {
         const dispatcher = new Dispatcher();
-        registerPushHandlers(dispatcher, auth);
+        pushArea({ auth, push: {} as PushService, changed: () => undefined }).handlers?.(dispatcher);
         const replies: ServerFrame[] = [];
         const payload = {
             ...subscription,
@@ -951,7 +951,7 @@ describe('what a device chose to hear of', () => {
 
     test('push.preferences reads back what the asking device chose, defaults filled in', async () => {
         const dispatcher = new Dispatcher();
-        registerPushHandlers(dispatcher, auth);
+        pushArea({ auth, push: {} as PushService, changed: () => undefined }).handlers?.(dispatcher);
         const ask = async (owner: string | null): Promise<ServerFrame> => {
             const replies: ServerFrame[] = [];
             await dispatcher.handle(
@@ -1347,7 +1347,7 @@ describe('a device in quiet hours', () => {
     let quiet: PushService;
     /* The timers the service has set and not yet seen fire or cleared. */
     const armed = new Set<unknown>();
-    const watched: OutboxClock = {
+    const watched: Clock = {
         now: () => clock.now(),
         setTimeout: (run, ms) => {
             const handle = clock.setTimeout(() => {

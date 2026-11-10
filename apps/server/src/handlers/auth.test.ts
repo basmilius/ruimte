@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bu
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { CodedError } from '@adecore/agents';
 import { PROTOCOL_VERSION, type ServerFrame, type TextModelChoice } from '@ruimte/contracts';
 import { machineRegistrationMessage, peerAccessRequestMessage } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
@@ -9,13 +10,14 @@ import { AgentIntegrations } from '../agents/integrations.ts';
 import { AuthStore, type StatementAdmission } from '../auth/auth-store.ts';
 import { generateKeyPair } from '../auth/keys.ts';
 import { admitClient } from '../auth/test-admit.ts';
-import { Dispatcher, RequestError, type ClientAccess, type ClientConnection } from '../dispatcher.ts';
-import { LENT_NOTHING, lendNothing } from '../endpoint-id-test-helpers.ts';
+import { Dispatcher } from '../dispatcher.ts';
+import { NO_SETTING_PORTS } from '../endpoint-id-test-helpers.ts';
 import { readOrCreateEndpointIdentity, type EndpointIdentity } from '../endpoint-id.ts';
+import { PeerKey } from '../peer/giver/peer-key.ts';
 import { ClosedLidError, DEFAULT_ADMIN_PROMPT } from '../power/closed-lid.ts';
 import { MachineUpdates } from '../power/machine-update.ts';
-import { PeerKey } from '../remote/peer-key.ts';
-import { registerAuthHandlers } from './auth.ts';
+import type { ClientAccess, ClientConnection } from '../wire.ts';
+import { authArea } from './auth.ts';
 
 let home: string;
 let store: AuthStore;
@@ -70,8 +72,6 @@ beforeEach(async () => {
     setSystemTime(NOW);
     home = await mkdtemp(join(tmpdir(), 'ruimte-auth-handlers-'));
     store = new AuthStore(home);
-    identity = lendNothing(await readOrCreateEndpointIdentity(home, 'box'));
-    dispatcher = new Dispatcher();
     lanDoorOpen = true;
     disconnected = [];
     streamingChanges = [];
@@ -82,6 +82,22 @@ beforeEach(async () => {
     lidCancels = false;
     ruleRequests = [];
     updates = new MachineUpdates();
+    identity = await readOrCreateEndpointIdentity(home, 'box', () => ({
+        ...NO_SETTING_PORTS,
+        describe: () => ({
+            keepAwakeLidRule: lidRule,
+            agentIntegrations: integrations.summary(),
+            brokerUrl: identity.broker.mode === 'custom' ? identity.broker.url : null,
+            brokerFixed: false,
+            lan: lanDoorOpen ? { port: 4220, addresses: ['192.168.1.20'] } : null,
+            lanDoorFixed: false
+        }),
+        keepAwakeChanged: () => {
+            keepAwakeChanges += 1;
+        },
+        streamingChanged: (allowed) => streamingChanges.push(allowed)
+    }));
+    dispatcher = new Dispatcher();
     integrations = new AgentIntegrations({
         home,
         fixed: false,
@@ -92,25 +108,19 @@ beforeEach(async () => {
     await integrations.load();
     await integrations.refreshInstalled();
     peerKey = new PeerKey(home);
-    registerAuthHandlers(dispatcher, store, {
+    authArea({
+        store,
         identity,
         peerKey,
         home,
         version: '0.0.0',
-        broker: () => ({ brokerUrl: identity.broker.mode === 'custom' ? identity.broker.url : null, brokerFixed: false }),
-        lanDoor: () => ({ lan: lanDoorOpen ? { port: 4220, addresses: ['192.168.1.20'] } : null, lanDoorFixed: false }),
-        streamingChanged: (allowed) => streamingChanges.push(allowed),
+        keepAwake: { available: true },
+        announce: () => undefined,
         validateTextModel: async (choice) => {
             validatedTextModels.push(choice);
 
             if (refuseTextModel) {
-                throw new RequestError('unavailable', 'Text model unavailable');
-            }
-        },
-        keepAwake: {
-            available: true,
-            changed: () => {
-                keepAwakeChanges += 1;
+                throw new CodedError('unavailable', 'Text model unavailable');
             }
         },
         closedLid: {
@@ -126,13 +136,14 @@ beforeEach(async () => {
         },
         agentIntegrations: { summary: () => integrations.summary(), files: () => integrations.files(), set: (kind, on) => integrations.set(kind, on) },
         updates: {
+            subscribe: (clientId, sink) => updates.subscribe(clientId, sink),
             state: () => updates.state(),
             report: (clientId, report) => updates.report(clientId, report),
             requestInstall: () => updates.requestInstall(),
             ending: () => ({ terminals: 1, agents: 2 })
         },
         disconnect: (sessionId) => disconnected.push(sessionId)
-    });
+    }).handlers?.(dispatcher);
 });
 
 afterEach(async () => {
@@ -192,7 +203,7 @@ describe('auth handlers', () => {
             ok: false,
             error: { code: 'closed-lid-no-rule' }
         });
-        expect([identity.keepAwake.lidClosed, keepAwakeChanges]).toEqual([false, 0]);
+        expect([identity.keepAwakeLidClosed, keepAwakeChanges]).toEqual([false, 0]);
 
         lidRule = true;
         expect(await ask(paired, 'endpoint.setIdentity', { name: null, icon: null, keepAwakeLidClosed: true })).toMatchObject({
@@ -224,7 +235,6 @@ describe('auth handlers', () => {
         });
         expect(keepAwakeChanges).toBe(1);
 
-        // The same checks as beside a name: the closed-lid rule, and a folder for worktrees only from the owner.
         expect(await ask(paired, 'endpoint.settings', { keepAwakeLidClosed: true })).toMatchObject({ ok: false, error: { code: 'closed-lid-no-rule' } });
         expect(await ask(paired, 'endpoint.settings', { worktreeRoot: join(home, 'checkouts') })).toMatchObject({ ok: false, error: { code: 'owner-only' } });
         expect(identity.worktreeRoot).toBeNull();
@@ -313,6 +323,84 @@ describe('auth handlers', () => {
         expect(heard.at(-1)).toEqual({ event: 'endpoint.updateInstall', payload: {} });
     });
 
+    test('endpoint.info spells every field of a machine away from its defaults, and keeps the owner-only ones from other clients', async () => {
+        const chosen = join(await mkdtemp(join(tmpdir(), 'ruimte-wt-root-')), 'wt');
+        await identity.setIdentity(
+            'Studio',
+            { kind: 'lucide', value: 'server' },
+            {
+                agentsDeleteAnyView: true,
+                reachOpenProjects: true,
+                steerMessages: true,
+                streamingAllowed: false,
+                resumeAtReset: true,
+                visualReplies: false,
+                keepAwake: 'always',
+                keepAwakeOnBattery: true,
+                keepAwakeDisplay: true,
+                broker: { mode: 'custom', url: 'wss://mine.example.com' },
+                lanDoor: false,
+                worktreeRoot: chosen,
+                terminalShell: 'cmd',
+                usageStats: false
+            }
+        );
+        await identity.setNodeSize('terminal', { w: 800, h: 480 });
+        const fields = {
+            id: identity.id,
+            label: 'Studio',
+            nameSource: 'chosen',
+            icon: { kind: 'lucide', value: 'server' },
+            agentsDeleteAnyView: true,
+            agentsSharePorts: false,
+            reachOpenProjects: true,
+            steerMessages: true,
+            streamingAllowed: false,
+            resumeAtReset: true,
+            visualReplies: false,
+            textModel: null,
+            startFolder: '',
+            keepAwake: 'always',
+            keepAwakeOnBattery: true,
+            keepAwakeDisplay: true,
+            keepAwakeLidClosed: false,
+            keepAwakeAvailable: true,
+            keepAwakeLidAvailable: true,
+            keepAwakeLidRule: false,
+            agentIntegrations: integrations.summary(),
+            update: updates.state(),
+            platform: process.platform,
+            version: '0.0.0',
+            protocol: PROTOCOL_VERSION,
+            publicKey: identity.publicKey,
+            broker: { mode: 'custom', url: 'wss://mine.example.com' },
+            brokerUrl: 'wss://mine.example.com',
+            brokerFixed: false,
+            lan: { port: 4220, addresses: ['192.168.1.20'] },
+            lanDoor: false,
+            lanDoorFixed: false,
+            nodeSizes: { terminal: { w: 800, h: 480 } },
+            usageStats: false,
+            viewReferences: true
+        };
+        const features = dispatcher.types();
+
+        const paired = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.info');
+        expect(paired).toEqual({ id: '1', ok: true, result: { ...fields, reachability: 'lan', authenticated: true, features } });
+
+        const local = (await ask(LOCAL, 'endpoint.info')) as { result: Record<string, unknown> };
+        const { gitBashMissing: _gitBashMissing, ...localResult } = local.result;
+        expect(localResult).toEqual({
+            ...fields,
+            reachability: 'loopback',
+            authenticated: false,
+            features,
+            accountId: null,
+            worktreeRoot: chosen,
+            terminalShell: 'cmd'
+        });
+    });
+
     test('endpoint.info carries the key a client pins the machine on', async () => {
         const info = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.info');
         expect(info).toMatchObject({ ok: true, result: { id: identity.id, publicKey: identity.publicKey, authenticated: true } });
@@ -367,7 +455,12 @@ describe('auth handlers', () => {
                     keepAwakeOnBattery: false,
                     keepAwakeDisplay: false,
                     keepAwakeLidClosed: false,
-                    ...LENT_NOTHING,
+                    keepAwakeLidRule: false,
+                    agentIntegrations: integrations.summary(),
+                    brokerUrl: null,
+                    brokerFixed: false,
+                    lan: { port: 4220, addresses: ['192.168.1.20'] },
+                    lanDoorFixed: false,
                     broker: { mode: 'default' },
                     lanDoor: true,
                     nodeSizes: {},
@@ -377,7 +470,6 @@ describe('auth handlers', () => {
             }
         ]);
 
-        // A client that connects after the rename is told the same thing without asking for it.
         const info = await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.info');
         expect(info).toMatchObject({ ok: true, result: { label: 'The one under the desk' } });
     });
@@ -514,7 +606,7 @@ describe('auth handlers', () => {
 
         const cleared = await ask(paired, 'endpoint.setStartFolder', { folder: '   ' });
         expect(cleared).toMatchObject({ ok: true, result: { startFolder: '' } });
-        expect(identity.startFolder).toBeNull();
+        expect(identity.startFolder).toBe('');
         expect(await ask(undefined, 'endpoint.info')).toMatchObject({ ok: true, result: { features: expect.arrayContaining(['endpoint.setStartFolder']) } });
     });
 
@@ -522,7 +614,7 @@ describe('auth handlers', () => {
         const paired: ClientAccess = { reachability: 'lan', sessionId: 's1' };
 
         expect(await ask(paired, 'endpoint.setStartFolder', { folder: 'a'.repeat(4097) })).toMatchObject({ ok: false });
-        expect(identity.startFolder).toBeNull();
+        expect(identity.startFolder).toBe('');
     });
 
     test('a name nobody could read is refused before it reaches the file', async () => {
@@ -567,7 +659,6 @@ describe('auth handlers', () => {
         });
         expect(plain).toMatchObject({ ok: false });
         expect(identity.broker).toEqual({ mode: 'custom', url: 'wss://mine.example.com' });
-        // A rename leaves the broker where it stands.
         expect(await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Studio', icon: null })).toMatchObject({
             ok: true,
             result: { broker: { mode: 'custom' } }
@@ -652,7 +743,6 @@ describe('auth handlers', () => {
             expect(result.peerPublicKey).not.toBe(identity.publicKey);
             expect(verifySignature(result.peerPublicKey, message, result.peerSignature)).toBe(true);
             expect(verifySignature(identity.publicKey, message, result.machineSignature)).toBe(true);
-            // Each signature belongs to its own key and its own request.
             expect(verifySignature(identity.publicKey, message, result.peerSignature)).toBe(false);
             expect(verifySignature(result.peerPublicKey, message, result.machineSignature)).toBe(false);
             expect(

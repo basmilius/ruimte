@@ -1,7 +1,7 @@
 import type { Endpoint } from '@/state/endpoints';
+import type { ConnectionState, Transport, TransportStatus } from '../transport-api/transport';
 import { HandlerTable } from './handler-table';
 import type { SocketAddress } from './link-transport';
-import type { ConnectionState, Transport, TransportStatus } from './transport';
 
 /* How long a socket nobody holds stays up, so a switch there and back costs no round trip. */
 const IDLE_CLOSE_MS = 30_000;
@@ -18,7 +18,7 @@ export interface PooledTransport extends Transport {
     dispose(): void;
 }
 
-export interface TransportPoolOptions {
+interface TransportPoolOptions {
     /*
      * Opens a socket for an endpoint. The pool builds no addresses, which is what lets a test hand it
      * fakes. `currentId` is the id the entry is under right now, which a rekey changes.
@@ -112,7 +112,6 @@ export class TransportPool {
         this.emit(newId);
     }
 
-    /* The connection comes up again on what the row says now, keeping every holder and every client built on it. */
     reconnect(endpointId: string): void {
         this.byId.get(endpointId)?.transport.reconnect();
     }

@@ -27,11 +27,12 @@ import {
     type ArtifactVersionRef,
     type ChatAttachment
 } from '@ruimte/contracts';
-import type { MachineHome } from '../fs/machine-home.ts';
-import { realOrNull } from '../fs/real-path.ts';
-import { sniffMime } from '../fs/sniff.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
-import { shotFolders } from '../shots.ts';
+import { bestEffort } from '../best-effort.ts';
+import { shotFolders } from '../disk/agent-folders.ts';
+import type { MachineHome } from '../disk/machine-home.ts';
+import { realOrNull } from '../disk/real-path.ts';
+import { sniffMime } from '../disk/sniff.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { cleanupProposals, NO_PINS, removable, type PinnedVersions } from './artifact-cleanup.ts';
 import { copyVersionInto } from './artifact-copy.ts';
 import { ArtifactError, isTextMime, SNIFF_HEAD_BYTES } from './artifact-names.ts';
@@ -55,7 +56,6 @@ interface ArtifactReading {
 /* What the service needs to know of a project: its name and its folder; null for a project this machine does not know. */
 interface ArtifactProjects {
     known(): Promise<Array<{ projectId: string; name: string; folder: string }>>;
-    /* The project a node, view or chat is in. */
     projectOf(id: string): string | null;
 }
 
@@ -103,7 +103,7 @@ export interface ExtensionPublishInput {
     files: ReadonlyArray<{ name: string; bytes: Uint8Array }>;
 }
 
-export interface UploadState {
+interface UploadState {
     /* The bytes each staged file holds, by its place. */
     sizes: number[];
     /* The version an earlier publish with this request id made, so a retry need not send its bytes again. */
@@ -515,7 +515,7 @@ export class Artifacts {
 
     private async dropUpload(stagingId: string): Promise<void> {
         this.uploads.delete(stagingId);
-        await this.store.discardStaging(stagingId).catch(() => undefined);
+        await bestEffort('store.discardStaging', this.store.discardStaging(stagingId));
     }
 
     /* One staging folder per session and upload id, so two sessions never write into each other's. */

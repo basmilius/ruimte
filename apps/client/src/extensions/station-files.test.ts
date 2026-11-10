@@ -121,7 +121,6 @@ interface Served {
     fails?: boolean;
 }
 
-/* A machine with these extensions, each handing over the files given for it. */
 function machine(extensions: Served[]) {
     return {
         connection: { status: 'open' as const, attempts: 0, retryAt: null, features: Object.keys(REQUEST_SCHEMAS) },

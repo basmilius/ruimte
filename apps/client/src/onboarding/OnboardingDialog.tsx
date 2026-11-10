@@ -6,9 +6,11 @@ import clsx from 'clsx';
 import { ArrowRight, Check, Info, PanelsTopLeft, Server, Terminal } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useComputer } from '@/computer/computer';
 import { computerSetupOf } from '@/computer/setup';
 import { useComputerMachine } from '@/computer/use-computer-machine';
 import { ComputerTask } from '@/onboarding/ComputerTask';
+import { onboardingDialog } from '@/onboarding/dialog';
 import { closeOnboarding } from '@/onboarding/open';
 import { ProvidersTask } from '@/onboarding/ProvidersTask';
 import { RowTile, TaskPane } from '@/onboarding/TaskPane';
@@ -28,16 +30,14 @@ import {
     type OnboardingTask
 } from '@/onboarding/tasks';
 import { WELCOME_SKY } from '@/onboarding/welcome-sky';
-import { useComputer } from '@/state/computer';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
-import { useUi } from '@/state/ui';
-import { chatScopeOf } from '@/transport/chat-scope';
-import { machineFor } from '@/transport/connections';
 import { useMachineHold } from '@/transport/status';
 import { BrandSymbol } from '@/ui/Brand';
 import { Eclipse } from '@/ui/Eclipse';
+import { chatScopeOf } from '@/workspace/chat-scope';
+import { machineFor } from '@/workspace/connections';
 
 /*
  * The machine this window runs beside, held for as long as the onboarding is up. Its clients are
@@ -59,7 +59,7 @@ function useLocalMachine(): Endpoint | null {
  */
 export function OnboardingDialog() {
     const { t } = useTranslation('onboarding');
-    const step = useUi((s) => s.onboarding);
+    const step = onboardingDialog.useRequest((request) => request);
     // What the popup keeps showing while it animates closed, after the step is gone.
     const [shown, setShown] = useState(step);
     const titleId = useId();
@@ -111,7 +111,7 @@ function Welcome({ titleId }: { titleId: string }) {
                 </h2>
                 <p className="max-w-[420px] text-base text-text-muted">{t(total === 2 ? 'welcome.bodyTwo' : 'welcome.bodyThree')}</p>
                 <div className="mt-2 flex items-center gap-2.5">
-                    <Button variant="primary" onClick={() => useUi.getState().setOnboarding('hub')}>
+                    <Button variant="primary" onClick={() => onboardingDialog.set('hub')}>
                         {t('welcome.start')}
                     </Button>
                     <Button onClick={closeOnboarding}>{t('welcome.notNow')}</Button>
@@ -121,7 +121,6 @@ function Welcome({ titleId }: { titleId: string }) {
     );
 }
 
-/* The tasks on the left with how far each is, and the one picked on the right. */
 function Hub({ titleId }: { titleId: string }) {
     const { t } = useTranslation('onboarding');
     const endpoint = useLocalMachine();
@@ -229,7 +228,6 @@ const INTRO_ROWS = [
     { id: 'machines', icon: Server }
 ] as const;
 
-/* Three things about Ruimte that the rest of the app takes for granted. */
 function IntroTask({ onRead }: { onRead(): void }) {
     const { t } = useTranslation('onboarding');
     return (
@@ -264,7 +262,6 @@ function IntroTask({ onRead }: { onRead(): void }) {
     );
 }
 
-/* The end of the walk: what is done, what is left and where it waits, and the way into the app. */
 function DonePane({ tasks, facts }: { tasks: readonly OnboardingTask[]; facts: OnboardingFacts }) {
     const { t } = useTranslation(['onboarding', 'common']);
     const summary = summaryOf(tasks, facts);

@@ -27,8 +27,8 @@ struct ChatShellCommand: Equatable {
     }
 }
 
-/// The simple commands of a shell line, as `shellCommands` in the desktop's `chat/logic/embedded-code.ts` splits
-/// them: enough to tell which programs a line runs, not a parser.
+/// The simple commands of a shell line, as `shellCommands` in `chat/logic/embedded-code.ts` of `@adecore/agents-react`
+/// splits them: enough to tell which programs a line runs, not a parser.
 enum ChatShell {
     // Programs that run the next word as the command; their own options are skipped along with them.
     private static let wrappers: Set<String> = ["sudo", "env", "exec", "nohup", "time", "command", "nice"]
@@ -770,15 +770,12 @@ enum RuimteCommandLook {
     }
 
     /// Every view and node of a project by id, under the title it has now.
-    static func projectNames(_ views: [JSONValue]) -> [String: ChatCommandName] {
+    static func projectNames(_ views: [StoredView]) -> [String: ChatCommandName] {
         var names: [String: ChatCommandName] = [:]
         for view in views {
-            names[view.stableID] = ChatCommandName(
-                name: view.text("name"), icon: WorkspaceViewIcon.name(for: view), view: true)
-            for node in view.list("nodes") {
-                let kind = JSONValue.object(["kind": .string(node.text("kind"))])
-                names[node.stableID] = ChatCommandName(
-                    name: node.text("title"), icon: WorkspaceViewIcon.name(for: kind), view: false)
+            names[view.id] = ChatCommandName(name: view.name, icon: WorkspaceViewIcon.name(for: view), view: true)
+            for node in view.nodes {
+                names[node.id] = ChatCommandName(name: node.title, icon: WorkspaceViewIcon.name(for: node), view: false)
             }
         }
         return names

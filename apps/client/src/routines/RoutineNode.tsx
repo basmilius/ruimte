@@ -7,20 +7,19 @@ import clsx from 'clsx';
 import { CalendarClock, CircleAlert, CirclePause, Clock, Folder, Hand, Play, Rocket, WifiOff } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { NodeHeaderControls, NodePlate } from '@/nodes/node-chrome';
 import { lookOfRun, type BlockLook } from '@/routines/agenda';
 import { blockClass } from '@/routines/look-class';
 import { runRoutineNow, setRoutinePaused } from '@/routines/routine-commands';
 import { useRoutineList } from '@/routines/routine-list';
 import { useRoutineWhat } from '@/routines/routine-what';
 import { RoutinePrompt } from '@/routines/RoutinePrompt';
-import { showRoutine } from '@/routines/stage';
 import { dayWords, rowStatus, runWords, scheduleWords, weekdayClock } from '@/routines/words';
 import { useCanvas } from '@/state/canvas';
-import { useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
+import { showRoutine } from '@/state/routines-stage';
+import { NodeHeaderControls, NodePlate } from '@/surface/nodes/node-chrome';
 
-// The newest runs the strip shows; the stage has the rest.
 const STRIP_RUNS = 14;
 const MINUTE_MS = 60_000;
 
@@ -64,7 +63,6 @@ function RoutineOnCanvas({ endpointId, entry, timeZone }: { endpointId: string; 
     const routine = entry.routine;
     const run = entry.runs.find((candidate) => candidate.runId === picked) ?? entry.runs.find((candidate) => candidate.state !== 'skipped') ?? entry.runs[0];
     const strip = entry.runs.slice(0, STRIP_RUNS).reverse();
-    // A block opens its run where its chat is drawn: in Routines, at that run.
     const openRun = (runId: string): void => {
         setPicked(runId);
         showRoutine(target, runId);
@@ -149,7 +147,6 @@ function RunBlock({ run, picked, timeZone, onOpen }: { run: RoutineRun; picked: 
     );
 }
 
-/* What the routine starts, as the chips under its instructions: the agent and model and its mode, a folder, or a launch. */
 function RoutineChips({ endpointId, entry }: { endpointId: string; entry: RoutineEntry }) {
     const what = useRoutineWhat(entry);
     const routine = entry.routine;
@@ -169,7 +166,6 @@ function RoutineChips({ endpointId, entry }: { endpointId: string; entry: Routin
     );
 }
 
-/* When it runs next and how long that is from now; what stops it instead when it is paused, held or denied. */
 function NextCard({ entry, timeZone }: { entry: RoutineEntry; timeZone: string }) {
     const { t } = useTranslation('routines');
     const now = useNow(MINUTE_MS);
@@ -211,7 +207,6 @@ function NextCard({ entry, timeZone }: { entry: RoutineEntry; timeZone: string }
     );
 }
 
-/* How the runs in the strip went, counted: the line under the blocks. */
 function StripCounts({ runs }: { runs: readonly RoutineRun[] }) {
     const { t } = useTranslation('routines');
     const looks = runs.map(lookOfRun);

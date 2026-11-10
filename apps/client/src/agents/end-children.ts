@@ -1,7 +1,7 @@
 import type { Worktree } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
-import type { Transport } from '@/transport/transport';
+import { orNull, type Transport } from '@/transport-api/transport';
 
 export interface PendingEnd {
     /* What a delete or a stop names in its title; stopping a turn with its sub-agents has a title of its own. */
@@ -86,8 +86,8 @@ export async function askBeforeEndingAgents(
     run: () => void,
     worktrees?: () => Promise<PendingEnd['worktrees']>
 ): Promise<void> {
-    const [agents, left] = await Promise.all([agentsEndedWith(transport, nodeIds), worktrees?.().catch(() => undefined)]);
-    const offered = left !== undefined && left.worktrees.length > 0 ? left : undefined;
+    const [agents, left] = await Promise.all([agentsEndedWith(transport, nodeIds), orNull('worktrees', worktrees?.())]);
+    const offered = left != null && left.worktrees.length > 0 ? left : undefined;
     if (agents === 0 && offered === undefined) {
         run();
         return;

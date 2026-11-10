@@ -17,7 +17,7 @@ export interface RequestHead {
     headers: Array<[name: string, value: string]>;
 }
 
-export type HeadResult = { kind: 'need-more' } | { kind: 'head'; head: RequestHead; rest: Buffer } | { kind: 'bad'; status: 400 | 431 | 501; reason: string };
+type HeadResult = { kind: 'need-more' } | { kind: 'head'; head: RequestHead; rest: Buffer } | { kind: 'bad'; status: 400 | 431 | 501; reason: string };
 
 export function parseRequestHead(buffer: Buffer): HeadResult {
     const end = buffer.indexOf(HEAD_END);
@@ -68,7 +68,7 @@ export function headerValues(headers: RequestHead['headers'], name: string): str
     return headers.filter(([key]) => key.toLowerCase() === name).map(([, value]) => value);
 }
 
-export type Framing = { kind: 'none' } | { kind: 'length'; bytes: number } | { kind: 'chunked' } | { kind: 'bad'; reason: string };
+type Framing = { kind: 'none' } | { kind: 'length'; bytes: number } | { kind: 'chunked' } | { kind: 'bad'; reason: string };
 
 /* How long the body of a request is, by the rules of RFC 9112 section 6, refusing a request that names two lengths. */
 export function framingOf(headers: RequestHead['headers']): Framing {
@@ -216,7 +216,6 @@ export function parseAuthority(text: string): Authority | null {
     return { host: match[1]!.toLowerCase(), port, text: text.toLowerCase() };
 }
 
-/* `http://authority/path?query` split into its authority and the origin-form target, or null for anything else. */
 export function parseAbsoluteTarget(target: string): { authority: Authority; path: string } | null {
     // After the authority comes a path or a query and nothing else, so `host:80@elsewhere` is no authority of ours.
     const match = /^http:\/\/([^/?#\s@]+)((?:[/?][\x21-\x7e]*)?)$/i.exec(target);
@@ -250,7 +249,6 @@ export function forwardedHead(head: RequestHead, authority: Authority, path: str
     return Buffer.from(`${lines.join('\r\n')}\r\n\r\n`, 'latin1');
 }
 
-/* The status code of a response head, or null when the bytes do not start one. */
 export function statusOfResponse(bytes: Buffer): number | null {
     const match = /^HTTP\/1\.[01] (\d{3})[ \r]/.exec(bytes.subarray(0, 32).toString('latin1'));
 

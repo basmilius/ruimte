@@ -2,10 +2,11 @@ import { CodedError } from '@adecore/agents';
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers } from '@ruimte/actions';
 import { deviceButtons, isCanvasView, type DeviceInfo, type DeviceReference } from '@ruimte/contracts';
+import { field, orNote, type CanvasHost } from '../canvas/host.ts';
+import { checkDevicePath } from '../canvas/project-paths.ts';
+import { refuseOtherMachine } from '../canvas/remote-node.ts';
 import type { DeviceActionBody } from '../devices/agent-driver.ts';
-import { field, orNote, type CanvasHost, type DeviceDriveHost } from '../tools/host.ts';
-import { checkDevicePath } from '../tools/project-paths.ts';
-import { refuseOtherMachine } from '../tools/remote-node.ts';
+import type { DeviceDriveHost } from '../devices/agent-host.ts';
 import type { ServerActionContext } from './context.ts';
 
 const NO_DEVICES = 'This machine has no simulator, emulator or phone right now; the person brings one';

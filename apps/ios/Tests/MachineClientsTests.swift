@@ -12,7 +12,8 @@ import XCTest
             "connectedAt": .number(1_000), "current": .bool(false),
         ]
         object.merge(fields) { $1 }
-        return ConnectedMachineClient(.object(object))
+        // A fixture that does not decode is a broken test, not a case to cover.
+        return ConnectedMachineClient(try! JSONValue.object(object).decoded(as: ConnectedClient.self))
     }
 
     func testTheIconTableDrawsTheDeviceBeforeTheApp() {

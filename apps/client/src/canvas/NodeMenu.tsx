@@ -2,7 +2,7 @@ import { EMPTY_DRAFT, writeDraft } from '@adecore/agents-react/chat';
 import { BookmarkSubmenu } from '@adecore/agents-react/chat/ui';
 import { useChatRow, useProviders } from '@adecore/agents-react/state';
 import { DisabledReason, Icon, Kbd, ContextMenu, ScrollArea } from '@adecore/ui';
-import { nodeColorOf, type NodeAccent, type ProviderInfo, type Task } from '@ruimte/contracts';
+import { nodeColorOf, type NodeAccent, type ProviderInfo, type Task, resolveStoredPath, taskRowId } from '@ruimte/contracts';
 import {
     ChevronsDownUp,
     ChevronsUpDown,
@@ -33,55 +33,48 @@ import {
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-    arrangeGroupAction,
-    clearTerminalAction,
-    colorNodeAction,
-    createNodeAction,
-    duplicateNodeAction,
-    ignoreRefusal,
-    linkNodesAction,
-    perform
-} from '@/actions/client-actions';
+import { ignoreRefusal, perform } from '@/action-port/perform';
+import { arrangeGroupAction, clearTerminalAction, colorNodeAction, createNodeAction, duplicateNodeAction, linkNodesAction } from '@/action-port/person-actions';
 import { ChatAgentSubmenu } from '@/agents/AgentMenus';
 import { askBeforeClearingChat, askBeforeStoppingTask } from '@/agents/end-children';
-import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
+import { accentLabel, NODE_ACCENTS } from '@/canvas-model/accents';
+import type { Point } from '@/canvas-model/math';
 import { BringBackItem } from '@/canvas/BringBackItem';
 import { CanvasCreateItems } from '@/canvas/CanvasMenu';
 import { formatNodeSize, makeDefaultSize } from '@/canvas/default-size';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
-import type { Point } from '@/canvas/math';
 import { useUnstartedTask } from '@/canvas/remote-wait';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useShownChatOfNode } from '@/chat/focused-chat';
 import { ForkMenuItem } from '@/chat/ForkMenuItem';
 import { useOffersFork } from '@/chat/use-offers-fork';
 import { workflowCandidates, type WorkflowCandidate } from '@/chat/workflow/beside-workflows';
 import { useWorkflowBesideSwitch } from '@/chat/workflow/workflow-beside-state';
+import { useGroupWorktrees, useWorktreeOf } from '@/controllers/worktrees';
 import { NodeMenuSlot } from '@/extensions/SlotSurfaces';
+import { FileActionItems } from '@/files/FileActionItems';
+import { stopPrWatch } from '@/github/pr-watch-actions';
+import { useChatPrWatch } from '@/github/pr-watches';
 import { FlagSubmenu } from '@/project/FlagSubmenu';
-import { useViewNodes } from '@/project/view-nodes';
 import { askOpenAsView, canOpenAsView, showView } from '@/project/views';
 import { setRunsHidden, useRunsHidden } from '@/routines/runs-hidden';
-import { FileActionItems } from '@/shell/panels/FileActionItems';
-import { resolveStoredPath } from '@/shell/panels/files-tree';
-import { workFolderOf, worktreeDiffTab } from '@/shell/panels/worktree-rows';
-import { stopPrWatch } from '@/shell/pr-watch-actions';
-import { RowKbd } from '@/shell/RowKbd';
 import { canvasOfNode, maximizedNodeOf, useCanvas, useCanvasStore, type CanvasNode } from '@/state/canvas';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useFiles } from '@/state/files';
-import { useEndpointId } from '@/state/keys';
-import { useChatPrWatch } from '@/state/pr-watches';
 import { isScratchProject, useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useSessionRow } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
-import { useWorkspace } from '@/transport/connections';
-import { useTransport } from '@/transport/context';
-import { NodeMachineScope } from '@/transport/node-machine';
+import { useViewNodes } from '@/state/view-nodes';
+import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { RowKbd } from '@/surface/RowKbd';
+import { fireAndForget } from '@/transport-api/transport';
+import { useWorkspace } from '@/workspace/connections';
+import { useTransport } from '@/workspace/context';
+import { NodeMachineScope } from '@/workspace/node-machine';
+import { workFolderOf, worktreeDiffTab } from '@/worktree-rules/worktree-rows';
+import { worktreeBindDialog, worktreeMergeDialog, worktreeRemovalDialog } from '@/worktrees/dialogs';
 
 interface NodeMenuProps {
     id: string;
@@ -193,7 +186,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
     // The task was given by a chat of the workspace's machine, which owes the start and is the one that ends it.
     const stopWaiting = (task: Task): void => {
         void askBeforeStoppingTask(workspaceTransport, id, task.title, () => {
-            void perform('chat.stopSubagent', { chatId: task.parentId, toolUseId: `task-${task.id}` }).catch(ignoreRefusal);
+            void perform('chat.stopSubagent', { chatId: task.parentId, toolUseId: taskRowId(task.id) }).catch(ignoreRefusal);
         });
     };
     const clearChat = (): void => {
@@ -350,7 +343,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
                             <ContextMenu.Item
                                 onClick={() => {
                                     canvas();
-                                    useUi.getState().setWorktreeDialogFor(id);
+                                    worktreeBindDialog.set(id);
                                 }}
                             >
                                 <Icon icon={GitBranch} size={14} /> {t('menu.bindWorktree')}
@@ -444,7 +437,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
                 </ContextMenu.Item>
             )}
             {workingFolder && (
-                <ContextMenu.Item onClick={() => void transport.request('fs.reveal', { path: workingFolder }).catch(() => undefined)}>
+                <ContextMenu.Item onClick={() => void fireAndForget('fs.reveal', transport.request('fs.reveal', { path: workingFolder }))}>
                     <Icon icon={ExternalLink} size={14} /> {t('menu.openIn', { app: fileManagerName(platform) })}
                 </ContextMenu.Item>
             )}
@@ -467,10 +460,10 @@ function WorktreeItems({ folder, paths }: { folder: string; paths: string[] }) {
     const { t } = useTranslation('canvas');
     return (
         <>
-            <ContextMenu.Item onClick={() => useUi.getState().setWorktreeMerge({ folder, paths })}>
+            <ContextMenu.Item onClick={() => worktreeMergeDialog.set({ folder, paths })}>
                 <Icon icon={GitMerge} size={14} /> {t('menu.mergeWorktrees', { count: paths.length })}
             </ContextMenu.Item>
-            <ContextMenu.Item className="text-status-error" onClick={() => useUi.getState().setWorktreeRemoval({ folder, paths })}>
+            <ContextMenu.Item className="text-status-error" onClick={() => worktreeRemovalDialog.set({ folder, paths })}>
                 <Icon icon={Trash} size={14} /> {t('menu.removeWorktrees', { count: paths.length })}
             </ContextMenu.Item>
         </>

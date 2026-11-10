@@ -1,17 +1,11 @@
-import type { BrowserDriveEvent, BrowserDriveResult, BrowserPageState } from '@ruimte/contracts';
+import { BROWSER_LOAD_TIMEOUT_MS, BROWSER_START_TIMEOUT_MS, type BrowserDriveEvent, type BrowserDriveResult, type BrowserPageState } from '@ruimte/contracts';
 import { base64Of } from '@/base64';
 import { pageSnapshots } from '@/browser/page-snapshots';
-import { browserRegistry, useBrowser, type BrowserState } from '@/browser/registry';
+import { browserRegistry, useBrowser, type BrowserState } from '@/clients/browser/registry';
 import { endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
+import type { Transport } from '@/transport-api/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { watchPool } from '@/transport/pool-watch';
-import type { Transport } from '@/transport/transport';
-
-/* How long a page is given to come to rest before this client answers with wherever it got to. Under
-   the daemon's own wait, so an agent hears the page and not a timer. */
-const LOAD_TIMEOUT_MS = 10_000;
-
-/* A navigation that never starts (an anchor on the page it is already on) is over by doing nothing. */
-const START_TIMEOUT_MS = 1_500;
 
 /* What the daemon is told about a page this client holds; the icon and the stream are the client's own. */
 export function pageStateOf(browserId: string, row: BrowserState): BrowserPageState {
@@ -56,8 +50,8 @@ function settled(key: string): Promise<void> {
                 if (!started) {
                     done();
                 }
-            }, START_TIMEOUT_MS),
-            setTimeout(done, LOAD_TIMEOUT_MS)
+            }, BROWSER_START_TIMEOUT_MS),
+            setTimeout(done, BROWSER_LOAD_TIMEOUT_MS)
         );
     });
 }
@@ -126,12 +120,12 @@ export function startPageHolds(): () => void {
                     continue;
                 }
                 told.set(key, row);
-                void link.request('browser.hold', { state: pageStateOf(splitKey(key).id, row) }).catch(() => undefined);
+                void fireAndForget('browser.hold', link.request('browser.hold', { state: pageStateOf(splitKey(key).id, row) }));
             }
             for (const key of [...told.keys()]) {
                 if (rows[key] === undefined || !browserRegistry.has(key)) {
                     told.delete(key);
-                    void link.request('browser.release', { browserId: splitKey(key).id }).catch(() => undefined);
+                    void fireAndForget('browser.release', link.request('browser.release', { browserId: splitKey(key).id }));
                 }
             }
         };
@@ -144,7 +138,7 @@ export function startPageHolds(): () => void {
             subscriptions: [
                 useBrowser.subscribe(report),
                 link.on('browser.drive', (payload) => {
-                    void answer(endpointId, payload).then((result) => link.request('browser.driveResult', result).catch(() => undefined));
+                    void answer(endpointId, payload).then((result) => fireAndForget('browser.driveResult', link.request('browser.driveResult', result)));
                 })
             ]
         };

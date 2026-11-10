@@ -33,12 +33,21 @@ final class DrawingEditorModel {
     private var base: JSONValue?
     private var saveTask: Task<Void, Never>?
     private var renderTask: Task<Void, Never>?
-    private var subscription: (() -> Void)?
-    private var connection: (() -> Void)?
     private var generation = 0
     private var lifecycle = 0
     private var inFlightElements: [JSONValue]?
+    // The open request is the read, so the lease is refreshed by `reload` and the resource holds no watch of its own.
     private var lease: MachineSubscription?
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.drawingChanged, raw: { [weak self] event in
+                guard let self, event["projectId"] == target["projectId"], event["viewId"] == target["viewId"],
+                    let document = event["document"]
+                else { return }
+                receive(document)
+            })
+        ], read: { [weak self] in await self?.reload() })
 
     init(client: any MachineRequesting, machineID: String, projectID: String, viewID: String) {
         self.client = client
@@ -61,30 +70,15 @@ final class DrawingEditorModel {
         if document != nil { render() }
         if lease == nil {
             lease = client.acquireSubscription(
-                start: "drawing.open", stop: "drawing.close", payload: target, stopPayload: target)
+                start: .drawingOpen, stop: .drawingClose, payload: target, stopPayload: target)
         }
-        if subscription == nil {
-            subscription = client.subscribe(.drawingChanged) { [weak self] event in
-                guard let self, event["projectId"] == self.target["projectId"],
-                    event["viewId"] == self.target["viewId"],
-                    let document = event["document"]
-                else { return }
-                self.receive(document)
-            }
-            connection = client.observeConnection { [weak self] connected in
-                guard connected else { return }
-                Task { await self?.reload() }
-            }
-        }
+        live.start()
         await reload()
     }
 
     func stop() {
         lifecycle += 1
-        subscription?()
-        subscription = nil
-        connection?()
-        connection = nil
+        live.stop()
         save()
         let releasing = lease
         lease = nil
@@ -343,35 +337,47 @@ final class DrawingEditorModel {
                 saving = false
                 saveTask = nil
             }
-            var conflicts = 0
-            while dirty, problem == nil, let base, let sent = document {
-                inFlightElements = sent.list("elements")
+            var rev = RevSave()
+            while dirty, problem == nil, base != nil, document != nil {
                 defer { inFlightElements = nil }
-                do {
-                    let result = try await client.request(
-                        .drawingSave,
-                        payload:
-                            target
-                            .setting("baseRev", base["rev"])
-                            .setting("content", .object(["elements": .array(sent.list("elements"))])))
-                    let saved = sent.setting("rev", result["rev"])
-                    if (self.base?.number("rev") ?? 0) <= saved.number("rev") {
-                        self.base = saved
-                        document = document?.setting("rev", result["rev"])
+                let outcome = await rev.send(
+                    { [self] in
+                        guard let base, let sent = document else {
+                            throw MachineClientError.invalid(String(localized: "The drawing is missing."))
+                        }
+                        // The merge of a reload keeps what is on its way out.
+                        inFlightElements = sent.list("elements")
+                        let result = try await client.request(
+                            .drawingSave,
+                            payload:
+                                target
+                                .setting("baseRev", base["rev"])
+                                .setting("content", .object(["elements": .array(sent.list("elements"))])))
+                        return (sent, result["rev"])
+                    },
+                    reload: { [self] in
+                        let before = base?.number("rev") ?? 0
+                        await reload()
+                        return problem == nil && dirty && (base?.number("rev") ?? 0) > before
+                    })
+                switch outcome {
+                case .saved(let (sent, written)):
+                    let saved = sent.setting("rev", written)
+                    if (base?.number("rev") ?? 0) <= saved.number("rev") {
+                        base = saved
+                        document = document?.setting("rev", written)
                     }
                     persist()
-                } catch MachineClientError.server(let code, _) where code == "rev-conflict" {
-                    conflicts += 1
-                    if conflicts > 2 {
+                case .conflict:
+                    // A reload that merged away what was left to send, or that failed, has its own say.
+                    if problem == nil && dirty {
                         problem = String(
                             localized:
                                 "This drawing keeps changing on another device. Your changes are saved on this device. Tap Try again."
                         )
-                        return
                     }
-                    await reload()
-                    if problem != nil { return }
-                } catch {
+                    return
+                case .failed(let error):
                     let reason = error.localizedDescription
                     problem = String(
                         localized:

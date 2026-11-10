@@ -31,7 +31,7 @@ export interface TelemetrySettings {
     readonly ruimteHome: string;
 }
 
-interface ProjectSource {
+export interface ProjectSource {
     known(): Promise<ReadonlyArray<{ name: string; folder: string }>>;
 }
 
@@ -104,7 +104,7 @@ export const DAEMON_MOMENTS = {
     'daemon.client': ['local opened', 'local closed', 'account opened', 'account closed', 'machine opened', 'machine closed']
 } as const satisfies Record<string, readonly string[]>;
 
-export type MomentCategory = keyof typeof DAEMON_MOMENTS;
+type MomentCategory = keyof typeof DAEMON_MOMENTS;
 
 export function allowedMoment(breadcrumb: { category?: string; message?: string }): boolean {
     const words = (DAEMON_MOMENTS as Record<string, readonly string[]>)[breadcrumb.category ?? ''];
@@ -226,7 +226,7 @@ export function noteMoment<C extends MomentCategory>(category: C, message: (type
     sentry?.addBreadcrumb({ category, message, level: 'info' });
 }
 
-export type ClientKind = 'local' | 'account' | 'machine';
+type ClientKind = 'local' | 'account' | 'machine';
 
 /* Who a client is, as a kind: the app on this machine, a device of the account, or another machine of it. */
 export function clientKindOf(access: { sessionId: string | null; peer?: unknown } | undefined): ClientKind {
@@ -297,7 +297,6 @@ function startMeters(active: Sentry): void {
     meter = window;
 }
 
-/* Starts reporting for the serving daemon (`daemonClientOptions`). */
 export async function startTelemetry(current: TelemetrySettings): Promise<void> {
     const loaded = await import('@sentry/bun');
     const redactions = (): string[] => [...secrets, ...projectRedactions];
@@ -452,7 +451,6 @@ export async function stopTelemetry(): Promise<void> {
     await sentry?.close(FLUSH_MS);
 }
 
-/* The last lines of a process's stderr, kept for a report of its exit. */
 export class StderrTail {
     private readonly lines: string[] = [];
     private readonly size: number;

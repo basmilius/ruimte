@@ -4,9 +4,9 @@ import { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { ManualClock } from '@adecore/agents/testing';
 import type { ChatItem, ProjectContent } from '@ruimte/contracts';
 import { voiceActionCall } from '../actions/context.ts';
-import { serverActions } from '../actions/server-actions.ts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, invokeTool, releasedProject, turnsOf, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, releasedProject, turnsOf, type TestDaemon } from '../testing/test-daemon.ts';
 import { ENDED_REASON, wireEndChildren } from './end-children.ts';
 import { OutboxStore } from './outbox.ts';
 
@@ -59,14 +59,12 @@ async function boot(): Promise<TestDaemon> {
     return daemon;
 }
 
-/* The lead in the middle of a turn, as it is while it calls the tools. */
 async function leadWorking(daemon: TestDaemon): Promise<void> {
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     await daemon.chats.send('chat-lead', 'slow');
     await daemon.until(() => daemon.chats.get('chat-lead')?.info.agentSessionId !== null);
 }
 
-/* A chat child that is still working on its task, and a terminal child whose shell runs. */
 async function twoRunningChildren(daemon: TestDaemon): Promise<{ chat: string; terminal: string }> {
     const [chatLine] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', task: 'Slow', prompt: 'slow' });
     const [terminalLine] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', terminal: true, task: 'Shell', prompt: 'work' });
@@ -105,14 +103,12 @@ function withoutNode(id: string) {
 describe('stopping or deleting a parent ends the agents it opened', () => {
     test('deleting a lead with two running children ends all three processes, cancels their tasks and wakes nobody', async () => {
         const daemon = await boot();
-        daemon.worker.start();
         await leadWorking(daemon);
         const { chat, terminal } = await twoRunningChildren(daemon);
 
         // What the confirmation counts before anything happens.
         expect(await daemon.request('agent.children', { nodeId: 'chat-lead' })).toMatchObject({ ok: true, result: { nodeIds: [chat, terminal] } });
 
-        // A client deletes the node. The document loses it and the watcher kills its chat.
         await store.mutate(projectId, withoutNode('chat-lead'));
         expect(await daemon.request('chat.kill', { chatId: 'chat-lead' })).toMatchObject({ ok: true });
         await daemon.worker.settled();
@@ -135,7 +131,6 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
 
     test("stopping a lead that stays cancels the children's tasks and never wakes it about them", async () => {
         const daemon = await boot();
-        daemon.worker.start();
         await leadWorking(daemon);
         const { chat, terminal } = await twoRunningChildren(daemon);
 
@@ -153,7 +148,6 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
             ['cancelled', 'none', ENDED_REASON],
             ['cancelled', 'none', ENDED_REASON]
         ]);
-        // The lead ends its own turn; nothing it gave wakes it.
         await stopLeadTurn(daemon);
         expect(turnsOf(daemon, 'chat-lead').filter((turn) => turn.taskIds !== undefined)).toEqual([]);
         expect(daemon.alerts).toEqual([]);
@@ -162,7 +156,6 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
 
     test('a restart between the confirmation and the children ending still ends them, and the chat child is not resumed', async () => {
         const before = await boot();
-        before.worker.start();
         await leadWorking(before);
         const { chat, terminal } = await twoRunningChildren(before);
         before.worker.stop();
@@ -176,7 +169,6 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
 
         const after = await boot();
         // Both halves of a start. The chats whose turn ran are loaded, and the worker takes up what is owed.
-        after.worker.start();
         await after.chats.recoverInterrupted();
         await after.worker.settled();
 
@@ -192,7 +184,6 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
 
     test('a terminal lead that is stopped takes its agents along, and restarting one that already exited ends nothing', async () => {
         const daemon = await boot();
-        daemon.worker.start();
         await daemon.sessions.create({ sessionId: 'term-lead', cols: 80, rows: 24, cwd: folder, agent: { kind: 'claude', runtimeMode: 'full-access' } });
         const [line] = await invokeTool(daemon, 'term-lead', 'agent_start', { cli: 'claude', terminal: true, prompt: 'work' });
         const child = idOf(line);
@@ -213,7 +204,6 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
 
     test('a lead that leaves the document without any kill, as an agent rewriting the file would, still ends its agents', async () => {
         const daemon = await boot();
-        daemon.worker.start();
         await leadWorking(daemon);
         const { chat } = await twoRunningChildren(daemon);
         await store.mutate(projectId, withoutNode('chat-lead'));
@@ -231,7 +221,6 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
         // A person's wider composer pick does not reach a chat the lead opens either.
         daemon.chats.composerPreferences.set('client-1', { runtimeMode: 'full-access', changedAt: 1 });
         const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude' });
-        daemon.worker.start();
         await daemon.worker.settled();
         expect(daemon.chats.get(idOf(line))?.info.runtimeMode).toBe('supervised');
     });
@@ -252,6 +241,11 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
     test('a terminal agent an agent opened never reports itself above its ceiling or the mode it was launched in', async () => {
         const daemon = await boot();
         await daemon.lineage.put({ projectId, nodeId: 'term-lead', openedBy: 'chat-lead', depth: 1, agent: true, ceiling: 'auto' });
+        await store.hiddenAgents.put({
+            projectId,
+            openedBy: 'chat-lead',
+            node: { id: 'term-lead', kind: 'terminal', title: 'Lead', x: 0, y: 0, w: 480, h: 320 }
+        });
         await daemon.sessions.create({ sessionId: 'term-lead', cols: 80, rows: 24, cwd: folder, agent: { kind: 'claude', runtimeMode: 'full-access' } });
         // Any process in its shell can post a hook with the token in its environment.
         const token = daemon.sessions.get('term-lead')!.hookToken;
@@ -261,6 +255,11 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
         expect(refusal).toStartWith('refused\tmode-above-parent\t');
 
         await daemon.lineage.put({ projectId, nodeId: 'term-narrow', openedBy: 'chat-lead', depth: 1, agent: true, ceiling: 'auto' });
+        await store.hiddenAgents.put({
+            projectId,
+            openedBy: 'chat-lead',
+            node: { id: 'term-narrow', kind: 'terminal', title: 'Narrow', x: 0, y: 0, w: 480, h: 320 }
+        });
         await daemon.sessions.create({ sessionId: 'term-narrow', cols: 80, rows: 24, cwd: folder, agent: { kind: 'claude', runtimeMode: 'supervised' } });
         const narrow = daemon.sessions.get('term-narrow')!.hookToken;
         await daemon.sessions.applyHook('claude', narrow, { session_id: 'c2', hook_event_name: 'UserPromptSubmit', permission_mode: 'acceptEdits' });
@@ -294,7 +293,6 @@ function nativeRunning(daemon: TestDaemon, toolUseId: string): void {
 describe("stopping a chat's turn together with its sub-agents", () => {
     test('ends every agent it opened without waking it, marks its own subagents stopped and keeps the chat', async () => {
         const daemon = await boot();
-        daemon.worker.start();
         await leadWorking(daemon);
         const { chat, terminal } = await twoRunningChildren(daemon);
         nativeRunning(daemon, 'toolu_bg');
@@ -319,7 +317,6 @@ describe("stopping a chat's turn together with its sub-agents", () => {
 
     test('a plain stop leaves the agents it opened and its own subagents running', async () => {
         const daemon = await boot();
-        daemon.worker.start();
         await leadWorking(daemon);
         const { chat } = await twoRunningChildren(daemon);
         nativeRunning(daemon, 'toolu_bg');
@@ -335,7 +332,6 @@ describe("stopping a chat's turn together with its sub-agents", () => {
 
     test('a restart right after the stop still ends the agents it opened', async () => {
         const before = await boot();
-        before.worker.start();
         await leadWorking(before);
         const { chat, terminal } = await twoRunningChildren(before);
         before.worker.stop();
@@ -346,7 +342,6 @@ describe("stopping a chat's turn together with its sub-agents", () => {
         running = running.filter((daemon) => daemon !== before);
 
         const after = await boot();
-        after.worker.start();
         await after.chats.recoverInterrupted();
         await after.worker.settled();
 
@@ -359,7 +354,6 @@ describe("stopping a chat's turn together with its sub-agents", () => {
 
     test('a child the end reached before the restart loaded it is not resumed once it loads', async () => {
         const before = await boot();
-        before.worker.start();
         await leadWorking(before);
         const { chat } = await twoRunningChildren(before);
         const childSession = before.chats.get(chat)!.info.agentSessionId!;
@@ -369,11 +363,8 @@ describe("stopping a chat's turn together with its sub-agents", () => {
         await before.stop();
         running = running.filter((daemon) => daemon !== before);
 
-        // The order a slow disk gives a start: the owed end runs out before the interrupted turns are read.
+        // The start runs the owed end beside the read of the interrupted turns, in the order a restart of the app does.
         const after = await boot();
-        after.worker.start();
-        await after.worker.settled();
-        expect(after.chats.get(chat)).toBeUndefined();
         await after.chats.recoverInterrupted();
         await after.worker.settled();
 
@@ -387,7 +378,6 @@ describe("stopping a chat's turn together with its sub-agents", () => {
 describe('stopping one task from the list of the chat that gave it', () => {
     test('ends the child as a stop of its node would, cancels its task without waking the lead, and leaves the sibling running', async () => {
         const daemon = await boot();
-        daemon.worker.start();
         await leadWorking(daemon);
         const { chat, terminal } = await twoRunningChildren(daemon);
         const task = daemon.tasks.ofParent('chat-lead').find((candidate) => candidate.childId === chat)!;
@@ -406,7 +396,6 @@ describe('stopping one task from the list of the chat that gave it', () => {
         expect(daemon.chats.get('chat-lead')?.thread.get(`task-${task.id}`)).toMatchObject({ status: 'failed' });
         expect(daemon.sessions.get(terminal)?.exited).toBe(false);
 
-        // The lead ends its turn and is woken about nothing. The stopped task never wakes anyone.
         await stopLeadTurn(daemon);
         expect(turnsOf(daemon, 'chat-lead').filter((turn) => turn.taskIds !== undefined)).toEqual([]);
     });
@@ -453,7 +442,6 @@ test.each([
 
 test('indexing the project again after Voice started a chat owes no end-children and leaves the chat running', async () => {
     const daemon = await boot();
-    daemon.worker.start();
     const place = store.locate('chat-lead')!;
     const voice = voiceActionCall(daemon.host, place, {
         sessionId: 'session-1',

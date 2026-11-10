@@ -13,7 +13,7 @@ export interface BlobLease {
     release(): void;
 }
 
-export interface BlobCacheOptions {
+interface BlobCacheOptions {
     /* What the blobs nobody draws may add up to before the least recently used go. */
     maxIdleBytes: number;
     createUrl?(blob: Blob): string;

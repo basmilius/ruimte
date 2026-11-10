@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { defineBuiltIn } from '@/extensions/internal';
-import { startSharedStorage } from '@/state/shared-storage';
+import { startSharedStorage } from '@/shared-storage';
 
 const DISABLED_KEY = 'ruimte.builtIns.disabled';
 const address = window.location.href;

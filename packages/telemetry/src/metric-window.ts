@@ -83,7 +83,6 @@ export class MetricWindow {
         }
     }
 
-    /* What the window gathered as items to send, and an empty window after it. */
     drain(): MetricItem[] {
         const groups = [...this.groups.values()];
         this.groups = new Map();

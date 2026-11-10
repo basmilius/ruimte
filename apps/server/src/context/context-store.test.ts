@@ -1,11 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { renderTranscript } from '@adecore/agents/context';
 import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
 import { ArtifactError } from '../artifacts/artifact-names.ts';
 import { artifactReport } from '../artifacts/artifact-report.ts';
-import { catalog } from '../mcp/catalog.ts';
+import type { CanvasHost } from '../canvas/host.ts';
+import { catalog } from '../mcp/catalog-test-helpers.ts';
 import { callTool } from '../mcp/mcp-route.ts';
-import type { CanvasHost } from '../tools/host.ts';
 import type { ChatUsageInfo } from './chat-usage.ts';
 import { ContextStore, MAX_SCREEN_LINES } from './context-store.ts';
 
@@ -22,17 +23,22 @@ function toolsOf(context: ContextStore): (name: string, input?: Record<string, u
     } as unknown as CanvasHost;
 
     return async (name, input = {}) => {
-        const result = await callTool(catalog(), name, input, { caller: 'agent', host, files: () => Promise.reject(new Error('no files in these tests')) });
+        const result = await callTool(catalog(), name, input, {
+            caller: 'agent',
+            host,
+            actions: serverActions,
+            files: () => Promise.reject(new Error('no files in these tests'))
+        });
         const first = result.content[0];
 
         return { refused: result.isError === true, text: first?.type === 'text' ? first.text : '' };
     };
 }
 
-/* A store whose readers answer nothing, but for those a test hands it. */
 function storeWith(readers: Partial<ConstructorParameters<typeof ContextStore>[0]>): ContextStore {
     return new ContextStore({
         sources: () => [],
+        extensionNode: async () => null,
         terminalText: async () => null,
         chatItems: () => null,
         drawingElements: async () => null,
@@ -111,6 +117,7 @@ const phone: DeviceInfo = {
 
 const store = new ContextStore({
     sources: (targetId) => linked.get(targetId) ?? [],
+    extensionNode: async () => null,
     terminalText: async (id) => (id === 'term' ? `${Array.from({ length: 2500 }, (_, i) => `line ${i}`).join('\n')}` : null),
     chatItems: (id) => (id === 'chat' ? items : null),
     browserPage: async (id) => {

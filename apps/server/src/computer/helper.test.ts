@@ -71,7 +71,12 @@ describe('the helper', () => {
     test('names a helper that serves another home, and a reply it cannot read', async () => {
         const fake = new FakeHelper();
         const helper = await helperOver(fake);
+        fake.error = 'the request does not carry the local secret of /other';
+        fake.errorCode = 'home-refused';
+        expect((await failureOf(helper.request({ command: 'state', app: '1' }, StateResultSchema))).code).toBe('helper-busy');
+        // A helper from before the codes, still running for another Ruimte.
         fake.error = 'refused: the request does not carry the local secret of /other';
+        fake.errorCode = null;
         expect((await failureOf(helper.request({ command: 'state', app: '1' }, StateResultSchema))).code).toBe('helper-busy');
         fake.error = null;
         expect((await failureOf(helper.request({ command: 'click', app: '1' }, StateResultSchema))).code).toBe('helper-invalid');

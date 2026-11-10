@@ -100,8 +100,8 @@ final class MachineIconTests: XCTestCase {
     private var pending: [Int: CheckedContinuation<JSONValue, Error>] = [:]
     private let arrival = NativeArrival()
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
-        XCTAssertEqual(type, "endpoint.info")
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
+        XCTAssertEqual(type, .endpointInfo)
         let index = requests
         requests += 1
         return try await withCheckedThrowingContinuation {
@@ -110,8 +110,8 @@ final class MachineIconTests: XCTestCase {
         }
     }
 
-    func subscribe(_ name: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
-        XCTAssertEqual(name, "endpoint.changed")
+    func subscribe(_ name: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+        XCTAssertEqual(name, .endpointChanged)
         subscriptions += 1
         event = handler
         return { self.event = nil }

@@ -4,12 +4,14 @@ import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { NODE_SIZE, type ProjectContent } from '@ruimte/contracts';
 import { z } from 'zod';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
+import { AgentFiles, readOpened } from '../agent-files/files.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { ContextRefusal } from '../context/context-store.ts';
 import { ProjectError } from '../projects/project-error.ts';
-import type { CanvasHost } from '../tools/host.ts';
 import { defineTool, defineToolkit } from '../tools/tool.ts';
+import { catalog } from './catalog-test-helpers.ts';
 import { buildCatalog, type ToolContext } from './catalog.ts';
-import { AgentFiles, readOpened } from './files.ts';
 import { callTool, handleMcpRequest, visibleTools } from './mcp-route.ts';
 
 const PLACE = { projectId: 'p1', folder: '/nowhere/repo', canvasId: 'main' };
@@ -98,11 +100,11 @@ function host(): CanvasHost {
 }
 
 function context(caller: string, files = new AgentFiles('/nowhere/repo', [])): ToolContext {
-    return { caller, host: host(), files: async () => files };
+    return { caller, host: host(), actions: serverActions, files: async () => files };
 }
 
 async function call(caller: string, name: string, input: Record<string, unknown>) {
-    return callTool(await visibleTools(caller, host()), name, input, context(caller));
+    return callTool(await visibleTools(caller, host(), catalog()), name, input, context(caller));
 }
 
 function textOf(result: Awaited<ReturnType<typeof call>>): string {
@@ -122,8 +124,8 @@ beforeEach(() => {
 
 describe('visibility', () => {
     test('a terminal sees no chat tools, and a chat sees them', async () => {
-        const terminal = (await visibleTools('term-1', host())).map((tool) => tool.name);
-        const chat = (await visibleTools('chat-1', host())).map((tool) => tool.name);
+        const terminal = (await visibleTools('term-1', host(), catalog())).map((tool) => tool.name);
+        const chat = (await visibleTools('chat-1', host(), catalog())).map((tool) => tool.name);
 
         expect(terminal).toContain('node_list');
         expect(terminal).not.toContain('plan_new');
@@ -134,11 +136,13 @@ describe('visibility', () => {
     });
 
     test('computer use and databases show their tools only while they are there', async () => {
-        expect((await visibleTools('chat-1', host())).some((tool) => tool.name.startsWith('computer_') || tool.name.startsWith('database_'))).toBe(false);
+        expect((await visibleTools('chat-1', host(), catalog())).some((tool) => tool.name.startsWith('computer_') || tool.name.startsWith('database_'))).toBe(
+            false
+        );
 
         computerOn = true;
         connections = 1;
-        const names = (await visibleTools('chat-1', host())).map((tool) => tool.name);
+        const names = (await visibleTools('chat-1', host(), catalog())).map((tool) => tool.name);
 
         expect(names).toContain('computer_act');
         expect(names).toContain('database_query');
@@ -350,7 +354,7 @@ describe('images', () => {
 
 describe('http', () => {
     const callers: Record<string, string> = { 'tok-chat': 'chat-1', 'tok-dots': '..', 'tok-up': '../x' };
-    const deps = { targetForToken: (token: string) => callers[token] ?? null, host: host() };
+    const deps = { targetForToken: (token: string) => callers[token] ?? null, host: host(), actions: serverActions, tools: catalog() };
 
     function post(body: unknown, token: string | null): Request {
         return new Request('http://127.0.0.1:4210/mcp', {

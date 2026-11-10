@@ -1,11 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import { ManualTimers } from '@adecore/editor-react/testing';
+import { ManualTimers, settle } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import type { CompletionItem } from '@adecore/lsp';
+import { installWorkspaceRegistries } from '@/wiring/workspace-registries';
 import { FakeLanguageTransport } from './fake-daemon';
-import { EditorLanguage } from './ruimte-editor-language';
-import { ProjectLanguage } from './ruimte-project-language';
-import { settleLanguage as settle } from './settle.test';
+import { createEditorLanguage } from './ruimte-editor-language';
+import { RuimteProject } from './ruimte-project';
+
+// An editor is drawn only in a workspace, whose chunk installs this before it draws one (`App.tsx`).
+installWorkspaceRegistries();
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });
@@ -14,11 +17,11 @@ async function setup(text: string, items: CompletionItem[], caret = text.length)
     const transport = new FakeLanguageTransport();
     transport.providers = { 'textDocument/completion': { triggerCharacters: ['.'] } };
     transport.answers.set('language.request', () => ({ result: { isIncomplete: false, items }, server: 'typescript', version: 1 }));
-    const project = new ProjectLanguage(transport, 'p1', '/work/app');
+    const project = new RuimteProject(transport, 'p1', '/work/app');
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text, theme: 'light' });
     editor.moveCaret(at(0, caret));
     const timers = new ManualTimers();
-    const language = new EditorLanguage(project, editor, uri, 'typescript', timers);
+    const language = createEditorLanguage(project, editor, uri, 'typescript', timers);
     await language.document.ready;
     return { editor, language, timers };
 }

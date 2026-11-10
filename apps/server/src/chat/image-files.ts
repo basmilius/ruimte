@@ -12,10 +12,10 @@ import {
     type ChatImageSaveResult,
     type ChatImageTargetPayload,
     type ChatImageTargetResult,
+    isRuimteState,
     sniffImageMime
 } from '@ruimte/contracts';
-import { realOrNull } from '../fs/real-path.ts';
-import { isRuimteState } from '../projects/project-files.ts';
+import { realOrNull } from '../disk/real-path.ts';
 
 class ImageFileError extends CodedError {}
 
@@ -63,7 +63,6 @@ async function destination(folder: string, path: string): Promise<string> {
     return actual;
 }
 
-/* The bytes of an attached image, refused when they changed while read or are no image of its type. */
 async function imageBytes(attachment: ChatAttachment): Promise<Uint8Array> {
     const source = await open(attachment.path, constants.O_RDONLY | constants.O_NOFOLLOW);
     try {

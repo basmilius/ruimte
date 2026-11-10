@@ -4,10 +4,10 @@ import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
 import type { ProjectContent } from '@ruimte/contracts';
 import { sayAndSettle } from '../chat/lead-chat-test-helpers.ts';
+import { routineOpener } from '../opener.ts';
 import { documentPathInFolder } from '../projects/project-files.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { routineOpener } from '../routines/routines.ts';
-import { bootTestDaemon, releasedProject, turnsOf, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, releasedProject, turnsOf, type TestDaemon } from '../testing/test-daemon.ts';
 
 // The manual clock starts at 1 000 000 ms, so the fake is told a reset ten minutes on, in seconds.
 const RESET_AT = 1_600_000;
@@ -45,7 +45,6 @@ beforeEach(async () => {
     ({ root, folder, store, projectId } = released);
     clock = new ManualClock();
     daemon = await bootTestDaemon({ home: released.home, store, clock, machine: { resumeAtReset: true } });
-    daemon.worker.start();
     await store.closeProject(projectId, 'client-1');
 });
 

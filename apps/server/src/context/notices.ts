@@ -2,6 +2,7 @@ import { deliverToChat, MAX_MESSAGE_HOPS, type ChatDelivery, type ChatNoticeTarg
 import type { Notice, NoticeStore } from '@adecore/agents/coordination';
 import { isExternalActor, type AgentInfo } from '@ruimte/contracts';
 import { takesHookContext } from '../agents/hooks.ts';
+import type { NoticeDelivery } from '../canvas/host.ts';
 
 /* What the receiving agent hears: the id to act on, the title to read, and the message itself. */
 export function renderNotice(notice: Notice): string {
@@ -45,16 +46,6 @@ export function messageLabel(notices: readonly Notice[]): string {
 
 export const MESSAGE_WORDS: MessageWords = { heard: renderNotice, shown: noticeNote, prompt: messageText, label: messageLabel };
 
-/* Where a message went: onto a screen now, into a turn the chat is owed, or into a queue it waits in. */
-export interface NoticeDelivery {
-    at: 'now' | 'waiting';
-    detail: string;
-    /* Whether the receiving chat is owed a turn on this message; the daemon's outbox is what opens it. */
-    wake: boolean;
-    /* Whether the message may join the turn the chat is running. */
-    inTurn?: boolean;
-}
-
 // Without this tail on every answer to a notify, a model polls the node it wrote to until it gives up.
 export const NO_REPLY_NOTICE = 'do not wait on it: an answer reaches you only as a message of its own, and task_new is what brings a result back';
 
@@ -66,7 +57,6 @@ function waitingCount(waiting: number): string {
     return waiting === 1 ? '1 waiting' : `${waiting} waiting`;
 }
 
-/* What the sender reads about a message that went to a chat. */
 function chatDelivered({ outcome, waiting }: ChatDelivery): NoticeDelivery {
     const count = waitingCount(waiting);
     switch (outcome) {

@@ -1,5 +1,5 @@
 import type { FindOptions } from '@adecore/editor-react/models';
-import { Button, ButtonGroup, Icon, IconButton, Surface, matchesShortcut, type Shortcut, Tooltip } from '@adecore/ui';
+import { Button, ButtonGroup, Icon, IconButton, Surface, matchesShortcut, type Shortcut, Tooltip, isApplePlatform } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
 import clsx from 'clsx';
 import {
@@ -19,10 +19,9 @@ import {
 } from 'lucide-react';
 import { useLayoutEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isApplePlatform } from '@/desktop/bridge';
 import { FIND_SHORTCUTS } from '@/find/shortcuts';
 import type { FindState } from '@/find/use-find';
-import { matchesKeymapRow, useKeyOf } from '@/shell/shortcut-overrides';
+import { matchesKeymapRow, useKeyOf } from '@/surface/shortcut-overrides';
 
 const OPTIONS: readonly { key: keyof FindOptions; icon: LucideIcon; label: string }[] = [
     { key: 'caseSensitive', icon: CaseSensitive, label: 'find.caseSensitive' },
@@ -30,7 +29,6 @@ const OPTIONS: readonly { key: keyof FindOptions; icon: LucideIcon; label: strin
     { key: 'regex', icon: Regex, label: 'find.regex' }
 ];
 
-/* What a surface that can replace hands the bar: what to do, and why it cannot while it cannot. */
 interface FindReplacement {
     onReplace(): void;
     onReplaceAll(): void;

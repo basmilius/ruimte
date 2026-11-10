@@ -17,9 +17,9 @@ import {
     type NodeTitleSource,
     type ProjectView
 } from '@ruimte/contracts';
-import { orNote } from '../tools/host.ts';
-import { checkUrl, newId } from '../tools/nodes.ts';
-import { checkPath } from '../tools/project-paths.ts';
+import { orNote } from '../canvas/host.ts';
+import { checkUrl, newId } from '../canvas/nodes.ts';
+import { checkPath } from '../canvas/project-paths.ts';
 import {
     ID_PREFIX,
     MAX_PROJECT_VIEWS,
@@ -33,7 +33,7 @@ import {
     type TableParts,
     viewLines,
     viewNamed
-} from '../tools/views.ts';
+} from '../canvas/views.ts';
 import type { ServerActionContext } from './context.ts';
 import { databasesOf } from './database-actions.ts';
 

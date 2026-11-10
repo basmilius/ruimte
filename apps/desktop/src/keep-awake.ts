@@ -2,7 +2,7 @@ import type { KeepAwakeRequest } from '@ruimte/desktop-bridge';
 
 export type KeepAwakeBlocker = 'prevent-app-suspension' | 'prevent-display-sleep';
 
-export interface PowerFacts {
+interface PowerFacts {
     platform: NodeJS.Platform;
     onBattery: boolean;
 }
@@ -10,7 +10,6 @@ export interface PowerFacts {
 /* What a client from before the request asked for with its `true`: the system only, on any power source. */
 export const LEGACY_KEEP_AWAKE: KeepAwakeRequest = { onBattery: true, display: false };
 
-/* A request as it came over IPC. Anything that is not one asks for nothing. */
 export function keepAwakeRequestFrom(value: unknown): KeepAwakeRequest | null {
     if (typeof value !== 'object' || value === null) {
         return null;
@@ -45,7 +44,7 @@ export function keepAwakeBlocker(request: KeepAwakeRequest | null, facts: PowerF
 }
 
 /* The part of Electron's `powerSaveBlocker` the hold uses, so a test hands it a fake. */
-export interface PowerSaveBlocker {
+interface PowerSaveBlocker {
     start(type: KeepAwakeBlocker): number;
     stop(id: number): void;
     isStarted(id: number): boolean;

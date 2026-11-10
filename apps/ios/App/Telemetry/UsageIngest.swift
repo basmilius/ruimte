@@ -35,7 +35,6 @@ enum UsageIngest {
 
     private static let counters = Set(UsageCounter.allCases.map(\.rawValue))
 
-    /// What the ingest takes as the name of a counter.
     static func isName(_ name: String) -> Bool {
         guard let first = name.unicodeScalars.first, first.isASCII, CharacterSet.letters.contains(first),
             name.utf8.count <= 64

@@ -5,25 +5,28 @@ import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { serviceDefinition as definitionFor, type ServiceManager } from '@adecore/service';
-import type { AppIpc } from '@adecore/shell';
-import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
+import type { BuildIdentity } from '@ruimte/contracts';
 import type { BackgroundServiceState, MachineMode, MachineStopPreview, ServiceSupport } from '@ruimte/desktop-bridge';
+import { probeHealth, settledHealth, waitForHealth } from '@ruimte/service/health';
+import { localKeyPath } from '@ruimte/service/home';
 import { commandLineServiceProgram, daemonServiceSpec, platformServiceManager, serviceLogFile } from '@ruimte/service/host';
+import { BUILD_FILE } from '@ruimte/service/runtime';
 import { openDaemonLog, type DaemonLog } from '../daemon-log';
 import { askDaemonWork, proveDaemon, stopDaemonGently, type DaemonPort } from '../daemon-proof';
+import { electron } from '../electron';
 import { askLoginShellPath, fileLoginPathCache, loadLoginPath } from '../login-path';
 import { removeOwnDefinition, secretFor, tildeHome } from '../machine-mode';
-import { createServiceController, type ServiceController } from '../service/controller';
+import { createServiceController, probedPortOf, type ProbedPort, type ServiceController } from '../service/controller';
 import { keepRunningSetting, serviceSupport } from '../service/settings';
 import { createSecretGate } from '../startup';
 import type { DaemonStartupDiagnostics } from '../telemetry';
-import { electron } from './electron';
+import type { DesktopIpc } from './ipc';
 import { reportShellProblem } from './telemetry';
 
 const { app, dialog } = electron;
 
-export interface MachineOptions {
-    ipc: AppIpc;
+interface MachineOptions {
+    ipc: DesktopIpc;
     port: number;
     /* The home the daemon runs with, where its local secret lives. */
     ruimteHome: string;
@@ -81,7 +84,7 @@ function bundledBuild(): string | null {
         return null;
     }
     try {
-        return readFileSync(join(process.resourcesPath, 'bin', 'ruimte.build'), 'utf8').trim() || null;
+        return readFileSync(join(process.resourcesPath, 'bin', BUILD_FILE), 'utf8').trim() || null;
     } catch {
         return null;
     }
@@ -159,33 +162,16 @@ export function createMachine(options: MachineOptions): Machine {
         });
     };
 
-    /* One ask of the port, bounded, so a daemon that hangs is no answer rather than a start that never ends. */
-    const probeDaemon = async (): Promise<BuildIdentity | null> => {
-        try {
-            const response = await fetch(`http://127.0.0.1:${port}${MACHINE_HEALTH_PATH}`, { signal: AbortSignal.timeout(1000) });
-            return response.ok ? buildIdentityOf(await response.json()) : null;
-        } catch {
-            return null;
-        }
-    };
+    const probeDaemon = async (): Promise<ProbedPort> => probedPortOf(await probeHealth(port));
 
-    /* Long enough for a daemon that is snapshotting its sessions on the way out of a restart. */
-    const waitForDaemon = async (accept: (health: BuildIdentity) => boolean, within = 20_000): Promise<void> => {
-        const deadline = Date.now() + within;
-        while (Date.now() < deadline) {
-            const health = await probeDaemon();
-            if (health && accept(health)) {
-                return;
-            }
-            await new Promise((resolve) => setTimeout(resolve, 25));
-        }
-        throw new Error('The background service did not come up');
-    };
+    const settleDaemon = async (): Promise<ProbedPort> => probedPortOf(await settledHealth(port));
+
+    const waitForDaemon = (accept: (health: BuildIdentity) => boolean, within?: number): Promise<void> => waitForHealth(port, accept, { within });
 
     // Read on every ask: the daemon mints it on its first start, which under `bun dev` may come after this window.
     const readLocalSecret = async (): Promise<string | null> => {
         try {
-            return (await readFile(join(ruimteHome, 'local.key'), 'utf8')).trim() || null;
+            return (await readFile(localKeyPath(ruimteHome), 'utf8')).trim() || null;
         } catch {
             return null;
         }
@@ -241,6 +227,7 @@ export function createMachine(options: MachineOptions): Machine {
         ruimteHome,
         expected: { version: app.getVersion(), build: bundledBuild() },
         probe: probeDaemon,
+        settle: settleDaemon,
         work: () => askDaemonWork(daemonPort),
         verify: () => proveDaemon(daemonPort),
         askRestart: askRestartUnproven,

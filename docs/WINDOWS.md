@@ -49,7 +49,7 @@ On the PC, 2026-10-30: `check:types`, `lint` and `format:check` pass. `bun run t
   - `pty/bun-pty`, the resize in Git Bash: its `stty` reads no size from a ConPTY. A test of its own holds the resize in PowerShell.
   - `git/run`, the timeout that ends a background job, and `git/identity`, a fake `git` script. The hook tests in `git/actions-cancel` and `git/worktree-merge-cancel` do hold the process tree.
   - `sessions/shell-editor`, `shell-editor-review`, `background-cwd`, `shell-integration` and `prepare-terminal`: POSIX shells, with zsh among them.
-  - `peering/one-shot-place`, `providers/acp-providers` (a fake CLI as a shell script) and `devices/helper-source` (Bun answers `EMFILE`). Apple's model and the launcher, which refuses Windows until the release.
+  - `peer/worker/one-shot-place`, `providers/acp-providers` (a fake CLI as a shell script) and `devices/helper-source` (Bun answers `EMFILE`). Apple's model and the launcher, which refuses Windows until the release.
   - Bun's watcher hears no edit through a junction, so a daemon on a linked ADE CORE may not restart for a source edit.
 - `unit (Windows)` in `ci.yml` runs on two workers and only with `WINDOWS_RELEASE` set to `true`, outside the final check, and may fail without failing the run. It stays off until everything works on the PC. `canvas/worktree-verb.test.ts` and `git/worktree-merge.test.ts` (now an integration test) passed in the baseline, but did time out on the runner, leaving a folder Windows holds (`EBUSY`).
 - On build 26300 an elevated process refuses a junction a non-elevated process made ("untrusted mount point"); a non-elevated process reads it fine, and a junction an elevated process made works for both. So run `bun install` on the PC over SSH: one from a person's PowerShell crashed every test in the elevated SSH session. Whether this reaches an elevated Ruimte, or other Windows builds, is not known.
@@ -89,8 +89,8 @@ Open:
 Done, unit tested with Windows paths, untried on the PC.
 
 - Git's absolute paths go through `nativePath` (`apps/server/src/git/native-path.ts`) where they enter the daemon (`rev-parse --show-toplevel`, `--git-common-dir`, `--git-path`, `--absolute-git-dir`, `worktree list`, `check-ignore`) and compare with `resolve()` after. Checkout-relative paths (status, diff, blame) stay POSIX on the wire, as do a repository's `label` and a detected launch's `cwd` and `path`.
-- `isPathBelow` (`packages/contracts/src/stored-path.ts`) takes either separator; `database/sql-analysis.ts`, the client's `database/console-file.ts` and `holdsUnder` in `language/host.ts` use it. The client handles paths through `shell/panels/files-tree.ts`.
-- `projects/project-files.ts` and `fs/rename.ts` rename through `retryingRename` (`fs/busy-retry.ts`), retrying about a second on EPERM, EBUSY and EACCES. `writeAtomic` in `@adecore/agents` does not.
+- `isPathBelow` (`packages/contracts/src/stored-path.ts`) takes either separator; `database/sql-analysis.ts`, the client's `database/console-file.ts` and `holdsUnder` in `language/host.ts` use it. The client handles paths through `paths/file-path.ts` and the helpers of `@ruimte/contracts`.
+- `projects/project-files.ts` and `fs/rename.ts` rename through `retryingRename` (`disk/busy-retry.ts`), retrying about a second on EPERM, EBUSY and EACCES. `writeAtomic` in `@adecore/agents` does not.
 
 ### 6. Packaging and the service
 

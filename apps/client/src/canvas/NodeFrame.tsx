@@ -1,112 +1,70 @@
 import { useSubagentTrail } from '@adecore/agents-react/chat';
-import { AccountPill, GoalPill, LimitPill, SubagentTitleCrumb } from '@adecore/agents-react/chat/ui';
+import { SubagentTitleCrumb } from '@adecore/agents-react/chat/ui';
 import { AgentIcon } from '@adecore/agents-react/providers';
-import {
-    ButtonGroup,
-    ErrorBoundary,
-    Pill,
-    messageOf,
-    Tooltip,
-    FileIcon,
-    Icon,
-    IconButton,
-    Input,
-    ContextMenu,
-    LazyBoundary,
-    lazyNamed,
-    tintStyle
-} from '@adecore/ui';
+import { ButtonGroup, ErrorBoundary, Pill, messageOf, Tooltip, FileIcon, Icon, IconButton, Input, ContextMenu, tintStyle } from '@adecore/ui';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { notePaperOf, type CanvasNodeKind } from '@ruimte/contracts';
 import clsx from 'clsx';
-import { ChevronDown, ChevronRight, CircleDot, CirclePower, CircleX, Crosshair, Eye, GitBranch, Hand, Link2, Shrink, X, type LucideIcon } from 'lucide-react';
+import { ChevronDown, ChevronRight, CircleDot, CirclePower, CircleX, Crosshair, GitBranch, Hand, Shrink, X, type LucideIcon } from 'lucide-react';
 import { memo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { renameNodeAction } from '@/actions/client-actions';
+import { renameNodeAction } from '@/action-port/person-actions';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { ChildWaitLabel } from '@/attention/WaitLabel';
 import { WorkingMark } from '@/attention/WorkingMark';
-import { Favicon } from '@/browser/Favicon';
 import { useBrowserDisplayTitle } from '@/browser/title';
-import { accentColor, accentHeaderStyle, accentShades, notePaperClass } from '@/canvas/accents';
+import { accentColor, accentHeaderStyle, accentShades, notePaperClass } from '@/canvas-model/accents';
+import type { Point } from '@/canvas-model/math';
 import { useHeldWhileVisible, useNodeInViewport, useRenderZoom } from '@/canvas/culling';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { useGhostLanding } from '@/canvas/ghost-landing';
-import { KindIcon } from '@/canvas/KindIcon';
-import type { Point } from '@/canvas/math';
-import { NODE_KIND_ICONS } from '@/canvas/node-icons';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
-import { DiagramNode, DiagramPlate } from '@/canvas/nodes/DiagramNode';
-import { DrawingNode } from '@/canvas/nodes/DrawingNode';
-import { FileNode, FilePlate } from '@/canvas/nodes/FileNode';
-import { NoteNode, NotePreviewLock } from '@/canvas/nodes/NoteNode';
-import { UnknownNodePlate } from '@/canvas/nodes/UnknownNode';
+import { NotePreviewLock } from '@/canvas/nodes/NoteNode';
 import { useRemoteNodeState } from '@/canvas/remote-node-state';
 import { useUntakenTask, useWaitingMachines } from '@/canvas/remote-wait';
 import { RemoteNodeOffline } from '@/canvas/RemoteNodeOffline';
 import { useHiddenNeedsYou } from '@/canvas/use-group-waits';
 import { useShownChatOfNode } from '@/chat/focused-chat';
-import { ForkPill } from '@/chat/ForkPill';
 import { useWaitingOn } from '@/chat/waiting-on';
-import { ComputerIndicator } from '@/computer/ComputerIndicator';
-import { useHasContextLinks } from '@/context/sources';
+import { markPeerLapsed, usePeerLapse } from '@/clients/project/peer-lapse';
+import { linkToPeer } from '@/clients/project/peer-linker';
+import { useGroupWorktrees, useWorktreeOf } from '@/controllers/worktrees';
 import { openInSystemBrowser } from '@/desktop/bridge';
-import { DeviceBody, DevicePlate, DeviceToolbar } from '@/devices/DeviceBody';
-import { DeviceOperatedStrip } from '@/devices/DeviceOperatedStrip';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { ExtensionNodeBody } from '@/extensions/ExtensionNodeBody';
-import { extensionKeyOf } from '@/extensions/registry';
 import { nodeInfoOf } from '@/extensions/slots';
 import { NodeHeaderSlot, SlotRow } from '@/extensions/SlotSurfaces';
-import { BrowserBody } from '@/nodes/BrowserBody';
-import { ChatBody } from '@/nodes/ChatBody';
-import { resetTitle } from '@/nodes/node-host';
-import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
-import { PlanPill } from '@/plan/PlanPill';
+import { remoteNodeDialog } from '@/machine-ui/dialogs';
+import { useMachineIcon } from '@/machines/machine-icon';
+import { nameOf } from '@/machines/machine-list';
+import { MachineGlyph } from '@/machines/MachineGlyph';
+import { useMachineEntry } from '@/machines/use-machine-entry';
 import { ProcessAlertMark } from '@/processes/ProcessAlertMark';
 import { useNodeAlerts } from '@/processes/use-node-alerts';
 import { FlagMarkOf } from '@/project/FlagMark';
-import { markPeerLapsed, usePeerLapse } from '@/project/peer-lapse';
-import { linkToPeer } from '@/project/peer-linker';
-import { fixedSlot, FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
-import { useUnsavedStoredPath } from '@/shell/panels/use-unsaved';
-import { workFolderOf } from '@/shell/panels/worktree-rows';
-import { useMachineIcon } from '@/shell/settings/machine-icon';
-import { nameOf } from '@/shell/settings/machine-list';
-import { SnoozeMenuItems } from '@/shell/Snooze';
-import { useMachineEntry } from '@/shell/use-machine-entry';
+import { nodeKindRegistry } from '@/registry/node-kinds';
 import type { AgentWork } from '@/state/agent-work';
 import { useUnseen } from '@/state/attention';
 import { GROUP_HEADER_PX, isNodeActive, maximizedNodeOf, useCanvas, useCanvasCamera, useCanvasStore, type AgentStatus } from '@/state/canvas';
 import { useChildWait, useNodeStatus, useNodeWork } from '@/state/chats';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useCellHasFocus } from '@/state/document';
 import { useEndpointIdOfMachine } from '@/state/endpoints';
-import { useEndpointId, useEndpointOfNode } from '@/state/keys';
-import { useChatPrWatch } from '@/state/pr-watches';
+import { useEndpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useChildTask } from '@/state/tasks';
 import { useToasts } from '@/state/toasts';
-import { useUi } from '@/state/ui';
-import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
+import { KindIcon } from '@/surface/canvas/KindIcon';
+import { NODE_KIND_ICONS } from '@/surface/canvas/node-icons';
+import { Favicon } from '@/surface/Favicon';
+import { resetTitle } from '@/surface/nodes/node-host';
+import { fixedSlot, FileToolbarSlotProvider } from '@/surface/panels/file-toolbar-slot';
+import { useUnsavedStoredPath } from '@/surface/panels/use-unsaved';
+import { SnoozeMenuItems } from '@/surface/Snooze';
+import { StatusDot } from '@/surface/StatusDot';
 import { showsTaskMark } from '@/tasks/task-mark';
 import { TaskMark } from '@/tasks/TaskMark';
-import { SessionPorts } from '@/terminal/SessionPorts';
-import { useWorkspace } from '@/transport/connections';
-import { NodeMachineScope } from '@/transport/node-machine';
-
-// Draws what the artifact view draws, which a canvas without one never loads.
-const ArtifactNodeBody = lazyNamed(() => import('@/output/ArtifactNode'), 'ArtifactNodeBody');
-const RoutineNodeBody = lazyNamed(() => import('@/routines/RoutineNode'), 'RoutineNodeBody');
-const DesignNodeBody = lazyNamed(() => import('@/design/DesignNode'), 'DesignNodeBody');
-
-const STATUS_CLASS: Record<AgentStatus, string> = {
-    running: 'bg-status-running',
-    'needs-you': 'bg-status-needs-you',
-    idle: 'bg-status-idle',
-    error: 'bg-status-error',
-    // A CLI that is gone is not a failure; it is a session waiting to be picked up again.
-    exited: 'bg-text-faint'
-};
+import { useWorkspace } from '@/workspace/connections';
+import { NodeMachineScope } from '@/workspace/node-machine';
+import { workFolderOf } from '@/worktree-rules/worktree-rows';
 
 /* A node at rest carries no mark. Work is `WorkingMark`, and only while an agent works, since an attached shell reads running too. */
 const STATUS_MARK: Partial<Record<AgentStatus, { icon: LucideIcon; className: string }>> = {
@@ -119,23 +77,6 @@ const STATUS_MARK: Partial<Record<AgentStatus, { icon: LucideIcon; className: st
    from `hoverGroupId` and not from `:hover`, since a node in the group is its sibling in the DOM. */
 const GROUP_FRAME = 'border-dashed bg-[color-mix(in_srgb,var(--group-accent,var(--text-faint))_7%,transparent)]';
 const GROUP_FRAME_HOVER = 'border-dashed bg-[color-mix(in_srgb,var(--group-accent,var(--text-faint))_10%,transparent)]';
-
-/* `plain` drops the tooltip, for a control that already has one of its own; a screen reader still hears the status. */
-export function StatusDot({ status, className, plain = false }: { status: AgentStatus; className?: string; plain?: boolean }) {
-    const { t } = useTranslation('canvas');
-    const label = t(`status.${status}`);
-    const dot = (
-        <span
-            role="img"
-            aria-label={label}
-            className={clsx('inline-block h-2 w-2 shrink-0 rounded-full', STATUS_CLASS[status], status === 'running' && 'status-pulse', className)}
-        />
-    );
-    if (plain) {
-        return dot;
-    }
-    return <Tooltip label={label}>{dot}</Tooltip>;
-}
 
 function StatusMark({ status, work, chatId, endpointId }: { status: AgentStatus; work: AgentWork | null; chatId?: string; endpointId?: string }) {
     const { t } = useTranslation('canvas');
@@ -242,28 +183,6 @@ function IssuePill({ issue }: { issue: { repo: string; number: number; url: stri
         <Tooltip label={t('node.issuePill', { issue: `${issue.repo}#${issue.number}` })}>
             <Pill mono icon={<Icon icon={CircleDot} size={12} />} className="max-w-48" onClick={open}>
                 #{issue.number}
-            </Pill>
-        </Tooltip>
-    );
-}
-
-const PR_CHECK_TONES = { failure: 'error', success: 'idle', pending: 'muted', none: 'muted' } as const;
-
-function PrWatchPill({ chatId }: { chatId: string }) {
-    const { t } = useTranslation('canvas');
-    const watch = useChatPrWatch(chatId);
-    if (watch === null) {
-        return null;
-    }
-    return (
-        <Tooltip label={t('node.prWatchPill', { pr: `${watch.repo}#${watch.number}`, state: t(`node.prWatchState.${watch.checkState}`) })}>
-            <Pill
-                mono
-                tone={PR_CHECK_TONES[watch.checkState]}
-                icon={<Icon icon={Eye} size={12} />}
-                onClick={() => useUi.getState().setPullRequestDialog({ cwd: watch.cwd })}
-            >
-                PR #{watch.number}
             </Pill>
         </Tooltip>
     );
@@ -405,7 +324,6 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     const task = useChildTask(id);
     const waitingFor = useWaitingMachines(id);
     const unstarted = useUntakenTask(id, node?.machine);
-    const hasContext = useHasContextLinks(id);
     const nodeWorktree = useWorktreeOf(node === undefined ? undefined : workFolderOf(node, chatId));
     const groupWorktrees = useGroupWorktrees(node?.kind === 'group' && !node.worktree ? id : null);
     const hidden = useCanvas((s) => s.hidden.has(id));
@@ -414,6 +332,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     const browserTitle = useBrowserDisplayTitle(id, node?.title ?? '', node?.titleSource);
     const unsavedFile = useUnsavedStoredPath(node?.kind === 'file' ? (node.path ?? null) : null);
     const landingFrame = useGhostLanding();
+    const kinds = nodeKindRegistry.useAll();
 
     if (!node || hidden) {
         return null;
@@ -430,7 +349,9 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     const borderAccent = isNote ? noteAccent : frameAccent;
     // A newer Ruimte's node: it moves, resizes and goes away like any other, and nothing else about it is this version's to change.
     const isUnknown = node.kind === 'unknown';
-    const extensionKey = isUnknown ? extensionKeyOf(node.raw) : null;
+    const kind = kinds.find((candidate) => candidate.id === node.kind);
+    const bodyProps = { id, live, renderBody, focused: takesKeyboard, active, sessionLive };
+    const headerProps = { id, chatId, narrow: node.w < MACHINE_PILL_MIN_WIDTH, renaming };
     const collapsed = isGroup && node.collapsed === true;
     // Any other node folded to its header: its body stays mounted at the height it had, under the header and out of reach.
     const folded = !isGroup && node.collapsed === true;
@@ -566,18 +487,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                     {!renaming && <FlagMarkOf id={id} />}
                     {collapsed && <Pill className="tabular-nums">{t('group.inside', { count: node.memberIds?.length ?? 0 })}</Pill>}
                     {hiddenNeedsYou && <StatusDot status="needs-you" />}
-                    {isChat && !renaming && (
-                        <>
-                            <AccountPill chatId={chatId} />
-                            <ForkPill chatId={chatId} />
-                            <PlanPill chatId={chatId} />
-                            <LimitPill chatId={chatId} />
-                            <GoalPill chatId={chatId} />
-                            <PrWatchPill chatId={chatId} />
-                        </>
-                    )}
-                    {node.kind === 'terminal' && !renaming && <SessionPorts id={id} />}
-                    {(node.kind === 'chat' || node.kind === 'terminal' || node.kind === 'design') && !renaming && <ComputerIndicator nodeId={id} />}
+                    {kind?.afterTitle && <kind.afterTitle {...headerProps} />}
                     {node.machine !== undefined && nodeEndpointId !== workspaceId && !renaming && (
                         <MachinePill machineId={node.machine} endpointId={nodeEndpointId} narrow={node.w < MACHINE_PILL_MIN_WIDTH} />
                     )}
@@ -592,11 +502,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                         </Tooltip>
                     )}
                     {isGroup && node.worktree && <WorktreePill worktree={node.worktree} />}
-                    {node.kind === 'terminal' && hasContext && !renaming && (
-                        <Tooltip label={t('node.context.tooltip')}>
-                            <Pill icon={<Icon icon={Link2} size={12} />}>{t('node.context.pill')}</Pill>
-                        </Tooltip>
-                    )}
+                    {kind?.beforeStatus && <kind.beforeStatus {...headerProps} />}
                     {/* The child's own label already says that it waits, so the line only speaks without one. */}
                     {isChat && !childWait && !renaming && <WaitingOnLine chatId={chatId} endpointId={nodeEndpointId} />}
                     {childWait && !renaming && <ChildWaitLabel wait={childWait} />}
@@ -610,9 +516,9 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-muted" />
                         </Tooltip>
                     )}
-                    {(node.kind === 'file' || node.kind === 'artifact') && <ButtonGroup ref={setFileControls} render={<span />} className="shrink-0" />}
-                    {(node.kind === 'routine' || node.kind === 'design') && <span ref={setFileControls} className="flex shrink-0 items-center gap-1.5" />}
-                    {node.kind === 'device' && <DeviceToolbar id={id} narrow={node.w < MACHINE_PILL_MIN_WIDTH} />}
+                    {kind?.controls === 'buttons' && <ButtonGroup ref={setFileControls} render={<span />} className="shrink-0" />}
+                    {kind?.controls === 'row' && <span ref={setFileControls} className="flex shrink-0 items-center gap-1.5" />}
+                    {kind?.toolbar && <kind.toolbar {...headerProps} />}
                     <NodeHeaderSlot nodeId={id} />
                     {isNote && <SlotRow place="noteToolbar" context={{ node: nodeInfoOf(id) }} />}
                     <ButtonGroup className="shrink-0">
@@ -630,7 +536,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                         <IconButton icon={X} size="sm" label={t('node.close')} onClick={remove} />
                     </ButtonGroup>
                 </header>
-                {node.kind === 'device' && !collapsed && <DeviceOperatedStrip id={id} />}
+                {kind?.strip && !collapsed && <kind.strip id={id} />}
                 {isGroup ? (
                     // No body attribute: a press anywhere on the frame drags it, together with what it holds.
                     <div className="grow" />
@@ -641,7 +547,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                             'relative min-h-0',
                             folded ? 'shrink-0' : 'grow',
                             // A thread reads at the node's own 14px, over the 22px a chat gives its prose.
-                            (node.kind === 'chat' || node.kind === 'design') && '[--text-sm--line-height:22px]'
+                            kind?.bodyClass
                         )}
                         /* Folded, the body keeps the height it had under the header, where the frame cuts it off:
                            a terminal keeps its rows and its session, a chat its thread and its place in it. */
@@ -656,7 +562,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                                     state={remote === 'ready' ? 'unstarted' : remote}
                                     task={unstarted?.title}
                                     onLinkAgain={() =>
-                                        useUi.getState().setRemoteNodeDialog({
+                                        remoteNodeDialog.set({
                                             machineId: node.machine!,
                                             kind: node.kind === 'terminal' || node.kind === 'device' ? node.kind : 'chat',
                                             viewId: null,
@@ -667,43 +573,13 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                                 />
                             ) : (
                                 <>
-                                    {node.kind === 'terminal' && (sessionLive ? <TerminalBody id={id} focused={takesKeyboard} /> : <TerminalPlate id={id} />)}
-                                    {node.kind === 'chat' && <ChatBody id={id} focused={takesKeyboard} onCanvas workflowsBeside visible={sessionLive} />}
-                                    {node.kind === 'browser' && <BrowserBody id={id} focused={active} />}
-                                    {node.kind === 'device' && (live && renderBody ? <DeviceBody id={id} /> : <DevicePlate id={id} />)}
-                                    {node.kind === 'note' && <NoteNode id={id} focused={active} />}
-                                    {node.kind === 'drawing' && <DrawingNode id={id} />}
-                                    {node.kind === 'diagram' && (live && renderBody ? <DiagramNode id={id} /> : <DiagramPlate id={id} />)}
-                                    {isUnknown &&
-                                        (extensionKey === null ? <UnknownNodePlate id={id} /> : <ExtensionNodeBody id={id} contributionKey={extensionKey} />)}
-                                    {node.kind === 'artifact' && (
-                                        <FileToolbarSlotProvider value={toolbarSlot}>
-                                            <LazyBoundary>
-                                                <ArtifactNodeBody id={id} />
-                                            </LazyBoundary>
-                                        </FileToolbarSlotProvider>
-                                    )}
-                                    {node.kind === 'routine' && (
-                                        <FileToolbarSlotProvider value={toolbarSlot}>
-                                            <LazyBoundary>
-                                                <RoutineNodeBody id={id} />
-                                            </LazyBoundary>
-                                        </FileToolbarSlotProvider>
-                                    )}
-                                    {node.kind === 'design' && (
-                                        <FileToolbarSlotProvider value={toolbarSlot}>
-                                            <LazyBoundary>
-                                                <DesignNodeBody id={id} focused={takesKeyboard} />
-                                            </LazyBoundary>
-                                        </FileToolbarSlotProvider>
-                                    )}
-                                    {node.kind === 'file' &&
-                                        (live && renderBody ? (
-                                            <FileToolbarSlotProvider value={toolbarSlot}>
-                                                <FileNode id={id} focused={takesKeyboard} />
-                                            </FileToolbarSlotProvider>
+                                    {kind &&
+                                        (kind.controls === undefined ? (
+                                            <kind.body {...bodyProps} />
                                         ) : (
-                                            <FilePlate id={id} />
+                                            <FileToolbarSlotProvider value={toolbarSlot}>
+                                                <kind.body {...bodyProps} />
+                                            </FileToolbarSlotProvider>
                                         ))}
                                 </>
                             )}

@@ -15,11 +15,10 @@ import { lookOf, usePetPool } from '@extensions/pets/client/use-pet-look';
 import { Activity, Bot, ImageUp, MapPin, PawPrint, Pencil, Shapes, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { SettingsSection } from '@/machines/SettingsSection';
 
 const PETS_PLACES: readonly PetsPlace[] = ['nodes', 'screen'];
 
-/* A row of the figures table: what the set looks like, its name, and a switch that puts it among the pets. */
 function FigureRow({
     choice,
     name,

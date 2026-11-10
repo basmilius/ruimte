@@ -2,10 +2,11 @@ import { useProvidersStore } from '@adecore/agents-react/state';
 import { useTranslation } from 'react-i18next';
 import { useCliSession } from '@/chat/cli-session';
 import { CliTerminalDialog, CliTerminalFrame } from '@/chat/CliTerminalDialog';
-import { useUi, type ProviderCommandRequest } from '@/state/ui';
+import type { ProviderCommandRequest } from '@/chat/dialog-state';
+import { providerCommandDialog } from '@/chat/dialog-state';
 
 function closeCommand(): void {
-    useUi.getState().setProviderCommand(null);
+    providerCommandDialog.set(null);
 }
 
 /*
@@ -13,7 +14,7 @@ function closeCommand(): void {
  * needs no project. The command is typed and never sent: nothing starts a command a person did not run.
  */
 export function ProviderCommandDialog() {
-    const request = useUi((s) => s.providerCommand);
+    const request = providerCommandDialog.useRequest((request) => request);
 
     return (
         <CliTerminalDialog request={request} keyOf={(shown) => `${shown.endpointId}:${shown.command}`} close={closeCommand}>

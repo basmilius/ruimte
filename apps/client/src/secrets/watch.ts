@@ -1,4 +1,4 @@
-import { useSecrets } from '@/state/secrets';
+import { useSecrets } from '@/secrets/secrets';
 import { pool } from '@/transport';
 import { joinWatches, snapshotWatch, watchPool, type WatchablePool } from '@/transport/pool-watch';
 

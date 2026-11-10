@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@ruimte/actions": "workspace:*",
-    "@ruimte/contracts": "workspace:*"
+    "@ruimte/contracts": "workspace:*",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/bun": "^1.4.4",

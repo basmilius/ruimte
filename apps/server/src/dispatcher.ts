@@ -1,47 +1,9 @@
 import { CodedError } from '@adecore/agents';
-import {
-    REQUEST_SCHEMAS,
-    isRequestType,
-    parseRequest,
-    type EventMap,
-    type EventType,
-    type ReplyError,
-    type RequestMap,
-    type RequestType,
-    type ServerFrame
-} from '@ruimte/contracts';
+import { REQUEST_SCHEMAS, isRequestType, parseRequest, type ReplyError, type RequestMap, type RequestType } from '@ruimte/contracts';
+import type { UsageReportCounter } from '@ruimte/pulsar';
 import { isOwner } from './auth/access.ts';
 import { errorText } from './error-text.ts';
-import { countRequest } from './stats/usage-stats.ts';
-import { noteActivity } from './telemetry/activity.ts';
-import { recordRequestDuration } from './telemetry/reporter.ts';
-
-export interface ClientAccess {
-    reachability: 'loopback' | 'lan' | 'tunnel' | 'public';
-    // The session behind the socket; null for a client that presented the local secret.
-    sessionId: string | null;
-    /* Set when the client is another machine of the account that works here, not a person. It asks for the requests on the peer list and nothing else. */
-    peer?: { machineId: string };
-}
-
-export interface ClientConnection {
-    // Unique per socket for the life of the daemon, so a handler can attach a session to exactly this client.
-    readonly id: string;
-    readonly access?: ClientAccess;
-    /* True once the channel went. Its cleanup already ran, so state a handler leaves for it after an await would outlive it. */
-    readonly closed?: boolean;
-    send(frame: ServerFrame): void;
-    // A channel that carries binary frames; a reply that asked for one goes out this way.
-    sendBinary?(frame: Uint8Array): void;
-    /* Bytes the channel holds that are not on the wire yet, for bulk data that must wait rather than fill it. Without it a client takes any frame. */
-    bufferedAmount?(): number;
-    /* Calls `listener` whenever the channel drained; returns the way to stop. */
-    onDrain?(listener: () => void): () => void;
-}
-
-export function sendEvent<E extends EventType>(client: ClientConnection, event: E, payload: EventMap[E]): void {
-    client.send({ type: 'event', event, payload });
-}
+import type { ClientConnection } from './wire.ts';
 
 /* A result that goes out as one binary frame, which only a handler whose client has `sendBinary` hands back. */
 export class BinaryReply {
@@ -57,10 +19,16 @@ type Handler<T extends RequestType> = (
     client: ClientConnection
 ) => RequestMap[T]['result'] | BinaryReply | Promise<RequestMap[T]['result'] | BinaryReply>;
 
-// Thrown by a handler to answer with a specific error code instead of a generic failure.
-export class RequestError extends CodedError {}
+/* What an answered request adds to the usage counts; `once` counts a key once per day, like a file a person opened. */
+export type UsageCount = UsageReportCounter | { counter: UsageReportCounter; once: string };
 
-interface HandlerOptions {
+/* Told of every request the dispatcher answers, so what counts or times them stays out of its imports. */
+interface RequestObserver {
+    started?(type: RequestType): void;
+    answered?(type: RequestType, ms: number, counts: readonly UsageCount[]): void;
+}
+
+interface HandlerOptions<T extends RequestType> {
     /* Only a client that presented the local secret may ask; any other is refused as `forbidden` before the handler runs. */
     owner?: boolean;
     /*
@@ -69,6 +37,8 @@ interface HandlerOptions {
      * An owner-only request can never carry it.
      */
     peer?: boolean;
+    /* What a person's request counts once it was answered, by what its payload says when that matters. */
+    count?: readonly UsageCount[] | ((payload: RequestMap[T]['payload']) => readonly UsageCount[]);
 }
 
 function errorReply(id: string | null, code: string, message: string): ReplyError {
@@ -83,8 +53,10 @@ export class Dispatcher {
     private readonly handlers = new Map<RequestType, Handler<RequestType>>();
     private readonly ownerOnly = new Set<RequestType>();
     private readonly peerAllowed = new Set<RequestType>();
+    private readonly counts = new Map<RequestType, (payload: never) => readonly UsageCount[]>();
+    private readonly observers: RequestObserver[] = [];
 
-    register<T extends RequestType>(type: T, handler: Handler<T>, options: HandlerOptions = {}): void {
+    register<T extends RequestType>(type: T, handler: Handler<T>, options: HandlerOptions<T> = {}): void {
         if (this.handlers.has(type)) {
             throw new Error(`Handler for ${type} is already registered`);
         }
@@ -98,6 +70,14 @@ export class Dispatcher {
         if (options.peer === true) {
             this.peerAllowed.add(type);
         }
+        const { count } = options;
+        if (count !== undefined) {
+            this.counts.set(type, typeof count === 'function' ? count : () => count);
+        }
+    }
+
+    observe(observer: RequestObserver): void {
+        this.observers.push(observer);
     }
 
     has(type: RequestType): boolean {
@@ -153,12 +133,17 @@ export class Dispatcher {
         }
 
         const started = performance.now();
-        noteActivity(`request ${type}`);
+        for (const observer of this.observers) {
+            observer.started?.(type);
+        }
 
         try {
             const result = await handler(payloadParse.data, client);
-            recordRequestDuration(type, performance.now() - started);
-            countRequest(type, payloadParse.data);
+            const elapsed = performance.now() - started;
+            const counted = this.counts.get(type)?.(payloadParse.data as never) ?? [];
+            for (const observer of this.observers) {
+                observer.answered?.(type, elapsed, counted);
+            }
             if (result instanceof BinaryReply && client.sendBinary) {
                 client.sendBinary(result.encode(id));
                 return;

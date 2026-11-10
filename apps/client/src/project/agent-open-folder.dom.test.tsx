@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
-import { startAgentProjectWatch, useAgentFolderAsk } from '@/project/agent-project-watch';
+import { useAgentFolderAsk } from '@/project/agent-asks';
+import { startAgentProjectWatch } from '@/project/agent-project-watch';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
@@ -21,7 +22,6 @@ function onScreen(text: string): boolean {
     return document.body.textContent?.includes(text) === true;
 }
 
-/* An agent's `project_open` of a folder without a project, the way the machine passes it on to the clients with its project open. */
 function agentAsks(fromProjectId = 'project-atlas'): void {
     act(() => machine.emit('project.askOpen', { folder: '/work/fresh', fromProjectId, by: 'term-1' }));
 }

@@ -2,7 +2,7 @@ import { DEVICE_LINK_LIFETIME_MS, USER_CODE_LENGTH } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { create } from 'zustand';
 import { storedJson } from '@/state/stored-json';
-import type { AccountStatus } from './account';
+import type { AccountStatus } from '@/station';
 import type { LoginStorage } from './web';
 
 /*
@@ -20,7 +20,6 @@ type PendingLink = z.infer<typeof PendingLinkSchema>;
 
 const storedPendingLink = storedJson(PENDING_LINK_KEY, PendingLinkSchema);
 
-/* The code a `/link` address carries, `{ code: null }` for the page without one, or null for any other page. */
 export function linkRequestOf(pathname: string, search: string): { code: string | null } | null {
     if (pathname.replace(/\/+$/, '') !== LINK_PATH) {
         return null;
@@ -33,7 +32,6 @@ export function rememberLink(storage: LoginStorage, code: string | null, now = D
     storage.setItem(PENDING_LINK_KEY, JSON.stringify({ code, openedAt: now } satisfies PendingLink));
 }
 
-/* The request a page left for GitHub with, until no code it carries could still be waiting. */
 export function rememberedLink(storage: LoginStorage, now = Date.now()): PendingLink | null {
     const pending = storedPendingLink.read(storage);
     if (pending === null || now - pending.openedAt > DEVICE_LINK_LIFETIME_MS) {
@@ -64,12 +62,10 @@ type LinkStep = 'unavailable' | 'sign-in' | 'signing-in' | 'enter-code' | 'confi
 
 interface LinkStepInput {
     accountStatus: AccountStatus;
-    // A machine the code was looked up for, waiting for a yes or a no.
     lookedUp: boolean;
     outcome: 'added' | 'denied' | null;
 }
 
-/* Which part of the dialog stands: an outcome first, then the account, then the code. */
 export function linkStep(input: LinkStepInput): LinkStep {
     if (input.outcome !== null) {
         return input.outcome;
@@ -95,7 +91,6 @@ interface LinkRequestState {
 /* The dialog the `/link` page opens, outside the settings: the web client may show it before any machine is picked. */
 export const useLinkRequest = create<LinkRequestState>(() => ({ open: false, code: null }));
 
-/* Once at boot: a `/link` address becomes the dialog, and so does one the page left for GitHub with. */
 export function startLinkRequest(storage: LoginStorage = localStorage): void {
     const arrived = linkRequestOf(location.pathname, location.search);
     if (arrived !== null) {

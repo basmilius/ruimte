@@ -1,6 +1,6 @@
 import { chatRequests } from '@adecore/agents/coordination';
 import { launchDigest } from '../launches/store.ts';
-import { commandDigest, type ApprovalPorts } from '../tunnels/approvals.ts';
+import { commandDigest, type ApprovalPorts } from '../tools/approval-tools.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { LaunchesBundle } from './launches.ts';
 import type { ProjectsBundle } from './projects.ts';

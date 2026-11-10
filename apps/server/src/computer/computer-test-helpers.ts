@@ -2,8 +2,8 @@ import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AgentStatus } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
 import type { Timers } from '../timers.ts';
+import type { SessionEvent } from '../wire.ts';
 import { ComputerUse, type ComputerUseOptions } from './computer-use.ts';
 import type { HelperRequest, HelperSession, RunningApp } from './helper-protocol.ts';
 import { ComputerHelper, HelperUnreachable, type HelperTransport } from './helper.ts';
@@ -326,10 +326,6 @@ export async function until(condition: () => boolean): Promise<void> {
 
 export function chatInfo(chatId: string, status: AgentStatus): SessionEvent {
     return { event: 'chat.event', payload: { chatId, event: { type: 'info', info: { chatId, status } } } } as unknown as SessionEvent;
-}
-
-export function turnEnded(chatId: string, state: 'done' | 'aborted' | 'error'): SessionEvent {
-    return { event: 'chat.event', payload: { chatId, event: { type: 'item', item: { kind: 'turn', id: 'turn-1', state } } } } as unknown as SessionEvent;
 }
 
 export function terminalStatus(sessionId: string, status: AgentStatus): SessionEvent {

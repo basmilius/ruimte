@@ -37,7 +37,7 @@ export class Refused extends Error {
     }
 }
 
-export interface HostNode {
+interface HostNode {
     id: string;
     kind: string;
     title: string;
@@ -54,7 +54,6 @@ export interface HostNode {
     dataVersion?: number;
 }
 
-/* Something an extension put in a slot, as the client host keeps it. */
 export interface Entry {
     id: string;
     kind: 'action' | 'menu' | 'widget';
@@ -87,7 +86,7 @@ export function sizeOfKind(kind: string): { width: number; height: number } {
 }
 
 /* A chat the machine runs, on a canvas or in a view of its own, which `chats.read` and `useChat` find either way. */
-export interface HostChat {
+interface HostChat {
     id: string;
     title: string;
     text: string;
@@ -124,7 +123,6 @@ function errorText(e: unknown): string {
     return e instanceof Error ? e.message : String(e);
 }
 
-/* The client host of one test, with what it holds and what it saw. */
 export class TestHost {
     readonly id: string;
     readonly name: string;
@@ -299,7 +297,6 @@ export class TestHost {
         this.entryOf.set(definition, entry);
     }
 
-    /* The definition of this kind and id, or a throw that lists what there is. */
     defined(kind: string, id: string): PublicTesting.TestDefinition {
         const ofKind = this.definitions.filter((each) => each.kind === kind);
         const found = ofKind.find((each) => (each.definition as { id?: string }).id === id);
@@ -520,7 +517,6 @@ export class TestHost {
         return view;
     }
 
-    /* Tells every watch of this path, or of a folder above it, that it changed. */
     changeFile(path: string): void {
         const full = this.inProject(path);
 
@@ -912,7 +908,6 @@ export class TestHost {
         });
     }
 
-    /* What a person answers a dialog, as the test scripted it. */
     ask<Value>(kind: 'confirm' | 'prompt' | 'pick' | 'folder', title: string, answer: Value, body?: string): Value {
         this.dialogs.push({ kind, title, ...(body === undefined ? {} : { body }), answer });
 

@@ -36,7 +36,7 @@ import XCTest
         ]
         await model.addAttachment(data: Data("File".utf8), name: "file.txt", mime: "text/plain")
         await model.send()
-        let payload = try XCTUnwrap(client.requests.first { $0.0 == "chat.send" }?.1)
+        let payload = try XCTUnwrap(client.requests.first { $0.0 == .chatSend }?.1)
         XCTAssertEqual(payload["mentions"], .array([.string("file.swift")]))
         XCTAssertEqual(payload["skills"], .array([.string("review")]))
         XCTAssertEqual(payload["chats"], .array([.string("related")]))
@@ -57,7 +57,7 @@ import XCTest
         model.draft = "Second"
         await model.addAttachment(data: Data("Second".utf8), name: "second.txt", mime: "text/plain")
         await model.send()
-        XCTAssertEqual(client.requests.filter { $0.0 == "chat.send" }.count, 1)
+        XCTAssertEqual(client.requests.filter { $0.0 == .chatSend }.count, 1)
         client.finishSend()
         await sending.value
         XCTAssertEqual(model.draft, "Second")
@@ -123,7 +123,7 @@ import XCTest
         XCTAssertEqual(model.draft, "Earlier\n\nNew thought")
         XCTAssertEqual(model.skills, ["review"])
         XCTAssertTrue(model.queue.isEmpty)
-        XCTAssertEqual(client.requests.first?.0, "chat.unqueue")
+        XCTAssertEqual(client.requests.first?.0, .chatUnqueue)
         XCTAssertNil(model.queueProblem)
     }
 
@@ -159,16 +159,16 @@ import XCTest
 }
 
 @MainActor private final class ComposerClientFake: MachineRequesting {
-    var requests: [(String, JSONValue)] = []
+    var requests: [(WireRequest, JSONValue)] = []
     var failure: MachineClientError?
     var holdSend = false
     private var pendingSend: CheckedContinuation<JSONValue, any Error>?
     private var waiting: CheckedContinuation<Void, Never>?
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
         if let failure { throw failure }
-        if type == "chat.send", holdSend {
+        if type == .chatSend, holdSend {
             return try await withCheckedThrowingContinuation {
                 pendingSend = $0
                 waiting?.resume()
@@ -178,7 +178,7 @@ import XCTest
         return .object([:])
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 
     func waitForSend() async {
         if pendingSend != nil { return }

@@ -1,11 +1,11 @@
-import { serverActions } from '../actions/server-actions.ts';
-import type { ChatManager } from '../chat/chat-manager.ts';
+import type { ChatCore } from '@adecore/agents/chat';
+import type { ServerActions } from '../actions/server-actions.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import type { ServerConfig } from '../config.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import type { CanvasHost } from '../tools/host.ts';
 import { SYSTEM_CLOCK } from '../voice/clock.ts';
 import { VoiceKeyStore } from '../voice/key-store.ts';
-import { openAiLive, type OpenAiLive } from '../voice/openai-live.ts';
+import type { OpenAiLive } from '../voice/openai-live.ts';
 import { VoicePreferencesStore } from '../voice/preferences-store.ts';
 import { VoiceSessions } from '../voice/voice-sessions.ts';
 
@@ -21,9 +21,9 @@ interface VoiceInput {
     /* This machine, the only one whose projects Voice works in. */
     machine: { id: string; label: string };
     canvasHost: CanvasHost;
-    chats: Pick<ChatManager, 'observe' | 'get'>;
-    /* Only a test hands in another, a fake GPT-Live on loopback. */
-    live?: OpenAiLive;
+    actions: ServerActions;
+    chats: Pick<ChatCore, 'observe' | 'get'>;
+    live: OpenAiLive;
 }
 
 /*
@@ -36,7 +36,7 @@ export function wireVoice(input: VoiceInput): VoiceBundle {
     const preferences = new VoicePreferencesStore(config.home);
     const listening = new Map<string, () => void>();
     const sessions = new VoiceSessions({
-        live: input.live ?? openAiLive(),
+        live: input.live,
         key: () => keys.read(),
         preferences: () => preferences.get(),
         clock: SYSTEM_CLOCK,
@@ -60,7 +60,7 @@ export function wireVoice(input: VoiceInput): VoiceBundle {
                 listening.delete(holder);
             }
         },
-        runner: serverActions,
+        runner: input.actions,
         host: canvasHost,
         chats: {
             observe: (sink) => chats.observe(sink),

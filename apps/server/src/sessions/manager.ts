@@ -6,18 +6,28 @@ import { join, resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { narrowerMode, launchEnv, storedAccount, type AccountLaunches, type CliMcpServer } from '@adecore/agents/providers';
 import { SingleFlight } from '@adecore/utils/async';
-import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, RuntimeMode, SessionInfo } from '@ruimte/contracts';
+import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, RuntimeMode, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
 import { codexIndexIn } from '../agents/codex-title.ts';
 import { borrowedHook, modeOfHook, normalizeHook, requestOfHook, settleWaiting } from '../agents/hooks.ts';
+import { bestEffort } from '../best-effort.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { contextHint, toolsNote } from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';
-import { offersKind } from '../providers/kinds.ts';
-import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, quote, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
-import { TERMINAL_TOKEN_VARIABLE, ruimteCliMcp } from '../providers/ruimte-mcp.ts';
+import {
+    DEFAULT_RUNTIME_MODE,
+    freshCommand,
+    launchedMode,
+    quote,
+    resumeCommand,
+    resumeOrFreshCommand,
+    terminalCommand,
+    type LaunchProviders
+} from '../providers/launch.ts';
 import { defaultShell, defaultShellArgs, gitBash, shellName, type PtyAdapter } from '../pty/pty.ts';
+import { TERMINAL_TOKEN_VARIABLE, ruimteCliMcp } from '../ruimte-mcp.ts';
 import { countUsage } from '../stats/usage-stats.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { Session } from './session.ts';
 import type { ShellEnvironment } from './shell-integration.ts';
 import type { SessionSnapshot, SnapshotStore } from './snapshot-store.ts';
@@ -52,10 +62,6 @@ function motdOf(hint: string | null, notices: readonly string[]): string | undef
 }
 
 export class SessionError extends CodedError<SessionErrorCode> {}
-
-export type SessionEvent = { [E in EventType]: { event: E; payload: EventMap[E] } }[EventType];
-
-export type SessionSink = (event: SessionEvent) => void;
 
 function sizeOf(session: Session): { cols: number; rows: number } {
     return { cols: session.cols, rows: session.rows };
@@ -136,7 +142,7 @@ export interface SessionManagerOptions {
     codexTitles?: { forThread(threadId: string, index?: string): Promise<string | null> };
     // Lets a test shorten the wait before a session without a name looks again.
     titleRetryMs?: number;
-    // Which commands a person on this machine let a shell type; a test about something else passes `OPEN_BOUNDS`.
+    // Which commands a person on this machine let a shell type; a test about something else passes `OPEN_BOUNDS` (`open-bounds-test-helpers.ts`).
     commands: CommandGate;
     // The widest mode the agent of this node may start in, whatever the node says; null for no limit.
     modeCeiling: (sessionId: string) => RuntimeMode | null;
@@ -149,8 +155,8 @@ export interface SessionManagerOptions {
     accounts?: AccountLaunches;
     // The account a first launch takes, given the one it named: the project's choice, else the top account of the CLI. Throws to refuse it.
     openingAccount?: (sessionId: string, kind: AgentKind, named: string | undefined) => string | undefined;
-    // CLI capabilities must be known before building a launch or resume command.
-    prepareAgent?: (kind: AgentKind) => Promise<void>;
+    // The CLIs this machine offers, which say how a launch or resume line is built; a CLI that has to ask its binary first is awaited before a line is built.
+    providers: LaunchProviders & { kinds(): readonly AgentKind[] };
     // Lets a test pose as Windows, where a session that types a line needs Git Bash.
     platform?: string;
     findGitBash?: () => string | null;
@@ -161,7 +167,6 @@ export interface SessionManagerOptions {
 export interface CommandGate {
     /* May settle later, while an approval from before the cwd was bound moves to this cwd on disk. */
     approved(sessionId: string, command: string, cwd: string): boolean | Promise<boolean>;
-    /* Writes down that a person let this node type this command in this folder. */
     approve(sessionId: string, command: string, cwd: string): Promise<void>;
 }
 
@@ -208,8 +213,8 @@ export class SessionManager {
     private readonly titleRetries = new Map<string, { timer: ReturnType<typeof setTimeout> | null; count: number }>();
     // When each session last looked for its name, so the tool hooks of a busy turn do not all read.
     private readonly titleReadAt = new Map<string, number>();
-    hookUrl: string | null;
-    contextUrl: string | null;
+    readonly hookUrl: string | null;
+    readonly contextUrl: string | null;
     private readonly contextFor: (sessionId: string) => ContextSource[];
     private readonly firstPrompt: (sessionId: string) => Promise<string | null>;
     private readonly firstNotices: (sessionId: string) => string[];
@@ -223,7 +228,7 @@ export class SessionManager {
     private readonly checkCwd: (sessionId: string, cwd: string) => Promise<void>;
     private readonly accounts: AccountLaunches | null;
     private readonly openingAccount: (sessionId: string, kind: AgentKind, named: string | undefined) => string | undefined;
-    private readonly prepareAgent: (kind: AgentKind) => Promise<void>;
+    private readonly providers: SessionManagerOptions['providers'];
     private readonly platform: string;
     private readonly findGitBash: () => string | null;
     private readonly personShell: () => string;
@@ -259,13 +264,12 @@ export class SessionManager {
         this.checkCwd = options.checkCwd;
         this.accounts = options.accounts ?? null;
         this.openingAccount = options.openingAccount ?? ((_sessionId, _kind, named) => named);
-        this.prepareAgent = options.prepareAgent ?? (() => Promise.resolve());
+        this.providers = options.providers;
         this.platform = options.platform ?? process.platform;
         this.findGitBash = options.findGitBash ?? (() => gitBash(this.env));
         this.personShell = options.personShell ?? (() => defaultShell(this.env, this.platform));
     }
 
-    /* The session a hook or context token belongs to. */
     sessionIdForToken(token: string): string | null {
         return this.tokens.get(token) ?? null;
     }
@@ -326,8 +330,8 @@ export class SessionManager {
             : await this.agents?.readRecord(options.sessionId);
         const restoredAgent: AgentInfo | undefined = restored?.agent;
         const ranUnder = restoredAgent?.kind === options.agent?.kind ? restored?.account : undefined;
-        // A node of a CLI this daemon does not offer keeps its shell, and its stored kind, and is told why nothing started.
-        const unoffered = options.agent !== undefined && !offersKind(options.agent.kind) ? options.agent.kind : null;
+        // A node of a CLI this daemon does not offer in a terminal (an agent from the ACP registry, a chat-only provider) keeps its shell, and its stored kind, and is told why nothing started.
+        const unoffered = options.agent !== undefined && !this.offersTerminal(options.agent.kind) ? options.agent.kind : null;
         const launch = unoffered === null ? this.startingLaunch(options.sessionId, options.agent, restoredAgent !== undefined, ranUnder) : undefined;
         // On the shell and not on the typed line, so a resume and whatever a person types there run under the same account.
         const env = launch ? launchEnv(this.accounts, launch.kind, launch.account, this.env) : this.env;
@@ -404,6 +408,10 @@ export class SessionManager {
      * account its CLI ran under here before, so a resume finds its transcript; only a first start takes
      * the person's pick for new agents of this CLI, and else the CLI's default account.
      */
+    private offersTerminal(kind: AgentKind): boolean {
+        return this.providers.kinds().includes(kind) && this.providers.get(kind).capabilities.terminal;
+    }
+
     private startingLaunch(sessionId: string, requested: AgentLaunch | undefined, ranBefore: boolean, ranUnder: string | undefined): AgentLaunch | undefined {
         const launch = this.withinCeiling(sessionId, requested);
         if (launch === undefined) {
@@ -519,7 +527,6 @@ export class SessionManager {
         return `& '${bash.replaceAll("'", "''")}' -l '${script.replaceAll("'", "''")}'`;
     }
 
-    /* A hook POST from a CLI inside one of the shells; the token says which one. */
     async applyHook(kind: AgentKind, token: string, body: unknown): Promise<HookResult> {
         const sessionId = this.tokens.get(token);
         const session = sessionId === undefined ? undefined : this.sessions.get(sessionId);
@@ -579,7 +586,6 @@ export class SessionManager {
         return 'applied';
     }
 
-    /* Types the CLI's resume command into the shell of a session whose agent is known but not running. */
     async resumeAgent(sessionId: string): Promise<void> {
         const session = this.require(sessionId);
         const { kind } = this.resumableAgent(session);
@@ -591,7 +597,7 @@ export class SessionManager {
         this.resuming.set(sessionId, this.now());
         let line: string;
         try {
-            await this.prepareAgent(kind);
+            await this.providers.get(kind).terminal?.prepare?.();
             // The line goes to whatever holds the terminal: a vim or an ssh started after the agent left would take it.
             if ((await this.holdsForeground(session.pid)) === false) {
                 throw new SessionError('shell-busy', 'Another program runs in front of the shell; quit it and resume again');
@@ -605,7 +611,6 @@ export class SessionManager {
         session.write(`${line}\n`);
     }
 
-    /* The agent of a running session that a resume may start again. */
     private resumableAgent(session: Session): AgentInfo {
         if (session.exited) {
             throw new SessionError('session-exited', `Session ${session.id} has ended`);
@@ -724,7 +729,7 @@ export class SessionManager {
 
     async kill(sessionId: string): Promise<void> {
         // A node deleted while its session is still being made ends that session rather than missing it.
-        await this.creating.get(sessionId)?.catch(() => undefined);
+        await bestEffort('creating.get', this.creating.get(sessionId));
         const session = this.require(sessionId);
         this.deleted.add(session);
         this.announce(session, 'closed');
@@ -740,7 +745,6 @@ export class SessionManager {
         session.kill();
     }
 
-    /* A signal to the shell of a session that still runs; a session that ended takes none. */
     signal(sessionId: string, signal: 'SIGINT' | 'SIGTERM' | 'SIGKILL'): void {
         const session = this.sessions.get(sessionId);
         if (!session || session.exited) {
@@ -765,7 +769,7 @@ export class SessionManager {
      * parent was stopped: removing it is a person's call, as deleting the node is.
      */
     async end(sessionId: string): Promise<void> {
-        await this.creating.get(sessionId)?.catch(() => undefined);
+        await bestEffort('creating.get', this.creating.get(sessionId));
         const session = this.sessions.get(sessionId);
         if (!session || session.exited) {
             return;
@@ -826,7 +830,6 @@ export class SessionManager {
         }
     }
 
-    /* The note about the tools a CLI of this session starts with. */
     private noteFor(sessionId: string): string {
         return toolsNote({
             depth: this.depthOf(sessionId),
@@ -842,15 +845,15 @@ export class SessionManager {
         if (!launch || restored) {
             return undefined;
         }
-        await this.prepareAgent(launch.kind);
+        await this.providers.get(launch.kind).terminal?.prepare?.();
         const note = this.noteFor(sessionId);
         const mcp = this.mcpEndpoint();
         if (launch.resume) {
-            return resumeOrFreshCommand(launch, launch.resume, note, mcp);
+            return resumeOrFreshCommand(this.providers, launch, launch.resume, note, mcp);
         }
         // Taken only here: a prompt that is not put on a line is a prompt nobody would ever see.
         const prompt = (await this.firstPrompt(sessionId)) ?? undefined;
-        const line = terminalCommand(launch, prompt, note, mcp);
+        const line = terminalCommand(this.providers, launch, prompt, note, mcp);
 
         return this.platform === 'win32' && prompt?.startsWith('/') ? `${keepingFromPathConversion(prompt)} ${line}` : line;
     }
@@ -865,12 +868,12 @@ export class SessionManager {
         const note = this.noteFor(session.id);
         const mcp = this.mcpEndpoint();
         if (agent.transcriptPath === null) {
-            return resumeOrFreshCommand(launch, agent.agentSessionId, note, mcp);
+            return resumeOrFreshCommand(this.providers, launch, agent.agentSessionId, note, mcp);
         }
         if (existsSync(agent.transcriptPath)) {
-            return resumeCommand(launch, agent.agentSessionId, mcp);
+            return resumeCommand(this.providers, launch, agent.agentSessionId, mcp);
         }
-        return freshCommand(launch, note, mcp);
+        return freshCommand(this.providers, launch, note, mcp);
     }
 
     /* Ruimte's MCP server for an agent this manager launches, which needs the hook token the session carries as its bearer. */
@@ -975,16 +978,17 @@ export class SessionManager {
         const codex = this.codexTitles;
         const path = agent.transcriptPath;
         const threadId = agent.agentSessionId;
+        const source = this.providers.get(agent.kind).subagentSource;
         // The hooks name the transcript, which already sits in the folder of the account the CLI runs under.
-        if (agent.kind === 'claude' && claude && path !== null) {
+        if (source === 'claude-transcript' && claude && path !== null) {
             return () => claude.forTranscript(path);
         }
-        if (agent.kind === 'codex' && codex && threadId !== null) {
+        if (source === 'codex-thread' && codex && threadId !== null) {
             if (this.accounts === null) {
                 return () => codex.forThread(threadId);
             }
-            // A Codex started by hand in a shell opened for another CLI runs under the default account.
-            const home = this.accounts.homeFolder('codex', session.launch?.kind === 'codex' ? session.launch.account : undefined);
+            // A CLI started by hand in a shell opened for another CLI runs under the default account.
+            const home = this.accounts.homeFolder(agent.kind, session.launch?.kind === agent.kind ? session.launch.account : undefined);
             return home === null ? null : () => codex.forThread(threadId, codexIndexIn(home));
         }
         return null;
@@ -1014,8 +1018,9 @@ export class SessionManager {
             }
         }
         this.titleReadAt.set(session.id, now);
-        void read()
-            .then((title) => {
+        void bestEffort(
+            'read the session title',
+            read().then((title) => {
                 const current = session.agent;
                 if (this.sessions.get(session.id) !== session || current === null || current.agentSessionId !== agent.agentSessionId) {
                     return;
@@ -1032,7 +1037,7 @@ export class SessionManager {
                 }
                 return this.setAgent(session, { ...current, suggestedTitle: title });
             })
-            .catch(() => undefined);
+        );
     }
 
     private retryTitle(session: Session): void {
@@ -1115,7 +1120,6 @@ export class SessionManager {
         this.broadcast({ event: 'session.list-changed', payload: {} });
     }
 
-    /* Every client watching sessions, and the parts of the daemon that observe them beside. */
     private broadcast(event: SessionEvent): void {
         this.sinks.emit(event);
         for (const observer of this.observers) {

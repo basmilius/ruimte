@@ -1,7 +1,7 @@
 import { basename } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
 import { isWithin } from '@adecore/utils/path';
-import { ARRANGE_LAYOUTS, ActionRefusal, type ActionHandlers, type ActionInput, type ActionOutput } from '@ruimte/actions';
+import { ARRANGE_LAYOUTS, ActionRefusal, type ActionHandlers, type ActionInput, type ActionName, type ActionOutput } from '@ruimte/actions';
 import {
     DEFAULT_TITLES,
     NODE_ACCENT_NAMES,
@@ -31,16 +31,16 @@ import {
     type ProjectView
 } from '@ruimte/contracts';
 import { ArtifactError } from '../artifacts/artifact-names.ts';
+import { isChatView } from '../canvas/chat-view.ts';
+import { NEW_NODE, canvasNamed, field, orNote, referencedBy, snoozedAt, type AgentCall } from '../canvas/host.ts';
+import { ownEnd } from '../canvas/links.ts';
+import { EVERY_KIND_LINE, KIND_FIELDS, REQUIRED_FIELD, kindLine, type KindField } from '../canvas/node-kinds.ts';
+import { MAX_CANVAS_NODES, NOT_A_GROUP, canvasFull, checkUrl, newId, nodeLines, nodesNamed, openingEdge } from '../canvas/nodes.ts';
+import { ownViewOf, refuseMissingNodes, refuseOwnView } from '../canvas/own-view.ts';
+import { arrangeRects, containersOf, gridColumns, groupMembers, placeBeside, placeFree } from '../canvas/placement.ts';
+import { checkCwd, checkPath } from '../canvas/project-paths.ts';
+import { refuseOtherMachine } from '../canvas/remote-node.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import { isChatView } from '../tools/chat-view.ts';
-import { NEW_NODE, canvasNamed, field, orNote, referencedBy, snoozedAt, type AgentCall } from '../tools/host.ts';
-import { ownEnd } from '../tools/links.ts';
-import { EVERY_KIND_LINE, KIND_FIELDS, REQUIRED_FIELD, kindLine, type KindField } from '../tools/node-kinds.ts';
-import { MAX_CANVAS_NODES, NOT_A_GROUP, canvasFull, checkUrl, newId, nodeLines, nodesNamed, openingEdge } from '../tools/nodes.ts';
-import { ownViewOf, refuseMissingNodes, refuseOwnView } from '../tools/own-view.ts';
-import { arrangeRects, containersOf, gridColumns, groupMembers, placeBeside, placeFree } from '../tools/placement.ts';
-import { checkCwd, checkPath } from '../tools/project-paths.ts';
-import { refuseOtherMachine } from '../tools/remote-node.ts';
 import { hostService, agentCallOf, type ServerActionCall, type ServerActionContext } from './context.ts';
 import { machineDevice } from './device-actions.ts';
 import { entryOf, routinesOf } from './routine-actions.ts';
@@ -113,7 +113,6 @@ function writableLines(canvas: ProjectCanvasView, call: AgentCall, chatView: boo
     });
 }
 
-/* The text as a line of its own under what is there, and nothing but the text on a note still empty. */
 function withLine(body: string, text: string): string {
     if (body === '') {
         return text;
@@ -404,6 +403,9 @@ async function createNodes(call: ServerActionCall, viewId: string, specs: readon
     });
     return output;
 }
+
+/* The actions of this file that honor a dry run. */
+export const nodePreviews: readonly ActionName[] = ['node.create', 'node.createMany', 'node.setColor'];
 
 export const nodeActions: ActionHandlers<ServerActionContext> = {
     'node.list': async ({ viewId }, { actor, context }) => {

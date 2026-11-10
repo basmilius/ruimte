@@ -85,35 +85,36 @@ extension ContentUnavailableView where Label == SwiftUI.Label<Text, Image>, Desc
 }
 
 struct WorkspaceViewIcon: View {
-    let item: JSONValue
+    let name: String
     var size: CGFloat = 20
 
+    init(item: JSONValue, size: CGFloat = 20) {
+        name = Self.name(for: item)
+        self.size = size
+    }
+
+    init(item: ProjectItem, size: CGFloat = 20) {
+        name = Self.name(kind: item.kind, chosen: item.icon)
+        self.size = size
+    }
+
     var body: some View {
-        LucideIcon(name: Self.name(for: item), size: size).accessibilityHidden(true)
+        LucideIcon(name: name, size: size).accessibilityHidden(true)
     }
 
     nonisolated static func name(for item: JSONValue) -> String {
-        if item.text("kind") != "unknown", let icon = item["icon"], icon.text("kind") == "lucide" {
-            return icon.text("value")
-        }
-        // Match the fallback marks in the desktop client's project/ViewGlyph.tsx.
-        switch item.text("kind") {
-        case "canvas": return "frame"
-        case "chat": return "message-square"
-        case "terminal": return "terminal"
-        case "browser": return "globe"
-        case "device": return "smartphone"
-        case "separator": return "minus"
-        case "subheader": return "heading"
-        case "drawing": return "pen-tool"
-        case "diagram": return "workflow"
-        case "file": return "file-text"
-        case "database": return "table"
-        case "note": return "sticky-note"
-        case "group": return "layout-grid"
-        case "artifact": return "package"
-        case "design": return "swatch-book"
-        default: return "circle-question-mark"
-        }
+        let icon = item["icon"].flatMap { $0.text("kind") == "lucide" ? $0.text("value") : nil }
+        return name(kind: item.text("kind"), chosen: icon)
+    }
+
+    nonisolated static func name(for view: StoredView) -> String {
+        name(kind: view.kind, chosen: view.icon.flatMap { $0.kind == "lucide" ? $0.value : nil })
+    }
+
+    nonisolated static func name(for node: StoredNode) -> String { name(kind: node.kind.rawValue, chosen: nil) }
+
+    nonisolated static func name(kind: String, chosen: String?) -> String {
+        if kind != "unknown", let chosen { return chosen }
+        return ProjectKinds.row(kind)?.icon ?? "circle-question-mark"
     }
 }

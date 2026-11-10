@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { canShareView, mergeFiles, overlayOfLegacy, privateFieldsOf, privateFileOf, splitContent, viewShareRefusal } from './project-split.ts';
 import {
-    designFolderOf,
     designPlaces,
     EMPTY_PRIVATE_FILE,
     isDesignPath,
@@ -189,12 +188,6 @@ describe('splitContent', () => {
         const split = splitContent(content([design]), ['d1'], 1);
         expect(split.shared.views[0]).toEqual({ ...design, node: { provider: 'claude' } });
         expect(split.private.overlay.d1).toEqual({ resume: 'sess-9' });
-    });
-
-    test("a design's folder is private until the design is shared, and a folder a design named itself stays put", () => {
-        expect(designFolderOf({ path: 'onboarding' }, false)).toBe('.ruimte/private/designs/onboarding');
-        expect(designFolderOf({ path: 'onboarding' }, true)).toBe('.ruimte/designs/onboarding');
-        expect(designFolderOf({ path: 'designs/onboarding' }, false)).toBe('designs/onboarding');
     });
 
     test('a design whose name is no folder of its own is kept as it was read and is no design anywhere', () => {

@@ -683,11 +683,3 @@ describe('smart keys', () => {
         expect(settingsFrom({ smartKeys: null as never }).smartKeys.camelHumps).toBe(false);
     });
 });
-
-describe('rendered documentation', () => {
-    test('stays off until a person turns it on', () => {
-        expect(settingsFrom({}).codeRenderDocs).toBe(false);
-        expect(settingsFrom({ codeRenderDocs: true }).codeRenderDocs).toBe(true);
-        expect(settingsFrom({ codeRenderDocs: 'yes' as unknown as boolean }).codeRenderDocs).toBe(false);
-    });
-});

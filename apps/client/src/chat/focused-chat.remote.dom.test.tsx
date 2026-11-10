@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { useSubagentView } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
+import { isApplePlatform } from '@adecore/ui';
 import type { ProjectCanvasView, ProjectNode, ProviderInfo } from '@ruimte/contracts';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
-import { runPaletteCommand } from '@/shell/menu/actions';
+import { runBehavior } from '@/commands/behavior';
 import { focusedCanvas } from '@/state/canvas';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { endpointKey } from '@/state/keys';
@@ -78,7 +78,6 @@ function thread(): HTMLElement {
     return page.host.querySelector<HTMLElement>(`[data-node-id="${LEAD.id}"] .chat-scroll`)!;
 }
 
-/* Dispatches the key at `target` the way a browser does and says whether something on the page took it. */
 async function press(target: HTMLElement, init: KeyboardEventInit): Promise<boolean> {
     const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
     await act(async () => {
@@ -106,7 +105,6 @@ beforeEach(async () => {
     await page.renderApp();
     await until(() => Object.values(useChats.getState().byKey).some((row) => row.structure?.['user-2'] !== undefined));
     await until(() => composer() !== null);
-    // Clicking into the node's body hands it the keyboard.
     await act(async () => focusedCanvas().getState().setBodyFocus(LEAD.id));
 });
 
@@ -149,7 +147,7 @@ describe('the commands that act on a focused chat that runs on another machine',
         expect(scrolls).toHaveLength(1);
 
         // A click on the menu row runs the palette's.
-        await act(async () => runPaletteCommand('chat-message-next'));
+        await act(async () => runBehavior('chat-message-next'));
         expect(scrolls).toHaveLength(2);
     });
 });

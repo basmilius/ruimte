@@ -1,8 +1,8 @@
 import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
 import { refusing, type Requester } from '@/actions/refusal';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
-import { machineFor } from '@/transport/connections';
+import { machineFor } from '@/workspace/connections';
 
 /* What the chat search reaches outside the document; a test hands in a fake. */
 export interface ChatSearchMachine {
@@ -15,7 +15,6 @@ const LIVE_MACHINE: ChatSearchMachine = {
     projectId: () => useProject.getState().current?.projectId ?? null
 };
 
-/* A person's look through the chats of the open project, and through the CLI sessions started beside them. */
 export function chatSearchActions(overrides: Partial<ChatSearchMachine> = {}): ActionHandlers<void> {
     const machine: ChatSearchMachine = { ...LIVE_MACHINE, ...overrides };
 

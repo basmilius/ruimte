@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
+import { settle } from '@adecore/editor-react/testing';
 import type { DiagnosticsReport } from '@adecore/lsp';
-import { TransportError } from '@/transport/transport';
+import { TransportError } from '@/transport-api/transport';
 import { FakeLanguageTransport } from './fake-daemon';
-import { settleLanguage as settle } from './settle.test';
 import { WireLanguageService } from './wire-service';
 
 const folder = '/work/app';

@@ -1,7 +1,7 @@
 import { SECRET_LIMITS } from '@ruimte/contracts';
 import { z } from 'zod';
+import { field } from '../canvas/host.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { field } from './host.ts';
 import { defineToolkit, textInput } from './tool.ts';
 
 const secretRequest = defineActionTool('secret', {

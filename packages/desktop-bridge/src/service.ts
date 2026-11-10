@@ -28,7 +28,6 @@ export interface DaemonCrash {
     restarting: boolean;
 }
 
-/* The background service of this machine, as the client draws it in the machine dialog. */
 export interface BackgroundServiceState {
     support: ServiceSupport;
     /* "Keep this machine running when Ruimte quits". Always false where the service is not supported. */

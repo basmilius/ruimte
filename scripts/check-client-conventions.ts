@@ -2,7 +2,8 @@ import { Glob } from 'bun';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseSync, Visitor } from 'oxc-parser';
+import { designProblemsIn, type DesignOptions } from '@adecore/ui/design-conventions';
+import { parseSync } from 'oxc-parser';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 
@@ -19,32 +20,29 @@ function clientSources(): Array<{ path: string; text: string }> {
     );
 }
 
-const KEY_LISTENERS = new Set([
-    'apps/client/src/shell/app-shortcuts.ts',
-    'apps/client/src/canvas/canvas-shortcuts.ts',
-    'apps/client/src/drawing/use-drawing-keys.ts'
-]);
-
-// The speech model needs a fixed date format; no person reads it.
-const INTL_OUTSIDE_FORMAT = new Set(['apps/client/src/voice/controller.ts']);
-
-// The places a color is written down as paint rather than read from a token: the syntax palettes, the
-// accents a person and an agent pick from (xterm reads them as literals), and scenes drawn in WebGL or a
-// canvas that no theme reaches, the pets' pixel art among them. The contrast math measures colors against
-// the theme's two grounds and the two texts it can print on an accent, which only exist as values here.
-const COLOR_LITERALS = new Set([
-    'apps/client/src/shell/panels/code-themes.ts',
-    'apps/client/src/state/accent-contrast.ts',
-    'apps/client/src/canvas/accents.ts',
-    'apps/client/src/ui/EclipseStars.tsx',
-    'apps/client/src/ui/galaxy/Galaxy.tsx',
-    'apps/client/src/measure/scene.ts',
-    'extensions/pets/client/sprite-colors.ts',
-    'extensions/pets/client/catalog.ts',
-    'extensions/pets/client/sketches.ts'
-]);
-// A hex color, or a color function given numbers rather than a token, anywhere in a string.
-const COLOR_LITERAL = /(?:^|[\s[(:,'"])#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})(?![0-9a-z])|\b(?:rgba?|hsla?|oklch|oklab|lab|lch)\(\s*[\d.]/i;
+// The design rules of ADE CORE that the root CLAUDE.md states as well. Its other rules (uppercase labels,
+// focus rings, icon sizes) are not Ruimte's: a model's badge is in capitals, and the pets draw their own focus.
+export const DESIGN_OPTIONS: DesignOptions = {
+    rules: ['keyListeners', 'typeSize', 'tooltip', 'intl', 'color', 'fractionalPixel'],
+    keyListeners: ['apps/client/src/shell/app-shortcuts.ts', 'apps/client/src/shell/canvas-shortcuts.ts', 'apps/client/src/drawing/use-drawing-keys.ts'],
+    // The speech model needs a fixed date format; no person reads it.
+    intlExempt: ['apps/client/src/voice/controller.ts'],
+    // The places a color is written down as paint rather than read from a token: the syntax palettes, the
+    // accents a person and an agent pick from (xterm reads them as literals), and scenes drawn in WebGL or a
+    // canvas that no theme reaches, the pets' pixel art among them. The contrast math measures colors against
+    // the theme's two grounds and the two texts it can print on an accent, which only exist as values here.
+    colorExempt: [
+        'apps/client/src/code-themes.ts',
+        'apps/client/src/state/accent-contrast.ts',
+        'apps/client/src/canvas-model/accents.ts',
+        'apps/client/src/ui/EclipseStars.tsx',
+        'apps/client/src/ui/galaxy/Galaxy.tsx',
+        'apps/client/src/measure/scene.ts',
+        'extensions/pets/client/sprite-colors.ts',
+        'extensions/pets/client/catalog.ts',
+        'extensions/pets/client/sketches.ts'
+    ]
+};
 
 export interface TopLevelArrow {
     line: number;
@@ -82,40 +80,12 @@ export function topLevelArrows(path: string, text: string): TopLevelArrow[] {
     return found;
 }
 
-/* What a file of the client breaks of the rules above, one line per problem. */
+/* What a file of the client breaks of the rules that are Ruimte's alone, one line per problem. */
 export function conventionProblems(path: string, text: string): string[] {
     const problems: string[] = [];
-    if (/(window|document)\.addEventListener\(\s*['"]key(down|up)['"]/.test(text) && !KEY_LISTENERS.has(path)) {
-        problems.push(`${path}: bind window shortcuts in the designated shortcut modules`);
-    }
     // Cleanup after a machine switch must still reach the original machine.
     if (path.endsWith('.tsx') && /import\s*\{[^}]*\b(sessionClient|chatClient)\b[^}]*\}\s*from\s*'@\/(terminal|transport\/connections)'/.test(text)) {
         problems.push(`${path}: reach sessions and chats through the component's machine`);
-    }
-    const program = parseSync(path, text).program;
-    const lineOf = (start: number): number => text.slice(0, start).split('\n').length;
-    if (!COLOR_LITERALS.has(path)) {
-        new Visitor({
-            Literal(node) {
-                if (typeof node.value === 'string' && COLOR_LITERAL.test(node.value)) {
-                    problems.push(`${path}:${lineOf(node.start)}: use a semantic token, not a raw color`);
-                }
-            },
-            TemplateElement(node) {
-                if (COLOR_LITERAL.test(node.value.raw)) {
-                    problems.push(`${path}:${lineOf(node.start)}: use a semantic token, not a raw color`);
-                }
-            }
-        }).visit(program);
-    }
-    if (!INTL_OUTSIDE_FORMAT.has(path)) {
-        new Visitor({
-            MemberExpression(node) {
-                if (node.object.type === 'Identifier' && node.object.name === 'Intl') {
-                    problems.push(`${path}:${lineOf(node.start)}: use @adecore/ui/format`);
-                }
-            }
-        }).visit(program);
     }
     for (const arrow of topLevelArrows(path, text)) {
         problems.push(`${path}:${arrow.line}: declare ${arrow.name} as a function, not a const bound to an arrow`);
@@ -123,8 +93,16 @@ export function conventionProblems(path: string, text: string): string[] {
     return problems;
 }
 
+/* The design rules of ADE CORE that hold for the client, and then the rules of Ruimte's own. */
+export function clientProblems(sources: Array<{ path: string; text: string }>): string[] {
+    return [
+        ...designProblemsIn(sources, DESIGN_OPTIONS).map(({ rule, location }) => `${location}: ${rule}`),
+        ...sources.flatMap(({ path, text }) => conventionProblems(path, text))
+    ];
+}
+
 if (import.meta.main) {
-    const problems = clientSources().flatMap(({ path, text }) => conventionProblems(path, text));
+    const problems = clientProblems(clientSources());
     for (const problem of problems) {
         console.error(problem);
     }

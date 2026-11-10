@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { DesktopBridge } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { httpUrlFor } from '@/transport/machine-url';
-import { forgetTicket, rememberLocalSecret, rememberTicket } from './credentials';
+import { forgetTicket, rememberLocalSecret, rememberTicket } from '../transport-api/credentials';
 import { socketAddressFor } from './handshake';
 
 const DAEMON_ID = 'daemon-xyz';

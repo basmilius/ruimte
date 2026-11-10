@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { assetPathOf, isPagePath } from '@/design/design-page';
+import type { DesignCamera } from '@/state/design-chat';
 
 /* The methods between the stage and the runtime in a design page, beside the bridge of every visual. */
 export const DESIGN_METHODS = {
@@ -35,12 +36,11 @@ export const DESIGN_METHODS = {
 
 export type DesignTool = 'view' | 'comment' | 'edit' | 'draw';
 
-export const DesignCameraSchema = z.object({
+const DesignCameraSchema = z.object({
     x: z.number().finite(),
     y: z.number().finite(),
     zoom: z.number().finite().min(0.01).max(16)
-});
-export type DesignCamera = z.infer<typeof DesignCameraSchema>;
+}) satisfies z.ZodType<DesignCamera>;
 
 /* A zoom around the middle of the stage, or the whole board fitted into it. */
 export type DesignZoom = { action: 'set'; zoom: number } | { action: 'fit' };
@@ -48,8 +48,7 @@ export type DesignZoom = { action: 'set'; zoom: number } | { action: 'fit' };
 const TweakValueSchema = z.union([z.string().max(500), z.number().finite(), z.boolean()]);
 export type TweakValue = z.infer<typeof TweakValueSchema>;
 
-// One control of the tweaks a page declares, with the value it holds now.
-export const TweakSchema = z.object({
+const TweakSchema = z.object({
     label: z.string().max(80).optional(),
     type: z.enum(['color', 'range', 'select', 'toggle', 'text']),
     value: TweakValueSchema,
@@ -67,7 +66,7 @@ export type Tweaks = z.infer<typeof TweaksSchema>;
 
 const RectSchema = z.object({ x: z.number().finite(), y: z.number().finite(), width: z.number().finite(), height: z.number().finite() });
 
-export const DesignElementSchema = z.object({
+const DesignElementSchema = z.object({
     selector: z.string().min(1).max(1000),
     option: z.string().max(16).nullable(),
     name: z.string().max(200),
@@ -100,7 +99,7 @@ const PageMessageSchema = z.discriminatedUnion('method', [
         })
     )
 ]);
-export type DesignPageMessage = z.infer<typeof PageMessageSchema>;
+type DesignPageMessage = z.infer<typeof PageMessageSchema>;
 
 /* What a design page said, checked: it is an agent's page, so anything else is ignored. */
 export function designPageMessage(data: unknown): DesignPageMessage | null {
@@ -116,7 +115,6 @@ export function tweaksOf(declared: unknown): Tweaks | null {
     return parsed.success && Object.keys(parsed.data).length > 0 ? parsed.data : null;
 }
 
-/* One message for the page. */
 export function designMessage(method: (typeof DESIGN_METHODS)[keyof typeof DESIGN_METHODS], params?: object): object {
     return params === undefined ? { jsonrpc: '2.0', method } : { jsonrpc: '2.0', method, params };
 }

@@ -2,6 +2,7 @@ import type { SpeechBridge } from '@ruimte/desktop-bridge';
 import { SpeechCapture } from '@/audio/capture';
 import { ensureMicrophoneAccess, openMicrophoneStream } from '@/audio/microphone';
 import { desktop } from '@/desktop/bridge';
+import { fireAndForget } from '@/transport-api/transport';
 import { DictationError, type DictationEngine, type DictationHandlers, type DictationOptions, type DictationSession } from './engine';
 
 export interface Capture {
@@ -154,7 +155,7 @@ export class HelperSession implements DictationSession {
             return;
         }
         this.#end();
-        void this.#bridge.cancel(this.#id).catch(() => undefined);
+        void fireAndForget('bridge.cancel', this.#bridge.cancel(this.#id));
     }
 }
 

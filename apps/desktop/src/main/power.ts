@@ -1,7 +1,7 @@
-import type { AppIpc } from '@adecore/shell';
 import type { KeepAwakeRequest } from '@ruimte/desktop-bridge';
+import { electron } from '../electron';
 import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE, mergeKeepAwake } from '../keep-awake';
-import { electron } from './electron';
+import type { DesktopIpc } from './ipc';
 
 const { powerMonitor, powerSaveBlocker } = electron;
 
@@ -12,8 +12,7 @@ export interface Power {
     followPowerSource(): void;
 }
 
-/* What the pages ask of the computer's sleep and idle state. */
-export function installPower(ipc: AppIpc): Power {
+export function installPower(ipc: DesktopIpc): Power {
     // By window id. Kept rather than applied once, since the power source changes while a request stands.
     const requests = new Map<number, KeepAwakeRequest>();
     const hold = createKeepAwakeHold(powerSaveBlocker);

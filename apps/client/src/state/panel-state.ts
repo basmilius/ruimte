@@ -6,8 +6,8 @@ import {
     type ProjectPanels,
     type ProjectStripTab
 } from '@ruimte/contracts';
-import { databaseTabId, databaseTabKey } from '@/database/tabs';
-import type { LooseStrip } from '@/shell/legacy-files-cell';
+import type { LooseStrip } from '@/layout/legacy-files-cell';
+import { databaseTabId, databaseTabKey } from '@/state/database-tabs';
 import {
     artifactTabKey,
     isArtifactTab,
@@ -21,6 +21,7 @@ import {
     type Tab
 } from '@/state/files';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE } from '@/state/git';
+import { kindOfStoredFlag, panelTraits } from '@/state/panel-traits';
 import type { PanelDefaults, PanelKind } from '@/state/ui';
 
 /* Everything the surfaces around the canvas remember for one project on this machine. */
@@ -50,13 +51,8 @@ function storedPanelKind(stored: ProjectPanels, kind: ProjectPanelKind): PanelKi
     if (stored.extensionPanel?.startsWith('extension:')) {
         return stored.extensionPanel as `extension:${string}`;
     }
-    if (stored.databasesPanel === true) {
-        return 'databases';
-    }
-    if (stored.outputPanel === true) {
-        return 'output';
-    }
-    return stored.launchesPanel === true ? 'launches' : kind;
+
+    return kindOfStoredFlag(stored) ?? kind;
 }
 
 function fileTabOf(tab: ProjectFileTab): FileTab {
@@ -146,7 +142,6 @@ function storedTab(tab: StoredTab): ProjectStripTab {
     return isDatabaseTab(tab) ? storedDatabaseTab(tab) : { kind: 'file', ...storedFileTab(tab) };
 }
 
-/* The tab in front, which has to be one of them, or the first. */
 function activeOf(tabs: readonly Tab[], stored: ProjectPanels | undefined): string | null {
     return tabs.some((tab) => tab.key === stored?.activeTab) ? (stored?.activeTab ?? null) : (tabs[0]?.key ?? null);
 }
@@ -181,6 +176,22 @@ export function parsePanels(stored: ProjectPanels | undefined, defaults: PanelsS
     };
 }
 
+/* A client from before a kind existed reads the files panel in its place; one that only lasts the session is stored closed. */
+function storedPanel(panel: PanelDefaults['panel']): ProjectPanels['panel'] {
+    const traits = panelTraits(panel.kind);
+    if (panel.kind.startsWith('extension:') || traits.storedAs !== undefined) {
+        return { open: panel.open, kind: 'files' };
+    }
+
+    return traits.sessionOnly === true ? { open: false, kind: 'files' } : { open: panel.open, kind: panel.kind as ProjectPanelKind };
+}
+
+function storedFlag(kind: PanelKind): Partial<ProjectPanels> {
+    const flag = panelTraits(kind).storedAs;
+
+    return flag === undefined ? {} : { [flag]: true };
+}
+
 /* The other way, for the machine-local file. A width nobody dragged stays out of it. */
 export function serializePanels(state: PanelsState): ProjectPanels {
     // A comparison and a snapshot live in this window's session only, so neither the tab nor its place in front is written.
@@ -188,17 +199,9 @@ export function serializePanels(state: PanelsState): ProjectPanels {
     const active = tabs.some((tab) => tab.key === state.active) ? state.active : (tabs[0]?.key ?? null);
 
     return {
-        // A client from before launches, databases or output reads the files panel in its place.
-        panel:
-            state.panel.kind === 'launches' || state.panel.kind === 'databases' || state.panel.kind === 'output' || state.panel.kind.startsWith('extension:')
-                ? { open: state.panel.open, kind: 'files' }
-                : state.panel.kind === 'problems' || state.panel.kind === 'voice'
-                  ? { open: false, kind: 'files' }
-                  : { open: state.panel.open, kind: state.panel.kind as ProjectPanelKind },
+        panel: storedPanel(state.panel),
         ...(state.panel.kind.startsWith('extension:') ? { extensionPanel: state.panel.kind } : {}),
-        ...(state.panel.kind === 'launches' ? { launchesPanel: true } : {}),
-        ...(state.panel.kind === 'databases' ? { databasesPanel: true } : {}),
-        ...(state.panel.kind === 'output' ? { outputPanel: true } : {}),
+        ...storedFlag(state.panel.kind),
         ...(state.panelWidth === null ? {} : { panelWidth: Math.round(state.panelWidth) }),
         ...(state.planAnchor === null ? {} : { plan: state.planAnchor }),
         ...(state.planWidth === null ? {} : { planWidth: Math.round(state.planWidth) }),
@@ -215,7 +218,6 @@ export function serializePanels(state: PanelsState): ProjectPanels {
         },
         /* A list nobody has folded stays out of the file, so the next open still seeds itself. */
         ...(state.sidebarExpanded === null ? {} : { sidebarExpanded: state.sidebarExpanded }),
-        /* A project with no page open writes no map at all. */
         ...(Object.keys(state.favicons).length === 0 ? {} : { favicons: state.favicons })
     };
 }

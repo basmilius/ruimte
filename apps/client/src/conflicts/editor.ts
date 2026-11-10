@@ -133,7 +133,6 @@ export function applyBlock(view: EditorView, block: number, lines: readonly stri
     }
 }
 
-/* Brings a block into view and puts the caret at its first line. */
 export function revealBlock(view: EditorView, block: number): void {
     const span = spanOf(view.state, block);
     if (span === undefined) {

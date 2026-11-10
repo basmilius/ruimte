@@ -3,7 +3,7 @@ import { EditorView } from '@codemirror/view';
 import type { EndpointInfo, ProjectView } from '@ruimte/contracts';
 import { act } from 'react';
 import { useServers } from '@/state/server';
-import { startServerInfo } from '@/transport/server-info';
+import { startServerInfo } from '@/workspace/server-info';
 import { chatInfoOf } from '../../testing/chat-info';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';

@@ -1,10 +1,9 @@
-import { isMeasured } from '@/canvas/math';
+import { isMeasured } from '@/canvas-model/math';
 import type { NodeKind } from '@/state/canvas';
 
-/* The nodes an empty canvas draws as ghosts: outlines of what is not there yet. */
 export type GhostKind = Extract<NodeKind, 'chat' | 'terminal' | 'browser' | 'note'>;
 
-export interface GhostFrame {
+interface GhostFrame {
     x: number;
     y: number;
     w: number;

@@ -1,20 +1,24 @@
 import { describe, expect, test } from 'bun:test';
 import type { EditorAssistGenerateResult, ServerFrame } from '@ruimte/contracts';
-import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
+import { Dispatcher } from '../dispatcher.ts';
 import type { EditorAssistRequest } from '../editor-assist/model.ts';
-import { registerEditorAssistHandlers } from './editor-assist.ts';
+import type { ClientConnection } from '../wire.ts';
+import { editorAssistArea } from './editor-assist.ts';
 
 function harness() {
     const pending: Array<{ request: EditorAssistRequest; signal?: AbortSignal; answer(text: string): void }> = [];
     const dispatcher = new Dispatcher();
-    registerEditorAssistHandlers(dispatcher, {
-        status: async (agent) => ({ available: true, model: agent?.model ?? 'automatic' }),
-        generate: (request, signal) =>
-            new Promise<EditorAssistGenerateResult>((resolve) => {
-                pending.push({ request, signal, answer: (text) => resolve({ state: 'done', text }) });
-                signal?.addEventListener('abort', () => resolve({ state: 'aborted', text: '' }), { once: true });
-            })
-    });
+    editorAssistArea({
+        model: {
+            status: async (agent) => ({ available: true, model: agent?.model ?? 'automatic' }),
+            generate: (request, signal) =>
+                new Promise<EditorAssistGenerateResult>((resolve) => {
+                    pending.push({ request, signal, answer: (text) => resolve({ state: 'done', text }) });
+                    signal?.addEventListener('abort', () => resolve({ state: 'aborted', text: '' }), { once: true });
+                }),
+            dispose: async () => undefined
+        }
+    }).handlers?.(dispatcher);
     const frames: ServerFrame[] = [];
     const client: ClientConnection & { closed: boolean } = { id: 'client-1', closed: false, send: (frame) => frames.push(frame) };
     const request = (id: string, type: string, payload: unknown, who: ClientConnection = client) =>

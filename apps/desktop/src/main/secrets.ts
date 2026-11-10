@@ -1,21 +1,21 @@
 import { join } from 'node:path';
-import type { AppIpc } from '@adecore/shell';
+import { liveTools, mintLiveSession, parseOpenAiLivePreferences } from '@ruimte/voice';
 import { databaseSecretFile, parseSecret, parseSecretKey } from '../database-bridge';
+import { electron } from '../electron';
 import { heedBodyless } from '../net-response';
-import { createOpenAiLiveSession, parseOpenAiLivePreferences } from '../openai-live';
 import { fileSecretStore, type SecretStore } from '../secret-store';
-import { electron } from './electron';
+import type { DesktopIpc } from './ipc';
 import { pendingRemovalFile, voiceKey, type MachineVoiceKey } from './voice-key';
 
 const { app, net, safeStorage } = electron;
 
-export interface InstalledSecrets {
+interface InstalledSecrets {
     /* Gives the saved OpenAI key to the app's own daemon, for the Voice it runs for a phone. */
     handOverVoiceKey(): Promise<void>;
 }
 
 /* The OpenAI API key and the database passwords, which stay in the shell, encrypted with the OS keychain. */
-export function installSecrets(ipc: AppIpc, machineVoiceKey: MachineVoiceKey | null): InstalledSecrets {
+export function installSecrets(ipc: DesktopIpc, machineVoiceKey: MachineVoiceKey | null): InstalledSecrets {
     let openAiKeyStore: SecretStore | null = null;
 
     const openAiKeys = (): SecretStore => {
@@ -68,7 +68,12 @@ export function installSecrets(ipc: AppIpc, machineVoiceKey: MachineVoiceKey | n
         if (apiKey === null) {
             throw new Error('Add an OpenAI API key in Settings first');
         }
-        return createOpenAiLiveSession((input, init) => net.fetch(input, init).then(heedBodyless), apiKey, sdp, requested);
+        return mintLiveSession(
+            (input, init) => net.fetch(input, init).then(heedBodyless),
+            apiKey,
+            { language: requested.language, voice: requested.voice, tools: liveTools(requested), sdp },
+            'desktop'
+        );
     });
 
     return { handOverVoiceKey: () => voice.handOver() };

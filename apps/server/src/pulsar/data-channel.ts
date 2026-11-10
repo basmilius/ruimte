@@ -11,8 +11,8 @@ import {
 } from '@ruimte/contracts';
 import type { RTCDataChannel } from 'werift';
 import { LOW_WATER_MARK, SOCKET_BACKPRESSURE_LIMIT, type OutputShare } from '../backpressure.ts';
-import type { ClientChannel } from '../connection.ts';
 import { errorText } from '../error-text.ts';
+import type { ClientChannel } from '../wire.ts';
 
 /* What the adapter needs of a DataChannel. werift's is one; a test hands in a fake with the same few members. */
 export interface RawDataChannel {

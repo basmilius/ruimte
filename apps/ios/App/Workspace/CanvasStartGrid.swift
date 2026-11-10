@@ -5,13 +5,15 @@ import SwiftUI
 /// The agent CLIs a machine reports through `provider.list`, the one source for which agents it offers.
 @MainActor
 enum AgentCatalog {
-    static func load(_ client: any MachineRequesting) async throws -> [JSONValue] {
-        try await client.request("provider.list", payload: .object([:]))["providers"]?.arrayValue ?? []
+    static func load(_ client: any MachineRequesting) async throws -> [ProviderInfo] {
+        let providers = try await client.request(.providerList, payload: .object([:]))
+            .decoded(as: ProviderListResult.self).providers
+        AgentDirectory.shared.learn(providers)
+        return providers
     }
 
-    /// Installed CLIs that open as `target`, a chat or a terminal.
-    static func installed(_ providers: [JSONValue], target: String) -> [JSONValue] {
-        providers.filter { $0["installed"] == .bool(true) && $0["capabilities"]?[target] == .bool(true) }
+    nonisolated static func installedChats(_ providers: [ProviderInfo]) -> [ProviderInfo] {
+        providers.filter { $0.installed && $0.capabilities.chat }
     }
 }
 
@@ -34,14 +36,11 @@ struct CanvasStartGrid: View {
         _catalog = State(initialValue: NewChatModel(client: workspace.client, machineID: workspace.session.machine.id))
     }
 
-    private var providers: [JSONValue]? { catalog.providers }
+    private var providers: [ProviderInfo]? { catalog.providers }
     @State private var saving = false
 
-    private var agents: [JSONValue] {
-        (providers ?? []).filter {
-            $0["installed"] == .bool(true)
-                && ($0["capabilities"]?["chat"] == .bool(true) || $0["capabilities"]?["terminal"] == .bool(true))
-        }
+    private var agents: [ProviderInfo] {
+        (providers ?? []).filter { $0.installed && ($0.capabilities.chat || $0.capabilities.terminal) }
     }
 
     var body: some View {
@@ -80,7 +79,9 @@ struct CanvasStartGrid: View {
                         tile(
                             String(localized: "Group"), detail: String(localized: "Holds nodes"), icon: "layout-grid"
                         ) {
-                            insert(kind: "group", title: "Group", extra: ["memberIds": .array([]), "membersListed": .bool(true)])
+                            insert(
+                                kind: "group", title: "Group",
+                                extra: ["memberIds": .array([]), "membersListed": .bool(true)])
                         }
                     }
                 }
@@ -93,7 +94,7 @@ struct CanvasStartGrid: View {
         .disabled(saving)
         .accessibilityIdentifier("canvas.startGrid")
         .task {
-            await RemotePageLifecycle.run(client: workspace.client, events: ["accounts.changed"], load: catalog.load)
+            await RemotePageLifecycle.run(client: workspace.client, events: [.accountsChanged], load: catalog.load)
         }
         .mobileSheet(isPresented: $chatProvider.isPresent()) {
             if let kind = chatProvider {
@@ -120,21 +121,18 @@ struct CanvasStartGrid: View {
             .accessibilityElement(children: .combine)
         } else {
             section(String(localized: "Agents")) {
-                ForEach(agents, id: \.agentKind) { provider in
-                    let chat = provider["capabilities"]?["chat"] == .bool(true)
+                ForEach(agents, id: \.kind) { provider in
+                    let chat = provider.capabilities.chat
                     tile(
-                        provider.text("name", fallback: provider.text("kind")),
+                        provider.name,
                         detail: chat ? String(localized: "Chat") : String(localized: "Terminal"), icon: "bot"
                     ) {
-                        if chat && catalog.needsAccountChoice(provider: provider.agentKind, project: workspace.document)
-                        {
-                            chatProvider = provider.agentKind
+                        if chat && catalog.needsAccountChoice(provider: provider.kind, project: workspace.document) {
+                            chatProvider = provider.kind
                         } else if chat {
-                            insertChat(provider.agentKind)
+                            insertChat(provider.kind)
                         } else {
-                            insert(
-                                kind: "terminal", title: provider.text("name", fallback: "Agent"),
-                                extra: ["provider": .string(provider.agentKind)])
+                            insert(kind: "terminal", title: provider.name, extra: ["provider": .string(provider.kind)])
                         }
                     }
                 }
@@ -182,7 +180,7 @@ struct CanvasStartGrid: View {
                         .array(
                             view.list("nodes") + [
                                 newCanvasNode(
-                                    kind: "chat", title: ProcessesText.agentName(provider), after: view.list("nodes"),
+                                    kind: "chat", title: AgentDirectory.shared.name(provider), after: view.list("nodes"),
                                     extra: extra)
                             ]))
                 }

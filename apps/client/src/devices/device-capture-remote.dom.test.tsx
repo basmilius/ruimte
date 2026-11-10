@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { REQUEST_SCHEMAS, type RequestType } from '@ruimte/contracts';
-import { swapPeerLinker } from '@/project/peer-linker';
+import { swapPeerLinker } from '@/clients/project/peer-linker';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { button, phoneCanvas } from '../../testing/device-dom';

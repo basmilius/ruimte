@@ -1,0 +1,32 @@
+import { Icon } from '@adecore/ui';
+import type { Account } from '@ruimte/pulsar';
+import { User } from 'lucide-react';
+import { useState } from 'react';
+import { accountName } from '@/pulsar/account-name';
+
+/* GitHub serves every login's profile picture at this address; no other provider hands out a picture. */
+function pictureOf(account: Account): string | null {
+    return account.provider === 'github' && account.login !== null ? `https://github.com/${encodeURIComponent(account.login)}.png?size=64` : null;
+}
+
+export function AccountAvatar({ account }: { readonly account: Account | null }) {
+    const picture = account === null ? null : pictureOf(account);
+    // Offline, or a login GitHub no longer knows: the letter stands in rather than a broken image.
+    const [failed, setFailed] = useState<string | null>(null);
+
+    if (account === null) {
+        return (
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface-hover text-text-muted">
+                <Icon icon={User} size={16} />
+            </span>
+        );
+    }
+    if (picture !== null && failed !== picture) {
+        return <img src={picture} alt="" className="h-8 w-8 shrink-0 rounded-full bg-surface-hover" onError={() => setFailed(picture)} />;
+    }
+    return (
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent-soft text-xs font-semibold text-accent" aria-hidden>
+            {accountName(account).slice(0, 1).toUpperCase()}
+        </span>
+    );
+}

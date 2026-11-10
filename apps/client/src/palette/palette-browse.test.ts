@@ -1,0 +1,329 @@
+import { describe, expect, test } from 'bun:test';
+import type { Machine } from '@ruimte/pulsar';
+import { mergeMachines } from '@/machines/machine-list';
+import type { Endpoint } from '@/state/endpoints';
+import type { ConnectionState } from '@/transport-api/transport';
+import {
+    browseBack,
+    browseMachines,
+    browseStart,
+    folderPresence,
+    isFullPath,
+    isPathQuery,
+    linkDot,
+    linkHint,
+    machineLink,
+    machinesStep,
+    openBrowse,
+    paletteStart,
+    pickMachine,
+    retryLink,
+    settleLink,
+    typedPathOffer,
+    type BrowseStep
+} from './palette-browse';
+
+describe('folderPresence', () => {
+    const listing = { entries: [{ name: 'projects' }, { name: 'Pictures' }], exists: true };
+
+    test('a path ending in a separator is answered by exists alone', () => {
+        expect(folderPresence('~/projects/', listing, '/')).toBe('there');
+        expect(folderPresence('~/nope/', { entries: [], exists: false }, '/')).toBe('missing');
+    });
+
+    test('without a separator the last segment has to be a name that came back, exactly', () => {
+        expect(folderPresence('~/projects', listing, '/')).toBe('there');
+        expect(folderPresence('~/pro', listing, '/')).toBe('missing');
+        expect(folderPresence('~/pictures', listing, '/')).toBe('missing');
+    });
+
+    test('a Windows path takes either separator for the last segment', () => {
+        const drive = { entries: [{ name: 'Projects' }], exists: true };
+
+        expect(folderPresence('C:/Projects', drive, '\\')).toBe('there');
+        expect(folderPresence('C:\\Projects', drive, '\\')).toBe('there');
+        expect(folderPresence('C:/Proj', drive, '\\')).toBe('missing');
+        expect(folderPresence('C:/Projects/', drive, '\\')).toBe('there');
+    });
+
+    test('a path on a machine with forward slashes keeps a backslash inside a name', () => {
+        expect(folderPresence('/srv/a\\b', { entries: [{ name: 'a\\b' }], exists: true }, '/')).toBe('there');
+    });
+
+    test('a daemon that does not know the field leaves the question open', () => {
+        expect(folderPresence('~/projects/', { entries: [] }, '/')).toBe('unknown');
+        expect(folderPresence('~/projects/', null, '/')).toBe('unknown');
+    });
+});
+
+describe('typedPathOffer', () => {
+    test('a path from the root or from home opens, or is created when it is missing', () => {
+        expect(typedPathOffer('/Users/bas/app', 'darwin', 'there')).toBe('open');
+        expect(typedPathOffer('~/projects/new', 'darwin', 'missing')).toBe('create');
+        expect(typedPathOffer('~', 'linux', 'unknown')).toBe('open');
+    });
+
+    test('a relative path is refused before the machine is asked, whatever the listing said', () => {
+        expect(typedPathOffer('foo/bar', 'darwin', 'missing')).toBe('relative');
+        expect(typedPathOffer('./foo', 'darwin', 'there')).toBe('relative');
+        expect(typedPathOffer('../foo', null, 'unknown')).toBe('relative');
+        expect(typedPathOffer('~foo', 'darwin', 'missing')).toBe('relative');
+    });
+});
+
+describe('isFullPath', () => {
+    test('a Windows machine also starts a path at a drive or a share', () => {
+        expect(isFullPath('C:\\Users', 'win32')).toBe(true);
+        expect(isFullPath('\\\\server\\share', 'win32')).toBe(true);
+        expect(isFullPath('~\\projects', 'win32')).toBe(true);
+        expect(isFullPath('C:\\Users', 'darwin')).toBe(false);
+        expect(isFullPath('projects\\app', 'win32')).toBe(false);
+    });
+
+    test('surrounding spaces do not count, as the machine trims them too', () => {
+        expect(isFullPath('  /tmp ', 'linux')).toBe(true);
+    });
+});
+
+describe('isPathQuery', () => {
+    test('a slash, a tilde and a dot path browse on every machine', () => {
+        for (const platform of ['darwin', 'linux', 'win32', null]) {
+            expect(isPathQuery('/tmp', platform)).toBe(true);
+            expect(isPathQuery('~', platform)).toBe(true);
+            expect(isPathQuery('~/projects', platform)).toBe(true);
+            expect(isPathQuery('./app', platform)).toBe(true);
+            expect(isPathQuery('../app', platform)).toBe(true);
+            expect(isPathQuery('open file', platform)).toBe(false);
+        }
+    });
+
+    test('a drive letter browses on Windows once the separator is typed, with either slash', () => {
+        expect(isPathQuery('C:\\', 'win32')).toBe(true);
+        expect(isPathQuery('C:/', 'win32')).toBe(true);
+        expect(isPathQuery('d:\\Work\\app', 'win32')).toBe(true);
+        expect(isPathQuery('\\\\server\\share', 'win32')).toBe(true);
+    });
+
+    test('a bare drive letter stays a search, since the machine reads it as relative to the drive', () => {
+        expect(isPathQuery('C:', 'win32')).toBe(false);
+        expect(isPathQuery('C', 'win32')).toBe(false);
+    });
+
+    test('a drive letter is only a search on a machine without drives', () => {
+        expect(isPathQuery('C:\\', 'darwin')).toBe(false);
+        expect(isPathQuery('C:\\', 'linux')).toBe(false);
+        expect(isPathQuery('C:\\', null)).toBe(false);
+    });
+});
+
+describe('browseStart', () => {
+    test('nothing set is the home of the machine being browsed, which it expands itself, whatever its separator', () => {
+        expect(browseStart('', '/')).toEqual({ start: '~/', home: '~/' });
+        expect(browseStart('   ', '\\')).toEqual({ start: '~\\', home: '~\\' });
+    });
+
+    test('the folder that was set is listed whole, with home behind it to fall back to', () => {
+        expect(browseStart('~/projects', '/')).toEqual({ start: '~/projects/', home: '~/' });
+        expect(browseStart('~/projects/', '/')).toEqual({ start: '~/projects/', home: '~/' });
+    });
+});
+
+const KEY = 'A'.repeat(43);
+
+function opened(id: string, overrides: Partial<Endpoint> = {}): Endpoint {
+    return {
+        id,
+        label: `Row ${id}`,
+        httpBaseUrl: '',
+        wsBaseUrl: '',
+        reachability: 'public',
+        daemonId: id,
+        daemonPublicKey: KEY,
+        pairedBy: 'statement',
+        ...overrides
+    };
+}
+
+function record(id: string, overrides: Partial<Machine> = {}): Machine {
+    return {
+        id,
+        name: `Account ${id}`,
+        icon: null,
+        publicKey: KEY,
+        brokerUrl: 'wss://broker.example.com',
+        lastSeenAt: null,
+        ...overrides
+    };
+}
+
+const localRow = opened('local', {
+    label: 'This machine',
+    httpBaseUrl: 'http://127.0.0.1:4210',
+    wsBaseUrl: 'ws://127.0.0.1:4210',
+    daemonId: 'home',
+    daemonPublicKey: null,
+    reachability: 'loopback'
+});
+
+const OPEN: ConnectionState = { status: 'open', attempts: 0, retryAt: null, failure: null };
+const NO_LINK: ConnectionState = { status: 'closed', attempts: 0, retryAt: null, failure: null };
+
+describe('browseMachines', () => {
+    test('every machine the client knows, deduplicated with the account, the one it is pointed at first and then this machine', () => {
+        const entries = mergeMachines({
+            endpoints: [opened('studio'), localRow],
+            accountMachines: [record('studio'), record('home'), record('attic')],
+            showLocal: true
+        });
+        const rows = browseMachines(entries, 'studio');
+        expect(rows.map((row) => row.endpointId)).toEqual(['studio', 'local', 'attic']);
+        expect(rows.map((row) => row.label)).toEqual(['Row studio', 'This machine', 'Account attic']);
+        expect(browseMachines(entries, 'local').map((row) => row.endpointId)).toEqual(['local', 'studio', 'attic']);
+    });
+});
+
+describe('machineLink', () => {
+    const entries = mergeMachines({
+        endpoints: [opened('studio'), opened('fresh', { needsStatement: true }), localRow],
+        accountMachines: [record('attic'), record('cellar', { brokerUrl: null })],
+        showLocal: true
+    });
+    const byId = (id: string) => entries.find((entry) => entry.id === id)!;
+
+    test('a machine that answers says nothing beside its dot', () => {
+        const link = machineLink(byId('studio'), OPEN, null);
+        expect(link).toEqual({ kind: 'open' });
+        expect(linkHint(link)).toBeUndefined();
+        expect(linkDot(link)).toBe('bg-status-idle');
+    });
+
+    test('a machine not dialed yet says how it is reached, or that nothing outside its network can', () => {
+        expect(linkHint(machineLink(byId('attic'), NO_LINK, null))).toBe('Connects through your account');
+        expect(linkHint(machineLink(byId('cellar'), NO_LINK, null))).toBe('On its own network only');
+        expect(linkHint(machineLink(byId('fresh'), NO_LINK, null))).toBe('Connects through your account');
+        expect(linkHint(machineLink(byId('studio'), NO_LINK, null))).toBe('Connects through your account');
+        expect(linkHint(machineLink(byId('home'), NO_LINK, null))).toBe('Not connected');
+    });
+
+    test('a link under way or one that failed says so, with the reason the attempt gave', () => {
+        expect(linkHint(machineLink(byId('studio'), { status: 'connecting', attempts: 0, retryAt: null }, null))).toBe('Connecting…');
+        const failed = machineLink(byId('studio'), { status: 'closed', attempts: 2, retryAt: 1, failure: 'ICE failed' }, null);
+        expect(linkHint(failed)).toBe('Not reachable: ICE failed');
+        expect(linkDot(failed)).toBe('bg-status-error');
+        expect(linkHint(machineLink(byId('studio'), { status: 'closed', attempts: 1, retryAt: 1, failure: null }, null))).toBe(
+            'Not reachable: That machine is not answering'
+        );
+    });
+
+    test('the wait a person started speaks before what the pool knows', () => {
+        expect(machineLink(byId('attic'), NO_LINK, { state: 'connecting' })).toEqual({ kind: 'connecting' });
+        expect(machineLink(byId('attic'), NO_LINK, { state: 'failed', reason: 'Refused' })).toEqual({ kind: 'failed', reason: 'Refused' });
+    });
+});
+
+describe('openBrowse', () => {
+    test('one open machine goes straight to its folders, which have no path behind them yet', () => {
+        expect(openBrowse('local', [{ endpointId: 'local', open: true }])).toEqual({ endpointId: 'local', machines: false, path: '' });
+    });
+
+    test('one machine that is not open waits for its link on its folders step', () => {
+        expect(openBrowse('local', [{ endpointId: 'attic', open: false }])).toEqual({
+            endpointId: 'attic',
+            machines: false,
+            path: '',
+            link: { state: 'connecting' }
+        });
+    });
+
+    test('more than one machine asks which, and so does none', () => {
+        const two = [
+            { endpointId: 'local', open: true },
+            { endpointId: 'attic', open: false }
+        ];
+        expect(openBrowse('local', two)).toEqual({ endpointId: 'local', machines: true, path: '' });
+        expect(openBrowse('local', [])).toEqual({ endpointId: 'local', machines: true, path: '' });
+    });
+});
+
+describe('the wait for a machine picked in the palette', () => {
+    const machinesUp: BrowseStep = { endpointId: 'local', machines: true, path: '~/work/' };
+
+    test('a pick on a machine that is not open connects, then lists its folders', () => {
+        const connecting = pickMachine('attic', false);
+        expect(connecting.link).toEqual({ state: 'connecting' });
+        expect(settleLink(connecting, 'attic', null)).toEqual({ endpointId: 'attic', machines: false, path: '' });
+    });
+
+    test('a failure stays on the machine with its reason, and trying again waits again', () => {
+        const failed = settleLink(pickMachine('attic', false), 'attic', 'No network path to the machine');
+        expect(failed?.link).toEqual({ state: 'failed', reason: 'No network path to the machine' });
+        expect(retryLink(failed)?.link).toEqual({ state: 'connecting' });
+        expect(retryLink(machinesUp)).toBe(machinesUp);
+    });
+
+    test('going back cancels the wait: the machines step ignores a link that settles later', () => {
+        const back = machinesStep(pickMachine('attic', false), '');
+        expect(back).toEqual({ endpointId: 'attic', machines: true, path: '' });
+        expect(settleLink(back, 'attic', null)).toBe(back);
+        expect(browseBack(pickMachine('attic', false), 2)).toEqual({ to: 'machines' });
+    });
+
+    test('a link that settles for another machine, or after the palette closed, changes nothing', () => {
+        const other = pickMachine('studio', false);
+        expect(settleLink(other, 'attic', null)).toBe(other);
+        expect(settleLink(null, 'attic', 'Gone')).toBeNull();
+    });
+
+    test('the folders step keeps its path to come back to, a waiting step has none', () => {
+        expect(machinesStep({ endpointId: 'local', machines: false, path: '' }, '~/work/')).toEqual(machinesUp);
+    });
+});
+
+describe('paletteStart', () => {
+    const shut = { open: false, mode: 'default', browseAt: 0 };
+    const up = { open: true, mode: 'default', browseAt: 0 };
+
+    test('a store that did not move leaves the palette alone', () => {
+        expect(paletteStart(up, up)).toEqual({ changed: false, restart: false, browse: false });
+    });
+
+    test('opening plainly starts over without browsing', () => {
+        expect(paletteStart(up, shut)).toEqual({ changed: true, restart: true, browse: false });
+    });
+
+    test('opening through the browse command starts over and browses', () => {
+        expect(paletteStart({ ...up, browseAt: 1 }, shut)).toEqual({ changed: true, restart: true, browse: true });
+    });
+
+    test('the command chosen while the palette is already open still browses', () => {
+        expect(paletteStart({ ...up, browseAt: 1 }, up)).toEqual({ changed: true, restart: true, browse: true });
+    });
+
+    test('the command chosen again, while browsing, starts browsing over', () => {
+        const browsing = { ...up, browseAt: 1 };
+        expect(paletteStart({ ...up, browseAt: 2 }, browsing)).toEqual({ changed: true, restart: true, browse: true });
+    });
+
+    test('a mode that changes under an open palette starts over, but does not browse', () => {
+        expect(paletteStart({ ...up, mode: 'grep' }, up)).toEqual({ changed: true, restart: true, browse: false });
+    });
+
+    test('closing changes what was seen and starts nothing', () => {
+        expect(paletteStart(shut, up)).toEqual({ changed: true, restart: false, browse: false });
+    });
+});
+
+describe('browseBack', () => {
+    test('the machines return to the folders they were opened from', () => {
+        expect(browseBack({ endpointId: 'local', machines: true, path: '/work/' }, 2)).toEqual({ to: 'folders', path: '/work/' });
+    });
+
+    test('the machines leave browsing when there are no folders behind them', () => {
+        expect(browseBack({ endpointId: 'local', machines: true, path: '' }, 2)).toEqual({ to: 'palette' });
+    });
+
+    test('folders go to the machines, but only when there is more than one', () => {
+        expect(browseBack({ endpointId: 'local', machines: false, path: '/work/' }, 2)).toEqual({ to: 'machines' });
+        expect(browseBack({ endpointId: 'local', machines: false, path: '/work/' }, 1)).toEqual({ to: 'palette' });
+    });
+});

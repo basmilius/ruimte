@@ -1,7 +1,7 @@
 import type { ActionOutput } from '@ruimte/actions';
 import { z } from 'zod';
+import { field, orNote } from '../canvas/host.ts';
 import { defineActionTool, jsonLines, runAction } from './action-tool.ts';
-import { field, orNote } from './host.ts';
 import { defineTool, defineToolkit, type ToolCall } from './tool.ts';
 
 const UNSAVED_NOTE = "note\tThe file is open in an editor with changes that are not saved; these answers are about the editor's text, not the file on disk";

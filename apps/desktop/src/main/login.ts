@@ -1,10 +1,10 @@
 import { join } from 'node:path';
-import type { AppIpc } from '@adecore/shell';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionKeyUnavailableError, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
+import { electron } from '../electron';
 import { heedBodyless } from '../net-response';
 import { listenForLogin, type LoopbackLogin } from '../pulsar-login';
 import { fileSessionKey, fileSessionStore } from '../pulsar-store';
-import { electron } from './electron';
+import type { DesktopIpc } from './ipc';
 import { reportShellProblem } from './telemetry';
 
 const { app, net, safeStorage } = electron;
@@ -13,7 +13,7 @@ const { app, net, safeStorage } = electron;
  * The page runs the login (PKCE, state, start URL); this side listens on loopback for the redirect and
  * holds the refresh token and the session key, encrypted with the OS keychain. The page only gets access tokens.
  */
-export function installLogin(ipc: AppIpc): { signedIn(): Promise<boolean> } {
+export function installLogin(ipc: DesktopIpc): { signedIn(): Promise<boolean> } {
     const addressBookUrl = process.env.RUIMTE_PULSAR_URL ?? ADDRESS_BOOK_URL;
     const store = fileSessionStore(join(app.getPath('userData'), 'pulsar-session.bin'), safeStorage);
     let pulsarVault: SessionVault | null = null;

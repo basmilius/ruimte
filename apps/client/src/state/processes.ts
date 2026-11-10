@@ -28,8 +28,7 @@ const storedPreferences = storedJson<Preferences>(
     }))
 );
 
-/* What one machine said about its processes. */
-export interface ProcessesRow {
+interface ProcessesRow {
     /* Null until the machine answered the subscription; false on a platform without a sampler. */
     supported: boolean | null;
     fine: ProcessPoint[];

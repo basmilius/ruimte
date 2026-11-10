@@ -1,7 +1,6 @@
 import RuimtePulsar
 import SwiftUI
 
-/// What View settings writes into a view.
 enum ViewSettings {
     /// An address as a person types it, with `https://` when it names no scheme; nil for anything that is no web
     /// address.
@@ -24,31 +23,32 @@ enum ViewSettings {
         }
         if view.text("kind") == "browser", let address {
             changed = changed.setting("url", .string(address))
-            // A browser nobody named takes the name of what it shows, as the desktop names one.
-            if changed.text("titleSource") != "user" { changed = changed.setting("name", .string(address)) }
+            // A browser nobody named takes the name of what it shows, cut as the desktop cuts the title of its page.
+            if changed.text("titleSource") != "user" {
+                changed = changed.setting("name", .string(NodeTitle.derive(address) ?? address))
+            }
         }
         return changed
     }
 }
 
-/// A view's name and mark, and what a browser shows, as the desktop's view settings hold them.
 struct ViewSettingsSheet: View {
     let workspace: MobileWorkspace
-    let item: JSONValue
+    let item: ProjectItem
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
     @State private var address: String
     @State private var saving = false
 
-    init(workspace: MobileWorkspace, item: JSONValue) {
+    init(workspace: MobileWorkspace, item: ProjectItem) {
         self.workspace = workspace
         self.item = item
-        _name = State(initialValue: item.text("name"))
-        _address = State(initialValue: item.text("url"))
+        _name = State(initialValue: item.name)
+        _address = State(initialValue: item.url ?? "")
     }
 
-    private var current: JSONValue { workspace.views.first { $0.stableID == item.stableID } ?? item }
-    private var isBrowser: Bool { item.text("kind") == "browser" }
+    private var current: ProjectItem { workspace.items.first { $0.id == item.id } ?? item }
+    private var isBrowser: Bool { item.kind == "browser" }
     private var addressProblem: Bool { isBrowser && !address.isEmpty && ViewSettings.address(address) == nil }
 
     var body: some View {
@@ -70,19 +70,19 @@ struct ViewSettingsSheet: View {
                         if addressProblem { Text("Enter an HTTP or HTTPS address.") }
                     }
                 }
-                if item.text("kind") == "file" {
+                if item.kind == "file" {
                     Section("File") {
-                        Text(item.text("path")).font(.callout.monospaced()).foregroundStyle(MobileStyle.muted)
+                        Text(item.path ?? "").font(.callout.monospaced()).foregroundStyle(MobileStyle.muted)
                             .textSelection(.enabled)
                     }
                 }
                 Section {
                     NavigationLink {
                         IconChoiceGrid(
-                            selected: current["icon"]?.text("value"), resetTitle: String(localized: "Use default icon")
+                            selected: current.icon, resetTitle: String(localized: "Use default icon")
                         ) { name in
                             let icon = name.map { JSONValue.object(["kind": .string("lucide"), "value": .string($0)]) }
-                            Task { await workspace.updateView(item.stableID) { $0.setting("icon", icon) } }
+                            Task { await workspace.updateView(item.id) { $0.setting("icon", icon) } }
                         }
                         .navigationTitle("Icon").navigationBarTitleDisplayMode(.inline)
                     } label: {
@@ -114,7 +114,7 @@ struct ViewSettingsSheet: View {
         Task {
             defer { saving = false }
             let address = ViewSettings.address(address)
-            await workspace.updateView(item.stableID) { ViewSettings.applying(name: name, address: address, to: $0) }
+            await workspace.updateView(item.id) { ViewSettings.applying(name: name, address: address, to: $0) }
             if workspace.problem == nil { dismiss() }
         }
     }

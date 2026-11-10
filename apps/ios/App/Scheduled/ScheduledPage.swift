@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 /// Every routine of the connected machines, grouped by what a person needs to know: what waits on them, what still
@@ -126,13 +127,12 @@ struct ScheduledSections: View {
         group(String(localized: "Paused", comment: "Routines that do not run: paused, or not approved yet"), \.held)
     }
 
-    /// The groups below Needs you, top to bottom. The first one shown sits at the top of the page.
     private static var groups: [KeyPath<ScheduledBoard, [ScheduledItem]>] { [\.today, \.overnight, \.later, \.held] }
 
     @ViewBuilder private func card(_ wait: ScheduledWait) -> some View {
         let subtitle = [
             String(
-                localized: "\(Format.moment(wait.run.due, now: date)) run",
+                localized: "\(Format.moment(wait.run.dueDate, now: date)) run",
                 comment: "A routine's run by the time it was due, such as 07:00 run"),
             wait.item.entry.projectName, namesMachines ? wait.item.machineName : nil,
         ].compactMap { $0 }.joined(separator: " · ")
@@ -151,11 +151,12 @@ struct ScheduledSections: View {
     }
 
     private func openRun(_ wait: ScheduledWait) {
-        guard let chatID = wait.run.chatID else { return open(.routine(wait.item.target)) }
+        guard let chatID = wait.run.chatId else { return open(.routine(wait.item.target)) }
         open(
             .run(
                 RoutineRunTarget(
-                    machineID: wait.item.machineID, chatID: chatID, title: wait.item.entry.title, due: wait.run.due)))
+                    machineID: wait.item.machineID, chatID: chatID, title: wait.item.entry.title,
+                    due: wait.run.dueDate)))
     }
 
     @ViewBuilder private func group(_ title: String, _ path: KeyPath<ScheduledBoard, [ScheduledItem]>) -> some View {
@@ -239,7 +240,7 @@ struct ScheduledRow: View {
             Button(String(localized: "Resume"), action: resume)
                 .buttonStyle(.mobileCapsuleSmall)
                 .disabled(resuming || !connected)
-        } else if entry.approved, let next = entry.next {
+        } else if entry.approved, let next = entry.nextDate {
             // Today and tonight read as a time alone, the way the groups above them already name the day.
             Text(next.timeIntervalSince(date) < 86_400 ? Format.clock(next) : Format.weekdayClock(next))
                 .font(.subheadline).monospacedDigit().foregroundStyle(MobileStyle.text)

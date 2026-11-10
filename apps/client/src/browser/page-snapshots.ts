@@ -1,6 +1,8 @@
 import { create } from 'zustand';
-import { browserRegistry } from '@/browser/registry';
-import { endpointKey, useEndpointId } from '@/state/keys';
+import { browserRegistry } from '@/clients/browser/registry';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
+import { orNull } from '@/transport-api/transport';
 
 /*
  * The last picture of every page past the render distance, and whether it is past it. Only the parking
@@ -11,7 +13,7 @@ import { endpointKey, useEndpointId } from '@/state/keys';
  * `stayHidden`. So a page is photographed while it is still drawn, on its way out, and a page that is
  * already far is drawn again for the moment it takes, transparent (`revealing`), and hidden after.
  */
-export interface PageSnapshot {
+interface PageSnapshot {
     far: boolean;
     imageUrl: string | null;
     takenAt: number | null;
@@ -43,7 +45,7 @@ export const HIDE_DEADLINE_MS = 300;
 /* Pictures taken at once over every page, so zooming out over thirty pages is no spike of thirty. */
 export const MAX_CAPTURES = 2;
 
-export interface SnapshotDeps {
+interface SnapshotDeps {
     capture(key: string): Promise<Uint8Array | null>;
     /* The picture at most `width` pixels wide, in a format that keeps it small. */
     shrink(png: Uint8Array, width: number): Promise<Blob | null>;
@@ -147,7 +149,6 @@ export class PageSnapshots {
         return this.revealed(key);
     }
 
-    /* The page is gone; its picture goes with it. */
     forget(key: string): void {
         this.endLeaving(key);
         this.widths.delete(key);
@@ -165,7 +166,6 @@ export class PageSnapshots {
         });
     }
 
-    /* Forgets every page that is no longer among `keys`. */
     keep(keys: readonly string[]): void {
         const kept = new Set(keys);
         // A page that closed before it ever went far has a width and no entry.
@@ -224,7 +224,7 @@ export class PageSnapshots {
         }
         // A page that went while its picture waited in line is far by now, and only drawn again can it be taken.
         const png = this.of(job.key).far ? await this.revealed(job.key) : await this.deps.capture(job.key);
-        const blob = png === null ? null : await this.deps.shrink(png, job.width).catch(() => null);
+        const blob = png === null ? null : await orNull('deps.shrink', this.deps.shrink(png, job.width));
         const current = usePageSnapshots.getState().byKey[job.key];
         if (blob !== null && current !== undefined && current.generation === job.generation) {
             if (current.imageUrl !== null) {

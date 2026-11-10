@@ -59,7 +59,7 @@ import XCTest
 
     func testTheOfferIsTheDesktopsGroupsOrderExclusionsAndNames() throws {
         let fixture = try fixture()
-        let offered = ChatReferables.project(views: fixture.views, chatID: fixture.chatId)
+        let offered = ChatReferables.project(views: ProjectWire.stored(fixture.views), chatID: fixture.chatId)
         XCTAssertEqual(offered.map(\.id), fixture.referables.map(\.id))
         XCTAssertEqual(offered.map(\.name), fixture.referables.map(\.name))
         XCTAssertEqual(offered.map(\.kind), fixture.referables.map(\.kind))
@@ -82,7 +82,7 @@ import XCTest
             ]
             """
         let views = try JSONDecoder().decode([JSONValue].self, from: Data(json.utf8))
-        let offered = ChatReferables.project(views: views, chatID: "chat-lead")
+        let offered = ChatReferables.project(views: ProjectWire.stored(views), chatID: "chat-lead")
         XCTAssertEqual(offered.map(\.id), ["drawing-sketch", "canvas", "chat-plan"])
         XCTAssertEqual(offered.map(\.mark), ["brain", "frame", "message-square"])
         let lookup = ChatReferenceLookup(items: offered, known: true)
@@ -103,7 +103,7 @@ import XCTest
         let model = ChatModel(client: client, chatID: fixture.chatId, machineID: "machine", draftRoot: root)
         model.connected = true
         model.referenceSource = ChatReferenceSource(
-            items: { ChatReferables.project(views: fixture.views, chatID: fixture.chatId) }, viewReferences: { true })
+            items: { ChatReferables.project(views: ProjectWire.stored(fixture.views), chatID: fixture.chatId) }, viewReferences: { true })
         for pick in fixture.picks {
             model.draft += pick.typed
             model.composition.selection = NSRange(location: (model.draft as NSString).length, length: 0)
@@ -114,7 +114,7 @@ import XCTest
             model.chooseSuggestion(suggestion)
         }
         await model.send()
-        let payload = try XCTUnwrap(client.requests.first { $0.0 == "chat.send" }?.1)
+        let payload = try XCTUnwrap(client.requests.first { $0.0 == .chatSend }?.1)
         XCTAssertEqual(payload.text("text").trimmingCharacters(in: .whitespaces), fixture.send.text)
         XCTAssertEqual(payload.list("chats").compactMap(\.stringValue), fixture.send.chats)
         XCTAssertEqual(payload.list("references").compactMap(\.stringValue), fixture.send.references)
@@ -127,24 +127,22 @@ import XCTest
         let model = ChatModel(client: client, chatID: fixture.chatId, machineID: "machine", draftRoot: root)
         model.connected = true
         model.referenceSource = ChatReferenceSource(
-            items: { ChatReferables.project(views: fixture.views, chatID: fixture.chatId) }, viewReferences: { false })
+            items: { ChatReferables.project(views: ProjectWire.stored(fixture.views), chatID: fixture.chatId) }, viewReferences: { false })
         await model.search("#", query: "")
         XCTAssertEqual(Set(model.suggestions.compactMap(\.referable?.kind)), ["chat"])
         model.draft = "Ask #Release notes and #Research"
         model.composition.chats = [ChatDraftReference(id: "standalone", title: "Release notes")]
         model.composition.references = [ChatDraftReference(id: "research", title: "Research")]
         await model.send()
-        let payload = try XCTUnwrap(client.requests.first { $0.0 == "chat.send" }?.1)
+        let payload = try XCTUnwrap(client.requests.first { $0.0 == .chatSend }?.1)
         XCTAssertEqual(payload.list("chats").compactMap(\.stringValue), ["standalone"])
         XCTAssertNil(payload["references"])
         await model.composition.flush()
     }
 
-    private let grok: JSONValue = .object([
-        "kind": .string("grok"), "name": .string("Grok"), "installed": .bool(true),
-        "capabilities": .object(["chat": .bool(true)]),
-        "models": .array([.object(["slug": .string("grok-4"), "name": .string("Grok 4")])]),
-    ])
+    private let grok = ProviderWire.provider(
+        "grok", name: "Grok", models: [ProviderWire.model("grok-4", name: "Grok 4")]
+    ).providerInfo
 
     func testModelSuggestionsStayWhenTheFileSearchFails() async throws {
         let model = ChatModel(client: ReferenceClientFake(files: nil), chatID: "chat", draftRoot: root)
@@ -192,7 +190,7 @@ import XCTest
     }
 
     func testAChipOpensItsViewItsNodeOnItsCanvasOrTheCanvasOfAText() throws {
-        let views = try fixture().views
+        let views = ProjectWire.stored(try fixture().views)
         XCTAssertEqual(ChatReferables.destination("sketch", views: views)?.viewID, "sketch")
         XCTAssertEqual(ChatReferables.destination("research", views: views)?.viewID, "main")
         XCTAssertEqual(ChatReferables.destination("research", views: views)?.nodeID, "research")
@@ -204,7 +202,7 @@ import XCTest
 }
 
 @MainActor private final class ReferenceClientFake: MachineRequesting {
-    var requests: [(String, JSONValue)] = []
+    var requests: [(WireRequest, JSONValue)] = []
     /// What `fs.search` finds; nil makes it fail the way a timed-out search does.
     let files: [String]?
 
@@ -212,9 +210,9 @@ import XCTest
         self.files = files
     }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
-        if type == "fs.search" {
+        if type == .fsSearch {
             guard let files else {
                 throw MachineClientError.server(code: "not-readable", message: "Cannot search the working folder")
             }
@@ -223,7 +221,7 @@ import XCTest
         return .object([:])
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }
 
 final class ChatReferenceTrailTests: XCTestCase {
@@ -236,7 +234,7 @@ final class ChatReferenceTrailTests: XCTestCase {
 
     func testAChatViewReachesANodeThroughItsCanvas() {
         let chat: JSONValue = .object(["kind": .string("chat"), "id": .string("lead"), "name": .string("Lead")])
-        let items = ChatReferables.project(views: [chat, canvas], chatID: "lead")
+        let items = ChatReferables.project(views: ProjectWire.stored([chat, canvas]), chatID: "lead")
         XCTAssertEqual(items.map(\.id), ["board", "runner"])
         XCTAssertEqual(items[1].trail.map(\.name), ["Board"])
     }

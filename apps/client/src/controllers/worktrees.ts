@@ -1,0 +1,217 @@
+import { type CanvasNodeKind, type Worktree } from '@ruimte/contracts';
+import { useEffect } from 'react';
+import { create } from 'zustand';
+import { shallow } from 'zustand/shallow';
+import { carriedByGroups, useCanvas } from '@/state/canvas';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
+import { useProject } from '@/state/project';
+import { useViewNodes } from '@/state/view-nodes';
+import type { Transport } from '@/transport-api/transport';
+import { useOptionalConnection } from '@/workspace/context';
+import { worktreeOfPath } from '@/worktree-rules/worktree-rows';
+
+interface WorktreesStore {
+    rows: Record<string, readonly Worktree[]>;
+    put(key: string, worktrees: readonly Worktree[]): void;
+}
+
+const useWorktreeRows = create<WorktreesStore>((set, get) => ({
+    rows: {},
+    put(key, worktrees) {
+        set({ rows: { ...get().rows, [key]: worktrees } });
+    }
+}));
+
+const NONE: readonly Worktree[] = [];
+
+// Counting walks every worktree with `git status`, so focus that comes and goes asks at most once in this window.
+export const COUNTS_QUIET_MS = 5000;
+
+interface Held {
+    count: number;
+    // Readers that want the work counted; the list asks with `inspect` while any of them is mounted.
+    inspecting: number;
+    // When the work was last asked for, on the injected clock.
+    inspectedAt: number | null;
+    reload(): void;
+    stop(): void;
+}
+
+/*
+ * One list per machine and folder however many readers there are: the git panel, and every node
+ * header that wants to know whether it sits in a worktree. The daemon says `git.worktrees` after it
+ * made, removed or merged one, and an open socket after a gap asks again, since what changed in
+ * between was told to nobody.
+ */
+export class WorktreeLists {
+    private readonly held = new Map<string, Held>();
+
+    private readonly now: () => number;
+
+    constructor(now: () => number = Date.now) {
+        this.now = now;
+    }
+
+    hold(transport: Transport, endpointId: string, folder: string, inspect: boolean): () => void {
+        const key = endpointKey(endpointId, folder);
+        const current = this.held.get(key) ?? this.open(transport, key, folder);
+        current.count += 1;
+        if (inspect) {
+            current.inspecting += 1;
+        }
+        // A reader that wants counts where the list had none asks again; one that only needs the paths reuses what is there.
+        if (current.count === 1 || inspect) {
+            current.reload();
+        }
+        let released = false;
+        return () => {
+            if (released) {
+                return;
+            }
+            released = true;
+            current.count -= 1;
+            if (inspect) {
+                current.inspecting -= 1;
+            }
+            if (current.count === 0) {
+                current.stop();
+                this.held.delete(key);
+            }
+        };
+    }
+
+    private open(transport: Transport, key: string, folder: string): Held {
+        let generation = 0;
+        const entry: Held = {
+            count: 0,
+            inspecting: 0,
+            inspectedAt: null,
+            reload: () => {
+                const asked = ++generation;
+                if (entry.inspecting > 0) {
+                    entry.inspectedAt = this.now();
+                }
+                transport
+                    .request('git.worktree-list', { repo: folder, ...(entry.inspecting > 0 ? { inspect: true } : {}) })
+                    .then((answer) => {
+                        if (asked === generation) {
+                            useWorktreeRows.getState().put(key, answer.worktrees);
+                        }
+                    })
+                    .catch(() => {
+                        if (asked === generation) {
+                            useWorktreeRows.getState().put(key, NONE);
+                        }
+                    });
+            },
+            stop: () => undefined
+        };
+        // The event names the repository, not the folder a project sits in, so every list of the machine asks again.
+        const offChanged = transport.on('git.worktrees', () => entry.reload());
+        const offStatus = transport.subscribeStatus((status) => {
+            if (status === 'open') {
+                entry.reload();
+            }
+        });
+        entry.stop = () => {
+            offChanged();
+            offStatus();
+        };
+        this.held.set(key, entry);
+        return entry;
+    }
+
+    reload(endpointId: string, folder: string): void {
+        this.held.get(endpointKey(endpointId, folder))?.reload();
+    }
+
+    /*
+     * Counts the work again for a reader that just came back into view, unless it was counted a moment
+     * ago: an event or the Refresh button counts too, and nothing changes a worktree between two clicks.
+     */
+    refreshCounts(endpointId: string, folder: string): void {
+        const held = this.held.get(endpointKey(endpointId, folder));
+        if (held === undefined || held.inspecting === 0) {
+            return;
+        }
+        if (held.inspectedAt !== null && this.now() - held.inspectedAt < COUNTS_QUIET_MS) {
+            return;
+        }
+        held.reload();
+    }
+}
+
+export const worktreeLists = new WorktreeLists();
+
+/* The worktrees of the repository a folder is in, kept fresh while the component is mounted. */
+export function useWorktrees(transport: Transport | null, endpointId: string, folder: string | null, inspect = false): readonly Worktree[] {
+    const key = folder === null ? null : endpointKey(endpointId, folder);
+    useEffect(() => {
+        if (transport === null || folder === null) {
+            return;
+        }
+        return worktreeLists.hold(transport, endpointId, folder, inspect);
+    }, [transport, endpointId, folder, inspect]);
+    return useWorktreeRows((s) => (key === null ? NONE : (s.rows[key] ?? NONE)));
+}
+
+/*
+ * The worktree a node works in, read from the one list of its project's repository. A node without
+ * a folder of its own, or in the project folder itself, asks for nothing.
+ */
+export function useWorktreeOf(cwd: string | undefined): Worktree | null {
+    const connection = useOptionalConnection();
+    const endpointId = useEndpointId();
+    const folder = useProject((s) => s.current?.folder ?? null);
+    const wanted = cwd !== undefined && folder !== null && cwd !== folder;
+    const worktrees = useWorktrees(wanted ? (connection?.transport ?? null) : null, endpointId, wanted ? folder : null);
+    return wanted ? worktreeOfPath(worktrees, cwd) : null;
+}
+
+export interface WorktreeNode {
+    id: string;
+    kind: CanvasNodeKind;
+    title: string;
+    cwd?: string;
+    /* The later chats of a design node, each working in a folder of its own. */
+    chats?: readonly Record<string, unknown>[];
+}
+
+/* The nodes of every canvas of the project, with every canvas on screen as it is now rather than as last saved. */
+export function useProjectNodes(): readonly WorktreeNode[] {
+    return useViewNodes((views, nodesOf) => views.flatMap(nodesOf), shallow);
+}
+
+/*
+ * The worktrees a group carries: the one it is bound to, and every worktree one of its members works
+ * in, in the order of its members. A team's group has no worktree of its own but a member in each.
+ */
+export function useGroupWorktrees(groupId: string | null): readonly Worktree[] {
+    const connection = useOptionalConnection();
+    const endpointId = useEndpointId();
+    const folder = useProject((s) => s.current?.folder ?? null);
+    // Every node's frame asks, and only a group reads the canvas: the rest would render again on any change of any node.
+    const nodes = useCanvas((s) => (groupId === null ? null : s.nodes));
+    const texts = useCanvas((s) => (groupId === null ? null : s.texts));
+    const group = groupId === null || nodes === null ? undefined : nodes[groupId];
+    const wanted = group?.kind === 'group' && folder !== null;
+    const worktrees = useWorktrees(wanted ? (connection?.transport ?? null) : null, endpointId, wanted ? folder : null);
+    if (!wanted || group === undefined || nodes === null || texts === null || worktrees.length === 0) {
+        return NONE;
+    }
+    const found: Worktree[] = [];
+    const add = (worktree: Worktree | null | undefined): void => {
+        if (worktree && !found.includes(worktree)) {
+            found.push(worktree);
+        }
+    };
+    add(group.worktree ? worktrees.find((entry) => entry.path === group.worktree?.path) : null);
+    for (const id of carriedByGroups(nodes, texts, [group.id])) {
+        const member = nodes[id];
+        if (member?.kind === 'terminal' || member?.kind === 'chat') {
+            add(worktreeOfPath(worktrees, member.cwd));
+        }
+    }
+    return found.length === 0 ? NONE : found;
+}

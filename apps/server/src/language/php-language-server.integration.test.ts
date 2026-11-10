@@ -5,13 +5,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Diagnostic } from '@adecore/lsp';
 import type { LanguageRequestResult } from '@ruimte/contracts';
-import { MachineHome } from '../fs/machine-home.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import { MachineHome } from '../disk/machine-home.ts';
+import { tarGz } from '../disk/test-archives.ts';
+import type { SessionEvent } from '../wire.ts';
 import { LanguageHost } from './host.ts';
 import { cargoCommand, NativePolicy, phpLanguageServerCheckout, type Download } from './native.ts';
 import { sweepPhpCache } from './php-cache.ts';
 import { spawnLanguageProcess } from './runtime.ts';
-import { tarGz } from './test-archives.ts';
 import { eventually, positionOf } from './test-integration.ts';
 
 /*
@@ -219,7 +219,6 @@ describe.skipIf(!hasCargo || checkout === null)('the standalone PHP server in Ru
 
         const cacheNames = async (): Promise<string[]> => (await readdir(cacheFolder()).catch(() => [])).filter((name) => !name.includes('.tmp'));
 
-        /* Opens main.php on a stopped project and times the first answer that needs the index. */
         async function firstHover(): Promise<number> {
             const text = FILES['main.php']!;
             const started = performance.now();

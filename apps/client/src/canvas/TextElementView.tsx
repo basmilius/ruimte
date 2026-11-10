@@ -3,13 +3,13 @@ import clsx from 'clsx';
 import { Copy, Pencil, Trash } from 'lucide-react';
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { deleteNodesAction } from '@/actions/client-actions';
-import { accentColor } from '@/canvas/accents';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { deleteNodesAction } from '@/action-port/person-actions';
+import { accentColor } from '@/canvas-model/accents';
 import { FONT_STACK } from '@/canvas/text-font';
 import { loadDrawingFont } from '@/drawing/fonts';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { useCanvas, useCanvasCamera, useCanvasStore } from '@/state/canvas';
+import { CANVAS_SHORTCUTS } from '@/surface/canvas/shortcuts';
 
 // Kept by hand: a row of a long list.
 export const TextElementView = memo(function TextElementView({ id }: { id: string }) {

@@ -1,0 +1,390 @@
+import type { DiffContents } from '@adecore/agents-react/chat/ui';
+import { ButtonGroup, EmptyState, ErrorBoundary, LazyBoundary, Menu, ScrollArea, Separator, lazyNamed, messageOf, useNow } from '@adecore/ui';
+import { formatAge } from '@adecore/ui/format';
+import type { ActionInput } from '@ruimte/actions';
+import { splitChanges, type GitDiffFile, type GitDiffResult, type GitDiffScope, absoluteOf, relativeTo } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { Columns2, FileWarning, GitCompare, RefreshCw, Rows2 } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { perform } from '@/action-port/perform';
+import { useGitSignal } from '@/controllers/git-watch';
+import { ExtensionDiffViewer } from '@/extensions/ExtensionDiffViewer';
+import { pickedFile } from '@/files/commit-tree';
+import { CommitFileTree } from '@/files/CommitFileTree';
+import { useDiffCaret, useDiffCarets } from '@/files/diff-caret';
+import { FileActionsContext } from '@/files/file-actions';
+import { FileToolbar, FileToolbarToggle } from '@/files/FileToolbar';
+import { COMMIT_TREE_MIN_WIDTH, TreeSplit } from '@/files/TreeSplit';
+import { isCheckoutDiff, useFiles, type FileTabView } from '@/state/files';
+import { useGit } from '@/state/git';
+import { useSettings } from '@/state/settings';
+import { FILE_TOOLBAR } from '@/surface/panels/classes';
+import { useTransport } from '@/workspace/context';
+
+const UnifiedDiff = lazyNamed(() => import('@adecore/agents-react/chat/ui'), 'UnifiedDiff');
+
+const MINUTE_MS = 60_000;
+
+type DiffState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; diff: GitDiffResult };
+
+/* The whole texts beside the patch, which a daemon sends only when it can hand over both sides. */
+function contentsOf(diff: GitDiffResult): DiffContents | undefined {
+    return diff.oldText === undefined || diff.newText === undefined ? undefined : { old: diff.oldText, new: diff.newText };
+}
+
+function omittedLabel(omitted: GitDiffResult['omitted']): string {
+    return omitted === 'binary' ? i18next.t('panels:diff.omitted.binary') : i18next.t('panels:diff.omitted.tooLarge');
+}
+
+function DiffMessage({ children }: { children: ReactNode }) {
+    return <div className="file-diff grid min-h-0 grow place-items-center">{children}</div>;
+}
+
+/*
+ * A changed file as its diff, in a tab of the preview panel next to the tab that holds the file
+ * itself. The scope switch is the same one the git panel remembers, so flipping it here is what the
+ * next diff opens in as well.
+ */
+export function DiffFile({ tabKey, path, name, view }: { tabKey: string; path: string; name: string; view: FileTabView }) {
+    if (view.commit !== undefined) {
+        return <CommitDiff tabKey={tabKey} cwd={view.cwd} commit={view.commit} />;
+    }
+    if (isCheckoutDiff(path, view)) {
+        return <CommitDiff tabKey={tabKey} cwd={view.cwd} base={view.base ?? null} />;
+    }
+    return (
+        <ExtensionDiffViewer path={path} view={view}>
+            <FileDiffView tabKey={tabKey} path={path} name={name} view={view} />
+        </ExtensionDiffViewer>
+    );
+}
+
+function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: string; name: string; view: FileTabView }) {
+    const { t } = useTranslation('panels');
+    const layout = useSettings((s) => s.diffLayout);
+    const whitespace = useSettings((s) => s.diffWhitespace);
+    const wrap = useSettings((s) => s.codeWrap);
+    const [nonce, setNonce] = useState(0);
+    /* Goes up whenever the checkout moved, which is the tab reading itself again. */
+    const signal = useGitSignal(view.cwd);
+    const relative = relativeTo(view.cwd, path);
+    /* Which diff was asked for, so an answer to an older question is not drawn and a switch of scope
+       reads as loading. A reread of the same question keeps the diff on screen until the new one
+       lands, or every write would blink the tab back to its spinner. */
+    const asked = `${view.cwd}\u0000${relative}\u0000${view.scope}\u0000${String(view.staged)}\u0000${String(whitespace)}\u0000${view.base ?? ''}`;
+    const [held, setHeld] = useState<{ asked: string; state: DiffState } | null>(null);
+    // The same path on another machine is another diff, so a switch reads it again.
+    const transport = useTransport();
+    const state: DiffState = held !== null && held.asked === asked ? held.state : { status: 'loading' };
+
+    useEffect(() => {
+        let alive = true;
+        perform('git.diff', {
+            repository: view.cwd,
+            path: relative,
+            scope: view.scope,
+            commit: null,
+            staged: view.staged,
+            ignoreWhitespace: !whitespace,
+            base: view.base ?? null
+        })
+            .then((diff) => {
+                if (alive) {
+                    setHeld({ asked, state: { status: 'ready', diff } });
+                    useGit.getState().setCounts(tabKey, { added: diff.added, deleted: diff.deleted });
+                }
+            })
+            .catch((error: unknown) => {
+                if (alive) {
+                    setHeld({ asked, state: { status: 'error', message: messageOf(error, i18next.t('panels:diff.readFailed')) } });
+                }
+            });
+        return () => {
+            alive = false;
+        };
+    }, [transport, asked, nonce, signal, relative, tabKey, view.cwd, view.scope, view.staged, view.base, whitespace]);
+
+    const refresh = () => setNonce((count) => count + 1);
+    const actions = { path, name, on: 'tab' as const, tabKey, refresh };
+
+    const setScope = (scope: GitDiffScope): void => {
+        useGit.getState().setScope(scope);
+        useFiles.getState().setScope(tabKey, scope);
+    };
+
+    return (
+        <FileActionsContext.Provider value={actions}>
+            <div className="flex min-h-0 min-w-0 grow flex-col">
+                <FileToolbar
+                    menu={
+                        <>
+                            <Menu.RadioGroup value={view.scope} onValueChange={(scope: GitDiffScope) => setScope(scope)}>
+                                <Menu.RadioItem value="worktree">{t('diff.scope.worktree')}</Menu.RadioItem>
+                                <Menu.RadioItem value="base">{t('diff.scope.base')}</Menu.RadioItem>
+                            </Menu.RadioGroup>
+                            <Menu.Separator />
+                            <Menu.RadioGroup value={layout} onValueChange={(diffLayout: 'stacked' | 'split') => useSettings.getState().update({ diffLayout })}>
+                                <Menu.RadioItem value="stacked">{t('diff.layout.stacked')}</Menu.RadioItem>
+                                <Menu.RadioItem value="split">{t('diff.layout.split')}</Menu.RadioItem>
+                            </Menu.RadioGroup>
+                            <Menu.Separator />
+                            <Menu.CheckboxItem checked={whitespace} onCheckedChange={(diffWhitespace) => useSettings.getState().update({ diffWhitespace })}>
+                                {t('diff.whitespace.show')}
+                            </Menu.CheckboxItem>
+                        </>
+                    }
+                />
+                <DiffBody state={state} wrap={wrap} layout={layout} path={path} relative={relative} tabKey={tabKey} ignoreWhitespace={!whitespace} />
+            </div>
+        </FileActionsContext.Provider>
+    );
+}
+
+function DiffBody({
+    state,
+    wrap,
+    layout,
+    path,
+    relative,
+    tabKey,
+    ignoreWhitespace
+}: {
+    state: DiffState;
+    wrap: boolean;
+    layout: 'stacked' | 'split';
+    /* Absolute, the file the diff opens at its caret. */
+    path: string;
+    relative: string;
+    tabKey: string;
+    ignoreWhitespace: boolean;
+}) {
+    const { t } = useTranslation('panels');
+    const { surface, onSource } = useDiffCaret(path, tabKey);
+    if (state.status === 'loading') {
+        return (
+            <DiffMessage>
+                <EmptyState busy>{t('diff.reading', { path: relative })}</EmptyState>
+            </DiffMessage>
+        );
+    }
+    if (state.status === 'error' || state.diff.omitted) {
+        return (
+            <DiffMessage>
+                <EmptyState icon={FileWarning}>{state.status === 'error' ? state.message : omittedLabel(state.diff.omitted)}</EmptyState>
+            </DiffMessage>
+        );
+    }
+    if (state.diff.diff === '') {
+        return (
+            <DiffMessage>
+                <EmptyState icon={GitCompare}>{t('diff.noChange', { path: relative })}</EmptyState>
+            </DiffMessage>
+        );
+    }
+    return (
+        <ScrollArea axis="both" viewportRef={surface} className="grow" viewportClassName="file-diff flex flex-col">
+            <LazyBoundary fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('diff.loading')}</div>}>
+                <UnifiedDiff
+                    change={{ path: relative, kind: 'update', diff: state.diff.diff }}
+                    overflow={wrap ? 'wrap' : 'scroll'}
+                    diffStyle={layout === 'split' ? 'split' : 'unified'}
+                    fill
+                    contents={contentsOf(state.diff)}
+                    ignoreWhitespace={ignoreWhitespace}
+                    onSource={onSource}
+                />
+            </LazyBoundary>
+        </ScrollArea>
+    );
+}
+
+/*
+ * A whole commit in one tab: its message over a tree of the files it touched, beside the diff of the
+ * file picked in the tree. One request answers all of it, so moving through the tree reads nothing.
+ * Without a commit the tab is a whole checkout against `base`, which is how a worktree shows what it holds.
+ */
+function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string; commit?: string; base?: string | null }) {
+    const { t } = useTranslation('panels');
+    const layout = useSettings((s) => s.diffLayout);
+    const wrap = useSettings((s) => s.codeWrap);
+    const now = useNow(MINUTE_MS);
+    const [nonce, setNonce] = useState(0);
+    /* A commit never changes, so only the changes of a checkout follow the tree. */
+    const signal = useGitSignal(commit === undefined ? cwd : null);
+    /* Which commit was asked for, so a tab that just changed reads as loading without an effect
+       that has to empty the state first. A reread of the same one keeps what is on screen. */
+    const asked = `${cwd}\u0000${commit ?? ''}\u0000${base ?? ''}`;
+
+    const [held, setHeld] = useState<{ asked: string; state: DiffState } | null>(null);
+    // The same path on another machine is another diff, so a switch reads it again.
+    const transport = useTransport();
+    const state: DiffState = held !== null && held.asked === asked ? held.state : { status: 'loading' };
+
+    useEffect(() => {
+        let alive = true;
+        const ask: ActionInput<'git.diff'> =
+            commit === undefined
+                ? { repository: cwd, path: null, scope: 'base', commit: null, staged: null, ignoreWhitespace: null, base: base ?? null }
+                : { repository: cwd, path: null, scope: 'commit', commit, staged: null, ignoreWhitespace: null, base: null };
+        perform('git.diff', ask)
+            .then((diff) => {
+                if (alive) {
+                    setHeld({ asked, state: { status: 'ready', diff } });
+                    const split = diff.files !== undefined && diff.truncated !== true ? splitChanges(diff.files) : undefined;
+                    useGit.getState().setCounts(tabKey, { added: diff.added, deleted: diff.deleted, ...(split === undefined ? {} : { split }) });
+                }
+            })
+            .catch((error: unknown) => {
+                if (alive) {
+                    setHeld({ asked, state: { status: 'error', message: messageOf(error, i18next.t('panels:diff.commitFailed')) } });
+                }
+            });
+        return () => {
+            alive = false;
+        };
+    }, [transport, asked, nonce, signal, commit, base, cwd, tabKey]);
+
+    const ready = state.status === 'ready' ? state.diff : null;
+    const meta = ready?.commit;
+    const files: readonly GitDiffFile[] = ready?.files ?? [];
+    const since = base ?? t('worktree.baseBranch');
+    const picked = useGit((s) => s.commitFiles[tabKey]);
+    const shown = pickedFile(files, picked);
+    const pick = (path: string) => useGit.getState().setCommitFile(tabKey, path);
+    const treeWidth = useGit((s) => s.commitTreeWidth);
+    const caret = useDiffCarets((s) => s.carets[tabKey]);
+
+    return (
+        <div className="flex min-h-0 min-w-0 grow flex-col">
+            <div className={FILE_TOOLBAR}>
+                <span className="truncate font-mono text-xs text-text-muted">
+                    {commit === undefined ? t('diff.since', { base: since }) : (meta?.shortHash ?? commit.slice(0, 7))}
+                </span>
+                <span className="grow" />
+                {commit === undefined && (
+                    <>
+                        <FileToolbarToggle icon={RefreshCw} label={t('diff.readAgain')} active={false} onClick={() => setNonce((count) => count + 1)} />
+                        <Separator />
+                    </>
+                )}
+                <ButtonGroup render={<span />}>
+                    <FileToolbarToggle
+                        icon={Rows2}
+                        label={t('diff.layout.stacked')}
+                        active={layout === 'stacked'}
+                        onClick={() => useSettings.getState().update({ diffLayout: 'stacked' })}
+                    />
+                    <FileToolbarToggle
+                        icon={Columns2}
+                        label={t('diff.layout.split')}
+                        active={layout === 'split'}
+                        onClick={() => useSettings.getState().update({ diffLayout: 'split' })}
+                    />
+                </ButtonGroup>
+            </div>
+            {state.status === 'loading' && (
+                <DiffMessage>
+                    <EmptyState busy>{commit === undefined ? t('diff.readingChanges') : t('diff.readingCommit')}</EmptyState>
+                </DiffMessage>
+            )}
+            {state.status === 'error' && (
+                <DiffMessage>
+                    <EmptyState icon={FileWarning}>{state.message}</EmptyState>
+                </DiffMessage>
+            )}
+            {ready !== null && (
+                <ErrorBoundary label={t('diff.commitCrashed')} resetKeys={[asked]} className="min-h-0 grow">
+                    <TreeSplit
+                        side={
+                            <>
+                                <div className="shrink-0 border-b border-border px-3 py-2">
+                                    {commit === undefined ? (
+                                        <p className="text-xs text-text-faint">
+                                            {files.length === 0 ? t('diff.nothingSince', { base: since }) : t('diff.sinceSummary', { base: since })}
+                                        </p>
+                                    ) : (
+                                        <>
+                                            <p className="text-xs font-medium text-text">{meta?.subject ?? commit}</p>
+                                            <p className="mt-1 text-xs text-text-faint">
+                                                {meta === undefined ? commit : `${meta.author} · ${formatAge(meta.at * 1000, now)} · ${meta.shortHash}`}
+                                            </p>
+                                        </>
+                                    )}
+                                </div>
+                                <div className="flex min-h-0 grow flex-col overflow-hidden py-1">
+                                    {files.length > 0 && (
+                                        <CommitFileTree files={files} shown={shown?.path ?? null} onPick={pick} menu={{ cwd, commit }} caret={caret} />
+                                    )}
+                                    {ready.truncated === true && <p className="shrink-0 px-3 py-2 text-xs text-text-faint">{t('diff.moreFiles')}</p>}
+                                </div>
+                            </>
+                        }
+                        width={treeWidth}
+                        minWidth={COMMIT_TREE_MIN_WIDTH}
+                        onWidth={(next) => useGit.getState().setCommitTreeWidth(next)}
+                        stackedHeight="h-72"
+                    >
+                        <CommitFileDiff
+                            file={shown}
+                            cwd={cwd}
+                            tabKey={tabKey}
+                            empty={files.length === 0}
+                            commit={commit !== undefined}
+                            wrap={wrap}
+                            layout={layout}
+                        />
+                    </TreeSplit>
+                </ErrorBoundary>
+            )}
+        </div>
+    );
+}
+
+function CommitFileDiff({
+    file,
+    cwd,
+    tabKey,
+    empty,
+    commit,
+    wrap,
+    layout
+}: {
+    file: GitDiffFile | null;
+    cwd: string;
+    tabKey: string;
+    /* Whether the answer holds no file at all, which a checkout says above the tree already. */
+    empty: boolean;
+    commit: boolean;
+    wrap: boolean;
+    layout: 'stacked' | 'split';
+}) {
+    const { t } = useTranslation('panels');
+    // Opens the file as it is now, also from a commit, since that is the one a person edits.
+    const { surface, onSource } = useDiffCaret(absoluteOf(cwd, file?.path ?? ''), tabKey);
+    if (file === null || file.diff === '') {
+        return (
+            <div className="file-diff grid min-h-0 min-w-0 grow place-items-center">
+                {file !== null ? (
+                    <EmptyState icon={FileWarning}>{omittedLabel(file.omitted)}</EmptyState>
+                ) : (
+                    empty && commit && <EmptyState icon={GitCompare}>{t('diff.noFiles')}</EmptyState>
+                )}
+            </div>
+        );
+    }
+    return (
+        <ScrollArea axis="both" viewportRef={surface} className="grow" viewportClassName="file-diff flex flex-col">
+            <LazyBoundary fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('diff.loading')}</div>}>
+                <UnifiedDiff
+                    key={file.path}
+                    change={{ path: file.path, kind: 'update', diff: file.diff }}
+                    overflow={wrap ? 'wrap' : 'scroll'}
+                    diffStyle={layout === 'split' ? 'split' : 'unified'}
+                    fill
+                    onSource={onSource}
+                />
+            </LazyBoundary>
+        </ScrollArea>
+    );
+}

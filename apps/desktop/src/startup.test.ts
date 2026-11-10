@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { createSecretGate, startApp, type StartupDeps } from './startup';
 
-/* Lets every promise that can settle now settle. */
 function settle(): Promise<void> {
     return new Promise((resolve) => setImmediate(resolve));
 }

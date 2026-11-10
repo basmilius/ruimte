@@ -34,8 +34,6 @@ function entry<Name extends ExtensionActionName, Action extends ActionName>(
     return { action, ...translate };
 }
 
-const RUN_STATES = { 'needs-you': 'needsYou' } as const;
-
 function routineOf(entry: RoutineEntry): ExtensionActionOutput<'routine.list'>['routines'][number] {
     const last = entry.runs[0];
 
@@ -46,7 +44,7 @@ function routineOf(entry: RoutineEntry): ExtensionActionOutput<'routine.list'>['
         approved: entry.approved,
         paused: entry.local.pausedAt !== undefined,
         next: entry.next,
-        lastRun: last === undefined ? null : { state: last.state === 'needs-you' ? RUN_STATES['needs-you'] : last.state, at: last.at }
+        lastRun: last === undefined ? null : { state: last.state === 'needs-you' ? 'needsYou' : last.state, at: last.at }
     };
 }
 
@@ -160,7 +158,6 @@ const MACHINE_ACTIONS: { [Name in Exclude<ExtensionActionName, 'artifact.publish
     'device.launch': entry('device.launch', { input: (input) => ({ ...node(input), app: input.app }), output: ({ nodeId }) => ({ node: { id: nodeId } }) })
 };
 
-/* What an action answered, or the refusal an extension reads when it did not run. */
 export function outputOf<Action extends ActionName>(result: ActionResult<Action>): ActionOutput<Action> {
     if (result.status === 'failed') {
         throw asExtensionRefusal(new CodedError(result.error.code, result.error.message));
@@ -198,7 +195,6 @@ async function publishOf(input: ExtensionActionInput<'artifact.publish'>, publis
     return { artifact: artifactOf(artifact), version: { id: version.versionId, number: version.number }, existing: result.existing };
 }
 
-/* An action an extension names, with an input of its own shape, translated to the machine's action and back. */
 export async function runMachineAction(name: string, input: unknown, execute: ExecuteAction, publish: PublishFiles): Promise<unknown> {
     if (!isExtensionActionName(name)) {
         throw new ExtensionRefusal('not-found', `An extension cannot ask for ${name}`);

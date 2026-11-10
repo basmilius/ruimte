@@ -2,9 +2,9 @@ import { messageOf } from '@adecore/ui';
 import type { ProjectLocal, ProjectSummary, ProjectView, ProjectViewLocal, SplitLayout } from '@ruimte/contracts';
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
-import { viewIdsIn } from '@/shell/split';
+import { viewIdsIn } from '@/layout/split';
 import type { EditorRegistry, SavedFileSetters } from '@/state/editors';
-import { isConnectionError, TransportError, type Transport, type TransportStatus } from '@/transport/transport';
+import { isConnectionError, TransportError, type Transport, type TransportStatus, fireAndForget } from '@/transport-api/transport';
 
 /* The slice of the document store this client reads; the real store has more. */
 export interface DocumentAccess {
@@ -28,10 +28,9 @@ export interface ProjectAccess {
 }
 
 /* What an editor of a file-backed view offers this client, whatever kind of file it holds. */
-export interface FileEditorState<TDocument, TContent> extends SavedFileSetters<TDocument> {
+interface FileEditorState<TDocument, TContent> extends SavedFileSetters<TDocument> {
     rev: number;
     dirty: boolean;
-    /* Counts changes to the content, which is what this client saves on. */
     edits: number;
     loading: boolean;
     conflict: TDocument | null;
@@ -72,7 +71,6 @@ export interface FileEditorClientOptions {
     document?: Pick<Document, 'addEventListener' | 'removeEventListener' | 'visibilityState'> | null;
 }
 
-/* One file the daemon has open for this client, with everything a save of that one file needs. */
 interface OpenFile<TState, TDocument> {
     projectId: string;
     viewId: string;
@@ -238,7 +236,6 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
         }
     }
 
-    /* Every file the daemon holds open for this client, on screen or parked. */
     private held(): OpenFile<TState, TDocument>[] {
         return [...this.open.values(), ...this.parked.values()];
     }
@@ -267,7 +264,6 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
         return held.some((view) => view.id === viewId && this.channel.isView(view));
     }
 
-    /* The views of this kind the grid has on screen, which is exactly what the daemon should hold open. */
     private wantedIn(state: ReturnType<DocumentAccess['getState']>): string[] {
         const onScreen = state.layout === null ? [] : viewIdsIn(state.layout);
         return onScreen.filter((viewId) => state.views.some((view) => view.id === viewId && this.channel.isView(view)));
@@ -297,7 +293,6 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
         return file.projectId === projectId && !this.inProject(this.documents.getState(), file.viewId);
     }
 
-    /* Nothing of the file waits any more: no unsaved edit, no conflict and no save on its way. */
     private isSettled(file: OpenFile<TState, TDocument>): boolean {
         const state = file.store.getState();
         return !state.dirty && state.conflict === null && file.saving === null;
@@ -444,7 +439,7 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
     private release(file: OpenFile<TState, TDocument>): void {
         file.store.getState().unload();
         this.editors.release(file.viewId);
-        void this.channel.close(this.transport, file.projectId, file.viewId).catch(() => undefined);
+        void fireAndForget('channel.close', this.channel.close(this.transport, file.projectId, file.viewId));
     }
 
     private async openOne(projectId: string, viewId: string, local: ProjectViewLocal | null): Promise<void> {

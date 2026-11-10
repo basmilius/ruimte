@@ -12,7 +12,6 @@ const HANDOFF_WINDOW_SHARE = 0.025;
 // A rough average for English text and code; the budget only needs the order of magnitude.
 const BYTES_PER_TOKEN = 4;
 
-/* The handoff budget for a model with this context window in tokens; the floor when its window is unknown. */
 export function handoffBudget(contextWindow: number | null | undefined): number {
     const tokens = contextWindow ?? 0;
     if (!Number.isFinite(tokens) || tokens <= 0) {
@@ -34,7 +33,6 @@ export interface HandoffMeta {
     totalTurns: number;
     at: number;
     cwd: string;
-    /* The worktree the fork works in, or null when it shares the original's folder. */
     worktree: { branch: string; afterTurn: boolean } | null;
     /* Set when the conversation ran on another machine, which names it: that machine cannot be read from here, so no line says how to. */
     remote?: { machine: string };

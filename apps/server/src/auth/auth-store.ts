@@ -74,7 +74,7 @@ function statementRecord(record: z.infer<typeof StoredRecordSchema>): SessionRec
 }
 
 // What a session that still has its access is: a client (`peer` null) or the machine a peer is.
-export interface SessionStanding {
+interface SessionStanding {
     peer: { machineId: string; machinePublicKey: string } | null;
 }
 

@@ -11,30 +11,30 @@ import {
 import { Composer, SubagentTimeline, Timeline } from '@adecore/agents-react/chat/ui';
 import { providersOf, useChats, useChatRow } from '@adecore/agents-react/state';
 import { ErrorBoundary, Icon, LazyBoundary, messageOf } from '@adecore/ui';
-import type { AgentKind, ModelSelection } from '@ruimte/contracts';
+import { deriveNodeTitle, type AgentKind, type ModelSelection } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { MessageSquare } from 'lucide-react';
 import { Activity, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
-import { bringPromptToFront } from '@/canvas/prompt-stack';
-import { ChatOnCanvasContext } from '@/chat/composer-status';
-import { peekOpeningMode, settleOpeningMode } from '@/chat/opening-mode';
-import { deriveNodeTitle } from '@/chat/title';
+import { peekOpeningMode, settleOpeningMode } from '@/action-port/opening-mode';
+import { perform } from '@/action-port/perform';
 import { ViewAccessories } from '@/extensions/ContributedSlots';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { useMountCount } from '@/measure/mounts';
 import { MissingProviderNote } from '@/nodes/MissingProviderNote';
-import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
-import { ConnectionNotice, NodeNotice } from '@/nodes/NodeNotice';
 import { OutputChatContext } from '@/output/chat-scope';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { DEFAULT_CHAT_TEXT_SIZE, useChatTextSizes } from '@/state/chat-text-size';
-import { endpointKey, useEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { chatClientFor } from '@/transport/connections';
+import { bringPromptToFront } from '@/surface/canvas/prompt-stack';
+import { ChatOnCanvasContext } from '@/surface/nodes/chat-on-canvas';
+import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/surface/nodes/node-host';
+import { ConnectionNotice, NodeNotice } from '@/surface/nodes/NodeNotice';
 import { useTransportStatus } from '@/transport/status';
+import { chatClientFor } from '@/workspace/connections';
 
 /*
  * The body of a chat, the same on a canvas inside a frame and filling a view of its own. In a view what a built-in

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { clientAuthMessage, clientChannelMessage, daemonChallengeMessage, daemonChannelMessage, type AuthTicketPayload } from '@ruimte/contracts';
+import type { AuthTicketPayload } from '@ruimte/contracts';
+import { clientAuthMessage, clientChannelMessage, daemonChallengeMessage, daemonChannelMessage } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { AuthStore } from './auth-store.ts';

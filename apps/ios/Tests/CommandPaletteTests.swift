@@ -10,11 +10,10 @@ final class CommandPaletteTests: XCTestCase {
     }
 
     private func row(_ machine: Machine, _ id: String, name: String, scratch: Bool = false) -> UnifiedProjectRow {
-        var summary: [String: JSONValue] = [
-            "projectId": .string(id), "name": .string(name), "folder": .string("/code/\(id)"),
-        ]
-        if scratch { summary["scratch"] = .bool(true) }
-        return UnifiedProjectRow(machine: machine, summary: .object(summary), connected: true)
+        UnifiedProjectRow(
+            machine: machine,
+            summary: ProjectRowWire.summary(id, name: name, scratch: scratch, folder: "/code/\(id)").projectSummary,
+            connected: true)
     }
 
     func testEveryTypedWordHasToAppearInAnyOrder() {
@@ -104,10 +103,10 @@ final class CommandPaletteTests: XCTestCase {
 @MainActor private final class PaletteMachine: MachineRequesting {
     var fail = false
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         if fail { throw MachineClientError.server(code: "offline", message: "Offline") }
-        return .object(["files": .array([.string("src/pool.ts")])])
+        return .object(["files": .array([.string("src/pool.ts")]), "truncated": .bool(false)])
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

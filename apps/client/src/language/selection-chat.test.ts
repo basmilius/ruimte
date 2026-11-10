@@ -1,16 +1,20 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { EMPTY_DRAFT, readDraft, writeDraft } from '@adecore/agents-react/chat';
+import { keyOf as eventOf } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import type { ProjectDocument } from '@ruimte/contracts';
-import { useChatChooser } from '@/chat/chat-chooser';
-import { keyOf } from '@/shell/shortcut-overrides';
+import { useChatChooser } from '@/language/chat-chooser';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
+import { keyOf } from '@/surface/shortcut-overrides';
+import { installWorkspaceRegistries } from '@/wiring/workspace-registries';
 import { LANGUAGE_COMMANDS } from './command-table';
 import { FakeLanguageTransport } from './fake-daemon';
-import { eventOf } from './key-events';
-import { EditorLanguage } from './ruimte-editor-language';
-import { ProjectLanguage } from './ruimte-project-language';
+import { createEditorLanguage } from './ruimte-editor-language';
+import { RuimteProject } from './ruimte-project';
+
+// An editor is drawn only in a workspace, whose chunk installs this before it draws one (`App.tsx`).
+installWorkspaceRegistries();
 
 const uri = 'file:///work/app/src/score.ts';
 const at = (line: number, character: number) => ({ line, character });
@@ -45,9 +49,9 @@ const document = (linked: boolean): ProjectDocument =>
     }) as ProjectDocument;
 
 async function setup(text = 'let one = 1;\nlet two = 2;\nlet three = 3;\n') {
-    const project = new ProjectLanguage(new FakeLanguageTransport(), 'p1', '/work/app');
+    const project = new RuimteProject(new FakeLanguageTransport(), 'p1', '/work/app');
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text, theme: 'light' });
-    const language = new EditorLanguage(project, editor, uri, 'typescript');
+    const language = createEditorLanguage(project, editor, uri, 'typescript');
     await language.document.ready;
     return { editor, language };
 }
@@ -67,7 +71,7 @@ describe('adding the selection to a chat from the editor', () => {
     test('puts the selected lines, named by their path from the project folder, in the one chat the file node is linked to', async () => {
         useDocument.getState().load(document(true), { activeViewId: 'main', views: {} });
         const { editor, language } = await setup();
-        language.selectionChat.bindNode('score');
+        language.app.selectionChat.bindNode('score');
         editor.setSelection({ start: at(0, 0), end: at(1, 13) });
         expect(editor.press(eventOf(keyOf('selectionToChat')!))).toBe(true);
         expect(readDraft('talk').text).toBe('src/score.ts:1-2\n```typescript\nlet one = 1;\nlet two = 2;\n```\n\n');
@@ -77,9 +81,9 @@ describe('adding the selection to a chat from the editor', () => {
     test('takes the line under the caret when nothing is selected, and asks when no chat is linked', async () => {
         useDocument.getState().load(document(false), { activeViewId: 'main', views: {} });
         const { editor, language } = await setup();
-        language.selectionChat.bindNode('score');
+        language.app.selectionChat.bindNode('score');
         editor.moveCaret(at(1, 4));
-        language.selectionChat.choose();
+        language.app.selectionChat.choose();
         const { request } = useChatChooser.getState();
         expect(request?.offer.block).toBe('src/score.ts:2\n```typescript\nlet two = 2;\n```');
         expect(request?.offer.label).toBe('score.ts:2');
@@ -91,7 +95,7 @@ describe('adding the selection to a chat from the editor', () => {
         useDocument.getState().load(document(true), { activeViewId: 'main', views: {} });
         const { editor, language } = await setup();
         editor.setSelection({ start: at(0, 0), end: at(2, 0) });
-        language.selectionChat.choose();
+        language.app.selectionChat.choose();
         const { request } = useChatChooser.getState();
         expect(request?.offer.label).toBe('score.ts:1-2');
         expect(request?.offer.block).toBe('src/score.ts:1-2\n```typescript\nlet one = 1;\nlet two = 2;\n```');

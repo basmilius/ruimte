@@ -38,7 +38,6 @@ export interface FakeProcess {
     /* Ignores a SIGTERM, so only a SIGKILL ends it. */
     stubborn: boolean;
     say(text: string): void;
-    /* The process dies on its own. */
     crash(code?: number): Promise<void>;
 }
 

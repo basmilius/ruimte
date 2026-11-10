@@ -1,10 +1,36 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionCall } from '@ruimte/actions';
-import type { ExternalCaller } from '../mcp/caller.ts';
+import type { ExternalCaller } from '../canvas/external-caller.ts';
+import { type CanvasHost, type ProjectHost, type AgentCall } from '../canvas/host.ts';
+import { callerKind } from '../canvas/tasks.ts';
+import { extensionOpener, voiceOpener } from '../opener.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import { type CanvasHost, type ProjectHost, type AgentCall } from '../tools/host.ts';
-import { callerKind } from '../tools/tasks.ts';
-import type { VoiceFollowHost } from '../voice/voice-follower.ts';
+
+/* Where a chat stands in the eyes of Voice, by name, to say which one it means. */
+export interface VoiceFollowedChat {
+    chat: string;
+    project: string;
+}
+
+/* Taken before a prompt goes out, so no turn it opens can end unheard; bound to the turn once the chat names it. */
+export interface VoicePromptTicket {
+    bind(turnId: string): void;
+    drop(): void;
+}
+
+/* Taken before a start, bound to the node the start made. */
+export interface VoiceStartTicket {
+    bind(chatId: string, chat: VoiceFollowedChat): void;
+    drop(): void;
+}
+
+/* What the actions of a session reach the follower through. */
+export interface VoiceFollowHost {
+    expectPrompt(chatId: string, chat: VoiceFollowedChat): VoicePromptTicket;
+    expectStart(): VoiceStartTicket;
+    /* A chat Voice cleared: what was followed in it and what waits to be told of it go. */
+    cleared(chatId: string): void;
+}
 
 export interface ServerActionContext {
     host: CanvasHost;
@@ -17,7 +43,7 @@ export interface ServerActionContext {
     origin?: IndexedPlace;
     /* Set only for the voice actor, so a handler open to Voice and an agent tells the two apart. */
     voice?: VoiceCaller;
-    /* Set only for an extension whose manifest names the permission: it has no node, so no line can run to it. */
+    /* Set with the extension actor, whose manifest names the permission: it has no node, so no line can run to it. */
     extension?: true;
     /* Set only for a client elsewhere with a credential: it acts as the person within the grant, and no node stands behind it. */
     external?: ExternalCaller;
@@ -79,8 +105,7 @@ export function hostService<Key extends keyof CanvasHost>(context: ServerActionC
     return service;
 }
 
-/* The kind of node the caller is, or null when it is no node of this project. */
-export async function callerNodeKind({ host, place, origin }: ServerActionContext, caller: string): Promise<string | null> {
+async function callerNodeKind({ host, place, origin }: ServerActionContext, caller: string): Promise<string | null> {
     return callerKind(await host.projects.read((origin ?? place).projectId), caller) ?? host.hiddenAgents?.get(caller)?.node.kind ?? null;
 }
 
@@ -179,25 +204,13 @@ export function externalActionCall(
     };
 }
 
-const VOICE_ACTOR_PREFIX = 'voice:';
-
-/* The actor id of a Voice session, apart from every node id, which is what a lineage or a claim is kept under. */
-function voiceActorId(sessionId: string): string {
-    return `${VOICE_ACTOR_PREFIX}${sessionId}`;
-}
-
-/* Whether an opener in the lineage is a Voice session, which no project places. */
-export function isVoiceActor(id: string): boolean {
-    return id.startsWith(VOICE_ACTOR_PREFIX);
-}
-
 /*
  * The call of a Voice session. Its place is the current project of the session, with the canvas on the
  * phone's screen or else the project's first, so an action lands where an agent of that canvas would.
  * Without a current project, an action that needs one refuses and says how to pick one.
  */
 export function voiceActionCall(host: CanvasHost, place: IndexedPlace | null, voice: VoiceCaller): ActionCall<VoiceActionContext> {
-    const actor = { kind: 'voice' as const, id: voiceActorId(voice.sessionId) };
+    const actor = { kind: 'voice' as const, id: voiceOpener(voice.sessionId) };
     if (place !== null) {
         return { actor, context: { host, place, voice } };
     }
@@ -211,6 +224,14 @@ export function voiceActionCall(host: CanvasHost, place: IndexedPlace | null, vo
             }
         }
     };
+}
+
+/*
+ * The call of an extension whose manifest names the permission. Its place is the project the request came from, with the
+ * canvas it names or none, and its actor id is the extension's opener, apart from every node id.
+ */
+export function extensionActionCall(host: CanvasHost, place: IndexedPlace, extensionId: string): ServerActionCall {
+    return { actor: { kind: 'extension', id: extensionOpener(extensionId) }, context: { host, place, extension: true } };
 }
 
 export function noVoiceProject(): ToolRefusal {

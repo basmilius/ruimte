@@ -1,13 +1,6 @@
 import type { ChatInfo, ChatItem } from '@ruimte/contracts';
-import {
-    chatWaits,
-    turnCompletion,
-    waitingPrompt,
-    WAITING_COMMENTARY,
-    type VoiceChatCompletion,
-    type VoiceChatFollowUp,
-    type VoiceCompletionDelivery
-} from '@ruimte/voice';
+import { FollowedTurn, waitingPrompt, WAITING_COMMENTARY, type VoiceChatCompletion, type VoiceChatFollowUp, type VoiceCompletionDelivery } from '@ruimte/voice';
+import type { VoiceFollowedChat, VoiceFollowHost, VoicePromptTicket, VoiceStartTicket } from '../actions/context.ts';
 import type { VoiceClock } from './clock.ts';
 
 /* How long a chat Voice started may take from its node to the turn its first prompt opens, before Voice says it is not confirmed. */
@@ -42,41 +35,12 @@ interface VoiceFollowerDeps {
     activity(entry: VoiceFollowActivity): void;
 }
 
-/* Where a chat stands in the eyes of Voice, by name, to say which one it means. */
-interface VoiceFollowedChat {
-    chat: string;
-    project: string;
-}
-
-/* Taken before a prompt goes out, so no turn it opens can end unheard; bound to the turn once the chat names it. */
-interface VoicePromptTicket {
-    bind(turnId: string): void;
-    drop(): void;
-}
-
-/* Taken before a start, bound to the node the start made. */
-interface VoiceStartTicket {
-    bind(chatId: string, chat: VoiceFollowedChat): void;
-    drop(): void;
-}
-
-/* What the actions of a session reach the follower through. */
-export interface VoiceFollowHost {
-    expectPrompt(chatId: string, chat: VoiceFollowedChat): VoicePromptTicket;
-    expectStart(): VoiceStartTicket;
-    /* A chat Voice cleared: what was followed in it and what waits to be told of it go. */
-    cleared(chatId: string): void;
-}
-
 interface Followed {
     chatId: string;
     named: VoiceFollowedChat;
     /* Null until the chat names the turn: a prompt's once its send answers, a start's once its first turn opens. */
-    turnId: string | null;
+    turn: FollowedTurn | null;
     start: { step: 'created' | 'ready' | 'accepted'; cancelDeadline: () => void } | null;
-    /* How often the turn waited on the person, so each wait is told once and a later one again. */
-    waits: number;
-    waiting: boolean;
 }
 
 const UNCONFIRMED_COMMENTARY =
@@ -102,13 +66,13 @@ export class VoiceFollower implements VoiceFollowHost {
     }
 
     expectPrompt(chatId: string, chat: VoiceFollowedChat): VoicePromptTicket {
-        const entry = this.#follow({ chatId, named: chat, turnId: null, start: null, waits: 0, waiting: false });
+        const entry = this.#follow({ chatId, named: chat, turn: null, start: null });
         return {
             bind: (turnId) => {
                 if (this.#stopped || this.#followed.get(chatId) !== entry) {
                     return;
                 }
-                entry.turnId = turnId;
+                entry.turn = new FollowedTurn(turnId);
                 this.#look(chatId);
             },
             drop: () => this.#forget(chatId, entry)
@@ -125,7 +89,7 @@ export class VoiceFollower implements VoiceFollowHost {
                 }
                 const id = `start-${++this.#tickets}`;
                 const start: NonNullable<Followed['start']> = { step: 'created', cancelDeadline: () => undefined };
-                const made: Followed = { chatId, named: chat, turnId: null, start, waits: 0, waiting: false };
+                const made: Followed = { chatId, named: chat, turn: null, start };
                 entry = made;
                 this.#follow(made);
                 this.#deps.activity({ id: `${id}-made`, label: `Started “${chat.chat}”`, status: 'completed' });
@@ -211,58 +175,48 @@ export class VoiceFollower implements VoiceFollowHost {
             start.step = 'ready';
             this.#deps.activity({ id: `${chatId}-ready`, label: `“${entry.named.chat}” is running`, status: 'completed' });
         }
-        if (start !== null && entry.turnId === null) {
+        if (start !== null && entry.turn === null) {
             // The chat is new, so the first turn in its thread is the one its first prompt opened.
             const first = thread.items.find((item) => item.kind === 'turn');
             if (first === undefined) {
                 return;
             }
-            entry.turnId = first.id;
+            entry.turn = new FollowedTurn(first.id);
             start.step = 'accepted';
             start.cancelDeadline();
             this.#deps.activity({ id: `${chatId}-accepted`, label: `“${entry.named.chat}” took its first prompt`, status: 'completed' });
         }
-        if (entry.turnId === null) {
+        if (entry.turn === null) {
             return;
         }
-        const completion = turnCompletion({ items: thread.items, activeTurnId: thread.info.activeTurnId }, entry.turnId);
-        if (completion !== null) {
-            this.#settled(entry, completion);
-            return;
-        }
-        const waiting = thread.info.status === 'needs-you' && thread.info.activeTurnId === entry.turnId;
-        if (waiting && !entry.waiting) {
-            entry.waits += 1;
+        const step = entry.turn.observe(thread);
+        if (step.kind === 'settled') {
+            this.#settled(entry, entry.turn.turnId, step.completion);
+        } else if (step.kind === 'waits') {
             const session = { key: chatId, kind: 'chat' as const, name: entry.named.chat, project: entry.named.project };
-            this.#deps.delivery.report(
-                `${chatId}:${entry.turnId}:wait-${entry.waits}`,
-                chatId,
-                waitingPrompt(session, chatWaits(thread.items)),
-                WAITING_COMMENTARY
-            );
+            this.#deps.delivery.report(`${chatId}:${entry.turn.turnId}:wait-${step.count}`, chatId, waitingPrompt(session, step.waits), WAITING_COMMENTARY);
         }
-        entry.waiting = waiting;
     }
 
-    #settled(entry: Followed, completion: VoiceChatCompletion): void {
+    #settled(entry: Followed, turnId: string, completion: VoiceChatCompletion): void {
         this.#forget(entry.chatId, entry);
         const followUp: VoiceChatFollowUp = {
             key: entry.chatId,
             chatId: entry.chatId,
             chat: entry.named.chat,
             project: entry.named.project,
-            turnId: entry.turnId!
+            turnId
         };
         this.#deps.delivery.enqueue(followUp, completion);
         this.#deps.activity({
-            id: `${entry.chatId}-${entry.turnId}`,
+            id: `${entry.chatId}-${turnId}`,
             label: `“${entry.named.chat}” ${completion.state === 'done' ? 'finished' : completion.state === 'aborted' ? 'was stopped' : 'failed'}`,
             status: completion.state === 'done' ? 'completed' : 'failed'
         });
     }
 
     #unconfirmed(entry: Followed): void {
-        if (this.#followed.get(entry.chatId) !== entry || entry.turnId !== null) {
+        if (this.#followed.get(entry.chatId) !== entry || entry.turn !== null) {
             return;
         }
         this.#forget(entry.chatId, entry);

@@ -1,6 +1,6 @@
 import type { ComputerControlAction, ComputerSessionMode, ComputerUseStatus } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { useComputer } from '@/state/computer';
+import { useComputer } from '@/computer/computer';
 
 interface IndicatorLook {
     // The accent while the agent acts, muted while the person holds the Mac.

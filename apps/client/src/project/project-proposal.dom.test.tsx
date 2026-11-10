@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ChatInfo, ChatMoveInfoResult, ProjectProposal, ProjectSummary, ProjectView, ProviderInfo } from '@ruimte/contracts';
 import { act } from 'react';
+import { moveChatDialog } from '@/project/dialogs';
+import { useProposals } from '@/proposals/proposals';
 import { useProject } from '@/state/project';
-import { useProposals } from '@/state/proposals';
-import { useUi } from '@/state/ui';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { fakeProvider } from '../../testing/fake-provider';
@@ -86,7 +86,7 @@ function buttonIn(root: ParentNode | null, label: string): HTMLButtonElement | n
 }
 
 beforeEach(async () => {
-    useUi.getState().setMoveChatDialog(null);
+    moveChatDialog.set(null);
     machine = new FakeMachine();
     machine.answer('provider.list', () => ({ providers: [CLAUDE] }));
     machine.answer('chat.attach', ({ chatId }) => ({ info: infoOf(chatId), items: [], seq: 0 }) as never);
@@ -120,7 +120,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
     await act(async () => {
-        useUi.getState().setMoveChatDialog(null);
+        moveChatDialog.set(null);
         useProposals.getState().forget(ENDPOINT_ID);
     });
     await page.unmount();
@@ -143,7 +143,6 @@ describe('a chat in Chats that suggests a project', () => {
         await until(() => dialog() !== null);
         await until(() => dialog()!.textContent!.includes('Where this chat worked'));
         expect(dialog()!.querySelector<HTMLInputElement>('#move-chat-name')!.value).toBe('Vinyl shelf');
-        // Nothing is made by looking.
         expect(machine.requests('chat.move')).toHaveLength(0);
         await until(() => !buttonIn(dialog(), 'Make project')!.disabled);
         await clickOn(buttonIn(dialog(), 'Make project'));

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
+import { isApplePlatform } from '@adecore/ui';
 import type { ProjectView } from '@ruimte/contracts';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { answerDevices, FAKE_SIMULATOR, referenceOf, type FakeDevices } from '../../testing/fake-devices';
 import { FakeMachine } from '../../testing/fake-machine';

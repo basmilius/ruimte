@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
+import type { CanvasHost } from '../canvas/host.ts';
+import type { LaunchReading } from '../launches/agent-host.ts';
 import type { SecretAsk, SecretOutcome } from '../secrets/secret-requests.ts';
-import type { CanvasHost, LaunchReading } from './host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 let asks: { ask: SecretAsk; waitMs: number | undefined }[];

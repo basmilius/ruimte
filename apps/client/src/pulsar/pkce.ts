@@ -41,7 +41,6 @@ export function loginStartUrl(start: LoginStart): string {
     return url.toString();
 }
 
-/* The query the address book sent the browser back with. */
 export interface LoginCallback {
     code: string | null;
     state: string | null;

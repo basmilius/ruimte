@@ -26,7 +26,6 @@ export async function holdsForeground(pid: number, read: TpgidReader = readTpgid
     return group === null ? null : group === pid;
 }
 
-/* The process group holding the foreground of the terminal `pid` runs in; null when `ps` cannot say. */
 export async function foregroundGroup(pid: number, read: TpgidReader = readTpgid): Promise<number | null> {
     const output = await read(pid);
     return output === null ? null : groupOf(output);

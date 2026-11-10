@@ -1,18 +1,18 @@
 import { join } from 'node:path';
-import { createUpdater, type AppIpc, type Windows } from '@adecore/shell';
+import { createUpdater, type Windows } from '@adecore/shell';
+import { electron } from '../electron';
 import { heedBodyless } from '../net-response';
 import { createReleaseNotes } from '../release-notes';
-import { electron } from './electron';
+import type { DesktopIpc } from './ipc';
 import type { Machine } from './service';
 
 const { app, net } = electron;
 
-export interface UpdatesOptions {
+interface UpdatesOptions {
     windows: Windows;
     machine: Pick<Machine, 'controller' | 'stopsOnQuit'>;
     /* Asks the person whether the quit may end what it ends; true when nothing needs asking. */
     askBeforeQuit(stopsMachine: boolean): Promise<boolean>;
-    /* Marks the quit that follows as asked already, or takes that back. */
     confirmQuit(confirmed: boolean): void;
 }
 
@@ -21,7 +21,7 @@ export interface Updates {
 }
 
 /* The updater and the release notes beside it, a state the page watches rather than a dialog that interrupts. */
-export function installUpdates(ipc: AppIpc, options: UpdatesOptions): Updates {
+export function installUpdates(ipc: DesktopIpc, options: UpdatesOptions): Updates {
     const { windows, machine } = options;
 
     /* From the REST API: the updater's atom feed carries rendered HTML, only the versions up to the next one,

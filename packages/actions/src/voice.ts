@@ -71,6 +71,10 @@ const DOMAIN_TOOLS: Record<ActionDomain, { name: string; description: string }> 
     }
 };
 
+export function voiceToolName(domain: ActionDomain): string {
+    return DOMAIN_TOOLS[domain].name;
+}
+
 const CONTROL_TOOL: VoiceToolDefinition = {
     type: 'function',
     name: VOICE_CONTROL_TOOL,

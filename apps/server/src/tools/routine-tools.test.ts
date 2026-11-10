@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { narrowerMode } from '@adecore/agents/providers';
 import type { Routine, RoutineEntry, RoutineMadeBy, RoutineRunNowResult, RuntimeMode } from '@ruimte/contracts';
+import type { CanvasHost } from '../canvas/host.ts';
+import { ProviderRegistry } from '../providers/registry.ts';
 import { agentRoutines } from '../routines/agent-host.ts';
+import { scheduleText } from '../routines/routine-words.ts';
 import type { Routines } from '../routines/routines.ts';
-import type { CanvasHost } from './host.ts';
-import { parseSchedule, routineToolkit, scheduleText } from './routine-tools.ts';
+import { parseSchedule, routineToolkit } from './routine-tools.ts';
 import { launchReading, toolAnswer, toolCall } from './tool-test-helpers.ts';
+
+const providers = new ProviderRegistry();
 
 interface Saved {
     routine: Routine;
@@ -101,6 +105,7 @@ beforeEach(() => {
             modeOf: () => callerMode,
             accountOf: () => ({ kind: 'claude' }),
             installedAgents: async () => ['claude', 'codex'],
+            provider: (kind: string) => providers.get(kind),
             preferredSelection: () => undefined
         },
         launches: { list: async () => launches },

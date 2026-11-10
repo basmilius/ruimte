@@ -1,6 +1,5 @@
 import type { PaletteSide } from '@/state/palette';
 
-/* The two colors text on an accent can take: white, and the theme's own near-black. */
 const LIGHT_TEXT = '#ffffff';
 const DARK_TEXT = '#18181b';
 
@@ -13,8 +12,7 @@ const MIX_STEPS = 20;
 /* The ground of each side in `@adecore/ui`'s theme, for a palette that sets none. */
 export const THEME_SURFACE: Record<PaletteSide, string> = { light: '#ffffff', dark: '#131316' };
 
-export interface AccentContrast {
-    /* The text on the accent: white or near-black, whichever measures higher. */
+interface AccentContrast {
     text: string;
     /* The accent as text, an icon or a focus ring on the ground: the accent itself while it reaches 3:1, else the nearest mix toward black (light) or white (dark) that does. */
     onSurface: string;
@@ -37,7 +35,6 @@ function luminanceOf(channels: readonly number[]): number {
     return 0.2126 * red! + 0.7152 * green! + 0.0722 * blue!;
 }
 
-/* The WCAG contrast ratio of two six-digit hex colors. */
 export function contrastOf(first: string, second: string): number {
     const [lighter, darker] = [luminanceOf(channelsOf(first)), luminanceOf(channelsOf(second))].sort((a, b) => b - a);
     return (lighter! + 0.05) / (darker! + 0.05);

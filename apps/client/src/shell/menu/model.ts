@@ -1,151 +1,18 @@
 import { formatShortcut, type Shortcut } from '@adecore/ui';
 import type { ProjectView } from '@ruimte/contracts';
-import type { MenuNode, MenuRole, MenuShellAction, MenuSpec } from '@ruimte/desktop-bridge';
-import i18next from 'i18next';
-import { separatesGroups } from '@/agents/creation';
-import { viewShortcut } from '@/canvas/shortcuts';
-import {
-    COMMAND_IDS,
-    COMMANDS,
-    desktop as isDesktop,
-    menuPlacesOf,
-    onCanvas,
-    type CommandId as TableCommandId,
-    commandKey,
-    type MenuContainer,
-    type MenuPlace
-} from '@/shell/command-table';
-import { AFTER_SETTLE_PREFIX, CHAT_MOVE_PREFIX, GO_VIEW_PREFIX, LAUNCH_CHOOSE_PREFIX, PR_SHOW_IN_PREFIX } from '@/shell/menu/ids';
-import { BROWSER_KEEPS } from '@/shell/shortcuts';
-import type { SplitDirection } from '@/shell/split';
-import type { ViewOffers } from '@/shell/view-offers';
-import type { KeepAwakeMode } from '@/state/settings';
-import type { PanelKind } from '@/state/ui';
+import type { MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
+import { desktop as isDesktop, onCanvas } from '@/commands/conditions';
+import { only, role, separator, shell, submenu, t, tidy, type CommandOptions, type MenuCommand } from '@/commands/menu-builders';
+import type { MenuContext, MenuHost } from '@/commands/menu-context';
+import { menuExtrasOf } from '@/commands/menu-extras';
+import { commandIds, commandKey, commandSpec, menuPlacesOf } from '@/commands/registry';
+import type { MenuContainer, MenuPlace } from '@/commands/types';
+import { BROWSER_KEEPS } from '@/surface/shortcuts';
 
-export type MenuHost = 'desktop' | 'station';
-
-export interface MenuLaunch {
-    id: string;
-    name: string;
-    /* A process of it runs, or is being stopped; a group through its members. */
-    live: boolean;
-}
-
-interface MenuAgent {
-    kind: string;
-    name: string;
-    chat: boolean;
-    terminal: boolean;
-}
-
-/* Everything the menu depends on, flat, so the tree follows from it alone. */
-export interface MenuContext {
-    host: MenuHost;
-    apple: boolean;
-    /* A project is open in this window; the start screen has none. */
-    workspace: boolean;
-    /* The project has a folder a person may see; the Chats project has none. */
-    folder: boolean;
-    /* The project is the machine's Chats project, which has no panels for a folder and no launches. */
-    scratch: boolean;
-    /* The one selected node is a chat with a pull request watch on. */
-    prWatch: boolean;
-    /* The project's machine answers routines (`routine.list`). */
-    routines: boolean;
-    /* A chat has the focus: the chat view in the focused cell, or the chat node with the keyboard or selected alone (`focused-chat.ts`). */
-    chat: boolean;
-    chatTextSize: number | null;
-    /* A terminal has the keyboard, which takes the clear key for itself (`terminal/xterm.ts`). */
-    terminalKeys: boolean;
-    /* That terminal has a find bar, which answers the find key. */
-    terminalFind: boolean;
-    /* The view in front of the focused cell is a diff, whose file Open File at Line opens. */
-    diff: boolean;
-    /* The repositories of the folder that stand on a branch, which a pull request hangs on. */
-    prRepos: { path: string; label: string }[];
-    fileManager: string;
-    /* The kind of the view in the focused cell. */
-    view: ProjectView['kind'] | null;
-    offers: ViewOffers | null;
-    /* The chat in the focused cell runs a turn or waits on a person, so it cannot move now. */
-    chatWorking: boolean;
-    /* The projects of this machine a chat in Chats can move to, most recently touched first. */
-    moveProjects: { id: string; name: string }[];
-    shared: boolean;
-    /* The nodes selected on the canvas with the focus. */
-    selection: number;
-    /* The one selected node could open as a view of its own. */
-    promote: boolean;
-    /* The one selected node is an open group whose members can be moved. */
-    groupArrangeable: boolean;
-    anyLocked: boolean;
-    cells: number;
-    /* The focused cell as a host of tabs: how many, which one is in front, and whether the tab in front has room to leave for a cell of its own. */
-    tabs: { hosted: boolean; count: number; index: number; splitOff: boolean };
-    split: { right: boolean; down: boolean };
-    /* A cell fills the grid for now. */
-    maximized: boolean;
-    /* The maximize key acts on a node of the canvas with the focus (`maximizeTargetOf`), not on the cell. */
-    nodeMaximizable: boolean;
-    /* A node fills that canvas for now. */
-    nodeMaximized: boolean;
-    nodeZoomable: boolean;
-    /* Columns stand right of the focused cell. */
-    closesRight: boolean;
-    /* The open panel, or null while none is. */
-    panel: PanelKind | null;
-    sidebar: boolean;
-    /* The openable views in sidebar order; the first nine have a shortcut. */
-    views: string[];
-    navigation: {
-        views: boolean;
-        camera: { back: boolean; forward: boolean };
-        focus: Record<SplitDirection, boolean>;
-        nodes: Record<SplitDirection, boolean>;
-        prompts: boolean;
-        waiting: boolean;
-        editor: boolean;
-        language: boolean;
-    };
-    moveTargets: { id: string; name: string }[];
-    layouts: string[];
-    agents: MenuAgent[];
-    launches: MenuLaunch[];
-    /* The launch on the chip, which the Run menu's first rows act on. */
-    chosenLaunch: string | null;
-    /* The tasks that may run after a worktree chat settles, and the one that does, or null for none. */
-    afterSettle: { tasks: { id: string; name: string }[]; chosen: string | null };
-    releaseNotes: boolean;
-    /* The shell can start the app again without extensions, and this start loads them. */
-    safeModeRestart: boolean;
-    /* The page fills the screen, which only the web client asks the page itself. */
-    fullscreen: boolean;
-    /* When this computer stays awake, or null where the shell cannot hold it awake. */
-    keepAwake: KeepAwakeMode | null;
-    /* The settings dialog is up, where Find searches the settings instead. */
-    settingsOpen: boolean;
-    /* The shell opens windows of its own, a window per project. */
-    windows: boolean;
-    /* A chat outside any project can start from this window (`project/new-chat.ts`). */
-    newChat: boolean;
-    /* This app runs a machine of its own; the desktop app told to run none does not. */
-    localMachine: boolean;
-}
-
-type MenuCommand = (id: string, label: string, options?: CommandOptions) => MenuNode;
+export type { MenuContext, MenuHost };
+export { tidy };
 
 type MenuSection = MenuSpec['menus'][number];
-
-interface CommandOptions {
-    shortcut?: Shortcut;
-    enabled?: boolean;
-    checked?: boolean;
-    radio?: boolean;
-}
-
-function t(key: string, options?: Record<string, unknown>): string {
-    return i18next.t(`shell:menu.${key}`, options ?? {});
-}
 
 const ELECTRON_KEYS: Record<string, string> = { ArrowLeft: 'Left', ArrowRight: 'Right', ArrowUp: 'Up', ArrowDown: 'Down', '+': 'Plus' };
 
@@ -188,53 +55,13 @@ function sameShortcut(one: Shortcut, other: Shortcut): boolean {
     );
 }
 
-const separator: MenuNode = { kind: 'separator' };
-
-function role(name: MenuRole, label: string): MenuNode {
-    return { kind: 'role', role: name, label };
-}
-
-function shell(action: MenuShellAction, label: string): MenuNode {
-    return { kind: 'shell', action, label };
-}
-
-function submenu(id: string, label: string, items: MenuNode[], enabled?: boolean): MenuNode {
-    return {
-        kind: 'submenu',
-        id,
-        label,
-        items: tidy(items),
-        ...(enabled === undefined ? {} : { enabled })
-    };
-}
-
-/* No line at either end and never two in a row, so a group that is not offered takes its line with it. */
-export function tidy(items: MenuNode[]): MenuNode[] {
-    return items.filter(
-        (item, index) =>
-            item.kind !== 'separator' ||
-            (index > 0 &&
-                index < items.length - 1 &&
-                items[index - 1]!.kind !== 'separator' &&
-                items.slice(index + 1).some((next) => next.kind !== 'separator'))
-    );
-}
-
-function only(condition: boolean, ...items: MenuNode[]): MenuNode[] {
-    return condition ? items : [];
-}
-
-function agentRows(agents: MenuAgent[], rowsOf: (agent: MenuAgent) => MenuNode[]): MenuNode[] {
-    return agents.flatMap((agent, i) => [...only(separatesGroups(agents[i - 1]?.kind, agent.kind), separator), ...rowsOf(agent)]);
-}
-
-/* What a group draws besides the table's rows: a role, a submenu or a row per view, launch or agent. */
+/* What a group draws besides the rows of the command table: a role, or a submenu of the window itself. Features add theirs (`commands/menu-extras.ts`). */
 interface MenuExtra {
     readonly order: number;
     readonly build: (context: MenuContext, command: MenuCommand) => MenuNode[];
 }
 
-/* A run of rows between two lines. Its table rows say they belong to it (`MenuPlace` in `shell/command-table.ts`). */
+/* A run of rows between two lines. Rows of the table say they belong to it (`MenuPlace`). */
 interface MenuGroup {
     readonly id: string;
     readonly when?: (context: MenuContext) => boolean;
@@ -249,7 +76,6 @@ function quitRows(): MenuNode[] {
     return [shell('stop-machine-and-quit', t('stopAndQuit')), role('quit', t('quit'))];
 }
 
-/* The groups of every menu and submenu with a fixed place, top to bottom. */
 const LAYOUT: Record<MenuContainer, readonly MenuGroup[]> = {
     app: [
         { id: 'about' },
@@ -287,23 +113,7 @@ const LAYOUT: Record<MenuContainer, readonly MenuGroup[]> = {
         { id: 'settings' },
         { id: 'quit', when: (context) => !context.apple && isDesktop(context), extras: [{ order: 10, build: quitRows }] }
     ],
-    'new-view': [
-        { id: 'views' },
-        {
-            id: 'agents',
-            extras: [
-                {
-                    order: 10,
-                    build: (context, command) =>
-                        agentRows(context.agents, (agent) => [
-                            ...only(agent.chat, command(`agent-view-chat-${agent.kind}`, t('agentChat', { name: agent.name }))),
-                            ...only(agent.terminal, command(`agent-view-terminal-${agent.kind}`, t('agentTerminal', { name: agent.name })))
-                        ])
-                }
-            ]
-        },
-        { id: 'dividers' }
-    ],
+    'new-view': [{ id: 'views' }, { id: 'agents' }, { id: 'dividers' }],
     view: [
         { id: 'sidebar', when: inWorkspace },
         { id: 'panels', when: inWorkspace },
@@ -340,19 +150,7 @@ const LAYOUT: Record<MenuContainer, readonly MenuGroup[]> = {
         { id: 'search' }
     ],
     code: [
-        {
-            id: 'pull-request',
-            when: (context) => context.folder && !context.scratch,
-            extras: [
-                {
-                    order: 10,
-                    build: (context, command) =>
-                        context.prRepos.length > 1
-                            ? context.prRepos.map((repo) => command(`${PR_SHOW_IN_PREFIX}${repo.path}`, t('showPullRequestIn', { repo: repo.label })))
-                            : []
-                }
-            ]
-        },
+        { id: 'pull-request', when: (context) => context.folder && !context.scratch },
         { id: 'pr-watch' },
         { id: 'language' },
         { id: 'editor', extras: [{ order: 1000, build: (context, command) => [submenu('folding', t('folding'), itemsOf('folding', context, command))] }] }
@@ -361,17 +159,7 @@ const LAYOUT: Record<MenuContainer, readonly MenuGroup[]> = {
     go: [
         { id: 'palette' },
         { id: 'views', when: inWorkspace },
-        {
-            id: 'go-view',
-            when: inWorkspace,
-            extras: [
-                {
-                    order: 10,
-                    build: (context, command) =>
-                        context.views.slice(0, 9).map((name, index) => command(`${GO_VIEW_PREFIX}${index + 1}`, name, { shortcut: viewShortcut(index) }))
-                }
-            ]
-        },
+        { id: 'go-view', when: inWorkspace },
         { id: 'focus', when: inWorkspace },
         { id: 'nodes', when: (context) => context.workspace && context.view === 'canvas' },
         { id: 'prompts', when: inWorkspace },
@@ -379,44 +167,9 @@ const LAYOUT: Record<MenuContainer, readonly MenuGroup[]> = {
         { id: 'editor-navigation', when: (context) => context.workspace && !context.settingsOpen }
     ],
     kind: [
-        {
-            id: 'canvas-add',
-            when: onCanvas,
-            extras: [
-                {
-                    order: 80,
-                    build: (context, command) => {
-                        const agents = agentRows(context.agents, (agent) => [
-                            ...only(agent.chat, command(`agent-chat-${agent.kind}`, t('agentChat', { name: agent.name }))),
-                            ...only(agent.terminal, command(`agent-terminal-${agent.kind}`, t('agentTerminal', { name: agent.name })))
-                        ]);
-                        return only(agents.length > 0, submenu('new-agent', t('newAgent'), agents));
-                    }
-                }
-            ]
-        },
-        {
-            id: 'canvas-arrange',
-            when: onCanvas,
-            extras: [
-                {
-                    order: 40,
-                    build: (context, command) => [
-                        submenu(
-                            'move-to',
-                            t('moveTo'),
-                            context.moveTargets.map((target) => command(`view-move-${target.id}`, target.name)),
-                            context.moveTargets.length > 0
-                        )
-                    ]
-                }
-            ]
-        },
-        {
-            id: 'canvas-layout',
-            when: onCanvas,
-            extras: [{ order: 20, build: (context, command) => [submenu('layouts', t('layouts'), itemsOf('layouts', context, command))] }]
-        },
+        { id: 'canvas-add', when: onCanvas },
+        { id: 'canvas-arrange', when: onCanvas },
+        { id: 'canvas-layout', when: onCanvas },
         { id: 'terminal', when: (context) => context.view === 'terminal' },
         { id: 'drawing-copy', when: (context) => context.view === 'drawing' },
         { id: 'drawing-save', when: (context) => context.view === 'drawing' },
@@ -427,52 +180,12 @@ const LAYOUT: Record<MenuContainer, readonly MenuGroup[]> = {
         // A chat on a canvas has no menu of its own, so its rows go under the canvas's.
         { id: 'chat', when: (context) => (context.view === 'chat' || context.view === 'canvas') && context.chat },
         { id: 'session' },
-        {
-            id: 'place',
-            extras: [
-                {
-                    order: 6,
-                    build: (context, command) =>
-                        only(
-                            context.offers?.moveToProject === true,
-                            submenu('chat-move', t('moveToProject'), itemsOf('chat-move', context, command), !context.chatWorking)
-                        )
-                }
-            ]
-        },
+        { id: 'place' },
         { id: 'settings' },
         { id: 'delete' }
     ],
-    'chat-move': [
-        {
-            id: 'recent',
-            extras: [
-                { order: 10, build: (context, command) => context.moveProjects.map((project) => command(`${CHAT_MOVE_PREFIX}${project.id}`, project.name)) }
-            ]
-        },
-        { id: 'other' }
-    ],
-    layouts: [
-        { id: 'save' },
-        { id: 'apply', extras: [{ order: 10, build: (context, command) => context.layouts.map((name) => command(`layout-apply-${name}`, name)) }] },
-        {
-            id: 'delete',
-            extras: [
-                {
-                    order: 10,
-                    build: (context, command) =>
-                        only(
-                            context.layouts.length > 0,
-                            submenu(
-                                'delete-layout',
-                                t('deleteLayout'),
-                                context.layouts.map((name) => command(`layout-delete-${name}`, name))
-                            )
-                        )
-                }
-            ]
-        }
-    ],
+    'chat-move': [{ id: 'recent' }, { id: 'other' }],
+    layouts: [{ id: 'save' }, { id: 'apply' }, { id: 'delete' }],
     window: [
         {
             id: 'window',
@@ -489,69 +202,38 @@ const LAYOUT: Record<MenuContainer, readonly MenuGroup[]> = {
         { id: 'panels' },
         { id: 'front', extras: [{ order: 10, build: (context) => only(isDesktop(context) && context.apple, role('front', t('front'))) }] }
     ],
-    run: [
-        { id: 'launch' },
-        {
-            id: 'choose',
-            extras: [
-                {
-                    order: 10,
-                    build: (context, command) =>
-                        context.launches.map((launch) =>
-                            command(`${LAUNCH_CHOOSE_PREFIX}${launch.id}`, launch.name, { checked: launch.id === context.chosenLaunch, radio: true })
-                        )
-                }
-            ]
-        },
-        {
-            id: 'setup',
-            extras: [
-                {
-                    order: 10,
-                    build: (context, command) =>
-                        only(
-                            context.afterSettle.tasks.length > 0,
-                            submenu('launches-after-settle', t('launchesAfterSettle'), itemsOf('launches-after-settle', context, command))
-                        )
-                }
-            ]
-        }
-    ],
-    'launches-after-settle': [
-        { id: 'off' },
-        {
-            id: 'tasks',
-            extras: [
-                {
-                    order: 10,
-                    build: (context, command) =>
-                        context.afterSettle.tasks.map((task) =>
-                            command(`${AFTER_SETTLE_PREFIX}${task.id}`, task.name, { checked: task.id === context.afterSettle.chosen, radio: true })
-                        )
-                }
-            ]
-        }
-    ],
+    run: [{ id: 'launch' }, { id: 'choose' }, { id: 'setup' }],
+    'launches-after-settle': [{ id: 'off' }, { id: 'tasks' }],
     help: [{ id: 'help' }, { id: 'about' }]
 };
 
 interface PlacedCommand {
-    id: TableCommandId;
+    id: string;
     place: MenuPlace;
 }
 
-/* The table's rows per container and group, in their order. */
-const PLACED = new Map<string, PlacedCommand[]>();
-for (const id of COMMAND_IDS) {
-    for (const place of menuPlacesOf(id)) {
-        const at = `${place.menu}/${place.group}`;
-        PLACED.set(at, [...(PLACED.get(at) ?? []), { id, place }]);
-    }
-}
-for (const rows of PLACED.values()) {
-    rows.sort((one, other) => one.place.order - other.place.order);
-}
+let placedFor = -1;
+let placed = new Map<string, PlacedCommand[]>();
 
+function placedRows(): Map<string, PlacedCommand[]> {
+    const ids = commandIds();
+    if (placedFor === ids.length) {
+        return placed;
+    }
+    placed = new Map();
+    for (const id of ids) {
+        for (const place of menuPlacesOf(id)) {
+            const at = `${place.menu}/${place.group}`;
+            placed.set(at, [...(placed.get(at) ?? []), { id, place }]);
+        }
+    }
+    for (const rows of placed.values()) {
+        rows.sort((one, other) => one.place.order - other.place.order);
+    }
+    placedFor = ids.length;
+
+    return placed;
+}
 function shortcutOf(shortcut: Shortcut | undefined, place: MenuPlace, context: MenuContext): Shortcut | undefined {
     if (place.shortcut) {
         return place.shortcut(context);
@@ -560,7 +242,7 @@ function shortcutOf(shortcut: Shortcut | undefined, place: MenuPlace, context: M
 }
 
 function tableRow({ id, place }: PlacedCommand, context: MenuContext, command: MenuCommand): MenuNode {
-    const spec = COMMANDS[id];
+    const spec = commandSpec(id);
     const words = place.words?.(context) ?? { key: spec.key };
     const enabled = place.enabled?.(context);
     return command(id, t(words.key, words.values), {
@@ -571,16 +253,20 @@ function tableRow({ id, place }: PlacedCommand, context: MenuContext, command: M
     });
 }
 
-/* The rows of a menu or submenu, a line before every group but the first; `tidy` drops the lines empty groups leave. */
 function itemsOf(container: MenuContainer, context: MenuContext, command: MenuCommand): MenuNode[] {
     return LAYOUT[container].flatMap((group, index) => {
         if (group.when && !group.when(context)) {
             return [];
         }
-        const rows = (PLACED.get(`${container}/${group.id}`) ?? [])
+        const rows = (placedRows().get(`${container}/${group.id}`) ?? [])
             .filter(({ place }) => place.when?.(context) ?? true)
             .map((placed) => ({ order: placed.place.order, nodes: [tableRow(placed, context, command)] }));
-        const extras = (group.extras ?? []).map((extra) => ({ order: extra.order, nodes: extra.build(context, command) }));
+        const own = (group.extras ?? []).map((extra) => ({ order: extra.order, nodes: extra.build(context, command) }));
+        const contributed = menuExtrasOf(container, group.id).map((extra) => ({
+            order: extra.order,
+            nodes: extra.build(context, command, (inner) => itemsOf(inner, context, command))
+        }));
+        const extras = [...own, ...contributed];
         const nodes = [...rows, ...extras].sort((one, other) => one.order - other.order).flatMap((entry) => entry.nodes);
         return index === 0 ? nodes : [separator, ...nodes];
     });
@@ -589,7 +275,6 @@ function itemsOf(container: MenuContainer, context: MenuContext, command: MenuCo
 /* The kinds a cell shows with a menu of their own; a divider never has the focus and an unknown kind offers nothing. */
 const KIND_MENUS: readonly ProjectView['kind'][] = ['canvas', 'drawing', 'diagram', 'chat', 'terminal', 'browser', 'file'];
 
-/* The application menu for one moment: which view has the focus, what is selected, where it runs. */
 export function menuModel(context: MenuContext): MenuSpec {
     const { apple, workspace } = context;
     const desktop = context.host === 'desktop';

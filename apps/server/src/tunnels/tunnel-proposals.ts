@@ -1,19 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import type { TunnelOrigin, TunnelProposal, TunnelProposalAction, TunnelRowKind } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
 import { realTimers, type Timers } from '../timers.ts';
+import type { SessionEvent } from '../wire.ts';
 import { TunnelConfigError } from './tunnel-config.ts';
 import type { AddInput, UpdateInput } from './tunnel-service.ts';
 import type { StoredRow } from './tunnel-store.ts';
 
 /* A card about the machine's public addresses is decided on now; an agent that still wants it asks again. */
-export const TUNNEL_PROPOSAL_CARD_MS = 60 * 60_000;
+const TUNNEL_PROPOSAL_CARD_MS = 60 * 60_000;
 
 const MAX_CARDS_PER_CHAT = 10;
 const MAX_CARDS = 100;
 const MAX_OUTCOMES_PER_CHAT = 10;
 
-export type TunnelProposalOutcome = 'waiting' | 'confirmed' | 'declined' | 'stale' | 'expired';
+type TunnelProposalOutcome = 'waiting' | 'confirmed' | 'declined' | 'stale' | 'expired';
 
 /* What a confirm changes: the very input the person's own request in Settings sends. */
 export type TunnelChange =
@@ -42,8 +42,7 @@ export interface TunnelProposalSettled extends TunnelProposalAnswer {
     hostname: string;
 }
 
-/* The tunnel service as a card reaches it: the checks of the person's own changes, the rows as meant, and the changes themselves. */
-export interface ProposalTunnels {
+interface ProposalTunnels {
     checkAdd(input: AddInput): string;
     checkChange(id: string, change: UpdateInput | 'remove'): void;
     rowsAsMeant(): readonly StoredRow[];
@@ -78,7 +77,6 @@ interface Pending {
     cancelExpiry: () => void;
 }
 
-/* The change as the agent asked it, in the words of the card. */
 function changeWords(proposal: Pick<TunnelProposal, 'action' | 'hostname' | 'port' | 'origin'>): string {
     const { hostname } = proposal;
     const target = `port ${proposal.port ?? '-'}${proposal.origin?.https === true ? ' over HTTPS' : ''}`;
@@ -97,7 +95,6 @@ function changeWords(proposal: Pick<TunnelProposal, 'action' | 'hostname' | 'por
     }
 }
 
-/* The turn that tells the chat how the person answered its card. */
 export function answerWake(
     proposal: Pick<TunnelProposal, 'action' | 'hostname' | 'port' | 'origin'>,
     outcome: 'confirmed' | 'declined'
@@ -192,7 +189,6 @@ export class TunnelProposals {
             .sort((left, right) => left.createdAt - right.createdAt);
     }
 
-    /* The cards of one chat that stand, and what became of its last ones, for the agent's own list. */
     of(chatId: string): { standing: TunnelProposal[]; settled: readonly TunnelProposalSettled[] } {
         return { standing: this.list().filter((proposal) => proposal.chatId === chatId), settled: this.settled.get(chatId) ?? [] };
     }

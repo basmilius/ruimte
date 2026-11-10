@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 
 /*
@@ -152,3 +153,16 @@ export const ProcessesAlertsSchema = z.object({ alerts: z.array(ProcessAlertSche
 export type ProcessesAlerts = z.infer<typeof ProcessesAlertsSchema>;
 
 export const ProcessesDismissPayloadSchema = z.object({ id: z.string() });
+
+export const PROCESSES_REQUEST_SCHEMAS = {
+    'processes.subscribe': { payload: ProcessesSubscribePayloadSchema, result: ProcessesSubscribeResultSchema },
+    'processes.unsubscribe': { payload: EmptySchema, result: EmptySchema },
+    'processes.signal': { payload: ProcessesSignalPayloadSchema, result: EmptySchema },
+    'processes.listAlerts': { payload: EmptySchema, result: ProcessesAlertsSchema },
+    'processes.dismiss': { payload: ProcessesDismissPayloadSchema, result: EmptySchema }
+} as const;
+
+export const PROCESSES_EVENT_SCHEMAS = {
+    'processes.sample': ProcessesSampleEventSchema,
+    'processes.alerts': ProcessesAlertsSchema
+} as const;

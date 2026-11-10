@@ -1,12 +1,13 @@
+import { diagramScene } from '@adecore/diagram';
+import { drawingScene } from '@adecore/drawing';
 import type { DiagramDocument, DrawingDocument } from '@ruimte/contracts';
-import { renderDiagram, renderDrawing } from '../../server/src/render/scenes.ts';
 
 (globalThis as typeof globalThis & { ruimteRenderDocument: (kind: string, json: string) => string }).ruimteRenderDocument = (kind, json) => {
     if (kind === 'drawing') {
-        return JSON.stringify(renderDrawing(JSON.parse(json) as DrawingDocument));
+        return JSON.stringify(drawingScene(JSON.parse(json) as DrawingDocument));
     }
     if (kind === 'diagram') {
-        return JSON.stringify(renderDiagram(JSON.parse(json) as DiagramDocument));
+        return JSON.stringify(diagramScene(JSON.parse(json) as DiagramDocument));
     }
     throw new Error('Unsupported document kind');
 };

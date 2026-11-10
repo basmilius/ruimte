@@ -58,7 +58,6 @@ extension ChatItem {
         }
     }
 
-    /// The request an approval or a question answers to; nil for every other item.
     public var requestId: String? {
         switch self {
         case .approval(let item): item.requestId
@@ -67,7 +66,6 @@ extension ChatItem {
         }
     }
 
-    /// A request that still waits on a person, an approval or a question.
     public var isPending: Bool {
         switch self {
         case .approval(let item): item.decision == .pending

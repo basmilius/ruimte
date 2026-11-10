@@ -1,17 +1,19 @@
-import { createHmac } from 'node:crypto';
 import {
+    acceptedFrame,
+    challengeFrame,
     DIRECT_COMPRESSION,
-    DirectProofFrameSchema,
-    localSecretChannelMessage,
+    parseProofFrame,
     PROTOCOL_VERSION,
+    refusedFrame,
     type AuthChallengeResult,
     type AuthTicketPayload,
     type AuthTicketResult
 } from '@ruimte/contracts';
+import { localChannelProof } from '@ruimte/pulsar';
 import type { ChannelGrant } from '../auth/handshake.ts';
 import { sameSecret } from '../auth/local-secret.ts';
-import type { ClientAccess } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
+import type { ClientAccess } from '../wire.ts';
 import { AUTHENTICATED_FRAME_CHARS, UNAUTHENTICATED_FRAME_CHARS, type DirectChannel } from './data-channel.ts';
 
 // Two round trips over a slow link fit easily; a peer that says nothing for this long is closed.
@@ -33,13 +35,6 @@ interface ChannelAuthOptions {
     localSecret: string;
     reachability: ClientAccess['reachability'];
     timeoutMs?: number;
-}
-
-/* The proof a client on the daemon's own machine sends in place of a key signature. */
-export function localSecretProof(secret: string, daemonId: string, challenge: string, binding: string): string {
-    return createHmac('sha256', secret)
-        .update(localSecretChannelMessage(daemonId, challenge, binding))
-        .digest('base64url');
 }
 
 /*
@@ -67,12 +62,12 @@ export function authenticateChannel(options: ChannelAuthOptions): Promise<Client
             resolve(access);
         };
 
-        const refuse = (reason: string, protocol?: number): void => {
+        const refuse = (reason: string, extra?: { protocol?: number; code?: string }): void => {
             if (settled) {
                 return;
             }
             channel.receiveWith(() => undefined, UNAUTHENTICATED_FRAME_CHARS);
-            channel.send(JSON.stringify({ type: 'direct.refused', reason, ...(protocol === undefined ? {} : { protocol }) }));
+            channel.send(JSON.stringify(refusedFrame(reason, extra)));
             settle(null);
             setTimeout(() => channel.close(4003, reason), REFUSAL_LINGER_MS);
         };
@@ -88,20 +83,21 @@ export function authenticateChannel(options: ChannelAuthOptions): Promise<Client
                 refuse('Expected a proof');
                 return;
             }
-            const parsed = DirectProofFrameSchema.safeParse(json);
-            if (!parsed.success || parsed.data.challenge !== issued.challenge) {
+            const proof = parseProofFrame(json);
+            if (proof === null || proof.challenge !== issued.challenge) {
                 refuse('Expected a proof');
                 return;
             }
-            const proof = parsed.data;
             if (proof.protocol !== undefined && proof.protocol !== PROTOCOL_VERSION) {
-                refuse('This machine and this client run different versions of Ruimte', PROTOCOL_VERSION);
+                refuse('This machine and this client run different versions of Ruimte', { protocol: PROTOCOL_VERSION });
                 return;
             }
             if (proof.type === 'direct.key') {
                 const grant = await handshake.redeemChannel({ publicKey: proof.publicKey, challenge: proof.challenge, signature: proof.signature }, binding);
                 if (grant === null) {
-                    refuse('This machine does not know this device. Sign in to the account it is on to be let in again.');
+                    refuse('This machine does not know this device. Sign in to the account it is on to be let in again.', {
+                        code: 'not-paired'
+                    });
                     return;
                 }
                 accept(
@@ -111,7 +107,7 @@ export function authenticateChannel(options: ChannelAuthOptions): Promise<Client
                 );
                 return;
             }
-            const expected = localSecretProof(options.localSecret, options.daemonId, proof.challenge, binding);
+            const expected = await localChannelProof(options.localSecret, options.daemonId, proof.challenge, binding);
             if (!handshake.spend(proof.challenge, binding) || !sameSecret(proof.proof, expected)) {
                 refuse('That is not the secret of this machine');
                 return;
@@ -123,7 +119,7 @@ export function authenticateChannel(options: ChannelAuthOptions): Promise<Client
             if (settled) {
                 return;
             }
-            channel.send(JSON.stringify({ type: 'direct.accepted', ticket: ticket?.ticket ?? null, expiresIn: ticket?.expiresIn ?? null }));
+            channel.send(JSON.stringify(acceptedFrame(ticket)));
             // The verdict itself goes as text, so a client reads it whatever it chose.
             if (compression === DIRECT_COMPRESSION) {
                 channel.deflate();
@@ -140,14 +136,6 @@ export function authenticateChannel(options: ChannelAuthOptions): Promise<Client
                 refuse('The machine could not check the proof');
             });
         }, UNAUTHENTICATED_FRAME_CHARS);
-        channel.send(
-            JSON.stringify({
-                type: 'direct.challenge',
-                protocol: PROTOCOL_VERSION,
-                challenge: issued.challenge,
-                daemon: issued.daemon,
-                compression: [DIRECT_COMPRESSION]
-            })
-        );
+        channel.send(JSON.stringify(challengeFrame(issued)));
     });
 }

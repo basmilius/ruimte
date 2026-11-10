@@ -2,11 +2,13 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
-/// The device view of a project that shows a device, or the one to add for it.
 enum DeviceViews {
-    /// The view of `views` that already shows the device, by the reference a project file keeps.
-    static func existing(in views: [JSONValue], device: MachineDevice) -> String? {
-        views.first { $0.text("kind") == "device" && $0["device"] == device.reference }?.stableID
+    static func existing(in views: [StoredView], device: MachineDevice) -> String? {
+        views.first { view in
+            guard case .device(let shown) = view else { return false }
+            return shown.device.platform == device.platform && shown.device.kind == device.kind
+                && shown.device.name == device.name && shown.device.runtime == device.runtime
+        }?.id
     }
 
     static func view(for device: MachineDevice, id: String = "device-\(UUID().uuidString)") -> JSONValue {
@@ -61,8 +63,7 @@ struct MachineDevicesPage: View {
         .refreshable { await devices.load() }
     }
 
-    /// An iPad has the room for the devices as a grid, each running one with its live picture.
-    private var wide: Bool { UIDevice.current.userInterfaceIdiom == .pad && sizeClass == .regular }
+    private var wide: Bool { MobileDevice.isWide(sizeClass) }
 
     private var grid: some View {
         ScrollView {
@@ -136,7 +137,7 @@ struct MachineDevicesPage: View {
     }
 
     private func row(_ device: MachineDevice) -> some View {
-        let changing = devices.changing[device.id] != nil || device.state == "transitioning"
+        let changing = devices.changing[device.id] != nil || device.state == .transitioning
         return HStack(spacing: MobileSpacing.medium) {
             HStack(alignment: .firstTextBaseline, spacing: MobileSpacing.medium) {
                 MobileStatusGlyph(tone: changing ? .working : .idle, symbol: "smartphone")
@@ -153,7 +154,7 @@ struct MachineDevicesPage: View {
                 }
             }
             Spacer(minLength: 8)
-            if !changing && device.state == "shutdown" && device.canBoot {
+            if !changing && device.state == .shutdown && device.canBoot {
                 Button {
                     Task { await devices.boot(device) }
                 } label: {
@@ -170,14 +171,14 @@ struct MachineDevicesPage: View {
 
     @ViewBuilder private func menu(_ device: MachineDevice) -> some View {
         Menu("Open as view") {
-            ForEach(projects.listed, id: \.stableID) { project in
-                Button(project.text("name", fallback: String(localized: "Untitled project"))) {
+            ForEach(projects.listed, id: \.projectId) { project in
+                Button(project.name) {
                     Task { await open(device, in: project) }
                 }
             }
         }
         .disabled(projects.listed.isEmpty)
-        if device.state == "shutdown" && device.canBoot {
+        if device.state == .shutdown && device.canBoot {
             Button(String(localized: "Start"), lucideIcon: "power") { Task { await devices.boot(device) } }
         }
         if device.booted && device.canShutdown {
@@ -185,12 +186,11 @@ struct MachineDevicesPage: View {
         }
     }
 
-    /// Puts the device in a project as a view, or finds the one it has, and opens it there.
-    private func open(_ device: MachineDevice, in project: JSONValue) async {
+    private func open(_ device: MachineDevice, in project: ProjectSummary) async {
         opening = device.id
         defer { opening = nil }
         let workspace = MobileWorkspace(
-            session: session, projectID: project.text("projectId"), summary: project)
+            session: session, projectID: project.projectId, summary: project)
         workspace.start()
         await workspace.open()
         guard workspace.ready else {
@@ -198,7 +198,7 @@ struct MachineDevicesPage: View {
             workspace.stop()
             return
         }
-        var id = DeviceViews.existing(in: workspace.views, device: device)
+        var id = DeviceViews.existing(in: workspace.storedViews, device: device)
         if id == nil {
             let view = DeviceViews.view(for: device)
             await workspace.edit { $0.setting("views", .array($0.list("views") + [view])) }
@@ -214,19 +214,18 @@ struct MachineDevicesPage: View {
     }
 }
 
-/// A device that runs: its picture, read-only, beside its name, Open as view and Shut down.
 private struct RunningDeviceCard: View {
     let device: MachineDevice
     let busy: Bool
     let opening: Bool
-    let projects: [JSONValue]
-    let open: (JSONValue) -> Void
+    let projects: [ProjectSummary]
+    let open: (ProjectSummary) -> Void
     let shutdown: () -> Void
     @State private var preview: MachineDevicePreview
 
     init(
-        client: any MachineRequesting, device: MachineDevice, busy: Bool, opening: Bool, projects: [JSONValue],
-        open: @escaping (JSONValue) -> Void, shutdown: @escaping () -> Void
+        client: any MachineRequesting, device: MachineDevice, busy: Bool, opening: Bool, projects: [ProjectSummary],
+        open: @escaping (ProjectSummary) -> Void, shutdown: @escaping () -> Void
     ) {
         self.device = device
         self.busy = busy
@@ -249,8 +248,8 @@ private struct RunningDeviceCard: View {
                     .font(.caption).foregroundStyle(MobileStyle.muted)
                 HStack(spacing: 6) {
                     Menu {
-                        ForEach(projects, id: \.stableID) { project in
-                            Button(project.text("name", fallback: String(localized: "Untitled project"))) { open(project) }
+                        ForEach(projects, id: \.projectId) { project in
+                            Button(project.name) { open(project) }
                         }
                     } label: {
                         if opening {

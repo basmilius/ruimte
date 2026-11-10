@@ -29,16 +29,17 @@ import XCTest
         await model.refresh()
         XCTAssertEqual(model.limits, machine.snapshot)
         XCTAssertNil(model.problem)
-        machine.snapshot = .object([
-            "providers": .array([
-                .object([
-                    "kind": .string("claude"), "account": .object(["id": .string("work"), "label": .string("Work")]),
-                    "checkedAt": .number(1_793_340_000_000), "source": .string("probe"),
-                    "windows": .array([
-                        .object(["id": .string("session"), "label": .string("Session"), "used": .number(0.35)])
-                    ]),
-                    "unavailable": .object(["reason": .string("failed"), "message": .string("CLI did not answer")]),
-                ])
+        machine.snapshot = LimitsMachine.limits([
+            .object([
+                "kind": .string("claude"), "account": .object(["id": .string("work"), "label": .string("Work")]),
+                "checkedAt": .number(1_793_340_000_000),
+                "windows": .array([
+                    .object([
+                        "id": .string("session"), "kind": .string("session"), "label": .string("Session"),
+                        "used": .number(0.35), "resetsAt": .null, "durationMs": .null,
+                    ])
+                ]),
+                "unavailable": .object(["reason": .string("failed"), "message": .string("CLI did not answer")]),
             ])
         ])
         await record("limits-phone", machine: machine, width: 390)
@@ -88,7 +89,7 @@ import XCTest
         let model = UsageLimitsModel(client: machine)
         let loading = Task { await model.load() }
         await fulfillment(of: [entered], timeout: 1)
-        machine.snapshot = .object(["providers": .array([])])
+        machine.snapshot = LimitsMachine.limits([])
         await model.refresh()
         machine.release()
         await loading.value
@@ -111,7 +112,7 @@ import XCTest
         for refused in [false, true] {
             let old = LimitsMachine()
             let next = LimitsMachine()
-            next.snapshot = .object(["providers": .array([])])
+            next.snapshot = LimitsMachine.limits([])
             let model = UsageLimitsModel(client: old)
             let entered = expectation(description: "Old machine read entered")
             old.entered = { entered.fulfill() }
@@ -141,7 +142,7 @@ import XCTest
 }
 
 @MainActor private final class LimitsMachine: MachineRequesting {
-    var requests: [String] = []
+    var requests: [WireRequest] = []
     var refreshes = 0
     var hold = false
     var holdSnapshot = false
@@ -149,31 +150,35 @@ import XCTest
     var entered: (() -> Void)?
     var connection: (@MainActor @Sendable (Bool) -> Void)?
     private var continuation: CheckedContinuation<Void, Never>?
-    var snapshot = JSONValue.object([
-        "providers": .array([
-            .object([
-                "kind": .string("claude"), "checkedAt": .number(1_000), "source": .string("probe"),
-                "windows": .array([]), "unavailable": .null,
-            ])
-        ])
-    ])
+    var snapshot = LimitsMachine.limits([.object(["kind": .string("claude"), "checkedAt": .number(1_000)])])
+
+    /// `usage.limits` as a machine writes it; an entry names the fields it is about and the rest takes defaults.
+    static func limits(_ entries: [JSONValue]) -> UsageLimits {
+        let defaults: [String: JSONValue] = [
+            "plan": .null, "source": .string("probe"), "windows": .array([]), "cost": .null, "unavailable": .null,
+        ]
+        let providers = entries.map { entry in
+            JSONValue.object(defaults.merging(entry.objectValue ?? [:]) { _, given in given })
+        }
+        return JSONValue.object(["providers": .array(providers)]).usageLimits
+    }
 
     func release() {
         continuation?.resume()
         continuation = nil
     }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append(type)
-        let captured = snapshot
-        if type == "usage.limits", holdSnapshot {
+        let captured = try JSONValue(encoding: snapshot)
+        if type == .usageLimits, holdSnapshot {
             holdSnapshot = false
             await withCheckedContinuation { continuation in
                 self.continuation = continuation
                 entered?()
             }
         }
-        if type == "usage.refreshLimits" {
+        if type == .usageRefreshLimits {
             refreshes += 1
             if hold {
                 hold = false
@@ -184,19 +189,27 @@ import XCTest
             }
             if refuse { throw MachineClientError.invalid("CLI unavailable") }
         }
-        if type == "usage.summary" {
+        if type == .usageSummary {
             return .object([
                 "from": .string("2026-10-30"), "to": .string("2026-10-30"), "resolution": .string("day"),
-                "buckets": .array([]),
+                "timeZone": .string("Europe/Amsterdam"), "buckets": .array([]), "models": .array([]),
+                "projects": .array([]), "sessions": .number(0), "roots": .array([]),
+                "scan": .object([
+                    "at": .number(0), "files": .number(0), "changedFiles": .number(0), "durationMs": .number(0),
+                    "running": .bool(false), "failed": .bool(false),
+                ]),
+                "pricing": .object(["source": .string("none"), "fetchedAt": .null, "models": .number(0)]),
+                "rate": .null,
             ])
         }
-        if type == "accounts.list" {
+        if type == .accountsList {
             return .object([
                 "accounts": .object(["work": .object(["kind": .string("claude"), "label": .string("Work")])]),
+                "statuses": .array([AccountsWire.status("work")]),
                 "loginCommands": .object(["claude": .string("claude auth login")]),
             ])
         }
-        return type == "usage.limits" ? captured : snapshot
+        return type == .usageLimits ? captured : try JSONValue(encoding: snapshot)
     }
 
     func observeConnection(_ handler: @escaping @MainActor @Sendable (Bool) -> Void) -> () -> Void {
@@ -204,5 +217,5 @@ import XCTest
         handler(true)
         return { [weak self] in self?.connection = nil }
     }
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

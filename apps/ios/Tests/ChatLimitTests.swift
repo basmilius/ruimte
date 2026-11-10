@@ -79,7 +79,7 @@ import XCTest
         XCTAssertNil(model.continueTarget)
         await model.readLimits(unread: true, now: Date(timeIntervalSince1970: 1))
         XCTAssertEqual(model.continueTarget?.id, "work")
-        XCTAssertEqual(machine.requests.map(\.0), ["usage.limits"])
+        XCTAssertEqual(machine.requests.map(\.0), [.usageLimits])
         model.info = info(limit: .object(["kind": .string("overload")]))
         XCTAssertNil(model.continueTarget)
     }
@@ -99,12 +99,12 @@ import XCTest
         await displayFrames(3)
         XCTAssertEqual(model.continueTarget?.id, "work")
         XCTAssertEqual(model.continueTargets.map(\.id), ["work", "spare"])
-        XCTAssertEqual(machine.requests.map(\.0), ["usage.limits"])
+        XCTAssertEqual(machine.requests.map(\.0), [.usageLimits])
         model.connected = false
         await displayFrames(2)
         model.connected = true
         await displayFrames(3)
-        XCTAssertEqual(machine.requests.map(\.0), ["usage.limits", "usage.limits"])
+        XCTAssertEqual(machine.requests.map(\.0), [.usageLimits, .usageLimits])
         capture(window, name: "usage-limit-account-continuation")
     }
 
@@ -119,7 +119,7 @@ import XCTest
         await model.readLimits(unread: true, now: start)
         await model.readLimits(unread: true, now: start.addingTimeInterval(60))
         await model.readLimits(unread: true, now: start.addingTimeInterval(301))
-        XCTAssertEqual(machine.requests.filter { $0.0 == "usage.refreshLimits" }.count, 2)
+        XCTAssertEqual(machine.requests.filter { $0.0 == .usageRefreshLimits }.count, 2)
     }
 
     func testContinuingInPlaceStaysAndInAForkOpensIt() async {
@@ -153,7 +153,7 @@ import XCTest
         let machine = LimitMachine()
         let model = ChatModel(client: machine, chatID: "chat", machineID: "mac")
         await model.setResumeAtReset(false)
-        XCTAssertEqual(machine.requests.last?.0, "chat.configure")
+        XCTAssertEqual(machine.requests.last?.0, .chatConfigure)
         XCTAssertEqual(machine.requests.last?.1, .object(["chatId": .string("chat"), "resumeAtReset": .bool(false)]))
     }
 
@@ -168,7 +168,7 @@ import XCTest
 }
 
 @MainActor private final class LimitMachine: MachineRequesting {
-    var requests: [(String, JSONValue)] = []
+    var requests: [(WireRequest, JSONValue)] = []
     var fork = false
     var refuses = false
     var workRead = true
@@ -178,11 +178,11 @@ import XCTest
         ProviderAccountEntry(id: "spare", kind: "claude", label: "Personal", state: "ready"),
     ])
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
         if refuses { throw MachineClientError.server(code: "chat-busy", message: "Busy") }
         switch type {
-        case "usage.limits", "usage.refreshLimits":
+        case .usageLimits, .usageRefreshLimits:
             let window = JSONValue.object([
                 "id": .string("session"), "kind": .string("session"), "label": .string("Session"),
                 "used": .number(0.2), "resetsAt": .null, "durationMs": .null,
@@ -191,14 +191,14 @@ import XCTest
                 "providers": .array(
                     ["work", "spare"].map { id in
                         .object([
-                            "kind": .string("claude"), "account": .object(["id": .string(id)]), "plan": .null,
+                            "kind": .string("claude"), "account": .object(["id": .string(id), "label": .string(id)]), "plan": .null,
                             "checkedAt": .number(workRead ? 1 : 0), "source": .string("probe"),
                             "windows": .array([window.setting("used", .number(id == "work" ? 0.2 : 0.4))]),
                             "cost": .null, "unavailable": .null,
                         ])
                     })
             ])
-        case "chat.continueOn":
+        case .chatContinueOn:
             guard fork else { return .object(["chatId": .string("chat")]) }
             return .object(["chatId": .string("fork-chat"), "fork": .object(["nodeId": .string("fork-node")])])
         default:
@@ -206,5 +206,5 @@ import XCTest
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

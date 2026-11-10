@@ -3,7 +3,7 @@ import { Mic, Square, X } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useRef, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { useKeyOf } from '@/shell/shortcut-overrides';
+import { useKeyOf } from '@/surface/shortcut-overrides';
 import { cancelDictation, observeSpeech, registerDictationTarget, toggleDictation, useDictation, type DictationInsertion } from './controller';
 import { DictationButton } from './DictationButton';
 

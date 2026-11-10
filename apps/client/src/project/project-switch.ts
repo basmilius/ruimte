@@ -2,12 +2,11 @@ import { messageOf } from '@adecore/ui';
 import type { ProjectSummary } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
-import { TransportError } from '@/transport/transport';
+import { TransportError, fireAndForget } from '@/transport-api/transport';
 
 /* Long enough that a switch on a machine that is already connected never flashes a screen, short enough that a wait is never silent. */
 export const REVEAL_DELAY_MS = 300;
 
-/* Why a switch failed: the window's own words for a refusal it knows, the machine's sentence for the rest. */
 function failureOf(e: unknown): string {
     if (e instanceof TransportError && e.code === 'project-ids-taken') {
         return i18next.t('project:error.idsTaken');
@@ -15,33 +14,26 @@ function failureOf(e: unknown): string {
     return messageOf(e, i18next.t('project:error.couldNotOpen'));
 }
 
-/* What a switch is on its way to, with whatever the cached list knew about it to name it on screen. */
 export interface SwitchTarget {
     endpointId: string;
     /* The project from the cached list, or null for a folder, a new project, or a project the list does not have. */
     summary: ProjectSummary | null;
     folder: string | null;
-    /* What a new project is to be called. */
     name: string | null;
 }
 
 export type SwitchState =
     | { kind: 'idle' }
-    /* `visible` turns on after `REVEAL_DELAY_MS`; before that the screen draws nothing. */
     | { kind: 'connecting' | 'opening' | 'returning'; target: SwitchTarget; visible: boolean }
-    /* `step` says whether the machine never answered or answered and the project would not open. */
     | { kind: 'failed'; target: SwitchTarget; reason: string; step: 'connecting' | 'opening' };
 
 export type SwitchOutcome = 'done' | 'failed' | 'cancelled' | 'replaced';
 
 export interface SwitchContext {
-    /* Aborts when the person cancels or another switch takes over; the run stops at its next step. */
     signal: AbortSignal;
-    /* The machine answered, and what is left is opening the project on it. */
     opening(): void;
 }
 
-/* One try at a switch. `back` undoes whatever `steps` moved, and knows best what that was. */
 export interface SwitchRun {
     steps(context: SwitchContext): Promise<void>;
     back(): Promise<void>;
@@ -125,14 +117,13 @@ export class ProjectSwitch {
         return entry !== null && state.kind === 'failed' ? this.start(entry.target, entry.make) : null;
     }
 
-    /* The way back from a failure. It undoes what the run moved, then leaves the screen to what is open. */
     async back(): Promise<void> {
         const { entry, state } = this;
         if (entry === null || state.kind !== 'failed') {
             return;
         }
         this.set({ kind: 'returning', target: state.target, visible: true });
-        await entry.run.back().catch(() => undefined);
+        await fireAndForget('entry.run.back', entry.run.back());
         this.finish(entry);
     }
 
@@ -158,7 +149,7 @@ export class ProjectSwitch {
                 return 'replaced';
             }
             // Only after the run stopped, since what it had on the wire would otherwise land on top of the way back.
-            await entry.run.back().catch(() => undefined);
+            await fireAndForget('entry.run.back', entry.run.back());
             this.finish(entry);
             return 'cancelled';
         }

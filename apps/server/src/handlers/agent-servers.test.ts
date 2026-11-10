@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { writeFile } from 'node:fs/promises';
 import type { ServerFrame } from '@ruimte/contracts';
-import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
-import { sha256, zip } from '../language/test-archives.ts';
+import { sha256, zip } from '../disk/test-archives.ts';
+import { Dispatcher } from '../dispatcher.ts';
 import { AcpServerInstall, parseAcpServerRelease } from '../providers/acp-server.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
-import { registerAgentServerHandlers } from './agent-servers.ts';
+import type { ClientAccess } from '../wire.ts';
+import { agentServersArea } from './agent-servers.ts';
 import { askOnce } from './test-helpers.ts';
 
 const ARCHIVE = zip([{ path: 'agy_acp_server.par', text: 'server' }]);
@@ -36,7 +37,9 @@ beforeEach(async () => {
         }
     });
     dispatcher = new Dispatcher();
-    registerAgentServerHandlers(dispatcher, { of: (kind) => (kind === 'antigravity' ? server : undefined), installed: (kind) => invalidated.push(kind) });
+    agentServersArea({
+        servers: { of: (kind) => (kind === 'antigravity' ? server : undefined), installed: (kind) => invalidated.push(kind) }
+    }).handlers?.(dispatcher);
 });
 
 const OWNER: ClientAccess = { reachability: 'loopback', sessionId: null };

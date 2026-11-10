@@ -4,30 +4,28 @@ import { ArrowDownToLine, ChartNoAxesColumn, RotateCw, Search, Settings } from '
 import { useTranslation } from 'react-i18next';
 import { desktop, hasOverlayControls } from '@/desktop/bridge';
 import { LaunchChip } from '@/launches/LaunchChip';
-import { useConnectionDotShown } from '@/shell/connection-dot';
-import { ConnectionDot } from '@/shell/ConnectionDot';
-import { askMachineUpdateAgain, showsPendingRestart } from '@/shell/machine-update';
+import { askMachineUpdateAgain, showsPendingRestart } from '@/machine-ui/machine-update';
+import { useBackgroundServiceState } from '@/machine-ui/use-background-service';
+import { useConnectionDotShown } from '@/machines/connection-dot';
+import { ConnectionDot } from '@/machines/ConnectionDot';
 import { PanelControls } from '@/shell/PanelControls';
 import { useToolbarPanels } from '@/shell/panels';
-import { useKeyOf } from '@/shell/shortcut-overrides';
-import { useBackgroundServiceState } from '@/shell/use-background-service';
+import { useUsagePeekShown } from '@/shell/usage-peek';
 import { isScratchProject, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { hasUpdate, useUpdates } from '@/state/updates';
+import { useKeyOf } from '@/surface/shortcut-overrides';
+import { usageDialog } from '@/usage/dialog';
 import { useVoice } from '@/voice/state';
 import { VoiceButton } from '@/voice/VoiceButton';
 
 /* Below the window controls Linux draws over the top right, which stand as tall as the top row. */
 const OVERLAY_INSET_PX = 47;
 
-/*
- * The shell's tools, in one column at the window's right edge: the palette, the launches, the panels and
- * Routines, and at the foot the connection, Voice, Usage and Settings. A panel closes from its own button here.
- */
 export function ShellRail() {
     const { t } = useTranslation('shell');
     const paletteOpen = useUi((s) => s.paletteOpen);
-    const usagePeek = useUi((s) => s.usagePeek);
+    const usagePeek = useUsagePeekShown((s) => s.shown);
     const paletteKey = useKeyOf('palette');
     const settingsKey = useKeyOf('settings');
     // The Chats project has no folder to show, so no files, git, devices or launches either.
@@ -70,7 +68,7 @@ export function ShellRail() {
             <VoiceButton />
             {(voice || update || restartPending || connectionDot) && <WorkspaceRailSeparator />}
             <UsageLimitsCard side="left" open={usagePeek}>
-                <IconButton icon={ChartNoAxesColumn} label={t('sidebar.usage')} tooltip={false} onClick={() => useUi.getState().setUsageOpen(true)} />
+                <IconButton icon={ChartNoAxesColumn} label={t('sidebar.usage')} tooltip={false} onClick={() => usageDialog.set(true)} />
             </UsageLimitsCard>
             <IconButton
                 icon={Settings}

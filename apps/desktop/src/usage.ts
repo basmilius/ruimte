@@ -1,5 +1,6 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { writeAtomicSync } from '@adecore/utils/fs';
 import type { MachineMode } from '@ruimte/desktop-bridge';
 import {
     isoWeekOf,
@@ -45,7 +46,7 @@ const StateSchema = z.object({
 });
 
 type UsageState = z.infer<typeof StateSchema>;
-export type DesktopUsageDay = z.infer<typeof DaySchema>;
+type DesktopUsageDay = z.infer<typeof DaySchema>;
 
 export interface DesktopUsageStore {
     read(): string | null;
@@ -64,9 +65,7 @@ export function fileDesktopUsageStore(path: string): DesktopUsageStore {
         },
         write: (text) => {
             mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-            const temp = `${path}.tmp`;
-            writeFileSync(temp, text, { mode: 0o600 });
-            renameSync(temp, path);
+            writeAtomicSync(path, text);
         }
     };
 }
@@ -87,7 +86,7 @@ export function usageSettingOf(text: string | null): boolean | null {
     }
 }
 
-export interface UsageGateFacts {
+interface UsageGateFacts {
     // A release build (`telemetryBuild`); a checkout, `bun dev` and a local build count nothing.
     release: boolean;
     mode: MachineMode;
@@ -304,7 +303,7 @@ export function desktopUsageDayOf(record: DesktopUsageDay, cohortWeek: string, p
 }
 
 /* Newest first, as many days as fit in the ingest's size and at most a week per batch. */
-export function desktopUsageBatchesOf(days: readonly UsageDesktopDay[]): UsageDesktopBatch[] {
+function desktopUsageBatchesOf(days: readonly UsageDesktopDay[]): UsageDesktopBatch[] {
     const batches: UsageDesktopDay[][] = [];
     for (const day of days) {
         const last = batches.at(-1);
@@ -321,7 +320,6 @@ function batchBytes(days: readonly UsageDesktopDay[]): number {
     return new TextEncoder().encode(JSON.stringify({ days })).byteLength;
 }
 
-/* An answer of the ingest other than 2xx. */
 export class UsageSendError extends Error {
     readonly status: number;
 

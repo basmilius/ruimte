@@ -51,7 +51,7 @@ const FOREIGN_UID = -2;
 /* POSIX hands an orphan to init; the monitor recognizes a stray by that parent. */
 const ORPHAN_PPID = 1;
 
-export interface NativeProcess {
+interface NativeProcess {
     pid: number;
     ppid: number;
     /* Microseconds since the epoch; 0 for a process the system started without a time. */

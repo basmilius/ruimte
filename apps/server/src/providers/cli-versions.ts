@@ -5,7 +5,6 @@ import { runProcess, type ProcessResult } from '@adecore/agents';
 import type { AgentKind, CliInstallMethod, CliVersion, ProviderInfo } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 
-/* How a CLI's executable came to the machine, read from where it really is. */
 interface CliInstall {
     method: CliInstallMethod;
     // The formula, cask or npm package the route knows it by.
@@ -114,7 +113,6 @@ function compareIdentifiers(left: string, right: string): number {
     return left < right ? -1 : left > right ? 1 : 0;
 }
 
-/* What a route answers for the newest version it offers. */
 interface Latest {
     latest: string | null;
     // Homebrew says itself whether an install is behind, which also weighs a revision the version does not show.
@@ -124,7 +122,6 @@ interface Latest {
 /* Runs a package manager; the default spawns it, a test answers from memory. */
 export type VersionRun = (command: string[], env: Record<string, string>) => Promise<ProcessResult>;
 
-/* Throws the last lines a failed install or update printed. */
 export function throwOnFailure(command: string[], result: ProcessResult): void {
     if (result.exitCode !== 0) {
         const said = (result.stderr.trim() || result.stdout.trim()).split('\n').slice(-6).join('\n');

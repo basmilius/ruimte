@@ -1,8 +1,5 @@
-import { lazyNamed } from '@adecore/ui';
 import { useState } from 'react';
-
-// The workspace draws chats, and an extension may draw on the start screen too, so the body comes only once one is asked for.
-const ChatBody = lazyNamed(() => import('@/nodes/ChatBody'), 'ChatBody');
+import { ExtensionChatBody } from './extension-chat-body';
 
 /*
  * A chat of the project in front as Ruimte draws it, thread and composer, inside a surface of an extension. It has the
@@ -21,7 +18,7 @@ export function ExtensionChat({ id }: { id: string }) {
                 }
             }}
         >
-            <ChatBody id={id} focused={focused} />
+            {ExtensionChatBody !== null && <ExtensionChatBody id={id} focused={focused} />}
         </div>
     );
 }

@@ -20,8 +20,10 @@ import type { ChatMoveInfoResult, ChatMoveRefusal, ProjectSummary } from '@ruimt
 import { AtSign, Folder, FolderInput, FolderOpen, FolderPlus, TriangleAlert, type LucideIcon } from 'lucide-react';
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { desktop } from '@/desktop/bridge';
+import type { MoveChatRequest } from '@/project/dialogs';
+import { moveChatDialog } from '@/project/dialogs';
 import {
     baseName,
     defaultOwnFiles,
@@ -36,12 +38,11 @@ import {
 } from '@/project/move-chat-form';
 import { moveCandidatesOf } from '@/project/move-targets';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
-import { useViewNodes } from '@/project/view-nodes';
+import { useEndpointId } from '@/state/current-endpoint';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
-import { useEndpointId } from '@/state/keys';
 import { useProjectList } from '@/state/project-list';
-import { useUi, type MoveChatRequest } from '@/state/ui';
-import { useTransport } from '@/transport/context';
+import { useViewNodes } from '@/state/view-nodes';
+import { useTransport } from '@/workspace/context';
 
 type OwnFiles = 'move' | 'leave';
 
@@ -61,8 +62,8 @@ const STALE_CODES: readonly string[] = ['move-refused', 'chat-busy', 'files-conf
  */
 export function MoveChatDialog() {
     const { t } = useTranslation('project');
-    const request = useUi((s) => s.moveChatDialog);
-    const close = (): void => useUi.getState().setMoveChatDialog(null);
+    const request = moveChatDialog.useRequest((request) => request);
+    const close = (): void => moveChatDialog.set(null);
     return (
         <Dialog.Root
             open={request !== null}

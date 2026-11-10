@@ -1,4 +1,5 @@
-import type { ChatInfo } from '@adecore/agent-contracts';
+import { chatActivity, type ChatInfo } from '@adecore/agent-contracts';
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { ProjectSummarySchema } from './project.ts';
 import { isAbsolutePath } from './stored-path.ts';
@@ -119,13 +120,19 @@ export function chatIsWorking(
         return false;
     }
     const heldByCard = ownCard && info.status === 'needs-you' && (info.activeTurnId ?? null) === null;
-    return (
-        info.status === 'running' ||
-        (info.status === 'needs-you' && !heldByCard) ||
-        info.delegating === true ||
-        (info.background?.length ?? 0) > 0 ||
-        info.goal?.status === 'active' ||
-        (info.requests?.length ?? 0) > 0 ||
-        (info.queue?.length ?? 0) > 0
-    );
+    // The card holds the chat with nobody asked, so the rest (a subagent, a goal, a queue) is judged as if it were idle.
+    return chatActivity({ ...info, status: heldByCard ? 'idle' : info.status }) !== 'settled';
 }
+
+export const CHAT_MOVE_REQUEST_SCHEMAS = {
+    'chat.move': { payload: ChatMovePayloadSchema, result: ChatMoveResultSchema },
+    'chat.moveInfo': { payload: ChatMoveInfoPayloadSchema, result: ChatMoveInfoResultSchema },
+    // The suggestions of agents in Chats that a person has not answered yet, and a person's no to one.
+    'chat.proposals': { payload: EmptySchema, result: ProjectProposalsSchema },
+    'chat.proposalDecline': { payload: ProjectProposalDeclinePayloadSchema, result: ProjectProposalDeclineResultSchema }
+} as const;
+
+export const CHAT_MOVE_EVENT_SCHEMAS = {
+    // Every open suggestion of an agent in Chats, to every client, whenever the list changes.
+    'chat.proposals': ProjectProposalsSchema
+} as const;

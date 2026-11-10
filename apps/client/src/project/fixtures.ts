@@ -8,7 +8,6 @@ export function fakeStorage(storage: Map<string, string>) {
     };
 }
 
-/* A machine of the list that a project can be on, reachable over the network. */
 export function lanEndpoint(id: string, label: string = id): Endpoint {
     return { id, label, httpBaseUrl: `http://${id}`, wsBaseUrl: `ws://${id}`, reachability: 'lan', daemonId: id, daemonPublicKey: null };
 }

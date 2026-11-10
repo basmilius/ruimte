@@ -6,7 +6,6 @@ export function median(samples: readonly number[]): number {
     return samples.toSorted((left, right) => left - right)[Math.floor(samples.length / 2)]!;
 }
 
-/* The milliseconds the page's main thread spent on tasks between two `Performance.getMetrics`. */
 export function cpuTaskMs(before: CdpMetrics, after: CdpMetrics): number {
     const seconds = (sample: CdpMetrics): number => sample.metrics.find((row) => row.name === 'TaskDuration')?.value ?? 0;
     return 1000 * (seconds(after) - seconds(before));
@@ -48,7 +47,6 @@ export function spawnBenchDaemon(home: string, port: number, binary?: string) {
     );
 }
 
-/* Asks politely, then kills after five seconds. */
 export async function stopBenchDaemon(child: Bun.Subprocess): Promise<void> {
     child.kill('SIGTERM');
     const timeout = setTimeout(() => child.kill('SIGKILL'), 5000);

@@ -1,24 +1,24 @@
-import { rectDropPreview, SplitView, tabDropPreview, tabGapAt, type SplitCommand, type SplitRect, type TabDrop } from '@adecore/ui';
+import { rectDropPreview, SplitView, tabDropPreview, tabGapAt, type SplitRect, type TabDrop } from '@adecore/ui';
 import { isCanvasView } from '@ruimte/contracts';
 import { useEffect, useState, type DragEvent as ReactDragEvent, type ReactElement } from 'react';
-import { placeFilesAction, placeViewAction } from '@/actions/client-actions';
-import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
-import { finderPaths } from '@/canvas/finder-drop';
+import { placeFilesAction, placeViewAction } from '@/action-port/person-actions';
 import { PromptStack } from '@/canvas/PromptStack';
-import { carriesDatabase, droppedDatabase } from '@/database/drag';
-import { dropDatabaseTab } from '@/database/open';
-import { carriesArtifact, dropArtifactTab, droppedArtifact } from '@/output/artifact-drag';
-import { cellsMoved, registerCell } from '@/shell/cell-rects';
-import { isLooseView } from '@/shell/cell-view';
-import { CellOverlay } from '@/shell/CellOverlay';
+import { cellsMoved, registerCell } from '@/layout/cell-rects';
+import { canDropAsTab, canMoveCell, canSplit, cellAt, cellViewIds, locateView, MIN_SHARE, splitTree, type CellAt, type SplitZone } from '@/layout/split';
+import { clampTabLeft, DEFAULT_TAB_WIDTH, gapLeft, positionAfterLifting } from '@/layout/tab-drop';
 import { CellToolbar } from '@/shell/CellToolbar';
-import { cellForPane, columnForSplit, coreLayout } from '@/shell/core-layout';
-import { carriesDiff, droppedDiff } from '@/shell/diff-drag';
 import { Dock } from '@/shell/Dock';
-import { hideDropPreview, showDropPreview } from '@/shell/drop-preview';
-import { canDropAsTab, canMoveCell, canSplit, cellAt, cellViewIds, locateView, MIN_SHARE, type CellAt, type SplitZone } from '@/shell/split';
-import { clampTabLeft, DEFAULT_TAB_WIDTH, gapLeft, positionAfterLifting } from '@/shell/tab-drop';
 import { useCellView } from '@/shell/use-cell-view';
+import { ViewSurface } from '@/shell/ViewHost';
+import { currentEndpointId } from '@/state/current-endpoint';
+import { canStandInCell, useDocument } from '@/state/document';
+import { CellViewContext } from '@/state/workspace-stores';
+import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/surface/canvas/drop';
+import { finderPaths } from '@/surface/canvas/finder-drop';
+import { isLooseView } from '@/surface/cell-view';
+import { CellOverlay } from '@/surface/CellOverlay';
+import { hideDropPreview, showDropPreview } from '@/surface/drop-preview';
+import { carriesTabDrag, takeTabDrop } from '@/surface/tab-drags';
 import {
     carriesView,
     draggedViewId,
@@ -31,13 +31,7 @@ import {
     shapeOf,
     shapeRect,
     zoneAt
-} from '@/shell/view-drag';
-import { ViewSurface } from '@/shell/ViewHost';
-import { canStandInCell, useDocument } from '@/state/document';
-import { tabKey, useFiles } from '@/state/files';
-import { currentEndpointId } from '@/state/keys';
-import { useSettings } from '@/state/settings';
-import { CellViewContext } from '@/state/workspace-stores';
+} from '@/surface/view-drag';
 
 /*
  * What a surface inside a cell says about the paths dropped on it, so the grid does not carry a list
@@ -62,7 +56,6 @@ function takesDrop(target: EventTarget | null, fromFileManager: boolean): string
     return null;
 }
 
-/* The box of an element in the grid's coordinates, which the drop preview is drawn in. */
 function boxInGrid(element: Element, grid: DOMRect): SplitRect {
     const box = element.getBoundingClientRect();
     return { x: Math.round(box.left - grid.left), y: Math.round(box.top - grid.top), width: Math.round(box.width), height: Math.round(box.height) };
@@ -103,7 +96,6 @@ type LiftedTabDrop = TabDrop & { lift: number };
 /* The gap between a cell's title and the tab that would stand after it, the same as the bar's own spacing. */
 const TITLE_GAP = 8;
 
-/* The cell's box, kept up to date for the parking layer: one observer per cell, cleared with it. */
 const observers = new Map<string, ResizeObserver>();
 
 function watchCell(viewId: string, element: HTMLElement | null): void {
@@ -132,7 +124,6 @@ function Cell({
     at: CellAt;
     viewId: string;
     focused: boolean;
-    /* Maximized: drawn over the whole grid, while its own place in the column stays held. */
     filling: boolean;
     /* Behind a maximized cell. Still mounted, so its session and its page keep running. */
     hidden: boolean;
@@ -168,7 +159,7 @@ function Cell({
             return null;
         }
         const moving = dragging();
-        if (!carriesDiff(event.dataTransfer) && !carriesDatabase(event.dataTransfer) && !carriesArtifact(event.dataTransfer) && !usesPaths(event)) {
+        if (!carriesTabDrag(event.dataTransfer) && !usesPaths(event)) {
             if (moving === null || draggingWholeCell() || !canStandInCell(useDocument.getState(), moving) || !canDropAsTab(layout, at, moving)) {
                 return null;
             }
@@ -197,7 +188,6 @@ function Cell({
         };
     };
 
-    /* The position among the tabs the drop leaves, which only a host has an order for. */
     const tabIndexFor = (gap: number, moving: string): number | null => {
         const layout = useDocument.getState().layout;
         const cell = layout === null ? null : cellAt(layout, at);
@@ -219,8 +209,7 @@ function Cell({
         if (layout === null) {
             return null;
         }
-        // A change dropped in the middle of a cell opens as a tab of it, whatever the cell holds.
-        if (here === 'center' && (carriesDiff(event.dataTransfer) || carriesDatabase(event.dataTransfer) || carriesArtifact(event.dataTransfer))) {
+        if (here === 'center' && carriesTabDrag(event.dataTransfer)) {
             return here;
         }
         // The bar of a host carries every tab, so the question is whether the whole cell fits there.
@@ -262,24 +251,11 @@ function Cell({
         }
         event.preventDefault();
         event.stopPropagation();
-        const database = droppedDatabase(event.dataTransfer);
-        if (database !== null) {
-            dropDatabaseTab(database, at, 'center', tabIndexFor(tab.gap, dragging() ?? ''));
-            return;
-        }
-        const artifact = droppedArtifact(event.dataTransfer);
-        if (artifact !== null) {
-            dropArtifactTab(artifact, at, 'center', tabIndexFor(tab.gap, dragging() ?? ''));
+        if (takeTabDrop(event.dataTransfer, at, 'center', (moving) => tabIndexFor(tab.gap, moving))) {
             return;
         }
         if (usesPaths(event)) {
             placeFilesAction(pathsOf(event), viewId, 'center', tabs === undefined ? null : tab.gap);
-            return;
-        }
-        const diff = droppedDiff(event.dataTransfer);
-        if (diff !== null) {
-            const key = tabKey(diff.path, diff.view);
-            useFiles.getState().dropDiff(diff.path, diff.view, useSettings.getState().filesTabLimit, at, 'center', tabIndexFor(tab.gap, key));
             return;
         }
         const dragged = draggedViewId(event.dataTransfer);
@@ -298,24 +274,12 @@ function Cell({
         }
         event.preventDefault();
         event.stopPropagation();
-        const database = droppedDatabase(event.dataTransfer);
-        if (database !== null) {
-            dropDatabaseTab(database, at, here);
-            return;
-        }
-        const artifact = droppedArtifact(event.dataTransfer);
-        if (artifact !== null) {
-            dropArtifactTab(artifact, at, here);
+        if (takeTabDrop(event.dataTransfer, at, here)) {
             return;
         }
         if (paths.length > 0) {
             // A dropped file stays out of the sidebar.
             placeFilesAction(paths, viewId, here);
-            return;
-        }
-        const diff = droppedDiff(event.dataTransfer);
-        if (diff !== null) {
-            useFiles.getState().dropDiff(diff.path, diff.view, useSettings.getState().filesTabLimit, at, here);
             return;
         }
         const dragged = draggedViewId(event.dataTransfer);
@@ -358,7 +322,6 @@ function Cell({
                 style={{ borderRadius: 'inherit' }}
                 data-maximized={filling ? '' : undefined}
                 className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
-                // A press anywhere in a cell is what moves the focus to it, the way it moves between panels.
                 onPointerDownCapture={() => useDocument.getState().focusCellAt(at)}
                 /* A press inside a <webview> never reaches this page, only the focus it takes does. The
                    preview of an HTML file is one, and Tab into anything in the cell counts the same. */
@@ -369,7 +332,6 @@ function Cell({
                     if (overBar(event)) {
                         const tab = tabDropFor(event);
                         if (tab !== null) {
-                            // Only a prevented dragover accepts the drop.
                             event.preventDefault();
                         }
                         event.dataTransfer.dropEffect = tab === null ? 'none' : usesPaths(event) ? dropEffectFor(event.dataTransfer.effectAllowed) : 'move';
@@ -410,42 +372,9 @@ function Cell({
     );
 }
 
-function applyCommand(command: SplitCommand): void {
-    const document = useDocument.getState();
-    if (command.type === 'focus') {
-        const at = cellForPane(command.paneId);
-        if (at !== null) {
-            document.focusCellAt(at);
-        }
-    } else if (command.type === 'equalizeAxis') {
-        if (command.axis === 'horizontal') {
-            document.evenColumns(1, true);
-        } else {
-            document.layout?.columns.forEach((_, column) => document.evenCells(column, 1, true));
-        }
-    } else if (command.type === 'resize' || command.type === 'equalize') {
-        const column = columnForSplit(command.splitId);
-        if (command.type === 'resize') {
-            if (column === null) {
-                document.resizeColumns(command.sizes);
-            } else {
-                document.resizeCells(column, command.sizes);
-            }
-        } else {
-            const at = (command.index ?? 0) + 1;
-            const all = command.index === undefined;
-            if (column === null) {
-                document.evenColumns(at, all);
-            } else {
-                document.evenCells(column, at, all);
-            }
-        }
-    }
-}
-
 /*
  * The views of one project beside each other: columns of cells, at most three by three. The model
- * and its limits are pure (`shell/split.ts`); this only draws what the layout says and hands a drag
+ * and its limits are pure (`layout/split.ts`); this only draws what the layout says and hands a drag
  * back to it.
  */
 export function SplitGrid(): ReactElement | null {
@@ -469,18 +398,21 @@ export function SplitGrid(): ReactElement | null {
     if (layout === null) {
         return null;
     }
-    const value = coreLayout(layout, maximizedId);
+    const value = splitTree(layout, maximizedId);
     return (
         <SplitView
             data-split-grid
             value={value}
-            onValueChange={(_, command) => applyCommand(command)}
+            onValueChange={(_, command) => useDocument.getState().runSplitCommand(command)}
             showTabs={false}
             minimumSize={{ width: 0, height: 0 }}
             minimumResizeShare={MIN_SHARE}
             onViewBoundsChange={() => cellsMoved()}
             renderView={(viewId, info) => {
-                const at = cellForPane(info.paneId)!;
+                const at = locateView(layout, viewId);
+                if (at === null) {
+                    return null;
+                }
                 return (
                     <Cell
                         at={at}

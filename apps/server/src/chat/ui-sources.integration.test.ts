@@ -14,7 +14,6 @@ let reads: string[];
 let hosts: UiSourceHosts;
 const info = (): ChatInfo => ({ chatId: 'writer', cwd: folder }) as ChatInfo;
 
-/* A status of a folder in no repository, with what a test sets. */
 function statusOf(overrides: Partial<GitStatus> = {}): GitStatus {
     return {
         repo: false,
@@ -269,8 +268,4 @@ test('git.status reads the branch, the counts and the first files of a busy chec
     expect(status).toMatchObject({ branch: 'main', ahead: 2, counts: { staged: 667, unstaged: 1333, untracked: 0, conflicted: 0 }, truncated: true });
     expect((status as { files: unknown[] }).files).toHaveLength(50);
     expect(JSON.stringify(status).length).toBeLessThan(64 * 1024);
-});
-
-test('a chat gets no place lookup, so a place with only an address reads as not found', () => {
-    expect(ruimteUiSources(hosts).place).toBeUndefined();
 });

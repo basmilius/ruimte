@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises';
 import { ManualClock } from '@adecore/agents/testing';
 import type { ProjectContent } from '@ruimte/contracts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, itemsOf, releasedProject, turnsOf, invokeTool, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, itemsOf, releasedProject, turnsOf, invokeTool, type TestDaemon } from '../testing/test-daemon.ts';
 import { NO_REPLY_NOTICE } from './notices.ts';
 
 /* Two chats a person opened beside each other, plus a note nothing links to: a message travels only along a line. */
@@ -54,7 +54,6 @@ afterEach(async () => {
 
 async function boot(): Promise<TestDaemon> {
     const daemon = await bootTestDaemon({ home, store, clock });
-    daemon.worker.start();
     running.push(daemon);
     return daemon;
 }
@@ -80,7 +79,6 @@ async function notify(daemon: TestDaemon, from: string, to: string, text: string
     return invokeTool(daemon, from, 'notify', { id: to, text });
 }
 
-/* The line notify prints, which every answer ends with the same way. */
 function notified(id: string, at: string, detail: string, title: string): string {
     return `notified\t${id}\t${at}\t${detail}; ${NO_REPLY_NOTICE}\t${title}`;
 }

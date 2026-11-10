@@ -22,7 +22,6 @@ extension View {
         }
     }
 
-    /// An alert with OK that shows `failure` while it holds a message.
     func failureAlert(_ title: LocalizedStringKey, _ failure: Binding<String?>) -> some View {
         alert(title, isPresented: failure.isPresent()) {
             Button("OK") { failure.wrappedValue = nil }
@@ -138,7 +137,7 @@ struct SubagentListPage: View {
 extension ChatModel {
     func stopSubagent(_ item: ChatSubagentItem) async throws {
         _ = try await client.request(
-            "chat.stopSubagent", payload: target(["toolUseId": .string(item.toolUseId)]))
+            .chatStopSubagent, payload: target(["toolUseId": .string(item.toolUseId)]))
     }
 
     /// The question before a task stops, since that ends the agent working on it and every agent that one opened.
@@ -177,7 +176,7 @@ extension ChatModel {
 
 private struct SubagentEntryRow: View {
     let item: ChatSubagentItem
-    let task: JSONValue?
+    let task: AgentTask?
     let work: [ChatItem]
     let client: any MachineRequesting
     let chatID: String
@@ -248,6 +247,7 @@ struct SubagentStatusIcon: View {
         Group {
             switch word {
             case .running: Spinner(size: size)
+            case .paused: Image(lucide: "circle-pause", size: size)
             case .done: Image(lucide: "circle-check", size: size)
             case .failed: Image(lucide: "circle-x", size: size)
             case .cancelled: Image(lucide: "circle-slash", size: size)
@@ -262,7 +262,7 @@ struct SubagentStatusIcon: View {
 /// How long a running entry has run, ticking each second while it is on screen, or when a settled one ended.
 struct SubagentEntryTime: View {
     let item: ChatSubagentItem
-    let task: JSONValue?
+    let task: AgentTask?
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {

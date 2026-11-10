@@ -1,6 +1,6 @@
 import { CodedError } from '@adecore/agents';
 import { isWithin } from '@adecore/utils/path';
-import { realOrSelf } from './real-path.ts';
+import { realOrSelf } from '../disk/real-path.ts';
 
 class OutsideError extends CodedError<'outside-project'> {}
 

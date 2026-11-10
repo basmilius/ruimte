@@ -1,5 +1,7 @@
 import type { Machine } from '@ruimte/pulsar';
-import type { AccountStatus } from '@/pulsar/account';
+
+/* `unavailable` is a page with no platform to sign in on: a browser on an origin the address book does not send a login back to. */
+export type AccountStatus = 'unavailable' | 'loading' | 'signed-out' | 'signing-in' | 'signed-in';
 
 /*
  * The web client at `station.ruimte.app`, built with `vite build --mode station`. Its origin serves

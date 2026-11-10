@@ -1,7 +1,7 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers } from '@ruimte/actions';
 import { flagOf, isCanvasView, withFlags, type ProjectContent } from '@ruimte/contracts';
-import { viewLines } from '../tools/views.ts';
+import { viewLines } from '../canvas/views.ts';
 import type { ServerActionContext } from './context.ts';
 
 /* Whether an id names a view or a node of this project; a view id and a node id are one namespace. */

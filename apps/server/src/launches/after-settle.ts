@@ -1,13 +1,12 @@
 import { join, relative } from 'node:path';
-import { runningInBackground } from '@adecore/agents/chat';
+import { type ChatCore, runningInBackground } from '@adecore/agents/chat';
 import type { AgentEvent } from '@adecore/agents/host';
 import { isWithin } from '@adecore/utils/path';
-import type { ChatItem, ChatTurnItem, LaunchStatus } from '@ruimte/contracts';
+import { chatActivity, type ChatItem, type ChatTurnItem, type LaunchStatus } from '@ruimte/contracts';
 import { z } from 'zod';
-import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
 import { JsonFileStore } from '../json-file-store.ts';
-import type { OutboxEntry, OutboxWork, RunAfterSettleEntry } from '../outbox/outbox.ts';
+import type { OutboxWork, RunAfterSettleEntry } from '../outbox/outbox.ts';
 import type { LaunchRunner, WorktreeRun } from './runner.ts';
 import type { AfterSettleChoices, LaunchStore, ResolvedLaunch } from './store.ts';
 
@@ -75,19 +74,17 @@ export class AfterSettleStore implements AfterSettleChoices {
 
 export interface AfterSettleDeps {
     store: AfterSettleStore;
-    chats: Pick<ChatManager, 'get' | 'isLoading' | 'deliverNote'>;
+    chats: Pick<ChatCore, 'get' | 'isLoading' | 'deliverNote'>;
     launches: Pick<LaunchStore, 'inWorktree'>;
     runner: Pick<LaunchRunner, 'startIn'>;
-    /* The project that places a chat node; null for none. */
     projectOf(chatId: string): string | null;
     /* Whether another machine gave this chat its task, which never starts a command of this machine's project on its own. */
     isPeerChat(chatId: string): boolean;
     folderOf(projectId: string): string | null;
     /* The worktrees of the repository the folder is in, without the main checkout and without one that is gone. */
     worktreesOf(folder: string): Promise<string[]>;
-    /* The top of the repository the folder is in. */
     repoRootOf(folder: string): Promise<string>;
-    entries(): readonly OutboxEntry[];
+    ofKind(kind: 'run-after-settle'): readonly RunAfterSettleEntry[];
     enqueue(projectId: string, target: string, work: OutboxWork): Promise<void>;
 }
 
@@ -218,15 +215,7 @@ export class AfterSettleLaunches {
             return null;
         }
         const { info } = chat;
-        const held =
-            info.activeTurnId !== null ||
-            info.status === 'needs-you' ||
-            (info.requests ?? []).length > 0 ||
-            info.goal?.status === 'active' ||
-            (info.background ?? []).length > 0 ||
-            (info.queue ?? []).length > 0 ||
-            info.delegating === true;
-        if (held) {
+        if (chatActivity(info) !== 'settled') {
             return null;
         }
         const items = chat.thread.list();
@@ -235,7 +224,7 @@ export class AfterSettleLaunches {
     }
 
     private owes(chatId: string, turnId: string): boolean {
-        return this.deps.entries().some((entry) => entry.kind === 'run-after-settle' && entry.target === chatId && entry.payload.turnId === turnId);
+        return this.deps.ofKind('run-after-settle').some((entry) => entry.target === chatId && entry.payload.turnId === turnId);
     }
 
     private async worktreeOf(projectId: string, chatId: string): Promise<string | null> {

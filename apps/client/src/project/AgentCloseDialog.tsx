@@ -1,9 +1,9 @@
 import { PromptDialog } from '@adecore/ui';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
-import { useAgentCloseAsk } from '@/project/agent-project-watch';
-import { closeWarning } from '@/project/project-sessions';
+import { ignoreRefusal, perform } from '@/action-port/perform';
+import { closeWarning } from '@/clients/project/project-sessions';
+import { useAgentCloseAsk } from '@/project/agent-asks';
 
 /* The close confirmation of the project menu, raised by an agent's `project_close`; the person's answer is the close. */
 export function AgentCloseDialog() {

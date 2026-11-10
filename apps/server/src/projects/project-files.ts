@@ -1,5 +1,5 @@
 import { mkdir, readFile, rename, rm } from 'node:fs/promises';
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { settled, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
 import type { Serializer } from '@adecore/utils/async';
 import { isNotFound } from '@adecore/utils/errors';
@@ -7,7 +7,11 @@ import { fileExists, writeAtomic } from '@adecore/utils/fs';
 import { climbsOut } from '@adecore/utils/path';
 import { isRecord } from '@adecore/utils/record';
 import {
+    DIAGRAMS_DIR,
     DIAGRAM_VERSION,
+    DRAWINGS_DIR,
+    PRIVATE_DIR,
+    PROJECT_DIR,
     DRAWING_VERSION,
     PROJECT_PRIVATE_VERSION,
     PROJECT_VERSION,
@@ -34,41 +38,13 @@ import {
     type SharedFileRead,
     mapDesignChats
 } from '@ruimte/contracts';
+import { retryingRename } from '../disk/busy-retry.ts';
 import { errorText } from '../error-text.ts';
-import { retryingRename } from '../fs/busy-retry.ts';
 
-export const PROJECT_DIR = '.ruimte';
 export const PROJECT_FILE = 'project.json';
-/* The mirror of `.ruimte` that holds what belongs to one person. The `.gitignore` beside it names this one line. */
-export const PRIVATE_DIR = 'private';
 const GITIGNORE_FILE = '.gitignore';
 // Editors and git write in bursts; one event per burst is what a client wants.
 export const WATCH_SETTLE_MS = 150;
-// One file per drawing view, in a directory of their own: `.ruimte` is read by people and by git,
-// and its top level stays the two files the daemon documents.
-const DRAWINGS_DIR = 'drawings';
-// The same rule for diagrams, in a directory beside it, so a file name never says which kind it is.
-const DIAGRAMS_DIR = 'diagrams';
-// A person's database consoles, plain `.sql` files under `private`, so git never sees them.
-export const CONSOLES_DIR = 'consoles';
-// A folder per design, under `private` until its view is shared (`designFolderOf`).
-const DESIGNS_DIR = 'designs';
-
-/*
- * Whether a path inside a project folder, as the names below that folder, is Ruimte's own state, which a
- * file request never writes, creates, moves or deletes: the files there change only through their own
- * requests and revs. A person's consoles and the folders of designs are the exception, since they are
- * files like any other: a design's chat and the person's edits write its pages.
- */
-export function isRuimteState(segments: readonly string[]): boolean {
-    if (segments[0] !== PROJECT_DIR) {
-        return false;
-    }
-    if (segments[1] === DESIGNS_DIR && segments.length > 2) {
-        return false;
-    }
-    return !(segments[1] === PRIVATE_DIR && (segments[2] === CONSOLES_DIR || segments[2] === DESIGNS_DIR) && segments.length > 3);
-}
 
 /*
  * `unreadable` is broken JSON or a shape no version of ours ever wrote; `invalid` is a file that
@@ -237,8 +213,179 @@ export function watchDirectories(seams: WatchSeams, dirs: readonly string[], hea
         .filter((watcher) => watcher !== null);
 }
 
+export interface FolderChain {
+    /* Starts the whole chain again when its first folder has no watcher, as one that was missing; true when it has one now. */
+    retry(): boolean;
+    close(): void;
+}
+
+/*
+ * Watches a chain of folders, each the parent of the next. A watcher on a folder that was removed never hears
+ * again, and a folder that is not there yet has none, so whenever a folder hears the name of the next one (or no
+ * name), the watch starts again from that next folder down. `heard` gets the depth of the folder that heard.
+ *
+ * With `moved`, the nearest folder above the first one that is there is watched too: it hears the first folder go,
+ * which lets go of the watcher that died with it and calls `moved(false)`, and come back, which arms the chain again
+ * and calls `moved(true)`. When that folder goes itself, as a disk that is ejected, the one above it takes over.
+ */
+export function watchFolderChain(
+    seams: WatchSeams,
+    folders: readonly string[],
+    heard: (depth: number, filename: string | null) => void,
+    moved?: (there: boolean) => void
+): FolderChain {
+    const watchers: (DirectoryWatcher | null)[] = folders.map(() => null);
+    const root = folders[0]!;
+    let anchor: { folder: string; watcher: DirectoryWatcher } | null = null;
+    let closed = false;
+
+    const arm = (from: number): void => {
+        for (let depth = from; depth < folders.length; depth++) {
+            watchers[depth]?.close();
+            watchers[depth] = watchOne(depth);
+        }
+    };
+
+    const watchOne = (depth: number): DirectoryWatcher | null => {
+        const next = folders[depth + 1];
+        const [watcher] = watchDirectories(seams, [folders[depth]!], (filename) => {
+            if (closed) {
+                return;
+            }
+
+            if (next !== undefined && (filename === null || filename === basename(next))) {
+                arm(depth + 1);
+            }
+
+            heard(depth, filename);
+        });
+
+        // An error is how a watcher whose folder went away ends, so it keeps no place a retry would take for a live one.
+        watcher?.on('error', () => {
+            if (watchers[depth] !== watcher) {
+                return;
+            }
+
+            watchers[depth] = null;
+
+            if (depth === 0 && !closed) {
+                moved?.(false);
+            }
+        });
+
+        return watcher ?? null;
+    };
+
+    // The name of the folder on the way from `folder` down to the first one, which is what `folder` hears come or go.
+    const towardRoot = (folder: string): string => {
+        let below = root;
+
+        while (dirname(below) !== folder && dirname(below) !== below) {
+            below = dirname(below);
+        }
+
+        return basename(below);
+    };
+
+    const anchorFrom = (start: string): void => {
+        anchor?.watcher.close();
+        anchor = null;
+
+        for (let folder = start; ; folder = dirname(folder)) {
+            const toward = towardRoot(folder);
+            const [watcher] = watchDirectories(seams, [folder], (filename) => {
+                // No name says nothing of the first folder while it is watched, and the parent of a project hears its siblings too.
+                if (!closed && (filename === toward || (filename === null && watchers[0] === null))) {
+                    rootMoved(folder);
+                }
+            });
+
+            if (watcher !== undefined) {
+                anchor = { folder, watcher };
+                watcher.on('error', () => anchorGone(watcher, folder));
+
+                return;
+            }
+
+            if (dirname(folder) === folder) {
+                return;
+            }
+        }
+    };
+
+    const anchorAt = (): void => anchorFrom(dirname(root));
+
+    // The folder above takes over, since a folder that went may still answer a watch for a moment; it hears the one that went come back.
+    const anchorGone = (watcher: DirectoryWatcher, folder: string): void => {
+        if (closed || anchor?.watcher !== watcher) {
+            return;
+        }
+
+        if (dirname(folder) === folder) {
+            anchor = null;
+        } else {
+            anchorFrom(dirname(folder));
+        }
+
+        rearm();
+    };
+
+    const rearm = (): void => {
+        const had = watchers[0] !== null;
+
+        arm(0);
+
+        const has = watchers[0] !== null;
+
+        if (had !== has) {
+            moved?.(has);
+        }
+    };
+
+    const rootMoved = (heardIn: string): void => {
+        if (heardIn !== dirname(root)) {
+            anchorAt();
+        }
+
+        rearm();
+    };
+
+    arm(0);
+
+    if (moved !== undefined) {
+        anchorAt();
+    }
+
+    return {
+        retry: () => {
+            if (closed || watchers[0] !== null) {
+                return false;
+            }
+
+            if (moved !== undefined && anchor?.folder !== dirname(root)) {
+                anchorAt();
+            }
+
+            arm(0);
+
+            return watchers[0] !== null;
+        },
+        close: () => {
+            closed = true;
+            anchor?.watcher.close();
+            anchor = null;
+
+            for (const watcher of watchers) {
+                watcher?.close();
+            }
+
+            watchers.fill(null);
+        }
+    };
+}
+
 /* A store of a shared and a private file in `.ruimte` that takes in an edit it did not write itself. */
-export interface OutsideEdits {
+interface OutsideEdits {
     seams: WatchSeams;
     writes: Serializer;
     folder: string;
@@ -331,7 +478,6 @@ export function inPersonalOrder<T extends { id: string }>(entries: readonly T[],
         .map(({ entry }) => entry);
 }
 
-/* Reads `.ruimte/project.json` on any version there has been. */
 export function readSharedFile(path: string): Promise<JsonDocumentRead<SharedFileRead>> {
     return readJsonDocument(path, parseSharedFile);
 }
@@ -397,7 +543,6 @@ function serializeView(view: unknown, indent: string): string {
     return `${indent}{\n${fields.join(',\n')}\n${indent}}`;
 }
 
-/* A nested object pretty-printed, indented to sit one level into the file. */
 function nested(value: unknown): string {
     return JSON.stringify(value, null, 2).split('\n').join(`\n${INDENT}`);
 }

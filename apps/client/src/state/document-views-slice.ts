@@ -3,6 +3,9 @@ import {
     isDesignView,
     isOpenableView,
     withDuplicatedView,
+    isPathBelow,
+    resolveStoredPath,
+    storedPathOf,
     withMovedView,
     withRenamedView,
     withView,
@@ -10,13 +13,12 @@ import {
     withoutView,
     type ProjectView
 } from '@ruimte/contracts';
-import { basenameOf, isPathBelow, resolveStoredPath, storedPathOf } from '@/shell/panels/files-tree';
-import { closeTab, collapseTabHosts, locateView, singleLayout } from '@/shell/split';
+import { closeTab, collapseTabHosts, locateView, singleLayout } from '@/layout/split';
+import { basenameOf } from '@/paths/file-path';
 import { nextId } from '@/state/canvas';
 import type { DocumentState } from '@/state/document';
 import type { DocumentKit } from '@/state/document-model';
 
-/* The list of views: adding, renaming, deleting with an undo, duplicating and reordering them. */
 export function createDocumentViewsSlice({
     set,
     get,

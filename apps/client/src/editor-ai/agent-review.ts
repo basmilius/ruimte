@@ -4,10 +4,10 @@ import { replaceAllLines, replacedWords, type LineReplacement } from '@adecore/e
 import { splitLines } from '@adecore/merge';
 import type { ProvenanceReviewState, ProvenanceRun } from '@ruimte/contracts';
 import { createStore, type StoreApi } from 'zustand';
-import { lineRangeLabel, selectionBlock } from '@/chat/selection-to-chat';
+import { registerAgentReview } from '@/language/agent-review-registry';
+import { lineRangeLabel, selectionBlock } from '@/language/selection-to-chat';
 import { useReviewFocus } from '@/state/review-focus';
 import type { AgentChanges, DrawFrame } from './agent-changes';
-import { registerAgentReview } from './agent-review-registry';
 import { unchangedFolds } from './review-folds';
 
 const ROW_OWNER = 'review';
@@ -33,7 +33,6 @@ export interface ReviewSource {
     chatExists(chatId: string): boolean;
     /* The file as a chat reads it, such as `src/score.ts`. */
     label(): string;
-    /* The language of a code fence, when the file has one. */
     language(): string | null;
 }
 
@@ -55,7 +54,6 @@ interface ReviewState {
     items: readonly ReviewItem[];
     /* The change a step landed on last, as an index into `items`. */
     current: number | null;
-    /* The change whose comment is being typed. */
     commenting: { runId: string; text: string } | null;
 }
 

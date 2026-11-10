@@ -18,7 +18,6 @@ export interface BrokerLimits {
     iceRequestsPerMinute: number;
     /* How often a socket is pinged; one that answers nothing for twice this long is dropped. */
     heartbeatMs: number;
-    /* How long a socket may take from opening to a verified signature. */
     helloTimeoutMs: number;
 }
 

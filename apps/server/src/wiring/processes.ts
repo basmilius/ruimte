@@ -1,7 +1,8 @@
 import { isIdle, type MachineWork } from '@ruimte/contracts';
 import { HOOK_EVENTS } from '../agents/hooks.ts';
+import type { Area } from '../area.ts';
 import type { ServerConfig } from '../config.ts';
-import type { DeviceDriver } from '../devices/agent-driver.ts';
+import type { NodeLifecycle } from '../node-lifecycle.ts';
 import { holdsForeground } from '../processes/foreground.ts';
 import { DarwinListenerProbe } from '../processes/listeners.ts';
 import { ProcessMonitor } from '../processes/monitor.ts';
@@ -12,7 +13,6 @@ import { SelfUpdater, buildFileOf, readBuildFile } from '../service/self-update.
 import { childCounter, workOf } from '../service/work.ts';
 import { SessionPorts } from '../sessions/ports.ts';
 import { BUILD } from '../version.ts';
-import type { AgentWorkBundle } from './agent-work.ts';
 import type { AgentsBundle } from './agents.ts';
 import type { LaunchesBundle } from './launches.ts';
 
@@ -29,16 +29,15 @@ interface ProcessesInput {
     config: ServerConfig;
     machineId: string;
     agents: AgentsBundle;
-    work: AgentWorkBundle;
     launches: LaunchesBundle;
     projects: ProjectStore;
-    /* Frees the devices an agent claimed once its terminal ended. */
-    devices: Pick<DeviceDriver, 'nodeClosed'>;
+    /* Told when a terminal ended, for whatever holds something for it. */
+    lifecycle: NodeLifecycle;
     /* Ends the daemon for a reason it logs. */
     shutdown(reason: string): Promise<void>;
 }
 
-export async function wireProcesses({ config, machineId, agents, work, launches, projects, devices, shutdown }: ProcessesInput): Promise<ProcessesBundle> {
+export async function wireProcesses({ config, machineId, agents, launches, projects, lifecycle, shutdown }: ProcessesInput): Promise<ProcessesBundle> {
     const { sessions, chats } = agents;
     const sampler = await createSampler(process.platform, config.home);
     const sessionPorts = new SessionPorts({
@@ -98,11 +97,15 @@ export async function wireProcesses({ config, machineId, agents, work, launches,
         processes.nudge();
         selfUpdate.nudge();
         if (sessions.get(sessionId)?.exited !== false) {
-            work.tasks.terminals.ended(sessionId);
-            devices.nodeClosed(sessionId);
+            void lifecycle.emit('exited', sessionId);
         }
     };
     sessions.isAgentGone = (sessionId) => processes.isAgentGone(sessionId);
     sessions.holdsForeground = holdsForeground;
     return { sessionPorts, processes, selfUpdate, machineWork };
+}
+
+/* The self update belongs to no request; its monitors are the areas of `handlers/processes.ts` and `handlers/session-ports.ts`. */
+export function processesLifecycle({ selfUpdate }: ProcessesBundle): Area {
+    return { name: 'self update', stop: [{ phase: 'halt', label: 'Stopping the self update', run: () => selfUpdate.stop() }] };
 }

@@ -1,19 +1,19 @@
 import type { EditorRange } from '@adecore/editor';
-import { shikiLanguageOf, type HoverView } from '@adecore/editor-react';
+import { shikiLanguageOf, type EditorLanguage, type HoverView } from '@adecore/editor-react';
 import { isEmptyRange } from '@adecore/editor-react/models';
 import { messageOf } from '@adecore/ui';
+import { explainPrompt } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
-import { editorAssistClientFor, type EditorAssistClient } from '@/editor-assist/client';
+import { type EditorAssistClient } from '@/editor-assist/client';
 import { functionSourceAt, isFunctionSignature } from '@/editor-assist/explain-model';
-import { explainPrompt } from '@/editor-assist/prompts';
+import { promptFileName } from '@/editor-assist/prompt-file';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { promptFileName, type HostLanguage as EditorLanguage } from './host-language';
+import { orNull } from '@/transport-api/transport';
 
 const TOAST_ID = 'language-explain';
 
-/* What the card of a symbol or selection says about its explanation. */
 interface ExplainView {
     /* The card offers an Explain link: the setting is on, the symbol is a function and the machine has the model. */
     readonly offered: boolean;
@@ -46,14 +46,19 @@ export class ExplainFeature {
     private controller: AbortController | null = null;
     private subject: HoverView['subject'] | null = null;
 
-    constructor(language: EditorLanguage, client: EditorAssistClient = editorAssistClientFor(language.project.transport)) {
+    constructor(language: EditorLanguage, client: EditorAssistClient) {
         this.language = language;
         this.client = client;
-        const unsubscribe = language.popups.subscribe((state, previous) => {
-            if (state.hover?.subject !== previous.hover?.subject) {
+        const card = language.popups.slot('hover');
+        let previous = card.get();
+        const unsubscribe = card.subscribe(() => {
+            const hover = card.get();
+            const changed = hover?.subject !== previous?.subject;
+            previous = hover;
+            if (changed) {
                 this.reset();
-                if (state.hover !== null) {
-                    this.offer(state.hover);
+                if (hover !== null) {
+                    this.offer(hover);
                 }
             }
         });
@@ -92,7 +97,7 @@ export class ExplainFeature {
 
     /* Explains the symbol of the card that is up: its source, found from its definition, with its signature and documentation. */
     async explainCard(): Promise<void> {
-        const hover = this.language.popups.getState().hover;
+        const hover = this.language.popups.slot('hover').get();
         const info = hover?.info;
         if (hover == null || info == null) {
             return;
@@ -130,7 +135,7 @@ export class ExplainFeature {
             return;
         }
         this.language.hover.showRange(range);
-        const subject = this.language.popups.getState().hover?.subject;
+        const subject = this.language.popups.slot('hover').get()?.subject;
         if (subject !== undefined) {
             await this.run(subject, { language: shikiLanguageOf(this.language.languageId), file: this.fileOf(this.language.uri), source });
         }
@@ -141,7 +146,7 @@ export class ExplainFeature {
         if (!service.supports('textDocument/documentSymbol', this.language.uri)) {
             return null;
         }
-        const symbols = await service.documentSymbols(this.language.uri).catch(() => null);
+        const symbols = await orNull('service.documentSymbols', service.documentSymbols(this.language.uri));
         return innermostFunction(symbols, line) ?? innermostSymbol(symbols, line);
     }
 
@@ -207,7 +212,6 @@ export function innermostSymbol(symbols: readonly SymbolLike[] | null, line: num
     return found;
 }
 
-/* The innermost method, constructor or function whose lines hold a line. */
 export function innermostFunction(symbols: readonly SymbolLike[] | null, line: number): EditorRange | null {
     let found: EditorRange | null = null;
     const walk = (list: readonly SymbolLike[]): void => {

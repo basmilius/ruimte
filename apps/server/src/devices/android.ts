@@ -14,12 +14,14 @@ import type {
     DeviceTextSize,
     DeviceTool
 } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { locateAndroidSdk, type AndroidSdk } from './android-sdk.ts';
 import { androidTree, parseWmSize } from './android-tree.ts';
 import { runCommand, type CommandResult } from './command.ts';
+import { DeviceError } from './device-error.ts';
 import { isVideo, requireExtension, requireMedia } from './device-paths.ts';
 import type { DeviceTree } from './device-tree.ts';
-import { DeviceError, PASTE_SETTLE_MS, typeInRuns, type DeviceBackend, type DeviceKeyboard, type DeviceSource } from './manager.ts';
+import { PASTE_SETTLE_MS, typeInRuns, type DeviceBackend, type DeviceKeyboard, type DeviceSource } from './manager.ts';
 import { DeviceRecordings } from './recordings.ts';
 
 type AndroidRunner = (command: string, arguments_: string[]) => Promise<CommandResult>;
@@ -372,7 +374,6 @@ export class AndroidBackend implements DeviceBackend {
         return current;
     }
 
-    /* Starts a stopped emulator, with `extra` after the usual arguments. */
     private async start(deviceId: string, extra: readonly string[]): Promise<DeviceInfo> {
         const sdk = this.sdk();
         if (sdk.emulator === null) {
@@ -517,11 +518,11 @@ export class AndroidBackend implements DeviceBackend {
         return this.recordings.stop(
             deviceId,
             async () => {
-                await this.shell(serial, 'pkill -INT screenrecord').catch(() => undefined);
+                await bestEffort('shell', this.shell(serial, 'pkill -INT screenrecord'));
             },
             async (file) => {
                 await this.adbOn(serial, ['pull', RECORDING_ON_DEVICE, file]);
-                await this.shell(serial, `rm -f ${RECORDING_ON_DEVICE}`).catch(() => undefined);
+                await bestEffort('shell', this.shell(serial, `rm -f ${RECORDING_ON_DEVICE}`));
             }
         );
     }
@@ -715,7 +716,6 @@ export class AndroidBackend implements DeviceBackend {
         return this.located;
     }
 
-    /* The first console port no emulator of this backend holds or is starting on. */
     private freeEmulatorPort(): number {
         const used = new Set([...this.avdNames.keys(), ...[...this.booting.values()].map((booting) => booting.serial)]);
         let port = FIRST_EMULATOR_PORT;
@@ -954,7 +954,6 @@ export class AndroidBackend implements DeviceBackend {
         return (await this.adbOn(serial, ['shell', script])).stdout;
     }
 
-    /* adb for one device by its serial. */
     private adbOn(serial: string, arguments_: string[]): Promise<CommandResult> {
         return this.adb(this.sdk(), ['-s', serial, ...arguments_]);
     }

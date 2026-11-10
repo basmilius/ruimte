@@ -1,6 +1,7 @@
 import type { AgentKind, RoutineSkillsResult } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { machineTransport } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { useMachineAnswers } from '@/transport/features';
 
 type Skills = RoutineSkillsResult['skills'];
@@ -18,14 +19,16 @@ export function useRoutineSkills(endpointId: string, projectId: string, provider
             return;
         }
         let stale = false;
-        machineTransport(endpointId)
-            .request('routine.skills', { projectId, provider })
-            .then(({ skills }) => {
-                if (!stale) {
-                    setFound({ key: `${projectId}\n${provider}`, skills });
-                }
-            })
-            .catch(() => undefined);
+        void fireAndForget(
+            'routine.skills',
+            machineTransport(endpointId)
+                .request('routine.skills', { projectId, provider })
+                .then(({ skills }) => {
+                    if (!stale) {
+                        setFound({ key: `${projectId}\n${provider}`, skills });
+                    }
+                })
+        );
         return () => {
             stale = true;
         };

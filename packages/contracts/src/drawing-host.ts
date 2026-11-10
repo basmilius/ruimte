@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { DrawingContentSchema, DrawingDocumentSchema } from '@adecore/drawing/protocol';
 import { z } from 'zod';
 import { ProjectIdSchema, ProjectSaveResultSchema } from './project.ts';
@@ -65,3 +66,14 @@ export const DrawingChangedEventSchema = z.object({
     viewId: z.string().min(1),
     document: DrawingDocumentSchema
 });
+
+export const DRAWING_HOST_REQUEST_SCHEMAS = {
+    'drawing.open': { payload: DrawingTargetPayloadSchema, result: DrawingOpenResultSchema },
+    'drawing.save': { payload: DrawingSavePayloadSchema, result: DrawingSaveResultSchema },
+    'drawing.close': { payload: DrawingTargetPayloadSchema, result: EmptySchema },
+    'drawing.copy': { payload: DrawingCopyPayloadSchema, result: EmptySchema }
+} as const;
+
+export const DRAWING_HOST_EVENT_SCHEMAS = {
+    'drawing.changed': DrawingChangedEventSchema
+} as const;

@@ -35,8 +35,8 @@ struct LaunchOutputPage: View {
             }
             if let output, let status = output.status {
                 // A start makes a fresh session under the same id, so a new start time attaches afresh.
-                TerminalScreen(client: store.client, sessionID: status.sessionID, title: view.launch.name)
-                    .id("\(status.sessionID):\(status.startedAt)")
+                TerminalScreen(client: store.client, sessionID: status.sessionId, title: view.launch.name)
+                    .id("\(status.sessionId):\(status.startedAt)")
             } else {
                 ContentUnavailableView {
                     Label(String(localized: "\(view.launch.name) has not run since the machine started."), lucideIcon: "play", iconSize: 40)

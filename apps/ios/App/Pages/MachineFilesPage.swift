@@ -1,6 +1,7 @@
 import AVKit
 import PDFKit
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import RuimteVoice
 import SwiftUI
@@ -12,10 +13,10 @@ struct MachineFilesPage: View {
     let path: String
     /// The project these files are in, which adds mentions, views of their own and deleting; nil on a machine's files.
     var project: FilesProject?
-    /// The project's repositories, for the git status each row carries.
     var marks: GitRepositories?
     @State private var state = RemotePageState()
-    @AppStorage("ruimte.ios.showHiddenFiles") private var hidden = false
+    @State private var listing: FsListResult?
+    @AppStorage(Settings.showHiddenFiles) private var hidden
     @State private var search = ""
     @State private var selectedEntry: FileDestination?
     @State private var finding = false
@@ -25,9 +26,9 @@ struct MachineFilesPage: View {
         let path: String
         let directory: Bool
     }
-    private var entries: [JSONValue] {
-        state.value?.list("entries").filter {
-            search.isEmpty || $0.text("name").localizedCaseInsensitiveContains(search)
+    private var entries: [FsEntry] {
+        listing?.entries.filter {
+            search.isEmpty || $0.name.localizedCaseInsensitiveContains(search)
         } ?? []
     }
     var body: some View {
@@ -41,26 +42,27 @@ struct MachineFilesPage: View {
                 Button {
                     finding = true
                 } label: {
-                    Label(String(localized: "Find in files"), lucideIcon: "file-search").modifier(MobileSidebarLabel(disclosure: true))
+                    Label(String(localized: "Find in files"), lucideIcon: "file-search").modifier(
+                        MobileSidebarLabel(disclosure: true))
                 }
                 .modifier(MobileSidebarRow())
             }
-            ForEach(entries, id: \.stableID) { entry in
-                let directory = entry.text("kind") == "directory"
-                let mark = fileMarks.mark(path: entry.text("path"), directory: directory)
+            ForEach(entries, id: \.path) { entry in
+                let directory = entry.kind == .directory
+                let mark = fileMarks.mark(path: entry.path, directory: directory)
                 Button {
                     if !directory, let openFile = project?.openFile {
-                        openFile(entry.text("path"), nil)
+                        openFile(entry.path, nil)
                     } else {
-                        selectedEntry = FileDestination(path: entry.text("path"), directory: directory)
+                        selectedEntry = FileDestination(path: entry.path, directory: directory)
                     }
                 } label: {
                     HStack(spacing: 10) {
-                        Image(lucide: FileKinds.icon(name: entry.text("name"), kind: entry.text("kind")), size: 20)
+                        Image(lucide: FileKinds.icon(name: entry.name, kind: entry.kind.rawValue), size: 20)
                             .foregroundStyle(MobileStyle.muted)
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(entry.text("name")).lineLimit(1).truncationMode(.tail)
-                            if let size = entry["size"]?.numberValue {
+                            Text(entry.name).lineLimit(1).truncationMode(.tail)
+                            if let size = entry.size {
                                 Text(mobileByteCount(size)).font(.caption).foregroundStyle(MobileStyle.muted)
                             }
                         }
@@ -73,16 +75,17 @@ struct MachineFilesPage: View {
                     }
                     .modifier(MobileSidebarLabel(disclosure: true))
                 }
-                .modifier(MobileSidebarRow(selected: !directory && entry.text("path") == project?.shownFile))
+                .modifier(MobileSidebarRow(selected: !directory && entry.path == project?.shownFile))
                 .contextMenu { if let project { entryMenu(entry, directory: directory, project: project) } }
             }
-            if state.value != nil && entries.isEmpty {
+            if listing != nil && entries.isEmpty {
                 ContentUnavailableView(
                     search.isEmpty ? String(localized: "Empty folder") : String(localized: "No matching files"),
                     lucideIcon: "folder")
             }
-            if state.value?["truncated"] == .bool(true) {
-                Text("This folder has more entries than the machine can list at once.").font(.footnote).foregroundStyle(MobileStyle.muted)
+            if listing?.truncated == true {
+                Text("This folder has more entries than the machine can list at once.").font(.footnote).foregroundStyle(
+                    MobileStyle.muted)
             }
         }
         .navigationTitle(path == "~" ? String(localized: "Files") : MachinePath(inferring: path).name(path))
@@ -94,7 +97,7 @@ struct MachineFilesPage: View {
             }
         }
         .navigationDestination(isPresented: $finding) {
-            FileGrepPage(client: client, cwd: state.value?.text("path") ?? path, project: project)
+            FileGrepPage(client: client, cwd: listing?.path ?? path, project: project)
         }
         .modifier(FileDeleteConfirmation(client: client, path: $deleting) { Task { await load() } })
         .searchable(text: $search, prompt: "Filter this folder")
@@ -109,20 +112,22 @@ struct MachineFilesPage: View {
         }
         .task(id: "\(path):\(hidden)") {
             await RemotePageLifecycle.run(
-                client: client, events: ["fs.changed"],
-                matches: { event in
-                    let resolved = state.value?.text("path") ?? path
-                    return MachinePath(inferring: resolved).isBelow(resolved, root: event.text("root"))
+                client: client, events: [.fsChanged],
+                matches: RemotePageLifecycle.typed(FsChangedEvent.self) { event in
+                    let resolved = listing?.path ?? path
+                    return MachinePath(inferring: resolved).isBelow(resolved, root: event.root)
                 },
-                subscription: { fsWatch(client, path: state.value?.text("path") ?? path) },
+                watch: { fsWatch(path: listing?.path ?? path) },
                 start: { if path == "~" { await load() } }, load: load)
         }
         .refreshable { await load() }
     }
-    @ViewBuilder private func entryMenu(_ entry: JSONValue, directory: Bool, project: FilesProject) -> some View {
-        let entryPath = entry.text("path")
+    @ViewBuilder private func entryMenu(_ entry: FsEntry, directory: Bool, project: FilesProject) -> some View {
+        let entryPath = entry.path
         if !directory {
-            Button(String(localized: "Open as view"), lucideIcon: "columns-2") { Task { await project.openAsView(entryPath) } }
+            Button(String(localized: "Open as view"), lucideIcon: "columns-2") {
+                Task { await project.openAsView(entryPath) }
+            }
         }
         FileMentionMenu(project: project, path: entryPath, onMentioned: { note = $0 }) {
             Label(String(localized: "Mention in chat"), lucideIcon: "at-sign")
@@ -133,10 +138,13 @@ struct MachineFilesPage: View {
     }
 
     private func load() async {
-        await state.load {
+        await state.read(loaded: listing != nil) { stillTheLatest in
             let resolved = path == "~" ? try await MachinePath.startFolder(client: client) : path
-            return try await client.request(
-                "fs.list", payload: .object(["path": .string(resolved), "depth": .number(1), "hidden": .bool(hidden)]))
+            let result = try await client.request(
+                .fsList, payload: .object(["path": .string(resolved), "depth": .number(1), "hidden": .bool(hidden)])
+            ).decoded(as: FsListResult.self)
+            try stillTheLatest()
+            listing = result
         }
     }
 }
@@ -150,6 +158,7 @@ struct FileContentPage: View {
     /// Whether this page is the file's own view, which then does not offer to open one.
     var isView = false
     @State private var state = RemotePageState()
+    @State private var file: FsReadResult?
     @State private var edit = FileEditModel()
     @State private var changes = FileChangeMarksModel()
     @State private var deleting: String?
@@ -172,39 +181,41 @@ struct FileContentPage: View {
             Group {
                 if edit.editing {
                     editor
-                } else if isHTML, !showSource, initialLine == nil, let value = state.value,
-                    value.text("kind") == "text"
+                } else if isHTML, !showSource, initialLine == nil, let value = file,
+                    value.isText
                 {
                     underStatus {
                         MobileScrollViewport { insets in
-                            HTMLFilePreview(html: value.text("text"), viewportInsets: insets)
+                            HTMLFilePreview(html: value.text, viewportInsets: insets)
                         }
                     }
-                } else if let value = state.value, isMedia(value) {
+                } else if let value = file, isMedia(value) {
                     underStatus { mediaContents(value) }
                         .task(id: versionKey(value)) {
-                            await startPlayer(for: versionKey(value), audio: value.text("mime").hasPrefix("audio/"))
+                            await startPlayer(for: versionKey(value), audio: value.mime.hasPrefix("audio/"))
                         }
-                } else if let value = state.value, let image = shown.image {
+                } else if let value = file, let image = shown.image {
                     underStatus {
                         FileImageView(image: image.image, name: name)
                         FileFooter(items: [
-                            "\(image.pixelWidth) × \(image.pixelHeight)", mobileByteCount(value["size"]?.numberValue),
-                            value.text("mime"),
+                            "\(image.pixelWidth) × \(image.pixelHeight)", mobileByteCount(value.size),
+                            value.mime,
                         ])
                     }
-                } else if let value = state.value, let pdf = shown.pdf {
+                } else if let value = file, let pdf = shown.pdf {
                     underStatus {
                         FilePDFView(document: pdf, page: $pdfPage)
                         FileFooter(items: [
-                            String(localized: "Page \(Format.number(Double(pdfPage))) of \(Format.number(Double(pdf.pageCount)))"),
-                            mobileByteCount(value["size"]?.numberValue), value.text("mime"),
+                            String(
+                                localized:
+                                    "Page \(Format.number(Double(pdfPage))) of \(Format.number(Double(pdf.pageCount)))"),
+                            mobileByteCount(value.size), value.mime,
                         ])
                     }
-                } else if let value = state.value, value.text("kind") == "binary", shown.svg == nil {
+                } else if let value = file, value.isBinary, shown.svg == nil {
                     underStatus {
                         FileFallbackView(
-                            client: client, path: path, mime: value.text("mime"), size: value["size"]?.numberValue,
+                            client: client, path: path, mime: value.mime, size: value.size,
                             reason: shown.unreadable ?? unsupportedReason(value))
                     }
                 } else {
@@ -235,7 +246,7 @@ struct FileContentPage: View {
                 }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                if let project, !edit.editing, state.value != nil {
+                if let project, !edit.editing, file != nil {
                     actionBar(project)
                 }
             }
@@ -251,21 +262,21 @@ struct FileContentPage: View {
             } message: {
                 Text("Your edits are still here. Saving now overwrites the change on the machine.")
             }
-            .task(id: state.value.map(versionKey)) {
-                guard project != nil, state.value != nil else { return }
+            .task(id: file.map(versionKey)) {
+                guard project != nil, file != nil else { return }
                 await changes.load(client: client, path: path)
             }
             .task(id: path) {
                 let style = MachinePath(inferring: path)
                 let parent = style.parent(path)
                 await RemotePageLifecycle.run(
-                    client: client, events: ["fs.changed"],
-                    matches: { style.isBelow(parent, root: $0.text("root")) },
-                    subscription: { fsWatch(client, path: parent) }, load: load)
+                    client: client, events: [.fsChanged],
+                    matches: RemotePageLifecycle.typed(FsChangedEvent.self) { style.isBelow(parent, root: $0.root) },
+                    watch: { fsWatch(path: parent) }, load: load)
             }
             // Only a pause, and not on the way into full screen: the page comes back without reading the file again.
             .onDisappear { if !fullScreen { player?.pause() } }
-            .onChange(of: state.value) { _, _ in
+            .onChange(of: file) { _, _ in
                 if let initialLine { reader.scrollTo(initialLine, anchor: .center) }
             }
         }
@@ -286,26 +297,26 @@ struct FileContentPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 RemotePageStatus(state: state) { Task { await load() } }
-                if let value = state.value {
-                    if value.text("kind") == "text" {
+                if let value = file {
+                    if value.isText {
                         if isMarkdown && !showSource && initialLine == nil {
-                            MarkdownMessage(text: value.text("text")).frame(maxWidth: .infinity, alignment: .leading)
+                            MarkdownMessage(text: value.text).frame(maxWidth: .infinity, alignment: .leading)
                         } else if initialLine != nil || !changes.isEmpty {
                             FileLinesView(
-                                text: value.text("text"), language: value["language"]?.stringValue,
+                                text: value.text, language: value.language,
                                 changes: changes, highlight: initialLine)
                         } else {
                             CodeMessage(
-                                text: value.text("text"),
-                                language: FileKinds.highlightLanguage(value["language"]?.stringValue))
+                                text: value.text,
+                                language: FileKinds.highlightLanguage(value.language))
                         }
                     } else if let svg = shown.svg {
                         SafeSVGPreview(data: svg).frame(minHeight: 360)
-                    } else if value.text("kind") == "too-large" {
+                    } else if value.isTooLarge {
                         ContentUnavailableView(
                             String(localized: "File too large"), lucideIcon: "file-text",
                             description: Text(
-                                "This text file is \(mobileByteCount(value["size"]?.numberValue)). Open it on the machine."
+                                "This text file is \(mobileByteCount(value.size)). Open it on the machine."
                             ))
                     }
                 }
@@ -316,7 +327,8 @@ struct FileContentPage: View {
     private var editor: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let problem = edit.problem, !edit.stale {
-                Label(problem, lucideIcon: "triangle-alert").font(.caption).foregroundStyle(MobileStyle.statusError).padding()
+                Label(problem, lucideIcon: "triangle-alert").font(.caption).foregroundStyle(MobileStyle.statusError)
+                    .padding()
             }
             if edit.saving {
                 HStack(spacing: 10) {
@@ -334,19 +346,20 @@ struct FileContentPage: View {
     }
 
     private var canEdit: Bool {
-        state.value?.text("kind") == "text" && !(isHTML && !showSource && initialLine == nil)
+        file?.isText == true && !(isHTML && !showSource && initialLine == nil)
     }
 
-    /// The file's own menu: edit it, give it a view, mention it, and delete it.
     private func fileMenu(_ project: FilesProject) -> some View {
         Menu {
-            if canEdit, let value = state.value {
+            if canEdit, let value = file {
                 Button(String(localized: "Edit"), lucideIcon: "square-pen") {
-                    edit.begin(text: value.text("text"), mtime: value.number("mtime"))
+                    edit.begin(text: value.text, mtime: value.mtime ?? 0)
                 }
             }
             if !isView {
-                Button(String(localized: "Open as view"), lucideIcon: "columns-2") { Task { await project.openAsView(path) } }
+                Button(String(localized: "Open as view"), lucideIcon: "columns-2") {
+                    Task { await project.openAsView(path) }
+                }
             }
             FileMentionMenu(project: project, path: path, onMentioned: { note = $0 }) {
                 Label(String(localized: "Mention in chat"), lucideIcon: "at-sign")
@@ -362,7 +375,6 @@ struct FileContentPage: View {
         }
     }
 
-    /// The bar under a file: mention it in a chat, its diff against the last commit, and copying it.
     private func actionBar(_ project: FilesProject) -> some View {
         VStack(spacing: 6) {
             if let note {
@@ -378,7 +390,7 @@ struct FileContentPage: View {
                     .disabled(changes.diff == nil)
                 GitBarButton(title: String(localized: "Copy"), prominent: false) {
                     UIPasteboard.general.string =
-                        state.value?.text("kind") == "text" ? state.value?.text("text") : path
+                        file?.isText == true ? file?.text : path
                 }
             }
         }
@@ -391,40 +403,40 @@ struct FileContentPage: View {
         }
     }
 
-    private func isMedia(_ value: JSONValue) -> Bool {
-        let mime = value.text("mime")
-        return value.text("kind") == "binary" && (mime.hasPrefix("video/") || mime.hasPrefix("audio/"))
+    private func isMedia(_ value: FsReadResult) -> Bool {
+        let mime = value.mime
+        return value.isBinary && (mime.hasPrefix("video/") || mime.hasPrefix("audio/"))
     }
 
-    private func unsupportedReason(_ value: JSONValue) -> String {
-        if !FileKinds.machineServes(mime: value.text("mime")) {
+    private func unsupportedReason(_ value: FsReadResult) -> String {
+        if !FileKinds.machineServes(mime: value.mime) {
             return String(localized: "The machine only sends images, video, sound and PDFs to this app.")
         }
-        if !FileKinds.fitsInMemory(size: value["size"]?.numberValue) {
+        if !FileKinds.fitsInMemory(size: value.size) {
             return String(localized: "This app opens files up to \(mobileByteCount(WireConstants.bytesReadMaxBytes)).")
         }
         return String(localized: "This app has no preview for this file.")
     }
 
-    @ViewBuilder private func mediaContents(_ value: JSONValue) -> some View {
+    @ViewBuilder private func mediaContents(_ value: FsReadResult) -> some View {
         if let player {
             if let audio {
                 FileAudioPlayer(player: player, name: name, info: audio)
-                FileFooter(items: [mobileByteCount(value["size"]?.numberValue), value.text("mime")])
+                FileFooter(items: [mobileByteCount(value.size), value.mime])
             } else {
                 FilePlayerView(player: player, fullScreen: $fullScreen)
             }
         } else if let mediaProblem {
             FileFallbackView(
-                client: client, path: path, mime: value.text("mime"), size: value["size"]?.numberValue,
+                client: client, path: path, mime: value.mime, size: value.size,
                 reason: mediaProblem)
         } else {
             MobileLoadingRow(String(localized: "Loading")).frame(maxHeight: .infinity)
         }
     }
 
-    private func versionKey(_ value: JSONValue) -> String {
-        "\(value["mtime"]?.numberValue ?? 0)-\(value["size"]?.numberValue ?? 0)"
+    private func versionKey(_ value: FsReadResult) -> String {
+        "\(value.mtime ?? 0)-\(value.size)"
     }
 
     /// In the ranges the player asks for, so it starts at once and a file of any size plays. The asset is loaded
@@ -477,58 +489,86 @@ struct FileContentPage: View {
     }
 
     private func load() async {
-        await state.load {
-            var result = try await client.request("fs.read", payload: .object(["path": .string(path)]))
-            // Text past one frame comes as bytes, up to what a phone draws; bytes that are not UTF-8 stay too large.
-            if result.text("kind") == "too-large", (result["size"]?.numberValue ?? .infinity) <= largeTextMaxBytes {
-                let resource = try await client.readResource(.object(["kind": .string("file"), "path": .string(path)]))
-                if let text = String(data: resource.data, encoding: .utf8) {
-                    result = .object([
-                        "kind": .string("text"), "text": .string(text),
-                        "size": result["size"] ?? .number(Double(resource.data.count)),
-                        "mtime": result["mtime"] ?? .number(0),
-                    ])
+        await state.read(loaded: file != nil) { stillTheLatest in
+            let result = try await readFile()
+            try stillTheLatest()
+            file = result
+        }
+    }
+
+    private func readFile() async throws -> FsReadResult {
+        var result = try await client.request(.fsRead, payload: .object(["path": .string(path)]))
+            .decoded(as: FsReadResult.self)
+        // Text past one frame comes as bytes, up to what a phone draws; bytes that are not UTF-8 stay too large.
+        if result.isTooLarge, result.size <= largeTextMaxBytes {
+            let resource = try await client.readResource(.object(["kind": .string("file"), "path": .string(path)]))
+            if let text = String(data: resource.data, encoding: .utf8) {
+                result = .text(FsTextRead(text: text, size: result.size, mtime: result.mtime ?? 0))
+            }
+        }
+        // A player starts with its page and keeps playing through a change elsewhere in the folder.
+        if isMedia(result) { return result }
+        let binary = result.isBinary
+        let key = versionKey(result)
+        if binary, key == shown.version { return result }
+        // What is on screen stays until its successor is ready, so a reread never flashes the fallback.
+        let next = FileShown()
+        let mime = result.mime
+        if binary, mime.hasPrefix("image/") || mime == "application/pdf", FileKinds.fitsInMemory(size: result.size) {
+            let resource = try await client.readResource(.object(["kind": .string("file"), "path": .string(path)]))
+            if mime == "image/svg+xml" {
+                next.svg = resource.data
+            } else if mime == "application/pdf" {
+                next.pdf = PDFDocument(data: resource.data)
+                if next.pdf == nil { next.unreadable = String(localized: "This PDF cannot be opened.") }
+            } else {
+                let data = resource.data
+                next.image = await Task.detached(priority: .userInitiated) { FileImage.decode(data) }.value
+                if next.image == nil {
+                    next.unreadable = String(localized: "This device cannot show this picture.")
                 }
             }
-            // A player starts with its page and keeps playing through a change elsewhere in the folder.
-            if isMedia(result) { return result }
-            let binary = result.text("kind") == "binary"
-            let key = versionKey(result)
-            if binary, key == shown.version { return result }
-            // What is on screen stays until its successor is ready, so a reread never flashes the fallback.
-            let next = FileShown()
-            let mime = result.text("mime")
-            if binary, mime.hasPrefix("image/") || mime == "application/pdf",
-                FileKinds.fitsInMemory(size: result["size"]?.numberValue)
-            {
-                let resource = try await client.readResource(.object(["kind": .string("file"), "path": .string(path)]))
-                if mime == "image/svg+xml" {
-                    next.svg = resource.data
-                } else if mime == "application/pdf" {
-                    next.pdf = PDFDocument(data: resource.data)
-                    if next.pdf == nil { next.unreadable = String(localized: "This PDF cannot be opened.") }
-                } else {
-                    let data = resource.data
-                    next.image = await Task.detached(priority: .userInitiated) { FileImage.decode(data) }.value
-                    if next.image == nil { next.unreadable = String(localized: "This device cannot show this picture.") }
-                }
-                try Task.checkCancellation()
-            }
-            next.version = binary ? key : nil
-            cleanMedia()
-            shown.replace(with: next)
-            pdfPage = 1
-            return result
+            try Task.checkCancellation()
+        }
+        next.version = binary ? key : nil
+        cleanMedia()
+        shown.replace(with: next)
+        pdfPage = 1
+        return result
+    }
+}
+
+private extension FsReadResult {
+    var isText: Bool { if case .text = self { true } else { false } }
+    var isBinary: Bool { if case .binary = self { true } else { false } }
+    var isTooLarge: Bool { if case .tooLarge = self { true } else { false } }
+
+    /// Empty for what is not text, as the views that draw text only ask after they know it is.
+    var text: String { if case .text(let read) = self { read.text } else { "" } }
+    var language: String? { if case .text(let read) = self { read.language } else { nil } }
+    var mime: String { if case .binary(let read) = self { read.mime } else { "" } }
+
+    var size: Double {
+        switch self {
+        case .text(let read): read.size
+        case .binary(let read): read.size
+        case .tooLarge(let read): read.size
+        }
+    }
+
+    var mtime: Double? {
+        switch self {
+        case .text(let read): read.mtime
+        case .binary(let read): read.mtime
+        case .tooLarge(let read): read.mtime
         }
     }
 }
 
 private let largeTextMaxBytes: Double = 8 * 1024 * 1024
 
-/// The hold on `fs.watch` that a folder's `fs.changed` events come under.
-@MainActor func fsWatch(_ client: any MachineRequesting, path: String) -> MachineSubscription {
-    let payload: JSONValue = .object(["path": .string(path)])
-    return client.acquireSubscription(start: "fs.watch", stop: "fs.unwatch", payload: payload, stopPayload: payload)
+func fsWatch(path: String) -> LiveWatch {
+    .area(.fsWatch, payload: .object(["path": .string(path)]))
 }
 
 /// What a file page shows beside the read itself. Observable like `RemotePageState`, so a read and the picture it
@@ -537,7 +577,6 @@ private let largeTextMaxBytes: Double = 8 * 1024 * 1024
     var image: FileImage?
     var pdf: PDFDocument?
     var svg: Data?
-    /// Why a file whose bytes arrived still has no view of its own.
     var unreadable: String?
     /// The version on screen, as mtime and size, so a change elsewhere in the folder does not read the file again.
     var version: String?
@@ -578,7 +617,8 @@ private struct FilePlayerView: UIViewControllerRepresentable {
 
         func playerViewController(
             _ controller: AVPlayerViewController,
-            willBeginFullScreenPresentationWithAnimationCoordinator coordinator: any UIViewControllerTransitionCoordinator
+            willBeginFullScreenPresentationWithAnimationCoordinator coordinator:
+                any UIViewControllerTransitionCoordinator
         ) {
             fullScreen.wrappedValue = true
         }

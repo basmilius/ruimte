@@ -2,15 +2,16 @@ import { runtimeModeLabel, useChatPreferences, useNewAccountChoice } from '@adec
 import { AccountDot, AgentIcon } from '@adecore/agents-react/providers';
 import { useProviders } from '@adecore/agents-react/state';
 import { Icon, IconButton, Menu } from '@adecore/ui';
-import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
+import { separatesGroups, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
 import { Bot, MessageSquare, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { agentTargetLabel, type AgentTarget } from '@/agents/nodes';
+import { agentTargetLabel } from '@/agents/nodes';
+import type { AgentTarget } from '@/state/agent-availability';
 import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { useDetectProviders } from '@/transport/provider-detection';
-import { availableAgents, separatesGroups } from './creation';
+import { availableAgents } from '../state/agent-availability';
 
 function Submenu({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
     return (
@@ -31,14 +32,11 @@ type Drawn = 'nothing' | 'row' | 'group';
 interface ChainProps {
     target: AgentTarget;
     provider: ProviderInfo;
-    /* The CLIs after this one, in the order the menu lists them. */
     rest: ProviderInfo[];
     hint: string | null;
     onPick: PickAgent;
     drawn: Drawn;
-    /* The last CLI before this one that drew a row. */
     previous: AgentKind | undefined;
-    /* Whether a CLI before this one still waits for the accounts of the machine. */
     waiting: boolean;
 }
 

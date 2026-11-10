@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { MachineHome } from '../disk/machine-home.ts';
 import { Checkpoints } from './checkpoints.ts';
 import { gitIn, initRepo } from './test-repo.ts';
 
@@ -14,7 +15,7 @@ beforeAll(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-checkpoint-home-'));
     repo = await mkdtemp(join(tmpdir(), 'ruimte-checkpoint-repo-'));
     plain = await mkdtemp(join(tmpdir(), 'ruimte-checkpoint-plain-'));
-    checkpoints = new Checkpoints(home);
+    checkpoints = new Checkpoints(home, new MachineHome(home));
     await initRepo(repo, { '.gitignore': 'ignored.txt\n', 'kept.txt': 'one\ntwo\nthree\n', 'gone.txt': 'bye\n' });
 });
 

@@ -16,7 +16,7 @@ export interface PendingRemoval {
     set(owed: boolean): Promise<void>;
 }
 
-export interface VoiceKey {
+interface VoiceKey {
     status(): Promise<OpenAiCredentialStatus>;
     save(key: string): Promise<OpenAiCredentialStatus>;
     remove(): Promise<OpenAiCredentialStatus>;

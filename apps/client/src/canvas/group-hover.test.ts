@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { hoveredGroup } from '@/canvas/group-hover';
-import type { StackedNode } from '@/canvas/stacking';
+import type { StackedNode } from '@/surface/canvas/stacking';
 
 function at(kind: StackedNode['kind'], x: number, y: number, w: number, h: number): StackedNode {
     return { kind, x, y, w, h };

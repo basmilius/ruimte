@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { AgentFiles } from '../agent-files/files.ts';
 import { ArtifactStore } from '../artifacts/artifact-store.ts';
 import { Artifacts } from '../artifacts/artifacts.ts';
 import { MemoryArtifactFs } from '../artifacts/memory-artifact-fs.ts';
-import { AgentFiles } from '../mcp/files.ts';
-import type { CanvasHost } from './host.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 import type { ToolCaller } from './tool.ts';
 

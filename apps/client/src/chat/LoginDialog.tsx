@@ -6,19 +6,20 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCliSession } from '@/chat/cli-session';
 import { CliTerminalDialog, CliTerminalFrame } from '@/chat/CliTerminalDialog';
+import type { LoginRequest } from '@/chat/dialog-state';
+import { loginDialog } from '@/chat/dialog-state';
 import { loginLanded } from '@/chat/login-landing';
-import { useUi, type LoginRequest } from '@/state/ui';
+import { fireAndForget } from '@/transport-api/transport';
 
 /* Long enough to read that it worked, short enough not to wait on it. */
 const LANDED_MS = 1_200;
 
 function closeLogin(): void {
-    useUi.getState().setLogin(null);
+    loginDialog.set(null);
 }
 
-/* The CLI's own login in a terminal of its own, which the onboarding and the settings both open. */
 export function LoginDialog() {
-    const request = useUi((s) => s.login);
+    const request = loginDialog.useRequest((request) => request);
 
     return (
         <CliTerminalDialog request={request} keyOf={(shown) => `${shown.endpointId}:${shown.accountId}`} close={closeLogin}>
@@ -38,7 +39,7 @@ function LoginTerminal({ request, onRetry }: { request: LoginRequest; onRetry():
         sessionPrefix: 'login',
         start: (link, size) => link.request('session.login', { ...size, kind, account: accountId }),
         // Watching is a courtesy: the status still arrives on the machine's own clock.
-        onStarted: (link) => void link.request('accounts.watchLogin', { id: accountId }).catch(() => undefined)
+        onStarted: (link) => void fireAndForget('accounts.watchLogin', link.request('accounts.watchLogin', { id: accountId }))
     });
     const { phase, setPhase } = session;
     // The account as it read until this login started, which is what a landing has to differ from.

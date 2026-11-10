@@ -9,49 +9,40 @@ final class PlanStore {
     private(set) var plans: [String: [PlanDocument]] = [:]
     /// Chats whose agent made a plan that no one here has opened yet. The phone never opens it on its own.
     private(set) var unseen: Set<String> = []
-    @ObservationIgnored private var subscriptions: [() -> Void] = []
     @ObservationIgnored private let client: any MachineRequesting
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.planChanged, as: PlanChangedEvent.self) { [weak self] in
+                self?.put(chatID: $0.chatId, PlanDocument($0.plan))
+            },
+            .apply(.planRemoved, as: PlanRemovedEvent.self) { [weak self] in
+                self?.remove(chatID: $0.chatId, planID: $0.planId)
+            },
+            .apply(.planCreated, as: PlanCreatedEvent.self) { [weak self] in self?.unseen.insert($0.chatId) },
+        ],
+        read: { [weak self] in await self?.list() })
 
     init(client: any MachineRequesting) { self.client = client }
 
-    func start() {
-        guard subscriptions.isEmpty else { return }
-        subscriptions = [
-            client.subscribe("plan.changed") { [weak self] event in
-                guard let plan = event["plan"].flatMap(PlanDocument.init) else { return }
-                self?.put(chatID: event.text("chatId"), plan)
-            },
-            client.subscribe("plan.removed") { [weak self] event in
-                self?.remove(chatID: event.text("chatId"), planID: event.text("planId"))
-            },
-            client.subscribe("plan.created") { [weak self] event in
-                self?.unseen.insert(event.text("chatId"))
-            },
-            client.observeConnection { [weak self] connected in
-                guard connected else { return }
-                self?.list()
-            },
-        ]
-    }
+    func start() { live.start() }
 
     func stop() {
-        for unsubscribe in subscriptions { unsubscribe() }
-        subscriptions.removeAll()
+        live.stop()
         plans.removeAll()
         unseen.removeAll()
     }
 
-    /// Newest first.
     func plans(for chatID: String) -> [PlanDocument] { PlanDocument.newestFirst(plans[chatID] ?? []) }
 
     func markSeen(_ chatID: String) { unseen.remove(chatID) }
 
     /// What the machine answered replaces what was known, except a plan an event already brought at a later rev.
-    func setListed(_ entries: [JSONValue]) {
+    func setListed(_ entries: [PlanOfChat]) {
         var next: [String: [PlanDocument]] = [:]
         for entry in entries {
-            guard let plan = entry["plan"].flatMap(PlanDocument.init) else { continue }
-            let chatID = entry.text("chatId")
+            let plan = PlanDocument(entry.plan)
+            let chatID = entry.chatId
             let known = plans[chatID]?.first { $0.id == plan.id }
             next[chatID, default: []].append(known.map { $0.rev > plan.rev ? $0 : plan } ?? plan)
         }
@@ -80,16 +71,17 @@ final class PlanStore {
     /// Sends a person's operations; a refusal is thrown with the machine's message.
     func apply(chatID: String, planID: String, ops: [JSONValue]) async throws {
         let result = try await client.request(
-            "plan.apply",
-            payload: .object(["chatId": .string(chatID), "planId": .string(planID), "ops": .array(ops)]))
-        if let plan = result["plan"].flatMap(PlanDocument.init) { put(chatID: chatID, plan) }
+            .planApply,
+            payload: .object(["chatId": .string(chatID), "planId": .string(planID), "ops": .array(ops)])
+        ).decoded(as: PlanApplyResult.self)
+        put(chatID: chatID, PlanDocument(result.plan))
     }
 
-    private func list() {
-        Task { [weak self, client] in
-            guard let result = try? await client.request("plan.list", payload: .object([:])) else { return }
-            guard let self, !subscriptions.isEmpty else { return }
-            setListed(result.list("plans"))
-        }
+    private func list() async {
+        guard
+            let result = try? await client.request(.planList, payload: .object([:])).decoded(as: PlanListResult.self),
+            live.isStarted
+        else { return }
+        setListed(result.plans)
     }
 }

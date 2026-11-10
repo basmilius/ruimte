@@ -7,7 +7,6 @@ import RuimtePulsar
 extension PlanStepState {
     /// The states a person picks from; active is the agent's word for where it works.
     static let personStates: [PlanStepState] = [.open, .done, .warning, .info, .failed, .skipped, .blocked]
-    /// The outcomes the mark of a test step offers.
     static let testOutcomes: [PlanStepState] = [.done, .warning, .info, .failed, .skipped, .blocked]
 
     /// Outcomes that close a step without a failure, as `isFinishedOutcome` in `@adecore/plan`.
@@ -59,7 +58,7 @@ struct PlanStep: Identifiable, Equatable, Sendable {
     let checks: PlanChecks?
     /// Only a leaf stores a state; a parent's follows from its children.
     let storedState: PlanStepState?
-    let by: String?
+    let by: PlanActor?
     let at: String?
     let note: String?
     let unlocked: Bool
@@ -86,21 +85,19 @@ struct PlanStep: Identifiable, Equatable, Sendable {
 
     var progress: PlanProgress { PlanProgress(leaves: leaves) }
 
-    /// A tap on the circle of a steps plan: done goes back to open, anything else becomes done.
     var toggled: PlanStepState { state == .done ? .open : .done }
 
-    init?(_ value: JSONValue) {
-        guard value.text("type") == "step", let id = value["id"]?.stringValue else { return nil }
-        self.id = id
-        title = value.text("title")
-        description = value["description"]?.stringValue
-        checks = value["checks"]?.stringValue.flatMap(PlanChecks.init(rawValue:))
-        storedState = value["state"]?.stringValue.flatMap(PlanStepState.init(rawValue:))
-        by = value["by"]?.stringValue
-        at = value["at"]?.stringValue
-        note = value["note"]?.stringValue
-        unlocked = value["unlocked"]?.boolValue == true
-        steps = value.list("steps").compactMap(PlanStep.init)
+    init(_ stored: StoredPlanStep) {
+        id = stored.id
+        title = stored.title
+        description = stored.description
+        checks = stored.checks
+        storedState = stored.state
+        by = stored.by
+        at = stored.at
+        note = stored.note
+        unlocked = stored.unlocked == true
+        steps = (stored.steps ?? []).map(PlanStep.init)
     }
 }
 
@@ -108,6 +105,12 @@ struct PlanText: Identifiable, Equatable, Sendable {
     let id: String
     let title: String
     let description: String?
+
+    init(_ stored: StoredPlanText) {
+        id = stored.id
+        title = stored.title
+        description = stored.description
+    }
 }
 
 enum PlanEntry: Identifiable, Equatable, Sendable {
@@ -121,16 +124,10 @@ enum PlanEntry: Identifiable, Equatable, Sendable {
         }
     }
 
-    init?(_ value: JSONValue) {
-        switch value.text("type") {
-        case "text":
-            guard let id = value["id"]?.stringValue else { return nil }
-            self = .text(PlanText(id: id, title: value.text("title"), description: value["description"]?.stringValue))
-        case "step":
-            guard let step = PlanStep(value) else { return nil }
-            self = .step(step)
-        default:
-            return nil
+    init(_ stored: StoredPlanSectionItem) {
+        switch stored {
+        case .text(let text): self = .text(PlanText(text))
+        case .step(let step): self = .step(PlanStep(step))
         }
     }
 }
@@ -165,7 +162,6 @@ struct PlanProgress: Equatable, Sendable {
 
     func count(_ state: PlanStepState) -> Int { counts[state] ?? 0 }
 
-    /// Steps with an outcome.
     var finished: Int { count(.done) + count(.failed) + count(.skipped) + count(.warning) + count(.info) }
 
     var fraction: Double { total == 0 ? 0 : Double(finished) / Double(total) }
@@ -184,16 +180,15 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
     let checks: PlanChecks
     let groups: [PlanGroup]
 
-    init?(_ value: JSONValue) {
-        guard let id = value["id"]?.stringValue, let meta = value["meta"] else { return nil }
-        self.id = id
-        rev = Int(value.number("rev"))
-        createdAt = value.text("createdAt")
-        title = meta.text("title")
-        kind = PlanKind(rawValue: meta.text("kind")) ?? .steps
-        summary = meta["summary"]?.stringValue.flatMap { $0.isEmpty ? nil : $0 }
-        status = meta["status"]?.stringValue.flatMap { $0.isEmpty ? nil : $0 }
-        checks = PlanChecks(rawValue: meta.text("checks")) ?? .anyone
+    init(_ stored: StoredPlan) {
+        id = stored.id
+        rev = Int(stored.rev)
+        createdAt = stored.createdAt
+        title = stored.meta.title
+        kind = stored.meta.kind
+        summary = stored.meta.summary.flatMap { $0.isEmpty ? nil : $0 }
+        status = stored.meta.status.flatMap { $0.isEmpty ? nil : $0 }
+        checks = stored.meta.checks
         var groups: [PlanGroup] = []
         var loose: [PlanEntry] = []
         let closeLoose = {
@@ -201,15 +196,16 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
             groups.append(PlanGroup(id: "top-\(first.id)", title: nil, description: nil, entries: loose))
             loose = []
         }
-        for item in value.list("items") {
-            if item.text("type") == "section" {
+        for item in stored.items {
+            switch item {
+            case .section(let section):
                 closeLoose()
                 groups.append(
                     PlanGroup(
-                        id: item.text("id"), title: item.text("title"), description: item["description"]?.stringValue,
-                        entries: item.list("items").compactMap(PlanEntry.init)))
-            } else if let entry = PlanEntry(item) {
-                loose.append(entry)
+                        id: section.id, title: section.title, description: section.description,
+                        entries: section.items.map(PlanEntry.init)))
+            case .text(let text): loose.append(.text(PlanText(text)))
+            case .step(let step): loose.append(.step(PlanStep(step)))
             }
         }
         closeLoose()
@@ -346,17 +342,15 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
     /// locks stay out.
     var markdown: String {
         var blocks = ["# \(title)"]
-        if let summary { blocks.append(summary) }
+        if let summary { blocks.append(PlanCopyText.escapeText(summary)) }
         func stepLines(_ step: PlanStep, depth: Int) -> [String] {
             let indent = String(repeating: "    ", count: depth)
             let inner = indent + "    "
             var lines = ["\(indent)- \(step.state.marker) \(step.title)"]
-            if let description = step.description, !description.isEmpty {
-                lines += description.components(separatedBy: "\n").map { inner + $0 }
+            for line in step.description?.components(separatedBy: "\n") ?? [] {
+                lines.append(line.isEmpty ? "" : inner + PlanCopyText.escapeLine(line))
             }
-            if let note = step.note, !note.isEmpty {
-                lines += note.components(separatedBy: "\n").map { "\(inner)> \($0)" }
-            }
+            lines += PlanCopyText.noteLines(step, indent: inner)
             return lines + step.steps.flatMap { stepLines($0, depth: depth + 1) }
         }
         func entryBlocks(_ entries: [PlanEntry]) -> [String] {
@@ -372,7 +366,8 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
                     var lines = (text.description ?? "").components(separatedBy: "\n")
                     let first = lines.removeFirst()
                     result.append(
-                        (["> **\(text.title)**" + (first.isEmpty ? "" : " \(first)")] + lines.map { "> \($0)" })
+                        (["> **\(PlanCopyText.escapeBold(text.title))**" + (first.isEmpty ? "" : " \(first)")]
+                            + lines.map { "> \(PlanCopyText.escapeQuoted($0))" })
                             .joined(separator: "\n"))
                 }
             }
@@ -383,7 +378,9 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
         for group in groups {
             if let sectionTitle = group.title {
                 blocks.append("## \(sectionTitle)")
-                if let description = group.description, !description.isEmpty { blocks.append(description) }
+                if let description = group.description, !description.isEmpty {
+                    blocks.append(PlanCopyText.escapeText(description))
+                }
                 inSection = true
             } else if inSection {
                 // Only a rule brings the items after a section back to the top of the plan.
@@ -416,11 +413,7 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
 
     /// One step as a line of Markdown, as Copy in the desktop client writes it.
     func markdown(for step: PlanStep) -> String {
-        let state = step.state
-        let mark = state == .done ? "[x]" : "[ ]"
-        let label = state == .open || state == .done ? "" : " (\(word(for: state).lowercased()))"
-        let note = step.note.map { "\n    > " + $0.replacingOccurrences(of: "\n", with: "\n    > ") } ?? ""
-        return "- \(mark) \(step.title)\(label)\(note)"
+        PlanCopyText.stepLine(step) { word(for: $0).lowercased() }
     }
 
     /// Newest first, which is the plan a chat shows until a person picks another. A later place in the machine's
@@ -432,6 +425,71 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
                     ? $0.offset > $1.offset : $0.element.createdAt > $1.element.createdAt
             }
             .map(\.element)
+    }
+}
+
+/// The text rules of `planToMarkdown` and `stepToMarkdown` in `@adecore/plan`. A line the reader would take for markup
+/// starts with a backslash, which the reader drops again.
+enum PlanCopyText {
+    /// What a JavaScript `\s` and `trimStart` count as white space, which is not what Foundation's sets hold.
+    private static func isSpace(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.value {
+        case 0x09...0x0D, 0x20, 0xA0, 0x1680, 0x2000...0x200A, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF: true
+        default: false
+        }
+    }
+
+    private static func trimmedStart(_ line: String) -> String.UnicodeScalarView.SubSequence {
+        line.unicodeScalars.drop(while: isSpace)
+    }
+
+    /// A heading, a rule, a list item, a quote or the escape itself at the start of a line.
+    private static func isMarkup(_ line: String) -> Bool {
+        let scalars = trimmedStart(line)
+        guard let first = scalars.first else { return false }
+        if first == ">" || first == "\\" { return true }
+        let next = scalars.dropFirst().first
+        if first == "#" {
+            let hashes = scalars.prefix { $0 == "#" }.count
+            return hashes <= 6 && scalars.dropFirst(hashes).first.map(isSpace) == true
+        }
+        if first == "-" || first == "*" || first == "+", let next, isSpace(next) { return true }
+        guard first == "-" || first == "*" || first == "_" else { return false }
+        return scalars.count >= 3 && scalars.allSatisfy { $0 == first }
+    }
+
+    static func escapeLine(_ line: String) -> String { isMarkup(line) ? "\\" + line : line }
+
+    static func escapeText(_ text: String) -> String {
+        text.components(separatedBy: "\n").map(escapeLine).joined(separator: "\n")
+    }
+
+    static func escapeBold(_ title: String) -> String {
+        var result = ""
+        for character in title.unicodeScalars {
+            if character == "\\" || character == "*" { result.unicodeScalars.append("\\") }
+            result.unicodeScalars.append(character)
+        }
+        return result
+    }
+
+    /// A later line of a text block that starts in bold would start a text block of its own.
+    static func escapeQuoted(_ line: String) -> String {
+        let scalars = trimmedStart(line)
+        let bold = scalars.starts(with: "**".unicodeScalars)
+        return bold || scalars.first == "\\" ? "\\" + line : line
+    }
+
+    static func noteLines(_ step: PlanStep, indent: String) -> [String] {
+        (step.note?.components(separatedBy: "\n") ?? []).map { "\(indent)> \($0)" }
+    }
+
+    /// The box is checked for done only, and any other state but open is said in words after the title.
+    static func stepLine(_ step: PlanStep, describe: (PlanStepState) -> String) -> String {
+        let state = step.state
+        let label = state == .open || state == .done ? "" : " (\(describe(state)))"
+        return (["- \(state == .done ? "[x]" : "[ ]") \(step.title)\(label)"] + noteLines(step, indent: "    "))
+            .joined(separator: "\n")
     }
 }
 

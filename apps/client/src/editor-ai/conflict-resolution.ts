@@ -4,6 +4,7 @@ import { planConflict, replaceAllLines, replaceLines, type ConflictStretch } fro
 import type { AgentKind, ProvenanceReadResult, ProvenanceRun } from '@ruimte/contracts';
 import { createStore, type StoreApi } from 'zustand';
 import type { DiskText } from '@/state/text-drafts';
+import { orNull } from '@/transport-api/transport';
 import { useConflictInfo } from './conflict-info';
 
 const ROW_OWNER = 'conflict';
@@ -23,9 +24,7 @@ export interface ConflictAuthor {
 export interface ConflictBlockState {
     id: string;
     theirs: readonly string[];
-    /* The number of the first of `theirs` in the incoming file. */
     theirsFirstLine: number;
-    /* Whether the block has no line of ours left, which a person removed or never had. */
     oursEmpty: boolean;
     author: ConflictAuthor | null;
 }
@@ -162,7 +161,7 @@ export class ConflictResolution {
     /* The runs of the file are in, or changed: each block names the newest run that wrote its lines. */
     async refreshAuthors(): Promise<void> {
         const handled = this.handled;
-        const result = await this.source.runs().catch(() => null);
+        const result = await orNull('source.runs', this.source.runs());
         if (result === null || this.disposed || handled !== this.handled || result.mtime !== handled) {
             return;
         }
@@ -303,7 +302,6 @@ export class ConflictResolution {
         return this.runs.reduce<ProvenanceRun | null>((newest, run) => (newest === null || run.at > newest.at ? run : newest), null);
     }
 
-    /* The rows and the tint, where the blocks stand now. */
     private draw(): void {
         const signature = this.open
             .map((block) => {

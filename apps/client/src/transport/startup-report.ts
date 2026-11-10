@@ -1,6 +1,7 @@
 import { USAGE_MAX_STARTUP_MS } from '@ruimte/pulsar';
 import { desktop } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+import { fireAndForget } from '@/transport-api/transport';
 import { machineAnswers } from './features';
 import { watchPool, type WatchablePool } from './pool-watch';
 
@@ -20,9 +21,12 @@ export function startStartupReport(take = desktop()?.takeStartupMs, source?: Wat
                     return;
                 }
                 asked = true;
-                void take()
-                    .then((ms) => (ms !== null && ms >= 1 && ms <= USAGE_MAX_STARTUP_MS ? link.request('usage.startup', { ms: Math.round(ms) }) : undefined))
-                    .catch(() => undefined);
+                void fireAndForget(
+                    'usage.startup',
+                    take().then((ms) =>
+                        ms !== null && ms >= 1 && ms <= USAGE_MAX_STARTUP_MS ? link.request('usage.startup', { ms: Math.round(ms) }) : undefined
+                    )
+                );
             },
             subscriptions: []
         }),

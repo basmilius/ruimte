@@ -390,7 +390,6 @@ export function createDelegation(ctx: CanvasRenderingContext2D, fonts: Fonts): D
         at.y = route.ys[index - 1]! + (route.ys[index]! - route.ys[index - 1]!) * frac;
         return at;
     };
-    // Strokes the stretch of a route between two arc lengths.
     const strokeRoute = (route: Route, from: number, to: number) => {
         if (to <= from) {
             return;

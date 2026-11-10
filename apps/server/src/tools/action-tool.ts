@@ -3,10 +3,9 @@ import { type ActionInput, type ActionName, type ActionOutput } from '@ruimte/ac
 import { z } from 'zod';
 import { externalActionCall, serverActionCall } from '../actions/context.ts';
 import { PROJECT_WRITES } from '../actions/revision.ts';
-import { serverActions } from '../actions/server-actions.ts';
+import { canvasLines, placeOf, type AgentCall } from '../canvas/host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import { canvasLines, placeOf, type AgentCall } from './host.ts';
-import { defineTool, REVISION_INPUT, type Tool, type ToolSpec } from './tool.ts';
+import { defineTool, REVISION_INPUT, type Tool, type ToolCaller, type ToolSpec } from './tool.ts';
 
 /* What the daemon's registry answers when a handler failed outright rather than refused. */
 const FAILURES: ReadonlySet<string> = new Set(['action-failed', 'invalid-output']);
@@ -23,14 +22,14 @@ export function linesOf(details: unknown): string[] {
  * Runs an action for the agent behind this call and hands back its output, or throws a refusal under
  * the action's own code, or a plain error for a handler that broke.
  */
-export async function runAction<Name extends ActionName>(call: AgentCall, name: Name, input: ActionInput<Name>, dryRun = false): Promise<ActionOutput<Name>> {
+export async function runAction<Name extends ActionName>(call: ToolCaller, name: Name, input: ActionInput<Name>, dryRun = false): Promise<ActionOutput<Name>> {
     // A client elsewhere stands in no project of its own, so there is no origin: the place is the project its credential reached.
     const origin = call.reached === undefined || call.external !== undefined ? undefined : placeOf({ caller: call.caller, host: call.host });
     const actionCall =
         call.external === undefined
             ? serverActionCall(call.host, placeOf(call), call.caller, dryRun, call.expectedRevision, origin)
             : externalActionCall(call.host, placeOf(call), call.external, dryRun, call.expectedRevision);
-    const result = await serverActions.execute(name, input, actionCall);
+    const result = await call.actions.execute(name, input, actionCall);
 
     if (result.status === 'needs_confirmation') {
         throw new ToolRefusal('confirmation-required', `${name} asks for a confirmation an agent cannot give`);
@@ -53,7 +52,7 @@ export async function runAction<Name extends ActionName>(call: AgentCall, name: 
  * checks that the id is a canvas; only a caller on no canvas at all is the tool's to answer.
  */
 export async function canvasIdFor(
-    call: AgentCall,
+    call: Pick<AgentCall, 'host'>,
     place: IndexedPlace,
     view: string | undefined,
     offCanvas = 'This session is not on a canvas; name one with view'
@@ -70,19 +69,19 @@ export async function canvasIdFor(
 }
 
 /* The canvas of a node a person pointed the caller at with `#`, which then needs no view: the reference says where it stands. */
-export function pointedCanvas(call: AgentCall, ids: readonly string[], kind?: string): string | null {
+export function pointedCanvas(call: Pick<AgentCall, 'host' | 'caller'>, ids: readonly string[], kind?: string): string | null {
     const references = call.host.context?.referenced?.(call.caller) ?? [];
 
     return references.find((reference) => ids.includes(reference.id) && (kind === undefined || reference.kind === kind))?.canvas?.id ?? null;
 }
 
-export interface ActionToolSpec<Input extends z.ZodObject> extends ToolSpec<Input> {
+interface ActionToolSpec<Input extends z.ZodObject> extends ToolSpec<Input> {
     /* The action of `@ruimte/actions` the tool runs, whose handler holds every check. */
     action: ActionName;
 }
 
 /* `revision` is added to a tool whose action writes the project file, so no write goes without it. */
-export interface ActionTool<Input extends z.ZodObject = z.ZodObject> extends Tool<Input> {
+interface ActionTool<Input extends z.ZodObject = z.ZodObject> extends Tool<Input> {
     readonly action: ActionName;
 }
 

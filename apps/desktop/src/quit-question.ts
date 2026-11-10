@@ -1,7 +1,7 @@
 import type { MachineWork } from '@ruimte/contracts';
 import type { AgentActivity } from '@ruimte/desktop-bridge';
 
-export interface QuitFacts {
+interface QuitFacts {
     /* Whether what runs on the machine outlives this quit: the service keeps it, or the app never ran it. */
     survives: boolean;
     /* This app runs no machine, so the work its windows count runs on machines of someone's account. */
@@ -13,8 +13,7 @@ export interface QuitFacts {
     machine: MachineWork | null;
 }
 
-/* The options of Electron's message box. */
-export interface QuitQuestion {
+interface QuitQuestion {
     type: 'question';
     buttons: string[];
     defaultId: number;

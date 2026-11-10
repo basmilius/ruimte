@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { AttachmentStore, ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
+import { AttachmentStore, ChatStore, claudeProjectSlug, type ForkKept } from '@adecore/agents/chat';
 import { AgentLineageStore } from '@adecore/agents/coordination';
 import { ManualClock, inProcess, fakeCodex, fakeCodexForks } from '@adecore/agents/testing';
 import {
@@ -16,16 +16,20 @@ import {
     type ProjectCanvasView,
     type ProjectContent
 } from '@ruimte/contracts';
-import { toolsNote } from '../context/context-note.ts';
+import { CONTEXT_LEAD, toolsNote } from '../context/context-note.ts';
+import { RUIMTE_UI_FENCE } from '../context/ui-fence.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
-import { bootTestDaemon, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
-import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
+import { OPEN_BOUNDS } from '../sessions/open-bounds-test-helpers.ts';
+import { bootTestDaemon, releasedProject, type TestDaemon } from '../testing/test-daemon.ts';
+import { testChatManager } from './chat-manager-test-helpers.ts';
 import { retire } from './chat-manager.fixture.test.ts';
 import { ChatManager } from './chat-manager.ts';
 import { assistantTexts, turnsOf } from './chat-test-helpers.ts';
 import { chatForkDeps, forkChat, itemsThrough, type ChatForkDeps } from './fork.ts';
 import { leadProject, removeNodes, sayAndSettle, writeLeadTranscript } from './lead-chat-test-helpers.ts';
+
+const forkProviders = new ProviderRegistry();
 
 /* A canvas kept in memory, read and rewritten through the two calls the project store gives a fork. */
 function inMemoryCanvas(initial: ProjectContent) {
@@ -56,7 +60,6 @@ describe('forking a Claude chat', () => {
     beforeEach(async () => {
         ({ root, home, folder, store, projectId } = await releasedProject('ruimte-fork-', leadProject()));
         daemon = await bootTestDaemon({ home, store, clock: new ManualClock(), installed: ['claude', 'codex'] });
-        daemon.worker.start();
     });
 
     afterEach(async () => {
@@ -256,7 +259,10 @@ describe('forking a Claude chat', () => {
         // The note about the tools went in as developer instructions, so only the handoff stands before the text.
         expect(reply).toBe(`echo: ${record.preambles[0]}\n\ngo on (medium)`);
         await say(nodeId, 'note?');
-        expect(assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)).toBe(toolsNote({ depth: 0, visuals: true }));
+        // The fork is linked to its original, which the real wiring reads as context.
+        expect(assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)).toBe(
+            `${toolsNote({ depth: 0, visuals: true, uiFence: RUIMTE_UI_FENCE })} ${CONTEXT_LEAD}"Lexer" (chat). This is what the person means, so prefer it over anything your own tools or servers turn up.`
+        );
         expect(daemon.chats.get(nodeId)!.info.agentSessionId).not.toBeNull();
     });
 
@@ -326,20 +332,17 @@ describe('forkChat', () => {
             claude: unknown[];
             codex: unknown[];
             written: Array<{ info: ChatInfo; items: ChatItem[]; preambles: string[] }>;
-            bookmarkedItems: string[][];
-            keptVisuals: Array<(visual: ChatVisual) => boolean>;
-            agentImages: Array<[string, string]>;
+            sidecars: Array<{ from: string; to: string; kept: ForkKept }>;
         } = {
             claude: [],
             codex: [],
             written: [],
-            bookmarkedItems: [],
-            keptVisuals: [],
-            agentImages: []
+            sidecars: []
         };
         const deps: ChatForkDeps = {
             source: async () => source,
             installed: async () => ['claude', 'codex'],
+            provider: (kind) => forkProviders.get(kind),
             startingPoint: (_provider, selection) => ({
                 selection: selection ?? { model: 'picked', options: {} },
                 runtimeMode: 'full-access',
@@ -369,15 +372,8 @@ describe('forkChat', () => {
                 asked.written.push({ info: written, items, preambles });
             },
             deleteRecord: async () => undefined,
-            copyPlans: async () => undefined,
-            copyBookmarks: async (_fromChatId, _toChatId, itemIds) => {
-                asked.bookmarkedItems.push([...itemIds]);
-            },
-            copyVisuals: async (_fromChatId, _toChatId, keep) => {
-                asked.keptVisuals.push(keep);
-            },
-            copyAgentImages: async (fromChatId, toChatId) => {
-                asked.agentImages.push([fromChatId, toChatId]);
+            copySidecars: async (from, to, kept) => {
+                asked.sidecars.push({ from, to, kept });
             },
             newSessionId: () => 'session-2',
             now: () => 5
@@ -415,7 +411,8 @@ describe('forkChat', () => {
         const items = [turn('turn-1', { lastUuid: 'u-1' }), user('user-1', 'turn-1'), turn('turn-2', { lastUuid: 'u-2' }), user('user-2', 'turn-2')];
         const { deps, asked } = stub({ info: info('claude'), items });
         await forkChat(deps, { chatId: 'chat-lead', turnId: 'turn-1' });
-        expect(asked.bookmarkedItems).toEqual([['turn-1', 'user-1']]);
+        const { kept } = asked.sidecars[0]!;
+        expect(items.filter((item) => kept.item(item.id)).map((item) => item.id)).toEqual(['turn-1', 'user-1']);
     });
 
     test('a quote keeps its source in a fork, with the reply it names', async () => {
@@ -448,17 +445,19 @@ describe('forkChat', () => {
             size: 10,
             ...(turnId ? { turnId } : {})
         });
-        const keep = asked.keptVisuals[0]!;
+        const { kept } = asked.sidecars[0]!;
         // The turn the fork was cut at ended at 1.
         expect(
-            [visual('in-turn', 5, 'turn-1'), visual('before', 1), visual('later-turn', 0, 'turn-2'), visual('after', 2)].filter(keep).map((kept) => kept.id)
+            [visual('in-turn', 5, 'turn-1'), visual('before', 1), visual('later-turn', 0, 'turn-2'), visual('after', 2)]
+                .filter((candidate) => kept.visual(candidate))
+                .map((candidate) => candidate.id)
         ).toEqual(['in-turn', 'before']);
     });
 
-    test('the images the original agent attached go to the fork under the same chat pair', async () => {
+    test('the sidecars of the original are copied once, from the original to the fork', async () => {
         const { deps, asked } = stub({ info: info('claude'), items: [turn('turn-1', { lastUuid: 'u-1' })] });
         const result = await forkChat(deps, { chatId: 'chat-lead', turnId: 'turn-1' });
-        expect(asked.agentImages).toEqual([['chat-lead', result.info.chatId]]);
+        expect(asked.sidecars.map(({ from, to }) => [from, to])).toEqual([['chat-lead', result.info.chatId]]);
     });
 
     test('a fork into another CLI reads as much of the conversation as the window of its model allows', async () => {
@@ -647,7 +646,7 @@ describe('forking a Codex chat', () => {
     beforeEach(async () => {
         home = await mkdtemp(join(tmpdir(), 'ruimte-fork-codex-'));
         const attachments = new AttachmentStore(home);
-        manager = new ChatManager({
+        manager = testChatManager({
             ...OPEN_BOUNDS,
             providers: new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) }),
             store: new ChatStore(home, { attachments: attachments }),
@@ -663,13 +662,13 @@ describe('forking a Codex chat', () => {
     });
 
     test('thread/fork is asked with the turn id Codex gave turn 2, beside the original that keeps its own process', async () => {
-        await manager.create({ chatId: 'chat-lead', provider: 'codex', cwd: home });
+        await manager.core.create({ chatId: 'chat-lead', provider: 'codex', cwd: home });
         for (const word of ['alpha', 'bravo', 'charlie', 'delta']) {
-            const before = turnsOf(manager.get('chat-lead')!.thread.list()).length;
-            await manager.send('chat-lead', word);
+            const before = turnsOf(manager.core.get('chat-lead')!.thread.list()).length;
+            await manager.core.send('chat-lead', word);
             await new Promise<void>((resolve) => {
-                const stop = manager.observe(() => {
-                    const lead = manager.get('chat-lead')!;
+                const stop = manager.core.observe(() => {
+                    const lead = manager.core.get('chat-lead')!;
                     if (lead.info.activeTurnId === null && turnsOf(lead.thread.list()).length === before + 1) {
                         stop();
                         resolve();
@@ -677,12 +676,12 @@ describe('forking a Codex chat', () => {
                 });
             });
         }
-        const lead = manager.get('chat-lead')!;
+        const lead = manager.core.get('chat-lead')!;
         const turns = turnsOf(lead.thread.list());
         const leadView = leadProject().views[0] as ProjectCanvasView;
         const canvas = inMemoryCanvas({ ...leadProject(), views: [{ ...leadView, nodes: [{ ...leadView.nodes[0]!, provider: 'codex' as const }] }] });
         const host: Parameters<typeof chatForkDeps>[0]['host'] = {
-            starts: { installedAgents: async () => ['codex'] },
+            starts: { installedAgents: async () => ['codex'], provider: (kind) => forkProviders.get(kind) },
             machine: { nodeSize: (kind) => NODE_SIZE[kind] },
             projects: {
                 locate: () => ({ projectId: 'p1', folder: home, canvasId: 'main' }),

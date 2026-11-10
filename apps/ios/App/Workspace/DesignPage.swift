@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import SwiftUI
 
@@ -49,9 +50,7 @@ struct DesignPage: View {
             guard workspace.session.connected, let providers = try? await AgentCatalog.load(workspace.client) else {
                 return
             }
-            agents = AgentCatalog.installed(providers, target: "chat").map {
-                ($0.text("kind"), $0.text("name", fallback: $0.text("kind")))
-            }
+            agents = AgentCatalog.installedChats(providers).map { ($0.kind, $0.name) }
         }
     }
 
@@ -90,7 +89,7 @@ struct DesignPage: View {
         guard workspace.ready, workspace.session.connected else { return }
         let shown = chat
         do {
-            try await workspace.ensureSession(DesignPlace.sessionItem(shown))
+            try await workspace.ensureSession(id: shown.id, kind: "chat", raw: DesignPlace.sessionItem(shown))
             guard !Task.isCancelled else { return }
             ready = shown.id
             problem = nil
@@ -133,11 +132,11 @@ private struct DesignPagesList: View {
         // Whether the folder is there decides which changes count, so the watch starts over once it comes or goes.
         .task(id: "\(folder):\(found)") {
             await RemotePageLifecycle.run(
-                client: client, events: ["fs.changed"],
-                matches: { [folder, found] event in
-                    return event.list("paths").compactMap(\.stringValue).contains { DesignFiles.changeReaches($0, folder: folder, found: found) }
+                client: client, events: [.fsChanged],
+                matches: RemotePageLifecycle.typed(FsChangedEvent.self) { [folder, found] event in
+                    event.paths.contains { DesignFiles.changeReaches($0, folder: folder, found: found) }
                 },
-                subscription: { fsWatch(client, path: workspaceFolder) }, load: load)
+                watch: { fsWatch(path: workspaceFolder) }, load: load)
         }
         .refreshable { await load() }
     }
@@ -146,8 +145,8 @@ private struct DesignPagesList: View {
         Group {
             if let pages = listing.pages, !pages.isEmpty {
                 MobileList {
-                    ForEach(pages, id: \.stableName) { page in
-                        let name = page.text("name")
+                    ForEach(pages, id: \.name) { page in
+                        let name = page.name
                         Button {
                             open = name
                         } label: {
@@ -158,7 +157,7 @@ private struct DesignPagesList: View {
                                     Image(lucide: "file-code", size: 18)
                                 }
                                 Spacer()
-                                Text(Format.ago(milliseconds: Date.now.timeIntervalSince1970 * 1000 - page.number("mtime")))
+                                Text(Format.ago(milliseconds: Date.now.timeIntervalSince1970 * 1000 - page.mtime))
                                     .font(.caption).foregroundStyle(MobileStyle.muted)
                             }
                             .modifier(MobileSidebarLabel(disclosure: true))
@@ -184,18 +183,15 @@ private struct DesignPagesList: View {
         do {
             // Hidden too: git ignores a private design's folder, and a listing leaves out what git ignores.
             let listed = try await client.request(
-                "fs.list", payload: .object(["path": .string(folder), "depth": .number(1), "hidden": .bool(true)]))
-            listing = listing.after(.success(listed.list("entries")))
+                .fsList, payload: .object(["path": .string(folder), "depth": .number(1), "hidden": .bool(true)])
+            ).decoded(as: FsListResult.self)
+            listing = listing.after(.success(listed.entries))
         } catch is CancellationError {
             return
         } catch {
             listing = listing.after(.failure(error))
         }
     }
-}
-
-extension JSONValue {
-    fileprivate var stableName: String { text("name") }
 }
 
 /// One page of the design in the sandbox a visual runs in, standing on its own with the files it pulls in.

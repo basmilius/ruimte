@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { ConnectedClients } from './connected-clients.ts';
 
 const ACCOUNT = { reachability: 'lan', sessionId: 'session-1' } as const;

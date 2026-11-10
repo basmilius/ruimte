@@ -1,9 +1,9 @@
 import { FileIcon } from '@adecore/ui';
 import { useTranslation } from 'react-i18next';
-import { FileNodeGateContext } from '@/shell/panels/edit-gate';
-import { basenameOf } from '@/shell/panels/files-tree';
-import { FileSurface } from '@/shell/panels/FileSurface';
+import { FileSurface } from '@/files/FileSurface';
+import { basenameOf } from '@/paths/file-path';
 import { useCanvas } from '@/state/canvas';
+import { FileNodeGateContext } from '@/surface/panels/edit-gate';
 
 /*
  * A file node out of sight or too small to read: its mark and its name, with no read behind it, so

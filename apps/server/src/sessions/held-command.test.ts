@@ -5,7 +5,9 @@ import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import { emptyCanvasView, type ProjectContent, type ProjectView, type ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
-import { registerSessionHandlers } from '../handlers/session.ts';
+import { sessionArea } from '../handlers/session.ts';
+import { sessionDepsWith } from '../handlers/test-helpers.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore, type ProjectLinks } from '../projects/project-store.ts';
 import { CommandApprovals, commandsSet } from './command-approvals.ts';
@@ -49,10 +51,9 @@ function typed(sessionId: string): string {
     return harness.adapter.forSession(sessionId).typed;
 }
 
-/* A request as a client sends it, answered by the handlers the daemon registers. */
 async function request(type: string, payload: unknown): Promise<ServerFrame> {
     const dispatcher = new Dispatcher();
-    registerSessionHandlers(dispatcher, harness.manager);
+    sessionArea(sessionDepsWith(harness.manager)).handlers?.(dispatcher);
     const frames: ServerFrame[] = [];
     await dispatcher.handle({ id: 'c1', send: (frame) => frames.push(frame) }, JSON.stringify({ id: 'request', type, payload }));
     return frames[0]!;
@@ -322,7 +323,7 @@ describe("the project store's save listener", () => {
         root = await mkdtemp(join(tmpdir(), 'ruimte-held-store-'));
         await mkdir(join(root, 'repo'));
         links = projectLinks();
-        store = new ProjectStore(join(root, 'home'), links, new FakeWatch());
+        store = new ProjectStore(join(root, 'home'), links, projectOverlays(join(root, 'home')), new FakeWatch());
     });
 
     afterEach(async () => {

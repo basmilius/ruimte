@@ -149,7 +149,6 @@ function isCalendarDate(text: string): boolean {
     return DATE_PATTERN.test(text) && new Date(`${text}T00:00:00Z`).toISOString().startsWith(text);
 }
 
-/* The UTC day of a moment, as `YYYY-MM-DD`. */
 export function usageDateOf(time: number): string {
     return new Date(time).toISOString().slice(0, 10);
 }

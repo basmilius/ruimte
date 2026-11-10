@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import type { OutboxClock } from '@adecore/agents/coordination';
+import type { Clock } from '@adecore/agents/coordination';
 import { unrefTimeout } from '@adecore/utils/async';
 import {
     PUSH_NOTIFY_DEFAULT,
@@ -22,6 +22,7 @@ import {
 import {
     ADDRESS_BOOK_URL,
     MACHINE_ACTIVITY_NODE,
+    PUSH_APPROVAL_MAX_AGE_MS,
     PUSH_MAX_AGE_MS,
     pushMessage,
     pushCollapseIdMessage,
@@ -31,7 +32,7 @@ import {
     type PushRouting
 } from '@ruimte/pulsar';
 import type { AuthStore } from '../auth/auth-store.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { PushAttention } from './attention.ts';
 import { encryptPush } from './encrypt.ts';
 import { limitBody, limitKey, limitWindow, type LimitContext } from './limit-alert.ts';
@@ -57,11 +58,9 @@ interface PushServiceOptions {
     schedule?: (delayMs: number, run: () => void) => () => void;
     limitContext?: (chatId: string) => LimitContext | null;
 
-    /* The clock the end of quiet hours waits on. */
-    clock?: OutboxClock;
+    clock?: Clock;
 }
 
-/* What shapes one delivery besides the alert itself. */
 interface Delivery {
     /* Someone asked for this alert (`alert` tool), so quiet hours do not hold it. */
     asked?: boolean;
@@ -79,7 +78,6 @@ interface ChatLimit {
     account: string;
 }
 
-/* What the push side reads of `SnoozeStore`. */
 interface Snoozes {
     isSnoozed(nodeId: string): boolean;
     noteStatus(nodeId: string, needsYou: boolean): void;
@@ -116,14 +114,13 @@ interface NodeState {
     limit: ChatLimit | null;
 }
 
-const APPROVAL_MAX_AGE_MS = 110_000;
 const TITLE_MAX = 160;
 const NEEDS_YOU_BODY = 'The agent needs your attention.';
 const BODY_MAX = 500;
 /* How long a client's report of a person at it holds; the client renews it well within that. */
 const PRESENCE_LEASE_MS = 60_000;
 const HOLD_MS = 60_000;
-// Short, since an approval card on the phone expires after `APPROVAL_MAX_AGE_MS`.
+// Short, since an approval card on the phone expires after `PUSH_APPROVAL_MAX_AGE_MS`.
 const APPROVAL_HOLD_MS = 10_000;
 // How long one limit without a reset time keeps its other chats quiet.
 const LIMIT_QUIET_MS = 3_600_000;
@@ -173,7 +170,6 @@ export class PushService {
     private machineStartedAt = 0;
     private readonly machineActivityStates = new Map<string, string>();
     private readonly pending = new Set<Promise<void>>();
-    /* The clients a person is at, by client id, with the end of each report's lease. */
     private readonly presentClients = new Map<string, number>();
     private held: HeldAlert[] = [];
     private cancelRelease: (() => void) | null = null;
@@ -341,7 +337,7 @@ export class PushService {
                 { id: 'deny', kind: 'deny', label: 'Deny' },
                 ...(item.canAllowAlways ? [{ id: 'allow-always', kind: 'remember' as const, label: 'Always allow' }] : [])
             ],
-            expiresAt: this.now() + APPROVAL_MAX_AGE_MS
+            expiresAt: this.now() + PUSH_APPROVAL_MAX_AGE_MS
         };
         waiting.set(item.requestId, card);
         if (!this.snoozed(chatId)) {
@@ -422,7 +418,6 @@ export class PushService {
         return this.options.snoozes?.isSnoozed(nodeId) ?? false;
     }
 
-    /* The hours a device is quiet in right now, else null. */
     private quietHoursOf(subscription: PushSubscribePayload): QuietHours | null {
         const hours = subscription.quietHours;
 
@@ -461,7 +456,7 @@ export class PushService {
             const fresh = {
                 ...content,
                 ...(alert.wait ? { body: clipText(this.waitBody(content.nodeId), BODY_MAX) } : {}),
-                expiresAt: issuedAt + (content.kind === 'approval' ? APPROVAL_MAX_AGE_MS : PUSH_MAX_AGE_MS)
+                expiresAt: issuedAt + (content.kind === 'approval' ? PUSH_APPROVAL_MAX_AGE_MS : PUSH_MAX_AGE_MS)
             };
 
             this.queueAlert(() => this.deliverAlert(fresh, issuedAt, alert.preference, alert.ledger, { session: sessionId }));
@@ -472,7 +467,6 @@ export class PushService {
         }
     }
 
-    /* Whether a node still exists and still asks for a person. */
     private waiting(nodeId: string): boolean {
         return this.activityNodes().find((node) => node.nodeId === nodeId)?.status === 'needs-you';
     }
@@ -517,7 +511,7 @@ export class PushService {
         if (kind === 'woke' && node?.status === 'needs-you') {
             const cards = [...(this.approvals.get(nodeId)?.values() ?? [])];
             for (const card of cards) {
-                this.enqueue({ ...card, expiresAt: this.now() + APPROVAL_MAX_AGE_MS });
+                this.enqueue({ ...card, expiresAt: this.now() + PUSH_APPROVAL_MAX_AGE_MS });
             }
             if (cards.length === 0) {
                 this.waitAlert(node.target, nodeId, this.titleOf(nodeId, node.title));

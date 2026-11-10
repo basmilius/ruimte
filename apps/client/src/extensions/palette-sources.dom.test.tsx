@@ -1,7 +1,7 @@
 import { afterEach, expect, jest, test } from 'bun:test';
 import { act } from 'react';
 import { usePaletteHits } from '@/extensions/palette-sources';
-import { contribute } from '@/extensions/registry';
+import { contribute } from '@/state/extension-registry';
 import { mount, type Mounted } from '../../testing/dom';
 
 const stops: (() => void)[] = [];

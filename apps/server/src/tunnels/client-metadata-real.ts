@@ -36,7 +36,6 @@ export function pinnedGet(tls: { ca?: string | Buffer } = {}): MetadataPorts['ge
         });
 }
 
-/* The metadata fetch on this machine: the system resolver, once, and a connection pinned to what it answered. */
 export function realMetadataPorts(): MetadataPorts {
     return {
         resolve: async (hostname) => (await lookup(hostname, { all: true })).map((entry) => entry.address),

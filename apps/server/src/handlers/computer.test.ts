@@ -3,8 +3,9 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
 import { computerSetup, FakeHelper } from '../computer/computer-test-helpers.ts';
-import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
-import { registerComputerHandlers } from './computer.ts';
+import { Dispatcher } from '../dispatcher.ts';
+import type { ClientConnection } from '../wire.ts';
+import { computerArea } from './computer.ts';
 
 function request(type: string, payload: unknown = {}): string {
     return JSON.stringify({ id: type, type, payload });
@@ -14,7 +15,7 @@ describe('computer handlers', () => {
     test('a press and a restart answer with the status after them', async () => {
         const { computer, helper } = await computerSetup();
         const dispatcher = new Dispatcher();
-        registerComputerHandlers(dispatcher, computer);
+        computerArea({ computer }).handlers?.(dispatcher);
         const frames: ServerFrame[] = [];
         const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
 
@@ -35,7 +36,7 @@ describe('computer handlers', () => {
         helper.send = async (request) => (request.command === 'doctor' ? { ok: false, error: 'The helper broke' } : send(request));
         const { computer } = await computerSetup({ helper });
         const dispatcher = new Dispatcher();
-        registerComputerHandlers(dispatcher, computer);
+        computerArea({ computer }).handlers?.(dispatcher);
         const frames: ServerFrame[] = [];
         const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
 
@@ -46,7 +47,7 @@ describe('computer handlers', () => {
     test('a language a client switched to reaches the overlay', async () => {
         const { computer, home } = await computerSetup();
         const dispatcher = new Dispatcher();
-        registerComputerHandlers(dispatcher, computer);
+        computerArea({ computer }).handlers?.(dispatcher);
         const frames: ServerFrame[] = [];
         const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
         await dispatcher.handle(client, request('computer.setLanguage', { language: 'nl' }));
@@ -57,7 +58,7 @@ describe('computer handlers', () => {
     test('lists the grants and takes one back', async () => {
         const { computer } = await computerSetup();
         const dispatcher = new Dispatcher();
-        registerComputerHandlers(dispatcher, computer);
+        computerArea({ computer }).handlers?.(dispatcher);
         const frames: ServerFrame[] = [];
         const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
         expect(await computer.operate('chat-1', 'state', 'Shells', {}).catch(() => 'refused')).toBe('refused');

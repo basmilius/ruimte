@@ -3,7 +3,6 @@ import type { InstallerPorts } from './cloudflared-installer.ts';
 
 const DOWNLOAD_TIMEOUT_MS = 5 * 60_000;
 
-/* The installer's ports on this machine: `which`, the network, `tar` and the sha256 of Bun. */
 export function realInstallerPorts(): InstallerPorts {
     return {
         platform: process.platform,

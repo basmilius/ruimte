@@ -1,14 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { keyOf as eventOf } from '@adecore/editor-react/testing';
 import { typeInto } from '@adecore/editor/testing';
-import type { Shortcut } from '@adecore/ui';
+import { isApplePlatform, type Shortcut } from '@adecore/ui';
 import { act } from 'react';
-import { isApplePlatform } from '@/desktop/bridge';
-import { keyOf } from '@/shell/shortcut-overrides';
-import { useUi } from '@/state/ui';
+import { useTemplateRequest } from '@/language/template-request';
+import { keyOf } from '@/surface/shortcut-overrides';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { eventOf } from './key-events';
 import { languageCommandRows } from './language-commands';
 
 const MOD = isApplePlatform() ? { metaKey: true } : { ctrlKey: true };
@@ -66,7 +65,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
     // The store outlives the page, and the next file would open on this form.
-    useUi.getState().setTemplateRequest(null);
+    useTemplateRequest.getState().setRequest(null);
     await page.unmount();
     workspace.close();
 });

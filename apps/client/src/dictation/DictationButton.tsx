@@ -1,7 +1,7 @@
 import { IconButton } from '@adecore/ui';
 import { CircleAlert, Mic, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useKeyOf } from '@/shell/shortcut-overrides';
+import { useKeyOf } from '@/surface/shortcut-overrides';
 import type { DictationPhase } from './controller';
 
 /* The microphone button of a field or a terminal; `phase` is `idle` while another target dictates. */

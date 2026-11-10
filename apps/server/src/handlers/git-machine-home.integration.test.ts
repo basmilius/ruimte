@@ -4,14 +4,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { GitBundleResult, GitCompareResult, GitDiffResult, GitStatus, ServerFrame } from '@ruimte/contracts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { MachineHome } from '../fs/machine-home.ts';
 import { BundleStore } from '../git/bundles.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { GitStatusWatcher } from '../git/status-watcher.ts';
 import { readStatusAt } from '../git/status.ts';
 import { gitIn, initRepo } from '../git/test-repo.ts';
-import { registerGitHandlers } from './git.ts';
+import { gitArea } from './git.ts';
+import { gitDepsWith } from './test-helpers.ts';
 import { askOnce } from './test-helpers.ts';
 
 const refused = { ok: false, error: { code: 'machine-state' } };
@@ -33,7 +34,7 @@ beforeAll(async () => {
     await initRepo(join(home, 'worktrees', 'feature'), { 'a.txt': 'a\n' });
     dispatcher = new Dispatcher();
     const statuses = new GitStatusWatcher('darwin', new FakeWatch());
-    registerGitHandlers(dispatcher, {} as never, {} as never, statuses, {} as never, undefined, undefined, new MachineHome(home));
+    gitArea(gitDepsWith({ statuses, machineHome: new MachineHome(home) })).handlers?.(dispatcher);
 });
 
 afterAll(async () => {
@@ -84,11 +85,15 @@ async function checkoutAroundHome(name: string): Promise<Checkout> {
     const machineHome = new MachineHome(home);
     const dispatcher = new Dispatcher();
     const statuses = new GitStatusWatcher('darwin', new FakeWatch(), Date.now, (top) => readStatusAt(top, (folder) => machineHome.stateWithin(folder)));
-    registerGitHandlers(dispatcher, {} as never, {} as never, statuses, {} as never, undefined, undefined, machineHome, {
-        bundles: new BundleStore(home),
-        checkpoints: new Checkpoints(home),
-        folderOf: async () => repo
-    });
+    gitArea(
+        gitDepsWith({
+            statuses,
+            machineHome,
+            bundles: new BundleStore(home),
+            checkpoints: new Checkpoints(home, new MachineHome(home)),
+            folderOf: async () => repo
+        })
+    ).handlers?.(dispatcher);
 
     return {
         repo,

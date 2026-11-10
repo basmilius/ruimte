@@ -6,7 +6,6 @@ export function besideDaemon(name: string): string {
     return join(dirname(process.execPath), 'native', name);
 }
 
-/* The installed serve-sim package's `folder`; null when the package is not there. */
 export function serveSimFolder(folder: string): string | null {
     try {
         return join(dirname(Bun.resolveSync('serve-sim/middleware', import.meta.dir)), folder);

@@ -5,7 +5,7 @@ import { Serializer } from '@adecore/utils/async';
 import type { ProjectView } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
-import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { SessionEvent, SessionSink } from '../wire.ts';
 import { ProjectError } from './project-error.ts';
 import {
     tooNewMessage,
@@ -46,7 +46,6 @@ export interface ViewFileKind<TDocument extends TContent & { rev: number }, TCon
     write(path: string, document: TDocument): Promise<string>;
     /* Only the fields of the document, so a payload never carries anything else into the file. */
     documentOf(content: TContent, rev: number): TDocument;
-    /* What opening a view nobody ever saved answers. */
     empty: TDocument;
     /* Whether a view is of this kind: by the open project's own record, and in a document read from disk. */
     isViewOf(projects: ProjectStore, projectId: string, viewId: string): boolean;

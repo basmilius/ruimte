@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { act } from 'react';
 import { liveCanvas } from '@/state/canvas';
-import { windowWorkspace } from '@/state/window';
+import { windowWorkspace } from '@/workspace/window';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
@@ -45,7 +45,6 @@ function button(label: string): HTMLElement | null {
     return mounted.host.querySelector<HTMLElement>(`[data-ghost] button[aria-label="${label}"]`);
 }
 
-/* The first node of the canvas as the machine was asked to save it. */
 async function savedNode(): Promise<ProjectNode | undefined> {
     await until(() => Object.keys(liveCanvas('main')!.nodes).length === 1);
     await act(async () => windowWorkspace()!.connection.projects.flush());

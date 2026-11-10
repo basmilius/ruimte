@@ -1,14 +1,24 @@
 import type { TerminalViewHandle } from '@adecore/terminal';
-import { Button, copyText, readClipboardText, Icon, ContextMenu, ErrorBoundary, Kbd, prefetcher, EDIT_SHORTCUTS, messageOf } from '@adecore/ui';
+import {
+    Button,
+    copyText,
+    readClipboardText,
+    Icon,
+    ContextMenu,
+    ErrorBoundary,
+    Kbd,
+    prefetcher,
+    EDIT_SHORTCUTS,
+    messageOf,
+    isApplePlatform
+} from '@adecore/ui';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { ClipboardPaste, Copy, Eraser, Eye, Play, RotateCw, Scan } from 'lucide-react';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { clearTerminalAction, restartTerminalAction, resumeTerminalAgentAction } from '@/actions/client-actions';
-import { carriesFiles } from '@/canvas/drop';
-import { finderPaths } from '@/canvas/finder-drop';
-import { isApplePlatform } from '@/desktop/bridge';
+import { clearTerminalAction, restartTerminalAction, resumeTerminalAgentAction } from '@/action-port/person-actions';
+import { lastScreenOf, registerTerminal } from '@/clients/terminal/registry';
 import { TerminalDictation } from '@/dictation/TerminalDictation';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';
@@ -17,33 +27,34 @@ import { openFocusedFind } from '@/find/hosts';
 import { useFind } from '@/find/use-find';
 import { useMountCount } from '@/measure/mounts';
 import { MissingProviderNote } from '@/nodes/MissingProviderNote';
-import { closeHost, readNodeHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
-import { ConnectionNotice, NodeNotice } from '@/nodes/NodeNotice';
-import { openFileLink } from '@/shell/panels/file-links';
 import { canvasOfNode, useCanvas } from '@/state/canvas';
+import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { serverInfoOf } from '@/state/server';
 import { useSessionRestarts, useSessionRow } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
+import { carriesFiles } from '@/surface/canvas/drop';
+import { finderPaths } from '@/surface/canvas/finder-drop';
+import { closeHost, readNodeHost, useNodeHost, useSuggestedTitle } from '@/surface/nodes/node-host';
+import { ConnectionNotice, NodeNotice } from '@/surface/nodes/NodeNotice';
+import { openFileLink } from '@/surface/panels/file-links';
+import { CLEAR_SHORTCUT, platformShortcut } from '@/surface/terminal-keymap';
 import { hasControlCharacter, shellQuotedPaths } from '@/terminal/drop-path';
 import type { TerminalFileLink } from '@/terminal/file-links';
-import { CLEAR_SHORTCUT, platformShortcut } from '@/terminal/keymap';
 import { MachineTerminal } from '@/terminal/MachineTerminal';
 import { osc52Text } from '@/terminal/osc52';
-import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { SessionPortMonitor } from '@/terminal/SessionPorts';
 import { useTerminalFind } from '@/terminal/use-terminal-find';
 import { bindTerminalKeys, drawSession, fittedGrid } from '@/terminal/xterm';
-import { sessionClientFor } from '@/transport/connections';
+import { fireAndForget } from '@/transport-api/transport';
 import { useTransportStatus } from '@/transport/status';
+import { sessionClientFor } from '@/workspace/connections';
 
 // A terminal loads the WebGL addon on its first context; prefetched, it is there by then.
 prefetcher.register(() => import('@xterm/addon-webgl'));
 
-/* What the placeholder for an offscreen terminal shows: the text of its last screen. */
 export function TerminalPlate({ id }: { id: string }) {
     useMountCount('terminal-plate');
     const ref = useRef<HTMLDivElement>(null);
@@ -64,7 +75,6 @@ export function TerminalPlate({ id }: { id: string }) {
     );
 }
 
-/* The body of a terminal, the same on a canvas inside a frame and filling a view of its own. */
 export function TerminalBody({ id, focused }: { id: string; focused: boolean }) {
     useMountCount('terminal');
     const { t } = useTranslation(['canvas', 'common']);
@@ -75,7 +85,6 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     const [generation, setGeneration] = useState(0);
     const builds = generation + useSessionRestarts(id);
     const [failure, setFailure] = useState<string | null>(null);
-    // Whether the terminal had a selection when its menu opened, which is what Copy goes on.
     const [selected, setSelected] = useState(false);
     const fileHover = useRef<TerminalFileLink | null>(null);
     const [menuLink, setMenuLink] = useState<TerminalFileLink | null>(null);
@@ -285,14 +294,7 @@ function HeldCommandBar({ id, endpointId, command }: { id: string; endpointId: s
     return (
         <div className={clsx(BAR, 'text-text')}>
             <span className="grow truncate">{t('terminal.held', { command })}</span>
-            <Button
-                size="sm"
-                onClick={() =>
-                    void sessionClientFor(endpointId)
-                        ?.runHeld(id)
-                        .catch(() => undefined)
-                }
-            >
+            <Button size="sm" onClick={() => void fireAndForget('sessionClientFor', sessionClientFor(endpointId)?.runHeld(id))}>
                 <Icon icon={Play} size={12} /> {t('terminal.run')}
             </Button>
         </div>

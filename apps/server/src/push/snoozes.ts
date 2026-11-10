@@ -1,9 +1,9 @@
-import type { OutboxClock } from '@adecore/agents/coordination';
+import type { Clock } from '@adecore/agents/coordination';
 import { SnoozeListSchema, type Snooze } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { JsonFileStore } from '../json-file-store.ts';
-import { wakefulClock } from '../outbox/wakeful-clock.ts';
-import type { SessionSink } from '../sessions/manager.ts';
+import { wakefulClock } from '../timers.ts';
+import type { SessionSink } from '../wire.ts';
 
 /* Woke: the snooze ran out by itself, so a node still waiting is a new wait. Cleared: a person ended it early, and knows. */
 export interface SnoozeChange {
@@ -13,7 +13,7 @@ export interface SnoozeChange {
 
 interface SnoozeStoreOptions {
     path?: string;
-    clock?: OutboxClock;
+    clock?: Clock;
 }
 
 function keyOf(projectId: string, nodeId: string): string {
@@ -31,7 +31,7 @@ export class SnoozeStore {
     private readonly sinks = new ClientSinks();
     private readonly listeners = new Set<(change: SnoozeChange) => void>();
     private readonly file: JsonFileStore<{ snoozes: Snooze[] }>;
-    private readonly clock: OutboxClock;
+    private readonly clock: Clock;
     private timer: unknown = null;
 
     constructor(options: SnoozeStoreOptions = {}) {

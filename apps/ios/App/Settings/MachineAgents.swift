@@ -3,6 +3,21 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
+/// A switch of the machine that `endpoint.setIdentity` takes beside the name and icon. The case is the field's name, and
+/// reading it through `keyPath` keeps a renamed field from building.
+enum EndpointSwitch: String {
+    case resumeAtReset, agentsDeleteAnyView, reachOpenProjects, visualReplies
+
+    var keyPath: KeyPath<EndpointInfo, Bool?> {
+        switch self {
+        case .resumeAtReset: \.resumeAtReset
+        case .agentsDeleteAnyView: \.agentsDeleteAnyView
+        case .reachOpenProjects: \.reachOpenProjects
+        case .visualReplies: \.visualReplies
+        }
+    }
+}
+
 /// The accounts and defaults of the installed CLIs on one machine. Login stays with the CLI itself.
 @MainActor @Observable final class MachineAgentsModel {
     struct Agent: Identifiable, Equatable {
@@ -10,7 +25,7 @@ import SwiftUI
         let name: String
         let version: String?
         let chat: Bool
-        let models: [JSONValue]
+        let models: [ProviderModel]
         let defaultModel: String?
         var accounts: [Account]
         var id: String { kind }
@@ -34,8 +49,8 @@ import SwiftUI
     private(set) var agents: [Agent] = []
     /// Whether the machine keeps an order of accounts that a person can change from here.
     private(set) var reorders = false
-    private var providers: [JSONValue] = []
-    private(set) var rawAccounts: JSONValue?
+    private var providers: [ProviderInfo] = []
+    private(set) var snapshot: AccountsSnapshot?
     private(set) var chatLogins: Set<String> = []
     private(set) var silentLogins: Set<String> = []
     private var mutations = 0
@@ -55,7 +70,7 @@ import SwiftUI
 
     /// Per CLI, what the machine types to log in under an account; a CLI without one has no login to offer here.
     private(set) var loginCommands: [String: String] = [:]
-    private(set) var endpoint: JSONValue?
+    private(set) var endpoint: EndpointInfo?
     /// Nil for a machine without the helper app.
     private(set) var computer: JSONValue?
 
@@ -68,9 +83,9 @@ import SwiftUI
         let mutation = mutations
         await state.read(loaded: !agents.isEmpty) { stillTheLatest in
             let providers = try await AgentCatalog.load(client)
-            let accounts = try? await client.request(.accountsList)
-            let endpoint = try? await client.request("endpoint.info")
-            let computer = try? await client.request("computer.status")
+            let accounts = try? await client.request(.accountsList).decoded(as: AccountsSnapshot.self)
+            let endpoint = try? await client.request(.endpointInfo).decoded(as: EndpointInfo.self)
+            let computer = try? await client.request(.computerStatus)
             try stillTheLatest()
             guard mutation == mutations else { throw CancellationError() }
             self.providers = providers
@@ -91,7 +106,9 @@ import SwiftUI
         mutations += 1
         await state.perform {
             do {
-                apply(accounts: try await client.request(.accountsReorder, payload: payload))
+                apply(
+                    accounts: try await client.request(.accountsReorder, payload: payload)
+                        .decoded(as: AccountsSnapshot.self))
             } catch {
                 await load()
                 throw error
@@ -103,13 +120,13 @@ import SwiftUI
         .object(["kind": .string(kind), "ids": .array(ids.map(JSONValue.string))])
     }
 
-    private func apply(accounts: JSONValue?) {
+    private func apply(accounts: AccountsSnapshot?) {
         mutations += 1
-        rawAccounts = accounts
-        chatLogins = Set(accounts?.list("chatLogins").compactMap(\.stringValue) ?? [])
-        silentLogins = Set(accounts?.list("silentLogins").compactMap(\.stringValue) ?? [])
+        snapshot = accounts
+        chatLogins = Set(accounts?.chatLogins ?? [])
+        silentLogins = Set(accounts?.silentLogins ?? [])
         agents = Self.agents(providers: providers, accounts: accounts)
-        loginCommands = (accounts?["loginCommands"]?.objectValue ?? [:]).compactMapValues(\.stringValue)
+        loginCommands = accounts?.loginCommands ?? [:]
     }
 
     static func label(_ text: String, required: Bool) throws -> String {
@@ -128,7 +145,7 @@ import SwiftUI
             let label = try Self.label(label, required: true)
             let value = try await client.request(
                 .accountsCreate, payload: .object(["kind": .string(kind), "label": .string(label)]))
-            apply(accounts: value)
+            apply(accounts: try value.decoded(as: AccountsSnapshot.self))
             if let id = value["id"]?.stringValue { createdAccounts.insert(id) }
             saved = true
         }
@@ -153,7 +170,9 @@ import SwiftUI
             if let enabled { entry["enabled"] = .bool(enabled) }
             accounts[id] = .object(entry)
             guard answers(.accountsSave) else { throw MachineClientError.disconnected }
-            apply(accounts: try await client.request(.accountsSave, payload: .object(["accounts": .object(accounts)])))
+            apply(
+                accounts: try await client.request(.accountsSave, payload: .object(["accounts": .object(accounts)]))
+                    .decoded(as: AccountsSnapshot.self))
             saved = true
         }
         return saved
@@ -162,55 +181,63 @@ import SwiftUI
     func refresh() async {
         guard !state.busy, answers(.accountsRefresh) else { return }
         mutations += 1
-        await state.perform { apply(accounts: try await client.request(.accountsRefresh)) }
+        await state.perform {
+            apply(accounts: try await client.request(.accountsRefresh).decoded(as: AccountsSnapshot.self))
+        }
     }
 
     /// Turns a switch the machine keeps in `endpoint.json`, leaving its name and icon as they stand.
-    func set(_ key: String, _ value: Bool) async {
+    func set(_ setting: EndpointSwitch, _ value: Bool) async {
         guard let endpoint else { return }
         await state.perform {
             self.endpoint = try await client.request(
-                "endpoint.setIdentity", payload: Self.identityPayload(endpoint: endpoint, key: key, value: value))
+                .endpointSetIdentity, payload: Self.identityPayload(endpoint: endpoint, setting: setting, value: value)
+            ).decoded(as: EndpointInfo.self)
         }
     }
 
     /// A machine nobody named answers to its own default, and sending that name back would make it a chosen one.
-    static func identityPayload(endpoint: JSONValue, key: String, value: Bool) -> JSONValue {
-        let chosen = endpoint["nameSource"] == .string("chosen")
+    static func identityPayload(endpoint: EndpointInfo, setting: EndpointSwitch, value: Bool) -> JSONValue {
+        let icon = endpoint.icon.present.flatMap { try? JSONValue(encoding: $0) }
         return .object([
-            "name": chosen ? .string(endpoint.text("label")) : .null,
-            "icon": endpoint["icon"] ?? .null,
-            key: .bool(value),
+            "name": endpoint.nameSource == .chosen ? .string(endpoint.label) : .null,
+            "icon": icon ?? .null,
+            setting.rawValue: .bool(value),
         ])
     }
 
     /// The installed CLIs, each with its accounts in the machine's order and what they read as now.
-    static func agents(providers: [JSONValue], accounts: JSONValue?) -> [Agent] {
+    static func agents(providers: [ProviderInfo], accounts: AccountsSnapshot?) -> [Agent] {
         let list = accounts.map(ProviderAccountList.init)
         let statuses = Dictionary(
-            (accounts?.list("statuses") ?? []).map { ($0.text("id"), $0) }, uniquingKeysWith: { first, _ in first })
-        return providers.filter { $0["installed"] == .bool(true) }.map { provider in
-            let kind = provider.text("kind")
+            (accounts?.statuses ?? []).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return providers.filter(\.installed).map { provider in
+            let kind = provider.kind
             let entries = list?.accounts(of: kind) ?? []
+            let agentName = provider.name
             return Agent(
-                kind: kind, name: provider.text("name", fallback: ProcessesText.agentName(kind)),
-                version: provider["version"]?.stringValue, chat: provider["capabilities"]?["chat"] == .bool(true),
-                models: provider.list("models").filter { $0["legacy"] != .bool(true) },
-                defaultModel: provider["defaultModel"]?.stringValue,
+                kind: kind, name: agentName,
+                version: provider.version, chat: provider.capabilities.chat,
+                models: provider.models.filter { !$0.legacy },
+                defaultModel: provider.defaultModel,
                 accounts: entries.map { entry in
                     let state = entry.enabled ? entry.state : "disabled"
                     return Account(
-                        id: entry.id, name: entry.name(provider: ProcessesText.agentName(kind)), state: state,
+                        id: entry.id, name: entry.name(provider: agentName), state: state,
                         detail: detail(state: state, status: statuses[entry.id]))
                 })
         }
     }
 
     /// What an account reads as in one line: its plan and email once signed in, else why it cannot run.
-    static func detail(state: String?, status: JSONValue?) -> String {
+    static func detail(state: String?, status: AccountStatus?) -> String {
+        detail(state: state, plan: status?.plan, email: status?.email, message: status?.message)
+    }
+
+    static func detail(state: String?, plan: String? = nil, email: String? = nil, message: String? = nil) -> String {
         switch state {
         case "ready":
-            let parts = [status?["plan"]?.stringValue, status?["email"]?.stringValue].compactMap { $0 }
+            let parts = [plan, email].compactMap { $0 }
                 .filter { !$0.isEmpty }
             return parts.isEmpty ? String(localized: "Logged in") : parts.joined(separator: " · ")
         case "signed-out": return String(localized: "Not logged in")
@@ -218,7 +245,7 @@ import SwiftUI
         case "checking", nil: return String(localized: "Checking")
         case "folder-missing": return String(localized: "Its folder is missing")
         case "not-found": return String(localized: "Not installed")
-        default: return status?["message"]?.stringValue ?? String(localized: "Unavailable")
+        default: return message ?? String(localized: "Unavailable")
         }
     }
 }
@@ -266,7 +293,7 @@ struct MachineAgentsPage: View {
         .environment(\.editMode, $editMode)
         .task {
             await RemotePageLifecycle.run(
-                client: session.rpc, events: ["endpoint.changed", "accounts.changed"], load: model.load)
+                client: session.rpc, events: [.endpointChanged, .accountsChanged], load: model.load)
         }
         .mobileSheet(item: $editor) { target in
             ProviderAccountEditor(model: model, target: target, connected: session.connected)
@@ -281,8 +308,8 @@ struct MachineAgentsPage: View {
     private func edit(_ agent: MachineAgentsModel.Agent, _ account: MachineAgentsModel.Account) {
         editor = ProviderAccountEditorTarget(
             kind: agent.kind, accountID: account.id,
-            label: model.rawAccounts?["accounts"]?[account.id]?["label"]?.stringValue ?? "",
-            enabled: model.rawAccounts?["accounts"]?[account.id]?["enabled"]?.boolValue ?? true)
+            label: model.snapshot?.accounts[account.id]?.label ?? "",
+            enabled: model.snapshot?.accounts[account.id]?.enabled ?? true)
         model.state.problem = nil
     }
 
@@ -425,25 +452,23 @@ struct MachineAgentsPage: View {
                 }
             }
             .pickerStyle(.menu)
-            ForEach(
-                model.agents.filter { $0.chat && !$0.models.isEmpty && ChatPreferences.providers.contains($0.kind) }
-            ) { agent in
+            ForEach(model.agents.filter { $0.chat && !$0.models.isEmpty }) { agent in
                 modelPicker(agent)
             }
-            if model.endpoint?["resumeAtReset"]?.boolValue != nil {
-                Toggle("Chats resume after a limit", isOn: endpointBinding("resumeAtReset"))
+            if model.endpoint?.resumeAtReset != nil {
+                Toggle("Chats resume after a limit", isOn: endpointBinding(.resumeAtReset))
                     .disabled(model.state.busy)
             }
-            if model.endpoint?["agentsDeleteAnyView"]?.boolValue != nil {
-                Toggle("Agents may delete any view or node", isOn: endpointBinding("agentsDeleteAnyView"))
+            if model.endpoint?.agentsDeleteAnyView != nil {
+                Toggle("Agents may delete any view or node", isOn: endpointBinding(.agentsDeleteAnyView))
                     .disabled(model.state.busy)
             }
-            if model.endpoint?["reachOpenProjects"]?.boolValue != nil {
-                Toggle("Agents may reach all open projects", isOn: endpointBinding("reachOpenProjects"))
+            if model.endpoint?.reachOpenProjects != nil {
+                Toggle("Agents may reach all open projects", isOn: endpointBinding(.reachOpenProjects))
                     .disabled(model.state.busy)
             }
-            if model.endpoint?["visualReplies"]?.boolValue != nil {
-                Toggle(isOn: endpointBinding("visualReplies")) {
+            if model.endpoint?.visualReplies != nil {
+                Toggle(isOn: endpointBinding(.visualReplies)) {
                     Text("Visual replies")
                     Text(
                         "Agents may show a chart, table or mockup above a reply. Off, they answer in text. Existing visuals stay."
@@ -464,24 +489,24 @@ struct MachineAgentsPage: View {
             selection: Binding(
                 get: {
                     preferences.selections[agent.kind]?["model"]?.stringValue ?? agent.defaultModel
-                        ?? agent.models.first?.text("slug") ?? ""
+                        ?? agent.models.first?.slug ?? ""
                 },
                 set: { slug in
                     preferences.rememberSelection(
                         .object(["model": .string(slug), "options": .object([:])]), provider: agent.kind)
                 })
         ) {
-            ForEach(agent.models.map { $0.text("slug") }, id: \.self) { slug in
+            ForEach(agent.models.map(\.slug), id: \.self) { slug in
                 Text(ModelName.of(slug, in: agent.models)).tag(slug)
             }
         }
         .pickerStyle(.menu)
     }
 
-    private func endpointBinding(_ key: String) -> Binding<Bool> {
+    private func endpointBinding(_ setting: EndpointSwitch) -> Binding<Bool> {
         Binding(
-            get: { model.endpoint?[key]?.boolValue ?? false },
-            set: { value in Task { await model.set(key, value) } })
+            get: { model.endpoint?[keyPath: setting.keyPath] ?? false },
+            set: { value in Task { await model.set(setting, value) } })
     }
 
     @ViewBuilder private var computerUse: some View {

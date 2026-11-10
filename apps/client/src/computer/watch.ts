@@ -1,6 +1,7 @@
 import i18next from 'i18next';
-import { useComputer } from '@/state/computer';
+import { useComputer } from '@/computer/computer';
 import { pool } from '@/transport';
+import { fireAndForget } from '@/transport-api/transport';
 import { joinWatches, snapshotWatch, watchPool, type WatchablePool } from '@/transport/pool-watch';
 
 /*
@@ -19,7 +20,7 @@ export function startComputerWatch(source: WatchablePool = pool): () => void {
             language = next;
             if (useComputer.getState().statuses[endpointId]?.enabled) {
                 // A failed ask keeps the words the overlay has.
-                link.request('computer.setLanguage', { language: next }).catch(() => undefined);
+                void fireAndForget('computer.setLanguage', link.request('computer.setLanguage', { language: next }));
             }
         };
         i18next.on('languageChanged', onLanguage);

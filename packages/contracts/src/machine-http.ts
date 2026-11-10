@@ -1,7 +1,6 @@
-import { toBase64Url } from '@ruimte/pulsar';
+import { LanDoorSchema, localSecretMac, machineProofMessage } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { KeepAwakeModeSchema } from './keep-awake.ts';
-import { LanDoorSchema } from './lan-door.ts';
 import { ReachCheckSchema } from './reach.ts';
 
 /*
@@ -12,13 +11,9 @@ import { ReachCheckSchema } from './reach.ts';
 
 export const MACHINE_HEALTH_PATH = '/health';
 
-/*
- * Where the desktop app's own page lives: the shell serves the built client under this scheme, so the
- * page never depends on a daemon to exist. The daemon takes this origin beside loopback; a page on the
- * web cannot carry it.
- */
-export const DESKTOP_APP_SCHEME = 'app';
-export const DESKTOP_APP_ORIGIN = `${DESKTOP_APP_SCHEME}://ruimte`;
+// The desktop app's own origin is the pulsar package's, since the Workers allow it too.
+export { DESKTOP_APP_ORIGIN, DESKTOP_APP_SCHEME } from '@ruimte/pulsar';
+
 export const MACHINE_WORK_PATH = '/machine/work';
 /* Where the desktop app hands the OpenAI key from its settings to the daemon's Voice, local secret only. */
 export const MACHINE_VOICE_KEY_PATH = '/machine/voice-key';
@@ -33,7 +28,12 @@ export const HealthResultSchema = z.object({
     /* The id `apps/server/scripts/compile.ts` stamps into the binary; absent in a checkout. */
     build: z.string().min(1).nullish(),
     /* Whether launchd or systemd started this daemon. */
-    service: z.boolean().optional()
+    service: z.boolean().optional(),
+    /*
+     * True while the daemon holds the port and wires itself, when it answers this path with status 503
+     * and nothing else yet. It is this machine, so a reader waits for it instead of taking the port for another program.
+     */
+    starting: z.boolean().optional()
 });
 export type HealthResult = z.infer<typeof HealthResultSchema>;
 
@@ -120,10 +120,23 @@ export type MachineStatus = z.infer<typeof MachineStatusSchema>;
  */
 export const MACHINE_NOTIFY_PATH = '/machine/notify';
 
-export const MachineNotifyRequestSchema = z.object({ nodeId: z.string().min(1), text: z.string().trim().min(1).max(500) });
+export const MACHINE_NOTIFY_MAX_TEXT = 500;
+
+export const MachineNotifyRequestSchema = z.object({ nodeId: z.string().min(1), text: z.string().trim().min(1).max(MACHINE_NOTIFY_MAX_TEXT) });
 
 /* What a refused notification answers beside its status: `node-not-found` for a node no project holds. */
 export const MachineNotifyRefusalSchema = z.object({ code: z.string(), message: z.string() });
+
+/* What `ruimte login` has the machine sign, on the local secret: a request to link the machine, then its registration on the account the person approved. */
+export const MACHINE_LINK_PATH = '/machine/link-request';
+export const MACHINE_REGISTRATION_PATH = '/machine/registration';
+
+/* What `ruimte logout` asks: the machine leaves its account, as `endpoint.leaveAccount` does for the app. */
+export const MACHINE_LEAVE_ACCOUNT_PATH = '/machine/leave-account';
+
+/* What `ruimte extension dev` asks, on the local secret: run a folder as an extension here, and stop. */
+export const EXTENSION_LINK_PATH = '/extensions/link';
+export const EXTENSION_UNLINK_PATH = '/extensions/unlink';
 
 /*
  * Where a daemon proves it holds the local secret of its home without showing it. The desktop shell
@@ -136,19 +149,9 @@ export const MachineProofRequestSchema = z.object({ nonce: z.string().min(16).ma
 
 export const MachineProofResultSchema = z.object({ proof: z.string().min(1) });
 
-/*
- * The port is covered too, so a daemon of the same home on another port cannot answer for whatever
- * holds this one. The first line keeps the HMAC from ever meaning anything else signed with the secret.
- */
-function proofMessage(port: number, nonce: string): string {
-    return `ruimte machine proof v1\n${port}\n${nonce}`;
-}
-
-/* HMAC-SHA256 under the local secret, in base64url, with WebCrypto so the daemon and the shell compute the same bytes. */
-export async function localProofOf(secret: string, port: number, nonce: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    return toBase64Url(await crypto.subtle.sign('HMAC', key, encoder.encode(proofMessage(port, nonce))));
+/* What the daemon answers a nonce with: the local secret's HMAC over this port and that nonce. */
+export function localProofOf(secret: string, port: number, nonce: string): Promise<string> {
+    return localSecretMac(secret, machineProofMessage(port, nonce));
 }
 
 /* Whether a reply to the proof request was made with this secret, for this port and this nonce. */

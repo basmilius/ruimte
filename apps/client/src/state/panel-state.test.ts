@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { ProjectLocalSchema } from '@ruimte/contracts';
+import { panelRegistry } from '@/registry/panels';
 import { parsePanels, serializePanels, stripOf, type PanelsState } from './panel-state.ts';
 
 const defaults: PanelsState = {
@@ -77,6 +78,25 @@ describe('panels in the machine-local file', () => {
         expect(serializePanels(databases)).not.toHaveProperty('launchesPanel');
         expect(parsePanels(serializePanels(databases), defaults).panel).toEqual({ open: true, kind: 'databases' });
         expect(serializePanels(defaults)).not.toHaveProperty('databasesPanel');
+    });
+
+    test('a stored panel reads and writes the same before the workspace registers its panels', () => {
+        const registered = panelRegistry.all();
+        panelRegistry.clear();
+        try {
+            for (const [kind, flag] of [
+                ['launches', 'launchesPanel'],
+                ['databases', 'databasesPanel'],
+                ['output', 'outputPanel']
+            ] as const) {
+                const open: PanelsState = { ...defaults, panel: { open: true, kind } };
+                expect(serializePanels(open)).toMatchObject({ panel: { open: true, kind: 'files' }, [flag]: true });
+                expect(parsePanels({ panel: { open: true, kind: 'files' }, [flag]: true }, defaults).panel).toEqual({ open: true, kind });
+            }
+            expect(serializePanels({ ...defaults, panel: { open: true, kind: 'problems' } }).panel).toEqual({ open: false, kind: 'files' });
+        } finally {
+            panelRegistry.add(...registered);
+        }
     });
 
     test('the strip keeps the order of every kind, and a client from before it reads the file tabs alone', () => {

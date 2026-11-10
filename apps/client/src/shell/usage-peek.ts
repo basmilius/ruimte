@@ -1,5 +1,10 @@
+import { create } from 'zustand';
+
 /* Long enough that Option on its way to a character or a chord shows nothing. */
 export const PEEK_DELAY_MS = 300;
+
+/* Whether Option is held on its own, which shows the usage card; `useAppShortcuts` sets it and the rail reads it. */
+export const useUsagePeekShown = create<{ shown: boolean }>(() => ({ shown: false }));
 
 interface PeekTimers {
     set(run: () => void, ms: number): number;

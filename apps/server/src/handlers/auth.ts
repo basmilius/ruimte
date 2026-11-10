@@ -1,10 +1,10 @@
+import { CodedError } from '@adecore/agents';
 import {
     PROTOCOL_VERSION,
     type AgentIntegrationReport,
     type AgentIntegrationsResult,
     type EndpointInfoPayload,
     type EndpointSettings,
-    type LanDoor,
     type MachineUpdate,
     type MachineUpdateReport,
     type MachineWork,
@@ -12,58 +12,50 @@ import {
 } from '@ruimte/contracts';
 import { peerAccessRequestMessage } from '@ruimte/pulsar';
 import { INTEGRATION_KINDS, IntegrationsFixed, isIntegrationKind } from '../agents/integrations.ts';
+import type { Area } from '../area.ts';
 import { isOwner } from '../auth/access.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import { signForAccount } from '../auth/registration.ts';
-import { RequestError, type ClientAccess, type Dispatcher } from '../dispatcher.ts';
-import type { EndpointIdentity, IdentityFlags } from '../endpoint-id.ts';
-import { checkWorktreeRoot } from '../git/worktree-root.ts';
+import type { LiveSink } from '../client-sinks.ts';
+import { type Dispatcher } from '../dispatcher.ts';
+import type { EndpointIdentity } from '../endpoint-id.ts';
+import { prepareSettings, type SettingPatch } from '../machine-settings.ts';
+import type { PeerKey } from '../peer/giver/peer-key.ts';
 import { DEFAULT_ADMIN_PROMPT } from '../power/closed-lid.ts';
 import type { InstallVerdict } from '../power/machine-update.ts';
 import { gitBash } from '../pty/pty.ts';
-import type { BrokerDescription } from '../pulsar/broker-switch.ts';
-import type { PeerKey } from '../remote/peer-key.ts';
 import { countClient, countUsage, recordStartup, recordTiming } from '../stats/usage-stats.ts';
+import type { ClientAccess } from '../wire.ts';
 
-interface EndpointHost {
+export interface AuthDeps {
+    store: AuthStore;
     identity: EndpointIdentity;
     // The key another machine lets this one in under, signed with next to the machine key.
     peerKey: Pick<PeerKey, 'publicKey' | 'sign'>;
     // `$RUIMTE_HOME`, which a worktree folder may not sit in.
     home: string;
     version: string;
-    // The broker clients are told to dial right now (null when this machine announces itself to none), and whether a flag decides it.
-    broker(): BrokerDescription;
-    // Where the door on the local network stands right now (null while it is closed), and whether a flag decides it.
-    lanDoor(): { lan: LanDoor | null; lanDoorFixed: boolean };
     // Revoking must take effect now, not at the next connection, so the daemon drops that session's sockets here.
     disconnect(sessionId: string): void;
-    // A disabled policy stops streams already in flight as well as refusing the next one.
-    streamingChanged(allowed: boolean): void;
-    // Chats take up a limited turn on a clock only while this is on; turning it off drops what was owed.
-    resumeChanged?(on: boolean): void;
-    // Throws when the machine cannot write short texts with this pick: its CLI, model or account is not there.
-    validateTextModel?(choice: TextModelChoice): Promise<void>;
-    // Off drops the days not sent yet, so nothing counted before goes out later.
-    usageStatsChanged?(on: boolean): Promise<void>;
-    // Whether this machine can hold a block on sleep, and the call that follows a changed setting.
-    keepAwake?: { available: boolean; changed(): void };
-    // The closed-lid mode of a Mac: whether it is offered, whether its rule is installed, and installing or removing that.
-    closedLid?: {
+    keepAwake: { available: boolean };
+    closedLid: {
         available: boolean;
         rule(): Promise<boolean>;
         setRule(install: boolean, prompt: string): Promise<void>;
     };
     // What a person allowed in the CLIs' global settings, and the calls that read and change it.
-    agentIntegrations?: {
+    agentIntegrations: {
         summary(): AgentIntegrationsResult['summary'];
         files(): Promise<AgentIntegrationsResult['files']>;
         set(kind: (typeof INTEGRATION_KINDS)[number], on: boolean): Promise<AgentIntegrationReport[]>;
     };
     // What a client told of itself, for the list of connected clients.
-    announce?(clientId: string, payload: EndpointInfoPayload): void;
+    announce(clientId: string, payload: EndpointInfoPayload): void;
+    // Throws when the machine cannot write short texts with this pick: its CLI, model or account is not there.
+    validateTextModel(choice: TextModelChoice): Promise<void>;
     // The update of the desktop app on this machine, and what installing it would end right now.
-    updates?: {
+    updates: {
+        subscribe(clientId: string, sink: LiveSink): () => void;
         state(): MachineUpdate;
         report(clientId: string, report: MachineUpdateReport): void;
         requestInstall(): InstallVerdict;
@@ -73,48 +65,35 @@ interface EndpointHost {
 
 export const PAIRING_REMOVED = 'Pairing links are gone. Put this machine on your account with `ruimte login`, or from the Ruimte app on it.';
 
-export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, host: EndpointHost): void {
-    const { identity } = host;
+export function authArea(deps: AuthDeps): Area {
+    return {
+        name: 'auth',
+        sources: [deps.identity, deps.updates],
+        handlers: (dispatcher) => registerRequests(dispatcher, deps)
+    };
+}
+
+function registerRequests(dispatcher: Dispatcher, host: AuthDeps): void {
+    const { identity, store } = host;
 
     // Built per client, so what the machine is called travels alongside what this connection is allowed.
     const info = async (access: ClientAccess | undefined) => ({
-        id: identity.id,
-        label: identity.label,
-        nameSource: identity.nameSource,
-        icon: identity.icon,
-        agentsDeleteAnyView: identity.agentsDeleteAnyView,
-        reachOpenProjects: identity.reachOpenProjects,
-        agentsSharePorts: identity.agentsSharePorts,
-        steerMessages: identity.steerMessages,
-        streamingAllowed: identity.streamingAllowed,
-        resumeAtReset: identity.resumeAtReset,
-        visualReplies: identity.visualReplies,
-        textModel: identity.textModel,
-        ...identity.keepAwakeFields(),
-        keepAwakeAvailable: host.keepAwake?.available === true,
-        keepAwakeLidAvailable: host.closedLid?.available === true,
-        keepAwakeLidRule: host.closedLid?.available === true ? await host.closedLid.rule() : false,
-        ...(host.agentIntegrations ? { agentIntegrations: host.agentIntegrations.summary() } : {}),
-        ...(host.updates ? { update: host.updates.state() } : {}),
+        ...identity.snapshot(),
+        keepAwakeAvailable: host.keepAwake.available,
+        keepAwakeLidAvailable: host.closedLid.available,
+        keepAwakeLidRule: host.closedLid.available ? await host.closedLid.rule() : false,
+        update: host.updates.state(),
         platform: process.platform,
         version: host.version,
         protocol: PROTOCOL_VERSION,
         reachability: access?.reachability ?? 'loopback',
         authenticated: access?.sessionId !== null && access?.sessionId !== undefined,
         publicKey: identity.publicKey,
-        broker: identity.broker,
-        ...host.broker(),
-        lanDoor: identity.lanDoor,
-        ...host.lanDoor(),
-        nodeSizes: identity.nodeSizes,
-        usageStats: identity.usageStats,
-        startFolder: identity.startFolder ?? '',
         // Only the app on this machine is told which account it is on; it is the one that can take it off.
         ...(isOwner(access)
             ? {
                   accountId: (await store.accountBinding())?.id ?? null,
-                  worktreeRoot: identity.worktreeRoot,
-                  ...(identity.terminalShell === null ? {} : { terminalShell: identity.terminalShell }),
+                  ...identity.ownerSettings(),
                   ...(process.platform === 'win32' && gitBash() === null ? { gitBashMissing: true } : {})
               }
             : {})
@@ -128,7 +107,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         'endpoint.info',
         async (payload, client) => {
             countClient(client.access, payload.client);
-            host.announce?.(client.id, payload);
+            host.announce(client.id, payload);
             if (client.access?.peer !== undefined) {
                 return {
                     id: identity.id,
@@ -147,89 +126,21 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         { peer: true }
     );
 
-    /* The checks and the side effects of the switches both requests set; `write` stores them, with or without a new name. */
+    /* The checks of the settings both requests set; `write` keeps them, with or without a new name, and follows what changed. */
     const applySettings = async (
         settings: EndpointSettings,
         access: ClientAccess | undefined,
-        write: (flags: IdentityFlags) => Promise<void>
+        write: (patch: SettingPatch) => Promise<void>
     ): Promise<void> => {
-        // Off always goes through, and a switch already on stays on; only turning it on needs the rule.
-        if (settings.keepAwakeLidClosed === true && !identity.keepAwake.lidClosed) {
-            if (host.closedLid?.available !== true) {
-                throw new RequestError('closed-lid-unavailable', 'Only a Mac can stay awake with its lid closed');
-            }
-            if (!(await host.closedLid.rule())) {
-                throw new RequestError('closed-lid-no-rule', 'Allow it on the Mac first: Ruimte there installs the rule with an administrator password');
-            }
-        }
-        // Where checkouts land decides which folders the daemon makes and writes in, so it is the owner's alone.
-        let worktreeRoot: string | undefined;
-        if (settings.worktreeRoot !== undefined) {
-            if (!isOwner(access)) {
-                throw new RequestError('owner-only', 'Only a person on this machine can choose where it makes worktrees');
-            }
-            if (settings.worktreeRoot === '') {
-                worktreeRoot = '';
-            } else {
-                const checked = await checkWorktreeRoot(settings.worktreeRoot, host.home);
-                if ('refusal' in checked) {
-                    throw new RequestError(checked.refusal, checked.message);
-                }
-                worktreeRoot = checked.root;
-            }
-        }
-        // Whether this machine sends anything is the decision of the person who runs it.
-        if (settings.usageStats !== undefined && !isOwner(access)) {
-            throw new RequestError('owner-only', 'Only a person on this machine can turn its usage statistics on or off');
-        }
-        // Letting an agent open a loopback service to every device of the account is the owner's decision, not a paired client's.
-        if (settings.agentsSharePorts !== undefined && !isOwner(access)) {
-            throw new RequestError('owner-only', 'Only a person on this machine can let agents share ports');
-        }
-        // What the daemon starts as a person's shell is the owner's alone.
-        if (settings.terminalShell !== undefined && !isOwner(access)) {
-            throw new RequestError('owner-only', 'Only a person on this machine can choose the shell of its terminals');
-        }
-        // A pick this machine cannot use now is refused here, so a person hears why while choosing and not on the first commit message.
-        if (settings.textModel != null) {
-            await host.validateTextModel?.(settings.textModel);
-        }
-        await write({
-            worktreeRoot,
-            terminalShell: settings.terminalShell,
-            usageStats: settings.usageStats,
-            agentsDeleteAnyView: settings.agentsDeleteAnyView,
-            reachOpenProjects: settings.reachOpenProjects,
-            agentsSharePorts: settings.agentsSharePorts,
-            steerMessages: settings.steerMessages,
-            streamingAllowed: settings.streamingAllowed,
-            resumeAtReset: settings.resumeAtReset,
-            visualReplies: settings.visualReplies,
-            textModel: settings.textModel,
-            keepAwake: settings.keepAwake,
-            keepAwakeOnBattery: settings.keepAwakeOnBattery,
-            keepAwakeDisplay: settings.keepAwakeDisplay,
-            keepAwakeLidClosed: settings.keepAwakeLidClosed,
-            broker: settings.broker,
-            lanDoor: settings.lanDoor
-        });
-        if (
-            settings.keepAwake !== undefined ||
-            settings.keepAwakeOnBattery !== undefined ||
-            settings.keepAwakeDisplay !== undefined ||
-            settings.keepAwakeLidClosed !== undefined
-        ) {
-            host.keepAwake?.changed();
-        }
-        if (settings.streamingAllowed !== undefined) {
-            host.streamingChanged(identity.streamingAllowed);
-        }
-        if (settings.resumeAtReset !== undefined) {
-            host.resumeChanged?.(identity.resumeAtReset);
-        }
-        if (settings.usageStats !== undefined) {
-            await host.usageStatsChanged?.(identity.usageStats);
-        }
+        await write(
+            await prepareSettings(settings, {
+                owner: isOwner(access),
+                home: host.home,
+                closedLid: host.closedLid,
+                current: identity.settings(),
+                validateTextModel: (choice) => host.validateTextModel(choice)
+            })
+        );
     };
 
     /*
@@ -273,8 +184,8 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         'endpoint.closedLidRule',
         async (payload, client) => {
             const closedLid = host.closedLid;
-            if (closedLid?.available !== true) {
-                throw new RequestError('closed-lid-unavailable', 'Only a Mac can stay awake with its lid closed');
+            if (!closedLid.available) {
+                throw new CodedError('closed-lid-unavailable', 'Only a Mac can stay awake with its lid closed');
             }
             await closedLid.setRule(payload.install, payload.prompt ?? DEFAULT_ADMIN_PROMPT[payload.install ? 'install' : 'remove']);
             return info(client.access);
@@ -286,17 +197,10 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
      * What Ruimte writes into the CLIs' own settings is a person's call on this machine, so only the local
      * secret reads the files and changes the choice. A client the machine let in is not its owner.
      */
-    const integrations = () => {
-        if (host.agentIntegrations === undefined) {
-            throw new RequestError('unavailable', 'This machine does not manage the CLIs’ settings');
-        }
-        return host.agentIntegrations;
-    };
-
     dispatcher.register(
         'endpoint.agentIntegrations',
         async () => {
-            const current = integrations();
+            const current = host.agentIntegrations;
             return { summary: current.summary(), files: await current.files() };
         },
         { owner: true }
@@ -305,13 +209,13 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
     dispatcher.register(
         'endpoint.setAgentIntegration',
         async (payload) => {
-            const current = integrations();
+            const current = host.agentIntegrations;
             if (!isIntegrationKind(payload.provider)) {
-                throw new RequestError('unknown-provider', `Ruimte writes no settings for ${payload.provider}`);
+                throw new CodedError('unknown-provider', `Ruimte writes no settings for ${payload.provider}`);
             }
             const report = await current.set(payload.provider, payload.on).catch((e: unknown) => {
                 if (e instanceof IntegrationsFixed) {
-                    throw new RequestError('integrations-fixed', 'This machine was started with agent status turned off');
+                    throw new CodedError('integrations-fixed', 'This machine was started with agent status turned off');
                 }
                 throw e;
             });
@@ -353,7 +257,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
     dispatcher.register(
         'endpoint.reportUpdate',
         (payload, client) => {
-            host.updates?.report(client.id, payload);
+            host.updates.report(client.id, payload);
             return {};
         },
         { owner: true }
@@ -366,19 +270,16 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
      */
     dispatcher.register('endpoint.installUpdate', (payload) => {
         const updates = host.updates;
-        if (!updates) {
-            throw new RequestError('update-no-app', 'This machine cannot install an update from here');
-        }
         const ending = updates.ending();
         if (!payload.confirm) {
             return { started: false, ending };
         }
         const verdict = updates.requestInstall();
         if (verdict === 'no-app') {
-            throw new RequestError('update-no-app', 'The Ruimte app is not open on this machine; install the update there');
+            throw new CodedError('update-no-app', 'The Ruimte app is not open on this machine; install the update there');
         }
         if (verdict === 'nothing') {
-            throw new RequestError('update-none', 'There is no update to install on this machine');
+            throw new CodedError('update-none', 'There is no update to install on this machine');
         }
         return { started: true, ending };
     });
@@ -392,7 +293,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
     dispatcher.register(
         'endpoint.signRegistration',
         async (payload) => ({
-            registration: await signForAccount(store, identity, host.broker().brokerUrl, payload.accountId, (sessionId) => host.disconnect(sessionId))
+            registration: await signForAccount(store, identity, identity.describe().brokerUrl, payload.accountId, (sessionId) => host.disconnect(sessionId))
         }),
         { owner: true }
     );
@@ -403,7 +304,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
      */
     dispatcher.register('endpoint.signPeerAccess', async ({ machineId, nonce }) => {
         if (machineId === identity.id) {
-            throw new RequestError('bad-request', 'A machine cannot work in itself');
+            throw new CodedError('bad-request', 'A machine cannot work in itself');
         }
         const peerPublicKey = await host.peerKey.publicKey();
         const message = peerAccessRequestMessage(machineId, peerPublicKey, identity.id, nonce);
@@ -430,7 +331,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
 
     dispatcher.register('auth.revoke', async (payload) => {
         if (!(await store.revoke(payload.id))) {
-            throw new RequestError('session-not-found', `No client ${payload.id} on this machine`);
+            throw new CodedError('session-not-found', `No client ${payload.id} on this machine`);
         }
         host.disconnect(payload.id);
         return {};

@@ -2,8 +2,8 @@ import { Icon } from '@adecore/ui';
 import { CircleQuestionMark } from 'lucide-react';
 import { createElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { extensionKeyOf, useContributions } from '@/extensions/registry';
 import { useCanvas } from '@/state/canvas';
+import { extensionKeyOf, useContributions } from '@/state/extension-registry';
 
 export function ExtensionNodeBody({ id, contributionKey }: { id: string; contributionKey: string }) {
     const { t } = useTranslation('shell');

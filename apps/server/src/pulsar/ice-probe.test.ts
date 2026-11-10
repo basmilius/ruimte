@@ -11,7 +11,6 @@ function answer(request: StunMessage, kind: 'success' | 'error', code?: number, 
     return { method: request.method, kind, transactionId: request.transactionId, attributes };
 }
 
-/* A TURN server that wants the long-term credentials of `user`/`pass`, and says what it was asked. */
 function fakeTurn(options: { staleOnce?: boolean } = {}): { open: OpenExchange; asked: string[] } {
     const asked: string[] = [];
     let stale = options.staleOnce === true;

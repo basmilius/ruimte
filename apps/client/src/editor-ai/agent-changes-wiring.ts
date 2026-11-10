@@ -1,11 +1,11 @@
 import { useChats } from '@adecore/agents-react/state';
 import type { Editor } from '@adecore/editor';
 import { joinReviewGroup } from '@adecore/editor-react';
+import { isPathBelow, relativeTo } from '@ruimte/contracts';
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
-import { isPathBelow, relativeTo } from '@/shell/panels/files-tree';
 import { endpointKey } from '@/state/keys';
 import { type TextDraft, useTextDrafts } from '@/state/text-drafts';
-import type { Transport } from '@/transport/transport';
+import type { Transport } from '@/transport-api/transport';
 import { AgentChanges } from './agent-changes';
 import { AgentReview, type ReviewSource } from './agent-review';
 import { providerNameOf } from './use-chat-identity';
@@ -23,7 +23,6 @@ type AgentReviewApp = Pick<ReviewSource, 'offer' | 'focusChat' | 'chatExists' | 
     folder(): string | null;
 };
 
-/* The path the way a chat reads it: inside the project folder it is relative to it. */
 function projectRelative(path: string, folder: string | null): string {
     return folder !== null && isPathBelow(folder, path) ? relativeTo(folder, path) : path;
 }

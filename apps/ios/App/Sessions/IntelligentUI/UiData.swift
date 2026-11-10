@@ -1,5 +1,6 @@
 import Foundation
 import RuimtePulsar
+import RuimteShared
 
 /// Numbers as a block shows them. A tone, never the renderer, says whether a change is good.
 enum UiFormat {
@@ -160,7 +161,6 @@ struct UiTableColumn: Equatable {
 
     var numeric: Bool { [.number, .bytes, .duration].contains(kind) }
 
-    /// Rows shown before a person asks for all of them.
     static let rowsShown = 50
     /// The Column children whose key some row has, each key once. A table without columns takes the keys of its
     /// rows, as numbers when every value there is one. Empty when nothing is usable, which draws the fallback.
@@ -263,7 +263,6 @@ enum ISO8601Parsing {
     nonisolated(unsafe) static let whole = formatter([.withInternetDateTime])
     nonisolated(unsafe) static let dateOnly = formatter([.withFullDate])
 
-    /// An internet date and time, with or without fractional seconds.
     static func date(_ string: String) -> Date? {
         fractional.date(from: string) ?? whole.date(from: string)
     }
@@ -299,7 +298,6 @@ struct UiChartData: Equatable {
     /// The range the axis covers, from zero or below it, never empty.
     let min: Double
     let max: Double
-    /// Whether rows past `maxRows` were left out.
     let truncated: Bool
     /// The rows of the data, drawn or not.
     let total: Int

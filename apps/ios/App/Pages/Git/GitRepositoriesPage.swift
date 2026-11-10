@@ -77,7 +77,6 @@ struct GitRepositoriesPage: View {
 }
 
 extension GitRepositories {
-    /// Every repository that has something to push, one after another.
     func pushAll(client: any MachineRequesting) async {
         for entry in GitPanel.pushable(checkouts) {
             await act(client: client, cwd: entry.checkout.path, kind: entry.kind)

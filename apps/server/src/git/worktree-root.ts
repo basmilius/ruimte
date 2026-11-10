@@ -3,7 +3,8 @@ import { access, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { isWithin } from '@adecore/utils/path';
-import { realOrSelf } from '../fs/real-path.ts';
+import { homeFolder } from '@ruimte/service/home';
+import { realOrSelf } from '../disk/real-path.ts';
 
 type WorktreeRootCheck = { root: string } | { refusal: 'root-refused' | 'not-a-folder'; message: string };
 
@@ -55,7 +56,7 @@ export async function checkWorktreeRoot(path: string, home: string, userHome: st
         return { refusal: 'root-refused', message: 'The worktree folder cannot be your home folder' };
     }
     const realHome = await realOrSelf(home);
-    if (isWithin(realHome, real) && !isWithin(join(realHome, 'worktrees'), real)) {
+    if (isWithin(realHome, real) && !isWithin(homeFolder(realHome, 'worktrees'), real)) {
         return { refusal: 'root-refused', message: "The worktree folder cannot be inside Ruimte's own data folder" };
     }
     if (!nearest.writable) {

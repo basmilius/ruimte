@@ -15,29 +15,24 @@ public struct AccountSessionWindow: Sendable, Equatable {
 
 extension ProviderAccountList {
     /// The `usage.limits` entry of an account. An entry from a machine before accounts is its CLI's default account.
-    public static func limitsEntry(_ limits: JSONValue?, account id: String) -> JSONValue? {
-        (limits?["providers"]?.arrayValue ?? []).first {
-            ($0["account"]?["id"]?.stringValue ?? $0["kind"]?.stringValue) == id
-        }
+    public static func limitsEntry(_ limits: UsageLimits?, account id: String) -> UsageLimitsProvider? {
+        (limits?.providers ?? []).first { ($0.account?.id ?? $0.kind) == id }
     }
 
-    public static func sessionWindow(_ limits: JSONValue?, account id: String) -> AccountSessionWindow? {
-        let windows = limitsEntry(limits, account: id)?["windows"]?.arrayValue ?? []
-        guard let session = windows.first(where: { $0["kind"]?.stringValue == "session" }),
-            let used = session["used"]?.numberValue
-        else { return nil }
-        return AccountSessionWindow(used: used, resetsAt: session["resetsAt"]?.numberValue)
+    public static func sessionWindow(_ limits: UsageLimits?, account id: String) -> AccountSessionWindow? {
+        let windows = limitsEntry(limits, account: id)?.windows ?? []
+        guard let session = windows.first(where: { $0.kind == .session }) else { return nil }
+        return AccountSessionWindow(used: session.used, resetsAt: session.resetsAt.map(Double.init))
     }
 
     /// The account a chat that stopped on a usage limit could go on under: another one of its CLI that is on, signed
     /// in and has room, the one with the least of its session spent. Nil when none has room or none was read yet; the
     /// choice is only ever offered, never made.
-    public func continueTarget(_ kind: String, current: String?, limits: JSONValue?) -> ProviderAccountEntry? {
+    public func continueTarget(_ kind: String, current: String?, limits: UsageLimits?) -> ProviderAccountEntry? {
         continueTargets(kind, current: current, limits: limits).first
     }
 
-    /// Every account with room, in the order the continuation picker offers them.
-    public func continueTargets(_ kind: String, current: String?, limits: JSONValue?) -> [ProviderAccountEntry] {
+    public func continueTargets(_ kind: String, current: String?, limits: UsageLimits?) -> [ProviderAccountEntry] {
         let roomy = others(kind, current: current).compactMap { account -> (ProviderAccountEntry, Double)? in
             guard let entry = Self.limitsEntry(limits, account: account.id), Self.hasRoom(entry) else { return nil }
             return (account, Self.pressure(entry))
@@ -47,11 +42,10 @@ extension ProviderAccountList {
 
     /// Whether another account a chat could go on under has no numbers yet: a machine reads an account other than a
     /// CLI's default one only while it is in use.
-    public func hasUnreadAccount(_ kind: String, current: String?, limits: JSONValue?) -> Bool {
+    public func hasUnreadAccount(_ kind: String, current: String?, limits: UsageLimits?) -> Bool {
         others(kind, current: current).contains {
             let reading = Self.limitsEntry(limits, account: $0.id)
-            return (reading?["checkedAt"]?.numberValue ?? 0) == 0
-                || reading?["unavailable"]?["reason"] == .string("failed")
+            return (reading?.checkedAt ?? 0) == 0 || reading?.unavailable?.reason == .failed
         }
     }
 
@@ -60,21 +54,16 @@ extension ProviderAccountList {
     }
 
     /// The numbers were read and no window of the plan is spent. An account never read has no known room.
-    private static func hasRoom(_ entry: JSONValue) -> Bool {
-        let windows = entry["windows"]?.arrayValue ?? []
-        return (entry["checkedAt"]?.numberValue ?? 0) > 0 && !isUnavailable(entry) && !windows.isEmpty
-            && windows.allSatisfy { ($0["used"]?.numberValue ?? 1) < 1 }
+    private static func hasRoom(_ entry: UsageLimitsProvider) -> Bool {
+        entry.checkedAt > 0 && !isUnavailable(entry) && !entry.windows.isEmpty
+            && entry.windows.allSatisfy { $0.used < 1 }
     }
 
-    /// Whether the machine said why it could not read the entry's numbers.
-    static func isUnavailable(_ entry: JSONValue) -> Bool { entry["unavailable"].map { $0 != .null } ?? false }
+    public static func isUnavailable(_ entry: UsageLimitsProvider) -> Bool { entry.unavailable != nil }
 
     /// What a turn of this account would run into first: its session window, else its fullest one.
-    private static func pressure(_ entry: JSONValue) -> Double {
-        let windows = entry["windows"]?.arrayValue ?? []
-        if let session = windows.first(where: { $0["kind"]?.stringValue == "session" }) {
-            return session["used"]?.numberValue ?? 0
-        }
-        return windows.compactMap { $0["used"]?.numberValue }.max() ?? 0
+    private static func pressure(_ entry: UsageLimitsProvider) -> Double {
+        if let session = entry.windows.first(where: { $0.kind == .session }) { return session.used }
+        return entry.windows.map(\.used).max() ?? 0
     }
 }

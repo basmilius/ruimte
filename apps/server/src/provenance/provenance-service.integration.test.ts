@@ -4,9 +4,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AgentEvent } from '@adecore/agents/host';
 import type { ChatToolItem, ChatTurnItem, ProvenanceRun } from '@ruimte/contracts';
+import { MachineHome } from '../disk/machine-home.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { gitIn, repoTemplate, type RepoTemplate } from '../git/test-repo.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { ProvenanceService, type ProvenanceChat } from './provenance-service.ts';
 import { ProvenanceStore } from './provenance-store.ts';
 
@@ -51,7 +52,6 @@ interface Setup {
     /* Starts a turn the way the chat does: its tree is taken before the agent writes. */
     startTurn(turnId: string, prompt?: string): Promise<void>;
     tool(turnId: string, name: string, input: Record<string, unknown>, extra?: Partial<ChatToolItem>): void;
-    /* An Edit tool call on score.ts. */
     edit(turnId: string, oldString: string, newString: string): void;
     endTurn(turnId: string, settled?: boolean): Promise<void>;
     write(name: string, text: string): Promise<void>;
@@ -64,7 +64,7 @@ async function setup(options: { project?: boolean; git?: boolean } = {}): Promis
     }
     const home = await mkdtemp(join(tmpdir(), 'provenance-home-'));
     cleanups.push(repo, home);
-    const checkpoints = new Checkpoints(home);
+    const checkpoints = new Checkpoints(home, new MachineHome(home));
     const trees = new Map<string, string>();
     const prompts = new Map<string, string>();
     const turns: string[] = [];

@@ -1,0 +1,82 @@
+import { ErrorBoundary, LazyBoundary } from '@adecore/ui';
+import { useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { DiffFile } from '@/files/DiffFile';
+import { FileBody } from '@/files/FileBody';
+import { keptTabs, shownAfter } from '@/files/kept-tabs';
+import { basenameOf } from '@/paths/file-path';
+import { isFileTab, useFiles, type Tab } from '@/state/files';
+import { tabBodyRegistry, type TabBodyDefinition } from '@/state/tab-bodies';
+import { fixedSlot, FileToolbarSlotProvider, useFileToolbarSlot } from '@/surface/panels/file-toolbar-slot';
+
+/*
+ * One tab the viewer keeps drawn. One that is not up is invisible and inert, and its controls go into a
+ * place of their own rather than the bar of the cell, which only the tab up may fill.
+ */
+function KeptTab({ up, children }: { up: boolean; children: ReactNode }) {
+    const slot = useFileToolbarSlot();
+    const [parked, setParked] = useState<HTMLElement | null>(null);
+    const parkedSlot = fixedSlot(parked);
+    return (
+        <div className={`absolute inset-0 flex min-h-0 min-w-0 flex-col justify-center ${up ? '' : 'invisible'}`} inert={!up}>
+            <span ref={setParked} hidden className="hidden" />
+            <FileToolbarSlotProvider value={up ? slot : parkedSlot}>{children}</FileToolbarSlotProvider>
+        </div>
+    );
+}
+
+/* A tab that is not a file draws what the feature of its kind registered, with a failure of its own words; a file or a diff is drawn here. */
+function drawn(bodies: readonly TabBodyDefinition[], entry: Tab) {
+    for (const body of bodies) {
+        const content = body.render(entry);
+        if (content !== null) {
+            return (
+                <ErrorBoundary label={body.failed()} resetKeys={[entry.key]} className="h-full">
+                    <LazyBoundary>{content}</LazyBoundary>
+                </ErrorBoundary>
+            );
+        }
+    }
+    if (!isFileTab(entry)) {
+        return null;
+    }
+    if (entry.view) {
+        return <DiffFile key={entry.key} tabKey={entry.key} path={entry.path} name={basenameOf(entry.path)} view={entry.view} />;
+    }
+    return <FileBody key={entry.key} path={entry.path} name={basenameOf(entry.path)} on="tab" tabKey={entry.key} />;
+}
+
+/*
+ * The body of a host's loose views: whichever tab is up. The tabs shown last keep their editor hidden
+ * underneath, so going back to one finds its colors and folds as they were. A table with unsubmitted
+ * edits stays drawn however long ago it was up, or the edits would go with it.
+ */
+export function FileViewer({ active, ids }: { active: string | null; ids: readonly string[] }) {
+    // Read again with the language, since the words of a failed body come from the feature that owns it.
+    useTranslation();
+    const bodies = tabBodyRegistry.useAll();
+    const pool = useFiles((s) => s.tabs);
+    const unsubmitted = useFiles((s) => s.unsubmitted);
+    const [shown, setShown] = useState<readonly string[]>([]);
+    const tabs = ids.flatMap((id): Tab[] => pool.filter((entry) => entry.key === id));
+    // A view of the project in front leaves no loose tab up: what was shown last stays drawn, hidden.
+    const up = active !== null && tabs.some((entry) => entry.key === active) ? active : null;
+    if (up !== null && shown[0] !== up) {
+        setShown(shownAfter(shown, up));
+    }
+    const kept = keptTabs(up, shown, tabs, undefined, (entry) => unsubmitted[entry.key] === true);
+    if (kept.length === 0) {
+        return null;
+    }
+
+    return (
+        // Keyed on the tab, so a tab starts a read of its own instead of drawing the file before it.
+        <div className="relative min-h-0 min-w-0 grow">
+            {kept.map((entry) => (
+                <KeptTab key={entry.key} up={entry.key === up}>
+                    {drawn(bodies, entry)}
+                </KeptTab>
+            ))}
+        </div>
+    );
+}

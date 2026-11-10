@@ -1,0 +1,4758 @@
+{
+  "nodeTitle": [
+    {
+      "prompt": "",
+      "title": null
+    },
+    {
+      "prompt": "   ",
+      "title": null
+    },
+    {
+      "prompt": "\n\n  \n",
+      "title": null
+    },
+    {
+      "prompt": "Fix the login bug",
+      "title": "Fix the login bug"
+    },
+    {
+      "prompt": "Fix the login bug.",
+      "title": "Fix the login bug"
+    },
+    {
+      "prompt": "Hello!!!?",
+      "title": "Hello"
+    },
+    {
+      "prompt": "...",
+      "title": null
+    },
+    {
+      "prompt": " . , ; : ! ? ",
+      "title": null
+    },
+    {
+      "prompt": "\n\n  first line  \nsecond line",
+      "title": "first line"
+    },
+    {
+      "prompt": "tabs\tand nbsp and   spaces",
+      "title": "tabs and nbsp and spaces"
+    },
+    {
+      "prompt": "line one\r\nline two",
+      "title": "line one"
+    },
+    {
+      "prompt": "line separator",
+      "title": "line separator"
+    },
+    {
+      "prompt": "﻿bom first",
+      "title": "bom first"
+    },
+    {
+      "prompt": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "prompt": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "prompt": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa…"
+    },
+    {
+      "prompt": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa…"
+    },
+    {
+      "prompt": "word word word word word word word word word tail",
+      "title": "word word word word word word word word word…"
+    },
+    {
+      "prompt": "word word word word word word word word word word tail",
+      "title": "word word word word word word word word word…"
+    },
+    {
+      "prompt": "Refactor the authentication middleware so tokens refresh quietly, then update the docs",
+      "title": "Refactor the authentication middleware so…"
+    },
+    {
+      "prompt": "Refactor the authentication middleware so that, finally",
+      "title": "Refactor the authentication middleware so that…"
+    },
+    {
+      "prompt": "Refactor the authentication middleware so tokens refresh!!! now",
+      "title": "Refactor the authentication middleware so…"
+    },
+    {
+      "prompt": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa…"
+    },
+    {
+      "prompt": "aaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "title": "aaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb…"
+    },
+    {
+      "prompt": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa🚀",
+      "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa…"
+    },
+    {
+      "prompt": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa🚀 tail",
+      "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa🚀…"
+    },
+    {
+      "prompt": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaé",
+      "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa…"
+    },
+    {
+      "prompt": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaéé",
+      "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaé…"
+    },
+    {
+      "prompt": "👨‍👩‍👧‍👦 👨‍👩‍👧‍👦 👨‍👩‍👧‍👦 👨‍👩‍👧‍👦 👨‍👩‍👧‍👦 👨‍👩‍👧‍👦 👨‍👩‍👧‍👦 👨‍👩‍👧‍👦 ",
+      "title": "👨‍👩‍👧‍👦 👨‍👩‍👧‍👦 👨‍👩‍👧‍👦 👨‍👩‍👧‍👦…"
+    },
+    {
+      "prompt": "日本語のタスクを始めてください。日本語のタスクを始めてください。日本語のタスクを始めてください。日本語のタスクを始めてください。",
+      "title": "日本語のタスクを始めてください。日本語のタスクを始めてください。日本語のタスクを始めてください。…"
+    },
+    {
+      "prompt": "café — résumé and naïve façade of the søren project plan",
+      "title": "café — résumé and naïve façade of the søren…"
+    },
+    {
+      "prompt": "12345678 12345678 12345678 12345678 12345678",
+      "title": "12345678 12345678 12345678 12345678 12345678"
+    },
+    {
+      "prompt": "12345678 12345678 12345678 12345678 12345678.",
+      "title": "12345678 12345678 12345678 12345678 12345678"
+    },
+    {
+      "prompt": "🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱",
+      "title": "🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱🇳🇱…"
+    },
+    {
+      "prompt": "aaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "title": "aaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbb…"
+    },
+    {
+      "prompt": "aaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "title": "aaaaaaaaaaaaaaaaaaaaaaaaa…"
+    },
+    {
+      "prompt": "aaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "title": "aaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbb…"
+    }
+  ],
+  "slug": [
+    {
+      "name": "",
+      "fallback": "launch",
+      "slug": "launch"
+    },
+    {
+      "name": "   ",
+      "fallback": "launch",
+      "slug": "launch"
+    },
+    {
+      "name": "Web: Dev",
+      "fallback": "launch",
+      "slug": "web-dev"
+    },
+    {
+      "name": "Dev Server!",
+      "fallback": "launch",
+      "slug": "dev-server"
+    },
+    {
+      "name": "  --Already-Dashed--  ",
+      "fallback": "launch",
+      "slug": "already-dashed"
+    },
+    {
+      "name": "Café Crème",
+      "fallback": "launch",
+      "slug": "cafe-creme"
+    },
+    {
+      "name": "Ångström",
+      "fallback": "launch",
+      "slug": "angstrom"
+    },
+    {
+      "name": "日本語",
+      "fallback": "launch",
+      "slug": "launch"
+    },
+    {
+      "name": "日本語",
+      "fallback": "fallback",
+      "slug": "fallback"
+    },
+    {
+      "name": "🚀",
+      "fallback": "launch",
+      "slug": "launch"
+    },
+    {
+      "name": "ﬁnal ① ²",
+      "fallback": "launch",
+      "slug": "final-1-2"
+    },
+    {
+      "name": "Ünïcode",
+      "fallback": "launch",
+      "slug": "unicode"
+    },
+    {
+      "name": "UPPER lower 123",
+      "fallback": "launch",
+      "slug": "upper-lower-123"
+    },
+    {
+      "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "fallback": "launch",
+      "slug": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa b",
+      "fallback": "launch",
+      "slug": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bcd",
+      "fallback": "launch",
+      "slug": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-b"
+    },
+    {
+      "name": "ab ab ab ab ab ab ab ab ab ab ab ab ab ab ab ab ab ab ab ab ab ab ab ab ab ab ab ab ab ab ",
+      "fallback": "launch",
+      "slug": "ab-ab-ab-ab-ab-ab-ab-ab-ab-ab-ab-ab-ab-ab-ab-ab"
+    },
+    {
+      "name": "a_b.c/d\\e",
+      "fallback": "launch",
+      "slug": "a-b-c-d-e"
+    },
+    {
+      "name": "1st",
+      "fallback": "launch",
+      "slug": "1st"
+    },
+    {
+      "name": "x",
+      "fallback": "launch",
+      "maxLength": 1,
+      "slug": "x"
+    },
+    {
+      "name": "hello world",
+      "fallback": "launch",
+      "maxLength": 6,
+      "slug": "hello"
+    },
+    {
+      "name": "hello world",
+      "fallback": "launch",
+      "maxLength": 5,
+      "slug": "hello"
+    },
+    {
+      "name": "hello world",
+      "fallback": "launch",
+      "maxLength": 0,
+      "slug": "launch"
+    }
+  ],
+  "freeSlug": [
+    {
+      "name": "Dev",
+      "fallback": "launch",
+      "taken": [],
+      "slug": "dev"
+    },
+    {
+      "name": "Dev",
+      "fallback": "launch",
+      "taken": [
+        "dev"
+      ],
+      "slug": "dev-2"
+    },
+    {
+      "name": "Dev",
+      "fallback": "launch",
+      "taken": [
+        "dev",
+        "dev-2",
+        "dev-3"
+      ],
+      "slug": "dev-4"
+    },
+    {
+      "name": "Dev",
+      "fallback": "launch",
+      "taken": [
+        "dev-2"
+      ],
+      "slug": "dev"
+    },
+    {
+      "name": "",
+      "fallback": "launch",
+      "taken": [
+        "launch"
+      ],
+      "slug": "launch-2"
+    },
+    {
+      "name": "日本語",
+      "fallback": "launch",
+      "taken": [
+        "launch",
+        "launch-2"
+      ],
+      "slug": "launch-3"
+    }
+  ],
+  "launchCwd": [
+    {
+      "folder": "/work/p",
+      "launch": {},
+      "cwd": "/work/p"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": ""
+      },
+      "cwd": "/work/p"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "   "
+      },
+      "cwd": "/work/p"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "."
+      },
+      "cwd": "/work/p"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "./"
+      },
+      "cwd": "/work/p"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "./apps/site"
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "apps/site"
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "apps/site/"
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "apps//site"
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "apps/./site/."
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "apps/../libs"
+      },
+      "cwd": "/work/p/libs"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "../other"
+      },
+      "cwd": "/work/other"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "../../.."
+      },
+      "cwd": "/"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "/abs/path"
+      },
+      "cwd": "/abs/path"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "/abs/path/"
+      },
+      "cwd": "/abs/path"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "/abs/../x"
+      },
+      "cwd": "/x"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "  apps/site  "
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "\tapps\n"
+      },
+      "cwd": "/work/p/apps"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "apps\\site"
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "D:\\other"
+      },
+      "cwd": "D:\\other"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "D:/other/"
+      },
+      "cwd": "D:/other"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "\\\\server\\share"
+      },
+      "cwd": "\\\\server\\share"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "C:rel"
+      },
+      "cwd": "/work/p/C:rel"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": ".."
+      },
+      "cwd": "/work"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {},
+      "cwd": "/work/p"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": ""
+      },
+      "cwd": "/work/p"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "   "
+      },
+      "cwd": "/work/p"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "."
+      },
+      "cwd": "/work/p"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "./"
+      },
+      "cwd": "/work/p"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "./apps/site"
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "apps/site"
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "apps/site/"
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "apps//site"
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "apps/./site/."
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "apps/../libs"
+      },
+      "cwd": "/work/p/libs"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "../other"
+      },
+      "cwd": "/work/other"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "../../.."
+      },
+      "cwd": "/"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "/abs/path"
+      },
+      "cwd": "/abs/path"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "/abs/path/"
+      },
+      "cwd": "/abs/path"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "/abs/../x"
+      },
+      "cwd": "/x"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "  apps/site  "
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "\tapps\n"
+      },
+      "cwd": "/work/p/apps"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "apps\\site"
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "D:\\other"
+      },
+      "cwd": "D:\\other"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "D:/other/"
+      },
+      "cwd": "D:/other"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "\\\\server\\share"
+      },
+      "cwd": "\\\\server\\share"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": "C:rel"
+      },
+      "cwd": "/work/p/C:rel"
+    },
+    {
+      "folder": "/work/p/",
+      "launch": {
+        "cwd": ".."
+      },
+      "cwd": "/work"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {},
+      "cwd": "C:\\work\\p"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": ""
+      },
+      "cwd": "C:\\work\\p"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "   "
+      },
+      "cwd": "C:\\work\\p"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "."
+      },
+      "cwd": "C:\\work\\p"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "./"
+      },
+      "cwd": "C:\\work\\p"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "./apps/site"
+      },
+      "cwd": "C:\\work\\p\\apps\\site"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "apps/site"
+      },
+      "cwd": "C:\\work\\p\\apps\\site"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "apps/site/"
+      },
+      "cwd": "C:\\work\\p\\apps\\site"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "apps//site"
+      },
+      "cwd": "C:\\work\\p\\apps\\site"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "apps/./site/."
+      },
+      "cwd": "C:\\work\\p\\apps\\site"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "apps/../libs"
+      },
+      "cwd": "C:\\work\\p\\libs"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "../other"
+      },
+      "cwd": "C:\\work\\other"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "../../.."
+      },
+      "cwd": "C:\\"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "/abs/path"
+      },
+      "cwd": "/abs/path"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "/abs/path/"
+      },
+      "cwd": "/abs/path"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "/abs/../x"
+      },
+      "cwd": "/x"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "  apps/site  "
+      },
+      "cwd": "C:\\work\\p\\apps\\site"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "\tapps\n"
+      },
+      "cwd": "C:\\work\\p\\apps"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "apps\\site"
+      },
+      "cwd": "C:\\work\\p\\apps\\site"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "D:\\other"
+      },
+      "cwd": "D:\\other"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "D:/other/"
+      },
+      "cwd": "D:/other"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "\\\\server\\share"
+      },
+      "cwd": "\\\\server\\share"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": "C:rel"
+      },
+      "cwd": "C:\\work\\p\\C:rel"
+    },
+    {
+      "folder": "C:\\work\\p",
+      "launch": {
+        "cwd": ".."
+      },
+      "cwd": "C:\\work"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {},
+      "cwd": "C:\\work\\p"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": ""
+      },
+      "cwd": "C:\\work\\p"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "   "
+      },
+      "cwd": "C:\\work\\p"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "."
+      },
+      "cwd": "C:\\work\\p"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "./"
+      },
+      "cwd": "C:\\work\\p"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "./apps/site"
+      },
+      "cwd": "C:\\work\\p\\apps\\site"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "apps/site"
+      },
+      "cwd": "C:\\work\\p\\apps\\site"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "apps/site/"
+      },
+      "cwd": "C:\\work\\p\\apps\\site"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "apps//site"
+      },
+      "cwd": "C:\\work\\p\\apps\\site"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "apps/./site/."
+      },
+      "cwd": "C:\\work\\p\\apps\\site"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "apps/../libs"
+      },
+      "cwd": "C:\\work\\p\\libs"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "../other"
+      },
+      "cwd": "C:\\work\\other"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "../../.."
+      },
+      "cwd": "C:\\"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "/abs/path"
+      },
+      "cwd": "/abs/path"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "/abs/path/"
+      },
+      "cwd": "/abs/path"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "/abs/../x"
+      },
+      "cwd": "/x"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "  apps/site  "
+      },
+      "cwd": "C:\\work\\p\\apps\\site"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "\tapps\n"
+      },
+      "cwd": "C:\\work\\p\\apps"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "apps\\site"
+      },
+      "cwd": "C:\\work\\p\\apps\\site"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "D:\\other"
+      },
+      "cwd": "D:\\other"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "D:/other/"
+      },
+      "cwd": "D:/other"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "\\\\server\\share"
+      },
+      "cwd": "\\\\server\\share"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": "C:rel"
+      },
+      "cwd": "C:\\work\\p\\C:rel"
+    },
+    {
+      "folder": "C:\\work\\p\\",
+      "launch": {
+        "cwd": ".."
+      },
+      "cwd": "C:\\work"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {},
+      "cwd": "\\\\server\\share\\p"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": ""
+      },
+      "cwd": "\\\\server\\share\\p"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "   "
+      },
+      "cwd": "\\\\server\\share\\p"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "."
+      },
+      "cwd": "\\\\server\\share\\p"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "./"
+      },
+      "cwd": "\\\\server\\share\\p"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "./apps/site"
+      },
+      "cwd": "\\\\server\\share\\p\\apps\\site"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "apps/site"
+      },
+      "cwd": "\\\\server\\share\\p\\apps\\site"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "apps/site/"
+      },
+      "cwd": "\\\\server\\share\\p\\apps\\site"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "apps//site"
+      },
+      "cwd": "\\\\server\\share\\p\\apps\\site"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "apps/./site/."
+      },
+      "cwd": "\\\\server\\share\\p\\apps\\site"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "apps/../libs"
+      },
+      "cwd": "\\\\server\\share\\p\\libs"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "../other"
+      },
+      "cwd": "\\\\server\\share\\other"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "../../.."
+      },
+      "cwd": "\\\\"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "/abs/path"
+      },
+      "cwd": "/abs/path"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "/abs/path/"
+      },
+      "cwd": "/abs/path"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "/abs/../x"
+      },
+      "cwd": "/x"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "  apps/site  "
+      },
+      "cwd": "\\\\server\\share\\p\\apps\\site"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "\tapps\n"
+      },
+      "cwd": "\\\\server\\share\\p\\apps"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "apps\\site"
+      },
+      "cwd": "\\\\server\\share\\p\\apps\\site"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "D:\\other"
+      },
+      "cwd": "D:\\other"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "D:/other/"
+      },
+      "cwd": "D:/other"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "\\\\server\\share"
+      },
+      "cwd": "\\\\server\\share"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": "C:rel"
+      },
+      "cwd": "\\\\server\\share\\p\\C:rel"
+    },
+    {
+      "folder": "\\\\server\\share\\p",
+      "launch": {
+        "cwd": ".."
+      },
+      "cwd": "\\\\server\\share"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {},
+      "cwd": "/work/p"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": ""
+      },
+      "cwd": "/work/p"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "   "
+      },
+      "cwd": "/work/p"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "."
+      },
+      "cwd": "/work/p"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "./"
+      },
+      "cwd": "/work/p"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "./apps/site"
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "apps/site"
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "apps/site/"
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "apps//site"
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "apps/./site/."
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "apps/../libs"
+      },
+      "cwd": "/work/p/libs"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "../other"
+      },
+      "cwd": "/work/other"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "../../.."
+      },
+      "cwd": "/"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "/abs/path"
+      },
+      "cwd": "/abs/path"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "/abs/path/"
+      },
+      "cwd": "/abs/path"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "/abs/../x"
+      },
+      "cwd": "/x"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "  apps/site  "
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "\tapps\n"
+      },
+      "cwd": "/work/p/apps"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "apps\\site"
+      },
+      "cwd": "/work/p/apps/site"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "D:\\other"
+      },
+      "cwd": "D:\\other"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "D:/other/"
+      },
+      "cwd": "D:/other"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "\\\\server\\share"
+      },
+      "cwd": "\\\\server\\share"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": "C:rel"
+      },
+      "cwd": "/work/p/C:rel"
+    },
+    {
+      "folder": "/work//p",
+      "launch": {
+        "cwd": ".."
+      },
+      "cwd": "/work"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "a",
+        "overlay": {
+          "cwd": "/elsewhere"
+        }
+      },
+      "cwd": "/elsewhere"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "a",
+        "overlay": {
+          "cwd": ""
+        }
+      },
+      "cwd": "/work/p"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "a",
+        "overlay": {}
+      },
+      "cwd": "/work/p/a"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "overlay": {
+          "cwd": "sub/dir"
+        }
+      },
+      "cwd": "/work/p/sub/dir"
+    },
+    {
+      "folder": "/work/p",
+      "launch": {
+        "cwd": "/abs",
+        "overlay": {
+          "cwd": "../up"
+        }
+      },
+      "cwd": "/work/up"
+    }
+  ],
+  "launchGap": [
+    {
+      "launch": {
+        "kind": "group"
+      },
+      "gap": "members"
+    },
+    {
+      "launch": {
+        "kind": "group",
+        "launches": []
+      },
+      "gap": "members"
+    },
+    {
+      "launch": {
+        "kind": "group",
+        "launches": [
+          "a"
+        ]
+      },
+      "gap": null
+    },
+    {
+      "launch": {
+        "kind": "group",
+        "launches": [
+          "a",
+          "b"
+        ],
+        "command": ""
+      },
+      "gap": null
+    },
+    {
+      "launch": {
+        "kind": "task"
+      },
+      "gap": "command"
+    },
+    {
+      "launch": {
+        "kind": "task",
+        "command": ""
+      },
+      "gap": "command"
+    },
+    {
+      "launch": {
+        "kind": "task",
+        "command": "   "
+      },
+      "gap": "command"
+    },
+    {
+      "launch": {
+        "kind": "task",
+        "command": "\t\n"
+      },
+      "gap": "command"
+    },
+    {
+      "launch": {
+        "kind": "task",
+        "command": " "
+      },
+      "gap": "command"
+    },
+    {
+      "launch": {
+        "kind": "task",
+        "command": "bun dev"
+      },
+      "gap": null
+    },
+    {
+      "launch": {
+        "kind": "task",
+        "command": "  bun dev  "
+      },
+      "gap": null
+    },
+    {
+      "launch": {
+        "kind": "task",
+        "command": "",
+        "launches": [
+          "a"
+        ]
+      },
+      "gap": "command"
+    },
+    {
+      "launch": {
+        "kind": "service"
+      },
+      "gap": "command"
+    },
+    {
+      "launch": {
+        "kind": "service",
+        "command": "x"
+      },
+      "gap": null
+    }
+  ],
+  "groupFrame": [
+    {
+      "members": [],
+      "frame": null
+    },
+    {
+      "members": [
+        {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        }
+      ],
+      "frame": {
+        "x": -32,
+        "y": -72,
+        "w": 64,
+        "h": 104
+      }
+    },
+    {
+      "members": [
+        {
+          "x": 100,
+          "y": 100,
+          "w": 200,
+          "h": 100
+        }
+      ],
+      "frame": {
+        "x": 72,
+        "y": 32,
+        "w": 264,
+        "h": 208
+      }
+    },
+    {
+      "members": [
+        {
+          "x": 100,
+          "y": 100,
+          "w": 200,
+          "h": 100
+        },
+        {
+          "x": 400,
+          "y": 100,
+          "w": 200,
+          "h": 100
+        }
+      ],
+      "frame": {
+        "x": 72,
+        "y": 32,
+        "w": 568,
+        "h": 208
+      }
+    },
+    {
+      "members": [
+        {
+          "x": 36,
+          "y": 36,
+          "w": 7,
+          "h": 9
+        },
+        {
+          "x": -36,
+          "y": -44,
+          "w": 13,
+          "h": 5
+        }
+      ],
+      "frame": {
+        "x": -64,
+        "y": -112,
+        "w": 144,
+        "h": 192
+      }
+    },
+    {
+      "members": [
+        {
+          "x": -44,
+          "y": -76,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "frame": {
+        "x": -72,
+        "y": -144,
+        "w": 64,
+        "h": 104
+      }
+    },
+    {
+      "members": [
+        {
+          "x": 10.5,
+          "y": 20.25,
+          "w": 99.5,
+          "h": 40.75
+        }
+      ],
+      "frame": {
+        "x": -24,
+        "y": -48,
+        "w": 160,
+        "h": 144
+      }
+    },
+    {
+      "members": [
+        {
+          "x": -500,
+          "y": -300,
+          "w": 400,
+          "h": 300
+        },
+        {
+          "x": 800,
+          "y": 900,
+          "w": 320,
+          "h": 200
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "w": 5000,
+          "h": 10
+        }
+      ],
+      "frame": {
+        "x": -528,
+        "y": -368,
+        "w": 5568,
+        "h": 1504
+      }
+    },
+    {
+      "members": [
+        {
+          "x": 4,
+          "y": 4,
+          "w": 8,
+          "h": 8
+        },
+        {
+          "x": 12,
+          "y": 12,
+          "w": 8,
+          "h": 8
+        }
+      ],
+      "frame": {
+        "x": -24,
+        "y": -64,
+        "w": 80,
+        "h": 120
+      }
+    },
+    {
+      "members": [
+        {
+          "x": 20,
+          "y": 20,
+          "w": 20,
+          "h": 20
+        }
+      ],
+      "frame": {
+        "x": -8,
+        "y": -48,
+        "w": 88,
+        "h": 128
+      }
+    },
+    {
+      "members": [
+        {
+          "x": 28,
+          "y": 12,
+          "w": 3,
+          "h": 3
+        }
+      ],
+      "frame": {
+        "x": 0,
+        "y": -56,
+        "w": 64,
+        "h": 104
+      }
+    }
+  ],
+  "addEdge": [
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "page",
+      "to": "memo",
+      "drawn": [
+        {
+          "from": "page",
+          "to": "memo",
+          "label": null
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "memo",
+      "to": "frame",
+      "drawn": [
+        {
+          "from": "memo",
+          "to": "frame",
+          "label": null
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "frame",
+      "to": "shell",
+      "drawn": [
+        {
+          "from": "frame",
+          "to": "shell",
+          "label": "context"
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "page",
+      "to": "talk",
+      "drawn": [
+        {
+          "from": "page",
+          "to": "talk",
+          "label": "context"
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "talk",
+      "to": "page",
+      "drawn": [
+        {
+          "from": "talk",
+          "to": "page",
+          "label": null
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "shell",
+      "to": "talk",
+      "drawn": [
+        {
+          "from": "shell",
+          "to": "talk",
+          "label": "context"
+        },
+        {
+          "from": "talk",
+          "to": "shell",
+          "label": "context"
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "talk",
+      "to": "shell",
+      "drawn": [
+        {
+          "from": "talk",
+          "to": "shell",
+          "label": "context"
+        },
+        {
+          "from": "shell",
+          "to": "talk",
+          "label": "context"
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "plan",
+      "to": "shell",
+      "drawn": [
+        {
+          "from": "plan",
+          "to": "shell",
+          "label": "context"
+        },
+        {
+          "from": "shell",
+          "to": "plan",
+          "label": "context"
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "shell",
+      "to": "plan",
+      "drawn": [
+        {
+          "from": "shell",
+          "to": "plan",
+          "label": "context"
+        },
+        {
+          "from": "plan",
+          "to": "shell",
+          "label": "context"
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "plan",
+      "to": "memo",
+      "drawn": [
+        {
+          "from": "plan",
+          "to": "memo",
+          "label": null
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "memo",
+      "to": "plan",
+      "drawn": [
+        {
+          "from": "memo",
+          "to": "plan",
+          "label": "context"
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "plan",
+      "to": "talk",
+      "drawn": [
+        {
+          "from": "plan",
+          "to": "talk",
+          "label": "context"
+        },
+        {
+          "from": "talk",
+          "to": "plan",
+          "label": "context"
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "phone",
+      "to": "talk",
+      "drawn": [
+        {
+          "from": "phone",
+          "to": "talk",
+          "label": "context"
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "page",
+      "to": "page",
+      "drawn": []
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "page",
+      "to": "missing",
+      "drawn": []
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "missing",
+      "to": "page",
+      "drawn": []
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "folded-chat",
+      "to": "talk",
+      "drawn": []
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "talk",
+      "to": "folded-chat",
+      "drawn": []
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "folded-note",
+      "to": "memo",
+      "drawn": []
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "memo",
+      "to": "folded-note",
+      "drawn": []
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [],
+      "from": "folded-chat",
+      "to": "folded-chat",
+      "drawn": []
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [
+        {
+          "from": "page",
+          "to": "memo"
+        }
+      ],
+      "from": "page",
+      "to": "memo",
+      "drawn": []
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [
+        {
+          "from": "page",
+          "to": "memo"
+        }
+      ],
+      "from": "memo",
+      "to": "page",
+      "drawn": [
+        {
+          "from": "memo",
+          "to": "page",
+          "label": null
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [
+        {
+          "from": "shell",
+          "to": "talk"
+        }
+      ],
+      "from": "shell",
+      "to": "talk",
+      "drawn": []
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [
+        {
+          "from": "shell",
+          "to": "talk"
+        }
+      ],
+      "from": "talk",
+      "to": "shell",
+      "drawn": [
+        {
+          "from": "talk",
+          "to": "shell",
+          "label": "context"
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [
+        {
+          "from": "talk",
+          "to": "shell"
+        }
+      ],
+      "from": "shell",
+      "to": "talk",
+      "drawn": [
+        {
+          "from": "shell",
+          "to": "talk",
+          "label": "context"
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [
+        {
+          "from": "plan",
+          "to": "talk"
+        }
+      ],
+      "from": "talk",
+      "to": "plan",
+      "drawn": [
+        {
+          "from": "talk",
+          "to": "plan",
+          "label": "context"
+        }
+      ]
+    },
+    {
+      "nodes": [
+        {
+          "id": "shell",
+          "kind": "terminal"
+        },
+        {
+          "id": "talk",
+          "kind": "chat"
+        },
+        {
+          "id": "plan",
+          "kind": "design"
+        },
+        {
+          "id": "page",
+          "kind": "browser"
+        },
+        {
+          "id": "memo",
+          "kind": "note"
+        },
+        {
+          "id": "frame",
+          "kind": "group"
+        },
+        {
+          "id": "phone",
+          "kind": "device"
+        },
+        {
+          "id": "folded-chat",
+          "kind": "chat",
+          "collapsed": true
+        },
+        {
+          "id": "folded-note",
+          "kind": "note",
+          "collapsed": true
+        }
+      ],
+      "edges": [
+        {
+          "from": "shell",
+          "to": "talk"
+        },
+        {
+          "from": "talk",
+          "to": "shell"
+        }
+      ],
+      "from": "shell",
+      "to": "talk",
+      "drawn": []
+    }
+  ],
+  "sessionStatus": [
+    {
+      "state": null,
+      "status": null
+    },
+    {
+      "state": {
+        "attached": false
+      },
+      "status": null
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 0
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 1
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 137
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true
+      },
+      "status": "running"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 0
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 1
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 137
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "agent": null
+      },
+      "status": null
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 0,
+        "agent": null
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 1,
+        "agent": null
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 137,
+        "agent": null
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "agent": null
+      },
+      "status": "running"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 0,
+        "agent": null
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 1,
+        "agent": null
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 137,
+        "agent": null
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "agent": {
+          "live": true,
+          "status": "running"
+        }
+      },
+      "status": "running"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 0,
+        "agent": {
+          "live": true,
+          "status": "running"
+        }
+      },
+      "status": "running"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 1,
+        "agent": {
+          "live": true,
+          "status": "running"
+        }
+      },
+      "status": "running"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 137,
+        "agent": {
+          "live": true,
+          "status": "running"
+        }
+      },
+      "status": "running"
+    },
+    {
+      "state": {
+        "attached": true,
+        "agent": {
+          "live": true,
+          "status": "running"
+        }
+      },
+      "status": "running"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 0,
+        "agent": {
+          "live": true,
+          "status": "running"
+        }
+      },
+      "status": "running"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 1,
+        "agent": {
+          "live": true,
+          "status": "running"
+        }
+      },
+      "status": "running"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 137,
+        "agent": {
+          "live": true,
+          "status": "running"
+        }
+      },
+      "status": "running"
+    },
+    {
+      "state": {
+        "attached": false,
+        "agent": {
+          "live": true,
+          "status": "needs-you"
+        }
+      },
+      "status": "needs-you"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 0,
+        "agent": {
+          "live": true,
+          "status": "needs-you"
+        }
+      },
+      "status": "needs-you"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 1,
+        "agent": {
+          "live": true,
+          "status": "needs-you"
+        }
+      },
+      "status": "needs-you"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 137,
+        "agent": {
+          "live": true,
+          "status": "needs-you"
+        }
+      },
+      "status": "needs-you"
+    },
+    {
+      "state": {
+        "attached": true,
+        "agent": {
+          "live": true,
+          "status": "needs-you"
+        }
+      },
+      "status": "needs-you"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 0,
+        "agent": {
+          "live": true,
+          "status": "needs-you"
+        }
+      },
+      "status": "needs-you"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 1,
+        "agent": {
+          "live": true,
+          "status": "needs-you"
+        }
+      },
+      "status": "needs-you"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 137,
+        "agent": {
+          "live": true,
+          "status": "needs-you"
+        }
+      },
+      "status": "needs-you"
+    },
+    {
+      "state": {
+        "attached": false,
+        "agent": {
+          "live": true,
+          "status": "idle"
+        }
+      },
+      "status": "idle"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 0,
+        "agent": {
+          "live": true,
+          "status": "idle"
+        }
+      },
+      "status": "idle"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 1,
+        "agent": {
+          "live": true,
+          "status": "idle"
+        }
+      },
+      "status": "idle"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 137,
+        "agent": {
+          "live": true,
+          "status": "idle"
+        }
+      },
+      "status": "idle"
+    },
+    {
+      "state": {
+        "attached": true,
+        "agent": {
+          "live": true,
+          "status": "idle"
+        }
+      },
+      "status": "idle"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 0,
+        "agent": {
+          "live": true,
+          "status": "idle"
+        }
+      },
+      "status": "idle"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 1,
+        "agent": {
+          "live": true,
+          "status": "idle"
+        }
+      },
+      "status": "idle"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 137,
+        "agent": {
+          "live": true,
+          "status": "idle"
+        }
+      },
+      "status": "idle"
+    },
+    {
+      "state": {
+        "attached": false,
+        "agent": {
+          "live": true,
+          "status": "error"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 0,
+        "agent": {
+          "live": true,
+          "status": "error"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 1,
+        "agent": {
+          "live": true,
+          "status": "error"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 137,
+        "agent": {
+          "live": true,
+          "status": "error"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "agent": {
+          "live": true,
+          "status": "error"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 0,
+        "agent": {
+          "live": true,
+          "status": "error"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 1,
+        "agent": {
+          "live": true,
+          "status": "error"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 137,
+        "agent": {
+          "live": true,
+          "status": "error"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "agent": {
+          "live": true,
+          "status": "exited"
+        }
+      },
+      "status": "exited"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 0,
+        "agent": {
+          "live": true,
+          "status": "exited"
+        }
+      },
+      "status": "exited"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 1,
+        "agent": {
+          "live": true,
+          "status": "exited"
+        }
+      },
+      "status": "exited"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 137,
+        "agent": {
+          "live": true,
+          "status": "exited"
+        }
+      },
+      "status": "exited"
+    },
+    {
+      "state": {
+        "attached": true,
+        "agent": {
+          "live": true,
+          "status": "exited"
+        }
+      },
+      "status": "exited"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 0,
+        "agent": {
+          "live": true,
+          "status": "exited"
+        }
+      },
+      "status": "exited"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 1,
+        "agent": {
+          "live": true,
+          "status": "exited"
+        }
+      },
+      "status": "exited"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 137,
+        "agent": {
+          "live": true,
+          "status": "exited"
+        }
+      },
+      "status": "exited"
+    },
+    {
+      "state": {
+        "attached": false,
+        "agent": {
+          "live": false,
+          "status": "exited"
+        }
+      },
+      "status": "exited"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 0,
+        "agent": {
+          "live": false,
+          "status": "exited"
+        }
+      },
+      "status": "exited"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 1,
+        "agent": {
+          "live": false,
+          "status": "exited"
+        }
+      },
+      "status": "exited"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 137,
+        "agent": {
+          "live": false,
+          "status": "exited"
+        }
+      },
+      "status": "exited"
+    },
+    {
+      "state": {
+        "attached": true,
+        "agent": {
+          "live": false,
+          "status": "exited"
+        }
+      },
+      "status": "exited"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 0,
+        "agent": {
+          "live": false,
+          "status": "exited"
+        }
+      },
+      "status": "exited"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 1,
+        "agent": {
+          "live": false,
+          "status": "exited"
+        }
+      },
+      "status": "exited"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 137,
+        "agent": {
+          "live": false,
+          "status": "exited"
+        }
+      },
+      "status": "exited"
+    },
+    {
+      "state": {
+        "attached": false,
+        "agent": {
+          "live": false,
+          "status": "running"
+        }
+      },
+      "status": null
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 0,
+        "agent": {
+          "live": false,
+          "status": "running"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 1,
+        "agent": {
+          "live": false,
+          "status": "running"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 137,
+        "agent": {
+          "live": false,
+          "status": "running"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "agent": {
+          "live": false,
+          "status": "running"
+        }
+      },
+      "status": "running"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 0,
+        "agent": {
+          "live": false,
+          "status": "running"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 1,
+        "agent": {
+          "live": false,
+          "status": "running"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 137,
+        "agent": {
+          "live": false,
+          "status": "running"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "agent": {
+          "live": false,
+          "status": "needs-you"
+        }
+      },
+      "status": null
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 0,
+        "agent": {
+          "live": false,
+          "status": "needs-you"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 1,
+        "agent": {
+          "live": false,
+          "status": "needs-you"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 137,
+        "agent": {
+          "live": false,
+          "status": "needs-you"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "agent": {
+          "live": false,
+          "status": "needs-you"
+        }
+      },
+      "status": "running"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 0,
+        "agent": {
+          "live": false,
+          "status": "needs-you"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 1,
+        "agent": {
+          "live": false,
+          "status": "needs-you"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 137,
+        "agent": {
+          "live": false,
+          "status": "needs-you"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "agent": {
+          "live": false,
+          "status": "idle"
+        }
+      },
+      "status": null
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 0,
+        "agent": {
+          "live": false,
+          "status": "idle"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 1,
+        "agent": {
+          "live": false,
+          "status": "idle"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": false,
+        "exited": 137,
+        "agent": {
+          "live": false,
+          "status": "idle"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "agent": {
+          "live": false,
+          "status": "idle"
+        }
+      },
+      "status": "running"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 0,
+        "agent": {
+          "live": false,
+          "status": "idle"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 1,
+        "agent": {
+          "live": false,
+          "status": "idle"
+        }
+      },
+      "status": "error"
+    },
+    {
+      "state": {
+        "attached": true,
+        "exited": 137,
+        "agent": {
+          "live": false,
+          "status": "idle"
+        }
+      },
+      "status": "error"
+    }
+  ],
+  "sidebar": {
+    "shared": [
+      "board",
+      "talk",
+      "readme"
+    ],
+    "flags": {
+      "board": "red",
+      "talk": "blue",
+      "shell": "ultraviolet"
+    },
+    "views": [
+      {
+        "view": {
+          "kind": "canvas",
+          "id": "board",
+          "name": "Board",
+          "nodes": [
+            {
+              "id": "t1",
+              "kind": "terminal",
+              "title": "t1 title",
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 100,
+              "provider": "claude"
+            },
+            {
+              "id": "t2",
+              "kind": "terminal",
+              "title": "t2 title",
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 100
+            },
+            {
+              "id": "c1",
+              "kind": "chat",
+              "title": "c1 title",
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 100,
+              "provider": "codex"
+            },
+            {
+              "id": "c2",
+              "kind": "chat",
+              "title": "c2 title",
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 100
+            },
+            {
+              "id": "d1",
+              "kind": "design",
+              "title": "d1 title",
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 100,
+              "provider": "claude"
+            },
+            {
+              "id": "b1",
+              "kind": "browser",
+              "title": "b1 title",
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 100
+            },
+            {
+              "id": "v1",
+              "kind": "device",
+              "title": "v1 title",
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 100
+            },
+            {
+              "id": "n1",
+              "kind": "note",
+              "title": "n1 title",
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 100
+            },
+            {
+              "id": "g1",
+              "kind": "group",
+              "title": "g1 title",
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 100
+            },
+            {
+              "id": "w1",
+              "kind": "drawing",
+              "title": "w1 title",
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 100,
+              "viewId": "sketch"
+            },
+            {
+              "id": "f1",
+              "kind": "file",
+              "title": "f1 title",
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 100
+            }
+          ],
+          "texts": [],
+          "edges": []
+        },
+        "listed": true,
+        "head": {
+          "id": "board",
+          "name": "Board",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": true,
+          "flag": "red"
+        },
+        "self": null,
+        "row": {
+          "id": "board",
+          "name": "Board",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": true,
+          "flag": "red",
+          "kind": "canvas",
+          "nodes": [
+            {
+              "id": "t1",
+              "title": "t1 title",
+              "kind": "terminal",
+              "provider": "claude"
+            },
+            {
+              "id": "t2",
+              "title": "t2 title",
+              "kind": "terminal",
+              "provider": null
+            },
+            {
+              "id": "c1",
+              "title": "c1 title",
+              "kind": "chat",
+              "provider": "codex"
+            },
+            {
+              "id": "c2",
+              "title": "c2 title",
+              "kind": "chat",
+              "provider": null
+            },
+            {
+              "id": "d1",
+              "title": "d1 title",
+              "kind": "chat",
+              "provider": "claude",
+              "chats": []
+            },
+            {
+              "id": "b1",
+              "title": "b1 title",
+              "kind": "browser",
+              "provider": null
+            },
+            {
+              "id": "v1",
+              "title": "v1 title",
+              "kind": "device",
+              "provider": null
+            }
+          ],
+          "self": null
+        }
+      },
+      {
+        "view": {
+          "kind": "canvas",
+          "id": "elsewhere",
+          "name": "Other machine",
+          "hidden": true,
+          "nodes": [
+            {
+              "id": "x1",
+              "kind": "chat",
+              "title": "x1 title",
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 100
+            }
+          ],
+          "texts": [],
+          "edges": []
+        },
+        "listed": false,
+        "head": {
+          "id": "elsewhere",
+          "name": "Other machine",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false
+        },
+        "self": null,
+        "row": null
+      },
+      {
+        "view": {
+          "kind": "canvas",
+          "id": "bare",
+          "name": "Bare",
+          "nodes": [],
+          "texts": [],
+          "edges": []
+        },
+        "listed": true,
+        "head": {
+          "id": "bare",
+          "name": "Bare",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false
+        },
+        "self": null,
+        "row": {
+          "id": "bare",
+          "name": "Bare",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false,
+          "kind": "canvas",
+          "nodes": [],
+          "self": null
+        }
+      },
+      {
+        "view": {
+          "kind": "terminal",
+          "id": "shell",
+          "name": "Shell",
+          "node": {
+            "provider": "codex"
+          }
+        },
+        "listed": true,
+        "head": {
+          "id": "shell",
+          "name": "Shell",
+          "icon": null,
+          "provider": "codex",
+          "path": null,
+          "shared": false
+        },
+        "self": {
+          "id": "shell",
+          "title": "Shell",
+          "kind": "terminal",
+          "provider": "codex"
+        },
+        "row": {
+          "id": "shell",
+          "name": "Shell",
+          "icon": null,
+          "provider": "codex",
+          "path": null,
+          "shared": false,
+          "kind": "terminal",
+          "nodes": [],
+          "self": {
+            "id": "shell",
+            "title": "Shell",
+            "kind": "terminal",
+            "provider": "codex"
+          }
+        }
+      },
+      {
+        "view": {
+          "kind": "terminal",
+          "id": "plain-shell",
+          "name": "Plain shell",
+          "node": {}
+        },
+        "listed": true,
+        "head": {
+          "id": "plain-shell",
+          "name": "Plain shell",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false
+        },
+        "self": {
+          "id": "plain-shell",
+          "title": "Plain shell",
+          "kind": "terminal",
+          "provider": null
+        },
+        "row": {
+          "id": "plain-shell",
+          "name": "Plain shell",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false,
+          "kind": "terminal",
+          "nodes": [],
+          "self": {
+            "id": "plain-shell",
+            "title": "Plain shell",
+            "kind": "terminal",
+            "provider": null
+          }
+        }
+      },
+      {
+        "view": {
+          "kind": "chat",
+          "id": "talk",
+          "name": "Talk",
+          "node": {
+            "provider": "claude"
+          }
+        },
+        "listed": true,
+        "head": {
+          "id": "talk",
+          "name": "Talk",
+          "icon": null,
+          "provider": "claude",
+          "path": null,
+          "shared": true,
+          "flag": "blue"
+        },
+        "self": {
+          "id": "talk",
+          "title": "Talk",
+          "kind": "chat",
+          "provider": "claude"
+        },
+        "row": {
+          "id": "talk",
+          "name": "Talk",
+          "icon": null,
+          "provider": "claude",
+          "path": null,
+          "shared": true,
+          "flag": "blue",
+          "kind": "chat",
+          "nodes": [],
+          "self": {
+            "id": "talk",
+            "title": "Talk",
+            "kind": "chat",
+            "provider": "claude"
+          }
+        }
+      },
+      {
+        "view": {
+          "kind": "chat",
+          "id": "talk-fixed",
+          "name": "Fixed",
+          "node": {}
+        },
+        "listed": true,
+        "head": {
+          "id": "talk-fixed",
+          "name": "Fixed",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false
+        },
+        "self": {
+          "id": "talk-fixed",
+          "title": "Fixed",
+          "kind": "chat",
+          "provider": null
+        },
+        "row": {
+          "id": "talk-fixed",
+          "name": "Fixed",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false,
+          "kind": "chat",
+          "nodes": [],
+          "self": {
+            "id": "talk-fixed",
+            "title": "Fixed",
+            "kind": "chat",
+            "provider": null
+          }
+        }
+      },
+      {
+        "view": {
+          "kind": "chat",
+          "id": "talk-empty",
+          "name": "Nobody wrote here",
+          "node": {},
+          "empty": true
+        },
+        "listed": false,
+        "head": {
+          "id": "talk-empty",
+          "name": "Nobody wrote here",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false
+        },
+        "self": {
+          "id": "talk-empty",
+          "title": "Nobody wrote here",
+          "kind": "chat",
+          "provider": null
+        },
+        "row": null
+      },
+      {
+        "view": {
+          "kind": "chat",
+          "id": "talk-hidden",
+          "name": "Inline edit",
+          "node": {},
+          "hidden": true
+        },
+        "listed": false,
+        "head": {
+          "id": "talk-hidden",
+          "name": "Inline edit",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false
+        },
+        "self": {
+          "id": "talk-hidden",
+          "title": "Inline edit",
+          "kind": "chat",
+          "provider": null
+        },
+        "row": null
+      },
+      {
+        "view": {
+          "kind": "chat",
+          "id": "talk-drawn",
+          "name": "Drawn by an extension",
+          "node": {},
+          "drawnBy": "pets"
+        },
+        "listed": false,
+        "head": {
+          "id": "talk-drawn",
+          "name": "Drawn by an extension",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false
+        },
+        "self": {
+          "id": "talk-drawn",
+          "title": "Drawn by an extension",
+          "kind": "chat",
+          "provider": null
+        },
+        "row": null
+      },
+      {
+        "view": {
+          "kind": "chat",
+          "id": "talk-empty-hidden",
+          "name": "Both",
+          "node": {},
+          "empty": true,
+          "hidden": true
+        },
+        "listed": false,
+        "head": {
+          "id": "talk-empty-hidden",
+          "name": "Both",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false
+        },
+        "self": {
+          "id": "talk-empty-hidden",
+          "title": "Both",
+          "kind": "chat",
+          "provider": null
+        },
+        "row": null
+      },
+      {
+        "view": {
+          "kind": "browser",
+          "id": "web",
+          "name": "Docs",
+          "url": "https://example.com",
+          "titleSource": "user"
+        },
+        "listed": true,
+        "head": {
+          "id": "web",
+          "name": "Docs",
+          "titleSource": "user",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false
+        },
+        "self": {
+          "id": "web",
+          "title": "Docs",
+          "titleSource": "user",
+          "kind": "browser",
+          "provider": null
+        },
+        "row": {
+          "id": "web",
+          "name": "Docs",
+          "titleSource": "user",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false,
+          "kind": "browser",
+          "nodes": [],
+          "self": {
+            "id": "web",
+            "title": "Docs",
+            "titleSource": "user",
+            "kind": "browser",
+            "provider": null
+          }
+        }
+      },
+      {
+        "view": {
+          "kind": "file",
+          "id": "readme",
+          "name": "README",
+          "path": "docs/README.md"
+        },
+        "listed": true,
+        "head": {
+          "id": "readme",
+          "name": "README",
+          "icon": null,
+          "provider": null,
+          "path": "docs/README.md",
+          "shared": true
+        },
+        "self": null,
+        "row": {
+          "id": "readme",
+          "name": "README",
+          "icon": null,
+          "provider": null,
+          "path": "docs/README.md",
+          "shared": true,
+          "kind": "file",
+          "nodes": [],
+          "self": null
+        }
+      },
+      {
+        "view": {
+          "kind": "file",
+          "id": "outside",
+          "name": "Outside",
+          "path": "/etc/hosts"
+        },
+        "listed": true,
+        "head": {
+          "id": "outside",
+          "name": "Outside",
+          "icon": null,
+          "provider": null,
+          "path": "/etc/hosts",
+          "shared": false
+        },
+        "self": null,
+        "row": {
+          "id": "outside",
+          "name": "Outside",
+          "icon": null,
+          "provider": null,
+          "path": "/etc/hosts",
+          "shared": false,
+          "kind": "file",
+          "nodes": [],
+          "self": null
+        }
+      },
+      {
+        "view": {
+          "kind": "drawing",
+          "id": "sketch",
+          "name": "Sketch"
+        },
+        "listed": true,
+        "head": {
+          "id": "sketch",
+          "name": "Sketch",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false
+        },
+        "self": null,
+        "row": {
+          "id": "sketch",
+          "name": "Sketch",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false,
+          "kind": "drawing",
+          "nodes": [],
+          "self": null
+        }
+      },
+      {
+        "view": {
+          "kind": "diagram",
+          "id": "flow",
+          "name": "Flow"
+        },
+        "listed": true,
+        "head": {
+          "id": "flow",
+          "name": "Flow",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false
+        },
+        "self": null,
+        "row": {
+          "id": "flow",
+          "name": "Flow",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false,
+          "kind": "diagram",
+          "nodes": [],
+          "self": null
+        }
+      },
+      {
+        "view": {
+          "kind": "separator",
+          "id": "sep",
+          "name": "sep"
+        },
+        "listed": true,
+        "head": {
+          "id": "sep",
+          "name": "sep",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false
+        },
+        "self": null,
+        "row": {
+          "id": "sep",
+          "name": "sep",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false,
+          "kind": "separator",
+          "nodes": [],
+          "self": null
+        }
+      },
+      {
+        "view": {
+          "kind": "subheader",
+          "id": "sub",
+          "name": "Later"
+        },
+        "listed": true,
+        "head": {
+          "id": "sub",
+          "name": "Later",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false
+        },
+        "self": null,
+        "row": {
+          "id": "sub",
+          "name": "Later",
+          "icon": null,
+          "provider": null,
+          "path": null,
+          "shared": false,
+          "kind": "subheader",
+          "nodes": [],
+          "self": null
+        }
+      }
+    ]
+  }
+}

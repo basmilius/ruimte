@@ -3,28 +3,27 @@ import { Icon, Menu, PaneBar, Tooltip } from '@adecore/ui';
 import { Ungroup } from 'lucide-react';
 import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { closeCellAction } from '@/actions/client-actions';
+import { closeCellAction } from '@/action-port/person-actions';
 import { useBrowserDisplayTitle } from '@/browser/title';
 import { ViewAccessories } from '@/extensions/ContributedSlots';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
+import { FileMenuItems } from '@/files/FileMenuItems';
+import { LooseGlyph } from '@/files/LooseGlyph';
+import { cellAt, type CellAt } from '@/layout/split';
 import { ViewGlyph } from '@/project/ViewGlyph';
-import { isLooseView, viewGlyphOf, type CellView } from '@/shell/cell-view';
 import { MaximizedIndicator } from '@/shell/MaximizedIndicator';
-import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
-import { FileMenuItems } from '@/shell/panels/FileMenuItems';
-import { LooseGlyph } from '@/shell/panels/LooseGlyph';
-import { cellAt, type CellAt } from '@/shell/split';
 import { TabStrip } from '@/shell/TabStrip';
 import { useCellBarSlot } from '@/shell/top-row-slot';
-import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useHasViewToolbar, useViewToolbarLeads } from '@/shell/view-toolbar';
-import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
 import { ViewToolbar } from '@/shell/ViewToolbar';
 import { useDocument } from '@/state/document';
 import { isDatabaseTab } from '@/state/files';
+import { isLooseView, viewGlyphOf, type CellView } from '@/surface/cell-view';
+import { FileToolbarSlotProvider } from '@/surface/panels/file-toolbar-slot';
+import { setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
+import { SplitItems, ViewMenuItems } from '@/view-menu/ViewMenuItems';
 
-/* What a cell is: its tabs when it hosts them, or the glyph and the name of the view. */
 function CellTitle({ at, view, tabs, title }: { at: CellAt; view: CellView; tabs: readonly string[] | undefined; title: string | undefined }) {
     if (tabs !== undefined) {
         return <TabStrip at={at} ids={tabs} active={view.id} />;
@@ -60,11 +59,6 @@ function CellTitle({ at, view, tabs, title }: { at: CellAt; view: CellView; tabs
     );
 }
 
-/*
- * The bar of a cell: what the cell holds, the view's own controls, its menu and its close button. The bar
- * is ADE CORE's `PaneBar`; the cell supplies the words, the controls and what a drag carries. The bar of
- * the only cell joins the project in the top row.
- */
 export function CellToolbar({
     at,
     view,
@@ -162,7 +156,6 @@ export function CellToolbar({
                         event.dataTransfer.effectAllowed = 'move';
                         setDragging(view.id, hosted);
                     }}
-                    onDragEnd={() => setDragging(null)}
                     menu={
                         <>
                             {tabs?.length === 1 && (

@@ -1,6 +1,8 @@
 import type { DeviceInput, LiveStreamFrame } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { runCommand, type CommandResult } from './command.ts';
-import { DeviceError, type DeviceSource } from './manager.ts';
+import { DeviceError } from './device-error.ts';
+import { type DeviceSource } from './manager.ts';
 import {
     controlMessages,
     encodeGetClipboard,
@@ -347,7 +349,7 @@ export class ScrcpySource implements DeviceSource {
         session.video?.close();
         session.control?.close();
         session.serverProcess.kill();
-        await this.host.adb(['forward', '--remove', `tcp:${session.port}`]).catch(() => undefined);
+        await bestEffort('host.adb', this.host.adb(['forward', '--remove', `tcp:${session.port}`]));
     }
 
     private async adb(arguments_: string[]): Promise<CommandResult> {
@@ -364,7 +366,6 @@ export class ScrcpySource implements DeviceSource {
     }
 }
 
-/* The host of a real device: adb for one serial and a loopback socket. */
 export function adbScrcpyHost(adb: string, serial: string): ScrcpyHost {
     return {
         adb: (arguments_) => runCommand([adb, '-s', serial, ...arguments_]),
@@ -377,8 +378,8 @@ export function adbScrcpyHost(adb: string, serial: string): ScrcpyHost {
                     output = (output + decoder.decode(chunk, { stream: true })).slice(-4096);
                 }
             };
-            void collect(child.stdout).catch(() => undefined);
-            void collect(child.stderr).catch(() => undefined);
+            void bestEffort('collect', collect(child.stdout));
+            void bestEffort('collect', collect(child.stderr));
             return { exited: child.exited, output: () => output, kill: () => child.kill('SIGTERM') };
         },
         connect: async (port, handlers) => {

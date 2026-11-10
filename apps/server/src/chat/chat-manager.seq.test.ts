@@ -6,7 +6,8 @@ import { AttachmentStore, ChatStore, COMPACT_ABOVE_BYTES, ChatThread } from '@ad
 import { fakeClaude, inProcess, type InProcessCli } from '@adecore/agents/testing';
 import type { ChatAttachResult, ChatEvent, Task } from '@ruimte/contracts';
 import { ProviderRegistry } from '../providers/registry.ts';
-import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
+import { OPEN_BOUNDS } from '../sessions/open-bounds-test-helpers.ts';
+import { testChatManager, type TestChatOptions } from './chat-manager-test-helpers.ts';
 import { retire } from './chat-manager.fixture.test.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder, RecordingStore } from './chat-test-helpers.ts';
@@ -18,9 +19,8 @@ let managers: ChatManager[];
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
-/* One run of the daemon's chats over the same home, with every event it numbered. */
-function boot(extra: Partial<ConstructorParameters<typeof ChatManager>[0]> = {}) {
-    const manager = new ChatManager({
+function boot(extra: Partial<TestChatOptions> = {}) {
+    const manager = testChatManager({
         ...OPEN_BOUNDS,
         providers,
         store: new ChatStore(home, { attachments: attachments }),
@@ -31,9 +31,9 @@ function boot(extra: Partial<ConstructorParameters<typeof ChatManager>[0]> = {})
     });
     managers.push(manager);
     const recorder = new ChatRecorder();
-    manager.subscribe('watcher', recorder.sink());
+    manager.core.subscribe('watcher', recorder.sink());
     const numbered: Array<{ seq: number; event: ChatEvent }> = [];
-    manager.observe((event) => {
+    manager.core.observe((event) => {
         if (event.event === 'chat.event' && event.payload.seq !== undefined) {
             numbered.push({ seq: event.payload.seq, event: event.payload.event });
         }
@@ -63,15 +63,15 @@ afterEach(async () => {
 describe('the stream of a chat', () => {
     test('a client that comes back with any seq it saw ends with the thread a fresh attach hands out', async () => {
         const { manager, recorder, numbered } = boot();
-        await manager.create({ chatId: 'chat', cwd: home });
-        const start = manager.attach('chat', 'watcher');
+        await manager.core.create({ chatId: 'chat', cwd: home });
+        const start = manager.core.attach('chat', 'watcher');
         expect(start.seq).toBe(0);
-        await manager.send('chat', 'hello');
+        await manager.core.send('chat', 'hello');
         await recorder.untilIdle();
-        await manager.send('chat', 'run: ls');
+        await manager.core.send('chat', 'run: ls');
         await recorder.until(() => recorder.idle && recorder.ofKind('turn').length === 2);
 
-        const fresh = manager.attach('chat', 'fresh');
+        const fresh = manager.core.attach('chat', 'fresh');
         expect(fresh.seq).toBe(numbered.at(-1)!.seq);
         expect(numbered.map((line) => line.seq)).toEqual(numbered.map((_, i) => i + 1));
         for (let since = 0; since <= fresh.seq!; since++) {
@@ -80,7 +80,7 @@ describe('the stream of a chat', () => {
             for (const line of numbered.slice(0, since)) {
                 mirror.apply(line.event);
             }
-            const back = manager.attach('chat', `client-${since}`, undefined, since);
+            const back = manager.core.attach('chat', `client-${since}`, undefined, since);
             expect(back.items).toEqual([]);
             expect(back.events).toEqual(numbered.slice(since).map((line) => line.event));
             for (const event of back.events!) {
@@ -92,16 +92,16 @@ describe('the stream of a chat', () => {
 
     test('a seq from before a clear gets the whole thread', async () => {
         const { manager, recorder } = boot();
-        await manager.create({ chatId: 'chat', cwd: home });
-        manager.attach('chat', 'watcher');
-        await manager.send('chat', 'hello');
+        await manager.core.create({ chatId: 'chat', cwd: home });
+        manager.core.attach('chat', 'watcher');
+        await manager.core.send('chat', 'hello');
         await recorder.untilIdle();
-        const before = manager.attach('chat', 'client').seq!;
-        await manager.clear('chat');
-        await manager.send('chat', 'again');
+        const before = manager.core.attach('chat', 'client').seq!;
+        await manager.core.clear('chat');
+        await manager.core.send('chat', 'again');
         await recorder.until(() => recorder.idle && recorder.ofKind('turn').length === 1);
 
-        const back = manager.attach('chat', 'client', undefined, before);
+        const back = manager.core.attach('chat', 'client', undefined, before);
         expect(back.events).toBeUndefined();
         expect(back.items.filter((item) => item.kind === 'user').map((item) => (item.kind === 'user' ? item.text : ''))).toEqual(['again']);
         expect(back.seq).toBeGreaterThan(before);
@@ -124,84 +124,84 @@ describe('the stream of a chat', () => {
             }
         ];
         const first = boot({ taskRows: () => tasks });
-        await first.manager.create({ chatId: 'chat', cwd: home });
-        expect(first.manager.attach('chat', 'watcher').items).toHaveLength(1);
+        await first.manager.core.create({ chatId: 'chat', cwd: home });
+        expect(first.manager.core.attach('chat', 'watcher').items).toHaveLength(1);
 
-        await first.manager.clear('chat');
+        await first.manager.core.clear('chat');
         tasks[0] = { ...tasks[0]!, status: 'done', settledAt: 2 };
-        first.manager.syncTaskRow(tasks[0]!);
-        expect(first.manager.attach('chat', 'watcher').items).toEqual([]);
+        first.manager.core.syncTaskRow(tasks[0]!);
+        expect(first.manager.core.attach('chat', 'watcher').items).toEqual([]);
         expect((await new ChatStore(home).read('chat'))?.extras.clearedTaskIds).toEqual(['old']);
-        first.manager.persistAllSync();
-        await first.manager.shutdown();
+        first.manager.core.persistAllSync();
+        await first.manager.core.shutdown();
 
         const second = boot({ taskRows: () => tasks });
-        await second.manager.create({ chatId: 'chat' });
-        expect(second.manager.attach('chat', 'watcher').items).toEqual([]);
+        await second.manager.core.create({ chatId: 'chat' });
+        expect(second.manager.core.attach('chat', 'watcher').items).toEqual([]);
         tasks.push({ ...tasks[0]!, id: 'new', childId: 'new-child', status: 'open', settledAt: null });
-        second.manager.syncTaskRow(tasks[1]!);
-        expect(second.manager.attach('chat', 'watcher').items.map((item) => item.id)).toEqual(['task-new']);
+        second.manager.core.syncTaskRow(tasks[1]!);
+        expect(second.manager.core.attach('chat', 'watcher').items.map((item) => item.id)).toEqual(['task-new']);
 
-        await second.manager.clear('chat');
-        await second.manager.shutdown();
+        await second.manager.core.clear('chat');
+        await second.manager.core.shutdown();
         const third = boot({ taskRows: () => tasks });
-        await third.manager.create({ chatId: 'chat' });
+        await third.manager.core.create({ chatId: 'chat' });
         for (const task of tasks) {
-            third.manager.syncTaskRow(task);
+            third.manager.core.syncTaskRow(task);
         }
-        expect(third.manager.attach('chat', 'watcher').items).toEqual([]);
+        expect(third.manager.core.attach('chat', 'watcher').items).toEqual([]);
     });
 
     test('after a restart the stream goes on, and a seq the folded log no longer covers gets the whole thread', async () => {
         const first = boot();
-        await first.manager.create({ chatId: 'chat', cwd: home });
-        first.manager.attach('chat', 'watcher');
-        await first.manager.send('chat', 'hello');
+        await first.manager.core.create({ chatId: 'chat', cwd: home });
+        first.manager.core.attach('chat', 'watcher');
+        await first.manager.core.send('chat', 'hello');
         await first.recorder.untilIdle();
-        const last = first.manager.attach('chat', 'client').seq!;
-        await first.manager.shutdown();
+        const last = first.manager.core.attach('chat', 'client').seq!;
+        await first.manager.core.shutdown();
 
         const second = boot();
-        await second.manager.create({ chatId: 'chat' });
+        await second.manager.core.create({ chatId: 'chat' });
         // The info the load settles is an event of its own, so a client that saw everything before hears it too.
-        const caughtUp = second.manager.attach('chat', 'client', undefined, last);
+        const caughtUp = second.manager.core.attach('chat', 'client', undefined, last);
         expect(caughtUp.items).toEqual([]);
         expect(caughtUp.events?.map((event) => event.type)).toEqual(['info']);
         expect(second.numbered[0]?.seq).toBe(last + 1);
 
-        const behind = second.manager.attach('chat', 'client', undefined, last - 1);
+        const behind = second.manager.core.attach('chat', 'client', undefined, last - 1);
         expect(behind.events).toBeUndefined();
         expect(behind.items.map((item) => item.kind)).toEqual(['turn', 'user', 'thinking', 'assistant']);
     });
 
     test('a turn a CLI was in the middle of stays running through a stop the CLI dies in, when a resume is owed', async () => {
         const first = boot();
-        await first.manager.create({ chatId: 'chat', cwd: home });
-        first.manager.attach('chat', 'watcher');
-        await first.manager.send('chat', 'slow');
+        await first.manager.core.create({ chatId: 'chat', cwd: home });
+        first.manager.core.attach('chat', 'watcher');
+        await first.manager.core.send('chat', 'slow');
         await first.recorder.until(() => first.recorder.info?.agentSessionId !== null && first.recorder.info?.agentSessionId !== undefined);
         const turnId = first.recorder.info!.activeTurnId!;
-        first.manager.persistAllSync();
-        await first.manager.shutdown();
+        first.manager.core.persistAllSync();
+        await first.manager.core.shutdown();
         // The CLI is gone, and its exit said nothing to the thread.
         await claude.started[0]!.exited;
-        expect(first.manager.get('chat')?.info.activeTurnId).toBe(turnId);
+        expect(first.manager.core.get('chat')?.info.activeTurnId).toBe(turnId);
 
         const owed: unknown[] = [];
         const second = boot({ onInterruptedRun: async (run) => owed.push(run) > 0 });
-        const info = await second.manager.create({ chatId: 'chat' });
+        const info = await second.manager.core.create({ chatId: 'chat' });
         expect(owed).toEqual([{ chatId: 'chat', turnId, attempt: 2 }]);
         expect(info).toMatchObject({ status: 'running', activeTurnId: turnId, running: false });
-        expect(second.manager.get('chat')?.thread.get(turnId)).toMatchObject({ state: 'running' });
+        expect(second.manager.core.get('chat')?.thread.get(turnId)).toMatchObject({ state: 'running' });
 
         // With nothing to owe it to, the turn ends aborted and the note says why.
-        await second.manager.shutdown();
+        await second.manager.core.shutdown();
         const third = boot();
-        await third.manager.create({ chatId: 'chat' });
-        expect(third.manager.get('chat')?.thread.get(turnId)).toMatchObject({ state: 'aborted' });
-        expect(third.manager.get('chat')?.info).toMatchObject({ status: 'idle', activeTurnId: null });
+        await third.manager.core.create({ chatId: 'chat' });
+        expect(third.manager.core.get('chat')?.thread.get(turnId)).toMatchObject({ state: 'aborted' });
+        expect(third.manager.core.get('chat')?.info).toMatchObject({ status: 'idle', activeTurnId: null });
         expect(
-            third.manager
+            third.manager.core
                 .get('chat')
                 ?.thread.list()
                 .find((item) => item.kind === 'note')
@@ -217,33 +217,33 @@ describe('the record of a chat', () => {
     test('turns after its first write only go to the log, and a machine that went down without a word still reads every one', async () => {
         const store = new RecordingStore(home, { attachments });
         const first = boot({ store });
-        await first.manager.create({ chatId: 'chat', cwd: home });
-        first.manager.attach('chat', 'watcher');
+        await first.manager.core.create({ chatId: 'chat', cwd: home });
+        first.manager.core.attach('chat', 'watcher');
         for (const prompt of ['one', 'two', 'three', 'four', 'five']) {
-            await first.manager.send('chat', prompt);
+            await first.manager.core.send('chat', prompt);
             await first.recorder.untilIdle();
         }
-        await first.manager.persisted('chat');
+        await first.manager.core.persisted('chat');
         expect(store.calls).toEqual(['write chat']);
-        const items = first.manager.get('chat')!.thread.list();
+        const items = first.manager.core.get('chat')!.thread.list();
         expect(items.filter((item) => item.kind === 'turn')).toHaveLength(5);
 
         // Down without a shutdown: nothing is folded or written on the way out.
-        first.manager.get('chat')!.dispose();
+        first.manager.core.get('chat')!.dispose();
         managers.splice(managers.indexOf(first.manager), 1);
         const second = boot();
-        await second.manager.create({ chatId: 'chat' });
-        expect(second.manager.get('chat')!.thread.list()).toEqual(items);
+        await second.manager.core.create({ chatId: 'chat' });
+        expect(second.manager.core.get('chat')!.thread.list()).toEqual(items);
     });
 
     test('a log that passed its bound is folded into the record at the next write, which leaves the log short', async () => {
         const store = new RecordingStore(home, { attachments });
         const { manager, recorder } = boot({ store });
-        await manager.create({ chatId: 'chat', cwd: home });
-        manager.attach('chat', 'watcher');
-        await manager.send('chat', `output:${COMPACT_ABOVE_BYTES + 1024}`);
+        await manager.core.create({ chatId: 'chat', cwd: home });
+        manager.core.attach('chat', 'watcher');
+        await manager.core.send('chat', `output:${COMPACT_ABOVE_BYTES + 1024}`);
         await recorder.untilIdle();
-        await manager.persisted('chat');
+        await manager.core.persisted('chat');
 
         expect(store.calls).toEqual(['write chat', 'write chat']);
         // The output itself is kept apart from the record, which names it.

@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { Hold, type Schedule } from '@/plan/hold';
 
-/* A clock that only moves when the test says so. */
 function manualClock() {
     let now = 0;
     const timers = new Map<number, { at: number; callback: () => void }>();

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { BYTES_CHUNK_MAX } from '@ruimte/contracts';
+import type { BytesPiece } from '../transport-api/piece';
 import { STREAM_PIECE_BYTES, answerRange, bytesStreamUrl, parseRange, type PieceQuestion, type RangeRequest } from './bytes-stream';
-import type { BytesPiece } from './piece';
 
 const MTIME = 1_700_000_000_123;
 

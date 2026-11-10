@@ -1,8 +1,8 @@
 import { type RefObject } from 'react';
-import { lineRoutes } from '@/canvas/line-routes';
-import { HINT_HOT, HINT_REACH, portHints, portKey, takenPorts } from '@/canvas/port-hints';
 import { useWorldPointer } from '@/canvas/use-world-pointer';
 import { useCanvas, useCanvasCamera } from '@/state/canvas';
+import { lineRoutes } from '@/surface/canvas/line-routes';
+import { HINT_HOT, HINT_REACH, portHints, portKey, takenPorts } from '@/surface/canvas/port-hints';
 
 /*
  * The ports a node offers the pointer that comes near one. They are drawn here and not in the frame,

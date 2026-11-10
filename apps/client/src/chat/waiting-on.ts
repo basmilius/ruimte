@@ -2,8 +2,9 @@ import { waitingOnLabel, waitingOnOf, type WaitingChild } from '@adecore/agents-
 import { useChats } from '@adecore/agents-react/state';
 import { useNow } from '@adecore/ui';
 import type { ChatInfo, Task } from '@ruimte/contracts';
-import { endpointKey, useEndpointId } from '@/state/keys';
-import { usePlans } from '@/state/plans';
+import { usePlans } from '@/plan/plans';
+import { useEndpointId } from '@/state/current-endpoint';
+import { endpointKey } from '@/state/keys';
 import { useTasks, type TasksById } from '@/state/tasks';
 
 const NO_CHILDREN: readonly Task[] = [];

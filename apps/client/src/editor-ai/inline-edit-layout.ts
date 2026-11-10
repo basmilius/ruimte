@@ -25,7 +25,6 @@ export function problemLabel(problem: InlineProblem, limit = PROBLEM_CHIP_CHARS)
     return label.length <= limit ? label : `${label.slice(0, limit - 1).trimEnd()}…`;
 }
 
-/* What the tooltip of a chip says: the whole message, and the server's code when it gave one. */
 export function problemDetail(problem: InlineProblem): string {
     const message = problem.message.trim();
     return problem.code === '' ? message : `${message} (${problem.code})`;

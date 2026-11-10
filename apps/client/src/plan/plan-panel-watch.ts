@@ -1,9 +1,10 @@
 import { PlanPanelRules, type PlanClock, type PlanPanelIo } from '@/plan/panel-rules';
-import { chatsInSight, liveChatSight } from '@/state/attention';
+import { findPlan, subscribePlanCreated, usePlans } from '@/plan/plans';
 import { subscribeCanvases } from '@/state/canvas';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
-import { currentEndpointId, endpointKey } from '@/state/keys';
-import { findPlan, subscribePlanCreated, usePlans } from '@/state/plans';
+import { chatsInSight, liveSight } from '@/state/in-sight';
+import { endpointKey } from '@/state/keys';
 import { useUi } from '@/state/ui';
 
 export const PLAN_MIN_WIDTH = 320;
@@ -29,7 +30,6 @@ function activeRules(): PlanPanelRules {
     return (rules ??= new PlanPanelRules(uiIo(windowClock)));
 }
 
-/* Opens the plan in the panel, even after a person closed it. */
 export function openPlanFromPill(chatId: string, planId: string): void {
     usePlans.getState().markSeen(currentEndpointId(), chatId);
     activeRules().pill(chatId, planId);
@@ -56,7 +56,7 @@ export function startPlanPanelWatch(clock: PlanClock = windowClock): () => void 
     const pass = (): void => {
         const ui = useUi.getState();
         const planWidth = ui.planOpen ? Math.max(PLAN_MIN_WIDTH, ui.planWidth ?? PLAN_DEFAULT_WIDTH) : 0;
-        own.sight(chatsInSight(liveChatSight(), { planWidth }));
+        own.sight(chatsInSight(liveSight(), { planWidth }));
         const { planAnchor, planOpen } = useUi.getState();
         if (planAnchor === null) {
             return;

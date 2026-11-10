@@ -106,7 +106,6 @@ export const BrokerErrorCodeSchema = z.enum([
     'bad-frame',
     // The signature over the challenge did not verify; the socket closes after this.
     'bad-signature',
-    // Nobody with that key is connected.
     'not-connected',
     // Another socket proved the same key later; this one closes after this.
     'replaced',

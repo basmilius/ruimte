@@ -1,8 +1,8 @@
 import { realpath, stat } from 'node:fs/promises';
 import { isAbsolute, join, posix, resolve, sep } from 'node:path';
 import { FS_LOCATE_MAX_MATCHES, type FsLocatePayload, type FsLocateResult, type GitReposResult } from '@ruimte/contracts';
+import { isMachineStatePath, NO_MACHINE_HOME, type MachineHomePolicy } from '../disk/machine-home.ts';
 import { cachedRepos } from '../git/repo-cache.ts';
-import { isMachineStatePath, NO_MACHINE_HOME, type MachineHomePolicy } from './machine-home.ts';
 
 export interface LocateDeps {
     repos: (folder: string) => Promise<GitReposResult>;
@@ -98,7 +98,6 @@ async function filesEndingIn(payload: FsLocatePayload, list: NonNullable<LocateD
     );
 }
 
-/* The paths that are open, in their order, up to the most an answer carries. */
 async function firstOpen(paths: Iterable<string>, open: (path: string) => Promise<boolean>): Promise<string[]> {
     const matches: string[] = [];
     for (const path of paths) {

@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import type { ClientAccess } from '../dispatcher.ts';
+import { ClientSinks } from '../client-sinks.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { PortStreams } from '../ports/port-streams.ts';
 import { base64Of, FakeNetwork, FakeTimers, testGrants } from '../ports/port-test-helpers.ts';
-import { registerPortHandlers } from './ports.ts';
+import type { ClientAccess } from '../wire.ts';
+import { portsArea } from './ports.ts';
 import { askOnce } from './test-helpers.ts';
 
 const OWNER: ClientAccess = { reachability: 'loopback', sessionId: null };
@@ -16,7 +17,7 @@ function setup() {
     const streams = new PortStreams({ grants, connect: network.connect, timers: new FakeTimers() });
     const dispatcher = new Dispatcher();
 
-    registerPortHandlers(dispatcher, grants, streams);
+    portsArea({ grants, streams, changes: new ClientSinks() }).handlers?.(dispatcher);
 
     return { dispatcher, grants, network };
 }

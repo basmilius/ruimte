@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 import UIKit
 
@@ -161,7 +162,6 @@ struct UiChoiceView: View {
     }
 }
 
-/// Pressed, an open row sinks a little and darkens; a closed row does neither.
 private struct UiChoiceStyle: ButtonStyle {
     let open: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

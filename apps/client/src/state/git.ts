@@ -9,7 +9,7 @@ export const DEFAULT_LOG_HEIGHT = 200;
 // The file tree of a commit tab, until a drag gives it a width of its own.
 const DEFAULT_COMMIT_TREE_WIDTH = 240;
 
-export interface TabCounts {
+interface TabCounts {
     added: number;
     deleted: number;
     split?: ChangeSplit;

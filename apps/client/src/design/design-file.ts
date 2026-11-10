@@ -6,7 +6,6 @@ export type DesignEdits = Record<string, Record<string, string>>;
 const EDITS_BLOCK = /<style id="ruimte-edits">([\s\S]*?)<\/style>/i;
 const TWEAKS_BLOCK = /(<script type="application\/json" id="ruimte-tweaks">)([\s\S]*?)(<\/script>)/i;
 
-/* The rules of the overrides block of a page, read back the way `withEdits` writes them. */
 export function editsOf(html: string): DesignEdits {
     const block = EDITS_BLOCK.exec(html)?.[1] ?? '';
     const edits: DesignEdits = {};

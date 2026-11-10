@@ -1,7 +1,7 @@
 import { chmod, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { helperPath } from '@adecore/database/host';
+import { helperFileName, helperPath } from '@adecore/database/host';
 
 interface PinnedPackage {
     version: string;
@@ -12,7 +12,6 @@ function escapeForPattern(text: string): string {
     return text.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
 }
 
-/* The version and integrity `bun.lock` pins for a package, or null when it pins none. */
 export function pinnedIn(lock: string, name: string): PinnedPackage | null {
     const escaped = escapeForPattern(name);
     const match = new RegExp(`"${escaped}": \\["${escaped}@([^"]+)", "[^"]*", \\{[^}]*\\}, "(sha512-[^"]+)"\\]`).exec(lock);
@@ -48,7 +47,7 @@ async function fetchPinned(name: string, pinned: PinnedPackage, into: string): P
  */
 export async function placeDatabaseHelper(root: string, nativeDir: string, platform: string, arch: string): Promise<void> {
     const name = `@adecore/database-${platform}-${arch}`;
-    const file = platform === 'win32' ? 'adecore-database.exe' : 'adecore-database';
+    const file = helperFileName(platform);
     const pinned = pinnedIn(await readFile(join(root, '..', '..', 'bun.lock'), 'utf8'), name);
     if (pinned === null) {
         console.warn(`There is no ${name}, so this build has no database helper.`);

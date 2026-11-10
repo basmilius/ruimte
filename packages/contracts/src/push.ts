@@ -1,3 +1,4 @@
+import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { PushHandleSchema } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { QuietHoursSchema } from './quiet-hours.ts';
@@ -67,3 +68,25 @@ export const PushAttentionResultSchema = z.object({
 export const PushReadPayloadSchema = PushAttentionEntrySchema.pick({ nodeId: true, issuedAt: true });
 // Whether a person is at this client right now; a machine holds its pushes while one is.
 export const PresenceReportPayloadSchema = z.object({ present: z.boolean() });
+
+export const PushNotificationEventSchema = z.object({
+    projectId: z.string().min(1),
+    viewId: z.string().min(1),
+    nodeId: z.string().min(1),
+    title: z.string().max(160),
+    body: z.string().max(500)
+});
+
+export const PUSH_REQUEST_SCHEMAS = {
+    'push.attention': { payload: EmptySchema, result: PushAttentionResultSchema },
+    'push.read': { payload: PushReadPayloadSchema, result: EmptySchema },
+    'push.subscribe': { payload: PushSubscribePayloadSchema, result: EmptySchema },
+    'push.unsubscribe': { payload: PushUnsubscribePayloadSchema, result: EmptySchema },
+    'push.preferences': { payload: EmptySchema, result: PushPreferencesResultSchema },
+    'presence.report': { payload: PresenceReportPayloadSchema, result: EmptySchema }
+} as const;
+
+export const PUSH_EVENT_SCHEMAS = {
+    'push.attention': PushAttentionEntrySchema,
+    'push.notification': PushNotificationEventSchema
+} as const;

@@ -1,15 +1,15 @@
-import { LINE_HEIGHT, NOTE_PADDING, RESIZE_HANDLES, boundsOfElements, handlePoint, writingFrameOf, type Rect, type WrittenElement } from '@adecore/drawing';
+import { LINE_HEIGHT, NOTE_PADDING, RESIZE_HANDLES, boundsOfElements, handlePoint, writingFrameOf, type WrittenElement } from '@adecore/drawing';
+import type { Rect } from '@adecore/utils/geometry';
 import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { fitTextBox } from '@/drawing/measure';
-import { readFontStacks } from '@/drawing/palette';
+import { fitTextBox } from '@/canvas-model/drawing-measure';
+import { readFontStacks } from '@/canvas-model/drawing-palette';
 import { isWritten, useDrawing, useDrawingStore } from '@/state/drawing';
 import { HANDLE_HIT_SIZE } from './handle-hit';
 
 /* The squares on a selection box, in screen pixels whatever the zoom is. */
 const HANDLE = 8;
 
-/* How far above the box the handle that turns the selection sits. */
 const ROTATE_OFFSET = 24;
 
 const CURSOR: Record<string, string> = {

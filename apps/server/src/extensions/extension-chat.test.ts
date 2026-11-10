@@ -5,12 +5,13 @@ import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { ManualClock } from '@adecore/agents/testing';
 import { EXTENSION_API_VERSION, type ProjectContent } from '@ruimte/contracts';
-import { serverActions } from '../actions/server-actions.ts';
+import { serverActions } from '../actions/server-actions-test-helpers.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { markDrawnChat } from '../projects/drawn-chat.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
-import type { CanvasHost } from '../tools/host.ts';
+import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
 import { extensionChatStarter } from './extension-chat.ts';
 import { ExtensionHost } from './extension-host.ts';
 import { ExtensionStore } from './store.ts';
@@ -46,7 +47,7 @@ beforeEach(async () => {
     const folder = join(root, 'shop');
 
     await mkdir(folder, { recursive: true });
-    store = new ProjectStore(join(root, 'home'), projectLinks());
+    store = new ProjectStore(join(root, 'home'), projectLinks(), projectOverlays(join(root, 'home')));
 
     const opened = await store.openProject({ folder });
 
@@ -300,7 +301,6 @@ describe('an extension starts a chat', () => {
     });
 });
 
-/* `target` with one method in place of its own, the rest of it as it is. */
 function withMethod<Target extends object>(target: Target, name: keyof Target, method: unknown): Target {
     return new Proxy(target, {
         get: (object, property, receiver) => (property === name ? method : Reflect.get(object, property, receiver))

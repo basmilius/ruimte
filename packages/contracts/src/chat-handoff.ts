@@ -23,3 +23,8 @@ export const ChatHandoffResultSchema = z.object({
     all: z.boolean()
 });
 export type ChatHandoffResult = z.infer<typeof ChatHandoffResultSchema>;
+
+export const CHAT_HANDOFF_REQUEST_SCHEMAS = {
+    // Errors: `move-refused`, `files-conflict` and `move-failed`; each leaves the chat where it was.
+    'chat.handoff': { payload: ChatHandoffPayloadSchema, result: ChatHandoffResultSchema }
+} as const;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
+import type { AgentInfo, AgentStatus, ChatInfo } from '@ruimte/contracts';
 import { isIdle } from '@ruimte/contracts';
 import { childCounter, workOf } from './work.ts';
 
@@ -12,6 +12,10 @@ function agent(status: AgentStatus, live = true): AgentInfo {
         live,
         updatedAt: 0
     };
+}
+
+function chat(patch: Partial<ChatInfo> = {}) {
+    return { status: 'idle' as const, activeTurnId: null, ...patch };
 }
 
 function shell(pid: number, options: { exited?: boolean; agent?: AgentInfo | null } = {}) {
@@ -66,9 +70,16 @@ describe('workOf', () => {
     });
 
     test('a chat with a turn in flight is an agent, one without is not', () => {
-        expect(workOf({ sessions: [], chats: [{ activeTurnId: 'turn-1' }, { activeTurnId: null }], children: () => 0 })).toEqual({
+        expect(workOf({ sessions: [], chats: [chat({ status: 'running', activeTurnId: 'turn-1' }), chat()], children: () => 0 })).toEqual({
             terminals: 0,
             agents: 1
+        });
+    });
+
+    test('a chat waiting on a person or on its subagents is an agent too', () => {
+        expect(workOf({ sessions: [], chats: [chat({ status: 'needs-you' }), chat({ delegating: true })], children: () => 0 })).toEqual({
+            terminals: 0,
+            agents: 2
         });
     });
 

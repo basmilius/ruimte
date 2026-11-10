@@ -60,16 +60,16 @@ extension VoiceTarget {
     @MainActor init(_ workspace: MobileWorkspace, shown: String?) {
         self.init(
             machineID: workspace.session.machine.id, projectID: workspace.projectID, projectName: workspace.title,
-            viewID: Self.canvas(shown: shown, views: workspace.views), machineName: workspace.session.machine.name)
+            viewID: Self.canvas(shown: shown, views: workspace.storedViews), machineName: workspace.session.machine.name)
     }
 
     /// The canvas a shown id stands for: a canvas itself, or the canvas of a node opened on its own, which is what both
     /// the iPhone and the iPad name as shown then.
-    static func canvas(shown: String?, views: [JSONValue]) -> String? {
+    static func canvas(shown: String?, views: [StoredView]) -> String? {
         guard let shown else { return nil }
-        let canvases = views.filter { $0.text("kind") == "canvas" }
-        if let canvas = canvases.first(where: { $0.stableID == shown }) { return canvas.stableID }
-        return canvases.first { $0.list("nodes").contains { $0.stableID == shown } }?.stableID
+        let canvases = views.compactMap(\.canvas)
+        if let canvas = canvases.first(where: { $0.id == shown }) { return canvas.id }
+        return canvases.first { $0.nodes.contains { $0.id == shown } }?.id
     }
 }
 
@@ -77,7 +77,7 @@ extension NowModel {
     /// When a project of this machine was opened last, as its feed says; 0 for a machine without one.
     func lastOpened(on machineID: String) -> Double {
         (feeds[machineID]?.projects ?? []).compactMap { project in
-            project["summary"].flatMap { NewChat.isChats($0) ? nil : $0.number("lastOpenedAt") }
+            project.summary.isChats ? nil : project.summary.lastOpenedAt
         }.max() ?? 0
     }
 }
@@ -97,7 +97,6 @@ extension AppRuntime {
         machines.filter { voice.offers(machineID: $0.id, client: session(for: $0).rpc) }
     }
 
-    /// Whether a bar shows the mic: a machine offers Voice, or Voice runs in this scene.
     func showsVoice(in scene: VoiceScene?) -> Bool {
         guard let scene else { return false }
         return voice.isOwner(scene.id) || !voiceMachines.isEmpty

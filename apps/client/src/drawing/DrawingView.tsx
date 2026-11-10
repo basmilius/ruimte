@@ -1,13 +1,12 @@
-import { boundsOfElements, elementAt, rectFromPoints, resizeRect, scaleElement, type Point, type Rect, type ResizeHandle } from '@adecore/drawing';
-import { EmptyState, isInFloatingLayer, Kbd, isModHeld, ContextMenu } from '@adecore/ui';
+import { boundsOfElements, elementAt, resizeRect, scaleElement, type ResizeHandle } from '@adecore/drawing';
+import { EmptyState, isInFloatingLayer, Kbd, isModHeld, ContextMenu, isApplePlatform } from '@adecore/ui';
+import { rectFromPoints, type Point, type Rect } from '@adecore/utils/geometry';
 import type { DrawingElement } from '@ruimte/contracts';
 import { useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-import { groundPlacement, toWorld } from '@/canvas/math';
-import { isSpaceDown } from '@/canvas/space-pan';
-import { useWheelCamera } from '@/canvas/use-wheel-camera';
-import { isApplePlatform } from '@/desktop/bridge';
+import { fitTextBox } from '@/canvas-model/drawing-measure';
+import { groundPlacement, toWorld } from '@/canvas-model/math';
 import { DrawingDock } from '@/drawing/DrawingDock';
 import { DrawingMenuPopup } from '@/drawing/DrawingMenu';
 import { DrawingOverlay } from '@/drawing/DrawingOverlay';
@@ -25,7 +24,6 @@ import {
     snapPoint,
     textElement
 } from '@/drawing/gestures';
-import { fitTextBox } from '@/drawing/measure';
 import { applyCamera, clearPathCache, paintElements, paintOptions } from '@/drawing/paint';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { useDrawingKeys } from '@/drawing/use-drawing-keys';
@@ -35,6 +33,8 @@ import { useDocument } from '@/state/document';
 import { isWritten, newSeed, useDrawing, useDrawingStore } from '@/state/drawing';
 import { useSettings } from '@/state/settings';
 import { usePaletteKey } from '@/state/theme';
+import { isSpaceDown } from '@/surface/canvas/space-pan';
+import { useWheelCamera } from '@/surface/canvas/use-wheel-camera';
 import { DrawingScene } from '@/ui/EmptyScenes';
 import { nearestHandle } from './handle-hit';
 
@@ -141,7 +141,6 @@ export function DrawingView({ id }: { id: string }) {
 
     useViewportSize(rootRef, drawingStore);
 
-    /* Paints on every change of what is drawn, of the camera or of the theme, once per frame. */
     useEffect(() => {
         let frame = 0;
         const draw = (): void => {
@@ -534,7 +533,6 @@ export function DrawingView({ id }: { id: string }) {
     );
 }
 
-/* What the pointer says it will do here: the tool, unless a gesture is already saying otherwise. */
 function cursorFor(tool: string, gesture: Gesture['kind'] | null, space: boolean): string {
     if (gesture === 'pan') {
         return 'grabbing';

@@ -1,0 +1,17 @@
+import { Icon } from '@adecore/ui';
+import clsx from 'clsx';
+import { Globe } from 'lucide-react';
+import { useState } from 'react';
+import { useBrowserRow } from '@/clients/browser/registry';
+
+/* The page's own favicon where there is one, otherwise the globe. A URL that fails to load stays
+   failed, so the row never flashes a broken image. */
+export function Favicon({ id, size = 16, className }: { id: string; size?: number; className?: string }) {
+    const url = useBrowserRow(id, (row) => row?.favicon ?? null);
+    const [failed, setFailed] = useState<string | null>(null);
+
+    if (!url || url === failed) {
+        return <Icon icon={Globe} size={size} className={className} />;
+    }
+    return <img src={url} alt="" width={size} height={size} className={clsx('shrink-0', className)} onError={() => setFailed(url)} />;
+}

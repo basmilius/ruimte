@@ -1,0 +1,49 @@
+import { isPathBelow, relativeTo } from '@ruimte/contracts';
+import { useEffect, useRef, useState } from 'react';
+import { useGitSignal } from '@/controllers/git-watch';
+import { useEndpointId } from '@/state/current-endpoint';
+import { useGitRoot } from '@/surface/panels/use-git-root';
+import { orNull } from '@/transport-api/transport';
+import { useTransport } from '@/workspace/context';
+
+/*
+ * What the file is compared against in the editor's margin: its text in the last commit, or null when
+ * it is not in a repository or the machine cannot say. A file that no commit or index entry differs
+ * from is its own base, so an untouched file shows nothing.
+ */
+export function useGitBase(path: string, disk: string): string | null {
+    const transport = useTransport();
+    const endpointId = useEndpointId();
+    const key = `${endpointId}\u0000${path}`;
+    const [held, setHeld] = useState<{ key: string; base: string | null } | null>(null);
+    const latestDisk = useRef(disk);
+    const root = useGitRoot(path);
+    // Goes up when the checkout moved: a commit, a stage or a write of this file all do.
+    const signal = useGitSignal(root ?? null, path);
+
+    useEffect(() => {
+        latestDisk.current = disk;
+    }, [disk]);
+
+    useEffect(() => {
+        if (root === null || root === undefined || !isPathBelow(root, path)) {
+            return;
+        }
+        let alive = true;
+        const relative = relativeTo(root, path);
+        const read = (staged: boolean) => orNull('git.diff', transport.request('git.diff', { cwd: root, path: relative, scope: 'worktree', staged }));
+        // The commit's text is the old side of the staged diff when something is staged, else the index's is.
+        void Promise.all([read(true), read(false)]).then(([staged, unstaged]) => {
+            if (!alive) {
+                return;
+            }
+            const unchanged = staged?.diff === '' && unstaged?.diff === '' && staged.omitted === undefined && unstaged.omitted === undefined;
+            setHeld({ key, base: staged?.oldText ?? unstaged?.oldText ?? (unchanged ? latestDisk.current : null) });
+        });
+        return () => {
+            alive = false;
+        };
+    }, [transport, key, path, root, signal]);
+
+    return held?.key === key ? held.base : null;
+}

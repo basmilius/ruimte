@@ -2,7 +2,6 @@ import { Broker, NO_METER, type BrokerMeter, type Peer } from './broker.ts';
 import { clientIpOf, nameFor, type BrokerConfig, type TurnConfig } from './config.ts';
 import { cloudflareTurn, noTurn, sharedSecretTurn, type TurnProvider } from './turn.ts';
 
-// How often the sockets, machines and clients online go to the meter.
 const ONLINE_EVERY_MS = 60_000;
 
 interface SocketData {

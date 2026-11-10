@@ -1,8 +1,22 @@
-import { sendEvent, type Dispatcher } from '../dispatcher.ts';
+import type { Area } from '../area.ts';
+import { type Dispatcher } from '../dispatcher.ts';
 import type { EditorAssistModel } from '../editor-assist/model.ts';
+import { sendEvent } from '../wire.ts';
+
+interface EditorAssistDeps {
+    model: Pick<EditorAssistModel, 'generate' | 'status' | 'dispose'>;
+}
 
 /* The selected CLI receives only the supplied code, without the project's configuration. */
-export function registerEditorAssistHandlers(dispatcher: Dispatcher, model: Pick<EditorAssistModel, 'generate' | 'status'>): void {
+export function editorAssistArea(deps: EditorAssistDeps): Area {
+    return {
+        name: 'editor assist',
+        handlers: (dispatcher) => registerRequests(dispatcher, deps),
+        stop: [{ phase: 'end', label: 'Stopping editor model requests', run: () => deps.model.dispose() }]
+    };
+}
+
+function registerRequests(dispatcher: Dispatcher, { model }: EditorAssistDeps): void {
     const running = new Map<string, AbortController>();
 
     dispatcher.register('editor.status', (payload) => model.status(payload.agent));

@@ -1,6 +1,6 @@
 import { composerEditorExtensions } from '@adecore/agents-react/chat/ui';
 import { createSmartEditorEngine, type Editor } from '@adecore/editor';
-import dutchEditor from '@adecore/editor-react/locales/nl.json' with { type: 'json' };
+import dutchEditor from '@adecore/editor-react/locales/nl';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import i18next from 'i18next';
@@ -8,11 +8,11 @@ import { createElement } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { dictationRange, dictationRangeEffect, dictationPreview, dictationPreviewEffect } from '@/dictation/editor';
+import { FileEditor } from '@/files/FileEditor';
 import { initI18n } from '@/i18n';
 import dutchPanels from '@/i18n/locales/nl/panels.json' with { type: 'json' };
 import { FakeLanguageTransport } from '@/language/fake-daemon';
-import { ProjectLanguage } from '@/language/ruimte-project-language';
-import { FileEditor } from '@/shell/panels/FileEditor';
+import { RuimteProject } from '@/language/ruimte-project';
 
 export async function probeEditorLabels() {
     // The probe page boots no app, so nothing set the words up yet.
@@ -56,7 +56,7 @@ export async function probeEditorLabels() {
             mounted = editor;
         }
     };
-    const project = new ProjectLanguage(new FakeLanguageTransport(), 'editor-label-probe', '/work/app');
+    const project = new RuimteProject(new FakeLanguageTransport(), 'editor-label-probe', '/work/app');
     try {
         await i18next.changeLanguage('en');
         flushSync(() => root.render(createElement(FileEditor, props)));
@@ -72,8 +72,8 @@ export async function probeEditorLabels() {
             english,
             dutch,
             sameEditor: first !== null && first === mounted,
-            sameWords: project.i18n === i18next,
-            featureWords: project.i18n.t('editor:language.codeVision.usagesNone')
+            sameWords: project.language.i18n === i18next,
+            featureWords: project.language.i18n.t('editor:language.codeVision.usagesNone')
         };
     } finally {
         flushSync(() => root.unmount());

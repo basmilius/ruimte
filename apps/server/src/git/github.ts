@@ -57,7 +57,6 @@ export function ghError(result: GitResult, notFound: 'issue-not-found' | 'pr-not
     return new GitError('gh-failed', text === '' ? 'gh failed' : text);
 }
 
-/* The output of a `gh` that succeeded; every other outcome is an error from `ghError`. */
 export async function ghOutput(run: GhRunner, args: string[], cwd: string, notFound?: 'issue-not-found' | 'pr-not-found'): Promise<string> {
     const result = await run(args, cwd);
     if (result.code !== 0) {
@@ -66,7 +65,6 @@ export async function ghOutput(run: GhRunner, args: string[], cwd: string, notFo
     return result.stdout;
 }
 
-/* `owner/repo` of the repository a folder is in, as gh sees its remotes. */
 async function repoOf(run: GhRunner, cwd: string): Promise<string> {
     const output = await ghOutput(run, ['repo', 'view', '--json', 'nameWithOwner'], cwd);
     const name = (JSON.parse(output) as { nameWithOwner?: unknown }).nameWithOwner;
@@ -207,7 +205,6 @@ interface Page<Node> {
     data?: { viewer?: { login?: string } | null; repository?: { pullRequest?: Node | null } | null };
 }
 
-/* The pull request of every page of a `--paginate` answer, in order. */
 export function pagesOf<Node>(output: string): Node[] {
     return (jsonDocuments(output) as Array<Page<Node>>)
         .map((page) => page.data?.repository?.pullRequest)
@@ -237,7 +234,6 @@ function threadOf(json: ThreadJson): GitPrThread {
     };
 }
 
-/* Where a pull request lives, from the link `gh pr view` reports. */
 function locate(url: string): { owner: string; name: string; number: number } | null {
     const match = /^https?:\/\/[^/]+\/([^/]+)\/([^/]+)\/pull\/(\d+)/.exec(url);
     return match ? { owner: match[1]!, name: match[2]!, number: Number.parseInt(match[3]!, 10) } : null;

@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import { clientChannelMessage, daemonChannelMessage, type AuthChallengeResult, type AuthTicketPayload, type AuthTicketResult } from '@ruimte/contracts';
+import type { AuthChallengeResult, AuthTicketPayload, AuthTicketResult } from '@ruimte/contracts';
+import { clientChannelMessage, daemonChannelMessage } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import type { AuthStore } from './auth-store.ts';
 

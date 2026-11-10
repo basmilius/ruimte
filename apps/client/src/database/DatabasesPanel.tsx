@@ -5,6 +5,7 @@ import type { DatabaseConnection } from '@ruimte/contracts';
 import { CircleAlert, Container, KeyRound, Plus, Settings2, SquareTerminal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDatabasePanel } from '@/clients/database/state';
 import {
     asViewConnections,
     connectionName,
@@ -21,11 +22,10 @@ import { useConsoleFolders } from '@/database/console-folders';
 import { containersFor } from '@/database/docker';
 import { startDatabaseDrag } from '@/database/drag';
 import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
-import { useDatabasePanel } from '@/database/state';
-import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
-import { basenameOf } from '@/shell/panels/files-tree';
-import { setDragging } from '@/shell/view-drag';
+import { basenameOf } from '@/paths/file-path';
 import { useProject } from '@/state/project';
+import { PanelHeaderActions, PanelHeaderSlot } from '@/surface/PanelHeaderSlot';
+import { fireAndForget } from '@/transport-api/transport';
 import { DatabasesScene } from '@/ui/EmptyScenes';
 
 /*
@@ -103,7 +103,6 @@ function PanelBodyFor({ status, error, connections }: { status: ConnectionsStatu
                 onValueChange={(next) => useDatabasePanel.getState().setSelection(next)}
                 openOnClick
                 onTableDragStart={(ref, event, kind) => startDatabaseDrag(event.dataTransfer, ref, kind)}
-                onTableDragEnd={() => setDragging(null)}
                 folders={consoles.folders}
                 className="min-h-0 grow"
             />
@@ -148,14 +147,14 @@ function NoConnections() {
     useEffect(() => {
         let live = true;
         // Without Docker, or with it stopped, there is simply nothing to offer.
-        client
-            .discover('docker')
-            .then((found) => {
+        void fireAndForget(
+            'client.discover',
+            client.discover('docker').then((found) => {
                 if (live) {
                     setContainers(found);
                 }
             })
-            .catch(() => undefined);
+        );
         return () => {
             live = false;
         };

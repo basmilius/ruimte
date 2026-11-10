@@ -23,6 +23,7 @@ import {
     nodeChats
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
+import type { CreatableViewKind } from '@/action-port/perform';
 import {
     agentFor,
     canvasNow,
@@ -40,23 +41,22 @@ import {
     sessionsEnded,
     storedFilePath,
     unknownCanvas,
-    unknownView,
-    type CreatableViewKind
+    unknownView
 } from '@/actions/action-reach';
 import { addAgentView, addDesignView } from '@/agents/nodes';
-import { databaseViewName } from '@/database/view-name';
 import { databaseViewShareRefusal } from '@/database/view-sharing';
 import { freeDesignFolder } from '@/design/design-folder';
+import { locateView } from '@/layout/split';
+import { basenameOf } from '@/paths/file-path';
 import { saveViewFiles, viewDeletionFacts, type ViewDeletionMachine } from '@/project/view-deletion';
-import { nodesOfView } from '@/project/view-nodes';
 import { offerViewUndo } from '@/project/view-trash';
-import { basenameOf } from '@/shell/panels/files-tree';
-import { locateView } from '@/shell/split';
 import { canvasInReach } from '@/state/canvas-target';
+import { databaseViewName } from '@/state/database-view-name';
 import type { DocumentState } from '@/state/document';
+import { nodesOfView } from '@/state/view-nodes';
 
 /* What the view actions reach outside the document; a test hands in a fake of each. */
-export interface ViewReach {
+interface ViewReach {
     /* The agent CLIs of the machine the project runs on. */
     providers(): readonly ProviderInfo[];
     viewDeletion: ViewDeletionMachine;
@@ -187,7 +187,6 @@ function addViewOf(
     }
 }
 
-/* The views of the project: shown, named, made, deleted, copied, moved, marked, shared and flagged. */
 export function viewActions(document: StoreApi<DocumentState>, reach: ViewReach): ActionHandlers<void> {
     const { providers, viewDeletion, copyViewContent, designFolders } = reach;
     return {

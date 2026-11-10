@@ -6,7 +6,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { CLIENT_REACT_MAJOR } from './scaffold.ts';
 
-export const HAPPY_DOM = '@happy-dom/global-registrator';
+const HAPPY_DOM = '@happy-dom/global-registrator';
 
 /* The page a `*.dom.test.tsx` file draws into, registered before React loads. */
 export const DOM_PRELOAD = `import { GlobalRegistrator } from '${HAPPY_DOM}';\n\nGlobalRegistrator.register();\n`;
@@ -14,7 +14,6 @@ export const DOM_PRELOAD = `import { GlobalRegistrator } from '${HAPPY_DOM}';\n\
 const SKIPPED = new Set(['node_modules', 'dist', '.git']);
 const DOM_TEST = /\.dom\.test\.[jt]sx?$/;
 
-/* Whether the project holds a test that draws into a page, outside what it installs and builds. */
 export function hasDomTests(folder: string): boolean {
     for (const entry of readdirSync(folder, { withFileTypes: true })) {
         if (entry.isDirectory() ? !SKIPPED.has(entry.name) && hasDomTests(join(folder, entry.name)) : DOM_TEST.test(entry.name)) {

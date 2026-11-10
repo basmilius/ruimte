@@ -64,7 +64,6 @@ export async function textAt(path: string): Promise<string | null> {
     return (await bytesAt(path))?.toString('utf8') ?? null;
 }
 
-/* Writes every file whose text on disk is not its `after` yet; a null `after` leaves the file alone. */
 export async function writeChangedFiles(files: ReadonlyArray<{ path: string; after: string | null }>, io: ProjectWriteIO): Promise<void> {
     for (const file of files) {
         if (file.after !== null && (await textAt(file.path)) !== file.after) {

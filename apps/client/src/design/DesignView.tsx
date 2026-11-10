@@ -3,15 +3,14 @@ import type { ProjectDesignView } from '@ruimte/contracts';
 import { SwatchBook } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { activeDesignChat, placeOfView, useDesignChat } from '@/design/design-chat';
-import { useDesignFolder } from '@/design/design-places';
 import { DesignStage } from '@/design/DesignStage';
 import { ChatBody } from '@/nodes/ChatBody';
+import { activeDesignChat, placeOfView, useDesignChat } from '@/state/design-chat';
+import { useDesignFolder } from '@/state/design-places';
 
 const CHAT_WIDTH = 400;
 const CHAT_MIN_WIDTH = 320;
 
-/* A design: the chat that works on it, and beside it the pages of its folder on a stage. */
 export function DesignView({ view, focused }: { view: ProjectDesignView; focused: boolean }) {
     const { t } = useTranslation('shell');
     const design = placeOfView(view);

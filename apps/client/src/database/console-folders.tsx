@@ -4,13 +4,13 @@ import { ActionRefusal } from '@ruimte/actions';
 import { Pencil, SquareTerminal, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
+import { perform } from '@/action-port/perform';
 import { openConsoleFile } from '@/database/console-file';
 import { useConsoleFiles } from '@/database/use-console-files';
-import { newEntryPathOf, segmentsOf, validateNewEntry } from '@/shell/panels/file-create';
-import { basenameOf, dirnameOf } from '@/shell/panels/files-tree';
+import { basenameOf, dirnameOf } from '@/paths/file-path';
 import { useServer } from '@/state/server';
 import { useToasts } from '@/state/toasts';
+import { newEntryPathOf, segmentsOf, validateNewEntry } from '@/surface/panels/file-create';
 
 /* What a console's menu asked for, which waits for the person in a dialog. */
 type ConsoleQuestion = { kind: 'rename' | 'delete'; path: string };

@@ -3,25 +3,24 @@ import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize, sep } from 'node:path';
 import { gunzipSync } from 'node:zlib';
-import type { AppIpc } from '@adecore/shell';
 import { Serializer } from '@adecore/utils/async';
 import { writeAtomic } from '@adecore/utils/fs';
 import {
-    clashingPackPath,
-    EXTENSION_API_VERSION,
     EXTENSION_ICON_PATH,
     EXTENSION_PACK_MAX_UNPACKED_BYTES,
     ExtensionIdSchema,
     ExtensionManifestSchema,
     extensionFrameHost,
-    ExtensionPackSchema,
-    extensionPermissionProblems,
+    extensionManifestProblem,
     isSafePackPath,
+    readExtensionPack,
+    type ApiRefusal,
     type ExtensionManifest
 } from '@ruimte/contracts';
 import { EXTENSION_FILE_TYPES, EXTENSION_FILES_PATH, extensionFrameCsp } from '@ruimte/csp';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { z } from 'zod';
+import type { DesktopIpc } from './ipc';
 
 const IndexSchema = z.array(z.object({ id: z.string(), hash: z.string(), enabled: z.boolean(), fromStore: z.boolean().optional() }));
 type IndexEntry = z.infer<typeof IndexSchema>[number];
@@ -37,11 +36,14 @@ export function hostsOf(manifest: Pick<ExtensionManifest, 'permissions'>): strin
     });
 }
 
-function refuseUnknownPermissions(manifest: ExtensionManifest): void {
-    const problems = extensionPermissionProblems(manifest.permissions);
+/* The shell names the extension to a person, who updates Ruimte rather than reads API numbers. */
+const OTHER_RUIMTE: ApiRefusal = (manifest) => `${manifest.name} needs a different version of Ruimte`;
 
-    if (problems.length > 0) {
-        throw new Error(`${manifest.name}: ${problems.join('; ')}`);
+function refuseManifest(manifest: ExtensionManifest): void {
+    const problem = extensionManifestProblem(manifest, { refusesApi: OTHER_RUIMTE });
+
+    if (problem !== null) {
+        throw new Error(problem.message);
     }
 }
 
@@ -160,27 +162,14 @@ export class ClientExtensions {
 
     async install(pack: Uint8Array, fromStore = false): Promise<InstalledClientExtension> {
         const bytes = Buffer.from(pack);
-        const parsed = ExtensionPackSchema.parse(JSON.parse(gunzipSync(bytes, { maxOutputLength: EXTENSION_PACK_MAX_UNPACKED_BYTES }).toString('utf8')));
-        const paths = Object.keys(parsed.files);
+        const parsed = readExtensionPack(bytes, (packed) => gunzipSync(packed, { maxOutputLength: EXTENSION_PACK_MAX_UNPACKED_BYTES }), OTHER_RUIMTE);
 
-        if (!paths.every(isSafePackPath)) {
-            throw new Error('The pack names a path outside itself');
+        if (!parsed.ok) {
+            throw new Error(parsed.message);
         }
 
-        const clash = clashingPackPath(paths);
-
-        if (clash !== null) {
-            throw new Error(`The pack names ${clash} twice, in another case`);
-        }
-
-        const manifest = ExtensionManifestSchema.parse(JSON.parse(Buffer.from(parsed.files['manifest.json'] ?? '', 'base64').toString('utf8')));
-
-        if (manifest.api !== EXTENSION_API_VERSION) {
-            throw new Error(`${manifest.name} needs a different version of Ruimte`);
-        }
-
-        refuseUnknownPermissions(manifest);
-
+        const { manifest, files } = parsed;
+        const paths = Object.keys(files);
         const hash = createHash('sha256').update(bytes).digest('hex');
         const folder = join(this.root, manifest.id, hash);
 
@@ -194,7 +183,7 @@ export class ClientExtensions {
                 try {
                     for (const path of paths) {
                         await mkdir(dirname(join(unpacking, path)), { recursive: true });
-                        await writeFile(join(unpacking, path), Buffer.from(parsed.files[path] as string, 'base64'));
+                        await writeFile(join(unpacking, path), Buffer.from(files[path] as string, 'base64'));
                     }
 
                     const unpacked = await readdir(unpacking, { recursive: true, withFileTypes: true });
@@ -273,7 +262,7 @@ export class ClientExtensions {
                 throw new Error(`No valid manifest.json in ${folder}`);
             }
 
-            refuseUnknownPermissions(manifest);
+            refuseManifest(manifest);
             this.links.set(manifest.id, { folder, revision, manifest, enabled: enabled ?? this.links.get(manifest.id)?.enabled ?? true });
             touched();
         });
@@ -362,8 +351,7 @@ export class ClientExtensions {
     }
 }
 
-/* The page installs, links and switches its extensions; the shell keeps them and serves their files. */
-export function installExtensions(ipc: AppIpc, extensions: ClientExtensions): void {
+export function installExtensions(ipc: DesktopIpc, extensions: ClientExtensions): void {
     ipc.handle('extensions:list', () => extensions.list());
     ipc.handle('extensions:install', (_event, pack: Uint8Array, options?: { fromStore?: unknown }) => extensions.install(pack, options?.fromStore === true));
     ipc.handle('extensions:remove', (_event, id: string) => extensions.remove(id));

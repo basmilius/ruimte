@@ -1,9 +1,9 @@
 import { clipText } from '@ruimte/contracts';
 import type { IdentityLinkCompletePayload, ProviderId } from '@ruimte/pulsar';
+import { fireAndForget } from '@/transport-api/transport';
 import { codeFromCallback, createLoginState, createPkce, loginStartUrl, type LoginCallback } from './pkce';
 import type { SessionKeeper, SessionView } from './session';
 
-/* How a login leaves this client and comes back, such as the desktop shell's loopback listener. */
 export interface LoginRedirect {
     listen(): Promise<{ redirectUri: string }>;
     /* Opens the start URL where the person can type a password: the system browser, not this page. */
@@ -17,7 +17,6 @@ interface SignInOptions {
     keeper: SessionKeeper;
     addressBookUrl: string;
     provider?: ProviderId;
-    /* What the address book lists this device as in the log of who got access. */
     label: string;
 }
 
@@ -47,14 +46,13 @@ async function loginInBrowser(options: {
             })
         );
     } catch (e) {
-        await options.redirect.cancel().catch(() => undefined);
+        await fireAndForget('options.redirect.cancel', options.redirect.cancel());
         throw e;
     }
     const code = codeFromCallback(await options.redirect.callback(), state);
     return { code, codeVerifier: pkce.verifier, redirectUri };
 }
 
-/* Signing in: the code is traded by the keeper, which keeps the refresh token that comes back. */
 export async function signIn(options: SignInOptions): Promise<SessionView> {
     const login = await loginInBrowser({ redirect: options.redirect, addressBookUrl: options.addressBookUrl, provider: options.provider ?? 'github' });
     return options.keeper.exchange({ ...login, label: clipText(options.label, 80) });
@@ -66,7 +64,6 @@ interface LinkIdentityOptions<T> {
     provider: ProviderId;
     /* A link token asked for with this client's session, so the login that follows is bound to it. */
     requestLink(): Promise<string>;
-    /* Trades the code with the same session; the identity lands on the account only then. */
     complete(login: IdentityLinkCompletePayload): Promise<T>;
 }
 

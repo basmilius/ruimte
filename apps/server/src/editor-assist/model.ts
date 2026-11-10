@@ -2,9 +2,16 @@ import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { ChatChild, type SpawnChatProcess } from '@adecore/agents/chat';
-import type { EditorAssistAgent, EditorAssistGenerateResult, EditorAssistPurpose, EditorAssistStatusResult } from '@ruimte/contracts';
+import { cliExecutable } from '@adecore/agents/providers';
+import {
+    ANSWER_TIMEOUT_MS,
+    EDITOR_ASSIST_INSTRUCTIONS,
+    type EditorAssistAgent,
+    type EditorAssistGenerateResult,
+    type EditorAssistPurpose,
+    type EditorAssistStatusResult
+} from '@ruimte/contracts';
 import { oneShotRun } from '../git/one-shot.ts';
-import { PURPOSES } from './instructions.ts';
 import { assistEnvironment, selectAssistAgent, type AssistProviders } from './selection.ts';
 
 interface EditorAssistModelOptions extends AssistProviders {
@@ -21,7 +28,6 @@ export interface EditorAssistRequest {
 }
 
 const MAX_PENDING = 4;
-const TIMEOUT_MS = 60_000;
 const MAX_ANSWER_LENGTH = 64_000;
 
 /* One print-mode CLI per request, in an empty folder with no project configuration or chat context. */
@@ -66,7 +72,7 @@ export class EditorAssistModel {
         const timer = setTimeout(() => {
             timedOut = true;
             controller.abort();
-        }, TIMEOUT_MS);
+        }, ANSWER_TIMEOUT_MS);
 
         try {
             const { provider, model, account } = await selectAssistAgent(this.options, request.agent);
@@ -77,23 +83,14 @@ export class EditorAssistModel {
                 return this.aborted(timedOut);
             }
 
-            const spec = PURPOSES[request.purpose];
-            const prompt = `${spec.instructions}\nDo not use tools, read files or run commands. Answer using only the following text.\n\n${request.prompt}`;
-            const run = oneShotRun(provider, prompt, model);
+            const prompt = `${EDITOR_ASSIST_INSTRUCTIONS[request.purpose]}\nDo not use tools, read files or run commands. Answer using only the following text.\n\n${request.prompt}`;
+            const run = oneShotRun(provider, prompt);
 
             if (run === null) {
                 throw new CodedError('unavailable', `${provider.name} cannot answer an editor request.`);
             }
 
-            const args = [...run.args];
-
-            if (provider.kind === 'claude') {
-                args.push('--tools', '', '--strict-mcp-config', '--setting-sources', '', '--no-session-persistence', '--effort', 'low');
-            } else if (provider.kind === 'grok') {
-                args.push('--tools', '', '--max-turns', '1', '--reasoning-effort', 'low');
-            } else if (provider.kind === 'codex') {
-                args.splice(1, 0, '-c', 'model_reasoning_effort="low"');
-            }
+            const args = provider.leanOneShotArgs?.(run.args, model) ?? [...run.args, '--model', model];
 
             const env = assistEnvironment(this.options.accounts, { provider, account }, this.options.env ?? process.env);
             let exit!: (code: number | null) => void;
@@ -101,7 +98,7 @@ export class EditorAssistModel {
                 exit = resolve;
             });
             child = new ChatChild({
-                command: [provider.command[0]!, ...args],
+                command: [cliExecutable(provider), ...args],
                 cwd,
                 env,
                 ...(this.options.spawn === undefined ? {} : { spawn: this.options.spawn }),
@@ -151,7 +148,7 @@ export class EditorAssistModel {
 
     private aborted(timedOut: boolean): EditorAssistGenerateResult {
         if (timedOut) {
-            throw new CodedError('failed', 'The editor model did not answer within 60 seconds.');
+            throw new CodedError('failed', `The editor model did not answer within ${ANSWER_TIMEOUT_MS / 1000} seconds.`);
         }
 
         return { state: 'aborted', text: '' };

@@ -1,10 +1,11 @@
-import { createMenuCommands, devToolsAccelerator, menuTemplateOf, staticMenuTemplate, type AppIpc, type PageKeys } from '@adecore/shell';
+import { createMenuCommands, devToolsAccelerator, menuTemplateOf, staticMenuTemplate, type PageKeys } from '@adecore/shell';
 import type { MenuShellAction, MenuSpec } from '@ruimte/desktop-bridge';
-import { electron } from './electron';
+import { electron } from '../electron';
+import type { DesktopIpc } from './ipc';
 
 const { app, Menu } = electron;
 
-export interface MenuOptions {
+interface MenuOptions {
     pageKeys: PageKeys;
     focused(): Electron.BrowserWindow | null;
     /* A page in a browser node or an HTML preview never sees the key, so there the menu answers. */
@@ -16,17 +17,15 @@ export interface MenuOptions {
     openWindow(): Electron.BrowserWindow;
 }
 
-export interface AppMenu {
+interface AppMenu {
     /* What stands until the page sends its own menu, and again after a reload or a crash. */
     setStatic(): void;
-    /* The menu of the window in front. */
     applyOf(window: Electron.BrowserWindow): void;
-    /* The window's page is gone, and its menu with it. */
     forget(windowId: number): void;
 }
 
 /* Every page builds the menu from what has the focus in it (`apps/client/src/shell/menu`); the shell draws the one in front. */
-export function installMenu(ipc: AppIpc, options: MenuOptions): AppMenu {
+export function installMenu(ipc: DesktopIpc, options: MenuOptions): AppMenu {
     // By window id; the one in front is drawn.
     const menuTemplates = new Map<number, Electron.MenuItemConstructorOptions[]>();
     // Settings asked for while no window was open, by the window opened for them; its first menu says its page listens.

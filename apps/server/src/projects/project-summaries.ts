@@ -66,7 +66,6 @@ export class ProjectSummaries {
         this.invalidate(folder);
     }
 
-    /* The file behind `GET /projects/<id>/icon`, or null when the project shows no image. */
     async iconFile(entry: RegistryEntry | undefined, theme: 'light' | 'dark'): Promise<{ path: string; mime: string } | null> {
         if (!entry || entry.icon) {
             return null;

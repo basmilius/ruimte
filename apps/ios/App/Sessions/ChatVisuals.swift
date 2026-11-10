@@ -149,7 +149,6 @@ enum ChatVisualHeights {
             ?? clamp(fallback, maxHeight: visual.maxHeight)
     }
 
-    /// The heights remembered for a visual, by width in whole points.
     @MainActor static func remembered(_ visualID: String) -> [Int: Double] { remembered[visualID] ?? [:] }
 
     @MainActor static func remember(_ visualID: String, width: Double, height: Double) {

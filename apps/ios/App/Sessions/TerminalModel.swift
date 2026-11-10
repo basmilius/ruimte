@@ -19,7 +19,40 @@ final class TerminalModel {
     @ObservationIgnored var resizeDisplay: ((Int, Int) -> Void)?
     @ObservationIgnored var applicationCursor: (() -> Bool)?
     @ObservationIgnored var toggleKeyboard: (() -> Void)?
-    @ObservationIgnored private var unsubscribe: [() -> Void] = []
+    // Only the events and the link: the attach below hands over the screen, then output follows without a gap, which
+    // no re-read of a resource does.
+    @ObservationIgnored private lazy var live = LiveResource(
+        client: client,
+        events: [
+            .apply(.sessionOutput, as: SessionOutputEvent.self) { [weak self] event in
+                guard let self, event.sessionId == sessionID else { return }
+                deliver(event.data, reset: false)
+            },
+            .apply(.sessionResync, as: SessionResyncEvent.self) { [weak self] event in
+                guard let self, event.sessionId == sessionID else { return }
+                deliver(event.screen, reset: true)
+            },
+            .apply(.sessionSize, as: SessionSizeEvent.self) { [weak self] event in
+                guard let self, event.sessionId == sessionID else { return }
+                follow(event)
+            },
+            .apply(.sessionExit, as: SessionExitEvent.self) { [weak self] event in
+                guard let self, event.sessionId == sessionID else { return }
+                exited = true
+            },
+            .apply(.sessionListChanged, raw: { [weak self] _ in Task { await self?.refreshInfo() } }),
+        ],
+        connection: { [weak self] available in
+            guard let self else { return }
+            connected = available
+            if available {
+                attach()
+            } else {
+                cancelWork()
+                loading = false
+                error = nil
+            }
+        })
     @ObservationIgnored private var attachTask: Task<Void, Never>?
     @ObservationIgnored private var writeTask: Task<Void, Never>?
     @ObservationIgnored private var queuedInput: [String] = []
@@ -34,44 +67,17 @@ final class TerminalModel {
         self.sessionID = sessionID
     }
 
-    /// Whether the session takes keys now.
     var usable: Bool { connected && !loading && !exited }
 
     func start() {
-        guard unsubscribe.isEmpty else { return }
-        attachment = client.acquireAttachment("session", id: sessionID)
-        for eventName in ["session.output", "session.resync", "session.size", "session.exit"] {
-            unsubscribe.append(
-                client.subscribe(eventName) { [weak self] payload in
-                    guard let self, payload["sessionId"]?.stringValue == sessionID else { return }
-                    switch eventName {
-                    case "session.output": deliver(payload["data"]?.stringValue ?? "", reset: false)
-                    case "session.resync": deliver(payload["screen"]?.stringValue ?? "", reset: true)
-                    case "session.size": follow(payload)
-                    default: exited = true
-                    }
-                })
-        }
-        unsubscribe.append(
-            client.subscribe("session.list-changed") { [weak self] _ in Task { await self?.refreshInfo() } })
-        unsubscribe.append(
-            client.observeConnection { [weak self] available in
-                guard let self else { return }
-                connected = available
-                if available {
-                    attach()
-                } else {
-                    cancelWork()
-                    loading = false
-                    error = nil
-                }
-            })
+        guard !live.isStarted else { return }
+        attachment = client.acquireAttachment(.session, id: sessionID)
+        live.start()
     }
 
     func stop() {
         cancelWork()
-        unsubscribe.forEach { $0() }
-        unsubscribe.removeAll()
+        live.stop()
         render = nil
         resizeDisplay = nil
         applicationCursor = nil
@@ -103,13 +109,15 @@ final class TerminalModel {
             do {
                 guard let attachment else { throw CancellationError() }
                 _ = try await TerminalSnapshot.load(attachment: attachment, sessionID: sessionID) {
-                    [weak self] snapshot in
-                    guard let self, self.generation == current else { return }
-                    self.cols = Int(snapshot["cols"]?.numberValue ?? 80)
-                    self.rows = Int(snapshot["rows"]?.numberValue ?? 24)
-                    self.exited = snapshot["exited"]?.boolValue ?? false
+                    [weak self] payload in
+                    guard let self, self.generation == current,
+                        let snapshot = try? payload.decoded(as: SessionAttachResult.self)
+                    else { return }
+                    self.cols = Int(snapshot.cols)
+                    self.rows = Int(snapshot.rows)
+                    self.exited = snapshot.exited
                     self.resizeDisplay?(self.cols, self.rows)
-                    self.pendingOutput = [(snapshot["screen"]?.stringValue ?? "", true)]
+                    self.pendingOutput = [(snapshot.screen, true)]
                     self.loading = false
                     self.flushOutput()
                     self.error = nil
@@ -126,18 +134,18 @@ final class TerminalModel {
 
     func refreshInfo() async {
         do {
-            let result = try await client.request("session.list", payload: .object([:]))
+            let result = try await client.request(.sessionList, payload: .object([:]))
+                .decoded(as: SessionListResult.self)
             guard !Task.isCancelled, connected else { return }
-            if let info = result["sessions"]?.arrayValue?.first(where: { $0["sessionId"]?.stringValue == sessionID }) {
-                exited = info["exited"]?.boolValue ?? exited
+            if let info = result.sessions.first(where: { $0.sessionId == sessionID }) {
+                exited = info.exited
             }
         } catch { self.error = error.localizedDescription }
     }
 
-    func follow(_ size: JSONValue) {
-        guard let cols = size["cols"]?.numberValue, let rows = size["rows"]?.numberValue else { return }
-        self.cols = Int(cols)
-        self.rows = Int(rows)
+    func follow(_ size: SessionSizeEvent) {
+        cols = Int(size.cols)
+        rows = Int(size.rows)
         resizeDisplay?(self.cols, self.rows)
     }
 
@@ -165,7 +173,7 @@ final class TerminalModel {
             while !queuedInput.isEmpty, !Task.isCancelled {
                 let text = queuedInput.joined()
                 queuedInput.removeAll()
-                do { _ = try await client.request("session.write", payload: target(["data": .string(text)])) } catch {
+                do { _ = try await client.request(.sessionWrite, payload: target(["data": .string(text)])) } catch {
                     self.error = error.localizedDescription
                     queuedInput.removeAll()
                     return
@@ -189,7 +197,7 @@ final class TerminalModel {
     }
 
     func clear() async {
-        do { _ = try await client.request("session.clear", payload: target()) } catch {
+        do { _ = try await client.request(.sessionClear, payload: target()) } catch {
             self.error = error.localizedDescription
         }
     }

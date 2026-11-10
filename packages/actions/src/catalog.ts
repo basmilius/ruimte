@@ -1,13 +1,18 @@
 import { z } from 'zod';
-import { AGENT_ACTIONS } from './catalog/agents.ts';
+import { AGENTS_ACTIONS } from './catalog/agents.ts';
+import { CANVAS_ACTIONS } from './catalog/canvas.ts';
+import { COMMUNICATE_ACTIONS } from './catalog/communicate.ts';
 import { CONTENT_ACTIONS } from './catalog/content.ts';
-import { CONTROL_ACTIONS } from './catalog/control.ts';
 import { DEVELOPER_ACTIONS } from './catalog/developer.ts';
 import type { ActionActorKind } from './catalog/fields.ts';
-import { GIT_ACTIONS } from './catalog/git.ts';
-import { LAUNCH_ACTIONS } from './catalog/launches.ts';
-import { PLAN_ACTIONS } from './catalog/plans.ts';
-import { SESSION_ACTIONS } from './catalog/sessions.ts';
+import { FILES_ACTIONS } from './catalog/files.ts';
+import { LAYOUT_ACTIONS } from './catalog/layout.ts';
+import { MACHINE_ACTIONS } from './catalog/machine.ts';
+import { PAGES_ACTIONS } from './catalog/pages.ts';
+import { PLANS_ACTIONS } from './catalog/plans.ts';
+import { PROJECTS_ACTIONS } from './catalog/projects.ts';
+import { SESSIONS_ACTIONS } from './catalog/sessions.ts';
+import { VIEWS_ACTIONS } from './catalog/views.ts';
 import { WORKSPACE_ACTIONS } from './catalog/workspace.ts';
 
 export {
@@ -30,17 +35,22 @@ export {
     type ActionActorKind
 } from './catalog/fields.ts';
 
-// The areas keep the order the actions had in one list, which ACTION_NAMES and every tool list built from it follow.
+// One file per domain, in the order of ACTION_DOMAINS, which ACTION_NAMES and every tool list built from it follow.
 export const ACTION_DEFINITIONS = {
     ...WORKSPACE_ACTIONS,
-    ...SESSION_ACTIONS,
-    ...PLAN_ACTIONS,
-    ...CONTROL_ACTIONS,
-    ...AGENT_ACTIONS,
-    ...GIT_ACTIONS,
-    ...LAUNCH_ACTIONS,
+    ...VIEWS_ACTIONS,
+    ...CANVAS_ACTIONS,
+    ...LAYOUT_ACTIONS,
+    ...COMMUNICATE_ACTIONS,
+    ...SESSIONS_ACTIONS,
+    ...PLANS_ACTIONS,
+    ...AGENTS_ACTIONS,
+    ...PROJECTS_ACTIONS,
+    ...DEVELOPER_ACTIONS,
+    ...FILES_ACTIONS,
     ...CONTENT_ACTIONS,
-    ...DEVELOPER_ACTIONS
+    ...PAGES_ACTIONS,
+    ...MACHINE_ACTIONS
 } as const;
 
 export type ActionName = keyof typeof ACTION_DEFINITIONS;

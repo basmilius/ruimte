@@ -4,7 +4,7 @@ import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { fileExists } from '@adecore/utils/fs';
 import { isWithin } from '@adecore/utils/path';
 import { isRecord } from '@adecore/utils/record';
-import type { LaunchConfig, LaunchConfigEnv, LaunchConfigKind, LaunchSuggestion } from '@ruimte/contracts';
+import { freeSlug, type LaunchConfig, type LaunchConfigEnv, type LaunchConfigKind, type LaunchSuggestion } from '@ruimte/contracts';
 import { readVscodeLaunch } from './vscode.ts';
 
 /*
@@ -112,15 +112,6 @@ export function shellQuote(value: string): string {
     return /^[\w@%+=:,./-]+$/.test(value) ? value : `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
-function slugOf(name: string): string {
-    return (
-        name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '') || 'launch'
-    );
-}
-
 function filled(value: string | undefined): value is string {
     return value !== undefined && value !== '';
 }
@@ -133,7 +124,6 @@ export function kindOfScript(name: string): LaunchConfigKind {
     return SERVICE_NAME.test(name) ? 'service' : 'task';
 }
 
-/* Where the paths of one launch are read from and what they point at. */
 class PathScope {
     /* A path in the launch points outside the project, so it cannot travel with it. */
     outside = false;
@@ -163,7 +153,6 @@ class PathScope {
         return portable(relative(this.cwd, absolute)) || '.';
     }
 
-    /* Every macro path inside a line of arguments, rewritten the same way. */
     line(value: string): string {
         return value
             .replace(/\$(PROJECT_DIR|USER_HOME)\$([^\s"'=]*)/g, (whole) => this.path(whole))
@@ -527,11 +516,7 @@ export async function detectLaunches(folder: string, checkouts: readonly string[
     }
     const taken = new Set<string>();
     return found.slice(0, MAX_SUGGESTIONS).map(({ built, source, path }) => {
-        const base = slugOf(built.launch.name);
-        let id = base;
-        for (let i = 2; taken.has(id); i++) {
-            id = `${base}-${i}`;
-        }
+        const id = freeSlug(built.launch.name, 'launch', taken);
         taken.add(id);
         const cwd = built.launch.cwd === undefined ? undefined : portable(relative(folder, built.launch.cwd));
         const launch: LaunchConfig = { ...built.launch, id };

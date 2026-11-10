@@ -10,7 +10,7 @@ import {
     type ProjectNewInlineChatResult
 } from '@ruimte/contracts';
 import type { ProjectStore } from './project-store.ts';
-import { newChatId } from './scratch-project.ts';
+import { newChatId } from './scratch-folder.ts';
 
 class InlineChatError extends CodedError<'project-not-found' | 'inline-path-outside' | 'inline-chat-not-found'> {}
 
@@ -18,7 +18,6 @@ class InlineChatError extends CodedError<'project-not-found' | 'inline-path-outs
 export interface InlineChatHost {
     /* Makes the chat the view stands for, which no client has opened. */
     start(payload: ChatCreatePayload): Promise<unknown>;
-    /* Ends the chat's CLI and removes its record. */
     end(chatId: string): Promise<void>;
     /* The checkouts of the repository the folder is in, the folder's own first. */
     worktreePaths(folder: string): Promise<string[]>;

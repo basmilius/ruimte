@@ -8,20 +8,13 @@ import UIKit
 /// `deviceTools` reads them.
 enum DeviceTools {
     /// What a simulator from before the list was announced has, which is what `deviceTools` assumes for one.
-    static let simulatorFallback = [
-        "openUrl", "launchApp", "terminateApp", "appearance", "textSize", "liquidGlass", "colorFilter", "reduceMotion",
-        "increaseContrast", "reduceTransparency", "showBorders", "voiceOver", "location", "clearLocation", "permissions",
-        "push",
-    ]
-    static let toggles = ["reduceMotion", "increaseContrast", "reduceTransparency", "showBorders", "voiceOver"]
+    static let simulatorFallback = WireVocabulary.iosSimulatorTools
+    static let toggles = WireVocabulary.deviceToggleSettings
     static let display = ["appearance", "textSize", "liquidGlass", "colorFilter"] + toggles
     static let apps = ["openUrl", "launchApp", "terminateApp"]
-    static let textSizes = ["small", "default", "large", "extra-large"]
-    static let colorFilters = ["none", "grayscale", "red-green", "green-red", "blue-yellow"]
-    static let permissions = [
-        "camera", "microphone", "photos", "contacts", "calendar", "reminders", "location", "motion", "media-library",
-        "faceid",
-    ]
+    static let textSizes = WireVocabulary.deviceTextSizes
+    static let colorFilters = WireVocabulary.deviceColorFilters
+    static let permissions = WireVocabulary.devicePermissions
     /// City names and their coordinates, which read the same in every language.
     static let locations: [(name: String, latitude: Double, longitude: Double)] = [
         ("San Francisco", 37.7749, -122.4194), ("New York", 40.7128, -74.006), ("London", 51.5074, -0.1278),
@@ -30,26 +23,25 @@ enum DeviceTools {
 
     /// The tools a device announces, or a simulator's when it announces none; a tool this version does not know
     /// stays out.
-    static func tools(_ device: JSONValue) -> [String] {
-        guard let announced = device["capabilities"]?["tools"]?.arrayValue else {
-            return device.text("platform") == "ios" && device.text("kind") == "simulator" ? simulatorFallback : []
+    static func tools(_ device: DeviceInfo) -> [String] {
+        guard let announced = device.capabilities.tools else {
+            return device.platform == .ios && device.kind == .simulator ? simulatorFallback : []
         }
-        return announced.compactMap(\.stringValue)
+        return announced
     }
 
     /// The permissions a device can set; every one when it names none.
-    static func permissions(_ device: JSONValue) -> [String] {
-        guard let announced = device["capabilities"]?["permissions"]?.arrayValue else { return permissions }
-        let names = Set(announced.compactMap(\.stringValue))
-        return permissions.filter(names.contains)
+    static func permissions(_ device: DeviceInfo) -> [String] {
+        guard let announced = device.capabilities.permissions else { return permissions }
+        return permissions.filter(Set(announced).contains)
     }
 
     /// Only a person erases, and only a simulator or an emulator; a phone is never erased.
-    static func canErase(_ device: JSONValue) -> Bool {
-        tools(device).contains("erase") && device.text("kind") != "physical"
+    static func canErase(_ device: DeviceInfo) -> Bool {
+        tools(device).contains("erase") && device.kind != .physical
     }
 
-    static func action(_ device: JSONValue, _ name: String, _ fields: [String: JSONValue] = [:]) -> JSONValue {
+    static func action(_ device: DeviceInfo, _ name: String, _ fields: [String: JSONValue] = [:]) -> JSONValue {
         var payload = DeviceView.target(device)
         payload["action"] = .string(name)
         payload.merge(fields) { _, new in new }
@@ -85,12 +77,12 @@ enum DeviceKeys {
 @MainActor @Observable
 final class DeviceToolsModel {
     let client: any MachineRequesting
-    let device: JSONValue
-    private(set) var settings: JSONValue?
+    let device: DeviceInfo
+    private(set) var settings: DeviceSettings?
     private(set) var pending = false
     private(set) var problem: String?
 
-    init(client: any MachineRequesting, device: JSONValue) {
+    init(client: any MachineRequesting, device: DeviceInfo) {
         self.client = client
         self.device = device
     }
@@ -102,12 +94,11 @@ final class DeviceToolsModel {
 
     func has(_ tool: String) -> Bool { tools.contains(tool) }
 
-    func setting(_ key: String) -> JSONValue? { settings?[key] }
-
     func load() async {
         do {
-            let detail = try await client.request("device.detail", payload: .object(DeviceView.target(device)))
-            settings = detail["settings"] ?? .object([:])
+            let detail = try await client.request(.deviceDetail, payload: .object(DeviceView.target(device)))
+                .decoded(as: DeviceDetail.self)
+            settings = detail.settings
         } catch {
             problem = error.localizedDescription
         }
@@ -118,8 +109,9 @@ final class DeviceToolsModel {
         problem = nil
         defer { pending = false }
         do {
-            let detail = try await client.request("device.action", payload: DeviceTools.action(device, name, fields))
-            settings = detail["settings"] ?? settings
+            let detail = try await client.request(.deviceAction, payload: DeviceTools.action(device, name, fields))
+                .decoded(as: DeviceDetail.self)
+            settings = detail.settings
             return true
         } catch {
             problem = error.localizedDescription
@@ -133,10 +125,11 @@ final class DeviceToolsModel {
         problem = nil
         defer { pending = false }
         do {
-            let result = try await client.request("device.capture", payload: .object(DeviceView.target(device)))
-            let data = try await read(result.text("path"))
+            let result = try await client.request(.deviceCapture, payload: .object(DeviceView.target(device)))
+                .decoded(as: DeviceCaptureResult.self)
+            let data = try await read(result.path)
             let url = FileManager.default.temporaryDirectory.appendingPathComponent(
-                DeviceTools.captureName(device.text("name"), at: Date()))
+                DeviceTools.captureName(device.name, at: Date()))
             try data.write(to: url, options: .atomic)
             return url
         } catch {
@@ -145,21 +138,21 @@ final class DeviceToolsModel {
         }
     }
 
-    /// Sends the text on this phone's clipboard to the device's.
     func sendClipboard() async {
         guard let text = UIPasteboard.general.string else { return }
         await clipboard(["text": .string(text)])
     }
 
     func copyClipboard() async {
-        if let result = await clipboard([:]) { UIPasteboard.general.string = result.text("text") }
+        if let result = await clipboard([:]) { UIPasteboard.general.string = result.text }
     }
 
-    @discardableResult private func clipboard(_ fields: [String: JSONValue]) async -> JSONValue? {
+    @discardableResult private func clipboard(_ fields: [String: JSONValue]) async -> DeviceClipboardResult? {
         var payload = DeviceView.target(device)
         payload.merge(fields) { _, new in new }
         do {
-            return try await client.request("device.clipboard", payload: .object(payload))
+            return try await client.request(.deviceClipboard, payload: .object(payload))
+                .decoded(as: DeviceClipboardResult.self)
         } catch {
             problem = error.localizedDescription
             return nil
@@ -183,5 +176,41 @@ extension DeviceTools {
         format.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
         let name = deviceName.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
         return "\(name) \(format.string(from: date)).png"
+    }
+}
+
+extension DeviceInfo {
+    /// The device a `device.open` answer describes, which is the listed device with the stream it was opened on.
+    init(_ opened: DeviceOpenResult) {
+        self.init(
+            deviceId: opened.deviceId, backendId: opened.backendId, platform: opened.platform, kind: opened.kind,
+            name: opened.name, runtime: opened.runtime, state: opened.state, reason: opened.reason,
+            capabilities: opened.capabilities)
+    }
+}
+
+extension DeviceSettings {
+    /// A choice by the name the tools sheet and the wire give it, as the word the wire writes.
+    func choice(_ key: String) -> String? {
+        switch key {
+        case "appearance": appearance?.rawValue
+        case "textSize": textSize?.rawValue
+        case "liquidGlass": liquidGlass?.rawValue
+        case "colorFilter": colorFilter?.rawValue
+        case "statusBar": statusBar?.rawValue
+        default: nil
+        }
+    }
+
+    func toggle(_ key: String) -> Bool? {
+        switch key {
+        case "reduceMotion": reduceMotion
+        case "increaseContrast": increaseContrast
+        case "reduceTransparency": reduceTransparency
+        case "showBorders": showBorders
+        case "voiceOver": voiceOver
+        case "biometricEnrolled": biometricEnrolled
+        default: nil
+        }
     }
 }

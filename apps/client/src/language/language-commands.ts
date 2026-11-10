@@ -1,7 +1,7 @@
 import type { Shortcut } from '@adecore/ui';
 import i18next from 'i18next';
-import { agentReviewOf } from '@/editor-ai/agent-review-registry';
-import { keymapKeyOf } from '@/shell/shortcut-overrides';
+import { agentReviewOf } from '@/language/agent-review-registry';
+import { keymapKeyOf } from '@/surface/shortcut-overrides';
 import { LANGUAGE_COMMANDS, LANGUAGE_COMMAND_IDS, type LanguageCommandId } from './command-table';
 import { languageForCommand } from './focused-language';
 import type { EditorLanguage } from './ruimte-editor-language';
@@ -28,12 +28,11 @@ const RUNNERS: Record<LanguageCommandId, (language: EditorLanguage) => void> = {
     'format-document': (language) => void language.codeActions.formatDocument(),
     'next-agent-change': (language) => agentReviewOf(language.editor)?.step(1),
     'previous-agent-change': (language) => agentReviewOf(language.editor)?.step(-1),
-    'selection-to-chat': (language) => language.selectionChat.choose(),
-    'inline-edit': (language) => language.inlineEdit.start(),
-    'show-inline-edit': (language) => void language.inlineEdit.show(),
-    explain: (language) => void language.explain.explainHere(),
-    'toggle-rendered-docs': (language) => void language.renderedDocs.toggle(),
-    'suggest-inline': (language) => void language.ghost.request(),
+    'selection-to-chat': (language) => language.app.selectionChat.choose(),
+    'inline-edit': (language) => language.app.inlineEdit.start(),
+    'show-inline-edit': (language) => void language.app.inlineEdit.show(),
+    explain: (language) => void language.app.explain.explainHere(),
+    'suggest-inline': (language) => void language.app.ghost.request(),
     'type-hierarchy': (language) => void language.callHierarchy.open(undefined, 'supertypes'),
     'last-edit-location': (language) => void language.history.lastEdit(),
     'next-edit-location': (language) => void language.history.nextEdit(),

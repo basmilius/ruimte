@@ -5,14 +5,13 @@ export interface ScriptFrame {
     readonly detached: boolean;
 }
 
-export type GuestEdit = 'copy' | 'select-all';
+type GuestEdit = 'copy' | 'select-all';
 
 const COMMANDS: Record<GuestEdit, string> = {
     copy: 'copy',
     'select-all': 'selectAll'
 };
 
-/* The frame a right-click landed in while it is still in its page, else the page's main frame. */
 export function editFrameOf(clicked: ScriptFrame | undefined, main: ScriptFrame): ScriptFrame {
     return clicked && !clicked.isDestroyed() && !clicked.detached ? clicked : main;
 }

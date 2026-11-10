@@ -43,7 +43,6 @@ interface BrokerRelayOptions {
     /* The daemon's own key from `endpoint.json`, and a signer that never hands out the private half. */
     publicKey: string;
     sign(message: string): string;
-    /* What every relayed signal goes through before it reaches the WebRTC answer code. */
     gate: SignalGate;
     createSocket?(url: string): WebSocket;
     backoffMinMs?: number;
@@ -90,9 +89,8 @@ export class BrokerRelay implements Relay {
     }
 
     /* The broker gives no address of its own; a client finds this machine by its key. */
-    async publish(): Promise<string | null> {
+    async publish(): Promise<void> {
         this.connect();
-        return null;
     }
 
     /* The servers for a direct connection, as werift reads them; none once the credentials expired. */

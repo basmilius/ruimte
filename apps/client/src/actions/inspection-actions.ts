@@ -2,15 +2,17 @@ import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
 import { isCanvasView, isChatHostView, isDesignView, nodeChats, viewChats, type AgentStatus, type ChatInfo, type SessionInfo } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { agentActivity } from '@/actions/agent-activity';
-import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
-import { nodesOfView } from '@/project/view-nodes';
 import { chatWorking, sessionWorking } from '@/state/agent-work';
 import { focusedCanvas } from '@/state/canvas';
+import { currentEndpointId } from '@/state/current-endpoint';
+import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/state/design-chat';
 import { activeViewOf, type DocumentState } from '@/state/document';
-import { currentEndpointId, endpointOfNode } from '@/state/keys';
+import { endpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
+import { nodesOfView } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
-import { chatClientFor } from '@/transport/connections';
+import { orNull } from '@/transport-api/transport';
+import { chatClientFor } from '@/workspace/connections';
 
 interface ProjectAgent {
     id: string;
@@ -105,7 +107,7 @@ async function snapshotsOf(endpointIds: readonly string[], transport: typeof tra
             if (link?.status !== 'open') {
                 return [endpointId, null];
             }
-            const snapshot = await Promise.all([link.request('chat.list', {}), link.request('session.list', {})]).catch(() => null);
+            const snapshot = await orNull('chat.list', Promise.all([link.request('chat.list', {}), link.request('session.list', {})]));
             return [endpointId, snapshot];
         })
     );

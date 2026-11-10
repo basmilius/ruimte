@@ -48,7 +48,6 @@ export function useOutputProject(endpointId: string): string | null {
     return answers ? projectId : null;
 }
 
-/* Save to Output in the menu of something a chat made, where the machine keeps Output. */
 export function saveToOutputActions(endpointId: string, source: ArtifactSaveSource, title?: string): readonly HostMenuAction[] {
     const projectId = outputProjectFor(endpointId);
     if (projectId === null) {

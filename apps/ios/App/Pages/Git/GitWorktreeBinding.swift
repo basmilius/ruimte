@@ -6,7 +6,7 @@ import SwiftUI
 /// Who works in a worktree, as the project's nodes say: a chat or terminal whose folder is in it, or a group
 /// bound to it.
 enum GitWorktreeOccupants {
-    static func line(in views: [JSONValue], path: String) -> String? {
+    static func line(in views: [StoredView], path: String) -> String? {
         var chats = 0
         var terminals = 0
         var groups: [String] = []
@@ -16,12 +16,14 @@ enum GitWorktreeOccupants {
             if kind == "terminal" { terminals += 1 }
         }
         for view in views {
-            count(view.text("kind"), view["node"]?["cwd"]?.stringValue ?? view["cwd"]?.stringValue)
-            for node in view.list("nodes") {
-                count(node.text("kind"), node["cwd"]?.stringValue)
-                if node.text("kind") == "group", node["worktree"]?["path"]?.stringValue == path {
-                    groups.append(node.text("title", fallback: String(localized: "A group")))
-                }
+            switch view {
+            case .chat(let chat): count("chat", chat.node.cwd)
+            case .terminal(let terminal): count("terminal", terminal.node.cwd)
+            default: break
+            }
+            for node in view.nodes {
+                count(node.kind.rawValue, node.cwd)
+                if node.kind == .group, node.worktree?.path == path { groups.append(node.title) }
             }
         }
         switch (chats, terminals) {
@@ -34,12 +36,10 @@ enum GitWorktreeOccupants {
     }
 }
 
-/// A group of a canvas, which is what a worktree is bound to.
 struct GitBindableGroup: Identifiable, Equatable {
     let viewID: String
     let id: String
     let title: String
-    /// The worktree it is bound to now.
     let worktree: (path: String, branch: String)?
 
     static func == (lhs: GitBindableGroup, rhs: GitBindableGroup) -> Bool {
@@ -52,22 +52,16 @@ struct GitBindableGroup: Identifiable, Equatable {
 /// group starts in that checkout. The worktree of a node is one person's, so the machine keeps it in the private
 /// project file.
 enum GitWorktreeBinding {
-    static func groups(in views: [JSONValue]) -> [GitBindableGroup] {
+    static func groups(in views: [StoredView]) -> [GitBindableGroup] {
         views.flatMap { view in
-            view.list("nodes").filter { $0.text("kind") == "group" }.map { node in
-                let bound = node["worktree"].flatMap { worktree -> (String, String)? in
-                    guard let path = worktree["path"]?.stringValue else { return nil }
-                    return (path, worktree.text("branch"))
-                }
-                return GitBindableGroup(
-                    viewID: view.stableID, id: node.stableID,
-                    title: node.text("title", fallback: String(localized: "Group")),
-                    worktree: bound)
+            view.nodes.filter { $0.kind == .group }.map { node in
+                GitBindableGroup(
+                    viewID: view.id, id: node.id, title: node.title,
+                    worktree: node.worktree.map { ($0.path, $0.branch) })
             }
         }
     }
 
-    /// A group's title as a branch name git accepts, the way the desktop proposes one.
     static func branchName(fromTitle title: String) -> String {
         var name = ""
         var gap = false
@@ -94,7 +88,6 @@ enum GitWorktreeBinding {
         return name.isEmpty ? "work" : name
     }
 
-    /// The document with the group bound to the worktree, or unbound with nil.
     static func bind(_ document: JSONValue, viewID: String, groupID: String, worktree: (path: String, branch: String)?)
         -> JSONValue
     {
@@ -112,7 +105,6 @@ enum GitWorktreeBinding {
     }
 }
 
-/// The sheet that binds a group to a worktree: which group, and the branch its checkout is on.
 @MainActor @Observable final class GitWorktreeBindModel {
     let workspace: MobileWorkspace
     var groupKey: String?
@@ -126,7 +118,7 @@ enum GitWorktreeBinding {
         branch = groups.first.map { GitWorktreeBinding.branchName(fromTitle: $0.title) } ?? ""
     }
 
-    var groups: [GitBindableGroup] { GitWorktreeBinding.groups(in: workspace.views) }
+    var groups: [GitBindableGroup] { GitWorktreeBinding.groups(in: workspace.storedViews) }
     var group: GitBindableGroup? { groups.first { Self.key($0) == groupKey } }
     var ready: Bool { group != nil && !branch.trimmingCharacters(in: .whitespaces).isEmpty && !busy }
 
@@ -145,17 +137,13 @@ enum GitWorktreeBinding {
         let name = branch.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
             let result = try await client.request(
-                "git.worktree-add",
+                .gitWorktreeAdd,
                 payload: .object([
                     "repo": .string(workspace.folder), "branch": .string(name),
                     "projectId": .string(workspace.projectID),
-                ]))
-            let worktree = result["worktree"]
-            guard let path = worktree?["path"]?.stringValue else {
-                problem = String(localized: "The machine did not say where the worktree is.")
-                return false
-            }
-            let bound = (path: path, branch: worktree?.text("branch", fallback: name) ?? name)
+                ])
+            ).decoded(as: WorktreeAddResult.self)
+            let bound = (path: result.worktree.path, branch: result.worktree.branch)
             await workspace.edit {
                 GitWorktreeBinding.bind($0, viewID: group.viewID, groupID: group.id, worktree: bound)
             }

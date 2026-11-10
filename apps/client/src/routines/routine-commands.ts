@@ -1,12 +1,12 @@
 import { messageOf } from '@adecore/ui';
 import { isCanvasView, type RoutineEntry } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { createNodeAction } from '@/actions/client-actions';
+import { createNodeAction } from '@/action-port/person-actions';
 import { showView } from '@/project/views';
 import { refreshRoutines } from '@/routines/routine-list';
-import { leaveRoutines } from '@/routines/stage';
 import { canvasSettled } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { leaveRoutines } from '@/state/routines-stage';
 import { useToasts } from '@/state/toasts';
 import { machineTransport } from '@/transport';
 
@@ -36,14 +36,12 @@ export function setRoutinePaused(endpointId: string, entry: RoutineEntry, paused
         .catch(failed);
 }
 
-/* The canvas a routine goes on: the one in front when it is a canvas, else the project's first. Null for a project without one. */
 function routineCanvasId(): string | null {
     const { views, activeViewId } = useDocument.getState();
     const canvases = views.filter((view) => isCanvasView(view) && view.hidden !== true);
     return (canvases.find((view) => view.id === activeViewId) ?? canvases[0])?.id ?? null;
 }
 
-/* Leaves Routines for the canvas and places the routine there as a node, through the same creation a person's menu uses. */
 export async function showRoutineOnCanvas(entry: RoutineEntry): Promise<void> {
     const viewId = routineCanvasId();
     if (viewId === null) {

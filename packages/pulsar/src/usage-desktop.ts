@@ -9,9 +9,9 @@ import { USAGE_DAY_DESCRIPTION, USAGE_MAX_COUNT, USAGE_MAX_DAYS_PER_BATCH, usage
  */
 
 /*
- * Every row of the client's command table (`apps/client/src/shell/command-table.ts`) in camelCase, then one
+ * Every row of the client's command table (`apps/client/src/commands/registry.ts`) in camelCase, then one
  * name per kind of generated row (a row per view, launch, agent or layout), never the row's own id.
- * `apps/client/src/desktop/usage.test.ts` holds the table against this list.
+ * `apps/client/src/commands/usage.test.ts` holds the table against this list.
  */
 export const USAGE_DESKTOP_COMMANDS = [
     'about',

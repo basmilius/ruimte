@@ -1,7 +1,6 @@
 import { Buffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
 import { isAbsolute } from 'node:path';
-import { CodedError } from '@adecore/agents';
 import {
     deviceMatches,
     type DeviceAction,
@@ -21,6 +20,7 @@ import {
 import { LiveSinks, type LiveEvent, type LiveSink } from '../client-sinks.ts';
 import { FrameFanout, streamKeyOf } from '../streams/frame-fanout.ts';
 import { LiveStreamHub, type LiveFrameSource } from '../streams/live-stream.ts';
+import { DeviceError, isDeviceErrorCode } from './device-error.ts';
 import { actionPaths } from './device-paths.ts';
 import type { DeviceTree } from './device-tree.ts';
 
@@ -96,9 +96,7 @@ export interface DeviceBackend {
      * `keyboard` holds a session and answers its keys, for a backend that types through them.
      */
     type?(deviceId: string, text: string, keyboard: () => Promise<DeviceKeyboard>): Promise<void>;
-    /* The accessibility tree of what the device shows now; absent on a backend that cannot read one. */
     tree?(deviceId: string): Promise<DeviceTree>;
-    /* Ends whatever `tree` keeps running for this device. */
     closeTree?(deviceId: string): void;
     /* A phone's own battery; null for a device without one of its own, such as a simulator. */
     power?(deviceId: string): Promise<DevicePower | null>;
@@ -115,55 +113,6 @@ interface DeviceSession {
     streamId: string;
     unregister: () => void;
 }
-
-/* Every code a device failure reaches a client with, the helper's own among them. */
-const DEVICE_ERROR_CODES = [
-    'device-action-unavailable',
-    'device-capture-failed',
-    'device-capture-unavailable',
-    'device-input-unavailable',
-    'device-not-booted',
-    'device-not-found',
-    'device-not-open',
-    'device-tools-unavailable',
-    'platform-unavailable',
-    'invalid-devicectl-output',
-    'invalid-simctl-output',
-    'devicectl-failed',
-    'devicectl-unavailable',
-    'simctl-failed',
-    'simctl-unavailable',
-    'device-helper-exited',
-    'device-helper-failed',
-    'device-helper-native',
-    'device-helper-protocol',
-    'device-helper-running',
-    'device-helper-unavailable',
-    'device-not-streaming',
-    'device-tree-failed',
-    'device-tree-unavailable',
-    'device-format-unsupported',
-    'adb-unavailable',
-    'adb-failed',
-    'invalid-adb-output',
-    'emulator-unavailable',
-    'emulator-failed',
-    'scrcpy-unavailable',
-    'scrcpy-failed',
-    'scrcpy-protocol',
-    'device-path-refused',
-    'device-recording',
-    'device-not-recording',
-    'device-must-be-shut-down'
-] as const;
-
-type DeviceErrorCode = (typeof DEVICE_ERROR_CODES)[number];
-
-function isDeviceErrorCode(code: string): code is DeviceErrorCode {
-    return (DEVICE_ERROR_CODES as readonly string[]).includes(code);
-}
-
-export class DeviceError extends CodedError<DeviceErrorCode> {}
 
 /* What a client that names no formats draws, since it predates H.264. */
 const FORMATS_BEFORE_H264: readonly DeviceVideoFormat[] = ['jpeg', 'hevc'];
@@ -193,7 +142,6 @@ export class DeviceManager {
         return (await this.survey()).devices;
     }
 
-    /* Every device the backends found, and why the others found nothing. */
     async survey(): Promise<{ devices: DeviceInfo[]; unavailable: DeviceUnavailable[] }> {
         const backends = [...this.backends.values()];
         const results = await Promise.allSettled(backends.map((backend) => backend.list()));
@@ -460,7 +408,6 @@ export class DeviceManager {
         await this.guarded(() => paste(text));
     }
 
-    /* The session of a device this client or holder has open. */
     private openFor(backendId: string, deviceId: string, clientId: string): DeviceSession {
         const session = this.sessions.get(sessionKey(backendId, deviceId));
         if (!session || !session.clients.has(clientId)) {

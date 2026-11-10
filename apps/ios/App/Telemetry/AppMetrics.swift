@@ -83,7 +83,6 @@ struct MetricWindow {
         groups[key] = group
     }
 
-    /// What the window gathered as items to send, and an empty window after it.
     mutating func drain() -> [AppMetric] {
         defer {
             groups = [:]

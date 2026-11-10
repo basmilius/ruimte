@@ -1,0 +1,162 @@
+import type { GitActionKind, GitActionPhase, GitStash, GitStatus } from '@ruimte/contracts';
+import i18next from 'i18next';
+
+let counter = 0;
+
+/* Names one run, so the progress of this push is not drawn on the toast of the one before it. */
+export function nextActionId(): string {
+    counter += 1;
+    return `git-${Date.now()}-${counter}`;
+}
+
+export interface PushButton {
+    label: string;
+    kind: GitActionKind;
+    disabled: boolean;
+    /* What the tooltip says, which on a disabled button is why it is one. */
+    reason: string;
+}
+
+/*
+ * The primary button of the header. A branch git has never seen is published with an upstream in
+ * the same push, which is a different word for the person and a different flag for git, so the
+ * button says which of the two it is instead of failing halfway.
+ */
+export function pushButton(status: GitStatus | null): PushButton {
+    const push = i18next.t('panels:git.push.label');
+    if (status === null || !status.repo) {
+        return { label: push, kind: 'push', disabled: true, reason: i18next.t('panels:git.push.noRepo') };
+    }
+    if (status.detached || status.branch === null) {
+        return { label: push, kind: 'push', disabled: true, reason: i18next.t('panels:git.push.detached') };
+    }
+    if (status.upstream === null) {
+        return {
+            label: i18next.t('panels:git.push.publish'),
+            kind: 'publish',
+            disabled: false,
+            reason: i18next.t('panels:git.push.publishReason', { branch: status.branch })
+        };
+    }
+    if (status.ahead === 0) {
+        return { label: push, kind: 'push', disabled: true, reason: i18next.t('panels:git.push.nothing') };
+    }
+    return { label: push, kind: 'push', disabled: false, reason: i18next.t('panels:git.push.reason', { count: status.ahead, upstream: status.upstream }) };
+}
+
+/* What the push menu offers for one repository: what its own button would say and how far ahead it is. */
+export interface PushEntry {
+    cwd: string;
+    label: string;
+    button: PushButton;
+    ahead: number;
+}
+
+export function pushEntries(checkouts: readonly { path: string; label: string; status: GitStatus | null }[]): PushEntry[] {
+    return checkouts.map((checkout) => ({
+        cwd: checkout.path,
+        label: checkout.label,
+        button: pushButton(checkout.status),
+        ahead: checkout.status?.ahead ?? 0
+    }));
+}
+
+/* The repositories a push would actually move, which is what "push all" runs and counts. Publishing a
+   branch puts a new one on the remote (or fails where there is none), so that is asked per repository. */
+export function pushable(entries: readonly PushEntry[]): PushEntry[] {
+    return entries.filter((entry) => !entry.button.disabled && entry.button.kind !== 'publish');
+}
+
+/*
+ * The primary button while the folder holds more than one repository. It pushes all of them: pushing
+ * one of nine is the exception, and the flyout beside it is where that one is.
+ */
+export function pushAllButton(entries: readonly PushEntry[]): PushButton {
+    const ready = pushable(entries);
+    return {
+        label: i18next.t('panels:git.push.allLabel'),
+        kind: 'push',
+        disabled: ready.length === 0,
+        reason: ready.length === 0 ? i18next.t('panels:git.push.nothing') : i18next.t('panels:git.push.allReason', { count: ready.length })
+    };
+}
+
+/* What the toast says while a run over several repositories is on this one. A kind this version has
+   no words for still counts its way through rather than showing the name of a missing key. */
+export function manyTitle(kind: GitActionKind, repo: string, done: number, total: number): string {
+    return i18next.t(`panels:git.many.${kind}`, { repo, done, total, defaultValue: i18next.t('panels:git.many.working', { repo, done, total }) });
+}
+
+/* What it says once that run is over. A repository that failed does not stop the others, so the end
+   is the only place the whole outcome can be read. A branch that moved on both sides waits for a choice. */
+export function manySummary(done: number, failed: readonly string[], diverged: readonly string[] = []): string {
+    if (failed.length > 0) {
+        return i18next.t('panels:git.many.failed', { count: failed.length, repos: failed.join(', ') });
+    }
+    if (diverged.length > 0) {
+        return i18next.t('panels:git.many.diverged', { count: diverged.length, repos: diverged.join(', ') });
+    }
+    return i18next.t('panels:git.many.done', { count: done });
+}
+
+/* One checkout as the commit box weighs it: what is staged in it decides whether it takes the commit. */
+export interface CommitCandidate {
+    revision?: number;
+    path: string;
+    label: string;
+    status: GitStatus | null;
+}
+
+function withStaged(checkouts: readonly CommitCandidate[]): CommitCandidate[] {
+    return checkouts.filter((checkout) => checkout.status?.files.some((file) => file.state === 'staged') === true);
+}
+
+/*
+ * Where a commit would land: every repository with something staged. With nothing staged, a single
+ * repository with changes is staged first; with more than one, there is nothing to commit yet.
+ */
+export function commitTargets(checkouts: readonly CommitCandidate[]): { targets: CommitCandidate[]; stageAll: boolean } {
+    const staged = withStaged(checkouts);
+    if (staged.length > 0) {
+        return { targets: staged, stageAll: false };
+    }
+    const changed = checkouts.filter((checkout) => (checkout.status?.files.length ?? 0) > 0);
+    return changed.length === 1 ? { targets: changed, stageAll: true } : { targets: [], stageAll: false };
+}
+
+/*
+ * The one repository whose last commit an amend rewrites: the only one with something staged, or with
+ * nothing staged anywhere, the folder's only repository. An amend never stages on its own, since
+ * rewording the last commit with nothing staged is half of what it is for.
+ */
+export function amendTarget(checkouts: readonly CommitCandidate[]): CommitCandidate | null {
+    const staged = withStaged(checkouts);
+    if (staged.length > 0) {
+        return staged.length === 1 ? staged[0]! : null;
+    }
+    const only = checkouts.length === 1 ? checkouts[0]! : null;
+    return only?.status != null ? only : null;
+}
+
+export function phaseLabel(phase: GitActionPhase): string {
+    return i18next.t(`panels:git.phase.${phase}`);
+}
+
+/* What the toast says the moment an action starts, before git has written a line. A kind this
+   version has no words for still gets a title rather than the name of a missing key. */
+export function actionTitle(kind: GitActionKind): string {
+    return i18next.t(`panels:git.action.${kind}`, { defaultValue: i18next.t('panels:git.action.working') });
+}
+
+export function splitMessage(message: string): { subject: string; body: string } {
+    const [subject = '', ...rest] = message.split('\n');
+    return { subject: subject.trim(), body: rest.join('\n').trim() };
+}
+
+/* What "Pop stash" does with the stashes of a repository: the one there is, or a question which. */
+export function popStashStep(stashes: readonly GitStash[]): { kind: 'pop'; ref: string } | { kind: 'pick' } | null {
+    if (stashes.length === 0) {
+        return null;
+    }
+    return stashes.length === 1 ? { kind: 'pop', ref: stashes[0]!.ref } : { kind: 'pick' };
+}

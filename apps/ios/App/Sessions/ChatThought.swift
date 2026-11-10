@@ -37,7 +37,6 @@ enum ChatThought {
         line.wholeMatch(of: headingLine)?.output.1
     }
 
-    /// The marks of Markdown taken out, leaving the words they mark.
     static func stripMarkdown(_ text: String) -> String {
         text
             .replacing(#/(?m)^ *```[^\n]*\n?/#, with: "")

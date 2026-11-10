@@ -4,6 +4,10 @@ import XCTest
 @testable import Ruimte
 
 final class NotificationPreferencesTests: XCTestCase {
+    func testTheKindsAPhoneChoosesFromAreTheKindsThePushSchemaNames() {
+        XCTAssertEqual(PushNotifyKind.allCases.map(\.rawValue), WireVocabulary.pushNotifyKinds)
+    }
+
     func testWithoutChoicesAMachineHearsOfWhatNeedsYouAndNoProject() {
         let preferences = NotificationPreferences()
         XCTAssertEqual(
@@ -295,18 +299,18 @@ private actor FakeAccountAPI: AccountAPI {
 
 @MainActor final class MachineAgentsTests: XCTestCase {
     func testASwitchKeepsANameNobodyChoseUnchosen() {
-        let endpoint = JSONValue.object([
-            "label": .string("studio.local"), "nameSource": .string("default"), "icon": .null,
-        ])
+        let endpoint = EndpointWire.decoded(
+            EndpointWire.info(["label": .string("studio.local"), "nameSource": .string("default"), "icon": .null]))
         XCTAssertEqual(
-            MachineAgentsModel.identityPayload(endpoint: endpoint, key: "resumeAtReset", value: true),
+            MachineAgentsModel.identityPayload(endpoint: endpoint, setting: .resumeAtReset, value: true),
             .object(["name": .null, "icon": .null, "resumeAtReset": .bool(true)]))
-        let named = JSONValue.object([
-            "label": .string("Studio"), "nameSource": .string("chosen"),
-            "icon": .object(["kind": .string("lucide"), "value": .string("monitor")]),
-        ])
+        let named = EndpointWire.decoded(
+            EndpointWire.info([
+                "label": .string("Studio"), "nameSource": .string("chosen"),
+                "icon": .object(["kind": .string("lucide"), "value": .string("monitor")]),
+            ]))
         XCTAssertEqual(
-            MachineAgentsModel.identityPayload(endpoint: named, key: "agentsDeleteAnyView", value: false),
+            MachineAgentsModel.identityPayload(endpoint: named, setting: .agentsDeleteAnyView, value: false),
             .object([
                 "name": .string("Studio"), "icon": .object(["kind": .string("lucide"), "value": .string("monitor")]),
                 "agentsDeleteAnyView": .bool(false),
@@ -314,34 +318,25 @@ private actor FakeAccountAPI: AccountAPI {
     }
 
     func testInstalledAgentsCarryTheirAccountsInOneLine() {
-        let providers: [JSONValue] = [
-            .object([
-                "kind": .string("claude"), "name": .string("Claude Code"), "installed": .bool(true),
-                "version": .string("2.0.14"), "capabilities": .object(["chat": .bool(true)]),
-                "models": .array([
-                    .object(["slug": .string("opus"), "legacy": .bool(false)]),
-                    .object(["slug": .string("old"), "legacy": .bool(true)]),
-                ]),
-                "defaultModel": .string("opus"),
-            ]),
-            .object(["kind": .string("gemini"), "name": .string("Gemini"), "installed": .bool(false)]),
-        ]
+        let providers = [
+            ProviderWire.provider(
+                "claude", name: "Claude Code", version: "2.0.14",
+                models: [ProviderWire.model("opus"), ProviderWire.model("old", legacy: true)], defaultModel: "opus"),
+            ProviderWire.provider("gemini", name: "Gemini", installed: false),
+        ].map(\.providerInfo)
         let accounts = JSONValue.object([
             "accounts": .object([
                 "claude": .object(["kind": .string("claude")]),
                 "work": .object(["kind": .string("claude"), "label": .string("Work")]),
             ]),
             "statuses": .array([
-                .object([
-                    "id": .string("claude"), "state": .string("ready"), "plan": .string("Max"),
-                    "email": .string("bas@example.com"),
-                ]),
-                .object(["id": .string("work"), "state": .string("signed-out")]),
+                AccountsWire.status("claude", email: "bas@example.com", plan: "Max"),
+                AccountsWire.status("work", state: "signed-out"),
             ]),
         ])
-        let agents = MachineAgentsModel.agents(providers: providers, accounts: accounts)
+        let agents = MachineAgentsModel.agents(providers: providers, accounts: accounts.accountsSnapshot)
         XCTAssertEqual(agents.map(\.kind), ["claude"])
-        XCTAssertEqual(agents[0].models.map { $0.text("slug") }, ["opus"])
+        XCTAssertEqual(agents[0].models.map(\.slug), ["opus"])
         XCTAssertEqual(agents[0].accounts.map(\.detail), ["Max · bas@example.com", "Not logged in"])
         XCTAssertEqual(agents[0].accounts.map(\.name), ["Claude Code", "Work"])
         XCTAssertTrue(agents[0].accounts[1].signedOut)
@@ -349,7 +344,7 @@ private actor FakeAccountAPI: AccountAPI {
     }
 
     @MainActor func testTheAgentsSettingsFollowTheOrderAndTagTheTopAccountThatIsOn() {
-        let providers: [JSONValue] = [.object(["kind": .string("claude"), "installed": .bool(true)])]
+        let providers = [ProviderWire.provider("claude").providerInfo]
         let accounts = JSONValue.object([
             "accounts": .object([
                 "claude": .object(["kind": .string("claude")]),
@@ -358,7 +353,7 @@ private actor FakeAccountAPI: AccountAPI {
             ]),
             "statuses": .array([]),
         ])
-        let agents = MachineAgentsModel.agents(providers: providers, accounts: accounts)
+        let agents = MachineAgentsModel.agents(providers: providers, accounts: accounts.accountsSnapshot)
         XCTAssertEqual(agents[0].accounts.map(\.id), ["off", "work", "claude"])
         XCTAssertEqual(agents[0].defaultAccount, "work")
         XCTAssertEqual(
@@ -366,7 +361,7 @@ private actor FakeAccountAPI: AccountAPI {
             .object(["kind": .string("claude"), "ids": .array([.string("work"), .string("claude")])]))
         let single = MachineAgentsModel.agents(
             providers: providers,
-            accounts: .object(["accounts": .object(["claude": .object(["kind": .string("claude")])])]))
+            accounts: AccountsWire.snapshot(accounts: ["claude": .object(["kind": .string("claude")])]).accountsSnapshot)
         XCTAssertNil(single[0].defaultAccount)
     }
 }

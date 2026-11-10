@@ -1,33 +1,14 @@
+import { timeContext } from '@ruimte/voice';
 import type { VoiceOpenProject } from '../actions/context.ts';
+import { agentReading } from '../actions/voice-agent-reading.ts';
+import { openableViews, projectAgents, visibleCanvas } from '../actions/voice-project-reading.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import type { CanvasHost } from '../tools/host.ts';
-import { agentReading } from './agent-reading.ts';
-import { openableViews, projectAgents, visibleCanvas } from './project-reading.ts';
 
 // The nodes and views a context names; past these it says how many more there are.
 const LISTED = 30;
 // What one context costs at most, in characters, before the chunks under the append bound.
 const MAX_CONTEXT_CHARS = 2400;
-
-/* A zone the phone sent that this machine does not know reads as UTC, and says so, rather than failing the session. */
-function zoneOf(timeZone: string): { zone: string; known: boolean } {
-    try {
-        new Intl.DateTimeFormat('en-GB', { timeZone });
-        return { zone: timeZone, known: true };
-    } catch {
-        return { zone: 'UTC', known: false };
-    }
-}
-
-/*
- * The time on the person's phone. This is for the speech model, not something a person reads, so a fixed
- * `en-GB` keeps the date unambiguous whatever language is spoken, as the desktop's context does.
- */
-export function timeContext(now: number, timeZone: string): string {
-    const { zone, known } = zoneOf(timeZone);
-    const local = new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long', timeZone: zone }).format(now);
-    return `User local date and time: ${local}. IANA time zone: ${known ? zone : `unknown (${timeZone.slice(0, 64)}), shown in UTC`}. UTC time: ${new Date(now).toISOString()}.`;
-}
 
 function listed(names: string[]): string {
     if (names.length === 0) {

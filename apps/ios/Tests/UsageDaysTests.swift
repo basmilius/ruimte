@@ -229,14 +229,15 @@ private final class MemoryUsageStore: UsageStore {
     }
 
     func testAMachineSaysItsSwitchInItsEndpointInfo() {
-        XCTAssertTrue(MachineEndpoint.usageStats(in: .object([:])))
-        XCTAssertTrue(MachineEndpoint.usageStats(in: .object(["usageStats": .bool(true)])))
-        XCTAssertFalse(MachineEndpoint.usageStats(in: .object(["usageStats": .bool(false)])))
+        XCTAssertTrue(MachineEndpoint.usageStats(in: EndpointWire.decoded(EndpointWire.info())))
+        XCTAssertTrue(MachineEndpoint.usageStats(in: EndpointWire.decoded(EndpointWire.info(["usageStats": .bool(true)]))))
+        XCTAssertFalse(
+            MachineEndpoint.usageStats(in: EndpointWire.decoded(EndpointWire.info(["usageStats": .bool(false)]))))
     }
 
     func testOnlyARequestThatAnswersACardCountsAsAnAnswer() {
-        XCTAssertEqual(UsageCounter.answering("chat.approve"), .approvalAnswered)
-        XCTAssertEqual(UsageCounter.answering("chat.answer"), .questionAnswered)
-        XCTAssertNil(UsageCounter.answering("chat.send"))
+        XCTAssertEqual(UsageCounter.answering(.chatApprove), .approvalAnswered)
+        XCTAssertEqual(UsageCounter.answering(.chatAnswer), .questionAnswered)
+        XCTAssertNil(UsageCounter.answering(.chatSend))
     }
 }

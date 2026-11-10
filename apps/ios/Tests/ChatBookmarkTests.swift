@@ -44,9 +44,9 @@ import XCTest
     func testANameIsSentOnlyWhenItChangedAndAnEmptyOneTakesItAway() {
         XCTAssertNil(ChatBookmarks.naming("  Plan ", previous: "Plan"))
         XCTAssertNil(ChatBookmarks.naming("", previous: nil))
-        XCTAssertEqual(ChatBookmarks.naming(" Plan ", previous: nil)?.request, "chat.addBookmark")
+        XCTAssertEqual(ChatBookmarks.naming(" Plan ", previous: nil)?.request, .chatAddBookmark)
         XCTAssertEqual(ChatBookmarks.naming(" Plan ", previous: nil)?.name, "Plan")
-        XCTAssertEqual(ChatBookmarks.naming(" ", previous: "Plan")?.request, "chat.renameBookmark")
+        XCTAssertEqual(ChatBookmarks.naming(" ", previous: "Plan")?.request, .chatRenameBookmark)
         XCTAssertEqual(ChatBookmarks.naming(String(repeating: "x", count: 200), previous: nil)?.name.count, 120)
     }
 
@@ -65,7 +65,7 @@ import XCTest
         XCTAssertTrue(model.presentation.bookmarks.isEmpty)
         XCTAssertEqual(
             machine.requests.map(\.0),
-            ["chat.addBookmark", "chat.addBookmark", "chat.renameBookmark", "chat.removeBookmark"])
+            [.chatAddBookmark, .chatAddBookmark, .chatRenameBookmark, .chatRemoveBookmark])
         XCTAssertEqual(machine.requests[1].1["name"], .string("Plan"))
         XCTAssertEqual(machine.requests[0].1["chatId"], .string("chat"))
     }
@@ -75,9 +75,9 @@ import XCTest
         let model = ChatModel(client: machine, chatID: "chat")
         model.start()
         defer { model.stop() }
-        machine.emit("chat.bookmarks", .object(["chatId": .string("other"), "bookmarks": .array([bookmark("x")])]))
+        machine.emit(.chatBookmarks, .object(["chatId": .string("other"), "bookmarks": .array([bookmark("x")])]))
         XCTAssertTrue(model.presentation.bookmarks.isEmpty)
-        machine.emit("chat.bookmarks", .object(["chatId": .string("chat"), "bookmarks": .array([bookmark("x")])]))
+        machine.emit(.chatBookmarks, .object(["chatId": .string("chat"), "bookmarks": .array([bookmark("x")])]))
         XCTAssertEqual(model.presentation.bookmarks.keys.sorted(), ["x"])
     }
 
@@ -112,21 +112,21 @@ import XCTest
 }
 
 @MainActor private final class BookmarkMachine: MachineRequesting {
-    var requests: [(String, JSONValue)] = []
+    var requests: [(WireRequest, JSONValue)] = []
     private var bookmarks: [String: JSONValue] = [:]
-    private var handlers: [String: [@MainActor @Sendable (JSONValue) -> Void]] = [:]
+    private var handlers: [WireEvent: [@MainActor @Sendable (JSONValue) -> Void]] = [:]
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
         let id = payload["itemId"]?.stringValue ?? ""
         switch type {
-        case "chat.addBookmark", "chat.renameBookmark":
+        case .chatAddBookmark, .chatRenameBookmark:
             var values: [String: JSONValue] = [
                 "itemId": .string(id), "excerpt": .string("Start of \(id)"), "createdAt": .number(1),
             ]
             if let name = payload["name"]?.stringValue, !name.isEmpty { values["name"] = .string(name) }
             bookmarks[id] = .object(values)
-        case "chat.removeBookmark":
+        case .chatRemoveBookmark:
             bookmarks[id] = nil
         default:
             break
@@ -134,12 +134,12 @@ import XCTest
         return .object(["bookmarks": .array(Array(bookmarks.values))])
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
         handlers[event, default: []].append(handler)
         return {}
     }
 
-    func emit(_ event: String, _ payload: JSONValue) {
+    func emit(_ event: WireEvent, _ payload: JSONValue) {
         for handler in handlers[event] ?? [] { handler(payload) }
     }
 }

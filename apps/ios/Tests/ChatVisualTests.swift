@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import WebKit
 import XCTest
@@ -15,7 +16,6 @@ import XCTest
             ].merging(extra) { _, extra in extra })
     }
 
-    /// A turn that ended: what the person asked, a call that folds away and the answer that closed it.
     private var settledTurn: [JSONValue] {
         [
             item("u1", "user", at: 1000, ["text": .string("Show me")]),
@@ -25,7 +25,6 @@ import XCTest
         ]
     }
 
-    /// A turn still running: a call, a word between calls and a call that runs.
     private var runningTurn: [JSONValue] {
         [
             item("u2", "user", turn: "t2", at: 3000, ["text": .string("And now")]),
@@ -134,13 +133,13 @@ import XCTest
         let model = ChatModel(client: machine, chatID: "chat")
         model.start()
         defer { model.stop() }
-        machine.emit("chat.visuals", .object(["chatId": .string("other"), "visuals": .array(machine.visuals)]))
+        machine.emit(.chatVisuals, .object(["chatId": .string("other"), "visuals": .array(machine.visuals)]))
         XCTAssertTrue(model.presentation.visuals.isEmpty)
-        machine.emit("chat.visuals", .object(["chatId": .string("chat"), "visuals": .array(machine.visuals)]))
+        machine.emit(.chatVisuals, .object(["chatId": .string("chat"), "visuals": .array(machine.visuals)]))
         XCTAssertEqual(model.presentation.visuals.map(\.id), ["v1", "v2"])
         await model.removeVisual("v1")
         XCTAssertEqual(model.presentation.visuals.map(\.id), ["v2"])
-        let removal = machine.requests.first { $0.0 == "chat.removeVisual" }
+        let removal = machine.requests.first { $0.0 == .chatRemoveVisual }
         XCTAssertEqual(removal?.1["chatId"], .string("chat"))
         XCTAssertEqual(removal?.1["visualId"], .string("v1"))
     }
@@ -361,22 +360,22 @@ import XCTest
 }
 
 @MainActor private final class VisualMachine: MachineRequesting {
-    var requests: [(String, JSONValue)] = []
+    var requests: [(WireRequest, JSONValue)] = []
     var visuals: [JSONValue] = []
-    private var handlers: [String: [@MainActor @Sendable (JSONValue) -> Void]] = [:]
+    private var handlers: [WireEvent: [@MainActor @Sendable (JSONValue) -> Void]] = [:]
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
-        if type == "chat.removeVisual" { visuals.removeAll { $0["id"] == payload["visualId"] } }
+        if type == .chatRemoveVisual { visuals.removeAll { $0["id"] == payload["visualId"] } }
         return .object(["visuals": .array(visuals)])
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
         handlers[event, default: []].append(handler)
         return {}
     }
 
-    func emit(_ event: String, _ payload: JSONValue) {
+    func emit(_ event: WireEvent, _ payload: JSONValue) {
         for handler in handlers[event] ?? [] { handler(payload) }
     }
 }

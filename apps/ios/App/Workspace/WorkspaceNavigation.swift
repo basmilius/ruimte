@@ -8,7 +8,6 @@ final class WorkspaceNavigation: Hashable, Identifiable {
     var selectedViewID: String?
     /// A view to open once the project is there, such as a chat a machine just made.
     var pendingViewID: String?
-    /// The view pushed over the project's list on an iPhone.
     var openedViewID: String?
     var adding = false
     var newChat = false
@@ -27,7 +26,6 @@ final class WorkspaceNavigation: Hashable, Identifiable {
 
     init(workspace: MobileWorkspace) { self.workspace = workspace }
 
-    /// Puts a sheet up at once.
     func show(_ sheet: ProjectSheet) {
         switch sheet {
         case .newView: adding = true

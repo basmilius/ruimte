@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { compileUiBlock, evaluateUiBlock, UI_GROUPS } from '@adecore/intelligent-ui';
-import type { CanvasHost } from './host.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 async function catalog(group: string): Promise<string[]> {
@@ -57,9 +57,12 @@ test('every group prints a rule and at least one component with a description', 
 });
 
 test('the places group tells agents to give lat and lon since Ruimte looks up no addresses', async () => {
-    const rules = (await catalog('places')).find((line) => line.startsWith('rules\t'));
-    expect(rules).toContain('Ruimte does not look up addresses, so give lat and lon for every Place');
-    expect(rules).toContain('an address may still be given as text');
+    const lines = await catalog('places');
+    expect(lines.find((line) => line.startsWith('rules\t'))).toBe(
+        'rules\tGive lat and lon in decimal degrees for every Place. Never a tile or map URL. The host chooses the map.'
+    );
+    expect(lines).toContain('component\tPlace\tlat?, lon?, detail?, value?\tOne place by lat and lon. Children are the name.');
+    expect(lines.join('\n')).not.toContain('address');
 });
 
 test('the content group says how to attach a file of your own', async () => {

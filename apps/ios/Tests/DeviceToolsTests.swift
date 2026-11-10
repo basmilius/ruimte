@@ -30,35 +30,35 @@ import Testing
 
     @Test func aSimulatorThatAnnouncesNoToolsHasTheOldSixteenAndAPhoneNone() {
         #expect(
-            DeviceTools.tools(Self.device()) == [
+            DeviceTools.tools(Self.device().deviceInfo) == [
                 "openUrl", "launchApp", "terminateApp", "appearance", "textSize", "liquidGlass", "colorFilter",
                 "reduceMotion",
                 "increaseContrast", "reduceTransparency", "showBorders", "voiceOver", "location", "clearLocation",
                 "permissions", "push",
             ])
-        #expect(DeviceTools.tools(Self.device(kind: "physical")).isEmpty)
-        #expect(DeviceTools.tools(Self.device(tools: ["capture", "keyboard"])) == ["capture", "keyboard"])
+        #expect(DeviceTools.tools(Self.device(kind: "physical").deviceInfo).isEmpty)
+        #expect(DeviceTools.tools(Self.device(tools: ["capture", "keyboard"]).deviceInfo) == ["capture", "keyboard"])
     }
 
     @Test func permissionsKeepTheirOrderAndOnlyWhatTheDeviceNames() {
         #expect(
-            DeviceTools.permissions(Self.device()) == [
+            DeviceTools.permissions(Self.device().deviceInfo) == [
                 "camera", "microphone", "photos", "contacts", "calendar", "reminders", "location", "motion",
                 "media-library",
                 "faceid",
             ])
         #expect(
-            DeviceTools.permissions(Self.device(permissions: ["photos", "camera", "teleport"])) == ["camera", "photos"])
+            DeviceTools.permissions(Self.device(permissions: ["photos", "camera", "teleport"]).deviceInfo) == ["camera", "photos"])
     }
 
     @Test func onlyASimulatorOrEmulatorThatAnnouncesEraseCanBeErased() {
-        #expect(DeviceTools.canErase(Self.device(tools: ["erase"])))
-        #expect(!DeviceTools.canErase(Self.device(tools: ["capture"])))
-        #expect(!DeviceTools.canErase(Self.device(kind: "physical", tools: ["erase"])))
+        #expect(DeviceTools.canErase(Self.device(tools: ["erase"]).deviceInfo))
+        #expect(!DeviceTools.canErase(Self.device(tools: ["capture"]).deviceInfo))
+        #expect(!DeviceTools.canErase(Self.device(kind: "physical", tools: ["erase"]).deviceInfo))
     }
 
     @Test func anActionCarriesTheTargetAndItsFields() {
-        let payload = DeviceTools.action(Self.device(), "setAppearance", ["value": .string("dark")])
+        let payload = DeviceTools.action(Self.device().deviceInfo, "setAppearance", ["value": .string("dark")])
         #expect(
             payload
                 == .object([
@@ -90,12 +90,12 @@ import Testing
 
     @Test func aChangeGoesOutAsAnActionAndTheAnswerIsTheNewSettings() async {
         let machine = ToolsMachine(devices: [Self.device(tools: ["appearance"])])
-        let model = DeviceToolsModel(client: machine, device: Self.device(tools: ["appearance"]))
+        let model = DeviceToolsModel(client: machine, device: Self.device(tools: ["appearance"]).deviceInfo)
         await model.load()
-        #expect(model.setting("appearance") == .string("light"))
+        #expect(model.settings?.appearance == .light)
 
         #expect(await model.act("setAppearance", ["value": .string("dark")]))
-        #expect(model.setting("appearance") == .string("dark"))
+        #expect(model.settings?.appearance == .dark)
         #expect(machine.requests.last?.1["action"] == .string("setAppearance"))
 
         machine.refusal = "device-action-unavailable"
@@ -105,46 +105,46 @@ import Testing
 
     @Test func eraseStopsARunningSimulatorErasesItAndStartsItAgain() async {
         let machine = ToolsMachine(devices: [Self.device(tools: ["erase"])])
-        let model = DeviceViewModel(client: machine, reference: Self.reference)
+        let model = DeviceViewModel(client: machine, reference: Self.reference.deviceReference)
         await model.refresh()
         #expect(model.canErase)
 
         await model.erase()
 
         let steps = machine.requests.map(\.0).filter {
-            ["device.shutdown", "device.action", "device.boot"].contains($0)
+            [.deviceShutdown, .deviceAction, .deviceBoot].contains($0)
         }
-        #expect(steps == ["device.shutdown", "device.action", "device.boot"])
-        #expect(machine.requests.first { $0.0 == "device.action" }?.1["action"] == .string("erase"))
+        #expect(steps == [.deviceShutdown, .deviceAction, .deviceBoot])
+        #expect(machine.requests.first { $0.0 == .deviceAction }?.1["action"] == .string("erase"))
     }
 
     @Test func keysGoOutOnlyToADeviceThatAnnouncesTheKeyboard() async {
         let machine = ToolsMachine(devices: [Self.device(tools: ["keyboard"])])
-        let model = DeviceViewModel(client: machine, reference: Self.reference)
+        let model = DeviceViewModel(client: machine, reference: Self.reference.deviceReference)
         await model.refresh()
         #expect(model.takesKeys)
         model.key("down", usage: 0x04)
         await machine.waitForInput()
         #expect(
-            machine.requests.first { $0.0 == "device.input" }?.1["input"]
+            machine.requests.first { $0.0 == .deviceInput }?.1["input"]
                 == .object(["kind": .string("key"), "phase": .string("down"), "usage": .number(4)]))
 
         let unsupported = ToolsMachine(devices: [Self.device()])
-        let plain = DeviceViewModel(client: unsupported, reference: Self.reference)
+        let plain = DeviceViewModel(client: unsupported, reference: Self.reference.deviceReference)
         await plain.refresh()
         #expect(!plain.takesKeys)
         let unsupportedInput = NativeTaskDrain { plain.key("down", usage: 0x04) }
         await unsupportedInput.finish()
         model.key("up", usage: 0x04)
         await machine.waitForInput(count: 2)
-        #expect(!unsupported.requests.contains { $0.0 == "device.input" })
+        #expect(!unsupported.requests.contains { $0.0 == .deviceInput })
     }
 }
 
 @MainActor private final class ToolsMachine: MachineRequesting {
     var devices: [JSONValue]
     var refusal: String?
-    var requests: [(String, JSONValue)] = []
+    var requests: [(WireRequest, JSONValue)] = []
     private var settings: [String: JSONValue] = ["appearance": .string("light")]
     private let inputArrival = NativeArrival()
 
@@ -152,23 +152,30 @@ import Testing
         await inputArrival.wait(for: count)
     }
 
+    private func detail() -> JSONValue {
+        .object([
+            "deviceId": .string("UDID-1"), "backendId": .string("simctl"), "platform": .string("ios"),
+            "settings": .object(settings),
+        ])
+    }
+
     init(devices: [JSONValue]) { self.devices = devices }
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))
-        if type == "device.input" { inputArrival.record() }
-        if let refusal, type == "device.action" { throw MachineClientError.server(code: refusal, message: refusal) }
+        if type == .deviceInput { inputArrival.record() }
+        if let refusal, type == .deviceAction { throw MachineClientError.server(code: refusal, message: refusal) }
         switch type {
-        case "device.list": return .object(["devices": .array(devices)])
-        case "device.open": return (devices.first ?? .object([:])).setting("streamId", .string("device:1"))
-        case "device.detail": return .object(["settings": .object(settings)])
-        case "device.action":
+        case .deviceList: return .object(["devices": .array(devices)])
+        case .deviceOpen: return (devices.first ?? .object([:])).setting("streamId", .string("device:1"))
+        case .deviceDetail: return detail()
+        case .deviceAction:
             if payload.text("action") == "setAppearance" { settings["appearance"] = payload["value"] }
-            return .object(["settings": .object(settings)])
-        case "device.shutdown", "device.boot": return devices.first ?? .object([:])
+            return detail()
+        case .deviceShutdown, .deviceBoot: return devices.first ?? .object([:])
         default: return .object([:])
         }
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

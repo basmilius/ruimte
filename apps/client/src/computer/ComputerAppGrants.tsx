@@ -1,0 +1,96 @@
+import { Button, Tooltip } from '@adecore/ui';
+import { formatDayWithYear, useFormatLocale } from '@adecore/ui/format';
+import { SettingsRow, TopIcon } from '@adecore/ui/settings';
+import type { ComputerAppEntry, ComputerAppGrants as Grants, ComputerRevokePayload } from '@ruimte/contracts';
+import { AppWindow, Clock, SquareTerminal, type LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { SettingsSection } from '@/machines/SettingsSection';
+
+interface ComputerAppGrantsProps {
+    readonly grants: Grants;
+    readonly busy: boolean;
+    onRevoke(revoke: ComputerRevokePayload): void;
+}
+
+/* What a person allowed on one machine, each with the button that takes it back. */
+export function ComputerAppGrants({ grants, busy, onRevoke }: ComputerAppGrantsProps) {
+    const { t } = useTranslation('settings');
+    useFormatLocale();
+    return (
+        <>
+            <SettingsSection title={t('computer.apps.always')}>
+                {grants.always.length === 0 && <SettingsRow muted label={t('computer.apps.alwaysEmpty')} />}
+                {grants.always.map((entry) => (
+                    <GrantRow key={entry.bundleId} entry={entry} icon={AppWindow} detail={t('computer.apps.allowed', { date: formatDayWithYear(entry.at) })}>
+                        <Button
+                            disabled={busy}
+                            aria-label={t('computer.apps.removeLabel', { app: entry.name })}
+                            onClick={() => onRevoke({ bundleId: entry.bundleId, kind: 'always' })}
+                        >
+                            {t('computer.apps.remove')}
+                        </Button>
+                    </GrantRow>
+                ))}
+            </SettingsSection>
+            <SettingsSection title={t('computer.apps.terminals')}>
+                {grants.terminals.length === 0 && <SettingsRow muted label={t('computer.apps.terminalsEmpty')} />}
+                {grants.terminals.map((entry) => (
+                    <GrantRow key={entry.bundleId} entry={entry} icon={SquareTerminal} detail={t('computer.apps.seen', { date: formatDayWithYear(entry.at) })}>
+                        <Tooltip label={t('computer.apps.notTerminalHint')}>
+                            <Button
+                                disabled={busy}
+                                aria-label={t('computer.apps.notTerminalLabel', { app: entry.name })}
+                                onClick={() => onRevoke({ bundleId: entry.bundleId, kind: 'terminal' })}
+                            >
+                                {t('computer.apps.notTerminal')}
+                            </Button>
+                        </Tooltip>
+                    </GrantRow>
+                ))}
+            </SettingsSection>
+            {grants.thisTime.length > 0 && (
+                <SettingsSection title={t('computer.apps.thisTime')}>
+                    {grants.thisTime.map((entry) => (
+                        <GrantRow
+                            key={`${entry.nodeId}\n${entry.bundleId}`}
+                            entry={entry}
+                            icon={Clock}
+                            detail={[entry.nodeTitle ?? t('computer.apps.untitled'), entry.projectName].filter(Boolean).join(' · ')}
+                        >
+                            <Button
+                                disabled={busy}
+                                aria-label={t('computer.apps.removeLabel', { app: entry.name })}
+                                onClick={() => onRevoke({ bundleId: entry.bundleId, kind: 'thisTime', nodeId: entry.nodeId })}
+                            >
+                                {t('computer.apps.remove')}
+                            </Button>
+                        </GrantRow>
+                    ))}
+                </SettingsSection>
+            )}
+        </>
+    );
+}
+
+interface GrantRowProps {
+    readonly entry: ComputerAppEntry;
+    readonly icon: LucideIcon;
+    readonly detail: string;
+    readonly children: ReactNode;
+}
+
+function GrantRow({ entry, icon, detail, children }: GrantRowProps) {
+    return (
+        <SettingsRow
+            leading={<TopIcon icon={icon} size={20} className="text-text-muted" />}
+            label={
+                <Tooltip label={entry.bundleId}>
+                    <span className="max-w-full truncate">{entry.name || entry.bundleId}</span>
+                </Tooltip>
+            }
+            description={detail}
+            control={children}
+        />
+    );
+}

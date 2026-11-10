@@ -4,9 +4,10 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { ProjectContent } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { DiagramStore } from './diagram-store.ts';
 import { DrawingStore } from './drawing-store.ts';
+import { projectOverlays } from './overlays.ts';
 import { projectLinks } from './project-file-test-helpers.ts';
 import { documentPathInFolder, viewFilePathOf } from './project-files.ts';
 import { ProjectStore } from './project-store.ts';
@@ -37,7 +38,12 @@ for (const kind of ['drawing', 'diagram'] as const) {
             const folder = join(root, 'repo');
             await mkdir(folder);
             watch = new FakeWatch();
-            projects = new ProjectStore(join(root, 'home'), projectLinks({ viewFiles: () => [drawings, diagrams] }), watch);
+            projects = new ProjectStore(
+                join(root, 'home'),
+                projectLinks({ viewFiles: () => [drawings, diagrams] }),
+                projectOverlays(join(root, 'home')),
+                watch
+            );
             drawings = new DrawingStore(projects, watch);
             diagrams = new DiagramStore(projects, watch);
             projectId = (await projects.openProject({ folder })).summary.projectId;
@@ -86,7 +92,12 @@ for (const kind of ['drawing', 'diagram'] as const) {
                 diagrams.closeAll();
                 expect(watch.watchers.every((watcher) => watcher.closed)).toBe(true);
                 watch = new FakeWatch();
-                projects = new ProjectStore(join(root, 'home'), projectLinks({ viewFiles: () => [drawings, diagrams] }), watch);
+                projects = new ProjectStore(
+                    join(root, 'home'),
+                    projectLinks({ viewFiles: () => [drawings, diagrams] }),
+                    projectOverlays(join(root, 'home')),
+                    watch
+                );
                 drawings = new DrawingStore(projects, watch);
                 diagrams = new DiagramStore(projects, watch);
                 await projects.openProject({ projectId });

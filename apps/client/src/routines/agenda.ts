@@ -1,4 +1,14 @@
-import { dueTimesBetween, wallTimeOf, zonedTime, type RoutineEntry, type RoutineRun, type RoutineSchedule } from '@ruimte/contracts';
+import {
+    dueTimesBetween,
+    freeSlug,
+    isDeclined,
+    isScheduled,
+    wallTimeOf,
+    zonedTime,
+    type RoutineEntry,
+    type RoutineRun,
+    type RoutineSchedule
+} from '@ruimte/contracts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -102,11 +112,6 @@ function dayIndexOf(week: AgendaWeek, at: number): number {
     return week.days.findIndex((day) => at >= day.start && at < day.end);
 }
 
-/* Whether the machine owes this routine its times: approved as it stands and not said no to. */
-export function scheduled(entry: RoutineEntry): boolean {
-    return entry.approved && entry.local.declined !== entry.digest;
-}
-
 /*
  * The blocks of one routine in a week: a block per run it had, and its coming times from the schedule.
  * A run sits on the day it was due, so a caught-up run stays on the morning it missed.
@@ -119,7 +124,7 @@ export function blocksOf(entry: RoutineEntry, week: AgendaWeek, now: number, tim
             blocks.push({ key: run.runId, day, at: run.due, look: lookOfRun(run), run });
         }
     }
-    if (scheduled(entry) && week.end > now) {
+    if (isScheduled(entry) && week.end > now) {
         const taken = new Set(entry.runs.map((run) => run.due));
         const paused = entry.local.pausedAt !== undefined;
         for (const at of dueTimesBetween(entry.routine.schedule, Math.max(now, week.start - 1), week.end - 1, timeZone, WEEK_TIMES_MAX)) {
@@ -185,7 +190,7 @@ export function cellItems(blocks: readonly AgendaBlock[], schedule: RoutineSched
  * now, to its end, past the days that still hold a run. Null when it is not paused or the week is past.
  */
 export function pausedBand(entry: RoutineEntry, blocks: readonly AgendaBlock[], week: AgendaWeek, now: number): { from: number; to: number } | null {
-    if (entry.local.pausedAt === undefined || !scheduled(entry) || week.end <= now) {
+    if (entry.local.pausedAt === undefined || !isScheduled(entry) || week.end <= now) {
         return null;
     }
     let from = week.start > now ? 0 : Math.max(0, dayIndexOf(week, now));
@@ -195,7 +200,6 @@ export function pausedBand(entry: RoutineEntry, blocks: readonly AgendaBlock[], 
     return from > 6 ? null : { from, to: 6 };
 }
 
-/* The runs a pause skipped since it began. */
 export function skippedWhilePaused(entry: RoutineEntry): number {
     const since = entry.local.pausedAt;
     if (since === undefined) {
@@ -204,34 +208,20 @@ export function skippedWhilePaused(entry: RoutineEntry): number {
     return entry.runs.filter((run) => run.state === 'skipped' && run.skipped === 'paused' && run.due >= since).length;
 }
 
-/* Whether a routine waits on a person's approval here: held, and not already said no to as it stands. */
 export function awaitsApproval(entry: RoutineEntry): boolean {
-    return entry.held !== undefined && entry.local.declined !== entry.digest;
+    return entry.held !== undefined && !isDeclined(entry);
 }
 
 export function awaitingApproval(entries: readonly RoutineEntry[]): RoutineEntry[] {
     return entries.filter(awaitsApproval);
 }
 
-/* The runs that wait on a person now, newest first. */
 export function runsWaiting(entries: readonly RoutineEntry[]): Array<{ entry: RoutineEntry; run: RoutineRun }> {
     return entries
         .flatMap((entry) => entry.runs.filter((run) => run.state === 'needs-you').map((run) => ({ entry, run })))
         .sort((left, right) => right.run.at - left.run.at);
 }
 
-/* A short id a routine is named by in its files, out of its title, that none of the project's others has. */
 export function freshRoutineId(title: string, taken: ReadonlySet<string>): string {
-    const base =
-        title
-            .toLowerCase()
-            .normalize('NFKD')
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '')
-            .slice(0, 48) || 'routine';
-    let candidate = base;
-    for (let count = 2; taken.has(candidate); count++) {
-        candidate = `${base}-${count}`;
-    }
-    return candidate;
+    return freeSlug(title, 'routine', taken);
 }

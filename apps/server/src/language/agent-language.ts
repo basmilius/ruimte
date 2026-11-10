@@ -1,13 +1,19 @@
 import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
-import { fileUriToPath, type Diagnostic, type Range } from '@adecore/lsp';
-import { storedPathOf, type LanguageMethod } from '@ruimte/contracts';
-import type { SqlAnalysis, SqlChoice } from '../database/sql-analysis.ts';
-import { languageOf } from '../fs/read.ts';
+import { fileUriToPath, lspLanguageId, type Diagnostic, type Range } from '@adecore/lsp';
+import { storedPathOf, type LanguageMethod, type SqlChoice } from '@ruimte/contracts';
+import { languageOf } from '../disk/language-of.ts';
 import type { AgentDocument, LanguageHost } from './host.ts';
-import { KIND_PROFILES, lspLanguageId } from './profiles.ts';
+import { KIND_PROFILES } from './profiles.ts';
+import type { SqlFileContext } from './sql-file-context.ts';
 import { BUILD_HELD_MESSAGE } from './worktree-build.ts';
+
+/* The project's running language servers as an agent may ask them; absent on a host without them. */
+export type LanguageAgentHost = Pick<
+    AgentLanguage,
+    'diagnostics' | 'hover' | 'definition' | 'references' | 'symbols' | 'sqlFile' | 'problems' | 'supertypes' | 'subtypes'
+>;
 
 /* A place in a file as an agent writes it: lines and columns from 1, a column counting characters. */
 interface AgentPosition {
@@ -29,7 +35,6 @@ interface AgentServer {
     message?: string;
 }
 
-/* What every answer says besides itself: which file, whether its text is an editor's, and the servers that answered. */
 interface AgentAnswerHead {
     path: string;
     unsaved: boolean;
@@ -103,7 +108,6 @@ interface AgentSqlFile {
     installed: boolean;
 }
 
-/* Where an agent's call stands: the project and its folder. */
 interface AgentLanguagePlace {
     projectId: string;
     folder: string;
@@ -274,8 +278,7 @@ function kindOfProcess(process: string): string {
 
 interface AgentLanguageOptions {
     host: Pick<LanguageHost, 'forAgent' | 'programOf' | 'cachedWorkspaceProblems'>;
-    sql: Pick<SqlAnalysis, 'fileContext'>;
-    /* The text of a file on disk, or null when it cannot be read. */
+    sql: { fileContext(projectId: string, path: string): Promise<SqlFileContext> };
     readText?: (path: string) => Promise<string | null>;
 }
 
@@ -358,7 +361,6 @@ export class AgentLanguage {
         return this.hierarchy(place, caller, path, at, 'typeHierarchy/subtypes');
     }
 
-    /* Which connection, database and snapshot a `.sql` file is read against, and the command that checks it from a shell. */
     async sqlFile(place: AgentLanguagePlace, path: string): Promise<AgentSqlFile> {
         const stored = storedPathOf(place.folder, path);
         if (!isSql(path)) {
@@ -530,7 +532,6 @@ export class AgentLanguage {
         });
     }
 
-    /* Opens the file for the call, checks that a server can answer and that the agent may see what it says, and runs `work`. */
     private async ask<T>(
         place: AgentLanguagePlace,
         caller: string,
@@ -606,7 +607,6 @@ export class AgentLanguage {
     }
 }
 
-/* Whether the connection a file is read against was turned off for agents. */
 function isWithheld(access: string, choice: SqlChoice): boolean {
     return access === 'off' && choice.source !== 'none' && choice.source !== 'unbound';
 }

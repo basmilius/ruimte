@@ -1,10 +1,11 @@
 import { expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { EXTERNAL_TIERS, type ExternalTier } from '@ruimte/contracts';
-import type { CanvasHost } from '../tools/host.ts';
-import { approvalTools, type ApprovalPorts } from '../tunnels/approvals.ts';
-import { externalActorId, type ExternalCaller } from './caller.ts';
-import type { InputSchema, Tool } from './catalog.ts';
+import { externalActorId, type ExternalCaller } from '../canvas/external-caller.ts';
+import type { CanvasHost } from '../canvas/host.ts';
+import { approvalTools, type ApprovalPorts } from '../tools/approval-tools.ts';
+import { catalog } from './catalog-test-helpers.ts';
+import { listed, type InputSchema, type Tool } from './catalog.ts';
 import { visibleExternalTools } from './external-catalog.ts';
 import BUDGET from './external-context-budget.json';
 import { EXTERNAL_INSTRUCTIONS } from './external-instructions.ts';
@@ -35,7 +36,7 @@ function caller(tier: ExternalTier, approvals: boolean): ExternalCaller {
 }
 
 function listOf(tier: ExternalTier, approvals = false): Tool[] {
-    return visibleExternalTools(caller(tier, approvals), host, approvalTools(unusedPorts));
+    return visibleExternalTools(caller(tier, approvals), host, catalog(), approvalTools(unusedPorts));
 }
 
 function shape(tool: Tool) {
@@ -65,7 +66,7 @@ function current(): Record<string, ReturnType<typeof shape>[]> {
 
     return {
         ...Object.fromEntries(EXTERNAL_TIERS.map((tier) => [tier, listOf(tier).sort(byName).map(shape)])),
-        approvals: approvalTools(unusedPorts).sort(byName).map(shape)
+        approvals: approvalTools(unusedPorts).map(listed).sort(byName).map(shape)
     };
 }
 
@@ -76,7 +77,7 @@ function bytes(tools: readonly Tool[]): number {
 function measured(): Record<string, number> {
     return {
         ...Object.fromEntries(EXTERNAL_TIERS.map((tier) => [tier, bytes(listOf(tier))])),
-        approvals: bytes(approvalTools(unusedPorts)),
+        approvals: bytes(approvalTools(unusedPorts).map(listed)),
         instructions: Buffer.byteLength(EXTERNAL_INSTRUCTIONS, 'utf8')
     };
 }

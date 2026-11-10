@@ -14,7 +14,6 @@ export interface ReachCheckerOptions {
     broker(): ReachFacts['broker'];
     /* The STUN servers of the machine and every server the broker handed out, credentials included. */
     iceServers(): IceServer[];
-    /* Whether the broker handed out any ICE servers at all. */
     granted(): boolean;
     lanDoor(): ReachFacts['lanDoor'];
     tunnel(): Promise<string | null>;

@@ -16,7 +16,7 @@ import { useServingKinds } from './use-serving-kinds';
  */
 export function LanguageStatusItem({ language, name }: { language: EditorLanguage; name: string }) {
     const { t } = useTranslation('panels');
-    const tracker = language.project.status;
+    const tracker = language.app.project.status;
     const statuses = useStatuses(tracker);
     const serving = useServingKinds(language);
     const [logOf, setLogOf] = useState<string | null>(null);

@@ -3,9 +3,9 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { syncExtensions, useInstalledExtensions } from '@/extensions/loader';
-import { useContributions } from '@/extensions/registry';
 import type { MachineExtensions } from '@/extensions/station-files';
 import { useEndpoints } from '@/state/endpoints';
+import { useContributions } from '@/state/extension-registry';
 import { until } from '../../testing/dom';
 import { serveExtensionLoads, writeExtension } from '../../testing/extension-loads';
 

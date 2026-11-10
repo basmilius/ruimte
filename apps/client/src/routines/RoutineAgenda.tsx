@@ -1,6 +1,6 @@
 import { EmptyState, Icon, Popover, ScrollArea, Switch } from '@adecore/ui';
 import { formatClock, formatDateTime } from '@adecore/ui/format';
-import type { RoutineEntry, RoutineKind } from '@ruimte/contracts';
+import { isDeclined, type RoutineEntry, type RoutineKind } from '@ruimte/contracts';
 import clsx from 'clsx';
 import { Bot, Pause, Rocket, SquareTerminal, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
@@ -12,8 +12,8 @@ import { blockClass, HATCH } from '@/routines/look-class';
 import { setRoutinePaused } from '@/routines/routine-commands';
 import { useRoutineWhat } from '@/routines/routine-what';
 import { RoutineRunPopover, type PickedRun } from '@/routines/RoutineRunPopover';
-import { showRoutine } from '@/routines/stage';
 import { blockWords, dayWords, foldWords, rowStatus, scheduleWords } from '@/routines/words';
+import { showRoutine } from '@/state/routines-stage';
 
 const NAME_COLUMN = 248;
 // A day never narrower than a block that says "09:00 · 3m"; a narrow stage scrolls sideways instead.
@@ -45,10 +45,6 @@ function todayIndex(week: AgendaWeek, now: number): number {
     return week.days.findIndex((day) => now >= day.start && now < day.end);
 }
 
-/*
- * The week: a row per routine under its project, with a block per run on the day it was due, the times
- * still to come outlined, and a line at now.
- */
 export function RoutineAgenda({ endpointId, groups, week, now, timeZone, empty = false }: AgendaProps) {
     const { t } = useTranslation('routines');
     const [picked, setPicked] = useState<PickedRun | null>(null);
@@ -130,7 +126,6 @@ export function RoutineAgenda({ endpointId, groups, week, now, timeZone, empty =
     );
 }
 
-/* The week as a list: the runs and coming times of every day that has any, in the order they come. */
 export function RoutineWeekList({ endpointId, groups, week, now, timeZone }: Omit<AgendaProps, 'empty'>) {
     const { t } = useTranslation('routines');
     const [picked, setPicked] = useState<PickedRun | null>(null);
@@ -197,7 +192,6 @@ export function RoutineWeekList({ endpointId, groups, week, now, timeZone }: Omi
     );
 }
 
-/* What the blocks mean, in the tooltip of the stage's info button. */
 export function AgendaLegend() {
     const { t } = useTranslation('routines');
     return (
@@ -235,7 +229,7 @@ function AgendaRow({
     const band = pausedBand(entry, blocks, week, now);
     const status = rowStatus(entry, timeZone);
     const paused = entry.local.pausedAt !== undefined;
-    const declined = entry.local.declined === entry.digest;
+    const declined = isDeclined(entry);
     const target = { projectId: entry.projectId, routineId: entry.routine.id };
     const subtitle =
         status.tone === 'needs' || declined
@@ -363,7 +357,6 @@ function Block({
     );
 }
 
-/* A day's quiet runs in one chip, whose popover lists each as the block it would have been. */
 function FoldedRuns({
     item,
     entry,
@@ -420,7 +413,6 @@ function FoldedRuns({
     );
 }
 
-/* The rest of a day of a repeat within a day, as one outlined chip rather than a block per time. */
 function ComingChip({ item, entry, timeZone }: { item: Extract<CellItem, { kind: 'coming' }>; entry: RoutineEntry; timeZone: string }) {
     const { t } = useTranslation('routines');
     const look = item.blocks[0]!.look;

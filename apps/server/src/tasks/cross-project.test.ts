@@ -3,12 +3,13 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
+import type { CanvasHost } from '../canvas/host.ts';
+import { projectReach } from '../canvas/reach.ts';
+import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import type { CanvasHost } from '../tools/host.ts';
-import { projectReach } from '../tools/reach.ts';
+import { bootTestDaemon, invokeTool, type TestDaemon } from '../testing/test-daemon.ts';
 import { failTasksOfClosedProject } from './closed-project.ts';
-import { bootTestDaemon, invokeTool, type TestDaemon } from './test-daemon.ts';
 
 let root: string;
 let home: string;
@@ -34,7 +35,8 @@ beforeEach(async () => {
             closing: (name, nodeIds) =>
                 daemon &&
                 failTasksOfClosedProject({ tasks: daemon.tasks, locate: (id) => store.index.locate(id), coordinator: daemon.wiring.coordinator }, name, nodeIds)
-        })
+        }),
+        projectOverlays(home)
     );
     const opened = await store.openProject({ folder: own });
     ownId = opened.summary.projectId;
@@ -61,7 +63,6 @@ afterEach(async () => {
 
 async function boot(): Promise<TestDaemon> {
     daemon = await bootTestDaemon({ home, store, clock: new ManualClock(), installed: ['claude', 'codex'] });
-    daemon.worker.start();
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: join(root, 'repo') });
     await daemon.chats.send('chat-lead', 'plan');
     await daemon.until(

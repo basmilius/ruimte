@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useFolderWatch } from '@/controllers/fs-watch';
 import { changeReaches, designScope, listingOf, pagesByChange, scopedListingAfter, type ScopedListing } from '@/design/design-page';
 import { listDesignFolder } from '@/design/design-read';
-import { useFolderWatch } from '@/state/fs-watch';
-import { useTransport } from '@/transport/context';
+import { useTransport } from '@/workspace/context';
 
-export interface DesignPages {
+interface DesignPages {
     /* Null until the machine first answers. */
     pages: string[] | null;
     /* Why the last read failed, with the pages of the read before it still in `pages`. */

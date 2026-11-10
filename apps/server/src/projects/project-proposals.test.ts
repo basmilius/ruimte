@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ChatEvent, ProjectProposal } from '@ruimte/contracts';
 import { ManualTimers } from '../computer/computer-test-helpers.ts';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { SessionEvent } from '../wire.ts';
 import { ProjectProposals, PROPOSAL_CARD_MS, type ProposalAsk } from './project-proposals.ts';
 
 const ask: ProposalAsk = { chatId: 'chat-1', name: 'Vinyl shelf', folder: '/work/vinyl-shelf', reason: 'The notes became a codebase' };

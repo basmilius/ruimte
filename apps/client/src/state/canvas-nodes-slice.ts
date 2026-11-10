@@ -1,6 +1,6 @@
 import { DEFAULT_TITLES, emptyCanvasGroupIds, groupFrame, isUnknownNode, nodeColorPatch, withMemberIds } from '@ruimte/contracts';
-import { arrangeGroupMembers } from '@/canvas/arrange-group';
-import { snapToGrid } from '@/canvas/math';
+import { snapToGrid } from '@/canvas-model/math';
+import { arrangeGroupMembers } from '@/state/arrange-group';
 import type { CanvasState } from '@/state/canvas';
 import {
     anchorOf,
@@ -21,7 +21,6 @@ import {
 } from '@/state/canvas-model';
 import { defaultNodeSize } from '@/state/node-size';
 
-/* Adding, changing, grouping and removing the nodes of the canvas. */
 export function createCanvasNodesSlice(
     set: CanvasSet,
     get: CanvasGet

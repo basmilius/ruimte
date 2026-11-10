@@ -67,7 +67,6 @@ const SERVER_GROUPS = [
 
 type ServerGroupId = (typeof SERVER_GROUPS)[number]['id'];
 
-/* The catalog statuses by group, in the order of the groups, and the servers no group knows with the last. */
 export function groupedStatuses(statuses: readonly LanguageServerStatus[]): { id: ServerGroupId; statuses: LanguageServerStatus[] }[] {
     const known = new Set<string>(SERVER_GROUPS.flatMap((group) => group.kinds));
     return SERVER_GROUPS.map((group) => ({
@@ -79,7 +78,6 @@ export function groupedStatuses(statuses: readonly LanguageServerStatus[]): { id
     })).filter((group) => group.statuses.length > 0);
 }
 
-/* A server of a person's own, which the catalog does not name. */
 export function isOwn(status: Pick<LanguageServerStatus, 'server'>): boolean {
     return status.server.startsWith('custom:');
 }
@@ -127,7 +125,6 @@ export function kindOf(server: string): LanguageServerKind | null {
     return server in SERVER_NAMES ? (server as LanguageServerKind) : null;
 }
 
-/* One line of a server's log as the dialog prints it: its level in front, and a trace line marked as one. */
 export function logLineText(line: LanguageLogLine): string {
     if (line.source === 'trace') {
         return `[trace] ${line.text}`;

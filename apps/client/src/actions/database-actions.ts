@@ -1,6 +1,6 @@
 import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
 import { refusing, type Requester } from '@/actions/refusal';
-import { windowWorkspace } from '@/state/window';
+import { windowWorkspace } from '@/workspace/window';
 
 /* What the database actions reach outside the document; a test hands in a fake. */
 export interface DatabaseMachine {
@@ -11,7 +11,6 @@ const LIVE_MACHINE: DatabaseMachine = {
     transport: () => windowWorkspace()?.connection.transport ?? null
 };
 
-/* The database views of a person, through the machine of the project the window has open. */
 export function databaseActions(overrides: Partial<DatabaseMachine> = {}): ActionHandlers<void> {
     const machine: DatabaseMachine = { ...LIVE_MACHINE, ...overrides };
     return {

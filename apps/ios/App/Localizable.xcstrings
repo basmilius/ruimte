@@ -1422,6 +1422,16 @@
         }
       }
     },
+    "Design" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Design"
+          }
+        }
+      }
+    },
     "Device tools" : {
       "localizations" : {
         "nl" : {
@@ -2022,16 +2032,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Run van %@"
-          }
-        }
-      }
-    },
-    "On a schedule this app does not know" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Volgens een planning die deze app niet kent"
           }
         }
       }
@@ -8843,6 +8843,16 @@
         }
       }
     },
+    "Background task finished: %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Achtergrondtaak klaar: %@"
+          }
+        }
+      }
+    },
     "Base" : {
       "localizations" : {
         "nl" : {
@@ -14982,16 +14992,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mergen…"
-          }
-        }
-      }
-    },
-    "Merged." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gemerged."
           }
         }
       }
@@ -21594,16 +21594,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "De machine zei niet waar de chat is."
-          }
-        }
-      }
-    },
-    "The machine did not say where the worktree is." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De machine zei niet waar de worktree is."
           }
         }
       }

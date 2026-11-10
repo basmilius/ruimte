@@ -8,14 +8,13 @@ import SwiftUI
 /// repository with submodules has one per module, and an ordinary project has exactly one.
 @MainActor @Observable final class GitRepositories {
     private(set) var checkouts: [GitCheckout] = []
-    /// Set when the folder holds more repositories than the list carries.
     private(set) var truncated = false
     /// True until the first list of repositories has landed, which is the only spinner this page shows.
     private(set) var loading = true
     var problem: String?
+    var refusal: MachineErrorCode?
     /// An action a person started; what it came from stays disabled until it settles.
     var busy = false
-    /// The last line git wrote while an action runs, which is where a slow push says where it is.
     var progress: String?
     /// Which repository a run over several of them is on, as "backend (2/9)".
     var step: String?
@@ -33,48 +32,26 @@ import SwiftUI
 
     func checkout(_ path: String) -> GitCheckout? { checkouts.first { $0.path == path } }
 
-    private enum Signal {
-        case connected
-        case status(JSONValue)
-    }
-
     /// The whole life of the page: the repositories of the folder, a watch on each of them, and the
     /// statuses the daemon pushes back. A reconnect reads the list again, because a folder can have
     /// gained or lost a repository while the phone was away.
     func run(client: any MachineRequesting, folder: String) async {
-        let (stream, continuation) = AsyncStream<Signal>.makeStream(bufferingPolicy: .unbounded)
-        let cancelConnection = client.observeConnection { if $0 { continuation.yield(.connected) } }
-        let cancelStatus = client.subscribe("git.status") { continuation.yield(.status($0)) }
-        defer {
-            cancelConnection()
-            cancelStatus()
-            continuation.finish()
-            let held = leases
-            leases = [:]
-            Task { await withTaskCancellationShield { for lease in held.values { await lease.release() } } }
-        }
-        for await signal in stream {
-            if Task.isCancelled { break }
-            switch signal {
-            case .connected:
-                await reload(client: client, folder: folder)
-            case .status(let payload):
-                apply(payload)
-            }
-        }
+        let live = LiveResource(
+            client: client, events: [.apply(.gitStatus, raw: { [weak self] in self?.apply($0) })],
+            read: { [weak self] in await self?.reload(client: client, folder: folder) })
+        await live.run()
+        let held = leases
+        leases = [:]
+        Task { await withTaskCancellationShield { for lease in held.values { await lease.release() } } }
     }
 
-    /// Reads which repositories the folder holds, then takes a watch and a first status on each.
     func reload(client: any MachineRequesting, folder: String) async {
         do {
-            let answer = try await client.request("git.repos", payload: .object(["folder": .string(folder)]))
-            let repos = answer.list("repos")
-            truncated = answer["truncated"] == .bool(true)
-            checkouts = repos.map { repo in
-                let path = repo.text("path")
-                return GitCheckout(
-                    path: path, label: repo.text("label", fallback: GitPanel.label(folder: folder, path: path)),
-                    kind: repo.text("kind", fallback: "nested"), status: checkout(path)?.status)
+            let answer = try await client.request(.gitRepos, payload: .object(["folder": .string(folder)]))
+                .decoded(as: GitReposResult.self)
+            truncated = answer.truncated
+            checkouts = answer.repos.map { repo in
+                GitCheckout(path: repo.path, label: repo.label, kind: repo.kind, status: checkout(repo.path)?.status)
             }
             problem = nil
         } catch is CancellationError {
@@ -87,7 +64,6 @@ import SwiftUI
         await refreshAll(client: client)
     }
 
-    /// One watch per repository, and none for a repository that is no longer in the list.
     private func watchAll(client: any MachineRequesting) async {
         let wanted = Set(checkouts.map(\.path))
         for (path, lease) in leases where !wanted.contains(path) {
@@ -95,7 +71,7 @@ import SwiftUI
             await lease.release()
         }
         for checkout in checkouts where leases[checkout.path] == nil {
-            leases[checkout.path] = GitPanel.watch(client, cwd: checkout.path)
+            leases[checkout.path] = client.acquireSubscription(GitPanel.watch(cwd: checkout.path))
         }
         for lease in leases.values { _ = try? await lease.refresh() }
     }
@@ -111,7 +87,7 @@ import SwiftUI
 
     func refresh(client: any MachineRequesting, cwd: String) async {
         do {
-            let status = try await client.request("git.status", payload: .object(["cwd": .string(cwd)]))
+            let status = try await client.request(.gitStatus, payload: .object(["cwd": .string(cwd)]))
             store(path: cwd, result: .success(try status.decoded(as: GitStatus.self)))
         } catch {
             store(path: cwd, result: .failure(error))

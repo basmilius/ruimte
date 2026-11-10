@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectView, SplitLayout } from '@ruimte/contracts';
-import { useDesignChat } from '@/design/design-chat';
-import { nodesInSightOf, type NodeSightWorkspace } from '@/state/in-sight';
+import { useDesignChat } from '@/state/design-chat';
+import { nodesInSightOf, type SightWorkspace } from '@/state/in-sight';
 
 describe('what a person has in sight of a design', () => {
     const layout = (...viewIds: string[]): SplitLayout => ({
@@ -14,7 +14,7 @@ describe('what a person has in sight of a design', () => {
     ];
     const canvasView = { kind: 'canvas', id: 'canvas', name: 'Canvas', nodes: [], texts: [], edges: [], layouts: [] } as unknown as ProjectView;
     const designView = { kind: 'design', id: 'design-view', name: 'Design', path: 'design', node: {}, chats: laterChats } as unknown as ProjectView;
-    const workspace: NodeSightWorkspace = {
+    const workspace: SightWorkspace = {
         views: [canvasView, designView],
         layout: layout('canvas', 'design-view'),
         canvasOf: (viewId) =>

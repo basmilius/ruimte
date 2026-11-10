@@ -17,6 +17,7 @@ import {
     type ArtifactVersionRef
 } from '@ruimte/contracts';
 import { z } from 'zod';
+import { bestEffort } from '../best-effort.ts';
 import { isDiskFull, NODE_ARTIFACT_FS, type ArtifactFs } from './artifact-fs.ts';
 import { ArtifactError, checkFileName, checkKey, kindOf, mimeOf, SNIFF_HEAD_BYTES } from './artifact-names.ts';
 
@@ -250,7 +251,6 @@ export class ArtifactStore {
         }
     }
 
-    /* Copies a file from elsewhere on the machine into staging as the next file. */
     async stageCopy(stagingId: string, index: number, from: string): Promise<void> {
         try {
             await this.fs.copyIn(from, this.stagedFile(stagingId, index));
@@ -277,7 +277,7 @@ export class ArtifactStore {
         try {
             return await this.commitStaged(stagingId, input);
         } catch (e) {
-            await this.discardStaging(stagingId).catch(() => undefined);
+            await bestEffort('discardStaging', this.discardStaging(stagingId));
             throw saveFailure(e);
         }
     }
@@ -295,7 +295,7 @@ export class ArtifactStore {
         try {
             await stage(stagingId);
         } catch (e) {
-            await this.discardStaging(stagingId).catch(() => undefined);
+            await bestEffort('discardStaging', this.discardStaging(stagingId));
             throw e;
         }
         return this.commit(stagingId, input);
@@ -356,7 +356,7 @@ export class ArtifactStore {
             }
             await this.writeRegister();
             for (const staged of trash) {
-                await this.discardStaging(staged).catch(() => undefined);
+                await bestEffort('discardStaging', this.discardStaging(staged));
             }
             for (const artifactId of changed) {
                 this.emit({ artifactId, projectId: this.entries.get(artifactId)!.artifact.projectId });
@@ -395,7 +395,7 @@ export class ArtifactStore {
             }
             await this.writeRegister();
             for (const staged of trash) {
-                await this.discardStaging(staged).catch(() => undefined);
+                await bestEffort('discardStaging', this.discardStaging(staged));
             }
             this.emit({ artifactId, projectId: entry.artifact.projectId, ...(whole ? { removed: true } : {}) });
             return { removed: going.length, freedBytes };

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { CodedError } from '@adecore/agents';
 import { KeyedSerializer } from '@adecore/utils/async';
 import {
     PEER_ARTIFACT_PIECE_BYTES,
@@ -9,9 +10,13 @@ import {
     type ArtifactVersion,
     type PeerArtifactReadResult
 } from '@ruimte/contracts';
-import type { PeerLink } from '../remote/peer-connection.ts';
 import { ArtifactError } from './artifact-names.ts';
 import type { ArtifactStore } from './artifact-store.ts';
+
+/* What an import asks of an open link to another machine. */
+interface PeerRequests {
+    request<T>(type: string, payload: unknown): Promise<T>;
+}
 
 interface ArtifactImportDeps {
     store: ArtifactStore;
@@ -20,7 +25,7 @@ interface ArtifactImportDeps {
     /* The project on that machine the project here is linked to; null without a link. */
     remoteProjectOf(projectId: string, machineId: string): string | null;
     /* An open link to that machine; its `request` reads every answer with the schema of the request (`checkedReply`). */
-    connect(machineId: string): Promise<Pick<PeerLink, 'request'>>;
+    connect(machineId: string): Promise<PeerRequests>;
 }
 
 /* The request id a copy of one version saves under, so asking twice lands once. */
@@ -28,21 +33,14 @@ function requestIdOf(machineId: string, artifactId: string, versionId: string): 
     return `imp-${createHash('sha256').update(`${machineId}\0${artifactId}\0${versionId}`).digest('hex').slice(0, 40)}`;
 }
 
-/* What another machine refused, read off the message its reply carried (`code: message`). */
-function refusalOf(e: unknown): string | null {
-    const message = e instanceof Error ? e.message : '';
-    return /^([a-z][a-z-]*): /.exec(message)?.[1] ?? null;
-}
-
 /* A failure of a request to the other machine in the words of this one, never with anything of the artifact in it. */
 function importFailure(e: unknown): ArtifactError {
     if (e instanceof ArtifactError) {
         return e;
     }
-    if (typeof e === 'object' && e !== null && 'code' in e && e.code === 'bad-reply') {
-        return new ArtifactError('bad-reply', 'The other machine answered with something that is no part of this artifact');
-    }
-    switch (refusalOf(e)) {
+    switch (e instanceof CodedError ? e.code : null) {
+        case 'bad-reply':
+            return new ArtifactError('bad-reply', 'The other machine answered with something that is no part of this artifact');
         case 'not-found':
             return new ArtifactError('not-found', 'That version is no longer on the other machine');
         case 'peer-not-linked':
@@ -126,7 +124,7 @@ export class ArtifactImporter {
 
     /* Reads one file a piece at a time into staging and refuses it unless it is exactly the bytes the manifest names. */
     private async fetchFile(
-        link: Pick<PeerLink, 'request'>,
+        link: PeerRequests,
         place: { projectId: string; artifactId: string; version: ArtifactVersion; index: number; file: ArtifactFile },
         stagingId: string
     ): Promise<void> {

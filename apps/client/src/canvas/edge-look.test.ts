@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectEdge } from '@ruimte/contracts';
-import type { EdgeLine } from './edge-lines';
+import type { EdgeLine } from '../state/edge-lines';
 import { edgeLook, lineMeaning, type EdgeLook } from './edge-look';
 
 function edgeOf(from: string, to: string, role?: string): ProjectEdge {

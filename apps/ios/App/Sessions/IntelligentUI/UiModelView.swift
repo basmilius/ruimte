@@ -5,7 +5,7 @@ import SceneKit
 import SceneKit.ModelIO
 import SwiftUI
 
-/// The formats an agent attaches as a model, told from the bytes as the daemon tells them (`apps/server/src/fs/sniff.ts`),
+/// The formats an agent attaches as a model, told from the bytes as the daemon tells them (`apps/server/src/disk/sniff.ts`),
 /// since the name says nothing about them.
 enum UiModelFormat: Equatable {
     case gltfBinary
@@ -99,7 +99,6 @@ final class UiModelScene: @unchecked Sendable {
         try? FileManager.default.removeItem(at: file)
     }
 
-    /// The gray an STL is drawn in, lighter on a light ground and darker on a dark one.
     @MainActor func follow(dark: Bool) {
         neutral?.diffuse.contents = UIColor(white: dark ? 0.62 : 0.74, alpha: 1)
     }

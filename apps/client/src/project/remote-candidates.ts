@@ -1,6 +1,5 @@
 import type { GitIdentity, GitIdentityMiss } from '@ruimte/contracts';
 
-/* A project of the other machine that could be this project's checkout there. */
 export interface RemoteCandidate {
     projectId: string;
     name: string;
@@ -14,7 +13,7 @@ export interface RemoteCandidate {
     remoteUrl: string | null;
 }
 
-export interface RemoteProject {
+interface RemoteProject {
     projectId: string;
     name: string;
     folder: string;

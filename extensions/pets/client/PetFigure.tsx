@@ -11,7 +11,6 @@ import { useEffect, useRef } from 'react';
 /* The paint a beam draws on, with room around the figure for the pixels that fly in from the sides. */
 const BEAM_SIZE = { w: (PAINT_COLUMNS + BEAM_SPREAD.x * 2) * PAINT_CELL, h: (PAINT_ROWS + BEAM_SPREAD.y * 2) * PAINT_CELL } as const;
 
-/* The filled cells of one frame of a figure, read back from its paint. */
 function cellsOf(look: PetLook, mood: PetMood, crowded: boolean, bow: BowColors | null): BeamCell[] {
     const source = document.createElement('canvas');
     source.width = PAINT_SIZE.w;
@@ -75,7 +74,6 @@ function PetBeam({
         picked.current ??= beamStyleOf(setting, Math.random());
         const style = picked.current;
         const cells = cellsOf(look, mood, crowded, accent === undefined ? null : bowColors(accent));
-        // The light is the app's accent, read once for the beam.
         const light = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || BEAM_LIGHT.fallback;
         let frame = 0;
 
@@ -146,7 +144,6 @@ export function PetFigure({
     /* Only for a preview of one state: that pose, whatever the mood. */
     pose?: PetPose;
 
-    /* Whether it is on its way in or out, from `useTeleport`. */
     beam?: 'in' | 'out';
 
     /* Only for a small picture in the settings: the pixels a cell takes, below a kid's one. */

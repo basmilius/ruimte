@@ -12,7 +12,6 @@ interface Progress {
     names: Map<string, string>;
 }
 
-/* The index in a Codex home, which is the folder CODEX_HOME names. */
 export function codexIndexIn(home: string): string {
     return join(home, 'session_index.jsonl');
 }

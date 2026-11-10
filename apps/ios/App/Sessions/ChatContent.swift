@@ -139,7 +139,7 @@ struct ChatLinkRouting: ViewModifier {
                     if ["http", "https", "mailto"].contains(url.scheme?.lowercased() ?? "") { return .systemAction }
                     if let id = ChatReferables.id(from: url) {
                         guard let workspace = context.workspace,
-                            let place = ChatReferables.destination(id, views: workspace.views)
+                            let place = ChatReferables.destination(id, views: workspace.storedViews)
                         else { return .discarded }
                         uiTarget = .node(viewID: place.viewID, nodeID: place.nodeID)
                         return .handled
@@ -181,7 +181,7 @@ struct ChatLinkRouting: ViewModifier {
     private var lookup: ChatReferenceLookup {
         guard let workspace = context.workspace else { return ChatReferenceLookup(referenced: context.referenced) }
         return ChatReferenceLookup(
-            items: ChatReferables.project(views: workspace.views, chatID: context.chatID),
+            items: ChatReferables.project(views: workspace.storedViews, chatID: context.chatID),
             referenced: context.referenced, known: true)
     }
 
@@ -215,8 +215,8 @@ struct ChatLinkRouting: ViewModifier {
             GitDiffPage(client: context.client, target: GitDiffTarget(cwd: cwd, path: nil, staged: false, commit: sha))
         case .node(let viewID, let nodeID):
             if let workspace = context.workspace,
-                let view = workspace.views.first(where: { $0.stableID == viewID }),
-                let item = view.stableID == nodeID ? view : view.list("nodes").first(where: { $0.stableID == nodeID })
+                let view = workspace.items.first(where: { $0.id == viewID }),
+                let item = view.id == nodeID ? view : view.nodes.first(where: { $0.id == nodeID })
             {
                 ProjectItemPage(workspace: workspace, item: item, showsProject: true, projectName: workspace.title)
             } else {

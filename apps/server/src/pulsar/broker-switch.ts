@@ -13,8 +13,7 @@ interface BrokerSwitchOptions {
     log?: Pick<Console, 'log'>;
 }
 
-/* What a client is told about this machine's broker. */
-export interface BrokerDescription {
+interface BrokerDescription {
     brokerUrl: string | null;
     /* True when a flag or the environment decides, so a client's setting is kept but changes nothing. */
     brokerFixed: boolean;
@@ -65,10 +64,9 @@ export class BrokerSwitch implements Relay {
         return this.relay?.grantedIceServers?.() ?? [];
     }
 
-    async publish(local: { host: string; port: number }): Promise<string | null> {
+    async publish(local: { host: string; port: number }): Promise<void> {
         this.local = local;
         await this.apply();
-        return null;
     }
 
     /* Brings the running relay in line with the effective URL; before `publish` there is nothing to start yet. */

@@ -1,6 +1,7 @@
 import CoreTransferable
 import QuickLook
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 import SwiftUI
 import UniformTypeIdentifiers
@@ -12,7 +13,6 @@ struct OutputItemPage: View {
     @State private var model: OutputItemModel
     @State private var showingOrigin = false
     private let context: OutputContext
-    /// What the page says until the machine answered.
     private let title: String
 
     init(context: OutputContext, artifactID: String, title: String, pinned: String? = nil) {
@@ -185,7 +185,7 @@ private struct OutputPageBody: View {
 
     var body: some View {
         ChatVisualContent(
-            visual: ChatVisual(id: "output-\(version.id)", title: title, at: version.createdAt), failed: $failed,
+            visual: ChatVisual(id: "output-\(version.id)", title: title, at: version.created), failed: $failed,
             read: { [model, version] in try await model.read(version, file: 0) }, fill: true)
     }
 }
@@ -298,7 +298,7 @@ struct OutputFileRows: View {
                 HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(verbatim: file.name).lineLimit(1).truncationMode(.middle)
-                        Text(Format.bytes(file.size)).font(.caption).monospacedDigit()
+                        Text(Format.bytes(file.bytes)).font(.caption).monospacedDigit()
                             .foregroundStyle(MobileStyle.muted)
                     }
                     Spacer(minLength: 8)
@@ -333,7 +333,6 @@ private struct OutputSharedFile: Transferable {
     }
 }
 
-/// Where a version came from, as the machine recorded it, and its files.
 private struct OutputOriginPage: View {
     let model: OutputItemModel
     let version: OutputVersion
@@ -344,13 +343,13 @@ private struct OutputOriginPage: View {
             Section("Origin") {
                 LabeledContent(String(localized: "Made by")) {
                     HStack(spacing: 6) {
-                        if version.provenance.maker == "agent" && version.provenance.agent != nil {
+                        if version.provenance.maker == .agent && version.provenance.agent != nil {
                             OutputMakerIcon(provenance: version.provenance)
                         }
                         Text(verbatim: model.maker(version.provenance)).lineLimit(1)
                     }
                 }
-                if let chatID = version.provenance.chatID {
+                if let chatID = version.provenance.chatId {
                     LabeledContent(String(localized: "Chat")) {
                         chat(chatID)
                     }
@@ -372,7 +371,7 @@ private struct OutputOriginPage: View {
     @ViewBuilder private func chat(_ chatID: String) -> some View {
         if let name = context.chatName(chatID) {
             Text(verbatim: name.isEmpty ? String(localized: "Another chat") : name).lineLimit(1)
-        } else if model.chatPresent && chatID == model.latest?.provenance.chatID {
+        } else if model.chatPresent && chatID == model.latest?.provenance.chatId {
             Text("Another chat")
         } else {
             Text("Chat removed").foregroundStyle(MobileStyle.muted)

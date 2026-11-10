@@ -1,6 +1,6 @@
 import type { ProjectSummary } from '@ruimte/contracts';
 import { create } from 'zustand';
-import { withClientClosedProject } from '@/project/closed-projects';
+import { withClientClosedProject } from '@/state/closed-projects';
 
 /*
  * One project of one daemon. A project id is minted by the daemon that owns it, so the same id on
@@ -19,7 +19,6 @@ interface ProjectListStore {
     setProjects(endpointId: string, summaries: ProjectSummary[]): void;
     /* One row of one machine, for a rename, an icon, or a project another client just opened there. */
     patchProject(endpointId: string, summary: ProjectSummary): void;
-    /* Every row of a machine this client no longer knows. */
     forgetProjects(endpointId: string): void;
 }
 

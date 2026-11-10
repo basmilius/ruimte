@@ -31,7 +31,8 @@ import XCTest
 
     func testAnEditShowsItsFileAndDiffAndACommandItsCommand() throws {
         let edit = try XCTUnwrap(
-            NowRequest(approval(["path": .string("src/pool.ts"), "diff": .string("-old\n+new"), "truncated": .bool(true)])))
+            NowRequest(
+                approval(["path": .string("src/pool.ts"), "diff": .string("-old\n+new"), "truncated": .bool(true)])))
         XCTAssertEqual(edit.headline, "Edit src/pool.ts")
         XCTAssertEqual(edit.approval?.diff, "-old\n+new")
         XCTAssertEqual(edit.approval?.truncated, true)
@@ -41,7 +42,9 @@ import XCTest
         XCTAssertEqual(several.headline, "Edit 3 files")
 
         let command = try XCTUnwrap(
-            NowRequest(approval(["toolName": .string("Bash"), "subject": .string("bun test"), "command": .string("bun test")])))
+            NowRequest(
+                approval(["toolName": .string("Bash"), "subject": .string("bun test"), "command": .string("bun test")]))
+        )
         XCTAssertEqual(command.headline, "Run a command")
         XCTAssertEqual(command.summary, "Run a command")
         XCTAssertEqual(command.wants, "Run a command")
@@ -102,7 +105,8 @@ import XCTest
     }
 
     func testADraftAnswersWithATappedChoiceThePickedOnesOrItsReply() throws {
-        let single = try XCTUnwrap(NowRequest(question(multiSelect: false, choices: ["2026", "Keep old"]))?.inlineQuestion)
+        let single = try XCTUnwrap(
+            NowRequest(question(multiSelect: false, choices: ["2026", "Keep old"]))?.inlineQuestion)
         var draft = NowRequestDraft()
         XCTAssertEqual(draft.answer(single, choice: "Keep old"), ["q": "Keep old"])
         XCTAssertNil(draft.answer(single))
@@ -130,7 +134,7 @@ import XCTest
         let answers = NowAnswers()
         answers.drafts["mac:r1"] = NowRequestDraft(reply: "draft", replying: true)
         await answers.send(.chatApprove, payload: .object([:]), key: "mac:r1", client: machine)
-        XCTAssertEqual(machine.requests, ["chat.approve"])
+        XCTAssertEqual(machine.requests, [.chatApprove])
         XCTAssertTrue(answers.answered.contains("mac:r1"))
         XCTAssertNil(answers.drafts["mac:r1"])
 
@@ -152,14 +156,14 @@ import XCTest
 }
 
 @MainActor private final class AnsweringMachine: MachineRequesting {
-    var requests: [String] = []
+    var requests: [WireRequest] = []
     var refusal: String?
 
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         requests.append(type)
         if let refusal { throw MachineClientError.server(code: refusal, message: refusal) }
         return .object([:])
     }
 
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

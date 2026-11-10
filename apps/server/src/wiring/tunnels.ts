@@ -1,12 +1,14 @@
 import { randomBytes, randomInt } from 'node:crypto';
-import { callerFolders } from '../agents/caller-folders.ts';
+import type { ServerActions } from '../actions/server-actions.ts';
+import type { CanvasHost } from '../canvas/host.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import type { ServerConfig } from '../config.ts';
+import { chatFolders, shotFolders } from '../disk/agent-folders.ts';
 import { errorText } from '../error-text.ts';
+import type { Tool } from '../mcp/catalog.ts';
+import { externalCallerOf, handleExternalMcpRequest } from '../mcp/external-route.ts';
 import { deniedRuimtePorts } from '../ports/reserved-ports.ts';
-import { shotFolders } from '../shots.ts';
-import type { CanvasHost } from '../tools/host.ts';
-import { approvalTools } from '../tunnels/approvals.ts';
+import { approvalTools } from '../tools/approval-tools.ts';
 import { realMetadataPorts } from '../tunnels/client-metadata-real.ts';
 import { fetchClientMetadata } from '../tunnels/client-metadata.ts';
 import { FileTokenStore } from '../tunnels/cloudflare-token-store.ts';
@@ -53,8 +55,11 @@ interface TunnelsInput {
     launches: Pick<LaunchesBundle, 'store' | 'agentHost'>;
     routines: Pick<RoutinesBundle, 'routines'>;
     machineId: string;
+    actions: ServerActions;
+    /* Every tool of the daemon, of which a client elsewhere sees those of its tier. */
+    tools: readonly Tool[];
     /* Called when an external client is used after a minute of quiet, so the list of connected clients reads again. */
-    externalUsed?(): void;
+    externalUsed(): void;
     /* The port the API answers on, which is not `config.port` when the system picked one. */
     later: { apiPort(): number };
 }
@@ -75,7 +80,7 @@ export async function wireTunnels(input: TunnelsInput): Promise<TunnelsBundle> {
         random: (bytes) => randomBytes(bytes).toString('base64url'),
         used: () => {
             changed();
-            input.externalUsed?.();
+            input.externalUsed();
         }
     });
     await credentials.load();
@@ -91,13 +96,16 @@ export async function wireTunnels(input: TunnelsInput): Promise<TunnelsBundle> {
         credentials,
         consent,
         limiter,
-        mcp: {
-            host: canvasHost,
-            uploads: artifacts.artifacts,
-            callerFolders: (caller) => callerFolders(config.home, caller),
-            shotFolders: shotFolders(config.home),
-            extraTools: approvalTools(approvalPorts({ stores, agents, projects, launches, routines }))
-        },
+        serve: (request, credential, client) =>
+            handleExternalMcpRequest(request, externalCallerOf(credential, client), {
+                host: canvasHost,
+                actions: input.actions,
+                tools: input.tools,
+                uploads: artifacts.artifacts,
+                callerFolders: (caller) => chatFolders(config.home, caller),
+                shotFolders: shotFolders(config.home),
+                extraTools: approvalTools(approvalPorts({ stores, agents, projects, launches, routines }))
+            }),
         fetchMetadata: (clientId) => fetchClientMetadata(clientId, realMetadataPorts()),
         now: Date.now,
         port: () => listener.port
@@ -155,13 +163,6 @@ export async function wireTunnels(input: TunnelsInput): Promise<TunnelsBundle> {
     });
 
     proposals = cards;
-    canvasHost.tunnels = {
-        state: () => service.state(),
-        rowsAsMeant: () => service.rowsAsMeant(),
-        zoneOf: (hostname) => service.zoneOf(hostname),
-        propose: (ask) => cards.ask(ask),
-        of: (chatId) => cards.of(chatId)
-    };
 
     return { service, proposals: cards, credentials, consent, listener, sinks, deniedPorts };
 }
