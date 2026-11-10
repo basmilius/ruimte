@@ -539,7 +539,7 @@ export function MachineLinks({ endpoint }: { endpoint: Endpoint }) {
                     })}
                     control={
                         <div className="flex shrink-0 items-center gap-1">
-                            <Select<RuntimeMode>
+                            <Select
                                 label={t('machine.links.ceiling', { machine: link.label })}
                                 variant="outlined"
                                 value={link.ceiling}
@@ -584,7 +584,7 @@ export function TerminalShellRow({ endpoint, reason }: { endpoint: Endpoint; rea
             description={t(gitBashMissing ? 'machine.terminalShell.gitBashMissing' : 'machine.terminalShell.description')}
             control={
                 <WithReason reason={reason}>
-                    <Select<TerminalShell>
+                    <Select
                         label={t('machine.terminalShell.label')}
                         variant="outlined"
                         value={chosen}

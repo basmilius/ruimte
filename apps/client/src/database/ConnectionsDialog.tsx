@@ -166,7 +166,7 @@ function AgentsField({ connection, local }: { connection: DatabaseConnection; lo
 
     return (
         <Field label={t('dialog.agents.label')} hint={t('dialog.agents.description')} orientation="horizontal" group>
-            <Select<DatabaseAgentAccess> value={access} onValueChange={choose} items={items} label={t('dialog.agents.label')} />
+            <Select value={access} onValueChange={choose} items={items} label={t('dialog.agents.label')} />
         </Field>
     );
 }

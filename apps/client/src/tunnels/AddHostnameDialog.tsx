@@ -180,7 +180,7 @@ function HostnameForm({
             >
                 <fieldset disabled={busy} className="flex min-w-0 flex-col gap-3 py-3">
                     {row === null && !hasMcp && (
-                        <Segmented<TunnelRowKind>
+                        <Segmented
                             value={kind}
                             label={t('tunnels.add.kind')}
                             options={[
@@ -194,7 +194,7 @@ function HostnameForm({
                     {kind === 'dev' && (
                         <Field orientation="horizontal" label={t('tunnels.add.port')}>
                             {ports.length > 0 && !typing && !elsewhere ? (
-                                <Select<string>
+                                <Select
                                     label={t('tunnels.add.port')}
                                     variant="outlined"
                                     value={ports.some((entry) => String(entry.port) === port) ? port : ''}

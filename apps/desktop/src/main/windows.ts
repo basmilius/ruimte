@@ -80,7 +80,11 @@ export function installWindows(ipc: DesktopIpc, options: WindowChannelOptions): 
         }
     });
 
-    ipc.handle('window:is-fullscreen', (event) => ipc.senderWindow(event)?.isFullScreen() ?? false);
+    ipc.handle('window:controls', (event) => {
+        const window = ipc.senderWindow(event);
+
+        return window ? theme.windowControls(window) : { inset: null };
+    });
 
     /*
      * A project is in one window at a time: when another window has it, that one comes to the front and

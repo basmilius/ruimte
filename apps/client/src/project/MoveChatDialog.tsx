@@ -262,7 +262,7 @@ function MoveChatForm({ request, onDone }: { request: MoveChatRequest; onDone():
             {asksProject && (
                 <div className="mt-3 flex items-center justify-between gap-3">
                     <span className="text-xs text-text-muted">{t('moveChat.project')}</span>
-                    <Select<string>
+                    <Select
                         label={t('moveChat.project')}
                         variant="outlined"
                         value={form.destination}
@@ -313,7 +313,7 @@ function MoveChatForm({ request, onDone }: { request: MoveChatRequest; onDone():
                             </div>
                         </div>
                     )}
-                    <ChoiceCards<FolderChoice>
+                    <ChoiceCards
                         className="mt-2"
                         label={t('moveChat.folder')}
                         orientation="vertical"
@@ -378,7 +378,7 @@ function MoveChatForm({ request, onDone }: { request: MoveChatRequest; onDone():
             {ownCount > 0 && info !== null && (
                 <div className="mt-3">
                     <span className="block text-xs text-text-muted">{t('moveChat.ownFiles')}</span>
-                    <Segmented<OwnFiles>
+                    <Segmented
                         className="mt-1"
                         label={t('moveChat.ownFiles')}
                         value={effectiveFiles}

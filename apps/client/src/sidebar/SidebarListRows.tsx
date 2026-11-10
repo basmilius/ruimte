@@ -48,11 +48,9 @@ const ROW = 'w-full gap-2 text-left text-sm';
 
 /* Every row opens with the same 16px square, so a view and a node under it line up one indent apart. */
 const ICON_SLOT = 'grid size-4 shrink-0 place-items-center';
-const ROW_SELECTED = 'bg-surface-active text-text';
-/* Standing in a cell beside the focused one: the name at full strength, the background left empty,
-   so it reads as open without claiming to be the row the keyboard is on. */
-const ROW_BESIDE = 'text-text hover:bg-surface-hover';
 const ROW_PLAIN = 'text-text-muted hover:bg-surface-hover hover:text-text';
+/* A row with `selected` gets its background from `ListRow`, so only the text is left to set. */
+const ROW_IDLE = 'text-text-muted hover:text-text';
 
 interface RowProps {
     /* The one row Tab reaches: the list is a single stop and the arrows move inside it. */
@@ -203,11 +201,10 @@ export function NodeRow({ row, tabbable, snoozable }: RowProps & { row: SidebarN
     const menu = (
         <ContextMenu.Root>
             <ContextMenu.Trigger
-                render={<ListRow variant="inset" render={<button />} />}
+                render={<ListRow variant="inset" selected={selected} render={<button />} />}
                 data-sidebar-row={row.rowId}
-                aria-current={selected ? 'true' : undefined}
                 tabIndex={tabbable ? 0 : -1}
-                className={clsx(ROW, row.viewName === null && 'pl-6', selected ? ROW_SELECTED : ROW_PLAIN)}
+                className={clsx(ROW, row.viewName === null && 'pl-6', selected ? 'text-text' : ROW_IDLE)}
                 onClick={() => (row.target ? void openSidebarTarget(row.target) : revealNode(node.id))}
                 onDoubleClick={() => {
                     if (node.chatOf === undefined) {
@@ -457,14 +454,15 @@ export function ViewRow({ row, tabbable, onToggle, onDrag }: ViewRowProps) {
     return (
         <ContextMenu.Root>
             <ContextMenu.Trigger
-                render={<ListRow variant="inset" render={<button />} />}
+                render={<ListRow variant="inset" selected={active} render={<button />} />}
                 draggable
                 data-sidebar-row={row.rowId}
                 data-view-index={row.index}
-                aria-current={active ? 'true' : undefined}
                 aria-expanded={row.expandable ? row.expanded : undefined}
                 tabIndex={tabbable ? 0 : -1}
-                className={clsx(ROW, 'group font-medium', active ? ROW_SELECTED : row.beside ? ROW_BESIDE : ROW_PLAIN)}
+                // Standing in a cell beside the focused one, the name is at full strength without the background,
+                // so it reads as open without claiming to be the row the keyboard is on.
+                className={clsx(ROW, 'group font-medium', active || row.beside ? 'text-text' : ROW_IDLE)}
                 onClick={(event) => (row.target ? void openSidebarTarget(row.target) : showView(view.id, { newTab: wantsNewTab(event, isApplePlatform()) }))}
                 onDoubleClick={() => setRenaming(true)}
                 onDragStart={(event) => onDrag(view.id, event.dataTransfer)}

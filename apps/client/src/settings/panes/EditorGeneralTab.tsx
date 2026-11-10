@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { CodeThemePreview } from '@/settings/panes/CodeSection';
 import { useCodeTheme } from '@/state/code-theme';
-import { CODE_LINE_HEIGHT_RANGE, FONT_SIZE_RANGE, MONO_FONTS, TRAILING_WHITESPACE_MODES, type TrailingWhitespaceMode, useSettings } from '@/state/settings';
+import { CODE_LINE_HEIGHT_RANGE, FONT_SIZE_RANGE, MONO_FONTS, TRAILING_WHITESPACE_MODES, useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
 
@@ -109,7 +109,7 @@ export function EditorGeneralTab() {
                     label={t('editor.general.saving.trailingWhitespace.label')}
                     description={t('editor.general.saving.trailingWhitespace.description')}
                     control={
-                        <Segmented<TrailingWhitespaceMode>
+                        <Segmented
                             value={trailingWhitespace}
                             options={TRAILING_WHITESPACE_MODES.map((id) => ({ id, label: t(`editor.general.saving.trailingWhitespace.options.${id}`) }))}
                             label={t('editor.general.saving.trailingWhitespace.label')}

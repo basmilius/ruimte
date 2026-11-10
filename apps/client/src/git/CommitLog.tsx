@@ -19,7 +19,7 @@ const REFS_SHOWN = 1;
 
 /* A commit row is its own open button, inset and rounded like a row of the file tree above it; a
    button centers its text unless told otherwise. */
-const LOG_ROW = `group w-full min-w-0 gap-2 overflow-hidden rounded-md pr-2 pl-1 text-left text-xs text-inherit hover:bg-surface-hover hover:text-text data-[selected]:bg-surface-active data-[selected]:text-text`;
+const LOG_ROW = `group w-full min-w-0 gap-2 overflow-hidden rounded-md pr-2 pl-1 text-left text-xs text-inherit hover:text-text aria-[current=true]:text-text`;
 
 /* The checkouts the log is read from, named so a row can say which one it came out of. */
 export interface LogSource {
@@ -234,10 +234,8 @@ const CommitRow = memo(function CommitRow({ commit, picture, selected, now, onOp
     return (
         <ContextMenu.Root>
             <ContextMenu.Trigger
-                render={<ListRow variant="flat" render={<button />} />}
+                render={<ListRow variant="flat" selected={selected} render={<button />} />}
                 className={LOG_ROW}
-                aria-current={selected}
-                data-selected={selected || undefined}
                 onClick={() => onOpen(commit.cwd, commit)}
             >
                 <AuthorAvatar name={commit.author} email={commit.authorEmail} picture={picture} />

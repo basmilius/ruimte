@@ -1,4 +1,4 @@
-import type { ThemeState } from '@adecore/shell/bridge';
+import type { ThemeState, WindowControlsState } from '@adecore/shell/bridge';
 import type { SessionLoginCode } from '@ruimte/pulsar';
 import type { BrowserContextAction, BrowserContextParams, OpenAiCredentialStatus, OpenAiLiveSession, WindowPoint } from './bridge.ts';
 import type { BrowserRouteBinding, BrowserRouteBlocked } from './browser.ts';
@@ -79,7 +79,7 @@ export const IPC_INVOKE = {
     'save-stream:write': invoke<[id: string, bytes: Uint8Array]>(),
     'save-stream:end': invoke<[id: string], string>(),
     'save-stream:abort': invoke<[id: string]>(),
-    'window:is-fullscreen': invoke<[], boolean>(),
+    'window:controls': invoke<[], WindowControlsState>(),
     'window:claim': invoke<[key: string | null], boolean>(),
     'window:move-to-new': invoke<[at: WindowPoint | null], boolean>(),
     'window:close-if-others': invoke<[], boolean>(),
@@ -153,7 +153,7 @@ export const IPC_EVENT = {
     'guest:focus': push<[webContentsId: number]>(),
     'menu:settings': push<[section: string | null]>(),
     'menu:run': push<[id: string]>(),
-    'window:fullscreen': push<[fullscreen: boolean]>(),
+    'window:controls': push<[state: WindowControlsState]>(),
     'window:show-view': push<[view: string]>(),
     'window:show-project': push<[key: string]>(),
     'window:take-project': push<[key: string, x: number | null]>(),

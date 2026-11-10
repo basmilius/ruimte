@@ -351,7 +351,7 @@ function RemoteNodeForm({
             {!request.relink && request.handoff === undefined && (
                 <div className="mt-3 flex items-center justify-between gap-3">
                     <span className="text-xs text-text-muted">{t('remoteNode.kind')}</span>
-                    <Select<Kind>
+                    <Select
                         label={t('remoteNode.kind')}
                         variant="outlined"
                         value={kind}
@@ -389,7 +389,7 @@ function RemoteNodeForm({
                     {kind === 'device' && <DeviceField machine={machine} devices={devices} failed={devicesFailed} value={device} onPick={setDeviceKey} />}
                     <div className="mt-3 flex items-center justify-between gap-3">
                         <span className="text-xs text-text-muted">{t('remoteNode.startFrom')}</span>
-                        <Select<StartFrom>
+                        <Select
                             label={t('remoteNode.startFrom')}
                             variant="outlined"
                             value={startFrom}
@@ -523,7 +523,7 @@ function CheckoutField({ checkouts, candidates, candidate, machine, seen, openin
     return (
         <div className="mt-1 flex flex-col gap-1">
             {candidates.length > 1 ? (
-                <Select<string>
+                <Select
                     label={t('remoteNode.checkout')}
                     variant="outlined"
                     value={candidate.projectId}
@@ -569,7 +569,7 @@ function DeviceField({
     return (
         <div className="mt-3 flex items-center justify-between gap-3">
             <span className="text-xs text-text-muted">{t('remoteNode.device')}</span>
-            <Select<string>
+            <Select
                 label={t('remoteNode.device')}
                 variant="outlined"
                 value={value === null ? null : deviceKeyOf(value)}

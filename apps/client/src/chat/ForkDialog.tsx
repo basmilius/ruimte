@@ -250,7 +250,7 @@ function ForkForm({ chatId, turnId, source, onDone }: { chatId: string; turnId: 
             {machines.length > 0 && nodeView !== null && !sharedCanvas && (
                 <div className="mt-3 flex items-center justify-between gap-3">
                     <span className="text-xs text-text-muted">{t('fork.machine')}</span>
-                    <Select<string>
+                    <Select
                         label={t('fork.machine')}
                         variant="outlined"
                         value={remote === null ? 'here' : remote.id}
@@ -306,7 +306,7 @@ function ForkForm({ chatId, turnId, source, onDone }: { chatId: string; turnId: 
             {remote === null && !elsewhere && shapes.length > 1 && (
                 <div className="mt-3 flex items-center justify-between gap-3">
                     <span className="text-xs text-text-muted">{t('fork.into')}</span>
-                    <Select<ForkShape>
+                    <Select
                         label={t('fork.into')}
                         variant="outlined"
                         value={shape}

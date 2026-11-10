@@ -155,7 +155,7 @@ export function CompareBody({ tab }: { tab: CompareTab }) {
                         side={
                             <div className="flex min-h-0 grow flex-col">
                                 <div className="shrink-0 border-b border-border p-2">
-                                    <Segmented<'files' | 'commits'>
+                                    <Segmented
                                         label={t('git.compare.section')}
                                         size="sm"
                                         value={section}

@@ -1,4 +1,4 @@
-import { setApplePlatform } from '@adecore/ui';
+import { setApplePlatform, setWindowControlsSource } from '@adecore/ui';
 import type { DesktopBridge, MachineMode } from '@ruimte/desktop-bridge';
 
 export type {
@@ -68,13 +68,36 @@ export function canTellIdle(): boolean {
     return desktop()?.idleState !== undefined;
 }
 
-export function hasTrafficLights(): boolean {
-    return desktop()?.platform === 'darwin';
-}
+/* The padding a strip starts with where there are no window controls to clear. */
+export const STRIP_PADDING_PX = 12;
 
-/* The traffic lights end 64px in (12px from the edge, then three 12px buttons 8px apart, see the
-   shell), and the first control starts 20px after that, so the lights read as their own group. */
-export const TRAFFIC_LIGHTS_INSET_PX = 84;
+/* `useWindowControlsInset` of `@adecore/ui` follows the room the shell keeps for the traffic lights, which fullscreen hides. */
+export function connectWindowControls(): (() => void) | undefined {
+    const bridge = desktop();
+    if (!bridge?.windowControls || !bridge.onWindowControls) {
+        return;
+    }
+
+    let inset: number | null = null;
+    const listeners = new Set<() => void>();
+    const take = (state: { inset: number | null }) => {
+        inset = state.inset;
+        listeners.forEach((listener) => listener());
+    };
+
+    const stop = bridge.onWindowControls(take);
+    void bridge.windowControls().then(take);
+    setWindowControlsSource({
+        inset: () => inset,
+        subscribe: (listener) => {
+            listeners.add(listener);
+
+            return () => listeners.delete(listener);
+        }
+    });
+
+    return stop;
+}
 
 /* `isApplePlatform` of `@adecore/ui` answers the desktop app's platform first and a browser tab's after. Shortcuts differ
    there: Ctrl+B is readline's backward-char and tmux's prefix, while Cmd+B is free. */

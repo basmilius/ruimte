@@ -49,7 +49,7 @@ export function LogDialog({ server, tracker, onClose }: { server: string | null;
                     <Dialog.Title>{t('language.logTitle', { name: server === null ? '' : nameOf(server, statuses) })}</Dialog.Title>
                     <div className="flex items-center gap-2">
                         {tracing && server !== null && (
-                            <Select<LanguageTraceValue>
+                            <Select
                                 label={t('language.trace.label')}
                                 variant="outlined"
                                 size="sm"

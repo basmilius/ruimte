@@ -128,7 +128,7 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
                 <RemoveSection entry={entry} model={model} />
             ) : (
                 <>
-                    <Segmented<MachineTab>
+                    <Segmented
                         value={tab}
                         options={MACHINE_TABS.map((id) => ({ id, label: t(`machineDialog.tabs.${id}`) }))}
                         label={t('machineDialog.tabs.label')}

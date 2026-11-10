@@ -30,7 +30,7 @@ export function ZoneField({ zones, zone, label, disabled, onZone, onLabel }: Zon
                 disabled={disabled}
                 onChange={(e) => onLabel(e.target.value)}
             />
-            <Select<string>
+            <Select
                 label={t('tunnels.add.zone')}
                 variant="outlined"
                 value={picked?.id ?? ''}

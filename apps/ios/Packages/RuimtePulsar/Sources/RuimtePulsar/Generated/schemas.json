@@ -11924,6 +11924,9 @@
                                 "label": {
                                   "type": "string"
                                 },
+                                "detail": {
+                                  "type": "string"
+                                },
                                 "code": {
                                   "type": "string"
                                 },
@@ -13622,6 +13625,9 @@
                                 "label": {
                                   "type": "string"
                                 },
+                                "detail": {
+                                  "type": "string"
+                                },
                                 "code": {
                                   "type": "string"
                                 },
@@ -15314,6 +15320,9 @@
                                         "label": {
                                           "type": "string"
                                         },
+                                        "detail": {
+                                          "type": "string"
+                                        },
                                         "code": {
                                           "type": "string"
                                         },
@@ -16755,6 +16764,9 @@
                                   "type": "string"
                                 },
                                 "label": {
+                                  "type": "string"
+                                },
+                                "detail": {
                                   "type": "string"
                                 },
                                 "code": {
@@ -18746,6 +18758,9 @@
                                             "type": "string"
                                           },
                                           "label": {
+                                            "type": "string"
+                                          },
+                                          "detail": {
                                             "type": "string"
                                           },
                                           "code": {
@@ -20964,6 +20979,9 @@
                                   "type": "string"
                                 },
                                 "label": {
+                                  "type": "string"
+                                },
+                                "detail": {
                                   "type": "string"
                                 },
                                 "code": {
@@ -26193,6 +26211,9 @@
                                 "label": {
                                   "type": "string"
                                 },
+                                "detail": {
+                                  "type": "string"
+                                },
                                 "code": {
                                   "type": "string"
                                 },
@@ -30118,6 +30139,9 @@
                                   "type": "string"
                                 },
                                 "label": {
+                                  "type": "string"
+                                },
+                                "detail": {
                                   "type": "string"
                                 },
                                 "code": {
@@ -80099,6 +80123,9 @@
       "label": {
         "type": "string"
       },
+      "detail": {
+        "type": "string"
+      },
       "code": {
         "type": "string"
       },
@@ -82843,6 +82870,9 @@
                                       "label": {
                                         "type": "string"
                                       },
+                                      "detail": {
+                                        "type": "string"
+                                      },
                                       "code": {
                                         "type": "string"
                                       },
@@ -84284,6 +84314,9 @@
                                 "type": "string"
                               },
                               "label": {
+                                "type": "string"
+                              },
+                              "detail": {
                                 "type": "string"
                               },
                               "code": {
@@ -86275,6 +86308,9 @@
                                           "type": "string"
                                         },
                                         "label": {
+                                          "type": "string"
+                                        },
+                                        "detail": {
                                           "type": "string"
                                         },
                                         "code": {

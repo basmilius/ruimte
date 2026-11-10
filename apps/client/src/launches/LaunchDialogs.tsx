@@ -20,7 +20,7 @@ import {
     messageOf
 } from '@adecore/ui';
 import { ActionRefusal, REVISION_CONFLICT } from '@ruimte/actions';
-import { isSecretReference, type LaunchConfigEntry, type LaunchConfigKind, type LaunchesDocument, type LaunchSuggestion } from '@ruimte/contracts';
+import { isSecretReference, type LaunchConfigEntry, type LaunchesDocument, type LaunchSuggestion } from '@ruimte/contracts';
 import clsx from 'clsx';
 import { KeyRound, Lock, Plus, Rocket, Search, TriangleAlert, Users, X } from 'lucide-react';
 import { useState } from 'react';
@@ -356,7 +356,7 @@ function LaunchForm({
                 <Input value={entry.name} autoFocus={entry.name === ''} onChange={(e) => set({ name: e.target.value })} />
             </Field>
             <Field orientation="horizontal" group label={t('edit.kind')} hint={t(`edit.kindHint.${entry.kind}`)}>
-                <Segmented<LaunchConfigKind>
+                <Segmented
                     label={t('edit.kind')}
                     value={entry.kind}
                     onValueChange={(kind) => set({ kind })}
@@ -392,7 +392,7 @@ function LaunchForm({
                 <>
                     <Field orientation="horizontal" group label={t('edit.directory')}>
                         <div className="flex gap-2">
-                            <Select<string>
+                            <Select
                                 label={t('edit.directory')}
                                 className="w-44 shrink-0"
                                 value={place.root === '' ? PROJECT_FOLDER : place.root}

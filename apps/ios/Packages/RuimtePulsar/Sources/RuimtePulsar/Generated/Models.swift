@@ -4522,10 +4522,11 @@ public struct ChatUiQueryStateBlocksValueLinksValue: Codable, Sendable, Equatabl
     public let `conflicted`: Bool?
     public let `relativePath`: String?
     public let `label`: String?
+    public let `detail`: String?
     public let `code`: String?
     public let `reason`: String?
 
-    public init(`state`: ChatUiQueryStateBlocksValueLinksValueState, `target`: ChatUiQueryStateBlocksValueLinksValueTarget? = nil, `cwd`: String? = nil, `viewId`: String? = nil, `projectId`: String? = nil, `staged`: Bool? = nil, `conflicted`: Bool? = nil, `relativePath`: String? = nil, `label`: String? = nil, `code`: String? = nil, `reason`: String? = nil) {
+    public init(`state`: ChatUiQueryStateBlocksValueLinksValueState, `target`: ChatUiQueryStateBlocksValueLinksValueTarget? = nil, `cwd`: String? = nil, `viewId`: String? = nil, `projectId`: String? = nil, `staged`: Bool? = nil, `conflicted`: Bool? = nil, `relativePath`: String? = nil, `label`: String? = nil, `detail`: String? = nil, `code`: String? = nil, `reason`: String? = nil) {
         self.`state` = `state`
         self.`target` = `target`
         self.`cwd` = `cwd`
@@ -4535,6 +4536,7 @@ public struct ChatUiQueryStateBlocksValueLinksValue: Codable, Sendable, Equatabl
         self.`conflicted` = `conflicted`
         self.`relativePath` = `relativePath`
         self.`label` = `label`
+        self.`detail` = `detail`
         self.`code` = `code`
         self.`reason` = `reason`
     }
@@ -4550,6 +4552,7 @@ public struct ChatUiQueryStateBlocksValueLinksValue: Codable, Sendable, Equatabl
         `conflicted` = try container.decodeIfPresent(Bool.self, forKey: .`conflicted`)
         `relativePath` = try container.decodeIfPresent(String.self, forKey: .`relativePath`)
         `label` = try container.decodeIfPresent(String.self, forKey: .`label`)
+        `detail` = try container.decodeIfPresent(String.self, forKey: .`detail`)
         `code` = try container.decodeIfPresent(String.self, forKey: .`code`)
         `reason` = try container.decodeIfPresent(String.self, forKey: .`reason`)
     }
@@ -4565,6 +4568,7 @@ public struct ChatUiQueryStateBlocksValueLinksValue: Codable, Sendable, Equatabl
         try container.encodeIfPresent(`conflicted`, forKey: .`conflicted`)
         try container.encodeIfPresent(`relativePath`, forKey: .`relativePath`)
         try container.encodeIfPresent(`label`, forKey: .`label`)
+        try container.encodeIfPresent(`detail`, forKey: .`detail`)
         try container.encodeIfPresent(`code`, forKey: .`code`)
         try container.encodeIfPresent(`reason`, forKey: .`reason`)
     }
@@ -4579,6 +4583,7 @@ public struct ChatUiQueryStateBlocksValueLinksValue: Codable, Sendable, Equatabl
         case `conflicted` = "conflicted"
         case `relativePath` = "relativePath"
         case `label` = "label"
+        case `detail` = "detail"
         case `code` = "code"
         case `reason` = "reason"
     }

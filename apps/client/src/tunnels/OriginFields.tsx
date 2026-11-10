@@ -5,8 +5,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { OriginDraft } from '@/tunnels/origin-draft';
 
-type Protocol = 'http' | 'https';
-
 /* How Cloudflare talks to a dev server, behind a disclosure: most servers need none of it. */
 export function OriginFields({
     draft,
@@ -36,7 +34,7 @@ export function OriginFields({
             {open && (
                 <>
                     <Field orientation="horizontal" group label={t('tunnels.origin.protocol')}>
-                        <Segmented<Protocol>
+                        <Segmented
                             value={draft.https ? 'https' : 'http'}
                             label={t('tunnels.origin.protocol')}
                             options={[

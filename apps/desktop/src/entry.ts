@@ -312,8 +312,7 @@ function createWindow(
         contents.reload();
     });
     // In fullscreen macOS hides the traffic lights, so the client can take the room back.
-    window.on('enter-full-screen', () => contents.send('window:fullscreen', true));
-    window.on('leave-full-screen', () => contents.send('window:fullscreen', false));
+    theme.followWindowControls(window, (state) => contents.send('window:controls', state));
     // Links a page opens in a new window go to the system browser, never to another Electron window.
     contents.setWindowOpenHandler(({ url }) => {
         if (isExternalLink(url)) {

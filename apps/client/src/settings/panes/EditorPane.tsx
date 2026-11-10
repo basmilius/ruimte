@@ -56,12 +56,7 @@ export function EditorPane() {
 
     return (
         <>
-            <Segmented<EditorTab>
-                value={tab}
-                options={TABS.map((id) => ({ id, label: t(`editor.tabs.${id}`) }))}
-                label={t('editor.tabs.label')}
-                onValueChange={setTab}
-            />
+            <Segmented value={tab} options={TABS.map((id) => ({ id, label: t(`editor.tabs.${id}`) }))} label={t('editor.tabs.label')} onValueChange={setTab} />
             {tab === 'general' && <EditorGeneralTab />}
             {tab === 'colors' && <CodeSection />}
             {tab === 'folding' && <EditorFoldingTab />}

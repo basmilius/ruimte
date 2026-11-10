@@ -1,6 +1,6 @@
 import type { TemplateLanguage, TemplatePlace } from '@adecore/editor-react';
 import { Button, Checkbox, Dialog, Field, FormError, Icon, Input, Menu, ScrollArea, Segmented, TextArea, messageOf } from '@adecore/ui';
-import { POSTFIX_TEMPLATE_LANGUAGES, TEMPLATE_LANGUAGES, TEMPLATE_LIMITS, TEMPLATE_PLACES, type TemplateScope } from '@ruimte/contracts';
+import { POSTFIX_TEMPLATE_LANGUAGES, TEMPLATE_LANGUAGES, TEMPLATE_LIMITS, TEMPLATE_PLACES } from '@ruimte/contracts';
 import { ChevronDown } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -171,7 +171,7 @@ function Form({ start, tracker, onClose }: { start: TemplateDraft; tracker: Temp
                 )}
                 {postfix && (
                     <Field orientation="horizontal" group label={t('editor.templates.dialog.expression')}>
-                        <Segmented<TemplateDraft['expression']>
+                        <Segmented
                             label={t('editor.templates.dialog.expression')}
                             value={draft.expression}
                             onValueChange={(expression) => set({ expression })}
@@ -189,7 +189,7 @@ function Form({ start, tracker, onClose }: { start: TemplateDraft; tracker: Temp
                         label={t('editor.templates.dialog.where')}
                         hint={tracker.projectWritable ? undefined : t('editor.templates.dialog.whereNoProject')}
                     >
-                        <Segmented<TemplateScope>
+                        <Segmented
                             label={t('editor.templates.dialog.where')}
                             value={draft.scope}
                             onValueChange={(scope) => set({ scope })}

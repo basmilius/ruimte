@@ -131,7 +131,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
             </div>
             <ButtonGroup>
                 {!native && (
-                    <Select<string>
+                    <Select
                         value={String(scale)}
                         onValueChange={(value) => setScale(Number(value))}
                         items={scaleItems}

@@ -315,7 +315,7 @@ function AddToMachineForm({ request, onDone }: { request: AddToMachineRequest; o
                 {machines.length === 0 ? (
                     <span className="text-sm text-text-muted">{t('addToMachine.noMachines')}</span>
                 ) : (
-                    <Select<string>
+                    <Select
                         label={t('addToMachine.machine')}
                         variant="outlined"
                         value={machineId}

@@ -1,10 +1,9 @@
-import { Button, ChoiceCards, FormError, ScrollArea, Spinner, type Choice, messageOf } from '@adecore/ui';
+import { Button, ChoiceCards, FormError, ScrollArea, Spinner, type Choice, messageOf, useWindowControlsInset } from '@adecore/ui';
 import { MonitorSmartphone, Server } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { desktop } from '@/desktop/bridge';
+import { STRIP_PADDING_PX, desktop } from '@/desktop/bridge';
 import { isShellFailure } from '@/desktop/shell-failure';
-import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
 import { WELCOME_SKY } from '@/onboarding/welcome-sky';
 import { useSettings } from '@/state/settings';
 import { BrandSymbol } from '@/ui/Brand';
@@ -19,7 +18,7 @@ type FirstChoice = 'local' | 'none';
  */
 export function FirstRunScreen() {
     const { t } = useTranslation('onboarding');
-    const inset = useTrafficLightInset();
+    const inset = useWindowControlsInset();
     const machine = desktop()?.machine;
     const [value, setValue] = useState<FirstChoice>('local');
     const [busy, setBusy] = useState(false);
@@ -54,7 +53,7 @@ export function FirstRunScreen() {
                     <BrandSymbol size={96} className="rounded-[22px] shadow-float" />
                     <h1 className="text-4xl font-semibold tracking-tight text-text">{t('welcome.title')}</h1>
                     <p className="max-w-[420px] text-base text-text-muted">{t('firstRun.body')}</p>
-                    <ChoiceCards<FirstChoice>
+                    <ChoiceCards
                         value={value}
                         onValueChange={setValue}
                         choices={choices}

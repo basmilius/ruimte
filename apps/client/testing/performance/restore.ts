@@ -34,8 +34,7 @@ export async function measureRestore(options: {
                     Object.defineProperty(navigator,'connection',{value:{saveData:true}});
                     localStorage.setItem('ruimte.settings',JSON.stringify({onboardingSeen:true,onboardingIntroSeen:true,...${JSON.stringify(options.settings ?? {})}}));
                     window.ruimteDesktop={platform:'darwin',daemonUrl:${JSON.stringify(options.daemonUrl)},
-                        pickFolder:async()=>null,openExternal:async()=>{},openGuestDevTools:()=>{},isFullscreen:async()=>false,onFullscreen:()=>()=>{},
-                        localSecret:()=>new Promise(resolve=>setTimeout(()=>resolve(${JSON.stringify(options.secret)}),${waitBeforeWindow ? 0 : gateMs})),claimWindow:async()=>true
+                        pickFolder:async()=>null,openExternal:async()=>{},openGuestDevTools:()=>{},                        localSecret:()=>new Promise(resolve=>setTimeout(()=>resolve(${JSON.stringify(options.secret)}),${waitBeforeWindow ? 0 : gateMs})),claimWindow:async()=>true
                     };
                     window.benchErrors=[];
                     window.benchRequests=[];

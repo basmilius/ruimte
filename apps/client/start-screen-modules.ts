@@ -130,7 +130,6 @@ export const START_SCREEN_MODULES: readonly string[] = [
     'database/view-sharing.ts',
     'database/window-project.ts',
     'desktop/bridge.ts',
-    'desktop/useFullscreen.ts',
     'devices/command-table.ts',
     'devices/operated.ts',
     'diagram/command-table.ts',

@@ -41,8 +41,6 @@ function fakeShell(): FakeShell {
         pickFolder: async () => null,
         openExternal: async () => undefined,
         openGuestDevTools: () => undefined,
-        isFullscreen: async () => false,
-        onFullscreen: () => () => undefined,
         openWindow: (key) => void heard.push(`open ${key}`),
         holdTabs: async (keys) => {
             kept = [...keys];

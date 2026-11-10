@@ -141,7 +141,7 @@ function Picker({ seed }: { seed: BranchCompareSeed }) {
                             { value: 'merge-base', label: t('git.compare.mergeBase') },
                             { value: 'tips', label: t('git.compare.tips') }
                         ]}
-                        onValueChange={(value) => setMode(value as GitCompareMode)}
+                        onValueChange={setMode}
                     />
                 </Field>
             </div>

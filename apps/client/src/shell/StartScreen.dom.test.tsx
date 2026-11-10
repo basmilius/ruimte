@@ -24,8 +24,6 @@ const bridge: DesktopBridge = {
     pickFolder: async () => null,
     openExternal: async () => undefined,
     openGuestDevTools: () => undefined,
-    isFullscreen: async () => false,
-    onFullscreen: () => () => undefined,
     requestKeepAwake: () => undefined,
     machine: machineBridge('none')
 };

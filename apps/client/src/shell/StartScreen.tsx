@@ -1,4 +1,4 @@
-import { Button, ErrorBoundary, Icon, ScrollArea, SectionLabel, Tile, ContextMenu } from '@adecore/ui';
+import { Button, ErrorBoundary, Icon, ScrollArea, SectionLabel, Tile, ContextMenu, useWindowControlsInset } from '@adecore/ui';
 import { isRecentProject } from '@ruimte/contracts';
 import clsx from 'clsx';
 import { FolderOpen, LogIn, MessageSquarePlus, MessagesSquare, MonitorSmartphone, RotateCw } from 'lucide-react';
@@ -6,8 +6,7 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { chatsProjects, openableRows, recentProjects, type ProjectMenuRow } from '@/clients/project/list';
 import { runCommand } from '@/commands/key-dispatch';
-import { isDesktop } from '@/desktop/bridge';
-import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
+import { STRIP_PADDING_PX, isDesktop } from '@/desktop/bridge';
 import { AddMachineDialog } from '@/machine-ui/AddMachineDialog';
 import { LinkMachineDialog } from '@/machine-ui/LinkMachineDialog';
 import { SignInButtons } from '@/machine-ui/SignInButtons';
@@ -343,7 +342,7 @@ function StartContent() {
  */
 export function StartScreen() {
     const { t } = useTranslation('shell');
-    const inset = useTrafficLightInset();
+    const inset = useWindowControlsInset();
     return (
         <div className="flex h-full w-full flex-col bg-bg">
             <div className="app-drag h-12 shrink-0" style={{ paddingLeft: inset ?? STRIP_PADDING_PX }} />

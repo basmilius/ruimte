@@ -237,7 +237,7 @@ function PickTunnel({ state, endpointId, change }: { state: TunnelState; endpoin
             control={
                 <>
                     {state.accounts.length > 1 && (
-                        <Select<string>
+                        <Select
                             label={t('tunnels.tunnel.account')}
                             variant="outlined"
                             value={account ?? ''}
@@ -248,7 +248,7 @@ function PickTunnel({ state, endpointId, change }: { state: TunnelState; endpoin
                         />
                     )}
                     {listing && <Spinner size={12} label={t('tunnels.tunnel.listing')} />}
-                    <Select<string>
+                    <Select
                         label={t('tunnels.tunnel.pick')}
                         variant="outlined"
                         value={chosen}

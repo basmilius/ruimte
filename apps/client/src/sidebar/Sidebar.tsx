@@ -1,6 +1,6 @@
 import { useDrafts } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
-import { Icon, Menu, ScrollArea, SectionLabel, SlidingColumn } from '@adecore/ui';
+import { Icon, Menu, ScrollArea, SectionLabel, SlidingColumn, useWindowControlsInset } from '@adecore/ui';
 import {
     designNodeChats,
     isDesignView,
@@ -17,7 +17,6 @@ import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { moveViewAction } from '@/action-port/person-actions';
-import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { useChatDrawers } from '@/extensions/drawn-chats';
 import { SidebarCards } from '@/extensions/SidebarCards';
 import { SlotRow } from '@/extensions/SlotSurfaces';
@@ -160,7 +159,7 @@ export function Sidebar({ brandMenu }: { brandMenu?: ReactNode }) {
     const open = useUi((s) => s.sidebarOpen);
     const expanded = useUi(useShallow((s) => s.sidebarExpanded));
     const instant = useInstantWidth();
-    const inset = useTrafficLightInset();
+    const inset = useWindowControlsInset();
     const listRef = useRef<HTMLDivElement>(null);
     const listHadFocus = useRef(false);
     const [rovingId, setRovingId] = useState<string | null>(null);

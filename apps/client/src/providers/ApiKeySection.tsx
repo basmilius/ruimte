@@ -280,7 +280,7 @@ export function ClaudeApiSection({ endpointId }: { endpointId: string }) {
                         label={t('providers.claudeApi.window.label')}
                         description={t('providers.claudeApi.window.description')}
                         control={
-                            <Segmented<ClaudeApiWindow>
+                            <Segmented
                                 value={settings.contextWindow ?? '200k'}
                                 options={CONTEXT_WINDOWS.map((id) => ({ id, label: t(`providers.claudeApi.window.options.${id}`) }))}
                                 label={t('providers.claudeApi.window.label')}

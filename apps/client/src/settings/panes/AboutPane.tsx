@@ -194,7 +194,7 @@ export function AboutPane() {
                         label={t('about.updates.track.label')}
                         description={t('about.updates.track.description')}
                         control={
-                            <Select<UpdateTrack>
+                            <Select
                                 value={track}
                                 label={t('about.updates.track.label')}
                                 align="end"

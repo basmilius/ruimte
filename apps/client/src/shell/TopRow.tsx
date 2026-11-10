@@ -1,8 +1,7 @@
-import { ErrorBoundary, lazyNamed, LazyBoundary, WorkspaceTopRow } from '@adecore/ui';
+import { ErrorBoundary, lazyNamed, LazyBoundary, WorkspaceTopRow, useWindowControlsInset } from '@adecore/ui';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { hasLogoMenu, hasOverlayControls } from '@/desktop/bridge';
-import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
+import { STRIP_PADDING_PX, hasLogoMenu, hasOverlayControls } from '@/desktop/bridge';
 import { ProjectMenu } from '@/project/ProjectMenu';
 import { StationMenu } from '@/shell/menu/StationMenu';
 import { useSidebarWidth } from '@/sidebar/sidebar-width';
@@ -31,7 +30,7 @@ export function TopRow() {
     const panelOpen = useShownPanel().open;
     const sidebarOpen = useUi((s) => s.sidebarOpen);
     const tabs = useSettings((s) => s.projectNavigation === 'tabs');
-    const inset = useTrafficLightInset();
+    const inset = useWindowControlsInset();
     const sidebarWidth = useSidebarWidth();
 
     return (

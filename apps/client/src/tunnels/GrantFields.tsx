@@ -1,9 +1,9 @@
 import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@adecore/agents-react/chat';
 import { Checkbox, Field, MiddleTruncate, Segmented, Select, Table } from '@adecore/ui';
-import { EXTERNAL_TIERS, type ExternalTier, type RuntimeMode } from '@ruimte/contracts';
+import { EXTERNAL_TIERS } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
 import { useProjectList } from '@/state/project-list';
-import type { Expiry, GrantDraft } from '@/tunnels/grant-draft';
+import type { GrantDraft } from '@/tunnels/grant-draft';
 
 /* The dialogs are narrower than the smallest breakpoint, so the folder stays and truncates in the middle instead. */
 const PROJECT_COLUMNS = [{ width: 'auto' }, { width: 'minmax(0,1fr)' }, { width: 'minmax(0,1fr)' }] as const;
@@ -26,7 +26,7 @@ export function GrantFields({ endpointId, draft, onChange }: { endpointId: strin
     return (
         <div className="flex flex-col gap-3">
             <Field orientation="horizontal" label={t('tunnels.grant.tier')} hint={t(`tunnels.grant.tierHint.${draft.tier}`)}>
-                <Select<ExternalTier>
+                <Select
                     label={t('tunnels.grant.tier')}
                     variant="outlined"
                     value={draft.tier}
@@ -35,7 +35,7 @@ export function GrantFields({ endpointId, draft, onChange }: { endpointId: strin
                 />
             </Field>
             <Field orientation="horizontal" group label={t('tunnels.grant.projects')}>
-                <Segmented<'all' | 'some'>
+                <Segmented
                     value={draft.projects === null ? 'all' : 'some'}
                     label={t('tunnels.grant.projects')}
                     options={[
@@ -78,7 +78,7 @@ export function GrantFields({ endpointId, draft, onChange }: { endpointId: strin
                 </Table.Root>
             )}
             <Field orientation="horizontal" label={t('tunnels.grant.ceiling')}>
-                <Select<RuntimeMode>
+                <Select
                     label={t('tunnels.grant.ceiling')}
                     variant="outlined"
                     value={draft.ceiling}
@@ -87,7 +87,7 @@ export function GrantFields({ endpointId, draft, onChange }: { endpointId: strin
                 />
             </Field>
             <Field orientation="horizontal" label={t('tunnels.grant.expiry')}>
-                <Select<Expiry>
+                <Select
                     label={t('tunnels.grant.expiry')}
                     variant="outlined"
                     value={draft.expiry}

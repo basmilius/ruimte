@@ -894,7 +894,7 @@ function PermissionTools({
     const row = (all: boolean): ReactNode => (
         <div className="flex flex-wrap gap-1.5">
             {!all && (
-                <Select<DevicePermission>
+                <Select
                     label={t('device.tools.permissions.label')}
                     value={permission}
                     items={permissions.map((value) => ({ value, label: t(`device.tools.permissions.kinds.${value}`) }))}

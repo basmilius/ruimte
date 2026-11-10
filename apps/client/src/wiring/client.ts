@@ -10,7 +10,7 @@ import { startAgentIntegrationsPrompt } from '@/controllers/agent-integrations';
 import { startKeepAwake, startKeepAwakeMove } from '@/controllers/keep-awake';
 import { startLastSeen } from '@/controllers/last-seen-watch';
 import { startRemoteStatusWatch } from '@/controllers/remote-status';
-import { connectPlatform, desktop } from '@/desktop/bridge';
+import { connectPlatform, connectWindowControls, desktop } from '@/desktop/bridge';
 import { startDeviceOperatedWatch } from '@/devices/operated';
 import { connectFormat } from '@/format/source';
 import { onboardingDialog } from '@/onboarding/dialog';
@@ -126,6 +126,7 @@ const STEPS: readonly Step[] = [
     { name: 'format', start: connectFormat },
     // Before the first shortcut is written or matched, so none of them follows the page's guess instead of the shell.
     { name: 'platform', start: connectPlatform },
+    { name: 'windowControls', start: connectWindowControls },
     { name: 'staleChunks', start: reloadOnStaleChunks },
     // Before every other watcher, so a window that opens beside another follows what that one changes from the start.
     { name: 'sharedStorage', start: startSharedStorage },

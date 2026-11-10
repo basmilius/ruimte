@@ -3,7 +3,7 @@ import { SettingsRow, useSettingsTarget } from '@adecore/ui/settings';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NODE_SORT_THENS, NODE_SORTS, sortHasGroups } from '@/canvas-model/node-sort';
-import { RENDER_DISTANCES, type RenderDistance } from '@/canvas-model/render-distance';
+import { RENDER_DISTANCES } from '@/canvas-model/render-distance';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { NodeSizeSection } from '@/settings/NodeSizeSection';
@@ -80,7 +80,7 @@ function CanvasTab() {
                     label={t('views.canvas.renderDistance.label')}
                     description={t('views.canvas.renderDistance.description')}
                     control={
-                        <Segmented<RenderDistance>
+                        <Segmented
                             value={renderDistance}
                             options={RENDER_DISTANCES.map((id) => ({ id, label: t(`views.canvas.renderDistance.options.${id}`) }))}
                             label={t('views.canvas.renderDistance.label')}
@@ -140,12 +140,7 @@ export function ViewsPane() {
 
     return (
         <>
-            <Segmented<ViewTab>
-                value={tab}
-                options={tabs.map((id) => ({ id, label: t(`views.${id}.title`) }))}
-                label={t('views.tabs')}
-                onValueChange={setTab}
-            />
+            <Segmented value={tab} options={tabs.map((id) => ({ id, label: t(`views.${id}.title`) }))} label={t('views.tabs')} onValueChange={setTab} />
             {tab === 'canvas' && <CanvasTab />}
             {tab === 'drawing' && <DrawingTab />}
             {tab === 'browser' && (

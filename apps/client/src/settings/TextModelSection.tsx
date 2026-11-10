@@ -14,8 +14,6 @@ import { useServers } from '@/state/server';
 import { useEndpointConnection } from '@/transport/status';
 import { chatScopeOf } from '@/workspace/chat-scope';
 
-type Mode = 'automatic' | 'custom';
-
 /* Which model writes the short texts of the machine picked in the section's tag: new chat titles, commit messages and conflict proposals. */
 export function TextModelSection() {
     const { t } = useTranslation('settings');
@@ -88,7 +86,7 @@ function TextModelRow({ endpoint }: { endpoint: Endpoint }) {
             description={description}
             control={
                 <div className="flex flex-wrap items-center justify-end gap-1.5">
-                    <Segmented<Mode>
+                    <Segmented
                         value={choice === null ? 'automatic' : 'custom'}
                         options={[
                             { id: 'automatic', label: t('agents.textModel.automatic') },

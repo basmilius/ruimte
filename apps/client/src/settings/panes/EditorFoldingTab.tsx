@@ -1,4 +1,3 @@
-import type { EditorFoldOutline } from '@adecore/editor';
 import { Segmented, Switch } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
@@ -20,7 +19,7 @@ export function EditorFoldingTab() {
                     label={t('editor.folding.outline.label')}
                     description={t('editor.folding.outline.description')}
                     control={
-                        <Segmented<EditorFoldOutline>
+                        <Segmented
                             value={outline}
                             options={FOLD_OUTLINES.map((id) => ({ id, label: t(`editor.folding.outline.options.${id}`) }))}
                             label={t('editor.folding.outline.label')}

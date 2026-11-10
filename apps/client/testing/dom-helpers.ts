@@ -10,8 +10,6 @@ export function installDesktop(patch: Partial<DesktopBridge> = {}): void {
         pickFolder: async () => null,
         openExternal: async () => undefined,
         openGuestDevTools: () => undefined,
-        isFullscreen: async () => false,
-        onFullscreen: () => () => undefined,
         ...Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined))
     } as DesktopBridge;
 }

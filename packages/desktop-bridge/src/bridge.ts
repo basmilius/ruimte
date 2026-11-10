@@ -1,3 +1,4 @@
+import type { WindowControlsState } from '@adecore/shell/bridge';
 import type { SessionLoginCode } from '@ruimte/pulsar';
 import type { BrowserRouteBinding, BrowserRouteBlocked } from './browser.ts';
 import type { DatabaseSecretsBridge, OpenPathRequest, SavePathRequest } from './database.ts';
@@ -165,8 +166,9 @@ export interface DesktopBridge {
     quit?(): void;
     /* Retained by the shell after its last window closes, for the native quit question. */
     setLanguage?(language: string): void;
-    isFullscreen(): Promise<boolean>;
-    onFullscreen(listener: (fullscreen: boolean) => void): () => void;
+    /* The room the page keeps free for the traffic lights, which fullscreen hides. */
+    windowControls?(): Promise<WindowControlsState>;
+    onWindowControls?(listener: (state: WindowControlsState) => void): () => void;
     /* For the native window controls, the `prefers-color-scheme` of every hosted page, and the ground
        a page paints on before it has one. */
     setTheme?(theme: { resolved: 'light' | 'dark'; followsSystem: boolean; background: string }): void;

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { InlineAgentPicker } from '@/editor-ai/InlineAgentPicker';
 import { useEditorAssistAvailability } from '@/editor-assist/use-availability';
 import { SettingsSection } from '@/machines/SettingsSection';
-import { AGENT_CHANGES_MODES, GHOST_TEXT_MODES, type AgentChangesMode, type GhostTextMode } from '@/state/ai-settings';
+import { AGENT_CHANGES_MODES, GHOST_TEXT_MODES } from '@/state/ai-settings';
 import { useSettings } from '@/state/settings';
 import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
 import { useKeyOf } from '@/surface/shortcut-overrides';
@@ -53,7 +53,7 @@ export function EditorAiTab() {
                     label={t('editor.ai.agentChanges.label')}
                     description={t('editor.ai.agentChanges.description')}
                     control={
-                        <Segmented<AgentChangesMode>
+                        <Segmented
                             value={changes}
                             options={AGENT_CHANGES_MODES.map((id) => ({ id, label: t(`editor.ai.agentChanges.options.${id}`) }))}
                             label={t('editor.ai.agentChanges.label')}
@@ -75,7 +75,7 @@ export function EditorAiTab() {
                         .join(' ')}
                     control={
                         <div className="flex flex-wrap items-center gap-1.5">
-                            <Segmented<'automatic' | 'custom'>
+                            <Segmented
                                 value={assistAgent === null ? 'automatic' : 'custom'}
                                 options={[
                                     { id: 'automatic', label: t('editor.ai.assist.automatic') },
@@ -123,7 +123,7 @@ export function EditorAiTab() {
                     label={t('editor.ai.assist.ghost.label')}
                     description={whyNot ?? (editorAssistHelp ? t('editor.ai.assist.ghost.description') : t('editor.ai.assist.ghost.needsHelp'))}
                     control={
-                        <Segmented<GhostTextMode>
+                        <Segmented
                             value={unavailable || !editorAssistHelp ? 'off' : ghostText}
                             disabled={unavailable || !editorAssistHelp}
                             options={GHOST_TEXT_MODES.map((id) => ({

@@ -121,7 +121,7 @@ export function ModelsComparison({ result, start }: { result: ModelBenchmarksRes
                         <h2 className="text-sm font-semibold text-text">{t(`views.${view}`)}</h2>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                             {view === 'speed' && (
-                                <Select<SpeedMetric>
+                                <Select
                                     value={speedMetric}
                                     onValueChange={(next) => {
                                         setPreview(null);
@@ -140,7 +140,7 @@ export function ModelsComparison({ result, start }: { result: ModelBenchmarksRes
                                             {t('chart.pareto')}
                                         </label>
                                     </Tooltip>
-                                    <Segmented<CostScale>
+                                    <Segmented
                                         value={scale}
                                         options={SCALES.map((id) => ({ id, label: t(`dialog.scales.${id}`) }))}
                                         onValueChange={setScale}

@@ -126,7 +126,7 @@ function Form({ start, endpointId, tracker, onClose }: { start: CustomDraft; end
                 </Field>
                 <Field orientation="horizontal" group label={t('editor.servers.own.dialog.scope')} error={errorOf('projects')}>
                     <div className="flex flex-col gap-2">
-                        <Segmented<CustomDraft['scope']>
+                        <Segmented
                             label={t('editor.servers.own.dialog.scope')}
                             value={draft.scope}
                             onValueChange={(scope) => set({ scope })}

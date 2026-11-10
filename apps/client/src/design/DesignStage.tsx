@@ -491,7 +491,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
                     </Button>
                 )}
                 <span className="grow" />
-                <Segmented<DesignTool>
+                <Segmented
                     iconOnly
                     size="sm"
                     label={t('design.tools.label')}
