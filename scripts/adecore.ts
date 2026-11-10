@@ -327,7 +327,8 @@ export function bumpCatalog(text: string, version: string, file = 'package.json'
 
     for (const name of names) {
         const key = name.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
-        next = next.replace(new RegExp(`("${key}"\\s*:\\s*")[^"]*(")`, 'g'), `$1${version}$2`);
+        // The root's own dependencies name the same packages as `catalog:`, which must stay.
+        next = next.replace(new RegExp(`("${key}"\\s*:\\s*")(?!catalog:)[^"]*(")`, 'g'), `$1${version}$2`);
     }
 
     if (!Bun.deepEquals(JSON.parse(next), expected, true)) {

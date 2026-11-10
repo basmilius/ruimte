@@ -101,6 +101,12 @@ describe('the catalog', () => {
         );
     });
 
+    test('leaves a dependency of the root on the catalog alone, and takes a prerelease', () => {
+        const manifest = rootManifest.replace('"name": "ruimte",', '"name": "ruimte",\n    "devDependencies": { "@adecore/ui": "catalog:" },');
+
+        expect(bumpCatalog(manifest, '0.25.0-next.1').text).toBe(manifest.replaceAll('"0.23.1"', '"0.25.0-next.1"'));
+    });
+
     test('refuses when the same name appears outside the catalog', () => {
         const manifest = rootManifest.replace('"name": "ruimte",', '"name": "ruimte",\n    "overrides": { "@adecore/ui": "0.23.1" },');
 
