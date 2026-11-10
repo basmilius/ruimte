@@ -23,6 +23,12 @@ export class DeviceWatch {
     private readonly timers: Timers;
     private readonly sinks = new ClientSinks((clientId) => this.unwatch(clientId));
     private readonly watching = new Set<string>();
+    /*
+     * Clients that started watching after the last survey began. A client reads the list around the time
+     * it watches, so a change may sit between its read and the next survey's state: it hears the next
+     * completed survey whatever that found.
+     */
+    private readonly fresh = new Set<string>();
     private cancel: (() => void) | null = null;
     // A survey still under way when the last client left belongs to a loop that is over.
     private loop = 0;
@@ -41,6 +47,7 @@ export class DeviceWatch {
 
     watch(clientId: string): void {
         this.watching.add(clientId);
+        this.fresh.add(clientId);
         if (this.cancel === null) {
             this.seen = null;
             this.surveys = 0;
@@ -51,6 +58,7 @@ export class DeviceWatch {
 
     unwatch(clientId: string): void {
         this.watching.delete(clientId);
+        this.fresh.delete(clientId);
         if (this.watching.size === 0) {
             this.stop();
         }
@@ -58,6 +66,7 @@ export class DeviceWatch {
 
     stop(): void {
         this.watching.clear();
+        this.fresh.clear();
         this.cancel?.();
         this.cancel = null;
         this.loop += 1;
@@ -68,15 +77,21 @@ export class DeviceWatch {
     }
 
     private async survey(loop: number): Promise<void> {
+        const fresh = new Set(this.fresh);
+        this.fresh.clear();
         const state = await this.read();
         if (loop !== this.loop) {
             return;
         }
-        if (this.seen !== null && state !== this.seen) {
-            for (const clientId of this.watching) {
+
+        const changed = this.seen !== null && state !== this.seen;
+
+        for (const clientId of this.watching) {
+            if (changed || fresh.has(clientId)) {
                 this.sinks.to(clientId, { event: 'device.changed', payload: {} });
             }
         }
+
         this.seen = state;
         this.surveys += 1;
         this.schedule(loop, DEVICE_WATCH_MS);

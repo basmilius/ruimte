@@ -72,6 +72,7 @@ describe('DeviceWatch', () => {
         watch.watch('client-1');
         timers.advance(0);
         await settle();
+        heard.length = 0;
         timers.advance(DEVICE_WATCH_MS);
         await settle();
 
@@ -84,6 +85,42 @@ describe('DeviceWatch', () => {
         await settle();
 
         expect(heard).toEqual(['client-1:device.changed']);
+    });
+
+    test('tells a client of the first survey after it watches, so a change after its own read of the list reaches it', async () => {
+        const { timers, state, watch } = setup();
+        let shown = state.devices;
+        watch.subscribe('client-1', () => {
+            shown = state.devices;
+        });
+        state.devices = [{ ...SIMULATOR, state: 'shutdown' }];
+        watch.watch('client-1');
+        timers.advance(0);
+        await settle();
+        timers.advance(DEVICE_WATCH_MS);
+        await settle();
+
+        expect(shown).toEqual([{ ...SIMULATOR, state: 'shutdown' }]);
+    });
+
+    test('tells a client that joins a running survey of the next one, and leaves the others be', async () => {
+        const { timers, state, watch, heard, listen } = setup();
+        listen('client-1');
+        listen('client-2');
+        watch.watch('client-1');
+        timers.advance(0);
+        await settle();
+        heard.length = 0;
+        state.devices = [{ ...SIMULATOR, state: 'shutdown' }];
+        timers.advance(DEVICE_WATCH_MS);
+        await settle();
+        watch.watch('client-2');
+        timers.advance(DEVICE_WATCH_MS);
+        await settle();
+        timers.advance(DEVICE_WATCH_MS);
+        await settle();
+
+        expect(heard).toEqual(['client-1:device.changed', 'client-2:device.changed']);
     });
 
     test('tells that the survey failed once, and again when it works', async () => {
@@ -101,7 +138,7 @@ describe('DeviceWatch', () => {
         timers.advance(DEVICE_WATCH_MS);
         await settle();
 
-        expect(heard).toEqual(['client-1:device.changed', 'client-1:device.changed']);
+        expect(heard).toEqual(['client-1:device.changed', 'client-1:device.changed', 'client-1:device.changed']);
     });
 
     test('reads the battery of a phone every minute and tells when it moved', async () => {
@@ -115,6 +152,7 @@ describe('DeviceWatch', () => {
 
         expect(state.powers).toBe(1);
 
+        heard.length = 0;
         state.power = { level: 79, plugged: false, charging: false };
         for (let second = 1; second < 60; second += 1) {
             timers.advance(DEVICE_WATCH_MS);
