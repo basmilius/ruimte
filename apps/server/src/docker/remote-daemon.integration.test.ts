@@ -166,7 +166,8 @@ class RemoteClient {
         if (frame.ok) {
             pending.resolve(frame.result);
         } else {
-            pending.reject(new Error(`${frame.error.code}: ${frame.error.message}`));
+            // The code rides on the error, as on the app's own transport, so a test checks it rather than the words.
+            pending.reject(Object.assign(new Error(`${frame.error.code}: ${frame.error.message}`), { code: frame.error.code }));
         }
     }
 }
