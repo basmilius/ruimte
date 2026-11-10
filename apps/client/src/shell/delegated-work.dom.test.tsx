@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { useChats } from '@adecore/agents-react/state';
 import type { ChatInfo, ProjectView, Task } from '@ruimte/contracts';
 import { act } from 'react';
@@ -63,10 +63,41 @@ afterEach(async () => {
     useTasks.setState({ byEndpoint: {} });
 });
 
+const SHELL = { id: 'b1', kind: 'shell' as const, description: 'Run the tests', command: 'bun test', startedAt: 1 };
+const MONITOR = { id: 'b2', kind: 'monitor' as const, description: 'Watch CI', command: null, startedAt: 2 };
+
+/* The mark of commands left running, named by what the chat waits on. */
+function backgroundMark(): Element | null {
+    return leadRow()!.querySelector('[role="img"][aria-label^="Run the tests · "], [role="img"][aria-label^="Watch CI · "]');
+}
+
 describe('a chat between turns that still has work going on', () => {
-    test('reads as working while a command it started runs in the background', async () => {
-        await setChat(LEAD.id, { background: [{ id: 'b1', kind: 'shell', description: 'Run the tests', command: 'bun test', startedAt: 1 }] });
-        await until(() => leadRow()!.querySelector('[aria-label="Working in the background"]') !== null);
+    test('marks a shell it left running with the terminal icon, named by the command and its age', async () => {
+        await setChat(LEAD.id, { background: [SHELL] });
+        await until(() => backgroundMark()?.querySelector('.lucide-square-terminal') != null);
+        expect(leadRow()!.querySelector('[aria-label="Working in the background"]')).toBeNull();
+    });
+
+    test('marks only a monitor with the activity icon, and a shell beside it with the terminal icon', async () => {
+        await setChat(LEAD.id, { background: [MONITOR] });
+        await until(() => backgroundMark()?.querySelector('.lucide-activity') != null);
+
+        await setChat(LEAD.id, { background: [MONITOR, SHELL] });
+        await until(() => backgroundMark()?.querySelector('.lucide-square-terminal') != null);
+    });
+
+    test('gives the mark up while a turn runs or the chat needs you', async () => {
+        await setChat(LEAD.id, { background: [SHELL] });
+        await until(() => backgroundMark() !== null);
+
+        await setChat(LEAD.id, { status: 'running', background: [SHELL] });
+        await until(() => backgroundMark() === null);
+
+        await setChat(LEAD.id, { status: 'needs-you', background: [SHELL] });
+        await until(() => leadRow()!.textContent!.length > 0 && backgroundMark() === null);
+
+        await setChat(LEAD.id, { background: [] });
+        await until(() => backgroundMark() === null);
     });
 
     test('reads as working while a child agent it gave a task is not done', async () => {

@@ -16,15 +16,25 @@ struct ProjectRowMarks: Equatable {
     /// It lives in the file a team commits.
     var shared = false
     var snoozedUntil: Date?
+    /// Between turns, only commands or monitors it left running, which wake it once they end.
+    var background: ProjectBackground?
 
     var needsYou: Bool { status == .needsYou && snoozedUntil == nil }
     var working: Bool { !needsYou && (status == .running || delegating) }
+}
+
+/// What a row between turns still runs, named by its oldest command or monitor.
+struct ProjectBackground: Equatable {
+    var shell: Bool
+    var description: String
 }
 
 struct ProjectMarkSources {
     var statuses: [String: AgentStatus] = [:]
     var unseen: Set<String> = []
     var delegating: Set<String> = []
+    /// What each chat runs in the background (`ChatInfo.background`).
+    var background: [String: [ChatActivity.Background]] = [:]
     var drafts: Set<String> = []
     var warnings: Set<String> = []
     var shared: Set<String> = []
@@ -65,7 +75,8 @@ enum ProjectListLogic {
             delegating: ids.contains { sources.delegating.contains($0) },
             unseen: ids.contains { sources.unseen.contains($0) },
             warning: sources.warnings.contains(id) || ids.contains { sources.warnings.contains($0) },
-            shared: sources.shared.contains(id))
+            shared: sources.shared.contains(id),
+            background: waking.lazy.compactMap { background(of: $0, sources: sources) }.first)
     }
 
     static func marks(node: ProjectItem, sources: ProjectMarkSources) -> ProjectRowMarks {
@@ -74,7 +85,22 @@ enum ProjectListLogic {
             status: sources.statuses[id], delegating: sources.delegating.contains(id),
             unseen: sources.unseen.contains(id),
             draft: node.kind == "chat" && sources.drafts.contains(id),
-            warning: sources.warnings.contains(id), snoozedUntil: sources.snoozes[id])
+            warning: sources.warnings.contains(id), snoozedUntil: sources.snoozes[id],
+            background: background(of: id, sources: sources))
+    }
+
+    static func backgroundLine(_ background: ProjectBackground) -> String {
+        background.description.isEmpty
+            ? String(localized: "A command it started still runs.")
+            : String(localized: "\(background.description) still runs.", comment: "%@ is a command or monitor, such as Run the tests")
+    }
+
+    /// Only a chat between turns: a turn, sub-agents and a wait on a person each say more than a command left running.
+    static func background(of id: String, sources: ProjectMarkSources) -> ProjectBackground? {
+        guard sources.statuses[id] == .idle, !sources.delegating.contains(id),
+            let tasks = sources.background[id], let oldest = tasks.min(by: { $0.startedAt < $1.startedAt })
+        else { return nil }
+        return ProjectBackground(shell: tasks.contains(where: \.shell), description: oldest.description)
     }
 
     /// The actions a view offers; a node of a canvas only offers what acts on its session.

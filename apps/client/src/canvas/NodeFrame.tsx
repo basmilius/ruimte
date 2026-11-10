@@ -9,6 +9,7 @@ import { ChevronDown, ChevronRight, CircleDot, CirclePower, CircleX, Crosshair, 
 import { memo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { renameNodeAction } from '@/action-port/person-actions';
+import { BackgroundMark } from '@/attention/BackgroundMark';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { ChildWaitLabel } from '@/attention/WaitLabel';
 import { WorkingMark } from '@/attention/WorkingMark';
@@ -81,6 +82,9 @@ const GROUP_FRAME_HOVER = 'border-dashed bg-[color-mix(in_srgb,var(--group-accen
 function StatusMark({ status, work, chatId, endpointId }: { status: AgentStatus; work: AgentWork | null; chatId?: string; endpointId?: string }) {
     const { t } = useTranslation('canvas');
     if (status === 'running' || status === 'idle') {
+        if (work === 'background') {
+            return <BackgroundMark chatId={chatId} endpointId={endpointId} />;
+        }
         return work === null ? null : <WorkingMark delegating={work === 'delegating'} chatId={chatId} endpointId={endpointId} />;
     }
     const mark = STATUS_MARK[status];

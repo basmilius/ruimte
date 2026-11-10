@@ -4032,6 +4032,17 @@
         }
       }
     },
+    "%@ still runs." : {
+      "comment" : "%@ is a command or monitor, such as Run the tests",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ draait nog."
+          }
+        }
+      }
+    },
     "%@ still uses %@ of a core after its turn" : {
       "localizations" : {
         "en" : {
@@ -7279,6 +7290,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Een chat in Chats werkt buiten elk project."
+          }
+        }
+      }
+    },
+    "A command it started still runs." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Een opdracht die hij startte, draait nog."
           }
         }
       }

@@ -52,6 +52,27 @@ final class ProjectListLogicTests: XCTestCase {
         XCTAssertEqual(ProjectListLogic.heaviest([.idle, .running, nil, .exited]), .exited)
     }
 
+    func testAChatBetweenTurnsMarksWhatItLeftRunningUnlessItWorksOrNeedsYou() {
+        let chat = ProjectWire.item(.object(["id": .string("chat"), "kind": .string("chat")]))
+        let shell = ChatActivity.Background(description: "Run the tests", startedAt: 2, shell: true)
+        let monitor = ChatActivity.Background(description: "Watch CI", startedAt: 1)
+
+        func marks(_ status: AgentStatus, _ tasks: [ChatActivity.Background], delegating: Set<String> = []) -> ProjectRowMarks {
+            ProjectListLogic.marks(
+                view: chat, sources: ProjectMarkSources(statuses: ["chat": status], delegating: delegating, background: ["chat": tasks]))
+        }
+
+        XCTAssertEqual(marks(.idle, [shell]).background, ProjectBackground(shell: true, description: "Run the tests"))
+        XCTAssertEqual(marks(.idle, [monitor]).background, ProjectBackground(shell: false, description: "Watch CI"))
+        XCTAssertEqual(marks(.idle, [shell, monitor]).background, ProjectBackground(shell: true, description: "Watch CI"))
+        XCTAssertNil(marks(.idle, []).background)
+        XCTAssertNil(marks(.running, [shell]).background)
+        XCTAssertNil(marks(.needsYou, [shell]).background)
+        XCTAssertNil(marks(.idle, [shell], delegating: ["chat"]).background)
+        XCTAssertEqual(
+            ProjectListLogic.backgroundLine(ProjectBackground(shell: true, description: "Run the tests")), "Run the tests still runs.")
+    }
+
     func testALongPressOffersWhatAppliesToTheRow() {
         let claude = ProjectWire.item(
             .object(["id": .string("c"), "kind": .string("chat"), "node": .object(["provider": .string("claude")])]))

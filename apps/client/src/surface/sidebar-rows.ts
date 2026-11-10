@@ -178,12 +178,14 @@ export function heaviestStatus(nodes: readonly Pick<SidebarNode, 'status'>[]): A
     }, null);
 }
 
-/* A turn speaks for a folded canvas before sub-agents that go on alone. */
+/* A turn speaks for a folded canvas before sub-agents that go on alone, and those before commands left running. */
 export function heaviestWork(nodes: readonly SidebarNode[]): AgentWork | null {
-    if (nodes.some((node) => node.work === 'turn')) {
-        return 'turn';
+    for (const work of ['turn', 'delegating', 'background'] as const) {
+        if (nodes.some((node) => node.work === work)) {
+            return work;
+        }
     }
-    return nodes.some((node) => node.work === 'delegating') ? 'delegating' : null;
+    return null;
 }
 
 /* One state for a design's chats: what waits on a person first, then a problem, then work, and only then a turn that ended unseen. */

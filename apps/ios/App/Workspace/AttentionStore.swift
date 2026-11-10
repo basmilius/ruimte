@@ -52,6 +52,8 @@ struct ChatActivity: Hashable {
         let description: String
         /// Epoch milliseconds.
         let startedAt: Double
+        /// A command rather than a monitor.
+        var shell = false
     }
 
     var queued = 0
@@ -64,7 +66,9 @@ extension ChatActivity {
     init(info: ChatInfo) {
         self.init(
             queued: info.queue?.count ?? 0,
-            background: (info.background ?? []).map { Background(description: $0.description, startedAt: $0.startedAt) })
+            background: (info.background ?? []).map {
+                Background(description: $0.description, startedAt: $0.startedAt, shell: $0.kind == .shell)
+            })
     }
 }
 

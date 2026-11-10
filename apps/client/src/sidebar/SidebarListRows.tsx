@@ -7,6 +7,7 @@ import { ChevronRight, Globe, PanelTop, Pencil, Plus, Trash, TriangleAlert, User
 import { useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { renameNodeAction, renameViewAction } from '@/action-port/person-actions';
+import { BackgroundMark } from '@/attention/BackgroundMark';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { WaitingCount } from '@/attention/WaitingCount';
 import { ChildWaitLabel, WaitLabel } from '@/attention/WaitLabel';
@@ -128,6 +129,9 @@ function RowStatus({
 }) {
     // Another project's rows cannot tell a working agent from a shell at its prompt, so they keep the dot.
     if ((status === 'running' || status === 'idle') && work !== undefined) {
+        if (work === 'background') {
+            return <BackgroundMark chatId={chatId} endpointId={endpointId} />;
+        }
         return work === null ? null : <WorkingMark plain delegating={work === 'delegating'} chatId={chatId} endpointId={endpointId} />;
     }
     return status && status !== 'idle' ? <StatusDot status={status} plain /> : null;
@@ -530,7 +534,12 @@ export function ViewRow({ row, tabbable, onToggle, onDrag }: ViewRowProps) {
                 {view.self?.wait && row.status === 'needs-you' ? (
                     <WaitLabel detail={view.self.wait} snoozed={Boolean(view.self.snoozedUntil)} />
                 ) : (
-                    <RowStatus status={row.status} work={view.self ? view.self.work : heaviestWork(view.nodes)} />
+                    <RowStatus
+                        status={row.status}
+                        work={view.self ? view.self.work : heaviestWork(view.nodes)}
+                        chatId={view.self?.kind === 'chat' || view.self?.kind === 'design' ? view.self.id : undefined}
+                        endpointId={row.target?.endpointId ?? endpointId}
+                    />
                 )}
                 {/* Last, after the dots that are the news. Only a shared row is marked, since a view is
                     private until someone says otherwise; never in the accent. */}

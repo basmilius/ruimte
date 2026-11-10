@@ -65,6 +65,7 @@ struct PhoneProjectList: View {
         return ProjectMarkSources(
             statuses: attention.statuses, unseen: attention.unseen,
             delegating: attention.delegating.union(workspace.session.tasks.parentsWithOpenTasks),
+            background: attention.activity.compactMapValues { $0.background.isEmpty ? nil : $0.background },
             drafts: state.drafts, warnings: state.warnings,
             shared: Set(workspace.header?.shared ?? []),
             snoozes: workspace.session.snoozes.standing)
@@ -202,6 +203,10 @@ struct ProjectRowMarksView: View {
             } else if marks.working {
                 Spinner(size: 12, label: String(localized: "Working"))
                     .foregroundStyle(marks.status == .running ? MobileStyle.statusRunning : MobileStyle.faint)
+            } else if let background = marks.background {
+                // The icons of the background chip over the composer; the hourglass means a wait on a person.
+                Image(lucide: background.shell ? "square-terminal" : "activity", size: 12).foregroundStyle(MobileStyle.faint)
+                    .accessibilityLabel(ProjectListLogic.backgroundLine(background))
             } else if marks.unseen {
                 Circle().fill(MobileStyle.accent).frame(width: 6, height: 6).accessibilityLabel("New activity")
             }
@@ -318,6 +323,7 @@ private struct ProjectRowPreview: View {
         default: break
         }
         if marks.delegating { return String(localized: "Work it started still runs.") }
+        if let background = marks.background { return ProjectListLogic.backgroundLine(background) }
         switch item.kind {
         case "browser": return item.url ?? String(localized: "No address yet.")
         case "file": return item.path ?? ""

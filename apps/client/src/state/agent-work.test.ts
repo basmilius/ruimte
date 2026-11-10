@@ -86,10 +86,12 @@ describe('which node the working agent is in', () => {
         expect(nodeWorking(thread, {}, { 'local:c1': chat('idle', true) }, 'local')).toBe(true);
     });
 
-    test('a chat between turns works through a command it left running, unless it waits on a person', () => {
+    test('a chat between turns works through a command it left running, unless it waits on a person, works or delegates', () => {
         const background = [{ id: 'b1', kind: 'shell' as const, description: 'Dev server', command: 'bun dev', startedAt: 1 }];
 
-        expect(nodeWork(thread, {}, { 'local:c1': { info: chatInfoOf('c1', { status: 'idle', background }) } }, 'local')).toBe('delegating');
+        expect(nodeWork(thread, {}, { 'local:c1': { info: chatInfoOf('c1', { status: 'idle', background }) } }, 'local')).toBe('background');
+        expect(nodeWork(thread, {}, { 'local:c1': { info: chatInfoOf('c1', { status: 'idle', background, delegating: true }) } }, 'local')).toBe('delegating');
+        expect(nodeWork(thread, {}, { 'local:c1': { info: chatInfoOf('c1', { status: 'running', background }) } }, 'local')).toBe('turn');
         expect(nodeWork(thread, {}, { 'local:c1': { info: chatInfoOf('c1', { status: 'needs-you', background }) } }, 'local')).toBeNull();
         expect(agentsWorking({}, { 'local:c1': { info: chatInfoOf('c1', { status: 'idle', background }) } })).toBe(false);
     });

@@ -25,25 +25,32 @@ function chatDelegating(chat: Pick<ChatState, 'info'> | undefined): boolean {
 }
 
 /*
- * The same, widened by what a node shows: a command or monitor left running, and a child agent it gave a
- * task still open. Not for staying awake, since a dev server in the background never ends.
+ * The same, widened by what a node shows: a child agent it gave a task still open, and below that a
+ * command or monitor left running. Not for staying awake, since a dev server in the background never ends.
  */
-function chatWaitsOnWork(chat: Pick<ChatState, 'info'> | undefined, openChildren: number): boolean {
+function chatWaitsOnWork(chat: Pick<ChatState, 'info'> | undefined, openChildren: number): AgentWork | null {
     if (chat?.info.status !== 'idle') {
-        return false;
+        return null;
     }
 
     const activity = chatActivity(chat.info);
 
-    return activity === 'delegating' || activity === 'background' || openChildren > 0;
+    if (activity === 'delegating' || openChildren > 0) {
+        return 'delegating';
+    }
+
+    return activity === 'background' ? 'background' : null;
 }
 
 export function agentsWorking(sessions: SessionsByKey, chats: ChatStatuses): boolean {
     return Object.values(sessions).some(sessionWorking) || Object.values(chats).some((chat) => chatWorking(chat) || chatDelegating(chat));
 }
 
-/* A turn of the node's own agent, or only the work it left running in the background, which a node draws in gray. */
-export type AgentWork = 'turn' | 'delegating';
+/*
+ * A turn of the node's own agent, agents it left working (drawn in gray), or only commands and monitors
+ * it left running, which a node marks with their own icon since no agent works on them.
+ */
+export type AgentWork = 'turn' | 'delegating' | 'background';
 
 /*
  * What the agent in this node is working on, if anything. Only a terminal and a chat can say,
@@ -63,7 +70,7 @@ export function nodeWork(node: StatusOf, sessions: SessionsByKey, chats: ChatSta
     if (chatWorking(chat)) {
         return 'turn';
     }
-    return chatWaitsOnWork(chat, openChildTasks(tasks, node.id).length) ? 'delegating' : null;
+    return chatWaitsOnWork(chat, openChildTasks(tasks, node.id).length);
 }
 
 export function nodeWorking(node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): boolean {
