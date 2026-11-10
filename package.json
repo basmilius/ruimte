@@ -48,7 +48,7 @@
     "check:types": "bun check --no-script -p tsconfig.scripts.json && bun run --filter '*' typecheck",
     "check:generated": "bun run --cwd packages/contracts check:swift && bun packages/contracts/scripts/generate-extension-vocabularies.ts --check && bun apps/server/scripts/generate-extension-runtimes.ts --check",
     "generate:extension-runtimes": "bun apps/server/scripts/generate-extension-runtimes.ts",
-    "lint": "oxlint --deny-warnings && oxlint --type-aware --deny-warnings -c apps/server/oxlint.promises.json apps/server/src && bun scripts/check-client-conventions.ts && bun scripts/check-test-clock.ts && bun scripts/check-built-ins.ts && bun scripts/adecore.ts check",
+    "lint": "oxlint --deny-warnings && oxlint --type-aware --deny-warnings -c apps/server/oxlint.promises.json apps/server/src && bun scripts/check-client-conventions.ts && bun scripts/check-test-clock.ts && bun scripts/check-built-ins.ts && bun scripts/check-module-cycles.ts && bun scripts/adecore.ts check",
     "symbolicate:electron": "bun scripts/symbolicate-electron.ts",
     "test": "bun test --conditions=source --parallel --no-isolate --only-failures --timings=test-timings.json",
     "test:windows": "bun test --conditions=source --parallel=8 --no-isolate --only-failures",
