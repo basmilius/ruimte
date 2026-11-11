@@ -162,8 +162,11 @@ import XCTest
     }
 }
 
-@MainActor private final class LoginMachine: MachineRequesting {
+@MainActor private final class LoginMachine: MachineRequesting, MachineFeatures {
     var sent: [(WireRequest, JSONValue)] = []
+
+    func answers(_ type: WireRequest) -> Bool { true }
+
     var refusal: String?
     var handlers: [WireEvent: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
 

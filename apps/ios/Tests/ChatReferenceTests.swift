@@ -216,7 +216,7 @@ import XCTest
             guard let files else {
                 throw MachineClientError.server(code: "not-readable", message: "Cannot search the working folder")
             }
-            return .object(["files": .array(files.map { .string($0) })])
+            return .object(["files": .array(files.map { .string($0) }), "truncated": .bool(false)])
         }
         return .object([:])
     }
