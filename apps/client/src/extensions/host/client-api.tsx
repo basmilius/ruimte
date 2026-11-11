@@ -25,7 +25,7 @@ import {
     type RequestMap
 } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { icons, Package, type LucideIcon } from 'lucide-react';
+import { Package, type LucideIcon } from 'lucide-react';
 import { createContext, createElement, lazy, Suspense, use, useContext, useEffect, useRef, useState, useSyncExternalStore, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
@@ -53,6 +53,7 @@ import {
 import { ExtensionChat } from '@/extensions/host/ExtensionChat';
 import { askHost, openOverlay, type OpenOverlay } from '@/extensions/host/host-dialog-state';
 import { useMachineStorage } from '@/extensions/host/machine-storage';
+import { namedIcon } from '@/extensions/host/named-icon';
 import { extensionRequest } from '@/extensions/machine-request';
 import { baseContext, nodeInfoIn, useNodeInfo, useNodeSources, type NodeInfo } from '@/extensions/slots';
 import { focusView } from '@/extensions/view-focus';
@@ -131,12 +132,7 @@ function iconOf(name: string | undefined, extension: LoadedExtension): LucideIco
         return Mark as unknown as LucideIcon;
     }
 
-    const key = (name ?? '')
-        .split('-')
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join('');
-
-    return (icons as Record<string, LucideIcon>)[key] ?? Package;
+    return name === undefined ? Package : namedIcon(name);
 }
 
 function useExtension(): LoadedExtension {

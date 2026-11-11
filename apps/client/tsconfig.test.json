@@ -17,6 +17,7 @@
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
         "src/built-in-entry.d.ts",
+        "src/lucide-cjs.d.ts",
         "../../extensions/**/*.test.ts",
         "../../extensions/**/*.test.tsx",
         "test-preload.ts",

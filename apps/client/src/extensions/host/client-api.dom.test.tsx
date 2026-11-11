@@ -591,7 +591,8 @@ describe('the client API', () => {
         await mounted.render(<ViewGlyph id="view-9" kind="unknown" />);
 
         try {
-            expect(mounted.host.querySelector('svg')?.getAttribute('class')).toContain('lucide-gauge');
+            // The set the name is looked up in loads on first use.
+            await until(() => mounted?.host.querySelector('svg')?.getAttribute('class')?.includes('lucide-gauge') === true);
         } finally {
             useDocument.setState({ views: [] });
         }

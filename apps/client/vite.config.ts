@@ -215,7 +215,8 @@ export default defineConfig(({ command, mode }) => ({
                             name: 'controls',
                             test: (id) => normalize(id).startsWith(uiSource) || /[\\/]node_modules[\\/]@base-ui[\\/]react[\\/]/.test(id)
                         },
-                        { name: 'icons', test: /[\\/]node_modules[\\/]lucide-react[\\/]/ }
+                        // The CommonJS build is the whole set an extension names icons from (`named-icon.tsx`); it loads alone.
+                        { name: 'icons', test: (id) => /[\\/]node_modules[\\/]lucide-react[\\/]/.test(id) && !/[\\/]dist[\\/]cjs[\\/]/.test(id) }
                     ]
                 }
             }
