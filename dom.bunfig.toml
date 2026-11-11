@@ -4,4 +4,4 @@
 # window that never opened one.
 pathIgnorePatterns = ["**/*.integration.test.ts", "**/*.cold.test.tsx", "**/docs/reports/**", "extensions/*/test/**", "extensions/poc/*/test/**"]
 # The page first: React DOM reads `document` once, as it loads, and the other two load it.
-preload = ["./apps/client/testing/dom-preload.ts", "./apps/client/testing/react-compiler-preload.ts", "./apps/client/node_modules/@adecore/ui/src/testing/dedupe.ts", "./apps/client/test-preload.ts", "./scripts/no-process-preload.ts"]
+preload = ["./apps/client/testing/dom-preload.ts", "./apps/client/testing/react-compiler-preload.ts", "./apps/client/node_modules/@adecore/ui/src/testing/dedupe.ts", "./apps/client/testing/built-in-preload.ts", "./apps/client/test-preload.ts", "./scripts/no-process-preload.ts"]

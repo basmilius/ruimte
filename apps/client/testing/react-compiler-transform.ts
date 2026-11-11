@@ -1,6 +1,7 @@
 import type { BunPlugin } from 'bun';
 import { existsSync, realpathSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { builtInModule } from '../built-ins';
 import { COMPILER_RUNTIME, compiledByReactCompiler, MAY_HOLD_REACT, REACT_COMPILED, REACT_COMPILED_PACKAGES } from '../react-compiler';
 import type { Compiled } from '../react-compiler-babel';
 import { CompilerCache } from '../react-compiler-cache';
@@ -139,9 +140,12 @@ export const reactCompilerPlugin: BunPlugin = {
     name: 'react-compiler',
     setup(build) {
         build.onResolve({ filter: /^react\/compiler-runtime$/ }, (args) => (args.importer === COMPILER_RUNTIME ? undefined : { path: COMPILER_RUNTIME }));
-        build.onLoad({ filter: new RegExp(REACT_COMPILED.map((pattern) => pattern.source).join('|')) }, async (args) => ({
-            contents: withClientRuntime(args.path, await withViteGlobs(args.path, await compiledOnce(args.path))),
-            loader: args.path.endsWith('.tsx') ? 'tsx' : 'ts'
-        }));
+        build.onLoad({ filter: new RegExp(REACT_COMPILED.map((pattern) => pattern.source).join('|')) }, async (args) => {
+            // A query, such as a built-in's `?activate`, names another module of the same file.
+            const [path = args.path] = args.path.split('?');
+            const code = withClientRuntime(path, await withViteGlobs(path, await compiledOnce(path)));
+
+            return { contents: builtInModule(args.path, code) ?? code, loader: path.endsWith('.tsx') ? 'tsx' : 'ts' };
+        });
     }
 };

@@ -227,7 +227,8 @@ interface ExtensionSchemaContribution {
 interface BuiltInContribution {
     id: string;
     manifest: ExtensionManifest;
-    icon?: LucideIcon;
+    // Its `assets/icon.svg` from the client's build, or a Lucide icon.
+    icon?: string | LucideIcon;
     setEnabled(enabled: boolean): void;
 }
 

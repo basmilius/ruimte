@@ -1,5 +1,6 @@
 import { CHAT_PREFERENCES_KEY, reloadChatPreferences } from '@adecore/agents-react/chat';
 import { reloadUsagePreferences, USAGE_PREFERENCES_KEY } from '@adecore/agents-react/state';
+import { BUILT_INS_DISABLED_KEY, followDisabledBuiltIns } from '@/extensions/built-ins';
 import { applyStoredExtensionTheme, EXTENSION_THEME_STORAGE_KEY } from '@/extensions/themes';
 import { followLanguageAndRegion } from '@/i18n/index';
 import { ENDPOINTS_STORAGE_KEY, useEndpoints } from '@/state/endpoints';
@@ -33,6 +34,7 @@ export function startSharedStorage(target?: StorageTarget | null): () => void {
         followOtherWindows(THEME_STORAGE_KEY, () => useTheme.getState().reload(), target),
         followOtherWindows(SHORTCUT_OVERRIDES_KEY, reloadOverrides, target),
         followOtherWindows(EXTENSION_THEME_STORAGE_KEY, applyStoredExtensionTheme, target),
+        followOtherWindows(BUILT_INS_DISABLED_KEY, followDisabledBuiltIns, target),
         followOtherWindows(CHAT_PREFERENCES_KEY, reloadChatPreferences, target),
         followOtherWindows(USAGE_PREFERENCES_KEY, reloadUsagePreferences, target),
         ...useContributions.getState().sharedStorage.map((storage) => followOtherWindows(storage.id, storage.reload, target))

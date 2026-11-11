@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { defineTheme } from '@/extensions/internal';
+import { defineBuiltIn } from '@/extensions/built-ins';
 import {
     activeExtensionTheme,
     applyStoredExtensionTheme,
@@ -11,7 +11,7 @@ import {
 } from '@/extensions/themes';
 import { AppearancePane } from '@/settings/panes/AppearancePane';
 import { startSharedStorage } from '@/shared-storage';
-import { contribute, type BuiltInThemeContribution } from '@/state/extension-registry';
+import { useContributions } from '@/state/extension-registry';
 import { useSettings } from '@/state/settings';
 import { mount } from '../../testing/dom';
 
@@ -162,17 +162,11 @@ describe('an extension theme', () => {
 });
 
 describe("a built-in's theme", () => {
-    const DUSK: BuiltInThemeContribution = {
-        id: 'acme.dusk/dusk',
-        extensionId: 'acme.dusk',
-        theme: { name: 'Dusk', side: 'dark', thumbnail: 'dusk.svg', tokens: { '--surface': '#010101' } },
-        thumbnailUrl: 'data:,'
-    };
+    const DUSK_KEY = 'acme.dusk/themes/dusk.json';
     let takeBuiltInOut = (): void => {};
-    let takeThemeOut = (): void => {};
 
     async function dusk(): Promise<ThemeChoice> {
-        const choice = (await listExtensionThemes([])).find((each) => each.key === DUSK.id);
+        const choice = (await listExtensionThemes([])).find((each) => each.key === DUSK_KEY);
 
         if (choice === undefined) {
             throw new Error('Dusk is not offered');
@@ -181,19 +175,29 @@ describe("a built-in's theme", () => {
         return choice;
     }
 
+    function turnDusk(enabled: boolean): void {
+        useContributions
+            .getState()
+            .builtIns.find((entry) => entry.id === 'acme.dusk')
+            ?.setEnabled(enabled);
+    }
+
     beforeEach(() => {
         localStorage.clear();
-        takeBuiltInOut = contribute('builtIns', {
-            id: 'acme.dusk',
-            manifest: { id: 'acme.dusk', name: 'Dusk', version: '1.0.0', api: 1 },
-            setEnabled: () => {}
+        takeBuiltInOut = defineBuiltIn({
+            manifest: { id: 'acme.dusk', name: 'Dusk', version: '1.0.0', api: 1, themes: ['themes/dusk.json'] },
+            themes: [
+                {
+                    path: 'themes/dusk.json',
+                    theme: { name: 'Dusk', side: 'dark', thumbnail: 'themes/dusk.svg', tokens: { '--surface': '#010101' } },
+                    thumbnailUrl: 'data:,'
+                }
+            ]
         });
-        takeThemeOut = defineTheme(DUSK);
     });
 
     afterEach(() => {
         chooseExtensionTheme(null);
-        takeThemeOut();
         takeBuiltInOut();
     });
 
@@ -202,18 +206,30 @@ describe("a built-in's theme", () => {
         await refreshExtensionTheme([]);
 
         expect(themeText()).toContain('--surface: #010101');
-        expect(activeExtensionTheme()).toBe(DUSK.id);
+        expect(activeExtensionTheme()).toBe(DUSK_KEY);
     });
 
     test('leaves the page while its built-in is off, and comes back with it', async () => {
         chooseExtensionTheme(await dusk());
-        takeThemeOut();
+        turnDusk(false);
 
         expect(themeText()).toBeNull();
-        expect(activeExtensionTheme()).toBe(DUSK.id);
+        expect(activeExtensionTheme()).toBe(DUSK_KEY);
 
-        takeThemeOut = defineTheme(DUSK);
+        turnDusk(true);
 
         expect(themeText()).toContain('--surface: #010101');
+    });
+});
+
+describe('Umbra', () => {
+    afterEach(() => chooseExtensionTheme(null));
+
+    test('stays chosen from before its theme became a file of its pack', async () => {
+        localStorage.setItem(EXTENSION_THEME_STORAGE_KEY, JSON.stringify({ key: 'ruimte.umbra/umbra', tokens: '', cssUrl: null }));
+        await refreshExtensionTheme([]);
+
+        expect(activeExtensionTheme()).toBe('ruimte.umbra/themes/umbra.json');
+        expect(themeText()).toContain('--surface: #08080a');
     });
 });

@@ -80,6 +80,10 @@ export interface LoadedExtension {
     dev?: boolean;
     disposers: (() => void)[];
     settings: ComponentType | null;
+    // Shipped inside the client (`extensions/built-ins.ts`), which only the host may grant more than an installed one.
+    builtIn?: boolean;
+    // A built-in's words come with the client's own build, by language, rather than from `base`.
+    words?: Readonly<Record<string, () => Promise<{ default: object }>>>;
 }
 
 const usePanelParams = create<{ params: Record<string, unknown> }>(() => ({ params: {} }));
@@ -386,14 +390,17 @@ function nodeStore(node: { id: string }): CanvasState {
 const wordsCache = new Map<string, Promise<Record<string, string>>>();
 
 function wordsOf(extension: LoadedExtension, language: string): Promise<Record<string, string>> {
-    const key = `${extension.base}${language}`;
+    const own = extension.words;
+    const key = own === undefined ? `${extension.base}${language}` : `${extension.manifest.id}\n${language}`;
     let words = wordsCache.get(key);
 
     if (words === undefined) {
-        const read = (name: string) =>
-            fetch(`${extension.base}locales/${name}.json`)
-                .then((answer) => (answer.ok ? (answer.json() as Promise<Record<string, string>>) : {}))
-                .catch(() => ({}));
+        const read = (name: string): Promise<Record<string, string>> =>
+            own === undefined
+                ? fetch(`${extension.base}locales/${name}.json`)
+                      .then((answer) => (answer.ok ? (answer.json() as Promise<Record<string, string>>) : {}))
+                      .catch(() => ({}))
+                : (own[name]?.().then(({ default: loaded }) => loaded as Record<string, string>) ?? Promise.resolve({}));
 
         words = Promise.all([read('en'), read(language)]).then(([english, own]) => ({ ...english, ...own }));
         wordsCache.set(key, words);

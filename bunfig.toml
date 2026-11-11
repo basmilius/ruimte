@@ -14,6 +14,7 @@ pathIgnorePatterns = ["**/*.integration.test.ts", "**/*.dom.test.tsx", "**/*.col
 # The last one makes every process start fail (`scripts/no-process-preload.ts`).
 preload = [
     "./apps/client/node_modules/@adecore/ui/src/testing/dedupe.ts",
+    "./apps/client/testing/built-in-preload.ts",
     "./apps/client/test-preload.ts",
     "./scripts/no-process-preload.ts"
 ]

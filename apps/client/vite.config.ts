@@ -8,6 +8,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import { build, defaultClientConditions, defineConfig, searchForWorkspaceRoot, type Plugin, type PluginOption } from 'vite';
 import { adecoreSources } from './adecore-sources.ts';
+import { builtInExtensions } from './built-ins.ts';
 import { scriptFilesGuard } from './inline-scripts.ts';
 import { compiledThroughCache } from './react-compiler-vite.ts';
 import { COMPILER_RUNTIME, REACT_COMPILED, REACT_COMPILED_PACKAGES, REACT_COMPILER_LEFT_OUT, REACT_COMPILER_OPTIONS } from './react-compiler.ts';
@@ -185,6 +186,7 @@ export default defineConfig(({ command, mode }) => ({
     },
     plugins: [
         adecoreSources(),
+        builtInExtensions(),
         react(),
         ...reactCompiler(),
         tailwindcss(),

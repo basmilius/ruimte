@@ -7,8 +7,8 @@ import { FileUp, HardDrive, Store, type LucideIcon } from 'lucide-react';
 import { createElement, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { desktop } from '@/desktop/bridge';
+import { readDisabled } from '@/extensions/built-ins';
 import { ExtensionTile } from '@/extensions/ExtensionTile';
-import { readDisabled } from '@/extensions/internal';
 import { extensionIconUrl, extensionsInSafeMode, syncExtensions, useInstalledExtensions } from '@/extensions/loader';
 import { SchemaSettings } from '@/extensions/SchemaSettings';
 import {

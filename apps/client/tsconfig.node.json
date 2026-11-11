@@ -7,5 +7,5 @@
     "module": "nodenext",
     "moduleResolution": "nodenext"
   },
-  "include": ["vite.config.ts", "react-compiler-worker.ts"]
+  "include": ["vite.config.ts", "react-compiler-worker.ts", "built-ins.ts"]
 }

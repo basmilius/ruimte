@@ -1,0 +1,19 @@
+{
+    "name": "Umbra",
+    "side": "dark",
+    "thumbnail": "themes/umbra.svg",
+    "tokens": {
+        "--bg": "#050506",
+        "--surface": "#08080a",
+        "--surface-raised": "#0d0d0f",
+        "--surface-sunken": "#030304",
+        "--surface-hover": "#141418",
+        "--surface-active": "#1b1b20",
+        "--separator": "#131317",
+        "--text": "#e1e1e8",
+        "--text-muted": "#8a8a96",
+        "--text-faint": "#52525c",
+        "--canvas-bg": "#050506",
+        "--canvas-dot": "#131317"
+    }
+}

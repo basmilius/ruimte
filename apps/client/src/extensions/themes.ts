@@ -29,6 +29,24 @@ type StoredTheme = z.infer<typeof StoredThemeSchema>;
 
 const storedTheme = storedJson<StoredTheme>(EXTENSION_THEME_STORAGE_KEY, StoredThemeSchema);
 
+// Umbra was named by a key of its own before its theme became a file of its pack, so a choice made then stays chosen.
+const RENAMED_THEMES: Readonly<Record<string, string>> = { 'ruimte.umbra/umbra': 'ruimte.umbra/themes/umbra.json' };
+
+function readStoredTheme(): StoredTheme | null {
+    const stored = storedTheme.read();
+    const renamed = stored === null ? undefined : RENAMED_THEMES[stored.key];
+
+    if (stored === null || renamed === undefined) {
+        return stored;
+    }
+
+    const next = { ...stored, key: renamed };
+
+    storedTheme.write(next);
+
+    return next;
+}
+
 function tokensCss(theme: ExtensionTheme): string {
     const lines = Object.entries(theme.tokens).map(([token, value]) => `${token}: ${value};`);
 
@@ -78,12 +96,12 @@ function paint(stored: StoredTheme | null): void {
 /* Before the first render, so the first pixel is already the chosen theme. Safe mode starts without one. */
 export function applyStoredExtensionTheme(): void {
     if (!new URLSearchParams(window.location.search).has('safe-mode')) {
-        paint(storedTheme.read());
+        paint(readStoredTheme());
     }
 }
 
 export function activeExtensionTheme(): string | null {
-    return storedTheme.read()?.key ?? null;
+    return readStoredTheme()?.key ?? null;
 }
 
 async function loadTheme(extension: InstalledClientExtension, path: string): Promise<ThemeChoice> {
@@ -169,7 +187,7 @@ export function chooseExtensionTheme(choice: ThemeChoice | null): void {
  * this computer forgets it. A Station's list is the machine's, so there nothing is removed for good.
  */
 export async function refreshExtensionTheme(installed: readonly InstalledClientExtension[]): Promise<void> {
-    const stored = storedTheme.read();
+    const stored = readStoredTheme();
 
     if (stored === null) {
         return;
@@ -209,7 +227,7 @@ export async function refreshExtensionTheme(installed: readonly InstalledClientE
  * it anew. The list of installed extensions has no say in it, so it may not have come in yet.
  */
 useContributions.subscribe((state, previous) => {
-    const stored = storedTheme.read();
+    const stored = readStoredTheme();
 
     if (state.builtInThemes === previous.builtInThemes || stored === null || !isBuiltIn(extensionIdOf(stored.key))) {
         return;
