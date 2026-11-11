@@ -91,7 +91,14 @@ export class FakeMachine implements PooledTransport {
 
     /* The link gone and a try to bring it back failed, which is what makes a machine lost and not just still loading. */
     lose(failure?: string): void {
-        this.connection = { ...this.connection, attempts: 1, ...(failure === undefined ? {} : { failure }) };
+        // The drop counts the try it schedules, so one that failed is the second.
+        this.connection = { ...this.connection, attempts: 2, ...(failure === undefined ? {} : { failure }) };
+        this.setStatus('closed');
+    }
+
+    /* The link dropped and waits out its first try back, as a socket the machine closed on a full queue does. */
+    blink(): void {
+        this.connection = { ...this.connection, attempts: 1 };
         this.setStatus('closed');
     }
 

@@ -61,6 +61,15 @@ describe('a machine that does not answer', () => {
         expect(document.body.querySelector('main')!.hasAttribute('inert')).toBe(false);
     });
 
+    test('leaves the workspace alone while a link that just dropped is on its first try back', async () => {
+        await act(async () => machine.blink());
+        expect(screen()).toBeNull();
+        expect(document.body.querySelector('main')!.hasAttribute('inert')).toBe(false);
+
+        await act(async () => machine.reopen());
+        expect(screen()).toBeNull();
+    });
+
     test('a switch whose machine never answered shows the machine, and Go back returns', async () => {
         const target: SwitchTarget = { endpointId: MACHINE, summary: null, folder: '/work/website', name: null };
         await act(async () => {

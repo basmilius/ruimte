@@ -6,9 +6,24 @@ describe('when the workspace says its machine stopped answering', () => {
         expect(machineLost({ status: 'open', attempts: 0 })).toBe(false);
         // A link that is opening for the first time is a wait, not a machine that went away.
         expect(machineLost({ status: 'connecting', attempts: 0 })).toBe(false);
-        expect(machineLost({ status: 'closed', attempts: 1 })).toBe(true);
+        expect(machineLost({ status: 'closed', attempts: 2 })).toBe(true);
         expect(machineLost({ status: 'connecting', attempts: 2 })).toBe(true);
         expect(machineLost({ status: 'closed', attempts: 0, failure: 'No network path to the machine' })).toBe(true);
+    });
+
+    test('not for a link that just dropped and is on its first try back, as a socket the machine closed on a full queue is', () => {
+        expect(machineLost({ status: 'closed', attempts: 1 })).toBe(false);
+        expect(machineLost({ status: 'connecting', attempts: 1 })).toBe(false);
+    });
+
+    test('for a dropped link that stayed down past the grace, and never for one that is open', () => {
+        expect(machineLost({ status: 'connecting', attempts: 1 }, true)).toBe(true);
+        expect(machineLost({ status: 'closed', attempts: 1 }, true)).toBe(true);
+        expect(machineLost({ status: 'open', attempts: 0 }, true)).toBe(false);
+    });
+
+    test('says why at once when the link gave a reason, also on the first try back', () => {
+        expect(machineLost({ status: 'closed', attempts: 1, failure: 'This machine runs an older Ruimte.' })).toBe(true);
     });
 });
 

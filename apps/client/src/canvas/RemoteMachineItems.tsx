@@ -5,9 +5,9 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Point } from '@/canvas-model/math';
 import { addToMachineDialog, remoteNodeDialog } from '@/machine-ui/dialogs';
+import { useLinkLost } from '@/machine-ui/use-machine-lost';
 import { iconOfEntry } from '@/machines/machine-icon';
 import { nameOf, type MachineEntry } from '@/machines/machine-list';
-import { machineLost } from '@/machines/machine-lost';
 import { MachineGlyph } from '@/machines/MachineGlyph';
 import { useOtherMachines } from '@/machines/use-other-machines';
 import { useCanvas } from '@/state/canvas';
@@ -85,6 +85,7 @@ function MachineRow({ entry, shared, link, onPick }: { entry: MachineEntry; shar
     const { t } = useTranslation('canvas');
     const endpointId = entry.endpoint?.id ?? entry.id;
     const connection = useEndpointConnection(endpointId);
+    const lost = useLinkLost(endpointId);
     const answered = useServers((s) => s.byEndpoint[endpointId]?.icon ?? null);
     const remoteName = useProjectList((s) =>
         link === null ? null : (s.projects.find((row) => row.endpointId === endpointId && row.summary.projectId === link.remoteProjectId)?.summary.name ?? null)
@@ -92,7 +93,7 @@ function MachineRow({ entry, shared, link, onPick }: { entry: MachineEntry; shar
     const name = nameOf(entry);
     const tooOld = connection.status === 'open' && !machineAnswers(connection, 'peer.placeNodes');
     const reason = shared ? t('otherMachine.shared') : tooOld ? t('otherMachine.needsUpdateTip', { machine: name }) : null;
-    const second = tooOld ? t('otherMachine.needsUpdate') : machineLost(connection) ? t('otherMachine.notAnswering') : remoteName;
+    const second = tooOld ? t('otherMachine.needsUpdate') : lost ? t('otherMachine.notAnswering') : remoteName;
     return (
         <DisabledReason reason={reason}>
             <ContextMenu.Item disabled={shared || tooOld} onClick={onPick}>
