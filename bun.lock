@@ -289,22 +289,16 @@
       "name": "@ruimte/extension-pets",
       "version": "0.0.0",
       "dependencies": {
-        "@adecore/agents-react": "catalog:",
-        "@adecore/ui": "catalog:",
-        "@ruimte/contracts": "workspace:*",
+        "@ruimte/extension": "workspace:*",
         "clsx": "^2.1.1",
-        "i18next": "^26.5.12",
         "lucide-react": "^1.65.0",
         "react": "^19.3.1",
-        "react-dom": "^19.3.1",
-        "react-i18next": "^17.1.9",
         "zod": "^4.6.7",
         "zustand": "^5.0.16",
       },
       "devDependencies": {
         "@types/bun": "^1.4.4",
         "@types/react": "^19.3.0",
-        "typescript": "^7.0.2",
       },
     },
     "extensions/poc/agents": {
