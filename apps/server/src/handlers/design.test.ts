@@ -199,19 +199,37 @@ describe('the pages held for a client', () => {
         expect(isHeld(elsewhere.pageId, 'other')).toBe(true);
     });
 
-    test('weigh no more than two of the largest pages, the oldest going first', () => {
+    test('weigh no more than four of the largest pages, the oldest going first', () => {
         const largest = 'x'.repeat(DESIGN_PAGE_MAX_BYTES);
-        const first = pages.hold('client', largest);
-        const second = pages.hold('client', largest);
+        const [first, second, , fourth] = [1, 2, 3, 4].map(() => pages.hold('client', largest));
         const elsewhere = pages.hold('other', largest);
 
-        expect(isHeld(first.pageId)).toBe(true);
+        expect(isHeld(first!.pageId)).toBe(true);
 
-        const third = pages.hold('client', largest);
+        const fifth = pages.hold('client', largest);
 
-        expect(isHeld(first.pageId)).toBe(false);
-        expect(isHeld(second.pageId)).toBe(true);
-        expect(isHeld(third.pageId)).toBe(true);
+        expect(isHeld(first!.pageId)).toBe(false);
+        expect(isHeld(second!.pageId)).toBe(true);
+        expect(isHeld(fourth!.pageId)).toBe(true);
+        expect(isHeld(fifth.pageId)).toBe(true);
         expect(isHeld(elsewhere.pageId, 'other')).toBe(true);
+    });
+
+    test('number no more than a few, however small, the oldest going first', () => {
+        const held = Array.from({ length: 12 }, () => pages.hold('client', ''));
+
+        expect(held.filter((page) => isHeld(page.pageId)).length).toBe(8);
+        expect(isHeld(held[0]!.pageId)).toBe(false);
+        expect(isHeld(held[11]!.pageId)).toBe(true);
+    });
+
+    test('go when read in scattered bytes rather than pieces', () => {
+        const held = pages.hold('client', 'x'.repeat(4096));
+
+        for (let offset = 0; offset < 4096 && isHeld(held.pageId); offset += 2) {
+            pages.sent('client', held.pageId, offset, 1);
+        }
+
+        expect(isHeld(held.pageId)).toBe(false);
     });
 });

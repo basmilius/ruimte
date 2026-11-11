@@ -1,8 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { DESIGN_PAGE_SENT_MAX_BYTES } from '@ruimte/contracts';
 
-// Room for a stage and an export of the largest page at once; a read that stopped halfway holds no more than this.
-const HELD_BYTES_PER_CLIENT = 2 * DESIGN_PAGE_SENT_MAX_BYTES;
+// Room for the design nodes of a canvas that build at once, each as large as a page gets; a read that stopped halfway holds no more than this.
+const HELD_BYTES_PER_CLIENT = 4 * DESIGN_PAGE_SENT_MAX_BYTES;
+
+// Small pages weigh next to nothing against the byte bound, so their number has a bound of its own.
+const HELD_PAGES_PER_CLIENT = 8;
+
+// A client reads a page in a few large pieces. One that reads it in scattered bytes would grow the record of what went out without end.
+const SENT_RANGES_PER_PAGE = 256;
 
 interface HeldPage {
     clientId: string;
@@ -25,15 +31,17 @@ export class HeldDesignPages {
         const bytes = new TextEncoder().encode(html);
         const own = [...this.pages].filter(([, page]) => page.clientId === clientId);
         let weight = own.reduce((total, [, page]) => total + page.bytes.length, bytes.length);
+        let count = own.length + 1;
 
         // A page larger than the bound is still held, alone.
         for (const [pageId, page] of own) {
-            if (weight <= HELD_BYTES_PER_CLIENT) {
+            if (weight <= HELD_BYTES_PER_CLIENT && count <= HELD_PAGES_PER_CLIENT) {
                 break;
             }
 
             this.pages.delete(pageId);
             weight -= page.bytes.length;
+            count -= 1;
         }
 
         const pageId = randomUUID();
@@ -59,7 +67,9 @@ export class HeldDesignPages {
         page.sent = mergeRange(page.sent, [offset, offset + length]);
         const [first, ...gaps] = page.sent;
 
-        if (first !== undefined && gaps.length === 0 && first[0] === 0 && first[1] >= page.bytes.length) {
+        const whole = first !== undefined && gaps.length === 0 && first[0] === 0 && first[1] >= page.bytes.length;
+
+        if (whole || page.sent.length > SENT_RANGES_PER_PAGE) {
             this.pages.delete(pageId);
         }
     }
