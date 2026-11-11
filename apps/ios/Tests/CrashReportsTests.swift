@@ -205,6 +205,18 @@ final class CrashReportsTests: XCTestCase {
         }
     }
 
+    /// The counts are what tell the layers apart, so the scrubber has to leave every one of them in the message.
+    func testAMissingPromptCardReportsItsCountsThroughTheScrubber() {
+        let gap = ChatPromptGap(
+            pending: 2, subjects: 0, answered: 1, activeSet: false, approval: false, sharedModel: true,
+            rejectedEvent: false)
+        let expected =
+            "A chat waited on a person without the card to answer it (pending 2, subjects 0, answered 1, active no, "
+            + "kind question, shared yes, rejected event no)"
+        XCTAssertEqual(gap.message, expected)
+        XCTAssertEqual(CrashScrubber(home: home).scrubMessage(gap.message), expected)
+    }
+
     @MainActor func testTheRuntimeRemembersTheNamesOfItsMachines() {
         let runtime = AppRuntime(defaults: UserDefaults(suiteName: "CrashReportsTests.\(UUID().uuidString)")!)
         runtime.machines = [

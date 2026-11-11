@@ -188,6 +188,7 @@ A shipping build (Release on a device) always reports crashes, errors and the me
 - a link that drops while open and is not back within 30 seconds
 - a read without an answer in time
 - a machine refused at the protocol check
+- a chat in sight that shows it waits on a person for five seconds without the card to answer it, once per chat a run, with counts and yes or no only
 
 The SDK's install id (`did`) is dropped at ingest because "Count users" is off for the app in Observatory. No tracing, profiling, logs, replay, screenshot or view hierarchy. The only breadcrumbs are the fixed words in `CrashReports.breadcrumbs`.
 

@@ -7,6 +7,8 @@ struct ChatScreen: View {
     @State private var model: ChatModel
     @State private var visible = false
     @State private var holdingChat = false
+    /// Whether the session already held this chat's model when the screen took it, for a report of a missing card.
+    @State private var openedShared = false
     @State private var showingClear = false
     @State private var clearDraft: String?
     @State private var subagentList: SubagentListRoute?
@@ -102,6 +104,14 @@ struct ChatScreen: View {
                 feed: promptFeed, prompts: prompts, model: model, attention: machineSession?.attention,
                 visible: visible)
         )
+        .task(id: promptGap) {
+            let reporter = ChatPromptGapReporter.shared
+            reporter.observe(chatID: model.chatID, gap: promptGap, now: .now)
+            guard promptGap != nil else { return }
+            try? await Task.sleep(for: .seconds(ChatPromptGapReporter.delay))
+            guard !Task.isCancelled else { return }
+            reporter.observe(chatID: model.chatID, gap: promptGap, now: .now)
+        }
         .onChange(of: prompts.activeID) { previous, next in
             if let focus = draftFocus.focus(from: previous, to: next, focused: composerFocused, visible: visible) {
                 composerFocused = focus
@@ -332,7 +342,13 @@ struct ChatScreen: View {
     private func start() {
         guard !holdingChat else { return }
         holdingChat = true
-        if let machineSession { model = machineSession.retainChat(model) } else { model.start() }
+        if let machineSession {
+            let fallback = model
+            model = machineSession.retainChat(fallback)
+            openedShared = model !== fallback
+        } else {
+            model.start()
+        }
         let chat = model
         model.presentation.agentSources = ChatAgentSources(
             tasks: machineSession?.tasks, attention: machineSession?.attention
@@ -630,6 +646,19 @@ struct ChatScreen: View {
         .frame(maxWidth: .infinity)
         .fixedSize(horizontal: false, vertical: true)
         .coordinateSpace(.named(Self.composerDockSpace))
+    }
+
+    /// A request the thread shows as waiting on a person that the composer has no card for, while the chat is in
+    /// sight and up to date.
+    private var promptGap: ChatPromptGap? {
+        guard visible, model.connected, !model.loading else { return nil }
+        let answerable = Set(prompts.subjects.filter { $0.chatID == nil }.map(\.item.id))
+        guard let missing = model.presentation.holdingTurn.subtracting(answerable).sorted().first else { return nil }
+        let approval = if case .approval = model.presentation.item(missing) { true } else { false }
+        return ChatPromptGap(
+            pending: model.pending.count, subjects: prompts.subjects.count, answered: prompts.answeredCount,
+            activeSet: prompts.activeID != nil, approval: approval, sharedModel: openedShared,
+            rejectedEvent: model.reattachedOverRejectedEvent)
     }
 
     private var promptComposer: some View {

@@ -130,6 +130,14 @@ enum CrashReports {
         SentrySDK.capture(event: event)
     }
 
+    static func report(_ gap: ChatPromptGap) {
+        let event = Event(level: .error)
+        event.message = SentryMessage(formatted: gap.message)
+        event.fingerprint = ["prompt-card-missing"]
+        event.tags = ["problem": "prompt-card-missing"]
+        SentrySDK.capture(event: event)
+    }
+
     /// Takes out of an event everything the allow-list does not name, and scrubs every string left. False for
     /// anything that is not an error, which carries far more and is never sent.
     static func scrub(_ event: Event, with scrubber: CrashScrubber) -> Bool {

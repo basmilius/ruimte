@@ -262,6 +262,30 @@ final class ChatPromptStateTests: XCTestCase {
         assertCovered("a reset")
     }
 
+    @MainActor func testAWaitingRequestWithoutItsCardIsReportedOncePerChatAfterTheDelay() {
+        var sent: [ChatPromptGap] = []
+        let reporter = ChatPromptGapReporter { sent.append($0) }
+        let gap = ChatPromptGap(
+            pending: 1, subjects: 0, answered: 0, activeSet: false, approval: false, sharedModel: true,
+            rejectedEvent: false)
+        let start = Date(timeIntervalSince1970: 1_000)
+        reporter.observe(chatID: "a", gap: gap, now: start)
+        reporter.observe(chatID: "a", gap: gap, now: start + 4)
+        reporter.observe(chatID: "a", gap: nil, now: start + 4.5)
+        reporter.observe(chatID: "a", gap: gap, now: start + 6)
+        reporter.observe(chatID: "a", gap: gap, now: start + 10)
+        XCTAssertTrue(sent.isEmpty, "a card that came in time starts the wait over")
+        reporter.observe(chatID: "a", gap: gap, now: start + 11)
+        XCTAssertEqual(sent, [gap])
+        reporter.observe(chatID: "a", gap: nil, now: start + 12)
+        reporter.observe(chatID: "a", gap: gap, now: start + 13)
+        reporter.observe(chatID: "a", gap: gap, now: start + 30)
+        XCTAssertEqual(sent.count, 1)
+        reporter.observe(chatID: "b", gap: gap, now: start + 30)
+        reporter.observe(chatID: "b", gap: gap, now: start + 35)
+        XCTAssertEqual(sent.count, 2)
+    }
+
     private enum Failure: Error { case expected }
 }
 

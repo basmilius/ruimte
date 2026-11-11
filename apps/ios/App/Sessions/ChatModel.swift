@@ -156,7 +156,7 @@ final class ChatModel {
     @ObservationIgnored private var generation = 0
     /// One reattach per connection is enough, since the snapshot brings the thread up to date. A machine that keeps
     /// sending unreadable events would otherwise cause a reattach on every one.
-    @ObservationIgnored private var reattachedOverRejectedEvent = false
+    @ObservationIgnored private(set) var reattachedOverRejectedEvent = false
 
     init(client: any MachineRequesting, chatID: String, machineID: String = "local", draftRoot: URL? = nil) {
         self.client = client

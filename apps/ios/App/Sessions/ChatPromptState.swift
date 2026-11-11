@@ -66,6 +66,7 @@ final class ChatPromptState {
         live.filter { !completed.contains($0.answerKey) }
     }
     var pending: [ChatItem] { subjects.map(\.item) }
+    var answeredCount: Int { completed.count }
     var activeSubject: ChatPromptSubject? { subjects.first { $0.key == activeID } }
     var active: ChatItem? { activeSubject?.item }
     var draft: ChatPromptDraft {
@@ -127,6 +128,55 @@ final class ChatPromptState {
             guard activeID == id else { return }
             self.error = error.localizedDescription
         }
+    }
+}
+
+/// A chat that shows it waits on a person while its composer has no card for that request. Only counts and kinds,
+/// which tell apart where the request got lost, never an id or anything the chat says.
+struct ChatPromptGap: Equatable {
+    let pending: Int
+    let subjects: Int
+    let answered: Int
+    let activeSet: Bool
+    let approval: Bool
+    let sharedModel: Bool
+    let rejectedEvent: Bool
+
+    var message: String {
+        func word(_ value: Bool) -> String { value ? "yes" : "no" }
+        return "A chat waited on a person without the card to answer it (pending \(pending), subjects \(subjects), "
+            + "answered \(answered), active \(word(activeSet)), kind \(approval ? "approval" : "question"), "
+            + "shared \(word(sharedModel)), rejected event \(word(rejectedEvent)))"
+    }
+}
+
+/// Reports a chat whose waiting request has gone without its card for `delay`, once per chat while the app runs.
+@MainActor final class ChatPromptGapReporter {
+    static let shared = ChatPromptGapReporter { CrashReports.report($0) }
+    static let delay: TimeInterval = 5
+
+    private let send: (ChatPromptGap) -> Void
+    private var since: [String: Date] = [:]
+    private var reported: Set<String> = []
+
+    init(send: @escaping (ChatPromptGap) -> Void) {
+        self.send = send
+    }
+
+    /// `gap` is nil while every waiting request has its card, or while the chat is out of sight or offline.
+    func observe(chatID: String, gap: ChatPromptGap?, now: Date) {
+        guard let gap else {
+            since[chatID] = nil
+            return
+        }
+        guard !reported.contains(chatID) else { return }
+        guard let start = since[chatID] else {
+            since[chatID] = now
+            return
+        }
+        guard now.timeIntervalSince(start) >= Self.delay else { return }
+        reported.insert(chatID)
+        send(gap)
     }
 }
 
