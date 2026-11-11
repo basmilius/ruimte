@@ -343,6 +343,68 @@ describe('a design view on a machine that builds its pages', () => {
         expect(mounted.host.textContent).not.toContain('Could not show');
     });
 
+    describe('when a held page is read', () => {
+        const html = '<!doctype html><title>Built</title>';
+
+        // Answers each held page's read with the error given for it, or its bytes once there is none.
+        function answerReads(errors: Record<string, TransportError>): void {
+            let built = 0;
+
+            machine.answer('design.page', () => {
+                built += 1;
+
+                return { kind: 'page' as const, pageId: `page-${built}`, size: html.length };
+            });
+            machine.answer('bytes.read', ({ resource, offset }) => {
+                const pageId = resource.kind === 'designPage' ? resource.pageId : '';
+                const error = errors[pageId];
+
+                if (error !== undefined) {
+                    throw error;
+                }
+
+                return { mime: 'text/html; charset=utf-8', size: html.length, version: pageId, offset, data: btoa(html.slice(offset)) };
+            });
+        }
+
+        function gone(): TransportError {
+            return new TransportError('not-found', 'Not a design page this machine holds');
+        }
+
+        test('that the machine let go of already, builds it once more and shows that one', async () => {
+            answerReads({ 'page-1': gone() });
+            await showAgain();
+
+            await until(() => machine.requests('design.page').length === 2 && mounted.host.querySelector('[role="progressbar"]') === null);
+
+            expect(machine.requests('bytes.read').map((read) => read.resource)).toEqual([
+                { kind: 'designPage', pageId: 'page-1' },
+                { kind: 'designPage', pageId: 'page-2' }
+            ]);
+            expect(mounted.host.textContent).not.toContain('Could not show');
+        });
+
+        test('that is gone a second time, shows the failure', async () => {
+            answerReads({ 'page-1': gone(), 'page-2': gone() });
+            await showAgain();
+
+            await until(() => mounted.host.textContent?.includes('Could not show') === true);
+
+            expect(machine.requests('design.page')).toHaveLength(2);
+            expect(mounted.host.textContent).toContain('Not a design page this machine holds');
+        });
+
+        test('that fails for another reason, shows the failure without building it again', async () => {
+            answerReads({ 'page-1': new TransportError('bad-offset', 'Offset 9 is past the end') });
+            await showAgain();
+
+            await until(() => mounted.host.textContent?.includes('Could not show') === true);
+
+            expect(machine.requests('design.page')).toHaveLength(1);
+            expect(mounted.host.textContent).toContain('Offset 9 is past the end');
+        });
+    });
+
     test('says in its own words why the machine built no page', async () => {
         machine.answer('design.page', ({ file }) => ({ kind: 'too-large' as const, name: file, size: 17 * 1024 * 1024, limit: 16 * 1024 * 1024 }));
         await showAgain();

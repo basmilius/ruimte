@@ -498,9 +498,36 @@ enum DesignFiles {
         return try await builtPage(file, design: design, project: project, client: client)
     }
 
+    /// A machine holds only a client's newest few built pages, so with many asked at once the oldest can be let go
+    /// before its first piece went out. That `not-found` is the held page gone, not the design: it is built once
+    /// more, and a second miss is the failure.
     @MainActor private static func builtPage(
         _ file: String, design: String, project: String, client: any MachineRequesting
     ) async throws -> Data {
+        let page: MachineResource
+        do {
+            page = try await readHeldPage(
+                heldPageId(file, design: design, project: project, client: client), client: client)
+        } catch let error where error.machineCode == .notFound {
+            page = try await readHeldPage(
+                heldPageId(file, design: design, project: project, client: client), client: client)
+        }
+        // Decoded as the page built here is, so a byte that is no UTF-8 shows the same on both paths.
+        return Data(String(decoding: page.data, as: UTF8.self).utf8)
+    }
+
+    @MainActor private static func readHeldPage(_ pageId: String, client: any MachineRequesting) async throws
+        -> MachineResource
+    {
+        // The machine lets go of the page once every byte went out, so a read that starts over would find nothing.
+        try await client.readResource(
+            .object(["kind": .string("designPage"), "pageId": .string(pageId)]),
+            maxBytes: DesignLimits.pageSentMaxBytes, restarts: 0)
+    }
+
+    @MainActor private static func heldPageId(
+        _ file: String, design: String, project: String, client: any MachineRequesting
+    ) async throws -> String {
         // With the bootstrap of a visual, which sets the theme a page draws in; the app has none of its own to add.
         let built = try await client.request(
             .designPage,
@@ -521,14 +548,8 @@ enum DesignFiles {
         case "not-text":
             throw MachineClientError.invalid(String(localized: "\(name) is not a text file."))
         default:
-            break
+            return built.text("pageId")
         }
-        // The machine lets go of the page once every byte went out, so a read that starts over would find nothing.
-        let page = try await client.readResource(
-            .object(["kind": .string("designPage"), "pageId": .string(built.text("pageId"))]),
-            maxBytes: DesignLimits.pageSentMaxBytes, restarts: 0)
-        // Decoded as the page built here is, so a byte that is no UTF-8 shows the same on both paths.
-        return Data(String(decoding: page.data, as: UTF8.self).utf8)
     }
 
     private final class Inlining {

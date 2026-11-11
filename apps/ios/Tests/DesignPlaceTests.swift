@@ -147,6 +147,45 @@ final class DesignPlaceTests: XCTestCase {
         XCTAssertEqual(machine.reads.map(\.offset), [0, Int(WireConstants.bytesChunkMax)])
     }
 
+    @MainActor func testAHeldPageTheMachineLetGoOfIsBuiltOnceMoreAndShown() async throws {
+        let machine = DesignMachine(answersPage: true)
+        machine.numbersBuilds = true
+        machine.page = Data("<p>hi</p>".utf8)
+        machine.heldFailures["held-1"] = .server(code: "not-found", message: "Not a design page this machine holds")
+        let page = try await Self.page(machine)
+        XCTAssertEqual(page, machine.page)
+        XCTAssertEqual(machine.asked.count, 2)
+        XCTAssertEqual(machine.reads.map { $0.resource.text("pageId") }, ["held-1", "held-2"])
+    }
+
+    @MainActor func testAHeldPageGoneTwiceIsTheFailure() async {
+        let machine = DesignMachine(answersPage: true)
+        machine.numbersBuilds = true
+        let gone = MachineClientError.server(code: "not-found", message: "Not a design page this machine holds")
+        machine.heldFailures = ["held-1": gone, "held-2": gone]
+        do {
+            _ = try await Self.page(machine)
+            XCTFail("a page was shown")
+        } catch {
+            XCTAssertEqual(error as? MachineClientError, gone)
+        }
+        XCTAssertEqual(machine.asked.count, 2)
+    }
+
+    @MainActor func testAHeldPageThatFailsForAnotherReasonIsNotBuiltAgain() async {
+        let machine = DesignMachine(answersPage: true)
+        machine.numbersBuilds = true
+        let failure = MachineClientError.server(code: "bad-offset", message: "Offset 9 is past the end")
+        machine.heldFailures["held-1"] = failure
+        do {
+            _ = try await Self.page(machine)
+            XCTFail("a page was shown")
+        } catch {
+            XCTAssertEqual(error as? MachineClientError, failure)
+        }
+        XCTAssertEqual(machine.asked.count, 1)
+    }
+
     @MainActor func testAPageAtTheLimitIsReadWholeWithTheBootstrapTheMachineAdds() async throws {
         // The bootstrap of a visual weighs about 9 KiB.
         let html = String(repeating: "x", count: DesignFiles.pageMaxBytes) + String(repeating: "b", count: 9 * 1024)
@@ -216,6 +255,10 @@ final class DesignPlaceTests: XCTestCase {
     var built: JSONValue = .null
     var page = Data()
     var files: [String: Data] = [:]
+    /// What the read of a held page answers instead of its bytes, by its id.
+    var heldFailures: [String: MachineClientError] = [:]
+    /// Each `design.page` builds a page under a new id, `held-1` first, when set.
+    var numbersBuilds = false
     private(set) var asked: [JSONValue] = []
     private(set) var reads: [(resource: JSONValue, offset: Int)] = []
 
@@ -226,7 +269,10 @@ final class DesignPlaceTests: XCTestCase {
     func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         guard type == .designPage else { throw MachineClientError.invalid(type.rawValue) }
         asked.append(payload)
-        return built
+        guard numbersBuilds else { return built }
+        return .object([
+            "kind": .string("page"), "pageId": .string("held-\(asked.count)"), "size": .number(Double(page.count)),
+        ])
     }
 
     func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
@@ -238,6 +284,7 @@ final class DesignPlaceTests: XCTestCase {
         let offset = Int(payload["offset"]?.numberValue ?? 0)
         let length = Int(payload["length"]?.numberValue ?? 0)
         reads.append((resource, offset))
+        if let failure = heldFailures[resource.text("pageId")] { throw failure }
         let held = resource.text("kind") == "designPage" ? page : files[resource.text("path")]
         guard let held else { throw MachineClientError.server(code: "not-found", message: "That file is not there") }
         return BytesPiece(

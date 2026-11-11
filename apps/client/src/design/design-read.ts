@@ -16,6 +16,7 @@ import { designReadFailed, type DesignRead } from '@/design/design-page';
 import { withDesignRuntime } from '@/design/design-runtime';
 import { machineTransport, pool } from '@/transport';
 import { readPiece } from '@/transport-api/piece';
+import { TransportError } from '@/transport-api/transport';
 import { readResource } from '@/transport/byte-transfer';
 import { machineAnswers } from '@/transport/features';
 import { readLargeText } from '@/transport/large-text';
@@ -166,15 +167,29 @@ export async function standaloneDesignPage(endpointId: string, design: DesignFol
     }
 }
 
+/*
+ * A machine holds only a client's newest few built pages, so with many asked at once the oldest can be
+ * let go before its first piece went out. That `not-found` is the held page gone, not the design: it is
+ * built once more, and a second miss is the failure.
+ */
 async function builtOnMachine(endpointId: string, page: { projectId: string; designId: string; file: string }): Promise<string> {
     const transport = machineTransport(endpointId);
-    const built = await transport.request('design.page', page);
 
-    if (built.kind !== 'page') {
-        throw new Error(failureText(built));
+    for (let builds = 1; ; builds += 1) {
+        const built = await transport.request('design.page', page);
+
+        if (built.kind !== 'page') {
+            throw new Error(failureText(built));
+        }
+
+        try {
+            const blob = await readResource((piece) => readPiece(transport, piece), { kind: 'designPage', pageId: built.pageId });
+
+            return await blob.text();
+        } catch (error) {
+            if (builds >= 2 || !(error instanceof TransportError) || error.code !== 'not-found') {
+                throw error;
+            }
+        }
     }
-
-    const blob = await readResource((piece) => readPiece(transport, piece), { kind: 'designPage', pageId: built.pageId });
-
-    return blob.text();
 }
