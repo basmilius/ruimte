@@ -30,8 +30,18 @@ export interface ContractScreen {
  * One with a `view` sits on that canvas of the project instead, which is not in front.
  */
 export type SeedNode =
-    | { id: string; kind: 'terminal' | 'chat'; title: string; text: string; view?: string }
+    | { id: string; kind: 'terminal' | 'chat'; title: string; text: string; view?: string; agent?: SeedAgent }
     | { id: string; kind: 'extension'; type: string; data: Client.Json; dataVersion?: number };
+
+/*
+ * What the agent in a seeded chat or terminal is doing: in a turn, or waiting on a person who may have put it off, and the
+ * sub-agents a chat runs, with the node of a task's child. A terminal without one runs no agent.
+ */
+export interface SeedAgent {
+    provider: string;
+    doing: 'turn' | 'waits' | 'snoozed';
+    subagents?: { node?: string }[];
+}
 
 /* What a scenario needs beside `SEED`: what the machine answers is the machine's own rule over it. */
 export interface WorldSeed {
@@ -46,6 +56,8 @@ export interface WorldSeed {
     streamEnd?: { fails: string } | 'waits';
     /* The run starts only once `letStreamStart` lets it, and gives its pieces even when it was stopped meanwhile. */
     streamStart?: 'held';
+    /* The agents the machine can start. */
+    providers?: { id: string; name: string }[];
 }
 
 export interface ClientWorld {
@@ -150,7 +162,7 @@ const CALLS: Readonly<Record<string, (api: typeof Client) => unknown>> = {
     'devices.tap': (api) => api.devices.tap({ node: REF, x: 1, y: 1 }),
     'devices.launch': (api) => api.devices.launch({ node: REF, app: 'app.ruimte' })
 };
-const HOOKS = new Set(['useAgents', 'useUsageLimits', 'Chat']);
+const HOOKS = new Set(['useAgents', 'useAgent', 'useSubagents', 'useUsageLimits', 'Chat']);
 
 export function clientContract(open: OpenClientWorld): void {
     describe('the client contract', () => {
@@ -648,6 +660,83 @@ export function clientContract(open: OpenClientWorld): void {
             const screen = await world.render(Far);
 
             expect(screen.text()).toBe('unknown');
+        });
+
+        test('reads the agent of a chat and of a terminal its CLI runs in, and none of a plain terminal', async () => {
+            const world = await open(
+                { 'agents.status': 'Shows' },
+                {
+                    nodes: [
+                        { id: 'chat-1', kind: 'chat', title: 'Chat', text: '', agent: { provider: 'codex', doing: 'turn' } },
+                        { id: 'shell-1', kind: 'terminal', title: 'Agent', text: '', agent: { provider: 'claude', doing: 'snoozed' } },
+                        { id: 'shell-2', kind: 'terminal', title: 'Shell', text: '' }
+                    ]
+                }
+            );
+            const { api, createElement: h } = world;
+            const line = (id: string): string => {
+                const agent = api.useAgent({ id });
+
+                return agent === null ? `${id} none` : `${id} ${agent.provider} ${agent.status} ${agent.activity} ${agent.snoozed}`;
+            };
+            const Agents = () => h('p', null, ['chat-1', 'shell-1', 'shell-2'].map(line).join(', '));
+            const screen = await world.render(Agents);
+
+            await screen.until(() => screen.text().includes('chat-1 codex'));
+
+            expect(screen.text()).toBe('chat-1 codex running turn false, shell-1 claude needsYou null true, shell-2 none');
+        });
+
+        test('reads the sub-agents a chat has at work, with the node of a task it gave', async () => {
+            const world = await open(
+                { 'agents.status': 'Shows' },
+                {
+                    nodes: [
+                        {
+                            id: 'chat-1',
+                            kind: 'chat',
+                            title: 'Chat',
+                            text: '',
+                            agent: { provider: 'claude', doing: 'turn', subagents: [{ node: 'chat-2' }, {}] }
+                        },
+                        { id: 'chat-2', kind: 'chat', title: 'Child', text: '', agent: { provider: 'claude', doing: 'turn' } }
+                    ]
+                }
+            );
+            const { api, createElement: h } = world;
+            const Kids = () =>
+                h(
+                    'p',
+                    null,
+                    api
+                        .useSubagents({ id: 'chat-1' })
+                        .map((kid) => `${kid.status} ${kid.node?.id ?? 'none'}`)
+                        .join(', ')
+                );
+            const screen = await world.render(Kids);
+
+            await screen.until(() => screen.text() !== '');
+
+            expect(screen.text()).toBe('running chat-2, running none');
+        });
+
+        test('lists the agents the machine can start', async () => {
+            const world = await open({}, { providers: [{ id: 'codex', name: 'Codex' }] });
+            const { api, createElement: h } = world;
+            const Providers = () =>
+                h(
+                    'p',
+                    null,
+                    api
+                        .useProviders()
+                        .map((provider) => `${provider.id} ${provider.name}`)
+                        .join(', ')
+                );
+            const screen = await world.render(Providers);
+
+            await screen.until(() => screen.text() !== '');
+
+            expect(screen.text()).toBe('codex Codex');
         });
 
         test('reads a chat it started in a view of its own', async () => {

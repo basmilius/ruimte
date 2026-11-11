@@ -77,6 +77,8 @@ var EXTENSION_CLIENT_PERMISSIONS = {
   "canvas.link": "canvas.write",
   "canvas.unlink": "canvas.write",
   useAgents: "agents.status",
+  useAgent: "agents.status",
+  useSubagents: "agents.status",
   useUsageLimits: "usage.read",
   Chat: "agents.start",
   ...Object.fromEntries(Object.entries(EXTENSION_ACTIONS).map(([action, permission]) => [extensionActionCall(action), permission]))

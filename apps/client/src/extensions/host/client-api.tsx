@@ -1,4 +1,4 @@
-import { useChats } from '@adecore/agents-react/state';
+import { useChats, useProvidersStore } from '@adecore/agents-react/state';
 import { ErrorBoundary } from '@adecore/ui';
 import * as format from '@adecore/ui/format';
 import {
@@ -31,6 +31,7 @@ import { databaseConnections } from '@/database/connections';
 import { desktop } from '@/desktop/bridge';
 import { runAction, trackRun, useActionRuns } from '@/extensions/action-runs';
 import { assertShortcut } from '@/extensions/action-shortcuts';
+import { useAgentOf, useSubagentsOf } from '@/extensions/agent-hooks';
 import { onClientEvent, type ClientEvents } from '@/extensions/client-events';
 import { sendDevLog } from '@/extensions/dev-log';
 import { DevReport } from '@/extensions/DevReport';
@@ -417,7 +418,7 @@ function hasPermission(extension: LoadedExtension, permission: string): boolean 
 }
 
 /* A hook has no Result to answer, so a missing permission fails the surface that draws it. */
-function hookPermission(extension: LoadedExtension, hook: 'useAgents' | 'useUsageLimits' | 'Chat'): void {
+function hookPermission(extension: LoadedExtension, hook: 'useAgents' | 'useAgent' | 'useSubagents' | 'useUsageLimits' | 'Chat'): void {
     const permission = extensionCallPermission(hook);
 
     if (permission !== null && !hasPermission(extension, permission)) {
@@ -1192,6 +1193,23 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                     title: node.title,
                     status: extensionAgentStatus(nodeStatus(node, sessions, chats, endpointId), nodeWaitAsk(node, sessions, chats, endpointId) !== null)
                 }));
+        },
+        useAgent(target: { id: string }) {
+            hookPermission(useExtension(), 'useAgent');
+
+            return useAgentOf(target.id);
+        },
+        useSubagents(chat: { id: string }) {
+            hookPermission(useExtension(), 'useSubagents');
+
+            return useSubagentsOf(chat.id);
+        },
+        // A chat scope is named after its machine, so this reads the machine in front from anywhere, inside a chat or not.
+        useProviders() {
+            const endpointId = useEndpointId();
+            const providers = useProvidersStore((state) => state.byScope[endpointId]?.providers);
+
+            return (providers ?? []).map((provider) => ({ id: provider.kind, name: provider.name }));
         },
         host: {
             busy<Value>(work: { title: string; nodes?: { id: string }[] }, run: (signal: AbortSignal) => Value | Promise<Value>) {

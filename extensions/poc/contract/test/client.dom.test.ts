@@ -3,7 +3,7 @@ import * as client from '@ruimte/extension/client';
 import { createTestHost, createTestServer, type TestNode } from '@ruimte/extension/testing';
 import * as ui from '@ruimte/extension/ui';
 import { createElement, useState } from 'react';
-import { clientContract, NAME, SEED, type WorldSeed } from '../contract/client';
+import { clientContract, NAME, SEED, type SeedAgent, type WorldSeed } from '../contract/client';
 import type { ContractServer } from '../server';
 
 async function* streamOf(pieces: string[], end: WorldSeed['streamEnd'], signal: AbortSignal): AsyncGenerator<string> {
@@ -16,11 +16,28 @@ async function* streamOf(pieces: string[], end: WorldSeed['streamEnd'], signal: 
     }
 }
 
+/* What the machine reports of a seeded agent, as the test host takes it. */
+function agentOf(agent: SeedAgent): Pick<TestNode, 'agent' | 'subagents'> {
+    const waits = agent.doing !== 'turn';
+
+    return {
+        agent: { provider: agent.provider, status: waits ? 'needsYou' : 'running', activity: waits ? null : 'turn', snoozed: agent.doing === 'snoozed' },
+        ...(agent.subagents === undefined ? {} : { subagents: agent.subagents.map((kid) => (kid.node === undefined ? {} : { node: kid.node })) })
+    };
+}
+
 clientContract(async (permissions, seed = {}) => {
     const nodes: TestNode[] = (seed.nodes ?? []).map((node) =>
         node.kind === 'extension'
             ? { id: node.id, extension: { type: node.type, data: node.data, ...(node.dataVersion === undefined ? {} : { dataVersion: node.dataVersion }) } }
-            : { id: node.id, kind: node.kind, title: node.title, text: node.text, ...(node.view === undefined ? {} : { view: node.view }) }
+            : {
+                  id: node.id,
+                  kind: node.kind,
+                  title: node.title,
+                  text: node.text,
+                  ...(node.view === undefined ? {} : { view: node.view }),
+                  ...(node.agent === undefined ? {} : agentOf(node.agent))
+              }
     );
     const views = [
         SEED.view,
@@ -34,6 +51,7 @@ clientContract(async (permissions, seed = {}) => {
         manifest: { name: NAME, permissions },
         project: { ...SEED.project, views, nodes: [SEED.node, ...nodes] },
         machine: SEED.machine,
+        ...(seed.providers === undefined ? {} : { providers: seed.providers }),
         answers: {
             ...(seed.server === undefined ? {} : { server: seed.server }),
             ...(seed.stream === undefined

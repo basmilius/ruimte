@@ -1,6 +1,7 @@
 import { afterEach } from 'bun:test';
+import { useChats, useProvidersStore } from '@adecore/agents-react/state';
 import * as ui from '@adecore/ui';
-import { REQUEST_SCHEMAS, type ExtensionManifest, type ProjectView, type RequestMap, type RequestType } from '@ruimte/contracts';
+import { REQUEST_SCHEMAS, type ChatSubagentItem, type ExtensionManifest, type ProjectView, type RequestMap, type RequestType } from '@ruimte/contracts';
 import { contextSelection } from '@ruimte/contracts/extension-context';
 import { act, createElement, type ComponentType, type ReactElement } from 'react';
 import { runAction } from '@/extensions/action-runs';
@@ -10,14 +11,20 @@ import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
 import { baseContext, nodeInfoOf, resolveSlot } from '@/extensions/slots';
 import { defaultCanvases, focusedCanvas } from '@/state/canvas';
 import type { CanvasNode } from '@/state/canvas-model';
+import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { useContributions } from '@/state/extension-registry';
+import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
+import { useSessions } from '@/state/sessions';
+import { useSnoozes } from '@/state/snooze';
 import { useToasts } from '@/state/toasts';
 import { TransportError } from '@/transport';
 import { clientContract, NAME, SEED, type ContractScreen, type SeedNode } from '../../../../../extensions/poc/contract/contract/client';
+import { chatInfoOf } from '../../../testing/chat-info';
 import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
+import { fakeProvider } from '../../../testing/fake-provider';
 import { emptyCanvas } from '../../../testing/project-fixtures';
 
 const ID = 'poc.contract';
@@ -36,6 +43,10 @@ afterEach(async () => {
     stopAnswering = null;
     forgetExtension(ID);
     delete document.documentElement.dataset.theme;
+    useChats.setState({ byKey: {}, statusByKey: {} });
+    useSessions.setState({ byKey: {} });
+    useSnoozes.setState({ byKey: {} });
+    useProvidersStore.setState({ byScope: {} });
 
     for (const key of Object.keys(localStorage).filter((each) => each.startsWith(`ruimte.extension.${ID}.`))) {
         localStorage.removeItem(key);
@@ -103,6 +114,63 @@ function canvasNodeOf(node: SeedNode): CanvasNode {
     }
 
     return { ...frame, kind: node.kind, title: node.title } as CanvasNode;
+}
+
+// Far beyond any test: a snooze only counts while it stands, and no clock runs here to end it.
+const SNOOZED_UNTIL = 4_102_444_800_000;
+
+function subagentOf(id: string, child: string | undefined): ChatSubagentItem {
+    return {
+        id,
+        kind: 'subagent',
+        turnId: null,
+        createdAt: 1,
+        toolUseId: `spawn-${id}`,
+        description: id,
+        subagentType: null,
+        prompt: null,
+        background: false,
+        status: 'running',
+        startedAt: 1,
+        finishedAt: null,
+        summary: null,
+        result: null,
+        usage: null,
+        lastTool: null,
+        itemsTruncated: false,
+        ...(child === undefined ? {} : { childId: child })
+    };
+}
+
+/* What the machine reports of each seeded agent, in the stores the client keeps it in: a chat's thread, a terminal's session and a snooze. */
+function seedAgents(nodes: readonly SeedNode[]): void {
+    const endpointId = currentEndpointId();
+
+    for (const node of nodes) {
+        if (node.kind === 'extension' || node.agent === undefined) {
+            continue;
+        }
+
+        const { agent } = node;
+        const key = endpointKey(endpointId, node.id);
+        const status = agent.doing === 'turn' ? 'running' : 'needs-you';
+
+        if (node.kind === 'chat') {
+            const items = (agent.subagents ?? []).map((kid, index) => subagentOf(`${node.id}-kid-${index}`, kid.node));
+            const structure = Object.fromEntries(items.map((item) => [item.id, item]));
+            const row = { info: chatInfoOf(node.id, { provider: agent.provider, status }), items: structure, structure, order: items.map((item) => item.id) };
+
+            useChats.setState((state) => ({ byKey: { ...state.byKey, [key]: row }, statusByKey: { ...state.statusByKey, [key]: row } }));
+        } else {
+            const cli = { kind: agent.provider, agentSessionId: 'a1', transcriptPath: null, status, live: true, updatedAt: 0 } as const;
+
+            useSessions.setState((state) => ({ byKey: { ...state.byKey, [key]: { attached: true, agent: cli } } }));
+        }
+
+        if (agent.doing === 'snoozed') {
+            useSnoozes.setState((state) => ({ byKey: { ...state.byKey, [key]: SNOOZED_UNTIL } }));
+        }
+    }
 }
 
 /* The real client host of `poc.contract`, on a fake machine that keeps what it is told to store and answers by its own rules. */
@@ -240,6 +308,15 @@ clientContract(async (permissions, seed = {}) => {
         edges: [],
         selection: []
     });
+
+    seedAgents(seed.nodes ?? []);
+
+    if (seed.providers !== undefined) {
+        useProvidersStore.getState().setProviders(
+            currentEndpointId(),
+            seed.providers.map((provider) => fakeProvider(provider.id, provider.name))
+        );
+    }
 
     const api = clientApiFor(extension);
     const draw = async (element: ReactElement): Promise<ContractScreen> => {

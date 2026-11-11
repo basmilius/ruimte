@@ -177,13 +177,30 @@ export function Chat(props: { id: string }): ReactElement;
 /** Where an agent is, the same word everywhere it shows. */
 export type AgentStatus = 'idle' | 'running' | 'needsYou' | 'stopped';
 
+/**
+ * What an agent works on, as its node shows it: a turn of its own, agents it handed work to, or only commands it left running.
+ * Null while it works on nothing, and while it waits on a person.
+ */
+export type AgentActivity = 'turn' | 'delegating' | 'background' | null;
+
 export interface AgentInfo {
     provider: string;
     account: string | null;
     status: AgentStatus;
+    activity: AgentActivity;
+
+    /** It waits on a person, who put that off for a while: `status` stays `needsYou`. */
+    snoozed: boolean;
+
     cwd: string | null;
     branch: string | null;
     worktree: string | null;
+}
+
+/** A sub-agent at work for a chat. `node` is the node of a task the chat gave, `paused` while that task waits for a limit to lift. */
+export interface SubagentInfo {
+    status: 'running' | 'paused';
+    node: NodeRef | null;
 }
 
 /** A chat on the machine, as `chats.list` answers it. Its id is the id of its node. */
@@ -374,6 +391,15 @@ export function useEvent<Name extends keyof ClientEvents>(name: Name, listener: 
 export function onEvent<Name extends keyof ClientEvents>(name: Name, listener: (event: ClientEvents[Name]) => void): () => void;
 /** Needs the permission `agents.status`. */
 export function useAgents(): { id: string; title: string; status: AgentStatus }[];
+/**
+ * Needs the permission `agents.status`. The agent of a node, or of a chat or terminal open as a view of its own, by its id: null
+ * where none runs, such as in a terminal whose command is no agent.
+ */
+export function useAgent(target: NodeRef | ViewRef): AgentInfo | null;
+/** Needs the permission `agents.status`. The sub-agents a chat has at work now, oldest first; none for any other node. */
+export function useSubagents(chat: NodeRef | ViewRef): SubagentInfo[];
+/** The agents a person can start on the machine in front, by the `provider` that names each, with the name a person reads. */
+export function useProviders(): { id: string; name: string }[];
 
 /** Needs the permission `usage.read`. `used` runs from 0 to 1. */
 export function useUsageLimits(): { provider: string; plan: string | null; windows: { label: string; used: number; resetsAt: number | null }[] }[];

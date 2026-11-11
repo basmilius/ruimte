@@ -1,24 +1,19 @@
-import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
-import { extensionAgentStatus, type ExtensionAgentStatus, type ProjectNode, type ProjectSummary, type ProjectView } from '@ruimte/contracts';
+import { useChats } from '@adecore/agents-react/state';
+import type { ProjectSummary, ProjectView } from '@ruimte/contracts';
 import type { LucideIcon } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { canvasOfNode, focusedCanvas, useCanvas, type CanvasState } from '@/state/canvas';
+import { agentInfoOf, type AgentInfo, type AgentSources } from '@/extensions/agent-info';
+import { canvasOfNode, focusedCanvas, useCanvas, type CanvasNode, type CanvasState } from '@/state/canvas';
 import { membersOf } from '@/state/canvas-model';
 import { currentEndpointId, useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { useContributions, type SlotEntry, type SlotName } from '@/state/extension-registry';
 import { useProject } from '@/state/project';
-import { nodeProvider, nodeStatus, nodeWaitAsk, useSessions, type SessionsByKey } from '@/state/sessions';
+import { useSessions } from '@/state/sessions';
+import { useSnoozes } from '@/state/snooze';
 
-export interface AgentInfo {
-    provider: string;
-    account: string | null;
-    status: ExtensionAgentStatus;
-    cwd: string | null;
-    branch: string | null;
-    worktree: string | null;
-}
+export type { AgentInfo } from '@/extensions/agent-info';
 
 export interface NodeInfo {
     id: string;
@@ -44,35 +39,12 @@ export interface BaseContext {
 }
 
 /* What a node's info is read from. In a render each comes from a hook, so a compiled component never keeps an old one. */
-interface NodeSources {
+interface NodeSources extends AgentSources {
     canvas: Pick<CanvasState, 'nodes' | 'edges' | 'viewId'>;
-    sessions: SessionsByKey;
-    chats: ChatStatuses;
-    endpointId: string;
 }
 
 // Every info handed out, so a slot can tell one in its context and read it again.
 const issued = new WeakSet<object>();
-
-function agentOf(node: ProjectNode, group: ProjectNode | undefined, sources: NodeSources): AgentInfo | undefined {
-    if (node.kind !== 'terminal' && node.kind !== 'chat' && node.kind !== 'design') {
-        return undefined;
-    }
-
-    const { sessions, chats, endpointId } = sources;
-    const status = nodeStatus(node, sessions, chats, endpointId);
-    const needsYou = nodeWaitAsk(node, sessions, chats, endpointId) !== null;
-
-    return {
-        // A chat opened on the default stores no CLI; its thread says which one it runs on.
-        provider: nodeProvider(node, chats, endpointId) ?? 'claude',
-        account: node.account ?? null,
-        status: extensionAgentStatus(status, needsYou),
-        cwd: node.cwd ?? group?.worktree?.path ?? null,
-        branch: group?.worktree?.branch ?? null,
-        worktree: group?.worktree?.path ?? null
-    };
-}
 
 /* A readable copy, so an extension never holds the store and the store stays ours to change. */
 export function nodeInfoIn(sources: NodeSources, id: string): NodeInfo {
@@ -87,7 +59,23 @@ export function nodeInfoIn(sources: NodeSources, id: string): NodeInfo {
 export function nodeInfoOf(id: string): NodeInfo {
     const canvas = (canvasOfNode(id) ?? focusedCanvas()).getState();
 
-    return nodeInfoIn({ canvas, sessions: useSessions.getState().byKey, chats: useChats.getState().statusByKey, endpointId: currentEndpointId() }, id);
+    return nodeInfoIn(
+        {
+            canvas,
+            sessions: useSessions.getState().byKey,
+            chats: useChats.getState().statusByKey,
+            snoozes: useSnoozes.getState().byKey,
+            endpointId: currentEndpointId()
+        },
+        id
+    );
+}
+
+/* Of nested groups that each hold the node, the innermost. */
+export function groupOf(nodes: Readonly<Record<string, CanvasNode>>, id: string): CanvasNode | undefined {
+    return Object.values(nodes)
+        .filter((each) => each.kind === 'group' && each.id !== id && membersOf(each, nodes, {}).includes(id))
+        .sort((one, other) => one.w * one.h - other.w * other.h)[0];
 }
 
 /* `null` while `active` is false, so a host with nothing to show subscribes to nothing that moves. */
@@ -99,13 +87,14 @@ export function useNodeSources(active = true): NodeSources | null {
     const viewId = useCanvas((state) => state.viewId);
     const sessions = useSessions(useShallow((state) => (active ? state.byKey : null)));
     const chats = useChats(useShallow((state) => (active ? state.statusByKey : null)));
+    const snoozes = useSnoozes((state) => (active ? state.byKey : null));
     const endpointId = useEndpointId();
 
-    if (nodes === null || edges === null || sessions === null || chats === null) {
+    if (nodes === null || edges === null || sessions === null || chats === null || snoozes === null) {
         return null;
     }
 
-    return { canvas: { nodes, edges, viewId }, sessions, chats, endpointId };
+    return { canvas: { nodes, edges, viewId }, sessions, chats, snoozes, endpointId };
 }
 
 function readNodeInfo(sources: NodeSources, id: string): NodeInfo {
@@ -126,12 +115,9 @@ function readNodeInfo(sources: NodeSources, id: string): NodeInfo {
         };
     }
 
-    // Of nested groups that each hold it, the innermost.
-    const group = Object.values(canvas.nodes)
-        .filter((each) => each.kind === 'group' && each.id !== id && membersOf(each, canvas.nodes, {}).includes(id))
-        .sort((one, other) => one.w * one.h - other.w * other.h)[0];
+    const group = groupOf(canvas.nodes, id);
     const raw = node.raw as { kind?: unknown; extension?: unknown; type?: unknown } | undefined;
-    const agent = agentOf(node, group, sources);
+    const agent = agentInfoOf(node, group, sources);
 
     return {
         id,

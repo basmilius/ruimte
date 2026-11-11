@@ -78,6 +78,7 @@ function publicHost(host: TestHost, api: ClientApi): PublicTesting.TestHost {
             host.settings[key] = value;
             host.changed();
         },
+        setAgent: (id, agent) => host.setAgent(id, agent),
         setStorage(scope, key, value) {
             if (value === undefined) {
                 delete host.storage[scope][key];
@@ -148,6 +149,7 @@ const OPTIONS = Object.keys({
     language: true,
     settings: true,
     storage: true,
+    providers: true,
     answers: true
 } satisfies Record<keyof PublicTesting.TestHostOptions, true>);
 

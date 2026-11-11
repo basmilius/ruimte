@@ -54,7 +54,7 @@ export function extensionErrorCodeOf(code: string): ExtensionErrorCode {
 
 export type ExtensionAgentStatus = 'idle' | 'running' | 'needsYou' | 'stopped';
 
-/* An agent's status in the one word an extension reads everywhere; nothing to report reads as stopped. */
+/* An agent's status in the one word an extension reads everywhere; nothing to report, an exit and an error read as stopped. */
 export function extensionAgentStatus(status: AgentStatus | null | undefined, needsYou = false): ExtensionAgentStatus {
     if (needsYou || status === 'needs-you') {
         return 'needsYou';
@@ -64,7 +64,7 @@ export function extensionAgentStatus(status: AgentStatus | null | undefined, nee
         return 'running';
     }
 
-    return status === undefined || status === null || status === 'exited' ? 'stopped' : 'idle';
+    return status === 'idle' ? 'idle' : 'stopped';
 }
 
 export interface ExtensionChatSummary {

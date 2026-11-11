@@ -6136,6 +6136,8 @@ var EXTENSION_CLIENT_PERMISSIONS = {
   "canvas.link": "canvas.write",
   "canvas.unlink": "canvas.write",
   useAgents: "agents.status",
+  useAgent: "agents.status",
+  useSubagents: "agents.status",
   useUsageLimits: "usage.read",
   Chat: "agents.start",
   ...Object.fromEntries(Object.entries(EXTENSION_ACTIONS).map(([action, permission]) => [extensionActionCall(action), permission]))
@@ -6199,7 +6201,7 @@ function extensionAgentStatus(status, needsYou = false) {
   if (status === "running") {
     return "running";
   }
-  return status === undefined || status === null || status === "exited" ? "stopped" : "idle";
+  return status === "idle" ? "idle" : "stopped";
 }
 function extensionChatOf(info) {
   return {
@@ -6848,6 +6850,12 @@ function sizeOfKind(kind) {
   const size = NODE_SIZE[kind];
   return size === undefined ? NEW_NODE : { width: size.w, height: size.h };
 }
+function agentIn(kind, agent) {
+  if (kind !== "chat" && kind !== "design" && (kind !== "terminal" || agent === undefined)) {
+    return;
+  }
+  return { provider: "claude", account: null, status: "idle", activity: null, snoozed: false, cwd: null, branch: null, worktree: null, ...agent };
+}
 function wire2(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 }
@@ -6885,6 +6893,8 @@ class TestHost {
   views;
   nodes = new Map;
   chats = new Map;
+  viewAgents = new Map;
+  providers;
   watches = new Set;
   edges = [];
   createdIds = [];
@@ -6933,6 +6943,7 @@ class TestHost {
       name: view.name ?? ""
     }));
     this.activeViewId = this.views[0]?.id ?? null;
+    this.providers = (options.providers ?? [{ id: "claude", name: "Claude" }]).map((provider) => ({ ...provider }));
     const server = this.answers.server === undefined ? undefined : machineStorageOf.get(this.answers.server);
     this.storage = {
       computer: wire2(options.storage?.computer ?? {}),
@@ -6953,6 +6964,7 @@ class TestHost {
         viewId: node.view ?? this.activeViewId ?? "",
         groupId: null,
         ...node.agent === undefined ? {} : { agent: node.agent },
+        ...node.subagents === undefined ? {} : { subagents: node.subagents },
         ...node.path === undefined ? {} : { path: node.path },
         ...node.url === undefined ? {} : { url: node.url },
         ...node.extension === undefined ? {} : { extension: { id: this.id, type: node.extension.type }, data: wire2(node.extension.data ?? {}) },
@@ -7252,15 +7264,7 @@ class TestHost {
     if (node === undefined) {
       return this.unknownNode(id, this.activeViewId ?? "");
     }
-    const agent = node.kind === "chat" || node.kind === "terminal" || node.kind === "design" ? {
-      provider: "claude",
-      account: null,
-      status: "idle",
-      cwd: null,
-      branch: null,
-      worktree: null,
-      ...node.agent
-    } : undefined;
+    const agent = agentIn(node.kind, node.agent);
     return {
       id,
       kind: node.kind,
@@ -7276,6 +7280,37 @@ class TestHost {
       ...node.url === undefined ? {} : { url: node.url },
       ...node.extension === undefined ? {} : { extension: { ...node.extension } }
     };
+  }
+  agentOf(id, canvas) {
+    const node = this.nodes.get(id);
+    if (node !== undefined) {
+      return node.viewId === canvas ? this.info(id).agent ?? null : null;
+    }
+    const view = this.views.find((each) => each.id === id);
+    return view === undefined ? null : agentIn(view.kind, this.viewAgents.get(id)?.agent) ?? null;
+  }
+  subagentsOf(id, canvas) {
+    const node = this.nodes.get(id);
+    const kind = node?.kind ?? this.views.find((each) => each.id === id)?.kind;
+    const subagents = node === undefined ? this.viewAgents.get(id)?.subagents : node.viewId === canvas ? node.subagents : undefined;
+    if (kind !== "chat" && kind !== "design") {
+      return [];
+    }
+    return (subagents ?? []).map((each) => ({ status: each.status ?? "running", node: each.node === undefined ? null : { id: each.node } }));
+  }
+  setAgent(id, agent) {
+    const { subagents, ...info } = agent ?? {};
+    const next = agent === null ? {} : { agent: info, ...subagents === undefined ? {} : { subagents } };
+    const node = this.nodes.get(id);
+    if (node !== undefined) {
+      const { agent: _agent, subagents: _subagents, ...rest } = node;
+      this.nodes.set(id, { ...rest, ...next });
+    } else if (this.views.some((each) => each.id === id)) {
+      this.viewAgents.set(id, next);
+    } else {
+      throw new Error(`No node or view ${id}`);
+    }
+    this.changed();
   }
   nodesInFront() {
     return [...this.nodes.values()].filter((node) => node.viewId === this.activeViewId).map((node) => this.info(node.id));
@@ -7455,6 +7490,11 @@ function assertLazy(surface, what) {
 }
 function useHost(host) {
   react().useSyncExternalStore((listener) => host.subscribe(listener), () => host.snapshot());
+}
+function useSurfaceCanvas(host) {
+  const module = react();
+  const nodeId = module.useContext(nodeContextOf(module));
+  return (nodeId === null ? undefined : host.nodes.get(nodeId)?.viewId) ?? host.activeViewId ?? "";
 }
 function removeTitle(count) {
   return count === 1 ? "Remove 1 node?" : `Remove ${count} nodes?`;
@@ -7812,10 +7852,8 @@ function clientApi(host) {
       return react().createElement("section", { "aria-label": chat?.title ?? id }, chat === undefined ? `No chat ${id}` : chat.text);
     },
     useNode: (id) => {
-      const module = react();
-      const nodeId = module.useContext(nodeContextOf(module));
       useHost(host);
-      const canvas = (nodeId === null ? undefined : host.nodes.get(nodeId)?.viewId) ?? host.activeViewId ?? "";
+      const canvas = useSurfaceCanvas(host);
       return host.nodes.get(id)?.viewId === canvas ? host.info(id) : host.unknownNode(id, canvas);
     },
     useNodes: (filter) => {
@@ -7845,6 +7883,20 @@ function clientApi(host) {
       host.hookPermission("useAgents");
       useHost(host);
       return host.nodesInFront().filter((node) => node.kind === "chat" || node.kind === "terminal").map((node) => ({ id: node.id, title: node.title, status: node.agent?.status ?? "idle" }));
+    },
+    useAgent(target) {
+      host.hookPermission("useAgent");
+      useHost(host);
+      return host.agentOf(target.id, useSurfaceCanvas(host));
+    },
+    useSubagents(chat) {
+      host.hookPermission("useSubagents");
+      useHost(host);
+      return host.subagentsOf(chat.id, useSurfaceCanvas(host));
+    },
+    useProviders() {
+      useHost(host);
+      return host.providers.map((provider) => ({ ...provider }));
     },
     host: {
       async busy(work, run) {
@@ -8227,6 +8279,7 @@ function publicHost(host, api) {
       host.settings[key] = value;
       host.changed();
     },
+    setAgent: (id, agent) => host.setAgent(id, agent),
     setStorage(scope, key, value) {
       if (value === undefined) {
         delete host.storage[scope][key];
@@ -8290,6 +8343,7 @@ var OPTIONS = Object.keys({
   language: true,
   settings: true,
   storage: true,
+  providers: true,
   answers: true
 });
 var ANSWERS = Object.keys({

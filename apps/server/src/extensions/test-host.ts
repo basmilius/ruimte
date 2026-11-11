@@ -47,6 +47,7 @@ interface HostNode {
     viewId: string;
     groupId: string | null;
     agent?: Partial<PublicClient.AgentInfo>;
+    subagents?: PublicTesting.TestSubagent[];
     path?: string;
     url?: string;
     extension?: { id: string; type: string };
@@ -94,6 +95,18 @@ interface HostChat {
     status: PublicServer.AgentStatus;
 }
 
+/*
+ * The agent in a node or view of this kind, as the client host reads it: a chat or a design always has one, a terminal only
+ * once a test says its CLI runs there, since a shell running anything else is no agent.
+ */
+function agentIn(kind: string, agent: Partial<PublicClient.AgentInfo> | undefined): PublicClient.AgentInfo | undefined {
+    if (kind !== 'chat' && kind !== 'design' && (kind !== 'terminal' || agent === undefined)) {
+        return undefined;
+    }
+
+    return { provider: 'claude', account: null, status: 'idle', activity: null, snoozed: false, cwd: null, branch: null, worktree: null, ...agent };
+}
+
 /* As it crosses to the machine and back. */
 export function wire<Value>(value: unknown): Value {
     return value === undefined ? (undefined as Value) : (JSON.parse(JSON.stringify(value)) as Value);
@@ -136,6 +149,9 @@ export class TestHost {
     readonly views: { id: string; kind: string; name: string }[];
     readonly nodes = new Map<string, HostNode>();
     readonly chats = new Map<string, HostChat>();
+    // The agent of a chat or terminal open as a view of its own, which has no node to carry it.
+    readonly viewAgents = new Map<string, { agent?: Partial<PublicClient.AgentInfo>; subagents?: PublicTesting.TestSubagent[] }>();
+    readonly providers: { id: string; name: string }[];
     readonly watches = new Set<{ path: string; listener: () => void }>();
     readonly edges: { from: string; to: string }[] = [];
     readonly createdIds: string[] = [];
@@ -194,6 +210,7 @@ export class TestHost {
                       name: view.name ?? ''
                   }));
         this.activeViewId = this.views[0]?.id ?? null;
+        this.providers = (options.providers ?? [{ id: 'claude', name: 'Claude' }]).map((provider) => ({ ...provider }));
 
         // A test server's `storage` is this host's `machine` storage, as on one machine: what either writes, the other reads.
         const server = this.answers.server === undefined ? undefined : machineStorageOf.get(this.answers.server);
@@ -218,6 +235,7 @@ export class TestHost {
                 viewId: node.view ?? this.activeViewId ?? '',
                 groupId: null,
                 ...(node.agent === undefined ? {} : { agent: node.agent }),
+                ...(node.subagents === undefined ? {} : { subagents: node.subagents }),
                 ...(node.path === undefined ? {} : { path: node.path }),
                 ...(node.url === undefined ? {} : { url: node.url }),
                 ...(node.extension === undefined ? {} : { extension: { id: this.id, type: node.extension.type }, data: wire(node.extension.data ?? {}) }),
@@ -325,7 +343,7 @@ export class TestHost {
         }
     }
 
-    hookPermission(hook: 'useAgents' | 'useUsageLimits' | 'Chat'): void {
+    hookPermission(hook: 'useAgents' | 'useAgent' | 'useSubagents' | 'useUsageLimits' | 'Chat'): void {
         const permission = extensionCallPermission(hook);
 
         if (permission !== null && !this.permissions.has(permission)) {
@@ -652,18 +670,7 @@ export class TestHost {
             return this.unknownNode(id, this.activeViewId ?? '');
         }
 
-        const agent =
-            node.kind === 'chat' || node.kind === 'terminal' || node.kind === 'design'
-                ? {
-                      provider: 'claude',
-                      account: null,
-                      status: 'idle' as const,
-                      cwd: null,
-                      branch: null,
-                      worktree: null,
-                      ...node.agent
-                  }
-                : undefined;
+        const agent = agentIn(node.kind, node.agent);
 
         return {
             id,
@@ -681,6 +688,49 @@ export class TestHost {
             ...(node.url === undefined ? {} : { url: node.url }),
             ...(node.extension === undefined ? {} : { extension: { ...node.extension } })
         };
+    }
+
+    /* The agent of a node on this canvas, or of a chat or terminal open as a view of its own. */
+    agentOf(id: string, canvas: string): PublicClient.AgentInfo | null {
+        const node = this.nodes.get(id);
+
+        if (node !== undefined) {
+            return node.viewId === canvas ? (this.info(id).agent ?? null) : null;
+        }
+
+        const view = this.views.find((each) => each.id === id);
+
+        return view === undefined ? null : (agentIn(view.kind, this.viewAgents.get(id)?.agent) ?? null);
+    }
+
+    subagentsOf(id: string, canvas: string): PublicClient.SubagentInfo[] {
+        const node = this.nodes.get(id);
+        const kind = node?.kind ?? this.views.find((each) => each.id === id)?.kind;
+        const subagents = node === undefined ? this.viewAgents.get(id)?.subagents : node.viewId === canvas ? node.subagents : undefined;
+
+        if (kind !== 'chat' && kind !== 'design') {
+            return [];
+        }
+
+        return (subagents ?? []).map((each) => ({ status: each.status ?? 'running', node: each.node === undefined ? null : { id: each.node } }));
+    }
+
+    setAgent(id: string, agent: (Partial<PublicClient.AgentInfo> & { subagents?: PublicTesting.TestSubagent[] }) | null): void {
+        const { subagents, ...info } = agent ?? {};
+        const next = agent === null ? {} : { agent: info, ...(subagents === undefined ? {} : { subagents }) };
+        const node = this.nodes.get(id);
+
+        if (node !== undefined) {
+            const { agent: _agent, subagents: _subagents, ...rest } = node;
+
+            this.nodes.set(id, { ...rest, ...next });
+        } else if (this.views.some((each) => each.id === id)) {
+            this.viewAgents.set(id, next);
+        } else {
+            throw new Error(`No node or view ${id}`);
+        }
+
+        this.changed();
     }
 
     nodesInFront(): NodeInfo[] {

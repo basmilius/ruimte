@@ -43,7 +43,10 @@ export interface TestNode {
     /** The id of the view it is on. */
     view?: string;
     linkedTo?: string[];
+    /** A chat or a design always has an agent, a terminal only with this: its CLI runs there. */
     agent?: Partial<AgentInfo>;
+    /** What `useSubagents` reads of a chat. */
+    subagents?: TestSubagent[];
     path?: string;
     url?: string;
     /**
@@ -51,6 +54,12 @@ export interface TestNode {
      * that stored `data`: below the definition's own, `render` moves it up through `migrate` first, as Ruimte does.
      */
     extension?: { type: string; data?: Json; dataVersion?: number };
+}
+
+/** A sub-agent at work for a chat: running unless it says otherwise, and `node` the id of the node of a task's child. */
+export interface TestSubagent {
+    status?: 'running' | 'paused';
+    node?: string;
 }
 
 /**
@@ -114,6 +123,8 @@ export interface TestHostOptions {
     /** What a person set, over the defaults of `defineExtensionSettings`. */
     settings?: Record<string, boolean | string>;
     storage?: { computer?: Record<string, Json>; project?: Record<string, Json>; machine?: Record<string, Json> };
+    /** What `useProviders` lists. Claude alone by default. */
+    providers?: { id: string; name: string }[];
     answers?: TestHostAnswers;
 }
 
@@ -197,6 +208,11 @@ export interface TestHost {
     select(ids: string[]): void;
     /** Changes a setting, as a person would. */
     setSetting(key: string, value: boolean | string): void;
+    /**
+     * The agent of a node, or of a chat or terminal open as a view of its own, changing what it does as the machine reports it,
+     * and draws again what reads it. Null takes a terminal's agent away, as its CLI ending does.
+     */
+    setAgent(id: string, agent: (Partial<AgentInfo> & { subagents?: TestSubagent[] }) | null): void;
     /** Writes a stored value as another window or `server/` would, and draws again what reads it. Undefined deletes the key. */
     setStorage(scope: 'computer' | 'project' | 'machine', key: string, value: Json | undefined): void;
     /** A file of the project changing on the machine, which calls back each `files.watch` of it or of a folder above it. */

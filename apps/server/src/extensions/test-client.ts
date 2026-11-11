@@ -13,6 +13,7 @@ import { formatModule, nodeContextOf, react } from './test-react.ts';
 
 type Result<Value> = PublicClient.Result<Value>;
 type NodeRef = PublicClient.NodeRef;
+type ViewRef = PublicClient.ViewRef;
 type Format = ReturnType<typeof PublicClient.useLocale>['format'];
 type Slots = Record<string, unknown>;
 type Lazy = { component?: unknown; frame?: unknown };
@@ -32,6 +33,14 @@ function useHost(host: TestHost): void {
         (listener) => host.subscribe(listener),
         () => host.snapshot()
     );
+}
+
+/* The canvas a surface draws on: the one of the node it draws, or the one in front. */
+function useSurfaceCanvas(host: TestHost): string {
+    const module = react();
+    const nodeId = module.useContext<string | null>(nodeContextOf(module));
+
+    return (nodeId === null ? undefined : host.nodes.get(nodeId)?.viewId) ?? host.activeViewId ?? '';
 }
 
 function removeTitle(count: number): string {
@@ -498,12 +507,9 @@ export function clientApi(host: TestHost) {
         },
         // Only a node of the canvas the surface is on, the one in front unless it draws a node: any other reads as unknown.
         useNode: (id: string) => {
-            const module = react();
-            const nodeId = module.useContext<string | null>(nodeContextOf(module));
-
             useHost(host);
 
-            const canvas = (nodeId === null ? undefined : host.nodes.get(nodeId)?.viewId) ?? host.activeViewId ?? '';
+            const canvas = useSurfaceCanvas(host);
 
             return host.nodes.get(id)?.viewId === canvas ? host.info(id) : host.unknownNode(id, canvas);
         },
@@ -544,6 +550,23 @@ export function clientApi(host: TestHost) {
                 .nodesInFront()
                 .filter((node) => node.kind === 'chat' || node.kind === 'terminal')
                 .map((node) => ({ id: node.id, title: node.title, status: node.agent?.status ?? 'idle' }));
+        },
+        useAgent(target: NodeRef | ViewRef) {
+            host.hookPermission('useAgent');
+            useHost(host);
+
+            return host.agentOf(target.id, useSurfaceCanvas(host));
+        },
+        useSubagents(chat: NodeRef | ViewRef) {
+            host.hookPermission('useSubagents');
+            useHost(host);
+
+            return host.subagentsOf(chat.id, useSurfaceCanvas(host));
+        },
+        useProviders() {
+            useHost(host);
+
+            return host.providers.map((provider) => ({ ...provider }));
         },
         host: {
             async busy<Value>(work: { title: string; nodes?: NodeRef[] }, run: (signal: AbortSignal) => Value | Promise<Value>): Promise<Value> {
