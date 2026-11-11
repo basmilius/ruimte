@@ -7,15 +7,17 @@ import { failure, json } from './http.ts';
 // https://artificialanalysis.ai/data-api/docs
 const MODELS_URL = 'https://artificialanalysis.ai/api/v2/language/models/free';
 export const MAX_PAGES = 10;
+const RESPONSE_ANSWER_TOKENS = 500;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const MeasuredModelSchema = z.object({
     id: z.string(),
     name: z.string().optional(),
+    release_date: z.string().nullish(),
     evaluations: z
         .object({
             artificial_analysis_intelligence_index: z.number().nullish(),
-            artificial_analysis_coding_index: z.number().nullish(),
-            artificial_analysis_agentic_index: z.number().nullish()
+            artificial_analysis_engineering_index: z.number().nullish()
         })
         .nullish(),
     artificial_analysis_intelligence_index_cost: z
@@ -24,11 +26,11 @@ const MeasuredModelSchema = z.object({
             cost_per_task: z.object({ total_cost: z.number().nullish() }).nullish()
         })
         .nullish(),
-    performance: z
+    performance_v3: z
         .object({
-            median_output_tokens_per_second: z.number().nullish(),
-            median_time_to_first_answer_token_seconds: z.number().nullish(),
-            median_end_to_end_response_time_seconds: z.number().nullish()
+            mean_output_tokens_per_second: z.number().nullish(),
+            mean_time_to_first_token_seconds: z.number().nullish(),
+            mean_time_to_first_answer_token_seconds: z.number().nullish()
         })
         .nullish(),
     pricing: z
@@ -69,18 +71,17 @@ export function measurementsOf(raw: unknown): (Measurements & { hasMore: boolean
         }
         const evaluations = model.data.evaluations;
         const costs = model.data.artificial_analysis_intelligence_index_cost;
-        const performance = model.data.performance;
+        const performance = model.data.performance_v3;
         const pricing = model.data.pricing;
         const values: Measurement = {};
         for (const [field, value] of [
             ['intelligence', evaluations?.artificial_analysis_intelligence_index],
-            ['coding', evaluations?.artificial_analysis_coding_index],
-            ['agentic', evaluations?.artificial_analysis_agentic_index],
+            ['engineering', evaluations?.artificial_analysis_engineering_index],
             ['costPerTask', costs?.cost_per_task?.total_cost],
             ['totalCost', costs?.total_cost],
-            ['outputSpeed', performance?.median_output_tokens_per_second],
-            ['timeToFirstAnswer', performance?.median_time_to_first_answer_token_seconds],
-            ['responseTime', performance?.median_end_to_end_response_time_seconds],
+            ['outputSpeed', performance?.mean_output_tokens_per_second],
+            ['timeToFirstToken', performance?.mean_time_to_first_token_seconds],
+            ['timeToFirstAnswer', performance?.mean_time_to_first_answer_token_seconds],
             ['inputPrice', pricing?.price_1m_input_tokens],
             ['outputPrice', pricing?.price_1m_output_tokens],
             ['cacheReadPrice', pricing?.price_1m_cache_hit_tokens],
@@ -89,7 +90,7 @@ export function measurementsOf(raw: unknown): (Measurements & { hasMore: boolean
             if (typeof value !== 'number' || !Number.isFinite(value)) {
                 continue;
             }
-            if (field !== 'intelligence' && field !== 'coding' && field !== 'agentic' && value < 0) {
+            if (field !== 'intelligence' && field !== 'engineering' && value < 0) {
                 continue;
             }
             if (field === 'outputSpeed' && value <= 0) {
@@ -97,7 +98,16 @@ export function measurementsOf(raw: unknown): (Measurements & { hasMore: boolean
             }
             values[field] = value;
         }
+        // performance_v3 has no end-to-end time on the Free tier, so it is derived the way the
+        // retired field was measured: the first answer token, then 500 answer tokens.
+        if (values.timeToFirstAnswer !== undefined && values.outputSpeed !== undefined) {
+            values.responseTime = values.timeToFirstAnswer + RESPONSE_ANSWER_TOKENS / values.outputSpeed;
+        }
         if (Object.keys(values).length > 0) {
+            const released = model.data.release_date;
+            if (typeof released === 'string' && ISO_DATE.test(released)) {
+                values.releaseDate = released;
+            }
             measurements.set(model.data.id, values);
             if (model.data.name !== undefined) {
                 names.set(model.data.id, model.data.name);

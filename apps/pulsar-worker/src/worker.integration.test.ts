@@ -2073,14 +2073,18 @@ describe('model benchmarks', () => {
         slug: `model-${id}`,
         release_date: '2026-09-01',
         model_creator: { id: 'creator', name: 'Creator' },
-        evaluations: { artificial_analysis_intelligence_index: intelligence, artificial_analysis_coding_index: 1, artificial_analysis_agentic_index: null },
+        evaluations: {
+            artificial_analysis_intelligence_index: intelligence,
+            artificial_analysis_coding_index: null,
+            artificial_analysis_agentic_index: null,
+            artificial_analysis_engineering_index: 1
+        },
         artificial_analysis_intelligence_index_cost: cost === null ? null : { total_cost: cost * 100, cost_per_task: { total_cost: cost } },
         pricing: { price_1m_input_tokens: 1, price_1m_output_tokens: 2, price_1m_cache_hit_tokens: 0, price_1m_cache_write_tokens: 1.25 },
-        performance: {
-            median_output_tokens_per_second: 3,
-            median_time_to_first_token_seconds: 0.1,
-            median_time_to_first_answer_token_seconds: 0.5,
-            median_end_to_end_response_time_seconds: 167.17
+        performance_v3: {
+            mean_output_tokens_per_second: 4,
+            mean_time_to_first_token_seconds: 0.1,
+            mean_time_to_first_answer_token_seconds: 0.5
         }
     });
     const page = (number: number, hasMore: boolean, data: unknown[]) => ({
@@ -2170,14 +2174,16 @@ describe('model benchmarks', () => {
             modelId: 'gpt-6-luna',
             effort: 'max',
             intelligence: 37.3,
-            coding: 1,
-            outputSpeed: 3,
+            engineering: 1,
+            outputSpeed: 4,
+            timeToFirstToken: 0.1,
             timeToFirstAnswer: 0.5,
-            responseTime: 167.17,
+            responseTime: 125.5,
             inputPrice: 1,
             outputPrice: 2,
             cacheReadPrice: 0,
-            cacheWritePrice: 1.25
+            cacheWritePrice: 1.25,
+            releaseDate: '2026-09-01'
         });
         // Every model the migration mapped, grouped in the order of the labs.
         expect(new Set(result.models.map((model) => model.id))).toEqual(new Set([...mapped.keys()].map((key) => key.split('/')[0])));

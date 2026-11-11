@@ -2,7 +2,7 @@
     "dialog": {
         "title": "Modellen vergelijken",
         "subtitle": "Benchmarks van Artificial Analysis",
-        "description": "Vergelijk intelligentie, coderen, agentprestaties, kosten en snelheid. Filter modellen en denkniveaus en kies twee meetpunten.",
+        "description": "Vergelijk intelligentie, engineering, kosten en snelheid. Filter modellen en denkniveaus en kies twee meetpunten.",
         "close": "Modelvergelijking sluiten",
         "failed": "Kon de modelvergelijking niet tonen",
         "scale": "Schaal horizontale as",
@@ -16,8 +16,7 @@
         "comparison": "Kosten vs intelligentie",
         "speed": "Snelheid",
         "score": "Intelligentie",
-        "coding": "Code",
-        "agentic": "Agents",
+        "engineering": "Engineering",
         "cost": "Kosten per taak",
         "totalCost": "Evaluatiekosten"
     },
@@ -34,11 +33,11 @@
     },
     "metrics": {
         "intelligence": "Intelligence Index",
-        "coding": "Coding Index",
-        "agentic": "Agentic Index",
+        "engineering": "Engineering Index",
         "costPerTask": "Kosten per taak",
         "totalCost": "Evaluatiekosten",
         "outputSpeed": "Uitvoersnelheid (tok/s)",
+        "timeToFirstToken": "Eerste token (s)",
         "timeToFirstAnswer": "Eerste antwoord (s)",
         "responseTime": "Antwoordtijd (s)",
         "inputPrice": "Input",
@@ -48,17 +47,18 @@
     },
     "units": {
         "intelligence": "Indexpunten, hoger is beter",
-        "coding": "Indexpunten, hoger is beter",
-        "agentic": "Indexpunten, hoger is beter",
+        "engineering": "Indexpunten, hoger is beter",
         "costPerTask": "USD, lager is beter",
         "totalCost": "USD, volledige Intelligence Index-evaluatie",
         "outputSpeed": "Uitvoertokens per seconde",
+        "timeToFirstToken": "Seconden, lager is beter",
         "timeToFirstAnswer": "Seconden, lager is beter",
         "responseTime": "Seconden, lager is beter"
     },
     "axes": {
         "costPerTask": "Kosten per taak (USD, lager is beter)",
         "outputSpeed": "Uitvoertokens per seconde (hoger is beter)",
+        "timeToFirstToken": "Tijd tot eerste token (seconden, lager is beter)",
         "timeToFirstAnswer": "Tijd tot eerste antwoordtoken (seconden, lager is beter)",
         "responseTime": "Totale antwoordtijd (seconden, lager is beter)"
     },
@@ -70,11 +70,11 @@
         "hidden": "Uitgezet",
         "missing": {
             "intelligence": "Geen intelligentiescore beschikbaar",
-            "coding": "Geen Code-score beschikbaar",
-            "agentic": "Geen Agents-score beschikbaar",
+            "engineering": "Geen Engineering-score beschikbaar",
             "costPerTask": "Geen kostenmeting beschikbaar",
             "totalCost": "Geen evaluatiekosten beschikbaar",
             "outputSpeed": "Geen uitvoersnelheid beschikbaar",
+            "timeToFirstToken": "Geen tijd tot eerste token beschikbaar",
             "timeToFirstAnswer": "Geen wachttijd beschikbaar",
             "responseTime": "Geen antwoordtijd beschikbaar"
         }
@@ -134,7 +134,8 @@
             "candidateHidden": "Een filter verborg meetpunt B. Referentie A blijft vastgezet.",
             "cleared": "Vergelijking gewist."
         },
-        "tokenPrices": "Tokenprijzen (USD per 1M tokens)"
+        "tokenPrices": "Tokenprijzen (USD per 1M tokens)",
+        "released": "Uitgebracht"
     },
     "empty": {
         "unavailable": "Nog geen benchmarks.",
@@ -161,9 +162,10 @@
     "speed": {
         "metric": "Snelheidsmaatstaf",
         "outputSpeed": "Uitvoertokens/s",
+        "timeToFirstToken": "Tijd tot eerste token",
         "timeToFirstAnswer": "Tijd tot eerste antwoord",
         "responseTime": "Totale antwoordtijd",
-        "context": "Medianen over API-aanbieders. Totale antwoordtijd geldt voor 500 antwoordtokens."
+        "context": "Gemiddelden over de gemeten workloads van de afgelopen 5 dagen. Totale antwoordtijd is het eerste antwoord plus 500 antwoordtokens."
     },
     "evaluation": {
         "context": "Kosten van de volledige Artificial Analysis Intelligence Index-evaluatie."

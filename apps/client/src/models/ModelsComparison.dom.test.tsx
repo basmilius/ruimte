@@ -22,13 +22,14 @@ const RESULT: ModelBenchmarksResult = {
             responseTime: 11,
             inputPrice: 4,
             outputPrice: 20,
-            cacheReadPrice: 0
+            cacheReadPrice: 0,
+            releaseDate: '2026-02-05'
         },
         {
             modelId: 'opus5',
             effort: 'high',
             intelligence: 50,
-            coding: 75,
+            engineering: 75,
             costPerTask: 2,
             outputSpeed: 60,
             timeToFirstAnswer: 2,
@@ -129,20 +130,20 @@ describe('benchmark comparison', () => {
         expect(pressed()).toEqual(['Claude Opus 5, High, Intelligence Index 50']);
     });
 
-    test('distinguishes a missing Code score from a model turned off by the user', async () => {
+    test('distinguishes a missing Engineering score from a model turned off by the user', async () => {
         await open();
-        await clickOn(tab('Coding'));
+        await clickOn(tab('Engineering'));
         const model = document.querySelector('button[aria-label="Claude Opus 5.5"]')!;
         expect(model.getAttribute('aria-pressed')).toBe('true');
-        expect(model.textContent).toContain('No Coding score available');
-        expect(document.getElementById(model.getAttribute('aria-describedby')!)?.textContent).toBe('No Coding score available');
+        expect(model.textContent).toContain('No Engineering score available');
+        expect(document.getElementById(model.getAttribute('aria-describedby')!)?.textContent).toBe('No Engineering score available');
         expect(point('Claude Opus 5.5')).toBeNull();
         expect(point('Claude Opus 5')).not.toBeNull();
         await clickOn(model);
         expect(model.getAttribute('aria-pressed')).toBe('false');
         expect(model.textContent).toContain('Turned off');
         await clickOn(model);
-        expect(model.textContent).toContain('No Coding score available');
+        expect(model.textContent).toContain('No Engineering score available');
     });
 
     test('switches latency metrics and compares token prices without inventing missing cache prices', async () => {
@@ -161,6 +162,9 @@ describe('benchmark comparison', () => {
         expect(cache.querySelectorAll('td')[1]?.textContent).toBe('n/a');
         const latency = [...panel.querySelectorAll('tr')].find((row) => row.querySelector('th')?.textContent === 'First answer (s)')!;
         expect(latency.querySelectorAll('td')[2]?.textContent).toBe('0.4×');
+        const released = [...panel.querySelectorAll('tr')].find((row) => row.querySelector('th')?.textContent === 'Released')!;
+        expect(released.querySelectorAll('td')[0]?.textContent).toContain('2026');
+        expect(released.querySelectorAll('td')[1]?.textContent).toBe('n/a');
         await clickOn(document.querySelector('button[aria-label="Clear comparison"]'));
         await clickOn(tab('Evaluation cost'));
         expect(page!.host.textContent).toContain('Cost of the full Artificial Analysis Intelligence Index evaluation.');

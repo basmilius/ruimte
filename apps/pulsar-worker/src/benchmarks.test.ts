@@ -29,40 +29,64 @@ describe('benchmark measurements', () => {
             page([
                 {
                     id: LOW,
-                    evaluations: { artificial_analysis_intelligence_index: 0, artificial_analysis_coding_index: 24, artificial_analysis_agentic_index: null },
+                    release_date: '2026-03-12',
+                    evaluations: {
+                        artificial_analysis_intelligence_index: 0,
+                        artificial_analysis_coding_index: 24,
+                        artificial_analysis_agentic_index: 30,
+                        artificial_analysis_engineering_index: 18,
+                        artificial_analysis_legal_index: 40
+                    },
                     artificial_analysis_intelligence_index_cost: { total_cost: 50, cost_per_task: null },
-                    performance: { median_output_tokens_per_second: 125, median_end_to_end_response_time_seconds: 3 },
+                    performance: { median_output_tokens_per_second: 80, median_end_to_end_response_time_seconds: 3 },
+                    performance_v3: { mean_output_tokens_per_second: 125, mean_time_to_first_token_seconds: 0.5, mean_time_to_first_answer_token_seconds: 1 },
                     pricing: { price_1m_output_tokens: 1 }
                 }
             ])
         );
-        expect(parsed?.measurements.get(LOW)).toEqual({ intelligence: 0, coding: 24, totalCost: 50, outputSpeed: 125, responseTime: 3, outputPrice: 1 });
+        expect(parsed?.measurements.get(LOW)).toEqual({
+            intelligence: 0,
+            engineering: 18,
+            totalCost: 50,
+            outputSpeed: 125,
+            timeToFirstToken: 0.5,
+            timeToFirstAnswer: 1,
+            responseTime: 5,
+            outputPrice: 1,
+            releaseDate: '2026-03-12'
+        });
         expect(parsed?.intelligenceIndexVersion).toBe(4.3);
     });
 
     test('never substitutes zero for a missing cost, score or speed', () => {
         const parsed = measurementsOf(
             page([
-                { id: LOW, evaluations: { artificial_analysis_coding_index: 0 }, performance: { median_output_tokens_per_second: 0 } },
+                {
+                    id: LOW,
+                    evaluations: { artificial_analysis_engineering_index: 0 },
+                    performance_v3: { mean_output_tokens_per_second: 0, mean_time_to_first_answer_token_seconds: null }
+                },
                 { id: HIGH, artificial_analysis_intelligence_index_cost: { total_cost: -1, cost_per_task: { total_cost: -1 } } },
-                { id: 'empty' }
+                { id: 'empty', release_date: '2026-01-01' },
+                { id: 'undated', evaluations: { artificial_analysis_intelligence_index: 20 }, release_date: 'January 2026' }
             ])
         );
-        expect(parsed?.measurements.get(LOW)).toEqual({ coding: 0 });
+        expect(parsed?.measurements.get(LOW)).toEqual({ engineering: 0 });
+        expect(parsed?.measurements.get('undated')).toEqual({ intelligence: 20 });
         expect(parsed?.measurements.has(HIGH)).toBe(false);
         expect(parsed?.measurements.has('empty')).toBe(false);
     });
 
-    test('delivers first-answer latency and token prices independently of missing Code scores', () => {
+    test('delivers first-answer latency and token prices independently of missing Engineering scores', () => {
         const parsed = measurementsOf(
             page([
                 {
                     id: LOW,
-                    evaluations: { artificial_analysis_intelligence_index: 42.3, artificial_analysis_coding_index: null },
-                    performance: {
-                        median_time_to_first_token_seconds: 0.1,
-                        median_time_to_first_answer_token_seconds: 12.5,
-                        median_end_to_end_response_time_seconds: 20
+                    evaluations: { artificial_analysis_intelligence_index: 42.3, artificial_analysis_engineering_index: null },
+                    performance_v3: {
+                        mean_output_tokens_per_second: null,
+                        mean_time_to_first_token_seconds: 0.1,
+                        mean_time_to_first_answer_token_seconds: 12.5
                     },
                     pricing: { price_1m_input_tokens: 4, price_1m_output_tokens: 20, price_1m_cache_hit_tokens: 0, price_1m_cache_write_tokens: null }
                 }
@@ -74,8 +98,8 @@ describe('benchmark measurements', () => {
                 modelId: MODEL.slug,
                 effort: 'low',
                 intelligence: 42.3,
+                timeToFirstToken: 0.1,
                 timeToFirstAnswer: 12.5,
-                responseTime: 20,
                 inputPrice: 4,
                 outputPrice: 20,
                 cacheReadPrice: 0
@@ -89,7 +113,7 @@ describe('benchmark measurements', () => {
             page([
                 {
                     id: LOW,
-                    performance: { median_time_to_first_answer_token_seconds: 0, median_end_to_end_response_time_seconds: -1 },
+                    performance_v3: { mean_output_tokens_per_second: -1, mean_time_to_first_answer_token_seconds: 0 },
                     pricing: { price_1m_input_tokens: 0, price_1m_output_tokens: -1, price_1m_cache_hit_tokens: -1, price_1m_cache_write_tokens: 0 }
                 }
             ])
@@ -101,8 +125,8 @@ describe('benchmark measurements', () => {
         const result = benchmarksFrom(
             SOURCES,
             new Map([
-                [LOW, { intelligence: 30, coding: 25, outputSpeed: 120 }],
-                [HIGH, { intelligence: 40, costPerTask: 0.12, totalCost: 230, agentic: 42 }]
+                [LOW, { intelligence: 30, engineering: 25, outputSpeed: 120 }],
+                [HIGH, { intelligence: 40, costPerTask: 0.12, totalCost: 230, engineering: 42 }]
             ]),
             123,
             4.3
@@ -112,7 +136,7 @@ describe('benchmark measurements', () => {
             modelId: MODEL.slug,
             effort: 'low',
             intelligence: 30,
-            coding: 25,
+            engineering: 25,
             outputSpeed: 120
         });
         expect(result.models.flatMap((model) => model.points).every((point) => BenchmarkPointSchema.safeParse(point).success)).toBe(true);

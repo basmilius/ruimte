@@ -1,5 +1,5 @@
 import { IconButton, ScrollArea, Select } from '@adecore/ui';
-import { formatDecimal, formatRounded } from '@adecore/ui/format';
+import { formatDayWithYear, formatDecimal, formatRounded } from '@adecore/ui/format';
 import clsx from 'clsx';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +26,9 @@ export function ModelsPointComparison({ models, marks, points, reference, candid
     }
     const comparing = reference !== null && candidate !== null && reference.key !== candidate.key;
     const model = models.find((model) => model.id === shown.modelId)!;
+    // An ISO date is midnight UTC, so it is read in UTC to keep its day.
+    const releaseDay = (point: ModelPoint): string =>
+        point.releaseDate === undefined ? t('compare.unavailable') : formatDayWithYear(Date.parse(point.releaseDate), 'UTC');
     const label = (point: ModelPoint): string => `${shortModelName(point.modelName)} · ${t(`efforts.${point.effort}`, { defaultValue: point.effort })}`;
     const groups = [METRICS, PRICE_METRICS].map((metrics) =>
         metrics.filter((metric) => metricValue(shown, metric) !== null || (reference !== null && metricValue(reference, metric) !== null))
@@ -73,12 +76,24 @@ export function ModelsPointComparison({ models, marks, points, reference, candid
                         </tr>
                     </thead>
                 )}
+                {(shown.releaseDate !== undefined || reference?.releaseDate !== undefined) && (
+                    <tbody>
+                        <tr className="*:pb-1.5">
+                            <th className="py-0.5 pr-2 text-left font-normal text-text-muted">{t('compare.released')}</th>
+                            {reference !== null && <td className="py-0.5 pl-2 text-right text-text">{releaseDay(reference)}</td>}
+                            <td className="py-0.5 pl-2 text-right font-medium text-text">
+                                {reference !== null && !comparing ? t('compare.unavailable') : releaseDay(shown)}
+                            </td>
+                            {reference !== null && <td />}
+                        </tr>
+                    </tbody>
+                )}
                 {groups.map((metrics, index) =>
                     metrics.length === 0 ? null : (
                         <tbody key={index}>
                             {index === 1 && (
                                 <tr>
-                                    <th colSpan={reference === null ? 2 : 4} className="border-t border-border pt-3 pb-1 text-left font-medium text-text">
+                                    <th colSpan={reference === null ? 2 : 4} className="border-t border-border pt-2 pb-0.5 text-left font-medium text-text">
                                         {t('compare.tokenPrices')}
                                     </th>
                                 </tr>
@@ -88,18 +103,18 @@ export function ModelsPointComparison({ models, marks, points, reference, candid
                                 const original = reference === null ? null : metricValue(reference, metric);
                                 const change = comparing ? metricChange(reference, candidate!, metric) : null;
                                 return (
-                                    <tr key={metric} className="first:border-t first:border-border">
-                                        <th className="py-1.5 pr-2 text-left font-normal text-text-muted">{t(`metrics.${metric}`)}</th>
+                                    <tr key={metric} className="first:border-t first:border-border first:*:pt-1.5 last:*:pb-1.5">
+                                        <th className="py-0.5 pr-2 text-left font-normal text-text-muted">{t(`metrics.${metric}`)}</th>
                                         {reference !== null && (
-                                            <td className="py-1.5 pl-2 text-right text-text">
+                                            <td className="py-0.5 pl-2 text-right text-text">
                                                 {original === null ? t('compare.unavailable') : formatMetric(original, metric)}
                                             </td>
                                         )}
-                                        <td className="py-1.5 pl-2 text-right font-medium text-text">
+                                        <td className="py-0.5 pl-2 text-right font-medium text-text">
                                             {value === null ? t('compare.unavailable') : formatMetric(value, metric)}
                                         </td>
                                         {reference !== null && (
-                                            <td className="py-1.5 pl-2 text-right font-medium text-text">
+                                            <td className="py-0.5 pl-2 text-right font-medium text-text">
                                                 {change === null
                                                     ? t('compare.unavailable')
                                                     : change.ratio

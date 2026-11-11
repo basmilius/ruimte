@@ -169,7 +169,7 @@ describe('comparison chart math', () => {
         ];
         const state = reduceComparison(models, initialSelection(), { type: 'effort', id: 'high' });
         const filtered = comparisonModels(models, state).drawn[0]!;
-        expect(models[0]!.points.some((point) => matchesChart(point, 'coding', false, 'linear'))).toBe(false);
+        expect(models[0]!.points.some((point) => matchesChart(point, 'engineering', false, 'linear'))).toBe(false);
         expect(models[0]!.points.some((point) => matchesChart(point, 'timeToFirstAnswer', true, 'linear'))).toBe(true);
         expect(filtered.points.some((point) => matchesChart(point, 'timeToFirstAnswer', true, 'log'))).toBe(false);
         expect(filtered.points.some((point) => matchesChart(point, 'timeToFirstAnswer', true, 'linear'))).toBe(true);
@@ -190,15 +190,15 @@ describe('comparison chart math', () => {
             {
                 ...MODELS[0]!,
                 points: [
-                    { effort: 'low', coding: 0 },
-                    { effort: 'max', coding: 40, totalCost: 300 }
+                    { effort: 'low', engineering: 0 },
+                    { effort: 'max', engineering: 40, totalCost: 300 }
                 ]
             },
-            { ...MODELS[1]!, points: [{ effort: 'high', intelligence: 50, coding: 30, totalCost: 100 }] }
+            { ...MODELS[1]!, points: [{ effort: 'high', intelligence: 50, engineering: 30, totalCost: 100 }] }
         ];
-        expect(barGroups(partial, 'coding', true).map((group) => group[0]!.modelId)).toEqual(['haiku', 'gpt']);
+        expect(barGroups(partial, 'engineering', true).map((group) => group[0]!.modelId)).toEqual(['haiku', 'gpt']);
         expect(barGroups(partial, 'totalCost', true).map((group) => group[0]!.modelId)).toEqual(['gpt', 'haiku']);
-        expect(barGroups(partial, 'coding', false)[0]?.map((point) => point.coding)).toEqual([40, 30, 0]);
+        expect(barGroups(partial, 'engineering', false)[0]?.map((point) => point.engineering)).toEqual([40, 30, 0]);
         expect(
             barGroups(partial, 'score', true)
                 .flat()
@@ -208,9 +208,9 @@ describe('comparison chart math', () => {
     });
 
     test('uses index point differences and speed ratios without inventing absent values', () => {
-        const original = { effort: 'low', coding: 0, outputSpeed: 100 };
-        const other = { effort: 'high', coding: 30, outputSpeed: 150 };
-        expect(metricChange(original, other, 'coding')).toEqual({ value: 30, ratio: false });
+        const original = { effort: 'low', engineering: 0, outputSpeed: 100 };
+        const other = { effort: 'high', engineering: 30, outputSpeed: 150 };
+        expect(metricChange(original, other, 'engineering')).toEqual({ value: 30, ratio: false });
         expect(metricChange(original, other, 'outputSpeed')).toEqual({ value: 1.5, ratio: true });
         expect(metricChange(original, other, 'totalCost')).toBeNull();
         const reference = { effort: 'low', intelligence: 40, costPerTask: 0.2 };

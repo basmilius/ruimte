@@ -437,31 +437,37 @@ public struct BenchmarkMeasurement: Codable, Sendable, Equatable {
     public let `intelligence`: Double?
     public let `coding`: Double?
     public let `agentic`: Double?
+    public let `engineering`: Double?
     public let `costPerTask`: Double?
     public let `totalCost`: Double?
     public let `outputSpeed`: Double?
+    public let `timeToFirstToken`: Double?
     public let `timeToFirstAnswer`: Double?
     public let `responseTime`: Double?
     public let `inputPrice`: Double?
     public let `outputPrice`: Double?
     public let `cacheReadPrice`: Double?
     public let `cacheWritePrice`: Double?
+    public let `releaseDate`: String?
 
-    public init(`modelId`: String, `effort`: String, `intelligence`: Double? = nil, `coding`: Double? = nil, `agentic`: Double? = nil, `costPerTask`: Double? = nil, `totalCost`: Double? = nil, `outputSpeed`: Double? = nil, `timeToFirstAnswer`: Double? = nil, `responseTime`: Double? = nil, `inputPrice`: Double? = nil, `outputPrice`: Double? = nil, `cacheReadPrice`: Double? = nil, `cacheWritePrice`: Double? = nil) {
+    public init(`modelId`: String, `effort`: String, `intelligence`: Double? = nil, `coding`: Double? = nil, `agentic`: Double? = nil, `engineering`: Double? = nil, `costPerTask`: Double? = nil, `totalCost`: Double? = nil, `outputSpeed`: Double? = nil, `timeToFirstToken`: Double? = nil, `timeToFirstAnswer`: Double? = nil, `responseTime`: Double? = nil, `inputPrice`: Double? = nil, `outputPrice`: Double? = nil, `cacheReadPrice`: Double? = nil, `cacheWritePrice`: Double? = nil, `releaseDate`: String? = nil) {
         self.`modelId` = `modelId`
         self.`effort` = `effort`
         self.`intelligence` = `intelligence`
         self.`coding` = `coding`
         self.`agentic` = `agentic`
+        self.`engineering` = `engineering`
         self.`costPerTask` = `costPerTask`
         self.`totalCost` = `totalCost`
         self.`outputSpeed` = `outputSpeed`
+        self.`timeToFirstToken` = `timeToFirstToken`
         self.`timeToFirstAnswer` = `timeToFirstAnswer`
         self.`responseTime` = `responseTime`
         self.`inputPrice` = `inputPrice`
         self.`outputPrice` = `outputPrice`
         self.`cacheReadPrice` = `cacheReadPrice`
         self.`cacheWritePrice` = `cacheWritePrice`
+        self.`releaseDate` = `releaseDate`
     }
 
     public init(from decoder: Decoder) throws {
@@ -472,15 +478,18 @@ public struct BenchmarkMeasurement: Codable, Sendable, Equatable {
         `intelligence` = try container.decodeIfPresent(Double.self, forKey: .`intelligence`)
         `coding` = try container.decodeIfPresent(Double.self, forKey: .`coding`)
         `agentic` = try container.decodeIfPresent(Double.self, forKey: .`agentic`)
+        `engineering` = try container.decodeIfPresent(Double.self, forKey: .`engineering`)
         `costPerTask` = try container.decodeIfPresent(Double.self, forKey: .`costPerTask`)
         `totalCost` = try container.decodeIfPresent(Double.self, forKey: .`totalCost`)
         `outputSpeed` = try container.decodeIfPresent(Double.self, forKey: .`outputSpeed`)
+        `timeToFirstToken` = try container.decodeIfPresent(Double.self, forKey: .`timeToFirstToken`)
         `timeToFirstAnswer` = try container.decodeIfPresent(Double.self, forKey: .`timeToFirstAnswer`)
         `responseTime` = try container.decodeIfPresent(Double.self, forKey: .`responseTime`)
         `inputPrice` = try container.decodeIfPresent(Double.self, forKey: .`inputPrice`)
         `outputPrice` = try container.decodeIfPresent(Double.self, forKey: .`outputPrice`)
         `cacheReadPrice` = try container.decodeIfPresent(Double.self, forKey: .`cacheReadPrice`)
         `cacheWritePrice` = try container.decodeIfPresent(Double.self, forKey: .`cacheWritePrice`)
+        `releaseDate` = try container.decodeIfPresent(String.self, forKey: .`releaseDate`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -490,15 +499,18 @@ public struct BenchmarkMeasurement: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`intelligence`, forKey: .`intelligence`)
         try container.encodeIfPresent(`coding`, forKey: .`coding`)
         try container.encodeIfPresent(`agentic`, forKey: .`agentic`)
+        try container.encodeIfPresent(`engineering`, forKey: .`engineering`)
         try container.encodeIfPresent(`costPerTask`, forKey: .`costPerTask`)
         try container.encodeIfPresent(`totalCost`, forKey: .`totalCost`)
         try container.encodeIfPresent(`outputSpeed`, forKey: .`outputSpeed`)
+        try container.encodeIfPresent(`timeToFirstToken`, forKey: .`timeToFirstToken`)
         try container.encodeIfPresent(`timeToFirstAnswer`, forKey: .`timeToFirstAnswer`)
         try container.encodeIfPresent(`responseTime`, forKey: .`responseTime`)
         try container.encodeIfPresent(`inputPrice`, forKey: .`inputPrice`)
         try container.encodeIfPresent(`outputPrice`, forKey: .`outputPrice`)
         try container.encodeIfPresent(`cacheReadPrice`, forKey: .`cacheReadPrice`)
         try container.encodeIfPresent(`cacheWritePrice`, forKey: .`cacheWritePrice`)
+        try container.encodeIfPresent(`releaseDate`, forKey: .`releaseDate`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -507,15 +519,18 @@ public struct BenchmarkMeasurement: Codable, Sendable, Equatable {
         case `intelligence` = "intelligence"
         case `coding` = "coding"
         case `agentic` = "agentic"
+        case `engineering` = "engineering"
         case `costPerTask` = "costPerTask"
         case `totalCost` = "totalCost"
         case `outputSpeed` = "outputSpeed"
+        case `timeToFirstToken` = "timeToFirstToken"
         case `timeToFirstAnswer` = "timeToFirstAnswer"
         case `responseTime` = "responseTime"
         case `inputPrice` = "inputPrice"
         case `outputPrice` = "outputPrice"
         case `cacheReadPrice` = "cacheReadPrice"
         case `cacheWritePrice` = "cacheWritePrice"
+        case `releaseDate` = "releaseDate"
     }
 }
 

@@ -2,7 +2,7 @@
     "dialog": {
         "title": "Compare models",
         "subtitle": "Artificial Analysis benchmarks",
-        "description": "Compare intelligence, coding, agentic performance, cost and speed. Filter models and reasoning levels, then pick two measurements.",
+        "description": "Compare intelligence, engineering, cost and speed. Filter models and reasoning levels, then pick two measurements.",
         "close": "Close model comparison",
         "failed": "Could not show the model comparison",
         "scale": "Horizontal axis scale",
@@ -16,8 +16,7 @@
         "comparison": "Cost vs intelligence",
         "speed": "Speed",
         "score": "Intelligence",
-        "coding": "Coding",
-        "agentic": "Agentic",
+        "engineering": "Engineering",
         "cost": "Cost per task",
         "totalCost": "Evaluation cost"
     },
@@ -34,11 +33,11 @@
     },
     "metrics": {
         "intelligence": "Intelligence Index",
-        "coding": "Coding Index",
-        "agentic": "Agentic Index",
+        "engineering": "Engineering Index",
         "costPerTask": "Cost per task",
         "totalCost": "Evaluation cost",
         "outputSpeed": "Output speed (tok/s)",
+        "timeToFirstToken": "First token (s)",
         "timeToFirstAnswer": "First answer (s)",
         "responseTime": "Response time (s)",
         "inputPrice": "Input",
@@ -48,17 +47,18 @@
     },
     "units": {
         "intelligence": "Index points, higher is better",
-        "coding": "Index points, higher is better",
-        "agentic": "Index points, higher is better",
+        "engineering": "Index points, higher is better",
         "costPerTask": "USD, lower is better",
         "totalCost": "USD, full Intelligence Index run",
         "outputSpeed": "Output tokens per second",
+        "timeToFirstToken": "Seconds, lower is better",
         "timeToFirstAnswer": "Seconds, lower is better",
         "responseTime": "Seconds, lower is better"
     },
     "axes": {
         "costPerTask": "Cost per task (USD, lower is better)",
         "outputSpeed": "Output tokens per second (higher is better)",
+        "timeToFirstToken": "Time to first token (seconds, lower is better)",
         "timeToFirstAnswer": "Time to first answer token (seconds, lower is better)",
         "responseTime": "Total response time (seconds, lower is better)"
     },
@@ -70,11 +70,11 @@
         "hidden": "Turned off",
         "missing": {
             "intelligence": "No Intelligence score available",
-            "coding": "No Coding score available",
-            "agentic": "No Agentic score available",
+            "engineering": "No Engineering score available",
             "costPerTask": "No cost measurement available",
             "totalCost": "No evaluation cost available",
             "outputSpeed": "No output speed available",
+            "timeToFirstToken": "No first-token time available",
             "timeToFirstAnswer": "No first-answer time available",
             "responseTime": "No response time available"
         }
@@ -134,7 +134,8 @@
             "candidateHidden": "A filter hid measurement B. Reference A stays pinned.",
             "cleared": "Comparison cleared."
         },
-        "tokenPrices": "Token prices (USD per 1M tokens)"
+        "tokenPrices": "Token prices (USD per 1M tokens)",
+        "released": "Released"
     },
     "empty": {
         "unavailable": "No benchmarks yet.",
@@ -161,9 +162,10 @@
     "speed": {
         "metric": "Speed metric",
         "outputSpeed": "Output tokens/s",
+        "timeToFirstToken": "Time to first token",
         "timeToFirstAnswer": "Time to first answer",
         "responseTime": "Total response time",
-        "context": "Median values across API providers. Total response time covers 500 answer tokens."
+        "context": "Means over the measured workloads of the last 5 days. Total response time is the first answer plus 500 answer tokens."
     },
     "evaluation": {
         "context": "Cost of the full Artificial Analysis Intelligence Index evaluation."

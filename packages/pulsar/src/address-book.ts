@@ -241,19 +241,24 @@ export const BenchmarkMeasurementSchema = z.object({
     modelId: z.string().max(64),
     effort: z.string().max(32),
     intelligence: z.number().optional(),
+    // Artificial Analysis no longer publishes these two; kept so an older client still parses a snapshot.
     coding: z.number().optional(),
     agentic: z.number().optional(),
+    engineering: z.number().optional(),
     costPerTask: z.number().nonnegative().optional(),
     totalCost: z.number().nonnegative().optional(),
     outputSpeed: z.number().positive().optional(),
-    // Median seconds; responseTime is measured with 500 answer tokens by Artificial Analysis.
+    // Mean seconds; responseTime is the first answer token plus 500 answer tokens at outputSpeed.
+    timeToFirstToken: z.number().nonnegative().optional(),
     timeToFirstAnswer: z.number().nonnegative().optional(),
     responseTime: z.number().nonnegative().optional(),
     // USD per million tokens, for the measured model variant.
     inputPrice: z.number().nonnegative().optional(),
     outputPrice: z.number().nonnegative().optional(),
     cacheReadPrice: z.number().nonnegative().optional(),
-    cacheWritePrice: z.number().nonnegative().optional()
+    cacheWritePrice: z.number().nonnegative().optional(),
+    // When the measured model variant came out, as an ISO date.
+    releaseDate: z.iso.date().optional()
 });
 export type BenchmarkMeasurement = z.infer<typeof BenchmarkMeasurementSchema>;
 

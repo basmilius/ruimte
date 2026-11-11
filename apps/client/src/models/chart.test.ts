@@ -30,10 +30,10 @@ describe('the marks', () => {
         const measurements = [
             { modelId: 'haiku', effort: 'max', intelligence: 42, costPerTask: 0.2 },
             { modelId: 'other', effort: 'low', intelligence: 12 },
-            { modelId: 'haiku', effort: 'low', coding: 0, outputSpeed: 120 }
+            { modelId: 'haiku', effort: 'low', engineering: 0, outputSpeed: 120 }
         ];
         expect(chartModels([original], LABS, measurements)[0]?.points).toEqual([
-            { effort: 'low', coding: 0, outputSpeed: 120 },
+            { effort: 'low', engineering: 0, outputSpeed: 120 },
             { effort: 'max', intelligence: 42, costPerTask: 0.2 }
         ]);
         expect(measurements[0]?.effort).toBe('max');
