@@ -1,7 +1,7 @@
 import { storage, type Json } from '@ruimte/extension/client';
 import { create } from 'zustand';
 import { BEAM_SETTINGS, type BeamSetting } from './beam';
-import { movedFromBefore } from './moved-storage';
+import { movedFromBefore, PETS_IN_APP_SETTINGS } from './moved-storage';
 
 /* Under the computer storage of the extension, which every window of this computer shares. */
 export const PET_SETTINGS_KEY = 'settings';
@@ -94,7 +94,7 @@ function settingsOf(state: PetSettingsStore): PetSettings {
 }
 
 export const usePetSettings = create<PetSettingsStore>((set, get) => {
-    movedFromBefore(LEGACY_KEY, PET_SETTINGS_KEY);
+    movedFromBefore(LEGACY_KEY, PET_SETTINGS_KEY, PETS_IN_APP_SETTINGS);
 
     return {
         ...read(),

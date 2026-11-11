@@ -1,7 +1,7 @@
 import '../../../apps/client/testing/pets-load';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { storage } from '@ruimte/extension/client';
-import { movedFromBefore } from './moved-storage';
+import { movedFromBefore, PETS_IN_APP_SETTINGS } from './moved-storage';
 
 const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 let items = new Map<string, string>();
@@ -43,5 +43,24 @@ describe('what pets kept before they ran on the extension API', () => {
 
         expect(storage.get('settings')).toEqual({ pets: false });
         expect(items.has('ruimte.pets')).toBe(true);
+    });
+
+    test('from before pets had a key, are copied out of the app settings, which stay as they were', () => {
+        const app = JSON.stringify({ theme: 'dark', pets: true, petsSets: ['cats'], petsVisitor: false });
+        items.set('ruimte.settings', app);
+
+        movedFromBefore('ruimte.pets', 'settings', PETS_IN_APP_SETTINGS);
+
+        expect(storage.get('settings')).toEqual({ pets: true, petsSets: ['cats'], petsVisitor: false });
+        expect(items.get('ruimte.settings')).toBe(app);
+    });
+
+    test('from their own key win over the app settings', () => {
+        items.set('ruimte.pets', JSON.stringify({ pets: false }));
+        items.set('ruimte.settings', JSON.stringify({ pets: true }));
+
+        movedFromBefore('ruimte.pets', 'settings', PETS_IN_APP_SETTINGS);
+
+        expect(storage.get('settings')).toEqual({ pets: false });
     });
 });
