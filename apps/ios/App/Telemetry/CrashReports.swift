@@ -43,6 +43,18 @@ enum CrashReports {
         return "ruimte-ios@\(version)+\(build)"
     }
 
+    /// The longest a hang in the foreground lasts before the system ends the app; a longer one was measured across a
+    /// suspension, where the main thread stood still because the app did.
+    static let longestRealHang: Double = 60
+
+    /// Whether a reported hang is the app suspended in the background rather than a blocked main thread: the SDK
+    /// words its length as "App hanging between 2475.1 and 2475.9 seconds.".
+    static func suspendedHang(type: String?, value: String?) -> Bool {
+        guard let type, type.hasPrefix("App Hang"), let value, value.hasSuffix("seconds.") else { return false }
+        let seconds = value.split(whereSeparator: { !($0.isNumber || $0 == ".") }).compactMap { Double($0) }
+        return (seconds.max() ?? 0) > longestRealHang
+    }
+
     static func start() {
         guard enabled else { return }
         let dedupe = CrashDedupe(store: DefaultsCrashDedupeStore(defaults: .standard))
@@ -86,6 +98,7 @@ enum CrashReports {
             options.sessionReplay.onErrorSampleRate = 0
             options.beforeBreadcrumb = { crumb in allowed(crumb) ? crumb : nil }
             options.beforeSend = { event in
+                if let hang = event.exceptions?.first, suspendedHang(type: hang.type, value: hang.value) { return nil }
                 guard scrub(event, with: CrashScrubber(redactions: CrashRedactions.all)) else { return nil }
                 return dedupe.admit(event.signature.key) ? event : nil
             }

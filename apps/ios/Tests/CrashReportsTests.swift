@@ -87,6 +87,20 @@ final class CrashReportsTests: XCTestCase {
             "b2c66679")
     }
 
+    func testAHangMeasuredAcrossASuspensionIsNotReported() {
+        let hang = "App Hang Fully Blocked"
+        XCTAssertTrue(CrashReports.suspendedHang(type: hang, value: "App hanging between 2475.1 and 2475.9 seconds."))
+        XCTAssertFalse(CrashReports.suspendedHang(type: hang, value: "App hanging between 5.0 and 5.8 seconds."))
+        XCTAssertFalse(
+            CrashReports.suspendedHang(type: "App Hang Non Fully Blocked", value: "App hanging between 2.0 and 2.4 seconds."))
+        // The watchdog's own report is never a suspension, whatever number it names.
+        XCTAssertFalse(
+            CrashReports.suspendedHang(
+                type: "Fatal App Hang Fully Blocked",
+                value: "The user or the OS watchdog terminated your app while it blocked the main thread for at least 2000 ms."))
+        XCTAssertFalse(CrashReports.suspendedHang(type: "NSInvalidArgumentException", value: "took 900 seconds."))
+    }
+
     func testTheSameErrorGoesOutOnceADay() {
         let store = MemoryDedupeStore()
         let clock = Clock()
