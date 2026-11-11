@@ -621,6 +621,24 @@ describe('LinkTransport', () => {
             expect(problems).toEqual([{ kind: 'refused', mismatch: 'daemon-older' }]);
             transport.dispose();
         });
+
+        test('a frame it cannot read, once per kind and by the event type only', async () => {
+            const { transport, links, problems } = reported();
+            await tick();
+            open(links[0]!);
+            const invalid = JSON.stringify({ type: 'event', event: 'project.summary', payload: { secret: '/Users/someone' } });
+            links[0]!.events.message(invalid);
+            links[0]!.events.message(invalid);
+            links[0]!.events.message('not json');
+            links[0]!.events.message(JSON.stringify({ type: 'event' }));
+            links[0]!.events.message(JSON.stringify({ type: 'event', event: 'session.list-changed', payload: {} }));
+            expect(problems).toEqual([
+                { kind: 'unread', frame: { kind: 'invalid-event', event: 'project.summary' } },
+                { kind: 'unread', frame: { kind: 'not-json' } },
+                { kind: 'unread', frame: { kind: 'malformed' } }
+            ]);
+            transport.dispose();
+        });
     });
 });
 

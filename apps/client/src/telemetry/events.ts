@@ -5,7 +5,14 @@ export type MachineKind = 'local' | 'remote';
 export type LinkKind = 'socket' | 'direct';
 
 /* What a link to a machine went through, as the transport sees it. Never a payload, an address or a machine's name. */
-export type LinkProblem = { kind: 'dropped'; code: number | null } | { kind: 'timeout'; request: string } | { kind: 'refused'; mismatch: string };
+export type LinkProblem =
+    | { kind: 'dropped'; code: number | null }
+    | { kind: 'timeout'; request: string }
+    | { kind: 'refused'; mismatch: string }
+    | { kind: 'unread'; frame: UnreadFrame };
+
+/* A frame the client threw away. Only an event's type goes along, never what it carried. */
+export type UnreadFrame = { kind: 'not-json' } | { kind: 'malformed' } | { kind: 'invalid-event'; event: string };
 
 export type ConnectionProblem = LinkProblem & { machine: MachineKind; link: LinkKind };
 
@@ -17,7 +24,7 @@ interface ConnectionEvent {
 }
 
 /* The tags a report of the client may carry; the scrubber drops every other one. */
-export const CLIENT_TAGS: readonly string[] = ['surface', 'process', 'platform', 'problem', 'machine', 'link', 'close_code', 'request', 'mismatch'];
+export const CLIENT_TAGS: readonly string[] = ['surface', 'process', 'platform', 'problem', 'machine', 'link', 'close_code', 'request', 'mismatch', 'event'];
 
 export function connectionEvent(problem: ConnectionProblem): ConnectionEvent {
     const where = { machine: problem.machine, link: problem.link };
@@ -47,7 +54,30 @@ export function connectionEvent(problem: ConnectionProblem): ConnectionEvent {
                 fingerprint: ['protocol-refused', problem.mismatch],
                 tags: { problem: 'protocol-refused', ...where, mismatch: problem.mismatch }
             };
+        // Most often a client and a machine on different versions; the release tag says the client's.
+        case 'unread':
+            return unreadEvent(problem.frame, where);
     }
+}
+
+function unreadEvent(frame: UnreadFrame, where: { machine: MachineKind; link: LinkKind }): ConnectionEvent {
+    if (frame.kind === 'invalid-event') {
+        return {
+            message: `Dropped a ${frame.event} event from a ${where.machine} machine that failed validation`,
+            level: 'error',
+            fingerprint: ['invalid-event', frame.event],
+            tags: { problem: 'invalid-event', ...where, event: frame.event }
+        };
+    }
+
+    const problem = frame.kind === 'not-json' ? 'frame-not-json' : 'frame-malformed';
+
+    return {
+        message: `Dropped a ${frame.kind === 'not-json' ? 'non-JSON' : 'malformed'} frame from a ${where.machine} machine`,
+        level: 'error',
+        fingerprint: [problem],
+        tags: { problem, ...where }
+    };
 }
 
 const SENT_KEY = 'ruimte.telemetry.sent';

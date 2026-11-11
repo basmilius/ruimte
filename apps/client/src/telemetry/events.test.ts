@@ -31,6 +31,17 @@ describe('connectionEvent', () => {
         expect(connectionEvent({ kind: 'refused', mismatch: 'daemon-older', machine: 'remote', link: 'direct' }).level).toBe('info');
     });
 
+    test('an event that failed validation groups by its type and keeps it through the scrubber', () => {
+        const event = connectionEvent({ kind: 'unread', frame: { kind: 'invalid-event', event: 'chat.status' }, machine: 'remote', link: 'direct' });
+        expect(event.fingerprint).toEqual(['invalid-event', 'chat.status']);
+        expect(createScrubber({ tags: CLIENT_TAGS }).scrubEvent(event)?.tags).toEqual({
+            problem: 'invalid-event',
+            machine: 'remote',
+            link: 'direct',
+            event: 'chat.status'
+        });
+    });
+
     test('keeps every tag through the scrubber of the client', () => {
         const event = connectionEvent({ kind: 'refused', mismatch: 'daemon-older', machine: 'remote', link: 'direct' });
         const withUrl: { tags: Record<string, string> } = { ...event, tags: { ...event.tags, url: 'https://station.ruimte.app/x' } };

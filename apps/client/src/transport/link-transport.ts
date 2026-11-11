@@ -15,7 +15,7 @@ import {
     type RequestType
 } from '@ruimte/contracts';
 import i18next from 'i18next';
-import type { LinkProblem } from '@/telemetry/events';
+import type { LinkProblem, UnreadFrame } from '@/telemetry/events';
 import type { LinkMeter, ReconnectReason } from '@/telemetry/metrics';
 import type { BytesPiece } from '../transport-api/piece';
 import { TransportError, type ConnectionState, type LiveFrameHandler, type SignalRoute, type TransportStatus } from '../transport-api/transport';
@@ -109,7 +109,7 @@ interface LinkTransportOptions {
     random?: () => number;
     now?: () => number;
     log?: Pick<Console, 'info' | 'warn'>;
-    /* A link that dropped while open and stayed down, a request without an answer in time, a machine refused at the check: for a crash report. */
+    /* A link that dropped while open and stayed down, a request without an answer in time, a machine refused at the check, a frame it could not read: for a crash report. */
     report?: (problem: LinkProblem) => void;
     meter?: LinkMeter;
 }
@@ -151,6 +151,8 @@ export class LinkTransport implements PooledTransport {
     private readonly log: Pick<Console, 'info' | 'warn'>;
     private readonly report: (problem: LinkProblem) => void;
     private readonly meter: LinkMeter;
+    // A machine that sends one bad event sends it on every change, so each kind is reported once per transport.
+    private readonly unreadReported = new Set<string>();
     private attemptStartedAt = 0;
     private nextId = 1;
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -532,11 +534,13 @@ export class LinkTransport implements PooledTransport {
             json = JSON.parse(raw);
         } catch {
             console.warn('Dropped a server frame that is not JSON');
+            this.reportUnread({ kind: 'not-json' });
             return;
         }
         const parsed = parseServerFrame(json);
         if (!parsed.ok) {
             console.warn('Dropped a malformed server frame', parsed.message);
+            this.reportUnread({ kind: 'malformed' });
             return;
         }
         const frame = parsed.value;
@@ -593,6 +597,17 @@ export class LinkTransport implements PooledTransport {
         }
     }
 
+    private reportUnread(frame: UnreadFrame): void {
+        const key = frame.kind === 'invalid-event' ? `${frame.kind}:${frame.event}` : frame.kind;
+
+        if (this.unreadReported.has(key)) {
+            return;
+        }
+
+        this.unreadReported.add(key);
+        this.report({ kind: 'unread', frame });
+    }
+
     private dispatchEvent(event: string, payload: unknown): void {
         if (!isEventType(event)) {
             console.warn('Dropped an unknown event', event);
@@ -601,6 +616,7 @@ export class LinkTransport implements PooledTransport {
         const parsed = EVENT_SCHEMAS[event].safeParse(payload);
         if (!parsed.success) {
             console.warn(`Dropped a malformed ${event} event`);
+            this.reportUnread({ kind: 'invalid-event', event });
             return;
         }
         const handlers = this.eventHandlers.get(event);
