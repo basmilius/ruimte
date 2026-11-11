@@ -112,6 +112,15 @@ struct ChatScreen: View {
             guard !Task.isCancelled else { return }
             reporter.observe(chatID: model.chatID, gap: promptGap, now: .now)
         }
+        .task(id: childPromptGap) {
+            let reporter = ChatPromptGapReporter.shared
+            let key = "\(model.chatID)/children"
+            reporter.observe(chatID: key, gap: childPromptGap, now: .now)
+            guard childPromptGap != nil else { return }
+            try? await Task.sleep(for: .seconds(ChatPromptGapReporter.delay))
+            guard !Task.isCancelled else { return }
+            reporter.observe(chatID: key, gap: childPromptGap, now: .now)
+        }
         .onChange(of: prompts.activeID) { previous, next in
             if let focus = draftFocus.focus(from: previous, to: next, focused: composerFocused, visible: visible) {
                 composerFocused = focus
@@ -659,6 +668,35 @@ struct ChatScreen: View {
             pending: model.pending.count, subjects: prompts.subjects.count, answered: prompts.answeredCount,
             activeSet: prompts.activeID != nil, approval: approval, sharedModel: openedShared,
             rejectedEvent: model.reattachedOverRejectedEvent)
+    }
+
+    /// A chat a row of this one opened that the row says waits on the person, while no card of it is here.
+    private var childPromptGap: ChatPromptGap? {
+        guard visible, model.connected, !model.loading else { return nil }
+        let carded = Set(prompts.subjects.compactMap(\.chatID))
+        let attention = machineSession?.attention
+        let rows = (model.history.subagents + model.items).compactMap(\.subagentItem)
+        guard
+            let childID = rows.first(where: { row in
+                guard let id = row.childId, !carded.contains(id) else { return false }
+                return row.status == .running && ChatSubagents.childWaiting(row, attention: attention)
+            })?.childId
+        else { return nil }
+        let child = promptFeed.model(for: childID)
+        let attach: ChatPromptGap.Child.Attach =
+            if let child {
+                child.loading ? .inFlight : child.error != nil ? .failed : child.info != nil ? .finished : .none
+            } else {
+                .none
+            }
+        let status = child?.info.flatMap { AgentStatus(rawValue: $0.status)?.rawValue } ?? "unknown"
+        var gap = ChatPromptGap(
+            pending: model.pending.count, subjects: prompts.subjects.count, answered: prompts.answeredCount,
+            activeSet: prompts.activeID != nil, approval: false, sharedModel: openedShared,
+            rejectedEvent: model.reattachedOverRejectedEvent)
+        gap.child = ChatPromptGap.Child(
+            followed: child != nil, attach: attach, status: status, pending: child?.pending.count ?? 0)
+        return gap
     }
 
     private var promptComposer: some View {

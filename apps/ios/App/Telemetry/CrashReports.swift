@@ -133,7 +133,7 @@ enum CrashReports {
     static func report(_ gap: ChatPromptGap) {
         let event = Event(level: .error)
         event.message = SentryMessage(formatted: gap.message)
-        event.fingerprint = ["prompt-card-missing"]
+        event.fingerprint = ["prompt-card-missing", gap.child == nil ? "own" : "child"]
         event.tags = ["problem": "prompt-card-missing"]
         SentrySDK.capture(event: event)
     }

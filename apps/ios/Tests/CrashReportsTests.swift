@@ -215,6 +215,14 @@ final class CrashReportsTests: XCTestCase {
             + "kind question, shared yes, rejected event no)"
         XCTAssertEqual(gap.message, expected)
         XCTAssertEqual(CrashScrubber(home: home).scrubMessage(gap.message), expected)
+
+        var childGap = gap
+        childGap.child = ChatPromptGap.Child(followed: true, attach: .inFlight, status: "needs-you", pending: 0)
+        let expectedChild =
+            "A child chat waited on a person without its card in the parent (subjects 0, answered 1, active no, "
+            + "shared yes, followed yes, attach in flight, child status needs-you, child pending 0)"
+        XCTAssertEqual(childGap.message, expectedChild)
+        XCTAssertEqual(CrashScrubber(home: home).scrubMessage(childGap.message), expectedChild)
     }
 
     @MainActor func testTheRuntimeRemembersTheNamesOfItsMachines() {

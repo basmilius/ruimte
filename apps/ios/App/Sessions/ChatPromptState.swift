@@ -141,12 +141,35 @@ struct ChatPromptGap: Equatable {
     let approval: Bool
     let sharedModel: Bool
     let rejectedEvent: Bool
+    /// Set when the request is a child's that a row of this chat says waits on the person.
+    var child: Child?
+
+    /// What the feed knows of a child whose row says it waits.
+    struct Child: Equatable {
+        enum Attach: String {
+            case none
+            case inFlight = "in flight"
+            case finished, failed
+        }
+
+        let followed: Bool
+        let attach: Attach
+        /// The child's status as its model read it, or `unknown` for none or a word this app does not know.
+        let status: String
+        let pending: Int
+    }
 
     var message: String {
         func word(_ value: Bool) -> String { value ? "yes" : "no" }
-        return "A chat waited on a person without the card to answer it (pending \(pending), subjects \(subjects), "
-            + "answered \(answered), active \(word(activeSet)), kind \(approval ? "approval" : "question"), "
-            + "shared \(word(sharedModel)), rejected event \(word(rejectedEvent)))"
+        guard let child else {
+            return "A chat waited on a person without the card to answer it (pending \(pending), subjects \(subjects), "
+                + "answered \(answered), active \(word(activeSet)), kind \(approval ? "approval" : "question"), "
+                + "shared \(word(sharedModel)), rejected event \(word(rejectedEvent)))"
+        }
+        return "A child chat waited on a person without its card in the parent (subjects \(subjects), "
+            + "answered \(answered), active \(word(activeSet)), shared \(word(sharedModel)), "
+            + "followed \(word(child.followed)), attach \(child.attach.rawValue), child status \(child.status), "
+            + "child pending \(child.pending))"
     }
 }
 
