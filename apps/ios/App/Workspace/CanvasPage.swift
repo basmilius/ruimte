@@ -736,9 +736,9 @@ private final class CanvasSurface: UIView {
         CGRect(
             x: node.x.clamped(), y: node.y.clamped(), width: max(1, node.w.clamped()), height: max(1, node.h.clamped()))
     }
-    /// A text has no size of its own on the wire, so its frame is the one a node without a size takes.
     private func textRect(_ text: StoredCanvasViewTextsItem) -> CGRect {
-        CGRect(x: text.x.clamped(), y: text.y.clamped(), width: 320, height: 200)
+        CanvasTextGeometry.rect(
+            x: text.x.clamped(), y: text.y.clamped(), size: text.size, text: text.text, maxWidth: text.maxWidth)
     }
     fileprivate func configure(_ canvas: CanvasContent) {
         nodes = canvas.nodes
@@ -865,7 +865,11 @@ private final class CanvasSurface: UIView {
         for text in texts {
             let frame = textRect(text)
             if frame.intersects(viewport) {
-                drawText(text.text, rect: frame, font: .systemFont(ofSize: 24), color: .label)
+                let size = CanvasTextGeometry.fontSize(text.size)
+                drawText(
+                    text.text, rect: frame,
+                    font: text.bold == true ? .boldSystemFont(ofSize: size) : .systemFont(ofSize: size), color: .label,
+                    wraps: true)
             }
         }
     }
@@ -922,9 +926,9 @@ private final class CanvasSurface: UIView {
         }
     }
 
-    private func drawText(_ text: String, rect: CGRect, font: UIFont, color: UIColor) {
+    private func drawText(_ text: String, rect: CGRect, font: UIFont, color: UIColor, wraps: Bool = false) {
         let paragraph = NSMutableParagraphStyle()
-        paragraph.lineBreakMode = .byTruncatingTail
+        paragraph.lineBreakMode = wraps ? .byWordWrapping : .byTruncatingTail
         (text as NSString).draw(
             in: rect, withAttributes: [.font: font, .foregroundColor: color, .paragraphStyle: paragraph])
     }
@@ -964,6 +968,22 @@ private final class CanvasDrawing: UIView {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     override func draw(_ rect: CGRect) { if let context = UIGraphicsGetCurrentContext() { paint(context) } }
+}
+
+/// Where a text of a canvas stands, estimated from its size as `textRect` in the desktop's `edge-lines.ts` does, so a
+/// heading of 96 takes the room on the phone that it takes there.
+enum CanvasTextGeometry {
+    /// A size from a hand-edited file stays one a font can be made at.
+    static func fontSize(_ size: Double) -> CGFloat { CGFloat(Swift.max(1, Swift.min(512, size.isFinite ? size : 16))) }
+
+    static func rect(x: Double, y: Double, size: Double, text: String, maxWidth: Double?) -> CGRect {
+        let size = Double(fontSize(size))
+        let widths = text.split(separator: "\n", omittingEmptySubsequences: false).map { Double($0.count) * size * 0.55 }
+        let width = maxWidth.flatMap { $0.isFinite && $0 > 0 ? $0 : nil } ?? Swift.max(40, (widths.max() ?? 0) + 8)
+        let available = Swift.max(1, width - 8)
+        let lines = widths.reduce(0) { $0 + Swift.max(1, ($1 / available).rounded(.up)) }
+        return CGRect(x: x, y: y, width: width, height: lines * size * 1.25 + 4)
+    }
 }
 
 extension BinaryFloatingPoint {

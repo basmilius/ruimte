@@ -6,6 +6,23 @@ import Testing
 @testable import Ruimte
 
 @Suite struct CanvasRenderTests {
+    @Test func aCanvasTextTakesTheRoomOfItsSizeAsOnTheDesktop() {
+        // The desktop's estimate: 0.55 of the size per character plus 8, and 1.25 of the size per line plus 4.
+        let heading = CanvasTextGeometry.rect(x: 10, y: 20, size: 96, text: "Plan", maxWidth: nil)
+        #expect(heading == CGRect(x: 10, y: 20, width: 4 * 96 * 0.55 + 8, height: 96 * 1.25 + 4))
+        let small = CanvasTextGeometry.rect(x: 0, y: 0, size: 16, text: "Plan", maxWidth: nil)
+        #expect(small.height == 16 * 1.25 + 4)
+        #expect(small.width == 4 * 16 * 0.55 + 8)
+        // A width a person set wraps the line, and a line break counts as a line.
+        let wrapped = CanvasTextGeometry.rect(x: 0, y: 0, size: 20, text: "abcdefghij\nk", maxWidth: 68)
+        #expect(wrapped.width == 68)
+        #expect(wrapped.height == 3 * 20 * 1.25 + 4)
+    }
+    @Test func aCanvasTextSizeFromAHandEditedFileStaysDrawable() {
+        #expect(CanvasTextGeometry.fontSize(.infinity) == 16)
+        #expect(CanvasTextGeometry.fontSize(-4) == 1)
+        #expect(CanvasTextGeometry.fontSize(96) == 96)
+    }
     @Test func arcAndRelativeCommandsKeepTheirEndpoints() throws {
         let path = try SVGPathParser.parse("M10 20 h40 v20 l-10 5 A20 10 30 0 1 90 60 q10 20 30 10 t20 -10")
         #expect(path.currentPoint == CGPoint(x: 140, y: 60))
