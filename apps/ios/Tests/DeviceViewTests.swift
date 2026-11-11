@@ -275,7 +275,8 @@ import UIKit
 
     fileprivate static func frame(_ data: String, sequence: Int = 0) -> JSONValue {
         .object([
-            "deviceId": .string("UDID-1"), "backendId": .string("ios-simulator"), "format": .string("jpeg"),
+            "deviceId": .string("UDID-1"), "backendId": .string("ios-simulator"), "platform": .string("ios"),
+            "format": .string("jpeg"), "width": .number(390), "height": .number(844),
             "data": .string(data), "sequence": .number(Double(sequence)),
         ])
     }
