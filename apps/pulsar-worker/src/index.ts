@@ -21,8 +21,10 @@ import { changePushDevice, registerPushDevice, sendPush } from './push.ts';
 import { issueStatement } from './statements.ts';
 import { telemetryOptions } from './telemetry.ts';
 
-// Rows past use for this long are dropped by the daily cleanup; the statement log is kept.
+// Rows past use for this long are dropped by the daily cleanup.
 const REVOKED_SESSION_RETENTION_MS = 30 * 24 * 60 * 60_000;
+// The statement log holds the address each statement was asked from, and nothing reads a row this old.
+const STATEMENT_LOG_RETENTION_MS = 90 * 24 * 60 * 60_000;
 
 // Four pages every three hours is 32 of the 100 requests a day the free tier allows; hourly would be 96. Mirrors `wrangler.jsonc`.
 const BENCHMARKS_CRON = '17 */3 * * *';
@@ -198,6 +200,7 @@ async function cleanUp(env: Env): Promise<void> {
         env.DB.prepare('DELETE FROM identity_link_code WHERE expires_at <= ?1').bind(now),
         env.DB.prepare('DELETE FROM device_link WHERE expires_at <= ?1').bind(now),
         env.DB.prepare('DELETE FROM rate_limit WHERE window_start < ?1').bind(now - 60 * 60_000),
+        env.DB.prepare('DELETE FROM statement_log WHERE issued_at < ?1').bind(now - STATEMENT_LOG_RETENTION_MS),
         env.DB.prepare('DELETE FROM session WHERE expires_at <= ?1 OR revoked_at <= ?2').bind(now, now - REVOKED_SESSION_RETENTION_MS)
     ]);
 }

@@ -4,7 +4,7 @@ The Cloudflare Worker behind `https://pulsar.ruimte.app`. It knows which machine
 
 - Worker `ruimte-pulsar`, account `5e565cf9fa55b0eae1f8131903da2ca9`, also on `https://ruimte-pulsar.bas.workers.dev`
 - D1 database `ruimte-pulsar`, migrations in `migrations/`
-- A cron at 04:17 UTC drops expired logins, codes, rate limit windows and dead sessions. It checks in with Observatory as monitor `pulsar-nightly` (`src/check-in.ts`, `OBSERVATORY_CHECK_IN_URL`), which opens an issue for a run that is missed, takes over two minutes or fails. A failed check-in never fails the run.
+- A cron at 04:17 UTC drops expired logins, codes, rate limit windows and dead sessions, and the rows of the statement log older than 90 days, with the IP address each came from. It checks in with Observatory as monitor `pulsar-nightly` (`src/check-in.ts`, `OBSERVATORY_CHECK_IN_URL`), which opens an issue for a run that is missed, takes over two minutes or fails. A failed check-in never fails the run.
 - Errors and log lines go to Observatory through `@sentry/cloudflare` (`src/telemetry.ts`, `OBSERVATORY_DSN`, hence `nodejs_compat`), release `pulsar@<12 hex>`. Events keep only the allow-list of `@ruimte/telemetry`, and log lines their first line and scalar attributes, scrubbed. No request, address or body leaves. A 500 from the router is handed to the SDK explicitly.
 - A cron every three hours (`17 */3 * * *`) reads Artificial Analysis's model benchmarks into D1.
 

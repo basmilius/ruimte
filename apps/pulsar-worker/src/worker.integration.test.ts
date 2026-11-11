@@ -987,6 +987,26 @@ describe('statements', () => {
         expect(device).toEqual({ label: 'Test device' });
     });
 
+    test('the daily cleanup drops log rows older than 90 days and keeps the rest', async () => {
+        const session = await signIn(4007);
+        await dispatch('/v1/machines', { method: 'POST', headers: bearer(session), body: registration(session, newKeyPair(), 'studio') });
+        await dispatch('/v1/statements', { method: 'POST', headers: bearer(session), body: accessRequest('studio', newKeyPair()) });
+        const db = database(mf);
+        const day = 24 * 60 * 60_000;
+        const old = Date.now() - 91 * day;
+        await db.run(
+            "INSERT INTO statement_log (account_id, machine_id, device_public_key, session_id, ip, issued_at, expires_at) VALUES (?1, 'studio', 'old', 'old-session', '203.0.113.9', ?2, ?2)",
+            session.account.id,
+            old
+        );
+
+        await (await mf.getWorker('pulsar')).scheduled({ cron: '17 4 * * *' });
+
+        const left = await db.all<{ device_public_key: string }>('SELECT device_public_key FROM statement_log WHERE account_id = ?1', session.account.id);
+        expect(left).toHaveLength(1);
+        expect(left[0]!.device_public_key).not.toBe('old');
+    });
+
     test('a statement for a machine on another account is refused', async () => {
         const owner = await signIn(4003);
         const stranger = await signIn(4004);
