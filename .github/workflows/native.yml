@@ -158,12 +158,13 @@ jobs:
       - run: swift build
       - run: swift test
 
-  # Xcode Cloud builds the app only from a release tag, so a contract change that breaks it shows here first. Building
-  # is enough on a push; the app's own tests take long on these runners and run only in the full run of a release.
+  # Xcode Cloud builds the app only from a release tag, so a contract change that breaks it shows here first. Only on a
+  # change under apps/ios and only a build: the app's own tests take long on these runners, and a release, whose full
+  # run would wait on this job, already has Xcode Cloud building the app from its tag.
   ios-build:
     name: ios (Ruimte)
     needs: changes
-    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.ios == 'true') }}
+    if: ${{ !cancelled() && needs.changes.outputs.ios == 'true' }}
     runs-on: xcode-27
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -189,14 +190,6 @@ jobs:
         run: |
           xcodebuild build-for-testing -project apps/ios/Ruimte.xcodeproj -scheme Ruimte -configuration Debug \
             -destination "platform=iOS Simulator,id=$SIMULATOR" -derivedDataPath "$DERIVED_DATA" CODE_SIGNING_ALLOWED=NO
-      - name: Test
-        if: ${{ inputs.full }}
-        env:
-          SIMULATOR: ${{ steps.setup.outputs.simulator }}
-        run: |
-          xcodebuild test-without-building -project apps/ios/Ruimte.xcodeproj -scheme Ruimte -configuration Debug \
-            -destination "platform=iOS Simulator,id=$SIMULATOR" -derivedDataPath "$DERIVED_DATA" \
-            -only-testing:RuimteTests CODE_SIGNING_ALLOWED=NO
 
   # One result for a caller to wait on: a skipped check passes only when this run left it to the paths.
   native:
@@ -212,7 +205,8 @@ jobs:
           CHECKS: ${{ toJSON(needs) }}
         run: |
           if [ "$FULL" = true ]; then
-            jq -e 'del(.changes) | all(.[]; .result == "success")' <<< "$CHECKS"
+            # The app's build never runs in a full run, so it is skipped there by design.
+            jq -e 'del(.changes, .["ios-build"]) | all(.[]; .result == "success")' <<< "$CHECKS"
           else
             jq -e 'all(.[]; . == "success" or . == "skipped")' <<< "$RESULTS"
           fi
