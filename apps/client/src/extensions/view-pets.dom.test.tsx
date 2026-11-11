@@ -3,11 +3,11 @@ import { usePetSettings } from '@extensions/pets/client/pet-settings';
 import type { AgentInfo, AgentStatus, ProjectView } from '@ruimte/contracts';
 import { act } from 'react';
 import { useSessions } from '@/state/sessions';
-import { chatInfoOf } from '../../../apps/client/testing/chat-info';
-import { clickOn, mount, until, type Mounted } from '../../../apps/client/testing/dom';
-import { FakeMachine } from '../../../apps/client/testing/fake-machine';
-import { claudeProvider } from '../../../apps/client/testing/fake-provider';
-import { openFakeWorkspace, type FakeWorkspace } from '../../../apps/client/testing/fake-workspace';
+import { chatInfoOf } from '../../testing/chat-info';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { FakeMachine } from '../../testing/fake-machine';
+import { claudeProvider } from '../../testing/fake-provider';
+import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 
 const SHELL: ProjectView = { kind: 'terminal', id: 'shell-view', name: 'Tests', node: {} };
 

@@ -5,12 +5,12 @@ import type { ChatSubagentItem, ProjectCanvasView, ProjectNode } from '@ruimte/c
 import { act } from 'react';
 import { canvasOfNode } from '@/state/canvas';
 import { useUi } from '@/state/ui';
-import { openCanvasPage, type CanvasPage } from '../../../../apps/client/testing/canvas-page';
-import { chatInfoOf } from '../../../../apps/client/testing/chat-info';
-import { clickOn, until } from '../../../../apps/client/testing/dom';
-import { buttonWithText, everything, typeInto } from '../../../../apps/client/testing/dom-helpers';
-import { FakeMachine } from '../../../../apps/client/testing/fake-machine';
-import { claudeProvider, fakeProvider } from '../../../../apps/client/testing/fake-provider';
+import { openCanvasPage, type CanvasPage } from '../../testing/canvas-page';
+import { chatInfoOf } from '../../testing/chat-info';
+import { clickOn, until } from '../../testing/dom';
+import { buttonWithText, everything, typeInto } from '../../testing/dom-helpers';
+import { FakeMachine } from '../../testing/fake-machine';
+import { claudeProvider, fakeProvider } from '../../testing/fake-provider';
 
 const WRITER: ProjectNode = { id: 'writer', kind: 'chat', title: 'Writer', x: 2000, y: 1000, w: 480, h: 520 };
 const PLAN: ProjectNode = { id: 'plan', kind: 'note', title: 'Plan', body: 'Ship it', x: 0, y: 0, w: 400, h: 320 };
@@ -87,7 +87,7 @@ describe('pets on a canvas', () => {
         await act(async () => machine.emit('chat.status', { chatId: WRITER.id, info: chatInfoOf(WRITER.id) }));
         expect(pet(WRITER.id)).toBeNull();
 
-        await act(async () => useUi.getState().setSettings({ open: true, section: 'pets' }));
+        await act(async () => useUi.getState().setSettings({ open: true, section: 'ruimte.pets' }));
         await until(() => petsSwitch() !== null);
         expect(petsSwitch()?.getAttribute('aria-checked')).toBe('false');
 
@@ -102,7 +102,7 @@ describe('pets on a canvas', () => {
 
     test('the visitor is on until a person turns it off in Settings, Pets', async () => {
         await open();
-        await act(async () => useUi.getState().setSettings({ open: true, section: 'pets' }));
+        await act(async () => useUi.getState().setSettings({ open: true, section: 'ruimte.pets' }));
         const visitorSwitch = (): HTMLElement | null => document.querySelector('[role="switch"][aria-label="Visitor"]');
         await until(() => visitorSwitch() !== null);
         expect(visitorSwitch()?.getAttribute('aria-checked')).toBe('true');
@@ -113,7 +113,7 @@ describe('pets on a canvas', () => {
 
     test('a person switches on several packs of figures in Settings, Pets, each with a preview and its figures, and never none', async () => {
         await open();
-        await act(async () => useUi.getState().setSettings({ open: true, section: 'pets' }));
+        await act(async () => useUi.getState().setSettings({ open: true, section: 'ruimte.pets' }));
         const setSwitch = (name: string): HTMLElement | null => document.querySelector(`[role="switch"][aria-label="Use ${name}"]`);
         await until(() => setSwitch('Buddies') !== null);
         expect(document.querySelector('[role="img"][aria-label="Preview of Animals"]')).not.toBeNull();
@@ -214,7 +214,7 @@ describe('pets on a canvas', () => {
         );
         await until(() => kids(WRITER.id).length === 1);
 
-        await act(async () => useUi.getState().setSettings({ open: true, section: 'pets' }));
+        await act(async () => useUi.getState().setSettings({ open: true, section: 'ruimte.pets' }));
         const kidsSwitch = (): HTMLElement | null => document.querySelector('[role="switch"][aria-label="Sub-agents"]');
         await until(() => kidsSwitch() !== null);
         expect(kidsSwitch()?.getAttribute('aria-checked')).toBe('true');
@@ -279,7 +279,7 @@ describe('a figure per agent', () => {
             providers: [claudeProvider(), fakeProvider('codex', 'Codex')]
         }));
         await open();
-        await act(async () => useUi.getState().setSettings({ open: true, section: 'pets' }));
+        await act(async () => useUi.getState().setSettings({ open: true, section: 'ruimte.pets' }));
         const trigger = (name: string): HTMLElement | null => document.querySelector(`[aria-label="Figure for ${name}"]`);
         await until(() => trigger('Codex') !== null && trigger('Claude Code') !== null);
         expect(trigger('Codex')?.textContent).toContain('Default');
@@ -315,7 +315,7 @@ describe('a figure of your own', () => {
 
     async function openSettings(): Promise<void> {
         await open();
-        await act(async () => useUi.getState().setSettings({ open: true, section: 'pets' }));
+        await act(async () => useUi.getState().setSettings({ open: true, section: 'ruimte.pets' }));
         await until(() => buttonWithText('Add figure') !== null);
     }
 
@@ -387,7 +387,7 @@ describe('a figure of your own', () => {
     });
 
     test('one added before opens with its strips, and a strip left out and a new name are kept on Save', async () => {
-        localStorage.setItem('ruimte.pets.sprites', JSON.stringify([CAT]));
+        localStorage.setItem('ruimte.extension.ruimte.pets.sprites', JSON.stringify([CAT]));
         usePetSprites.getState().reload();
         await openSettings();
         expect(everything()).toContain('2 states');
