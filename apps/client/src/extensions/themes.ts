@@ -6,6 +6,7 @@ import { useExtensionTheme } from '@/state/extension-theme';
 import { previewColors } from '@/state/settings';
 import { storedJson } from '@/state/stored-json';
 import { useTheme } from '@/state/theme';
+import { withoutTransitions } from '@/state/theme-change';
 import { IS_STATION } from '@/station';
 
 export const EXTENSION_THEME_STORAGE_KEY = 'ruimte.extensionTheme';
@@ -66,6 +67,10 @@ function place(element: HTMLElement): void {
 }
 
 function paint(stored: StoredTheme | null): void {
+    withoutTransitions(() => paintColors(stored));
+}
+
+function paintColors(stored: StoredTheme | null): void {
     // Before the colors, so the palette that follows sees whether a theme of an extension is on.
     useExtensionTheme.setState({ key: stored?.key ?? null });
     previewColors(null);

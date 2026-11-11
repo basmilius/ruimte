@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { usePalette } from '@/state/palette';
 import { storedText } from '@/state/stored-json';
+import { withoutTransitions } from '@/state/theme-change';
 
 export type Theme = 'light' | 'dark' | 'system';
 
@@ -24,7 +25,9 @@ function apply(theme: Theme): void {
     if (typeof document === 'undefined') {
         return;
     }
-    document.documentElement.dataset.theme = resolvedOf(theme);
+    withoutTransitions(() => {
+        document.documentElement.dataset.theme = resolvedOf(theme);
+    });
 }
 
 interface ThemeState {

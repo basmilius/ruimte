@@ -946,6 +946,13 @@
             animation: none !important;
         }
     }
+
+    /* A theme changes every color at once (`state/theme-change.ts`), so nothing fades from the old one into the new. */
+    [data-theme-changing] *,
+    [data-theme-changing] *::before,
+    [data-theme-changing] *::after {
+        transition: none !important;
+    }
 }
 
 /* A release's own headings sit under its version, so none of them may outgrow it. */
