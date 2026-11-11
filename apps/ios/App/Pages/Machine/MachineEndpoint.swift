@@ -10,7 +10,14 @@ extension KeepAwakeMode {
         case .off: String(localized: "Off", comment: "Keep awake setting")
         case .working: String(localized: "While agents work")
         case .always: String(localized: "Always", comment: "Keep awake setting")
+        case .unknown: String(localized: "Set on the machine", comment: "Keep awake setting of a newer machine")
         }
+    }
+
+    /// What the phone offers, and the machine's own setting beside it when this version has no word for it.
+    static func choices(current: KeepAwakeMode) -> [KeepAwakeMode] {
+        let known: [KeepAwakeMode] = [.off, .working, .always]
+        return known.contains(current) ? known : known + [current]
     }
 }
 

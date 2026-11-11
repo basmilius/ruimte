@@ -197,7 +197,12 @@ public enum WireSchema {
             throw fail()
         }
         if let literal = schema["const"], literal != value { throw fail() }
-        if let choices = schema["enum"]?.arrayValue, !choices.contains(value) { throw fail() }
+        // A word of a newer machine in a list stamped `x-open-values` reads as the generated enum's `unknown`.
+        if let choices = schema["enum"]?.arrayValue, !choices.contains(value),
+            schema["x-open-values"] != .bool(true) || value.stringValue == nil
+        {
+            throw fail()
+        }
         if let types = schema["type"]?.arrayValue {
             for type in types {
                 var candidate = schema.objectValue ?? [:]

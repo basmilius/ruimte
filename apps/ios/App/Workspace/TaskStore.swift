@@ -97,7 +97,7 @@ enum AgentWorkLook {
         case .open: self = .running
         case .done: self = .done
         case .failed: self = .failed
-        case .cancelled: self = .stopped
+        case .cancelled, .unknown: self = .stopped
         }
     }
 
@@ -124,6 +124,8 @@ struct TaskMark: View {
         case .done: String(localized: "done", comment: "Status of a task an agent gave")
         case .failed: String(localized: "failed", comment: "Status of a task an agent gave")
         case .cancelled: String(localized: "canceled", comment: "Status of a task an agent gave")
+        // A status of a newer machine, in its own word.
+        case .unknown(let word): word
         }
     }
 
@@ -135,6 +137,7 @@ struct TaskMark: View {
             case .done: "circle-check"
             case .failed: "circle-x"
             case .cancelled: "circle-slash"
+            case .unknown: "circle"
             }
         Image(lucide: icon, size: 14)
             .foregroundStyle(AgentWorkLook(taskStatus: status).color)

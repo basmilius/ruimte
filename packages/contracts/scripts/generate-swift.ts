@@ -5,6 +5,7 @@ import { UsageProviderSchema } from '@adecore/agent-contracts';
 import * as chat from '@adecore/agent-contracts/chat';
 import * as envelope from '@adecore/agent-contracts/envelope';
 import { RuntimeModeSchema } from '@adecore/agent-contracts/model';
+import { TaskResultSchema, TaskSchema, TaskStatusSchema } from '@adecore/agent-contracts/task';
 import { PLAN_STATE_MARKERS } from '@adecore/plan';
 import * as plan from '@adecore/plan/protocol';
 import { z } from 'zod';
@@ -14,23 +15,29 @@ import * as push from '../../pulsar/src/push.ts';
 import * as signaling from '../../pulsar/src/signaling.ts';
 import * as signing from '../../pulsar/src/signing.ts';
 import { PULSAR_STATEMENT_PUBLIC_KEYS } from '../../pulsar/src/statement-key.ts';
+import { AgentIntegrationSchema } from '../src/agent-integrations.ts';
 import * as agent from '../src/agent.ts';
 import { ARTIFACT_KINDS, ArtifactKindSchema } from '../src/artifact.ts';
+import { EndpointNameSourceSchema, ReachabilitySchema } from '../src/auth.ts';
 import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES, BYTES_REPLY_KIND, BYTES_REPLY_MAX_BYTES, CHAT_MODEL_MAX_BYTES } from '../src/bytes.ts';
 import * as liveness from '../src/direct-liveness.ts';
 import * as direct from '../src/direct.ts';
 import { REQUEST_SCHEMAS, EVENT_SCHEMAS } from '../src/index.ts';
+import { KeepAwakeModeSchema } from '../src/keep-awake.ts';
+import { TerminalShellSchema } from '../src/machine-settings.ts';
 import { MachineUpdateStatusSchema } from '../src/machine-update.ts';
 import { NODE_ACCENT_COLORS, NODE_ACCENT_NAMES } from '../src/node-accents.ts';
-import { ProjectSidebarResultSchema } from '../src/project-sidebar.ts';
+import { ProjectSidebarResultSchema, ProjectSidebarViewSchema } from '../src/project-sidebar.ts';
 import {
     CameraSchema,
     CanvasNodeSchema,
     NodeKindSchema,
+    NodeTitleSourceSchema,
     PROJECT_ICON_NAMES,
     PROJECT_VIEW_KINDS,
     ProjectIconNameSchema,
     ProjectListResultSchema,
+    ProjectNameSourceSchema,
     ProjectViewSchema
 } from '../src/project.ts';
 import { PROTOCOL_VERSION } from '../src/protocol.ts';
@@ -69,6 +76,29 @@ for (const module of [agent, task, plan, chat]) {
         }
     }
 }
+/*
+ * States a newer machine may add a value to, on a page that should still show. The interpreter takes any word for
+ * them and the Swift enum keeps its cases beside `unknown(String)`, so a switch over one still stops compiling when a
+ * case is added; a list that already names `unknown` reads a newer word as that.
+ */
+const openValues: ReadonlySet<unknown> = new Set<unknown>([
+    chat.ChatGoalStatusSchema,
+    chat.ChatTurnLimitSchema.shape.kind,
+    chat.ChatBackgroundTaskSchema.shape.kind,
+    ReachabilitySchema,
+    EndpointNameSourceSchema,
+    KeepAwakeModeSchema,
+    TerminalShellSchema,
+    AgentIntegrationSchema.shape.state,
+    NodeTitleSourceSchema,
+    ProjectNameSourceSchema,
+    ProjectSidebarViewSchema.shape.kind,
+    ProjectSidebarViewSchema.shape.nodes.element.shape.kind,
+    TaskStatusSchema,
+    TaskSchema.shape.wake,
+    TaskSchema.shape.paused.unwrap().shape.kind,
+    TaskResultSchema.shape.source
+]);
 const schemas: Record<string, Schema> = {};
 function stampRefinements(zodSchema: object, jsonSchema: Schema, where: string): void {
     const refinements = refinementsOf(zodSchema, where);
@@ -76,11 +106,19 @@ function stampRefinements(zodSchema: object, jsonSchema: Schema, where: string):
         jsonSchema['x-refinements'] = refinements;
     }
 }
+function stampOpenValues(zodSchema: object, jsonSchema: Schema): void {
+    if (openValues.has(zodSchema)) {
+        jsonSchema['x-open-values'] = true;
+    }
+}
 for (const [name, schema] of Object.entries(roots)) {
     schemas[name] = z.toJSONSchema(schema, {
         io: 'input',
         unrepresentable: 'throw',
-        override: ({ zodSchema, jsonSchema, path }) => stampRefinements(zodSchema, jsonSchema, `${name} ${path.join('.')}`)
+        override: ({ zodSchema, jsonSchema, path }) => {
+            stampRefinements(zodSchema, jsonSchema, `${name} ${path.join('.')}`);
+            stampOpenValues(zodSchema, jsonSchema);
+        }
     });
 }
 function canonical(schema: Schema): string {
@@ -119,6 +157,10 @@ function typeOf(schema: Schema, suggested: string, force = false): string {
     const named = names.get(canonical(schema));
     const name = named ?? suggested;
     if (named && !force && declarations.has(name)) {
+        return name;
+    }
+    if (schema.enum && schema['x-open-values']) {
+        declarations.set(name, openValuesSource(name, schema.enum));
         return name;
     }
     if (schema.enum) {
@@ -230,6 +272,39 @@ function typeOf(schema: Schema, suggested: string, force = false): string {
         return 'JSONValue';
     }
     throw new Error(`Unsupported schema ${suggested}: ${JSON.stringify(schema)}`);
+}
+function openValuesSource(name: string, values: string[]): string {
+    const fallback = values.includes('unknown') ? '.`unknown`' : '.unknown(rawValue)';
+    const extra = values.includes('unknown') ? '' : '\n    /// A word of a newer machine.\n    case unknown(String)';
+    const rawValues = values.map((value) => `        case .${identifier(value)}: ${JSON.stringify(value)}`);
+    if (!values.includes('unknown')) {
+        rawValues.push('        case .unknown(let value): value');
+    }
+    return `public enum ${name}: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+${values.map((value) => `    case ${identifier(value)}`).join('\n')}${extra}
+
+    public init(rawValue: String) {
+        switch rawValue {
+${values.map((value) => `        case ${JSON.stringify(value)}: self = .${identifier(value)}`).join('\n')}
+        default: self = ${fallback}
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+${rawValues.join('\n')}
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+}`;
 }
 /*
  * A member the interpreter marked, or one these decoders cannot read, becomes `unknown`: the fields every member
@@ -421,6 +496,9 @@ for (const [name, schema] of Object.entries(apiRoots)) {
             }
             if (!name.endsWith('.payload') && isLossyArray(zodSchema)) {
                 jsonSchema['x-lossy-items'] = true;
+            }
+            if (!name.endsWith('.payload')) {
+                stampOpenValues(zodSchema, jsonSchema);
             }
             stampRefinements(zodSchema, jsonSchema, `${name} ${path.join('.')}`);
             if (zodSchema instanceof z.ZodPipe && zodSchema.in === CameraSchema) {
@@ -1276,6 +1354,12 @@ const futureEvent = { type: 'future-event', itemId: 'assistant-1' };
 const placeless = { createdAt: 1000, turnId: null, kind: 'future-kind' };
 const chatInfoWithoutCwd = Object.fromEntries(Object.entries(chatInfoFixture).filter(([key]) => key !== 'cwd'));
 const subagentBase = { history: { cursor: null }, source: 'claude-transcript', live: false, items: [] };
+// zod's answer for a known goal state, with the newer word the app keeps in its place.
+const withGoalStatus = (parsed: unknown) => {
+    const event = parsed as { info: { goal: object } };
+
+    return { ...event, info: { ...event.info, goal: { ...event.info.goal, status: 'future-status' } } };
+};
 const readableSubagent = roots['request.chat.subagent.result']!.parse({ ...subagentBase, pending: [chatItemsFixture[6]] }) as { pending: unknown[] };
 const tolerated = [
     {
@@ -1292,6 +1376,13 @@ const tolerated = [
         schema: 'request.chat.list.result',
         input: { chats: [chatInfoFixture, { ...chatInfoWithoutCwd, chatId: 'chat-2' }] },
         output: roots['request.chat.list.result']!.parse({ chats: [chatInfoFixture] })
+    },
+    {
+        schema: 'event.chat.status',
+        input: { chatId: 'chat-1', info: { ...chatInfoFixture, goal: { objective: 'Ship', status: 'future-status' } } },
+        output: withGoalStatus(
+            roots['event.chat.status']!.parse({ chatId: 'chat-1', info: { ...chatInfoFixture, goal: { objective: 'Ship', status: 'active' } } })
+        )
     },
     {
         schema: 'event.chat.event',

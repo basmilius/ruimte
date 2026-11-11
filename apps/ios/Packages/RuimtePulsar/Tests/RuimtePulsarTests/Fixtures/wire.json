@@ -3700,6 +3700,79 @@
       }
     },
     {
+      "schema": "event.chat.status",
+      "input": {
+        "chatId": "chat-1",
+        "info": {
+          "chatId": "chat-1",
+          "provider": "claude",
+          "cwd": "/work",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "opus",
+            "options": {
+              "effort": "high",
+              "thinking": true
+            }
+          },
+          "runtimeMode": "auto",
+          "status": "needs-you",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [
+            "compact"
+          ],
+          "usage": {
+            "contextTokens": 1200,
+            "contextWindow": null,
+            "costUsd": 0.25,
+            "turns": 1
+          },
+          "createdAt": 1000,
+          "goal": {
+            "objective": "Ship",
+            "status": "future-status"
+          }
+        }
+      },
+      "output": {
+        "chatId": "chat-1",
+        "info": {
+          "chatId": "chat-1",
+          "provider": "claude",
+          "cwd": "/work",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "opus",
+            "options": {
+              "effort": "high",
+              "thinking": true
+            }
+          },
+          "runtimeMode": "auto",
+          "status": "needs-you",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [
+            "compact"
+          ],
+          "usage": {
+            "contextTokens": 1200,
+            "contextWindow": null,
+            "costUsd": 0.25,
+            "turns": 1
+          },
+          "goal": {
+            "objective": "Ship",
+            "status": "future-status"
+          },
+          "createdAt": 1000
+        }
+      }
+    },
+    {
       "schema": "event.chat.event",
       "input": {
         "chatId": "chat-1",

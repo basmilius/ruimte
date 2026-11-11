@@ -280,7 +280,9 @@ struct MachinePage: View {
                         selection: Binding(
                             get: { keepAwake.mode }, set: { mode in changeKeepAwake { $0.mode = mode } })
                     ) {
-                        ForEach(KeepAwakeMode.allCases, id: \.self) { Text($0.label).tag($0) }
+                        ForEach(KeepAwakeMode.choices(current: keepAwake.mode), id: \.self) {
+                            Text($0.label).tag($0)
+                        }
                     }
                     .pickerStyle(.menu)
                     .labelsHidden()

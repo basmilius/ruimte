@@ -24,7 +24,8 @@ struct ChatGoalView: Equatable {
     init?(goal: ChatInfoGoal?, activeTurnID: String?, goals: String?, canAct: Bool) {
         guard let goal else { return nil }
         self.goal = goal
-        guard canAct, let goals else {
+        // A state of a newer machine says nothing about what pausing or resuming would do, so it offers neither.
+        guard canAct, let goals, !Self.isNewer(goal.status) else {
             actions = []
             return
         }
@@ -50,7 +51,12 @@ struct ChatGoalView: Equatable {
         case .usageLimited: String(localized: "Goal stopped on a usage limit")
         case .budgetLimited: String(localized: "Goal used up its token budget")
         case .complete: String(localized: "Goal met")
+        case .unknown: String(localized: "Update Ruimte to see this.")
         }
+    }
+
+    private static func isNewer(_ status: ChatGoalStatus) -> Bool {
+        if case .unknown = status { true } else { false }
     }
 
     /// How far the goal got, in what its CLI counts: the checks that sent the agent on, or the tokens it spent.

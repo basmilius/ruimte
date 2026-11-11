@@ -209,6 +209,8 @@ struct ChatActivityChips: View {
         switch kind {
         case .shell: String(localized: "Shell")
         case .monitor: String(localized: "Monitor")
+        // A kind of a newer machine, in its own word.
+        case .unknown(let word): word
         }
     }
 

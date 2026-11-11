@@ -3270,6 +3270,17 @@
         }
       }
     },
+    "Set on the machine" : {
+      "comment" : "Keep awake setting of a newer machine",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingesteld op de machine"
+          }
+        }
+      }
+    },
     "v%lld, %@" : {
       "comment" : "A version: its number, then its day and time",
       "localizations" : {

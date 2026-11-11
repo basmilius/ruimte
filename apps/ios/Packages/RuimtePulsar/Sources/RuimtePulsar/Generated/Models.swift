@@ -3756,11 +3756,42 @@ public enum AgentStatus: String, CaseIterable, Codable, Sendable, Equatable {
     case `exited` = "exited"
 }
 
-public enum TaskStatus: String, CaseIterable, Codable, Sendable, Equatable {
-    case `open` = "open"
-    case `done` = "done"
-    case `failed` = "failed"
-    case `cancelled` = "cancelled"
+public enum TaskStatus: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `open`
+    case `done`
+    case `failed`
+    case `cancelled`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "open": self = .`open`
+        case "done": self = .`done`
+        case "failed": self = .`failed`
+        case "cancelled": self = .`cancelled`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`open`: "open"
+        case .`done`: "done"
+        case .`failed`: "failed"
+        case .`cancelled`: "cancelled"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public enum PlanActor: String, CaseIterable, Codable, Sendable, Equatable {
@@ -3809,13 +3840,48 @@ public enum ChatGoalAction: String, CaseIterable, Codable, Sendable, Equatable {
     case `clear` = "clear"
 }
 
-public enum ChatGoalStatus: String, CaseIterable, Codable, Sendable, Equatable {
-    case `active` = "active"
-    case `paused` = "paused"
-    case `blocked` = "blocked"
-    case `usageLimited` = "usage-limited"
-    case `budgetLimited` = "budget-limited"
-    case `complete` = "complete"
+public enum ChatGoalStatus: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `active`
+    case `paused`
+    case `blocked`
+    case `usageLimited`
+    case `budgetLimited`
+    case `complete`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "active": self = .`active`
+        case "paused": self = .`paused`
+        case "blocked": self = .`blocked`
+        case "usage-limited": self = .`usageLimited`
+        case "budget-limited": self = .`budgetLimited`
+        case "complete": self = .`complete`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`active`: "active"
+        case .`paused`: "paused"
+        case .`blocked`: "blocked"
+        case .`usageLimited`: "usage-limited"
+        case .`budgetLimited`: "budget-limited"
+        case .`complete`: "complete"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public enum ChatRequestKind: String, CaseIterable, Codable, Sendable, Equatable {
@@ -5971,9 +6037,36 @@ public struct ChatTurnItemLimit: Codable, Sendable, Equatable {
     }
 }
 
-public enum ChatTurnItemLimitKind: String, CaseIterable, Codable, Sendable, Equatable {
-    case `usage` = "usage"
-    case `overload` = "overload"
+public enum ChatTurnItemLimitKind: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `usage`
+    case `overload`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "usage": self = .`usage`
+        case "overload": self = .`overload`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`usage`: "usage"
+        case .`overload`: "overload"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct ChatTurnItemCheckpointDiffRef: Codable, Sendable, Equatable {
@@ -6643,9 +6736,36 @@ public struct ChatInfoBackgroundItem: Codable, Sendable, Equatable {
     }
 }
 
-public enum ChatInfoBackgroundItemKind: String, CaseIterable, Codable, Sendable, Equatable {
-    case `shell` = "shell"
-    case `monitor` = "monitor"
+public enum ChatInfoBackgroundItemKind: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `shell`
+    case `monitor`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "shell": self = .`shell`
+        case "monitor": self = .`monitor`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`shell`: "shell"
+        case .`monitor`: "monitor"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct ChatInfoUsage: Codable, Sendable, Equatable {
@@ -6801,9 +6921,36 @@ public struct ChatInfoLimit: Codable, Sendable, Equatable {
     }
 }
 
-public enum ChatInfoLimitKind: String, CaseIterable, Codable, Sendable, Equatable {
-    case `usage` = "usage"
-    case `overload` = "overload"
+public enum ChatInfoLimitKind: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `usage`
+    case `overload`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "usage": self = .`usage`
+        case "overload": self = .`overload`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`usage`: "usage"
+        case .`overload`: "overload"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct ChatInfoRequestsItem: Codable, Sendable, Equatable {
@@ -8030,9 +8177,36 @@ public struct ProjectInitialIcon: Codable, Sendable, Equatable {
     }
 }
 
-public enum ProjectSummaryNameSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `chosen` = "chosen"
-    case `folder` = "folder"
+public enum ProjectSummaryNameSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `chosen`
+    case `folder`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "chosen": self = .`chosen`
+        case "folder": self = .`folder`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`chosen`: "chosen"
+        case .`folder`: "folder"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct EndpointInfo: Codable, Sendable, Equatable {
@@ -8281,9 +8455,36 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
     }
 }
 
-public enum EndpointNameSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `chosen` = "chosen"
-    case `default` = "default"
+public enum EndpointNameSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `chosen`
+    case `default`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "chosen": self = .`chosen`
+        case "default": self = .`default`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`chosen`: "chosen"
+        case .`default`: "default"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct EndpointInfoTextModel: Codable, Sendable, Equatable {
@@ -8318,10 +8519,39 @@ public struct EndpointInfoTextModel: Codable, Sendable, Equatable {
     }
 }
 
-public enum KeepAwakeMode: String, CaseIterable, Codable, Sendable, Equatable {
-    case `off` = "off"
-    case `working` = "working"
-    case `always` = "always"
+public enum KeepAwakeMode: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `off`
+    case `working`
+    case `always`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "off": self = .`off`
+        case "working": self = .`working`
+        case "always": self = .`always`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`off`: "off"
+        case .`working`: "working"
+        case .`always`: "always"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public enum EndpointBroker: Codable, Sendable, Equatable {
@@ -8421,11 +8651,42 @@ public struct EndpointBrokerVariant2: Codable, Sendable, Equatable {
     }
 }
 
-public enum EndpointTerminalShell: String, CaseIterable, Codable, Sendable, Equatable {
-    case `powershell` = "powershell"
-    case `gitBash` = "git-bash"
-    case `cmd` = "cmd"
-    case `wsl` = "wsl"
+public enum EndpointTerminalShell: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `powershell`
+    case `gitBash`
+    case `cmd`
+    case `wsl`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "powershell": self = .`powershell`
+        case "git-bash": self = .`gitBash`
+        case "cmd": self = .`cmd`
+        case "wsl": self = .`wsl`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`powershell`: "powershell"
+        case .`gitBash`: "git-bash"
+        case .`cmd`: "cmd"
+        case .`wsl`: "wsl"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct EndpointNodeSize: Codable, Sendable, Equatable {
@@ -8506,11 +8767,42 @@ public struct EndpointUpdate: Codable, Sendable, Equatable {
     }
 }
 
-public enum EndpointInfoReachability: String, CaseIterable, Codable, Sendable, Equatable {
-    case `loopback` = "loopback"
-    case `lan` = "lan"
-    case `tunnel` = "tunnel"
-    case `public` = "public"
+public enum EndpointInfoReachability: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `loopback`
+    case `lan`
+    case `tunnel`
+    case `public`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "loopback": self = .`loopback`
+        case "lan": self = .`lan`
+        case "tunnel": self = .`tunnel`
+        case "public": self = .`public`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`loopback`: "loopback"
+        case .`lan`: "lan"
+        case .`tunnel`: "tunnel"
+        case .`public`: "public"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct LanDoor: Codable, Sendable, Equatable {
@@ -8599,10 +8891,39 @@ public struct EndpointAgentIntegrationsProvidersItem: Codable, Sendable, Equatab
     }
 }
 
-public enum EndpointAgentIntegrationsProvidersItemState: String, CaseIterable, Codable, Sendable, Equatable {
-    case `unset` = "unset"
-    case `on` = "on"
-    case `off` = "off"
+public enum EndpointAgentIntegrationsProvidersItemState: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `unset`
+    case `on`
+    case `off`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "unset": self = .`unset`
+        case "on": self = .`on`
+        case "off": self = .`off`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`unset`: "unset"
+        case .`on`: "on"
+        case .`off`: "off"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct EndpointChangedEvent: Codable, Sendable, Equatable {
@@ -12083,16 +12404,74 @@ public struct AgentTaskResult: Codable, Sendable, Equatable {
     }
 }
 
-public enum AgentTaskResultSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `done` = "done"
-    case `turn` = "turn"
-    case `exit` = "exit"
+public enum AgentTaskResultSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `done`
+    case `turn`
+    case `exit`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "done": self = .`done`
+        case "turn": self = .`turn`
+        case "exit": self = .`exit`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`done`: "done"
+        case .`turn`: "turn"
+        case .`exit`: "exit"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
-public enum AgentTaskWake: String, CaseIterable, Codable, Sendable, Equatable {
-    case `pending` = "pending"
-    case `sent` = "sent"
-    case `none` = "none"
+public enum AgentTaskWake: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `pending`
+    case `sent`
+    case `none`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "pending": self = .`pending`
+        case "sent": self = .`sent`
+        case "none": self = .`none`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`pending`: "pending"
+        case .`sent`: "sent"
+        case .`none`: "none"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct AgentTaskPaused: Codable, Sendable, Equatable {
@@ -12122,9 +12501,36 @@ public struct AgentTaskPaused: Codable, Sendable, Equatable {
     }
 }
 
-public enum AgentTaskPausedKind: String, CaseIterable, Codable, Sendable, Equatable {
-    case `usage` = "usage"
-    case `overload` = "overload"
+public enum AgentTaskPausedKind: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `usage`
+    case `overload`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "usage": self = .`usage`
+        case "overload": self = .`overload`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`usage`: "usage"
+        case .`overload`: "overload"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct TaskChangedEvent: Codable, Sendable, Equatable {
@@ -12408,11 +12814,42 @@ public struct ConnectedClient: Codable, Sendable, Equatable {
     }
 }
 
-public enum ConnectedClientReachability: String, CaseIterable, Codable, Sendable, Equatable {
-    case `loopback` = "loopback"
-    case `lan` = "lan"
-    case `tunnel` = "tunnel"
-    case `public` = "public"
+public enum ConnectedClientReachability: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `loopback`
+    case `lan`
+    case `tunnel`
+    case `public`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "loopback": self = .`loopback`
+        case "lan": self = .`lan`
+        case "tunnel": self = .`tunnel`
+        case "public": self = .`public`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`loopback`: "loopback"
+        case .`lan`: "lan"
+        case .`tunnel`: "tunnel"
+        case .`public`: "public"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public enum FsReadResult: Codable, Sendable, Equatable {
@@ -16558,24 +16995,95 @@ public struct ProjectSidebarView: Codable, Sendable, Equatable {
     }
 }
 
-public enum ProjectSidebarViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `auto` = "auto"
-    case `user` = "user"
+public enum ProjectSidebarViewTitleSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `auto`
+    case `user`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "auto": self = .`auto`
+        case "user": self = .`user`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`auto`: "auto"
+        case .`user`: "user"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
-public enum ProjectSidebarViewKind: String, CaseIterable, Codable, Sendable, Equatable {
-    case `canvas` = "canvas"
-    case `terminal` = "terminal"
-    case `chat` = "chat"
-    case `browser` = "browser"
-    case `device` = "device"
-    case `drawing` = "drawing"
-    case `diagram` = "diagram"
-    case `file` = "file"
-    case `database` = "database"
-    case `separator` = "separator"
-    case `subheader` = "subheader"
-    case `unknown` = "unknown"
+public enum ProjectSidebarViewKind: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `canvas`
+    case `terminal`
+    case `chat`
+    case `browser`
+    case `device`
+    case `drawing`
+    case `diagram`
+    case `file`
+    case `database`
+    case `separator`
+    case `subheader`
+    case `unknown`
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "canvas": self = .`canvas`
+        case "terminal": self = .`terminal`
+        case "chat": self = .`chat`
+        case "browser": self = .`browser`
+        case "device": self = .`device`
+        case "drawing": self = .`drawing`
+        case "diagram": self = .`diagram`
+        case "file": self = .`file`
+        case "database": self = .`database`
+        case "separator": self = .`separator`
+        case "subheader": self = .`subheader`
+        case "unknown": self = .`unknown`
+        default: self = .`unknown`
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`canvas`: "canvas"
+        case .`terminal`: "terminal"
+        case .`chat`: "chat"
+        case .`browser`: "browser"
+        case .`device`: "device"
+        case .`drawing`: "drawing"
+        case .`diagram`: "diagram"
+        case .`file`: "file"
+        case .`database`: "database"
+        case .`separator`: "separator"
+        case .`subheader`: "subheader"
+        case .`unknown`: "unknown"
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct ProjectSidebarNode: Codable, Sendable, Equatable {
@@ -16630,16 +17138,74 @@ public struct ProjectSidebarNode: Codable, Sendable, Equatable {
     }
 }
 
-public enum ProjectSidebarNodeTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `auto` = "auto"
-    case `user` = "user"
+public enum ProjectSidebarNodeTitleSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `auto`
+    case `user`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "auto": self = .`auto`
+        case "user": self = .`user`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`auto`: "auto"
+        case .`user`: "user"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
-public enum ProjectSidebarNodeKind: String, CaseIterable, Codable, Sendable, Equatable {
-    case `terminal` = "terminal"
-    case `chat` = "chat"
-    case `browser` = "browser"
-    case `device` = "device"
+public enum ProjectSidebarNodeKind: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `terminal`
+    case `chat`
+    case `browser`
+    case `device`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "terminal": self = .`terminal`
+        case "chat": self = .`chat`
+        case "browser": self = .`browser`
+        case "device": self = .`device`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`terminal`: "terminal"
+        case .`chat`: "chat"
+        case .`browser`: "browser"
+        case .`device`: "device"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct ProjectSummaryEvent: Codable, Sendable, Equatable {
@@ -17142,9 +17708,36 @@ public struct StoredCanvasView: Codable, Sendable, Equatable {
     }
 }
 
-public enum StoredCanvasViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `auto` = "auto"
-    case `user` = "user"
+public enum StoredCanvasViewTitleSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `auto`
+    case `user`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "auto": self = .`auto`
+        case "user": self = .`user`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`auto`: "auto"
+        case .`user`: "user"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct StoredNode: Codable, Sendable, Equatable {
@@ -17350,9 +17943,36 @@ public enum StoredNodeKind: String, CaseIterable, Codable, Sendable, Equatable {
     case `unknown` = "unknown"
 }
 
-public enum StoredNodeTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `auto` = "auto"
-    case `user` = "user"
+public enum StoredNodeTitleSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `auto`
+    case `user`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "auto": self = .`auto`
+        case "user": self = .`user`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`auto`: "auto"
+        case .`user`: "user"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct StoredNodeDevice: Codable, Sendable, Equatable {
@@ -17923,9 +18543,36 @@ public struct StoredChatView: Codable, Sendable, Equatable {
     }
 }
 
-public enum StoredChatViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `auto` = "auto"
-    case `user` = "user"
+public enum StoredChatViewTitleSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `auto`
+    case `user`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "auto": self = .`auto`
+        case "user": self = .`user`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`auto`: "auto"
+        case .`user`: "user"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct StoredChatViewNode: Codable, Sendable, Equatable {
@@ -18106,9 +18753,36 @@ public struct StoredTerminalView: Codable, Sendable, Equatable {
     }
 }
 
-public enum StoredTerminalViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `auto` = "auto"
-    case `user` = "user"
+public enum StoredTerminalViewTitleSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `auto`
+    case `user`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "auto": self = .`auto`
+        case "user": self = .`user`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`auto`: "auto"
+        case .`user`: "user"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct StoredTerminalViewNode: Codable, Sendable, Equatable {
@@ -18294,9 +18968,36 @@ public struct StoredBrowserView: Codable, Sendable, Equatable {
     }
 }
 
-public enum StoredBrowserViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `auto` = "auto"
-    case `user` = "user"
+public enum StoredBrowserViewTitleSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `auto`
+    case `user`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "auto": self = .`auto`
+        case "user": self = .`user`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`auto`: "auto"
+        case .`user`: "user"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct StoredDeviceView: Codable, Sendable, Equatable {
@@ -18351,9 +19052,36 @@ public struct StoredDeviceView: Codable, Sendable, Equatable {
     }
 }
 
-public enum StoredDeviceViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `auto` = "auto"
-    case `user` = "user"
+public enum StoredDeviceViewTitleSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `auto`
+    case `user`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "auto": self = .`auto`
+        case "user": self = .`user`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`auto`: "auto"
+        case .`user`: "user"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct StoredDeviceViewDevice: Codable, Sendable, Equatable {
@@ -18440,9 +19168,36 @@ public struct StoredDrawingView: Codable, Sendable, Equatable {
     }
 }
 
-public enum StoredDrawingViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `auto` = "auto"
-    case `user` = "user"
+public enum StoredDrawingViewTitleSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `auto`
+    case `user`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "auto": self = .`auto`
+        case "user": self = .`user`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`auto`: "auto"
+        case .`user`: "user"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct StoredDiagramView: Codable, Sendable, Equatable {
@@ -18492,9 +19247,36 @@ public struct StoredDiagramView: Codable, Sendable, Equatable {
     }
 }
 
-public enum StoredDiagramViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `auto` = "auto"
-    case `user` = "user"
+public enum StoredDiagramViewTitleSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `auto`
+    case `user`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "auto": self = .`auto`
+        case "user": self = .`user`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`auto`: "auto"
+        case .`user`: "user"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct StoredFileView: Codable, Sendable, Equatable {
@@ -18549,9 +19331,36 @@ public struct StoredFileView: Codable, Sendable, Equatable {
     }
 }
 
-public enum StoredFileViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `auto` = "auto"
-    case `user` = "user"
+public enum StoredFileViewTitleSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `auto`
+    case `user`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "auto": self = .`auto`
+        case "user": self = .`user`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`auto`: "auto"
+        case .`user`: "user"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct StoredDatabaseView: Codable, Sendable, Equatable {
@@ -18631,9 +19440,36 @@ public struct StoredDatabaseView: Codable, Sendable, Equatable {
     }
 }
 
-public enum StoredDatabaseViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `auto` = "auto"
-    case `user` = "user"
+public enum StoredDatabaseViewTitleSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `auto`
+    case `user`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "auto": self = .`auto`
+        case "user": self = .`user`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`auto`: "auto"
+        case .`user`: "user"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public enum StoredDatabaseViewMode: String, CaseIterable, Codable, Sendable, Equatable {
@@ -18772,9 +19608,36 @@ public struct StoredArtifactView: Codable, Sendable, Equatable {
     }
 }
 
-public enum StoredArtifactViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `auto` = "auto"
-    case `user` = "user"
+public enum StoredArtifactViewTitleSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `auto`
+    case `user`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "auto": self = .`auto`
+        case "user": self = .`user`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`auto`: "auto"
+        case .`user`: "user"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct StoredArtifactViewNode: Codable, Sendable, Equatable {
@@ -18965,9 +19828,36 @@ public struct StoredDesignView: Codable, Sendable, Equatable {
     }
 }
 
-public enum StoredDesignViewTitleSource: String, CaseIterable, Codable, Sendable, Equatable {
-    case `auto` = "auto"
-    case `user` = "user"
+public enum StoredDesignViewTitleSource: RawRepresentable, Codable, Sendable, Equatable, Hashable {
+    case `auto`
+    case `user`
+    /// A word of a newer machine.
+    case unknown(String)
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "auto": self = .`auto`
+        case "user": self = .`user`
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .`auto`: "auto"
+        case .`user`: "user"
+        case .unknown(let value): value
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public struct StoredDesignViewNode: Codable, Sendable, Equatable {

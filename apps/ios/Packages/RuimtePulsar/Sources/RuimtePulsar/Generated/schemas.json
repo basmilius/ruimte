@@ -6284,7 +6284,8 @@
       "done",
       "failed",
       "cancelled"
-    ]
+    ],
+    "x-open-values": true
   },
   "PlanActorSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -6363,7 +6364,8 @@
       "usage-limited",
       "budget-limited",
       "complete"
-    ]
+    ],
+    "x-open-values": true
   },
   "ChatRequestKindSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -11041,7 +11043,8 @@
                   "enum": [
                     "shell",
                     "monitor"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "description": {
                   "type": "string"
@@ -11188,7 +11191,8 @@
                 "enum": [
                   "usage",
                   "overload"
-                ]
+                ],
+                "x-open-values": true
               },
               "resetsAt": {
                 "type": "number"
@@ -11360,7 +11364,8 @@
                   "usage-limited",
                   "budget-limited",
                   "complete"
-                ]
+                ],
+                "x-open-values": true
               },
               "checks": {
                 "type": "integer",
@@ -12925,7 +12930,8 @@
                       "enum": [
                         "usage",
                         "overload"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "resetsAt": {
                       "type": "number"
@@ -14635,7 +14641,8 @@
                       "enum": [
                         "usage",
                         "overload"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "resetsAt": {
                       "type": "number"
@@ -16339,7 +16346,8 @@
                               "enum": [
                                 "usage",
                                 "overload"
-                              ]
+                              ],
+                              "x-open-values": true
                             },
                             "resetsAt": {
                               "type": "number"
@@ -17223,7 +17231,8 @@
                             "enum": [
                               "shell",
                               "monitor"
-                            ]
+                            ],
+                            "x-open-values": true
                           },
                           "description": {
                             "type": "string"
@@ -17370,7 +17379,8 @@
                           "enum": [
                             "usage",
                             "overload"
-                          ]
+                          ],
+                          "x-open-values": true
                         },
                         "resetsAt": {
                           "type": "number"
@@ -17542,7 +17552,8 @@
                             "usage-limited",
                             "budget-limited",
                             "complete"
-                          ]
+                          ],
+                          "x-open-values": true
                         },
                         "checks": {
                           "type": "integer",
@@ -17903,7 +17914,8 @@
                             "enum": [
                               "shell",
                               "monitor"
-                            ]
+                            ],
+                            "x-open-values": true
                           },
                           "description": {
                             "type": "string"
@@ -18050,7 +18062,8 @@
                           "enum": [
                             "usage",
                             "overload"
-                          ]
+                          ],
+                          "x-open-values": true
                         },
                         "resetsAt": {
                           "type": "number"
@@ -18222,7 +18235,8 @@
                             "usage-limited",
                             "budget-limited",
                             "complete"
-                          ]
+                          ],
+                          "x-open-values": true
                         },
                         "checks": {
                           "type": "integer",
@@ -19787,7 +19801,8 @@
                                 "enum": [
                                   "usage",
                                   "overload"
-                                ]
+                                ],
+                                "x-open-values": true
                               },
                               "resetsAt": {
                                 "type": "number"
@@ -22022,7 +22037,8 @@
                       "enum": [
                         "usage",
                         "overload"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "resetsAt": {
                       "type": "number"
@@ -22689,7 +22705,8 @@
               "enum": [
                 "shell",
                 "monitor"
-              ]
+              ],
+              "x-open-values": true
             },
             "description": {
               "type": "string"
@@ -22836,7 +22853,8 @@
             "enum": [
               "usage",
               "overload"
-            ]
+            ],
+            "x-open-values": true
           },
           "resetsAt": {
             "type": "number"
@@ -23008,7 +23026,8 @@
               "usage-limited",
               "budget-limited",
               "complete"
-            ]
+            ],
+            "x-open-values": true
           },
           "checks": {
             "type": "integer",
@@ -23385,7 +23404,8 @@
                       "enum": [
                         "shell",
                         "monitor"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "description": {
                       "type": "string"
@@ -23532,7 +23552,8 @@
                     "enum": [
                       "usage",
                       "overload"
-                    ]
+                    ],
+                    "x-open-values": true
                   },
                   "resetsAt": {
                     "type": "number"
@@ -23704,7 +23725,8 @@
                       "usage-limited",
                       "budget-limited",
                       "complete"
-                    ]
+                    ],
+                    "x-open-values": true
                   },
                   "checks": {
                     "type": "integer",
@@ -24225,7 +24247,8 @@
               "enum": [
                 "shell",
                 "monitor"
-              ]
+              ],
+              "x-open-values": true
             },
             "description": {
               "type": "string"
@@ -24372,7 +24395,8 @@
             "enum": [
               "usage",
               "overload"
-            ]
+            ],
+            "x-open-values": true
           },
           "resetsAt": {
             "type": "number"
@@ -24544,7 +24568,8 @@
               "usage-limited",
               "budget-limited",
               "complete"
-            ]
+            ],
+            "x-open-values": true
           },
           "checks": {
             "type": "integer",
@@ -25118,7 +25143,8 @@
                   "enum": [
                     "shell",
                     "monitor"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "description": {
                   "type": "string"
@@ -25265,7 +25291,8 @@
                 "enum": [
                   "usage",
                   "overload"
-                ]
+                ],
+                "x-open-values": true
               },
               "resetsAt": {
                 "type": "number"
@@ -25437,7 +25464,8 @@
                   "usage-limited",
                   "budget-limited",
                   "complete"
-                ]
+                ],
+                "x-open-values": true
               },
               "checks": {
                 "type": "integer",
@@ -27261,7 +27289,8 @@
                       "enum": [
                         "usage",
                         "overload"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "resetsAt": {
                       "type": "number"
@@ -27915,7 +27944,8 @@
                     "enum": [
                       "shell",
                       "monitor"
-                    ]
+                    ],
+                    "x-open-values": true
                   },
                   "description": {
                     "type": "string"
@@ -28062,7 +28092,8 @@
                   "enum": [
                     "usage",
                     "overload"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "resetsAt": {
                   "type": "number"
@@ -28234,7 +28265,8 @@
                     "usage-limited",
                     "budget-limited",
                     "complete"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "checks": {
                   "type": "integer",
@@ -28623,7 +28655,8 @@
             "enum": [
               "chosen",
               "folder"
-            ]
+            ],
+            "x-open-values": true
           },
           "scratch": {
             "type": "boolean"
@@ -31201,7 +31234,8 @@
                       "enum": [
                         "usage",
                         "overload"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "resetsAt": {
                       "type": "number"
@@ -32176,7 +32210,8 @@
                 "lan",
                 "tunnel",
                 "public"
-              ]
+              ],
+              "x-open-values": true
             },
             "connectedAt": {
               "type": "number"
@@ -40725,7 +40760,8 @@
                     "unset",
                     "on",
                     "off"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "reviewed": {
                   "type": "boolean"
@@ -40830,7 +40866,8 @@
         "enum": [
           "chosen",
           "default"
-        ]
+        ],
+        "x-open-values": true
       },
       "icon": {
         "anyOf": [
@@ -41099,7 +41136,8 @@
           "off",
           "working",
           "always"
-        ]
+        ],
+        "x-open-values": true
       },
       "keepAwakeOnBattery": {
         "type": "boolean"
@@ -41170,7 +41208,8 @@
           "git-bash",
           "cmd",
           "wsl"
-        ]
+        ],
+        "x-open-values": true
       },
       "nodeSizes": {
         "type": "object",
@@ -41276,7 +41315,8 @@
           "lan",
           "tunnel",
           "public"
-        ]
+        ],
+        "x-open-values": true
       },
       "authenticated": {
         "type": "boolean"
@@ -41359,7 +41399,8 @@
                     "unset",
                     "on",
                     "off"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "reviewed": {
                   "type": "boolean"
@@ -41445,7 +41486,8 @@
         "enum": [
           "chosen",
           "default"
-        ]
+        ],
+        "x-open-values": true
       },
       "icon": {
         "anyOf": [
@@ -41714,7 +41756,8 @@
           "off",
           "working",
           "always"
-        ]
+        ],
+        "x-open-values": true
       },
       "keepAwakeOnBattery": {
         "type": "boolean"
@@ -41785,7 +41828,8 @@
           "git-bash",
           "cmd",
           "wsl"
-        ]
+        ],
+        "x-open-values": true
       },
       "nodeSizes": {
         "type": "object",
@@ -41891,7 +41935,8 @@
           "lan",
           "tunnel",
           "public"
-        ]
+        ],
+        "x-open-values": true
       },
       "authenticated": {
         "type": "boolean"
@@ -41974,7 +42019,8 @@
                     "unset",
                     "on",
                     "off"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "reviewed": {
                   "type": "boolean"
@@ -42356,7 +42402,8 @@
                     "unset",
                     "on",
                     "off"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "reviewed": {
                   "type": "boolean"
@@ -42803,7 +42850,8 @@
         "enum": [
           "chosen",
           "default"
-        ]
+        ],
+        "x-open-values": true
       },
       "icon": {
         "anyOf": [
@@ -43072,7 +43120,8 @@
           "off",
           "working",
           "always"
-        ]
+        ],
+        "x-open-values": true
       },
       "keepAwakeOnBattery": {
         "type": "boolean"
@@ -43143,7 +43192,8 @@
           "git-bash",
           "cmd",
           "wsl"
-        ]
+        ],
+        "x-open-values": true
       },
       "nodeSizes": {
         "type": "object",
@@ -43249,7 +43299,8 @@
           "lan",
           "tunnel",
           "public"
-        ]
+        ],
+        "x-open-values": true
       },
       "authenticated": {
         "type": "boolean"
@@ -43332,7 +43383,8 @@
                     "unset",
                     "on",
                     "off"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "reviewed": {
                   "type": "boolean"
@@ -43445,7 +43497,8 @@
         "enum": [
           "chosen",
           "default"
-        ]
+        ],
+        "x-open-values": true
       },
       "icon": {
         "anyOf": [
@@ -43714,7 +43767,8 @@
           "off",
           "working",
           "always"
-        ]
+        ],
+        "x-open-values": true
       },
       "keepAwakeOnBattery": {
         "type": "boolean"
@@ -43785,7 +43839,8 @@
           "git-bash",
           "cmd",
           "wsl"
-        ]
+        ],
+        "x-open-values": true
       },
       "nodeSizes": {
         "type": "object",
@@ -43891,7 +43946,8 @@
           "lan",
           "tunnel",
           "public"
-        ]
+        ],
+        "x-open-values": true
       },
       "authenticated": {
         "type": "boolean"
@@ -43974,7 +44030,8 @@
                     "unset",
                     "on",
                     "off"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "reviewed": {
                   "type": "boolean"
@@ -44047,7 +44104,8 @@
         "enum": [
           "chosen",
           "default"
-        ]
+        ],
+        "x-open-values": true
       },
       "icon": {
         "anyOf": [
@@ -44316,7 +44374,8 @@
           "off",
           "working",
           "always"
-        ]
+        ],
+        "x-open-values": true
       },
       "keepAwakeOnBattery": {
         "type": "boolean"
@@ -44387,7 +44446,8 @@
           "git-bash",
           "cmd",
           "wsl"
-        ]
+        ],
+        "x-open-values": true
       },
       "nodeSizes": {
         "type": "object",
@@ -44493,7 +44553,8 @@
           "lan",
           "tunnel",
           "public"
-        ]
+        ],
+        "x-open-values": true
       },
       "authenticated": {
         "type": "boolean"
@@ -44576,7 +44637,8 @@
                     "unset",
                     "on",
                     "off"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "reviewed": {
                   "type": "boolean"
@@ -44786,7 +44848,8 @@
         "enum": [
           "chosen",
           "default"
-        ]
+        ],
+        "x-open-values": true
       },
       "icon": {
         "anyOf": [
@@ -45055,7 +45118,8 @@
           "off",
           "working",
           "always"
-        ]
+        ],
+        "x-open-values": true
       },
       "keepAwakeOnBattery": {
         "type": "boolean"
@@ -45126,7 +45190,8 @@
           "git-bash",
           "cmd",
           "wsl"
-        ]
+        ],
+        "x-open-values": true
       },
       "nodeSizes": {
         "type": "object",
@@ -45232,7 +45297,8 @@
           "lan",
           "tunnel",
           "public"
-        ]
+        ],
+        "x-open-values": true
       },
       "authenticated": {
         "type": "boolean"
@@ -45315,7 +45381,8 @@
                     "unset",
                     "on",
                     "off"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "reviewed": {
                   "type": "boolean"
@@ -54894,7 +54961,8 @@
               "done",
               "failed",
               "cancelled"
-            ]
+            ],
+            "x-open-values": true
           },
           {
             "type": "string",
@@ -54916,7 +54984,8 @@
                   "done",
                   "turn",
                   "exit"
-                ]
+                ],
+                "x-open-values": true
               },
               "at": {
                 "type": "number"
@@ -56908,7 +56977,8 @@
               "enum": [
                 "chosen",
                 "folder"
-              ]
+              ],
+              "x-open-values": true
             },
             "scratch": {
               "type": "boolean"
@@ -57223,7 +57293,8 @@
             "enum": [
               "chosen",
               "folder"
-            ]
+            ],
+            "x-open-values": true
           },
           "scratch": {
             "type": "boolean"
@@ -57604,7 +57675,8 @@
             "enum": [
               "chosen",
               "folder"
-            ]
+            ],
+            "x-open-values": true
           },
           "scratch": {
             "type": "boolean"
@@ -57841,7 +57913,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -58083,7 +58156,8 @@
                             "enum": [
                               "auto",
                               "user"
-                            ]
+                            ],
+                            "x-open-values": true
                           },
                           "x": {
                             "type": "number"
@@ -58651,7 +58725,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -58972,7 +59047,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -59283,7 +59359,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -59515,7 +59592,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -59775,7 +59853,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -59999,7 +60078,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -60223,7 +60303,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -60452,7 +60533,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -60762,7 +60844,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -61073,7 +61156,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -62269,7 +62353,8 @@
                   "enum": [
                     "chosen",
                     "folder"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "scratch": {
                   "type": "boolean"
@@ -67172,7 +67257,8 @@
             "enum": [
               "chosen",
               "folder"
-            ]
+            ],
+            "x-open-values": true
           },
           "scratch": {
             "type": "boolean"
@@ -67680,7 +67766,8 @@
             "enum": [
               "chosen",
               "folder"
-            ]
+            ],
+            "x-open-values": true
           },
           "scratch": {
             "type": "boolean"
@@ -68003,7 +68090,8 @@
                   "enum": [
                     "chosen",
                     "folder"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "scratch": {
                   "type": "boolean"
@@ -68038,7 +68126,8 @@
                         "enum": [
                           "auto",
                           "user"
-                        ]
+                        ],
+                        "x-open-values": true
                       },
                       "kind": {
                         "type": "string",
@@ -68055,7 +68144,8 @@
                           "separator",
                           "subheader",
                           "unknown"
-                        ]
+                        ],
+                        "x-open-values": true
                       },
                       "icon": {
                         "anyOf": [
@@ -68302,7 +68392,8 @@
                               "enum": [
                                 "auto",
                                 "user"
-                              ]
+                              ],
+                              "x-open-values": true
                             },
                             "kind": {
                               "type": "string",
@@ -68311,7 +68402,8 @@
                                 "chat",
                                 "browser",
                                 "device"
-                              ]
+                              ],
+                              "x-open-values": true
                             },
                             "provider": {
                               "anyOf": [
@@ -68374,7 +68466,8 @@
                                 "enum": [
                                   "auto",
                                   "user"
-                                ]
+                                ],
+                                "x-open-values": true
                               },
                               "kind": {
                                 "type": "string",
@@ -68383,7 +68476,8 @@
                                   "chat",
                                   "browser",
                                   "device"
-                                ]
+                                ],
+                                "x-open-values": true
                               },
                               "provider": {
                                 "anyOf": [
@@ -74610,7 +74704,8 @@
                 "done",
                 "failed",
                 "cancelled"
-              ]
+              ],
+              "x-open-values": true
             },
             "result": {
               "anyOf": [
@@ -74626,7 +74721,8 @@
                         "done",
                         "turn",
                         "exit"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "at": {
                       "type": "number"
@@ -74658,7 +74754,8 @@
                 "pending",
                 "sent",
                 "none"
-              ]
+              ],
+              "x-open-values": true
             },
             "paused": {
               "type": "object",
@@ -74668,7 +74765,8 @@
                   "enum": [
                     "usage",
                     "overload"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "until": {
                   "type": "number"
@@ -83754,7 +83852,8 @@
                             "enum": [
                               "usage",
                               "overload"
-                            ]
+                            ],
+                            "x-open-values": true
                           },
                           "resetsAt": {
                             "type": "number"
@@ -84638,7 +84737,8 @@
                           "enum": [
                             "shell",
                             "monitor"
-                          ]
+                          ],
+                          "x-open-values": true
                         },
                         "description": {
                           "type": "string"
@@ -84785,7 +84885,8 @@
                         "enum": [
                           "usage",
                           "overload"
-                        ]
+                        ],
+                        "x-open-values": true
                       },
                       "resetsAt": {
                         "type": "number"
@@ -84957,7 +85058,8 @@
                           "usage-limited",
                           "budget-limited",
                           "complete"
-                        ]
+                        ],
+                        "x-open-values": true
                       },
                       "checks": {
                         "type": "integer",
@@ -85318,7 +85420,8 @@
                           "enum": [
                             "shell",
                             "monitor"
-                          ]
+                          ],
+                          "x-open-values": true
                         },
                         "description": {
                           "type": "string"
@@ -85465,7 +85568,8 @@
                         "enum": [
                           "usage",
                           "overload"
-                        ]
+                        ],
+                        "x-open-values": true
                       },
                       "resetsAt": {
                         "type": "number"
@@ -85637,7 +85741,8 @@
                           "usage-limited",
                           "budget-limited",
                           "complete"
-                        ]
+                        ],
+                        "x-open-values": true
                       },
                       "checks": {
                         "type": "integer",
@@ -87202,7 +87307,8 @@
                               "enum": [
                                 "usage",
                                 "overload"
-                              ]
+                              ],
+                              "x-open-values": true
                             },
                             "resetsAt": {
                               "type": "number"
@@ -87830,7 +87936,8 @@
                   "enum": [
                     "shell",
                     "monitor"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "description": {
                   "type": "string"
@@ -87977,7 +88084,8 @@
                 "enum": [
                   "usage",
                   "overload"
-                ]
+                ],
+                "x-open-values": true
               },
               "resetsAt": {
                 "type": "number"
@@ -88149,7 +88257,8 @@
                   "usage-limited",
                   "budget-limited",
                   "complete"
-                ]
+                ],
+                "x-open-values": true
               },
               "checks": {
                 "type": "integer",
@@ -90386,7 +90495,8 @@
         "enum": [
           "chosen",
           "default"
-        ]
+        ],
+        "x-open-values": true
       },
       "icon": {
         "anyOf": [
@@ -90655,7 +90765,8 @@
           "off",
           "working",
           "always"
-        ]
+        ],
+        "x-open-values": true
       },
       "keepAwakeOnBattery": {
         "type": "boolean"
@@ -90813,7 +90924,8 @@
                     "unset",
                     "on",
                     "off"
-                  ]
+                  ],
+                  "x-open-values": true
                 },
                 "reviewed": {
                   "type": "boolean"
@@ -93099,7 +93211,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -93341,7 +93454,8 @@
                             "enum": [
                               "auto",
                               "user"
-                            ]
+                            ],
+                            "x-open-values": true
                           },
                           "x": {
                             "type": "number"
@@ -93909,7 +94023,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -94230,7 +94345,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -94541,7 +94657,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -94773,7 +94890,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -95033,7 +95151,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -95257,7 +95376,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -95481,7 +95601,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -95710,7 +95831,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -96020,7 +96142,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -96331,7 +96454,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "icon": {
                       "type": "object",
@@ -97131,7 +97255,8 @@
             "enum": [
               "chosen",
               "folder"
-            ]
+            ],
+            "x-open-values": true
           },
           "scratch": {
             "type": "boolean"
@@ -97164,7 +97289,8 @@
               "enum": [
                 "auto",
                 "user"
-              ]
+              ],
+              "x-open-values": true
             },
             "kind": {
               "type": "string",
@@ -97181,7 +97307,8 @@
                 "separator",
                 "subheader",
                 "unknown"
-              ]
+              ],
+              "x-open-values": true
             },
             "icon": {
               "anyOf": [
@@ -97428,7 +97555,8 @@
                     "enum": [
                       "auto",
                       "user"
-                    ]
+                    ],
+                    "x-open-values": true
                   },
                   "kind": {
                     "type": "string",
@@ -97437,7 +97565,8 @@
                       "chat",
                       "browser",
                       "device"
-                    ]
+                    ],
+                    "x-open-values": true
                   },
                   "provider": {
                     "anyOf": [
@@ -97500,7 +97629,8 @@
                       "enum": [
                         "auto",
                         "user"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "kind": {
                       "type": "string",
@@ -97509,7 +97639,8 @@
                         "chat",
                         "browser",
                         "device"
-                      ]
+                      ],
+                      "x-open-values": true
                     },
                     "provider": {
                       "anyOf": [
@@ -98427,7 +98558,8 @@
               "done",
               "failed",
               "cancelled"
-            ]
+            ],
+            "x-open-values": true
           },
           "result": {
             "anyOf": [
@@ -98443,7 +98575,8 @@
                       "done",
                       "turn",
                       "exit"
-                    ]
+                    ],
+                    "x-open-values": true
                   },
                   "at": {
                     "type": "number"
@@ -98475,7 +98608,8 @@
               "pending",
               "sent",
               "none"
-            ]
+            ],
+            "x-open-values": true
           },
           "paused": {
             "type": "object",
@@ -98485,7 +98619,8 @@
                 "enum": [
                   "usage",
                   "overload"
-                ]
+                ],
+                "x-open-values": true
               },
               "until": {
                 "type": "number"

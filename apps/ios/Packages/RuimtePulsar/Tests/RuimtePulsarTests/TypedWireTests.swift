@@ -82,6 +82,15 @@ struct TypedWireTests {
         #expect(event.type == "future-event")
     }
 
+    @Test func aStateOfANewerMachineDecodesAsUnknownAndKeepsItsWord() throws {
+        let cases = try #require(wireFixture()["tolerated"]?.arrayValue)
+        let status = try #require(cases.first { $0["schema"] == .string("event.chat.status") })
+        let event = try #require(status["output"]).decoded(as: ChatStatusEvent.self)
+        #expect(event.info.goal?.status == .unknown("future-status"))
+        #expect(try JSONValue(encoding: event.info.goal?.status) == .string("future-status"))
+        #expect(ChatGoalStatus(rawValue: "active") == .active)
+    }
+
     @Test func anAgentWordThisAppDoesNotKnowStillDecodes() throws {
         let output = try #require(try fixtures("event.session.status").first)
         var agent = try #require(output["agent"]?.objectValue)

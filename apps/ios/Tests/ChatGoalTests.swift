@@ -38,6 +38,14 @@ final class ChatGoalTests: XCTestCase {
         XCTAssertEqual(actions(.active, turn: "turn", goals: nil), [])
     }
 
+    func testAStateOfANewerMachineAsksForAnUpdateAndOffersNothing() {
+        XCTAssertEqual(actions(.unknown("future-status")), [])
+        XCTAssertEqual(
+            ChatGoalView(goal: goal(.unknown("future-status")), activeTurnID: nil, goals: "native", canAct: true)?
+                .status,
+            "Update Ruimte to see this.")
+    }
+
     func testTheLineSaysHowFarTheGoalGotInWhatItsCLICounts() {
         func line(_ goal: ChatInfoGoal) -> String? {
             ChatGoalView(goal: goal, activeTurnID: nil, goals: "native", canAct: true)?.line
