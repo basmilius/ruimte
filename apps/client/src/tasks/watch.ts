@@ -1,5 +1,5 @@
 import { useProjectList } from '@/state/project-list';
-import { useTasks } from '@/state/tasks';
+import { readableTask, useTasks } from '@/state/tasks';
 import { fireAndForget } from '@/transport-api/transport';
 import { watchPool } from '@/transport/pool-watch';
 
@@ -25,7 +25,13 @@ export function startTaskWatch(): () => void {
                 // A failed ask leaves the tasks as they were; the next open link asks again.
                 void fireAndForget(
                     'task.list',
-                    link.request('task.list', { projectId }).then((result) => useTasks.getState().setProjectTasks(endpointId, projectId, result.tasks))
+                    link.request('task.list', { projectId }).then((result) =>
+                        useTasks.getState().setProjectTasks(
+                            endpointId,
+                            projectId,
+                            result.tasks.flatMap((task) => readableTask(task) ?? [])
+                        )
+                    )
                 );
             }
         };
@@ -36,7 +42,16 @@ export function startTaskWatch(): () => void {
                 asked.clear();
                 ask();
             },
-            subscriptions: [link.on('task.changed', (payload) => useTasks.getState().putTask(endpointId, payload.task)), useProjectList.subscribe(ask)]
+            subscriptions: [
+                link.on('task.changed', (payload) => {
+                    const task = readableTask(payload.task);
+
+                    if (task !== null) {
+                        useTasks.getState().putTask(endpointId, task);
+                    }
+                }),
+                useProjectList.subscribe(ask)
+            ]
         };
     });
 }

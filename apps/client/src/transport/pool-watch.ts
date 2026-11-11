@@ -1,4 +1,4 @@
-import type { EventMap, EventType, RequestMap } from '@ruimte/contracts';
+import type { ReadEventMap, EventType, ReadRequestMap } from '@ruimte/contracts';
 import { pool } from '@/transport';
 import { readOnEveryOpen, type Transport, fireAndForget } from '../transport-api/transport';
 import type { BareRequest } from './machine-watch';
@@ -71,13 +71,13 @@ export function snapshotWatch<Q extends BareRequest, E extends EventType>(
     link: Transport,
     request: Q,
     event: E,
-    apply: (payload: RequestMap[Q]['result'] | EventMap[E]) => void,
+    apply: (payload: ReadRequestMap[Q]['result'] | ReadEventMap[E]) => void,
     when: () => boolean = () => true
 ): LinkWatch {
     return {
         onOpen: () => {
             if (when()) {
-                void fireAndForget('link.request', link.request(request, {} as RequestMap[Q]['payload']).then(apply));
+                void fireAndForget('link.request', link.request(request, {} as ReadRequestMap[Q]['payload']).then(apply));
             }
         },
         subscriptions: [link.on(event, apply)]

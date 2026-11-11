@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { clientIdentityFrom } from './client-kind';
+import { clientIdentityFrom as identityWithFeatures } from './client-kind';
+
+// Who the client is, apart from what it reads; the last test holds the features.
+function clientIdentityFrom(env: Parameters<typeof identityWithFeatures>[0]): Omit<ReturnType<typeof identityWithFeatures>, 'clientFeatures'> {
+    const { clientFeatures: _features, ...identity } = identityWithFeatures(env);
+
+    return identity;
+}
 
 const BROWSER = { station: false, desktopPlatform: null, uaPlatform: null, uaMobile: null, maxTouchPoints: 0, version: '' };
 
@@ -57,5 +64,15 @@ describe('clientIdentityFrom', () => {
 
     test('leaves out a system nothing here recognizes', () => {
         expect(clientIdentityFrom({ ...BROWSER, userAgent: 'Bun/1.4' })).toEqual({ client: 'browser', clientDevice: 'desktop' });
+    });
+
+    test('the desktop app, Station and a browser each say they read a newer machine whole', () => {
+        const builds = [
+            { ...BROWSER, desktopPlatform: 'darwin', userAgent: WINDOWS },
+            { ...BROWSER, station: true, userAgent: IPHONE },
+            { ...BROWSER, userAgent: WINDOWS }
+        ];
+
+        expect(builds.map((env) => identityWithFeatures(env).clientFeatures)).toEqual([['tolerantWire'], ['tolerantWire'], ['tolerantWire']]);
     });
 });

@@ -2,8 +2,8 @@ import type { CommandName } from '@adecore/agents-react';
 import { handbackReportOf, lookRunOf, sentMessageOf, toolSummary, stripAnsi } from '@adecore/agents-react/chat';
 import type { TimelineRow } from '@adecore/agents-react/chat';
 import type { ChatFindField } from '@adecore/agents-react/chat/ui';
+import type { ChatThreadItem } from '@adecore/agents-react/state';
 import { compileFind, matchesIn, MATCH_LIMIT, type FindQuery } from '@adecore/editor-react/models';
-import type { ChatItem } from '@ruimte/contracts';
 import { RUIMTE_COMMAND_LOOKS, RUIMTE_TOOL_LOOKS } from '@/chat/ruimte-command-look';
 
 /*
@@ -27,7 +27,7 @@ interface ChatSearch {
 export const NOTHING: ChatSearch = { hits: [], invalid: false };
 
 /* A sub-agent's own steps, and the agents it opened, belong to its row, which the thread keeps shut; they are its business. */
-function isChild(item: ChatItem): boolean {
+function isChild(item: ChatThreadItem): boolean {
     return (item.kind === 'tool' || item.kind === 'assistant' || item.kind === 'subagent') && Boolean(item.parentToolUseId);
 }
 
@@ -38,7 +38,7 @@ type CallNames = (word: string, option: string | null) => CommandName | null;
  * The line of a `ruimte-context` call or a tool of the MCP server as its row draws it: the detail, a named
  * word as its title with the id behind it, the way the frame holds both. Null for any other call.
  */
-function contextCallLine(item: Extract<ChatItem, { kind: 'tool' }>, nameOf: CallNames | undefined): string | null {
+function contextCallLine(item: Extract<ChatThreadItem, { kind: 'tool' }>, nameOf: CallNames | undefined): string | null {
     const run = lookRunOf(item, RUIMTE_COMMAND_LOOKS, RUIMTE_TOOL_LOOKS);
     if (run === null) {
         return null;
@@ -56,7 +56,7 @@ function contextCallLine(item: Extract<ChatItem, { kind: 'tool' }>, nameOf: Call
 }
 
 /* What a reader can find in an item, part by part, in the order its row draws them. */
-function findableFields(item: ChatItem, nameOf?: CallNames, hideTools = false): { field: ChatFindField; text: string }[] {
+function findableFields(item: ChatThreadItem, nameOf?: CallNames, hideTools = false): { field: ChatFindField; text: string }[] {
     if (isChild(item)) {
         return [];
     }
@@ -111,7 +111,7 @@ function findableFields(item: ChatItem, nameOf?: CallNames, hideTools = false): 
     }
 }
 
-export function searchChat(items: readonly ChatItem[], query: FindQuery, nameOf?: CallNames, hideTools = false): ChatSearch {
+export function searchChat(items: readonly ChatThreadItem[], query: FindQuery, nameOf?: CallNames, hideTools = false): ChatSearch {
     const compiled = compileFind(query);
     if (compiled.kind === 'empty') {
         return NOTHING;
@@ -168,14 +168,14 @@ export function indexRows(rows: readonly TimelineRow[]): RowIndex {
 }
 
 /* The row a hit is shown at, as the thread stands; -1 for an item the thread draws nowhere. */
-export function hitRow(index: RowIndex, item: ChatItem | undefined): number {
+export function hitRow(index: RowIndex, item: ChatThreadItem | undefined): number {
     if (item === undefined) {
         return -1;
     }
     return index.rows.get(item.id) ?? (item.turnId === null ? undefined : index.folds.get(item.turnId)) ?? -1;
 }
 
-export function placeOfHit(rows: readonly TimelineRow[], index: RowIndex, item: ChatItem | undefined): HitPlace {
+export function placeOfHit(rows: readonly TimelineRow[], index: RowIndex, item: ChatThreadItem | undefined): HitPlace {
     if (item === undefined) {
         return null;
     }

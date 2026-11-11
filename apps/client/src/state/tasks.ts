@@ -1,9 +1,16 @@
-import type { Task } from '@ruimte/contracts';
+import { TaskSchema, type FromMachine, type Task } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
 import { useEndpointId } from './current-endpoint';
 
 export type TasksById = Readonly<Record<string, Task>>;
+
+/* A task with a word of a newer machine in it, its status above all, stays out: a line or a mark would show it wrong. */
+export function readableTask(task: FromMachine<Task>): Task | null {
+    const read = TaskSchema.safeParse(task);
+
+    return read.success ? read.data : null;
+}
 
 interface TasksStore {
     /* Per machine, the tasks it told this client about, by task id. */

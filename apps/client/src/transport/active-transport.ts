@@ -1,4 +1,4 @@
-import type { BytesReadPayload, EventMap, EventType, LiveFrameEvent, RequestMap, RequestType } from '@ruimte/contracts';
+import type { BytesReadPayload, ReadEventMap, EventType, LiveFrameEvent, ReadRequestMap, RequestType } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { readPiece, type BytesPiece } from '../transport-api/piece';
 import { TransportError, type ConnectionState, type LiveFrameHandler, type Transport, type TransportStatus } from '../transport-api/transport';
@@ -32,7 +32,7 @@ const SHARED_IN_FLIGHT: ReadonlySet<RequestType> = new Set<RequestType>(['sessio
 /* Per socket rather than per facade: the active machine's facade and that machine's own are two over one socket. */
 const inFlight = new WeakMap<Transport, Map<RequestType, Promise<unknown>>>();
 
-function sharedRequest<T extends RequestType>(socket: Transport, type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
+function sharedRequest<T extends RequestType>(socket: Transport, type: T, payload: ReadRequestMap[T]['payload']): Promise<ReadRequestMap[T]['result']> {
     let lists = inFlight.get(socket);
     if (!lists) {
         lists = new Map();
@@ -40,7 +40,7 @@ function sharedRequest<T extends RequestType>(socket: Transport, type: T, payloa
     }
     const known = lists.get(type);
     if (known) {
-        return known as Promise<RequestMap[T]['result']>;
+        return known as Promise<ReadRequestMap[T]['result']>;
     }
     const answer = socket.request(type, payload);
     const settled = (): void => {
@@ -87,7 +87,7 @@ export class ActiveTransport implements Transport {
         return this.source.statusOf(this.activeId());
     }
 
-    request<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
+    request<T extends RequestType>(type: T, payload: ReadRequestMap[T]['payload']): Promise<ReadRequestMap[T]['result']> {
         if (!this.bound) {
             return notConnected();
         }
@@ -101,7 +101,7 @@ export class ActiveTransport implements Transport {
         return readPiece(this.bound, payload);
     }
 
-    on<E extends EventType>(event: E, handler: (payload: EventMap[E]) => void): () => void {
+    on<E extends EventType>(event: E, handler: (payload: ReadEventMap[E]) => void): () => void {
         return this.register((transport) => transport.on(event, handler));
     }
 

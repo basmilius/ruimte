@@ -5,7 +5,7 @@ import type { ChatInfo } from '@ruimte/contracts';
 import { act } from 'react';
 import { useDocument } from '@/state/document';
 import { chatInfoOf } from '../../testing/chat-info';
-import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom';
+import { clickOn, layOutChat, mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { claudeProvider } from '../../testing/fake-provider';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
@@ -160,6 +160,36 @@ async function toggleStash(viewId: string): Promise<void> {
 function notice(viewId: string): string | null {
     return page.host.querySelector(`[data-split-cell][data-view-id="${viewId}"] [role="status"]`)?.textContent ?? null;
 }
+
+describe('a thread of a newer machine', () => {
+    test('a pending approval this version cannot read says where to answer it, and offers no Allow', async () => {
+        // A description that a newer machine sends as more than a string; the rest is an approval as it is today.
+        const approval = {
+            id: 'approval-1',
+            kind: 'approval',
+            createdAt: 2,
+            turnId: 'turn-1',
+            requestId: 'request-1',
+            toolUseId: null,
+            toolName: 'Deploy',
+            input: { target: 'production' },
+            description: { text: 'Deploy to production', risk: 'high' },
+            canAllowAlways: false,
+            decision: 'pending'
+        };
+        machine.answerFromNewer('chat.attach', ({ chatId }) => ({ info: chatInfoOf(chatId, { status: 'needs-you' }), items: [approval], seq }));
+        const restoreLayout = layOutChat();
+
+        try {
+            await showView(third);
+            const cell = (): Element => page.host.querySelector(`[data-split-cell][data-view-id="${third}"]`)!;
+            await until(() => cell().textContent?.includes('Answer this in Ruimte on the machine, or update Ruimte to answer here.') === true);
+            expect([...cell().querySelectorAll('button')].filter((each) => each.textContent?.trim() === 'Allow')).toEqual([]);
+        } finally {
+            restoreLayout();
+        }
+    });
+});
 
 describe('a stashed prompt', () => {
     test('keeps the chats attached to it and gives them back in another chat of the project', async () => {

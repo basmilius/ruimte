@@ -1,7 +1,7 @@
 import { waitingOnLabel, waitingOnOf, type WaitingChild } from '@adecore/agents-react/chat';
-import { useChats } from '@adecore/agents-react/state';
+import { useChats, type ChatThreadInfo } from '@adecore/agents-react/state';
 import { useNow } from '@adecore/ui';
-import type { ChatInfo, Task } from '@ruimte/contracts';
+import type { Task } from '@ruimte/contracts';
 import { usePlans } from '@/plan/plans';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
@@ -16,7 +16,7 @@ export function openChildTasks(tasks: TasksById | undefined, chatId: string): re
     return open.length === 0 ? NO_CHILDREN : open;
 }
 
-function needsPerson(info: Pick<ChatInfo, 'status' | 'requests'> | undefined): boolean {
+function needsPerson(info: Pick<ChatThreadInfo, 'status' | 'requests'> | undefined): boolean {
     return info?.status === 'needs-you' || (info?.requests?.length ?? 0) > 0;
 }
 

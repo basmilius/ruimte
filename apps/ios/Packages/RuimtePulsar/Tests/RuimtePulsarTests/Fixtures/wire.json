@@ -3516,7 +3516,61 @@
         },
         "pending": [],
         "seq": 12
-      }
+      },
+      "degraded": [
+        {
+          "kind": "unknown-member",
+          "path": [
+            "items",
+            10
+          ],
+          "name": "ChatItem",
+          "tag": "future-kind"
+        },
+        {
+          "kind": "unknown-member",
+          "path": [
+            "items",
+            11
+          ],
+          "name": "ChatItem",
+          "tag": "tool"
+        },
+        {
+          "kind": "unknown-member",
+          "path": [
+            "items",
+            12
+          ],
+          "name": "ChatItem",
+          "tag": "approval"
+        },
+        {
+          "kind": "unknown-member",
+          "path": [
+            "items",
+            13
+          ],
+          "name": "ChatItem",
+          "tag": "approval"
+        },
+        {
+          "kind": "unknown-member",
+          "path": [
+            "items",
+            14
+          ],
+          "name": "ChatItem",
+          "tag": "question"
+        },
+        {
+          "kind": "dropped-element",
+          "path": [
+            "items",
+            15
+          ]
+        }
+      ]
     },
     {
       "schema": "request.chat.subagent.result",
@@ -3603,7 +3657,25 @@
         ],
         "source": "claude-transcript",
         "live": false
-      }
+      },
+      "degraded": [
+        {
+          "kind": "unknown-member",
+          "path": [
+            "pending",
+            1
+          ],
+          "name": "ChatPendingRequest",
+          "tag": "approval"
+        },
+        {
+          "kind": "dropped-element",
+          "path": [
+            "pending",
+            2
+          ]
+        }
+      ]
     },
     {
       "schema": "request.chat.list.result",
@@ -3697,7 +3769,91 @@
             "createdAt": 1000
           }
         ]
-      }
+      },
+      "degraded": [
+        {
+          "kind": "dropped-element",
+          "path": [
+            "chats",
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "schema": "request.task.list.result",
+      "input": {
+        "tasks": [
+          {
+            "id": "task-1",
+            "projectId": "project-1",
+            "parentId": "chat-1",
+            "childId": "chat-2",
+            "title": "Check the build",
+            "prompt": "Run it",
+            "status": "open",
+            "result": null,
+            "createdAt": 1000,
+            "settledAt": null,
+            "wake": "none"
+          },
+          {
+            "id": "task-2",
+            "projectId": "project-1",
+            "parentId": "chat-1",
+            "childId": "chat-2",
+            "title": "Check the build",
+            "prompt": "Run it",
+            "status": "future-status",
+            "result": null,
+            "createdAt": 1000,
+            "settledAt": null,
+            "wake": "none"
+          }
+        ]
+      },
+      "output": {
+        "tasks": [
+          {
+            "id": "task-1",
+            "projectId": "project-1",
+            "parentId": "chat-1",
+            "childId": "chat-2",
+            "title": "Check the build",
+            "prompt": "Run it",
+            "status": "open",
+            "result": null,
+            "createdAt": 1000,
+            "settledAt": null,
+            "wake": "none"
+          },
+          {
+            "id": "task-2",
+            "projectId": "project-1",
+            "parentId": "chat-1",
+            "childId": "chat-2",
+            "title": "Check the build",
+            "prompt": "Run it",
+            "status": "future-status",
+            "result": null,
+            "createdAt": 1000,
+            "settledAt": null,
+            "wake": "none"
+          }
+        ]
+      },
+      "degraded": [
+        {
+          "kind": "unknown-word",
+          "path": [
+            "tasks",
+            1,
+            "status"
+          ],
+          "name": "TaskStatus",
+          "word": "future-status"
+        }
+      ]
     },
     {
       "schema": "event.chat.status",
@@ -3770,7 +3926,19 @@
           },
           "createdAt": 1000
         }
-      }
+      },
+      "degraded": [
+        {
+          "kind": "unknown-word",
+          "path": [
+            "info",
+            "goal",
+            "status"
+          ],
+          "name": "ChatGoalStatus",
+          "word": "future-status"
+        }
+      ]
     },
     {
       "schema": "event.chat.event",
@@ -3810,7 +3978,18 @@
             "x-unknown": true
           }
         }
-      }
+      },
+      "degraded": [
+        {
+          "kind": "unknown-member",
+          "path": [
+            "event",
+            "item"
+          ],
+          "name": "ChatItem",
+          "tag": "future-kind"
+        }
+      ]
     },
     {
       "schema": "event.chat.event",
@@ -3830,7 +4009,17 @@
           "itemId": "assistant-1",
           "x-unknown": true
         }
-      }
+      },
+      "degraded": [
+        {
+          "kind": "unknown-member",
+          "path": [
+            "event"
+          ],
+          "name": "ChatEvent",
+          "tag": "future-event"
+        }
+      ]
     }
   ],
   "binding": {

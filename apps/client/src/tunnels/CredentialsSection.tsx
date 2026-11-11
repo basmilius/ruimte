@@ -1,6 +1,6 @@
 import { Button, Icon, IconButton, Menu, Pill, RelativeTime, Switch, Table, useNow } from '@adecore/ui';
 import { ConfirmDialog, useSettingsTarget } from '@adecore/ui/settings';
-import type { Credential, TunnelState } from '@ruimte/contracts';
+import type { Credential as MachineCredential, FromMachine, TunnelState } from '@ruimte/contracts';
 import { MoreHorizontal, Trash } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,8 @@ import { SettingsSection } from '@/machines/SettingsSection';
 import { transportFor } from '@/transport';
 import { NewCredentialDialog } from '@/tunnels/NewCredentialDialog';
 import type { TunnelChange } from '@/tunnels/use-tunnels';
+
+type Credential = FromMachine<MachineCredential>;
 
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 3_600_000;

@@ -11,7 +11,7 @@ import {
 } from '@adecore/agents-react/prompts';
 import { useChats, type ChatState, useProviders } from '@adecore/agents-react/state';
 import { Button, ButtonGroup, ErrorBoundary, IconButton, PreviewCard } from '@adecore/ui';
-import type { ChatAttachResult, ComputerApproval, ProjectProposal, SecretRequest, TunnelProposal } from '@ruimte/contracts';
+import type { ChatAttachResult, ComputerApproval, FromMachine, ProjectProposal, SecretRequest, TunnelProposal } from '@ruimte/contracts';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -73,7 +73,7 @@ function clientsOn(endpointId: string): ChatPromptClients {
 }
 
 /* Enough of a chat for its prompts: every item that came with the read, the requests from before its page among them. */
-function chatOf(result: ChatAttachResult): ChatState {
+function chatOf(result: FromMachine<ChatAttachResult>): ChatState {
     const byId = Object.fromEntries([...(result.pending ?? []), ...result.items].map((item) => [item.id, item]));
     return { info: result.info, items: byId, structure: byId, order: Object.keys(byId) };
 }

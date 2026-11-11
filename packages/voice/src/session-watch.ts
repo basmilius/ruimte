@@ -1,4 +1,4 @@
-import type { AgentRequest, AgentStatus, ChatItem } from '@ruimte/contracts';
+import type { AgentRequest, AgentStatus, ChatItem, FromMachine } from '@ruimte/contracts';
 
 /*
  * A chat or terminal agent Voice set to work. Voice follows it by itself, so a person never has to ask
@@ -101,7 +101,7 @@ function inputDescription(input: unknown): string | null {
 }
 
 /* Only what the caller holds of the thread, in thread order; a chat whose thread is not held says what it waits on through chat.inspect. */
-export function chatWaits(items: readonly ChatItem[] | undefined): string[] {
+export function chatWaits(items: readonly FromMachine<ChatItem>[] | undefined): string[] {
     if (!items) {
         return [];
     }

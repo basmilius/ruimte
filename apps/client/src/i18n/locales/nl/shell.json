@@ -100,7 +100,8 @@
             "loopback": "Op deze machine",
             "lan": "Op het lokale netwerk",
             "tunnel": "Via een tunnel",
-            "public": "Op het openbare internet"
+            "public": "Op het openbare internet",
+            "other": "Op een andere manier bereikt"
         },
         "route": {
             "lan": "Lokaal netwerk",

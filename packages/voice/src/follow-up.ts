@@ -1,4 +1,4 @@
-import type { ChatItem } from '@ruimte/contracts';
+import type { ChatItem, FromMachine } from '@ruimte/contracts';
 
 /* A prompt Voice sent, followed to the end of the turn it opened. `key` is what the caller files the chat under. */
 export interface VoiceChatFollowUp {
@@ -16,7 +16,7 @@ export interface VoiceChatCompletion {
 
 /* The part of a chat's thread the caller holds, in thread order, and the turn the chat runs now. */
 export interface VoiceChatThread {
-    items: readonly ChatItem[];
+    items: readonly FromMachine<ChatItem>[];
     activeTurnId: string | null | undefined;
 }
 

@@ -1,4 +1,4 @@
-import { knownNodeSizes, type EndpointInfo, type EndpointNameSource } from '@ruimte/contracts';
+import { knownNodeSizes, type EndpointInfo, type EndpointNameSource, type FromMachine } from '@ruimte/contracts';
 import { LOCAL_ENDPOINT_ID, localMachineLabel, useEndpoints } from '@/state/endpoints';
 import { serverInfoOf, useServers } from '@/state/server';
 import { fireAndForget } from '@/transport-api/transport';
@@ -37,7 +37,7 @@ function load(endpointId: string): void {
 }
 
 /* Everything a machine says about itself, on every connection and in its answer to a change made here. */
-export function adoptEndpointInfo(endpointId: string, info: EndpointInfo): void {
+export function adoptEndpointInfo(endpointId: string, info: FromMachine<EndpointInfo>): void {
     useEndpoints.getState().learnBrokerUrl(endpointId, info.brokerUrl ?? null);
     useEndpoints.getState().learnLan(endpointId, info.lan ?? null);
     useServers.getState().setEndpoint(endpointId, {

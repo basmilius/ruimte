@@ -1,6 +1,6 @@
 import { CliMark } from '@adecore/agents-react/providers';
 import { Button, Dialog, FormError, ScrollArea, Skeleton } from '@adecore/ui';
-import type { AgentIntegration, AgentIntegrationFile, AgentIntegrationReport, AgentKind } from '@ruimte/contracts';
+import type { AgentIntegration, AgentIntegrationFile, AgentIntegrationReport, AgentKind, FromMachine } from '@ruimte/contracts';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { agentIntegrationsDialog } from '@/controllers/agent-integrations';
@@ -51,7 +51,7 @@ export function IntegrationDetails({
     files,
     consequence = entry.state !== 'on'
 }: {
-    entry: Pick<AgentIntegration, 'provider' | 'state'>;
+    entry: Pick<FromMachine<AgentIntegration>, 'provider' | 'state'>;
     files: readonly AgentIntegrationFile[] | null;
     consequence?: boolean;
 }) {

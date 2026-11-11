@@ -1,5 +1,5 @@
 import { useChats } from '@adecore/agents-react/state';
-import type { RuntimeMode } from '@ruimte/contracts';
+import { RuntimeModeSchema, type RuntimeMode } from '@ruimte/contracts';
 import { perform } from '@/action-port/perform';
 import { endpointKey } from '@/state/keys';
 import { fireAndForget } from '@/transport-api/transport';
@@ -11,6 +11,13 @@ const pending = new Map<string, RuntimeMode>();
  * Has a new chat run in this mode as its own, leaving the machine's default alone. The chat may
  * already have opened by the time its maker knows its id, so an open one is configured instead.
  */
+/* A mode a machine reported, when this version knows it; one of a newer machine is never passed on as another. */
+export function knownRuntimeMode(word: string): RuntimeMode | undefined {
+    const known = RuntimeModeSchema.safeParse(word);
+
+    return known.success ? known.data : undefined;
+}
+
 export function openChatInMode(endpointId: string, chatId: string, runtimeMode: RuntimeMode): void {
     const key = endpointKey(endpointId, chatId);
     const info = useChats.getState().statusByKey[key]?.info;
@@ -37,7 +44,8 @@ export function settleOpeningMode(endpointId: string, chatId: string): void {
     configureMode(chatId, info.runtimeMode, wanted);
 }
 
-function configureMode(chatId: string, current: RuntimeMode, wanted: RuntimeMode): void {
+// `current` as the machine reports it, possibly a mode of a newer machine, which is only compared here.
+function configureMode(chatId: string, current: string, wanted: RuntimeMode): void {
     if (current !== wanted) {
         void fireAndForget('chat.configure', perform('chat.configure', { chatId, model: null, option: null, runtimeMode: wanted }));
     }

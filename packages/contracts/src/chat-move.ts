@@ -1,4 +1,4 @@
-import { chatActivity, type ChatInfo } from '@adecore/agent-contracts';
+import { chatActivity } from '@adecore/agent-contracts';
 import { EmptySchema } from '@adecore/agent-contracts/protocol';
 import { z } from 'zod';
 import { ProjectSummarySchema } from './project.ts';
@@ -112,10 +112,7 @@ export const ProjectProposalDeclineResultSchema = z.object({
  * chat's own project suggestion holds a chat with no turn at `needs-you`, which a move it asks for
  * does not count as work.
  */
-export function chatIsWorking(
-    info: (Pick<ChatInfo, 'status' | 'delegating' | 'background' | 'goal' | 'requests' | 'queue'> & Partial<Pick<ChatInfo, 'activeTurnId'>>) | null | undefined,
-    ownCard = false
-): boolean {
+export function chatIsWorking(info: Parameters<typeof chatActivity>[0] | null | undefined, ownCard = false): boolean {
     if (info === null || info === undefined) {
         return false;
     }

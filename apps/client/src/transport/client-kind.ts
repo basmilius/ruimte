@@ -76,13 +76,16 @@ function browserSystemVersion(os: string | undefined, userAgent: string): string
  * counts (`browser` counts nothing), the rest is for its list of connected clients. A best guess from the
  * user agent outside the desktop app, and only ever shown; what is unknown is left out.
  */
+// Every build reads replies and events with `readFromMachine` (`link-transport.ts`).
+const CLIENT_FEATURES = ['tolerantWire'];
+
 export function clientIdentityFrom(env: IdentityEnvironment): EndpointInfoPayload {
     const version = env.version === '' ? {} : { clientVersion: env.version };
 
     if (env.desktopPlatform !== null) {
         const os = DESKTOP_SYSTEMS[env.desktopPlatform];
 
-        return { client: 'desktop', ...version, ...(os === undefined ? {} : { clientOs: os }), clientDevice: 'desktop' };
+        return { client: 'desktop', ...version, ...(os === undefined ? {} : { clientOs: os }), clientDevice: 'desktop', clientFeatures: CLIENT_FEATURES };
     }
 
     const os = browserSystem(env);
@@ -93,7 +96,8 @@ export function clientIdentityFrom(env: IdentityEnvironment): EndpointInfoPayloa
         ...version,
         ...(os === undefined ? {} : { clientOs: os }),
         ...(osVersion === undefined ? {} : { clientOsVersion: osVersion }),
-        clientDevice: browserDevice(os, env)
+        clientDevice: browserDevice(os, env),
+        clientFeatures: CLIENT_FEATURES
     };
 }
 

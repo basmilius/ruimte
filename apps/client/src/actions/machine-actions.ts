@@ -4,14 +4,17 @@ import { ActionRefusal, type ActionHandlers, type ActionOutput } from '@ruimte/a
 import {
     evenPace,
     totalTokensOf,
+    UsageProviderSchema,
     type ComputerUseStatus,
     type DeviceOperated,
     type EndpointInfo,
+    type FromMachine,
     type ProcessAlert,
     type ProjectIconChoice,
     type ProcessesSampleEvent,
     type ProcessGroup,
     type UsageLimitsSnapshot,
+    type UsageProvider,
     type UsageSummaryPayload,
     type UsageSummaryResult
 } from '@ruimte/contracts';
@@ -23,6 +26,7 @@ import { useProcesses, useProcessWarnings } from '@/state/processes';
 import { serverInfoOf } from '@/state/server';
 import { projectNodes } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
+import { knownWord } from '@/transport-api/known-word';
 import { machineFor } from '@/workspace/connections';
 import { adoptEndpointInfo } from '@/workspace/server-info';
 
@@ -42,7 +46,7 @@ export interface MachineReach {
     linkTo(endpointId: string): Requester | null;
     /* The name a person gave the machine, null for its own default name, and its icon. */
     identity(endpointId: string): { name: string | null; icon: ProjectIconChoice | null };
-    adoptInfo(endpointId: string, info: EndpointInfo): void;
+    adoptInfo(endpointId: string, info: FromMachine<EndpointInfo>): void;
     adoptComputer(endpointId: string, status: ComputerUseStatus): void;
     adoptDevice(endpointId: string, operated: DeviceOperated): void;
 }
@@ -85,13 +89,19 @@ function addCost(total: number | null, cost: number | null): number | null {
     return cost === null ? total : (total ?? 0) + cost;
 }
 
-function usageOf(summary: UsageSummaryResult): UsageOutput {
+function isUsageProvider(word: string): word is UsageProvider {
+    return knownWord(UsageProviderSchema.options, word) !== null;
+}
+
+// A provider of a newer machine has no name in what an action answers, so its rows stay out.
+function usageOf(summary: FromMachine<UsageSummaryResult>): UsageOutput {
     const providers = new Map<string, { tokens: number; costUsd: number | null }>();
-    for (const model of summary.models) {
-        const known = providers.get(model.provider) ?? { tokens: 0, costUsd: null };
-        providers.set(model.provider, { tokens: known.tokens + totalTokensOf(model.totals), costUsd: addCost(known.costUsd, model.costUsd) });
+    const known = summary.models.filter((model): model is typeof model & { provider: UsageProvider } => isUsageProvider(model.provider));
+    for (const model of known) {
+        const sum = providers.get(model.provider) ?? { tokens: 0, costUsd: null };
+        providers.set(model.provider, { tokens: sum.tokens + totalTokensOf(model.totals), costUsd: addCost(sum.costUsd, model.costUsd) });
     }
-    const models = summary.models
+    const models = known
         .map((model) => ({ provider: model.provider, model: model.model, tokens: totalTokensOf(model.totals), costUsd: model.costUsd }))
         .sort((left, right) => right.tokens - left.tokens);
     return {
@@ -109,22 +119,24 @@ function usageOf(summary: UsageSummaryResult): UsageOutput {
     };
 }
 
-function limitsOf(snapshot: UsageLimitsSnapshot, now: number): ActionOutput<'usage.limits'> {
+function limitsOf(snapshot: FromMachine<UsageLimitsSnapshot>, now: number): ActionOutput<'usage.limits'> {
     return {
-        providers: snapshot.providers.map((provider) => ({
-            provider: provider.kind,
-            account: provider.account?.label ?? null,
-            plan: provider.plan,
-            checkedAt: provider.checkedAt,
-            unavailable: provider.unavailable === null ? null : (provider.unavailable.message ?? provider.unavailable.reason),
-            windows: provider.windows.map((window) => ({
-                label: window.label,
-                kind: window.kind,
-                usedPercent: Math.round(window.used * 100),
-                resetsAt: window.resetsAt,
-                evenPacePercent: evenPace(window, now)?.percent ?? null
+        providers: snapshot.providers
+            .flatMap((row) => (isUsageProvider(row.kind) ? [{ ...row, kind: row.kind }] : []))
+            .map((provider) => ({
+                provider: provider.kind,
+                account: provider.account?.label ?? null,
+                plan: provider.plan,
+                checkedAt: provider.checkedAt,
+                unavailable: provider.unavailable === null ? null : (provider.unavailable.message ?? provider.unavailable.reason),
+                windows: provider.windows.map((window) => ({
+                    label: window.label,
+                    kind: window.kind,
+                    usedPercent: Math.round(window.used * 100),
+                    resetsAt: window.resetsAt,
+                    evenPacePercent: evenPace(window, now)?.percent ?? null
+                }))
             }))
-        }))
     };
 }
 

@@ -2,7 +2,16 @@ import { RUNTIME_MODES, runtimeModeLabel } from '@adecore/agents-react/chat';
 import { messageOf, Segmented, Select, Switch, Button, IconButton, Tooltip, FormError, Input, useNow } from '@adecore/ui';
 import { formatNumericDate, formatAgo } from '@adecore/ui/format';
 import { ConfirmDialog, SettingsRow } from '@adecore/ui/settings';
-import type { AuthSession, PeerLink, ReachCheck, RuntimeMode, TerminalShell } from '@ruimte/contracts';
+import {
+    RuntimeModeSchema,
+    TerminalShellSchema,
+    type AuthSession,
+    type FromMachine,
+    type PeerLink,
+    type ReachCheck,
+    type RuntimeMode,
+    type TerminalShell
+} from '@ruimte/contracts';
 import { brokerUrlProblem, type BrokerSetting } from '@ruimte/pulsar';
 import { Trash } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
@@ -16,6 +25,7 @@ import { useMachineList } from '@/machine-ui/use-machine-list';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
+import { knownWord } from '@/transport-api/known-word';
 import { useMachineAnswers } from '@/transport/features';
 import { pool, transportFor, type Transport } from '@/transport/index';
 import { useEndpointConnection } from '@/transport/status';
@@ -390,7 +400,7 @@ async function readSessions(transport: Transport): Promise<AuthSession[]> {
     return (await transport.request('auth.sessions', {})).sessions;
 }
 
-async function readLinks(transport: Transport): Promise<PeerLink[]> {
+async function readLinks(transport: Transport): Promise<FromMachine<PeerLink>[]> {
     return (await transport.request('peer.list', {})).links;
 }
 
@@ -478,7 +488,7 @@ export function MachineLinks({ endpoint }: { endpoint: Endpoint }) {
     const { t } = useTranslation('settings');
     const answers = useMachineAnswers(endpoint.id, 'peer.list');
     const { open, items: links, failure, setFailure, load } = useMachineList(endpoint.id, answers, readLinks, 'machine.links');
-    const [target, setTarget] = useState<PeerLink | null>(null);
+    const [target, setTarget] = useState<FromMachine<PeerLink> | null>(null);
     const now = useNow(MINUTE_MS);
 
     useEffect(() => {
@@ -500,7 +510,7 @@ export function MachineLinks({ endpoint }: { endpoint: Endpoint }) {
         load();
     };
 
-    const setCeiling = (link: PeerLink, ceiling: RuntimeMode): Promise<void> =>
+    const setCeiling = (link: FromMachine<PeerLink>, ceiling: RuntimeMode): Promise<void> =>
         change(
             transportFor(endpoint.id)?.request('peer.setCeiling', { machineId: link.machineId, projectId: link.projectId, ceiling }),
             'machine.links.changeFailed'
@@ -542,7 +552,8 @@ export function MachineLinks({ endpoint }: { endpoint: Endpoint }) {
                             <Select
                                 label={t('machine.links.ceiling', { machine: link.label })}
                                 variant="outlined"
-                                value={link.ceiling}
+                                // A ceiling of a newer machine has no row here, so nothing is picked until a person picks one.
+                                value={knownWord(RuntimeModeSchema.options, link.ceiling)}
                                 onValueChange={(ceiling) => void setCeiling(link, ceiling)}
                                 items={modes}
                             />
@@ -574,7 +585,8 @@ export function MachineLinks({ endpoint }: { endpoint: Endpoint }) {
 /* The shell of a new terminal on this Windows machine. An open terminal keeps the one it started in. */
 export function TerminalShellRow({ endpoint, reason }: { endpoint: Endpoint; reason: string | null }) {
     const { t } = useTranslation('settings');
-    const chosen = useServers((s) => s.byEndpoint[endpoint.id]?.terminalShell) ?? 'powershell';
+    const shell = useServers((s) => s.byEndpoint[endpoint.id]?.terminalShell) ?? 'powershell';
+    const chosen = knownWord(TerminalShellSchema.options, shell);
     const gitBashMissing = useServers((s) => s.byEndpoint[endpoint.id]?.gitBashMissing) === true;
     const [problem, setProblem] = useState<string | null>(null);
     return (

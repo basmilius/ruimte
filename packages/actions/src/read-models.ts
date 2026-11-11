@@ -1,7 +1,8 @@
-import type { ChatItem, GitDiffResult, Worktree } from '@ruimte/contracts';
+import type { ChatItem, FromMachine, GitDiffResult, Worktree } from '@ruimte/contracts';
 
 /* The questions and approvals a chat waits on, as `chat.inspect` and the daemon's chat read show them. */
-export function pendingRequestsOf(items: readonly ChatItem[]) {
+// A client's thread as a newer machine may send it; an item of an unknown kind waits on nothing here.
+export function pendingRequestsOf(items: readonly FromMachine<ChatItem>[]) {
     return {
         questions: items.flatMap((item) =>
             item.kind === 'question' && item.state === 'pending'

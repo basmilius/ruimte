@@ -1,5 +1,5 @@
 import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
-import { isCanvasView, isChatHostView, isDesignView, nodeChats, viewChats, type AgentStatus, type ChatInfo, type SessionInfo } from '@ruimte/contracts';
+import { AgentStatusSchema, isCanvasView, isChatHostView, isDesignView, nodeChats, viewChats, type AgentStatus, type ReadRequestMap } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { agentActivity } from '@/actions/agent-activity';
 import { chatWorking, sessionWorking } from '@/state/agent-work';
@@ -9,8 +9,10 @@ import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@
 import { activeViewOf, type DocumentState } from '@/state/document';
 import { endpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
+import { agentFromMachine } from '@/state/sessions';
 import { nodesOfView } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
+import { knownWord } from '@/transport-api/known-word';
 import { orNull } from '@/transport-api/transport';
 import { chatClientFor } from '@/workspace/connections';
 
@@ -94,7 +96,7 @@ export function projectAgents(document: StoreApi<DocumentState>): ProjectAgent[]
     return placedAgents(document).map((placed) => placed.agent);
 }
 
-type Snapshot = [{ chats: ChatInfo[] }, { sessions: SessionInfo[] }];
+type Snapshot = [ReadRequestMap['chat.list']['result'], ReadRequestMap['session.list']['result']];
 
 /*
  * The chats and sessions of every machine the agents run on, each asked of its own machine; null for one that is not connected
@@ -133,15 +135,17 @@ export function inspectionActions(document: StoreApi<DocumentState>, dependencie
                 if (target.kind === 'terminal' && snapshot && !session?.agent) {
                     return [];
                 }
-                const status: AgentStatus | 'unknown' = !snapshot
-                    ? 'unknown'
+                const reported = !snapshot
+                    ? null
                     : target.kind === 'chat'
-                      ? (chat?.status ?? 'unknown')
+                      ? chat?.status
                       : session?.agent?.live
                         ? session.agent.status
-                        : session?.agent?.status === 'exited'
-                          ? 'exited'
-                          : 'unknown';
+                        : session?.agent?.status;
+                // A status of a newer machine is unknown here; a session's own is only told while its agent is live.
+                const known = knownWord(AgentStatusSchema.options, reported);
+                const status: AgentStatus | 'unknown' =
+                    known === null || (target.kind === 'terminal' && !session?.agent?.live && known !== 'exited') ? 'unknown' : known;
                 return [
                     {
                         ...target,
@@ -151,7 +155,7 @@ export function inspectionActions(document: StoreApi<DocumentState>, dependencie
                                 ? null
                                 : target.kind === 'chat'
                                   ? chatWorking(chat ? { info: chat } : undefined)
-                                  : sessionWorking(session ? { attached: false, agent: session.agent } : undefined),
+                                  : sessionWorking(session ? { attached: false, agent: agentFromMachine(session.agent ?? null) } : undefined),
                         toolHistory: target.kind === 'chat',
                         updatedAt: target.kind === 'terminal' ? (session?.agent?.updatedAt ?? null) : null
                     }

@@ -100,7 +100,8 @@
             "loopback": "On this machine",
             "lan": "On the local network",
             "tunnel": "Through a tunnel",
-            "public": "On the public internet"
+            "public": "On the public internet",
+            "other": "Reached another way"
         },
         "route": {
             "lan": "Local network",

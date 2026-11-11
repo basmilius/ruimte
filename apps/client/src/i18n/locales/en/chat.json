@@ -1,4 +1,8 @@
 {
+    "unknownItem": {
+        "item": "Update Ruimte to see this.",
+        "request": "Answer this in Ruimte on the machine, or update Ruimte to answer here."
+    },
     "where": {
         "worktree": "Worktree {{name}}",
         "mainCheckout": "Main checkout",

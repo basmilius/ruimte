@@ -425,6 +425,7 @@ export const START_SCREEN_MODULES: readonly string[] = [
     'terminal/menu-facts.ts',
     'terminal/xterm.ts',
     'transport-api/credentials.ts',
+    'transport-api/known-word.ts',
     'transport-api/piece.ts',
     'transport-api/transport.ts',
     'transport/active-transport.ts',

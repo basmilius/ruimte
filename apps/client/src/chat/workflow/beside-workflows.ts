@@ -1,4 +1,5 @@
-import { activeWorkflows, type ChatItem, type ChatToolItem, type ChatWorkflow } from '@ruimte/contracts';
+import type { ChatThreadItem } from '@adecore/agents-react/state';
+import { activeWorkflows, type ChatToolItem, type ChatWorkflow } from '@ruimte/contracts';
 import { memoByIdentity } from '@/state/identity-memo';
 
 /* A Workflow call a chat node could show beside it, named by its item, since a call that never launched has no task. */
@@ -12,14 +13,15 @@ export interface WorkflowCandidate {
 
 const NONE: readonly string[] = [];
 
-const candidatesOf = memoByIdentity((structure: Readonly<Record<string, ChatItem>>, order: readonly string[], before: readonly string[]): WorkflowCandidate[] =>
-    // The ones from before the page the client holds come first, since they are older than all of it.
-    activeWorkflows([...before, ...order].flatMap((id) => structure[id] ?? [])).map((tool) => ({
-        id: tool.id,
-        tool,
-        workflow: tool.workflow!,
-        running: tool.state === 'running'
-    }))
+const candidatesOf = memoByIdentity(
+    (structure: Readonly<Record<string, ChatThreadItem>>, order: readonly string[], before: readonly string[]): WorkflowCandidate[] =>
+        // The ones from before the page the client holds come first, since they are older than all of it.
+        activeWorkflows([...before, ...order].flatMap((id) => structure[id] ?? [])).map((tool) => ({
+            id: tool.id,
+            tool,
+            workflow: tool.workflow!,
+            running: tool.state === 'running'
+        }))
 );
 
 /*
@@ -28,7 +30,7 @@ const candidatesOf = memoByIdentity((structure: Readonly<Record<string, ChatItem
  * the three changed, so a selector over a store that changes on every pan answers without work.
  */
 export function workflowCandidates(row: {
-    structure: Readonly<Record<string, ChatItem>>;
+    structure: Readonly<Record<string, ChatThreadItem>>;
     order: readonly string[];
     workflowsBefore?: readonly string[];
 }): WorkflowCandidate[] {

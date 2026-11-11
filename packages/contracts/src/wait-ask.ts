@@ -1,5 +1,6 @@
 import type { AgentRequest } from '@adecore/agent-contracts/agent';
 import type { ChatRequestSummary } from '@adecore/agent-contracts/chat';
+import type { FromMachine } from './tolerance.ts';
 
 /* What a waiting node asks a person for, read from its oldest open request. */
 export interface WaitAsk {
@@ -70,7 +71,7 @@ function terminalAsk(request: AgentRequest, more: number): WaitAsk {
     return { kind: 'tool', tool, detail: oneLine(request.title), more };
 }
 
-function chatAsk(request: ChatRequestSummary, more: number): WaitAsk | null {
+function chatAsk(request: FromMachine<ChatRequestSummary>, more: number): WaitAsk | null {
     if (request.kind === 'question') {
         const first = request.question?.questions[0];
 
@@ -78,7 +79,8 @@ function chatAsk(request: ChatRequestSummary, more: number): WaitAsk | null {
     }
 
     const approval = request.approval;
-    if (!approval) {
+    // A request of a newer machine's kind is never read as an approval.
+    if (!approval || request.kind !== 'approval') {
         return null;
     }
 
@@ -95,14 +97,21 @@ function chatAsk(request: ChatRequestSummary, more: number): WaitAsk | null {
 }
 
 /* What a terminal's agent waits on; null while it reports no request, as a CLI that asks only through `Notification` does. */
-export function terminalWaitAsk(requests: readonly AgentRequest[] | undefined): WaitAsk | null {
+export function terminalWaitAsk(requests: readonly FromMachine<AgentRequest>[] | undefined): WaitAsk | null {
     const oldest = requests?.[0];
 
-    return oldest ? terminalAsk(oldest, requests.length - 1) : null;
+    if (!oldest) {
+        return null;
+    }
+
+    // A kind no request has today is read as neither an approval nor a question.
+    const kind = oldest.kind === 'approval' ? 'approval' : oldest.kind === 'question' ? 'question' : null;
+
+    return kind === null ? null : terminalAsk({ ...oldest, kind }, requests.length - 1);
 }
 
 /* What a chat waits on, from the requests on its info, oldest first. */
-export function chatWaitAsk(requests: readonly ChatRequestSummary[] | undefined): WaitAsk | null {
+export function chatWaitAsk(requests: readonly FromMachine<ChatRequestSummary>[] | undefined): WaitAsk | null {
     const oldest = requests?.[0];
 
     return oldest ? chatAsk(oldest, requests.length - 1) : null;

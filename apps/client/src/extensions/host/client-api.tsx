@@ -22,7 +22,7 @@ import {
     type ExtensionManifest,
     type ExtensionResult,
     type NodeAccent,
-    type RequestMap
+    type ReadRequestMap
 } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { Package, type LucideIcon } from 'lucide-react';
@@ -103,7 +103,7 @@ export interface LoadedExtension {
 
 const usePanelParams = create<{ params: Record<string, unknown> }>(() => ({ params: {} }));
 
-type UsageLimitsResult = RequestMap['usage.limits']['result'];
+type UsageLimitsResult = ReadRequestMap['usage.limits']['result'];
 type ExtensionRefusal = Extract<ExtensionResult<never>, { ok: false }>;
 type ServerClient<Server> = PublicClient.ServerClient<Server>;
 

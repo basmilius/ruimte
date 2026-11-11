@@ -1,4 +1,5 @@
-import type { ExternalGrant, ExternalTier, RuntimeMode } from '@ruimte/contracts';
+import { DEFAULT_EXTERNAL_CEILING, RuntimeModeSchema, type ExternalGrant, type ExternalTier, type FromMachine, type RuntimeMode } from '@ruimte/contracts';
+import { knownWord } from '@/transport-api/known-word';
 
 const DAY_MS = 24 * 3_600_000;
 
@@ -13,8 +14,9 @@ export interface GrantDraft {
     expiry: Expiry;
 }
 
-export function draftOf(grant: ExternalGrant): GrantDraft {
-    return { ...grant, expiry: 'never' };
+/* A ceiling of a newer machine has no row in the form, so the form starts at the default and the person sees what they approve. */
+export function draftOf(grant: FromMachine<ExternalGrant>): GrantDraft {
+    return { ...grant, ceiling: knownWord(RuntimeModeSchema.options, grant.ceiling) ?? DEFAULT_EXTERNAL_CEILING, expiry: 'never' };
 }
 
 export function expiryAt(expiry: Expiry, now: number): number | null {

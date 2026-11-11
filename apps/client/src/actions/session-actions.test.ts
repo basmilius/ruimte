@@ -169,14 +169,14 @@ interface Fake {
     of(type: RequestType): Record<string, unknown>[];
     applied: { chatId: string; planId: string; ops: PlanPersonOp[] }[];
     retargeted: string[];
-    revealed: ChatForkResult[];
+    revealed: Pick<ChatForkResult, 'viewId' | 'nodeId'>[];
 }
 
 function fake(answers: Answers = {}, machine: Partial<SessionMachine> = {}): Fake {
     const asked: { type: RequestType; payload: Record<string, unknown> }[] = [];
     const applied: Fake['applied'] = [];
     const retargeted: string[] = [];
-    const revealed: ChatForkResult[] = [];
+    const revealed: Fake['revealed'] = [];
     const defaults: Answers = {
         'agent.children': () => ({ nodeIds: ['child-1', 'child-2'] }),
         'chat.cancel': () => ({}),

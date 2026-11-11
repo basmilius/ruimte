@@ -1,7 +1,10 @@
 import { formatAgo } from '@adecore/ui/format';
-import type { ConnectedClient } from '@ruimte/contracts';
+import type { ConnectedClient as MachineClient, FromMachine } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { CircleQuestionMark, Globe, Laptop, Plug, Server, Smartphone, Tablet, type LucideIcon } from 'lucide-react';
+
+/* A reach of a newer machine reads as the internet, the farthest this version names. */
+type ConnectedClient = FromMachine<MachineClient>;
 
 /* One row of the list: connections that differ only in id and time, with the earliest time. */
 interface ClientGroup {

@@ -1,4 +1,4 @@
-import type { RequestMap, RequestType } from '@ruimte/contracts';
+import type { ReadRequestMap, RequestType } from '@ruimte/contracts';
 import { TransportError, type Transport } from '@/transport';
 import { machineAnswers } from '@/transport/features';
 
@@ -10,8 +10,8 @@ import { machineAnswers } from '@/transport/features';
 export function extensionRequest<Type extends RequestType>(
     link: Pick<Transport, 'request' | 'connection'>,
     type: Type,
-    payload: RequestMap[Type]['payload']
-): Promise<RequestMap[Type]['result']> {
+    payload: ReadRequestMap[Type]['payload']
+): Promise<ReadRequestMap[Type]['result']> {
     if (!machineAnswers(link.connection, type)) {
         return Promise.reject(new TransportError('unavailable', `This machine does not answer ${type}`, { request: type }));
     }

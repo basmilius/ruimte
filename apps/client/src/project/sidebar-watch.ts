@@ -1,5 +1,15 @@
-import { projectSidebarViews, type AgentStatus, type ProjectChangedEvent, type ProjectSidebarResult, type ProjectSummaryEvent } from '@ruimte/contracts';
+import {
+    AgentStatusSchema,
+    projectSidebarViews,
+    type AgentStatus,
+    type FromMachine,
+    type ProjectChangedEvent,
+    type ProjectSidebarResult,
+    type ProjectSidebarView,
+    type ProjectSummaryEvent
+} from '@ruimte/contracts';
 import { waitDate } from '@/state/waiting-date';
+import { knownWord } from '@/transport-api/known-word';
 import { fireAndForget, type Transport } from '@/transport-api/transport';
 import { machineAnswers } from '@/transport/features';
 
@@ -43,6 +53,41 @@ function waitingAt(status: AgentStatus, requests: readonly { createdAt: number }
     }
 
     return waitDate(requests, previous, fallback);
+}
+
+type SidebarNode = ProjectSidebarView['nodes'][number];
+
+const SIDEBAR_NODE_KINDS: readonly SidebarNode['kind'][] = ['terminal', 'chat', 'browser', 'device'];
+const SIDEBAR_VIEW_KINDS: readonly ProjectSidebarView['kind'][] = [
+    'canvas',
+    'terminal',
+    'chat',
+    'browser',
+    'device',
+    'drawing',
+    'diagram',
+    'file',
+    'database',
+    'separator',
+    'subheader',
+    'unknown'
+];
+
+/* A node of a kind this version cannot open stays out of its view's row; a status it cannot read draws as none. */
+function readableNode(node: FromMachine<SidebarNode>): SidebarNode | null {
+    const kind = knownWord(SIDEBAR_NODE_KINDS, node.kind);
+
+    return kind === null ? null : { ...node, kind, status: knownWord(AgentStatusSchema.options, node.status) ?? undefined };
+}
+
+/* A view of a newer kind is a row of kind `unknown`, as a view a project file names is. */
+function readableViews(views: readonly FromMachine<ProjectSidebarView>[]): ProjectSidebarView[] {
+    return views.map((row) => ({
+        ...row,
+        kind: knownWord(SIDEBAR_VIEW_KINDS, row.kind) ?? 'unknown',
+        nodes: row.nodes.flatMap((node) => readableNode(node) ?? []),
+        self: row.self === null ? null : readableNode(row.self)
+    }));
 }
 
 function sameProjects(left: SidebarMachineSnapshot['projects'], right: SidebarMachineSnapshot['projects']): boolean {
@@ -146,15 +191,24 @@ export class SidebarWatch {
         this.queue(ALL_PARTS);
     };
 
-    private status(key: string, status: AgentStatus, requests?: readonly { createdAt: number }[], fallback?: number): void {
+    private status(key: string, word: FromMachine<AgentStatus>, requests?: readonly { createdAt: number }[], fallback?: number): void {
         this.touched.add(key);
-        const at = waitingAt(status, requests, this.snapshot.waitingSince[key], fallback);
+        const status = knownWord(AgentStatusSchema.options, word);
+        const at = status === null ? null : waitingAt(status, requests, this.snapshot.waitingSince[key], fallback);
 
-        if (this.snapshot.statuses[key] === status && this.snapshot.waitingSince[key] === (at ?? undefined)) {
+        if (this.snapshot.statuses[key] === (status ?? undefined) && this.snapshot.waitingSince[key] === (at ?? undefined)) {
             return;
         }
 
+        const statuses = { ...this.snapshot.statuses };
         const waitingSince = { ...this.snapshot.waitingSince };
+
+        // A status of a newer machine draws as none, rather than as the last one this client could read.
+        if (status === null) {
+            delete statuses[key];
+        } else {
+            statuses[key] = status;
+        }
 
         if (at === null) {
             delete waitingSince[key];
@@ -162,7 +216,7 @@ export class SidebarWatch {
             waitingSince[key] = at;
         }
 
-        this.set({ ...this.snapshot, statuses: { ...this.snapshot.statuses, [key]: status }, waitingSince });
+        this.set({ ...this.snapshot, statuses, waitingSince });
     }
 
     /* The document comes along to a client that holds the project, so its rows come from it without asking. */
@@ -180,7 +234,7 @@ export class SidebarWatch {
     }
 
     /* Every other client gets the rows of a changed document here, from a machine that sends them. */
-    private summary({ summary, views }: ProjectSummaryEvent): void {
+    private summary({ summary, views }: FromMachine<ProjectSummaryEvent>): void {
         const known = this.snapshot.projects.some((project) => project.summary.projectId === summary.projectId);
         // A closed project leaves the list and a new one joins it, which only the machine's list says in full.
         if (!known || summary.closedAt != null || this.snapshot.state !== 'ready') {
@@ -190,7 +244,7 @@ export class SidebarWatch {
         this.set({
             ...this.snapshot,
             projects: this.snapshot.projects.map((project) =>
-                project.summary.projectId === summary.projectId ? { ...project, summary, ...(views ? { views } : {}) } : project
+                project.summary.projectId === summary.projectId ? { ...project, summary, ...(views ? { views: readableViews(views) } : {}) } : project
             )
         });
     }
@@ -250,8 +304,10 @@ export class SidebarWatch {
                 const fetched: Record<string, AgentStatus> = {};
                 const waitingSince: Record<string, number> = {};
 
-                const remember = (key: string, status: AgentStatus, requests?: readonly { createdAt: number }[], fallback?: number): void => {
-                    if (this.touched.has(key)) {
+                const remember = (key: string, word: FromMachine<AgentStatus>, requests?: readonly { createdAt: number }[], fallback?: number): void => {
+                    const status = knownWord(AgentStatusSchema.options, word);
+
+                    if (this.touched.has(key) || status === null) {
                         return;
                     }
 
@@ -284,7 +340,11 @@ export class SidebarWatch {
                 );
 
                 this.set({
-                    projects: overview?.projects ?? this.snapshot.projects,
+                    projects:
+                        overview?.projects.map((project) => ({
+                            summary: project.summary,
+                            views: project.views === null ? null : readableViews(project.views)
+                        })) ?? this.snapshot.projects,
                     statuses: { ...fetched, ...Object.fromEntries(kept) },
                     waitingSince: { ...waitingSince, ...Object.fromEntries(keptDates) },
                     state: 'ready'

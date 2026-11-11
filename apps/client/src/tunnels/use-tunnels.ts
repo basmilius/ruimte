@@ -1,5 +1,5 @@
 import { messageOf } from '@adecore/ui';
-import type { Credential, RequestType, TunnelState } from '@ruimte/contracts';
+import type { Credential, FromMachine, RequestType, TunnelState } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { transportFor } from '@/transport';
@@ -20,7 +20,7 @@ export function useTunnels(endpointId: string) {
     // The newest request of the section, so a machine with an older shape of the state offers no Tunnels.
     const answers = useMachineAnswers(endpointId, 'tunnel.link');
     const [state, setState] = useState<TunnelState | null>(null);
-    const [credentials, setCredentials] = useState<Credential[] | null>(null);
+    const [credentials, setCredentials] = useState<FromMachine<Credential>[] | null>(null);
     const [failure, setFailure] = useState<string | null>(null);
 
     const load = (): void => {

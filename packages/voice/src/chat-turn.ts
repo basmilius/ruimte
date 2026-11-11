@@ -1,11 +1,11 @@
-import type { ChatInfo, ChatItem } from '@ruimte/contracts';
+import type { ChatInfo, ChatItem, FromMachine } from '@ruimte/contracts';
 import { turnCompletion, type VoiceChatCompletion } from './follow-up.ts';
 import { chatWaits } from './session-watch.ts';
 
-/* A chat as a runner holds it: its thread in thread order, and what the chat says of itself now. */
+/* A chat as a runner holds it: its thread in thread order, and what the chat says of itself now, as a newer machine may send it. */
 export interface VoiceChatState {
-    items: readonly ChatItem[];
-    info: Pick<ChatInfo, 'status' | 'activeTurnId'>;
+    items: readonly FromMachine<ChatItem>[];
+    info: Pick<FromMachine<ChatInfo>, 'status' | 'activeTurnId'>;
 }
 
 export type ChatTurnProgress = { kind: 'settled'; completion: VoiceChatCompletion } | { kind: 'running'; waiting: boolean };

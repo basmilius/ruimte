@@ -42,6 +42,29 @@ describe('connectionEvent', () => {
         });
     });
 
+    test('a reply of a newer machine read in part is information, grouped by its type, with its counts through the scrubber', () => {
+        const event = connectionEvent({
+            kind: 'degraded',
+            frame: { request: 'chat.attach' },
+            members: 5,
+            dropped: 1,
+            words: 0,
+            machine: 'local',
+            link: 'socket'
+        });
+        expect(event.level).toBe('info');
+        expect(event.fingerprint).toEqual(['newer-machine', 'chat.attach']);
+        expect(createScrubber({ tags: CLIENT_TAGS }).scrubEvent(event)?.tags).toEqual({
+            problem: 'newer-machine',
+            machine: 'local',
+            link: 'socket',
+            request: 'chat.attach',
+            members: '5',
+            dropped: '1',
+            words: '0'
+        });
+    });
+
     test('keeps every tag through the scrubber of the client', () => {
         const event = connectionEvent({ kind: 'refused', mismatch: 'daemon-older', machine: 'remote', link: 'direct' });
         const withUrl: { tags: Record<string, string> } = { ...event, tags: { ...event.tags, url: 'https://station.ruimte.app/x' } };

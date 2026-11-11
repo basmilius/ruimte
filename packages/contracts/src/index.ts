@@ -50,6 +50,7 @@ import { SQL_BINDING_REQUEST_SCHEMAS, SQL_BINDING_EVENT_SCHEMAS } from './sql-bi
 import { TASK_REQUEST_SCHEMAS, TASK_EVENT_SCHEMAS } from './task.ts';
 import { TEMPLATES_REQUEST_SCHEMAS, TEMPLATES_EVENT_SCHEMAS } from './templates.ts';
 import { TERMINAL_PREPARE_REQUEST_SCHEMAS } from './terminal-prepare.ts';
+import type { FromMachine } from './tolerance.ts';
 import { TUNNEL_REQUEST_SCHEMAS, TUNNEL_EVENT_SCHEMAS } from './tunnel.ts';
 import { VOICE_REQUEST_SCHEMAS, VOICE_EVENT_SCHEMAS } from './voice.ts';
 
@@ -100,6 +101,9 @@ export { cleanGhost, ghostPrompt, type GhostInput } from './editor-assist-ghost.
 export { NAMES_ASKED, namesPrompt, parseNames, type NamesInput } from './editor-assist-names.ts';
 export { EDITOR_ASSIST_INSTRUCTIONS } from './editor-assist-purposes.ts';
 export * from './timeouts.ts';
+// Its stamps run on import, so every schema here reads tolerantly wherever the contracts are loaded.
+export { KNOWN_AGENT_KINDS, readFromMachine, type FromMachine, type MachineOpenWords } from './tolerance.ts';
+export type { WireDegradation } from '@adecore/agent-contracts/tolerance';
 export { TextModelChoiceSchema, type TextModelChoice } from './text-model.ts';
 export * from './launches.ts';
 export * from './launch-rules.ts';
@@ -283,6 +287,38 @@ export type EventType = keyof typeof EVENT_SCHEMAS;
 
 export type EventMap = {
     [E in EventType]: z.infer<(typeof EVENT_SCHEMAS)[E]>;
+};
+
+/*
+ * The documents a client writes back after it read them. They keep their strict types: no list in them leaves an element
+ * out and no member of them becomes unknown (`tolerance.test.ts`), and a word of a newer machine in one goes back as it came.
+ */
+export const WRITTEN_BACK_REPLIES = [
+    'project.open',
+    'project.save',
+    'drawing.open',
+    'diagram.open',
+    'plan.list',
+    'routine.list'
+] as const satisfies readonly RequestType[];
+export const WRITTEN_BACK_EVENTS = [
+    'project.changed',
+    'drawing.changed',
+    'diagram.changed',
+    'plan.changed',
+    'plan.created'
+] as const satisfies readonly EventType[];
+
+/* What a client reads from a machine (`readFromMachine`); what it sends stays `RequestMap`'s payload. */
+export type ReadRequestMap = {
+    [T in RequestType]: {
+        payload: RequestMap[T]['payload'];
+        result: T extends (typeof WRITTEN_BACK_REPLIES)[number] ? RequestMap[T]['result'] : FromMachine<RequestMap[T]['result']>;
+    };
+};
+
+export type ReadEventMap = {
+    [E in EventType]: E extends (typeof WRITTEN_BACK_EVENTS)[number] ? EventMap[E] : FromMachine<EventMap[E]>;
 };
 
 export function isRequestType(type: string): type is RequestType {

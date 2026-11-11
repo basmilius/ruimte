@@ -62,9 +62,14 @@ struct TypedWireTests {
         let unknown = result.items.compactMap { item -> ChatItemUnknown? in
             if case .unknown(let value) = item { value } else { nil }
         }
-        #expect(unknown.map(\.id) == ["future-1", "tool-2", "approval-2", "approval-3", "question-2"])
-        #expect(unknown.map(\.kind) == ["future-kind", "tool", "approval", "approval", "question"])
-        #expect(result.items.count - unknown.count == 10)
+        // The members the TypeScript reader keeps as unknown too, named by their place in the input and their tag.
+        let degraded = try #require(attach["degraded"]?.arrayValue)
+        let members = degraded.filter { $0["kind"] == .string("unknown-member") }
+        let inputItems = try #require(attach["input"]?["items"]?.arrayValue)
+        let places = try members.map { member in Int(try #require(member["path"]?.arrayValue?.last?.numberValue)) }
+        #expect(unknown.map(\.id) == places.compactMap { inputItems[$0]["id"]?.stringValue })
+        #expect(unknown.map(\.kind) == members.compactMap { $0["tag"]?.stringValue })
+        #expect(result.items.count - unknown.count == inputItems.count - degraded.count)
         // The decoders alone degrade what the interpreter degrades, for a path that reads without it.
         let unchecked = try #require(attach["input"]).decoded(as: ChatAttachResult.self)
         #expect(unchecked.items == result.items)

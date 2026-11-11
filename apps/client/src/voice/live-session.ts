@@ -1,5 +1,5 @@
 import { localTimeZone } from '@adecore/ui/format';
-import type { RequestMap, RequestType } from '@ruimte/contracts';
+import type { ReadRequestMap, RequestType } from '@ruimte/contracts';
 import type { LiveEvent } from '@ruimte/voice';
 import i18next from 'i18next';
 import { desktop, type OpenAiLivePreferences } from '@/desktop/bridge';
@@ -58,7 +58,7 @@ function desktopRoute(): LiveSessionRoute {
     };
 }
 
-type MachineRequest = <T extends RequestType>(type: T, payload: RequestMap[T]['payload']) => Promise<RequestMap[T]['result']>;
+type MachineRequest = <T extends RequestType>(type: T, payload: ReadRequestMap[T]['payload']) => Promise<ReadRequestMap[T]['result']>;
 
 /* The machine of this window mints with its own key and runs every tool, the route of a phone (`voice.start`). Development only. */
 export function machineRoute(request: MachineRequest = (type, payload) => machineTransport(currentEndpointId()).request(type, payload)): LiveSessionRoute {

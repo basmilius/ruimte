@@ -1,8 +1,9 @@
 import { formatAge } from '@adecore/ui/format';
-import type { Reachability } from '@ruimte/contracts';
+import { ReachabilitySchema, type FromMachine, type Reachability } from '@ruimte/contracts';
 import i18next from 'i18next';
 import type { Endpoint } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
+import { knownWord } from '@/transport-api/known-word';
 import type { ConnectionState } from '@/transport/index';
 
 /*
@@ -10,8 +11,10 @@ import type { ConnectionState } from '@/transport/index';
  * when a row draws it, because this module is imported before `initI18n()` has run: a string fixed
  * here would stay English for the life of the window.
  */
-export function reachabilityLabel(reach: Reachability): string {
-    return i18next.t(`shell:connection.reachability.${reach}`);
+export function reachabilityLabel(reach: FromMachine<Reachability>): string {
+    const known = knownWord(ReachabilitySchema.options, reach);
+
+    return known === null ? i18next.t('shell:connection.reachability.other') : i18next.t(`shell:connection.reachability.${known}`);
 }
 
 interface MachineInfo {
@@ -19,7 +22,7 @@ interface MachineInfo {
     endpointLabel: string;
     /* What the daemon calls itself, its hostname unless it was given a label. */
     machineLabel: string | null;
-    reachability: Reachability | null;
+    reachability: FromMachine<Reachability> | null;
     platform: string | null;
 }
 

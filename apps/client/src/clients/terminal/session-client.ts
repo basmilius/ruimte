@@ -1,10 +1,11 @@
 import { MountedRegistry, type MountedEntry } from '@adecore/agents-react';
-import type { AgentLaunch, SessionAttachPayload, SessionAttachResult, SessionInfo } from '@ruimte/contracts';
+import type { AgentLaunch, FromMachine, SessionAttachPayload, SessionAttachResult, SessionInfo } from '@ruimte/contracts';
 import { fireAndForget } from '@/transport-api/transport';
-import type { SessionSink } from '../../state/sessions';
+import { agentFromMachine, type SessionSink } from '../../state/sessions';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../../transport-api/transport';
 import { HandlerTable } from '../../transport/handler-table';
 
+type MachineSession = FromMachine<SessionInfo>;
 type OutputHandler = (data: string) => void;
 type ExitHandler = (exitCode: number) => void;
 type ScreenHandler = (result: Pick<SessionAttachResult, 'screen'>) => void;
@@ -79,7 +80,7 @@ export class SessionClient {
                 this.sink.setExited(sessionId, exitCode);
                 this.exitHandlers.fanOut(sessionId, exitCode);
             }),
-            transport.on('session.status', ({ sessionId, agent }) => this.sink.setAgent(sessionId, agent)),
+            transport.on('session.status', ({ sessionId, agent }) => this.sink.setAgent(sessionId, agentFromMachine(agent))),
             // Another client said yes to a held command; this one only learns it from the list.
             transport.on('session.list-changed', () => {
                 if (this.held.size > 0) {
@@ -107,7 +108,7 @@ export class SessionClient {
                 ...(grid ?? DEFAULT_GRID)
             });
             this.sink.setExited(nodeId, undefined);
-            this.sink.setAgent(nodeId, info.agent ?? null);
+            this.sink.setAgent(nodeId, agentFromMachine(info.agent ?? null));
             this.sink.setAccount(nodeId, info.account);
             this.sink.setShell(nodeId, info.shell);
             this.setHeld(nodeId, info.heldCommand);
@@ -295,19 +296,19 @@ export class SessionClient {
         this.applyAgents(await this.listSessions());
     }
 
-    private applyAgents(sessions: SessionInfo[] | null): void {
+    private applyAgents(sessions: MachineSession[] | null): void {
         for (const session of sessions ?? []) {
             if (session.agent) {
-                this.sink.setAgent(session.sessionId, session.agent);
+                this.sink.setAgent(session.sessionId, agentFromMachine(session.agent));
             }
         }
     }
 
     private onStatus(status: TransportStatus): void {
         if (status === 'open') {
-            let listed: Promise<SessionInfo[] | null> | null = null;
+            let listed: Promise<MachineSession[] | null> | null = null;
             // One list for the whole pass and the agents of every shell, asked for once the first attach has answered.
-            const sessions = (): Promise<SessionInfo[] | null> => {
+            const sessions = (): Promise<MachineSession[] | null> => {
                 if (listed === null) {
                     listed = this.listSessions();
                     void listed.then((list) => this.applyAgents(list));
@@ -330,7 +331,7 @@ export class SessionClient {
         this.mounted.detachAll((nodeId) => this.sink.setAttached(nodeId, false));
     }
 
-    private async reattach(nodeId: string, entry: Mounted, sessions: () => Promise<SessionInfo[] | null>): Promise<void> {
+    private async reattach(nodeId: string, entry: Mounted, sessions: () => Promise<MachineSession[] | null>): Promise<void> {
         const attachment = this.register(nodeId, entry);
         await this.ensure(nodeId, { cwd: entry.cwd, command: entry.command, agent: entry.agent, follow: entry.follow }, entry.grid);
         // The node may have left the canvas while the create was on the wire, or mounted again with an open of its own.
@@ -346,7 +347,7 @@ export class SessionClient {
     }
 
     /* Null when the node left while the attach was on the wire. */
-    private async attachWith(nodeId: string, grid: Grid | null, sessions: () => Promise<SessionInfo[] | null>): Promise<SessionAttachResult | null> {
+    private async attachWith(nodeId: string, grid: Grid | null, sessions: () => Promise<MachineSession[] | null>): Promise<SessionAttachResult | null> {
         if (this.disposed) {
             return null;
         }
@@ -446,12 +447,12 @@ export class SessionClient {
     }
 
     // The attach reply says only that the shell ended; the exit code and the agent are on the list entry.
-    private async settle(nodeId: string, result: SessionAttachResult, sessions: () => Promise<SessionInfo[] | null>): Promise<void> {
+    private async settle(nodeId: string, result: SessionAttachResult, sessions: () => Promise<MachineSession[] | null>): Promise<void> {
         const info = (await sessions())?.find((session) => session.sessionId === nodeId) ?? null;
         if (result.exited) {
             this.sink.setExited(nodeId, info?.exitCode ?? 0);
         }
-        this.sink.setAgent(nodeId, info?.agent ?? null);
+        this.sink.setAgent(nodeId, agentFromMachine(info?.agent ?? null));
         this.setHeld(nodeId, info?.heldCommand);
         if (info !== null) {
             this.sink.setAccount(nodeId, info.account);
@@ -483,7 +484,7 @@ export class SessionClient {
         }
     }
 
-    private async listSessions(): Promise<SessionInfo[] | null> {
+    private async listSessions(): Promise<MachineSession[] | null> {
         try {
             return (await this.transport.request('session.list', {})).sessions;
         } catch {

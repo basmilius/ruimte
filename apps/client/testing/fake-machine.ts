@@ -1,5 +1,5 @@
 import { spyOn } from 'bun:test';
-import { EVENT_SCHEMAS, REQUEST_SCHEMAS, type EventMap, type EventType, type RequestMap, type RequestType } from '@ruimte/contracts';
+import { EVENT_SCHEMAS, REQUEST_SCHEMAS, readFromMachine, type EventMap, type EventType, type RequestMap, type RequestType } from '@ruimte/contracts';
 import { LOCAL_ENDPOINT_ID, endpointById, type Endpoint } from '@/state/endpoints';
 import { pool } from '@/transport';
 import { TransportError, type ConnectionState, type TransportStatus } from '@/transport-api/transport';
@@ -105,6 +105,19 @@ export class FakeMachine implements PooledTransport {
 
     answer<T extends RequestType>(type: T, answer: Answer<T>): void {
         this.answers.set(type, answer as unknown as Answer<RequestType>);
+    }
+
+    /* An answer of a newer machine, which no type of this version describes: read as `LinkTransport` reads a reply. */
+    answerFromNewer<T extends RequestType>(type: T, answer: (payload: RequestMap[T]['payload']) => unknown): void {
+        this.answer(type, (payload) => {
+            const read = readFromMachine(REQUEST_SCHEMAS[type].result, answer(payload));
+
+            if (!read.success) {
+                throw new TransportError('bad-reply', `This version cannot read the ${type} answer`, { request: type });
+            }
+
+            return read.data as RequestMap[T]['result'];
+        });
     }
 
     requests<T extends RequestType>(type: T): Array<RequestMap[T]['payload']> {

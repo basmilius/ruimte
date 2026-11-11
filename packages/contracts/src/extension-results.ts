@@ -55,7 +55,8 @@ export function extensionErrorCodeOf(code: string): ExtensionErrorCode {
 export type ExtensionAgentStatus = 'idle' | 'running' | 'needsYou' | 'stopped';
 
 /* An agent's status in the one word an extension reads everywhere; nothing to report, an exit and an error read as stopped. */
-export function extensionAgentStatus(status: AgentStatus | null | undefined, needsYou = false): ExtensionAgentStatus {
+// A status of a newer machine reads as stopped, like every status the extension API has no word for.
+export function extensionAgentStatus(status: AgentStatus | (string & {}) | null | undefined, needsYou = false): ExtensionAgentStatus {
     if (needsYou || status === 'needs-you') {
         return 'needsYou';
     }
@@ -75,7 +76,9 @@ export interface ExtensionChatSummary {
     cwd: string;
 }
 
-export function extensionChatOf(info: Pick<ChatInfo, 'chatId' | 'provider' | 'status' | 'model' | 'cwd' | 'requests'>): ExtensionChatSummary {
+export function extensionChatOf(
+    info: Pick<ChatInfo, 'chatId' | 'provider' | 'model' | 'cwd'> & { readonly status: string; readonly requests?: readonly unknown[] }
+): ExtensionChatSummary {
     return {
         id: info.chatId,
         provider: info.provider,

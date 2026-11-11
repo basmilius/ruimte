@@ -1,6 +1,6 @@
 import { useNow } from '@adecore/ui';
 import { SettingsRow, TopIcon } from '@adecore/ui/settings';
-import type { ConnectedClient } from '@ruimte/contracts';
+import type { ConnectedClient, FromMachine } from '@ruimte/contracts';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { clientDescription, clientIcon, clientLabel, groupClients } from '@/machine-ui/machine-clients';
@@ -13,7 +13,7 @@ import { startMachineWatch } from '@/transport/machine-watch';
 
 const MINUTE_MS = 60_000;
 
-async function readClients(transport: Transport): Promise<ConnectedClient[]> {
+async function readClients(transport: Transport): Promise<FromMachine<ConnectedClient>[]> {
     return (await transport.request('client.list', {})).clients;
 }
 

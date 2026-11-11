@@ -1,8 +1,13 @@
+import type { ChatThreadItem } from '@adecore/agents-react/state';
 import type { ActionOutput } from '@ruimte/actions';
-import type { ChatItem } from '@ruimte/contracts';
+import type { ChatToolItem } from '@ruimte/contracts';
 
-export function agentActivity(items: ChatItem[], limit: number, toolId: string | null): Pick<ActionOutput<'agent.activity'>, 'tools' | 'truncated'> {
-    const all = items.filter((item) => item.kind === 'tool');
+export function agentActivity(
+    items: readonly ChatThreadItem[],
+    limit: number,
+    toolId: string | null
+): Pick<ActionOutput<'agent.activity'>, 'tools' | 'truncated'> {
+    const all = items.filter((item): item is ChatToolItem => item.kind === 'tool');
     const selected = toolId ? all.filter((item) => item.id === toolId || item.toolUseId === toolId) : all.slice(-limit);
     const tools = selected.map((item) => {
         const args = item.input && typeof item.input === 'object' ? (item.input as Record<string, unknown>) : {};

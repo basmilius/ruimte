@@ -1,5 +1,5 @@
 import { messageOf } from '@adecore/ui';
-import type { AgentIntegration, AgentIntegrationFile, AgentIntegrationReport, AgentIntegrationsSummary, AgentKind } from '@ruimte/contracts';
+import type { AgentIntegration, AgentIntegrationFile, AgentIntegrationReport, AgentIntegrationsSummary, AgentKind, FromMachine } from '@ruimte/contracts';
 import { useState } from 'react';
 import { createFlagState } from '@/registry/dialog-state';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
@@ -20,7 +20,7 @@ export const INTEGRATION_NAMES: Partial<Record<AgentKind, string>> = {
  * Whether a person still has something to decide: a provider never asked about, or one that was
  * wired up by an earlier release and has not been shown yet. `--no-hooks` leaves nothing to decide.
  */
-export function pendingReview(summary: AgentIntegrationsSummary | null | undefined): boolean {
+export function pendingReview(summary: FromMachine<AgentIntegrationsSummary> | null | undefined): boolean {
     if (!summary || summary.fixed) {
         return false;
     }
@@ -29,7 +29,7 @@ export function pendingReview(summary: AgentIntegrationsSummary | null | undefin
 
 /* Migrated providers left without a choice, minus those the person already answered or is answering. */
 export function providersToKeep(
-    summary: AgentIntegrationsSummary | null | undefined,
+    summary: FromMachine<AgentIntegrationsSummary> | null | undefined,
     answered: readonly string[],
     busy: string | null
 ): AgentIntegration['provider'][] {
@@ -38,11 +38,12 @@ export function providersToKeep(
         .map((entry) => entry.provider);
 }
 
-function localSummary(): AgentIntegrationsSummary | null {
+function localSummary(): FromMachine<AgentIntegrationsSummary> | null {
     return serverInfoOf(LOCAL_ENDPOINT_ID).agentIntegrations;
 }
 
-export function useAgentIntegrations(): AgentIntegrationsSummary | null {
+/* A state of a newer machine is neither on nor waiting on a choice, so its switch shows off and nothing asks about it. */
+export function useAgentIntegrations(): FromMachine<AgentIntegrationsSummary> | null {
     return useServers((s) => (hasLocalMachine() ? (s.byEndpoint[LOCAL_ENDPOINT_ID]?.agentIntegrations ?? null) : null));
 }
 

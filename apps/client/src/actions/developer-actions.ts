@@ -18,7 +18,7 @@ import {
     type GitRepo,
     type GitRepoKind,
     type GitStatus,
-    type RequestMap,
+    type ReadRequestMap,
     type RequestType,
     type Worktree,
     isPathBelow,
@@ -143,7 +143,7 @@ export function developerActions(document: StoreApi<DocumentState>, overrides: P
         return folder;
     };
 
-    const ask = async <Type extends RequestType>(type: Type, payload: RequestMap[Type]['payload']): Promise<RequestMap[Type]['result']> =>
+    const ask = async <Type extends RequestType>(type: Type, payload: ReadRequestMap[Type]['payload']): Promise<ReadRequestMap[Type]['result']> =>
         refusing(connected().request(type, payload));
 
     const allRepos = async (): Promise<GitRepo[]> => (await ask('git.repos', { folder: projectFolder() })).repos;

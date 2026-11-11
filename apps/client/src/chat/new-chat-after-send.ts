@@ -1,6 +1,6 @@
 import { rememberChatSelection } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
-import { openChatInMode } from '@/action-port/opening-mode';
+import { knownRuntimeMode, openChatInMode } from '@/action-port/opening-mode';
 import { createNodeAction, createViewAction } from '@/action-port/person-actions';
 import { newChatOn } from '@/project/new-chat';
 import { canvasOfNode, liveCanvases } from '@/state/canvas';
@@ -29,8 +29,10 @@ export async function openNewChatAfterSend(endpointId: string, chatId: string): 
     rememberChatSelection(info.provider, info.selection);
     // A chat that was not opened for one CLI stays free to move to another, so only a fixed one names its CLI.
     const agent = host.provider === undefined ? {} : { provider: info.provider, ...(info.account === undefined ? {} : { account: info.account }) };
+    // A mode of a newer machine leaves the new chat on its own.
+    const mode = knownRuntimeMode(info.runtimeMode);
     if (isScratchProject(useProject.getState().current)) {
-        if (await newChatOn(endpointId, agent, info.runtimeMode)) {
+        if (await newChatOn(endpointId, agent, mode)) {
             useDocument.getState().setBodyFocused(true);
         }
         return;
@@ -39,7 +41,9 @@ export async function openNewChatAfterSend(endpointId: string, chatId: string): 
     if (!host.onCanvas) {
         const viewId = await createViewAction('chat', session);
         if (viewId !== null) {
-            openChatInMode(endpointId, viewId, info.runtimeMode);
+            if (mode !== undefined) {
+                openChatInMode(endpointId, viewId, mode);
+            }
             useDocument.getState().setBodyFocused(true);
         }
         return;
@@ -47,7 +51,9 @@ export async function openNewChatAfterSend(endpointId: string, chatId: string): 
     const canvasViewId = liveCanvases().find(([, canvas]) => canvas.nodes[chatId] !== undefined)?.[0];
     const nodeId = await createNodeAction('chat', { ...session, viewId: canvasViewId ?? null });
     if (nodeId !== null) {
-        openChatInMode(endpointId, nodeId, info.runtimeMode);
+        if (mode !== undefined) {
+            openChatInMode(endpointId, nodeId, mode);
+        }
         canvasOfNode(nodeId)?.getState().setBodyFocus(nodeId);
     }
 }

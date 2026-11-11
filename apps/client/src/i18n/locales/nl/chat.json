@@ -1,4 +1,8 @@
 {
+    "unknownItem": {
+        "item": "Werk Ruimte bij om dit te zien.",
+        "request": "Beantwoord dit in Ruimte op de machine, of werk Ruimte bij om hier te antwoorden."
+    },
     "where": {
         "worktree": "Worktree {{name}}",
         "mainCheckout": "Hoofdcheckout",

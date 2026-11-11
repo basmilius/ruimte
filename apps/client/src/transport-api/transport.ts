@@ -1,4 +1,4 @@
-import type { BytesReadPayload, EventMap, EventType, LiveFrameEvent, LiveFrameHeader, RequestMap, RequestType } from '@ruimte/contracts';
+import type { BytesReadPayload, EventType, LiveFrameEvent, LiveFrameHeader, ReadEventMap, ReadRequestMap, RequestType } from '@ruimte/contracts';
 import type { BytesPiece } from './piece';
 
 export type TransportStatus = 'connecting' | 'open' | 'closed';
@@ -26,11 +26,12 @@ export interface ConnectionState {
 
 export type LiveFrameHandler<E extends LiveFrameEvent> = (header: LiveFrameHeader<E>, bytes: Uint8Array) => void;
 
+/* What a client reads comes from a machine that may be newer, so replies and events are typed as `readFromMachine` reads them. */
 export interface Transport {
-    request<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']>;
+    request<T extends RequestType>(type: T, payload: ReadRequestMap[T]['payload']): Promise<ReadRequestMap[T]['result']>;
     /* `bytes.read` answered as a binary reply, by a transport that reads those; see `readPiece`. */
     readBytes?(payload: BytesReadPayload): Promise<BytesPiece>;
-    on<E extends EventType>(event: E, handler: (payload: EventMap[E]) => void): () => void;
+    on<E extends EventType>(event: E, handler: (payload: ReadEventMap[E]) => void): () => void;
     /* The frames of a stream opened with `binary`, by a transport that reads those; without it a client asks for JSON. */
     onLiveFrame?<E extends LiveFrameEvent>(event: E, handler: LiveFrameHandler<E>): () => void;
     readonly status: TransportStatus;

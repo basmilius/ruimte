@@ -1,4 +1,4 @@
-import type { EndpointInfo } from '@ruimte/contracts';
+import type { EndpointInfo, FromMachine } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { rekeyClientLocal } from '@/clients/project/client-local';
 import { rekeyLastProject } from '@/clients/project/last-project';
@@ -15,7 +15,7 @@ import { rekeyTicket } from '../transport-api/credentials';
  * that already knows a different daemon keeps everything it has, because the address now points at
  * another machine; that mismatch is reported rather than adopted.
  */
-export function noteDaemonIdentity(endpointId: string, info: EndpointInfo): string {
+export function noteDaemonIdentity(endpointId: string, info: FromMachine<EndpointInfo>): string {
     const daemonId = info.id;
     const endpoint = endpointById(endpointId);
     if (!endpoint) {

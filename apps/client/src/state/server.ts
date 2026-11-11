@@ -1,6 +1,7 @@
 import type {
     AgentIntegrationsSummary,
     EndpointNameSource,
+    FromMachine,
     KeepAwakeMode,
     MachineUpdate,
     NodeSizes,
@@ -37,7 +38,8 @@ export interface ServerInfo {
     visualReplies: boolean;
     /* The model that writes the machine's short texts; null is Automatic, undefined a machine that predates the setting. */
     textModel?: TextModelChoice | null;
-    keepAwake: KeepAwakeMode;
+    // The words below come from the machine as it reads them, so one of a newer machine shows as set there.
+    keepAwake: FromMachine<KeepAwakeMode>;
     keepAwakeOnBattery: boolean;
     keepAwakeDisplay: boolean;
     /* Whether the machine can hold a block on sleep at all. */
@@ -49,7 +51,7 @@ export interface ServerInfo {
     /* Whether the sudoers rule the closed-lid mode needs is installed on the machine. */
     keepAwakeLidRule: boolean;
     /* Where the update of the desktop app on the machine stands; null while it reports none. */
-    update: MachineUpdate | null;
+    update: FromMachine<MachineUpdate> | null;
     broker: BrokerSetting;
     /* Whether a flag or the environment on the machine decides the broker, which leaves the setting without effect. */
     brokerFixed: boolean;
@@ -58,8 +60,8 @@ export interface ServerInfo {
     /* Whether a flag on the machine decides the door, which leaves the setting without effect. */
     lanDoorFixed: boolean;
     /* What a person allowed in the CLIs' global settings; null while the machine has not said. */
-    agentIntegrations: AgentIntegrationsSummary | null;
-    reachability: Reachability | null;
+    agentIntegrations: FromMachine<AgentIntegrationsSummary> | null;
+    reachability: FromMachine<Reachability> | null;
     /* The key the machine announces, which the record on an account carries; null until it answers. */
     publicKey: string | null;
     /* The account the machine is on, null for none. Only the app on the machine is told, so it is
@@ -67,7 +69,7 @@ export interface ServerInfo {
     accountId: string | null | undefined;
     /* The folder new worktrees are made in, null for the data folder. Only the app on the machine is told; undefined for any other. */
     worktreeRoot: string | null | undefined;
-    terminalShell: TerminalShell | undefined;
+    terminalShell: FromMachine<TerminalShell> | undefined;
     gitBashMissing: boolean;
     /* The sizes a person gave new nodes of a kind on the machine, only the kinds they changed. */
     nodeSizes: NodeSizes;
@@ -160,7 +162,7 @@ interface ServersStore {
         >
     ): void;
     /* What a person allowed in the CLIs' settings, after this client changed it. */
-    setAgentIntegrations(endpointId: string, summary: AgentIntegrationsSummary): void;
+    setAgentIntegrations(endpointId: string, summary: FromMachine<AgentIntegrationsSummary>): void;
     /* The account the machine is on now, after this client put it on one or took it off. */
     setAccount(endpointId: string, accountId: string | null): void;
     /* What someone set on this machine, from `endpoint.changed` or from setting it here. A switch left out stays where it stands. */
@@ -194,7 +196,7 @@ interface ServersStore {
             >
     ): void;
     /* The update of the desktop app on the machine moved on, from `endpoint.updateChanged`. */
-    setUpdate(endpointId: string, update: MachineUpdate): void;
+    setUpdate(endpointId: string, update: FromMachine<MachineUpdate>): void;
     forget(endpointId: string): void;
 }
 

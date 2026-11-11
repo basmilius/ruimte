@@ -1,5 +1,5 @@
 import { Button, Dialog, FormError, messageOf, ScrollArea } from '@adecore/ui';
-import type { ConsentRequest } from '@ruimte/contracts';
+import type { ConsentRequest as MachineConsentRequest, FromMachine } from '@ruimte/contracts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConsent } from '@/state/consent';
@@ -7,6 +7,8 @@ import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { transportFor } from '@/transport';
 import { draftOf, expiryAt, grantOf, type GrantDraft } from '@/tunnels/grant-draft';
 import { GrantFields } from '@/tunnels/GrantFields';
+
+type ConsentRequest = FromMachine<MachineConsentRequest>;
 
 /* The host the client's address names. The name in its document is whatever its author typed; the address is where it came from. */
 function hostOf(address: string): string {

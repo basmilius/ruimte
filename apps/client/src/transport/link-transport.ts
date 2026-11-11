@@ -6,16 +6,18 @@ import {
     decodeLiveFrame,
     isEventType,
     parseServerFrame,
+    readFromMachine,
     type BytesReadPayload,
     type EventMap,
     type EventType,
     type LiveFrameEvent,
     type RequestMap,
     REQUEST_TIMEOUT_MS,
-    type RequestType
+    type RequestType,
+    type WireDegradation
 } from '@ruimte/contracts';
 import i18next from 'i18next';
-import type { LinkProblem, UnreadFrame } from '@/telemetry/events';
+import type { Degraded, LinkProblem, UnreadFrame } from '@/telemetry/events';
 import type { LinkMeter, ReconnectReason } from '@/telemetry/metrics';
 import type { BytesPiece } from '../transport-api/piece';
 import { TransportError, type ConnectionState, type LiveFrameHandler, type SignalRoute, type TransportStatus } from '../transport-api/transport';
@@ -562,13 +564,15 @@ export class LinkTransport implements PooledTransport {
             entry.reject(new TransportError(frame.error.code, frame.error.message, { request: entry.type, cause: entry.callSite }));
             return;
         }
-        const result = REQUEST_SCHEMAS[entry.type].result.safeParse(frame.result);
+        const result = readFromMachine(REQUEST_SCHEMAS[entry.type].result, frame.result);
         if (!result.success || entry.bytes) {
+            this.reportUnread({ kind: 'bad-reply', request: entry.type });
             entry.reject(
                 new TransportError('bad-reply', i18next.t('machines:connection.badReply', { type: entry.type }), { request: entry.type, cause: entry.callSite })
             );
             return;
         }
+        this.reportDegraded({ request: entry.type }, result.degraded);
         entry.resolve(result.data);
     }
 
@@ -598,7 +602,8 @@ export class LinkTransport implements PooledTransport {
     }
 
     private reportUnread(frame: UnreadFrame): void {
-        const key = frame.kind === 'invalid-event' ? `${frame.kind}:${frame.event}` : frame.kind;
+        const key =
+            frame.kind === 'invalid-event' ? `${frame.kind}:${frame.event}` : frame.kind === 'bad-reply' ? `${frame.kind}:${frame.request}` : frame.kind;
 
         if (this.unreadReported.has(key)) {
             return;
@@ -608,17 +613,35 @@ export class LinkTransport implements PooledTransport {
         this.report({ kind: 'unread', frame });
     }
 
+    private reportDegraded(frame: Degraded['frame'], degraded: readonly WireDegradation[]): void {
+        const key = 'request' in frame ? `degraded:${frame.request}` : `degraded:${frame.event}`;
+
+        if (degraded.length === 0 || this.unreadReported.has(key)) {
+            return;
+        }
+
+        this.unreadReported.add(key);
+        this.report({
+            kind: 'degraded',
+            frame,
+            members: degraded.filter((entry) => entry.kind === 'unknown-member').length,
+            dropped: degraded.filter((entry) => entry.kind === 'dropped-element').length,
+            words: degraded.filter((entry) => entry.kind === 'unknown-word').length
+        });
+    }
+
     private dispatchEvent(event: string, payload: unknown): void {
         if (!isEventType(event)) {
             console.warn('Dropped an unknown event', event);
             return;
         }
-        const parsed = EVENT_SCHEMAS[event].safeParse(payload);
+        const parsed = readFromMachine(EVENT_SCHEMAS[event], payload);
         if (!parsed.success) {
             console.warn(`Dropped a malformed ${event} event`);
             this.reportUnread({ kind: 'invalid-event', event });
             return;
         }
+        this.reportDegraded({ event }, parsed.degraded);
         const handlers = this.eventHandlers.get(event);
         if (!handlers) {
             return;

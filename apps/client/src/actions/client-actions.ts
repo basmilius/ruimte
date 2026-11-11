@@ -1,8 +1,8 @@
 import type { ChatSendExtras } from '@adecore/agents-react/chat';
 import { recentChatMessages } from '@adecore/agents-react/chat';
-import { useChats, providersOf } from '@adecore/agents-react/state';
+import { useChats, providersOf, type ChatThreadItem } from '@adecore/agents-react/state';
 import { ActionRefusal, ActionRegistry, type ActionHandlers } from '@ruimte/actions';
-import type { ChatItem, ProviderInfo } from '@ruimte/contracts';
+import type { ProviderInfo } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { canvasActions } from '@/actions/canvas-actions';
 import { chatSearchActions, type ChatSearchMachine } from '@/actions/chat-search-actions';
@@ -37,7 +37,7 @@ interface ClientActionMachine {
     sendChat(chatId: string, text: string, extras: ChatSendExtras): Promise<{ queued: boolean; turnId?: string }>;
     clearChat(chatId: string, force: boolean): Promise<void>;
     /* The thread of a chat nobody in this window opened, read without attaching to it for good. */
-    inspectChat(chatId: string): Promise<{ items: ChatItem[] }>;
+    inspectChat(chatId: string): Promise<{ items: ChatThreadItem[] }>;
     clearTerminal(terminalId: string): void;
     /* The agent CLIs of the machine the project runs on. */
     providers(): readonly ProviderInfo[];

@@ -1,11 +1,9 @@
 import { createCipheriv, createPrivateKey, createPublicKey, diffieHellman, hkdfSync, sign } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { UsageProviderSchema } from '@adecore/agent-contracts';
 import * as chat from '@adecore/agent-contracts/chat';
 import * as envelope from '@adecore/agent-contracts/envelope';
-import { RuntimeModeSchema } from '@adecore/agent-contracts/model';
-import { TaskResultSchema, TaskSchema, TaskStatusSchema } from '@adecore/agent-contracts/task';
+import { wireStampOf } from '@adecore/agent-contracts/tolerance';
 import { PLAN_STATE_MARKERS } from '@adecore/plan';
 import * as plan from '@adecore/plan/protocol';
 import { z } from 'zod';
@@ -15,37 +13,17 @@ import * as push from '../../pulsar/src/push.ts';
 import * as signaling from '../../pulsar/src/signaling.ts';
 import * as signing from '../../pulsar/src/signing.ts';
 import { PULSAR_STATEMENT_PUBLIC_KEYS } from '../../pulsar/src/statement-key.ts';
-import { AgentIntegrationSchema } from '../src/agent-integrations.ts';
 import * as agent from '../src/agent.ts';
-import { ARTIFACT_KINDS, ArtifactKindSchema } from '../src/artifact.ts';
-import { EndpointNameSourceSchema, ReachabilitySchema } from '../src/auth.ts';
 import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES, BYTES_REPLY_KIND, BYTES_REPLY_MAX_BYTES, CHAT_MODEL_MAX_BYTES } from '../src/bytes.ts';
 import * as liveness from '../src/direct-liveness.ts';
 import * as direct from '../src/direct.ts';
 import { REQUEST_SCHEMAS, EVENT_SCHEMAS } from '../src/index.ts';
-import { KeepAwakeModeSchema } from '../src/keep-awake.ts';
-import { TerminalShellSchema } from '../src/machine-settings.ts';
-import { MachineUpdateStatusSchema } from '../src/machine-update.ts';
 import { NODE_ACCENT_COLORS, NODE_ACCENT_NAMES } from '../src/node-accents.ts';
-import { ProjectSidebarResultSchema, ProjectSidebarViewSchema } from '../src/project-sidebar.ts';
-import {
-    CameraSchema,
-    CanvasNodeSchema,
-    NodeKindSchema,
-    NodeTitleSourceSchema,
-    PROJECT_ICON_NAMES,
-    PROJECT_VIEW_KINDS,
-    ProjectIconNameSchema,
-    ProjectListResultSchema,
-    ProjectNameSourceSchema,
-    ProjectViewSchema
-} from '../src/project.ts';
+import { CameraSchema, CanvasNodeSchema, NodeKindSchema, PROJECT_VIEW_KINDS, ProjectViewSchema } from '../src/project.ts';
 import { PROTOCOL_VERSION } from '../src/protocol.ts';
-import { PushNotifyKindSchema } from '../src/push.ts';
 import * as server from '../src/server.ts';
 import * as task from '../src/task.ts';
-import { TunnelProposalActionSchema } from '../src/tunnel.ts';
-import { VoiceActivityKindSchema, VoiceActivityStatusSchema, VoicePhaseSchema } from '../src/voice.ts';
+import { KNOWN_AGENT_KINDS } from '../src/tolerance.ts';
 import { refinementsOf, UNNAMED_REFINEMENTS } from './refinements.ts';
 
 type Schema = Record<string, any>;
@@ -64,8 +42,6 @@ for (const module of [address, broker, signaling, direct, server, envelope, push
  */
 const vocabularies: Record<string, z.ZodType> = {};
 // Open on the wire, so its Swift enum holds the kinds this version knows by name and a newer one decodes as nil.
-// The list is frozen here: the contracts no longer carry one, and the app's vocabulary stays as it shipped until the iPhone work reads the machine's providers instead.
-const KNOWN_AGENT_KINDS = ['claude', 'codex', 'gemini', 'copilot', 'apple'] as const;
 const KnownAgentKindSchema = z.enum(KNOWN_AGENT_KINDS);
 for (const module of [agent, task, plan, chat]) {
     for (const [name, rawValue] of Object.entries(module)) {
@@ -77,28 +53,17 @@ for (const module of [agent, task, plan, chat]) {
     }
 }
 /*
- * States a newer machine may add a value to, on a page that should still show. The interpreter takes any word for
- * them and the Swift enum keeps its cases beside `unknown(String)`, so a switch over one still stops compiling when a
- * case is added; a list that already names `unknown` reads a newer word as that.
+ * What a newer machine may add without the app refusing the page, read from the stamps on the schemas themselves
+ * (`src/tolerance.ts` and the chat contracts), so the TypeScript reader and these Swift types degrade the same values.
+ * A vocabulary of `cases` keeps its Swift cases beside `unknown(String)`, so a switch over one still stops compiling when
+ * a case is added; a list that already names `unknown` reads a newer word as that. One of `strings` is any string on
+ * the wire, with its known words riding along as `x-open-enum`.
  */
-const openValues: ReadonlySet<unknown> = new Set<unknown>([
-    chat.ChatGoalStatusSchema,
-    chat.ChatTurnLimitSchema.shape.kind,
-    chat.ChatBackgroundTaskSchema.shape.kind,
-    ReachabilitySchema,
-    EndpointNameSourceSchema,
-    KeepAwakeModeSchema,
-    TerminalShellSchema,
-    AgentIntegrationSchema.shape.state,
-    NodeTitleSourceSchema,
-    ProjectNameSourceSchema,
-    ProjectSidebarViewSchema.shape.kind,
-    ProjectSidebarViewSchema.shape.nodes.element.shape.kind,
-    TaskStatusSchema,
-    TaskSchema.shape.wake,
-    TaskSchema.shape.paused.unwrap().shape.kind,
-    TaskResultSchema.shape.source
-]);
+function openWordsOf(zodSchema: object): 'cases' | 'strings' | null {
+    const stamp = wireStampOf(zodSchema);
+
+    return stamp?.open === 'values' ? stamp.words : null;
+}
 const schemas: Record<string, Schema> = {};
 function stampRefinements(zodSchema: object, jsonSchema: Schema, where: string): void {
     const refinements = refinementsOf(zodSchema, where);
@@ -107,7 +72,7 @@ function stampRefinements(zodSchema: object, jsonSchema: Schema, where: string):
     }
 }
 function stampOpenValues(zodSchema: object, jsonSchema: Schema): void {
-    if (openValues.has(zodSchema)) {
+    if (openWordsOf(zodSchema) === 'cases') {
         jsonSchema['x-open-values'] = true;
     }
 }
@@ -422,48 +387,30 @@ const constantSource = Object.entries(constants)
     )
     .join('\n');
 /*
- * Vocabularies a newer machine may extend without asking this app first. A released app validates whole replies,
- * so one closed literal it never saw would refuse every `chat.list` or `project.open` holding it. On the wire these
- * are any string, and the known words ride along as `x-open-enum` for the app to fall back from.
+ * A vocabulary of `strings` is any string on the wire: a released app validates whole replies, so one closed literal
+ * it never saw would refuse every `chat.list` or `project.open` holding it. Its known words ride along as `x-open-enum`.
  */
-const openVocabularies: ReadonlyMap<unknown, readonly string[]> = new Map<unknown, readonly string[]>([
-    [agent.AgentKindSchema, KNOWN_AGENT_KINDS],
-    [agent.AgentStatusSchema, agent.AgentStatusSchema.options],
-    [ArtifactKindSchema, ARTIFACT_KINDS],
-    [RuntimeModeSchema, RuntimeModeSchema.options],
-    [chat.ChatRequestKindSchema, chat.ChatRequestKindSchema.options],
-    [MachineUpdateStatusSchema, MachineUpdateStatusSchema.options],
-    [PushNotifyKindSchema, PushNotifyKindSchema.options],
-    [ProjectIconNameSchema, PROJECT_ICON_NAMES],
-    [UsageProviderSchema, UsageProviderSchema.options],
-    [VoicePhaseSchema, VoicePhaseSchema.options],
-    [VoiceActivityKindSchema, VoiceActivityKindSchema.options],
-    [VoiceActivityStatusSchema, VoiceActivityStatusSchema.options],
-    [TunnelProposalActionSchema, TunnelProposalActionSchema.options]
-]);
+function knownWordsOf(zodSchema: object): readonly string[] | null {
+    const stamp = wireStampOf(zodSchema);
+
+    return stamp?.open === 'values' && stamp.words === 'strings' ? stamp.known : null;
+}
 /*
- * Unions a newer machine may extend with a member, or with a value inside one. The app keeps a member it cannot read
- * in its place, marked with `UNKNOWN_MARK`, as long as the tag and the fields in `base` hold; both the schema
- * interpreter and the generated decoders read this stamp, so the two degrade the same member.
+ * A union a newer machine may extend with a member, or with a value inside one. The app keeps a member it cannot read in
+ * its place, marked with `UNKNOWN_MARK`, as long as the tag and the fields in `base` hold; both the schema interpreter
+ * and the generated decoders read this stamp, so the two degrade the same member.
  */
-const openUnions: ReadonlyMap<unknown, { tag: string; base: readonly string[] }> = new Map<unknown, { tag: string; base: readonly string[] }>([
-    [chat.ChatItemSchema, { tag: 'kind', base: ['id', 'createdAt', 'turnId'] }],
-    [chat.ChatEventSchema, { tag: 'type', base: [] }],
-    // A request a delegated chat waits on; one this app cannot read is never answered from it.
-    [chat.ChatSubagentResultSchema.shape.pending.unwrap().element, { tag: 'kind', base: ['id', 'createdAt', 'turnId'] }]
-]);
-/*
- * Lists of which the app leaves out an element it cannot read, so one newer chat, project or task does not empty the
- * page it is on. An array of an open union is one too, for a member without the fields every member shares.
- */
-const lossyArrays: ReadonlySet<unknown> = new Set<unknown>([
-    chat.ChatListResultSchema.shape.chats,
-    ProjectListResultSchema.shape.projects,
-    ProjectSidebarResultSchema.shape.projects,
-    task.TaskListResultSchema.shape.tasks
-]);
+function openUnionOf(zodSchema: object): { tag: string; base: readonly string[] } | null {
+    const stamp = wireStampOf(zodSchema);
+
+    return stamp?.open === 'union' ? stamp : null;
+}
+// A list of which the app leaves out an element it cannot read; an array of an open union is one too, for a member without the shared fields.
 function isLossyArray(zodSchema: unknown): boolean {
-    return lossyArrays.has(zodSchema) || (zodSchema instanceof z.ZodArray && openUnions.has(zodSchema.element));
+    return (
+        (typeof zodSchema === 'object' && zodSchema !== null && wireStampOf(zodSchema)?.open === 'items') ||
+        (zodSchema instanceof z.ZodArray && openUnionOf(zodSchema.element) !== null)
+    );
 }
 // Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.
 const apiRoots: Record<string, z.ZodType> = {};
@@ -484,13 +431,13 @@ for (const [name, schema] of Object.entries(apiRoots)) {
         io: 'input',
         unrepresentable: 'throw',
         override: ({ zodSchema, jsonSchema, path }) => {
-            const known = openVocabularies.get(zodSchema);
+            const known = knownWordsOf(zodSchema);
             if (known) {
                 jsonSchema['x-open-enum'] = [...known];
                 delete jsonSchema.enum;
             }
             // Only what a machine sends degrades; what the app sends goes whole or not at all.
-            const open = name.endsWith('.payload') ? undefined : openUnions.get(zodSchema);
+            const open = name.endsWith('.payload') ? null : openUnionOf(zodSchema);
             if (open) {
                 jsonSchema['x-open-union'] = { tag: open.tag, base: [...open.base] };
             }
@@ -1361,35 +1308,77 @@ const withGoalStatus = (parsed: unknown) => {
     return { ...event, info: { ...event.info, goal: { ...event.info.goal, status: 'future-status' } } };
 };
 const readableSubagent = roots['request.chat.subagent.result']!.parse({ ...subagentBase, pending: [chatItemsFixture[6]] }) as { pending: unknown[] };
+const taskFixture = {
+    id: 'task-1',
+    projectId: 'project-1',
+    parentId: 'chat-1',
+    childId: 'chat-2',
+    title: 'Check the build',
+    prompt: 'Run it',
+    status: 'open',
+    result: null,
+    createdAt: 1000,
+    settledAt: null,
+    wake: 'none'
+};
+// zod's answer for a known task state, with the newer word the app keeps in its place.
+const withTaskStatus = (parsed: unknown) => {
+    const result = parsed as { tasks: object[] };
+
+    return { tasks: [result.tasks[0], { ...result.tasks[1], status: 'future-status' }] };
+};
+// What each language gives up to read the input, in the order a reader meets it; an unknown member is named by its tag.
+const member = (path: (string | number)[], name: string, tag: string) => ({ kind: 'unknown-member', path, name, tag });
+const dropped = (path: (string | number)[]) => ({ kind: 'dropped-element', path });
+const word = (path: (string | number)[], name: string, value: string) => ({ kind: 'unknown-word', path, name, word: value });
 const tolerated = [
     {
         schema: 'request.chat.attach.result',
         input: { ...attachBase, items: [...chatItemsFixture, ...futureItems, placeless] },
-        output: { ...readableAttach, items: [...readableAttach.items, ...futureItems.map(marked)] }
+        output: { ...readableAttach, items: [...readableAttach.items, ...futureItems.map(marked)] },
+        degraded: [
+            ...futureItems.map((item, index) => member(['items', chatItemsFixture.length + index], 'ChatItem', item.kind)),
+            dropped(['items', chatItemsFixture.length + futureItems.length])
+        ]
     },
     {
         schema: 'request.chat.subagent.result',
         input: { ...subagentBase, pending: [chatItemsFixture[6], futureItems[2], placeless] },
-        output: { ...readableSubagent, pending: [...readableSubagent.pending, marked(futureItems[2]!)] }
+        output: { ...readableSubagent, pending: [...readableSubagent.pending, marked(futureItems[2]!)] },
+        degraded: [member(['pending', 1], 'ChatPendingRequest', 'approval'), dropped(['pending', 2])]
     },
     {
         schema: 'request.chat.list.result',
         input: { chats: [chatInfoFixture, { ...chatInfoWithoutCwd, chatId: 'chat-2' }] },
-        output: roots['request.chat.list.result']!.parse({ chats: [chatInfoFixture] })
+        output: roots['request.chat.list.result']!.parse({ chats: [chatInfoFixture] }),
+        degraded: [dropped(['chats', 1])]
+    },
+    {
+        schema: 'request.task.list.result',
+        input: { tasks: [taskFixture, { ...taskFixture, id: 'task-2', status: 'future-status' }] },
+        output: withTaskStatus(roots['request.task.list.result']!.parse({ tasks: [taskFixture, { ...taskFixture, id: 'task-2' }] })),
+        degraded: [word(['tasks', 1, 'status'], 'TaskStatus', 'future-status')]
     },
     {
         schema: 'event.chat.status',
         input: { chatId: 'chat-1', info: { ...chatInfoFixture, goal: { objective: 'Ship', status: 'future-status' } } },
         output: withGoalStatus(
             roots['event.chat.status']!.parse({ chatId: 'chat-1', info: { ...chatInfoFixture, goal: { objective: 'Ship', status: 'active' } } })
-        )
+        ),
+        degraded: [word(['info', 'goal', 'status'], 'ChatGoalStatus', 'future-status')]
     },
     {
         schema: 'event.chat.event',
         input: { chatId: 'chat-1', seq: 15, event: { type: 'item', item: futureItems[0] } },
-        output: { chatId: 'chat-1', seq: 15, event: { type: 'item', item: marked(futureItems[0]!) } }
+        output: { chatId: 'chat-1', seq: 15, event: { type: 'item', item: marked(futureItems[0]!) } },
+        degraded: [member(['event', 'item'], 'ChatItem', 'future-kind')]
     },
-    { schema: 'event.chat.event', input: { chatId: 'chat-1', seq: 16, event: futureEvent }, output: { chatId: 'chat-1', seq: 16, event: marked(futureEvent) } }
+    {
+        schema: 'event.chat.event',
+        input: { chatId: 'chat-1', seq: 16, event: futureEvent },
+        output: { chatId: 'chat-1', seq: 16, event: marked(futureEvent) },
+        degraded: [member(['event'], 'ChatEvent', 'future-event')]
+    }
 ];
 for (const entry of tolerated) {
     if (roots[entry.schema]!.safeParse(entry.input).success) {

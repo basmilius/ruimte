@@ -1,7 +1,7 @@
 import { writeMentionDrag } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
 import { ContextMenu, DocumentTab, TabStrip as CoreTabStrip } from '@adecore/ui';
-import { sessionStatus, type AgentStatus, type ProjectView } from '@ruimte/contracts';
+import { sessionStatus, type AgentStatus, type FromMachine, type ProjectView } from '@ruimte/contracts';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { closeTabAction } from '@/action-port/person-actions';
@@ -191,7 +191,7 @@ function LooseTabItem({ view }: { view: LooseCellView }) {
     return isDatabaseTab(view.tab) ? <DatabaseTabItem tab={view.tab} /> : <FileTabItem tab={view.tab} tabKey={view.id} label={view.name} />;
 }
 
-function NeedsYouMark({ status }: { status: AgentStatus | undefined }) {
+function NeedsYouMark({ status }: { status: FromMachine<AgentStatus> | undefined }) {
     return status === 'needs-you' ? <StatusDot status="needs-you" plain /> : null;
 }
 

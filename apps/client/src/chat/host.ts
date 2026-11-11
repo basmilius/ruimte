@@ -4,6 +4,7 @@ import { messageOf } from '@adecore/ui';
 import { type AgentKind, CHAT_MODEL_MAX_BYTES } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
 import { PERSON_PROMPT_CLIENTS } from '@/action-port/person-actions';
 import { askBeforeStoppingSubagents, askBeforeStoppingTask } from '@/agents/end-children';
@@ -235,6 +236,11 @@ export const CHAT_HOST: ChatHostLayer = {
     useStreaming: () => useSettings((s) => s.chatStreaming),
     useSendDelivery: () => useSettings((s) => (s.chatSteerByDefault ? 'steer' : 'queue')),
     useHidesToolCalls: () => useSettings((s) => s.chatHideToolCalls),
+    // The iPhone app's words for an item of a newer machine, so a person reads the same on both.
+    useUnknownItemWords: () => {
+        const { t } = useTranslation('chat');
+        return { item: t('unknownItem.item'), request: t('unknownItem.request') };
+    },
     tasks: {
         useTasks: (endpointId) => useTasks((s) => s.byEndpoint[endpointId]),
         useTask: (endpointId, taskId) => useTasks((s) => (taskId === null ? null : (s.byEndpoint[endpointId]?.[taskId] ?? null)))

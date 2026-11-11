@@ -1,5 +1,5 @@
-import type { ChatState, ChatStatuses } from '@adecore/agents-react/state';
-import { extensionAgentStatus, type ChatItem, type ChatSubagentItem, type ExtensionAgentStatus } from '@ruimte/contracts';
+import type { ChatState, ChatStatuses, ChatThreadItem } from '@adecore/agents-react/state';
+import { extensionAgentStatus, type ChatSubagentItem, type ExtensionAgentStatus } from '@ruimte/contracts';
 import { nodeWork } from '@/state/agent-work';
 import type { CanvasNode } from '@/state/canvas';
 import { endpointKey, endpointOfNode } from '@/state/keys';
@@ -84,7 +84,7 @@ export function subagentsOf(row: Pick<ChatState, 'structure' | 'order' | 'subage
     }
 
     return [...(row.subagentsBefore ?? NONE), ...row.order].flatMap((id) => {
-        const item: ChatItem | undefined = row.structure[id];
+        const item: ChatThreadItem | undefined = row.structure[id];
 
         if (item?.kind !== 'subagent' || item.status !== 'running') {
             return [];

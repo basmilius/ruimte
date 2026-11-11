@@ -1,23 +1,25 @@
 import { forkRefusal, lastSettledTurn, summaryRefusal, recentSubagentMessages, stopOf, subagentTitle } from '@adecore/agents-react/chat';
-import { useChats, type ChatState, providersOf } from '@adecore/agents-react/state';
+import { useChats, type ChatState, type ChatThreadInfo, type ChatThreadItem, providersOf } from '@adecore/agents-react/state';
 import { effectiveChecks, findItem } from '@adecore/plan';
 import { ActionRefusal, pendingRequestsOf, type ActionCall, type ActionHandlers, type ActionOutput } from '@ruimte/actions';
 import {
+    AgentStatusSchema,
+    ChatBackgroundTaskSchema,
     CHAT_FORK_TITLE_MAX,
     chatHostOf,
     clipText,
     isSessionView,
+    RuntimeModeSchema,
     sessionKindOfView,
     type AgentKind,
     type ChatForkResult,
-    type ChatInfo,
-    type ChatItem,
     type ChatQuestionItem,
+    type ChatUnknownItem,
     type ModelSelection,
     type Plan,
     type PlanPersonOp,
     type ProviderInfo,
-    type RequestMap,
+    type ReadRequestMap,
     type RequestType,
     nodeChats
 } from '@ruimte/contracts';
@@ -41,6 +43,7 @@ import { endpointOfNodeId } from '@/state/node-endpoint';
 import { useSessions, type SessionState } from '@/state/sessions';
 import { nodesOfView } from '@/state/view-nodes';
 import { readNodeHost, updateHost, type NodeHost } from '@/surface/nodes/node-host';
+import { knownWord } from '@/transport-api/known-word';
 import { chatClientFor, machineFor } from '@/workspace/connections';
 
 type Call = ActionCall<void> & { confirmed: boolean };
@@ -52,7 +55,7 @@ export interface SessionMachine {
     /* What this window knows of a chat: its status always, its thread only while someone has it open. */
     chat(chatId: string): ChatState | null;
     isOpen(chatId: string): boolean;
-    applyInfo(chatId: string, info: ChatInfo): void;
+    applyInfo(chatId: string, info: ChatThreadInfo): void;
     terminal(terminalId: string): SessionState | null;
     /* The lines of a terminal this window has drawn, oldest first; null for one it never drew. */
     screen(terminalId: string): string[] | null;
@@ -65,7 +68,7 @@ export interface SessionMachine {
     /* Newest first, the way the store keeps them. */
     plans(chatId: string): readonly Plan[];
     applyPlan(chatId: string, planId: string, ops: PlanPersonOp[]): Promise<Plan>;
-    revealFork(result: ChatForkResult): void;
+    revealFork(result: Pick<ChatForkResult, 'viewId' | 'nodeId'>): void;
     /* What a terminal was made to run: its command, or the CLI and the mode of a terminal agent. */
     terminalHost(terminalId: string): Pick<NodeHost, 'command' | 'provider' | 'runtimeMode'> | null;
     /*
@@ -174,8 +177,26 @@ function lastLines(lines: readonly string[], limit: number): { lines: string[]; 
     return { lines: kept, truncated: kept.length < lines.length };
 }
 
-function threadOf(row: ChatState): ChatItem[] {
-    return row.order.flatMap((id) => (row.structure[id] === undefined ? [] : [row.structure[id]]));
+const BACKGROUND_TASK_KINDS = ChatBackgroundTaskSchema.shape.kind.options;
+
+// An item of a newer machine has nothing an action could tell of it, so a thread an action reads leaves it out.
+function threadOf(row: ChatState): Exclude<ChatThreadItem, ChatUnknownItem>[] {
+    return row.order.flatMap((id) => {
+        const item = row.structure[id];
+
+        return item === undefined || item.kind === 'unknown' ? [] : [item];
+    });
+}
+
+/* A word an action answers with; a newer machine's word refuses the action instead of reading as another. */
+function machineWord<Word extends string>(known: readonly Word[], word: string, what: string): Word {
+    const read = knownWord(known, word);
+
+    if (read === null) {
+        throw new ActionRefusal('newer-machine', `The machine reports a ${what} this version of Ruimte does not know (“${word}”). Update Ruimte to read it.`);
+    }
+
+    return read;
 }
 
 function pendingQuestion(row: ChatState | null, match: (item: ChatQuestionItem) => boolean): ChatQuestionItem | null {
@@ -223,7 +244,7 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
         return transport;
     };
 
-    const ask = async <Type extends RequestType>(type: Type, payload: RequestMap[Type]['payload']): Promise<RequestMap[Type]['result']> =>
+    const ask = async <Type extends RequestType>(type: Type, payload: ReadRequestMap[Type]['payload']): Promise<ReadRequestMap[Type]['result']> =>
         refusing(connected(nodeOf(payload)).request(type, payload));
 
     /*
@@ -331,8 +352,8 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
                     provider: info.provider,
                     model: info.selection.model,
                     options: info.selection.options,
-                    runtimeMode: info.runtimeMode,
-                    status: info.status,
+                    runtimeMode: machineWord(RuntimeModeSchema.options, info.runtimeMode, 'permission mode'),
+                    status: machineWord(AgentStatusSchema.options, info.status, 'status'),
                     working,
                     open,
                     queue: (info.queue ?? []).map((message) => ({ messageId: message.id, text: message.text })),
@@ -342,7 +363,12 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
                             ? [{ toolUseId: item.toolUseId, title: subagentTitle(item), status: item.status, stoppable: stopOf(item, working) !== null }]
                             : []
                     ),
-                    tasks: (info.background ?? []).map((task) => ({ taskId: task.id, kind: task.kind, description: task.description, command: task.command })),
+                    // A task of a newer machine's kind has no name an action could answer with.
+                    tasks: (info.background ?? []).flatMap((task) => {
+                        const kind = knownWord(BACKGROUND_TASK_KINDS, task.kind);
+
+                        return kind === null ? [] : [{ taskId: task.id, kind, description: task.description, command: task.command }];
+                    }),
                     lastTurnId: open ? lastSettledTurn(row.structure, row.order) : null,
                     forkOf: info.forkOf ? { chatId: info.forkOf.chatId, turnId: info.forkOf.turnId } : null
                 }
@@ -465,7 +491,7 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
                     provider: updated.provider,
                     model: updated.selection.model,
                     options: updated.selection.options,
-                    runtimeMode: updated.runtimeMode
+                    runtimeMode: machineWord(RuntimeModeSchema.options, updated.runtimeMode, 'permission mode')
                 }
             };
         },

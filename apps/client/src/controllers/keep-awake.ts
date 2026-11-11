@@ -1,5 +1,6 @@
 import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
 import { messageOf } from '@adecore/ui';
+import { KeepAwakeModeSchema, type FromMachine, type KeepAwakeMode } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { perform } from '@/action-port/perform';
 import { canKeepAwake, desktop, type DesktopBridge, type KeepAwakeRequest } from '@/desktop/bridge';
@@ -11,6 +12,7 @@ import { serverInfoOf, useServers, type ServerInfo } from '@/state/server';
 import { useSessions, type SessionsByKey } from '@/state/sessions';
 import { useSettings, type Settings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
+import { knownWord } from '@/transport-api/known-word';
 import { TransportError, fireAndForget } from '@/transport-api/transport';
 import { transportFor } from '@/transport/index';
 import { adoptEndpointInfo } from '@/workspace/server-info';
@@ -31,8 +33,16 @@ function localInfo(): ServerInfo {
     return serverInfoOf(LOCAL_ENDPOINT_ID);
 }
 
+/*
+ * A mode of a newer machine reads as `always`: it is not off, so nothing from before is moved over it,
+ * and the rows under the choice stay as they are for it. A person who picks a mode here replaces it.
+ */
+function keepAwakeMode(word: FromMachine<KeepAwakeMode>): KeepAwakeMode {
+    return knownWord(KeepAwakeModeSchema.options, word) ?? 'always';
+}
+
 export function keepAwakeChoice(info: ServerInfo = localInfo()): KeepAwakeSettings {
-    return { keepAwake: info.keepAwake, keepAwakeOnBattery: info.keepAwakeOnBattery, keepAwakeDisplay: info.keepAwakeDisplay };
+    return { keepAwake: keepAwakeMode(info.keepAwake), keepAwakeOnBattery: info.keepAwakeOnBattery, keepAwakeDisplay: info.keepAwakeDisplay };
 }
 
 /* Whether this computer's machine holds keep awake, inside a render. */
@@ -42,7 +52,7 @@ export function useMachineKeepsAwake(): boolean {
 
 /* The setting as it stands, inside a render. Each field is selected on its own, so the choice is not a new object per call. */
 export function useKeepAwakeChoice(): KeepAwakeSettings {
-    const keepAwake = useServers((s) => s.byEndpoint[LOCAL_ENDPOINT_ID]?.keepAwake ?? 'off');
+    const keepAwake = useServers((s) => keepAwakeMode(s.byEndpoint[LOCAL_ENDPOINT_ID]?.keepAwake ?? 'off'));
     const keepAwakeOnBattery = useServers((s) => s.byEndpoint[LOCAL_ENDPOINT_ID]?.keepAwakeOnBattery === true);
     const keepAwakeDisplay = useServers((s) => s.byEndpoint[LOCAL_ENDPOINT_ID]?.keepAwakeDisplay === true);
     return { keepAwake, keepAwakeOnBattery, keepAwakeDisplay };

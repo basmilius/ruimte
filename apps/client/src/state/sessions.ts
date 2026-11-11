@@ -1,16 +1,55 @@
 import type { ChatStatuses } from '@adecore/agents-react/state';
-import { chatWaitAsk, sessionStatus, terminalWaitAsk, type AgentInfo, type AgentKind, type AgentStatus, type WaitAsk } from '@ruimte/contracts';
+import {
+    AgentStatusSchema,
+    chatWaitAsk,
+    sessionStatus,
+    terminalWaitAsk,
+    type AgentInfo,
+    type AgentKind,
+    type AgentRequest,
+    type AgentStatus,
+    type FromMachine,
+    type WaitAsk
+} from '@ruimte/contracts';
 import { create } from 'zustand';
 import type { CanvasNode } from '@/state/canvas';
 import { dropEndpoint, endpointKey, endpointOfNode } from '@/state/keys';
+import { knownWord } from '@/transport-api/known-word';
 import { useEndpointId } from './current-endpoint';
+
+/*
+ * A terminal's agent as the machine reports it; a status of a newer machine draws as no status. Its requests keep their
+ * strict type: `agentFromMachine` leaves out one of a kind this version cannot read, so nothing answers it from here.
+ */
+export type MachineAgentInfo = Omit<FromMachine<AgentInfo>, 'requests'> & Pick<AgentInfo, 'requests'>;
+
+export function agentFromMachine(agent: FromMachine<AgentInfo>): MachineAgentInfo;
+export function agentFromMachine(agent: FromMachine<AgentInfo> | null): MachineAgentInfo | null;
+export function agentFromMachine(agent: FromMachine<AgentInfo> | null): MachineAgentInfo | null {
+    if (agent === null) {
+        return null;
+    }
+
+    const { requests, ...rest } = agent;
+
+    if (requests === undefined) {
+        return rest;
+    }
+
+    return {
+        ...rest,
+        requests: requests.flatMap((request): AgentRequest[] =>
+            request.kind === 'approval' ? [{ ...request, kind: 'approval' }] : request.kind === 'question' ? [{ ...request, kind: 'question' }] : []
+        )
+    };
+}
 
 export interface SessionState {
     attached: boolean;
     /* Exit code of the shell, once it has ended. Absent while it runs. */
     exited?: number;
     /* The agent CLI the daemon last saw in this shell, reported through its hooks. */
-    agent?: AgentInfo | null;
+    agent?: MachineAgentInfo | null;
     /* A command from the project file the shell started without, until a person on this machine says yes to it. */
     heldCommand?: string;
     /* The account the daemon started this shell's CLI under, also when the node names none; absent is the CLI's default account. */
@@ -26,7 +65,7 @@ export type SessionsByKey = Record<string, SessionState>;
 export interface SessionSink {
     setAttached(nodeId: string, attached: boolean): void;
     setExited(nodeId: string, exitCode: number | undefined): void;
-    setAgent(nodeId: string, agent: AgentInfo | null): void;
+    setAgent(nodeId: string, agent: MachineAgentInfo | null): void;
     setHeldCommand(nodeId: string, command: string | undefined): void;
     setAccount(nodeId: string, account: string | undefined): void;
     setShell(nodeId: string, shell: string | undefined): void;
@@ -39,7 +78,7 @@ interface SessionsStore {
     restarts: Record<string, number>;
     setAttached(key: string, attached: boolean): void;
     setExited(key: string, exitCode: number | undefined): void;
-    setAgent(key: string, agent: AgentInfo | null): void;
+    setAgent(key: string, agent: MachineAgentInfo | null): void;
     setHeldCommand(key: string, command: string | undefined): void;
     setAccount(key: string, account: string | undefined): void;
     setShell(key: string, shell: string | undefined): void;
@@ -145,7 +184,7 @@ export function nodeStatus(node: StatusOf, sessions: SessionsByKey, chats: ChatS
         return sessionStatus(sessions[endpointKey(machine, node.id)]);
     }
     if (node.kind === 'chat' || node.kind === 'design') {
-        return chats[endpointKey(machine, node.id)]?.info.status;
+        return knownWord(AgentStatusSchema.options, chats[endpointKey(machine, node.id)]?.info.status) ?? undefined;
     }
     return node.status;
 }

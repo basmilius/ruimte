@@ -1,5 +1,5 @@
 import { carriesMentions, droppedMentions } from '@adecore/agents-react/chat';
-import type { Reachability } from '@ruimte/contracts';
+import type { FromMachine, Reachability } from '@ruimte/contracts';
 import type { Point } from '@/canvas-model/math';
 
 /*
@@ -58,7 +58,7 @@ export type FinderRefusal = 'no-bridge' | 'other-machine';
  * A `File` out of an OS drag has no path in a browser; only the desktop shell can name it. That path
  * is on this machine, so a project on a daemon elsewhere cannot read it either. Null means it can.
  */
-export function finderRefusal(canNamePaths: boolean, reachability: Reachability | null): FinderRefusal | null {
+export function finderRefusal(canNamePaths: boolean, reachability: FromMachine<Reachability> | null): FinderRefusal | null {
     if (!canNamePaths) {
         return 'no-bridge';
     }

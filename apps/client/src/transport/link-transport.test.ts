@@ -3,6 +3,7 @@ import { PROTOCOL_VERSION, REQUEST_SCHEMAS, encodeBytesReply, encodeLiveFrame } 
 import i18next from 'i18next';
 import type { LinkProblem } from '@/telemetry/events';
 import { linkMetrics, type PageMetric } from '@/telemetry/metrics';
+import wire from '../../../ios/Packages/RuimtePulsar/Tests/RuimtePulsarTests/Fixtures/wire.json';
 import type { SignalRoute, TransportError, TransportStatus } from '../transport-api/transport';
 import { LinkTransport, type Link, type LinkEvents } from './link-transport';
 
@@ -639,8 +640,90 @@ describe('LinkTransport', () => {
             ]);
             transport.dispose();
         });
+
+        // The inputs are the shared fixtures the iPhone app reads too (`generate-swift.ts`).
+        const fromNewerMachine = [
+            { what: 'a reply with a word it does not know', request: 'task.list', payload: { projectId: 'p-1' }, fixture: 'request.task.list.result' },
+            { what: 'a reply with a list element it cannot read', request: 'chat.list', payload: {}, fixture: 'request.chat.list.result' }
+        ] as const;
+
+        test.each(fromNewerMachine)('$what resolves with what it could read and is reported once, by counts only', async ({ request, payload, fixture }) => {
+            const { transport, links, problems } = reported();
+            const { input, output, degraded } = toleratedFixture(fixture);
+            await tick();
+            open(links[0]!);
+
+            const answers: unknown[] = [];
+
+            for (let i = 0; i < 2; i++) {
+                const reply = transport.request(request, payload);
+                const { id } = JSON.parse(links[0]!.sent.at(-1)!) as { id: string };
+                links[0]!.events.message(JSON.stringify({ id, ok: true, result: input }));
+                answers.push(await reply);
+            }
+
+            expect(answers).toEqual([output, output]);
+            expect(problems).toEqual([{ kind: 'degraded', frame: { request }, ...countsOf(degraded) }]);
+            transport.dispose();
+        });
+
+        test('an event with a word it does not know reaches its handlers and is reported once', async () => {
+            const { transport, links, problems } = reported();
+            const { input, output, degraded } = toleratedFixture('event.chat.status');
+            const heard: unknown[] = [];
+            transport.on('chat.status', (payload) => heard.push(payload));
+            await tick();
+            open(links[0]!);
+
+            const frame = JSON.stringify({ type: 'event', event: 'chat.status', payload: input });
+            links[0]!.events.message(frame);
+            links[0]!.events.message(frame);
+
+            expect(heard).toEqual([output, output]);
+            expect(problems).toEqual([{ kind: 'degraded', frame: { event: 'chat.status' }, ...countsOf(degraded) }]);
+            transport.dispose();
+        });
+
+        test('a reply it cannot read is refused and reported once, by its request', async () => {
+            const { transport, links, problems } = reported();
+            await tick();
+            open(links[0]!);
+
+            for (let i = 0; i < 2; i++) {
+                const reply = transport.request('chat.list', {});
+                const { id } = JSON.parse(links[0]!.sent.at(-1)!) as { id: string };
+                links[0]!.events.message(JSON.stringify({ id, ok: true, result: { chats: 'none' } }));
+                await expect(reply).rejects.toMatchObject({ code: 'bad-reply' });
+            }
+
+            expect(problems).toEqual([{ kind: 'unread', frame: { kind: 'bad-reply', request: 'chat.list' } }]);
+            transport.dispose();
+        });
     });
 });
+
+interface ToleratedFixture {
+    schema: string;
+    input: unknown;
+    output: unknown;
+    degraded: { kind: string }[];
+}
+
+function toleratedFixture(schema: string): ToleratedFixture {
+    const found = (wire.tolerated as ToleratedFixture[]).find((entry) => entry.schema === schema);
+
+    if (found === undefined) {
+        throw new Error(`No tolerated fixture for ${schema}`);
+    }
+
+    return found;
+}
+
+function countsOf(degraded: readonly { kind: string }[]): { members: number; dropped: number; words: number } {
+    const count = (kind: string): number => degraded.filter((entry) => entry.kind === kind).length;
+
+    return { members: count('unknown-member'), dropped: count('dropped-element'), words: count('unknown-word') };
+}
 
 describe('what the transport measures', () => {
     function measured(options: { gateTimeoutMs?: number; socket?: boolean } = {}) {

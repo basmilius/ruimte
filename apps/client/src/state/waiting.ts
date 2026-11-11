@@ -108,8 +108,13 @@ export interface WaitDetails {
 
 const WAIT_PRIORITY = { approval: 0, question: 1, waiting: 2 } as const;
 
-function requestsByPriority<Request extends { kind: 'approval' | 'question'; createdAt: number }>(requests: readonly Request[]): Request[] {
-    return [...requests].sort((before, next) => WAIT_PRIORITY[before.kind] - WAIT_PRIORITY[next.kind] || before.createdAt - next.createdAt);
+// A request of a newer machine's kind still waits on a person, but on what this version cannot say.
+function waitKindOf(request: { kind: string } | undefined): WaitDetails['kind'] {
+    return request?.kind === 'approval' || request?.kind === 'question' ? request.kind : 'waiting';
+}
+
+function requestsByPriority<Request extends { kind: string; createdAt: number }>(requests: readonly Request[]): Request[] {
+    return [...requests].sort((before, next) => WAIT_PRIORITY[waitKindOf(before)] - WAIT_PRIORITY[waitKindOf(next)] || before.createdAt - next.createdAt);
 }
 
 /* The request that blocks progress comes before a question, while the session's age still dates its earliest wait. */
@@ -126,12 +131,12 @@ export function waitDetailsOf(
     if (node.kind === 'chat' || node.kind === 'design') {
         const requests = requestsByPriority(chats[key]?.info.requests ?? []);
 
-        return { kind: requests[0]?.kind ?? 'waiting', since: at, ask: chatWaitAsk(requests) };
+        return { kind: waitKindOf(requests[0]), since: at, ask: chatWaitAsk(requests) };
     }
 
     const requests = requestsByPriority(sessions[key]?.agent?.requests ?? []);
 
-    return { kind: requests[0]?.kind ?? 'waiting', since: at, ask: terminalWaitAsk(requests) };
+    return { kind: waitKindOf(requests[0]), since: at, ask: terminalWaitAsk(requests) };
 }
 
 export function compareWaits(before?: Pick<WaitDetails, 'kind' | 'since'>, next?: Pick<WaitDetails, 'kind' | 'since'>): number {
