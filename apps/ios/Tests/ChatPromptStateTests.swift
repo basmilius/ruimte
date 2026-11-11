@@ -1,5 +1,6 @@
 import RuimtePulsar
 import RuimteTransport
+import SwiftUI
 import XCTest
 
 #if canImport(Ruimte)
@@ -286,7 +287,78 @@ final class ChatPromptStateTests: XCTestCase {
         XCTAssertEqual(sent.count, 2)
     }
 
+    /// A chat a task opened asks a person; its parent's composer answers it, as the desktop's does.
+    @MainActor func testAQuestionOfAChatATaskOpenedReachesItsParentsComposer() async {
+        let machine = ChatsMachine()
+        let question = ChatWire.item([
+            "id": .string("question-r1"), "kind": .string("question"), "requestId": .string("r1"),
+            "createdAt": .number(20), "turnId": .string("turn-child"),
+            "questions": .array(
+                (0..<3).map { index in
+                    .object([
+                        "id": .string("\(index)"), "header": .string("H\(index)"), "question": .string("Q\(index)?"),
+                        "choices": .array([.object(["label": .string("A"), "description": .string("a")])]),
+                        "multiSelect": .bool(false),
+                    ])
+                }),
+        ])
+        machine.snapshots["child"] = .object([
+            "info": ChatWire.info([
+                "chatId": .string("child"), "status": .string("needs-you"), "activeTurnId": .string("turn-child"),
+                "requests": .array([
+                    .object([
+                        "requestId": .string("r1"), "itemId": .string("question-r1"), "kind": .string("question"),
+                        "createdAt": .number(20),
+                    ])
+                ]),
+            ]),
+            "items": .array([question]),
+        ])
+        machine.snapshots["parent"] = .object([
+            "info": ChatWire.info([
+                "chatId": .string("parent"), "status": .string("idle"), "activeTurnId": .null,
+            ]),
+            "items": .array([
+                ChatWire.item([
+                    "id": .string("task-task-1"), "kind": .string("subagent"), "toolUseId": .string("task-task-1"),
+                    "description": .string("Ask the person"), "background": .bool(true), "status": .string("running"),
+                    "startedAt": .number(10), "createdAt": .number(10), "origin": .string("ruimte"),
+                    "childId": .string("child"),
+                ])
+            ]),
+        ])
+        let model = ChatModel(client: machine, chatID: "parent")
+        let prompts = ChatPromptState()
+        let feed = ChatPromptFeed(session: nil)
+        // Run first in a fresh host, this test can come before the host app's scene connects.
+        for _ in 0..<60 where UIApplication.shared.connectedScenes.isEmpty { await displayFrames() }
+        let host = UIHostingController(
+            rootView: Color.clear.modifier(
+                ChatPromptFeedTracking(feed: feed, prompts: prompts, model: model, attention: nil, visible: true)))
+        let window = UIWindow.showing(host, size: CGSize(width: 390, height: 400))
+        defer { window.close() }
+        model.start()
+        await displayFrames(20)
+        XCTAssertEqual(prompts.activeSubject?.chatID, "child")
+        XCTAssertEqual(prompts.activeSubject?.item.requestId, "r1")
+        XCTAssertEqual(prompts.activeSubject?.source?.label, "Ask the person")
+    }
+
     private enum Failure: Error { case expected }
+}
+
+@MainActor private final class ChatsMachine: MachineRequesting {
+    var snapshots: [String: JSONValue] = [:]
+
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
+        switch type {
+        case .chatAttach: return snapshots[payload["chatId"]?.stringValue ?? ""] ?? .object([:])
+        case .providerList: return .object(["providers": .array([])])
+        default: return .object([:])
+        }
+    }
+
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }
 
 @MainActor private final class HistoryMachine: MachineRequesting {
