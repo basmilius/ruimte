@@ -100,7 +100,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The shell tests start /bin/zsh, which the runner image does not promise.
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends zsh
+      # Only when it is missing, and with retries: the runner's package mirrors go unreachable now and then.
+      - run: command -v zsh || (sudo apt-get -o Acquire::Retries=5 update && sudo apt-get -o Acquire::Retries=5 install -y --no-install-recommends zsh)
       # The runner image makes /usr/share world-writable, and Ubuntu's global zshrc then stops on compinit's prompt.
       - run: zsh -fc 'autoload -Uz compaudit; compaudit' 2>/dev/null | sort -u | xargs -r sudo chmod go-w
       - uses: ./.github/actions/install
