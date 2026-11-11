@@ -1,7 +1,7 @@
 import type { ServerWebSocket } from 'bun';
 import type { ServerFrame } from '@ruimte/contracts';
 import type { Area, ClientEnd } from './area.ts';
-import { OutputGate } from './backpressure.ts';
+import { OutputGate, SOCKET_BACKPRESSURE_LIMIT } from './backpressure.ts';
 import { isLiveFrame, type LiveSink } from './client-sinks.ts';
 import { type Dispatcher } from './dispatcher.ts';
 import { clientClosed, clientKindOf, clientOpened } from './telemetry/reporter.ts';
@@ -125,13 +125,42 @@ export function connectionOpener(host: ConnectionHost): (channel: ClientChannel,
 export interface SocketChannel extends ClientChannel {
     closed(): void;
     drained(): void;
+    /* The most bytes that waited in the socket's queue, measured whenever a send had to wait. */
+    queuedPeak(): number;
+}
+
+/* Close codes a client sends on its own: done, leaving (a reload or a quit), and a close without a code. */
+const ORDINARY_CLOSE_CODES = new Set([1000, 1001, 1005]);
+
+/*
+ * The log line for a client's socket that closed, or null for an ordinary close. A close after the
+ * queue came near the backpressure limit says so, since Bun closes such a socket itself and a client
+ * reads that as a machine that stopped answering.
+ */
+export function socketCloseLine(code: number, reason: string, queuedPeak: number): string | null {
+    const nearLimit = queuedPeak >= SOCKET_BACKPRESSURE_LIMIT / 2;
+    if (ORDINARY_CLOSE_CODES.has(code) && !nearLimit) {
+        return null;
+    }
+    const why = reason === '' ? '' : `, ${reason}`;
+    const queue = queuedPeak === 0 ? '' : `, its queue peaked at ${(queuedPeak / 1_048_576).toFixed(1)} MB of ${SOCKET_BACKPRESSURE_LIMIT / 1_048_576} MB`;
+    return `A client's socket closed (code ${code}${why}${queue})`;
 }
 
 export function socketChannel(ws: ServerWebSocket<ClientAccess>): SocketChannel {
     const closeListeners: Array<() => void> = [];
     const drainListeners: Array<() => void> = [];
+    let queuedPeak = 0;
     return {
-        send: (data) => ws.send(data),
+        send: (data) => {
+            const sent = ws.send(data);
+            // Only a send that waited or was dropped reads the queue, so the usual send costs nothing more.
+            if (sent <= 0) {
+                queuedPeak = Math.max(queuedPeak, ws.getBufferedAmount());
+            }
+            return sent;
+        },
+        queuedPeak: () => queuedPeak,
         bufferedAmount: () => ws.getBufferedAmount(),
         close: (code, reason) => ws.close(code, reason),
         onClose: (listener) => {
