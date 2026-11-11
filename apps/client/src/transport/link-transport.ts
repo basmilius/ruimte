@@ -410,10 +410,12 @@ export class LinkTransport implements PooledTransport {
                 }
                 this.linkToken = null;
                 this.link = null;
+                // The code tells a machine that closed a socket with a full queue (Bun's backpressure limit) from a network that dropped it.
+                const closeCode = code === undefined ? '' : ` (code ${code})`;
                 if (failure === null) {
-                    this.log.info('The connection to the machine closed');
+                    this.log.info(`The connection to the machine closed${closeCode}`);
                 } else {
-                    this.log.warn(`The connection to the machine closed: ${failure}`);
+                    this.log.warn(`The connection to the machine closed${closeCode}: ${failure}`);
                 }
                 // Scheduling first, so the closed status arrives with the attempt it announces.
                 this.scheduleReconnect();

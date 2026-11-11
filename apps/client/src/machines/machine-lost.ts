@@ -3,9 +3,17 @@ import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import type { ConnectionState } from '@/transport-api/transport';
 import { protocolRefusal } from '@/transport/protocol';
 
-/* Whether the link of the workspace's machine is down and at least one try to bring it back failed; a link that is merely opening says nothing yet. */
-export function machineLost(connection: Pick<ConnectionState, 'status' | 'attempts' | 'failure'>): boolean {
-    return connection.status !== 'open' && (connection.attempts > 0 || Boolean(connection.failure));
+/*
+ * Whether a machine's link is down for real: it said why, a try to bring it back failed, or it has
+ * stayed down past the grace (`DropGrace`). The drop itself already counts one attempt, the one it
+ * schedules, so a link that dropped and is on its first try back is a blink, not a machine that went
+ * away. A machine closes a socket whose queue filled up, and the next one is open within a second.
+ */
+export function machineLost(connection: Pick<ConnectionState, 'status' | 'attempts' | 'failure'>, downPastGrace = false): boolean {
+    if (connection.status === 'open') {
+        return false;
+    }
+    return Boolean(connection.failure) || connection.attempts > 1 || (connection.attempts > 0 && downPastGrace);
 }
 
 /*

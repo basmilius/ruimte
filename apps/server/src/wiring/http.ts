@@ -30,7 +30,7 @@ import { SOCKET_BACKPRESSURE_LIMIT } from '../backpressure.ts';
 import type { CanvasHost } from '../canvas/host.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from '../chat/attachment-route.ts';
 import type { ServerConfig } from '../config.ts';
-import { socketChannel } from '../connection.ts';
+import { socketChannel, socketCloseLine } from '../connection.ts';
 import { hookContext } from '../context/context-note.ts';
 import { chatFolders, shotFolders } from '../disk/agent-folders.ts';
 import { errorText } from '../error-text.ts';
@@ -417,13 +417,17 @@ function daemonHandlers(input: HttpInput): DoorwayHandlers {
             message(ws, message) {
                 sockets.get(ws)?.connection.receive(message);
             },
-            close(ws) {
+            close(ws, code, reason) {
                 if (ws.data.ticket !== null) {
                     handshake.socketClosed(ws.data.ticket);
                 }
                 const state = sockets.get(ws);
                 if (!state) {
                     return;
+                }
+                const line = socketCloseLine(code, reason, state.channel.queuedPeak());
+                if (line !== null) {
+                    console.log(line);
                 }
                 sockets.delete(ws);
                 state.channel.closed();

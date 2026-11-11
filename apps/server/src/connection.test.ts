@@ -4,7 +4,7 @@ import type { Area } from './area.ts';
 import { HIGH_WATER_MARK } from './backpressure.ts';
 import type { LiveSink } from './client-sinks.ts';
 import { ConnectedClients } from './clients/connected-clients.ts';
-import { connectionOpener } from './connection.ts';
+import { connectionOpener, socketCloseLine } from './connection.ts';
 import { Dispatcher } from './dispatcher.ts';
 import { clientArea } from './handlers/client.ts';
 import { sendEvent, type SessionEvent, type SessionSink, type ClientChannel } from './wire.ts';
@@ -315,4 +315,21 @@ test('requested notifications travel over the connection and unsubscribe on clos
     expect(channel.frames).toEqual([{ type: 'event', event: 'push.notification', payload }]);
     channel.fireClose();
     expect(listeners.size).toBe(0);
+});
+
+describe('the log line of a client socket that closed', () => {
+    test('says nothing of a client that closed on its own with a quiet queue', () => {
+        expect(socketCloseLine(1000, '', 0)).toBeNull();
+        expect(socketCloseLine(1001, '', 2 * 1_048_576)).toBeNull();
+        expect(socketCloseLine(1005, '', 0)).toBeNull();
+    });
+
+    test('names any other close with its code and reason', () => {
+        expect(socketCloseLine(1006, '', 0)).toBe("A client's socket closed (code 1006)");
+        expect(socketCloseLine(1009, 'Message too big', 0)).toBe("A client's socket closed (code 1009, Message too big)");
+    });
+
+    test('says how full the queue got once it came near the backpressure limit, whatever the code', () => {
+        expect(socketCloseLine(1000, '', 15.5 * 1_048_576)).toBe("A client's socket closed (code 1000, its queue peaked at 15.5 MB of 16 MB)");
+    });
 });
