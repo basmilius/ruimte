@@ -497,7 +497,7 @@
             {
                 "name": "useProviders",
                 "kind": "function",
-                "doc": "The agents a person can start on the machine in front, by the `provider` that names each, with the name a person reads.",
+                "doc": "The agents a person can start on the machine in front, by the `provider` that names each, with the name a person reads. Needs no permission, since it holds only the id and name of each CLI the machine offers and nothing of what runs.",
                 "code": "export function useProviders(): { id: string; name: string }[];"
             },
             {

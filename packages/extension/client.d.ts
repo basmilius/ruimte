@@ -474,7 +474,10 @@ export function useAgents(): { id: string; title: string; status: AgentStatus }[
 export function useAgent(target: NodeRef | ViewRef): AgentInfo | null;
 /** Needs the permission `agents.status`. The sub-agents a chat has at work now, oldest first; none for any other node. */
 export function useSubagents(chat: NodeRef | ViewRef): SubagentInfo[];
-/** The agents a person can start on the machine in front, by the `provider` that names each, with the name a person reads. */
+/**
+ * The agents a person can start on the machine in front, by the `provider` that names each, with the name a person reads.
+ * Needs no permission, since it holds only the id and name of each CLI the machine offers and nothing of what runs.
+ */
 export function useProviders(): { id: string; name: string }[];
 
 /** Needs the permission `usage.read`. `used` runs from 0 to 1. */
