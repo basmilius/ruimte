@@ -11,16 +11,8 @@ export interface BrowserContextAction {
 /* A sealed preview only reads: nothing it is asked to do may download, inspect or leave for the system browser. */
 const PREVIEW_ACTIONS: ReadonlySet<string> = new Set(['copy', 'select-all', 'copy-image']);
 
-/*
- * Whether the shell does `action` for a guest. A page shared through a port also never hands an address to
- * the system browser: a link or a search there would send the person's click, and what they selected, out of
- * the connection that page was shared through.
- */
-export function guestActionAllowed(action: string, guest: GuestKind | 'tunnel'): boolean {
-    if (guest === 'preview') {
-        return PREVIEW_ACTIONS.has(action);
-    }
-    return !(guest === 'tunnel' && action === 'open-external');
+export function guestActionAllowed(action: string, guest: GuestKind): boolean {
+    return guest !== 'preview' || PREVIEW_ACTIONS.has(action);
 }
 
 /* So the menu cannot run off the screen. */
@@ -88,12 +80,10 @@ export function editableMenuTemplate(
     return template;
 }
 
-export function contextMenuPayload(webContentsId: number, guest: GuestKind, params: Electron.ContextMenuParams, external = true) {
+export function contextMenuPayload(webContentsId: number, guest: GuestKind, params: Electron.ContextMenuParams) {
     return {
         webContentsId,
         guest,
-        // Sent only when false, so a client that does not know the field draws what it always drew.
-        ...(external ? {} : { external }),
         x: params.x,
         y: params.y,
         linkURL: params.linkURL,

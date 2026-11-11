@@ -12,7 +12,6 @@ import {
 } from '@/clients/browser/swipe';
 import { useSwipeOverlay } from '@/clients/browser/swipe-overlay';
 import { canSwipeBetweenPages, desktop, type DesktopBridge } from '@/desktop/bridge';
-import { portTunnelPages } from '@/port-tunnel/tunnel-pages';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointById, LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { dropEndpoint, endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
@@ -28,8 +27,6 @@ interface LoadFailure {
     code: number;
     description: string;
     ownerRoute?: boolean;
-    /* The address is outside the port this page shares from another machine, which opens nothing else. */
-    sharedPort?: boolean;
 }
 
 export interface BrowserState {
@@ -46,8 +43,6 @@ export interface BrowserState {
     /* A server-rendered page can fail before Chromium has a Chromium error code. */
     streamError: string | null;
     streamId: string | null;
-    /* Requests of a page of a shared port that went to other addresses and were refused since it began loading. */
-    refusedAssets?: number;
 }
 
 interface BrowserStore {
@@ -112,8 +107,7 @@ const EMPTY: BrowserState = {
     favicon: null,
     error: null,
     streamError: null,
-    streamId: null,
-    refusedAssets: 0
+    streamId: null
 };
 
 // Electron's <webview> as far as the registry uses it; the tag has no DOM typings of its own.
@@ -172,9 +166,6 @@ function originOf(url: string): string {
     }
 }
 
-/* The session every ordinary browser node shares (`apps/desktop/src/web-guards.ts`). */
-const BROWSER_PARTITION = 'persist:ruimte';
-
 // A load the page itself cancelled (a redirect, a new navigation) is not an error worth a banner.
 const ABORTED = -3;
 
@@ -202,8 +193,6 @@ class BrowserRegistry {
     /* Keyed with `endpointKey`, the way the store above is, since a page belongs to a node of one machine. */
     private readonly elements = new Map<string, WebviewElement>();
     private readonly owners = new Map<string, string>();
-    /* The session each page was made in: the shared one, or that of a port shared on another machine. */
-    private readonly partitions = new Map<string, string>();
     private readonly swipes = new Map<string, SwipeState>();
     private readonly settleTimers = new Map<string, ReturnType<typeof setTimeout>>();
     private watchingChanges = false;
@@ -232,19 +221,9 @@ class BrowserRegistry {
             this.suspend(key);
             return null;
         }
-        // A loopback address of another machine opens in a session of its own, once the shell made it.
-        const route = portTunnelPages.routeFor(key, splitKey(key).endpointId, url);
-        if (route.kind === 'pending') {
-            return null;
-        }
-        const partition = route.kind === 'ready' ? route.partition : BROWSER_PARTITION;
         const existing = this.elements.get(key);
         if (existing) {
-            if (this.partitions.get(key) === partition) {
-                return existing;
-            }
-            // The address moved between a shared port and the rest of the web, which are different sessions.
-            this.suspend(key);
+            return existing;
         }
         if (!desktop()) {
             return null;
@@ -252,22 +231,18 @@ class BrowserRegistry {
         const element = document.createElement('webview') as WebviewElement;
         // Only sets attributes that turn something on. An Electron webview attribute counts as set the
         // moment it is there, so `allowpopups="false"` would turn popups on. A page here opens nothing.
-        element.setAttribute('partition', partition);
+        element.setAttribute('partition', 'persist:ruimte');
         element.style.width = '100%';
         element.style.height = '100%';
         // What shows until the page paints. A page with a background of its own covers it at once.
         element.style.backgroundColor = 'var(--bg)';
         const shell = desktop()!;
-        // A tunnel's session holds its page to the shared port from the start, so it has no route to bind.
-        const guarded = partition === BROWSER_PARTITION && !!shell.bindBrowserRoute && !!shell.onBrowserRouteBlocked;
+        const guarded = !!shell.bindBrowserRoute && !!shell.onBrowserRouteBlocked;
         setInitialWebviewUrl(element, guarded ? 'about:blank' : url);
         if (guarded) {
             this.bindRouteOnReady(key, element, url, boundOwner, shell);
-        }
-        if (shell.onBrowserRouteBlocked) {
             this.watchRouteBlocks();
         }
-        this.partitions.set(key, partition);
         this.watchChanges();
         this.listen(key, element);
         this.elements.set(key, element);
@@ -339,11 +314,6 @@ class BrowserRegistry {
         }
         const url = normalizeUrl(input);
         useBrowser.getState().patch(key, { url, error: null });
-        // Another port, or leaving a shared one, needs another session: `ensure` makes it when the node's address changes.
-        const route = portTunnelPages.routeFor(key, splitKey(key).endpointId, url);
-        if (route.kind === 'pending' || (route.kind === 'ready' ? route.partition : BROWSER_PARTITION) !== this.partitions.get(key)) {
-            return;
-        }
         const pending = this.pendingRoutes.get(key);
         if (pending) {
             pending.url = url;
@@ -448,7 +418,6 @@ class BrowserRegistry {
     destroy(key: string): void {
         this.owners.delete(key);
         this.suspend(key);
-        portTunnelPages.release(key);
     }
 
     // An unavailable route closes the guest but cannot erase its machine binding.
@@ -460,7 +429,6 @@ class BrowserRegistry {
         this.pendingRoutes.get(key)?.cancel();
         this.pendingRoutes.delete(key);
         this.elements.delete(key);
-        this.partitions.delete(key);
         element.remove();
         useBrowser.getState().forget(key);
         this.endSwipe(key);
@@ -476,17 +444,11 @@ class BrowserRegistry {
             return;
         }
         this.watchingRouteBlocks = true;
-        subscribe(({ webContentsId, url, subresource, count }) => {
+        subscribe(({ webContentsId, url }) => {
             const key = this.keyOfContents(webContentsId);
-            if (!key) {
-                return;
+            if (key) {
+                useBrowser.getState().patch(key, { loading: false, error: routeFailure(url) });
             }
-            if (subresource === true) {
-                // An asset from another address: the page goes on without it, and the node says how many it missed.
-                useBrowser.getState().patch(key, { refusedAssets: (useBrowser.getState().byKey[key]?.refusedAssets ?? 0) + (count ?? 1) });
-                return;
-            }
-            useBrowser.getState().patch(key, { loading: false, error: routeFailure(url, this.partitions.get(key) !== BROWSER_PARTITION) });
         });
     }
 
@@ -512,7 +474,7 @@ class BrowserRegistry {
             });
         };
         // Clear the error at load start; `did-navigate` also fires for Chromium's failure page.
-        element.addEventListener('did-start-loading', () => patch({ loading: true, error: null, refusedAssets: 0 }));
+        element.addEventListener('did-start-loading', () => patch({ loading: true, error: null }));
         element.addEventListener('did-stop-loading', () => {
             if (!this.pendingRoutes.has(key)) {
                 patch({ loading: false });
@@ -656,14 +618,8 @@ class BrowserRegistry {
     }
 }
 
-function routeFailure(url: string, sharedPort = false): LoadFailure {
-    return {
-        url,
-        code: -20,
-        description: 'Browser destination has no route to its project machine',
-        ownerRoute: true,
-        ...(sharedPort ? { sharedPort: true } : {})
-    };
+function routeFailure(url: string): LoadFailure {
+    return { url, code: -20, description: 'Browser destination has no route to its project machine', ownerRoute: true };
 }
 
 export const browserRegistry = new BrowserRegistry();

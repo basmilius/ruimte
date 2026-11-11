@@ -15,6 +15,5 @@ export * from './window.ts';
 export * from './database.ts';
 export * from './machine.ts';
 export * from './browser.ts';
-export * from './port-tunnel.ts';
 export * from './extensions.ts';
 export * from './bridge.ts';

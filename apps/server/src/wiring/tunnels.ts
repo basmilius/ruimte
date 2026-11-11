@@ -40,7 +40,7 @@ export interface TunnelsBundle {
     listener: ExternalListener;
     /* What every client hears: the tunnel state or the consent waiting for a person moved. */
     sinks: ClientSinks;
-    /* The ports Ruimte listens on or reserves, which neither a tunnel row nor a shared port may name; read at every check. */
+    /* The ports Ruimte listens on or reserves, which a tunnel row may not name; read at every check. */
     deniedPorts(): number[];
 }
 

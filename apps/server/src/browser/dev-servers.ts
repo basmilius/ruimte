@@ -1,5 +1,7 @@
-import { clipText, type DevServer, type PortHost } from '@ruimte/contracts';
+import { clipText, type DevServer } from '@ruimte/contracts';
 import { bestEffort } from '../best-effort.ts';
+
+type LoopbackHost = '127.0.0.1' | '::1';
 
 /* As much of `fetch` as a probe uses, so a test can hand it an answer. */
 type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
@@ -48,7 +50,7 @@ async function readStart(response: Response): Promise<string> {
     return html;
 }
 
-async function probePort(port: number, request: Fetch, host: PortHost): Promise<DevServer | null> {
+async function probePort(port: number, request: Fetch, host: LoopbackHost): Promise<DevServer | null> {
     try {
         // A literal address rather than localhost: a resolver that answers ::1 first would call a server
         // bound to IPv4 down. A redirect is an answer as well, and following one could leave the machine.
@@ -70,7 +72,7 @@ async function probePort(port: number, request: Fetch, host: PortHost): Promise<
  * connection: a page with a name is worth more on the splash than an open socket, and a port that
  * answers something other than HTTP is not one a browser node can open anyway.
  */
-export async function probeDevServers(ports: readonly number[], request: Fetch = fetch, host: PortHost = '127.0.0.1'): Promise<DevServer[]> {
+export async function probeDevServers(ports: readonly number[], request: Fetch = fetch, host: LoopbackHost = '127.0.0.1'): Promise<DevServer[]> {
     const answers = await Promise.all(ports.map((port) => probePort(port, request, host)));
     return answers.filter((server): server is DevServer => server !== null).sort((one, other) => one.port - other.port);
 }

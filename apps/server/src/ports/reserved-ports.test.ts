@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { PortGrants, portsStore } from './port-grants.ts';
 import { deniedRuimtePorts, reservedPorts, WELL_KNOWN_RUIMTE_PORTS } from './reserved-ports.ts';
 
 const released: Array<() => void> = [];
@@ -7,16 +6,6 @@ const released: Array<() => void> = [];
 afterEach(() => {
     released.splice(0).forEach((release) => release());
 });
-
-function grantsWithRuimtePorts(own: number[] = []): PortGrants {
-    return new PortGrants({
-        store: portsStore(undefined),
-        deniedPorts: () => deniedRuimtePorts(own),
-        random: () => 'g',
-        now: () => 1,
-        changed: () => undefined
-    });
-}
 
 describe('the ports of Ruimte itself', () => {
     test('cover a dev and an installed daemon side by side, with their doors and external listeners', () => {
@@ -28,31 +17,27 @@ describe('the ports of Ruimte itself', () => {
         expect(WELL_KNOWN_RUIMTE_PORTS).not.toContain(5173);
     });
 
-    test('are refused for a grant whichever daemon this is, and the own ports of this daemon too', () => {
-        const grants = grantsWithRuimtePorts([5555]);
+    test('are denied whichever daemon this is, and the own ports of this daemon too', () => {
+        const denied = deniedRuimtePorts([5555]);
 
         for (const port of [4210, 4211, 4213, 4221, 4231, 5555]) {
-            expect(() => grants.share('project-1', port, '127.0.0.1', 'person')).toThrow(/belongs to Ruimte/);
+            expect(denied).toContain(port);
         }
 
-        expect(grants.share('project-1', 3000, '127.0.0.1', 'person').port).toBe(3000);
+        expect(denied).not.toContain(3000);
     });
 
-    test('hold a port a proxy of Ruimte listens on until it is released, and are read again at every open', () => {
-        const grants = grantsWithRuimtePorts();
-        const grant = grants.share('project-1', 40123, '127.0.0.1', 'person');
-
-        expect(grants.deniedReason(grant)).toBeNull();
+    test('hold a port a proxy of Ruimte listens on until it is released, and are read again at every check', () => {
+        expect(deniedRuimtePorts([])).not.toContain(40123);
 
         const release = reservedPorts.reserve(40123);
         released.push(release);
 
-        expect(grants.deniedReason(grant)).toMatch(/belongs to Ruimte/);
-        expect(() => grants.share('project-2', 40123, '127.0.0.1', 'person')).toThrow(/belongs to Ruimte/);
+        expect(deniedRuimtePorts([])).toContain(40123);
 
         release();
 
-        expect(grants.deniedReason(grant)).toBeNull();
+        expect(deniedRuimtePorts([])).not.toContain(40123);
     });
 
     test('stay reserved while a second proxy holds the same port, and release once each', () => {

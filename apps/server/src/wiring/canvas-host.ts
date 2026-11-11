@@ -10,7 +10,6 @@ import type { DevicesBundle } from './devices.ts';
 import type { GitBundle } from './git.ts';
 import type { LanguageBundle } from './language.ts';
 import type { LaunchesBundle } from './launches.ts';
-import type { PortsBundle } from './ports.ts';
 import type { ProjectsBundle } from './projects.ts';
 import type { ProvidersBundle } from './providers.ts';
 import type { RemoteBundle } from './remote.ts';
@@ -39,7 +38,6 @@ interface CanvasHostInput {
     later: {
         language(): LanguageBundle;
         push(): PushService;
-        ports(): PortsBundle;
         tunnels(): TunnelsBundle;
     };
 }

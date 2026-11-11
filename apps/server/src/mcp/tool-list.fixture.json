@@ -75,7 +75,6 @@
             "plan_remove",
             "plan_set",
             "plan_status",
-            "port_share",
             "project_activate",
             "project_close",
             "project_ignored",
@@ -168,7 +167,6 @@
             "notify",
             "operation_cancel",
             "operation_get",
-            "port_share",
             "project_activate",
             "project_close",
             "project_ignored",
@@ -2404,31 +2402,6 @@
                 "destructiveHint": false
             },
             "audience": "chat"
-        },
-        {
-            "name": "port_share",
-            "description": "Shares a dev server's port with the person's other devices, or stops a share you made. Needs the machine's Agents setting.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "port": {
-                        "type": "integer"
-                    },
-                    "host": {
-                        "type": "string",
-                        "description": "Where the server listens, 127.0.0.1 unless it listens on IPv6 only",
-                        "enum": ["127.0.0.1", "::1"]
-                    },
-                    "stop": {
-                        "type": "boolean",
-                        "description": "Ends a share you made"
-                    }
-                }
-            },
-            "annotations": {
-                "destructiveHint": false
-            },
-            "audience": "everyone"
         },
         {
             "name": "project_activate",

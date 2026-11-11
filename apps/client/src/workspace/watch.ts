@@ -14,7 +14,6 @@ export function startEndpointWatch(): () => void {
                     icon: payload.icon,
                     agentsDeleteAnyView: payload.agentsDeleteAnyView === true,
                     ...(payload.reachOpenProjects === undefined ? {} : { reachOpenProjects: payload.reachOpenProjects }),
-                    ...(payload.agentsSharePorts === undefined ? {} : { agentsSharePorts: payload.agentsSharePorts }),
                     ...(payload.streamingAllowed === undefined ? {} : { streamingAllowed: payload.streamingAllowed }),
                     resumeAtReset: payload.resumeAtReset === true,
                     ...(payload.visualReplies === undefined ? {} : { visualReplies: payload.visualReplies }),

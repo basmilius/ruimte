@@ -13,7 +13,6 @@ import { useEndpointConnection } from '@/transport/status';
 const WORDS: Record<MachineSwitch, string> = {
     agentsDeleteAnyView: 'deleteAnyView',
     reachOpenProjects: 'reachOpenProjects',
-    agentsSharePorts: 'sharePorts',
     resumeAtReset: 'resumeAtReset',
     visualReplies: 'visualReplies'
 };

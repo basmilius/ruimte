@@ -40824,9 +40824,6 @@
       "reachOpenProjects": {
         "type": "boolean"
       },
-      "agentsSharePorts": {
-        "type": "boolean"
-      },
       "steerMessages": {
         "type": "boolean"
       },
@@ -41440,9 +41437,6 @@
         "type": "boolean"
       },
       "reachOpenProjects": {
-        "type": "boolean"
-      },
-      "agentsSharePorts": {
         "type": "boolean"
       },
       "steerMessages": {
@@ -42438,9 +42432,6 @@
       "reachOpenProjects": {
         "type": "boolean"
       },
-      "agentsSharePorts": {
-        "type": "boolean"
-      },
       "steerMessages": {
         "type": "boolean"
       },
@@ -42804,9 +42795,6 @@
         "type": "boolean"
       },
       "reachOpenProjects": {
-        "type": "boolean"
-      },
-      "agentsSharePorts": {
         "type": "boolean"
       },
       "steerMessages": {
@@ -43451,9 +43439,6 @@
       "reachOpenProjects": {
         "type": "boolean"
       },
-      "agentsSharePorts": {
-        "type": "boolean"
-      },
       "steerMessages": {
         "type": "boolean"
       },
@@ -44056,9 +44041,6 @@
       "reachOpenProjects": {
         "type": "boolean"
       },
-      "agentsSharePorts": {
-        "type": "boolean"
-      },
       "steerMessages": {
         "type": "boolean"
       },
@@ -44437,9 +44419,6 @@
       "reachOpenProjects": {
         "type": "boolean"
       },
-      "agentsSharePorts": {
-        "type": "boolean"
-      },
       "steerMessages": {
         "type": "boolean"
       },
@@ -44799,9 +44778,6 @@
         "type": "boolean"
       },
       "reachOpenProjects": {
-        "type": "boolean"
-      },
-      "agentsSharePorts": {
         "type": "boolean"
       },
       "steerMessages": {
@@ -55676,295 +55652,6 @@
         ]
       }
     }
-  },
-  "request.port.close.payload": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "streamId": {
-        "type": "string",
-        "minLength": 8,
-        "maxLength": 64
-      },
-      "half": {
-        "type": "string",
-        "const": "write"
-      }
-    },
-    "required": [
-      "streamId"
-    ]
-  },
-  "request.port.close.result": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {}
-  },
-  "request.port.credit.payload": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "streamId": {
-        "type": "string",
-        "minLength": 8,
-        "maxLength": 64
-      },
-      "offset": {
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 9007199254740991
-      }
-    },
-    "required": [
-      "streamId",
-      "offset"
-    ]
-  },
-  "request.port.credit.result": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {}
-  },
-  "request.port.list.payload": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {}
-  },
-  "request.port.list.result": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "grants": {
-        "maxItems": 256,
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            },
-            "projectId": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 256
-            },
-            "host": {
-              "type": "string",
-              "x-open-enum": [
-                "127.0.0.1",
-                "::1"
-              ]
-            },
-            "port": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 65535
-            },
-            "sharedBy": {
-              "type": "string",
-              "x-open-enum": [
-                "person",
-                "agent"
-              ]
-            },
-            "createdAt": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 9007199254740991
-            }
-          },
-          "required": [
-            "id",
-            "projectId",
-            "host",
-            "port",
-            "sharedBy",
-            "createdAt"
-          ]
-        }
-      }
-    },
-    "required": [
-      "grants"
-    ]
-  },
-  "request.port.open.payload": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "streamId": {
-        "type": "string",
-        "minLength": 8,
-        "maxLength": 64
-      },
-      "grantId": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 64
-      }
-    },
-    "required": [
-      "streamId",
-      "grantId"
-    ]
-  },
-  "request.port.open.result": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "window": {
-        "type": "integer",
-        "exclusiveMinimum": 0,
-        "maximum": 9007199254740991
-      }
-    },
-    "required": [
-      "window"
-    ]
-  },
-  "request.port.revoke.payload": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "id": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 64
-      }
-    },
-    "required": [
-      "id"
-    ]
-  },
-  "request.port.revoke.result": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {}
-  },
-  "request.port.share.payload": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "projectId": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 256
-      },
-      "port": {
-        "type": "integer",
-        "minimum": 1,
-        "maximum": 65535
-      },
-      "host": {
-        "type": "string",
-        "x-open-enum": [
-          "127.0.0.1",
-          "::1"
-        ]
-      }
-    },
-    "required": [
-      "projectId",
-      "port"
-    ]
-  },
-  "request.port.share.result": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "grant": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64
-          },
-          "projectId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 256
-          },
-          "host": {
-            "type": "string",
-            "x-open-enum": [
-              "127.0.0.1",
-              "::1"
-            ]
-          },
-          "port": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 65535
-          },
-          "sharedBy": {
-            "type": "string",
-            "x-open-enum": [
-              "person",
-              "agent"
-            ]
-          },
-          "createdAt": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          }
-        },
-        "required": [
-          "id",
-          "projectId",
-          "host",
-          "port",
-          "sharedBy",
-          "createdAt"
-        ]
-      }
-    },
-    "required": [
-      "grant"
-    ]
-  },
-  "request.port.write.payload": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "streamId": {
-        "type": "string",
-        "minLength": 8,
-        "maxLength": 64
-      },
-      "offset": {
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 9007199254740991
-      },
-      "data": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 21848
-      }
-    },
-    "required": [
-      "streamId",
-      "offset",
-      "data"
-    ]
-  },
-  "request.port.write.result": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "flushed": {
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 9007199254740991
-      }
-    },
-    "required": [
-      "flushed"
-    ]
   },
   "request.presence.report.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -90669,9 +90356,6 @@
       "reachOpenProjects": {
         "type": "boolean"
       },
-      "agentsSharePorts": {
-        "type": "boolean"
-      },
       "steerMessages": {
         "type": "boolean"
       },
@@ -92439,72 +92123,6 @@
     "required": [
       "chatId",
       "planId"
-    ]
-  },
-  "event.port.changed": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {}
-  },
-  "event.port.data": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "streamId": {
-        "type": "string",
-        "minLength": 8,
-        "maxLength": 64
-      },
-      "offset": {
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 9007199254740991
-      },
-      "data": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 21848
-      }
-    },
-    "required": [
-      "streamId",
-      "offset",
-      "data"
-    ]
-  },
-  "event.port.end": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "streamId": {
-        "type": "string",
-        "minLength": 8,
-        "maxLength": 64
-      },
-      "offset": {
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 9007199254740991
-      },
-      "reason": {
-        "type": "string",
-        "x-open-enum": [
-          "eof",
-          "closed",
-          "error",
-          "revoked",
-          "overload"
-        ]
-      },
-      "message": {
-        "type": "string",
-        "maxLength": 300
-      }
-    },
-    "required": [
-      "streamId",
-      "offset",
-      "reason"
     ]
   },
   "event.processes.alerts": {

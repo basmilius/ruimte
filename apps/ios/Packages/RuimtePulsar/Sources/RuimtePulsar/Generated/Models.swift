@@ -7955,7 +7955,6 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
     public let `icon`: Presence<MachineIcon>
     public let `agentsDeleteAnyView`: Bool?
     public let `reachOpenProjects`: Bool?
-    public let `agentsSharePorts`: Bool?
     public let `steerMessages`: Bool?
     public let `streamingAllowed`: Bool?
     public let `resumeAtReset`: Bool?
@@ -7992,14 +7991,13 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
     public let `features`: [String]?
     public let `viewReferences`: Bool?
 
-    public init(`id`: String, `label`: String, `nameSource`: EndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `agentsSharePorts`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `textModel`: Presence<EndpointInfoTextModel> = .missing, `keepAwake`: KeepAwakeMode? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `broker`: EndpointBroker? = nil, `lanDoor`: Bool? = nil, `worktreeRoot`: Presence<String> = .missing, `terminalShell`: EndpointTerminalShell? = nil, `nodeSizes`: [String: EndpointNodeSize]? = nil, `usageStats`: Bool? = nil, `startFolder`: String? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: EndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: EndpointInfoReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `brokerFixed`: Bool? = nil, `lan`: Presence<LanDoor> = .missing, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing, `agentIntegrations`: EndpointAgentIntegrations? = nil, `gitBashMissing`: Bool? = nil, `features`: [String]? = nil, `viewReferences`: Bool? = nil) {
+    public init(`id`: String, `label`: String, `nameSource`: EndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `textModel`: Presence<EndpointInfoTextModel> = .missing, `keepAwake`: KeepAwakeMode? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `broker`: EndpointBroker? = nil, `lanDoor`: Bool? = nil, `worktreeRoot`: Presence<String> = .missing, `terminalShell`: EndpointTerminalShell? = nil, `nodeSizes`: [String: EndpointNodeSize]? = nil, `usageStats`: Bool? = nil, `startFolder`: String? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: EndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: EndpointInfoReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `brokerFixed`: Bool? = nil, `lan`: Presence<LanDoor> = .missing, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing, `agentIntegrations`: EndpointAgentIntegrations? = nil, `gitBashMissing`: Bool? = nil, `features`: [String]? = nil, `viewReferences`: Bool? = nil) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
         self.`icon` = `icon`
         self.`agentsDeleteAnyView` = `agentsDeleteAnyView`
         self.`reachOpenProjects` = `reachOpenProjects`
-        self.`agentsSharePorts` = `agentsSharePorts`
         self.`steerMessages` = `steerMessages`
         self.`streamingAllowed` = `streamingAllowed`
         self.`resumeAtReset` = `resumeAtReset`
@@ -8045,7 +8043,6 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
         `icon` = try container.contains(.`icon`) ? (container.decodeNil(forKey: .`icon`) ? .null : .value(container.decode(MachineIcon.self, forKey: .`icon`))) : .missing
         `agentsDeleteAnyView` = try container.decodeIfPresent(Bool.self, forKey: .`agentsDeleteAnyView`)
         `reachOpenProjects` = try container.decodeIfPresent(Bool.self, forKey: .`reachOpenProjects`)
-        `agentsSharePorts` = try container.decodeIfPresent(Bool.self, forKey: .`agentsSharePorts`)
         `steerMessages` = try container.decodeIfPresent(Bool.self, forKey: .`steerMessages`)
         `streamingAllowed` = try container.decodeIfPresent(Bool.self, forKey: .`streamingAllowed`)
         `resumeAtReset` = try container.decodeIfPresent(Bool.self, forKey: .`resumeAtReset`)
@@ -8095,7 +8092,6 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
         }
         try container.encodeIfPresent(`agentsDeleteAnyView`, forKey: .`agentsDeleteAnyView`)
         try container.encodeIfPresent(`reachOpenProjects`, forKey: .`reachOpenProjects`)
-        try container.encodeIfPresent(`agentsSharePorts`, forKey: .`agentsSharePorts`)
         try container.encodeIfPresent(`steerMessages`, forKey: .`steerMessages`)
         try container.encodeIfPresent(`streamingAllowed`, forKey: .`streamingAllowed`)
         try container.encodeIfPresent(`resumeAtReset`, forKey: .`resumeAtReset`)
@@ -8160,7 +8156,6 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
         case `icon` = "icon"
         case `agentsDeleteAnyView` = "agentsDeleteAnyView"
         case `reachOpenProjects` = "reachOpenProjects"
-        case `agentsSharePorts` = "agentsSharePorts"
         case `steerMessages` = "steerMessages"
         case `streamingAllowed` = "streamingAllowed"
         case `resumeAtReset` = "resumeAtReset"
@@ -8530,7 +8525,6 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
     public let `icon`: MachineIcon?
     public let `agentsDeleteAnyView`: Bool?
     public let `reachOpenProjects`: Bool?
-    public let `agentsSharePorts`: Bool?
     public let `steerMessages`: Bool?
     public let `streamingAllowed`: Bool?
     public let `resumeAtReset`: Bool?
@@ -8552,14 +8546,13 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
     public let `lanDoorFixed`: Bool?
     public let `agentIntegrations`: EndpointAgentIntegrations?
 
-    public init(`id`: String, `label`: String, `nameSource`: EndpointNameSource, `icon`: MachineIcon?, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `agentsSharePorts`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `textModel`: Presence<EndpointChangedEventTextModel> = .missing, `keepAwake`: KeepAwakeMode? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `broker`: EndpointBroker? = nil, `lanDoor`: Bool? = nil, `nodeSizes`: [String: EndpointNodeSize]? = nil, `usageStats`: Bool? = nil, `startFolder`: String? = nil, `keepAwakeLidRule`: Bool? = nil, `brokerUrl`: Presence<String> = .missing, `brokerFixed`: Bool? = nil, `lan`: Presence<LanDoor> = .missing, `lanDoorFixed`: Bool? = nil, `agentIntegrations`: EndpointAgentIntegrations? = nil) {
+    public init(`id`: String, `label`: String, `nameSource`: EndpointNameSource, `icon`: MachineIcon?, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `textModel`: Presence<EndpointChangedEventTextModel> = .missing, `keepAwake`: KeepAwakeMode? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `broker`: EndpointBroker? = nil, `lanDoor`: Bool? = nil, `nodeSizes`: [String: EndpointNodeSize]? = nil, `usageStats`: Bool? = nil, `startFolder`: String? = nil, `keepAwakeLidRule`: Bool? = nil, `brokerUrl`: Presence<String> = .missing, `brokerFixed`: Bool? = nil, `lan`: Presence<LanDoor> = .missing, `lanDoorFixed`: Bool? = nil, `agentIntegrations`: EndpointAgentIntegrations? = nil) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
         self.`icon` = `icon`
         self.`agentsDeleteAnyView` = `agentsDeleteAnyView`
         self.`reachOpenProjects` = `reachOpenProjects`
-        self.`agentsSharePorts` = `agentsSharePorts`
         self.`steerMessages` = `steerMessages`
         self.`streamingAllowed` = `streamingAllowed`
         self.`resumeAtReset` = `resumeAtReset`
@@ -8590,7 +8583,6 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
         `icon` = try container.decode(MachineIcon?.self, forKey: .`icon`)
         `agentsDeleteAnyView` = try container.decodeIfPresent(Bool.self, forKey: .`agentsDeleteAnyView`)
         `reachOpenProjects` = try container.decodeIfPresent(Bool.self, forKey: .`reachOpenProjects`)
-        `agentsSharePorts` = try container.decodeIfPresent(Bool.self, forKey: .`agentsSharePorts`)
         `steerMessages` = try container.decodeIfPresent(Bool.self, forKey: .`steerMessages`)
         `streamingAllowed` = try container.decodeIfPresent(Bool.self, forKey: .`streamingAllowed`)
         `resumeAtReset` = try container.decodeIfPresent(Bool.self, forKey: .`resumeAtReset`)
@@ -8621,7 +8613,6 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
         try container.encode(`icon`, forKey: .`icon`)
         try container.encodeIfPresent(`agentsDeleteAnyView`, forKey: .`agentsDeleteAnyView`)
         try container.encodeIfPresent(`reachOpenProjects`, forKey: .`reachOpenProjects`)
-        try container.encodeIfPresent(`agentsSharePorts`, forKey: .`agentsSharePorts`)
         try container.encodeIfPresent(`steerMessages`, forKey: .`steerMessages`)
         try container.encodeIfPresent(`streamingAllowed`, forKey: .`streamingAllowed`)
         try container.encodeIfPresent(`resumeAtReset`, forKey: .`resumeAtReset`)
@@ -8663,7 +8654,6 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
         case `icon` = "icon"
         case `agentsDeleteAnyView` = "agentsDeleteAnyView"
         case `reachOpenProjects` = "reachOpenProjects"
-        case `agentsSharePorts` = "agentsSharePorts"
         case `steerMessages` = "steerMessages"
         case `streamingAllowed` = "streamingAllowed"
         case `resumeAtReset` = "resumeAtReset"

@@ -5,7 +5,6 @@ import { MACHINE_SETTING_KEYS, isOwnerOnlySetting, isOwnerSeenSetting, settingDe
 const SWITCHES = [
     'agentsDeleteAnyView',
     'reachOpenProjects',
-    'agentsSharePorts',
     'steerMessages',
     'streamingAllowed',
     'resumeAtReset',
@@ -39,7 +38,7 @@ describe('the machine settings table', () => {
     });
 
     test('refuses the owner-only settings to other clients and keeps two of them from the event', () => {
-        expect(MACHINE_SETTING_KEYS.filter(isOwnerOnlySetting).toSorted()).toEqual(['agentsSharePorts', 'terminalShell', 'usageStats', 'worktreeRoot']);
+        expect(MACHINE_SETTING_KEYS.filter(isOwnerOnlySetting).toSorted()).toEqual(['terminalShell', 'usageStats', 'worktreeRoot']);
         expect(MACHINE_SETTING_KEYS.filter(isOwnerSeenSetting).toSorted()).toEqual(['terminalShell', 'worktreeRoot']);
     });
 
@@ -47,7 +46,6 @@ describe('the machine settings table', () => {
         expect(MACHINE_SETTING_KEYS.map((key) => [key, settingDefault(key)])).toEqual([
             ['agentsDeleteAnyView', false],
             ['reachOpenProjects', false],
-            ['agentsSharePorts', false],
             ['steerMessages', false],
             ['streamingAllowed', true],
             ['resumeAtReset', false],

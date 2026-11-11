@@ -18,7 +18,6 @@ import { nodeFeature } from './node.ts';
 import { notifyFeature } from './notify.ts';
 import { operationFeature } from './operation.ts';
 import { planFeature } from './plan.ts';
-import { portFeature } from './port.ts';
 import { projectFeature } from './project.ts';
 import { providerFeature } from './provider.ts';
 import { routineFeature } from './routine.ts';
@@ -58,7 +57,6 @@ export const AGENT_FEATURES = [
     agentFeature,
     flagFeature,
     browserFeature,
-    portFeature,
     tunnelFeature,
     chatFeature,
     planFeature,

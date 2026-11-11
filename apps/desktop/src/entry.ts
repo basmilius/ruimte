@@ -32,7 +32,6 @@ import { startTelemetry } from './main/telemetry';
 import { installUpdates } from './main/updates';
 import { installUsage } from './main/usage';
 import { installWindows } from './main/windows';
-import { installPortTunnels } from './port-tunnel/tunnel-session';
 import { quitQuestion } from './quit-question';
 import { runSmoke } from './smoke';
 import { installSocketTypeOfServiceGuard } from './socket-tos-guard';
@@ -468,7 +467,7 @@ if (!app.requestSingleInstanceLock()) {
         }
         sealAppSession();
         sealPreviewSession();
-        browserRoutes = installBrowserRoutes(fromAppWindow, join(here, 'guest.cjs'), installPortTunnels(fromAppWindow, join(here, 'guest.cjs')).owns);
+        browserRoutes = installBrowserRoutes(fromAppWindow, join(here, 'guest.cjs'));
         power.followPowerSource();
         followDisplays();
         await startApp({

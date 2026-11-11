@@ -45,9 +45,6 @@ export const MACHINE_SETTINGS = {
     agentsDeleteAnyView: row({ schema: z.boolean(), default: false }),
     // Lets an agent read the other projects open on this machine and start agents there (`--project`).
     reachOpenProjects: row({ schema: z.boolean(), default: false }),
-    // Lets an agent share a development port of this machine with the person's other devices (`port_share`). The daemon enforces it, and
-    // only the owner turns it on: opening a loopback service to every device of the account is not a paired client's decision.
-    agentsSharePorts: row({ schema: z.boolean(), default: false, ownerOnly: true }),
     // Lets a message of an agent join a running turn, as a person's "Send to a working agent right away" does.
     steerMessages: row({ schema: z.boolean(), default: false }),
     // Browser pages and device screens.

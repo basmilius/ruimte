@@ -30,8 +30,6 @@ import { DeviceDriver } from '../devices/agent-driver.ts';
 import { RecordingBackend } from '../devices/device-test-helpers.ts';
 import { DeviceManager } from '../devices/manager.ts';
 import { freeBranch } from '../git/worktrees.ts';
-import { portShareHost } from '../ports/agent-host.ts';
-import { testGrants } from '../ports/port-test-helpers.ts';
 import { DiagramStore } from '../projects/diagram-store.ts';
 import { DrawingStore } from '../projects/drawing-store.ts';
 import { projectOverlays } from '../projects/overlays.ts';
@@ -46,12 +44,6 @@ import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 /* What a test turns between the fakes and the machine, fresh for every fixture. */
 export interface Knobs {
     deleteAnyView: boolean;
-    /* The machine's switch that lets an agent share a development port. */
-    sharePorts: boolean;
-    /* The loopback ports that answer HTTP now. */
-    httpPorts: number[];
-    /* The ports the launches of the project declare. */
-    launchPorts: number[];
     /* Whether any client on this machine has the page open, which is what a driver answers null without. */
     pageOpen: boolean;
     breakWrites: boolean;
@@ -182,8 +174,6 @@ export class CanvasFixture {
     readonly shotPath: string;
     readonly startClaims: StartClaims;
     readonly devices: DeviceDriver;
-    /* The shared ports of the fixture's machine, which a test reads to see what a tool left. */
-    readonly portGrants = testGrants([4210]).grants;
     tasks!: TaskStore;
     lineage!: AgentLineageStore;
     store!: ProjectStore;
@@ -207,9 +197,6 @@ export class CanvasFixture {
         });
         Object.assign(this.knobs, {
             deleteAnyView: false,
-            sharePorts: false,
-            httpPorts: [3000, 5173],
-            launchPorts: [],
             pageOpen: true,
             breakWrites: false,
             terminalPreference: undefined,
@@ -546,41 +533,6 @@ const PARTS: readonly HostSource<CanvasFixture>[] = [
         })
     },
     { name: 'device', host: (fixture) => ({ devices: fixture.devices }) },
-    {
-        name: 'launch',
-        // Only the reading a port share asks for; the launch tools have a fixture of their own.
-        host: (fixture) => ({
-            launches: {
-                list: async () =>
-                    fixture.knobs.launchPorts.map((port) => ({
-                        launchId: `launch-${port}`,
-                        name: `Launch ${port}`,
-                        kind: 'service',
-                        approved: true,
-                        url: null,
-                        port,
-                        members: [],
-                        status: null
-                    })),
-                text: async () => null,
-                start: async () => {
-                    throw new Error('The canvas fixture starts no launch');
-                },
-                stop: async () => 0,
-                entries: async () => [],
-                save: async () => undefined
-            }
-        })
-    },
-    {
-        name: 'port',
-        host: (fixture) => ({
-            ports: {
-                ...portShareHost({ allowed: () => fixture.knobs.sharePorts, grants: () => fixture.portGrants }),
-                answersHttp: async (port) => fixture.knobs.httpPorts.includes(port)
-            }
-        })
-    },
     {
         name: 'context',
         host: (fixture) => ({

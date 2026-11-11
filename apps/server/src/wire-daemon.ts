@@ -29,7 +29,6 @@ import { wireLaunches } from './wiring/launches.ts';
 import { wireMachine } from './wiring/machine.ts';
 import { wireMaintenance } from './wiring/maintenance.ts';
 import { wireNetwork } from './wiring/network.ts';
-import { wirePorts } from './wiring/ports.ts';
 import { wirePower } from './wiring/power.ts';
 import { wireProcesses } from './wiring/processes.ts';
 import { wireProjects } from './wiring/projects.ts';
@@ -167,7 +166,6 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
             later: { apiPort: () => servedPort ?? config.port }
         })
     );
-    const ports = provide('ports', wirePorts(config, tunnels.deniedPorts));
 
     const { sessions, chats } = agents;
     const push = provide('push', wirePush(home, machine.auth, identity, agents, projects.store, work.snoozes, usage));
@@ -265,8 +263,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
             canvasHost,
             extensions,
             connected,
-            tunnels,
-            ports
+            tunnels
         },
         later
     );
@@ -331,8 +328,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
         canvasHost,
         extensions,
         connected,
-        tunnels,
-        ports
+        tunnels
     };
 
     return {

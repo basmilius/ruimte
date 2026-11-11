@@ -270,16 +270,7 @@
         "conversationFailed": "Could not show this conversation"
     },
     "browser": {
-        "routeUnavailable": "This address is on the project's machine, which this browser cannot reach. A port that machine shares opens here.",
-        "sharedFrom": "on {{machine}}",
-        "refusedAssets_one": "{{count}} request refused",
-        "refusedAssets_other": "{{count}} requests refused",
-        "refusedAssetsHint": "This page asked for assets at other addresses. A shared port opens nothing but itself, so those did not load.",
-        "openExternalShared": "A shared port opens only here",
-        "sharedOnly": {
-            "title": "Only the shared port opens here",
-            "hint": "This page comes from a port shared by {{machine}} and cannot open other addresses. You can open the address in the system browser instead."
-        },
+        "routeUnavailable": "This address is on the project's machine, which this browser cannot reach.",
         "ownerUnavailable": "Could not reach the project's machine",
         "back": "Back",
         "forward": "Forward",

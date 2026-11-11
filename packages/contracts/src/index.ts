@@ -31,7 +31,6 @@ import { MACHINE_UPDATE_REQUEST_SCHEMAS, MACHINE_UPDATE_EVENT_SCHEMAS } from './
 import { NANOGPT_REQUEST_SCHEMAS } from './nanogpt.ts';
 import { PEER_REQUEST_SCHEMAS, PEER_EVENT_SCHEMAS } from './peer.ts';
 import { PLAN_HOST_REQUEST_SCHEMAS, PLAN_HOST_EVENT_SCHEMAS } from './plan-host.ts';
-import { PORT_REQUEST_SCHEMAS, PORT_EVENT_SCHEMAS } from './port.ts';
 import { PROCESSES_REQUEST_SCHEMAS, PROCESSES_EVENT_SCHEMAS } from './processes.ts';
 import { PROJECT_SIDEBAR_REQUEST_SCHEMAS, PROJECT_SIDEBAR_EVENT_SCHEMAS } from './project-sidebar.ts';
 import { PROJECT_REQUEST_SCHEMAS, PROJECT_EVENT_SCHEMAS } from './project.ts';
@@ -113,7 +112,6 @@ export * from './node-defaults.ts';
 export * from './node-title.ts';
 export { emptyCanvasGroupIds, groupUnder, joinGroupUnder } from './canvas-groups.ts';
 export * from './plan-host.ts';
-export * from './port.ts';
 export * from './processes.ts';
 export * from './provenance.ts';
 export * from './reach.ts';
@@ -208,7 +206,6 @@ export const REQUEST_SCHEMAS = {
     ...GIT_REQUEST_SCHEMAS,
     ...AUTH_REQUEST_SCHEMAS,
     ...TUNNEL_REQUEST_SCHEMAS,
-    ...PORT_REQUEST_SCHEMAS,
     ...PROCESSES_REQUEST_SCHEMAS,
     ...COMPUTER_REQUEST_SCHEMAS,
     ...SECRETS_REQUEST_SCHEMAS,
@@ -263,7 +260,6 @@ export const EVENT_SCHEMAS = {
     ...GIT_EVENT_SCHEMAS,
     ...AUTH_EVENT_SCHEMAS,
     ...TUNNEL_EVENT_SCHEMAS,
-    ...PORT_EVENT_SCHEMAS,
     ...PROCESSES_EVENT_SCHEMAS,
     ...COMPUTER_EVENT_SCHEMAS,
     ...SECRETS_EVENT_SCHEMAS,

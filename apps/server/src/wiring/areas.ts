@@ -25,7 +25,6 @@ import { gitArea } from '../handlers/git.ts';
 import { languageArea } from '../handlers/language.ts';
 import { launchesArea } from '../handlers/launches.ts';
 import { planArea } from '../handlers/plan.ts';
-import { portsArea } from '../handlers/ports.ts';
 import { processesArea } from '../handlers/processes.ts';
 import { proposalsArea } from '../handlers/project-proposals.ts';
 import { projectArea } from '../handlers/project.ts';
@@ -88,7 +87,7 @@ import { errorReportsLifecycle, usageCountsLifecycle } from './usage-stats.ts';
 export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
     const { runtime, machine, stores, providers, agents, projects, templates, artifacts, databases, work, launches, routines, devices } = input;
     const { usage, processes, language, push, voice, power, network, computer, extensions, stats, maintenance } = input;
-    const { connected, tunnels, ports } = input;
+    const { connected, tunnels } = input;
     const store = projects.store;
     const streamingAllowed = (): boolean => machine.identity.streamingAllowed;
 
@@ -108,7 +107,6 @@ export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
                 connected.externalChanged();
             }
         }),
-        portsArea({ grants: ports.grants, streams: ports.streams, changes: ports.sinks }),
         clientArea({ connected, auth: machine.auth, external: () => tunnels.credentials.active() }),
         maintenanceLifecycle(maintenance),
         extensionsArea({ host: extensions.host, ...extensions.handlerDeps(), readChat: extensions.readChat }),

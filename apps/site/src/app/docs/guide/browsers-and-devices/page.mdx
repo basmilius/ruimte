@@ -22,24 +22,13 @@ Press <Shortcut keys="Alt+B" /> on a canvas, or run **New browser view**, and ty
 
 Pages run in the desktop app. In the web app and on a phone, the machine can show the page instead; turn on **Browser and device streaming** for that machine under Settings, Account.
 
-A `localhost` page belongs to the project's machine. It opens in that machine's own desktop app, and in another desktop app once the machine shares the port.
+A `localhost` page belongs to the project's machine. It opens in that machine's own desktop app.
 
-### Share a port with your other devices
+### Open a dev server on your phone
 
-On the machine, open a browser node. Its start page lists the dev servers that run there. Choose **Share** under a running one and confirm. On your other computer, open a browser node of the same project and pick that port. The address bar still says `localhost:3000`, and the page loads over the connection Ruimte already has to the machine.
+On the machine, open a browser node. Its start page lists the dev servers that run there. The tunnel button under a running server opens Tunnels, and once the port has a hostname that runs, the same button copies its public address. Open that address in the browser on your phone or on any other device.
 
-A shared port stays shared until you choose **Stop sharing**, also across restarts of the machine. Stopping closes the open pages at once.
-
-- HTTP and WebSocket work on that one port, so hot reload does too.
-- A page that asks for something at another address, such as a font on a CDN, gets nothing. The node counts the refused requests. An address typed outside the port opens in your system browser, if you choose that.
-- Every shared page has its own cookies and storage, so the `localhost:3000` of two machines never mix.
-- **Open in system browser** is off for a shared page, because `localhost` there means the other machine.
-
-In the web app and on a phone the machine draws the page itself, so nothing needs sharing.
-
-<Note>A development site can accept writes and uploads, and it may trust every request that comes from its own machine. Every device signed in to your account can reach a port you share. Agents share a port only when you turn on **Agents may share a dev port** under Settings, Agents.</Note>
-
-For a browser outside Ruimte, put the port on a tunnel hostname instead. The tunnel button under a running server opens Tunnels, and once the port has a hostname that runs, the same button copies its public address. Sharing a port does not create a hostname, and a hostname does not share the port.
+In the web app and in the iPhone app the machine draws the page itself, so a `localhost` page of the project opens there without a hostname.
 
 ### What an agent may do in a browser
 

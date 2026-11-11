@@ -18,7 +18,6 @@ import type { LanguageBundle } from './language.ts';
 import type { LaunchesBundle } from './launches.ts';
 import type { MachineBundle } from './machine.ts';
 import type { NetworkBundle } from './network.ts';
-import type { PortsBundle } from './ports.ts';
 import type { PowerBundle } from './power.ts';
 import type { ProcessesBundle } from './processes.ts';
 import type { ProjectsBundle } from './projects.ts';
@@ -65,5 +64,4 @@ export interface DaemonBundles {
     extensions: ExtensionsBundle;
     connected: ConnectedClients;
     tunnels: TunnelsBundle;
-    ports: PortsBundle;
 }

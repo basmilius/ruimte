@@ -58,8 +58,6 @@ export function buildBrowserMenu(input: BrowserMenuInput): BrowserMenuItem[][] {
         return [];
     }
 
-    // A page shared through a port never hands an address to the system browser; the shell refuses it too.
-    const external = input.external !== false;
     const groups: BrowserMenuItem[][] = [
         [
             { id: 'back', label: i18next.t('browser:menu.back'), icon: ArrowLeft, disabled: !input.canGoBack, action: { kind: 'back' } },
@@ -72,16 +70,12 @@ export function buildBrowserMenu(input: BrowserMenuInput): BrowserMenuItem[][] {
         const url = input.linkURL;
         const link: BrowserMenuItem[] = [
             { id: 'link-node', label: i18next.t('browser:menu.link.openInNode'), icon: Globe, action: { kind: 'open-beside', url } },
-            ...(external
-                ? [
-                      {
-                          id: 'link-external',
-                          label: i18next.t('browser:menu.link.openExternal'),
-                          icon: ExternalLink,
-                          action: { kind: 'open-external', url }
-                      } satisfies BrowserMenuItem
-                  ]
-                : []),
+            {
+                id: 'link-external',
+                label: i18next.t('browser:menu.link.openExternal'),
+                icon: ExternalLink,
+                action: { kind: 'open-external', url }
+            },
             { id: 'link-address', label: i18next.t('browser:menu.link.copyAddress'), icon: Link, action: { kind: 'copy-text', text: url } }
         ];
         if (input.linkText.trim() !== '') {
@@ -108,16 +102,12 @@ export function buildBrowserMenu(input: BrowserMenuInput): BrowserMenuItem[][] {
     if (input.selectionText !== '') {
         groups.push([
             { id: 'copy', label: i18next.t('common:action.copy'), icon: Copy, disabled: !input.editFlags.canCopy, action: { kind: 'copy-selection' } },
-            ...(external
-                ? [
-                      {
-                          id: 'search',
-                          label: i18next.t('browser:menu.selection.search', { text: asLabel(input.selectionText) }),
-                          icon: Search,
-                          action: { kind: 'open-external', url: `${SEARCH_URL}${encodeURIComponent(input.selectionText)}` }
-                      } satisfies BrowserMenuItem
-                  ]
-                : [])
+            {
+                id: 'search',
+                label: i18next.t('browser:menu.selection.search', { text: asLabel(input.selectionText) }),
+                icon: Search,
+                action: { kind: 'open-external', url: `${SEARCH_URL}${encodeURIComponent(input.selectionText)}` }
+            }
         ]);
     }
 

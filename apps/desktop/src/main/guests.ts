@@ -2,7 +2,6 @@ import { createGestureGate, isExternalLink } from '@adecore/shell';
 import { electron } from '../electron';
 import { editFrameOf, runGuestEdit } from '../guest-edit';
 import { contextMenuPayload, editableMenuTemplate, guestActionAllowed, type BrowserContextAction, type GuestKind } from '../guest-menu';
-import { isTunnelSession } from '../port-tunnel/tunnel-sessions';
 import { BROWSER_PARTITION, PREVIEW_PARTITION } from '../web-guards';
 import type { DesktopIpc } from './ipc';
 
@@ -22,14 +21,8 @@ function isGuestOf(contents: Electron.WebContents, partition: string): boolean {
     return contents.getType() === 'webview' && contents.session === session.fromPartition(partition);
 }
 
-/* A page of a browser node, on the shared session or on the session of a shared port. */
 export function isBrowserGuest(contents: Electron.WebContents): boolean {
-    return isGuestOf(contents, BROWSER_PARTITION) || (contents.getType() === 'webview' && isTunnelSession(contents.session));
-}
-
-/* A page of a shared port, which never hands an address to the system browser. */
-function isTunnelGuest(contents: Electron.WebContents): boolean {
-    return contents.getType() === 'webview' && isTunnelSession(contents.session);
+    return isGuestOf(contents, BROWSER_PARTITION);
 }
 
 export function isPreviewGuest(contents: Electron.WebContents): boolean {
@@ -110,7 +103,7 @@ export function installGuests(ipc: DesktopIpc, options: GuestsOptions): Guests {
         const template = editableMenuTemplate(params, process.platform, {
             replaceMisspelling: (word) => contents.replaceMisspelling(word),
             lookUp: () => contents.showDefinitionForSelection(),
-            ...(isTunnelGuest(contents) ? {} : { openExternal: (url: string) => void shell.openExternal(url) }),
+            openExternal: (url: string) => void shell.openExternal(url),
             ...(inspectable ? { inspect: () => devTools(contents.id, { x: params.x, y: params.y }) } : {})
         });
         /*
@@ -126,7 +119,7 @@ export function installGuests(ipc: DesktopIpc, options: GuestsOptions): Guests {
         if (!contents || contents.isDestroyed()) {
             return;
         }
-        const guest = isTunnelGuest(contents) ? 'tunnel' : isBrowserGuest(contents) ? 'browser' : isPreviewGuest(contents) ? 'preview' : null;
+        const guest = isBrowserGuest(contents) ? 'browser' : isPreviewGuest(contents) ? 'preview' : null;
         if (guest === null || !guestActionAllowed(request.action, guest)) {
             return;
         }
@@ -181,7 +174,7 @@ export function installGuests(ipc: DesktopIpc, options: GuestsOptions): Guests {
                 menuFrames.delete(contents);
             }
             // A guest of no window of ours gets none.
-            options.windowOf(contents)?.webContents.send('browser:context-menu', contextMenuPayload(contents.id, guest, params, !isTunnelGuest(contents)));
+            options.windowOf(contents)?.webContents.send('browser:context-menu', contextMenuPayload(contents.id, guest, params));
         }
     };
 }

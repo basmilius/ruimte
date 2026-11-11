@@ -76,7 +76,6 @@ const keepAwakeChanged: Effect = (_values, ports) => ports.keepAwakeChanged();
 
 const SERVER_ROWS: { readonly [Key in MachineSettingKey]?: ServerRow<Key> } = {
     streamingAllowed: { changed: (values, ports) => ports.streamingChanged(values.streamingAllowed) },
-    agentsSharePorts: { ownerAction: 'let agents share ports' },
     resumeAtReset: { changed: (values, ports) => ports.resumeChanged(values.resumeAtReset) },
     // A pick this machine cannot use now is refused here, so a person hears why while choosing and not on the first commit message.
     textModel: {

@@ -33,20 +33,6 @@ describe('buildBrowserMenu', () => {
         expect(ids(buildBrowserMenu(input()))).toEqual([['back', 'forward', 'reload'], ['inspect']]);
     });
 
-    test('a page shared through a port has no row that leaves for the system browser', () => {
-        const patch = { linkURL: 'https://a.test/', linkText: 'a', selectionText: 'words' };
-
-        expect(find(buildBrowserMenu(input(patch)), 'link-external')).toBeDefined();
-        expect(find(buildBrowserMenu(input(patch)), 'search')).toBeDefined();
-
-        const shared = buildBrowserMenu(input({ ...patch, external: false }));
-
-        expect(find(shared, 'link-external')).toBeUndefined();
-        expect(find(shared, 'search')).toBeUndefined();
-        expect(find(shared, 'link-node')).toBeDefined();
-        expect(find(shared, 'copy')).toBeDefined();
-    });
-
     test('history rows follow what the page can still do', () => {
         const menu = buildBrowserMenu(input({ canGoBack: true }));
         expect(find(menu, 'back')?.disabled).toBe(false);
