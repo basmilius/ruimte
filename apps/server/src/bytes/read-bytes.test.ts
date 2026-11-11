@@ -50,7 +50,7 @@ async function readAll(resource: ByteResource): Promise<Uint8Array> {
     let size = Number.POSITIVE_INFINITY;
     const versions = new Set<string>();
     while (offset < size) {
-        const piece = await readBytes(sources, { resource, offset, length: BYTES_CHUNK_MAX });
+        const piece = await readBytes(sources, { resource, offset, length: BYTES_CHUNK_MAX }, 'client');
         size = piece.size;
         versions.add(piece.version);
         const bytes = Buffer.from(piece.bytes);
@@ -79,19 +79,19 @@ describe('readBytes', () => {
     });
 
     test('a piece is no larger than asked and says what it is', async () => {
-        const piece = await readBytes(sources, { resource: { kind: 'file', path: join(folder, 'picture.gif') }, offset: 10, length: 100 });
+        const piece = await readBytes(sources, { resource: { kind: 'file', path: join(folder, 'picture.gif') }, offset: 10, length: 100 }, 'client');
         expect(Buffer.from(piece.bytes)).toEqual(Buffer.from(picture.subarray(10, 110)));
         expect(piece).toMatchObject({ mime: 'image/gif', size: picture.length, offset: 10 });
     });
 
     test('text comes as plain text, whatever its name', async () => {
-        const piece = await readBytes(sources, { resource: { kind: 'file', path: join(folder, 'notes.txt') }, offset: 0, length: 100 });
+        const piece = await readBytes(sources, { resource: { kind: 'file', path: join(folder, 'notes.txt') }, offset: 0, length: 100 }, 'client');
         expect(new TextDecoder().decode(piece.bytes)).toBe('not an image');
         expect(piece.mime).toBe('text/plain; charset=utf-8');
     });
 
     test('a binary that is not media is refused like the route refuses it', async () => {
-        const refused = readBytes(sources, { resource: { kind: 'file', path: join(folder, 'a.out') }, offset: 0, length: 10 });
+        const refused = readBytes(sources, { resource: { kind: 'file', path: join(folder, 'a.out') }, offset: 0, length: 10 }, 'client');
         await expect(refused).rejects.toBeInstanceOf(BytesError);
         await expect(refused).rejects.toMatchObject({ code: 'not-found' });
     });
@@ -102,7 +102,7 @@ describe('readBytes', () => {
             { kind: 'attachment', chatId: 'chat-1', attachmentId: 'nope' },
             { kind: 'projectIcon', projectId: 'p2', theme: 'light' }
         ] as ByteResource[]) {
-            await expect(readBytes(sources, { resource, offset: 0, length: 10 })).rejects.toMatchObject({ code: 'not-found' });
+            await expect(readBytes(sources, { resource, offset: 0, length: 10 }, 'client')).rejects.toMatchObject({ code: 'not-found' });
         }
     });
 
@@ -111,19 +111,19 @@ describe('readBytes', () => {
         await writeFile(path, 'GIF89a');
         // Sparse, so the file costs no disk.
         await truncate(path, 100 * 1024 * 1024);
-        const piece = await readBytes(sources, { resource: { kind: 'file', path }, offset: 90 * 1024 * 1024, length: 10 });
+        const piece = await readBytes(sources, { resource: { kind: 'file', path }, offset: 90 * 1024 * 1024, length: 10 }, 'client');
         expect(piece).toMatchObject({ size: 100 * 1024 * 1024, offset: 90 * 1024 * 1024 });
         expect(Buffer.from(piece.bytes)).toHaveLength(10);
     });
 
     test('a bundle this machine wrote is served in pieces, and one over the cap is not', async () => {
-        const piece = await readBytes(sources, { resource: { kind: 'bundle', bundleId: 'bundle-one' }, offset: 2, length: 100 });
+        const piece = await readBytes(sources, { resource: { kind: 'bundle', bundleId: 'bundle-one' }, offset: 2, length: 100 }, 'client');
         expect(new TextDecoder().decode(piece.bytes)).toBe('bundle');
         expect(piece).toMatchObject({ mime: 'application/x-git-bundle', size: 8 });
-        await expect(readBytes(sources, { resource: { kind: 'bundle', bundleId: 'bundle-huge' }, offset: 0, length: 10 })).rejects.toMatchObject({
+        await expect(readBytes(sources, { resource: { kind: 'bundle', bundleId: 'bundle-huge' }, offset: 0, length: 10 }, 'client')).rejects.toMatchObject({
             code: 'bundle-too-large'
         });
-        await expect(readBytes(sources, { resource: { kind: 'bundle', bundleId: 'nope' }, offset: 0, length: 10 })).rejects.toMatchObject({
+        await expect(readBytes(sources, { resource: { kind: 'bundle', bundleId: 'nope' }, offset: 0, length: 10 }, 'client')).rejects.toMatchObject({
             code: 'not-found'
         });
     });
@@ -131,9 +131,9 @@ describe('readBytes', () => {
     test('a bundle is reported read once its last byte was served, and not before', async () => {
         read = [];
         const resource = { kind: 'bundle', bundleId: 'bundle-one' } as const;
-        await readBytes(sources, { resource, offset: 0, length: 4 });
+        await readBytes(sources, { resource, offset: 0, length: 4 }, 'client');
         expect(read).toEqual([]);
-        await readBytes(sources, { resource, offset: 4, length: 4 });
+        await readBytes(sources, { resource, offset: 4, length: 4 }, 'client');
         expect(read).toEqual(['bundle-one']);
     });
 
@@ -147,17 +147,17 @@ describe('readBytes', () => {
             }
         };
         const resource = { kind: 'file', path: join(folder, 'site.zip'), entry: 'big.bin' } as const;
-        const first = await readBytes(withEntries, { resource, offset: 0, length: BYTES_CHUNK_MAX });
+        const first = await readBytes(withEntries, { resource, offset: 0, length: BYTES_CHUNK_MAX }, 'client');
         expect(first).toMatchObject({ size: entry.length, version: '5-100', mime: 'application/octet-stream' });
         expect(first.bytes).toHaveLength(BYTES_CHUNK_MAX);
-        expect((await readBytes(withEntries, { resource, offset: BYTES_CHUNK_MAX, length: BYTES_CHUNK_MAX })).bytes).toHaveLength(10);
-        await expect(readBytes(withEntries, { resource, offset: entry.length + 1, length: 1 })).rejects.toMatchObject({ code: 'bad-offset' });
-        await expect(readBytes(sources, { resource, offset: 0, length: 1 })).rejects.toMatchObject({ code: 'not-found' });
+        expect((await readBytes(withEntries, { resource, offset: BYTES_CHUNK_MAX, length: BYTES_CHUNK_MAX }, 'client')).bytes).toHaveLength(10);
+        await expect(readBytes(withEntries, { resource, offset: entry.length + 1, length: 1 }, 'client')).rejects.toMatchObject({ code: 'bad-offset' });
+        await expect(readBytes(sources, { resource, offset: 0, length: 1 }, 'client')).rejects.toMatchObject({ code: 'not-found' });
     });
 
     test('an offset past the end is refused', async () => {
         await expect(
-            readBytes(sources, { resource: { kind: 'file', path: join(folder, 'picture.gif') }, offset: picture.length + 1, length: 10 })
+            readBytes(sources, { resource: { kind: 'file', path: join(folder, 'picture.gif') }, offset: picture.length + 1, length: 10 }, 'client')
         ).rejects.toMatchObject({ code: 'bad-offset' });
     });
 

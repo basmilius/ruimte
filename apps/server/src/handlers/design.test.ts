@@ -3,11 +3,11 @@ import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { BYTES_CHUNK_MAX, DESIGN_PAGE_MAX_BYTES, injectVisualBootstrap, type ProjectView } from '@ruimte/contracts';
-import { readBytes, type ByteSources } from '../bytes/read-bytes.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { HeldDesignPages } from '../fs/held-design-pages.ts';
+import { bytesArea } from './bytes.ts';
 import { designArea } from './design.ts';
-import { askOnce } from './test-helpers.ts';
+import { askOnce, HOME_WITHOUT_STATE } from './test-helpers.ts';
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
 const VIEWS: ProjectView[] = [{ kind: 'design', id: 'onboarding', name: 'Onboarding', node: {}, path: 'onboarding' }];
@@ -29,6 +29,16 @@ beforeEach(async () => {
         projectOf: async (clientId, projectId) => (clientId === 'client' && projectId === 'project' ? { folder: project, views: VIEWS, shared: [] } : null),
         pages
     }).handlers?.(dispatcher);
+    bytesArea({
+        sources: {
+            attachment: async () => null,
+            projectIcon: async () => null,
+            file: async () => null,
+            designPage: (clientId, pageId) => pages.bytesOf(clientId, pageId),
+            designPageSent: (clientId, pageId, offset, length) => pages.sent(clientId, pageId, offset, length)
+        },
+        machineHome: HOME_WITHOUT_STATE
+    }).handlers?.(dispatcher);
 });
 
 afterEach(async () => {
@@ -39,22 +49,27 @@ function ask(file: string, clientId = 'client', designId = 'onboarding', bootstr
     return askOnce(dispatcher, { id: clientId }, 'design.page', { projectId: 'project', designId, file, bootstrap });
 }
 
-/* The held page read back the way a client reads it, piece by piece over `bytes.read`. */
-async function readHeld(pageId: string, size: number): Promise<string> {
-    const sources: ByteSources = {
-        attachment: async () => null,
-        projectIcon: async () => null,
-        file: async () => null,
-        designPage: (id) => pages.bytesOf(id),
-        designPageSent: (id, length) => pages.sent(id, length)
-    };
-    const parts: Uint8Array[] = [];
+/* One piece of a held page as a client asks for it over `bytes.read`. */
+async function readPiece(pageId: string, offset: number, clientId = 'client') {
+    return askOnce(dispatcher, { id: clientId }, 'bytes.read', { resource: { kind: 'designPage', pageId }, offset, length: BYTES_CHUNK_MAX });
+}
+
+/* The held page read back the way a client reads it, piece by piece. */
+async function readHeld(pageId: string, size: number, clientId = 'client'): Promise<string> {
+    const parts: Buffer[] = [];
 
     for (let offset = 0; offset < size || offset === 0; offset += BYTES_CHUNK_MAX) {
-        parts.push((await readBytes(sources, { resource: { kind: 'designPage', pageId }, offset, length: BYTES_CHUNK_MAX })).bytes);
+        const frame = await readPiece(pageId, offset, clientId);
+
+        expect(frame).toMatchObject({ ok: true });
+        parts.push(Buffer.from((frame as { result: { data: string } }).result.data, 'base64'));
     }
 
     return new TextDecoder().decode(Buffer.concat(parts));
+}
+
+function isHeld(pageId: string, clientId = 'client'): boolean {
+    return pages.bytesOf(clientId, pageId) !== null;
 }
 
 describe('a page of a design', () => {
@@ -74,7 +89,7 @@ describe('a page of a design', () => {
         expect(html).toContain('data:text/html;charset=utf-8,%3Cp%3Etwo%3C/p%3E');
         // The frame applies no stylesheet typed as a download.
         expect(html).toContain(`href="data:text/css;base64,${Buffer.from('h1{color:red}').toString('base64')}"`);
-        expect(pages.bytesOf(pageId)).toBeNull();
+        expect(isHeld(pageId)).toBe(false);
     });
 
     test('that is not there, too large or not text says so for the client to word', async () => {
@@ -138,17 +153,52 @@ describe('a page of a design', () => {
 });
 
 describe('the pages held for a client', () => {
-    test('go when the client leaves, and its oldest goes past a few', () => {
-        const first = pages.hold('client', '<p>1</p>');
-        const others = ['2', '3', '4', '5'].map((text) => pages.hold('client', `<p>${text}</p>`));
+    test('are read and let go only by that client', async () => {
+        const held = pages.hold('client', '<p>mine</p>');
+
+        expect(await readPiece(held.pageId, 0, 'other')).toMatchObject({ ok: false, error: { code: 'not-found' } });
+        expect(isHeld(held.pageId)).toBe(true);
+        expect(await readHeld(held.pageId, held.size)).toBe('<p>mine</p>');
+    });
+
+    test('stay until every piece went out, also when one was read twice', async () => {
+        const held = pages.hold('client', 'x'.repeat(BYTES_CHUNK_MAX * 2));
+
+        await readPiece(held.pageId, 0);
+        await readPiece(held.pageId, 0);
+
+        expect(isHeld(held.pageId)).toBe(true);
+
+        await readPiece(held.pageId, BYTES_CHUNK_MAX);
+
+        expect(isHeld(held.pageId)).toBe(false);
+    });
+
+    test('go when the client leaves', () => {
+        const own = ['1', '2', '3', '4', '5'].map((text) => pages.hold('client', `<p>${text}</p>`));
         const elsewhere = pages.hold('other', '<p>other</p>');
 
-        expect(pages.bytesOf(first.pageId)).toBeNull();
-        expect(others.every((page) => pages.bytesOf(page.pageId) !== null)).toBe(true);
+        expect(own.every((page) => isHeld(page.pageId))).toBe(true);
 
         pages.detachAll('client');
 
-        expect(others.every((page) => pages.bytesOf(page.pageId) === null)).toBe(true);
-        expect(pages.bytesOf(elsewhere.pageId)).not.toBeNull();
+        expect(own.some((page) => isHeld(page.pageId))).toBe(false);
+        expect(isHeld(elsewhere.pageId, 'other')).toBe(true);
+    });
+
+    test('weigh no more than two of the largest pages, the oldest going first', () => {
+        const largest = 'x'.repeat(DESIGN_PAGE_MAX_BYTES);
+        const first = pages.hold('client', largest);
+        const second = pages.hold('client', largest);
+        const elsewhere = pages.hold('other', largest);
+
+        expect(isHeld(first.pageId)).toBe(true);
+
+        const third = pages.hold('client', largest);
+
+        expect(isHeld(first.pageId)).toBe(false);
+        expect(isHeld(second.pageId)).toBe(true);
+        expect(isHeld(third.pageId)).toBe(true);
+        expect(isHeld(elsewhere.pageId, 'other')).toBe(true);
     });
 });

@@ -461,7 +461,8 @@ describe('visuals and the chat they belong to', () => {
 
         const piece = await readBytes(
             { attachment: (chatId, attachmentId) => second.chats.findAttachment(chatId, attachmentId), projectIcon: async () => null, file: async () => null },
-            { resource: { kind: 'attachment', chatId: 'chat-lead', attachmentId: id }, offset: 0, length: 256 * 1024 }
+            { resource: { kind: 'attachment', chatId: 'chat-lead', attachmentId: id }, offset: 0, length: 256 * 1024 },
+            'client'
         );
         expect(piece.mime).toBe('text/html');
         expect(new TextDecoder().decode(piece.bytes)).toContain('<div style="background:var(--chart-1)">32</div>');

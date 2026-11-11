@@ -280,8 +280,8 @@ export function bytesDeps({ agents, projects, git, artifacts, machine }: AreaInp
             bundle: (id) => git.bundles.made(id),
             bundleRead: (id) => git.bundles.discard(id),
             artifact: async (artifactId, versionId, file) => artifacts.artifacts.file(artifactId, versionId, file),
-            designPage: (pageId) => projects.designPages.bytesOf(pageId),
-            designPageSent: (pageId, length) => projects.designPages.sent(pageId, length)
+            designPage: (clientId, pageId) => projects.designPages.bytesOf(clientId, pageId),
+            designPageSent: (clientId, pageId, offset, length) => projects.designPages.sent(clientId, pageId, offset, length)
         },
         machineHome: machine.machineHome
     };

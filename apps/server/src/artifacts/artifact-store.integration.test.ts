@@ -135,7 +135,8 @@ describe('artifact store on a real disk', () => {
         const artifacts = artifactsOver(store);
         const piece = await readBytes(
             { attachment: async () => null, projectIcon: async () => null, file: async () => null, artifact: async (...ids) => artifacts.file(...ids) },
-            { resource: { kind: 'artifact', artifactId: made.artifactId, versionId: made.versionId, file: 0 }, offset: 0, length: 1024 }
+            { resource: { kind: 'artifact', artifactId: made.artifactId, versionId: made.versionId, file: 0 }, offset: 0, length: 1024 },
+            'client'
         );
         expect(new TextDecoder().decode(piece.bytes)).toBe('hello');
         expect(piece.version).toBe(new Bun.CryptoHasher('sha256').update('hello').digest('hex'));

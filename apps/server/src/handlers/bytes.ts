@@ -18,7 +18,7 @@ function registerRequests(dispatcher: Dispatcher, { sources, machineHome }: Byte
         if (payload.resource.kind === 'file') {
             await machineHome.refuse(payload.resource.path);
         }
-        const { bytes, ...header } = await readBytes(sources, payload);
+        const { bytes, ...header } = await readBytes(sources, payload, client.id);
         if (payload.binary === true && client.sendBinary) {
             return new BinaryReply((id) => encodeBytesReply(id, header, bytes));
         }
