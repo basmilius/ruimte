@@ -1,4 +1,4 @@
-import { atHeadStart, inlineJson, RESOLVE_SCRIPT } from '@/design/design-page';
+import { DESIGN_PAGE_MAX_BYTES } from '@ruimte/contracts';
 import { DESIGN_METHODS } from '@/design/design-protocol';
 
 /*
@@ -335,138 +335,42 @@ const RUNTIME = String.raw`(function () {
 
 export const DESIGN_RUNTIME = RUNTIME;
 
-/*
- * What runs first in a page with a script: a file of the folder the script names while it runs, in an
- * attribute or in markup it adds, is asked of the window the page is framed in and shown from its bytes,
- * since the page is written from a string and a relative path loads nothing. The stage answers the page
- * it shows; a page answers the pages it frames from what it was answered itself, so a page framed in a
- * page reaches the stage without carrying the folder along. A page on its own, as Export hands it out,
- * asks nobody and leaves its paths as they are. The iPhone app shows a page as the document of its web
- * view, with no window above it, so its page asks `window.ruimteHost.asset(path)`, which answers with the
- * bytes or null, in the stage's place. It takes `from` as the JSON it stands in, so the app can carry the
- * text of the script and fill it in.
- */
-export function runtimeAssetsScript(fromJson: string): string {
-    return String.raw`(function () {
-    var host = window.ruimteHost;
-    if (window.parent === window && !host) { return; }
-    var method = ${inlineJson(DESIGN_METHODS.asset)}, from = ${fromJson};
-    var waiting = {}, asked = {}, urls = {};
-    ${RESOLVE_SCRIPT}
-    function pathOf(reference) {
-        var path = resolved(String(reference).trim(), from);
-        return path === null || /\.html?$/i.test(path) ? null : path;
-    }
-    function bytesOf(path) {
-        if (!asked[path]) {
-            if (host) {
-                asked[path] = host.asset(path);
-            } else {
-                asked[path] = new Promise(function (resolve) { waiting[path] = resolve; });
-                window.parent.postMessage({ jsonrpc: '2.0', method: method, params: { path: path } }, '*');
-            }
-        }
-        return asked[path];
-    }
-    function urlOf(path) {
-        if (!urls[path]) {
-            urls[path] = bytesOf(path).then(function (bytes) { return bytes === null ? null : URL.createObjectURL(bytes); });
-        }
-        return urls[path];
-    }
-    function framedHere(source) {
-        for (var i = 0; i < window.frames.length; i++) { if (window.frames[i] === source) { return true; } }
-        return false;
-    }
-    addEventListener('message', function (event) {
-        var data = event.data, params = data && data.params;
-        if (!data || data.jsonrpc !== '2.0' || data.method !== method || !params || typeof params.path !== 'string') { return; }
-        if (window.parent !== window && event.source === window.parent) {
-            if (waiting[params.path]) { waiting[params.path](params.bytes instanceof Blob ? params.bytes : null); delete waiting[params.path]; }
-            return;
-        }
-        // Only a page this one frames from bytes of its own: a page of the web it frames gets nothing of the folder.
-        if (event.origin !== 'null' || !framedHere(event.source) || params.path.length > 1024) { return; }
-        var source = event.source;
-        bytesOf(params.path).then(function (bytes) { source.postMessage({ jsonrpc: '2.0', method: method, params: { path: params.path, bytes: bytes } }, '*'); });
-    });
-    var URL_REFERENCE = /url\(\s*(["']?)([^"')]+)\1\s*\)/gi;
-    function referencesIn(name, value) {
-        if (name === 'style') {
-            var found = [];
-            value.replace(URL_REFERENCE, function (whole, quote, reference) { found.push(reference); return whole; });
-            return found;
-        }
-        if (name === 'srcset') {
-            // A data address holds commas of its own, so a set with one is left as it is.
-            return /data:/i.test(value) ? [] : value.split(',').map(function (candidate) { return candidate.trim().split(/\s+/)[0]; });
-        }
-        return [value];
-    }
-    function swapped(name, value, found) {
-        if (name === 'style') {
-            return value.replace(URL_REFERENCE, function (whole, quote, reference) { return found[reference] ? 'url(' + quote + found[reference] + quote + ')' : whole; });
-        }
-        if (name === 'srcset') {
-            return value.split(',').map(function (candidate) {
-                var parts = candidate.trim().split(/\s+/);
-                if (found[parts[0]]) { parts[0] = found[parts[0]]; }
-                return parts.join(' ');
-            }).join(', ');
-        }
-        return found[value] || value;
-    }
-    function applies(element, name) {
-        var tag = element.localName;
-        if (name === 'style') { return true; }
-        if (name === 'srcset') { return tag === 'img' || tag === 'source'; }
-        if (name === 'poster') { return tag === 'video'; }
-        return /^(?:img|source|video|audio|track|input)$/.test(tag);
-    }
-    function rewrite(element, name) {
-        var value = element.getAttribute(name);
-        if (value === null || !applies(element, name)) { return; }
-        var references = referencesIn(name, value).filter(function (reference) { return pathOf(reference) !== null; });
-        if (references.length === 0) { return; }
-        Promise.all(references.map(function (reference) { return urlOf(pathOf(reference)); })).then(function (loaded) {
-            if (element.getAttribute(name) !== value) { return; }
-            var found = {};
-            references.forEach(function (reference, index) {
-                var hash = reference.trim().indexOf('#');
-                if (loaded[index] !== null) { found[reference] = loaded[index] + (hash === -1 ? '' : reference.trim().slice(hash)); }
-            });
-            var next = swapped(name, value, found);
-            if (next !== value) { element.setAttribute(name, next); }
-        });
-    }
-    var NAMES = ['src', 'srcset', 'poster', 'style'];
-    function visit(node) {
-        if (node.nodeType !== 1) { return; }
-        NAMES.forEach(function (name) { rewrite(node, name); });
-        node.querySelectorAll('[src], [srcset], [poster], [style]').forEach(function (element) {
-            NAMES.forEach(function (name) { rewrite(element, name); });
-        });
-    }
-    new MutationObserver(function (records) {
-        records.forEach(function (record) {
-            if (record.type === 'attributes') { rewrite(record.target, record.attributeName); } else { record.addedNodes.forEach(visit); }
-        });
-    }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: NAMES });
-})();`;
-}
-
-export function runtimeAssetsElement(from: string): string {
-    return `<script data-ruimte-assets>${runtimeAssetsScript(inlineJson(from))}</script>`;
-}
-
-export function withRuntimeAssets(html: string, from: string): string {
-    return atHeadStart(html, runtimeAssetsElement(from));
-}
-
 /* The page with the design runtime at the end of its body, so it runs once the page's own markup is there. */
 export function withDesignRuntime(html: string): string {
     const script = `<script data-ruimte-design>${RUNTIME}</script>`;
     const end = html.search(/<\/body\s*>/i);
 
     return end === -1 ? `${html}${script}` : `${html.slice(0, end)}${script}${html.slice(end)}`;
+}
+
+/*
+ * What the stage reads for the files a page's script names while it runs: each once however often it is
+ * asked, by the page or the pages it frames, and up to the bounds of a visual all together. Null for a
+ * file it cannot or may not read, which the page shows as a broken path.
+ */
+export function runtimeAssets(read: (path: string) => Promise<Blob>): (path: string) => Promise<Blob | null> {
+    const asked = new Map<string, Promise<Blob | null>>();
+    let total = 0;
+
+    return (path) => {
+        let bytes = asked.get(path);
+
+        if (bytes === undefined) {
+            bytes = read(path).then(
+                (blob) => {
+                    if (total + blob.size > DESIGN_PAGE_MAX_BYTES) {
+                        return null;
+                    }
+
+                    total += blob.size;
+
+                    return blob;
+                },
+                () => null
+            );
+            asked.set(path, bytes);
+        }
+
+        return bytes;
+    };
 }

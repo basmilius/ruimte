@@ -14,6 +14,7 @@ import { chatArea } from '../handlers/chat.ts';
 import { clientArea } from '../handlers/client.ts';
 import { computerArea } from '../handlers/computer.ts';
 import { databaseArea, databaseConnectionsLifecycle } from '../handlers/database.ts';
+import { designArea } from '../handlers/design.ts';
 import { deviceArea } from '../handlers/device.ts';
 import { diagramArea } from '../handlers/diagram.ts';
 import { directArea } from '../handlers/direct.ts';
@@ -60,6 +61,7 @@ import {
     chatDeps,
     chatImageDeps,
     chatSearchDeps,
+    designDeps,
     fsDeps,
     gitDeps,
     peerLinksDeps,
@@ -157,6 +159,7 @@ export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
         fsArea(fsDeps(input)),
         archiveArea(archiveDeps(input)),
         bytesArea(bytesDeps(input)),
+        designArea(designDeps(input)),
         chatArea(chatDeps(input)),
         computerArea({ computer }),
         sessionArea(sessionDeps(input)),

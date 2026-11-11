@@ -161,7 +161,7 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         .diagramLayout, .diagramOpen, .fsBrowse, .fsSearch, .fsGrep, .fsList, .fsRead, .bytesRead, .gitWorktreeList,
         .gitStatus, .gitDiff, .gitRefs, .gitRepos, .gitLog, .gitConflicts, .gitConflict, .gitCapabilities,
         .usageSummary, .usageLimits, .processesListAlerts, .endpointInfo, .authSessions, .clientList, .taskList, .agentChildren,
-        .planList, .artifactList, .artifactGet,
+        .planList, .artifactList, .artifactGet, .designPage,
     ]
 
     private static let log = Logger(subsystem: "app.ruimte.mobile", category: "wire")

@@ -62,6 +62,7 @@
         "failed": "Could not show this",
         "openInRoutine": "Open in routine",
         "loading": "Loading",
+        "readingPage": "Reading the page…",
         "gone": "No longer in Output.",
         "versionGone": "Removed",
         "versionGoneDetail": "This version was removed.",

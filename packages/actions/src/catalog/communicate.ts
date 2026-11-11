@@ -179,7 +179,11 @@ export const COMMUNICATE_ACTIONS = {
         input: z.object({
             html: z.string().describe('The page, one self-contained HTML document'),
             width: z.number().nullable().describe('The width of the frame in CSS pixels; without it the reply column of a chat at a common size'),
-            appearance: z.enum(['dark', 'light']).nullable().describe('The appearance the page is drawn in; dark without it')
+            appearance: z.enum(['dark', 'light']).nullable().describe('The appearance the page is drawn in; dark without it'),
+            designPage: z
+                .string()
+                .optional()
+                .describe('An HTML page of a design folder of this project, by its path, built the way the design view shows it; then html stays empty')
         }),
         output: z.object({
             // A png on this machine, outside the project folder.

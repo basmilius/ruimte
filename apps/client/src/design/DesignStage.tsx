@@ -8,7 +8,6 @@ import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
 import { useFolderWatch } from '@/controllers/fs-watch';
 import { editsCss, editsOf, withEdits, withTweakValues, type DesignEdits } from '@/design/design-file';
-import { runtimeAssets } from '@/design/design-inline';
 import { bakePrompt, commentsPrompt, drawPrompt, textEditPrompt, type DesignComment } from '@/design/design-messages';
 import {
     changeReaches,
@@ -33,6 +32,7 @@ import {
     type TweakValue
 } from '@/design/design-protocol';
 import { listDesignFolder, readDesignAsset, readDesignText, rewriteDesignFile } from '@/design/design-read';
+import { runtimeAssets } from '@/design/design-runtime';
 import { DesignCommentPopover } from '@/design/DesignCommentPopover';
 import { DesignDrawLayer } from '@/design/DesignDrawLayer';
 import { DesignEditPanel } from '@/design/DesignEditPanel';
@@ -524,7 +524,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
             </div>
             <div ref={frameBox} className="relative min-h-0 grow overflow-hidden">
                 {/* Keyed on the page and when it was written: the frame takes a page only as it opens, so another page or a write of this one opens it again, and nothing else in the folder does. */}
-                <DesignPageFrame key={opened} endpointId={endpointId} folder={folder} file={active} />
+                <DesignPageFrame key={opened} endpointId={endpointId} designId={designId} folder={folder} file={active} />
                 {problem !== null && (
                     <NodeNotice tone="error" onRetry={readAgain}>
                         {t('design.listFailed', { reason: problem })}

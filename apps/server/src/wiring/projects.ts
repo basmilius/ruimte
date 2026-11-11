@@ -2,6 +2,7 @@ import { chatIsWorking } from '@ruimte/contracts';
 import { StartClaims } from '../canvas/start-claims.ts';
 import type { MachineHome } from '../disk/machine-home.ts';
 import { errorText } from '../error-text.ts';
+import { HeldDesignPages } from '../fs/held-design-pages.ts';
 import { isTrackedPath } from '../git/ignore.ts';
 import { DiagramStore } from '../projects/diagram-store.ts';
 import { DrawingStore } from '../projects/drawing-store.ts';
@@ -27,6 +28,8 @@ export interface ProjectsBundle {
     startClaims: StartClaims;
     drawings: DrawingStore;
     diagrams: DiagramStore;
+    /* The design pages built for clients, held until their bytes went out. */
+    designPages: HeldDesignPages;
     /*
      * Ends the shell or the CLI behind a node. A node that has never been shown has no session, and a
      * project going down is not the place to fail over one, so an id neither manager knows is
@@ -124,5 +127,5 @@ export async function wireProjects({ home, machineId, machineHome, stores, agent
     await startClaims.load();
     const drawings = new DrawingStore(store);
     const diagrams = new DiagramStore(store);
-    return { store, startClaims, drawings, diagrams, endSession };
+    return { store, startClaims, drawings, diagrams, designPages: new HeldDesignPages(), endSession };
 }

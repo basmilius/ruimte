@@ -22771,6 +22771,26 @@
         }
       }
     },
+    "%@ is not in the design." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ staat niet in het design."
+          }
+        }
+      }
+    },
+    "%@ is not a text file." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is geen tekstbestand."
+          }
+        }
+      }
+    },
     "Too large to watch. Pull to refresh it." : {
       "localizations" : {
         "nl" : {

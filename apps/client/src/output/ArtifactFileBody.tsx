@@ -1,8 +1,7 @@
-import { VisualPageFrame } from '@adecore/agents-react/chat/ui';
 import { EmptyState, ScrollArea } from '@adecore/ui';
 import { injectVisualBootstrap, type ArtifactFile } from '@ruimte/contracts';
 import { CircleAlert } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CodeText } from '@/files/CodeFile';
 import { FileActionsContext } from '@/files/file-actions';
@@ -13,6 +12,7 @@ import { ModelPreview } from '@/files/ModelPreview';
 import { PdfPreview } from '@/files/PdfPreview';
 import { readArtifactFile, useArtifactText, type ArtifactFileRef } from '@/output/artifact-bytes';
 import { artifactBinaryRead, artifactSource, fileViewOf, languageOfName } from '@/output/file-view';
+import { PageReadFrame } from '@/surface/PageReadFrame';
 
 interface ArtifactFileProps {
     endpointId: string;
@@ -63,27 +63,30 @@ export function ArtifactFileBody(props: ArtifactFileProps) {
  * runs no script, and a page an agent made for a person is meant to. `auto` grows the frame with its page
  * the way a visual in a chat does; without it the page fills its box.
  */
-export function ArtifactPage(props: ArtifactFileProps & { auto?: boolean }) {
-    return <PageOfFile key={`${props.endpointId}:${props.reference.versionId}:${props.reference.file}`} {...props} />;
-}
-
-function PageOfFile({ endpointId, reference, file, title, auto = false }: ArtifactFileProps & { auto?: boolean }) {
-    // One read per file: the frame opens its bridge again for every new `page`, so a fresh one each render never finishes loading.
-    // With the bootstrap a chat's visual is served with: it reports the page's size and takes the theme, which is what ends the frame's wait.
-    const [page] = useState(
-        () => (): Promise<string> =>
-            readArtifactFile(endpointId, reference, file)
-                .then((blob) => blob.text())
-                .then(injectVisualBootstrap)
+export function ArtifactPage({ endpointId, reference, file, title, auto = false }: ArtifactFileProps & { auto?: boolean }) {
+    const { t } = useTranslation('output');
+    const readKey = `${endpointId}:${reference.artifactId}:${reference.versionId}:${reference.file}`;
+    // Keyed too, so another file starts from its own progress line rather than showing the last page until it is read.
+    const frame = (
+        <PageReadFrame
+            key={readKey}
+            // With the bootstrap a chat's visual is served with: it reports the page's size and takes the theme, which is what ends the frame's wait.
+            read={() =>
+                readArtifactFile(endpointId, reference, file)
+                    .then((blob) => blob.text())
+                    .then(injectVisualBootstrap)
+            }
+            readKey={readKey}
+            title={title}
+            name={file.name}
+            readingLabel={t('view.readingPage')}
+            auto={auto}
+        />
     );
     if (auto) {
-        return <VisualPageFrame page={page} title={title} />;
+        return frame;
     }
-    return (
-        <div className="relative min-h-0 grow">
-            <VisualPageFrame page={page} title={title} fill />
-        </div>
-    );
+    return <div className="relative min-h-0 grow">{frame}</div>;
 }
 
 function ArtifactText({ endpointId, reference, file, markdown }: ArtifactFileProps & { markdown: boolean }) {

@@ -22,7 +22,9 @@ export const ByteResourceSchema = z.discriminatedUnion('kind', [
         artifactId: z.string().min(1).max(64),
         versionId: z.string().min(1).max(64),
         file: z.number().int().nonnegative().max(1024)
-    })
+    }),
+    // A design page this machine built for `design.page`, named by the id it answered; asked only of a machine that answers that.
+    z.object({ kind: z.literal('designPage'), pageId: z.string().min(1).max(64) })
 ]);
 export type ByteResource = z.infer<typeof ByteResourceSchema>;
 
@@ -68,6 +70,18 @@ export const BytesReadHeaderSchema = BytesReadResultSchema.omit({ data: true });
 export type BytesReadHeader = z.infer<typeof BytesReadHeaderSchema>;
 
 const BytesReplyHeadSchema = z.object({ id: z.string().min(1), result: BytesReadHeaderSchema });
+
+/*
+ * What a URL on a client's origin may claim to be. Anything a browser would run when it is opened
+ * (HTML, XML, JavaScript) is typed as a download instead. An SVG keeps its type, because an `<img>`
+ * does not draw one without it and runs nothing inside it. A design page built on the machine types
+ * the files it carries the same way, so it comes out as a client builds it.
+ */
+const DRAWABLE = /^(image\/(png|jpeg|gif|webp|avif|heic|heif|bmp|x-icon|tiff|svg\+xml)|(video|audio)\/[\w.+-]+|application\/pdf|text\/plain)$/;
+
+export function blobTypeFor(mime: string): string {
+    return DRAWABLE.test(mime) ? mime : 'application/octet-stream';
+}
 
 // The first byte of a binary reply, so a later kind of binary frame can be told apart.
 export const BYTES_REPLY_KIND = 1;

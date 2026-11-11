@@ -109,6 +109,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `databasePasswords` = "database.passwords"
     case `databaseRequest` = "database.request"
     case `databaseSnapshotRefresh` = "database.snapshot.refresh"
+    case `designPage` = "design.page"
     case `deviceAction` = "device.action"
     case `deviceBoot` = "device.boot"
     case `deviceCapture` = "device.capture"

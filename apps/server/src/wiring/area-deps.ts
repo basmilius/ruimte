@@ -16,6 +16,7 @@ import type { BytesDeps } from '../handlers/bytes.ts';
 import type { ChatImageDeps } from '../handlers/chat-image.ts';
 import type { ChatSearchDeps } from '../handlers/chat-search.ts';
 import type { ChatDeps } from '../handlers/chat.ts';
+import type { DesignDeps } from '../handlers/design.ts';
 import type { FsDeps } from '../handlers/fs.ts';
 import type { GitDeps } from '../handlers/git.ts';
 import type { ProjectDeps } from '../handlers/project.ts';
@@ -278,9 +279,27 @@ export function bytesDeps({ agents, projects, git, artifacts, machine }: AreaInp
             archiveEntry: readArchiveEntry,
             bundle: (id) => git.bundles.made(id),
             bundleRead: (id) => git.bundles.discard(id),
-            artifact: async (artifactId, versionId, file) => artifacts.artifacts.file(artifactId, versionId, file)
+            artifact: async (artifactId, versionId, file) => artifacts.artifacts.file(artifactId, versionId, file),
+            designPage: (pageId) => projects.designPages.bytesOf(pageId),
+            designPageSent: (pageId, length) => projects.designPages.sent(pageId, length)
         },
         machineHome: machine.machineHome
+    };
+}
+
+export function designDeps({ projects }: AreaInput): DesignDeps {
+    const { store } = projects;
+
+    return {
+        projectOf: async (clientId, projectId) => {
+            const folder = (await store.known()).find((project) => project.projectId === projectId)?.folder;
+            if (folder === undefined || !(await store.holdsFolder(clientId, folder, { refuseScratch: true }))) {
+                return null;
+            }
+            const { views, shared } = await store.place(projectId);
+            return { folder, views, shared };
+        },
+        pages: projects.designPages
     };
 }
 

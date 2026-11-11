@@ -66,7 +66,7 @@ export function DesignActions({ design, compact = false }: { design: DesignPlace
             if (folder === null || shown === null) {
                 return;
             }
-            const html = await standaloneDesignPage(endpointId, folder, shown);
+            const html = await standaloneDesignPage(endpointId, { projectId: project?.projectId ?? null, designId: design.id, folder }, shown);
             await saveBlob(new Blob([html], { type: 'text/html' }), shown, 'text/html');
         });
 

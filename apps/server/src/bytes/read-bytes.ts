@@ -23,9 +23,16 @@ export interface ByteSources {
     bundleRead?(bundleId: string): Promise<void>;
     /* A file of a saved version, found in the register by its ids only; its hash is its version, since it never changes. */
     artifact?(artifactId: string, versionId: string, file: number): Promise<{ path: string; mime: string; sha256: string } | null>;
+    /* A design page this machine built and holds for `design.page`. */
+    designPage?(pageId: string): Uint8Array | null;
+    /* A piece of that page went out. */
+    designPageSent?(pageId: string, length: number): void;
 }
 
-async function locate(sources: ByteSources, resource: ByteResource): Promise<{ path: string; mime: string; version?: string } | null> {
+async function locate(
+    sources: ByteSources,
+    resource: Exclude<ByteResource, { kind: 'designPage' }>
+): Promise<{ path: string; mime: string; version?: string } | null> {
     if (resource.kind === 'artifact') {
         const found = await sources.artifact?.(resource.artifactId, resource.versionId, resource.file);
         return found ? { path: found.path, mime: found.mime, version: found.sha256 } : null;
@@ -60,6 +67,9 @@ export async function readBytes(sources: ByteSources, payload: BytesReadPayload)
     if (resource.kind === 'file' && resource.entry !== undefined) {
         return readEntryPiece(sources, resource.path, resource.entry, payload);
     }
+    if (resource.kind === 'designPage') {
+        return readDesignPagePiece(sources, resource.pageId, payload);
+    }
     const found = await locate(sources, resource);
     const info = found ? await stat(found.path).catch(() => null) : null;
     if (!found || !info?.isFile()) {
@@ -83,6 +93,20 @@ export async function readBytes(sources: ByteSources, payload: BytesReadPayload)
         offset: payload.offset,
         bytes: piece
     };
+}
+
+/* A piece of a held design page; its id is its version, since a page is never built again under the same id. */
+function readDesignPagePiece(sources: ByteSources, pageId: string, payload: BytesReadPayload): BytesPieceRead {
+    const bytes = sources.designPage?.(pageId) ?? null;
+    if (bytes === null) {
+        throw new BytesError('not-found', 'Not a design page this machine holds');
+    }
+    if (payload.offset > bytes.length) {
+        throw new BytesError('bad-offset', `Offset ${payload.offset} is past the end of a page of ${bytes.length} bytes`);
+    }
+    const piece = bytes.subarray(payload.offset, Math.min(payload.offset + payload.length, bytes.length));
+    sources.designPageSent?.(pageId, piece.length);
+    return { mime: 'text/html; charset=utf-8', size: bytes.length, version: pageId, offset: payload.offset, bytes: piece };
 }
 
 /* A piece of an archive entry, cut from the entry the source unpacked whole; the source keeps it for the pieces after. */

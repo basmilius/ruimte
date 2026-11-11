@@ -126,4 +126,102 @@ final class DesignPlaceTests: XCTestCase {
         XCTAssertTrue(next.found)
         XCTAssertNil(next.problem)
     }
+
+    @MainActor func testAMachineThatAnswersDesignPageBuildsThePageAndHandsItOutOnce() async throws {
+        let html = "<p>" + String(repeating: "x", count: Int(WireConstants.bytesChunkMax)) + "</p>"
+        let machine = DesignMachine(answersPage: true)
+        machine.built = .object([
+            "kind": .string("page"), "pageId": .string("held-1"), "size": .number(Double(html.utf8.count)),
+        ])
+        machine.page = Data(html.utf8)
+        let page = try await Self.page(machine)
+        XCTAssertEqual(page, Data(html.utf8))
+        let asked: JSONValue = .object([
+            "projectId": .string("project-1"), "designId": .string("site"), "file": .string("index.html"),
+            "bootstrap": .bool(true),
+        ])
+        XCTAssertEqual(machine.asked, [asked])
+        let held: JSONValue = .object(["kind": .string("designPage"), "pageId": .string("held-1")])
+        XCTAssertEqual(machine.reads.map(\.resource), [held, held])
+        // Each piece once: the machine drops the page after its last byte went out.
+        XCTAssertEqual(machine.reads.map(\.offset), [0, Int(WireConstants.bytesChunkMax)])
+    }
+
+    @MainActor func testAnOlderMachineHandsOutTheFilesAndThePageIsBuiltHere() async throws {
+        let machine = DesignMachine(answersPage: false)
+        machine.files["/p/site/index.html"] = Data("<p>hi</p>".utf8)
+        let page = try await Self.page(machine)
+        XCTAssertEqual(String(decoding: page, as: UTF8.self), "<p>hi</p>")
+        XCTAssertTrue(machine.asked.isEmpty)
+        XCTAssertEqual(machine.reads.map { $0.resource.text("kind") }, ["file"])
+    }
+
+    @MainActor func testEachPageAMachineCannotBuildIsWordedAsTheAppWordsIt() async {
+        let failures: [(JSONValue, String)] = [
+            (.object(["kind": .string("missing"), "name": .string("index.html")]), "index.html is not in the design."),
+            (
+                .object([
+                    "kind": .string("too-large"), "name": .string("index.html"), "size": .number(20),
+                    "limit": .number(10),
+                ]), "This page is too large to show."
+            ),
+            (.object(["kind": .string("not-text"), "name": .string("index.html")]), "index.html is not a text file."),
+        ]
+        for (built, words) in failures {
+            let machine = DesignMachine(answersPage: true)
+            machine.built = built
+            do {
+                _ = try await Self.page(machine)
+                XCTFail("\(built) built a page")
+            } catch {
+                XCTAssertEqual(error.localizedDescription, words)
+            }
+            XCTAssertTrue(machine.reads.isEmpty)
+        }
+    }
+
+    @MainActor private static func page(_ machine: DesignMachine) async throws -> Data {
+        try await DesignFiles.page(
+            "index.html", folder: "/p/site", design: "site", project: "project-1", client: machine,
+            read: { path, maxBytes in
+                try await machine.readResource(
+                    .object(["kind": .string("file"), "path": .string(path)]), maxBytes: maxBytes)
+            })
+    }
+}
+
+/// A machine that builds a design page or, before `design.page`, hands out the files of the folder.
+@MainActor private final class DesignMachine: MachineRequesting, MachineFeatures {
+    let answersPage: Bool
+    var built: JSONValue = .null
+    var page = Data()
+    var files: [String: Data] = [:]
+    private(set) var asked: [JSONValue] = []
+    private(set) var reads: [(resource: JSONValue, offset: Int)] = []
+
+    init(answersPage: Bool) { self.answersPage = answersPage }
+
+    func answers(_ type: WireRequest) -> Bool { answersPage && type == .designPage }
+
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
+        guard type == .designPage else { throw MachineClientError.invalid(type.rawValue) }
+        asked.append(payload)
+        return built
+    }
+
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+        {}
+    }
+
+    func readBytes(_ payload: JSONValue) async throws -> BytesPiece {
+        let resource = payload["resource"] ?? .null
+        let offset = Int(payload["offset"]?.numberValue ?? 0)
+        let length = Int(payload["length"]?.numberValue ?? 0)
+        reads.append((resource, offset))
+        let held = resource.text("kind") == "designPage" ? page : files[resource.text("path")]
+        guard let held else { throw MachineClientError.server(code: "not-found", message: "That file is not there") }
+        return BytesPiece(
+            mime: "text/html", size: held.count, version: "1", offset: offset,
+            data: held.subdata(in: offset..<min(held.count, offset + length)))
+    }
 }

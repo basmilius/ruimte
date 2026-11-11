@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { readFile, rm } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { visualFileName } from '@adecore/agents/chat';
 import { ManualClock } from '@adecore/agents/testing';
@@ -23,11 +23,12 @@ let root: string;
 let home: string;
 let folder: string;
 let store: ProjectStore;
+let projectId: string;
 let clock: ManualClock;
 let running: TestDaemon[];
 
 beforeEach(async () => {
-    ({ root, home, folder, store } = await releasedProject('ruimte-visuals-', leadAndShellProject()));
+    ({ root, home, folder, store, projectId } = await releasedProject('ruimte-visuals-', leadAndShellProject()));
     clock = new ManualClock();
     running = [];
 });
@@ -245,6 +246,42 @@ describe('previews and measured heights', () => {
             { chatId: 'chat-lead', html: PAGE, width: 400, appearance: 'light' }
         ]);
         expect(await daemon.chats.listVisuals('chat-lead')).toEqual([]);
+    });
+
+    test('a preview of a design page draws it with the files of its folder, and refuses html beside it and a page outside the design folders', async () => {
+        const design = join(folder, '.ruimte', 'private', 'designs', 'board');
+        await mkdir(design, { recursive: true });
+        await writeFile(join(design, 'index.html'), '<iframe src="two.html"></iframe>');
+        await writeFile(join(design, 'two.html'), '<p>two</p>');
+        await writeFile(join(folder, 'outside.html'), '<p>outside</p>');
+        await store.mutate(projectId, (content) => ({
+            content: { ...content, views: [...content.views, { kind: 'design', id: 'board', name: 'Board', node: {}, path: 'board' }] },
+            result: null
+        }));
+        const asked: string[] = [];
+        const preview = async (_chatId: string, input: { html: string }): Promise<VisualPreview> => {
+            asked.push(input.html);
+            return previewed();
+        };
+        const daemon = await bootWithChat({ visualRender: { preview } });
+
+        expect((await invokeTool(daemon, 'chat-lead', 'visual_preview', { design_page: join(design, 'index.html') }))[0]).toStartWith('shot\t');
+        expect((await invokeTool(daemon, 'chat-lead', 'visual_preview', { design_page: '.ruimte/private/designs/board/two.html' }))[0]).toStartWith('shot\t');
+        expect(asked[0]).toContain('<script data-ruimte-pages>');
+        expect(asked[0]).toEndWith('<iframe src="data:text/html;charset=utf-8,%3Cp%3Etwo%3C/p%3E%3C!--"></iframe>');
+        expect(asked[1]).toBe('<p>two</p>');
+
+        expect(await invokeTool(daemon, 'chat-lead', 'visual_preview', { html: PAGE, design_page: join(design, 'index.html') })).toEqual([
+            'refused\ttwo-pages\tvisual_preview takes html or design_page, not both'
+        ]);
+        expect(await invokeTool(daemon, 'chat-lead', 'visual_preview', { design_page: join(folder, 'outside.html') })).toEqual([
+            'refused\tnot-a-design-page\tdesign_page takes the path of an HTML page inside a design folder of this project',
+            `folder\t${design}`
+        ]);
+        expect(
+            refusalCode(await invokeTool(daemon, 'chat-lead', 'visual_preview', { design_page: join(design, '..', '..', '..', '..', 'outside.html') }))
+        ).toBe('not-a-design-page');
+        expect(asked).toHaveLength(2);
     });
 
     test('a quiet page gets a note, and a page taller than its shot says how much the shot covers', async () => {

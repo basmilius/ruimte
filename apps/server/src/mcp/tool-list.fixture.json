@@ -3181,6 +3181,9 @@
                     },
                     "html": {
                         "type": "string"
+                    },
+                    "design_page": {
+                        "type": "string"
                     }
                 }
             },

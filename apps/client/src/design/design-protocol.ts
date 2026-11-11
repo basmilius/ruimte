@@ -1,5 +1,5 @@
+import { assetPathOf, DESIGN_ASSET_METHOD, isPagePath } from '@ruimte/contracts';
 import { z } from 'zod';
-import { assetPathOf, isPagePath } from '@/design/design-page';
 import type { DesignCamera } from '@/state/design-chat';
 
 /* The methods between the stage and the runtime in a design page, beside the bridge of every visual. */
@@ -31,7 +31,7 @@ export const DESIGN_METHODS = {
     // From the page: the options and the element under that drawing.
     located: 'ruimte/design/located',
     // Both ways: a file of the folder a page's script named while it ran, and its bytes, or null when it gets none.
-    asset: 'ruimte/design/asset'
+    asset: DESIGN_ASSET_METHOD
 } as const;
 
 export type DesignTool = 'view' | 'comment' | 'edit' | 'draw';

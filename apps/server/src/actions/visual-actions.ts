@@ -1,8 +1,9 @@
 import { CodedError } from '@adecore/agents';
 import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers } from '@ruimte/actions';
-import { VISUAL_LIMITS, type ChatVisual, type VisualLayout } from '@ruimte/contracts';
+import { DesignPageError, VISUAL_LIMITS, type ChatVisual, type DesignPageFailure, type VisualLayout } from '@ruimte/contracts';
 import { field, orNote } from '../canvas/host.ts';
+import { assembleDesignPage, designFoldersOf, designPageByPath } from '../fs/design-page.ts';
 import type { VisualHost } from '../visuals/agent-host.ts';
 import { PREVIEW_WIDTH } from '../visuals/renderer.ts';
 import { hostService, requireChatCaller, type ServerActionContext } from './context.ts';
@@ -55,6 +56,48 @@ async function visualChat(context: ServerActionContext, caller: string): Promise
     return { visuals, chatId };
 }
 
+function designFailureRefusal(failure: DesignPageFailure, folder: string): ToolRefusal {
+    switch (failure.kind) {
+        case 'missing':
+            return new ToolRefusal('design-page-missing', `design_page names ${failure.name}, which is not in the design folder ${folder}`);
+        case 'too-large':
+            return new ToolRefusal(
+                'visual-too-large',
+                `${failure.name} with what it carries is ${failure.size} bytes, and a page may be at most ${failure.limit}; load libraries from a public CDN URL and refer to large images by their http(s) URL`
+            );
+        case 'not-text':
+            return new ToolRefusal('design-page-not-text', `design_page names ${failure.name}, which is not UTF-8 text`);
+    }
+}
+
+/*
+ * A page of a design folder of the caller's project standing on its own, built as the design view builds
+ * it, so a preview shows what a person sees. A path outside every design folder of the project is refused
+ * with the folders it may name.
+ */
+async function designPageHtml(context: ServerActionContext, path: string): Promise<string> {
+    const designs = hostService(context, 'designs', 'unavailable', 'This machine reads no designs; pass the page as html');
+    const { projectId, folder } = context.place;
+    const project = { folder, ...(await designs.sides(projectId)) };
+    const page = designPageByPath(project, path);
+    if (page === null) {
+        const folders = designFoldersOf(project).map((design) => `folder\t${field(design.folder)}`);
+        throw new ToolRefusal(
+            'not-a-design-page',
+            'design_page takes the path of an HTML page inside a design folder of this project',
+            orNote(folders, 'This project has no design')
+        );
+    }
+    try {
+        return await assembleDesignPage(folder, page);
+    } catch (e) {
+        if (e instanceof DesignPageError) {
+            throw designFailureRefusal(e.failure, page.folder);
+        }
+        throw e;
+    }
+}
+
 async function storeRefusalsAsTool<Result>(work: () => Promise<Result>): Promise<Result> {
     try {
         return await work();
@@ -101,8 +144,12 @@ export const visualActions: ActionHandlers<ServerActionContext> = {
     'visual.show': async ({ title, html, maxHeight, layout }, { actor, context }) => ({
         output: { visual: await showVisual(context, actor.id, { title, html, maxHeight, ...(layout === undefined ? {} : { layout }) }) }
     }),
-    'visual.preview': async ({ html, width, appearance }, { actor, context }) => {
+    'visual.preview': async ({ html: given, width, appearance, designPage }, { actor, context }) => {
         const { visuals, chatId } = await visualChat(context, actor.id);
+        if (designPage !== undefined && given.trim() !== '') {
+            throw new ToolRefusal('two-pages', 'visual_preview takes html or design_page, not both');
+        }
+        const html = designPage === undefined ? given : await designPageHtml(context, designPage);
         if (html.trim() === '') {
             throw new ToolRefusal('visual-invalid', 'The page is empty; pass one self-contained HTML document');
         }

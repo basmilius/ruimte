@@ -1,5 +1,3 @@
-import { formatBytes } from '@adecore/ui/format';
-import i18next from 'i18next';
 import {
     assetPathOf,
     assetReferences,
@@ -10,13 +8,28 @@ import {
     isPagePath,
     pageDataUrl,
     pageMentions,
+    runtimeAssetsElement,
     takeRoom,
     withAssets,
-    withFramedPages
-} from '@/design/design-page';
-import { runtimeAssetsElement, withRuntimeAssets } from '@/design/design-runtime';
+    withFramedPages,
+    withRuntimeAssets
+} from './design-page.ts';
+import type { DesignPageFailure } from './design.ts';
 
-/* The files of a design folder by their path inside it. Either read throws when the file cannot be read. */
+/* A page that cannot be built, with what a client words for a person in its own language. */
+export class DesignPageError extends Error {
+    readonly failure: DesignPageFailure;
+
+    constructor(failure: DesignPageFailure) {
+        super(`${failure.name}: ${failure.kind}`);
+        this.failure = failure;
+    }
+}
+
+/*
+ * The files of a design folder by their path inside it. Either read throws when the file cannot be read;
+ * what `readPage` throws for the page asked for reaches the caller, so a `DesignPageError` there says why.
+ */
 export type DesignFiles = {
     readPage(path: string): Promise<{ text: string; size: number }>;
     readAsset(path: string): Promise<{ url: string; size: number }>;
@@ -76,7 +89,7 @@ async function inlinePage(inlining: Inlining, file: string, text: string, chain:
 
     // The script that shows the files of a page is not optional, so a page it cannot fit beside is not built at all.
     if (required > DESIGN_PAGE_MAX_BYTES) {
-        throw new Error(i18next.t('shell:design.pageTooLarge', { name: file, size: formatBytes(required), limit: formatBytes(DESIGN_PAGE_MAX_BYTES) }));
+        throw new DesignPageError({ kind: 'too-large', name: file, size: required, limit: DESIGN_PAGE_MAX_BYTES });
     }
 
     const room = { left: DESIGN_PAGE_MAX_BYTES - byteLength(text) - scriptsWeight(from) };
@@ -160,36 +173,4 @@ async function framedPageUrl(inlining: Inlining, path: string, chain: readonly s
     } catch {
         return null;
     }
-}
-
-/*
- * What the stage reads for the files a page's script names while it runs: each once however often it is
- * asked, by the page or the pages it frames, and up to the bounds of a visual all together. Null for a
- * file it cannot or may not read, which the page shows as a broken path.
- */
-export function runtimeAssets(read: (path: string) => Promise<Blob>): (path: string) => Promise<Blob | null> {
-    const asked = new Map<string, Promise<Blob | null>>();
-    let total = 0;
-
-    return (path) => {
-        let bytes = asked.get(path);
-
-        if (bytes === undefined) {
-            bytes = read(path).then(
-                (blob) => {
-                    if (total + blob.size > DESIGN_PAGE_MAX_BYTES) {
-                        return null;
-                    }
-
-                    total += blob.size;
-
-                    return blob;
-                },
-                () => null
-            );
-            asked.set(path, bytes);
-        }
-
-        return bytes;
-    };
 }

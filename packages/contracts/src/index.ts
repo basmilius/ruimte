@@ -17,6 +17,7 @@ import { CHAT_SEARCH_REQUEST_SCHEMAS } from './chat-search.ts';
 import { CLAUDE_API_REQUEST_SCHEMAS } from './claude-api.ts';
 import { COMPUTER_REQUEST_SCHEMAS, COMPUTER_EVENT_SCHEMAS } from './computer.ts';
 import { DATABASE_REQUEST_SCHEMAS, DATABASE_EVENT_SCHEMAS } from './database.ts';
+import { DESIGN_REQUEST_SCHEMAS } from './design.ts';
 import { DEVICE_REQUEST_SCHEMAS, DEVICE_EVENT_SCHEMAS } from './device.ts';
 import { DIAGRAM_HOST_REQUEST_SCHEMAS, DIAGRAM_HOST_EVENT_SCHEMAS } from './diagram-host.ts';
 import { DIRECT_REQUEST_SCHEMAS, DIRECT_EVENT_SCHEMAS } from './direct.ts';
@@ -79,6 +80,9 @@ export * from './direct.ts';
 export * from './direct-handshake.ts';
 export * from './direct-liveness.ts';
 export * from './device.ts';
+export * from './design.ts';
+export { DesignPageError, inlineDesignPage, type DesignFiles } from './design-inline.ts';
+export { assetPathOf, DESIGN_ASSET_MAX_BYTES, DESIGN_ASSET_METHOD, DESIGN_PAGE_MAX_BYTES, designAssetType, isPagePath } from './design-page.ts';
 export * from './change-split.ts';
 export * from './context-sources.ts';
 export * from './database.ts';
@@ -183,6 +187,7 @@ export const REQUEST_SCHEMAS = {
     ...SESSION_PORTS_REQUEST_SCHEMAS,
     ...BROWSER_REQUEST_SCHEMAS,
     ...DEVICE_REQUEST_SCHEMAS,
+    ...DESIGN_REQUEST_SCHEMAS,
     ...RUIMTE_AGENT_REQUEST_SCHEMAS,
     ...CHAT_IMAGE_REQUEST_SCHEMAS,
     ...CHAT_SEARCH_REQUEST_SCHEMAS,

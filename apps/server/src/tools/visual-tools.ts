@@ -63,11 +63,18 @@ const visualPreview = defineActionTool('visual', {
             .optional()
             .describe(`CSS pixels; the reply column is ${PREVIEW_WIDTH.default}`),
         appearance: z.enum(['dark', 'light'], { error: 'appearance is dark or light' }).optional(),
-        html: z.string().optional()
+        html: z.string().optional(),
+        // The design note tells a design chat what it takes, so every other session pays nothing for a description.
+        design_page: z.string().optional()
     }),
     async run(input, call) {
         const page = await pageOf('preview', input.html, call);
-        const shown = await runAction(call, 'visual.preview', { html: page.html, width: input.width ?? null, appearance: input.appearance ?? null });
+        const shown = await runAction(call, 'visual.preview', {
+            html: page.html,
+            width: input.width ?? null,
+            appearance: input.appearance ?? null,
+            ...(input.design_page === undefined ? {} : { designPage: input.design_page })
+        });
         call.image(shown.path);
 
         return [

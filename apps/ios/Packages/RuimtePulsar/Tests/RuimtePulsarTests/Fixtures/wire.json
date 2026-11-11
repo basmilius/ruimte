@@ -201,6 +201,7 @@
     "database.passwords",
     "database.request",
     "database.snapshot.refresh",
+    "design.page",
     "device.action",
     "device.boot",
     "device.capture",

@@ -297,6 +297,10 @@
     "filesView": {
         "failed": "These files could not be shown"
     },
+    "pageFrame": {
+        "failed": "Could not show {{name}}. {{reason}}",
+        "readAgain": "Read again"
+    },
     "design": {
         "pages": "Page",
         "pageChanged": "Changed {{ago}}",
@@ -308,9 +312,9 @@
         "failed": "The design could not be shown.",
         "failedAction": "The design could not do that",
         "listFailed": "The pages could not be read. {{reason}}",
-        "pageFailed": "Could not show {{name}}. {{reason}}",
         "pageTooLarge": "It is {{size}}, and a page holds at most {{limit}}.",
         "pageNotText": "{{name}} is not a text file.",
+        "pageMissing": "{{name}} is not in the design.",
         "readAgain": "Read again",
         "deletePage": {
             "action": "Delete {{name}}",

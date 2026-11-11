@@ -91,6 +91,7 @@ describe('wireDaemon', () => {
                 'computer',
                 'context',
                 'databases',
+                'designs',
                 'devices',
                 'diagrams',
                 'drawings',

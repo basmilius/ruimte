@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
-import type { FsEntry, ProjectView } from '@ruimte/contracts';
+import { REQUEST_SCHEMAS, type FsEntry, type ProjectView, type RequestType } from '@ruimte/contracts';
 import { act } from 'react';
 import { DESIGN_METHODS } from '@/design/design-protocol';
 import { useDesignChat } from '@/state/design-chat';
@@ -18,6 +18,8 @@ function page(name: string, mtime: number): FsEntry {
 
 const DESIGN: ProjectView = { kind: 'design', id: 'pricing', name: 'Pricing', path: 'pricing', node: { provider: 'claude' } };
 
+const EVERY_REQUEST = Object.keys(REQUEST_SCHEMAS) as RequestType[];
+
 const PAGES = [page('1a Calm.html', 100), page('2a Dense.html', 300), page('1b Bold.html', 200)];
 
 let machine: FakeMachine;
@@ -35,6 +37,8 @@ beforeEach(async () => {
     restoreLayout = layOutChat();
     listing = PAGES;
     machine = new FakeMachine();
+    // A machine from before `design.page`, so the page is built here from the files it reads; the tests of that request turn it on.
+    machine.answersOnly(EVERY_REQUEST.filter((type) => type !== 'design.page'));
     listError = null;
     machine.answer('fs.list', ({ path }) => {
         if (path === FOLDER && listError !== null) {
@@ -146,6 +150,7 @@ describe('a design view', () => {
         await until(() => fetched.mock.calls.length > 0 && mounted.host.querySelector('[role="progressbar"]') === null);
 
         expect(mounted.host.textContent).not.toContain('Could not show');
+        expect(machine.requests('design.page')).toEqual([]);
         fetched.mockRestore();
     });
 
@@ -307,5 +312,44 @@ describe('a design view', () => {
         await until(() => button('3a Airy') !== null);
 
         expect(shownPage()).toBe('2a Dense');
+    });
+});
+
+describe('a design view on a machine that builds its pages', () => {
+    async function showAgain(): Promise<void> {
+        machine.answersOnly(EVERY_REQUEST);
+        await mounted.unmount();
+        mounted = mount();
+        await mounted.renderApp();
+    }
+
+    test('asks the machine for the page and reads it as bytes', async () => {
+        const html = '<!doctype html><title>Built</title>';
+
+        machine.answer('design.page', () => ({ kind: 'page' as const, pageId: 'page-1', size: html.length }));
+        machine.answer('bytes.read', ({ offset }) => ({
+            mime: 'text/html; charset=utf-8',
+            size: html.length,
+            version: 'page-1',
+            offset,
+            data: btoa(html.slice(offset))
+        }));
+        await showAgain();
+
+        await until(() => machine.requests('bytes.read').length > 0 && mounted.host.querySelector('[role="progressbar"]') === null);
+
+        expect(machine.requests('design.page')).toEqual([{ projectId: expect.any(String), designId: 'pricing', file: '2a Dense.html' }]);
+        expect(machine.requests('bytes.read')[0]!.resource).toEqual({ kind: 'designPage', pageId: 'page-1' });
+        expect(mounted.host.textContent).not.toContain('Could not show');
+    });
+
+    test('says in its own words why the machine built no page', async () => {
+        machine.answer('design.page', ({ file }) => ({ kind: 'too-large' as const, name: file, size: 17 * 1024 * 1024, limit: 16 * 1024 * 1024 }));
+        await showAgain();
+
+        await until(() => mounted.host.textContent?.includes('a page holds at most') === true);
+
+        expect(mounted.host.textContent).toContain('Could not show 2a Dense.html');
+        expect(machine.requests('bytes.read')).toEqual([]);
     });
 });

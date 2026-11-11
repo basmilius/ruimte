@@ -486,6 +486,47 @@ enum DesignFiles {
         return Data(html.utf8)
     }
 
+    /// One page standing on its own. A machine that answers `design.page` builds it next to the files, so the page
+    /// travels once instead of every file it names; an older one hands out the files and the page is built here.
+    @MainActor static func page(
+        _ file: String, folder: String, design: String, project: String, client: any MachineRequesting,
+        read: @escaping @Sendable (String, Int) async throws -> MachineResource
+    ) async throws -> Data {
+        guard !project.isEmpty, (client as? MachineFeatures)?.answers(.designPage) == true else {
+            return try await standalonePage(file, folder: folder, read: read)
+        }
+        return try await builtPage(file, design: design, project: project, client: client)
+    }
+
+    @MainActor private static func builtPage(
+        _ file: String, design: String, project: String, client: any MachineRequesting
+    ) async throws -> Data {
+        // With the bootstrap of a visual, which sets the theme a page draws in; the app has none of its own to add.
+        let built = try await client.request(
+            .designPage,
+            payload: .object([
+                "projectId": .string(project), "designId": .string(design), "file": .string(file),
+                "bootstrap": .bool(true),
+            ]))
+        let name = built.text("name")
+        switch built.text("kind") {
+        case "missing":
+            throw MachineClientError.invalid(String(localized: "\(name) is not in the design."))
+        case "too-large":
+            throw MachineClientError.invalid(String(localized: "This page is too large to show."))
+        case "not-text":
+            throw MachineClientError.invalid(String(localized: "\(name) is not a text file."))
+        default:
+            break
+        }
+        // The machine lets go of the page once every byte went out, so a read that starts over would find nothing.
+        let page = try await client.readResource(
+            .object(["kind": .string("designPage"), "pageId": .string(built.text("pageId"))]), maxBytes: pageMaxBytes,
+            restarts: 0)
+        // Decoded as the page built here is, so a byte that is no UTF-8 shows the same on both paths.
+        return Data(String(decoding: page.data, as: UTF8.self).utf8)
+    }
+
     private final class Inlining {
         let folder: String
         let read: @Sendable (String, Int) async throws -> MachineResource

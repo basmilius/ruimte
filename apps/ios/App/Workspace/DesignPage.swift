@@ -37,7 +37,10 @@ struct DesignPage: View {
             .padding(.horizontal, 16).padding(.vertical, 8)
             switch side {
             case .chat: chatSide
-            case .pages: DesignPagesList(client: workspace.client, folder: folder, workspaceFolder: workspace.folder)
+            case .pages:
+                DesignPagesList(
+                    client: workspace.client, folder: folder, workspaceFolder: workspace.folder, design: design.id,
+                    project: workspace.projectID)
             }
         }
         .toolbar {
@@ -113,6 +116,8 @@ private struct DesignPagesList: View {
     let client: any MachineRequesting
     let folder: String
     let workspaceFolder: String
+    let design: String
+    let project: String
     @State private var listing = DesignFiles.Listing()
     @State private var open: String?
 
@@ -127,7 +132,7 @@ private struct DesignPagesList: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationDestination(item: $open) { file in
-            DesignPageView(client: client, folder: folder, file: file)
+            DesignPageView(client: client, folder: folder, file: file, design: design, project: project)
         }
         // Whether the folder is there decides which changes count, so the watch starts over once it comes or goes.
         .task(id: "\(folder):\(found)") {
@@ -199,15 +204,19 @@ private struct DesignPageView: View {
     let client: any MachineRequesting
     let folder: String
     let file: String
+    let design: String
+    let project: String
     @State private var failed = false
     @State private var attempt = 0
     /// What the page reads while it runs, bounded per time the page is opened.
     @State private var assets: DesignFiles.RuntimeAssets
 
-    init(client: any MachineRequesting, folder: String, file: String) {
+    init(client: any MachineRequesting, folder: String, file: String, design: String, project: String) {
         self.client = client
         self.folder = folder
         self.file = file
+        self.design = design
+        self.project = project
         _assets = State(initialValue: Self.assets(client, folder: folder))
     }
 
@@ -233,7 +242,10 @@ private struct DesignPageView: View {
         ChatVisualContent(
             visual: ChatVisual(id: "\(folder)/\(file)", title: DesignFiles.pageName(file), at: 0),
             failed: $failed,
-            read: { try await DesignFiles.standalonePage(file, folder: folder, read: Self.read(client)) },
+            read: {
+                try await DesignFiles.page(
+                    file, folder: folder, design: design, project: project, client: client, read: Self.read(client))
+            },
             fill: true,
             assets: assets
         )

@@ -10512,6 +10512,24 @@
               "versionId",
               "file"
             ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "designPage"
+              },
+              "pageId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              }
+            },
+            "required": [
+              "kind",
+              "pageId"
+            ]
           }
         ]
       },
@@ -34069,6 +34087,122 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
+  },
+  "request.design.page.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "designId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "file": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024
+      },
+      "bootstrap": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "projectId",
+      "designId",
+      "file"
+    ]
+  },
+  "request.design.page.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "page"
+          },
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "kind",
+          "pageId",
+          "size"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "missing"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "too-large"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "size",
+          "limit"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "not-text"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name"
+        ]
+      }
+    ]
   },
   "request.device.action.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

@@ -297,6 +297,10 @@
     "filesView": {
         "failed": "Deze bestanden konden niet worden getoond"
     },
+    "pageFrame": {
+        "failed": "{{name}} kan niet worden getoond. {{reason}}",
+        "readAgain": "Opnieuw lezen"
+    },
     "design": {
         "pages": "Pagina",
         "pageChanged": "Aangepast {{ago}}",
@@ -308,9 +312,9 @@
         "failed": "Het design kon niet worden getoond.",
         "failedAction": "Het design kon dat niet doen",
         "listFailed": "De pagina's konden niet worden gelezen. {{reason}}",
-        "pageFailed": "{{name}} kan niet worden getoond. {{reason}}",
         "pageTooLarge": "Het bestand is {{size}}, en een pagina mag hooguit {{limit}} zijn.",
         "pageNotText": "{{name}} is geen tekstbestand.",
+        "pageMissing": "{{name}} staat niet in het design.",
         "readAgain": "Opnieuw lezen",
         "deletePage": {
             "action": "{{name}} verwijderen",

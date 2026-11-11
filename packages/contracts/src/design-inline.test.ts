@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { inlineDesignPage, runtimeAssets, type DesignFiles } from './design-inline';
-import { DESIGN_PAGE_MAX_BYTES, pageDataUrl } from './design-page';
-import { runtimeAssetsElement } from './design-runtime';
+import { DesignPageError, inlineDesignPage, type DesignFiles } from './design-inline.ts';
+import { DESIGN_PAGE_MAX_BYTES, pageDataUrl, runtimeAssetsElement } from './design-page.ts';
 
 function folder(pages: Record<string, string>, assets: Record<string, number> = {}) {
     const reads = new Map<string, number>();
@@ -143,7 +142,11 @@ describe('a page with a script at the bounds of a visual', () => {
     }
 
     test('is refused when it and the script that shows its files do not fit together, rather than built past the bounds', async () => {
-        await expect(build(scripted(DESIGN_PAGE_MAX_BYTES - 1 - ((DESIGN_PAGE_MAX_BYTES - 1 - script.length) % 2)))).rejects.toThrow();
+        const refused = await build(scripted(DESIGN_PAGE_MAX_BYTES - 1 - ((DESIGN_PAGE_MAX_BYTES - 1 - script.length) % 2))).catch((e: unknown) => e);
+
+        expect(refused).toBeInstanceOf(DesignPageError);
+        expect((refused as DesignPageError).failure).toMatchObject({ kind: 'too-large', name: 'index.html', limit: DESIGN_PAGE_MAX_BYTES });
+        expect((refused as DesignPageError).failure).toHaveProperty('size', expect.any(Number));
     });
 
     test('is built within the bounds when it fits with that script', async () => {
@@ -178,26 +181,5 @@ describe('a file a page names only while it runs', () => {
         expect(await inlineDesignPage(files, 'Overview.html')).toStartWith('<head><script data-ruimte-assets>');
         expect(await inlineDesignPage(files, 'site.html')).toStartWith('<head><script data-ruimte-assets>');
         expect(await inlineDesignPage(files, 'still.html')).toBe('<p>still</p>');
-    });
-
-    test('is read once however often it is asked, and not past the bounds of a visual or when it cannot be read', async () => {
-        const reads: string[] = [];
-        const read = runtimeAssets(async (path) => {
-            reads.push(path);
-
-            if (path === 'gone.png') {
-                throw new Error('not there');
-            }
-
-            return new Blob([new Uint8Array(path === 'big.png' ? DESIGN_PAGE_MAX_BYTES : 4)]);
-        });
-
-        const [first, again] = await Promise.all([read('a.png'), read('a.png')]);
-
-        expect(first?.size).toBe(4);
-        expect(again).toBe(first);
-        expect(await read('gone.png')).toBeNull();
-        expect(await read('big.png')).toBeNull();
-        expect(reads).toEqual(['a.png', 'gone.png', 'big.png']);
     });
 });

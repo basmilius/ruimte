@@ -508,6 +508,42 @@ describe('a version drawn by what its files are', () => {
         }
     });
 
+    test('an HTML file whose read failed says why, and reading it again shows the page', async () => {
+        const width = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 800 });
+        const settings = (window as unknown as { happyDOM: { settings: { disableIframePageLoading: boolean } } }).happyDOM.settings;
+        settings.disableIframePageLoading = true;
+        try {
+            const html = '<h1>Rapport</h1>';
+            let reads = 0;
+            machine.answer('artifact.get', () => ({
+                ...DEPENDENCIES,
+                artifact: { ...DEPENDENCIES.artifact, kind: 'report' },
+                versions: [version('v-new', 2, NOW, { files: [{ name: 'rapport.html', mime: 'text/html', size: html.length, sha256: 'h' }] })]
+            }));
+            machine.answer('bytes.read', ({ offset }) => {
+                reads += 1;
+                if (reads === 1) {
+                    throw new TransportError('not-readable', 'The machine could not read it');
+                }
+                return { mime: 'text/html', size: html.length, version: 'v', offset, data: btoa(html.slice(offset)) };
+            });
+            await openPanel();
+            await until(() => text().includes('Dependency report'));
+            await clickOn(panelRow('Dependency report') ?? null);
+            await until(() => text().includes('The machine could not read it'));
+            expect(text()).toContain('Could not show rapport.html');
+            expect(page.host.querySelector('iframe[title="Dependency report"]')).toBeNull();
+
+            await clickOn(buttonWithText('Read again'));
+            await until(() => page.host.querySelector('iframe[title="Dependency report"]') !== null);
+            expect(text()).not.toContain('Could not show');
+        } finally {
+            settings.disableIframePageLoading = false;
+            Object.defineProperty(HTMLElement.prototype, 'clientWidth', width!);
+        }
+    });
+
     test('a text file of a build reads as code, and a file without a preview is a pick away', async () => {
         const log = 'compiled 42 modules\n';
         await openWith(
