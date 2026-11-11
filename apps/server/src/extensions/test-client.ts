@@ -4,7 +4,7 @@ import { parseExtensionActionInput, type ExtensionActionName } from '@ruimte/con
  * what the host holds or what the test scripted, and a hook reads the host as React draws. Held to the public types, so a
  * member the API gains and the fake lacks breaks the check rather than an author's test.
  */
-import { lazyComponentProblem, shortcutProblem } from '@ruimte/contracts/extension-client';
+import { extensionWord, lazyComponentProblem, shortcutProblem } from '@ruimte/contracts/extension-client';
 import { contextSelection } from '@ruimte/contracts/extension-context';
 import { NODE_ACCENT_COLORS } from '@ruimte/contracts/node-accents';
 import type * as PublicClient from '../../../../packages/extension/client';
@@ -369,9 +369,22 @@ export function clientApi(host: TestHost) {
             });
         },
         defineCommand: (command: object): void => host.record('command', command),
-        defineExtensionSettings(settings: { component?: unknown; fields?: unknown; groups?: unknown }): void {
+        defineExtensionSettings(settings: { component?: unknown; fields?: unknown; groups?: unknown; section?: PublicClient.SettingsSection }): void {
             if (settings.fields === undefined && settings.groups === undefined) {
                 assertLazy(settings, `defineExtensionSettings ${host.id}`);
+            }
+
+            const { section } = settings;
+
+            if (section !== undefined && section.group !== 'workspace' && section.group !== 'ai') {
+                throw new TypeError(`defineExtensionSettings ${host.id}: a section stands in the group workspace or ai`);
+            }
+
+            // An extension under test is never one Ruimte ships, so its page stays under Extensions, as in Ruimte.
+            if (section !== undefined) {
+                host.logs.push(
+                    'defineExtensionSettings: a section of its own in the settings is for the extensions Ruimte ships; this page stays under Extensions'
+                );
             }
 
             host.record('settings', settings);
@@ -543,8 +556,7 @@ export function clientApi(host: TestHost) {
 
                     return format;
                 },
-                t: (key: string, values?: Record<string, string | number>) =>
-                    Object.entries(values ?? {}).reduce((text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)), words[key] ?? key)
+                t: (key: string, values?: Record<string, string | number>) => extensionWord(words, host.language, key, values)
             };
         },
         useEvent<Name extends keyof PublicClient.ClientEvents>(name: Name, listener: (event: PublicClient.ClientEvents[Name]) => void): void {
@@ -577,6 +589,36 @@ export function clientApi(host: TestHost) {
             useHost(host);
 
             return host.providers.map((provider) => ({ ...provider }));
+        },
+        // The `computer` storage of `useStorage`, which a test reads and changes as `storage.computer` and `setStorage`.
+        storage: {
+            get<Value extends PublicClient.Json>(key: string): Value | undefined {
+                const values = host.storage.computer;
+
+                return (Object.hasOwn(values, key) ? values[key] : undefined) as Value | undefined;
+            },
+            set: (key: string, value: PublicClient.Json) =>
+                host.attempt('storage.set', [key, value], () => {
+                    host.storage.computer[key] = wire(value);
+                    host.changed();
+                }),
+            delete: (key: string) =>
+                host.attempt('storage.delete', [key], () => {
+                    delete host.storage.computer[key];
+                    host.changed();
+                }),
+            watch(key: string, listener: () => void): () => void {
+                let text = JSON.stringify(host.storage.computer[key] ?? null);
+
+                return host.subscribe(() => {
+                    const next = JSON.stringify(host.storage.computer[key] ?? null);
+
+                    if (next !== text) {
+                        text = next;
+                        listener();
+                    }
+                });
+            }
         },
         useCanvasView<Value>(select: (view: PublicClient.CanvasView) => Value): Value {
             useHost(host);

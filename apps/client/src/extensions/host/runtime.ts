@@ -1,10 +1,10 @@
 import * as agentsUi from '@adecore/agents-react/chat/ui';
 import * as charts from '@adecore/charts';
-import * as ui from '@adecore/ui';
 import * as React from 'react';
 import * as reactDom from 'react-dom';
 import * as jsxRuntime from 'react/jsx-runtime';
 import { consoleFor } from '@/extensions/dev-log';
+import * as ui from '@/extensions/host/extension-ui';
 import { loadOf } from '@/extensions/host/loads';
 
 export { forgetExtension, registerExtension } from '@/extensions/host/loads';

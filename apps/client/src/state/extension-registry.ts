@@ -27,9 +27,9 @@ export interface SettingsSearchRow {
 export interface SettingsSectionContribution {
     id: string;
     icon: LucideIcon;
-    group: 'workspace';
-    // The core section it comes after, so a built-in stays where a person knows it.
-    after: string;
+    group: 'workspace' | 'ai';
+    // The core section it comes after, so a built-in stays where a person knows it; at the end of its group without one.
+    after?: string;
     labelKey: string;
     descriptionKey: string;
     component: ComponentType;

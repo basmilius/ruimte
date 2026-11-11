@@ -98,6 +98,7 @@ export const EXTENSION_CALLS_WITHOUT_PERMISSION: readonly string[] = [
     'storage.get',
     'storage.set',
     'storage.delete',
+    'storage.watch',
     'secrets.get',
     'secrets.set',
     'machine.run',
@@ -178,4 +179,50 @@ export function extensionProjectPath(folder: string, path: string): string | nul
     }
 
     return joined;
+}
+
+/* What an extension's `locales/<language>.json` holds: words, by key, nested as deep as it likes. */
+export interface ExtensionWords {
+    readonly [key: string]: string | ExtensionWords;
+}
+
+/* A language's words over English, key by key down every nested object, so a word a language lacks stays English. */
+export function wordsOver(english: ExtensionWords, own: ExtensionWords): ExtensionWords {
+    const merged: Record<string, string | ExtensionWords> = { ...english };
+
+    for (const [key, value] of Object.entries(own)) {
+        const under = merged[key];
+
+        merged[key] = typeof value === 'object' && typeof under === 'object' ? wordsOver(under, value) : value;
+    }
+
+    return merged;
+}
+
+function wordAt(words: ExtensionWords, key: string): string | undefined {
+    const flat = words[key];
+
+    if (typeof flat === 'string') {
+        return flat;
+    }
+
+    let found: string | ExtensionWords | undefined = words;
+
+    for (const part of key.split('.')) {
+        found = typeof found === 'object' ? found[part] : undefined;
+    }
+
+    return typeof found === 'string' ? found : undefined;
+}
+
+/*
+ * The words of `t` in `useLocale`, on the client and in a test alike: a key with dots reads into nested objects, and with a
+ * number `count` the form of the language for it (`<key>_one`, `<key>_other`) comes first. An unknown key reads as itself.
+ */
+export function extensionWord(words: ExtensionWords, language: string, key: string, values: Readonly<Record<string, string | number>> = {}): string {
+    const count = values.count;
+    const plural = typeof count === 'number' ? [`${key}_${new Intl.PluralRules(language).select(count)}`, `${key}_other`] : [];
+    const text = [...plural, key].map((each) => wordAt(words, each)).find((each) => each !== undefined) ?? key;
+
+    return Object.entries(values).reduce((written, [name, value]) => written.replaceAll(`{{${name}}}`, String(value)), text);
 }

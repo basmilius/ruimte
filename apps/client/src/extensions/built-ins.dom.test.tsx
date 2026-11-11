@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import type { ExtensionManifest } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { defineBuiltIn } from '@/extensions/built-ins';
+import { settingsGroupsWith } from '@/settings/sections';
 import { startSharedStorage } from '@/shared-storage';
 import { useContributions } from '@/state/extension-registry';
 import { until } from '../../testing/dom';
@@ -103,6 +105,34 @@ describe('a built-in', () => {
         const installed = clientApiFor({ manifest: manifest('acme.names'), base: '/', disposers: [], settings: null });
 
         expect(Object.keys(await apiOf('acme.names')).sort()).toEqual(Object.keys(installed).sort());
+    });
+
+    test('gets a section of its own in the settings, where an installed extension keeps its page under Extensions', async () => {
+        const section = { group: 'workspace', after: 'views', label: 'section.label', description: 'section.description' } as const;
+        const words = { section: { label: 'Acme', description: 'What Acme does.' } };
+
+        takeOuts.push(
+            defineBuiltIn({
+                manifest: manifest('acme.section'),
+                words: { en: async () => ({ default: words }) },
+                activate: async () => ({
+                    default: () => {
+                        void apiOf('acme.section').then((api) => api.defineExtensionSettings({ component: async () => ({ default: () => null }), section }));
+                    }
+                })
+            })
+        );
+
+        const { clientApiFor } = await import('./host/client-api');
+        const installed = clientApiFor({ manifest: manifest('acme.installed'), base: '/', disposers: [], settings: null });
+
+        installed.defineExtensionSettings({ component: async () => ({ default: () => null }), section });
+        await until(() => useContributions.getState().settingsSections.some((each) => each.id === 'acme.section'));
+        await until(() => i18next.t('extension-acme.section:section.label') === 'Acme');
+
+        expect(useContributions.getState().settingsSections.map((each) => each.id)).not.toContain('acme.installed');
+        expect(useContributions.getState().extensionSettings.map((each) => each.id)).toContain('acme.installed');
+        expect(settingsGroupsWith(useContributions.getState().settingsSections)[1]?.sections.map((each) => each.id)).toContain('acme.section');
     });
 
     test('runs nothing in safe mode', async () => {

@@ -108,6 +108,8 @@ export interface ClientWorld {
     failures(): { text: string; detail: string }[];
     /* Each view `views.focus` handed the keyboard to. */
     focused(): string[];
+    /* The sections of their own this extension has in the settings navigation. */
+    settingsSections(): string[];
 }
 
 export type OpenClientWorld = (permissions: Record<string, string>, seed?: WorldSeed) => Promise<ClientWorld>;
@@ -802,6 +804,56 @@ export function clientContract(open: OpenClientWorld): void {
 
             expect(world.slot('beside', 'viewAccessory', { target: { id: 'c', kind: 'chat' }, composer: { top: 4, right: 20, width: 400 } })).toBe('chat 4');
             expect(world.slot('beside', 'viewAccessory', { target: { id: 't', kind: 'terminal' }, composer: null })).toBe('terminal none');
+        });
+
+        test('keeps a value on this computer outside a component, which useStorage reads and a watch hears change', async () => {
+            const world = await open({});
+            const { api, createElement: h } = world;
+            let heard = 0;
+            const stop = api.storage.watch('count', () => {
+                heard += 1;
+            });
+
+            expect(api.storage.get('count')).toBeUndefined();
+            expect(api.storage.set('count', 2)).toStrictEqual({ ok: true, value: undefined });
+            expect(api.storage.get('count')).toBe(2);
+
+            const Count = () => h('p', null, `count ${api.useStorage('count', 0)[0]}`);
+            const screen = await world.render(Count);
+
+            expect(screen.text()).toBe('count 2');
+
+            await world.fromOtherWindow({ storage: 'count', value: 3 });
+            await screen.until(() => screen.text() === 'count 3');
+            expect(api.storage.delete('count')).toStrictEqual({ ok: true, value: undefined });
+            stop();
+            api.storage.set('count', 4);
+
+            expect(heard).toBe(3);
+            expect(api.storage.get('count')).toBe(4);
+        });
+
+        test('keeps the settings page of an extension Ruimte does not ship under Extensions, also when it asks for a section', async () => {
+            const world = await open({});
+
+            world.api.defineExtensionSettings({
+                component: async () => ({ default: () => null }),
+                section: { group: 'workspace', after: 'views', label: 'section.label', description: 'section.description' }
+            });
+
+            expect(world.settingsSections()).toEqual([]);
+            expect(() =>
+                world.api.defineExtensionSettings({
+                    component: async () => ({ default: () => null }),
+                    section: { group: 'elsewhere' as 'ai', label: 'a', description: 'b' }
+                })
+            ).toThrow(TypeError);
+        });
+
+        test('hands out the rows and sections of a settings page with the components', async () => {
+            const { ui } = await open({});
+
+            expect([typeof ui.SettingsRow, typeof ui.SettingsSection]).not.toContain('undefined');
         });
 
         test('lists the agents the machine can start', async () => {

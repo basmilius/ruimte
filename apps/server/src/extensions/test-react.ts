@@ -53,9 +53,11 @@ export function formatModule<Module>(): Module {
     return besideExtension<Module>('@adecore/ui/format');
 }
 
-/* `@ruimte/extension/ui`, which Ruimte answers with the components of `@adecore/ui`. */
+/* `@ruimte/extension/ui`, which Ruimte answers with the components of `@adecore/ui` and the rows and sections of its settings. */
 export function uiModule(): Record<string, unknown> {
-    return besideExtension<Record<string, unknown>>('@adecore/ui');
+    const { SettingsRow, SettingsSection } = besideExtension<Record<string, unknown>>('@adecore/ui/settings');
+
+    return { ...besideExtension<Record<string, unknown>>('@adecore/ui'), SettingsRow, SettingsSection };
 }
 
 /* `@ruimte/extension/charts` and `/agents-ui`, which Ruimte answers with those of ADE CORE. */

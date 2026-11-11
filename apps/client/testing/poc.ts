@@ -1,7 +1,7 @@
 import { mock } from 'bun:test';
-import * as ui from '@adecore/ui';
 import type { ExtensionManifest } from '@ruimte/contracts';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
+import * as ui from '@/extensions/host/extension-ui';
 
 /*
  * Loads a POC's `client/index.ts` the way a pack does, with the imports a pack rewrites answered by the

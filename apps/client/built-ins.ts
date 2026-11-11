@@ -22,7 +22,7 @@ const UNBOUND_ID = '= builtInExtensionId();';
 
 // What a pack would rewrite to what the client supplies (`apps/server/src/extensions/pack.ts`).
 const HOSTED_PACKAGES: Readonly<Record<string, string>> = {
-    ui: '@adecore/ui',
+    ui: posix(fileURLToPath(new URL('./src/extensions/host/extension-ui.ts', import.meta.url))),
     'agents-ui': '@adecore/agents-react/chat/ui',
     charts: '@adecore/charts'
 };

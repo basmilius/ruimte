@@ -183,10 +183,16 @@
                 "code": "export interface SettingGroup {\n    title?: string;\n    description?: string;\n    fields: SettingField[];\n}"
             },
             {
+                "name": "SettingsSection",
+                "kind": "interface",
+                "doc": "Settings of your own component as a section of the settings navigation, beside Ruimte's own, instead of a page under Settings, Extensions. Ruimte gives a section only to the extensions it ships itself; any other extension's page stays under Extensions, and `ruimte extension dev` says so once. `label`, `description` and each row's words are keys of your `locales/`. A row of `search` leads to the `SettingsRow` of your page with that `searchId`.",
+                "code": "export interface SettingsSection {\n    /** The group of the navigation it stands in. */\n    group: 'workspace' | 'ai';\n    /** The id of the section of Ruimte it follows, such as `views`; at the end of its group without one, or when Ruimte has none of that id. */\n    after?: string;\n    /** A Lucide icon; your `assets/icon.svg` without one. */\n    icon?: string;\n    label: string;\n    description: string;\n    search?: { id: string; label: string; description: string }[];\n}"
+            },
+            {
                 "name": "defineExtensionSettings",
                 "kind": "function",
                 "doc": "Your own component, or `fields` (one card) or `groups` (a card per group) that Ruimte draws. One call takes one of the three: with `fields` or `groups` beside it, `component` is left out. Read a field with `useSetting`; keys are unique across groups.",
-                "code": "export function defineExtensionSettings(\n    settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] } | { groups: SettingGroup[] }\n): void;"
+                "code": "export function defineExtensionSettings(\n    settings: { component: LazyComponent; keywords?: string[]; section?: SettingsSection } | { fields: SettingField[] } | { groups: SettingGroup[] }\n): void;"
             },
             {
                 "name": "useSetting",
@@ -375,6 +381,12 @@
                 "code": "export function useStorage<Value>(key: string, initial: Value, scope?: 'computer' | 'project' | 'machine'): [Value, (next: Value) => void];"
             },
             {
+                "name": "storage",
+                "kind": "const",
+                "doc": "The `computer` storage of `useStorage` outside a component, which every window of this computer shares. `set` answers `limit` when the computer refused to keep it; `watch` calls back when any window, this one too, changed the key.",
+                "code": "export const storage: {\n    get<Value extends Json>(key: string): Value | undefined;\n    set(key: string, value: Json): Result<void>;\n    delete(key: string): Result<void>;\n    watch(key: string, listener: () => void): () => void;\n};"
+            },
+            {
                 "name": "useProject",
                 "kind": "function",
                 "doc": null,
@@ -443,7 +455,7 @@
             {
                 "name": "useLocale",
                 "kind": "function",
-                "doc": "Words from `locales/<language>.json`, English as the fallback, and every number and date through `format`.",
+                "doc": "Words from `locales/<language>.json`, English as the fallback, and every number and date through `format`. A key with dots reads into nested objects, `{{name}}` takes a value, and with a number `count` a key reads `<key>_one` or `<key>_other`, as the language counts.",
                 "code": "export function useLocale(): {\n    language: string;\n    t(key: string, values?: Record<string, string | number>): string;\n    format: typeof import('@adecore/ui/format');\n};"
             },
             {

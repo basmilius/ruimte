@@ -164,11 +164,29 @@ export interface SettingGroup {
 }
 
 /**
+ * Settings of your own component as a section of the settings navigation, beside Ruimte's own, instead of a page under
+ * Settings, Extensions. Ruimte gives a section only to the extensions it ships itself; any other extension's page stays
+ * under Extensions, and `ruimte extension dev` says so once. `label`, `description` and each row's words are keys of your
+ * `locales/`. A row of `search` leads to the `SettingsRow` of your page with that `searchId`.
+ */
+export interface SettingsSection {
+    /** The group of the navigation it stands in. */
+    group: 'workspace' | 'ai';
+    /** The id of the section of Ruimte it follows, such as `views`; at the end of its group without one, or when Ruimte has none of that id. */
+    after?: string;
+    /** A Lucide icon; your `assets/icon.svg` without one. */
+    icon?: string;
+    label: string;
+    description: string;
+    search?: { id: string; label: string; description: string }[];
+}
+
+/**
  * Your own component, or `fields` (one card) or `groups` (a card per group) that Ruimte draws. One call takes one of the three:
  * with `fields` or `groups` beside it, `component` is left out. Read a field with `useSetting`; keys are unique across groups.
  */
 export function defineExtensionSettings(
-    settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] } | { groups: SettingGroup[] }
+    settings: { component: LazyComponent; keywords?: string[]; section?: SettingsSection } | { fields: SettingField[] } | { groups: SettingGroup[] }
 ): void;
 export function useSetting<Value extends boolean | string>(key: string): Value;
 export function useMachine(): { id: string };
@@ -381,6 +399,16 @@ export function useServerEvent<Payload>(name: string, listener: (payload: Payloa
 export function useNodeData<Data>(): [Data, (next: Data) => void];
 /** `computer` stays on this computer. `project` and `machine` live on the machine, where `server/` reads `machine` keys too. */
 export function useStorage<Value>(key: string, initial: Value, scope?: 'computer' | 'project' | 'machine'): [Value, (next: Value) => void];
+/**
+ * The `computer` storage of `useStorage` outside a component, which every window of this computer shares. `set` answers
+ * `limit` when the computer refused to keep it; `watch` calls back when any window, this one too, changed the key.
+ */
+export const storage: {
+    get<Value extends Json>(key: string): Value | undefined;
+    set(key: string, value: Json): Result<void>;
+    delete(key: string): Result<void>;
+    watch(key: string, listener: () => void): () => void;
+};
 export function useProject(): ProjectRef & { name: string };
 export function useActiveView(): ViewRef;
 export function useViews(): { id: string; kind: string; name: string }[];
@@ -412,7 +440,11 @@ export function useCanvasView<Value>(select: (view: CanvasView) => Value): Value
 export function useInView(node: NodeRef): boolean;
 /** The color an accent of Ruimte is drawn in, as `#rrggbb`. */
 export function nodeColorValue(color: NodeColor): string;
-/** Words from `locales/<language>.json`, English as the fallback, and every number and date through `format`. */
+/**
+ * Words from `locales/<language>.json`, English as the fallback, and every number and date through `format`. A key with dots
+ * reads into nested objects, `{{name}}` takes a value, and with a number `count` a key reads `<key>_one` or `<key>_other`,
+ * as the language counts.
+ */
 export function useLocale(): {
     language: string;
     t(key: string, values?: Record<string, string | number>): string;

@@ -1,11 +1,11 @@
 import { afterEach } from 'bun:test';
 import { useChats, useProvidersStore } from '@adecore/agents-react/state';
-import * as ui from '@adecore/ui';
 import { REQUEST_SCHEMAS, type ChatSubagentItem, type ExtensionManifest, type ProjectView, type RequestMap, type RequestType } from '@ruimte/contracts';
 import { contextSelection } from '@ruimte/contracts/extension-context';
 import { act, createElement, type ComponentType, type ReactElement } from 'react';
 import { runAction } from '@/extensions/action-runs';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
+import * as ui from '@/extensions/host/extension-ui';
 import { useHostDialog } from '@/extensions/host/host-dialog-state';
 import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
 import { baseContext, nodeInfoOf, resolveSlot } from '@/extensions/slots';
@@ -432,6 +432,11 @@ clientContract(async (permissions, seed = {}) => {
                 .getState()
                 .edges.map((edge) => ({ from: edge.from, to: edge.to })),
         focused: () => [...focused],
+        settingsSections: () =>
+            useContributions
+                .getState()
+                .settingsSections.filter((section) => section.id === ID)
+                .map((section) => section.id),
         failures: () =>
             useToasts
                 .getState()

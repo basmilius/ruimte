@@ -28,7 +28,8 @@ function formatModule() {
   return besideExtension("@adecore/ui/format");
 }
 function uiModule() {
-  return besideExtension("@adecore/ui");
+  const { SettingsRow, SettingsSection } = besideExtension("@adecore/ui/settings");
+  return { ...besideExtension("@adecore/ui"), SettingsRow, SettingsSection };
 }
 function chartsModule() {
   return besideExtension("@adecore/charts");
@@ -6187,6 +6188,31 @@ function extensionProjectPath(folder, path) {
   }
   return joined;
 }
+function wordsOver(english, own) {
+  const merged = { ...english };
+  for (const [key, value] of Object.entries(own)) {
+    const under = merged[key];
+    merged[key] = typeof value === "object" && typeof under === "object" ? wordsOver(under, value) : value;
+  }
+  return merged;
+}
+function wordAt(words, key) {
+  const flat = words[key];
+  if (typeof flat === "string") {
+    return flat;
+  }
+  let found = words;
+  for (const part of key.split(".")) {
+    found = typeof found === "object" ? found[part] : undefined;
+  }
+  return typeof found === "string" ? found : undefined;
+}
+function extensionWord(words, language, key, values = {}) {
+  const count = values.count;
+  const plural = typeof count === "number" ? [`${key}_${new Intl.PluralRules(language).select(count)}`, `${key}_other`] : [];
+  const text = [...plural, key].map((each) => wordAt(words, each)).find((each) => each !== undefined) ?? key;
+  return Object.entries(values).reduce((written, [name, value]) => written.replaceAll(`{{${name}}}`, String(value)), text);
+}
 
 // packages/contracts/src/extension-context.ts
 function contextSelection(of) {
@@ -6896,7 +6922,7 @@ function wordsIn(folder, language) {
       return {};
     }
   };
-  return { ...read("en"), ...read(language) };
+  return wordsOver(read("en"), read(language));
 }
 function errorText(e) {
   return e instanceof Error ? e.message : String(e);
@@ -7776,6 +7802,13 @@ function clientApi(host) {
       if (settings.fields === undefined && settings.groups === undefined) {
         assertLazy(settings, `defineExtensionSettings ${host.id}`);
       }
+      const { section } = settings;
+      if (section !== undefined && section.group !== "workspace" && section.group !== "ai") {
+        throw new TypeError(`defineExtensionSettings ${host.id}: a section stands in the group workspace or ai`);
+      }
+      if (section !== undefined) {
+        host.logs.push("defineExtensionSettings: a section of its own in the settings is for the extensions Ruimte ships; this page stays under Extensions");
+      }
       host.record("settings", settings);
     },
     defineAction(action) {
@@ -7910,7 +7943,7 @@ function clientApi(host) {
           } });
           return format;
         },
-        t: (key, values) => Object.entries(values ?? {}).reduce((text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)), words[key] ?? key)
+        t: (key, values) => extensionWord(words, host.language, key, values)
       };
     },
     useEvent(name, listener) {
@@ -7935,6 +7968,30 @@ function clientApi(host) {
     useProviders() {
       useHost(host);
       return host.providers.map((provider) => ({ ...provider }));
+    },
+    storage: {
+      get(key) {
+        const values = host.storage.computer;
+        return Object.hasOwn(values, key) ? values[key] : undefined;
+      },
+      set: (key, value) => host.attempt("storage.set", [key, value], () => {
+        host.storage.computer[key] = wire2(value);
+        host.changed();
+      }),
+      delete: (key) => host.attempt("storage.delete", [key], () => {
+        delete host.storage.computer[key];
+        host.changed();
+      }),
+      watch(key, listener) {
+        let text = JSON.stringify(host.storage.computer[key] ?? null);
+        return host.subscribe(() => {
+          const next = JSON.stringify(host.storage.computer[key] ?? null);
+          if (next !== text) {
+            text = next;
+            listener();
+          }
+        });
+      }
     },
     useCanvasView(select) {
       useHost(host);

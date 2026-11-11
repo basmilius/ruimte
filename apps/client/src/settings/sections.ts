@@ -48,10 +48,13 @@ export function settingsGroupsWith(contributed: readonly SettingsSectionContribu
             return { label, sections };
         }
         const own = contributed.filter((section) => section.group === label);
+        const placed = (entry: SettingsSectionContribution): SettingsSectionMeta => ({ id: entry.id, icon: entry.icon });
+        // One that follows no section of this group stands at its end.
+        const last = own.filter((entry) => !sections.some((section) => section.id === entry.after));
 
         return {
             label,
-            sections: sections.flatMap((section) => [section, ...own.filter((entry) => entry.after === section.id).map(({ id, icon }) => ({ id, icon }))])
+            sections: [...sections.flatMap((section) => [section, ...own.filter((entry) => entry.after === section.id).map(placed)]), ...last.map(placed)]
         };
     });
 }

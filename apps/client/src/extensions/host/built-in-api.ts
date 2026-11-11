@@ -102,3 +102,4 @@ export const views = object('views');
 export const context = object('context');
 export const agents = object('agents');
 export const canvas = object('canvas');
+export const storage = object('storage');

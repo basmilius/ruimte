@@ -11,7 +11,9 @@ import {
     extensionCallPermission,
     extensionProjectPath,
     isExtensionSlotName,
-    missingPermissionMessage
+    missingPermissionMessage,
+    wordsOver,
+    type ExtensionWords
 } from '@ruimte/contracts/extension-client';
 import { CANVAS_GRID, DEFAULT_TITLES, groupFrame, NODE_SIZE } from '@ruimte/contracts/node-defaults';
 import type * as PublicClient from '../../../../packages/extension/client';
@@ -121,16 +123,16 @@ function manifestIn(folder: string): { id?: string; name?: string; permissions?:
     }
 }
 
-function wordsIn(folder: string, language: string): Record<string, string> {
-    const read = (name: string): Record<string, string> => {
+function wordsIn(folder: string, language: string): ExtensionWords {
+    const read = (name: string): ExtensionWords => {
         try {
-            return JSON.parse(readFileSync(join(folder, 'locales', `${name}.json`), 'utf8')) as Record<string, string>;
+            return JSON.parse(readFileSync(join(folder, 'locales', `${name}.json`), 'utf8')) as ExtensionWords;
         } catch {
             return {};
         }
     };
 
-    return { ...read('en'), ...read(language) };
+    return wordsOver(read('en'), read(language));
 }
 
 function errorText(e: unknown): string {
@@ -172,7 +174,7 @@ export class TestHost {
     readonly logs: string[] = [];
     readonly storage: { computer: Record<string, Json>; project: Record<string, Json>; machine: Record<string, Json> };
     readonly settings: Record<string, boolean | string>;
-    readonly words: Record<string, string>;
+    readonly words: ExtensionWords;
     readonly serverCache = new Map<string, Promise<Result<unknown>>>();
     readonly runs: { actionId: string | null; nodeIds: readonly string[] }[] = [];
 

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { BUILT_IN_API, builtInModule } from './built-ins';
 
 const PETS = fileURLToPath(new URL('../../extensions/pets/client/', import.meta.url)).replaceAll('\\', '/');
+const EXTENSION_UI = fileURLToPath(new URL('./src/extensions/host/extension-ui.ts', import.meta.url)).replaceAll('\\', '/');
 const POC = fileURLToPath(new URL('../../extensions/poc/surfaces/client/index.ts', import.meta.url)).replaceAll('\\', '/');
 
 describe('a built-in as the client builds it', () => {
@@ -10,7 +11,7 @@ describe('a built-in as the client builds it', () => {
         const code = 'import { useNodes } from \'@ruimte/extension/client\';\nimport { Tooltip } from "@ruimte/extension/ui";\n';
 
         expect(builtInModule(`${PETS}PetFigure.tsx`, code)).toBe(
-            `import { useNodes } from '${BUILT_IN_API}?extension=ruimte.pets';\nimport { Tooltip } from "@adecore/ui";\n`
+            `import { useNodes } from '${BUILT_IN_API}?extension=ruimte.pets';\nimport { Tooltip } from "${EXTENSION_UI}";\n`
         );
     });
 

@@ -1,7 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { EXTENSION_CALLS_WITHOUT_PERMISSION, EXTENSION_CLIENT_PERMISSIONS, extensionCallPermission, extensionProjectPath } from './extension-client.ts';
+import {
+    EXTENSION_CALLS_WITHOUT_PERMISSION,
+    EXTENSION_CLIENT_PERMISSIONS,
+    extensionCallPermission,
+    extensionProjectPath,
+    extensionWord,
+    wordsOver
+} from './extension-client.ts';
 
 describe('a path an extension names', () => {
     test.each([
@@ -123,5 +130,27 @@ describe('the permission of each call', () => {
 
         expect(documented.length).toBeGreaterThan(5);
         expect(documented.filter((entry) => extensionCallPermission(entry.call) !== entry.documented)).toEqual([]);
+    });
+});
+
+describe('the words of an extension', () => {
+    const english = { pets: { title: 'Pets', frames_one: '{{count}} frame', frames_other: '{{count}} frames', use: 'Use {{name}}' }, flat: 'Flat' };
+    const dutch = wordsOver(english, { pets: { title: 'Huisdieren' } });
+
+    test('read a key with dots into nested objects, and a flat key as it is', () => {
+        expect(extensionWord(english, 'en', 'pets.title')).toBe('Pets');
+        expect(extensionWord(english, 'en', 'flat')).toBe('Flat');
+    });
+
+    test('count in the forms of the language, with each value in its place', () => {
+        expect(extensionWord(english, 'en', 'pets.frames', { count: 1 })).toBe('1 frame');
+        expect(extensionWord(english, 'en', 'pets.frames', { count: 4 })).toBe('4 frames');
+        expect(extensionWord(english, 'en', 'pets.use', { name: 'Nox' })).toBe('Use Nox');
+    });
+
+    test('keep the English of a word another language lacks, and read an unknown key as itself', () => {
+        expect(extensionWord(dutch, 'nl', 'pets.title')).toBe('Huisdieren');
+        expect(extensionWord(dutch, 'nl', 'pets.use', { name: 'Nox' })).toBe('Use Nox');
+        expect(extensionWord(dutch, 'nl', 'pets.missing')).toBe('pets.missing');
     });
 });

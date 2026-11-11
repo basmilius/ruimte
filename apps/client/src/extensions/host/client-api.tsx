@@ -8,6 +8,9 @@ import {
     extensionChatOf,
     extensionErrorCodeOf,
     extensionProjectPath,
+    extensionWord,
+    wordsOver,
+    type ExtensionWords,
     isArgumentErrorCode,
     lazyComponentProblem,
     missingPermissionMessage,
@@ -39,7 +42,14 @@ import { sendDevLog } from '@/extensions/dev-log';
 import { DevReport } from '@/extensions/DevReport';
 import { ExtensionGlyph } from '@/extensions/ExtensionTile';
 import { addFileIcons } from '@/extensions/file-icons';
-import { settingKey, useExtensionStorage, writeExtensionStorage } from '@/extensions/host/extension-storage';
+import {
+    readExtensionStorage,
+    removeExtensionStorage,
+    settingKey,
+    useExtensionStorage,
+    watchExtensionStorage,
+    writeExtensionStorage
+} from '@/extensions/host/extension-storage';
 import { ExtensionChat } from '@/extensions/host/ExtensionChat';
 import { askHost, openOverlay, type OpenOverlay } from '@/extensions/host/host-dialog-state';
 import { useMachineStorage } from '@/extensions/host/machine-storage';
@@ -391,26 +401,63 @@ function nodeStore(node: { id: string }): CanvasState {
     return store;
 }
 
-const wordsCache = new Map<string, Promise<Record<string, string>>>();
+const wordsCache = new Map<string, Promise<ExtensionWords>>();
 
-function wordsOf(extension: LoadedExtension, language: string): Promise<Record<string, string>> {
+function wordsOf(extension: LoadedExtension, language: string): Promise<ExtensionWords> {
     const own = extension.words;
     const key = own === undefined ? `${extension.base}${language}` : `${extension.manifest.id}\n${language}`;
     let words = wordsCache.get(key);
 
     if (words === undefined) {
-        const read = (name: string): Promise<Record<string, string>> =>
+        const read = (name: string): Promise<ExtensionWords> =>
             own === undefined
                 ? fetch(`${extension.base}locales/${name}.json`)
-                      .then((answer) => (answer.ok ? (answer.json() as Promise<Record<string, string>>) : {}))
+                      .then((answer) => (answer.ok ? (answer.json() as Promise<ExtensionWords>) : {}))
                       .catch(() => ({}))
-                : (own[name]?.().then(({ default: loaded }) => loaded as Record<string, string>) ?? Promise.resolve({}));
+                : (own[name]?.().then(({ default: loaded }) => loaded as ExtensionWords) ?? Promise.resolve({}));
 
-        words = Promise.all([read('en'), read(language)]).then(([english, own]) => ({ ...english, ...own }));
+        words = Promise.all([read('en'), read(language)]).then(([english, spoken]) => wordsOver(english, spoken));
         wordsCache.set(key, words);
     }
 
     return words;
+}
+
+/* Where the words of an extension's settings section live in i18next, which the settings navigation and its search read. */
+function wordsNamespaceOf(id: string): string {
+    return `extension-${id}`;
+}
+
+/*
+ * The words of an extension in i18next, in English for the search and in the language in front, again for each language a
+ * person picks until the answer stops it.
+ */
+function followWordsInI18next(extension: LoadedExtension): () => void {
+    const namespace = wordsNamespaceOf(extension.manifest.id);
+    const load = (language: string): void => {
+        void wordsOf(extension, language).then((words) => i18next.addResourceBundle(language, namespace, words, true, true));
+    };
+
+    load('en');
+    load(i18next.language);
+    i18next.on('languageChanged', load);
+
+    return () => {
+        i18next.off('languageChanged', load);
+
+        for (const language of Object.keys(i18next.store.data)) {
+            i18next.removeResourceBundle(language, namespace);
+        }
+    };
+}
+
+/*
+ * The one place that decides whether an extension may stand in the settings navigation with a section of its own: only one
+ * Ruimte ships itself. Never the manifest's publisher, which anyone can write; a store that proves an extension is Ruimte's
+ * own could widen this later.
+ */
+function grantsSettingsSection(extension: LoadedExtension): boolean {
+    return extension.builtIn === true;
 }
 
 const ARRANGE_GAP = 40;
@@ -650,6 +697,8 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             dispose();
         }
     };
+    // Where `useStorage` keeps a key on this computer, which `storage` reads and writes too.
+    const computerKey = (key: string): string => `ruimte.extension.${id}.${key}`;
     const add = <Kind extends Parameters<typeof contribute>[0]>(kind: Kind, item: Parameters<typeof contribute<Kind>>[1]): (() => void) => {
         if (!live()) {
             return () => undefined;
@@ -932,7 +981,12 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
         defineCommand(command: { id: string; title: string; run: () => void | Promise<void> }) {
             add('commands', { id: `extension:${id}/${command.id}`, title: command.title, run: command.run, onFailure: reportFailure(command.id) });
         },
-        defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] } | { groups: SettingGroup[] }) {
+        defineExtensionSettings(
+            settings:
+                | { component: LazyComponent; keywords?: string[]; section?: PublicClient.SettingsSection }
+                | { fields: SettingField[] }
+                | { groups: SettingGroup[] }
+        ) {
             if ('fields' in settings || 'groups' in settings) {
                 const groups = 'groups' in settings ? settings.groups : [{ fields: settings.fields }];
 
@@ -942,7 +996,40 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             }
 
             assertLazy(settings, `defineExtensionSettings ${id}`);
-            add('extensionSettings', { id, component: surfaceOf(extension, settings) as ComponentType, keywords: settings.keywords ?? [] });
+
+            const component = surfaceOf(extension, settings) as ComponentType;
+            const { section } = settings;
+
+            if (section !== undefined && section.group !== 'workspace' && section.group !== 'ai') {
+                throw new TypeError(`defineExtensionSettings ${id}: a section stands in the group workspace or ai`);
+            }
+
+            if (section !== undefined && grantsSettingsSection(extension)) {
+                const words = wordsNamespaceOf(id);
+
+                hold(followWordsInI18next(extension));
+
+                add('settingsSections', {
+                    id,
+                    icon: iconOf(section.icon, extension),
+                    group: section.group,
+                    ...(section.after === undefined ? {} : { after: section.after }),
+                    labelKey: `${words}:${section.label}`,
+                    descriptionKey: `${words}:${section.description}`,
+                    component,
+                    search: (section.search ?? []).map((row) => ({ id: row.id, label: `${words}:${row.label}`, description: `${words}:${row.description}` }))
+                });
+
+                return;
+            }
+
+            if (section !== undefined) {
+                reportFailure('defineExtensionSettings')(
+                    'a section of its own in the settings is for the extensions Ruimte ships; this page stays under Extensions'
+                );
+            }
+
+            add('extensionSettings', { id, component, keywords: settings.keywords ?? [] });
         },
         defineAction(action: {
             id: string;
@@ -1194,8 +1281,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             return {
                 language: i18n.language,
                 format,
-                t: (key: string, values?: Record<string, string | number>) =>
-                    Object.entries(values ?? {}).reduce((text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)), words[key] ?? key)
+                t: (key: string, values?: Record<string, string | number>) => extensionWord(words, i18n.language, key, values)
             };
         },
         useEvent<Name extends keyof ClientEvents>(name: Name, listener: (event: ClientEvents[Name]) => void) {
@@ -1233,6 +1319,25 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                     status: extensionAgentStatus(nodeStatus(node, sessions, chats, endpointId), nodeWaitAsk(node, sessions, chats, endpointId) !== null)
                 }));
         },
+        storage: {
+            get<Value extends PublicClient.Json>(key: string): Value | undefined {
+                return readExtensionStorage(computerKey(key)) as Value | undefined;
+            },
+            set: (key: string, value: PublicClient.Json) =>
+                attempt('storage.set', () => {
+                    if (!writeExtensionStorage(computerKey(key), value)) {
+                        throw new Refused('limit', `storage ${key}: this computer refused to keep it`);
+                    }
+                }),
+            delete: (key: string) => attempt('storage.delete', () => removeExtensionStorage(computerKey(key))),
+            watch(key: string, listener: () => void): () => void {
+                const stop = watchExtensionStorage(computerKey(key), whileLive(listener));
+
+                hold(stop);
+
+                return stop;
+            }
+        },
         useAgent(target: { id: string }) {
             hookPermission(useExtension(), 'useAgent');
 
@@ -1266,8 +1371,11 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 });
             }),
             pickFolder: (initial?: string) => (live() ? (desktop()?.pickFolder?.(initial) ?? Promise.resolve(null)) : Promise.resolve(null)),
+            // The section of its own where it has one, its page under Extensions otherwise.
             openSettings: whileLive(() => {
-                useUi.getState().setSettings({ open: true, section: 'extensions' });
+                const own = useContributions.getState().settingsSections.some((section) => section.id === id);
+
+                useUi.getState().setSettings({ open: true, section: own ? id : 'extensions' });
             }),
             confirm: async ({ title, body, danger }: { title: string; body: string; danger?: boolean }) =>
                 (await ask({ title, body, ...(danger === undefined ? {} : { danger }) })) !== null,
