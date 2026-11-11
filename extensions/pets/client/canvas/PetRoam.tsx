@@ -1,27 +1,17 @@
-import { useChats } from '@adecore/agents-react/state';
-import { Tooltip } from '@adecore/ui';
-import { PET_HIT_HEIGHT, PET_HIT_TOP, petNodeKey, sameStanding } from '@extensions/pets/client/canvas/placement';
-import { FIGURE, groundOf, Roam, type Obstacle } from '@extensions/pets/client/canvas/roam';
-import { petLabel, usePrefersStill } from '@extensions/pets/client/figure-support';
-import { KID_HEIGHT, KID_PAINT_WIDTH, KID_WIDTH, kidId, kidMoodsOf, petKidsOf } from '@extensions/pets/client/kids';
-import type { PetLook } from '@extensions/pets/client/paint';
-import { usePetSettings } from '@extensions/pets/client/pet-settings';
-import { PET_HEIGHT, PET_PAINT_WIDTH, PET_WIDTH, petOf, type PetMood } from '@extensions/pets/client/pet-state';
-import { PetFigure } from '@extensions/pets/client/PetFigure';
-import { useDeparting, useTeleport } from '@extensions/pets/client/teleport';
-import { onPetTick } from '@extensions/pets/client/ticker';
-import { usePetLook } from '@extensions/pets/client/use-pet-look';
-import { nodeColorOf } from '@ruimte/contracts';
+import { canvas, nodeColorValue, useAgent, useLocale, useNode, useNodes, useSubagents } from '@ruimte/extension/client';
+import { Tooltip } from '@ruimte/extension/ui';
 import { useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { accentColor } from '@/canvas-model/accents';
-import { OVERLAY_LEDGE_ATTRIBUTE, OVERLAY_WALL_ATTRIBUTE } from '@/canvas/overlay-attributes';
-import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { useEndpointId } from '@/state/current-endpoint';
-import { useSessions } from '@/state/sessions';
-import { useSnoozes } from '@/state/snooze';
-import { useTasks } from '@/state/tasks';
-import { PROMPT_STACK_ATTRIBUTE } from '@/surface/canvas/prompt-stack';
+import { petLabel, usePrefersStill } from '../figure-support';
+import { KID_HEIGHT, KID_PAINT_WIDTH, KID_WIDTH, kidId, petKidMoods } from '../kids';
+import type { PetLook } from '../paint';
+import { usePetSettings } from '../pet-settings';
+import { PET_HEIGHT, PET_PAINT_WIDTH, PET_WIDTH, petOf, type PetMood } from '../pet-state';
+import { PetFigure } from '../PetFigure';
+import { useDeparting, useTeleport } from '../teleport';
+import { onPetTick } from '../ticker';
+import { usePetLook } from '../use-pet-look';
+import { PET_HIT_HEIGHT, PET_HIT_TOP, petNodeKey, sameStanding } from './placement';
+import { FIGURE, groundOf, Roam, type Obstacle } from './roam';
 
 function boxOf(element: Element | null | undefined, layer: DOMRect, ledge: boolean): Obstacle | null {
     if (element === null || element === undefined) {
@@ -42,24 +32,24 @@ function boxOf(element: Element | null | undefined, layer: DOMRect, ledge: boole
 }
 
 /*
- * What stands at the bottom of this canvas's cell. The layer and the cell's own chrome, the dock and the
- * prompt stack, are drawn in the same box that follows the cell (`CellOverlay`), so they are looked up there.
+ * What stands at the bottom of this canvas: the floors Ruimte marks in the box its overlay is drawn in
+ * (`defineCanvasOverlay`), a ledge such as the dock to stand on and a wall such as the minimap or a
+ * prompt card to walk up to.
  */
 function obstaclesAround(layer: HTMLElement): Obstacle[] {
     const box = layer.getBoundingClientRect();
-    const cell = layer.parentElement?.parentElement ?? layer.parentElement;
-    if (cell === null) {
+    const overlay = layer.closest('[data-canvas-overlay]');
+    if (overlay === null) {
         return [];
     }
-    // A dock that hides on its own fades out, and while it is gone a pet does not stand on air.
-    const bar = cell.querySelector(`[${OVERLAY_LEDGE_ATTRIBUTE}]`)?.firstElementChild;
-    const shown = bar instanceof HTMLElement && Number.parseFloat(getComputedStyle(bar).opacity) > 0.5;
-    const stack = cell.querySelector(`[${PROMPT_STACK_ATTRIBUTE}] > [data-holds-dock]`);
-    return [
-        shown ? boxOf(bar, box, true) : null,
-        boxOf(stack, box, false),
-        ...[...cell.querySelectorAll(`[${OVERLAY_WALL_ATTRIBUTE}]`)].map((wall) => boxOf(wall, box, false))
-    ].filter((obstacle) => obstacle !== null);
+    return [...overlay.querySelectorAll('[data-canvas-floor]')]
+        .map((floor) => {
+            const ledge = floor.getAttribute('data-canvas-floor') === 'ledge';
+            // A dock that hides on its own fades out, and while it is gone a pet does not stand on air.
+            const shown = !ledge || (floor instanceof HTMLElement && Number.parseFloat(getComputedStyle(floor).opacity) > 0.5);
+            return shown ? boxOf(floor, box, ledge) : null;
+        })
+        .filter((obstacle) => obstacle !== null);
 }
 
 type OnElement = (id: string, element: HTMLElement | null) => void;
@@ -110,19 +100,15 @@ function RoamingKid({
 
 /* One pet along the bottom, placed on each beat by the layer's `Roam`, which this tells its mood, with the kids of its sub-agents behind it. */
 function RoamingPet({ id, ownPets, roam, onElement, gone }: { id: string; ownPets: ReadonlySet<string>; roam: Roam; onElement: OnElement; gone: boolean }) {
-    const { t } = useTranslation('pets');
-    const canvasStore = useCanvasStore();
-    const endpointId = useEndpointId();
-    const node = useCanvas((s) => s.nodes[id]);
-    const sessions = useSessions((s) => s.byKey);
-    const chats = useChats((s) => s.statusByKey);
-    const snoozes = useSnoozes((s) => s.byKey);
+    const { t } = useLocale();
+    const info = useNode(id);
+    const node = info.kind === 'unknown' ? undefined : info;
+    const agent = useAgent({ id });
+    const subagents = useSubagents({ id });
     const withKids = usePetSettings((s) => s.petsSubagents);
-    const tasks = useTasks((s) => s.byEndpoint);
-    const kidKey = useChats((s) => (withKids && node !== undefined ? petKidsOf(node, s.byKey, tasks, endpointId, ownPets) : ''));
-    const kids = kidMoodsOf(kidKey);
+    const kids = withKids ? petKidMoods(subagents, ownPets) : [];
     const still = usePrefersStill();
-    const live = gone || node === undefined ? null : petOf(node, sessions, chats, endpointId, snoozes);
+    const live = gone || node === undefined ? null : petOf(agent);
     const { shown, beam } = useTeleport(live === null || node === undefined ? null : { node, pet: live }, sameStanding, still);
     const pet = shown?.pet ?? null;
     const look = usePetLook(pet?.agent, id);
@@ -152,7 +138,7 @@ function RoamingPet({ id, ownPets, roam, onElement, gone }: { id: string; ownPet
     }
 
     const label = petLabel(t, home, pet.mood);
-    const accent = accentColor(nodeColorOf(home));
+    const accent = home.color === null ? undefined : nodeColorValue(home.color);
     const leaving = beam === 'out';
 
     return (
@@ -198,7 +184,7 @@ function RoamingPet({ id, ownPets, roam, onElement, gone }: { id: string; ownPet
                             onDoubleClick={(event) => event.stopPropagation()}
                             onClick={(event) => {
                                 event.stopPropagation();
-                                canvasStore.getState().goToNode(id);
+                                canvas.reveal({ id });
                             }}
                         />
                     </Tooltip>
@@ -214,7 +200,7 @@ function RoamingPet({ id, ownPets, roam, onElement, gone }: { id: string; ownPet
  * where it is. Over the canvas and under the dock, which keeps every press meant for it.
  */
 export function PetRoam({ leaving }: { leaving: boolean }) {
-    const key = useCanvas(petNodeKey);
+    const key = petNodeKey(useNodes());
     // Turned off, every pet beams out where it is; a node removed takes its pet out the same way.
     const { all, gone } = useDeparting(leaving || key === '' ? [] : key.split('\n'));
     const own = new Set(all.filter((id) => !gone.has(id)));

@@ -1,21 +1,18 @@
-import { useProviders } from '@adecore/agents-react/state';
-import { Button, Icon, IconButton, Select, Switch } from '@adecore/ui';
-import { SettingsRow } from '@adecore/ui/settings';
-import { BEAM_SETTINGS } from '@extensions/pets/client/beam';
-import { EXTRA_FIGURES, packFigures } from '@extensions/pets/client/catalog';
-import { SHEET_LIMITS, stripsOf, usePetSprites, type CustomPetSprite } from '@extensions/pets/client/custom-sprites';
-import { usePetSettings, type PetsPlace } from '@extensions/pets/client/pet-settings';
-import { CUSTOM_PET_PREFIX, FIGURE_PET_PREFIX, PET_SETS, petChoiceKey, petChoiceOfKey, petSetsWith, type PetChoice } from '@extensions/pets/client/pet-state';
-import type { DrawnSprite } from '@extensions/pets/client/pixel';
-import { PetFigureDialog, type PetFigureEdit } from '@extensions/pets/client/settings/PetFigureDialog';
-import { PetsPreview } from '@extensions/pets/client/settings/PetsPreview';
-import { PetSwitchRow } from '@extensions/pets/client/settings/PetSwitchRow';
-import { FigureTile, SubagentsTile, TeleportTile, VisitorTile } from '@extensions/pets/client/settings/PetTiles';
-import { lookOf, usePetPool } from '@extensions/pets/client/use-pet-look';
+import { useLocale, useProviders } from '@ruimte/extension/client';
+import { Button, Icon, IconButton, Select, SettingsRow, SettingsSection, Switch } from '@ruimte/extension/ui';
 import { Activity, Bot, ImageUp, MapPin, PawPrint, Pencil, Shapes, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { SettingsSection } from '@/machines/SettingsSection';
+import { BEAM_SETTINGS } from '../beam';
+import { EXTRA_FIGURES, packFigures } from '../catalog';
+import { SHEET_LIMITS, stripsOf, usePetSprites, type CustomPetSprite } from '../custom-sprites';
+import { usePetSettings, type PetsPlace } from '../pet-settings';
+import { CUSTOM_PET_PREFIX, FIGURE_PET_PREFIX, PET_SETS, petChoiceKey, petChoiceOfKey, petSetsWith, type PetChoice } from '../pet-state';
+import type { DrawnSprite } from '../pixel';
+import { lookOf, usePetPool } from '../use-pet-look';
+import { PetFigureDialog, type PetFigureEdit } from './PetFigureDialog';
+import { PetsPreview } from './PetsPreview';
+import { PetSwitchRow } from './PetSwitchRow';
+import { FigureTile, SubagentsTile, TeleportTile, VisitorTile } from './PetTiles';
 
 const PETS_PLACES: readonly PetsPlace[] = ['nodes', 'screen'];
 
@@ -38,7 +35,7 @@ function FigureRow({
     onChange: (on: boolean) => void;
     actions?: React.ReactNode;
 }) {
-    const { t } = useTranslation('pets');
+    const { t } = useLocale();
 
     return (
         <tr data-pet-set={petChoiceKey(choice)} className="border-t border-border first:border-t-0">
@@ -79,8 +76,8 @@ const BY_POOL = 'default';
  * on Default takes its pets from the figures switched on, as every CLI did before.
  */
 function AgentFigures({ sprites }: { sprites: readonly CustomPetSprite[] }) {
-    const { t } = useTranslation('pets');
-    const providers = useProviders((s) => s.providers);
+    const { t } = useLocale();
+    const providers = useProviders();
     const byAgent = usePetSettings((s) => s.petsByAgent);
     const update = usePetSettings((s) => s.update);
     const customIds = sprites.map((sprite) => sprite.id);
@@ -114,12 +111,12 @@ function AgentFigures({ sprites }: { sprites: readonly CustomPetSprite[] }) {
         <SettingsRow searchId="pets.agents" label={t('pets.agents.label')} description={t('pets.agents.description')}>
             <ul className="flex flex-col">
                 {providers.map((provider) => {
-                    const given = byAgent[provider.kind];
+                    const given = byAgent[provider.id];
                     // A figure given and removed since reads as Default, which is what the pets do then.
                     const value = given !== undefined && petChoiceOfKey(given, customIds) !== null ? given : BY_POOL;
 
                     return (
-                        <li key={provider.kind} data-pet-agent={provider.kind} className="flex items-center gap-2 border-t border-border py-2 first:border-t-0">
+                        <li key={provider.id} data-pet-agent={provider.id} className="flex items-center gap-2 border-t border-border py-2 first:border-t-0">
                             <span className="min-w-0 grow truncate text-sm text-text">{provider.name}</span>
                             <Select
                                 value={value}
@@ -127,7 +124,7 @@ function AgentFigures({ sprites }: { sprites: readonly CustomPetSprite[] }) {
                                 align="end"
                                 searchable
                                 items={items}
-                                onValueChange={(next) => give(provider.kind, next)}
+                                onValueChange={(next) => give(provider.id, next)}
                             />
                         </li>
                     );
@@ -142,8 +139,8 @@ function AgentFigures({ sprites }: { sprites: readonly CustomPetSprite[] }) {
  * come and where they stand, what they show, and the figures they come from, the built-in sets and the
  * strips a person added, which stay in this client.
  */
-export function PetsPane() {
-    const { t } = useTranslation('pets');
+export default function PetsPane() {
+    const { t } = useLocale();
     const place = usePetSettings((s) => s.petsPlace);
     const beam = usePetSettings((s) => s.petsBeam);
     const update = usePetSettings((s) => s.update);

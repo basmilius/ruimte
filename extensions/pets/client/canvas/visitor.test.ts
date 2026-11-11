@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { createVisitor, VISIT_GAP_MS, visitDelay, visitSpot, type VisitClock } from '@extensions/pets/client/canvas/visitor';
-import type { CanvasNode } from '@/state/canvas';
+import type { PetNode } from './placement';
+import { createVisitor, VISIT_GAP_MS, visitDelay, visitSpot, type VisitClock } from './visitor';
 
 function fakeClock(random: () => number = () => 0.5) {
     let now = 0;
@@ -93,26 +93,22 @@ describe('when a visitor comes', () => {
 describe('where a visitor stands', () => {
     const visible = { x: 0, y: 0, w: 1000, h: 800 };
 
-    function nodesOf(...list: Record<string, unknown>[]): Record<string, CanvasNode> {
-        return Object.fromEntries(list.map((node) => [node.id, node as unknown as CanvasNode]));
+    function node(id: string, kind: string, x: number, y: number, w: number, h: number, hidden = false): PetNode {
+        return { id, kind, title: id, x, y, w, h, hidden, groupId: null };
     }
 
     test('above a node on screen, and never on a group or a node at the edge of the view', () => {
-        const nodes = nodesOf(
-            { id: 'group', kind: 'group', x: 0, y: 100, w: 600, h: 600 },
-            { id: 'edge', kind: 'note', x: 0, y: 10, w: 200, h: 200 },
-            { id: 'plan', kind: 'note', x: 100, y: 300, w: 300, h: 200 }
-        );
-        expect(visitSpot(nodes, new Set(), visible, () => 0)).toEqual({ nodeId: 'plan', x: 124, y: 300 - 62 + 2 });
+        const nodes = [node('group', 'group', 0, 100, 600, 600), node('edge', 'note', 0, 10, 200, 200), node('plan', 'note', 100, 300, 300, 200)];
+        expect(visitSpot(nodes, visible, () => 0)).toEqual({ nodeId: 'plan', x: 124, y: 300 - 62 + 2 });
     });
 
     test('never where it would stand on another node', () => {
-        const nodes = nodesOf({ id: 'upper', kind: 'note', x: 100, y: 0, w: 300, h: 290 }, { id: 'lower', kind: 'note', x: 100, y: 300, w: 300, h: 200 });
-        expect(visitSpot(nodes, new Set(), visible, () => 0)).toBeNull();
-        expect(visitSpot(nodes, new Set(['upper']), visible, () => 0)?.nodeId).toBe('lower');
+        const lower = node('lower', 'note', 100, 300, 300, 200);
+        expect(visitSpot([node('upper', 'note', 100, 0, 300, 290), lower], visible, () => 0)).toBeNull();
+        expect(visitSpot([node('upper', 'note', 100, 0, 300, 290, true), lower], visible, () => 0)?.nodeId).toBe('lower');
     });
 
     test('nowhere when no node is in view', () => {
-        expect(visitSpot(nodesOf({ id: 'far', kind: 'note', x: 4000, y: 4000, w: 200, h: 200 }), new Set(), visible, () => 0)).toBeNull();
+        expect(visitSpot([node('far', 'note', 4000, 4000, 200, 200)], visible, () => 0)).toBeNull();
     });
 });

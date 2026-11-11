@@ -1,12 +1,13 @@
-import type { PetMood } from '@extensions/pets/client/pet-state';
-import type { TFunction } from 'i18next';
 import { useSyncExternalStore } from 'react';
-import type { CanvasNode } from '@/state/canvas';
+import type { PetMood } from './pet-state';
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
 /* What an untitled node with a pet reads as; a chat is the rest, since only these kinds have one. */
-const KIND_LABELS: Partial<Record<CanvasNode['kind'], 'kinds.design' | 'kinds.terminal'>> = { design: 'kinds.design', terminal: 'kinds.terminal' };
+const KIND_LABELS: Readonly<Record<string, 'kinds.design' | 'kinds.terminal'>> = { design: 'kinds.design', terminal: 'kinds.terminal' };
+
+/* `t` of `useLocale`. */
+export type Words = (key: string, values?: Record<string, string | number>) => string;
 
 function prefersStill(): boolean {
     return typeof matchMedia === 'function' && matchMedia(REDUCED_MOTION).matches;
@@ -29,7 +30,7 @@ export function usePrefersStill(): boolean {
  * What a pet's button says: where it leads, and that it waits on you when it does. On a canvas a press
  * goes to the node; in a view of its own, where a person already is, it hands the keyboard over (`focus`).
  */
-export function petLabel(t: TFunction<'canvas'>, node: { kind: CanvasNode['kind']; title?: string }, mood: PetMood, press: 'goTo' | 'focus' = 'goTo'): string {
+export function petLabel(t: Words, node: { kind: string; title?: string | undefined }, mood: PetMood, press: 'goTo' | 'focus' = 'goTo'): string {
     // A node a person never named reads as its kind, so the label always says which node it leads to.
     const title = node.title?.trim() || t(KIND_LABELS[node.kind] ?? 'kinds.chat');
 

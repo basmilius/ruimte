@@ -1,63 +1,37 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatState } from '@adecore/agents-react/state';
-import type { ChatStatuses } from '@adecore/agents-react/state';
-import { FOX_SPRITE, FROG_SPRITE } from '@extensions/pets/client/animals';
-import { CLAUDE_BUDDY, CODEX_BUDDY } from '@extensions/pets/client/buddies';
-import { EXTRA_FIGURES, PET_PACKS, packFigures } from '@extensions/pets/client/catalog';
-import { agentPetChoice, builtInSprite, petChoiceFor, petFrame, petOf, petPoolOf, petSetsWith, type PetChoice } from '@extensions/pets/client/pet-state';
-import { DRAWN_CYCLE, JUMP_ROWS, PET_POSES, type DrawnSprite } from '@extensions/pets/client/pixel';
-import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
-import type { SessionsByKey, SessionState, StatusOf } from '@/state/sessions';
-import type { Snoozes } from '@/state/snooze';
-import { chatInfoOf } from '../../../apps/client/testing/chat-info';
+import type { AgentInfo } from '@ruimte/extension/client';
+import { FOX_SPRITE, FROG_SPRITE } from './animals';
+import { CLAUDE_BUDDY, CODEX_BUDDY } from './buddies';
+import { EXTRA_FIGURES, PET_PACKS, packFigures } from './catalog';
+import { agentPetChoice, builtInSprite, petChoiceFor, petFrame, petOf, petPoolOf, petSetsWith, type PetChoice } from './pet-state';
+import { DRAWN_CYCLE, JUMP_ROWS, PET_POSES, type DrawnSprite } from './pixel';
 
-function agent(status: AgentStatus, kind = 'claude'): AgentInfo {
-    return { kind, agentSessionId: 'a1', transcriptPath: null, status, live: true, updatedAt: 0 };
-}
-
-function session(info?: AgentInfo): SessionState {
-    return { attached: true, agent: info };
-}
-
-function chat(id: string, status: AgentStatus, provider = 'claude'): ChatState {
-    return { info: chatInfoOf(id, { status, provider }), items: {}, structure: {}, order: [] };
-}
-
-// A chat and two terminals, as a node on a canvas or a view of its own names them: no place, only what the status needs.
-const AGENTS: readonly StatusOf[] = [
-    { id: 'writer', kind: 'chat' },
-    { id: 'shell', kind: 'terminal' },
-    { id: 'agent', kind: 'terminal' }
-];
-
-function petsOf(nodes: readonly StatusOf[], sessions: SessionsByKey, chats: ChatStatuses, snoozes: Snoozes) {
-    return nodes.flatMap((node) => {
-        const pet = petOf(node, sessions, chats, 'local', snoozes);
-        return pet === null ? [] : [{ id: node.id, ...pet }];
-    });
+/* An agent as `useAgent` reads it: resting, unless the test says otherwise. */
+function agent(patch: Partial<AgentInfo> = {}): AgentInfo {
+    return { provider: 'claude', account: null, status: 'idle', activity: null, snoozed: false, cwd: null, branch: null, worktree: null, ...patch };
 }
 
 describe('what a pet shows', () => {
-    test('a question or an approval waiting on you, on a chat and on a terminal alike', () => {
-        const pets = petsOf(AGENTS, { 'local:agent': session(agent('needs-you')) }, { 'local:writer': chat('writer', 'needs-you') }, {});
-        expect(pets.map((pet) => pet.mood)).toEqual(['waiting', 'waiting']);
+    test('a question or an approval waiting on you, and no pet where no agent runs', () => {
+        expect(petOf(agent({ status: 'needsYou' }))?.mood).toBe('waiting');
+        expect(petOf(null)).toBeNull();
     });
 
     test('a snoozed wait keeps its bubble until it is answered, and does not jump', () => {
-        const snoozes = { 'local:writer': 2_000 };
-        const pets = petsOf(AGENTS, {}, { 'local:writer': chat('writer', 'needs-you') }, snoozes);
-        expect(pets[0].mood).toBe('snoozed');
+        expect(petOf(agent({ status: 'needsYou', snoozed: true }))?.mood).toBe('snoozed');
         const frames = Array.from({ length: 8 }, (_, tick) => petFrame('snoozed', tick, false));
         expect(frames.every((frame) => frame.bubble && frame.pose === 'wait' && frame.lift === 0)).toBe(true);
-        // Answered, the snooze has nothing left to hold, and the pet rests.
-        expect(petsOf(AGENTS, {}, { 'local:writer': chat('writer', 'idle') }, snoozes)[0].mood).toBe('idle');
     });
 
-    test('a turn, a rest and an end that went wrong', () => {
-        const mood = (status: AgentStatus) => petsOf(AGENTS, {}, { 'local:writer': chat('writer', status) }, {})[0].mood;
-        expect(mood('running')).toBe('working');
-        expect(mood('idle')).toBe('idle');
-        expect(mood('error')).toBe('stopped');
+    test('works on a turn, for agents it handed work to and on commands it left running; rests, or stopped after an end', () => {
+        expect((['turn', 'delegating', 'background'] as const).map((activity) => petOf(agent({ status: 'running', activity }))?.mood)).toEqual([
+            'working',
+            'working',
+            'working'
+        ]);
+        expect(petOf(agent())?.mood).toBe('idle');
+        expect(petOf(agent({ status: 'stopped' }))?.mood).toBe('stopped');
+        expect(petOf(agent({ provider: 'codex' }))?.agent).toBe('codex');
     });
 
     test('a waiting pet has a bubble and jumps, and lands again before the next jump', () => {

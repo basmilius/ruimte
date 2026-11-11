@@ -1,7 +1,5 @@
-import { coversOtherNode, hitBoxAt, visitorPlace } from '@extensions/pets/client/canvas/placement';
-import { PET_HEIGHT, PET_WIDTH } from '@extensions/pets/client/pet-state';
-import type { Rect } from '@/canvas-model/math';
-import type { CanvasNode } from '@/state/canvas';
+import { PET_HEIGHT, PET_WIDTH } from '../pet-state';
+import { coversOtherNode, hitBoxAt, visitorPlace, type PetNode, type Rect } from './placement';
 
 /* How long after the last visit, or after a canvas opened, a pet may drop by: somewhere in this window. */
 export const VISIT_GAP_MS = { min: 20 * 60_000, max: 60 * 60_000 } as const;
@@ -80,14 +78,14 @@ export interface VisitSpot {
  * A node on screen whose top edge has room for a visitor in view, picked at random; none when no node
  * offers it. A spot where the figure would stand on another node is no room: a visitor never covers work.
  */
-export function visitSpot(nodes: Readonly<Record<string, CanvasNode>>, hidden: ReadonlySet<string>, visible: Rect, random: () => number): VisitSpot | null {
-    const spots = Object.values(nodes)
-        .filter((node) => node.kind !== 'group' && !hidden.has(node.id))
+export function visitSpot(nodes: readonly PetNode[], visible: Rect, random: () => number): VisitSpot | null {
+    const spots = nodes
+        .filter((node) => node.kind !== 'group' && !node.hidden)
         .map((node) => ({ nodeId: node.id, ...visitorPlace(node) }))
         .filter(
             (spot) => spot.x >= visible.x && spot.y >= visible.y && spot.x + PET_WIDTH <= visible.x + visible.w && spot.y + PET_HEIGHT <= visible.y + visible.h
         )
-        .filter((spot) => !coversOtherNode(hitBoxAt(spot), spot.nodeId, nodes, hidden));
+        .filter((spot) => !coversOtherNode(hitBoxAt(spot), spot.nodeId, nodes));
     if (spots.length === 0) {
         return null;
     }

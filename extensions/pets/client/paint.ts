@@ -1,5 +1,5 @@
-import { spriteImage, stripFor, type CustomPetSprite } from '@extensions/pets/client/custom-sprites';
-import { bubbleCell, petFrame, type PetFrame, type PetMood } from '@extensions/pets/client/pet-state';
+import { spriteImage, stripFor, type CustomPetSprite } from './custom-sprites';
+import { bubbleCell, petFrame, type PetFrame, type PetMood } from './pet-state';
 import {
     BUBBLE_ROWS,
     bubble,
@@ -14,7 +14,7 @@ import {
     type BowColors,
     type DrawnSprite,
     type PetPose
-} from '@extensions/pets/client/pixel';
+} from './pixel';
 
 export type PetLook = { kind: 'drawn'; sprite: DrawnSprite } | { kind: 'sheet'; sprite: CustomPetSprite };
 

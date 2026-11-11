@@ -39,8 +39,11 @@ function fromOtherWindows(event: StorageEvent): void {
 }
 
 export function subscribeStorage(listener: () => void): () => void {
+    // Without a page there is no other window to hear, only this one's own writes.
+    const page = typeof window === 'undefined' ? null : window;
+
     if (listeners.size === 0) {
-        window.addEventListener('storage', fromOtherWindows);
+        page?.addEventListener('storage', fromOtherWindows);
     }
 
     listeners.add(listener);
@@ -49,7 +52,7 @@ export function subscribeStorage(listener: () => void): () => void {
         listeners.delete(listener);
 
         if (listeners.size === 0) {
-            window.removeEventListener('storage', fromOtherWindows);
+            page?.removeEventListener('storage', fromOtherWindows);
         }
     };
 }

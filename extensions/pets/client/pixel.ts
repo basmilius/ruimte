@@ -1,4 +1,4 @@
-import { BUBBLE, PROPS } from '@extensions/pets/client/sprite-colors';
+import { BUBBLE, PROPS } from './sprite-colors';
 
 /* A rectangle on a pet's grid, in cells. An outlined one gets a rim of one cell in the outline color. */
 export interface Cell {

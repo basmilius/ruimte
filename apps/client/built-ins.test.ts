@@ -11,7 +11,7 @@ describe('a built-in as the client builds it', () => {
         const code = 'import { useNodes } from \'@ruimte/extension/client\';\nimport { Tooltip } from "@ruimte/extension/ui";\n';
 
         expect(builtInModule(`${PETS}PetFigure.tsx`, code)).toBe(
-            `import { useNodes } from '${BUILT_IN_API}?extension=ruimte.pets';\nimport { Tooltip } from "${EXTENSION_UI}";\n`
+            `import { useNodes } from '${BUILT_IN_API}?extension=ruimte.pets&lang.ts';\nimport { Tooltip } from "${EXTENSION_UI}";\n`
         );
     });
 

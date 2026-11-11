@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { FIGURE, FLOOR_LEVEL, groundOf, Roam, type Obstacle } from '@extensions/pets/client/canvas/roam';
+import { FIGURE, FLOOR_LEVEL, groundOf, Roam, type Obstacle } from './roam';
 
 const WIDTH = 1200;
 const DOCK: Obstacle = { left: 400, right: 800, bottom: 16, top: 60, ledge: true };

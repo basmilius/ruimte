@@ -1,12 +1,11 @@
-import { Switch } from '@adecore/ui';
-import { SettingsRow } from '@adecore/ui/settings';
-import { usePetSettings, type PetSettings } from '@extensions/pets/client/pet-settings';
+import { useLocale } from '@ruimte/extension/client';
+import { SettingsRow, Switch } from '@ruimte/extension/ui';
 import type { ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
+import { usePetSettings, type PetSettings } from '../pet-settings';
 
 type BooleanSetting = { [Key in keyof PetSettings]: PetSettings[Key] extends boolean ? Key : never }[keyof PetSettings];
 
-/* A switch for one setting of the pets, with its words under `pets:<id>.label` and `.description`; the search finds it by `id`. */
+/* A switch for one setting of the pets, with its words under `<id>.label` and `.description`; the search finds it by `id`. */
 export function PetSwitchRow({
     id,
     setting,
@@ -18,7 +17,7 @@ export function PetSwitchRow({
     leading?: ReactNode;
     onChanged?: (next: boolean) => void;
 }) {
-    const { t } = useTranslation('pets');
+    const { t } = useLocale();
     const checked = usePetSettings((s) => s[setting]);
     const update = usePetSettings((s) => s.update);
 

@@ -1,14 +1,17 @@
-import { BEAM_SETTINGS, type BeamSetting } from '@extensions/pets/client/beam';
-import { z } from 'zod';
+import { storage, type Json } from '@ruimte/extension/client';
 import { create } from 'zustand';
-import { SETTINGS_STORAGE_KEY } from '@/state/settings';
-import { storedJson } from '@/state/stored-json';
+import { BEAM_SETTINGS, type BeamSetting } from './beam';
+import { movedFromBefore } from './moved-storage';
 
-export const PET_SETTINGS_STORAGE_KEY = 'ruimte.pets';
+/* Under the computer storage of the extension, which every window of this computer shares. */
+export const PET_SETTINGS_KEY = 'settings';
+
+// Where the settings lived before pets ran on the extension API.
+const LEGACY_KEY = 'ruimte.pets';
 
 export type PetsPlace = 'nodes' | 'screen';
 
-export interface PetSettings {
+export type PetSettings = {
     /* Whether a pet stands on every agent's node and says when it waits on you. Off to start with: a canvas is quiet until a person asks for company. */
     pets: boolean;
     /* Where the pets are: on their nodes, or along the bottom of the screen, around the dock (`canvas/roam.ts`). */
@@ -25,7 +28,7 @@ export interface PetSettings {
     petsByAgent: Record<string, string>;
     /* How a pet comes and goes (`beam.ts`), the same for every pet. */
     petsBeam: BeamSetting;
-}
+};
 
 interface PetSettingsStore extends PetSettings {
     update(patch: Partial<PetSettings>): void;
@@ -35,10 +38,6 @@ interface PetSettingsStore extends PetSettings {
 // More than the built-in sets and every figure a client may keep, so a hand-edited list cannot slow the picker.
 const MAX_PET_SETS = 32;
 const MAX_PET_SET_LENGTH = 64;
-
-const AnyObject = z.custom<Record<string, unknown>>((stored) => typeof stored === 'object' && stored !== null);
-const storedPets = storedJson<Record<string, unknown>, PetSettings>(PET_SETTINGS_STORAGE_KEY, AnyObject);
-const storedAppSettings = storedJson<Record<string, unknown>, Record<string, unknown>>(SETTINGS_STORAGE_KEY, AnyObject);
 
 /*
  * The stored sets, or the one choice before sets could be combined, under `petsSprite`, as a set of
@@ -82,13 +81,10 @@ export function petSettingsFrom(stored: Record<string, unknown>): PetSettings {
     };
 }
 
-/* Pets were part of the app's settings before they became a built-in, so that blob is the first answer until this one has its own. */
 function read(): PetSettings {
-    try {
-        return petSettingsFrom(storedPets.read() ?? storedAppSettings.read() ?? {});
-    } catch {
-        return petSettingsFrom({});
-    }
+    const stored = storage.get<Json>(PET_SETTINGS_KEY);
+
+    return petSettingsFrom(typeof stored === 'object' && stored !== null && !Array.isArray(stored) ? stored : {});
 }
 
 function settingsOf(state: PetSettingsStore): PetSettings {
@@ -98,22 +94,18 @@ function settingsOf(state: PetSettingsStore): PetSettings {
 }
 
 export const usePetSettings = create<PetSettingsStore>((set, get) => {
-    const initial = read();
-
-    // Written at once: the app's next save of its own settings drops these fields from its blob.
-    if (storedPets.read() === null) {
-        storedPets.write(initial);
-    }
+    movedFromBefore(LEGACY_KEY, PET_SETTINGS_KEY);
 
     return {
-        ...initial,
+        ...read(),
         update(patch) {
             const next = { ...settingsOf(get()), ...patch };
 
             // Storage that refuses still leaves the setting on for this session.
-            storedPets.write(next);
+            storage.set(PET_SETTINGS_KEY, next);
             set(next);
         },
+        // Another window changed them (`index.ts`).
         reload() {
             set(read());
         }

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { BEAM_STYLES, beamPixels, beamStyleOf, type BeamCell, type BeamPixel } from '@extensions/pets/client/beam';
-import { BEAM_LIGHT } from '@extensions/pets/client/sprite-colors';
+import { BEAM_STYLES, beamPixels, beamStyleOf, type BeamCell, type BeamPixel } from './beam';
+import { BEAM_LIGHT } from './sprite-colors';
 
 // A small figure of three rows: what each beam starts from and ends in.
 const FIGURE: BeamCell[] = [

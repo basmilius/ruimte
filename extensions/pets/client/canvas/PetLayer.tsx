@@ -1,26 +1,28 @@
-import { useChats } from '@adecore/agents-react/state';
-import { Tooltip } from '@adecore/ui';
-import { PET_HIT_HEIGHT, PET_HIT_TOP, petBlocked, petCrowded, petNodeKey, petPlace, sameStanding } from '@extensions/pets/client/canvas/placement';
-import { createVisitor, VISIT_MS, visitSpot, type VisitSpot } from '@extensions/pets/client/canvas/visitor';
-import { petLabel, usePrefersStill } from '@extensions/pets/client/figure-support';
-import { KID_HEIGHT, KID_SPACING, kidMoodsOf, petKidsOf } from '@extensions/pets/client/kids';
-import { usePetSettings } from '@extensions/pets/client/pet-settings';
-import { PET_HEIGHT, PET_PAINT_WIDTH, PET_WIDTH, petOf } from '@extensions/pets/client/pet-state';
-import { PetFigure } from '@extensions/pets/client/PetFigure';
-import { useDeparting, useLinger, useTeleport } from '@extensions/pets/client/teleport';
-import { usePetLook } from '@extensions/pets/client/use-pet-look';
-import { nodeColorOf } from '@ruimte/contracts';
+import {
+    canvas,
+    nodeColorValue,
+    useAgent,
+    useCanvasView,
+    useInView,
+    useLocale,
+    useNode,
+    useNodes,
+    useSubagents,
+    type CanvasArea
+} from '@ruimte/extension/client';
+import { Tooltip } from '@ruimte/extension/ui';
 import clsx from 'clsx';
-import { useEffect, useState, type CSSProperties } from 'react';
-import { useTranslation } from 'react-i18next';
-import { accentColor } from '@/canvas-model/accents';
-import { visibleRect } from '@/canvas-model/math';
-import { useNodeInViewport } from '@/canvas/culling';
-import { maximizedNodeOf, useCanvas, useCanvasStore } from '@/state/canvas';
-import { useEndpointId } from '@/state/current-endpoint';
-import { useSessions } from '@/state/sessions';
-import { useSnoozes } from '@/state/snooze';
-import { useTasks } from '@/state/tasks';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { petLabel, usePrefersStill } from '../figure-support';
+import { KID_HEIGHT, KID_SPACING, petKidMoods } from '../kids';
+import { usePetSettings } from '../pet-settings';
+import { PET_HEIGHT, PET_PAINT_WIDTH, PET_WIDTH, petOf } from '../pet-state';
+import { PetFigure } from '../PetFigure';
+import { useDeparting, useLinger, useTeleport } from '../teleport';
+import { usePetLook } from '../use-pet-look';
+import { PET_HIT_HEIGHT, PET_HIT_TOP, petBlocked, petCrowded, petNodeKey, petNodeOf, petPlace, sameStanding, type PetNode } from './placement';
+import { createVisitor, VISIT_MS, visitSpot, type VisitSpot } from './visitor';
+import './pets.css';
 
 const visitor = createVisitor({
     setTimeout: (run, ms) => window.setTimeout(run, ms),
@@ -35,38 +37,32 @@ const visitor = createVisitor({
  * lies over the pet's head (`crowded`) it goes beside the pet, so it never covers that node. The kids of
  * its sub-agents stand in a row behind it, paint only.
  */
-function Pet({ id, ownPets, gone }: { id: string; ownPets: ReadonlySet<string>; gone: boolean }) {
-    const { t } = useTranslation('pets');
-    const canvasStore = useCanvasStore();
-    const endpointId = useEndpointId();
-    const node = useCanvas((s) => s.nodes[id]);
-    const blocked = useCanvas((s) => petBlocked(s, id));
-    const crowded = useCanvas((s) => petCrowded(s, id));
-    const aiming = useCanvas((s) => s.linkDraft?.aiming === true);
-    const sessions = useSessions((s) => s.byKey);
-    const chats = useChats((s) => s.statusByKey);
-    const snoozes = useSnoozes((s) => s.byKey);
+function Pet({ id, ownPets, gone, blocked, crowded }: { id: string; ownPets: ReadonlySet<string>; gone: boolean; blocked: boolean; crowded: boolean }) {
+    const { t } = useLocale();
+    const info = useNode(id);
+    const node = info.kind === 'unknown' ? undefined : info;
+    const aiming = useCanvasView((view) => view.gesture === 'line');
+    const agent = useAgent({ id });
+    const subagents = useSubagents({ id });
     const withKids = usePetSettings((s) => s.petsSubagents);
-    const tasks = useTasks((s) => s.byEndpoint);
-    const kidKey = useChats((s) => (withKids && node !== undefined ? petKidsOf(node, s.byKey, tasks, endpointId, ownPets) : ''));
-    const kids = kidMoodsOf(kidKey);
+    const kids = withKids ? petKidMoods(subagents, ownPets) : [];
     const still = usePrefersStill();
-    const live = gone || node === undefined ? null : petOf(node, sessions, chats, endpointId, snoozes);
+    const live = gone || node === undefined ? null : petOf(agent);
     // The node goes with the pet, so one whose node was removed beams out where it stood.
     const { shown, beam } = useTeleport(live === null || node === undefined ? null : { node, pet: live }, sameStanding, still);
     const pet = shown?.pet ?? null;
     const look = usePetLook(pet?.agent, id);
     // A pet off screen keeps no beat; it stands where it was once its node comes back in view.
-    const inView = useNodeInViewport(id);
+    const inView = useInView({ id });
     const home = shown?.node;
-    const accent = home === undefined ? undefined : accentColor(nodeColorOf(home));
+    const accent = home?.color === null || home?.color === undefined ? undefined : nodeColorValue(home.color);
 
     if (home === undefined || pet === null) {
         return null;
     }
 
     const { mood } = pet;
-    const place = petPlace(home);
+    const place = petPlace(petNodeOf(home));
     const label = petLabel(t, home, mood);
     const leaving = beam === 'out';
 
@@ -114,7 +110,7 @@ function Pet({ id, ownPets, gone }: { id: string; ownPets: ReadonlySet<string>; 
                         onDoubleClick={(event) => event.stopPropagation()}
                         onClick={(event) => {
                             event.stopPropagation();
-                            canvasStore.getState().goToNode(id);
+                            canvas.reveal({ id });
                         }}
                     />
                 </Tooltip>
@@ -125,32 +121,42 @@ function Pet({ id, ownPets, gone }: { id: string; ownPets: ReadonlySet<string>; 
 
 /*
  * A pet for every node that may have one, and for a beam's length one for every node that left (or for
- * all of them once pets are off), so it beams out where it stood.
+ * all of them once pets are off), so it beams out where it stood. Where a pet stands on another node, or
+ * one lies over its head, is a word per pet, so a drag draws a pet again only when that word flips.
  */
 function NodePets({ on }: { on: boolean }) {
-    const key = useCanvas(petNodeKey);
+    const nodes = useNodes();
+    const boxes = nodes.map(petNodeOf);
+    const key = petNodeKey(nodes);
     const ids = on && key !== '' ? key.split('\n') : [];
     const { all, gone } = useDeparting(ids);
     const own = new Set(ids);
 
-    return all.map((id) => <Pet key={id} id={id} ownPets={own} gone={gone.has(id)} />);
+    return all.map((id) => <Pet key={id} id={id} ownPets={own} gone={gone.has(id)} blocked={petBlocked(boxes, id)} crowded={petCrowded(boxes, id)} />);
 }
 
 /* Now and then, while Pets is off, a pet stands beside a node for a moment and goes again. It takes no press and asks nothing. */
 function PetVisitor() {
-    const canvasStore = useCanvasStore();
     const [visit, setVisit] = useState<VisitSpot | null>(null);
     // From the set the node it visits would have, so a visitor is one of the figures a person picked.
     const look = usePetLook(undefined, visit?.nodeId ?? '');
+    const boxes = useNodes().map(petNodeOf);
+    const view = useCanvasView((each) => each);
+    // What the canvas holds when the clock calls, which comes long after this drew.
+    const now = useRef<{ boxes: readonly PetNode[]; visible: CanvasArea; busy: boolean }>({ boxes, visible: view.visible, busy: false });
+
+    useEffect(() => {
+        now.current = { boxes, visible: view.visible, busy: view.gesture !== 'none' };
+    });
 
     useEffect(() => {
         let leave: ReturnType<typeof setTimeout> | null = null;
         const stop = visitor.host(() => {
-            const state = canvasStore.getState();
-            if (document.visibilityState !== 'visible' || state.gesturing || maximizedNodeOf(state) !== null) {
+            const { boxes: nodes, visible, busy } = now.current;
+            if (document.visibilityState !== 'visible' || busy) {
                 return false;
             }
-            const spot = visitSpot(state.nodes, state.hidden, visibleRect(state.camera, state.viewport), Math.random);
+            const spot = visitSpot(nodes, { x: visible.x, y: visible.y, w: visible.width, h: visible.height }, Math.random);
             if (spot === null) {
                 return false;
             }
@@ -164,7 +170,7 @@ function PetVisitor() {
                 clearTimeout(leave);
             }
         };
-    }, [canvasStore]);
+    }, []);
 
     if (visit === null) {
         return null;
@@ -183,7 +189,7 @@ function PetVisitor() {
 }
 
 /* The pets of a canvas, in its world so they pan and zoom with their nodes, over every node. */
-export function PetLayer({ z }: { z: number }) {
+export function PetLayer() {
     const pets = usePetSettings((s) => s.pets);
     const visitorOn = usePetSettings((s) => s.petsVisitor);
     // Along the bottom of the screen they are `PetRoam`'s, over the canvas rather than in its world.
@@ -192,9 +198,9 @@ export function PetLayer({ z }: { z: number }) {
     const nodePets = useLinger(pets && onNodes);
 
     return (
-        <div className="pointer-events-none absolute left-0 top-0" style={{ zIndex: z }}>
+        <>
             {nodePets && <NodePets on={pets && onNodes} />}
             {!pets && visitorOn && <PetVisitor />}
-        </div>
+        </>
     );
 }

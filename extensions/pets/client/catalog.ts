@@ -1,7 +1,7 @@
-import { FOX_SPRITE, FROG_SPRITE } from '@extensions/pets/client/animals';
-import { CLAUDE_BUDDY, CODEX_BUDDY } from '@extensions/pets/client/buddies';
-import type { DrawnSprite } from '@extensions/pets/client/pixel';
-import { sketchedSprite, type PetPalette } from '@extensions/pets/client/sketches';
+import { FOX_SPRITE, FROG_SPRITE } from './animals';
+import { CLAUDE_BUDDY, CODEX_BUDDY } from './buddies';
+import type { DrawnSprite } from './pixel';
+import { sketchedSprite, type PetPalette } from './sketches';
 
 /*
  * Every built-in figure and the packs a person switches on. The buddies and the animals give each

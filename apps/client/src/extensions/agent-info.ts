@@ -49,7 +49,8 @@ export function agentInfoOf(node: AgentTarget, group: Group, { sessions, chats, 
     const machine = endpointOfNode(node, endpointId);
     const cli = node.kind === 'terminal' ? sessions[endpointKey(machine, node.id)]?.agent : undefined;
 
-    if (node.kind === 'terminal' && cli === undefined) {
+    // A session says `null` once its CLI is gone, and has no agent at all before one reported.
+    if (node.kind === 'terminal' && (cli === undefined || cli === null)) {
         return undefined;
     }
 

@@ -1,4 +1,4 @@
-import { BEAM_LIGHT } from '@extensions/pets/client/sprite-colors';
+import { BEAM_LIGHT } from './sprite-colors';
 
 export const BEAM_MS = 650;
 

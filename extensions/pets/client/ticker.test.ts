@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
-import { onPetTick, PET_TICK_MS } from '@extensions/pets/client/ticker';
+import { onPetTick, PET_TICK_MS } from './ticker';
 
 beforeEach(() => {
     jest.useFakeTimers();

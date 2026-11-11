@@ -1,143 +1,96 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatState } from '@adecore/agents-react/state';
-import type { ChatStatuses } from '@adecore/agents-react/state';
-import { FOX_SPRITE, FROG_SPRITE } from '@extensions/pets/client/animals';
-import { CLAUDE_BUDDY, CODEX_BUDDY } from '@extensions/pets/client/buddies';
-import {
-    coversOtherNode,
-    PET_HIT_HEIGHT,
-    petBlocked,
-    petBubbleBox,
-    petCrowded,
-    petHitBox,
-    petNodeKey,
-    petPlace
-} from '@extensions/pets/client/canvas/placement';
-import { bubbleCell, PET_HEIGHT, petFrame, petOf } from '@extensions/pets/client/pet-state';
-import { BUBBLE_BESIDE, BUBBLE_ROWS, BUBBLE_SIZE, JUMP_ROWS, PAINT_COLUMNS, PAINT_ROWS } from '@extensions/pets/client/pixel';
-import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
-import type { CanvasNode } from '@/state/canvas';
-import type { SessionsByKey, SessionState } from '@/state/sessions';
-import type { Snoozes } from '@/state/snooze';
-import { chatInfoOf } from '../../../../apps/client/testing/chat-info';
+import type { NodeInfo } from '@ruimte/extension/client';
+import { FOX_SPRITE, FROG_SPRITE } from '../animals';
+import { CLAUDE_BUDDY, CODEX_BUDDY } from '../buddies';
+import { bubbleCell, PET_HEIGHT, petFrame } from '../pet-state';
+import { BUBBLE_BESIDE, BUBBLE_ROWS, BUBBLE_SIZE, JUMP_ROWS, PAINT_COLUMNS, PAINT_ROWS } from '../pixel';
+import { coversOtherNode, PET_HIT_HEIGHT, petBlocked, petBubbleBox, petCrowded, petHitBox, petNodeKey, petPlace, type PetNode } from './placement';
 
-function agent(status: AgentStatus, kind = 'claude'): AgentInfo {
-    return { kind, agentSessionId: 'a1', transcriptPath: null, status, live: true, updatedAt: 0 };
+function info(id: string, kind: string, hidden = false): NodeInfo {
+    return {
+        id,
+        kind,
+        title: id,
+        color: null,
+        bounds: { x: 0, y: 0, width: 400, height: 300 },
+        groupId: null,
+        hidden,
+        viewId: 'main',
+        machine: null,
+        linkedTo: []
+    };
 }
 
-function session(info?: AgentInfo): SessionState {
-    return { attached: true, agent: info };
+function box(id: string, kind: string, at: Partial<PetNode> = {}): PetNode {
+    return { id, kind, title: id, x: 0, y: 0, w: 400, h: 300, hidden: false, groupId: null, ...at };
 }
 
-function chat(id: string, status: AgentStatus, provider = 'claude'): ChatState {
-    return { info: chatInfoOf(id, { status, provider }), items: {}, structure: {}, order: [] };
-}
-
-function node(id: string, kind: CanvasNode['kind']): CanvasNode {
-    return { id, kind, x: 0, y: 0, w: 400, h: 300 } as CanvasNode;
-}
-
-const NODES: Record<string, CanvasNode> = {
-    writer: node('writer', 'chat'),
-    shell: node('shell', 'terminal'),
-    agent: node('agent', 'terminal'),
-    plan: node('plan', 'note')
-};
-
-function chatAt(id: string, y: number): CanvasNode {
-    return { id, kind: 'chat', x: 0, y, w: 480, h: 300 } as CanvasNode;
-}
-
-/* The pets the layer draws: one for each node the key names that has an agent in it. */
-function petsOf(nodes: Record<string, CanvasNode>, hidden: Set<string>, sessions: SessionsByKey, chats: ChatStatuses, snoozes: Snoozes) {
-    const key = petNodeKey({ nodes, hidden });
-    return (key === '' ? [] : key.split('\n')).flatMap((id) => {
-        const pet = petOf(nodes[id], sessions, chats, 'local', snoozes);
-        return pet === null ? [] : [{ id, ...pet }];
-    });
+function chatAt(id: string, y: number, at: Partial<PetNode> = {}): PetNode {
+    return box(id, 'chat', { w: 480, y, ...at });
 }
 
 describe('which nodes have a pet', () => {
-    test('a chat and a terminal with an agent in it, and not a bare shell or a note', () => {
-        const pets = petsOf(
-            NODES,
-            new Set(),
-            { 'local:shell': session(), 'local:agent': session(agent('idle', 'codex')) },
-            { 'local:writer': chat('writer', 'idle') },
-            {}
-        );
-        expect(pets.map((pet) => [pet.id, pet.agent])).toEqual([
-            ['writer', 'claude'],
-            ['agent', 'codex']
-        ]);
+    test('a chat, a design and a terminal, and not a note', () => {
+        expect(petNodeKey([info('writer', 'chat'), info('studio', 'design'), info('shell', 'terminal'), info('plan', 'note')])).toBe('writer\nstudio\nshell');
     });
 
     test('none for a node a collapsed group hides', () => {
-        expect(petsOf(NODES, new Set(['writer']), {}, { 'local:writer': chat('writer', 'idle') }, {})).toEqual([]);
-    });
-
-    test('a design, through the chat under its own id, as its status dot reads it', () => {
-        const nodes = { studio: node('studio', 'design') };
-        const pet = (status: AgentStatus) => petsOf(nodes, new Set(), {}, { 'local:studio': chat('studio', status, 'codex') }, {});
-        expect(pet('idle')).toEqual([{ id: 'studio', agent: 'codex', mood: 'idle' }]);
-        expect(pet('running')[0].mood).toBe('working');
-        expect(pet('needs-you')[0].mood).toBe('waiting');
-        expect(petsOf(nodes, new Set(['studio']), {}, { 'local:studio': chat('studio', 'idle') }, {})).toEqual([]);
+        expect(petNodeKey([info('writer', 'chat', true)])).toBe('');
     });
 });
 
 describe('where a press on a pet lands', () => {
     test('on the figure, from the top edge of its node up to the top of its jump, and never on the bubble', () => {
         const node = { x: 100, y: 200, w: 400 };
-        const box = petHitBox(node);
-        expect([box.w, box.h]).toEqual([52, PET_HIT_HEIGHT]);
+        const hit = petHitBox(node);
+        expect([hit.w, hit.h]).toEqual([52, PET_HIT_HEIGHT]);
         // The outline under its feet lies inside the node's frame, where a press starts a drag of the node.
-        expect(box.y + box.h).toBe(200);
+        expect(hit.y + hit.h).toBe(200);
         // At the top of a jump the figure's third row, the first a body fills, is where the box begins.
         const jumpTop = petPlace(node).y + (BUBBLE_ROWS + JUMP_ROWS - JUMP_ROWS + 2) * 2;
-        expect(box.y).toBe(jumpTop);
-        expect(box.y).toBeGreaterThanOrEqual(petPlace(node).y + (BUBBLE_ROWS - 1) * 2);
+        expect(hit.y).toBe(jumpTop);
+        expect(hit.y).toBeGreaterThanOrEqual(petPlace(node).y + (BUBBLE_ROWS - 1) * 2);
     });
 
     test('a node 40 pixels under another, the gap new nodes get, keeps its pet off the one above', () => {
-        const nodes = { upper: chatAt('upper', 0), lower: chatAt('lower', 340) };
-        const box = petHitBox(nodes.lower);
-        expect(box.y - (nodes.upper.y + nodes.upper.h)).toBe(2);
-        expect(coversOtherNode(box, 'lower', nodes, new Set())).toBe(false);
-        expect([petBlocked({ nodes, hidden: new Set() }, 'upper'), petBlocked({ nodes, hidden: new Set() }, 'lower')]).toEqual([false, false]);
+        const nodes = [chatAt('upper', 0), chatAt('lower', 340)];
+        const hit = petHitBox(nodes[1]!);
+        expect(hit.y - 300).toBe(2);
+        expect(coversOtherNode(hit, 'lower', nodes)).toBe(false);
+        expect([petBlocked(nodes, 'upper'), petBlocked(nodes, 'lower')]).toEqual([false, false]);
     });
 
     test('a pet whose figure stands on the node above leaves the press to that node', () => {
-        const nodes = { upper: chatAt('upper', 0), lower: chatAt('lower', 310) };
-        expect(petBlocked({ nodes, hidden: new Set() }, 'lower')).toBe(true);
-        expect(petBlocked({ nodes, hidden: new Set() }, 'upper')).toBe(false);
+        const nodes = [chatAt('upper', 0), chatAt('lower', 310)];
+        expect(petBlocked(nodes, 'lower')).toBe(true);
+        expect(petBlocked(nodes, 'upper')).toBe(false);
     });
 
     test('the frame of a group the node does not stand in blocks it', () => {
-        const lower = chatAt('lower', 310);
-        const above = { id: 'above', kind: 'group', x: 0, y: 0, w: 600, h: 300 } as CanvasNode;
-        expect(coversOtherNode(petHitBox(lower), 'lower', { lower, above }, new Set())).toBe(true);
-        expect(coversOtherNode(petHitBox(lower), 'lower', { lower, above: { ...above, memberIds: ['lower'] } }, new Set())).toBe(false);
+        const above = box('above', 'group', { w: 600, h: 300 });
+        expect(coversOtherNode(petHitBox(chatAt('lower', 310)), 'lower', [chatAt('lower', 310), above])).toBe(true);
+        expect(coversOtherNode(petHitBox(chatAt('lower', 310)), 'lower', [chatAt('lower', 310, { groupId: 'above' }), above])).toBe(false);
     });
 
     test('a group the node stands in, or a node a collapsed group hides, does not block it', () => {
         const lower = chatAt('lower', 310);
-        const group = { id: 'team', kind: 'group', x: -40, y: -40, w: 600, h: 700 } as CanvasNode;
-        expect(coversOtherNode(petHitBox(lower), 'lower', { lower, team: group }, new Set())).toBe(false);
-        expect(coversOtherNode(petHitBox(lower), 'lower', { lower, upper: chatAt('upper', 0) }, new Set(['upper']))).toBe(false);
+        const group = box('team', 'group', { x: -40, y: -40, w: 600, h: 700 });
+        expect(coversOtherNode(petHitBox(lower), 'lower', [lower, group])).toBe(false);
+        expect(coversOtherNode(petHitBox(lower), 'lower', [lower, chatAt('upper', 0, { hidden: true })])).toBe(false);
     });
 });
 
 describe('where a waiting pet says so', () => {
-    function overlaps(a: { x: number; y: number; w: number; h: number }, b: CanvasNode): boolean {
+    function overlaps(a: { x: number; y: number; w: number; h: number }, b: PetNode): boolean {
         return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
     }
 
     test('a node 40 pixels above takes the space over its head, so the bubble goes beside it and never covers that node', () => {
-        const nodes = { upper: chatAt('upper', 0), lower: chatAt('lower', 340) };
+        const upper = chatAt('upper', 0);
+        const lower = chatAt('lower', 340);
         // Over its head, the bubble would lie on the bottom of the node above, at rest and higher in a jump.
-        expect(overlaps(petBubbleBox(nodes.lower, 0, false), nodes.upper)).toBe(true);
-        expect(petCrowded({ nodes, hidden: new Set() }, 'lower')).toBe(true);
+        expect(overlaps(petBubbleBox(lower, 0, false), upper)).toBe(true);
+        expect(petCrowded([upper, lower], 'lower')).toBe(true);
         for (const [mood, still] of [
             ['waiting', false],
             ['snoozed', false],
@@ -146,19 +99,18 @@ describe('where a waiting pet says so', () => {
             for (let tick = 0; tick < 8; tick++) {
                 const frame = petFrame(mood, tick, still);
                 expect(frame.bubble).toBe(true);
-                const box = petBubbleBox(nodes.lower, frame.lift, true);
-                expect(overlaps(box, nodes.upper)).toBe(false);
+                const bubble = petBubbleBox(lower, frame.lift, true);
+                expect(overlaps(bubble, upper)).toBe(false);
                 // Beside the pet it stays over the gap, off its own node too.
-                expect(box.y + box.h).toBeLessThanOrEqual(nodes.lower.y);
+                expect(bubble.y + bubble.h).toBeLessThanOrEqual(lower.y);
             }
         }
     });
 
     test('with nothing over its head, or only a node a collapsed group hides, the bubble stays there', () => {
-        const nodes = { upper: chatAt('upper', 0), lower: chatAt('lower', 400) };
-        expect(petCrowded({ nodes, hidden: new Set() }, 'lower')).toBe(false);
-        expect(petCrowded({ nodes: { lower: chatAt('lower', 340) }, hidden: new Set() }, 'lower')).toBe(false);
-        expect(petCrowded({ nodes: { upper: nodes.upper, lower: chatAt('lower', 340) }, hidden: new Set(['upper']) }, 'lower')).toBe(false);
+        expect(petCrowded([chatAt('upper', 0), chatAt('lower', 400)], 'lower')).toBe(false);
+        expect(petCrowded([chatAt('lower', 340)], 'lower')).toBe(false);
+        expect(petCrowded([chatAt('upper', 0, { hidden: true }), chatAt('lower', 340)], 'lower')).toBe(false);
     });
 
     test('beside a figure the bubble clears every built-in wait pose, and both places stay inside the paint', () => {

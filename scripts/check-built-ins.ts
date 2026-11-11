@@ -13,7 +13,8 @@ for (const found of new Glob('**/*.{ts,tsx}').scanSync(CLIENT)) {
     // Windows hands back backslashes.
     const path = found.replaceAll('\\', '/');
 
-    if (path === 'extensions/built-in.ts') {
+    // A test of a built-in draws it through the host, so it may name the built-in's own stores.
+    if (path === 'extensions/built-in.ts' || /\.test\.tsx?$/.test(path)) {
         continue;
     }
 

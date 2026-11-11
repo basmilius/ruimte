@@ -1,3 +1,4 @@
+import '../../../apps/client/testing/pets-load';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
     forgetUnusedImages,
@@ -16,8 +17,8 @@ import {
     type CustomPetSprite,
     type PetStrip,
     type SheetReader
-} from '@extensions/pets/client/custom-sprites';
-import { drawnFrameKey, type PetLook } from '@extensions/pets/client/paint';
+} from './custom-sprites';
+import { drawnFrameKey, type PetLook } from './paint';
 
 function bytesOf(...parts: (string | number[])[]): string {
     return parts.map((part) => (typeof part === 'string' ? part : String.fromCharCode(...part))).join('');
@@ -77,6 +78,8 @@ function reader(dataUrl: string, size = { width: 64, height: 16 }): SheetReader 
     return { dataUrl: async () => dataUrl, size: async () => size };
 }
 
+// Where the extension API keeps the figures on this computer.
+const SPRITES_KEY = 'ruimte.extension.ruimte.pets.sprites';
 const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 
 // The unit run has no storage of its own, and a sprite the storage refuses is not kept.
@@ -252,7 +255,7 @@ describe('a sprite read back from storage', () => {
 
     test('keeps the ones that pass and drops the rest of a hand-edited key', () => {
         localStorage.setItem(
-            'ruimte.pets.sprites',
+            SPRITES_KEY,
             JSON.stringify([
                 good,
                 { ...good, id: 'liar', frames: 1 },
@@ -296,7 +299,7 @@ describe('a sprite read back from storage', () => {
 
     test('keeps a name no longer than an import would, and each id once', () => {
         expect(storedSpriteOf({ ...good, name: 'x'.repeat(500) })?.name).toHaveLength(SHEET_LIMITS.nameLength);
-        localStorage.setItem('ruimte.pets.sprites', JSON.stringify([good, { ...good, name: 'twin' }]));
+        localStorage.setItem(SPRITES_KEY, JSON.stringify([good, { ...good, name: 'twin' }]));
         usePetSprites.getState().reload();
         expect(usePetSprites.getState().sprites.map((sprite) => sprite.name)).toEqual(['ok']);
     });
@@ -308,12 +311,12 @@ describe('a sprite read back from storage', () => {
     test('keeps no more figures, nor more room, than an import would', () => {
         const large: PetStrip = { image: png(64, 16, SHEET_LIMITS.bytes), frameSize: 16, frames: 4 };
         const many = Array.from({ length: SHEET_LIMITS.maxSprites + 2 }, (_, i) => ({ ...good, id: `c${i}` }));
-        localStorage.setItem('ruimte.pets.sprites', JSON.stringify(many));
+        localStorage.setItem(SPRITES_KEY, JSON.stringify(many));
         usePetSprites.getState().reload();
         expect(usePetSprites.getState().sprites).toHaveLength(SHEET_LIMITS.maxSprites);
 
         const heavy = { id: 'heavy', name: 'heavy', ...large, strips: { walk: large, work: large, wait: large, sleep: large, stopped: large } };
-        localStorage.setItem('ruimte.pets.sprites', JSON.stringify([heavy, { ...heavy, id: 'second' }, good]));
+        localStorage.setItem(SPRITES_KEY, JSON.stringify([heavy, { ...heavy, id: 'second' }, good]));
         usePetSprites.getState().reload();
         expect(usePetSprites.getState().sprites.map((sprite) => sprite.id)).toEqual(['heavy', 'ok']);
     });

@@ -144,6 +144,7 @@ export const START_SCREEN_MODULES: readonly string[] = [
     'extensions/action-runs.ts',
     'extensions/action-shortcuts.ts',
     'extensions/activation.ts',
+    'extensions/agent-info.ts',
     'extensions/built-in.ts',
     'extensions/built-ins.ts',
     'extensions/chat-seams.tsx',

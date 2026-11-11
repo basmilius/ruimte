@@ -10,11 +10,23 @@ stands on a canvas, along the bottom of the screen, and the visitor live in
 already holds (`chat.status`, a terminal's `session.status` from the CLI's hooks), and nothing reads
 the file system, the daemon's folders or a project file.
 
+Pets is a built-in, but it uses only the public extension API, as an installed extension would. Its
+sources import relative paths, `@ruimte/extension/client` and `/ui`, React, clsx, zustand and
+lucide-react, never `@/` or another package of the client. `index.ts` defines what it adds: its
+settings section, the canvas overlays `pets` (in canvas space) and `pets-roaming` (over the screen),
+and the widget `pets-view` in the `viewAccessory` slot. `apps/client/src/extensions/built-in.ts`
+binds it, and `apps/client/built-ins.ts` turns `index.ts` into the function its load runs.
+
+The classes in its components are Tailwind classes the client already generates. The client's
+Tailwind build scans this folder, so a new class works here, but an installed extension gets no such
+scan and ships its own CSS; keep that in mind before copying a component out.
+
 - Which nodes have one: a chat, a design (through the chat under its own id, as its status dot), and a
   terminal whose CLI reported through its hooks (`petNodeKey` in `canvas/placement.ts`, `petOf` in `pet-state.ts`). A node
   a collapsed group hides has none.
-- What it shows: working, waiting on you, idle or stopped. Waiting is the "needs you" every count
-  reads (`groupAttention`). A waiting pet has a black speech bubble with an orange exclamation mark
+- What it shows: working, waiting on you, idle or stopped, read from `useAgent`. Waiting is its
+  `needsYou`, and working is any `activity`: a turn of its own, agents it handed work to, or commands
+  it left running. A waiting pet has a black speech bubble with an orange exclamation mark
   and jumps until the question or approval is answered. The bubble stands over its head, or beside it
   where another node lies there (`petCrowded`), such as one 40 pixels above, so it never covers that
   node. A wait a person snoozed keeps its bubble until it is answered but does not jump. With reduced
@@ -39,7 +51,7 @@ the file system, the daemon's folders or a project file.
   beams nothing. With reduced motion a pet is there or gone at once.
 - A pet paints its canvas only when the picture changes (`petPainter`), so a strip of one frame at
   rest paints once.
-- A click goes to the node (`goToNode`): the camera centers on it and selects it, and Back in the
+- A click goes to the node (`canvas.reveal`): the camera centers on it and selects it, and Back in the
   camera history returns.
 - Only the figure takes a press (`petHitBox`, 52 by 38 world pixels from its node's top edge up, which
   covers it at rest and through its jump); the bubble never does. Where that box lies on another node
@@ -48,7 +60,7 @@ the file system, the daemon's folders or a project file.
   Its button still takes the keyboard. A text on the canvas is not counted, and neither is a card
   beside a node, such as a design's pages.
 - One interval for the page drives every pet (`ticker.ts`), only while a pet is mounted, and a pet
-  whose node is out of view mounts no canvas (`useNodeInViewport`).
+  whose node is out of view mounts no canvas (`useInView`).
 
 ## Along the bottom of the screen
 
@@ -63,8 +75,8 @@ still have them, so a node a collapsed group hides has none here either.
   passes under. A walk ends only where no other pet rests or is headed, and one put down in another
   walks off at once.
 - The floor runs between what stands on it: the dock, the minimap and a prompt card low enough to
-  touch a pet (`OVERLAY_LEDGE_ATTRIBUTE` and `OVERLAY_WALL_ATTRIBUTE` in `canvas/overlay-attributes.ts` of the client, the prompt stack by
-  its own attribute). A pet hops onto the dock and off again at its ends; the minimap it only walks
+  touch a pet, each marked `data-canvas-floor` (`ledge` or `wall`) inside the overlay's
+  `data-canvas-overlay` box, as the extension API documents. A pet hops onto the dock and off again at its ends; the minimap it only walks
   up to. A dock that hides, or a prompt card that comes up over it, sends the pets on it to the floor
   beside it.
 - The obstacles are measured on every beat, in whole pixels, so the ground changes only when one moves.
@@ -110,7 +122,8 @@ Settings, Pets, Add figure opens a dialog (`PetFigureDialog.tsx`) with a name an
 every state: Standing (the visitor), Walking (along the bottom of the screen), Working, Needs you (the
 jump is this strip lifted), Idle and Stopped, each with a preview painted as on the canvas. Only the
 files picked are read, and nothing is kept before Save. A figure is kept as data URLs in this
-client's storage (`ruimte.pets.sprites`), which every window of the app shares and no machine sees;
+client's extension storage (key `sprites`, moved once from `ruimte.pets.sprites`; the settings
+moved from `ruimte.pets` to `settings`), which every window of the app shares and no machine sees;
 the window that saves a figure last wins. What is read back goes through the same checks as an import
 (`storedSpriteOf`, `storedStripOf`): a figure whose Standing strip fails is dropped, any other strip
 that fails drops out alone. The previews decode under an id of their own (`previewSpriteOf`), so a
@@ -146,9 +159,8 @@ same set for the same id, and for a chat the same kids. A view has no color, so 
 
 - A chat's pet stands on the top edge of the composer card, near its right corner, with its kids
   behind it (`ChatViewPet`). The card holds the open question while there is one, so the pet stands
-  beside what waits on you. The card is ADE CORE's, so it is found by its class and measured again
-  when it changes. A composer narrower than 320 pixels has no pet.
+  beside what waits on you. The host measures the card and hands its edge to the widget as
+  `composer`, so the pet never looks for it itself. A composer narrower than 320 pixels has no pet.
 - A terminal's text takes every pixel of its body, so its pet stands in the cell's bar at half its
   size, its feet on the line under the bar, the bubble beside its head (`TerminalViewPet`).
 - A press hands the keyboard over: to the open question or the field to type in, or to the terminal.
-

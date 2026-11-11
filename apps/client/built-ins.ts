@@ -59,7 +59,8 @@ export function builtInFolderOf(path: string): string | null {
 
 function boundImports(folder: string, code: string): string {
     return code.replace(HOSTED_IMPORT, (_match, quote: string, entry: string) => {
-        const target = entry === 'client' ? `${BUILT_IN_API}?extension=${encodeURIComponent(idOf(folder))}` : HOSTED_PACKAGES[entry];
+        // `lang.ts` keeps the id ending in `.ts`, or Vite reads an id such as `ruimte.pets` as the file's language and parses it as JavaScript.
+        const target = entry === 'client' ? `${BUILT_IN_API}?extension=${encodeURIComponent(idOf(folder))}&lang.ts` : HOSTED_PACKAGES[entry];
 
         return `${quote}${target}${quote}`;
     });

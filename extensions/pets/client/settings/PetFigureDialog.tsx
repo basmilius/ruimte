@@ -1,4 +1,7 @@
-import { Button, FormError, Icon, IconButton, PromptDialog, ScrollArea } from '@adecore/ui';
+import { useLocale } from '@ruimte/extension/client';
+import { Button, FormError, Icon, IconButton, PromptDialog, ScrollArea } from '@ruimte/extension/ui';
+import { ImageUp, PawPrint, Trash2 } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import {
     browserSheetReader,
     forgetUnusedImages,
@@ -13,14 +16,11 @@ import {
     type PetStrip,
     type PetStrips,
     type SheetProblem
-} from '@extensions/pets/client/custom-sprites';
-import type { PetLook } from '@extensions/pets/client/paint';
-import { PET_HEIGHT, PET_PAINT_WIDTH, type PetMood } from '@extensions/pets/client/pet-state';
-import { PetFigure } from '@extensions/pets/client/PetFigure';
-import { PET_POSES, type PetPose } from '@extensions/pets/client/pixel';
-import { ImageUp, PawPrint, Trash2 } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
+} from '../custom-sprites';
+import type { PetLook } from '../paint';
+import { PET_HEIGHT, PET_PAINT_WIDTH, type PetMood } from '../pet-state';
+import { PetFigure } from '../PetFigure';
+import { PET_POSES, type PetPose } from '../pixel';
 
 /*
  * One opening of the dialog, for a new figure or one added before. It stays after a close, so the dialog
@@ -83,7 +83,7 @@ function StripRow({
     onChoose(): void;
     onDrop(): void;
 }) {
-    const { t } = useTranslation('pets');
+    const { t } = useLocale();
     const chooseRef = useRef<HTMLButtonElement>(null);
     const problemId = useId();
     const state = t(`pets.custom.states.${pose}`);
@@ -137,7 +137,7 @@ function StripRow({
  * the one strip a figure needs: every state without one of its own plays it. Nothing is kept before Save.
  */
 export function PetFigureDialog({ edit, onClose, onSaved }: { edit: PetFigureEdit | null; onClose(): void; onSaved(sprite: CustomPetSprite): void }) {
-    const { t } = useTranslation('pets');
+    const { t } = useLocale();
     const fileRef = useRef<HTMLInputElement>(null);
     const [held, setHeld] = useState<Draft>(() => draftOf(edit));
     const [target, setTarget] = useState<PetPose>('stand');

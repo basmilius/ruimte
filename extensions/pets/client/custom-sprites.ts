@@ -1,8 +1,9 @@
-import { PET_POSES, type PetPose } from '@extensions/pets/client/pixel';
-import { onPetSpritesChanged, PET_SPRITES_STORAGE_KEY } from '@extensions/pets/client/sprites-key';
+import { storage, type Json } from '@ruimte/extension/client';
 import { z } from 'zod';
 import { create } from 'zustand';
-import { storedJson } from '@/state/stored-json';
+import { movedFromBefore } from './moved-storage';
+import { PET_POSES, type PetPose } from './pixel';
+import { LEGACY_SPRITES_KEY, onPetSpritesChanged, PET_SPRITES_KEY } from './sprites-key';
 
 /*
  * The bounds of a sprite a person adds. It lives in this client's storage beside the settings, which
@@ -176,7 +177,33 @@ function keptSprites(entries: readonly unknown[]): CustomPetSprite[] {
     return kept;
 }
 
-const storedSprites = storedJson<CustomPetSprite[]>(PET_SPRITES_STORAGE_KEY, z.array(z.unknown()).transform(keptSprites));
+function readSprites(): CustomPetSprite[] {
+    const stored = storage.get<Json>(PET_SPRITES_KEY);
+
+    return Array.isArray(stored) ? keptSprites(stored) : [];
+}
+
+function stripJson({ image, frameSize, frames }: PetStrip): Json {
+    return { image, frameSize, frames };
+}
+
+function spriteJson(sprite: CustomPetSprite): Json {
+    const strips = Object.entries(sprite.strips ?? {}).flatMap(([pose, strip]) => (strip === undefined ? [] : [[pose, stripJson(strip)] as const]));
+
+    return {
+        id: sprite.id,
+        name: sprite.name,
+        image: sprite.image,
+        frameSize: sprite.frameSize,
+        frames: sprite.frames,
+        ...(sprite.strips === undefined ? {} : { strips: Object.fromEntries(strips) })
+    };
+}
+
+/* False when this computer refused to keep them. */
+function writeSprites(sprites: readonly CustomPetSprite[]): boolean {
+    return storage.set(PET_SPRITES_KEY, sprites.map(spriteJson)).ok;
+}
 
 export function stripFor(sprite: CustomPetSprite, pose: PetPose): { pose: PetPose; strip: PetStrip } {
     const own = pose === 'stand' ? undefined : sprite.strips?.[pose];
@@ -210,30 +237,34 @@ interface PetSpritesStore {
     reload(): void;
 }
 
-export const usePetSprites = create<PetSpritesStore>((set, get) => ({
-    sprites: storedSprites.read() ?? [],
-    put(sprite) {
-        const sprites = get().sprites;
-        const next = sprites.some((each) => each.id === sprite.id) ? sprites.map((each) => (each.id === sprite.id ? sprite : each)) : [...sprites, sprite];
-        if (!storedSprites.write(next)) {
-            return false;
+export const usePetSprites = create<PetSpritesStore>((set, get) => {
+    movedFromBefore(LEGACY_SPRITES_KEY, PET_SPRITES_KEY);
+
+    return {
+        sprites: readSprites(),
+        put(sprite) {
+            const sprites = get().sprites;
+            const next = sprites.some((each) => each.id === sprite.id) ? sprites.map((each) => (each.id === sprite.id ? sprite : each)) : [...sprites, sprite];
+            if (!writeSprites(next)) {
+                return false;
+            }
+            forgetImages(next);
+            set({ sprites: next });
+            return true;
+        },
+        remove(id) {
+            const next = get().sprites.filter((sprite) => sprite.id !== id);
+            writeSprites(next);
+            forgetImages(next);
+            set({ sprites: next });
+        },
+        reload() {
+            const next = readSprites();
+            forgetImages(next);
+            set({ sprites: next });
         }
-        forgetImages(next);
-        set({ sprites: next });
-        return true;
-    },
-    remove(id) {
-        const next = get().sprites.filter((sprite) => sprite.id !== id);
-        storedSprites.write(next);
-        forgetImages(next);
-        set({ sprites: next });
-    },
-    reload() {
-        const next = storedSprites.read() ?? [];
-        forgetImages(next);
-        set({ sprites: next });
-    }
-}));
+    };
+});
 
 onPetSpritesChanged(() => usePetSprites.getState().reload());
 

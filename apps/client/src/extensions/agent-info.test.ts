@@ -73,9 +73,14 @@ function task(childId: string, patch: Partial<Task> = {}): Task {
 
 describe('the agent an extension reads', () => {
     test('of a terminal is the CLI that reported through its hooks, and none for a shell', () => {
-        const sessions: SessionsByKey = { 'local:agent': { attached: true, agent: cli('running', 'codex') }, 'local:shell': { attached: true } };
+        const sessions: SessionsByKey = {
+            'local:agent': { attached: true, agent: cli('running', 'codex') },
+            'local:shell': { attached: true },
+            'local:gone': { attached: true, agent: null }
+        };
 
         expect(agentInfoOf({ id: 'shell', kind: 'terminal' }, undefined, sources({ sessions }))).toBeUndefined();
+        expect(agentInfoOf({ id: 'gone', kind: 'terminal' }, undefined, sources({ sessions }))).toBeUndefined();
         expect(agentInfoOf({ id: 'agent', kind: 'terminal' }, undefined, sources({ sessions }))).toMatchObject({
             provider: 'codex',
             status: 'running',

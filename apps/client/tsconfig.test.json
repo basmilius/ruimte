@@ -9,8 +9,18 @@
         "jsx": "react-jsx",
         "paths": {
             "@/*": ["./src/*"],
-            "@extensions/*": ["../../extensions/*"]
+            "@extensions/*": ["../../extensions/*"],
+            "@ruimte/extension/*": ["../../packages/extension/*"]
         }
     },
-    "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "../../extensions/**/*.test.ts", "../../extensions/**/*.test.tsx", "test-preload.ts", "testing/**/*.ts", "testing/**/*.tsx"]
+    "include": [
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "src/built-in-entry.d.ts",
+        "../../extensions/**/*.test.ts",
+        "../../extensions/**/*.test.tsx",
+        "test-preload.ts",
+        "testing/**/*.ts",
+        "testing/**/*.tsx"
+    ]
 }

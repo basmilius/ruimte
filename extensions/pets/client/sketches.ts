@@ -1,4 +1,4 @@
-import { cloud, snore, type Cell, type DrawnSprite, type Parts, type PetPose } from '@extensions/pets/client/pixel';
+import { cloud, snore, type Cell, type DrawnSprite, type Parts, type PetPose } from './pixel';
 
 /*
  * The figures of the pet catalog past the four first ones: each drawn from its shape, in a palette of

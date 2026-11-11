@@ -1,9 +1,9 @@
-import { usePrefersStill } from '@extensions/pets/client/figure-support';
-import type { PetLook } from '@extensions/pets/client/paint';
-import { usePetSettings } from '@extensions/pets/client/pet-settings';
-import { PetFigure } from '@extensions/pets/client/PetFigure';
-import { usePetLook } from '@extensions/pets/client/use-pet-look';
 import { useEffect, useState, type ReactNode } from 'react';
+import { usePrefersStill } from '../figure-support';
+import type { PetLook } from '../paint';
+import { usePetSettings } from '../pet-settings';
+import { PetFigure } from '../PetFigure';
+import { usePetLook } from '../use-pet-look';
 
 /* How long one turn of a tile takes: the thing it shows happens, holds a moment, and goes again. */
 const TURN_MS = 2600;

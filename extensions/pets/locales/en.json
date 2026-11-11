@@ -3,6 +3,11 @@
         "label": "Pets",
         "description": "Small figures that show what your agents do."
     },
+    "kinds": {
+        "chat": "Chat",
+        "design": "Design",
+        "terminal": "Terminal"
+    },
     "pets": {
         "title": "Pets",
         "enabled": {

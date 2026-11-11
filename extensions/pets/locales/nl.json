@@ -3,6 +3,11 @@
         "label": "Pets",
         "description": "Kleine figuurtjes die laten zien wat je agents doen."
     },
+    "kinds": {
+        "chat": "Chat",
+        "design": "Design",
+        "terminal": "Terminal"
+    },
     "pets": {
         "title": "Pets",
         "enabled": {

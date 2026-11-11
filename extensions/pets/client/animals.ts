@@ -1,5 +1,5 @@
-import { bow, cell, crossEye, emptyParts, flipped, laptop, snore, type DrawnSprite, type Parts } from '@extensions/pets/client/pixel';
-import { FOX, FROG } from '@extensions/pets/client/sprite-colors';
+import { bow, cell, crossEye, emptyParts, flipped, laptop, snore, type DrawnSprite, type Parts } from './pixel';
+import { FOX, FROG } from './sprite-colors';
 
 type AnimalPose = 'stand' | 'walk' | 'work' | 'wait' | 'sleep' | 'fallen';
 

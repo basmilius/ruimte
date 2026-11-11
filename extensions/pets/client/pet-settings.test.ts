@@ -1,7 +1,8 @@
+import '../../../apps/client/testing/pets-load';
 import { describe, expect, test } from 'bun:test';
-import { petSettingsFrom } from '@extensions/pets/client/pet-settings';
-import english from '@extensions/pets/locales/en.json';
-import dutch from '@extensions/pets/locales/nl.json';
+import english from '../locales/en.json';
+import dutch from '../locales/nl.json';
+import { petSettingsFrom } from './pet-settings';
 
 describe('pets', () => {
     test('stay away until a person turns them on, and only a stored true does', () => {

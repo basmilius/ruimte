@@ -1,28 +1,15 @@
-import type { ChatStatuses } from '@adecore/agents-react/state';
-import { PET_PACKS, packFigures, petFigure, providerFigure, type PetPackId } from '@extensions/pets/client/catalog';
-import {
-    BUBBLE_ABOVE,
-    BUBBLE_BESIDE,
-    BUBBLE_ROWS,
-    JUMP_ROWS,
-    PAINT_COLUMNS,
-    PAINT_ROWS,
-    SPRITE_COLUMNS,
-    type DrawnSprite,
-    type PetPose
-} from '@extensions/pets/client/pixel';
-import type { AgentKind } from '@ruimte/contracts';
-import { nodeWorking } from '@/state/agent-work';
-import { groupAttention } from '@/state/attention';
-import { endpointKey, endpointOfNode } from '@/state/keys';
-import { nodeProvider, nodeStatus, type SessionsByKey, type StatusOf } from '@/state/sessions';
-import type { Snoozes } from '@/state/snooze';
+import type { AgentInfo } from '@ruimte/extension/client';
+import { PET_PACKS, packFigures, petFigure, providerFigure, type PetPackId } from './catalog';
+import { BUBBLE_ABOVE, BUBBLE_BESIDE, BUBBLE_ROWS, JUMP_ROWS, PAINT_COLUMNS, PAINT_ROWS, SPRITE_COLUMNS, type DrawnSprite, type PetPose } from './pixel';
 
 /* What a pet shows of its node's agent, or that it only drops by. `snoozed` still waits on you, quietly. */
 export type PetMood = 'working' | 'waiting' | 'snoozed' | 'idle' | 'stopped' | 'visiting';
 
+/* The CLI behind a node, as `provider` names it, which picks the built-in figure. */
+export type AgentKind = string;
+
 export interface AgentPet {
-    /* The CLI behind the node, which picks the built-in figure; none for a chat that has not said yet. */
+    /* The CLI behind the node, which picks the built-in figure; none for a pet of no agent, such as the visitor. */
     agent: AgentKind | undefined;
     mood: PetMood;
 }
@@ -32,39 +19,34 @@ export function samePet(one: AgentPet, other: AgentPet): boolean {
     return one.agent === other.agent && one.mood === other.mood;
 }
 
-// Nothing here asks whether a pet was seen, so an empty record keeps the attention pass to the waits alone.
-const NO_UNSEEN: Readonly<Record<string, true>> = {};
-
 /*
- * The pet of a node or a view with an agent in it: a chat, a design (whose status is the chat under its
- * own id, as everywhere else), or a terminal whose CLI reported through its hooks.
- * Waiting is the same "needs you" every count reads. A wait a person snoozed keeps its bubble until it
- * is answered, since the question is still open, but does not jump.
+ * The pet of a node or a view with an agent in it (`useAgent`): a chat, a design, or a terminal whose CLI
+ * reported through its hooks. Waiting is the same "needs you" every count reads. A wait a person snoozed
+ * keeps its bubble until it is answered, since the question is still open, but does not jump. It works
+ * on a turn of its own, for agents it handed work to, and on commands it left running.
  */
-export function petOf(node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, endpointId: string, snoozes: Snoozes): AgentPet | null {
-    let agent: AgentKind | undefined;
-    if (node.kind === 'terminal') {
-        const session = sessions[endpointKey(endpointOfNode(node, endpointId), node.id)];
-        if (!session?.agent) {
-            return null;
-        }
-        agent = session.agent.kind;
-    } else {
-        agent = nodeProvider(node, chats, endpointId);
+export function petOf(agent: AgentInfo | null): AgentPet | null {
+    if (agent === null) {
+        return null;
     }
-    const attention = groupAttention([node], sessions, chats, endpointId, NO_UNSEEN, snoozes);
-    return { agent, mood: attention.snoozed.length > 0 ? 'snoozed' : moodOf(node, attention.needsYou.length > 0, sessions, chats, endpointId) };
+
+    return { agent: agent.provider, mood: moodOf(agent) };
 }
 
-function moodOf(node: StatusOf, waiting: boolean, sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): PetMood {
-    if (waiting) {
+function moodOf(agent: AgentInfo): PetMood {
+    if (agent.snoozed) {
+        return 'snoozed';
+    }
+
+    if (agent.status === 'needsYou') {
         return 'waiting';
     }
-    if (nodeWorking(node, sessions, chats, endpointId)) {
+
+    if (agent.activity !== null) {
         return 'working';
     }
-    const status = nodeStatus(node, sessions, chats, endpointId);
-    return status === 'error' || status === 'exited' ? 'stopped' : 'idle';
+
+    return agent.status === 'stopped' ? 'stopped' : 'idle';
 }
 
 /* How far a waiting pet is off the ground, in cells, frame by frame: up, a moment in the air, down, and a beat on the node. */

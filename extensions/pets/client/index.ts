@@ -1,32 +1,25 @@
-import { PET_SETTINGS_STORAGE_KEY, usePetSettings } from '@extensions/pets/client/pet-settings';
-import { petSpritesChanged, PET_SPRITES_STORAGE_KEY } from '@extensions/pets/client/sprites-key';
-import { PawPrint } from 'lucide-react';
-import { defineBuiltIn, defineCanvasLayer, defineSettingsPage, defineSharedStorage, defineViewAccessory } from '@/extensions/internal';
-import manifest from '../manifest.json';
+import { defineCanvasOverlay, defineExtensionSettings, defineWidget, storage } from '@ruimte/extension/client';
+import { PET_SETTINGS_KEY, usePetSettings } from './pet-settings';
+import { petSpritesChanged, PET_SPRITES_KEY } from './sprites-key';
 
 function row(id: string): { id: string; label: string; description: string } {
-    return { id: `pets.${id}`, label: `pets:pets.${id}.label`, description: `pets:pets.${id}.description` };
+    return { id: `pets.${id}`, label: `pets.${id}.label`, description: `pets.${id}.description` };
 }
 
-defineBuiltIn(
-    manifest,
-    () => [
-        defineSettingsPage({
-            id: 'pets',
-            icon: PawPrint,
-            group: 'workspace',
-            after: 'views',
-            labelKey: 'pets:section.label',
-            descriptionKey: 'pets:section.description',
-            component: () => import('@extensions/pets/client/settings/PetsPage'),
-            search: ['enabled', 'place', 'inViews', 'subagents', 'visitor', 'beam', 'sprite', 'custom', 'agents'].map(row)
-        }),
-        defineCanvasLayer({ id: 'pets', place: 'canvas', component: () => import('@extensions/pets/client/canvas/CanvasPetLayer') }),
-        defineCanvasLayer({ id: 'pets-roaming', place: 'screen', component: () => import('@extensions/pets/client/canvas/CanvasRoamingPets') }),
-        defineViewAccessory({ id: 'pets-chat', on: 'chat', component: () => import('@extensions/pets/client/ChatViewPetAccessory') }),
-        defineViewAccessory({ id: 'pets-terminal', on: 'terminal', component: () => import('@extensions/pets/client/TerminalViewPetAccessory') }),
-        defineSharedStorage({ id: PET_SETTINGS_STORAGE_KEY, reload: () => usePetSettings.getState().reload() }),
-        defineSharedStorage({ id: PET_SPRITES_STORAGE_KEY, reload: petSpritesChanged })
-    ],
-    PawPrint
-);
+defineExtensionSettings({
+    component: () => import('./settings/PetsPane'),
+    section: {
+        group: 'workspace',
+        after: 'views',
+        icon: 'paw-print',
+        label: 'section.label',
+        description: 'section.description',
+        search: ['enabled', 'place', 'inViews', 'subagents', 'visitor', 'beam', 'sprite', 'custom', 'agents'].map(row)
+    }
+});
+defineCanvasOverlay({ id: 'pets', space: 'canvas', component: () => import('./canvas/CanvasPets').then((module) => ({ default: module.CanvasPets })) });
+defineCanvasOverlay({ id: 'pets-roaming', component: () => import('./canvas/CanvasPets').then((module) => ({ default: module.CanvasRoamingPets })) });
+defineWidget({ id: 'pets-view', slots: { viewAccessory: true }, component: () => import('./ViewPetWidget') });
+// Another window that changes the settings or the figures a person added, which this one follows.
+storage.watch(PET_SETTINGS_KEY, () => usePetSettings.getState().reload());
+storage.watch(PET_SPRITES_KEY, petSpritesChanged);
