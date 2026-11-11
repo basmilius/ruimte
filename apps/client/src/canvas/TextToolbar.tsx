@@ -11,7 +11,7 @@ import { textRect } from '@/state/edge-lines';
 const FONTS: readonly DrawingFont[] = ['sans', 'hand', 'mono'];
 
 /* The same steps a drawing offers, so a label and a written word can be set to match. */
-const SIZES = [16, 20, 28, 36];
+const SIZES = [16, 20, 28, 36, 48, 64, 96];
 
 /* How far above the text the bar floats, and the room it needs before it moves below instead. */
 const GAP = 10;
