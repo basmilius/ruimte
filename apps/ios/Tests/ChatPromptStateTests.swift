@@ -344,21 +344,226 @@ final class ChatPromptStateTests: XCTestCase {
         XCTAssertEqual(prompts.activeSubject?.source?.label, "Ask the person")
     }
 
+    private func childQuestion(_ requestID: String, at time: Double) -> JSONValue {
+        ChatWire.item([
+            "id": .string("question-\(requestID)"), "kind": .string("question"), "requestId": .string(requestID),
+            "createdAt": .number(time), "turnId": .string("turn-child"),
+        ])
+    }
+
+    private func childInfo(_ status: String, requests: [String] = []) -> JSONValue {
+        ChatWire.info([
+            "chatId": .string("child"), "status": .string(status),
+            "activeTurnId": status == "idle" ? .null : .string("turn-child"),
+            "requests": .array(
+                requests.map {
+                    .object([
+                        "requestId": .string($0), "itemId": .string("question-\($0)"), "kind": .string("question"),
+                        "createdAt": .number(20),
+                    ])
+                }),
+        ])
+    }
+
+    private func taskRow(status: String = "running", child: String? = "child") -> JSONValue {
+        var fields: [String: JSONValue] = [
+            "id": .string("task-task-1"), "kind": .string("subagent"), "toolUseId": .string("task-task-1"),
+            "description": .string("Ask the person"), "background": .bool(true), "status": .string(status),
+            "startedAt": .number(10), "createdAt": .number(10), "origin": .string("ruimte"),
+        ]
+        if let child { fields["childId"] = .string(child) }
+        return ChatWire.item(fields)
+    }
+
+    private func itemEvent(_ item: JSONValue) -> JSONValue { .object(["type": .string("item"), "item": item]) }
+    private func infoEvent(_ info: JSONValue) -> JSONValue { .object(["type": .string("info"), "info": info]) }
+
+    @MainActor private func liveParent(
+        _ machine: ChatsMachine, parentItems: [JSONValue], child: JSONValue
+    ) async -> (ChatPromptState, ChatModel, UIWindow) {
+        machine.snapshots["parent"] = .object([
+            "info": ChatWire.info([
+                "chatId": .string("parent"), "status": .string("running"), "activeTurnId": .string("t"),
+            ]),
+            "items": .array(parentItems), "seq": .number(10),
+        ])
+        machine.snapshots["child"] = child
+        let model = ChatModel(client: machine, chatID: "parent")
+        let prompts = ChatPromptState()
+        for _ in 0..<60 where UIApplication.shared.connectedScenes.isEmpty { await displayFrames() }
+        let host = UIHostingController(
+            rootView: Color.clear.modifier(
+                ChatPromptFeedTracking(
+                    feed: ChatPromptFeed(session: nil), prompts: prompts, model: model, attention: nil, visible: true)))
+        let window = UIWindow.showing(host, size: CGSize(width: 390, height: 400))
+        model.start()
+        await displayFrames(10)
+        return (prompts, model, window)
+    }
+
+    /// The events of a child reach the phone on their own channels in no fixed order: its row in the parent, its
+    /// status and its own thread. In every order the parent's composer ends up with the child's question, as the
+    /// desktop's feed does.
+    @MainActor func testAChildsQuestionReachesTheParentInEveryOrderItsEventsCome() async {
+        func note(_ name: String, _ prompts: ChatPromptState, _ expected: [String], line: UInt = #line) {
+            XCTAssertEqual(prompts.subjects.map(\.key), expected, name, line: line)
+        }
+        let quiet = { [self] in childInfo("running") }
+        let empty: (JSONValue) -> JSONValue = { info in
+            .object(["info": info, "items": .array([]), "seq": .number(10)])
+        }
+
+        do {  // 1: item, then needs-you
+            let machine = ChatsMachine()
+            let (prompts, _, window) = await liveParent(machine, parentItems: [taskRow()], child: empty(quiet()))
+            machine.send("child", itemEvent(childQuestion("r1", at: 20)))
+            await displayFrames(5)
+            machine.send("child", infoEvent(childInfo("needs-you", requests: ["r1"])))
+            await displayFrames(10)
+            note("item, then status", prompts, ["child/r1"])
+            window.close()
+        }
+        do {  // 2: needs-you, then item
+            let machine = ChatsMachine()
+            let (prompts, _, window) = await liveParent(machine, parentItems: [taskRow()], child: empty(quiet()))
+            machine.send("child", infoEvent(childInfo("needs-you", requests: ["r1"])))
+            await displayFrames(5)
+            machine.send("child", itemEvent(childQuestion("r1", at: 20)))
+            await displayFrames(10)
+            note("status, then item", prompts, ["child/r1"])
+            window.close()
+        }
+        do {  // 3: attach in flight, answer carries the question
+            let machine = ChatsMachine()
+            machine.held = ["child"]
+            let (prompts, _, window) = await liveParent(machine, parentItems: [taskRow()], child: empty(quiet()))
+            machine.snapshots["child"] = .object([
+                "info": childInfo("needs-you", requests: ["r1"]), "items": .array([childQuestion("r1", at: 20)]),
+                "seq": .number(12),
+            ])
+            machine.release("child")
+            await displayFrames(10)
+            note("an attach still in flight", prompts, ["child/r1"])
+            window.close()
+        }
+        do {  // 4: item while running, needs-you later with nothing else
+            let machine = ChatsMachine()
+            let (prompts, _, window) = await liveParent(machine, parentItems: [taskRow()], child: empty(quiet()))
+            machine.send("child", itemEvent(childQuestion("r1", at: 20)))
+            await displayFrames(10)
+            machine.send("child", infoEvent(childInfo("needs-you", requests: ["r1"])))
+            await displayFrames(10)
+            note("only the status changes later", prompts, ["child/r1"])
+            window.close()
+        }
+        do {  // 5: a second question after the first settled
+            let machine = ChatsMachine()
+            let (prompts, _, window) = await liveParent(machine, parentItems: [taskRow()], child: empty(quiet()))
+            machine.send("child", itemEvent(childQuestion("r1", at: 20)))
+            machine.send("child", infoEvent(childInfo("needs-you", requests: ["r1"])))
+            await displayFrames(10)
+            var answered = childQuestion("r1", at: 20)
+            if case .object(var fields) = answered {
+                fields["state"] = .string("answered")
+                answered = .object(fields)
+            }
+            machine.send("child", itemEvent(answered))
+            machine.send("child", infoEvent(childInfo("running")))
+            await displayFrames(10)
+            machine.send("child", itemEvent(childQuestion("r2", at: 30)))
+            machine.send("child", infoEvent(childInfo("needs-you", requests: ["r2"])))
+            await displayFrames(10)
+            note("a second question", prompts, ["child/r2"])
+            window.close()
+        }
+        do {  // 6a: the row arrives later
+            let machine = ChatsMachine()
+            let (prompts, _, window) = await liveParent(
+                machine, parentItems: [],
+                child: .object([
+                    "info": childInfo("needs-you", requests: ["r1"]), "items": .array([childQuestion("r1", at: 20)]),
+                ]))
+            machine.send("parent", itemEvent(taskRow()))
+            await displayFrames(10)
+            note("the row comes later", prompts, ["child/r1"])
+            window.close()
+        }
+        do {  // 6b: the row's childId arrives in a later update of the row
+            let machine = ChatsMachine()
+            let (prompts, _, window) = await liveParent(
+                machine, parentItems: [taskRow(child: nil)],
+                child: .object([
+                    "info": childInfo("needs-you", requests: ["r1"]), "items": .array([childQuestion("r1", at: 20)]),
+                ]))
+            machine.send("parent", itemEvent(taskRow()))
+            await displayFrames(10)
+            note("the row names its child later", prompts, ["child/r1"])
+            window.close()
+        }
+        do {  // 7: a CLI sub-agent's background question in the parent's thread, live
+            let machine = ChatsMachine()
+            let agent = ChatWire.item([
+                "id": .string("agent-1"), "kind": .string("subagent"), "toolUseId": .string("use-agent"),
+                "description": .string("Explore"), "background": .bool(true), "status": .string("running"),
+                "startedAt": .number(10), "createdAt": .number(10),
+            ])
+            let (prompts, _, window) = await liveParent(
+                machine, parentItems: [agent, ChatWire.item(["id": .string("own"), "kind": .string("approval")])],
+                child: empty(quiet()))
+            machine.send(
+                "parent",
+                itemEvent(
+                    ChatWire.item([
+                        "id": .string("question-bg"), "kind": .string("question"), "requestId": .string("bg"),
+                        "createdAt": .number(40), "turnId": .null,
+                    ])))
+            machine.send(
+                "parent", infoEvent(ChatWire.info(["chatId": .string("parent"), "status": .string("needs-you")])))
+            await displayFrames(10)
+            note("a background question of the CLI's own sub-agent", prompts, ["request-own", "bg"])
+            window.close()
+        }
+    }
+
     private enum Failure: Error { case expected }
 }
 
 @MainActor private final class ChatsMachine: MachineRequesting {
     var snapshots: [String: JSONValue] = [:]
+    /// Chats whose attach waits until `release` answers it with what `snapshots` holds then.
+    var held: Set<String> = []
+    private var waiting: [String: CheckedContinuation<Void, Never>] = [:]
+    private var handlers: [WireEvent: [@MainActor @Sendable (JSONValue) -> Void]] = [:]
+    private var seq: [String: Int] = [:]
 
     func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         switch type {
-        case .chatAttach: return snapshots[payload["chatId"]?.stringValue ?? ""] ?? .object([:])
+        case .chatAttach:
+            let chatID = payload["chatId"]?.stringValue ?? ""
+            if held.contains(chatID) { await withCheckedContinuation { waiting[chatID] = $0 } }
+            return snapshots[chatID] ?? .object([:])
         case .providerList: return .object(["providers": .array([])])
         default: return .object([:])
         }
     }
 
-    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+        handlers[event, default: []].append(handler)
+        return {}
+    }
+
+    func release(_ chatID: String) {
+        held.remove(chatID)
+        waiting.removeValue(forKey: chatID)?.resume()
+    }
+
+    /// One event of a chat's thread, as `chat.event` carries it to the clients attached to that chat.
+    func send(_ chatID: String, _ event: JSONValue) {
+        let next = (seq[chatID] ?? 10) + 1
+        seq[chatID] = next
+        let envelope: JSONValue = .object(["chatId": .string(chatID), "seq": .number(Double(next)), "event": event])
+        for handler in handlers[.chatEvent] ?? [] { handler(envelope) }
+    }
 }
 
 @MainActor private final class HistoryMachine: MachineRequesting {
