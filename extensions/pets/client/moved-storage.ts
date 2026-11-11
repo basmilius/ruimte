@@ -13,8 +13,8 @@ export const PETS_IN_APP_SETTINGS: SharedBefore = {
 };
 
 /*
- * Moves what pets kept under a key of their own, before they ran on the extension API, into the extension's storage
- * once, so a person keeps what they set and added. A key already moved, or none to move, is left as it is. Without
+ * Copies what pets kept under a key of their own, before they ran on the extension API, into the extension's storage
+ * once, so a person keeps what they set and added. A key already copied, or none to copy, is left as it is. Without
  * that key, `shared` names the blob it was carved out of; its fields are copied, and the blob is never written.
  */
 export function movedFromBefore(legacyKey: string, key: string, shared?: SharedBefore): void {
@@ -33,9 +33,8 @@ export function movedFromBefore(legacyKey: string, key: string, shared?: SharedB
             return;
         }
 
-        if (storage.set(key, JSON.parse(text) as Json).ok) {
-            localStorage.removeItem(legacyKey);
-        }
+        // Copied, never removed: a Ruimte from before the move, started on the same profile again, still finds its pets.
+        storage.set(key, JSON.parse(text) as Json);
     } catch {
         // A key that does not read as JSON, or storage the browser refuses, leaves nothing to move.
     }

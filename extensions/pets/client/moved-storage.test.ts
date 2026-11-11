@@ -26,13 +26,13 @@ afterEach(() => {
 });
 
 describe('what pets kept before they ran on the extension API', () => {
-    test('moves once into the extension storage, and the old key goes', () => {
+    test('are copied once into the extension storage, and stay for an older Ruimte on the same profile', () => {
         items.set('ruimte.pets', JSON.stringify({ pets: true }));
 
         movedFromBefore('ruimte.pets', 'settings');
 
         expect(storage.get('settings')).toEqual({ pets: true });
-        expect(items.has('ruimte.pets')).toBe(false);
+        expect(items.get('ruimte.pets')).toBe(JSON.stringify({ pets: true }));
     });
 
     test('leaves a key alone that was already moved', () => {
