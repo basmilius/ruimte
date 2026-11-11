@@ -557,7 +557,12 @@ describe('reaching another open project', () => {
 
     test('project activate and project close only ask the clients with the caller project on screen', async () => {
         const asked: SessionEvent[] = [];
-        fx.store.subscribe('client-2', (event) => asked.push(event));
+        // Only what the two tools ask: a summary of an earlier write may still reach the client while this runs.
+        fx.store.subscribe('client-2', (event) => {
+            if (event.event === 'project.activate' || event.event === 'project.askClose') {
+                asked.push(event);
+            }
+        });
 
         expect((await fx.invoke('project_activate', { project_id: otherId }, 'chat', reaching())).lines).toEqual([
             `showing\t${otherId}\tother`,
