@@ -640,7 +640,10 @@ final class SubagentConversation {
         let chatID = page.context?.chatId
         let next = chatID.map { (chatID: $0, provider: page.context?.provider ?? "") }
         if next?.chatID != delegatedChat?.chatID || next?.provider != delegatedChat?.provider { delegatedChat = next }
-        let listed = page.pending?.arrayValue.map { $0.compactMap { try? $0.decoded(as: ChatItem.self) } }
+        // `isPending` holds only what this app can answer; a request it cannot read is answered on the machine.
+        let listed = page.pending?.arrayValue.map {
+            $0.compactMap { try? $0.decoded(as: ChatItem.self) }.filter(\.isPending)
+        }
         let waiting = chatID == nil ? [] : listed ?? items.filter(\.isPending)
         if waiting != pending { pending = waiting }
     }

@@ -13098,7 +13098,8 @@
               "turnId"
             ]
           }
-        }
+        },
+        "x-lossy-items": true
       },
       "history": {
         "type": "object",
@@ -14807,7 +14808,8 @@
               "turnId"
             ]
           }
-        }
+        },
+        "x-lossy-items": true
       },
       "seq": {
         "type": "integer",
@@ -19958,7 +19960,8 @@
                         "turnId"
                       ]
                     }
-                  }
+                  },
+                  "x-lossy-items": true
                 }
               },
               "required": [
@@ -19972,7 +19975,8 @@
             "tag": "type",
             "base": []
           }
-        }
+        },
+        "x-lossy-items": true
       },
       "bookmarks": {
         "type": "array",
@@ -22191,7 +22195,8 @@
               "turnId"
             ]
           }
-        }
+        },
+        "x-lossy-items": true
       }
     },
     "required": [
@@ -27429,7 +27434,8 @@
               "turnId"
             ]
           }
-        }
+        },
+        "x-lossy-items": true
       },
       "history": {
         "type": "object",
@@ -28278,7 +28284,8 @@
             "usage",
             "createdAt"
           ]
-        }
+        },
+        "x-lossy-items": true
       }
     },
     "required": [
@@ -31367,7 +31374,8 @@
               "turnId"
             ]
           }
-        }
+        },
+        "x-lossy-items": true
       },
       "history": {
         "type": "object",
@@ -31583,8 +31591,17 @@
                 "state"
               ]
             }
-          ]
-        }
+          ],
+          "x-open-union": {
+            "tag": "kind",
+            "base": [
+              "id",
+              "createdAt",
+              "turnId"
+            ]
+          }
+        },
+        "x-lossy-items": true
       },
       "source": {
         "type": "string",
@@ -56907,7 +56924,8 @@
             "icon",
             "nameSource"
           ]
-        }
+        },
+        "x-lossy-items": true
       }
     },
     "required": [
@@ -68443,7 +68461,8 @@
             "summary",
             "views"
           ]
-        }
+        },
+        "x-lossy-items": true
       }
     },
     "required": [
@@ -74677,7 +74696,8 @@
             "settledAt",
             "wake"
           ]
-        }
+        },
+        "x-lossy-items": true
       }
     },
     "required": [
@@ -87355,7 +87375,8 @@
                       "turnId"
                     ]
                   }
-                }
+                },
+                "x-lossy-items": true
               }
             },
             "required": [

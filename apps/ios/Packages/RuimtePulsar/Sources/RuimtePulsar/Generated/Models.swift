@@ -7259,7 +7259,7 @@ public struct ChatResetEvent: Codable, Sendable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         `type` = try container.decode(String.self, forKey: .`type`)
         `info` = try container.decode(ChatInfo.self, forKey: .`info`)
-        `items` = try container.decode([ChatItem].self, forKey: .`items`)
+        `items` = try container.decodeLossy([ChatItem].self, forKey: .`items`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -7358,16 +7358,16 @@ public struct ChatAttachResult: Codable, Sendable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         `info` = try container.decode(ChatInfo.self, forKey: .`info`)
-        `items` = try container.decode([ChatItem].self, forKey: .`items`)
+        `items` = try container.decodeLossy([ChatItem].self, forKey: .`items`)
         `history` = try container.decodeIfPresent(ChatHistoryPage.self, forKey: .`history`)
-        `pending` = try container.decodeIfPresent([ChatItem].self, forKey: .`pending`)
+        `pending` = try container.contains(.`pending`) ? container.decodeLossy([ChatItem].self, forKey: .`pending`) : nil
         `seq` = try container.decodeIfPresent(Int64.self, forKey: .`seq`)
-        `events` = try container.decodeIfPresent([ChatEvent].self, forKey: .`events`)
+        `events` = try container.contains(.`events`) ? container.decodeLossy([ChatEvent].self, forKey: .`events`) : nil
         `bookmarks` = try container.decodeIfPresent([ChatAttachResultBookmarksItem].self, forKey: .`bookmarks`)
         `visuals` = try container.decodeIfPresent([ChatAttachResultVisualsItem].self, forKey: .`visuals`)
         `subagents` = try container.decodeIfPresent([ChatSubagentItem].self, forKey: .`subagents`)
         `workflows` = try container.decodeIfPresent([ChatToolItem].self, forKey: .`workflows`)
-        `outline` = try container.decodeIfPresent([ChatItem].self, forKey: .`outline`)
+        `outline` = try container.contains(.`outline`) ? container.decodeLossy([ChatItem].self, forKey: .`outline`) : nil
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -7510,7 +7510,7 @@ public struct ChatHistoryResult: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        `items` = try container.decode([ChatItem].self, forKey: .`items`)
+        `items` = try container.decodeLossy([ChatItem].self, forKey: .`items`)
         `history` = try container.decode(ChatHistoryPage.self, forKey: .`history`)
     }
 
@@ -11909,7 +11909,7 @@ public struct TaskListResult: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        `tasks` = try container.decode([AgentTask].self, forKey: .`tasks`)
+        `tasks` = try container.decodeLossy([AgentTask].self, forKey: .`tasks`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -13987,7 +13987,7 @@ public struct ChatListResult: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        `chats` = try container.decode([ChatInfo].self, forKey: .`chats`)
+        `chats` = try container.decodeLossy([ChatInfo].self, forKey: .`chats`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -16242,7 +16242,7 @@ public struct ChatSubagentPage: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        `items` = try container.decode([ChatItem].self, forKey: .`items`)
+        `items` = try container.decodeLossy([ChatItem].self, forKey: .`items`)
         `history` = try container.decode(ChatSubagentHistory.self, forKey: .`history`)
         `pending` = try container.decodeIfPresent(JSONValue.self, forKey: .`pending`)
         `source` = try container.decode(ChatSubagentSource.self, forKey: .`source`)
@@ -16419,7 +16419,7 @@ public struct ProjectListResult: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        `projects` = try container.decode([ProjectSummary].self, forKey: .`projects`)
+        `projects` = try container.decodeLossy([ProjectSummary].self, forKey: .`projects`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -16441,7 +16441,7 @@ public struct ProjectSidebarResult: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        `projects` = try container.decode([ProjectSidebarEntry].self, forKey: .`projects`)
+        `projects` = try container.decodeLossy([ProjectSidebarEntry].self, forKey: .`projects`)
     }
 
     public func encode(to encoder: Encoder) throws {

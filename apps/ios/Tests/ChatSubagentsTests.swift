@@ -200,6 +200,23 @@ final class ChatSubagentsTests: XCTestCase {
         XCTAssertEqual(presentation.entries.map(\.kind), [.tools, .message])
     }
 
+    @MainActor func testARequestOfADelegatedChatThisAppCannotReadIsNotOfferedToAnswer() async {
+        let machine = SubagentMachine()
+        // An approval of a newer machine: `allowAlways` lost a field it requires.
+        let newer = ChatWire.item([
+            "id": .string("newer"), "kind": .string("approval"), "allowAlways": .object(["label": .string("Always")]),
+        ])
+        machine.page = [
+            "context": .object(["provider": .string("claude"), "cwd": .string("/work"), "chatId": .string("child")]),
+            "pending": .array([ChatWire.item(["id": .string("known"), "kind": .string("approval")]), newer]),
+        ]
+        let conversation = SubagentConversation(client: machine, chatID: "chat", toolUseID: "use")
+        conversation.start()
+        await machine.wait(for: 1)
+        XCTAssertEqual(conversation.pending.map(\.id), ["known"])
+        conversation.stop()
+    }
+
     @MainActor func testOnlyTheLastPageOnAConversationLetsTheMachineGo() async {
         let machine = SubagentMachine()
         let first = SubagentConversation(client: machine, chatID: "chat", toolUseID: "use")
@@ -303,6 +320,7 @@ final class ChatSubagentsTests: XCTestCase {
 }
 
 @MainActor private final class SubagentMachine: MachineRequesting {
+    var page: [String: JSONValue] = [:]
     var payloads: [JSONValue] = []
     var handlers: [@MainActor @Sendable (JSONValue) -> Void] = []
     private var waiters: [(Int, CheckedContinuation<Void, Never>)] = []
@@ -313,10 +331,13 @@ final class ChatSubagentsTests: XCTestCase {
         let reached = waiters.filter { payloads.count >= $0.0 }
         waiters.removeAll { payloads.count >= $0.0 }
         reached.forEach { $0.1.resume() }
-        return .object([
-            "items": .array([ChatWire.item(["id": .string("1"), "kind": .string("assistant"), "text": .string("Hi")])]),
-            "history": .object(["cursor": .null]), "source": .string("claude-transcript"), "live": .bool(true),
-        ])
+        return .object(
+            [
+                "items": .array([
+                    ChatWire.item(["id": .string("1"), "kind": .string("assistant"), "text": .string("Hi")])
+                ]),
+                "history": .object(["cursor": .null]), "source": .string("claude-transcript"), "live": .bool(true),
+            ].merging(page) { _, given in given })
     }
 
     func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {

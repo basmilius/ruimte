@@ -3014,48 +3014,6 @@
           "nameSource": "folder"
         }
       }
-    },
-    {
-      "schema": "request.chat.attach.result",
-      "input": {
-        "info": {
-          "chatId": "chat-1",
-          "provider": "claude",
-          "cwd": "/work",
-          "agentSessionId": null,
-          "model": null,
-          "selection": {
-            "model": "opus",
-            "options": {
-              "effort": "high",
-              "thinking": true
-            }
-          },
-          "runtimeMode": "auto",
-          "status": "needs-you",
-          "running": true,
-          "activeTurnId": "turn-1",
-          "slashCommands": [
-            "compact"
-          ],
-          "usage": {
-            "contextTokens": 1200,
-            "contextWindow": null,
-            "costUsd": 0.25,
-            "turns": 1
-          },
-          "createdAt": 1000
-        },
-        "items": [
-          {
-            "createdAt": 1000,
-            "turnId": null,
-            "kind": "future-kind"
-          }
-        ],
-        "seq": 12
-      },
-      "valid": false
     }
   ],
   "tolerated": [
@@ -3302,6 +3260,11 @@
             ],
             "answers": null,
             "state": "delegated"
+          },
+          {
+            "createdAt": 1000,
+            "turnId": null,
+            "kind": "future-kind"
           }
         ]
       },
@@ -3553,6 +3516,187 @@
         },
         "pending": [],
         "seq": 12
+      }
+    },
+    {
+      "schema": "request.chat.subagent.result",
+      "input": {
+        "history": {
+          "cursor": null
+        },
+        "source": "claude-transcript",
+        "live": false,
+        "items": [],
+        "pending": [
+          {
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "id": "approval-1",
+            "kind": "approval",
+            "requestId": "request-1",
+            "toolUseId": null,
+            "toolName": "Write",
+            "input": null,
+            "description": null,
+            "canAllowAlways": true,
+            "decision": "pending"
+          },
+          {
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "id": "approval-2",
+            "kind": "approval",
+            "requestId": "request-1",
+            "toolUseId": null,
+            "toolName": "Write",
+            "input": null,
+            "description": null,
+            "canAllowAlways": true,
+            "decision": "pending",
+            "allowAlways": {
+              "label": "Always"
+            }
+          },
+          {
+            "createdAt": 1000,
+            "turnId": null,
+            "kind": "future-kind"
+          }
+        ]
+      },
+      "output": {
+        "items": [],
+        "history": {
+          "cursor": null
+        },
+        "pending": [
+          {
+            "id": "approval-1",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "kind": "approval",
+            "requestId": "request-1",
+            "toolUseId": null,
+            "toolName": "Write",
+            "input": null,
+            "description": null,
+            "canAllowAlways": true,
+            "decision": "pending"
+          },
+          {
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "id": "approval-2",
+            "kind": "approval",
+            "requestId": "request-1",
+            "toolUseId": null,
+            "toolName": "Write",
+            "input": null,
+            "description": null,
+            "canAllowAlways": true,
+            "decision": "pending",
+            "allowAlways": {
+              "label": "Always"
+            },
+            "x-unknown": true
+          }
+        ],
+        "source": "claude-transcript",
+        "live": false
+      }
+    },
+    {
+      "schema": "request.chat.list.result",
+      "input": {
+        "chats": [
+          {
+            "chatId": "chat-1",
+            "provider": "claude",
+            "cwd": "/work",
+            "agentSessionId": null,
+            "model": null,
+            "selection": {
+              "model": "opus",
+              "options": {
+                "effort": "high",
+                "thinking": true
+              }
+            },
+            "runtimeMode": "auto",
+            "status": "needs-you",
+            "running": true,
+            "activeTurnId": "turn-1",
+            "slashCommands": [
+              "compact"
+            ],
+            "usage": {
+              "contextTokens": 1200,
+              "contextWindow": null,
+              "costUsd": 0.25,
+              "turns": 1
+            },
+            "createdAt": 1000
+          },
+          {
+            "chatId": "chat-2",
+            "provider": "claude",
+            "agentSessionId": null,
+            "model": null,
+            "selection": {
+              "model": "opus",
+              "options": {
+                "effort": "high",
+                "thinking": true
+              }
+            },
+            "runtimeMode": "auto",
+            "status": "needs-you",
+            "running": true,
+            "activeTurnId": "turn-1",
+            "slashCommands": [
+              "compact"
+            ],
+            "usage": {
+              "contextTokens": 1200,
+              "contextWindow": null,
+              "costUsd": 0.25,
+              "turns": 1
+            },
+            "createdAt": 1000
+          }
+        ]
+      },
+      "output": {
+        "chats": [
+          {
+            "chatId": "chat-1",
+            "provider": "claude",
+            "cwd": "/work",
+            "agentSessionId": null,
+            "model": null,
+            "selection": {
+              "model": "opus",
+              "options": {
+                "effort": "high",
+                "thinking": true
+              }
+            },
+            "runtimeMode": "auto",
+            "status": "needs-you",
+            "running": true,
+            "activeTurnId": "turn-1",
+            "slashCommands": [
+              "compact"
+            ],
+            "usage": {
+              "contextTokens": 1200,
+              "contextWindow": null,
+              "costUsd": 0.25,
+              "turns": 1
+            },
+            "createdAt": 1000
+          }
+        ]
       }
     },
     {

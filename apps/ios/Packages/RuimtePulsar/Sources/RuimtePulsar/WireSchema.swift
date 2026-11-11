@@ -131,6 +131,13 @@ public enum JSONValue: Codable, Sendable, Equatable {
     }
 }
 
+extension KeyedDecodingContainer {
+    /// A list stamped `x-lossy-items`, without the elements this app cannot read.
+    func decodeLossy<Element: Decodable>(_ type: [Element].Type, forKey key: Key) throws -> [Element] {
+        try decode([WireSchema.Lossy<Element>].self, forKey: key).compactMap(\.value)
+    }
+}
+
 public enum WireSchema {
     private static let schemas: Result<JSONValue, Error> = Result {
         guard let url = Bundle.module.url(forResource: "schemas", withExtension: "json") else {
@@ -234,6 +241,12 @@ public enum WireSchema {
             if let minimum = schema["minItems"]?.numberValue, Double(array.count) < minimum { throw fail() }
             if let maximum = schema["maxItems"]?.numberValue, Double(array.count) > maximum { throw fail() }
             let prefix = schema["prefixItems"]?.arrayValue ?? []
+            if schema["x-lossy-items"] == .bool(true), let item = schema["items"] {
+                return .array(
+                    array.enumerated().compactMap { index, value in
+                        try? parse(value, schema: item, path: "\(path)[\(index)]", definitions: definitions)
+                    })
+            }
             return .array(
                 try array.enumerated().map { index, value in
                     if index < prefix.count {
@@ -309,6 +322,15 @@ public enum WireSchema {
         }
         object[unknownMark] = .bool(true)
         return .object(object)
+    }
+
+    /// One element of a list stamped `x-lossy-items`, which reads as nil where the interpreter left it out.
+    struct Lossy<Element: Decodable>: Decodable {
+        let value: Element?
+
+        init(from decoder: Decoder) throws {
+            value = try? Element(from: decoder)
+        }
     }
 
     private static func resolved(_ schema: JSONValue, definitions: JSONValue?) -> JSONValue {

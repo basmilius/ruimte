@@ -22,6 +22,7 @@ import * as direct from '../src/direct.ts';
 import { REQUEST_SCHEMAS, EVENT_SCHEMAS } from '../src/index.ts';
 import { MachineUpdateStatusSchema } from '../src/machine-update.ts';
 import { NODE_ACCENT_COLORS, NODE_ACCENT_NAMES } from '../src/node-accents.ts';
+import { ProjectSidebarResultSchema } from '../src/project-sidebar.ts';
 import {
     CameraSchema,
     CanvasNodeSchema,
@@ -29,6 +30,7 @@ import {
     PROJECT_ICON_NAMES,
     PROJECT_VIEW_KINDS,
     ProjectIconNameSchema,
+    ProjectListResultSchema,
     ProjectViewSchema
 } from '../src/project.ts';
 import { PROTOCOL_VERSION } from '../src/protocol.ts';
@@ -153,14 +155,21 @@ function typeOf(schema: Schema, suggested: string, force = false): string {
         const assignment = properties.map(({ key }) => `        self.${identifier(key)} = ${identifier(key)}`).join('\n');
         const decoding = properties
             .map(({ key, value, optional, isNullable, base, type }) => {
-                const expression =
-                    value.default !== undefined
-                        ? `try container.decodeIfPresent(${base}.self, forKey: .${identifier(key)}) ?? ${JSON.stringify(value.default)}`
-                        : optional && isNullable
-                          ? `try container.contains(.${identifier(key)}) ? (container.decodeNil(forKey: .${identifier(key)}) ? .null : .value(container.decode(${base}.self, forKey: .${identifier(key)}))) : .missing`
-                          : optional
-                            ? `try container.decodeIfPresent(${base}.self, forKey: .${identifier(key)})`
-                            : `try container.decode(${type}.self, forKey: .${identifier(key)})`;
+                const lossy = (nullable(value) ?? value)['x-lossy-items'] === true && value.default === undefined && !(optional && isNullable);
+                const lossyRead = `container.decodeLossy(${base}.self, forKey: .${identifier(key)})`;
+                const expression = lossy
+                    ? optional
+                        ? `try container.contains(.${identifier(key)}) ? ${lossyRead} : nil`
+                        : isNullable
+                          ? `try container.decodeNil(forKey: .${identifier(key)}) ? nil : ${lossyRead}`
+                          : `try ${lossyRead}`
+                    : value.default !== undefined
+                      ? `try container.decodeIfPresent(${base}.self, forKey: .${identifier(key)}) ?? ${JSON.stringify(value.default)}`
+                      : optional && isNullable
+                        ? `try container.contains(.${identifier(key)}) ? (container.decodeNil(forKey: .${identifier(key)}) ? .null : .value(container.decode(${base}.self, forKey: .${identifier(key)}))) : .missing`
+                        : optional
+                          ? `try container.decodeIfPresent(${base}.self, forKey: .${identifier(key)})`
+                          : `try container.decode(${type}.self, forKey: .${identifier(key)})`;
                 return `        ${identifier(key)} = ${expression}`;
             })
             .join('\n');
@@ -364,8 +373,23 @@ const openVocabularies: ReadonlyMap<unknown, readonly string[]> = new Map<unknow
  */
 const openUnions: ReadonlyMap<unknown, { tag: string; base: readonly string[] }> = new Map<unknown, { tag: string; base: readonly string[] }>([
     [chat.ChatItemSchema, { tag: 'kind', base: ['id', 'createdAt', 'turnId'] }],
-    [chat.ChatEventSchema, { tag: 'type', base: [] }]
+    [chat.ChatEventSchema, { tag: 'type', base: [] }],
+    // A request a delegated chat waits on; one this app cannot read is never answered from it.
+    [chat.ChatSubagentResultSchema.shape.pending.unwrap().element, { tag: 'kind', base: ['id', 'createdAt', 'turnId'] }]
 ]);
+/*
+ * Lists of which the app leaves out an element it cannot read, so one newer chat, project or task does not empty the
+ * page it is on. An array of an open union is one too, for a member without the fields every member shares.
+ */
+const lossyArrays: ReadonlySet<unknown> = new Set<unknown>([
+    chat.ChatListResultSchema.shape.chats,
+    ProjectListResultSchema.shape.projects,
+    ProjectSidebarResultSchema.shape.projects,
+    task.TaskListResultSchema.shape.tasks
+]);
+function isLossyArray(zodSchema: unknown): boolean {
+    return lossyArrays.has(zodSchema) || (zodSchema instanceof z.ZodArray && openUnions.has(zodSchema.element));
+}
 // Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.
 const apiRoots: Record<string, z.ZodType> = {};
 // Sorted, so the generated files do not move when an area file adds a request.
@@ -390,9 +414,13 @@ for (const [name, schema] of Object.entries(apiRoots)) {
                 jsonSchema['x-open-enum'] = [...known];
                 delete jsonSchema.enum;
             }
-            const open = openUnions.get(zodSchema);
+            // Only what a machine sends degrades; what the app sends goes whole or not at all.
+            const open = name.endsWith('.payload') ? undefined : openUnions.get(zodSchema);
             if (open) {
                 jsonSchema['x-open-union'] = { tag: open.tag, base: [...open.base] };
+            }
+            if (!name.endsWith('.payload') && isLossyArray(zodSchema)) {
+                jsonSchema['x-lossy-items'] = true;
             }
             stampRefinements(zodSchema, jsonSchema, `${name} ${path.join('.')}`);
             if (zodSchema instanceof z.ZodPipe && zodSchema.in === CameraSchema) {
@@ -1225,18 +1253,14 @@ validationInputs.push(
         }
     }
 );
-// A member of an open union without the fields every member shares has no place to keep, so the reply stays refused.
-validationInputs.push({
-    schema: 'request.chat.attach.result',
-    input: { info: chatInfoFixture, items: [{ createdAt: 1000, turnId: null, kind: 'future-kind' }], seq: 12 }
-});
 const validations = validationInputs.map((entry) => {
     const parsed = roots[entry.schema]!.safeParse(entry.input);
     return { ...entry, valid: parsed.success, ...(parsed.success ? { output: parsed.data } : {}) };
 });
 /*
  * What a newer machine may send that zod here refuses and the app degrades: each member of an open union it cannot
- * read keeps its place, marked. `output` is zod's answer for the readable rest with the marked members put back.
+ * read keeps its place, marked, and an element of a lossy list it cannot place is left out. `output` is zod's answer
+ * for the readable rest with the marked members put back.
  */
 const futureItems = [
     { ...turnBase, id: 'future-1', kind: 'future-kind', shape: { nested: [1] } },
@@ -1249,11 +1273,25 @@ const marked = (value: object) => ({ ...value, [UNKNOWN_MARK]: true });
 const attachBase = { info: chatInfoFixture, history: { start: 0, cursor: 'c1' }, pending: [], seq: 12 };
 const readableAttach = roots['request.chat.attach.result']!.parse({ ...attachBase, items: chatItemsFixture }) as { items: unknown[] };
 const futureEvent = { type: 'future-event', itemId: 'assistant-1' };
+const placeless = { createdAt: 1000, turnId: null, kind: 'future-kind' };
+const chatInfoWithoutCwd = Object.fromEntries(Object.entries(chatInfoFixture).filter(([key]) => key !== 'cwd'));
+const subagentBase = { history: { cursor: null }, source: 'claude-transcript', live: false, items: [] };
+const readableSubagent = roots['request.chat.subagent.result']!.parse({ ...subagentBase, pending: [chatItemsFixture[6]] }) as { pending: unknown[] };
 const tolerated = [
     {
         schema: 'request.chat.attach.result',
-        input: { ...attachBase, items: [...chatItemsFixture, ...futureItems] },
+        input: { ...attachBase, items: [...chatItemsFixture, ...futureItems, placeless] },
         output: { ...readableAttach, items: [...readableAttach.items, ...futureItems.map(marked)] }
+    },
+    {
+        schema: 'request.chat.subagent.result',
+        input: { ...subagentBase, pending: [chatItemsFixture[6], futureItems[2], placeless] },
+        output: { ...readableSubagent, pending: [...readableSubagent.pending, marked(futureItems[2]!)] }
+    },
+    {
+        schema: 'request.chat.list.result',
+        input: { chats: [chatInfoFixture, { ...chatInfoWithoutCwd, chatId: 'chat-2' }] },
+        output: roots['request.chat.list.result']!.parse({ chats: [chatInfoFixture] })
     },
     {
         schema: 'event.chat.event',
