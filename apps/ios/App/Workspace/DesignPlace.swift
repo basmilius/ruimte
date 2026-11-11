@@ -508,6 +508,10 @@ enum DesignFiles {
                 "projectId": .string(project), "designId": .string(design), "file": .string(file),
                 "bootstrap": .bool(true),
             ]))
+        // A result of a newer machine the app cannot read is never read as a page, also when its kind says page.
+        if built[WireSchema.unknownMark] == .bool(true) {
+            throw MachineClientError.invalid(String(localized: "Update Ruimte to see this."))
+        }
         let name = built.text("name")
         switch built.text("kind") {
         case "missing":

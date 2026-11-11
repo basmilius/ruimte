@@ -179,7 +179,15 @@ final class DesignPlaceTests: XCTestCase {
             ),
             (.object(["kind": .string("not-text"), "name": .string("index.html")]), "index.html is not a text file."),
         ]
-        for (built, words) in failures {
+        // As the app's reading of a reply marks a result of a newer machine, one that names a page too.
+        let newer: [JSONValue] = [
+            .object(["kind": .string("locked"), "name": .string("index.html"), WireSchema.unknownMark: .bool(true)]),
+            .object([
+                "kind": .string("page"), "pageId": .string("held-1"), "size": .string("large"),
+                WireSchema.unknownMark: .bool(true),
+            ]),
+        ]
+        for (built, words) in failures + newer.map({ ($0, "Update Ruimte to see this.") }) {
             let machine = DesignMachine(answersPage: true)
             machine.built = built
             do {

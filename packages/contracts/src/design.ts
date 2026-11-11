@@ -46,6 +46,12 @@ export const DesignPageResultSchema = z.discriminatedUnion('kind', [
 ]);
 export type DesignPageResult = z.infer<typeof DesignPageResultSchema>;
 
+/* A result of a newer machine this client cannot read, as `readFromMachine` keeps it; never a page to read. */
+export interface DesignPageUnknownResult {
+    readonly kind: 'unknown';
+    readonly raw: Readonly<Record<string, unknown>>;
+}
+
 export const DESIGN_REQUEST_SCHEMAS = {
     'design.page': { payload: DesignPagePayloadSchema, result: DesignPageResultSchema }
 } as const;

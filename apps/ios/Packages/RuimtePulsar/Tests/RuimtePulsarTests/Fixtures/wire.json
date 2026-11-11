@@ -4020,6 +4020,48 @@
           "tag": "future-event"
         }
       ]
+    },
+    {
+      "schema": "request.design.page.result",
+      "input": {
+        "kind": "future-failure",
+        "name": "index.html"
+      },
+      "output": {
+        "kind": "future-failure",
+        "name": "index.html",
+        "x-unknown": true
+      },
+      "degraded": [
+        {
+          "kind": "unknown-member",
+          "path": [],
+          "name": "DesignPageResult",
+          "tag": "future-failure"
+        }
+      ]
+    },
+    {
+      "schema": "request.design.page.result",
+      "input": {
+        "kind": "page",
+        "pageId": "held-1",
+        "size": "large"
+      },
+      "output": {
+        "kind": "page",
+        "pageId": "held-1",
+        "size": "large",
+        "x-unknown": true
+      },
+      "degraded": [
+        {
+          "kind": "unknown-member",
+          "path": [],
+          "name": "DesignPageResult",
+          "tag": "page"
+        }
+      ]
     }
   ],
   "binding": {

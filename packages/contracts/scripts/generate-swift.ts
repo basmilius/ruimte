@@ -1378,6 +1378,19 @@ const tolerated = [
         input: { chatId: 'chat-1', seq: 16, event: futureEvent },
         output: { chatId: 'chat-1', seq: 16, event: marked(futureEvent) },
         degraded: [member(['event'], 'ChatEvent', 'future-event')]
+    },
+    {
+        schema: 'request.design.page.result',
+        input: { kind: 'future-failure', name: 'index.html' },
+        output: marked({ kind: 'future-failure', name: 'index.html' }),
+        degraded: [member([], 'DesignPageResult', 'future-failure')]
+    },
+    // A held page that does not read is never read as one.
+    {
+        schema: 'request.design.page.result',
+        input: { kind: 'page', pageId: 'held-1', size: 'large' },
+        output: marked({ kind: 'page', pageId: 'held-1', size: 'large' }),
+        degraded: [member([], 'DesignPageResult', 'page')]
     }
 ];
 for (const entry of tolerated) {

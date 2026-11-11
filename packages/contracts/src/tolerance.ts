@@ -1,6 +1,7 @@
 import { AgentKindSchema } from '@adecore/agent-contracts/agent';
 import {
     lossyItems,
+    openUnion,
     openValues,
     readTolerant,
     type OpenUnions,
@@ -12,6 +13,7 @@ import type { z } from 'zod';
 import { AgentIntegrationSchema, type AgentIntegration } from './agent-integrations.ts';
 import { ARTIFACT_KINDS, ArtifactKindSchema } from './artifact.ts';
 import { EndpointNameSourceSchema, ReachabilitySchema, type Reachability } from './auth.ts';
+import { DesignPageResultSchema, type DesignPageResult, type DesignPageUnknownResult } from './design.ts';
 import { KeepAwakeModeSchema, type KeepAwakeMode } from './keep-awake.ts';
 import { TerminalShellSchema, type TerminalShell } from './machine-settings.ts';
 import { MachineUpdateStatusSchema } from './machine-update.ts';
@@ -52,6 +54,8 @@ openValues(ProjectNameSourceSchema, 'ProjectNameSource');
 openValues(ProjectSidebarViewSchema.shape.kind, 'ProjectSidebarViewKind');
 openValues(ProjectSidebarViewSchema.shape.nodes.element.shape.kind, 'ProjectSidebarNodeKind');
 
+openUnion(DesignPageResultSchema, 'DesignPageResult', { tag: 'kind', base: [] });
+
 // One newer project or task left out keeps the page; these lists are only read, never written back.
 lossyItems(ProjectListResultSchema.shape.projects);
 lossyItems(ProjectSidebarResultSchema.shape.projects);
@@ -77,12 +81,18 @@ export type MachineOpenWords = {
     VoicePhase: VoicePhase;
 };
 
+/* The open unions stamped here, by stamp name: the type a strict parse gives and what a member this client cannot read becomes. */
+export type MachineOpenUnions = {
+    DesignPageResult: { known: DesignPageResult; unknown: DesignPageUnknownResult };
+};
+
+type Unions = OpenUnions & MachineOpenUnions;
 type Words = OpenWords & MachineOpenWords;
 
 /* `T` as a client reads it from a machine: an open union also holds its unknown member, an open vocabulary an `UnknownWord`. */
-export type FromMachine<T> = TolerantWith<T, OpenUnions, Words>;
+export type FromMachine<T> = TolerantWith<T, Unions, Words>;
 
 /* Reads what a machine sent as a client should; what a client sends and what a machine receives stay strict. */
 export function readFromMachine<S extends z.core.$ZodType>(schema: S, input: unknown): ToleratedRead<FromMachine<z.output<S>>> {
-    return readTolerant<S, OpenUnions, Words>(schema, input);
+    return readTolerant<S, Unions, Words>(schema, input);
 }

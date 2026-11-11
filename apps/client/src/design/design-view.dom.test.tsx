@@ -352,4 +352,16 @@ describe('a design view on a machine that builds its pages', () => {
         expect(mounted.host.textContent).toContain('Could not show 2a Dense.html');
         expect(machine.requests('bytes.read')).toEqual([]);
     });
+
+    test.each([
+        ['a kind it does not know', { kind: 'locked', name: '2a Dense.html' }],
+        ['a held page it cannot read', { kind: 'page', pageId: 'page-1', size: 'large' }]
+    ])('asks to update Ruimte for a result of a newer machine with %s, and reads no page', async (_name, result) => {
+        machine.answerFromNewer('design.page', () => result);
+        await showAgain();
+
+        await until(() => mounted.host.textContent?.includes('Update Ruimte to see this.') === true);
+
+        expect(machine.requests('bytes.read')).toEqual([]);
+    });
 });

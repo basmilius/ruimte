@@ -8,6 +8,7 @@ import {
     injectVisualBootstrap,
     inlineDesignPage,
     type DesignPageFailure,
+    type DesignPageUnknownResult,
     type FsReadText
 } from '@ruimte/contracts';
 import i18next from 'i18next';
@@ -27,8 +28,10 @@ export interface DesignFolderRef {
     folder: string;
 }
 
-function failureText(failure: DesignPageFailure): string {
+function failureText(failure: DesignPageFailure | DesignPageUnknownResult): string {
     switch (failure.kind) {
+        case 'unknown':
+            return i18next.t('chat:unknownItem.item');
         case 'missing':
             return i18next.t('shell:design.pageMissing', { name: failure.name });
         case 'too-large':
