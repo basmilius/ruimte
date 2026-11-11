@@ -8,6 +8,7 @@ let package = Package(
     products: [
         .library(name: "RuimteTransport", targets: ["RuimteTransport"]),
         .executable(name: "chat-history-benchmark", targets: ["ChatHistoryBenchmark"]),
+        .executable(name: "wire-benchmark", targets: ["WireBenchmark"]),
     ],
     dependencies: [
         .package(path: "../RuimtePulsar"),
@@ -20,5 +21,6 @@ let package = Package(
             resources: [.process("Localizable.xcstrings")]),
         .testTarget(name: "RuimteTransportTests", dependencies: ["RuimteTransport"], resources: [.copy("Fixtures")]),
         .executableTarget(name: "ChatHistoryBenchmark", dependencies: ["RuimtePulsar"], path: "Benchmarks/ChatHistory"),
+        .executableTarget(name: "WireBenchmark", dependencies: ["RuimtePulsar"], path: "Benchmarks/Wire"),
     ]
 )
