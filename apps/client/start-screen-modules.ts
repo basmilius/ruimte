@@ -383,6 +383,7 @@ export const START_SCREEN_MODULES: readonly string[] = [
     'state/tailwind-palettes.ts',
     'state/tasks.ts',
     'state/text-drafts.ts',
+    'state/theme-change.ts',
     'state/theme.ts',
     'state/toasts.ts',
     'state/tunnel-proposals.ts',

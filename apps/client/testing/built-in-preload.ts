@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { BUILT_IN_API, BUILT_IN_FOLDERS, builtInModule } from '../built-ins';
 
 /*
@@ -5,9 +6,12 @@ import { BUILT_IN_API, BUILT_IN_FOLDERS, builtInModule } from '../built-ins';
  * that imports a built-in. The DOM run's React Compiler preload goes first and binds them itself, since the first
  * plugin that loads a module is the one Bun keeps.
  */
-const escaped = (path: string): string => path.replace(/[\\^$.*+?()[\]{}|/]/g, '\\$&');
-const extensions = escaped(new URL('../../../extensions/', import.meta.url).pathname);
-const files = new RegExp(`^(?:${escaped(BUILT_IN_API)}|${extensions}(?:${BUILT_IN_FOLDERS.map(escaped).join('|')})/.*\\.tsx?)(?:$|\\?)`);
+const SEPARATOR = '[\\\\/]';
+const escaped = (text: string): string => text.replace(/[\\^$.*+?()[\]{}|/]/g, '\\$&');
+// Bun hands a path over with the platform's separator, and Windows has the other one.
+const pattern = (path: string): string => path.replaceAll('\\', '/').split('/').map(escaped).join(SEPARATOR);
+const extensions = pattern(fileURLToPath(new URL('../../../extensions/', import.meta.url)));
+const files = new RegExp(`^(?:${pattern(BUILT_IN_API)}|${extensions}(?:${BUILT_IN_FOLDERS.map(escaped).join('|')})${SEPARATOR}.*\\.tsx?)(?:$|\\?)`);
 
 Bun.plugin({
     name: 'ruimte-built-ins',
