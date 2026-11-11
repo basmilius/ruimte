@@ -92,6 +92,20 @@ A theme is data. It needs no `client/` and applies before the first render. It s
 
 `css` is optional. `url()` reaches only files in the pack and `@import` is refused, both when packing and when loading. The stable hooks are `[data-surface='sidebar']`, `'panel'` and `'node'` (the first two sit on a column, so its ground is `> div`); an internal class can change in any release. Safe mode starts without a theme.
 
+## Built-ins
+
+A built-in ships inside the client: `pets` and `theme-umbra`. `apps/client/src/extensions/built-in.ts` is the one file that names them, each with `defineBuiltIn` (`extensions/built-ins.ts`): its manifest, icon, words, themes and, for one with `client/`, its entry imported with `?activate`. It lists under Settings, Extensions like an installed one, and a person turns it off there (`ruimte.builtIns.disabled`, followed by every window).
+
+A built-in runs on the public API alone, loaded as an installed extension is (`host/loads.ts`), so it keeps working if it is ever packed like one. `scripts/check-built-ins.ts`, part of `bun run check`, holds both sides: the core never imports a built-in, and a built-in's sources import only relative paths, `@ruimte/extension/*`, React, clsx, zod, zustand and lucide-react.
+
+The binding happens at build time, in `apps/client/built-ins.ts`. In a built-in's folder it rewrites `@ruimte/extension/client` to `host/built-in-api.ts?extension=<id>&lang.ts`, a module of its own per built-in whose calls reach that built-in's current load, and `/ui`, `/agents-ui` and `/charts` to what the client draws with. The `lang.ts` keeps the id ending in `.ts`, since Vite would otherwise read `ruimte.pets` as the file's language. `?activate` wraps the entry's statements in the function a load runs, so turning it on again runs them anew. An entry that exports anything fails the build.
+
+Vite runs this as a plugin. Bun's tests run the same function from an `onLoad` in `apps/client/testing/built-in-preload.ts`, because a Bun `onResolve` per importer does not reach a bare specifier. The DOM run applies it inside the React Compiler's `onLoad` too, since Bun keeps the first plugin that loads a module.
+
+Only a built-in gets a settings section of its own. `grantsSettingsSection` in `host/client-api.tsx` decides that on `builtIn`, never on the manifest's `publisher`, in one place so it can widen later. Any other extension's call puts its page under Settings, Extensions, and the dev log says so once.
+
+The client measures a chat's composer card for the `viewAccessory` slot (`ViewAccessorySlot.tsx`), by an ADE CORE class until ADE CORE marks the card itself. That lookup lives in the host, never in an extension.
+
 ## The store
 
 An author builds a `.rex` and `publish` opens a pull request on `ruimte-app/extensions`. Ruimte never builds someone else's code, and every update gets a human review before it is signed.

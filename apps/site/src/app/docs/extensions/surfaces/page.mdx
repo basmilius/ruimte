@@ -140,7 +140,26 @@ const name = await rename.open({ name: 'Draft' });
 
 For a plain question, `host.confirm`, `host.prompt` and `host.pick` ask through Ruimte's own dialogs.
 
-`defineCanvasOverlay` draws over the whole canvas, under Ruimte's own controls. It lets clicks through; set `pointer-events: auto` on what should take them.
+`defineCanvasOverlay` draws over the whole canvas, under Ruimte's own controls. It lets clicks through; set `pointer-events: auto` on what should take them. Neither kind draws while a node is maximized.
+
+With `space: 'canvas'` the overlay draws in the canvas's own coordinates instead, over every node, and pans and zooms with them. A node's `bounds` are then where it stands:
+
+```ts
+defineCanvasOverlay({
+    id: 'badges',
+    space: 'canvas',
+    component: () => import('./Badges')
+});
+```
+
+An overlay on screen can stand on what lies at the bottom of the canvas. Ruimte marks each with `data-canvas-floor`: `ledge` where something may stand on top, such as the dock, and `wall` where it may only walk up to, such as the minimap and a prompt card. Find them from your own element:
+
+```ts
+const box = element.closest('[data-canvas-overlay]');
+const floors = box?.querySelectorAll('[data-canvas-floor]') ?? [];
+```
+
+One that fades away says so in its opacity. These two attributes are part of the API; Ruimte's other classes and attributes are not.
 
 ## File and diff viewers
 

@@ -141,6 +141,20 @@ For the pieces of a chat without an agent behind them, such as the answer of `ag
 
 With `chats.read`, `chats.list()` and `chats.read(id)` read every chat. With `chats.send`, `chats.send(id, text)` sends a message that wakes the chat. `useChat(id)` follows one chat's status in a component, and `useAgents()` (with `agents.status`) every agent on the canvas. A status is one of `idle`, `running`, `needsYou` and `stopped`, the same word in the client and the server part.
 
+`useAgent(node)` reads one agent closely, also with `agents.status`. It takes a node, or a chat or terminal open as a view of its own, and answers `null` where no agent runs, such as a terminal whose command is no agent:
+
+```tsx
+const agent = useAgent({ id });
+
+if (agent?.status === 'needsYou' && !agent.snoozed) {
+    return <span>{t('waiting')}</span>;
+}
+```
+
+Besides `status` it has the `provider`, the `account`, the `cwd`, `branch` and `worktree`, and `snoozed` for a wait a person put off. `activity` says what it works on: `turn` for a turn of its own, `delegating` while agents it handed work to run, `background` for commands it left running, and `null` while it works on nothing or waits on a person.
+
+`useSubagents(chat)` lists the sub-agents a chat has at work, oldest first. Each is `running` or `paused`, the last while its task waits for a limit to lift, and `node` names the node of a task the chat gave. `useProviders()` lists the agents a person can start on the machine in front, by `id` and `name`, and needs no permission.
+
 ## Tools for agents
 
 The server part can offer every agent on the machine a tool. Agents find it with Ruimte's `tool_list` tool and call it with `tool_run`:

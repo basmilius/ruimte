@@ -109,6 +109,34 @@ One call takes `component`, `fields` or `groups`, never two of them. With `field
 
 [Add a settings page](/docs/extensions/how-to/settings) builds both kinds of page.
 
+### A section of its own
+
+`section` asks for your page as a section of the settings navigation, beside Ruimte's own, instead of under Settings, Extensions:
+
+```ts
+defineExtensionSettings({
+    component: () => import('./Settings'),
+    section: {
+        group: 'workspace',
+        after: 'views',
+        icon: 'paw-print',
+        label: 'section.label',
+        description: 'section.description',
+        search: [
+            {
+                id: 'pets.enabled',
+                label: 'search.enabled.label',
+                description: 'search.enabled.description'
+            }
+        ]
+    }
+});
+```
+
+`group` is `workspace` or `ai`. `after` names the section of Ruimte it follows; without it, or when Ruimte has no section of that id, it goes at the end of its group. `icon` is a Lucide name, and your mark without one. `label`, `description` and the words of each `search` row are keys of your `locales/`, and a row leads to the `SettingsRow` of your page with that `searchId`.
+
+For now Ruimte gives a section only to the extensions it ships itself. For any other extension the same call puts the page under Settings, Extensions, as without `section`, and `ruimte extension dev` says so once. The test host shows the page under Extensions too.
+
 ## Storage
 
 `useStorage` keeps a value and draws again when it changes:
@@ -126,6 +154,16 @@ The third argument says where the value lives:
 | `machine` | The machine, for all projects | Data the server part also reads |
 
 The server part reads and writes `machine` values with `storage.get` and `storage.set`.
+
+Outside a component, such as in `client/index.ts` or a store of your own, `storage` from `@ruimte/extension/client` reads and writes the `computer` values:
+
+```ts
+import { storage } from '@ruimte/extension/client';
+
+const stop = storage.watch('layout', () => reload(storage.get('layout')));
+```
+
+`set` and `delete` answer a `Result`, with `limit` when the computer refused to keep the value. `watch` calls back when any window changed the key, this one included, and answers a function that stops it.
 
 A node keeps its own data with `useNodeData`, in the project itself. See [Surfaces](/docs/extensions/surfaces#nodes).
 
@@ -148,9 +186,15 @@ Put your words in `locales/<language>.json`, with `en.json` as the fallback:
 ```json
 {
     "summarize": "Summarize",
-    "notes": "{{count}} notes"
+    "notes_one": "{{count}} note",
+    "notes_other": "{{count}} notes",
+    "menu": {
+        "open": "Open {{name}}"
+    }
 }
 ```
+
+A key with dots reads into nested objects, so `t('menu.open', { name })` finds `Open`. With a number `count`, a key reads `<key>_one` or `<key>_other` as the language counts, and falls back to the key itself.
 
 `useLocale()` gives `t` for words and `format` for numbers and dates, in the language and region the person chose:
 

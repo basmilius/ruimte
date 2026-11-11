@@ -6,6 +6,17 @@ export const metadata = { title: 'Changes to the API' };
 
 API version `1` is a preview. It goes to a small group of invited developers first, and it can still change before Ruimte offers extensions to everyone. Every change lands on this page, newest first, with what an extension has to do about it.
 
+## 1, preview, agents, the canvas and settings (November 2026)
+
+- `useAgent` reads one agent: its status, what it works on (`activity`), whether a wait was `snoozed`, and its folder and branch. `useSubagents` lists a chat's sub-agents at work, and `useProviders` the agents a person can start. The first two need `agents.status`.
+- `defineCanvasOverlay` takes `space: 'canvas'`, to draw over the nodes in the canvas's own coordinates. On screen, `data-canvas-floor` marks what stands at the bottom of the canvas.
+- `useCanvasView`, `useInView` and `nodeColorValue` read what a person sees of the canvas. A node's `color` is one of Ruimte's accents or `null`, and `hidden` says a collapsed group hides it.
+- The `viewAccessory` slot stands beside a chat or terminal open as a view of its own, and `views.focus` hands one the keyboard.
+- `storage` reads and writes `computer` values outside a component, and follows them with `watch`.
+- `useLocale` reads nested keys and plurals.
+- `defineExtensionSettings` takes `section`, which Ruimte grants only to the extensions it ships itself for now.
+- An extension needs no change.
+
 ## 1, preview, chats and charts (November 2026)
 
 - `Chat` in `@ruimte/extension/client` draws a chat of the machine, its thread and its composer, inside your own surface. It needs `agents.start`, and draws a chat of the project in front.
