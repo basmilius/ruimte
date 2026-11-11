@@ -36,7 +36,8 @@ public struct ClientIdentity: Equatable, Sendable {
     }
 
     var payload: JSONValue {
-        var fields: [String: JSONValue] = ["client": .string("ios")]
+        // This app keeps what a newer machine sends that it does not know in its place (`WireSchema`).
+        var fields: [String: JSONValue] = ["client": .string("ios"), "clientFeatures": .array([.string("tolerantWire")])]
         for (key, value) in [
             ("clientVersion", version), ("clientOs", os), ("clientOsVersion", osVersion), ("clientDevice", device),
         ] {

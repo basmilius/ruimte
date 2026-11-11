@@ -45,6 +45,7 @@ private func event(_ name: String) -> String {
                 == .object([
                     "client": .string("ios"), "clientVersion": .string("0.31.0"), "clientOs": .string("ipados"),
                     "clientOsVersion": .string("27.1"), "clientDevice": .string("tablet"),
+                    "clientFeatures": .array([.string("tolerantWire")]),
                 ]))
     }
 
@@ -55,7 +56,8 @@ private func event(_ name: String) -> String {
         gate.start()
         let text = try #require(sent.first)
         let payload = try JSONValue.decode(Data(text.utf8))["payload"]
-        #expect(payload == .object(["client": .string("ios")]))
+        #expect(
+            payload == .object(["client": .string("ios"), "clientFeatures": .array([.string("tolerantWire")])]))
     }
 
     @Test func aMachineWithoutFeaturesIsRefusedAsOlder() throws {

@@ -98,7 +98,12 @@ export const EndpointInfoPayloadSchema = z.object({
     clientVersion: z.string().max(64).optional(),
     clientOs: z.string().max(64).optional(),
     clientOsVersion: z.string().max(64).optional(),
-    clientDevice: z.string().max(64).optional()
+    clientDevice: z.string().max(64).optional(),
+    /*
+     * What the app reads beyond the wire it shipped with, the reverse of `features`. `tolerantWire`: it keeps a chat
+     * item, union member, list element or state word it does not know in its place instead of refusing the answer.
+     */
+    clientFeatures: z.array(z.string().max(64)).max(32).optional()
 });
 export type EndpointInfoPayload = z.infer<typeof EndpointInfoPayloadSchema>;
 

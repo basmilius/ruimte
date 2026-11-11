@@ -9,6 +9,7 @@ interface Entry {
     access: ClientAccess;
     connectedAt: number;
     details: ClientDetails;
+    features: readonly string[];
 }
 
 function accessOf(access: ClientAccess): string {
@@ -34,7 +35,7 @@ export class ConnectedClients extends WatchedSinks<SessionEvent> {
     }
 
     opened(clientId: string, access: ClientAccess): void {
-        this.entries.set(clientId, { access, connectedAt: this.now(), details: {} });
+        this.entries.set(clientId, { access, connectedAt: this.now(), details: {}, features: [] });
         this.changed();
     }
 
@@ -59,7 +60,13 @@ export class ConnectedClients extends WatchedSinks<SessionEvent> {
             osVersion: payload.clientOsVersion,
             device: payload.clientDevice
         };
+        entry.features = payload.clientFeatures ?? [];
         this.changed();
+    }
+
+    /* What a client reads beyond the wire it shipped with (`clientFeatures`); nothing decides on it yet. */
+    featuresOf(clientId: string): readonly string[] {
+        return this.entries.get(clientId)?.features ?? [];
     }
 
     list(currentClientId: string, labelOf: (sessionId: string) => string | undefined): ConnectedClient[] {

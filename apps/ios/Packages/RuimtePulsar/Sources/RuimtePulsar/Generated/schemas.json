@@ -41467,6 +41467,14 @@
       "clientDevice": {
         "type": "string",
         "maxLength": 64
+      },
+      "clientFeatures": {
+        "maxItems": 32,
+        "type": "array",
+        "items": {
+          "type": "string",
+          "maxLength": 64
+        }
       }
     }
   },

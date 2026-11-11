@@ -51,6 +51,20 @@ describe('ConnectedClients', () => {
         ]);
     });
 
+    test('keeps what a client reads beyond its wire until it says so again, and shows none of it', () => {
+        const { connected } = clients();
+        connected.opened('client-1', ACCOUNT);
+        connected.announce('client-1', { client: 'ios', clientFeatures: ['tolerantWire'] });
+        connected.announce('client-1', {});
+
+        expect(connected.featuresOf('client-1')).toEqual(['tolerantWire']);
+        expect(connected.list('client-1', () => undefined)[0]).not.toHaveProperty('features');
+
+        connected.announce('client-1', { client: 'ios' });
+        expect(connected.featuresOf('client-1')).toEqual([]);
+        expect(connected.featuresOf('client-2')).toEqual([]);
+    });
+
     test('passes a value it does not know through as it came', () => {
         const { connected } = clients();
         connected.opened('client-1', ACCOUNT);
