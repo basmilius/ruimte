@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { withoutTransitions } from '@/state/theme-change';
 
 /*
  * The colors a person's choices put over the theme's own, per side. They are a stylesheet of their own,
@@ -128,7 +129,12 @@ export function applyPalette(input: PaletteInput, options: { preview?: boolean }
     const css = paletteCss(input);
     const changed = style.textContent !== css;
     if (changed) {
-        style.textContent = css;
+        const sheet = style;
+
+        // A tint or accent changes every color it reaches at once, as a theme does.
+        withoutTransitions(() => {
+            sheet.textContent = css;
+        });
     }
     if (settling !== null) {
         clearTimeout(settling);
