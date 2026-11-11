@@ -380,7 +380,6 @@ export function clientApi(host: TestHost) {
                 throw new TypeError(`defineExtensionSettings ${host.id}: a section stands in the group workspace or ai`);
             }
 
-            // An extension under test is never one Ruimte ships, so its page stays under Extensions, as in Ruimte.
             if (section !== undefined) {
                 host.logs.push(
                     'defineExtensionSettings: a section of its own in the settings is for the extensions Ruimte ships; this page stays under Extensions'

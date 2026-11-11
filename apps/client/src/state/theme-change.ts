@@ -23,6 +23,7 @@ export function withoutTransitions(change: () => void): void {
 
     root.setAttribute(ATTRIBUTE, '');
     change();
+
     pending = requestAnimationFrame(() => {
         pending = requestAnimationFrame(() => {
             pending = null;

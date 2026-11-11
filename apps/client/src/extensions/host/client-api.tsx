@@ -1371,7 +1371,6 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 });
             }),
             pickFolder: (initial?: string) => (live() ? (desktop()?.pickFolder?.(initial) ?? Promise.resolve(null)) : Promise.resolve(null)),
-            // The section of its own where it has one, its page under Extensions otherwise.
             openSettings: whileLive(() => {
                 const own = useContributions.getState().settingsSections.some((section) => section.id === id);
 

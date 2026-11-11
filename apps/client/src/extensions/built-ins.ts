@@ -157,6 +157,7 @@ export function defineBuiltIn(builtIn: BuiltIn): () => void {
         },
         ...(builtIn.icon === undefined ? {} : { icon: builtIn.icon })
     });
+
     followers.set(id, follow);
     follow(!readDisabled().includes(id));
 
