@@ -24,13 +24,11 @@ export interface PetDesign {
 
 type Pose = PetPose;
 
-function sketchPartsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
+/* A shape at rest. `partsOf` moves it per pose; only the shapes with a sleep of their own are drawn asleep here. */
+function sketchPartsOf(pet: PetDesign, sleeping: boolean, frame: number): Parts {
     const colors = pet.palette;
     const silhouette: Cell[] = [];
     const details: Cell[] = [];
-    const props: Cell[] = [];
-    const sleeping = pose === 'sleep';
-    const step = pose === 'walk' ? frame % 2 : 0;
     const base = sleeping ? 2 : 0;
 
     const add = (target: Cell[], x: number, y: number, w: number, h: number, color: string): void => {
@@ -42,10 +40,10 @@ function sketchPartsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
         detail(x, y, sleeping ? 2 : 1, 1, color);
     };
     const feet = (left = 6, right = 14): void => {
-        body(left, 14, 3, 3 - step);
-        body(right, 14, 3, 2 + step);
-        detail(left, 16 - step, 3, 1);
-        detail(right, 15 + step, 3, 1);
+        body(left, 14, 3, 3);
+        body(right, 14, 3, 2);
+        detail(left, 16, 3, 1);
+        detail(right, 15, 3, 1);
     };
     const face = (x = 10, y = 7): void => {
         eye(x, y);
@@ -85,7 +83,7 @@ function sketchPartsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
             body(2, 12, 2, 2, colors.light);
             body(12, 11, 5, 5);
             body(6, 15, 6, 2, colors.light);
-            body(15, 15, 5, 2 - step);
+            body(15, 15, 5, 2);
             detail(6, rearY + 1, 5, 1, colors.light);
             detail(4, rearY + 3, 1, 3, colors.shade);
             detail(10, 13, 2, 2, colors.shade);
@@ -229,8 +227,8 @@ function sketchPartsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
             detail(8, 6 + base, 3, 1, '#e6f6f9');
             eye(11, 8 + base);
             eye(15, 8 + base);
-            body(6, 14, 2, 3 - step, colors.shade);
-            body(17, 14, 2, 2 + step, colors.shade);
+            body(6, 14, 2, 3, colors.shade);
+            body(17, 14, 2, 2, colors.shade);
             detail(5, 11 + base, 2, 1, colors.accent);
             detail(18, 11 + base, 2, 1, colors.accent);
             break;
@@ -435,7 +433,7 @@ function sketchPartsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
             body(4, 12 + base, 4, 2);
             body(2, 14, 4, 2);
             body(17, 7 + base, pet.shape === 'hummingbird' ? 6 : 3, 1, colors.accent);
-            body(7, 8 + base - step, 5, 3, colors.shade);
+            body(7, 8 + base, 5, 3, colors.shade);
             eye(16, 6 + base);
             body(10, 15, 1, 2, colors.shade);
             body(14, 15, 1, 2, colors.shade);
@@ -457,9 +455,9 @@ function sketchPartsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
         case 'octopus':
             body(7, 5 + base, 11, 8 - base);
             body(9, 3 + base, 7, 3);
-            body(5, 12, 3, 4 - step);
+            body(5, 12, 3, 4);
             body(9, 12, 2, 5);
-            body(14, 12, 2, 5 - step);
+            body(14, 12, 2, 5);
             body(18, 11, 2, 5);
             detail(8, 5 + base, 2, 3, colors.light);
             face(10, 8 + base);
@@ -632,18 +630,6 @@ function sketchPartsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
 
             feet(10, 14);
             break;
-        case 'whale':
-            body(7, 8 + base, 14, 7 - base);
-            body(9, 6 + base, 9, 2);
-            body(2, 8 + base, 4, 2);
-            body(3, 10 + base, 4, 2);
-            detail(12, 13, 8, 1, colors.light);
-            eye(18, 10 + base);
-            detail(19, 12, 2, 1, colors.outline);
-            body(14, 3 + base, 1, 3, colors.light);
-            body(12, 2 + base, 2, 1, colors.light);
-            body(15, 1 + base, 2, 1, colors.light);
-            break;
         case 'moonrabbit':
             roundBody();
             body(8, 5 + base, 9, 6);
@@ -669,30 +655,7 @@ function sketchPartsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
             break;
     }
 
-    if (pose === 'work') {
-        props.push(
-            { x: 22, y: 9, w: 1, h: 6, color: '#82919b', outlined: true },
-            { x: 21, y: 10, w: 1, h: 4, color: '#a5daca' },
-            { x: 18, y: 15, w: 6, h: 1, color: '#61707e', outlined: true },
-            { x: 19 + (frame % 3), y: 15, w: 1, h: 1, color: '#d9e8d5' }
-        );
-    }
-
-    if (sleeping) {
-        props.push(
-            { x: 22, y: 3 + (frame % 2), w: 3, h: 1, color: '#8995bb' },
-            { x: 23, y: 4 + (frame % 2), w: 1, h: 1, color: '#8995bb' },
-            { x: 22, y: 5 + (frame % 2), w: 3, h: 1, color: '#8995bb' }
-        );
-    }
-
-    if (pose === 'stopped') {
-        const flip = (cells: Cell[]): Cell[] => cells.map((part) => ({ ...part, y: 17 - part.y - part.h }));
-
-        return { silhouette: flip(silhouette), details: flip(details), props: [{ x: 22, y: 8, w: 2, h: 2, color: '#9ea5ae' }] };
-    }
-
-    return { silhouette, details, props };
+    return { silhouette, details, props: [] };
 }
 
 type MotionKind = 'step' | 'hop' | 'waddle' | 'fly' | 'hover' | 'paddle' | 'ripple' | 'glide' | 'roll' | 'pot-hop' | 'scuttle';
@@ -1093,8 +1056,7 @@ function partsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
     const parts =
         pet.shape === 'whale'
             ? whaleParts(pet, pose === 'stopped' ? 'stand' : pose, pose === 'stopped' ? 4 : frame)
-            : sketchPartsOf(pet, ownSleep ? 'sleep' : 'stand', ownSleep ? frame % 2 : 0);
-    parts.props = pet.shape === 'whale' ? parts.props : [];
+            : sketchPartsOf(pet, ownSleep, ownSleep ? frame % 2 : 0);
 
     if (nativeBuddy) {
         parts.silhouette = parts.silhouette.filter((part) => part.y < 14);
