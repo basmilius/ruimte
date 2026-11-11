@@ -68,11 +68,14 @@ describe('benchmark measurements', () => {
                 },
                 { id: HIGH, artificial_analysis_intelligence_index_cost: { total_cost: -1, cost_per_task: { total_cost: -1 } } },
                 { id: 'empty', release_date: '2026-01-01' },
-                { id: 'undated', evaluations: { artificial_analysis_intelligence_index: 20 }, release_date: 'January 2026' }
+                { id: 'undated', evaluations: { artificial_analysis_intelligence_index: 20 }, release_date: 'January 2026' },
+                { id: 'misdated', evaluations: { artificial_analysis_intelligence_index: 30 }, release_date: '2026-02-30' }
             ])
         );
         expect(parsed?.measurements.get(LOW)).toEqual({ engineering: 0 });
         expect(parsed?.measurements.get('undated')).toEqual({ intelligence: 20 });
+        // A day the calendar does not have is left out, since a client refuses the whole list over one.
+        expect(parsed?.measurements.get('misdated')).toEqual({ intelligence: 30 });
         expect(parsed?.measurements.has(HIGH)).toBe(false);
         expect(parsed?.measurements.has('empty')).toBe(false);
     });

@@ -8,7 +8,6 @@ import { failure, json } from './http.ts';
 const MODELS_URL = 'https://artificialanalysis.ai/api/v2/language/models/free';
 export const MAX_PAGES = 10;
 const RESPONSE_ANSWER_TOKENS = 500;
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const MeasuredModelSchema = z.object({
     id: z.string(),
@@ -105,7 +104,8 @@ export function measurementsOf(raw: unknown): (Measurements & { hasMore: boolean
         }
         if (Object.keys(values).length > 0) {
             const released = model.data.release_date;
-            if (typeof released === 'string' && ISO_DATE.test(released)) {
+            // A real date, as the address book's schema asks: one the calendar does not have would make every client refuse the whole list.
+            if (typeof released === 'string' && z.iso.date().safeParse(released).success) {
                 values.releaseDate = released;
             }
             measurements.set(model.data.id, values);
