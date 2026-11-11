@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteTransport
 import XCTest
 
 #if canImport(Ruimte)
@@ -177,5 +178,99 @@ final class ChatPromptStateTests: XCTestCase {
         XCTAssertFalse(ChatPromptFeed.stillWaiting(item, info: info("running", requests: ["r1"])))
     }
 
+    /// The answer's reply can come after the machine already settled the request; when the same item waits again (a
+    /// reattach that replays it, a CLI that asks again), its card has to come back.
+    @MainActor func testAnAnswerSettledBeforeItsReplyLeavesTheRequestToComeBack() async {
+        let state = ChatPromptState()
+        let item = request("r1", question: true)
+        state.update([item])
+        await state.submit(item, connected: true) { state.update([]) }
+        XCTAssertNil(state.active)
+        state.update([item])
+        XCTAssertEqual(state.active, item)
+    }
+
+    @MainActor func testAnAnswerHidesOnlyTheItemItWentTo() async {
+        let state = ChatPromptState()
+        let first = request("r1")
+        state.update([first])
+        await state.submit(first, connected: true) {}
+        XCTAssertNil(state.active)
+        let again = ChatWire.item([
+            "id": .string("other-item"), "kind": .string("approval"), "requestId": .string("r1"),
+        ]).chatItem
+        state.update([first, again])
+        XCTAssertEqual(state.active, again)
+    }
+
+    /// Whatever shows the thread as waiting on a person reaches the composer as a request it can answer, through
+    /// every way the thread changes.
+    @MainActor func testEveryItemThatHoldsTheTurnBecomesARequestOfTheComposer() async {
+        let machine = HistoryMachine()
+        let model = ChatModel(client: machine, chatID: "chat")
+        model.connected = true
+        let state = ChatPromptState()
+        func assertCovered(_ step: String, line: UInt = #line) {
+            state.update(model.pending)
+            let answerable = Set(state.subjects.map(\.item.id))
+            XCTAssertTrue(
+                model.presentation.holdingTurn.isSubset(of: answerable),
+                "\(step): \(model.presentation.holdingTurn) waits without a card", line: line)
+        }
+        func question(_ id: String, index: Int, state: String = "pending", async: Bool = false) -> JSONValue {
+            ChatWire.item([
+                "id": .string(id), "kind": .string("question"), "requestId": .string("request-\(id)"),
+                "state": .string(state), "async": .bool(async), "createdAt": .number(Double(index)),
+            ])
+        }
+        func approval(_ id: String, decision: String = "pending") -> JSONValue {
+            ChatWire.item([
+                "id": .string(id), "kind": .string("approval"), "requestId": .string("request-\(id)"),
+                "decision": .string(decision),
+            ])
+        }
+        func item(_ value: JSONValue, index: Int) -> JSONValue {
+            .object(["type": .string("item"), "item": value, "historyIndex": .number(Double(index))])
+        }
+
+        model.attached(
+            .object([
+                "info": ChatWire.info(["status": .string("needs-you")]),
+                "items": .array([approval("a"), question("optional", index: 11, async: true)]),
+                "history": .object(["start": .number(10), "cursor": .string("older")]),
+                "pending": .array([question("old", index: 3)]),
+            ]), since: nil)
+        XCTAssertFalse(model.presentation.holdingTurn.isEmpty)
+        assertCovered("snapshot")
+        model.receive(item(question("q", index: 12), index: 12))
+        assertCovered("a question arrives")
+        model.receive(item(approval("a", decision: "allow"), index: 10))
+        assertCovered("an approval settles")
+        model.receive(item(question("old", index: 3), index: 3))
+        assertCovered("a request before the page changes")
+        machine.page = .object([
+            "items": .array([question("old", index: 3)]), "history": .object(["start": .number(0), "cursor": .null]),
+        ])
+        _ = await model.loadOlderNow()
+        assertCovered("the earlier page")
+        model.receive(
+            .object([
+                "type": .string("reset"), "info": ChatWire.info(["status": .string("needs-you")]),
+                "items": .array([approval("b")]),
+            ]))
+        XCTAssertEqual(model.presentation.holdingTurn, ["b"])
+        assertCovered("a reset")
+    }
+
     private enum Failure: Error { case expected }
+}
+
+@MainActor private final class HistoryMachine: MachineRequesting {
+    var page: JSONValue = .object([:])
+
+    func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
+        type == .chatHistory ? page : .object([:])
+    }
+
+    func subscribe(_ event: WireEvent, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

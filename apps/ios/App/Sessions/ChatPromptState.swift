@@ -38,6 +38,20 @@ struct ChatPromptSubject: Equatable {
         let request = item.requestId ?? ""
         return chatID.map { "\($0)/\(request)" } ?? request
     }
+
+    /// The one item an answer went to, so an answer never hides another item that carries the same request id.
+    var answerKey: String { "\(key)#\(item.id)" }
+}
+
+extension ChatItem {
+    /// An approval or a question the agent cannot go on without, which shows the chat as waiting on a person.
+    var holdsTurn: Bool {
+        switch self {
+        case .approval(let approval): approval.decision == .pending
+        case .question(let question): question.state == .pending && question.async != true
+        default: false
+        }
+    }
 }
 
 @MainActor @Observable
@@ -49,7 +63,7 @@ final class ChatPromptState {
     var sendingID: String?
     var error: String?
     var subjects: [ChatPromptSubject] {
-        live.filter { !completed.contains($0.key) }
+        live.filter { !completed.contains($0.answerKey) }
     }
     var pending: [ChatItem] { subjects.map(\.item) }
     var activeSubject: ChatPromptSubject? { subjects.first { $0.key == activeID } }
@@ -63,7 +77,7 @@ final class ChatPromptState {
     func update(_ requests: [ChatItem], others: [ChatPromptSubject] = []) {
         live = requests.map { ChatPromptSubject(chatID: nil, item: $0) } + others
         let keys = Set(live.map(\.key))
-        completed.formIntersection(keys)
+        completed.formIntersection(live.map(\.answerKey))
         drafts = drafts.filter { keys.contains($0.key) }
         reconcile()
     }
@@ -97,15 +111,16 @@ final class ChatPromptState {
     func submit(
         _ item: ChatItem, connected: Bool, perform: @MainActor () async throws -> Void
     ) async {
-        guard let id = activeSubject?.key, activeSubject?.item.requestId == item.requestId, sendingID == nil,
-            connected
+        guard let subject = activeSubject, subject.item.requestId == item.requestId, sendingID == nil, connected
         else { return }
+        let id = subject.key
         sendingID = id
         error = nil
         defer { sendingID = nil }
         do {
             try await perform()
-            completed.insert(id)
+            // Hidden only while the machine still lists it: once it left, an answer may not hide its return.
+            if live.contains(where: { $0.answerKey == subject.answerKey }) { completed.insert(subject.answerKey) }
             drafts.removeValue(forKey: id)
             reconcile()
         } catch {

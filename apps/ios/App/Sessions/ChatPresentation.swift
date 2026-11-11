@@ -283,6 +283,8 @@ final class ChatPresentation {
     private(set) var goneQuotes: Set<String> = []
     /// The calls that wait on a person's answer to an approval of them, by tool use id.
     private(set) var awaitingApproval: Set<String> = []
+    /// The items that show the chat as waiting on a person, by item id; each needs a card in the composer.
+    private(set) var holdingTurn: Set<String> = []
     @ObservationIgnored private var activeID: String?
 
     func replace(_ values: [ChatItem], info: ChatInfo?) {
@@ -350,13 +352,9 @@ final class ChatPresentation {
         {
             startedAt = turn.createdAt
         }
-        let blocked = records.values.contains {
-            switch $0.item {
-            case .approval(let approval): approval.decision == .pending
-            case .question(let question): question.state == .pending && question.async != true
-            default: false
-            }
-        }
+        let holding = Set(records.values.filter(\.item.holdsTurn).map(\.id))
+        if holding != holdingTurn { holdingTurn = holding }
+        let blocked = !holding.isEmpty
         let awaiting = Set(
             records.values.compactMap { record -> String? in
                 guard case .approval(let approval) = record.item, approval.decision == .pending else { return nil }

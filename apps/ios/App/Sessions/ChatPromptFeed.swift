@@ -107,6 +107,12 @@ struct ChatPromptFeedTracking: ViewModifier {
             .onChange(of: feed.subjects) { _, others in
                 prompts.update(model.pending, others: others)
             }
+            // A screen that comes back or takes over a shared model may meet requests equal to what it last saw, which
+            // no value change reports.
+            .onChange(of: ObjectIdentifier(model)) { _, _ in
+                prompts.update(model.pending, others: feed.subjects)
+            }
+            .onAppear { prompts.update(model.pending, others: feed.subjects) }
             .onChange(of: feed.wanted(under: model, attention: attention)) { _, wanted in
                 if visible { feed.follow(wanted, client: model.client, machineID: model.machineID) }
             }
