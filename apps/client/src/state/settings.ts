@@ -715,8 +715,9 @@ export const useSettings = create<SettingsStore>((set, get) => {
         update(patch) {
             const next: Settings = { ...settingsOf(get()), ...patch };
             Object.assign(next, measuresFrom(next));
-            // Storage that refuses still leaves the setting on for this session.
-            storedSettings.write(next);
+            // Over what is stored, so a key this store no longer knows stays for whoever reads it from here once, as a
+            // built-in does on its first run. Storage that refuses still leaves the setting on for this session.
+            storedSettings.write({ ...storedSettings.read(), ...next });
             apply(next);
             set({ ...next, version: get().version + 1 });
         },

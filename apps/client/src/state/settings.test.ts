@@ -120,6 +120,23 @@ describe('an update', () => {
             useSettings.setState(previous);
         }
     });
+
+    test('leaves a stored key the settings no longer know, for whoever still reads it from here', () => {
+        const previousStorage = globalThis.localStorage;
+        const previous = useSettings.getState();
+        const items = new Map<string, string>([[SETTINGS_STORAGE_KEY, JSON.stringify({ pets: true, petsSets: ['animals'] })]]);
+        globalThis.localStorage = {
+            getItem: (key: string) => items.get(key) ?? null,
+            setItem: (key: string, value: string) => items.set(key, value)
+        } as unknown as Storage;
+        try {
+            useSettings.getState().update({ dockAutoHide: true });
+            expect(JSON.parse(items.get(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({ pets: true, petsSets: ['animals'], dockAutoHide: true });
+        } finally {
+            globalThis.localStorage = previousStorage;
+            useSettings.setState(previous);
+        }
+    });
 });
 
 describe('a view an agent asks for', () => {
