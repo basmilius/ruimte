@@ -47,23 +47,6 @@ export interface CanvasLayerContribution {
     component: ComponentType<CanvasLayerProps>;
 }
 
-export interface ViewAccessoryProps {
-    id: string;
-    title: string | undefined;
-    onPress?: () => void;
-}
-
-export interface ViewAccessoryContribution {
-    id: string;
-    on: 'chat' | 'terminal';
-    component: ComponentType<ViewAccessoryProps>;
-}
-
-export interface SharedStorageContribution {
-    id: string;
-    reload: () => void;
-}
-
 export interface ExtensionSurfaceProps {
     nodeId?: string;
 }
@@ -247,8 +230,6 @@ export interface Contributions {
     references: readonly ReferenceContribution[];
     diffViewers: readonly DiffViewerContribution[];
     voiceActions: readonly VoiceActionContribution[];
-    viewAccessories: readonly ViewAccessoryContribution[];
-    sharedStorage: readonly SharedStorageContribution[];
     sidebarCards: readonly SidebarCardContribution[];
     extensionNodes: readonly ExtensionNodeContribution[];
     extensionViews: readonly ExtensionViewContribution[];
@@ -275,8 +256,6 @@ export const useContributions = create<Contributions>(() => ({
     references: [],
     diffViewers: [],
     voiceActions: [],
-    viewAccessories: [],
-    sharedStorage: [],
     sidebarCards: [],
     extensionNodes: [],
     extensionViews: [],

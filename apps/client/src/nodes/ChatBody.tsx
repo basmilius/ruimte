@@ -18,7 +18,6 @@ import { Activity, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { peekOpeningMode, settleOpeningMode } from '@/action-port/opening-mode';
 import { perform } from '@/action-port/perform';
-import { ViewAccessories } from '@/extensions/ContributedSlots';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { ChatViewAccessory } from '@/extensions/ViewAccessorySlot';
@@ -187,7 +186,6 @@ export function ChatBody({
                                 composer={
                                     composer && (
                                         <div className="relative">
-                                            {accessories !== undefined && <ViewAccessories on="chat" id={id} title={accessories.title} />}
                                             {accessories !== undefined && <ChatViewAccessory id={id} />}
                                             <SlotRow
                                                 place="composer"

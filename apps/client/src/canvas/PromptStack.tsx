@@ -300,7 +300,7 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
     if (active === null) {
         return snoozedMenu ? (
             <StackPlace viewId={viewId} dockShown={dockShown}>
-                <div data-holds-dock data-canvas-floor="wall" className="pointer-events-auto">
+                <div data-canvas-floor="wall" className="pointer-events-auto">
                     {snoozedMenu}
                 </div>
             </StackPlace>
@@ -346,7 +346,6 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
         <StackPlace viewId={viewId} dockShown={dockShown}>
             <div
                 ref={container}
-                data-holds-dock
                 // A card at the bottom of the canvas, which what an extension draws over the canvas walks up to (`overlay-attributes.ts`).
                 data-canvas-floor="wall"
                 className="pointer-events-auto relative w-full max-w-xl"

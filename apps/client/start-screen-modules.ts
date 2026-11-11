@@ -153,7 +153,6 @@ export const START_SCREEN_MODULES: readonly string[] = [
     'extensions/host/host-dialog-state.ts',
     'extensions/host/host-dialogs.tsx',
     'extensions/installed.ts',
-    'extensions/internal.tsx',
     'extensions/loader.ts',
     'extensions/machine-request.ts',
     'extensions/safe-mode.ts',

@@ -551,7 +551,7 @@ function read(): Settings {
         const settings = settingsFrom(stored);
 
         // Written back once, so from then on the blob holds its own answer and no later rule decides it again. Keys this
-        // store no longer knows stay, since a built-in such as the pets moves its own out of this blob only after.
+        // store no longer knows stay, since a key that moved elsewhere may still be read from here once.
         if (needsCodeHelpMigration(stored)) {
             storedSettings.write({ ...stored, ...settingsOf(settings) });
         }

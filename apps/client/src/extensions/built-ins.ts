@@ -28,9 +28,6 @@ export interface BuiltIn {
     activate?: () => Promise<{ default: () => void }>;
     words?: Readonly<Record<string, () => Promise<{ default: object }>>>;
     themes?: readonly BuiltInTheme[];
-
-    /* Until pets runs on the public API: what it added through `@/extensions/internal`. */
-    setup?: () => (() => void)[];
 }
 
 export const BUILT_INS_DISABLED_KEY = 'ruimte.builtIns.disabled';
@@ -134,12 +131,9 @@ function followerOf(builtIn: BuiltIn): (enabled: boolean) => void {
             return;
         }
 
-        disposers = [
-            ...(builtIn.themes ?? []).map(({ path, theme, thumbnailUrl }) =>
-                contribute('builtInThemes', { id: `${id}/${path}`, extensionId: id, theme, thumbnailUrl })
-            ),
-            ...(builtIn.setup?.() ?? [])
-        ];
+        disposers = (builtIn.themes ?? []).map(({ path, theme, thumbnailUrl }) =>
+            contribute('builtInThemes', { id: `${id}/${path}`, extensionId: id, theme, thumbnailUrl })
+        );
 
         if (builtIn.activate !== undefined) {
             void start(builtIn, builtIn.activate);

@@ -1,5 +1,5 @@
 import { afterEach } from 'bun:test';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AGENTS_LOCALES } from '@adecore/agents-react/locales';
@@ -34,17 +34,6 @@ const resources = Object.fromEntries(
         .map((name) => [name.slice(0, -'.json'.length), JSON.parse(readFileSync(join(folder, name), 'utf8')) as Record<string, unknown>])
 );
 
-// What a built-in brings, in a namespace named after its folder (`i18n/bundles`).
-const extensionFolder = fileURLToPath(new URL('../../extensions/', import.meta.url));
-const extensionResources = Object.fromEntries(
-    readdirSync(extensionFolder, { withFileTypes: true })
-        .filter((entry) => entry.isDirectory() && existsSync(join(extensionFolder, entry.name, 'locales', `${FALLBACK_LANGUAGE}.json`)))
-        .map((entry) => [
-            entry.name,
-            JSON.parse(readFileSync(join(extensionFolder, entry.name, 'locales', `${FALLBACK_LANGUAGE}.json`), 'utf8')) as Record<string, unknown>
-        ])
-);
-
 const agentsWords = await AGENTS_LOCALES[FALLBACK_LANGUAGE]!();
 
 await i18next.init({
@@ -55,7 +44,6 @@ await i18next.init({
     resources: {
         [FALLBACK_LANGUAGE]: {
             ...resources,
-            ...extensionResources,
             ...agentsWords,
             [UI_NAMESPACE]: UI_RESOURCES.en,
             [CHARTS_NAMESPACE]: CHARTS_RESOURCES.en,

@@ -4,7 +4,6 @@ import { BUILT_INS_DISABLED_KEY, followDisabledBuiltIns } from '@/extensions/bui
 import { applyStoredExtensionTheme, EXTENSION_THEME_STORAGE_KEY } from '@/extensions/themes';
 import { followLanguageAndRegion } from '@/i18n/index';
 import { ENDPOINTS_STORAGE_KEY, useEndpoints } from '@/state/endpoints';
-import { useContributions } from '@/state/extension-registry';
 import { followOtherWindows, type StorageTarget } from '@/state/other-windows';
 import { SETTINGS_STORAGE_KEY, useSettings } from '@/state/settings';
 import { THEME_STORAGE_KEY, useTheme } from '@/state/theme';
@@ -24,7 +23,7 @@ function reloadSettings(): void {
 /*
  * The keys a person means for the whole app: the machines this client knows (with the keys it
  * pinned for them), the settings, the theme, the keys they rebound, the defaults a new agent starts with, how the usage
- * page reads and what a built-in names. What a window keeps for itself (the open view, the camera,
+ * page reads and which built-ins are off. What a window keeps for itself (the open view, the camera,
  * the panels) stays out of it.
  */
 export function startSharedStorage(target?: StorageTarget | null): () => void {
@@ -36,8 +35,7 @@ export function startSharedStorage(target?: StorageTarget | null): () => void {
         followOtherWindows(EXTENSION_THEME_STORAGE_KEY, applyStoredExtensionTheme, target),
         followOtherWindows(BUILT_INS_DISABLED_KEY, followDisabledBuiltIns, target),
         followOtherWindows(CHAT_PREFERENCES_KEY, reloadChatPreferences, target),
-        followOtherWindows(USAGE_PREFERENCES_KEY, reloadUsagePreferences, target),
-        ...useContributions.getState().sharedStorage.map((storage) => followOtherWindows(storage.id, storage.reload, target))
+        followOtherWindows(USAGE_PREFERENCES_KEY, reloadUsagePreferences, target)
     ];
     return () => stops.forEach((stop) => stop());
 }

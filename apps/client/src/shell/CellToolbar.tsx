@@ -4,7 +4,6 @@ import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { closeCellAction } from '@/action-port/person-actions';
 import { useBrowserDisplayTitle } from '@/browser/title';
-import { ViewAccessories } from '@/extensions/ContributedSlots';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { TerminalViewAccessory } from '@/extensions/ViewAccessorySlot';
@@ -127,12 +126,7 @@ export function CellToolbar({
                     separated={leads}
                     accessory={
                         // A terminal's text takes every pixel of its body, so what a built-in adds stands in the bar.
-                        view.kind === 'terminal' && (
-                            <>
-                                <ViewAccessories on="terminal" id={view.id} title={visibleTitle} onPress={focusTerminal} />
-                                <TerminalViewAccessory id={view.id} focus={focusTerminal} />
-                            </>
-                        )
+                        view.kind === 'terminal' && <TerminalViewAccessory id={view.id} focus={focusTerminal} />
                     }
                     trailing={
                         <>

@@ -27,7 +27,7 @@ import { StatusSummary } from '@/attention/StatusSummary';
 import type { Point } from '@/canvas-model/math';
 import { layoutDialog } from '@/canvas/dialogs';
 import { LOCK_KEYS, lockHint, lockLabel } from '@/canvas/locks';
-import { CANVAS_FLOOR_ATTRIBUTE, OVERLAY_LEDGE_ATTRIBUTE } from '@/canvas/overlay-attributes';
+import { CANVAS_FLOOR_ATTRIBUTE } from '@/canvas/overlay-attributes';
 import { RemoteMachineItems } from '@/canvas/RemoteMachineItems';
 import { DesignAddItem } from '@/design/DesignAddItem';
 import { useDictation } from '@/dictation/controller';
@@ -101,7 +101,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
         return null;
     }
     return (
-        <DockShell autoHide={dockAutoHide} onHiddenChange={onHiddenChange} {...{ [OVERLAY_LEDGE_ATTRIBUTE]: '', 'data-dock': dockId }}>
+        <DockShell autoHide={dockAutoHide} onHiddenChange={onHiddenChange} {...{ 'data-dock': dockId }}>
             <StatusSummary />
 
             <Menu.Root>

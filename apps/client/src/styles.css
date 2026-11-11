@@ -753,29 +753,6 @@
         }
     }
 
-    /* A pet that drops by while Pets is off (`canvas/pets/PetLayer.tsx`): it fades in, stays a moment and
-       fades out over the length of a visit, which the visitor sets from `VISIT_MS`, and takes no press on its way. */
-    .pet-visitor {
-        position: absolute;
-        pointer-events: none;
-        opacity: 0;
-        animation: pet-visit var(--pet-visit-duration) ease-in-out forwards;
-    }
-    @keyframes pet-visit {
-        0% {
-            opacity: 0;
-        }
-        15% {
-            opacity: 1;
-        }
-        85% {
-            opacity: 1;
-        }
-        100% {
-            opacity: 0;
-        }
-    }
-
     /* The page an HTML file is drawn as. Its white ground is what a browser gives a document that
        brings no background; a native webview waits for its first load to avoid a white flash. */
     .file-preview-page {

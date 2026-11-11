@@ -18,7 +18,7 @@ import {
     worldOnMap,
     type MinimapScale
 } from '@/canvas/minimap-geometry';
-import { CANVAS_FLOOR_ATTRIBUTE, OVERLAY_WALL_ATTRIBUTE } from '@/canvas/overlay-attributes';
+import { CANVAS_FLOOR_ATTRIBUTE } from '@/canvas/overlay-attributes';
 import { waitingShown } from '@/canvas/use-group-waits';
 import { maximizedNodeOf, useCanvas, useCanvasStore, type CanvasNode, type CanvasState } from '@/state/canvas';
 import { useEndpointId } from '@/state/current-endpoint';
@@ -183,7 +183,7 @@ export function Minimap() {
 
     return (
         <Surface
-            {...{ [OVERLAY_WALL_ATTRIBUTE]: '', [CANVAS_FLOOR_ATTRIBUTE]: 'wall' }}
+            {...{ [CANVAS_FLOOR_ATTRIBUTE]: 'wall' }}
             className="pointer-events-auto absolute right-4 bottom-4 rounded-xl p-1"
             // The card stands over the canvas, which would read a press, a move or a click on it as its own.
             onPointerDown={(event) => event.stopPropagation()}
