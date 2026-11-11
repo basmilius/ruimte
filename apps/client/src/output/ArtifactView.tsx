@@ -480,6 +480,7 @@ export function VersionBody({ endpointId, artifact, version }: { endpointId: str
                     endpointId={endpointId}
                     reference={refOf(artifact, version, index)}
                     file={file}
+                    files={version.files}
                     title={artifact.title}
                     createdAt={version.createdAt}
                 />

@@ -10,7 +10,7 @@ import { ImageFile } from '@/files/ImageFile';
 import { MediaFile } from '@/files/MediaFile';
 import { ModelPreview } from '@/files/ModelPreview';
 import { PdfPreview } from '@/files/PdfPreview';
-import { readArtifactFile, useArtifactText, type ArtifactFileRef } from '@/output/artifact-bytes';
+import { readArtifactPage, useArtifactText, type ArtifactFileRef } from '@/output/artifact-bytes';
 import { artifactBinaryRead, artifactSource, fileViewOf, languageOfName } from '@/output/file-view';
 import { PageReadFrame } from '@/surface/PageReadFrame';
 
@@ -18,6 +18,8 @@ interface ArtifactFileProps {
     endpointId: string;
     reference: ArtifactFileRef;
     file: ArtifactFile;
+    /* Every file of the version, which a page may name. */
+    files: readonly ArtifactFile[];
     title: string;
     /* A version never changes, so its time pins the bytes the way a file's mtime does. */
     createdAt: number;
@@ -63,7 +65,7 @@ export function ArtifactFileBody(props: ArtifactFileProps) {
  * runs no script, and a page an agent made for a person is meant to. `auto` grows the frame with its page
  * the way a visual in a chat does; without it the page fills its box.
  */
-export function ArtifactPage({ endpointId, reference, file, title, auto = false }: ArtifactFileProps & { auto?: boolean }) {
+export function ArtifactPage({ endpointId, reference, file, files, title, auto = false }: ArtifactFileProps & { auto?: boolean }) {
     const { t } = useTranslation('output');
     const readKey = `${endpointId}:${reference.artifactId}:${reference.versionId}:${reference.file}`;
     // Keyed too, so another file starts from its own progress line rather than showing the last page until it is read.
@@ -71,11 +73,7 @@ export function ArtifactPage({ endpointId, reference, file, title, auto = false 
         <PageReadFrame
             key={readKey}
             // With the bootstrap a chat's visual is served with: it reports the page's size and takes the theme, which is what ends the frame's wait.
-            read={() =>
-                readArtifactFile(endpointId, reference, file)
-                    .then((blob) => blob.text())
-                    .then(injectVisualBootstrap)
-            }
+            read={() => readArtifactPage(endpointId, reference, files).then(injectVisualBootstrap)}
             readKey={readKey}
             title={title}
             name={file.name}

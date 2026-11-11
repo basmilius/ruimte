@@ -1,10 +1,11 @@
 import { formatBytes } from '@adecore/ui/format';
-import { BYTES_READ_MAX_BYTES, type ArtifactFile } from '@ruimte/contracts';
+import { BYTES_READ_MAX_BYTES, DESIGN_ASSET_MAX_BYTES, DESIGN_PAGE_MAX_BYTES, DesignPageError, type ArtifactFile } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useEffect, useState } from 'react';
 import { desktop, type SaveFileStreamBridge } from '@/desktop/bridge';
 import { saveBlob } from '@/download';
 import { useToasts } from '@/state/toasts';
+import { inlinedAsset, inlinedPage } from '@/surface/inline-page';
 import { machineTransport } from '@/transport';
 import { readPiece } from '@/transport-api/piece';
 import { fireAndForget } from '@/transport-api/transport';
@@ -20,6 +21,49 @@ export interface ArtifactFileRef {
 export function readArtifactFile(endpointId: string, ref: ArtifactFileRef, file: ArtifactFile): Promise<Blob> {
     const transport = machineTransport(endpointId);
     return readResource((piece) => readPiece(transport, piece), { kind: 'artifact', ...ref }, { maxBytes: Math.max(file.size, 1) });
+}
+
+/*
+ * An HTML file of a version as a page that stands on its own. Beside other files of its version, what it names
+ * of them is inlined as a design page is, and only from that version: a saved design draws as it was saved,
+ * whatever its folder holds now. A file the version does not hold, or one past a bound, loads nothing.
+ */
+export async function readArtifactPage(endpointId: string, ref: ArtifactFileRef, files: readonly ArtifactFile[]): Promise<string> {
+    const file = files[ref.file]!;
+
+    if (files.length === 1) {
+        return (await readArtifactFile(endpointId, ref, file)).text();
+    }
+
+    const indexOf = new Map(files.map((entry, index) => [entry.name, index]));
+
+    const read = async (path: string, maxBytes: number): Promise<Blob> => {
+        const index = indexOf.get(path);
+
+        if (index === undefined) {
+            throw new DesignPageError({ kind: 'missing', name: path });
+        }
+
+        const named = files[index]!;
+
+        if (named.size > maxBytes) {
+            throw new DesignPageError({ kind: 'too-large', name: path, size: named.size, limit: maxBytes });
+        }
+
+        return readArtifactFile(endpointId, { ...ref, file: index }, named);
+    };
+
+    return inlinedPage(
+        {
+            readPage: async (path) => {
+                const blob = await read(path, DESIGN_PAGE_MAX_BYTES);
+
+                return { text: await blob.text(), size: blob.size };
+            },
+            readAsset: async (path) => inlinedAsset(path, await read(path, DESIGN_ASSET_MAX_BYTES))
+        },
+        file.name
+    );
 }
 
 /* Whole up to the read bound, and past it only where the shell writes a file as its pieces arrive. */

@@ -1,19 +1,7 @@
-import { formatBytes } from '@adecore/ui/format';
-import {
-    DESIGN_ASSET_MAX_BYTES,
-    DESIGN_FOLDERS,
-    DESIGN_PAGE_MAX_BYTES,
-    designAssetType,
-    DesignPageError,
-    injectVisualBootstrap,
-    inlineDesignPage,
-    type DesignPageFailure,
-    type DesignPageUnknownResult,
-    type FsReadText
-} from '@ruimte/contracts';
-import i18next from 'i18next';
+import { DESIGN_ASSET_MAX_BYTES, DESIGN_FOLDERS, DESIGN_PAGE_MAX_BYTES, injectVisualBootstrap, type FsReadText } from '@ruimte/contracts';
 import { designReadFailed, type DesignRead } from '@/design/design-page';
 import { withDesignRuntime } from '@/design/design-runtime';
+import { inlinedAsset, inlinedPage, pageFailureText } from '@/surface/inline-page';
 import { machineTransport, pool } from '@/transport';
 import { readPiece } from '@/transport-api/piece';
 import { TransportError } from '@/transport-api/transport';
@@ -27,19 +15,6 @@ export interface DesignFolderRef {
     projectId: string | null;
     designId: string;
     folder: string;
-}
-
-function failureText(failure: DesignPageFailure | DesignPageUnknownResult): string {
-    switch (failure.kind) {
-        case 'unknown':
-            return i18next.t('chat:unknownItem.item');
-        case 'missing':
-            return i18next.t('shell:design.pageMissing', { name: failure.name });
-        case 'too-large':
-            return i18next.t('shell:design.pageTooLarge', { name: failure.name, size: formatBytes(failure.size), limit: formatBytes(failure.limit) });
-        case 'not-text':
-            return i18next.t('shell:design.pageNotText', { name: failure.name });
-    }
 }
 
 /* What the design folder holds. A folder that is not there yet is its own answer, since the chat makes it with its first file; any other error is a failed read. */
@@ -83,11 +58,11 @@ export async function readDesignText(endpointId: string, folder: string, file: s
     const read = first.kind === 'too-large' ? await readLargeText(endpointId, path, first, null, DESIGN_PAGE_MAX_BYTES) : first;
 
     if (read.kind === 'too-large') {
-        throw new Error(failureText({ kind: 'too-large', name: file, size: read.size, limit: DESIGN_PAGE_MAX_BYTES }));
+        throw new Error(pageFailureText({ kind: 'too-large', name: file, size: read.size, limit: DESIGN_PAGE_MAX_BYTES }));
     }
 
     if (read.kind !== 'text') {
-        throw new Error(failureText({ kind: 'not-text', name: file }));
+        throw new Error(pageFailureText({ kind: 'not-text', name: file }));
     }
 
     return read;
@@ -111,15 +86,6 @@ export async function rewriteDesignFile(endpointId: string, folder: string, file
     await writeMachineText(transport, path, changed, read.mtime);
 
     return true;
-}
-
-function dataUrlOf(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(reader.error ?? new Error('unreadable'));
-        reader.readAsDataURL(blob);
-    });
 }
 
 /* One page of the design as the sandbox frame takes it: standing on its own, with the bootstrap of a visual and the runtime of the stage. */
@@ -146,25 +112,17 @@ export async function standaloneDesignPage(endpointId: string, design: DesignFol
         return builtOnMachine(endpointId, { projectId, designId, file });
     }
 
-    try {
-        return await inlineDesignPage(
-            {
-                readPage: async (path) => {
-                    const read = await readDesignText(endpointId, folder, path);
+    return inlinedPage(
+        {
+            readPage: async (path) => {
+                const read = await readDesignText(endpointId, folder, path);
 
-                    return { text: read.text, size: read.size };
-                },
-                readAsset: async (path) => {
-                    const blob = await readDesignAsset(endpointId, folder, path);
-
-                    return { url: await dataUrlOf(new Blob([blob], { type: designAssetType(path, blob.type) })), size: blob.size };
-                }
+                return { text: read.text, size: read.size };
             },
-            file
-        );
-    } catch (error) {
-        throw error instanceof DesignPageError ? new Error(failureText(error.failure)) : error;
-    }
+            readAsset: async (path) => inlinedAsset(path, await readDesignAsset(endpointId, folder, path))
+        },
+        file
+    );
 }
 
 /*
@@ -179,7 +137,7 @@ async function builtOnMachine(endpointId: string, page: { projectId: string; des
         const built = await transport.request('design.page', page);
 
         if (built.kind !== 'page') {
-            throw new Error(failureText(built));
+            throw new Error(pageFailureText(built));
         }
 
         try {

@@ -41,6 +41,7 @@ export function SavedPreview({ endpointId, entry, preview }: { endpointId: strin
                             endpointId={endpointId}
                             reference={reference}
                             file={file}
+                            files={entry.version.files}
                             title={entry.artifact.title}
                             createdAt={entry.version.createdAt}
                             auto

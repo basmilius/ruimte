@@ -1,6 +1,15 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import { useProvidersStore } from '@adecore/agents-react/state';
-import { REQUEST_SCHEMAS, type ArtifactFile, type ArtifactGetResult, type ArtifactSummary, type ArtifactVersion, type RequestType } from '@ruimte/contracts';
+import {
+    injectVisualBootstrap,
+    REQUEST_SCHEMAS,
+    visualProxyReadyMessage,
+    type ArtifactFile,
+    type ArtifactGetResult,
+    type ArtifactSummary,
+    type ArtifactVersion,
+    type RequestType
+} from '@ruimte/contracts';
 import { act } from 'react';
 import { visibleRect } from '@/canvas-model/math';
 import { liveCanvas } from '@/state/canvas';
@@ -542,6 +551,92 @@ describe('a version drawn by what its files are', () => {
             settings.disableIframePageLoading = false;
             Object.defineProperty(HTMLElement.prototype, 'clientWidth', width!);
         }
+    });
+
+    describe('an HTML file in its frame', () => {
+        let width: PropertyDescriptor;
+
+        // happy-dom lays nothing out and loads no sandbox host page, so the frame gets a width and a stand-in window.
+        beforeEach(() => {
+            width = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth')!;
+            Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 800 });
+            frameSettings().disableIframePageLoading = true;
+        });
+
+        afterEach(() => {
+            frameSettings().disableIframePageLoading = false;
+            Object.defineProperty(HTMLElement.prototype, 'clientWidth', width);
+        });
+
+        function frameSettings(): { disableIframePageLoading: boolean } {
+            return (window as unknown as { happyDOM: { settings: { disableIframePageLoading: boolean } } }).happyDOM.settings;
+        }
+
+        async function openVersion(files: Array<{ name: string; mime: string; body: string }>): Promise<void> {
+            machine.answer('artifact.get', () => ({
+                ...DEPENDENCIES,
+                artifact: { ...DEPENDENCIES.artifact, kind: 'page' },
+                versions: [version('v-new', 2, NOW, { files: files.map(({ name, mime, body }) => ({ name, mime, size: body.length, sha256: name })) })]
+            }));
+            machine.answer('bytes.read', ({ resource, offset }) => {
+                const file = resource.kind === 'artifact' && resource.versionId === 'v-new' ? files[resource.file] : undefined;
+
+                if (file === undefined) {
+                    throw new TransportError('not-found', 'No such file');
+                }
+
+                return { mime: file.mime, size: file.body.length, version: 'v', offset, data: btoa(file.body.slice(offset)) };
+            });
+            await openPanel();
+            await until(() => text().includes('Dependency report'));
+            await clickOn(panelRow('Dependency report') ?? null);
+        }
+
+        // What the frame is handed once the sandbox host page says it listens.
+        async function framedPage(): Promise<string> {
+            await until(() => page.host.querySelector('iframe[title="Dependency report"]') !== null);
+
+            const posted: Array<{ method: string; params?: { html?: string } }> = [];
+            const stand = { postMessage: (message: { method: string }) => posted.push(message) };
+
+            Object.defineProperty(page.host.querySelector('iframe[title="Dependency report"]')!, 'contentWindow', { configurable: true, value: stand });
+            await act(async () => {
+                window.dispatchEvent(new MessageEvent('message', { source: stand as never, data: visualProxyReadyMessage() }));
+            });
+            await until(() => posted.some((message) => message.params?.html !== undefined));
+
+            return posted.find((message) => message.params?.html !== undefined)!.params!.html!;
+        }
+
+        function readFiles(): number[] {
+            return machine.requests('bytes.read').map(({ resource }) => (resource.kind === 'artifact' ? resource.file : -1));
+        }
+
+        test('beside the files of its version, draws with the stylesheet and image it names inlined from that version', async () => {
+            await openVersion([
+                { name: 'index.html', mime: 'text/html', body: '<link rel="stylesheet" href="style.css"><img src="assets/me.png">' },
+                { name: 'style.css', mime: 'text/plain', body: 'h1 { color: red; }' },
+                { name: 'assets/me.png', mime: 'image/png', body: 'png-bytes' }
+            ]);
+
+            const html = await framedPage();
+
+            expect(html).toContain(`href="data:text/css;base64,${btoa('h1 { color: red; }')}"`);
+            expect(html).toContain(`src="data:image/png;base64,${btoa('png-bytes')}"`);
+            expect(html).not.toContain('href="style.css"');
+            expect(readFiles().toSorted()).toEqual([0, 1, 2]);
+        });
+
+        test('alone in its version, draws as it was written', async () => {
+            const body = '<link rel="stylesheet" href="style.css"><h1>Rapport</h1>';
+
+            await openVersion([{ name: 'index.html', mime: 'text/html', body }]);
+
+            const html = await framedPage();
+
+            expect(html).toBe(injectVisualBootstrap(body));
+            expect(readFiles()).toEqual([0]);
+        });
     });
 
     test('a text file of a build reads as code, and a file without a preview is a pick away', async () => {
