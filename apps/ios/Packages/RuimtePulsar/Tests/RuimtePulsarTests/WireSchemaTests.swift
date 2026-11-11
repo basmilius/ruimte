@@ -23,6 +23,15 @@ struct WireSchemaTests {
         }
     }
 
+    @Test func aMemberOfAnOpenUnionThisAppCannotReadKeepsItsPlaceMarked() throws {
+        let cases = try #require(wireFixture()["tolerated"]?.arrayValue)
+        #expect(!cases.isEmpty)
+        for entry in cases {
+            let name = try #require(entry["schema"]?.stringValue)
+            #expect(try WireSchema.validate(name, try #require(entry["input"])) == entry["output"])
+        }
+    }
+
     @Test func everyStampedRefinementHasAnImplementation() {
         func names(in value: JSONValue) -> Set<String> {
             var found: Set<String> = []

@@ -224,8 +224,8 @@ import Testing
         var rejected: [JSONValue] = []
         let stop = client.subscribe(.chatEvent) { events.append($0) }
         let stopRejected = client.subscribeRejected(.chatEvent) { rejected.append($0) }
-        client.receive(
-            #"{"type":"event","event":"chat.event","payload":{"chatId":"c1","event":{"type":"future","x":1}}}"#)
+        // A newer event type is kept as unknown; one without a type has nothing to keep.
+        client.receive(#"{"type":"event","event":"chat.event","payload":{"chatId":"c1","event":{"x":1}}}"#)
         client.receive(
             #"{"type":"event","event":"chat.event","payload":{"chatId":"c1","event":{"type":"delta","itemId":"i","text":"x"}}}"#
         )
@@ -233,8 +233,7 @@ import Testing
         #expect(rejected.map { $0["chatId"] } == [.string("c1")])
         stop()
         stopRejected()
-        client.receive(
-            #"{"type":"event","event":"chat.event","payload":{"chatId":"c1","event":{"type":"future","x":1}}}"#)
+        client.receive(#"{"type":"event","event":"chat.event","payload":{"chatId":"c1","event":{"x":1}}}"#)
         #expect(rejected.count == 1)
     }
 

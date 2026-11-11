@@ -3260,6 +3260,16 @@
         }
       }
     },
+    "Update Ruimte to see this." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Werk Ruimte bij om dit te zien."
+          }
+        }
+      }
+    },
     "v%lld, %@" : {
       "comment" : "A version: its number, then its day and time",
       "localizations" : {
@@ -8541,6 +8551,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Antwoorden in de chat"
+          }
+        }
+      }
+    },
+    "Answer this in Ruimte on the machine, or update Ruimte to answer here." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beantwoord dit in Ruimte op de machine, of werk Ruimte bij om hier te antwoorden."
           }
         }
       }

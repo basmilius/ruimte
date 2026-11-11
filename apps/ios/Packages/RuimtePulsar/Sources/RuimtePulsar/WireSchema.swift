@@ -178,6 +178,9 @@ public enum WireSchema {
         }
         let value = try projectEntry(input, metadata: schema["x-project-entry"])
         let fail = { WireValidationError.invalid("Invalid \(path)") }
+        if let open = schema["x-open-union"], let options = (schema["oneOf"] ?? schema["anyOf"])?.arrayValue {
+            return try parseOpenUnion(value, options: options, open: open, path: path, definitions: definitions)
+        }
         if let options = (schema["oneOf"] ?? schema["anyOf"])?.arrayValue {
             for option in options where !literalMismatch(value, schema: option) {
                 if let parsed = try? parse(value, schema: option, path: path, definitions: definitions) {
@@ -277,6 +280,42 @@ public enum WireSchema {
         default: throw WireValidationError.invalid("Unsupported generated schema at \(path)")
         }
         return value
+    }
+
+    /// The key on a member of an open union this app cannot read, which the generated decoders read as `unknown`.
+    public static let unknownMark = "x-unknown"
+
+    /// A newer machine may add a member to an open union, or a value inside a member. Such a member keeps its place,
+    /// marked, once its tag and the fields every member shares hold, so one item never refuses a whole thread.
+    private static func parseOpenUnion(
+        _ value: JSONValue, options: [JSONValue], open: JSONValue, path: String, definitions: JSONValue?
+    ) throws -> JSONValue {
+        guard let tag = open["tag"]?.stringValue, var object = value.objectValue, let word = object[tag],
+            word.stringValue != nil
+        else {
+            throw WireValidationError.invalid("Invalid \(path)")
+        }
+        let members = options.map { resolved($0, definitions: definitions) }
+        if let member = members.first(where: { $0["properties"]?[tag]?["const"] == word }),
+            let parsed = try? parse(value, schema: member, path: path, definitions: definitions)
+        {
+            return parsed
+        }
+        for key in open["base"]?.arrayValue?.compactMap(\.stringValue) ?? [] {
+            guard let input = object[key], let property = members.first?["properties"]?[key] else {
+                throw WireValidationError.invalid("Missing \(path).\(key)")
+            }
+            _ = try parse(input, schema: property, path: "\(path).\(key)", definitions: definitions)
+        }
+        object[unknownMark] = .bool(true)
+        return .object(object)
+    }
+
+    private static func resolved(_ schema: JSONValue, definitions: JSONValue?) -> JSONValue {
+        guard let reference = schema["$ref"]?.stringValue, reference.hasPrefix("#/$defs/"),
+            let target = definitions?[String(reference.dropFirst("#/$defs/".count))]
+        else { return schema }
+        return target
     }
 
     /// The refinements the phone runs, by the name `packages/contracts/scripts/refinements.ts` stamps as

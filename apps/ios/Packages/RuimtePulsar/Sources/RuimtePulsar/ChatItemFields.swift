@@ -18,6 +18,7 @@ extension ChatQuestionItem: ChatItemFields {}
 extension ChatTurnItem: ChatItemFields {}
 extension ChatNoteItem: ChatItemFields {}
 extension ChatCompactionItem: ChatItemFields {}
+extension ChatItemUnknown: ChatItemFields {}
 
 extension ChatItem {
     public var fields: any ChatItemFields {
@@ -32,6 +33,7 @@ extension ChatItem {
         case .turn(let item): item
         case .note(let item): item
         case .compaction(let item): item
+        case .unknown(let item): item
         }
     }
 

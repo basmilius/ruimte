@@ -101,8 +101,9 @@ final class ChatModel {
                 guard let self, !self.loading, let envelope = try? payload.decoded(as: ChatEventEnvelope.self),
                     envelope.chatId == self.chatID
                 else { return }
-                self.apply(envelope.event)
+                // Before applying, so an event that reloads the thread whole clears it again.
                 if let seq = envelope.seq { self.lastSeq = Int(seq) }
+                self.apply(envelope.event)
             }),
             .apply(.accountsChanged, as: AccountsSnapshot.self) { [weak self] snapshot in
                 self?.accounts = ProviderAccountList(snapshot)
@@ -124,13 +125,8 @@ final class ChatModel {
                 self.limits = limits
             },
             .rejected(.chatEvent) { [weak self] payload in
-                guard let self, payload["chatId"]?.stringValue == self.chatID, !self.loading,
-                    !self.reattachedOverRejectedEvent
-                else { return }
-                self.reattachedOverRejectedEvent = true
-                // With `since` the machine would answer with the very event this app could not read.
-                self.lastSeq = nil
-                self.attach()
+                guard let self, payload["chatId"]?.stringValue == self.chatID, !self.loading else { return }
+                self.reloadOverUnreadEvent()
             },
         ],
         connection: { [weak self] available in
@@ -250,7 +246,8 @@ final class ChatModel {
         if next != hasSubagentRows { hasSubagentRows = next }
         let visibleIDs = Set(items.map(\.id))
         let requests =
-            history.pending.values.filter { !visibleIDs.contains($0.id) }.sorted { $0.id < $1.id }
+            // `isPending` holds only what this app can answer; a request it cannot read stays a row in the thread.
+            history.pending.values.filter { !visibleIDs.contains($0.id) && $0.isPending }.sorted { $0.id < $1.id }
             + items.filter(\.isPending)
         if requests != pending { pending = requests }
     }
@@ -340,6 +337,11 @@ final class ChatModel {
         let bookmarks = ChatBookmarks.parse(result["bookmarks"]?.arrayValue ?? [])
         let visuals = ChatVisuals.parse(result.list("visuals"))
         if since != nil, let events = snapshot.events {
+            if events.contains(where: { if case .unknown = $0 { true } else { false } }), !reattachedOverRejectedEvent {
+                // After this answer is done, so the attach it started does not finish the new one.
+                Task { [weak self] in self?.reloadOverUnreadEvent() }
+                return
+            }
             for event in events { apply(event) }
             if snapshot.info != info {
                 info = snapshot.info
@@ -419,7 +421,18 @@ final class ChatModel {
             presentation.upsert(item, textOnly: true)
             if Self.concernsSubagent(item) { subagentRevision += 1 }
             revision += 1
+        case .unknown:
+            reloadOverUnreadEvent()
         }
+    }
+
+    /// An event this app cannot read may change anything it shows, so the thread loads again whole.
+    private func reloadOverUnreadEvent() {
+        guard !reattachedOverRejectedEvent else { return }
+        reattachedOverRejectedEvent = true
+        // With `since` the machine would answer with the very event this app could not read.
+        lastSeq = nil
+        attach()
     }
 
     /// Finds the forks after each turn among the chats the machine has loaded; a machine that cannot say leaves

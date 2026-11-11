@@ -76,7 +76,7 @@ enum ChatVisuals {
         case .message:
             guard let item = entry.items.first?.item else { return nil }
             switch item {
-            case .user, .assistant, .thinking, .approval, .question: return item.createdAt
+            case .user, .assistant, .thinking, .approval, .question, .unknown: return item.createdAt
             case .tool(let tool):
                 return ChatSubagents.handbackReport(item) == nil && RuimteCommandLook.sent(of: tool) == nil
                     ? item.createdAt : nil

@@ -55,6 +55,29 @@ struct TypedWireTests {
         #expect(envelope.seq == 15)
     }
 
+    @Test func itemsAndEventsThisAppCannotReadDecodeAsUnknownAndEncodeBackUnchanged() throws {
+        let cases = try #require(wireFixture()["tolerated"]?.arrayValue)
+        let attach = try #require(cases.first { $0["schema"] == .string("request.chat.attach.result") })
+        let result = try #require(attach["output"]).decoded(as: ChatAttachResult.self)
+        let unknown = result.items.compactMap { item -> ChatItemUnknown? in
+            if case .unknown(let value) = item { value } else { nil }
+        }
+        #expect(unknown.map(\.id) == ["future-1", "tool-2", "approval-2", "approval-3", "question-2"])
+        #expect(unknown.map(\.kind) == ["future-kind", "tool", "approval", "approval", "question"])
+        #expect(result.items.count - unknown.count == 10)
+        let inputs = try #require(attach["input"]?["items"]?.arrayValue).suffix(5)
+        #expect(try unknown.map { try JSONValue(encoding: $0) } == Array(inputs))
+        let events = cases.filter { $0["schema"] == .string("event.chat.event") }
+        let envelopes = try events.map { try #require($0["output"]).decoded(as: ChatEventEnvelope.self) }
+        guard case .item(let item) = envelopes[0].event, case .unknown = item.item,
+            case .unknown(let event) = envelopes[1].event
+        else {
+            Issue.record("A newer item or event decoded as a known one")
+            return
+        }
+        #expect(event.type == "future-event")
+    }
+
     @Test func anAgentWordThisAppDoesNotKnowStillDecodes() throws {
         let output = try #require(try fixtures("event.session.status").first)
         var agent = try #require(output["agent"]?.objectValue)

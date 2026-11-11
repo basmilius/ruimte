@@ -3857,21 +3857,31 @@ public enum ChatItem: Codable, Sendable, Equatable {
     case `turn`(ChatTurnItem)
     case `note`(ChatNoteItem)
     case `compaction`(ChatCompactionItem)
+    case `unknown`(ChatItemUnknown)
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: Tag.self)
-        switch try container.decode(String.self, forKey: .value) {
-        case "user": self = .`user`(try ChatUserItem(from: decoder))
-        case "assistant": self = .`assistant`(try ChatAssistantItem(from: decoder))
-        case "thinking": self = .`thinking`(try ChatThinkingItem(from: decoder))
-        case "tool": self = .`tool`(try ChatToolItem(from: decoder))
-        case "subagent": self = .`subagent`(try ChatSubagentItem(from: decoder))
-        case "approval": self = .`approval`(try ChatApprovalItem(from: decoder))
-        case "question": self = .`question`(try ChatQuestionItem(from: decoder))
-        case "turn": self = .`turn`(try ChatTurnItem(from: decoder))
-        case "note": self = .`note`(try ChatNoteItem(from: decoder))
-        case "compaction": self = .`compaction`(try ChatCompactionItem(from: decoder))
-        default: throw WireValidationError.invalid("Unknown ChatItem tag")
+        let tag = try container.decode(String.self, forKey: .value)
+        guard !container.contains(.unknown) else {
+            self = .`unknown`(try ChatItemUnknown(from: decoder))
+            return
+        }
+        do {
+            switch tag {
+            case "user": self = .`user`(try ChatUserItem(from: decoder))
+            case "assistant": self = .`assistant`(try ChatAssistantItem(from: decoder))
+            case "thinking": self = .`thinking`(try ChatThinkingItem(from: decoder))
+            case "tool": self = .`tool`(try ChatToolItem(from: decoder))
+            case "subagent": self = .`subagent`(try ChatSubagentItem(from: decoder))
+            case "approval": self = .`approval`(try ChatApprovalItem(from: decoder))
+            case "question": self = .`question`(try ChatQuestionItem(from: decoder))
+            case "turn": self = .`turn`(try ChatTurnItem(from: decoder))
+            case "note": self = .`note`(try ChatNoteItem(from: decoder))
+            case "compaction": self = .`compaction`(try ChatCompactionItem(from: decoder))
+            default: self = .`unknown`(try ChatItemUnknown(from: decoder))
+            }
+        } catch {
+            self = .`unknown`(try ChatItemUnknown(from: decoder))
         }
     }
 
@@ -3887,10 +3897,14 @@ public enum ChatItem: Codable, Sendable, Equatable {
         case .`turn`(let value): try value.encode(to: encoder)
         case .`note`(let value): try value.encode(to: encoder)
         case .`compaction`(let value): try value.encode(to: encoder)
+        case .`unknown`(let value): try value.encode(to: encoder)
         }
     }
 
-    private enum Tag: String, CodingKey { case value = "kind" }
+    private enum Tag: String, CodingKey {
+        case value = "kind"
+        case unknown = "x-unknown"
+    }
 }
 
 public struct ChatUserItem: Codable, Sendable, Equatable {
@@ -6151,6 +6165,40 @@ public struct ChatCompactionItem: Codable, Sendable, Equatable {
     }
 }
 
+/// A member of `ChatItem` this app cannot read, kept as the machine sent it.
+public struct ChatItemUnknown: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `createdAt`: Double
+    public let `turnId`: String?
+    public let `kind`: String
+    public let raw: JSONValue
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `createdAt` = try container.decode(Double.self, forKey: .`createdAt`)
+        `turnId` = try container.decode(String?.self, forKey: .`turnId`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        var value = try JSONValue(from: decoder)
+        if case .object(var object) = value {
+            object.removeValue(forKey: WireSchema.unknownMark)
+            value = .object(object)
+        }
+        raw = value
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        try raw.encode(to: encoder)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `createdAt` = "createdAt"
+        case `turnId` = "turnId"
+        case `kind` = "kind"
+    }
+}
+
 public struct ChatInfo: Codable, Sendable, Equatable {
     public let `chatId`: String
     public let `provider`: String
@@ -7052,15 +7100,25 @@ public enum ChatEvent: Codable, Sendable, Equatable {
     case `delta`(ChatDeltaEvent)
     case `info`(ChatInfoEvent)
     case `reset`(ChatResetEvent)
+    case `unknown`(ChatEventUnknown)
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: Tag.self)
-        switch try container.decode(String.self, forKey: .value) {
-        case "item": self = .`item`(try ChatItemEvent(from: decoder))
-        case "delta": self = .`delta`(try ChatDeltaEvent(from: decoder))
-        case "info": self = .`info`(try ChatInfoEvent(from: decoder))
-        case "reset": self = .`reset`(try ChatResetEvent(from: decoder))
-        default: throw WireValidationError.invalid("Unknown ChatEvent tag")
+        let tag = try container.decode(String.self, forKey: .value)
+        guard !container.contains(.unknown) else {
+            self = .`unknown`(try ChatEventUnknown(from: decoder))
+            return
+        }
+        do {
+            switch tag {
+            case "item": self = .`item`(try ChatItemEvent(from: decoder))
+            case "delta": self = .`delta`(try ChatDeltaEvent(from: decoder))
+            case "info": self = .`info`(try ChatInfoEvent(from: decoder))
+            case "reset": self = .`reset`(try ChatResetEvent(from: decoder))
+            default: self = .`unknown`(try ChatEventUnknown(from: decoder))
+            }
+        } catch {
+            self = .`unknown`(try ChatEventUnknown(from: decoder))
         }
     }
 
@@ -7070,10 +7128,14 @@ public enum ChatEvent: Codable, Sendable, Equatable {
         case .`delta`(let value): try value.encode(to: encoder)
         case .`info`(let value): try value.encode(to: encoder)
         case .`reset`(let value): try value.encode(to: encoder)
+        case .`unknown`(let value): try value.encode(to: encoder)
         }
     }
 
-    private enum Tag: String, CodingKey { case value = "type" }
+    private enum Tag: String, CodingKey {
+        case value = "type"
+        case unknown = "x-unknown"
+    }
 }
 
 public struct ChatItemEvent: Codable, Sendable, Equatable {
@@ -7211,6 +7273,31 @@ public struct ChatResetEvent: Codable, Sendable, Equatable {
         case `type` = "type"
         case `info` = "info"
         case `items` = "items"
+    }
+}
+
+/// A member of `ChatEvent` this app cannot read, kept as the machine sent it.
+public struct ChatEventUnknown: Codable, Sendable, Equatable {
+    public let `type`: String
+    public let raw: JSONValue
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `type` = try container.decode(String.self, forKey: .`type`)
+        var value = try JSONValue(from: decoder)
+        if case .object(var object) = value {
+            object.removeValue(forKey: WireSchema.unknownMark)
+            value = .object(object)
+        }
+        raw = value
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        try raw.encode(to: encoder)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `type` = "type"
     }
 }
 

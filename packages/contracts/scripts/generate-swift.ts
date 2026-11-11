@@ -90,6 +90,8 @@ const names = new Map(
 const declarations = new Map<string, string>();
 // Off for the typed hot paths, which the client validated as a whole frame before anything decodes them.
 let validatingStructs = true;
+// The key `WireSchema` sets on a member of an open union it could not read, `WireSchema.unknownMark` in Swift.
+const UNKNOWN_MARK = 'x-unknown';
 function camel(name: string): string {
     return name.replace(/[-. ]+(\w)/g, (_match, letter) => letter.toUpperCase());
 }
@@ -186,6 +188,10 @@ function typeOf(schema: Schema, suggested: string, force = false): string {
             type: typeOf(member, `${name}Variant${index}`),
             label: tag ? String(member.properties[tag].const) : `variant${index}`
         }));
+        if (schema['x-open-union']) {
+            declarations.set(name, openUnionSource(name, schema['x-open-union'], members, cases));
+            return name;
+        }
         const decoding = tag
             ? `        let container = try decoder.container(keyedBy: Tag.self)\n        switch try container.decode(${typeof members[0].properties[tag].const === 'boolean' ? 'Bool' : 'String'}.self, forKey: .value) {\n${cases.map(({ label, type }: any) => `        case ${JSON.stringify(members[cases.findIndex((entry: any) => entry.label === label)].properties[tag].const)}: self = .${identifier(label)}(try ${type}(from: decoder))`).join('\n')}${typeof members[0].properties[tag].const === 'boolean' && cases.length === 2 ? '' : `\n        default: throw WireValidationError.invalid("Unknown ${name} tag")`}\n        }`
             : `${cases.map(({ label, type }: any) => `        if let value = try? ${type}(from: decoder) { self = .${identifier(label)}(value); return }`).join('\n')}\n        throw WireValidationError.invalid("Invalid ${name}")`;
@@ -215,6 +221,85 @@ function typeOf(schema: Schema, suggested: string, force = false): string {
         return 'JSONValue';
     }
     throw new Error(`Unsupported schema ${suggested}: ${JSON.stringify(schema)}`);
+}
+/*
+ * A member the interpreter marked, or one these decoders cannot read, becomes `unknown`: the fields every member
+ * shares and the member as it came, so it shows in its place and encodes back unchanged.
+ */
+function openUnionSource(name: string, open: { tag: string; base: string[] }, members: Schema[], cases: { label: string; type: string }[]): string {
+    if (cases.some(({ label }) => label === 'unknown') || members.some((member) => member.properties?.[open.tag]?.const === undefined)) {
+        throw new Error(`${name} cannot be an open union: every member needs a ${open.tag} literal and none may be called unknown`);
+    }
+    const unknown = `${name}Unknown`;
+    const fields = [
+        ...open.base.map((key) => {
+            const property = members[0].properties[key];
+            const inner = nullable(property);
+            const type = typeOf(inner ?? property, unknown + pascal(key));
+            return { key, type: inner ? `${type}?` : type };
+        }),
+        { key: open.tag, type: 'String' }
+    ];
+    const member = (label: string, value: string) => `.${identifier(label)}(${value})`;
+    const decodeUnknown = member('unknown', `try ${unknown}(from: decoder)`);
+    const union = `public enum ${name}: Codable, Sendable, Equatable {
+${cases.map(({ label, type }) => `    case ${identifier(label)}(${type})`).join('\n')}
+    case \`unknown\`(${unknown})
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Tag.self)
+        let tag = try container.decode(String.self, forKey: .value)
+        guard !container.contains(.unknown) else {
+            self = ${decodeUnknown}
+            return
+        }
+        do {
+            switch tag {
+${cases.map(({ label, type }, index) => `            case ${JSON.stringify(members[index].properties[open.tag].const)}: self = ${member(label, `try ${type}(from: decoder)`)}`).join('\n')}
+            default: self = ${decodeUnknown}
+            }
+        } catch {
+            self = ${decodeUnknown}
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+${[...cases.map(({ label }) => label), 'unknown'].map((label) => `        case .${identifier(label)}(let value): try value.encode(to: encoder)`).join('\n')}
+        }
+    }
+
+    private enum Tag: String, CodingKey {
+        case value = ${JSON.stringify(open.tag)}
+        case unknown = ${JSON.stringify(UNKNOWN_MARK)}
+    }
+}`;
+    const struct = `/// A member of \`${name}\` this app cannot read, kept as the machine sent it.
+public struct ${unknown}: Codable, Sendable, Equatable {
+${fields.map(({ key, type }) => `    public let ${identifier(key)}: ${type}`).join('\n')}
+    public let raw: JSONValue
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+${fields.map(({ key, type }) => `        ${identifier(key)} = try container.decode(${type}.self, forKey: .${identifier(key)})`).join('\n')}
+        var value = try JSONValue(from: decoder)
+        if case .object(var object) = value {
+            object.removeValue(forKey: WireSchema.unknownMark)
+            value = .object(object)
+        }
+        raw = value
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        try raw.encode(to: encoder)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+${fields.map(({ key }) => `        case ${identifier(key)} = ${JSON.stringify(key)}`).join('\n')}
+    }
+}`;
+    declarations.set(unknown, struct);
+    return union;
 }
 for (const [name, schema] of Object.entries(schemas)) {
     const clean = name === 'ErrorSchema' ? 'WireError' : name.replace(/Schema$/, '');
@@ -272,6 +357,15 @@ const openVocabularies: ReadonlyMap<unknown, readonly string[]> = new Map<unknow
     [VoiceActivityStatusSchema, VoiceActivityStatusSchema.options],
     [TunnelProposalActionSchema, TunnelProposalActionSchema.options]
 ]);
+/*
+ * Unions a newer machine may extend with a member, or with a value inside one. The app keeps a member it cannot read
+ * in its place, marked with `UNKNOWN_MARK`, as long as the tag and the fields in `base` hold; both the schema
+ * interpreter and the generated decoders read this stamp, so the two degrade the same member.
+ */
+const openUnions: ReadonlyMap<unknown, { tag: string; base: readonly string[] }> = new Map<unknown, { tag: string; base: readonly string[] }>([
+    [chat.ChatItemSchema, { tag: 'kind', base: ['id', 'createdAt', 'turnId'] }],
+    [chat.ChatEventSchema, { tag: 'type', base: [] }]
+]);
 // Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.
 const apiRoots: Record<string, z.ZodType> = {};
 // Sorted, so the generated files do not move when an area file adds a request.
@@ -295,6 +389,10 @@ for (const [name, schema] of Object.entries(apiRoots)) {
             if (known) {
                 jsonSchema['x-open-enum'] = [...known];
                 delete jsonSchema.enum;
+            }
+            const open = openUnions.get(zodSchema);
+            if (open) {
+                jsonSchema['x-open-union'] = { tag: open.tag, base: [...open.base] };
             }
             stampRefinements(zodSchema, jsonSchema, `${name} ${path.join('.')}`);
             if (zodSchema instanceof z.ZodPipe && zodSchema.in === CameraSchema) {
@@ -1127,10 +1225,48 @@ validationInputs.push(
         }
     }
 );
+// A member of an open union without the fields every member shares has no place to keep, so the reply stays refused.
+validationInputs.push({
+    schema: 'request.chat.attach.result',
+    input: { info: chatInfoFixture, items: [{ createdAt: 1000, turnId: null, kind: 'future-kind' }], seq: 12 }
+});
 const validations = validationInputs.map((entry) => {
     const parsed = roots[entry.schema]!.safeParse(entry.input);
     return { ...entry, valid: parsed.success, ...(parsed.success ? { output: parsed.data } : {}) };
 });
+/*
+ * What a newer machine may send that zod here refuses and the app degrades: each member of an open union it cannot
+ * read keeps its place, marked. `output` is zod's answer for the readable rest with the marked members put back.
+ */
+const futureItems = [
+    { ...turnBase, id: 'future-1', kind: 'future-kind', shape: { nested: [1] } },
+    { ...chatItemsFixture[4], id: 'tool-2', state: 'paused' },
+    { ...chatItemsFixture[6], id: 'approval-2', allowAlways: { label: 'Always' } },
+    { ...chatItemsFixture[6], id: 'approval-3', decision: 'escalated' },
+    { ...chatItemsFixture[7], id: 'question-2', state: 'delegated' }
+];
+const marked = (value: object) => ({ ...value, [UNKNOWN_MARK]: true });
+const attachBase = { info: chatInfoFixture, history: { start: 0, cursor: 'c1' }, pending: [], seq: 12 };
+const readableAttach = roots['request.chat.attach.result']!.parse({ ...attachBase, items: chatItemsFixture }) as { items: unknown[] };
+const futureEvent = { type: 'future-event', itemId: 'assistant-1' };
+const tolerated = [
+    {
+        schema: 'request.chat.attach.result',
+        input: { ...attachBase, items: [...chatItemsFixture, ...futureItems] },
+        output: { ...readableAttach, items: [...readableAttach.items, ...futureItems.map(marked)] }
+    },
+    {
+        schema: 'event.chat.event',
+        input: { chatId: 'chat-1', seq: 15, event: { type: 'item', item: futureItems[0] } },
+        output: { chatId: 'chat-1', seq: 15, event: { type: 'item', item: marked(futureItems[0]!) } }
+    },
+    { schema: 'event.chat.event', input: { chatId: 'chat-1', seq: 16, event: futureEvent }, output: { chatId: 'chat-1', seq: 16, event: marked(futureEvent) } }
+];
+for (const entry of tolerated) {
+    if (roots[entry.schema]!.safeParse(entry.input).success) {
+        throw new Error(`zod reads the tolerated ${entry.schema} fixture, so it no longer shows a degradation`);
+    }
+}
 const seed = Buffer.from('9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60', 'hex');
 const privateKey = createPrivateKey({ key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), seed]), format: 'der', type: 'pkcs8' });
 const publicKey = createPublicKey(privateKey).export({ format: 'der', type: 'spki' }).subarray(-32).toString('base64url');
@@ -1227,6 +1363,7 @@ outputs.set(
             purposes: signing.SIGNING_PURPOSES,
             framing: framingFixtures,
             validations,
+            tolerated,
             binding: {
                 offer: offer.signal.sdp,
                 answer: 'a=fingerprint:SHA-256 cc:dd\r\na=fingerprint:sha-256 CC:DD\r\n',

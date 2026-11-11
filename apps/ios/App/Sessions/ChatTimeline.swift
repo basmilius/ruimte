@@ -1408,8 +1408,29 @@ private struct ChatTimelineRow: View {
             case .compaction(let compaction):
                 ChatCompactionRule(
                     preTokens: compaction.preTokens.map(Double.init), postTokens: compaction.postTokens.map(Double.init))
+            case .unknown(let unknown):
+                Label(ChatUnknownItem.words(unknown), lucideIcon: "info", iconSize: 14)
+                    .font(.callout).foregroundStyle(MobileStyle.muted)
             }
         }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// An item a newer machine sent that this app cannot read. It is never answered from here, so a request among them
+/// sends the person to the machine.
+enum ChatUnknownItem {
+    static func words(_ item: ChatItemUnknown) -> String {
+        waitsForAnswer(item)
+            ? String(localized: "Answer this in Ruimte on the machine, or update Ruimte to answer here.")
+            : String(localized: "Update Ruimte to see this.")
+    }
+
+    private static func waitsForAnswer(_ item: ChatItemUnknown) -> Bool {
+        switch item.kind {
+        case "approval": item.raw["decision"] == .string("pending")
+        case "question": item.raw["state"] == .string("pending")
+        default: false
+        }
     }
 }
 

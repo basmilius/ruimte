@@ -94,6 +94,44 @@ import XCTest
         XCTAssertNil(machine.attaches.last?["since"])
         XCTAssertEqual(model.items.map(\.id), ["a", "b"])
     }
+
+    func testItemsOfANewerMachineKeepTheirPlaceAndNoneCanBeAnswered() async throws {
+        let machine = ResumeMachine()
+        let future = ChatWire.item(["id": .string("future"), "kind": .string("future-kind")])
+        // An approval this app cannot read: `allowAlways` lost a field it requires.
+        let approval = ChatWire.item([
+            "id": .string("approval"), "kind": .string("approval"),
+            "allowAlways": .object(["label": .string("Always")]),
+        ])
+        let newerTool = ChatWire.item(["id": .string("tool"), "kind": .string("tool"), "state": .string("paused")])
+        machine.attachResults = [snapshot([message("a", "Hello"), future, approval, newerTool], seq: 4)]
+        let model = await started(machine)
+
+        XCTAssertEqual(model.items.map(\.id), ["a", "future", "approval", "tool"])
+        XCTAssertTrue(model.pending.isEmpty)
+        let words = model.items.dropFirst().map { item -> String? in
+            if case .unknown(let unknown) = item { ChatUnknownItem.words(unknown) } else { nil }
+        }
+        XCTAssertEqual(
+            words,
+            [
+                "Update Ruimte to see this.", "Answer this in Ruimte on the machine, or update Ruimte to answer here.",
+                "Update Ruimte to see this.",
+            ])
+    }
+
+    func testAnEventOfANewerMachineReadsTheWholeThreadAgain() async {
+        let machine = ResumeMachine()
+        machine.attachResults = [snapshot([message("a", "Hello")], seq: 4)]
+        let model = await started(machine)
+
+        machine.attachResults = [snapshot([message("a", "Hello"), message("b", "New")], seq: 6)]
+        machine.emit(.object(["type": .string("future-event")]), seq: 5)
+        await machine.settle()
+        XCTAssertEqual(machine.attaches.count, 2)
+        XCTAssertNil(machine.attaches.last?["since"])
+        XCTAssertEqual(model.items.map(\.id), ["a", "b"])
+    }
 }
 
 @MainActor private final class ResumeMachine: MachineRequesting {

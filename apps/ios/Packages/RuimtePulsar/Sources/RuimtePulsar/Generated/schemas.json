@@ -13089,7 +13089,15 @@
                 "preTokens"
               ]
             }
-          ]
+          ],
+          "x-open-union": {
+            "tag": "kind",
+            "base": [
+              "id",
+              "createdAt",
+              "turnId"
+            ]
+          }
         }
       },
       "history": {
@@ -14790,7 +14798,15 @@
                 "preTokens"
               ]
             }
-          ]
+          ],
+          "x-open-union": {
+            "tag": "kind",
+            "base": [
+              "id",
+              "createdAt",
+              "turnId"
+            ]
+          }
         }
       },
       "seq": {
@@ -16485,7 +16501,15 @@
                         "preTokens"
                       ]
                     }
-                  ]
+                  ],
+                  "x-open-union": {
+                    "tag": "kind",
+                    "base": [
+                      "id",
+                      "createdAt",
+                      "turnId"
+                    ]
+                  }
                 },
                 "historyIndex": {
                   "type": "integer",
@@ -19925,7 +19949,15 @@
                           "preTokens"
                         ]
                       }
-                    ]
+                    ],
+                    "x-open-union": {
+                      "tag": "kind",
+                      "base": [
+                        "id",
+                        "createdAt",
+                        "turnId"
+                      ]
+                    }
                   }
                 }
               },
@@ -19935,7 +19967,11 @@
                 "items"
               ]
             }
-          ]
+          ],
+          "x-open-union": {
+            "tag": "type",
+            "base": []
+          }
         }
       },
       "bookmarks": {
@@ -22146,7 +22182,15 @@
                 "preTokens"
               ]
             }
-          ]
+          ],
+          "x-open-union": {
+            "tag": "kind",
+            "base": [
+              "id",
+              "createdAt",
+              "turnId"
+            ]
+          }
         }
       }
     },
@@ -27376,7 +27420,15 @@
                 "preTokens"
               ]
             }
-          ]
+          ],
+          "x-open-union": {
+            "tag": "kind",
+            "base": [
+              "id",
+              "createdAt",
+              "turnId"
+            ]
+          }
         }
       },
       "history": {
@@ -31306,7 +31358,15 @@
                 "preTokens"
               ]
             }
-          ]
+          ],
+          "x-open-union": {
+            "tag": "kind",
+            "base": [
+              "id",
+              "createdAt",
+              "turnId"
+            ]
+          }
         }
       },
       "history": {
@@ -83838,7 +83898,15 @@
                       "preTokens"
                     ]
                   }
-                ]
+                ],
+                "x-open-union": {
+                  "tag": "kind",
+                  "base": [
+                    "id",
+                    "createdAt",
+                    "turnId"
+                  ]
+                }
               },
               "historyIndex": {
                 "type": "integer",
@@ -87278,7 +87346,15 @@
                         "preTokens"
                       ]
                     }
-                  ]
+                  ],
+                  "x-open-union": {
+                    "tag": "kind",
+                    "base": [
+                      "id",
+                      "createdAt",
+                      "turnId"
+                    ]
+                  }
                 }
               }
             },
@@ -87288,7 +87364,11 @@
               "items"
             ]
           }
-        ]
+        ],
+        "x-open-union": {
+          "tag": "type",
+          "base": []
+        }
       },
       "seq": {
         "type": "integer",
