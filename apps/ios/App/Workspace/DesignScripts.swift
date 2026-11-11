@@ -167,3 +167,11 @@ enum DesignScripts {
 })();
 """#
 }
+
+/// The bounds of a design page, the desktop's own (`DESIGN_PAGE_MAX_BYTES`, `DESIGN_PAGE_SENT_MAX_BYTES`).
+enum DesignLimits {
+    static let pageMaxBytes = 16777216
+
+    /// What a page the machine built may weigh on its way, past `pageMaxBytes` by the bootstrap of a visual in its head.
+    static let pageSentMaxBytes = 16842752
+}

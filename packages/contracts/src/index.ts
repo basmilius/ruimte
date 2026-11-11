@@ -83,7 +83,16 @@ export * from './direct-liveness.ts';
 export * from './device.ts';
 export * from './design.ts';
 export { DesignPageError, inlineDesignPage, type DesignFiles } from './design-inline.ts';
-export { assetPathOf, DESIGN_ASSET_MAX_BYTES, DESIGN_ASSET_METHOD, DESIGN_PAGE_MAX_BYTES, designAssetType, isPagePath } from './design-page.ts';
+export {
+    assetPathOf,
+    DESIGN_ASSET_MAX_BYTES,
+    DESIGN_ASSET_METHOD,
+    DESIGN_PAGE_BOOTSTRAP_ALLOWANCE,
+    DESIGN_PAGE_MAX_BYTES,
+    DESIGN_PAGE_SENT_MAX_BYTES,
+    designAssetType,
+    isPagePath
+} from './design-page.ts';
 export * from './change-split.ts';
 export * from './context-sources.ts';
 export * from './database.ts';

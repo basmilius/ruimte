@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { DESIGN_PAGE_MAX_BYTES } from '@ruimte/contracts';
+import { DESIGN_PAGE_SENT_MAX_BYTES } from '@ruimte/contracts';
 
 // Room for a stage and an export of the largest page at once; a read that stopped halfway holds no more than this.
-const HELD_BYTES_PER_CLIENT = 2 * DESIGN_PAGE_MAX_BYTES;
+const HELD_BYTES_PER_CLIENT = 2 * DESIGN_PAGE_SENT_MAX_BYTES;
 
 interface HeldPage {
     clientId: string;

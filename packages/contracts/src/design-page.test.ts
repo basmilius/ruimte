@@ -1,5 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { assetPathOf, assetReferences, isPagePath, pageDataUrl, pageMentions, withAssets, withFramedPages } from './design-page.ts';
+import { injectVisualBootstrap } from '@adecore/agent-contracts/visual';
+import {
+    assetPathOf,
+    assetReferences,
+    DESIGN_PAGE_BOOTSTRAP_ALLOWANCE,
+    isPagePath,
+    pageDataUrl,
+    pageMentions,
+    withAssets,
+    withFramedPages
+} from './design-page.ts';
 
 describe('a reference a page makes to its folder', () => {
     test('names a file inside the folder, and nothing for the web, inline bytes, a fragment or a path that leaves it', () => {
@@ -213,5 +223,15 @@ describe('a page a design page frames', () => {
 
         element.setAttribute('src', 'three.html');
         expect(element.attributes.get('src')).toBe('three.html');
+    });
+});
+
+describe('what a built page may weigh on its way', () => {
+    test('leaves room for the bootstrap of a visual twice over', () => {
+        const page = '<!doctype html><html><head></head><body></body></html>';
+        const added = new TextEncoder().encode(injectVisualBootstrap(page)).length - page.length;
+
+        expect(added).toBeGreaterThan(0);
+        expect(added * 2).toBeLessThanOrEqual(DESIGN_PAGE_BOOTSTRAP_ALLOWANCE);
     });
 });

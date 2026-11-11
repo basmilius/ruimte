@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { BYTES_CHUNK_MAX, DESIGN_PAGE_MAX_BYTES, injectVisualBootstrap, type ProjectView } from '@ruimte/contracts';
+import { BYTES_CHUNK_MAX, DESIGN_PAGE_MAX_BYTES, DESIGN_PAGE_SENT_MAX_BYTES, injectVisualBootstrap, type ProjectView } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
 import { HeldDesignPages } from '../fs/held-design-pages.ts';
 import { bytesArea } from './bytes.ts';
@@ -141,6 +141,19 @@ describe('a page of a design', () => {
         const drawn = (await ask('index.html', 'client', 'onboarding', true)) as { result: { pageId: string; size: number } };
 
         expect(await readHeld(plain.result.pageId, plain.result.size)).toBe(written);
+        expect(await readHeld(drawn.result.pageId, drawn.result.size)).toBe(injectVisualBootstrap(written));
+    });
+
+    test('at the content limit is read whole with the bootstrap of a visual in its head', async () => {
+        const written = `<html><head></head><body>${'x'.repeat(DESIGN_PAGE_MAX_BYTES - 39)}</body></html>`;
+        await writeFile(join(folder, 'index.html'), written);
+
+        expect(Buffer.byteLength(written)).toBe(DESIGN_PAGE_MAX_BYTES);
+
+        const drawn = (await ask('index.html', 'client', 'onboarding', true)) as { result: { pageId: string; size: number } };
+
+        expect(drawn.result.size).toBeGreaterThan(DESIGN_PAGE_MAX_BYTES);
+        expect(drawn.result.size).toBeLessThanOrEqual(DESIGN_PAGE_SENT_MAX_BYTES);
         expect(await readHeld(drawn.result.pageId, drawn.result.size)).toBe(injectVisualBootstrap(written));
     });
 

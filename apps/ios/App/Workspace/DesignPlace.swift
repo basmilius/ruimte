@@ -85,7 +85,7 @@ struct DesignPlace: Equatable {
 /// Making a design and reading its pages, after `apps/client/src/design`.
 enum DesignFiles {
     static let folders = [".ruimte/private/designs", ".ruimte/designs"]
-    static let pageMaxBytes = 16 * 1024 * 1024
+    static let pageMaxBytes = DesignLimits.pageMaxBytes
     static let assetMaxBytes = 10 * 1024 * 1024
 
     /// The pages of a design, the HTML files right in its folder, the most recently changed first; a tie keeps the
@@ -521,8 +521,8 @@ enum DesignFiles {
         }
         // The machine lets go of the page once every byte went out, so a read that starts over would find nothing.
         let page = try await client.readResource(
-            .object(["kind": .string("designPage"), "pageId": .string(built.text("pageId"))]), maxBytes: pageMaxBytes,
-            restarts: 0)
+            .object(["kind": .string("designPage"), "pageId": .string(built.text("pageId"))]),
+            maxBytes: DesignLimits.pageSentMaxBytes, restarts: 0)
         // Decoded as the page built here is, so a byte that is no UTF-8 shows the same on both paths.
         return Data(String(decoding: page.data, as: UTF8.self).utf8)
     }

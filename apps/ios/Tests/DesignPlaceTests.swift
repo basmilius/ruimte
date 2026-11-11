@@ -147,6 +147,18 @@ final class DesignPlaceTests: XCTestCase {
         XCTAssertEqual(machine.reads.map(\.offset), [0, Int(WireConstants.bytesChunkMax)])
     }
 
+    @MainActor func testAPageAtTheLimitIsReadWholeWithTheBootstrapTheMachineAdds() async throws {
+        // The bootstrap of a visual weighs about 9 KiB.
+        let html = String(repeating: "x", count: DesignFiles.pageMaxBytes) + String(repeating: "b", count: 9 * 1024)
+        let machine = DesignMachine(answersPage: true)
+        machine.built = .object([
+            "kind": .string("page"), "pageId": .string("held-1"), "size": .number(Double(html.utf8.count)),
+        ])
+        machine.page = Data(html.utf8)
+        let page = try await Self.page(machine)
+        XCTAssertEqual(page.count, html.utf8.count)
+    }
+
     @MainActor func testAnOlderMachineHandsOutTheFilesAndThePageIsBuiltHere() async throws {
         let machine = DesignMachine(answersPage: false)
         machine.files["/p/site/index.html"] = Data("<p>hi</p>".utf8)

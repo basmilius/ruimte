@@ -1,5 +1,5 @@
 import { inlineDesignPage, type DesignFiles } from '../../../packages/contracts/src/design-inline.ts';
-import { framedPagesScript, runtimeAssetsScript } from '../../../packages/contracts/src/design-page.ts';
+import { DESIGN_PAGE_MAX_BYTES, DESIGN_PAGE_SENT_MAX_BYTES, framedPagesScript, runtimeAssetsScript } from '../../../packages/contracts/src/design-page.ts';
 import { writeGenerated } from './generated.ts';
 
 const PAGES_TOKEN = '%PAGES%';
@@ -36,6 +36,14 @@ enum DesignScripts {
 
     /// Shows the files a page's script names while it runs.
     static let runtimeAssets = ${swiftScript(template(runtimeAssetsScript(FROM_TOKEN), [FROM_TOKEN]))}
+}
+
+/// The bounds of a design page, the desktop's own (\`DESIGN_PAGE_MAX_BYTES\`, \`DESIGN_PAGE_SENT_MAX_BYTES\`).
+enum DesignLimits {
+    static let pageMaxBytes = ${DESIGN_PAGE_MAX_BYTES}
+
+    /// What a page the machine built may weigh on its way, past \`pageMaxBytes\` by the bootstrap of a visual in its head.
+    static let pageSentMaxBytes = ${DESIGN_PAGE_SENT_MAX_BYTES}
 }
 `;
 

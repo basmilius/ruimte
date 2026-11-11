@@ -4,6 +4,13 @@ import { blobTypeFor } from './bytes.ts';
 export const DESIGN_ASSET_MAX_BYTES = 10 * 1024 * 1024;
 export const DESIGN_PAGE_MAX_BYTES = 16 * 1024 * 1024;
 
+/*
+ * What a built page may weigh on its way to a client, past `DESIGN_PAGE_MAX_BYTES`: the bootstrap of a visual the
+ * machine adds to its head for a client that asks (`design.page` with `bootstrap`), about 9 KiB, with room to grow.
+ */
+export const DESIGN_PAGE_BOOTSTRAP_ALLOWANCE = 64 * 1024;
+export const DESIGN_PAGE_SENT_MAX_BYTES = DESIGN_PAGE_MAX_BYTES + DESIGN_PAGE_BOOTSTRAP_ALLOWANCE;
+
 /* The method between a design page and the window it is framed in for a file its script names while it runs. */
 export const DESIGN_ASSET_METHOD = 'ruimte/design/asset';
 
