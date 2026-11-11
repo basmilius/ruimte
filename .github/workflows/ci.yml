@@ -96,8 +96,7 @@ jobs:
 
   integration-linux:
     name: integration (Linux)
-    # Held on 24.04 while the 26.04 runners cannot resolve the Ubuntu package mirrors this job installs zsh from.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The shell tests start /bin/zsh, which the runner image does not promise.
