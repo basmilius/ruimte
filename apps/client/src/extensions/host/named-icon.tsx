@@ -66,7 +66,8 @@ export function namedIcon(name: string): LucideIcon {
         const loaded = useSyncExternalStore(subscribe, () => iconMap);
 
         if (loaded !== null) {
-            return createElement(loaded[key] ?? Package, { size, className, ...rest });
+            // Only a name of its own: `__proto__` would hand the prototype to React as a component.
+            return createElement(Object.hasOwn(loaded, key) ? loaded[key]! : Package, { size, className, ...rest });
         }
 
         return <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden />;
