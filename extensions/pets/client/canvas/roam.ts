@@ -173,47 +173,27 @@ export class Roam {
 
     join(id: string, mood: PetMood): void {
         const roamer = this.#roamers.get(id);
-        if (roamer !== undefined) {
-            roamer.mood = mood;
-            if (holds(mood)) {
-                roamer.route = [];
-            }
+        if (roamer === undefined) {
+            this.#add(id, mood, null);
             return;
         }
-        this.#roamers.set(id, {
-            mood,
-            on: 'floor',
-            x: 0,
-            facing: 1,
-            route: [],
-            goal: null,
-            hop: null,
-            restLeft: 0,
-            placed: false,
-            leader: null,
-            stepped: false
-        });
+        roamer.mood = mood;
+        if (holds(mood)) {
+            roamer.route = [];
+        }
     }
 
     follow(id: string, leader: string): void {
         const roamer = this.#roamers.get(id);
-        if (roamer !== undefined) {
-            roamer.leader = leader;
+        if (roamer === undefined) {
+            this.#add(id, 'working', leader);
             return;
         }
-        this.#roamers.set(id, {
-            mood: 'working',
-            on: 'floor',
-            x: 0,
-            facing: 1,
-            route: [],
-            goal: null,
-            hop: null,
-            restLeft: 0,
-            placed: false,
-            leader,
-            stepped: false
-        });
+        roamer.leader = leader;
+    }
+
+    #add(id: string, mood: PetMood, leader: string | null): void {
+        this.#roamers.set(id, { mood, on: 'floor', x: 0, facing: 1, route: [], goal: null, hop: null, restLeft: 0, placed: false, leader, stepped: false });
     }
 
     leave(id: string): void {
@@ -498,8 +478,8 @@ export class Roam {
         if (pet === undefined || pet.leader !== null || moving(pet)) {
             return null;
         }
-        const span = pet.on === 'ledge' ? this.#ground.ledge : this.#ground.floors.find((floor) => inSpan(floor, pet.x));
-        if (span === null || span === undefined) {
+        const span = this.#spanAt(pet.on, pet.x);
+        if (span === null) {
             return null;
         }
         const side = first.x !== pet.x ? Math.sign(first.x - pet.x) : -pet.facing;
@@ -517,8 +497,8 @@ export class Roam {
      * is the other side instead, if there is more room there.
      */
     #beside(place: { on: 'floor' | 'ledge'; x: number }, side: number, turn: boolean): { on: 'floor' | 'ledge'; x: number } | null {
-        const span = place.on === 'ledge' ? this.#ground.ledge : this.#ground.floors.find((floor) => inSpan(floor, place.x));
-        if (span === null || span === undefined) {
+        const span = this.#spanAt(place.on, place.x);
+        if (span === null) {
             return null;
         }
         const behind = clampTo(span, place.x + side * KID_GAP);
@@ -553,8 +533,13 @@ export class Roam {
             return null;
         }
         const x = blocker.x + roamer.facing * LEAP_REACH;
-        const span = roamer.on === 'ledge' ? this.#ground.ledge : this.#ground.floors.find((floor) => inSpan(floor, roamer.x));
-        return span !== null && span !== undefined && inSpan(span, x) ? x : null;
+        const span = this.#spanAt(roamer.on, roamer.x);
+        return span !== null && inSpan(span, x) ? x : null;
+    }
+
+    /* The stretch of ground a place lies on: the dock's top, or the floor around `x`. */
+    #spanAt(on: 'floor' | 'ledge', x: number): Span | null {
+        return on === 'ledge' ? this.#ground.ledge : (this.#ground.floors.find((floor) => inSpan(floor, x)) ?? null);
     }
 
     #plan(roamer: Roamer): Step[] {

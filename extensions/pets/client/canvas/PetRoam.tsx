@@ -127,6 +127,7 @@ function RoamingPet({ id, ownPets, roam, onElement, gone }: { id: string; ownPet
     const pet = shown?.pet ?? null;
     const look = usePetLook(pet?.agent, id);
     const mood = pet?.mood ?? null;
+    const present = mood !== null;
 
     useEffect(() => {
         if (mood === null) {
@@ -135,7 +136,14 @@ function RoamingPet({ id, ownPets, roam, onElement, gone }: { id: string; ownPet
         roam.join(id, mood);
     }, [roam, id, mood]);
 
-    useEffect(() => () => roam.leave(id), [roam, id]);
+    // A node whose agent ended keeps this mounted, and its pet must not stay behind unseen for others to keep clear of.
+    useEffect(() => {
+        if (!present) {
+            return;
+        }
+
+        return () => roam.leave(id);
+    }, [roam, id, present]);
 
     const home = shown?.node;
 
