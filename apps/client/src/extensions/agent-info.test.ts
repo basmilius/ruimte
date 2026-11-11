@@ -102,9 +102,9 @@ describe('the agent an extension reads', () => {
         expect(writer({ status: 'idle' }, { snoozes: { 'local:writer': 2_000 } })?.snoozed).toBe(false);
     });
 
-    test('ended in an error reads as stopped, and a chat not heard from yet rests', () => {
+    test('ended in an error reads as stopped, and a chat not heard from yet rests on no known CLI', () => {
         expect(writer({ status: 'error' })?.status).toBe('stopped');
-        expect(agentInfoOf({ id: 'writer', kind: 'chat' }, undefined, sources())?.status).toBe('idle');
+        expect(agentInfoOf({ id: 'writer', kind: 'chat' }, undefined, sources())).toMatchObject({ status: 'idle', provider: null });
     });
 
     test('is none for a node that runs no agent', () => {

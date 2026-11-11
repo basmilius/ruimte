@@ -209,7 +209,8 @@ export type AgentStatus = 'idle' | 'running' | 'needsYou' | 'stopped';
 export type AgentActivity = 'turn' | 'delegating' | 'background' | null;
 
 export interface AgentInfo {
-    provider: string;
+    /** The CLI it runs on, as `useProviders` names it; null until the chat or the terminal's CLI reported which. */
+    provider: string | null;
     account: string | null;
     status: AgentStatus;
     activity: AgentActivity;

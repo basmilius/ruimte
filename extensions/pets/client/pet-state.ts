@@ -30,7 +30,8 @@ export function petOf(agent: AgentInfo | null): AgentPet | null {
         return null;
     }
 
-    return { agent: agent.provider, mood: moodOf(agent) };
+    // A CLI not reported yet picks no figure of its own: the pack's default, as for a pet of no agent.
+    return { agent: agent.provider ?? undefined, mood: moodOf(agent) };
 }
 
 function moodOf(agent: AgentInfo): PetMood {

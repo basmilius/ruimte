@@ -151,7 +151,7 @@ if (agent?.status === 'needsYou' && !agent.snoozed) {
 }
 ```
 
-Besides `status` it has the `provider`, the `account`, the `cwd`, `branch` and `worktree`, and `snoozed` for a wait a person put off. `activity` says what it works on: `turn` for a turn of its own, `delegating` while agents it handed work to run, `background` for commands it left running, and `null` while it works on nothing or waits on a person.
+Besides `status` it has the `provider`, which is `null` until the chat or the terminal's CLI said which CLI it runs on, the `account`, the `cwd`, `branch` and `worktree`, and `snoozed` for a wait a person put off. `activity` says what it works on: `turn` for a turn of its own, `delegating` while agents it handed work to run, `background` for commands it left running, and `null` while it works on nothing or waits on a person.
 
 `useSubagents(chat)` lists the sub-agents a chat has at work, oldest first. Each is `running` or `paused`, the last while its task waits for a limit to lift, and `node` names the node of a task the chat gave. `useProviders()` lists the agents a person can start on the machine in front, by `id` and `name`, and needs no permission.
 

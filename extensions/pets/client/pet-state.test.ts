@@ -17,6 +17,15 @@ describe('what a pet shows', () => {
         expect(petOf(null)).toBeNull();
     });
 
+    test('an agent whose CLI is not known yet takes the pack default, never the figure a person gave Claude', () => {
+        const pet = petOf(agent({ provider: null }));
+        const pool: PetChoice[] = [{ kind: 'built-in', set: 'buddies' }];
+
+        expect(pet?.agent).toBeUndefined();
+        expect(builtInSprite('buddies', pet?.agent, 'n1')).toBe(CLAUDE_BUDDY);
+        expect(agentPetChoice({ claude: 'figure:nox' }, pet?.agent, pool, [], 'n1')).toEqual(pool[0]);
+    });
+
     test('a snoozed wait keeps its bubble until it is answered, and does not jump', () => {
         expect(petOf(agent({ status: 'needsYou', snoozed: true }))?.mood).toBe('snoozed');
         const frames = Array.from({ length: 8 }, (_, tick) => petFrame('snoozed', tick, false));

@@ -9,7 +9,7 @@ import { childTask, type TasksById } from '@/state/tasks';
 
 /* `AgentInfo` of `@ruimte/extension/client`: an agent as every surface of Ruimte shows it. */
 export interface AgentInfo {
-    provider: string;
+    provider: string | null;
     account: string | null;
     status: ExtensionAgentStatus;
     activity: 'turn' | 'delegating' | 'background' | null;
@@ -59,8 +59,8 @@ export function agentInfoOf(node: AgentTarget, group: Group, { sessions, chats, 
     const status = extensionAgentStatus(nodeStatus(node, sessions, chats, endpointId) ?? 'idle', needsYou);
 
     return {
-        // A chat opened on the default stores no CLI; its thread says which one it runs on.
-        provider: cli?.kind ?? nodeProvider(node, chats, endpointId) ?? 'claude',
+        // A chat opened on the default stores no CLI; its thread says which one it runs on, and nothing does before it is heard.
+        provider: cli?.kind ?? nodeProvider(node, chats, endpointId) ?? null,
         account: node.account ?? null,
         status,
         activity: status === 'needsYou' ? null : (nodeWork(node, sessions, chats, endpointId) ?? null),

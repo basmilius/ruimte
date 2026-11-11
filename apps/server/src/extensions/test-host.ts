@@ -107,7 +107,8 @@ function agentIn(kind: string, agent: Partial<PublicClient.AgentInfo> | undefine
         return undefined;
     }
 
-    return { provider: 'claude', account: null, status: 'idle', activity: null, snoozed: false, cwd: null, branch: null, worktree: null, ...agent };
+    // As in the client, no CLI is known until a test says which one reported.
+    return { provider: null, account: null, status: 'idle', activity: null, snoozed: false, cwd: null, branch: null, worktree: null, ...agent };
 }
 
 /* As it crosses to the machine and back. */

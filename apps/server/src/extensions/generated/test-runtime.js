@@ -6902,7 +6902,7 @@ function agentIn(kind, agent) {
   if (kind !== "chat" && kind !== "design" && (kind !== "terminal" || agent === undefined)) {
     return;
   }
-  return { provider: "claude", account: null, status: "idle", activity: null, snoozed: false, cwd: null, branch: null, worktree: null, ...agent };
+  return { provider: null, account: null, status: "idle", activity: null, snoozed: false, cwd: null, branch: null, worktree: null, ...agent };
 }
 function wire2(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));

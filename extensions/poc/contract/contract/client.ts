@@ -687,7 +687,8 @@ export function clientContract(open: OpenClientWorld): void {
                     nodes: [
                         { id: 'chat-1', kind: 'chat', title: 'Chat', text: '', agent: { provider: 'codex', doing: 'turn' } },
                         { id: 'shell-1', kind: 'terminal', title: 'Agent', text: '', agent: { provider: 'claude', doing: 'snoozed' } },
-                        { id: 'shell-2', kind: 'terminal', title: 'Shell', text: '' }
+                        { id: 'shell-2', kind: 'terminal', title: 'Shell', text: '' },
+                        { id: 'chat-2', kind: 'chat', title: 'Quiet', text: '' }
                     ]
                 }
             );
@@ -697,12 +698,13 @@ export function clientContract(open: OpenClientWorld): void {
 
                 return agent === null ? `${id} none` : `${id} ${agent.provider} ${agent.status} ${agent.activity} ${agent.snoozed}`;
             };
-            const Agents = () => h('p', null, ['chat-1', 'shell-1', 'shell-2'].map(line).join(', '));
+            const Agents = () => h('p', null, ['chat-1', 'shell-1', 'shell-2', 'chat-2'].map(line).join(', '));
             const screen = await world.render(Agents);
 
             await screen.until(() => screen.text().includes('chat-1 codex'));
 
-            expect(screen.text()).toBe('chat-1 codex running turn false, shell-1 claude needsYou null true, shell-2 none');
+            // A chat that has not said which CLI it runs on yet names none.
+            expect(screen.text()).toBe('chat-1 codex running turn false, shell-1 claude needsYou null true, shell-2 none, chat-2 null idle null false');
         });
 
         test('reads the sub-agents a chat has at work, with the node of a task it gave', async () => {
