@@ -240,7 +240,7 @@
                 "name": "AgentInfo",
                 "kind": "interface",
                 "doc": null,
-                "code": "export interface AgentInfo {\n    /** The CLI it runs on, as `useProviders` names it; null until the chat or the terminal's CLI reported which. */\n    provider: string | null;\n    account: string | null;\n    status: AgentStatus;\n    activity: AgentActivity;\n\n    /** It waits on a person, who put that off for a while: `status` stays `needsYou`. */\n    snoozed: boolean;\n\n    cwd: string | null;\n    branch: string | null;\n    worktree: string | null;\n}"
+                "code": "export interface AgentInfo {\n    /** The CLI it runs on, as `useProviders` names it; null until the chat or the terminal's CLI reported which. */\n    provider: string | null;\n    account: string | null;\n    status: AgentStatus;\n    activity: AgentActivity;\n\n    /** It waits on a person, who put that off for a while; `status` stays `needsYou`. */\n    snoozed: boolean;\n\n    cwd: string | null;\n    branch: string | null;\n    worktree: string | null;\n}"
             },
             {
                 "name": "SubagentInfo",
@@ -258,7 +258,7 @@
                 "name": "NodeInfo",
                 "kind": "interface",
                 "doc": null,
-                "code": "export interface NodeInfo {\n    id: string;\n    kind: string;\n    title: string;\n    color: NodeColor | null;\n    bounds: { x: number; y: number; width: number; height: number };\n    groupId: string | null;\n\n    /** A collapsed group hides it: it is on the canvas but not drawn. */\n    hidden: boolean;\n\n    viewId: string;\n    machine: string | null;\n    linkedTo: string[];\n    agent?: AgentInfo;\n    path?: string;\n    url?: string;\n    extension?: { id: string; type: string };\n}"
+                "code": "export interface NodeInfo {\n    id: string;\n    kind: string;\n    title: string;\n    color: NodeColor | null;\n    bounds: { x: number; y: number; width: number; height: number };\n    groupId: string | null;\n\n    /** A collapsed group hides it. It is on the canvas but not drawn. */\n    hidden: boolean;\n\n    viewId: string;\n    machine: string | null;\n    linkedTo: string[];\n    agent?: AgentInfo;\n    path?: string;\n    url?: string;\n    extension?: { id: string; type: string };\n}"
             },
             {
                 "name": "FileInfo",
@@ -485,7 +485,7 @@
             {
                 "name": "useAgent",
                 "kind": "function",
-                "doc": "Needs the permission `agents.status`. The agent of a node, or of a chat or terminal open as a view of its own, by its id: null where none runs, such as in a terminal whose command is no agent.",
+                "doc": "Needs the permission `agents.status`. The agent of a node, or of a chat or terminal open as a view of its own, by its id. Null where none runs, such as in a terminal whose command is no agent.",
                 "code": "export function useAgent(target: NodeRef | ViewRef): AgentInfo | null;"
             },
             {
@@ -901,7 +901,7 @@
                 "name": "TestNode",
                 "kind": "interface",
                 "doc": "A node of the project a test host starts with. Only `id` is needed: a node is a note on the first view unless it says otherwise.",
-                "code": "export interface TestNode {\n    id: string;\n    kind?: string;\n    title?: string;\n    /** What an agent reads of it: a note's text, a terminal's screen or a chat's thread. */\n    text?: string;\n    color?: NodeColor | null;\n    bounds?: { x: number; y: number; width: number; height: number };\n    /** A collapsed group hides it. */\n    hidden?: boolean;\n    /** The id of the view it is on. */\n    view?: string;\n    linkedTo?: string[];\n    /** A chat or a design always has an agent, a terminal only with this: its CLI runs there. Its `provider` is null unless this names one. */\n    agent?: Partial<AgentInfo>;\n    /** What `useSubagents` reads of a chat. */\n    subagents?: TestSubagent[];\n    path?: string;\n    url?: string;\n    /**\n     * A node of this extension, by the id it gave `defineNode`, with what `useNodeData` reads. `dataVersion` is the version\n     * that stored `data`: below the definition's own, `render` moves it up through `migrate` first, as Ruimte does.\n     */\n    extension?: { type: string; data?: Json; dataVersion?: number };\n}"
+                "code": "export interface TestNode {\n    id: string;\n    kind?: string;\n    title?: string;\n    /** What an agent reads of it: a note's text, a terminal's screen or a chat's thread. */\n    text?: string;\n    color?: NodeColor | null;\n    bounds?: { x: number; y: number; width: number; height: number };\n    /** A collapsed group hides it. */\n    hidden?: boolean;\n    /** The id of the view it is on. */\n    view?: string;\n    linkedTo?: string[];\n    /** A chat or a design always has an agent. A terminal has one only with this, which says its CLI runs there. Its `provider` is null unless this names one. */\n    agent?: Partial<AgentInfo>;\n    /** What `useSubagents` reads of a chat. */\n    subagents?: TestSubagent[];\n    path?: string;\n    url?: string;\n    /**\n     * A node of this extension, by the id it gave `defineNode`, with what `useNodeData` reads. `dataVersion` is the version\n     * that stored `data`: below the definition's own, `render` moves it up through `migrate` first, as Ruimte does.\n     */\n    extension?: { type: string; data?: Json; dataVersion?: number };\n}"
             },
             {
                 "name": "TestSubagent",

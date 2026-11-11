@@ -8,5 +8,5 @@ The page in the desktop app: `apps/client/src/browser/CLAUDE.md`. The tools: `ap
 
 Decisions the code cannot show. Do not reverse one without asking Bas.
 
-- A development port leaves the machine only on a Tunnels hostname (`apps/server/src/tunnels`), by Bas's choice (November 11, 2026): sharing a port with the account's other desktop apps was built and removed, since a person tests a dev server on a phone. Discovery (`browser.devServers`), a launch's port and a URL in a project file open nothing.
+- A development port leaves the machine only on a Tunnels hostname (`apps/server/src/tunnels`), by Bas's choice (November 11, 2026), since a person tests a dev server on a phone. Sharing a port with the account's other desktop apps was built once and removed. Discovery (`browser.devServers`), a launch's port and a URL in a project file open nothing.
 - A browser node is driven only over a line to the agent, and only by address: where the page goes, its history and a picture of it (the `browser_*` tools), never a click, keystroke or scroll. The one exception to the line is a chat view, which drives any browser node of the canvas it names with `--view` (`src/canvas/chat-view.ts`).

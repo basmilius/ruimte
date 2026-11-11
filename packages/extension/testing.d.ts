@@ -48,7 +48,7 @@ export interface TestNode {
     /** The id of the view it is on. */
     view?: string;
     linkedTo?: string[];
-    /** A chat or a design always has an agent, a terminal only with this: its CLI runs there. Its `provider` is null unless this names one. */
+    /** A chat or a design always has an agent. A terminal has one only with this, which says its CLI runs there. Its `provider` is null unless this names one. */
     agent?: Partial<AgentInfo>;
     /** What `useSubagents` reads of a chat. */
     subagents?: TestSubagent[];

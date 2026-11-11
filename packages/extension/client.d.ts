@@ -215,7 +215,7 @@ export interface AgentInfo {
     status: AgentStatus;
     activity: AgentActivity;
 
-    /** It waits on a person, who put that off for a while: `status` stays `needsYou`. */
+    /** It waits on a person, who put that off for a while; `status` stays `needsYou`. */
     snoozed: boolean;
 
     cwd: string | null;
@@ -246,7 +246,7 @@ export interface NodeInfo {
     bounds: { x: number; y: number; width: number; height: number };
     groupId: string | null;
 
-    /** A collapsed group hides it: it is on the canvas but not drawn. */
+    /** A collapsed group hides it. It is on the canvas but not drawn. */
     hidden: boolean;
 
     viewId: string;
@@ -468,7 +468,7 @@ export function onEvent<Name extends keyof ClientEvents>(name: Name, listener: (
 /** Needs the permission `agents.status`. */
 export function useAgents(): { id: string; title: string; status: AgentStatus }[];
 /**
- * Needs the permission `agents.status`. The agent of a node, or of a chat or terminal open as a view of its own, by its id: null
+ * Needs the permission `agents.status`. The agent of a node, or of a chat or terminal open as a view of its own, by its id. Null
  * where none runs, such as in a terminal whose command is no agent.
  */
 export function useAgent(target: NodeRef | ViewRef): AgentInfo | null;

@@ -283,7 +283,7 @@ function designNote(path: string, onCanvas = false): string {
         'A `<style id="ruimte-edits">` block holds the styles a person set by hand, as rules with `!important`. Leave it alone, except that a rule for an element you change goes with that change, and when they ask you to fold it in, move each rule into the source of its element and remove the block.',
         'Use text the person gives you word for word; style it, but rewrite it only when they ask. For a small request, change only what was asked; for a significant revision, copy the page and change the copy (`Onboarding v2.html`).',
         'Write each page as one self-contained HTML file in that folder with a descriptive name, such as `Onboarding.html`, assets by relative path and libraries from a public CDN; these files are the exception to keeping visual sources outside the project. Never show a design with `visual_show`, since the view shows the folder.',
-        "Before you end a turn, check every page you changed with `visual_preview` at its width, naming the page's path as `design_page` instead of passing `html`, so it draws with the folder's files as the person sees it, and fix what the console reports; a board draws without its pan and zoom there. Then reply in a sentence or two: what you made and what to look at."
+        "Before you end a turn, check every page you changed with `visual_preview` at its width. Name the page's path as `design_page` instead of passing `html`, so it draws with the folder's files as the person sees it. Fix what the console reports; a board draws without its pan and zoom there. Then reply in a sentence or two: what you made and what to look at."
     ].join(' ');
 }
 
