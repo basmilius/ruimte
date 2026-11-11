@@ -1,8 +1,10 @@
 import { createServerActions } from './actions/server-actions.ts';
 import { AGENT_FEATURES, AGENT_TOOLKITS } from './agent-features/list.ts';
 import { runStop, type Area } from './area.ts';
+import { bestEffort } from './best-effort.ts';
 import { dropEmptyMark } from './chat/scratch-project.ts';
 import { ConnectedClients } from './clients/connected-clients.ts';
+import { removeRetiredFiles } from './disk/retired-files.ts';
 import { Dispatcher } from './dispatcher.ts';
 import { errorText } from './error-text.ts';
 import { buildCatalog } from './mcp/catalog.ts';
@@ -78,6 +80,7 @@ interface WiredDaemon {
 export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInput): Promise<WiredDaemon> {
     const { config } = runtime;
     const { home } = config;
+    await bestEffort('retired files', removeRetiredFiles(home));
     const { later, provide } = lateness<DaemonBundles>();
     // The port the API answers on, which is not `config.port` when the system picked one; known once `start` is given it.
     let servedPort: number | null = null;
