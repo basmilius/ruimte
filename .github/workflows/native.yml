@@ -25,6 +25,7 @@ jobs:
       swift_voice: ${{ steps.paths.outputs.RuimteVoice }}
       swift_intelligent_ui: ${{ steps.paths.outputs.RuimteIntelligentUI }}
       computer_use: ${{ steps.paths.outputs.computer_use }}
+      ios: ${{ steps.paths.outputs.ios }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
@@ -59,6 +60,9 @@ jobs:
             computer_use:
               - '.github/**'
               - 'apps/computer-use/**'
+            ios:
+              - '.github/workflows/native.yml'
+              - 'apps/ios/**'
 
   rust:
     needs: changes
@@ -154,13 +158,51 @@ jobs:
       - run: swift build
       - run: swift test
 
-  # The app itself has no job here: its tests take too long on these runners and run by hand (apps/ios/README.md).
+  # Xcode Cloud builds the app only from a release tag, so a contract change that breaks it shows here first. Building
+  # is enough on a push; the app's own tests take long on these runners and run only in the full run of a release.
+  ios-build:
+    name: ios (Ruimte)
+    needs: changes
+    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.ios == 'true') }}
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Identify the toolchain and a simulator
+        id: setup
+        run: |
+          echo "DERIVED_DATA=$RUNNER_TEMP/ruimte-ios" >> "$GITHUB_ENV"
+          echo "toolchain=$({ sw_vers -productVersion; xcodebuild -version; } | shasum -a 256 | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+          simulator=$(xcrun simctl list devices available -j | jq -r '[.devices | to_entries[] | select(.key | contains("iOS")) | .value[] | select(.name | startswith("iPhone"))][0].udid')
+          echo "simulator=$simulator" >> "$GITHUB_OUTPUT"
+      # The packages and what an earlier run built from them; a new commit saves its own, so the newest is restored.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.DERIVED_DATA }}
+          key: ios-derived-v1-${{ steps.setup.outputs.toolchain }}-${{ hashFiles('apps/ios/Ruimte.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}-${{ github.sha }}
+          restore-keys: |
+            ios-derived-v1-${{ steps.setup.outputs.toolchain }}-${{ hashFiles('apps/ios/Ruimte.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}-
+      # SwiftTerm's shaders need it; an image that has it already answers with an error.
+      - run: xcodebuild -downloadComponent MetalToolchain || xcrun -f metal
+      - name: Build
+        env:
+          SIMULATOR: ${{ steps.setup.outputs.simulator }}
+        run: |
+          xcodebuild build-for-testing -project apps/ios/Ruimte.xcodeproj -scheme Ruimte -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR" -derivedDataPath "$DERIVED_DATA" CODE_SIGNING_ALLOWED=NO
+      - name: Test
+        if: ${{ inputs.full }}
+        env:
+          SIMULATOR: ${{ steps.setup.outputs.simulator }}
+        run: |
+          xcodebuild test-without-building -project apps/ios/Ruimte.xcodeproj -scheme Ruimte -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR" -derivedDataPath "$DERIVED_DATA" \
+            -only-testing:RuimteTests CODE_SIGNING_ALLOWED=NO
 
   # One result for a caller to wait on: a skipped check passes only when this run left it to the paths.
   native:
     name: Native checks
     if: ${{ always() }}
-    needs: [changes, rust, swift-pulsar, swift-shared, swift-transport, swift-voice, swift-intelligent-ui, computer-use]
+    needs: [changes, rust, swift-pulsar, swift-shared, swift-transport, swift-voice, swift-intelligent-ui, computer-use, ios-build]
     runs-on: ubuntu-latest
     steps:
       - name: Check job results

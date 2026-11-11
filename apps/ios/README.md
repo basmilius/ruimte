@@ -146,6 +146,7 @@ The system authorization sheet, with no browser callback and no web fallback. Th
 - `stasel/WebRTC` is pinned to `153.0.0`, commit `4266157cd08f92115de885ab12d87196a8db87e1`, in `RuimteTransport`. The machine link carries no audio or video and declares no microphone, camera or background audio.
 - `RuimteVoice` uses LiveKit's WebRTC (`livekit/webrtc-xcframework`, MIT, `150.7871.03`, commit `a41df9e9bcc7ab1d62131fda75c123ea391e5188`), the only build that hands an app the samples of both sides with Apple's voice processing on. Its `LK` prefix lets both frameworks ship side by side.
 - `packages/contracts/scripts/generate-swift.ts` generates the daemon API, schemas, constants, fixtures and closed vocabularies as Swift enums. `AgentKind`, `RuntimeMode`, `AgentStatus` and icon names are open on the wire (`x-open-enum`).
+- A chat item, union member, list element or status word of a newer machine never empties a page: the app shows "Update Ruimte to see this." in its place (a request among them is answered only on the machine), leaves out a listed chat, project or task it cannot read, and reads a newer word as `unknown`, following the stamps `x-open-union`, `x-lossy-items` and `x-open-values`.
 - `MachineClient` times out reads only, since a mutation ends when the link closes.
 
 The web authentication callback is exactly `ruimte://pulsar/callback`, checked with the pending state before the exchange. `/v1/providers` decides which sign-in options show.
@@ -173,7 +174,7 @@ The app is an Xcode Cloud product built from the committed project and `Ruimte.x
 
 - `Release` starts on every `v*` tag and archives for TestFlight and the App Store. `ci_scripts/ci_post_clone.sh` sets `MARKETING_VERSION` from the tag, a beta's without its suffix (`v0.30.0-beta.7` builds as `0.30.0`), and `CURRENT_PROJECT_VERSION` from `CI_BUILD_NUMBER`, generates the project and installs the Metal component. Both versions live in the spec because `agvtool` fails on a test target with `GENERATE_INFOPLIST_FILE = YES`.
 
-`Release` is the only workflow. No CI runs the app's own tests; run them in a simulator with `xcodebuild test` when a change calls for it. The Swift packages test in GitHub CI (`.github/workflows/native.yml`).
+`Release` is the only workflow. GitHub CI (`.github/workflows/native.yml`) tests the Swift packages and builds the app for the simulator on every change under `apps/ios`, so a contract change that breaks the app fails before a tag. It runs the app's own tests only in the full run of a release; run them in a simulator with `xcodebuild test` when a change calls for it.
 
 Onboarding refuses a project whose Swift packages live in repositories the team cannot grant access to. The product was made from a generated project without packages, then the real project was generated again; repeat that if it ever has to be made anew.
 
