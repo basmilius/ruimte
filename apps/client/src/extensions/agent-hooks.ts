@@ -28,12 +28,24 @@ function useTarget(id: string): AgentTarget | undefined {
 export function useAgentOf(id: string): AgentInfo | null {
     const target = useTarget(id);
     const group = useCanvas((state) => (state.nodes[id] === undefined ? undefined : groupOf(state.nodes, id)));
-    const sessions = useSessions((state) => state.byKey);
-    const chats = useChats((state) => state.statusByKey);
-    const snoozes = useSnoozes((state) => state.byKey);
     const endpointId = useEndpointId();
+    const key = target === undefined ? null : endpointKey(endpointOfNode(target, endpointId), id);
+    const session = useSessions((state) => (key === null ? undefined : state.byKey[key]));
+    const chat = useChats((state) => (key === null ? undefined : state.statusByKey[key]));
+    const snooze = useSnoozes((state) => (key === null ? undefined : state.byKey[key]));
 
-    return target === undefined ? null : (agentInfoOf(target, group, { sessions, chats, snoozes, endpointId }) ?? null);
+    if (target === undefined || key === null) {
+        return null;
+    }
+
+    const sources = {
+        sessions: session === undefined ? {} : { [key]: session },
+        chats: chat === undefined ? {} : { [key]: chat },
+        snoozes: snooze === undefined ? {} : { [key]: snooze },
+        endpointId
+    };
+
+    return agentInfoOf(target, group, sources) ?? null;
 }
 
 export function useSubagentsOf(id: string): SubagentInfo[] {

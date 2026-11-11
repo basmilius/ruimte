@@ -56,6 +56,8 @@ function OverlayBox({ viewId }: { readonly viewId: string }) {
 
     return (
         <div
+            // The box an extension's canvas overlay looks up what stands at the bottom of the canvas in (`canvas/overlay-attributes.ts`).
+            data-canvas-overlay=""
             className="pointer-events-none absolute top-0 left-0 origin-top-left overflow-hidden"
             style={{ visibility: 'hidden' }}
             /* The cell under this box never sees the press, so chrome outside the focused cell says

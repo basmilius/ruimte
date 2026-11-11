@@ -36,7 +36,10 @@ clientContract(async (permissions, seed = {}) => {
                   title: node.title,
                   text: node.text,
                   ...(node.view === undefined ? {} : { view: node.view }),
-                  ...(node.agent === undefined ? {} : agentOf(node.agent))
+                  ...(node.agent === undefined ? {} : agentOf(node.agent)),
+                  ...(node.color === undefined ? {} : { color: node.color }),
+                  ...(node.hidden === undefined ? {} : { hidden: node.hidden }),
+                  ...(node.at === undefined ? {} : { bounds: { ...node.at, width: 320, height: 200 } })
               }
     );
     const views = [
@@ -52,6 +55,7 @@ clientContract(async (permissions, seed = {}) => {
         project: { ...SEED.project, views, nodes: [SEED.node, ...nodes] },
         machine: SEED.machine,
         ...(seed.providers === undefined ? {} : { providers: seed.providers }),
+        ...(seed.visible === undefined ? {} : { canvas: { visible: seed.visible } }),
         answers: {
             ...(seed.server === undefined ? {} : { server: seed.server }),
             ...(seed.stream === undefined
@@ -106,7 +110,8 @@ clientContract(async (permissions, seed = {}) => {
         select: (ids) => host.select(ids),
         notes: () => host.canvas.notes().map(({ title, text }) => ({ title, text })),
         links: () => host.canvas.links(),
-        failures: () => host.notifications.flatMap(({ text, detail }) => (detail === undefined ? [] : [{ text, detail }]))
+        failures: () => host.notifications.flatMap(({ text, detail }) => (detail === undefined ? [] : [{ text, detail }])),
+        focused: () => [...host.focused]
     };
 });
 

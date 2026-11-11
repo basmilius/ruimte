@@ -6,6 +6,7 @@ import { parseExtensionActionInput, type ExtensionActionName } from '@ruimte/con
  */
 import { lazyComponentProblem, shortcutProblem } from '@ruimte/contracts/extension-client';
 import { contextSelection } from '@ruimte/contracts/extension-context';
+import { NODE_ACCENT_COLORS } from '@ruimte/contracts/node-accents';
 import type * as PublicClient from '../../../../packages/extension/client';
 import { callHandler, MissingHandler } from './server-api.ts';
 import { NEW_NODE, Refused, wire, type Entry, type TestHost } from './test-host.ts';
@@ -33,6 +34,10 @@ function useHost(host: TestHost): void {
         (listener) => host.subscribe(listener),
         () => host.snapshot()
     );
+}
+
+function overlaps(bounds: PublicClient.CanvasArea, area: PublicClient.CanvasArea): boolean {
+    return bounds.x < area.x + area.width && area.x < bounds.x + bounds.width && bounds.y < area.y + area.height && area.y < bounds.y + bounds.height;
 }
 
 /* The canvas a surface draws on: the one of the node it draws, or the one in front. */
@@ -307,8 +312,13 @@ export function clientApi(host: TestHost) {
                 }
             });
         },
-        defineCanvasOverlay(overlay: { id: string; component: unknown }): void {
+        defineCanvasOverlay(overlay: { id: string; component: unknown; space?: 'screen' | 'canvas' }): void {
             assertLazy(overlay, `defineCanvasOverlay ${overlay.id}`);
+
+            if (overlay.space !== undefined && overlay.space !== 'screen' && overlay.space !== 'canvas') {
+                throw new TypeError(`defineCanvasOverlay ${overlay.id}: space is screen or canvas`);
+            }
+
             host.record('canvasOverlay', overlay);
         },
         defineFileViewer(viewer: { id: string; component: unknown }): void {
@@ -568,6 +578,28 @@ export function clientApi(host: TestHost) {
 
             return host.providers.map((provider) => ({ ...provider }));
         },
+        useCanvasView<Value>(select: (view: PublicClient.CanvasView) => Value): Value {
+            useHost(host);
+
+            return select(host.canvasView);
+        },
+        useInView(node: NodeRef): boolean {
+            useHost(host);
+
+            const canvas = useSurfaceCanvas(host);
+            const found = host.nodes.get(node.id);
+
+            return found !== undefined && found.viewId === canvas && overlaps(found.bounds, host.canvasView.visible);
+        },
+        nodeColorValue(color: PublicClient.NodeColor): string {
+            const value = (NODE_ACCENT_COLORS as Partial<Record<string, string>>)[color];
+
+            if (value === undefined) {
+                throw new TypeError(`nodeColorValue: ${String(color)} is no accent of Ruimte`);
+            }
+
+            return value;
+        },
         host: {
             async busy<Value>(work: { title: string; nodes?: NodeRef[] }, run: (signal: AbortSignal) => Value | Promise<Value>): Promise<Value> {
                 const tracked = { actionId: null, nodeIds: (work.nodes ?? []).map((node) => node.id) };
@@ -690,6 +722,9 @@ export function clientApi(host: TestHost) {
         views: {
             open(view: { id: string }): void {
                 host.openView(view.id);
+            },
+            focus(view: { id: string }): void {
+                host.focused.push(view.id);
             },
             createCanvas: (name: string) =>
                 host.attempt('views.createCanvas', [name], () => {

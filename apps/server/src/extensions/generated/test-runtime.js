@@ -6085,7 +6085,8 @@ var EXTENSION_SLOT_NAMES = [
   "editorMenu",
   "diffToolbar",
   "terminalToolbar",
-  "browserToolbar"
+  "browserToolbar",
+  "viewAccessory"
 ];
 
 // packages/contracts/src/extension-client.ts
@@ -6192,6 +6193,27 @@ function contextSelection(of) {
   const named = new Set(of.nodeIds ?? []);
   return (nodeId, viewId) => viewId === of.viewId || named.has(nodeId);
 }
+
+// packages/contracts/src/node-accents.ts
+var NODE_ACCENT_COLORS = {
+  red: "#e7000b",
+  orange: "#f54900",
+  amber: "#e17100",
+  yellow: "#d08700",
+  lime: "#5ea500",
+  green: "#00a63e",
+  emerald: "#009966",
+  teal: "#009689",
+  cyan: "#0092b8",
+  sky: "#0084d1",
+  blue: "#155dfc",
+  indigo: "#4f39f6",
+  violet: "#7f22fe",
+  purple: "#9810fa",
+  fuchsia: "#c800de",
+  pink: "#e60076",
+  rose: "#ec003f"
+};
 
 // packages/contracts/src/extension-results.ts
 function extensionAgentStatus(status, needsYou = false) {
@@ -6895,6 +6917,8 @@ class TestHost {
   chats = new Map;
   viewAgents = new Map;
   providers;
+  focused = [];
+  canvasView;
   watches = new Set;
   edges = [];
   createdIds = [];
@@ -6944,6 +6968,11 @@ class TestHost {
     }));
     this.activeViewId = this.views[0]?.id ?? null;
     this.providers = (options.providers ?? [{ id: "claude", name: "Claude" }]).map((provider) => ({ ...provider }));
+    this.canvasView = {
+      visible: { x: 0, y: 0, width: 1280, height: 800, ...options.canvas?.visible },
+      zoom: options.canvas?.zoom ?? 1,
+      gesture: options.canvas?.gesture ?? "none"
+    };
     const server = this.answers.server === undefined ? undefined : machineStorageOf.get(this.answers.server);
     this.storage = {
       computer: wire2(options.storage?.computer ?? {}),
@@ -6963,6 +6992,7 @@ class TestHost {
         bounds: node.bounds ?? { ...NOTE, x: 0, y: 0 },
         viewId: node.view ?? this.activeViewId ?? "",
         groupId: null,
+        hidden: node.hidden === true,
         ...node.agent === undefined ? {} : { agent: node.agent },
         ...node.subagents === undefined ? {} : { subagents: node.subagents },
         ...node.path === undefined ? {} : { path: node.path },
@@ -7141,7 +7171,7 @@ class TestHost {
       id = `${kind}-${this.nextId}`;
     }
     this.nextId += 1;
-    this.nodes.set(id, { id, kind, title: "", text: "", color: null, bounds, viewId, groupId: null, ...details });
+    this.nodes.set(id, { id, kind, title: "", text: "", color: null, bounds, viewId, groupId: null, hidden: false, ...details });
     this.createdIds.push(id);
     this.changed();
     this.deliver("node.added", { node: this.info(id) });
@@ -7254,6 +7284,7 @@ class TestHost {
       color: null,
       bounds: { x: 0, y: 0, width: 0, height: 0 },
       groupId: null,
+      hidden: false,
       viewId,
       machine: null,
       linkedTo: []
@@ -7272,6 +7303,7 @@ class TestHost {
       color: node.color,
       bounds: { ...node.bounds },
       groupId: node.groupId,
+      hidden: node.hidden,
       viewId: node.viewId,
       machine: null,
       linkedTo: [...new Set(this.edges.flatMap((edge) => edge.from === id ? [edge.to] : edge.to === id ? [edge.from] : []))],
@@ -7491,6 +7523,9 @@ function assertLazy(surface, what) {
 function useHost(host) {
   react().useSyncExternalStore((listener) => host.subscribe(listener), () => host.snapshot());
 }
+function overlaps(bounds, area) {
+  return bounds.x < area.x + area.width && area.x < bounds.x + bounds.width && bounds.y < area.y + area.height && area.y < bounds.y + bounds.height;
+}
 function useSurfaceCanvas(host) {
   const module = react();
   const nodeId = module.useContext(nodeContextOf(module));
@@ -7685,6 +7720,9 @@ function clientApi(host) {
     },
     defineCanvasOverlay(overlay) {
       assertLazy(overlay, `defineCanvasOverlay ${overlay.id}`);
+      if (overlay.space !== undefined && overlay.space !== "screen" && overlay.space !== "canvas") {
+        throw new TypeError(`defineCanvasOverlay ${overlay.id}: space is screen or canvas`);
+      }
       host.record("canvasOverlay", overlay);
     },
     defineFileViewer(viewer) {
@@ -7898,6 +7936,23 @@ function clientApi(host) {
       useHost(host);
       return host.providers.map((provider) => ({ ...provider }));
     },
+    useCanvasView(select) {
+      useHost(host);
+      return select(host.canvasView);
+    },
+    useInView(node) {
+      useHost(host);
+      const canvas = useSurfaceCanvas(host);
+      const found = host.nodes.get(node.id);
+      return found !== undefined && found.viewId === canvas && overlaps(found.bounds, host.canvasView.visible);
+    },
+    nodeColorValue(color) {
+      const value = NODE_ACCENT_COLORS[color];
+      if (value === undefined) {
+        throw new TypeError(`nodeColorValue: ${String(color)} is no accent of Ruimte`);
+      }
+      return value;
+    },
     host: {
       async busy(work, run) {
         const tracked = { actionId: null, nodeIds: (work.nodes ?? []).map((node) => node.id) };
@@ -8002,6 +8057,9 @@ function clientApi(host) {
     views: {
       open(view) {
         host.openView(view.id);
+      },
+      focus(view) {
+        host.focused.push(view.id);
       },
       createCanvas: (name) => host.attempt("views.createCanvas", [name], () => {
         host.projectId();
@@ -8280,6 +8338,11 @@ function publicHost(host, api) {
       host.changed();
     },
     setAgent: (id, agent) => host.setAgent(id, agent),
+    setCanvasView(view) {
+      host.canvasView = { ...host.canvasView, ...view, visible: { ...host.canvasView.visible, ...view.visible } };
+      host.changed();
+    },
+    focused: host.focused,
     setStorage(scope, key, value) {
       if (value === undefined) {
         delete host.storage[scope][key];
@@ -8344,6 +8407,7 @@ var OPTIONS = Object.keys({
   settings: true,
   storage: true,
   providers: true,
+  canvas: true,
   answers: true
 });
 var ANSWERS = Object.keys({

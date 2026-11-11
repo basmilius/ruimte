@@ -17,7 +17,7 @@ import {
     X,
     type LucideIcon
 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { applyLayoutAction, createNodeAction, createTextAction, deleteLayoutAction, fitAction, setLocksAction } from '@/action-port/person-actions';
@@ -27,7 +27,7 @@ import { StatusSummary } from '@/attention/StatusSummary';
 import type { Point } from '@/canvas-model/math';
 import { layoutDialog } from '@/canvas/dialogs';
 import { LOCK_KEYS, lockHint, lockLabel } from '@/canvas/locks';
-import { OVERLAY_LEDGE_ATTRIBUTE } from '@/canvas/overlay-attributes';
+import { CANVAS_FLOOR_ATTRIBUTE, OVERLAY_LEDGE_ATTRIBUTE } from '@/canvas/overlay-attributes';
 import { RemoteMachineItems } from '@/canvas/RemoteMachineItems';
 import { DesignAddItem } from '@/design/DesignAddItem';
 import { useDictation } from '@/dictation/controller';
@@ -79,6 +79,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
     const hasFolder = useProject((s) => shownFolderOf(s.current) !== null);
     // The dock has no point of its own, so what the right-click places at the pointer lands in the middle of the view.
     const centerOfCanvas = (): Point => centerWorld(canvasStore.getState());
+    const dockId = useId();
     const anyLocked = Object.values(locks).some(Boolean);
     const allLocked = Object.values(locks).every(Boolean);
 
@@ -89,11 +90,18 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
         }
     }, [maximized, onHiddenChange]);
 
+    // Temporary: DockShell is ADE CORE's and draws its bar as its first child, with no hook of its own to mark it a floor by.
+    useEffect(() => {
+        const bar = document.querySelector(`[data-dock="${CSS.escape(dockId)}"]`)?.firstElementChild;
+
+        bar?.setAttribute(CANVAS_FLOOR_ATTRIBUTE, 'ledge');
+    });
+
     if (!onCanvas || maximized) {
         return null;
     }
     return (
-        <DockShell autoHide={dockAutoHide} onHiddenChange={onHiddenChange} {...{ [OVERLAY_LEDGE_ATTRIBUTE]: '' }}>
+        <DockShell autoHide={dockAutoHide} onHiddenChange={onHiddenChange} {...{ [OVERLAY_LEDGE_ATTRIBUTE]: '', 'data-dock': dockId }}>
             <StatusSummary />
 
             <Menu.Root>

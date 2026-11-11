@@ -78,8 +78,15 @@ export function defineNode<Data = Json>(
         addFrom?: Partial<Slots>;
     } & Surface
 ): void;
-/** Over the whole canvas, under Ruimte's own controls such as the minimap in the bottom right. It lets clicks through; set `pointer-events: auto` on what takes them. */
-export function defineCanvasOverlay(overlay: { id: string; component: LazyComponent }): void;
+/**
+ * Over the whole canvas, under Ruimte's own controls such as the minimap in the bottom right. It lets clicks through; set
+ * `pointer-events: auto` on what takes them. With `space: 'canvas'` it draws in the canvas's own coordinates instead, over
+ * every node, panned and zoomed with them, so a node's `bounds` are where it stands. Neither draws while a node is maximized.
+ * On screen, Ruimte marks what stands at the bottom of the canvas with `data-canvas-floor`: `ledge` where something may stand
+ * on top, such as the dock, and `wall` where it may only walk up to, such as the minimap and a prompt card. Find them from
+ * your own element with `closest('[data-canvas-overlay]')`; one that fades away says so in its opacity.
+ */
+export function defineCanvasOverlay(overlay: { id: string; component: LazyComponent; space?: 'screen' | 'canvas' }): void;
 /** Opens every file with these extensions in your component, with Ruimte's own view one click away. */
 export function defineFileViewer(viewer: {
     id: string;
@@ -216,9 +223,13 @@ export interface NodeInfo {
     id: string;
     kind: string;
     title: string;
-    color: string | null;
+    color: NodeColor | null;
     bounds: { x: number; y: number; width: number; height: number };
     groupId: string | null;
+
+    /** A collapsed group hides it: it is on the canvas but not drawn. */
+    hidden: boolean;
+
     viewId: string;
     machine: string | null;
     linkedTo: string[];
@@ -284,6 +295,13 @@ export interface SlotContexts {
     diffToolbar: { repository: string };
     terminalToolbar: { node: NodeInfo };
     browserToolbar: { node: NodeInfo; url: string };
+    /**
+     * Beside a chat or a terminal open as a view of its own: over the top edge of a chat's composer, in a terminal's bar. A
+     * widget here draws as it is, with nothing around it. `composer` is where the composer's card lies in the widget's box,
+     * in whole pixels: its top edge, its right edge from the right of the box, and its width. Null for a terminal, or while
+     * the card is not there.
+     */
+    viewAccessory: { target: { id: string; kind: 'chat' | 'terminal' }; composer: { top: number; right: number; width: number } | null };
 }
 
 export type SlotName = keyof SlotContexts;
@@ -369,6 +387,31 @@ export function useViews(): { id: string; kind: string; name: string }[];
 export function useSelection(): NodeInfo[];
 export function useNode(id: string): NodeInfo;
 export function useNodes(filter?: (node: NodeInfo) => boolean): NodeInfo[];
+
+/** A part of a canvas, in its own coordinates. */
+export interface CanvasArea {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+/** What a person sees of a canvas: what is on screen, how far it is zoomed, and whether they move something or aim a line. */
+export interface CanvasView {
+    visible: CanvasArea;
+    zoom: number;
+    gesture: 'none' | 'move' | 'line';
+}
+
+/**
+ * The view of the canvas a surface draws on, or of the one in front. It draws again only when what `select` answers changes,
+ * compared with `Object.is`, so answer a number or a word, or the view itself, which stays the same object until it changes.
+ */
+export function useCanvasView<Value>(select: (view: CanvasView) => Value): Value;
+/** Whether a node of the canvas a surface draws on is on screen, or close enough to come in at the next move. */
+export function useInView(node: NodeRef): boolean;
+/** The color an accent of Ruimte is drawn in, as `#rrggbb`. */
+export function nodeColorValue(color: NodeColor): string;
 /** Words from `locales/<language>.json`, English as the fallback, and every number and date through `format`. */
 export function useLocale(): {
     language: string;
@@ -687,9 +730,11 @@ export const database: {
     query(connection: string, sql: string): Promise<Result<{ columns: string[]; rows: DatabaseValue[][]; hasMore: boolean }>>;
 };
 
-/** Needs `views.write`, except `open`. */
+/** Needs `views.write`, except `open` and `focus`. */
 export const views: {
     open(view: ViewRef): void;
+    /** Hands the keyboard to a view on screen: a chat's open question, or else its field to write in, or a terminal. */
+    focus(view: ViewRef): void;
     createCanvas(name: string): Result<ViewRef>;
     rename(view: ViewRef, name: string): Result<void>;
 };

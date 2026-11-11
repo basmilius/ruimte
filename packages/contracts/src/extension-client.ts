@@ -92,6 +92,7 @@ export const EXTENSION_CALLS_WITHOUT_PERMISSION: readonly string[] = [
     'host.copy',
     'files.open',
     'views.open',
+    'views.focus',
     'canvas.select',
     'canvas.reveal',
     'storage.get',

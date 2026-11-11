@@ -1,5 +1,5 @@
-import { useChats } from '@adecore/agents-react/state';
-import type { ProjectSummary, ProjectView } from '@ruimte/contracts';
+import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
+import { isNodeAccent, type NodeAccent, type ProjectSummary, type ProjectView } from '@ruimte/contracts';
 import type { LucideIcon } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 import { useShallow } from 'zustand/react/shallow';
@@ -9,8 +9,10 @@ import { membersOf } from '@/state/canvas-model';
 import { currentEndpointId, useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { useContributions, type SlotEntry, type SlotName } from '@/state/extension-registry';
+import { memoByIdentity } from '@/state/identity-memo';
+import { endpointKey, endpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { useSessions } from '@/state/sessions';
+import { useSessions, type SessionsByKey } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 
 export type { AgentInfo } from '@/extensions/agent-info';
@@ -19,9 +21,10 @@ export interface NodeInfo {
     id: string;
     kind: string;
     title: string;
-    color: string | null;
+    color: NodeAccent | null;
     bounds: { x: number; y: number; width: number; height: number };
     groupId: string | null;
+    hidden: boolean;
     viewId: string;
     machine: string | null;
     linkedTo: string[];
@@ -40,19 +43,165 @@ export interface BaseContext {
 
 /* What a node's info is read from. In a render each comes from a hook, so a compiled component never keeps an old one. */
 interface NodeSources extends AgentSources {
-    canvas: Pick<CanvasState, 'nodes' | 'edges' | 'viewId'>;
+    canvas: Pick<CanvasState, 'nodes' | 'edges' | 'viewId' | 'hidden'>;
+}
+
+/* What one node's info is made of, each piece only its own, so an info stays the same object while none of them changes. */
+interface NodeParts {
+    node: CanvasNode;
+    group: CanvasNode | undefined;
+    hidden: boolean;
+    links: readonly string[];
+    viewId: string;
+    session: SessionsByKey[string] | undefined;
+    chat: ChatStatuses[string] | undefined;
+    snooze: number | undefined;
+    endpointId: string;
 }
 
 // Every info handed out, so a slot can tell one in its context and read it again.
 const issued = new WeakSet<object>();
+const NO_LINKS: readonly string[] = [];
+// The last info made for a node, with what it was made of.
+const kept = new WeakMap<CanvasNode, { parts: NodeParts; info: NodeInfo }>();
 
-/* A readable copy, so an extension never holds the store and the store stays ours to change. */
-export function nodeInfoIn(sources: NodeSources, id: string): NodeInfo {
-    const info = readNodeInfo(sources, id);
+/* Of nested groups that each hold a node, the innermost, for every node at once: found once per set of nodes, however many ask. */
+const groupsOf = memoByIdentity((nodes: Readonly<Record<string, CanvasNode>>): ReadonlyMap<string, CanvasNode> => {
+    const groups = new Map<string, CanvasNode>();
+    const area = (node: CanvasNode): number => node.w * node.h;
+
+    for (const group of Object.values(nodes).filter((each) => each.kind === 'group')) {
+        for (const member of membersOf(group, nodes, {})) {
+            const held = groups.get(member);
+
+            if (member !== group.id && (held === undefined || area(group) < area(held))) {
+                groups.set(member, group);
+            }
+        }
+    }
+
+    return groups;
+});
+
+/* The nodes each node has a line with, once each: two agents linked both ways are two edges, and one link. */
+const linksOf = memoByIdentity((edges: CanvasState['edges']): ReadonlyMap<string, readonly string[]> => {
+    const links = new Map<string, Set<string>>();
+    const add = (from: string, to: string): void => {
+        links.set(from, (links.get(from) ?? new Set()).add(to));
+    };
+
+    for (const edge of edges) {
+        add(edge.from, edge.to);
+        add(edge.to, edge.from);
+    }
+
+    return new Map([...links].map(([id, linked]) => [id, [...linked]]));
+});
+
+function sameParts(one: NodeParts, other: NodeParts): boolean {
+    return (Object.keys(one) as (keyof NodeParts)[]).every((key) => one[key] === other[key]);
+}
+
+function infoOf(parts: NodeParts): NodeInfo {
+    const before = kept.get(parts.node);
+
+    if (before !== undefined && sameParts(before.parts, parts)) {
+        return before.info;
+    }
+
+    const { node, group, endpointId } = parts;
+    const key = endpointKey(endpointOfNode(node, endpointId), node.id);
+    const raw = node.raw as { kind?: unknown; extension?: unknown; type?: unknown } | undefined;
+    const agent = agentInfoOf(node, group, {
+        sessions: parts.session === undefined ? {} : { [key]: parts.session },
+        chats: parts.chat === undefined ? {} : { [key]: parts.chat },
+        snoozes: parts.snooze === undefined ? {} : { [key]: parts.snooze },
+        endpointId
+    });
+    const info: NodeInfo = {
+        id: node.id,
+        kind: raw?.kind === 'extension' ? 'extension' : node.kind,
+        title: node.title,
+        color: isNodeAccent(node.accent) ? node.accent : null,
+        bounds: { x: node.x, y: node.y, width: node.w, height: node.h },
+        groupId: group?.id ?? null,
+        hidden: parts.hidden,
+        viewId: parts.viewId,
+        machine: node.machine ?? null,
+        linkedTo: [...parts.links],
+        ...(agent === undefined ? {} : { agent }),
+        ...(node.path === undefined ? {} : { path: node.path }),
+        ...(node.url === undefined ? {} : { url: node.url }),
+        ...(typeof raw?.extension === 'string' && typeof raw.type === 'string' ? { extension: { id: raw.extension, type: raw.type } } : {})
+    };
+
+    kept.set(node, { parts, info });
+    issued.add(info);
+
+    return info;
+}
+
+function unknownInfo(id: string, viewId: string): NodeInfo {
+    const info: NodeInfo = {
+        id,
+        kind: 'unknown',
+        title: '',
+        color: null,
+        bounds: { x: 0, y: 0, width: 0, height: 0 },
+        groupId: null,
+        hidden: false,
+        viewId,
+        machine: null,
+        linkedTo: []
+    };
 
     issued.add(info);
 
     return info;
+}
+
+/*
+ * One node's info for a render, which draws again only when that node, its group, its lines or its agent changed: a pet on
+ * one node stays as it is while another node moves.
+ */
+export function useNodeInfo(id: string): NodeInfo {
+    const node = useCanvas((state) => state.nodes[id]);
+    const group = useCanvas((state) => groupsOf(state.nodes).get(id));
+    const hidden = useCanvas((state) => state.hidden.has(id));
+    const links = useCanvas((state) => linksOf(state.edges).get(id) ?? NO_LINKS);
+    const viewId = useCanvas((state) => state.viewId ?? '');
+    const endpointId = useEndpointId();
+    const key = node === undefined ? null : endpointKey(endpointOfNode(node, endpointId), id);
+    const session = useSessions((state) => (key === null ? undefined : state.byKey[key]));
+    const chat = useChats((state) => (key === null ? undefined : state.statusByKey[key]));
+    const snooze = useSnoozes((state) => (key === null ? undefined : state.byKey[key]));
+
+    return node === undefined ? unknownInfo(id, viewId) : infoOf({ node, group, hidden, links, viewId, session, chat, snooze, endpointId });
+}
+
+/* A readable copy, so an extension never holds the store and the store stays ours to change. */
+export function nodeInfoIn(sources: NodeSources, id: string): NodeInfo {
+    const { canvas, endpointId } = sources;
+    const node = canvas.nodes[id];
+    const viewId = canvas.viewId ?? '';
+
+    if (node === undefined) {
+        return unknownInfo(id, viewId);
+    }
+
+    const key = endpointKey(endpointOfNode(node, endpointId), id);
+
+    return infoOf({
+        node,
+        group: groupsOf(canvas.nodes).get(id),
+        hidden: canvas.hidden.has(id),
+        links: linksOf(canvas.edges).get(id) ?? NO_LINKS,
+        viewId,
+        session: sources.sessions[key],
+        chat: sources.chats[key],
+        snooze: sources.snoozes[key],
+        endpointId
+    });
 }
 
 /* The same, read from the stores as they are now, for code outside a render. */
@@ -73,9 +222,7 @@ export function nodeInfoOf(id: string): NodeInfo {
 
 /* Of nested groups that each hold the node, the innermost. */
 export function groupOf(nodes: Readonly<Record<string, CanvasNode>>, id: string): CanvasNode | undefined {
-    return Object.values(nodes)
-        .filter((each) => each.kind === 'group' && each.id !== id && membersOf(each, nodes, {}).includes(id))
-        .sort((one, other) => one.w * one.h - other.w * other.h)[0];
+    return groupsOf(nodes).get(id);
 }
 
 /* `null` while `active` is false, so a host with nothing to show subscribes to nothing that moves. */
@@ -84,6 +231,7 @@ export function useNodeSources(active: boolean): NodeSources | null;
 export function useNodeSources(active = true): NodeSources | null {
     const nodes = useCanvas((state) => (active ? state.nodes : null));
     const edges = useCanvas((state) => (active ? state.edges : null));
+    const hidden = useCanvas((state) => state.hidden);
     const viewId = useCanvas((state) => state.viewId);
     const sessions = useSessions(useShallow((state) => (active ? state.byKey : null)));
     const chats = useChats(useShallow((state) => (active ? state.statusByKey : null)));
@@ -94,47 +242,7 @@ export function useNodeSources(active = true): NodeSources | null {
         return null;
     }
 
-    return { canvas: { nodes, edges, viewId }, sessions, chats, snoozes, endpointId };
-}
-
-function readNodeInfo(sources: NodeSources, id: string): NodeInfo {
-    const { canvas } = sources;
-    const node = canvas.nodes[id];
-
-    if (node === undefined) {
-        return {
-            id,
-            kind: 'unknown',
-            title: '',
-            color: null,
-            bounds: { x: 0, y: 0, width: 0, height: 0 },
-            groupId: null,
-            viewId: canvas.viewId ?? '',
-            machine: null,
-            linkedTo: []
-        };
-    }
-
-    const group = groupOf(canvas.nodes, id);
-    const raw = node.raw as { kind?: unknown; extension?: unknown; type?: unknown } | undefined;
-    const agent = agentInfoOf(node, group, sources);
-
-    return {
-        id,
-        kind: raw?.kind === 'extension' ? 'extension' : node.kind,
-        title: node.title,
-        color: node.accent ?? null,
-        bounds: { x: node.x, y: node.y, width: node.w, height: node.h },
-        groupId: group?.id ?? null,
-        viewId: canvas.viewId ?? '',
-        machine: node.machine ?? null,
-        // Two agents linked both ways are two edges, and one link.
-        linkedTo: [...new Set(canvas.edges.flatMap((edge) => (edge.from === id ? [edge.to] : edge.to === id ? [edge.from] : [])))],
-        ...(agent === undefined ? {} : { agent }),
-        ...(node.path === undefined ? {} : { path: node.path }),
-        ...(node.url === undefined ? {} : { url: node.url }),
-        ...(typeof raw?.extension === 'string' && typeof raw.type === 'string' ? { extension: { id: raw.extension, type: raw.type } } : {})
-    };
+    return { canvas: { nodes, edges, viewId, hidden }, sessions, chats, snoozes, endpointId };
 }
 
 function contextOf(

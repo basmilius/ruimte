@@ -26,12 +26,14 @@ import { icons, Package, type LucideIcon } from 'lucide-react';
 import { createContext, createElement, lazy, Suspense, use, useContext, useEffect, useRef, useState, useSyncExternalStore, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
+import { accentColor } from '@/canvas-model/accents';
 import { folderWatches } from '@/controllers/fs-watch';
 import { databaseConnections } from '@/database/connections';
 import { desktop } from '@/desktop/bridge';
 import { runAction, trackRun, useActionRuns } from '@/extensions/action-runs';
 import { assertShortcut } from '@/extensions/action-shortcuts';
 import { useAgentOf, useSubagentsOf } from '@/extensions/agent-hooks';
+import { useCanvasViewOf, useNodeInView } from '@/extensions/canvas-view';
 import { onClientEvent, type ClientEvents } from '@/extensions/client-events';
 import { sendDevLog } from '@/extensions/dev-log';
 import { DevReport } from '@/extensions/DevReport';
@@ -42,7 +44,8 @@ import { ExtensionChat } from '@/extensions/host/ExtensionChat';
 import { askHost, openOverlay, type OpenOverlay } from '@/extensions/host/host-dialog-state';
 import { useMachineStorage } from '@/extensions/host/machine-storage';
 import { extensionRequest } from '@/extensions/machine-request';
-import { baseContext, nodeInfoIn, useNodeSources, type NodeInfo } from '@/extensions/slots';
+import { baseContext, nodeInfoIn, useNodeInfo, useNodeSources, type NodeInfo } from '@/extensions/slots';
+import { focusView } from '@/extensions/view-focus';
 import { isUnderFolder } from '@/paths/file-path';
 import { revealNode } from '@/project/views';
 import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
@@ -776,9 +779,30 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 }
             });
         },
-        defineCanvasOverlay(overlay: { id: string; component: LazyComponent }) {
+        defineCanvasOverlay(overlay: { id: string; component: LazyComponent; space?: 'screen' | 'canvas' }) {
             assertLazy(overlay, `defineCanvasOverlay ${overlay.id}`);
-            add('canvasLayers', { id: `${id}/${overlay.id}`, place: 'screen', component: surfaceOf(extension, overlay) as ComponentType<{ z: number }> });
+
+            const Body = surfaceOf(extension, overlay) as ComponentType;
+            const space = overlay.space ?? 'screen';
+
+            if (space !== 'screen' && space !== 'canvas') {
+                throw new TypeError(`defineCanvasOverlay ${overlay.id}: space is screen or canvas`);
+            }
+
+            add('canvasLayers', {
+                id: `${id}/${overlay.id}`,
+                place: space,
+                component:
+                    space === 'screen'
+                        ? (Body as ComponentType<{ z: number }>)
+                        : // oxlint-disable-next-line react/only-export-components -- Made per extension, and never hot-reloaded.
+                          ({ z }: { z: number }) => (
+                              // In the canvas's own coordinates, over every node, letting every press through but what it takes.
+                              <div className="pointer-events-none absolute top-0 left-0" style={{ zIndex: z }}>
+                                  <Body />
+                              </div>
+                          )
+            });
         },
         defineFileViewer(viewer: {
             id: string;
@@ -1136,7 +1160,22 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             return info === undefined ? null : extensionChatOf(info);
         },
         useNode(nodeId: string) {
-            return nodeInfoIn(useNodeSources(), nodeId);
+            return useNodeInfo(nodeId);
+        },
+        useCanvasView<Value>(select: (view: PublicClient.CanvasView) => Value): Value {
+            return useCanvasViewOf(select);
+        },
+        useInView(node: { id: string }) {
+            return useNodeInView(node.id);
+        },
+        nodeColorValue(color: NodeAccent): string {
+            const value = accentColor(color);
+
+            if (value === undefined) {
+                throw new TypeError(`nodeColorValue: ${String(color)} is no accent of Ruimte`);
+            }
+
+            return value;
         },
         useNodes(filter?: (node: NodeInfo) => boolean) {
             const sources = useNodeSources();
@@ -1432,6 +1471,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             open: whileLive((view: { id: string }) => {
                 useDocument.getState().setActiveView(view.id);
             }),
+            focus: whileLive((view: { id: string }) => focusView(view.id)),
             createCanvas: (name: string) =>
                 attempt('views.createCanvas', () => {
                     currentProjectId();

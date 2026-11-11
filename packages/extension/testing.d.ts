@@ -1,6 +1,8 @@
 import type { ComponentType } from 'react';
 import type {
     AgentInfo,
+    CanvasArea,
+    CanvasView,
     ClientEvents,
     ContextOf,
     ContextSource,
@@ -9,6 +11,7 @@ import type {
     GitCommit,
     GitFileDiff,
     GitStatus,
+    NodeColor,
     NodeInfo,
     Returned,
     SlotContexts,
@@ -38,8 +41,10 @@ export interface TestNode {
     title?: string;
     /** What an agent reads of it: a note's text, a terminal's screen or a chat's thread. */
     text?: string;
-    color?: string | null;
+    color?: NodeColor | null;
     bounds?: { x: number; y: number; width: number; height: number };
+    /** A collapsed group hides it. */
+    hidden?: boolean;
     /** The id of the view it is on. */
     view?: string;
     linkedTo?: string[];
@@ -125,6 +130,8 @@ export interface TestHostOptions {
     storage?: { computer?: Record<string, Json>; project?: Record<string, Json>; machine?: Record<string, Json> };
     /** What `useProviders` lists. Claude alone by default. */
     providers?: { id: string; name: string }[];
+    /** What `useCanvasView` reads and `useInView` measures against: 1280 by 800 from the origin at 100%, with no gesture, by default. */
+    canvas?: { visible?: Partial<CanvasArea>; zoom?: number; gesture?: CanvasView['gesture'] };
     answers?: TestHostAnswers;
 }
 
@@ -213,6 +220,10 @@ export interface TestHost {
      * and draws again what reads it. Null takes a terminal's agent away, as its CLI ending does.
      */
     setAgent(id: string, agent: (Partial<AgentInfo> & { subagents?: TestSubagent[] }) | null): void;
+    /** A person panning, zooming or starting a gesture on the canvas, and draws again what reads it. */
+    setCanvasView(view: { visible?: Partial<CanvasArea>; zoom?: number; gesture?: CanvasView['gesture'] }): void;
+    /** Each view `views.focus` handed the keyboard to, by its id. */
+    focused: string[];
     /** Writes a stored value as another window or `server/` would, and draws again what reads it. Undefined deletes the key. */
     setStorage(scope: 'computer' | 'project' | 'machine', key: string, value: Json | undefined): void;
     /** A file of the project changing on the machine, which calls back each `files.watch` of it or of a folder above it. */

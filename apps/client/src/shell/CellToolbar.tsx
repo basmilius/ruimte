@@ -7,6 +7,7 @@ import { useBrowserDisplayTitle } from '@/browser/title';
 import { ViewAccessories } from '@/extensions/ContributedSlots';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
+import { TerminalViewAccessory } from '@/extensions/ViewAccessorySlot';
 import { FileMenuItems } from '@/files/FileMenuItems';
 import { LooseGlyph } from '@/files/LooseGlyph';
 import { cellAt, type CellAt } from '@/layout/split';
@@ -87,6 +88,10 @@ export function CellToolbar({
         return () => setHost((current) => (current === element ? null : current));
     };
     const bodyFocused = useDocument((s) => s.bodyFocused);
+    const focusTerminal = (): void => {
+        useDocument.getState().focusCellAt(at);
+        useDocument.getState().setBodyFocused(true);
+    };
     const maximized = useDocument((s) => s.maximized === view.id);
     const closable = useDocument((s) => s.layout !== null);
     /* The tabs of the cell when it is a host. A host keeps its bar whatever the view in front is. */
@@ -123,15 +128,10 @@ export function CellToolbar({
                     accessory={
                         // A terminal's text takes every pixel of its body, so what a built-in adds stands in the bar.
                         view.kind === 'terminal' && (
-                            <ViewAccessories
-                                on="terminal"
-                                id={view.id}
-                                title={visibleTitle}
-                                onPress={() => {
-                                    useDocument.getState().focusCellAt(at);
-                                    useDocument.getState().setBodyFocused(true);
-                                }}
-                            />
+                            <>
+                                <ViewAccessories on="terminal" id={view.id} title={visibleTitle} onPress={focusTerminal} />
+                                <TerminalViewAccessory id={view.id} focus={focusTerminal} />
+                            </>
                         )
                     }
                     trailing={

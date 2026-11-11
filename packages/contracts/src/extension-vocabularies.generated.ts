@@ -50,5 +50,6 @@ export const EXTENSION_SLOT_NAMES = [
     'editorMenu',
     'diffToolbar',
     'terminalToolbar',
-    'browserToolbar'
+    'browserToolbar',
+    'viewAccessory'
 ] as const;

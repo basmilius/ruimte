@@ -79,6 +79,11 @@ function publicHost(host: TestHost, api: ClientApi): PublicTesting.TestHost {
             host.changed();
         },
         setAgent: (id, agent) => host.setAgent(id, agent),
+        setCanvasView(view) {
+            host.canvasView = { ...host.canvasView, ...view, visible: { ...host.canvasView.visible, ...view.visible } };
+            host.changed();
+        },
+        focused: host.focused,
         setStorage(scope, key, value) {
             if (value === undefined) {
                 delete host.storage[scope][key];
@@ -150,6 +155,7 @@ const OPTIONS = Object.keys({
     settings: true,
     storage: true,
     providers: true,
+    canvas: true,
     answers: true
 } satisfies Record<keyof PublicTesting.TestHostOptions, true>);
 

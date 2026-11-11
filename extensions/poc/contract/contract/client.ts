@@ -5,6 +5,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { EXTENSION_CLIENT_PERMISSIONS } from '@ruimte/contracts/extension-client';
+import { NODE_ACCENT_COLORS } from '@ruimte/contracts/node-accents';
 import type * as Client from '../../../../packages/extension/client';
 import type * as Ui from '../../../../packages/extension/ui';
 
@@ -30,7 +31,18 @@ export interface ContractScreen {
  * One with a `view` sits on that canvas of the project instead, which is not in front.
  */
 export type SeedNode =
-    | { id: string; kind: 'terminal' | 'chat'; title: string; text: string; view?: string; agent?: SeedAgent }
+    | {
+          id: string;
+          kind: 'terminal' | 'chat';
+          title: string;
+          text: string;
+          view?: string;
+          agent?: SeedAgent;
+          color?: Client.NodeColor;
+          // A collapsed group hides it.
+          hidden?: boolean;
+          at?: { x: number; y: number };
+      }
     | { id: string; kind: 'extension'; type: string; data: Client.Json; dataVersion?: number };
 
 /*
@@ -58,6 +70,8 @@ export interface WorldSeed {
     streamStart?: 'held';
     /* The agents the machine can start. */
     providers?: { id: string; name: string }[];
+    /* What is on screen of the canvas in front, at 100%; 1280 by 800 from its origin by default. */
+    visible?: Client.CanvasArea;
 }
 
 export interface ClientWorld {
@@ -92,6 +106,8 @@ export interface ClientWorld {
     links(): { from: string; to: string }[];
     /* What a person was shown of a failed action: its title and why. */
     failures(): { text: string; detail: string }[];
+    /* Each view `views.focus` handed the keyboard to. */
+    focused(): string[];
 }
 
 export type OpenClientWorld = (permissions: Record<string, string>, seed?: WorldSeed) => Promise<ClientWorld>;
@@ -718,6 +734,74 @@ export function clientContract(open: OpenClientWorld): void {
             await screen.until(() => screen.text() !== '');
 
             expect(screen.text()).toBe('running chat-2, running none');
+        });
+
+        test('reads a node a collapsed group hides as hidden, and its color by its accent and as it is drawn', async () => {
+            const world = await open(
+                {},
+                {
+                    nodes: [
+                        { id: 'chat-1', kind: 'chat', title: 'Chat', text: '', color: 'blue' },
+                        { id: 'shell-1', kind: 'terminal', title: 'Shell', text: '', hidden: true }
+                    ]
+                }
+            );
+            const { api, createElement: h } = world;
+            const Nodes = () => {
+                const chat = api.useNode('chat-1');
+                const shell = api.useNode('shell-1');
+
+                return h('p', null, `${chat.color} ${chat.hidden} ${shell.color} ${shell.hidden}`);
+            };
+            const screen = await world.render(Nodes);
+
+            expect(screen.text()).toBe('blue false null true');
+            expect(api.nodeColorValue('blue')).toBe(NODE_ACCENT_COLORS.blue);
+            expect(() => api.nodeColorValue('plaid' as Client.NodeColor)).toThrow(TypeError);
+        });
+
+        test('reads what is on screen of the canvas, and whether a node is in view', async () => {
+            const world = await open(
+                {},
+                {
+                    nodes: [{ id: 'far-1', kind: 'terminal', title: 'Far', text: '', at: { x: 4000, y: 4000 } }],
+                    visible: { x: 0, y: 0, width: 1280, height: 800 }
+                }
+            );
+            const { api, createElement: h } = world;
+            const View = () => {
+                const area = api.useCanvasView((view) => `${view.visible.width}x${view.visible.height} ${view.zoom} ${view.gesture}`);
+
+                return h('p', null, `${area} ${api.useInView({ id: 'note-1' })} ${api.useInView({ id: 'far-1' })}`);
+            };
+            const screen = await world.render(View);
+
+            expect(screen.text()).toBe('1280x800 1 none true false');
+        });
+
+        test('hands the keyboard to a view it names, and refuses a canvas overlay in a space it does not know', async () => {
+            const world = await open({});
+
+            world.api.views.focus({ id: SEED.view.id });
+
+            expect(world.focused()).toEqual([SEED.view.id]);
+            expect(() => world.api.defineCanvasOverlay({ id: 'odd', component: async () => ({ default: () => null }), space: 'paper' as 'canvas' })).toThrow(
+                TypeError
+            );
+        });
+
+        test('tells a widget beside a view of its own which view it is, and where the composer lies', async () => {
+            const world = await open({});
+
+            world.api.defineAction({
+                id: 'beside',
+                title: 'Beside',
+                slots: { viewAccessory: (context) => ({ title: `${context.target.kind} ${context.composer?.top ?? 'none'}` }) },
+                run: () => undefined
+            });
+
+            expect(world.slot('beside', 'viewAccessory', { target: { id: 'c', kind: 'chat' }, composer: { top: 4, right: 20, width: 400 } })).toBe('chat 4');
+            expect(world.slot('beside', 'viewAccessory', { target: { id: 't', kind: 'terminal' }, composer: null })).toBe('terminal none');
         });
 
         test('lists the agents the machine can start', async () => {

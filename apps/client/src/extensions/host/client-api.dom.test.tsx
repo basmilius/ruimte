@@ -526,6 +526,40 @@ describe('the client API', () => {
         expect(focusedCanvas().getState().nodes['node-1']?.raw).toMatchObject({ data: { count: 5 }, dataVersion: 2 });
     });
 
+    test('draws a surface that reads one node again only when that node changes, not when another moves', async () => {
+        const { api } = loaded();
+        const renders = { one: 0, two: 0 };
+        const at = (x: number, id: string): CanvasNode => ({ id, kind: 'note', title: id, x, y: 0, w: 320, h: 200 }) as CanvasNode;
+        const Reader = ({ id }: { id: 'one' | 'two' }) => {
+            renders[id] += 1;
+
+            return createElement('p', null, `${id} ${api.useNode(id).bounds.x}`);
+        };
+        const Both = () => createElement('div', null, createElement(Reader, { id: 'one' }), createElement(Reader, { id: 'two' }));
+
+        focusedCanvas().setState({ nodes: { one: at(0, 'one'), two: at(400, 'two') } });
+        mounted = mount();
+        await mounted.render(createElement(Both));
+
+        const before = { ...renders };
+
+        await act(async () => focusedCanvas().setState(({ nodes }) => ({ nodes: { ...nodes, two: at(800, 'two') } })));
+
+        expect(mounted.host.textContent).toBe('one 0two 800');
+        expect(renders.one).toBe(before.one);
+        expect(renders.two).toBe(before.two + 1);
+    });
+
+    test('hands out the same info for a node that did not change, so a list of nodes keeps what it holds', () => {
+        focusedCanvas().setState({ nodes: { one: { id: 'one', kind: 'note', title: 'One', x: 0, y: 0, w: 320, h: 200 } as CanvasNode }, edges: [] });
+
+        const first = nodeInfoOf('one');
+
+        focusedCanvas().setState({ selection: ['one'] });
+
+        expect(nodeInfoOf('one')).toBe(first);
+    });
+
     test('renames a node of an extension, whose title lives in what the extension stored', () => {
         const { api } = loaded({ 'canvas.write': 'Renames' });
         const raw = { kind: 'extension', id: 'node-1', extension: 'acme.probe', type: 'counter', title: 'Counter' };

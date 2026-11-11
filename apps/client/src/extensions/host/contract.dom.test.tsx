@@ -9,6 +9,7 @@ import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api
 import { useHostDialog } from '@/extensions/host/host-dialog-state';
 import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
 import { baseContext, nodeInfoOf, resolveSlot } from '@/extensions/slots';
+import { provideViewFocus } from '@/extensions/view-focus';
 import { defaultCanvases, focusedCanvas } from '@/state/canvas';
 import type { CanvasNode } from '@/state/canvas-model';
 import { currentEndpointId } from '@/state/current-endpoint';
@@ -31,6 +32,7 @@ const ID = 'poc.contract';
 const mounts: Mounted[] = [];
 let disconnect: (() => void) | null = null;
 let stopAnswering: (() => void) | null = null;
+let stopFocus: (() => void) | null = null;
 
 afterEach(async () => {
     for (const mounted of mounts.splice(0)) {
@@ -63,12 +65,15 @@ function entryOf(action: string) {
     return entry;
 }
 
+// The places of a context that hold nodes, as the test host reads them; a view's `target` is no node.
+const NODE_PLACES = new Set(['node', 'nodes', 'from', 'to']);
+
 /* What the client host tells a slot: the base context and each node it was handed, as it is now. */
 function contextOf(extra: object): Record<string, unknown> {
     const nodes = (value: unknown): unknown =>
         Array.isArray(value) ? value.map(nodes) : typeof value === 'object' && value !== null && 'id' in value ? nodeInfoOf(String(value.id)) : value;
 
-    return { ...baseContext(), ...Object.fromEntries(Object.entries(extra).map(([key, value]) => [key, nodes(value)])) };
+    return { ...baseContext(), ...Object.fromEntries(Object.entries(extra).map(([key, value]) => [key, NODE_PLACES.has(key) ? nodes(value) : value])) };
 }
 
 function screenOf(mounted: Mounted): ContractScreen {
@@ -113,7 +118,7 @@ function canvasNodeOf(node: SeedNode): CanvasNode {
         return { ...frame, kind: 'unknown', title: node.type, raw } as CanvasNode;
     }
 
-    return { ...frame, kind: node.kind, title: node.title } as CanvasNode;
+    return { ...frame, ...node.at, kind: node.kind, title: node.title, ...(node.color === undefined ? {} : { accent: node.color }) } as CanvasNode;
 }
 
 // Far beyond any test: a snooze only counts while it stands, and no clock runs here to end it.
@@ -199,6 +204,13 @@ clientContract(async (permissions, seed = {}) => {
         });
     };
 
+    // What the machine keeps itself, which a window that watches the machine asks for again on its own.
+    answer('snooze.list', () => ({
+        snoozes: (seed.nodes ?? []).flatMap((node) =>
+            node.kind !== 'extension' && node.agent?.doing === 'snoozed' ? [{ projectId: SEED.project.id, nodeId: node.id, until: SNOOZED_UNTIL }] : []
+        )
+    }));
+    answer('provider.list', () => ({ providers: (seed.providers ?? []).map((provider) => fakeProvider(provider.id, provider.name)) }));
     answer('extension.storageGet', ({ key }) => ({ value: stored.get(key) }));
     answer('extension.storageSet', ({ key, value }) => {
         if (value === undefined) {
@@ -306,10 +318,19 @@ clientContract(async (permissions, seed = {}) => {
             ].map((node) => [node.id, node])
         ),
         edges: [],
-        selection: []
+        selection: [],
+        hidden: new Set((seed.nodes ?? []).flatMap((node) => (node.kind !== 'extension' && node.hidden === true ? [node.id] : []))),
+        // At 100%, so what is on screen is the viewport from where the camera looks.
+        camera: { x: -(seed.visible?.x ?? 0), y: -(seed.visible?.y ?? 0), zoom: 1 },
+        viewport: { w: seed.visible?.width ?? 1280, h: seed.visible?.height ?? 800 }
     });
 
     seedAgents(seed.nodes ?? []);
+
+    const focused: string[] = [];
+
+    stopFocus?.();
+    stopFocus = provideViewFocus(SEED.view.id, () => focused.push(SEED.view.id));
 
     if (seed.providers !== undefined) {
         useProvidersStore.getState().setProviders(
@@ -410,6 +431,7 @@ clientContract(async (permissions, seed = {}) => {
             focusedCanvas()
                 .getState()
                 .edges.map((edge) => ({ from: edge.from, to: edge.to })),
+        focused: () => [...focused],
         failures: () =>
             useToasts
                 .getState()

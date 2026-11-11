@@ -42,10 +42,11 @@ interface HostNode {
     kind: string;
     title: string;
     text: string;
-    color: string | null;
+    color: PublicClient.NodeColor | null;
     bounds: { x: number; y: number; width: number; height: number };
     viewId: string;
     groupId: string | null;
+    hidden: boolean;
     agent?: Partial<PublicClient.AgentInfo>;
     subagents?: PublicTesting.TestSubagent[];
     path?: string;
@@ -152,6 +153,8 @@ export class TestHost {
     // The agent of a chat or terminal open as a view of its own, which has no node to carry it.
     readonly viewAgents = new Map<string, { agent?: Partial<PublicClient.AgentInfo>; subagents?: PublicTesting.TestSubagent[] }>();
     readonly providers: { id: string; name: string }[];
+    readonly focused: string[] = [];
+    canvasView: PublicClient.CanvasView;
     readonly watches = new Set<{ path: string; listener: () => void }>();
     readonly edges: { from: string; to: string }[] = [];
     readonly createdIds: string[] = [];
@@ -211,6 +214,12 @@ export class TestHost {
                   }));
         this.activeViewId = this.views[0]?.id ?? null;
         this.providers = (options.providers ?? [{ id: 'claude', name: 'Claude' }]).map((provider) => ({ ...provider }));
+        // A window of a laptop at 100%, from the canvas's origin, unless the test says otherwise.
+        this.canvasView = {
+            visible: { x: 0, y: 0, width: 1280, height: 800, ...options.canvas?.visible },
+            zoom: options.canvas?.zoom ?? 1,
+            gesture: options.canvas?.gesture ?? 'none'
+        };
 
         // A test server's `storage` is this host's `machine` storage, as on one machine: what either writes, the other reads.
         const server = this.answers.server === undefined ? undefined : machineStorageOf.get(this.answers.server);
@@ -234,6 +243,7 @@ export class TestHost {
                 bounds: node.bounds ?? { ...NOTE, x: 0, y: 0 },
                 viewId: node.view ?? this.activeViewId ?? '',
                 groupId: null,
+                hidden: node.hidden === true,
                 ...(node.agent === undefined ? {} : { agent: node.agent }),
                 ...(node.subagents === undefined ? {} : { subagents: node.subagents }),
                 ...(node.path === undefined ? {} : { path: node.path }),
@@ -490,7 +500,7 @@ export class TestHost {
         }
 
         this.nextId += 1;
-        this.nodes.set(id, { id, kind, title: '', text: '', color: null, bounds, viewId, groupId: null, ...details });
+        this.nodes.set(id, { id, kind, title: '', text: '', color: null, bounds, viewId, groupId: null, hidden: false, ...details });
         this.createdIds.push(id);
         this.changed();
         this.deliver('node.added', { node: this.info(id) });
@@ -656,6 +666,7 @@ export class TestHost {
             color: null,
             bounds: { x: 0, y: 0, width: 0, height: 0 },
             groupId: null,
+            hidden: false,
             viewId,
             machine: null,
             linkedTo: []
@@ -679,6 +690,7 @@ export class TestHost {
             color: node.color,
             bounds: { ...node.bounds },
             groupId: node.groupId,
+            hidden: node.hidden,
             viewId: node.viewId,
             machine: null,
             // Once each, also where a pair of lines runs both ways between two agents.
