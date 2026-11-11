@@ -51,7 +51,7 @@ const ROUGHNESS: Array<{ value: DrawingStyle['roughness']; key: string }> = [
 
 const FONTS: Array<DrawingStyle['font']> = ['hand', 'sans', 'mono'];
 
-const TEXT_SIZES = [16, 20, 28, 36];
+const TEXT_SIZES = [16, 20, 28, 36, 48, 64, 96];
 
 const ALIGNMENTS: Array<DrawingStyle['align']> = ['left', 'center', 'right'];
 
