@@ -2,7 +2,14 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { BYTES_CHUNK_MAX, DESIGN_PAGE_MAX_BYTES, DESIGN_PAGE_SENT_MAX_BYTES, injectVisualBootstrap, type ProjectView } from '@ruimte/contracts';
+import {
+    BYTES_CHUNK_MAX,
+    DESIGN_PAGE_MAX_BYTES,
+    DESIGN_PAGE_SENT_MAX_BYTES,
+    injectVisualBootstrap,
+    type ProjectView,
+    type ServerFrame
+} from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
 import { HeldDesignPages } from '../fs/held-design-pages.ts';
 import { bytesArea } from './bytes.ts';
@@ -164,15 +171,26 @@ describe('a page of a design', () => {
         expect(await ask('index.html', 'client', 'canvas')).toMatchObject({ ok: false, error: { code: 'not-a-design' } });
     });
 
-    test('is held for nobody when its client left while it was built', async () => {
+    test('is held for nobody when its client left after it asked', async () => {
         await writeFile(join(folder, 'index.html'), '<p>one</p>');
+        const frames: ServerFrame[] = [];
+        const client = { id: 'client', closed: false, send: (frame: ServerFrame) => frames.push(frame) };
+        const leaving = new Dispatcher();
+        designArea({
+            projectOf: async () => {
+                client.closed = true;
+                return { folder: project, views: VIEWS, shared: [] };
+            },
+            pages
+        }).handlers?.(leaving);
         const hold = spyOn(pages, 'hold');
-        const gone = { id: 'client', closed: true };
 
-        expect(await askOnce(dispatcher, gone, 'design.page', { projectId: 'project', designId: 'onboarding', file: 'index.html' })).toMatchObject({
-            ok: false,
-            error: { code: 'closed' }
-        });
+        await leaving.handle(
+            client,
+            JSON.stringify({ id: 'request', type: 'design.page', payload: { projectId: 'project', designId: 'onboarding', file: 'index.html' } })
+        );
+
+        expect(frames[0]).toMatchObject({ ok: false, error: { code: 'closed' } });
         expect(hold).not.toHaveBeenCalled();
     });
 });
