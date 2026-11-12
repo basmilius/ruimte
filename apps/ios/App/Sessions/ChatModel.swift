@@ -614,14 +614,14 @@ final class ChatModel {
     }
 
     /// Whether a request that failed this way may still have reached the machine.
-    private static func mayHaveArrived(_ error: Error) -> Bool {
+    static func mayHaveArrived(_ error: Error) -> Bool {
         switch error as? MachineClientError {
         case .disconnected?, .timeout?, .invalid?: true
         default: false
         }
     }
 
-    private static let uncertainSendMessage =
+    static let uncertainSendMessage =
         String(
             localized:
                 "Sending was interrupted. The machine may already have it, so check the chat before you send again."

@@ -183,7 +183,17 @@ import XCTest
 
         let problem = await ChatHeldMessages.deliver(chatID: "chat", client: client)
 
-        XCTAssertEqual(problem, "The chat is busy")
+        XCTAssertEqual(problem, "The messages could not be delivered: The chat is busy")
+    }
+
+    func testDeliverNowAsksToCheckTheChatWhenTheAnswerGotLost() async {
+        client.failure = .disconnected
+
+        let problem = await ChatHeldMessages.deliver(chatID: "chat", client: client)
+
+        XCTAssertEqual(
+            problem,
+            "Sending was interrupted. The machine may already have it, so check the chat before you send again.")
     }
 
     private func queueInfo(_ queue: [ChatInfoQueueItem]) -> ChatInfo {

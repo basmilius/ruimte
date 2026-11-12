@@ -175,7 +175,13 @@ enum ChatHeldMessages {
             AppUsage.count(.messageSent)
             return nil
         } catch {
-            return error.localizedDescription
+            // A second prompt after a lost answer would start a second turn.
+            if ChatModel.mayHaveArrived(error) {
+                return ChatModel.uncertainSendMessage
+            }
+            return String(
+                localized: "The messages could not be delivered: \(error.localizedDescription)",
+                comment: "%@ is the reason the machine gave")
         }
     }
 }
@@ -203,8 +209,7 @@ struct ChatHeldMessageState: View {
                 .disabled(sending)
             }
             if let problem {
-                Text("The messages could not be delivered: \(problem)", comment: "%@ is the reason the machine gave")
-                    .foregroundStyle(MobileStyle.statusError)
+                Text(problem).foregroundStyle(MobileStyle.statusError)
             }
         }
         .font(.caption).foregroundStyle(MobileStyle.muted).frame(maxWidth: .infinity, alignment: .leading)
