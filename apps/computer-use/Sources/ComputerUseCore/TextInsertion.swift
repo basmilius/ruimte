@@ -14,8 +14,12 @@ public enum TextInsertion {
     }
 
     /// Whether the write changed the value. A field may format what it got, so any change counts; only an unchanged
-    /// value sends the keys after it, which keeps a slow field from getting the text twice.
-    public static func landed(before: String, after: String?) -> Bool {
-        after != nil && after != before
+    /// value sends the keys after it, which keeps a slow field from getting the text twice. A selection replaced by the
+    /// same text leaves the value as it was, so that write landed too; keys after it would type the text again.
+    public static func landed(before: String, after: String?, replacing selected: String?, with text: String) -> Bool {
+        guard let after else {
+            return false
+        }
+        return after != before || selected == text
     }
 }

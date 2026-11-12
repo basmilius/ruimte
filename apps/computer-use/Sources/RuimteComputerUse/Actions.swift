@@ -653,13 +653,16 @@ extension Agent {
             return false
         }
         // A value that cannot be read cannot show whether the write landed, and keys after a write that did would type twice.
-        guard let before = AX.attribute(field, kAXValueAttribute) as? String,
-              AXUIElementSetAttributeValue(field, kAXSelectedTextAttribute as CFString, text as CFString) == .success else {
+        guard let before = AX.attribute(field, kAXValueAttribute) as? String else {
+            return false
+        }
+        let selected = AX.attribute(field, kAXSelectedTextAttribute) as? String
+        guard AXUIElementSetAttributeValue(field, kAXSelectedTextAttribute as CFString, text as CFString) == .success else {
             return false
         }
         for _ in 0..<5 {
             try? await Task.sleep(for: .milliseconds(60))
-            if TextInsertion.landed(before: before, after: AX.attribute(field, kAXValueAttribute) as? String) {
+            if TextInsertion.landed(before: before, after: AX.attribute(field, kAXValueAttribute) as? String, replacing: selected, with: text) {
                 return true
             }
         }
