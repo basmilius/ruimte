@@ -812,9 +812,13 @@
             "hide": "Hide Ruimte",
             "hideOthers": "Hide other apps",
             "minimize": "Minimize window",
+            "minimizeOutsideEditor": "Minimize window (outside the editor)",
             "fullScreen": "Full screen",
             "developerTools": "Developer tools",
-            "quit": "Quit Ruimte"
+            "redoText": "Redo in a text field",
+            "redoTextOutsideEditor": "Redo in a text field (outside the editor)",
+            "quit": "Quit Ruimte",
+            "quitOutsideCode": "Quit Ruimte (outside a code file)"
         },
         "canvas": {
             "palette": "Command palette",

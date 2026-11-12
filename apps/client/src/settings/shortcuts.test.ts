@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { shortcutText } from '@adecore/ui';
+import { shortcut, shortcutText } from '@adecore/ui';
 import { overridesSnapshot } from '@/surface/shortcut-overrides';
 import { filterShortcuts, shortcutGroupOf, shortcutGroups, shortcutRowId } from './shortcuts.ts';
 
@@ -32,14 +32,31 @@ describe('shortcutGroups', () => {
             );
         });
 
-        test('Linux quits on Mod+Q and Windows redoes on Mod+Y instead', () => {
-            const shared = ['Cut Mod+X', 'Minimize window Mod+M', 'Full screen F11', 'Developer tools Mod+Shift+I'];
+        test('Linux quits on Mod+Q and Windows redoes in a text field on Mod+Y instead, each outside the editor that shares the key', () => {
+            const shared = ['Cut Mod+X', 'Minimize window (outside the editor) Mod+M', 'Full screen F11', 'Developer tools Mod+Shift+I'];
 
-            expect(general(false, 'linux')).toEqual(expect.arrayContaining([...shared, 'Quit Ruimte Mod+Q']));
-            expect(general(false, 'linux')).not.toContain('Redo Mod+Y');
-            expect(general(false, 'win32')).toEqual(expect.arrayContaining([...shared, 'Redo Mod+Y']));
-            expect(general(false, 'win32')).not.toContain('Quit Ruimte Mod+Q');
+            expect(general(false, 'linux')).toEqual(expect.arrayContaining([...shared, 'Quit Ruimte (outside a code file) Mod+Q']));
+            expect(general(false, 'linux').some((row) => row.startsWith('Redo'))).toBe(false);
+            expect(general(false, 'win32')).toEqual(expect.arrayContaining([...shared, 'Redo in a text field (outside the editor) Mod+Y']));
+            expect(general(false, 'win32').some((row) => row.startsWith('Quit Ruimte'))).toBe(false);
             expect(general(false, 'linux')).not.toContain('Hide Ruimte Mod+H');
+        });
+
+        test('a row drops the editor once a person moved the editor off its key', () => {
+            const moved = {
+                keys: new Map([
+                    ['matchBrace', shortcut('Ctrl+Alt+M')],
+                    ['deleteLine', shortcut('Ctrl+Alt+Y')],
+                    ['quickInfo', shortcut('Ctrl+Alt+Q')]
+                ])
+            };
+            const rows = (shell: string): string[] =>
+                shortcutGroups(false, moved, shell)
+                    .find((group) => group.id === 'general')!
+                    .shortcuts.map((row) => `${row.label} ${shortcutText(row.keys)}`);
+
+            expect(rows('win32')).toEqual(expect.arrayContaining(['Minimize window Mod+M', 'Redo in a text field Mod+Y']));
+            expect(rows('linux')).toContain('Quit Ruimte Mod+Q');
         });
 
         test.each([true, false])('a browser tab lists cut and no key of a shell it lacks, apple %p', (apple) => {

@@ -1,10 +1,13 @@
 import { SEND_AND_NEW_SHORTCUT } from '@adecore/agents-react/chat';
 import { PROMPT_SHORTCUTS } from '@adecore/agents-react/prompts';
+import type { KeymapId } from '@adecore/editor/keymap';
 import { KEY_SHORTCUTS, shortcut, shortcutParts, type Shortcut } from '@adecore/ui';
 import i18next from 'i18next';
 import { desktop } from '@/desktop/bridge';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
+import { sameKey } from '@/settings/shortcut-refusal';
 import { CANVAS_SHORTCUTS, VIEW_SHORTCUTS } from '@/surface/canvas/shortcuts';
+import { shortcutFor } from '@/surface/editor-keymap';
 import { keyIn, overridesSnapshot, type OverrideSnapshot, type RowId } from '@/surface/shortcut-overrides';
 import { CLEAR_SHORTCUT, LEAVE_NODE_SHORTCUT, platformShortcut, TERMINAL_FIND_SHORTCUT } from '@/surface/terminal-keymap';
 
@@ -44,13 +47,20 @@ export function shellPlatform(): string | null {
     return desktop()?.platform ?? null;
 }
 
+/* Whether the editor answers this key off macOS. Electron runs a role's key only when the page did not take it, so a focused editor that does wins. */
+function editorKeeps(snapshot: OverrideSnapshot, id: KeymapId, keys: Shortcut): boolean {
+    const held = snapshot.keys.get(id) ?? shortcutFor(id, false);
+
+    return held !== undefined && sameKey(held, keys, false);
+}
+
 /*
  * What the shell's menu binds at an Electron role's default key, or at a key of its own (devtools in
  * `apps/desktop/src/main/menu.ts`); the roles are placed in `shell/menu/model.ts`. Electron's quit has no key
- * on Windows, and its redo takes Ctrl+Y there. The role that closes a window is left out: it only stands while
- * no cell is open, and closing a cell holds the same key otherwise.
+ * on Windows, and its redo takes Ctrl+Y there, the native redo of the focused text field. The role that closes a
+ * window is left out: it only stands while no cell is open, and closing a cell holds the same key otherwise.
  */
-function shellRows(shell: string | null): ShortcutRow[] {
+function shellRows(shell: string | null, snapshot: OverrideSnapshot): ShortcutRow[] {
     if (shell === null) {
         return [];
     }
@@ -66,11 +76,20 @@ function shellRows(shell: string | null): ShortcutRow[] {
         ];
     }
 
+    // Quick info answers Ctrl+Q only in a file with a language, so that row names a code file.
+    const shared = (text: string, id: KeymapId, plain: string, kept: string): ShortcutRow => {
+        const keys = shortcut(text);
+
+        return { keys, label: say(editorKeeps(snapshot, id, keys) ? kept : plain) };
+    };
+
     return [
-        { keys: shortcut('Mod+M'), label: say('app.minimize') },
+        shared('Mod+M', 'matchBrace', 'app.minimize', 'app.minimizeOutsideEditor'),
         { keys: shortcut('F11'), label: say('app.fullScreen') },
         { keys: shortcut('Mod+Shift+I'), label: say('app.developerTools') },
-        shell === 'win32' ? { keys: shortcut('Mod+Y'), label: say('canvas.redo') } : { keys: shortcut('Mod+Q'), label: say('app.quit') }
+        shell === 'win32'
+            ? shared('Mod+Y', 'deleteLine', 'app.redoText', 'app.redoTextOutsideEditor')
+            : shared('Mod+Q', 'quickInfo', 'app.quit', 'app.quitOutsideCode')
     ];
 }
 
@@ -89,7 +108,7 @@ export function shortcutGroups(apple: boolean, snapshot: OverrideSnapshot = over
                 { keys: shortcut('Alt'), then: i18next.t('settings:gesture.hold'), label: say('canvas.usagePeek') },
                 { id: 'voice-control', keys: keyIn(snapshot, 'voice-control'), label: i18next.t('voice:shortcut') },
                 { keys: shortcut('Mod+X'), label: say('app.cut') },
-                ...shellRows(shell)
+                ...shellRows(shell, snapshot)
             ]
         },
         {

@@ -41,7 +41,8 @@ interface RefusalContext {
  * Why a recorded key is refused for a row, or null when it may be the row's. Every shortcut needs Mod, Ctrl, Meta or
  * Alt, since Shift alone is a letter typed. A key another row answers to is not taken from it, whether the row can be
  * rebound or is fixed: the panel lists them all, so the holder is named from it. Where a key is used (a canvas, a
- * terminal, an editor) stays out of it, because nearly every key overlaps another place somewhere.
+ * terminal, an editor) stays out of it, because nearly every key overlaps another place somewhere. The exception is the
+ * row's own default: off macOS the editor ships Ctrl+M, Ctrl+Y and Ctrl+Q beside the menu's fixed rows on those keys.
  */
 export function refusalOf(next: Shortcut, row: RowId, groups: readonly ShortcutGroup[], { apple, browserTab }: RefusalContext): ShortcutRefusal | null {
     if (!(next.mod || next.ctrl || next.meta || next.alt)) {
@@ -58,6 +59,13 @@ export function refusalOf(next: Shortcut, row: RowId, groups: readonly ShortcutG
 
     if (browserTab && kept.some((key) => shortcutText(key) === shortcutText(next))) {
         return { reason: 'browser' };
+    }
+
+    const shipped = defaultKeyOf(row);
+
+    // Pressing the row's own default is a reset by hand, so it may share that key as a reset may.
+    if (shipped !== undefined && sameKey(shipped, next, apple)) {
+        return resetRefusalOf(shipped, row, groups, apple);
     }
 
     return takenBy(next, row, groups, apple);

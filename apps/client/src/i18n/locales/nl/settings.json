@@ -812,9 +812,13 @@
             "hide": "Ruimte verbergen",
             "hideOthers": "Andere apps verbergen",
             "minimize": "Venster minimaliseren",
+            "minimizeOutsideEditor": "Venster minimaliseren (buiten de editor)",
             "fullScreen": "Volledig scherm",
             "developerTools": "Developer Tools",
-            "quit": "Ruimte afsluiten"
+            "redoText": "Opnieuw in een tekstveld",
+            "redoTextOutsideEditor": "Opnieuw in een tekstveld (buiten de editor)",
+            "quit": "Ruimte afsluiten",
+            "quitOutsideCode": "Ruimte afsluiten (buiten een codebestand)"
         },
         "canvas": {
             "palette": "Opdrachtenpalet",

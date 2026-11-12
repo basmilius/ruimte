@@ -92,13 +92,25 @@ describe('refusalOf against the fixed keys', () => {
     });
 
     test('refuses the keys of the Windows and Linux shells', () => {
-        expect(refusalIn('Mod+Y', false, 'win32')).toEqual({ reason: 'taken', label: 'Redo' });
-        expect(refusalIn('Mod+Q', false, 'linux')).toEqual({ reason: 'taken', label: 'Quit Ruimte' });
-        expect(refusalIn('Mod+Q', false, 'win32')).not.toEqual({ reason: 'taken', label: 'Quit Ruimte' });
+        expect(refusalIn('Mod+Y', false, 'win32')).toEqual({ reason: 'taken', label: 'Redo in a text field (outside the editor)' });
+        expect(refusalIn('Mod+Q', false, 'linux')).toEqual({ reason: 'taken', label: 'Quit Ruimte (outside a code file)' });
+        expect(refusalIn('Mod+Q', false, 'win32')).not.toMatchObject({ label: expect.stringMatching(/^Quit Ruimte/) });
 
         for (const shell of ['win32', 'linux']) {
             expect(takenOn('Mod+M', false, shell), shell).toBe(true);
             expect(takenOn('Mod+Shift+I', false, shell), shell).toBe(true);
+        }
+    });
+
+    test('lets an editor row take back the default it shares with a fixed key, and no other row', () => {
+        for (const shell of ['win32', 'linux']) {
+            const moved = keyboardGroups(false, { keys: new Map([['matchBrace', shortcut('Ctrl+Alt+M')]]) }, shell);
+
+            expect(refusalOf(shortcut('Ctrl+M'), 'matchBrace', moved, { apple: false, browserTab: false }), shell).toBeNull();
+            expect(refusalOf(shortcut('Ctrl+M'), 'goToSymbol', moved, { apple: false, browserTab: false }), shell).toEqual({
+                reason: 'taken',
+                label: 'Minimize window'
+            });
         }
     });
 

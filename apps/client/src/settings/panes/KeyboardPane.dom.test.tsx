@@ -9,7 +9,7 @@ import { useUi } from '@/state/ui';
 import { DEFAULT_KEYS } from '@/surface/default-keys';
 import { isShortcutRecording, removeOverrideOf } from '@/surface/shortcut-overrides';
 import { clickOn, mount, pressKey, until, type Mounted } from '../../../testing/dom';
-import { buttonWithText, everything } from '../../../testing/dom-helpers';
+import { buttonWithText, everything, installDesktop, removeDesktop } from '../../../testing/dom-helpers';
 import { KeyboardPane } from './KeyboardPane';
 
 const apple = isApplePlatform();
@@ -197,5 +197,45 @@ describe('rebinding in the Keyboard pane', () => {
         await record('Command palette', 'y', { ...MOD, altKey: true });
 
         expect(buttonWithText('Restore defaults')!.disabled).toBe(false);
+    });
+});
+
+describe.each([
+    ['win32', 'Redo in a text field (outside the editor)'],
+    ['linux', 'Quit Ruimte (outside a code file)']
+] as const)('the keys the editor shares with the menu, on %s', (platform, lastRow) => {
+    beforeEach(async () => {
+        await page.unmount();
+        installDesktop({ platform });
+        page = mount();
+        await page.render(<KeyboardPane />);
+    });
+
+    afterEach(() => {
+        removeOverrideOf(['matchBrace', 'goToSymbol']);
+        removeDesktop();
+    });
+
+    const openCategory = async (title: string): Promise<void> => {
+        await clickOn([...document.querySelectorAll('button')].find((button) => button.textContent?.startsWith(title)) ?? null);
+    };
+
+    test('the menu rows say that the editor keeps their keys', () => {
+        expect(everything()).toContain('Minimize window (outside the editor)');
+        expect(everything()).toContain(lastRow);
+    });
+
+    test('the editor row takes its default back by hand, and another row is refused it', async () => {
+        await openCategory('Editor navigation');
+        await record('Move to matching bracket', 'm', { ctrlKey: true, altKey: true });
+        await record('Move to matching bracket', 'm', { ctrlKey: true });
+
+        expect(isShortcutRecording()).toBe(false);
+        expect(recorder('Move to matching bracket')!.textContent).not.toContain('Alt');
+
+        await record('Go to symbol', 'm', { ctrlKey: true });
+
+        expect(everything()).toContain('Minimize window (outside the editor) already uses this key');
+        expect(isShortcutRecording()).toBe(true);
     });
 });
