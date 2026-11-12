@@ -69,7 +69,7 @@ The repo is a Bun workspace. The core is `apps/client` (React UI), `apps/server`
 
 ## Release
 
-`bun run dist` builds the client, compiles the daemon for this machine and packages the desktop app into `apps/desktop/release`, signed when a Developer ID is in the keychain. A `v*` tag does the same on GitHub Actions for macOS and Linux and uploads a draft release the app updates from. The tag also runs the iPhone app's tests, which the release does not wait for. See `docs/RELEASE.md`.
+`bun run dist` builds the client, compiles the daemon for this machine and packages the desktop app into `apps/desktop/release`, signed when a Developer ID is in the keychain. A `v*` tag does the same on GitHub Actions for macOS and Linux and uploads a draft release the app updates from. See `docs/RELEASE.md`.
 
 ## License
 
