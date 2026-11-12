@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import { useProviderAccountsStore } from '@adecore/agents-react/state';
 import { EditorView } from '@codemirror/view';
-import type { EndpointInfo, ProjectView } from '@ruimte/contracts';
+import type { EndpointInfo, EventMap, ProjectDocument, ProjectView } from '@ruimte/contracts';
 import { act } from 'react';
 import { useServers } from '@/state/server';
 import { startServerInfo } from '@/workspace/server-info';
@@ -23,6 +24,27 @@ const CLAUDE = {
     ]
 };
 
+type Accounts = EventMap['accounts.changed'];
+
+// Claude Code's own login and a second account beside it, both signed in, so the CLI offers a choice.
+const TWO_ACCOUNTS: Accounts = {
+    accounts: {
+        claude: { kind: 'claude', label: 'Personal' },
+        claude_work: { kind: 'claude', label: 'Work', home: '~/.claude-work' }
+    },
+    statuses: ['claude', 'claude_work'].map((id) => ({
+        id,
+        kind: 'claude',
+        state: 'ready' as const,
+        email: null,
+        plan: null,
+        organization: null,
+        home: '',
+        message: null,
+        checkedAt: 1
+    }))
+};
+
 let machine: FakeMachine;
 let workspace: FakeWorkspace;
 let page: Mounted;
@@ -34,7 +56,7 @@ afterEach(async () => {
     workspace.close();
 });
 
-async function open(id: string): Promise<void> {
+async function open(id: string, project: Pick<ProjectDocument, 'accounts'> = {}, accounts?: Accounts): Promise<void> {
     lead = { kind: 'chat', id, name: 'Lead', node: { provider: 'claude' } };
     machine = new FakeMachine();
     const info: EndpointInfo = { id: MACHINE, label: 'Fake machine', platform: 'darwin', version: '1', reachability: 'lan', authenticated: true };
@@ -43,7 +65,12 @@ async function open(id: string): Promise<void> {
     machine.answer('fs.search', () => ({ files: ['src/options.ts'], truncated: false }));
     machine.answer('chat.attach', ({ chatId }) => ({ info: chatInfoOf(chatId), items: [], seq: 0 }) as never);
     machine.answer('chat.send', () => ({ queued: false, turnId: 'turn-1' }));
-    workspace = await openFakeWorkspace(machine, { views: [lead] } as never, { activeViewId: lead.id, views: {} });
+
+    if (accounts !== undefined) {
+        machine.answer('accounts.list', () => accounts);
+    }
+
+    workspace = await openFakeWorkspace(machine, { ...project, views: [lead] } as never, { activeViewId: lead.id, views: {} });
     stopInfo = startServerInfo();
     page = mount();
     await page.renderApp();
@@ -90,5 +117,26 @@ describe('an @ in the composer', () => {
         const sent = machine.requests('chat.send')[0]!;
         expect(sent.text).toBe('Ask an agent on @model:claude/claude-opus-5-5');
         expect(sent.mentions ?? []).toEqual([]);
+    });
+
+    test('offers Accounts above Files by the name a person gave the account, and Enter sends its token as text', async () => {
+        await open('chat-tag-account', {}, TWO_ACCOUNTS);
+        await type('Start one on @wo');
+        await until(() => option('Work') !== null && option('options.ts') !== null);
+        expect(labels()).toEqual(['Accounts', 'Files']);
+        await pressKey(composer()!.contentDOM, 'Enter');
+        expect(composer()!.state.doc.toString()).toBe('Start one on @account:claude/claude_work ');
+        await pressKey(composer()!.contentDOM, 'Enter');
+        await until(() => machine.requests('chat.send').length === 1);
+        expect(machine.requests('chat.send')[0]!.text).toBe('Start one on @account:claude/claude_work');
+    });
+
+    test('leaves out an account the project turned off', async () => {
+        await open('chat-tag-account-off', { accounts: { claude: { off: ['claude_work'] } } }, TWO_ACCOUNTS);
+        await until(() => useProviderAccountsStore.getState().byScope[MACHINE]?.accounts?.accounts.claude_work !== undefined);
+        await type('@wo');
+        await until(() => option('options.ts') !== null);
+        expect(option('Work')).toBeNull();
+        expect(labels()).not.toContain('Accounts');
     });
 });
