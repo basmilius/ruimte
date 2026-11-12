@@ -115,6 +115,7 @@
 		3AF2536CFF4F274E9CA1F5B2 /* CanvasPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78AF6CD8C27D406B882C8FA0 /* CanvasPage.swift */; };
 		3D31A6E3A8580B2F81EE4763 /* ChatTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5566FA42E11FDC5B932C0F2E /* ChatTimeline.swift */; };
 		3D8352D2B97EFFBBE304F95F /* FileImagePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA4765B876EC0A5E3E010F07 /* FileImagePreview.swift */; };
+		3E3F44766B54ED09ED78DA5E /* ChatProposalCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 940A7B8427E44F8333FC72DE /* ChatProposalCard.swift */; };
 		3E72CBBB8FE40D0F094DE4F5 /* DefaultsKeysTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F186BBDA9E215B7EFE782B1F /* DefaultsKeysTests.swift */; };
 		3EBE35F7FD0FFAD39A87B971 /* ChatCommandLookTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 728B24E68603C4D94EB46173 /* ChatCommandLookTests.swift */; };
 		3EE3CE8C06BB6F881F6D0084 /* GitPrompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13C495C7F630954ED25CCCA0 /* GitPrompts.swift */; };
@@ -237,6 +238,7 @@
 		7A520DCC7261AB8C8C61F18C /* WelcomePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FAE5DD971FEE4F7A8B224B1 /* WelcomePage.swift */; };
 		7A56FE4D5A125ECE0A147680 /* MarkdownMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BE4363568E169F410A081A3 /* MarkdownMessage.swift */; };
 		7AEE793BDD608D77668AD964 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 60EEB414617E97AC9D64F858 /* Localizable.xcstrings */; };
+		7B01D40B5D53803C860B23C1 /* ChatProposalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B227B209CC53610BB52A5B72 /* ChatProposalTests.swift */; };
 		7BF0F27B9375E82D3B6BA6F8 /* NowModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EC0A126483A8203A7FE246D /* NowModel.swift */; };
 		7C021922761DDE49CD44ACEC /* MachineClientsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D233E5DDE66A2D11678E13AF /* MachineClientsSection.swift */; };
 		7D06E14FCBC8F6A1D2A998B3 /* NowBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B4F8B71A7CEC7F5A3E054F /* NowBoard.swift */; };
@@ -369,6 +371,7 @@
 		BE1FC7E879672EE54B406771 /* image.avif in Resources */ = {isa = PBXBuildFile; fileRef = 0790625A936C5BDBE201290C /* image.avif */; };
 		BF7E64934D21FD6760B95A19 /* SettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58D66111716096D21434ACBD /* SettingsTests.swift */; };
 		C0020C1C78C1D381817A0A85 /* SessionEndingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C065964C913B37E64C3EC24C /* SessionEndingTests.swift */; };
+		C0134073B221BD2DD5B4BB2B /* ProposalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9CD1A1B9D6518A8F9D6D44 /* ProposalStore.swift */; };
 		C04438E0889B85DD0C2280F0 /* document.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 7972284E09464A057A24B05F /* document.pdf */; };
 		C054F0A30DFF3ECB484AA3A5 /* VoiceWaveform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 153AD37ADA3F11EE2D4F3090 /* VoiceWaveform.swift */; };
 		C077E0093362AFCFC0EE2B3F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2C204ABF7BF115B3485C914E /* Assets.xcassets */; };
@@ -644,6 +647,7 @@
 		38E8FD76F34A66ED806FAE38 /* AgentDirectory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentDirectory.swift; sourceTree = "<group>"; };
 		39056D51C8E87E6BB0A1342B /* CanvasEditing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasEditing.swift; sourceTree = "<group>"; };
 		3A2764A51BCE359F3B4CCA36 /* UsageWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageWidget.swift; sourceTree = "<group>"; };
+		3A9CD1A1B9D6518A8F9D6D44 /* ProposalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProposalStore.swift; sourceTree = "<group>"; };
 		3ADF9EDED24291297CDF6751 /* CanvasDock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasDock.swift; sourceTree = "<group>"; };
 		3B40C228DD8D4FB4A5D62BB5 /* Lucide-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Lucide-LICENSE.txt"; sourceTree = "<group>"; };
 		3C313F3BEFC69407AE4E76C7 /* NowCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowCard.swift; sourceTree = "<group>"; };
@@ -799,6 +803,7 @@
 		92A8BFBDA0D41AEB14C54798 /* ChatResume.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatResume.swift; sourceTree = "<group>"; };
 		93217FEE09EFAED02A0593EA /* SubagentPages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubagentPages.swift; sourceTree = "<group>"; };
 		93D01ABC623CFE597F34A563 /* DrawingToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawingToolbar.swift; sourceTree = "<group>"; };
+		940A7B8427E44F8333FC72DE /* ChatProposalCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatProposalCard.swift; sourceTree = "<group>"; };
 		9447D15E48181E5F166E22A6 /* WorkspacePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspacePage.swift; sourceTree = "<group>"; };
 		944B9AE808B11D2BDF440B92 /* ProjectGroupsList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectGroupsList.swift; sourceTree = "<group>"; };
 		945C01FE70408377BA62088E /* CanvasStartGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasStartGrid.swift; sourceTree = "<group>"; };
@@ -860,6 +865,7 @@
 		AF6EAE616EB81DCA19EC6BAA /* GitDiffPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitDiffPage.swift; sourceTree = "<group>"; };
 		AFF728C8CD0A70E0529D27A2 /* ChatActivityChips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatActivityChips.swift; sourceTree = "<group>"; };
 		B18EA9099D4112D211FABBF0 /* DesignPlaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignPlaceTests.swift; sourceTree = "<group>"; };
+		B227B209CC53610BB52A5B72 /* ChatProposalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatProposalTests.swift; sourceTree = "<group>"; };
 		B22BE2076F9548674B7672E9 /* view-references.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "view-references.json"; sourceTree = "<group>"; };
 		B2A0B61894B8901DF4DBB313 /* MachineAccessSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineAccessSheet.swift; sourceTree = "<group>"; };
 		B2B20289635C51CC4B96248C /* FileKinds.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileKinds.swift; sourceTree = "<group>"; };
@@ -1106,6 +1112,7 @@
 				2AB8990ABCF1414440995DE4 /* ProjectsPage.swift */,
 				9AB9B459492C2AF8E3631D88 /* ProjectSVGRasterizer.swift */,
 				A7806958A715171F299C2B24 /* ProjectViewList.swift */,
+				3A9CD1A1B9D6518A8F9D6D44 /* ProposalStore.swift */,
 				089B611A941366002AA1307E /* RenderDocumentPage.swift */,
 				9E090439358C62866638E3DD /* SessionEnding.swift */,
 				653536E5B98BEFB676B13733 /* SharedMachineSession.swift */,
@@ -1426,6 +1433,7 @@
 				FF9029F76C5575EFD4782635 /* ChatPreferencesTests.swift */,
 				29EB1C15C9B520845CD3BB82 /* ChatPresentationTests.swift */,
 				BF96EC87E6B24E01AC048549 /* ChatPromptStateTests.swift */,
+				B227B209CC53610BB52A5B72 /* ChatProposalTests.swift */,
 				3624EE4FCD7DDACB13162418 /* ChatReferenceTests.swift */,
 				CAFAE60EC449D98A00A78F32 /* ChatResumeOfferTests.swift */,
 				E8B857DADDF760B5989FC34A /* ChatResumeTests.swift */,
@@ -1768,6 +1776,7 @@
 				59965D01855765D4A850A9AD /* ChatPromptCard.swift */,
 				FA47C5156D96FA80DF6383D2 /* ChatPromptFeed.swift */,
 				07925406E3DF19A644D70108 /* ChatPromptState.swift */,
+				940A7B8427E44F8333FC72DE /* ChatProposalCard.swift */,
 				CDEBDA8A3C104C2C7998E957 /* ChatQueueSheet.swift */,
 				36AEFCFE1AA942F03736757A /* ChatReferables.swift */,
 				92A8BFBDA0D41AEB14C54798 /* ChatResume.swift */,
@@ -2113,6 +2122,7 @@
 				F0D66FF5708BF6087C3BF13E /* ChatPreferencesTests.swift in Sources */,
 				397C943D1175F19383822284 /* ChatPresentationTests.swift in Sources */,
 				335A19076A65C7684FE67F22 /* ChatPromptStateTests.swift in Sources */,
+				7B01D40B5D53803C860B23C1 /* ChatProposalTests.swift in Sources */,
 				00664FE5C6F8D60665554A03 /* ChatReferenceTests.swift in Sources */,
 				018867BA4486AABC0B16A17E /* ChatResumeOfferTests.swift in Sources */,
 				ED7E9FDFE5EB181359B74D95 /* ChatResumeTests.swift in Sources */,
@@ -2277,6 +2287,7 @@
 				F738896288E2FA173ED71E91 /* ChatPromptCard.swift in Sources */,
 				9556D3E2663644A03231E7CA /* ChatPromptFeed.swift in Sources */,
 				0F2AF4A02D667182FE086D79 /* ChatPromptState.swift in Sources */,
+				3E3F44766B54ED09ED78DA5E /* ChatProposalCard.swift in Sources */,
 				832DDD2D985B451DDE2F7F8D /* ChatQueueSheet.swift in Sources */,
 				8803F1FD43F24C7D90C35325 /* ChatReferables.swift in Sources */,
 				18FD13F7EAB89D49A766474E /* ChatResume.swift in Sources */,
@@ -2443,6 +2454,7 @@
 				29A814716172F5B8F668D625 /* ProjectViewPage.swift in Sources */,
 				01D98A53201A53AD7A85935B /* ProjectWidgetRecorder.swift in Sources */,
 				653194255B85E3B0D1DB48D6 /* ProjectsPage.swift in Sources */,
+				C0134073B221BD2DD5B4BB2B /* ProposalStore.swift in Sources */,
 				ACE9FB1C18790F16F84B41A6 /* ProviderAccountEditor.swift in Sources */,
 				FBCC63860740FE29DB14145A /* RemotePageState.swift in Sources */,
 				F6559A2EF1AE52B8885568D7 /* RenderDocumentPage.swift in Sources */,

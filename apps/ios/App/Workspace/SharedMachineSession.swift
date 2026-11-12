@@ -41,6 +41,7 @@ final class SharedMachineSession {
     @ObservationIgnored lazy var attention = AttentionStore(client: rpc)
     @ObservationIgnored lazy var tasks = TaskStore(client: rpc)
     @ObservationIgnored lazy var plans = PlanStore(client: rpc)
+    @ObservationIgnored lazy var proposals = ProposalStore(client: rpc)
     @ObservationIgnored lazy var icons = MachineIconState(client: rpc, fallback: machine.icon)
     @ObservationIgnored lazy var endpoint = MachineEndpoint(
         client: rpc, machineID: machine.id,
@@ -119,6 +120,7 @@ final class SharedMachineSession {
         snoozes.start()
         tasks.start()
         plans.start()
+        proposals.start()
         icons.start()
         endpoint.start()
         usageWidget.start()
@@ -157,6 +159,7 @@ final class SharedMachineSession {
         snoozes.stop()
         tasks.stop()
         plans.stop()
+        proposals.stop()
         icons.stop()
         endpoint.stop()
         usageWidget.stop()

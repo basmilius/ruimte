@@ -26236,6 +26236,146 @@
           }
         }
       }
+    },
+    "This chat suggests a project" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze chat stelt een project voor"
+          }
+        }
+      }
+    },
+    "Add %@ → port %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ toevoegen → poort %@"
+          }
+        }
+      }
+    },
+    "Turn on %@ → Ruimte MCP" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ aanzetten → Ruimte MCP"
+          }
+        }
+      }
+    },
+    "Turn on %@ → port %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ aanzetten → poort %@"
+          }
+        }
+      }
+    },
+    "Turn off %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ uitzetten"
+          }
+        }
+      }
+    },
+    "Point %@ → port %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ omzetten → poort %@"
+          }
+        }
+      }
+    },
+    "Host header %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Host-header %@"
+          }
+        }
+      }
+    },
+    "Anyone with the address reaches this dev server." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Iedereen met het adres bereikt deze dev server."
+          }
+        }
+      }
+    },
+    "%@ changed since the agent asked. Decline this and ask again." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is veranderd sinds de agent het vroeg. Weiger dit en vraag het opnieuw."
+          }
+        }
+      }
+    },
+    "Make it a project in Ruimte on the machine." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maak er een project van in Ruimte op de machine."
+          }
+        }
+      }
+    },
+    "Confirm this in Ruimte on the machine." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bevestig dit in Ruimte op de machine."
+          }
+        }
+      }
+    },
+    "Already answered or expired" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al beantwoord of verlopen"
+          }
+        }
+      }
+    },
+    "Decline" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weigeren"
+          }
+        }
+      }
+    },
+    "Declining…" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weigeren…"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

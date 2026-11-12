@@ -613,6 +613,10 @@ struct ChatScreen: View {
         HStack(alignment: .bottom, spacing: 16) {
             VStack(spacing: 0) {
                 if prompts.active == nil {
+                    if let proposals = machineSession?.proposals {
+                        ChatProposalDock(
+                            store: proposals, chatID: model.chatID, client: model.client, connected: model.connected)
+                    }
                     ChatGoalDock(model: model)
                     ChatCompactionDock(model: model)
                     ChatLimitBanner(
