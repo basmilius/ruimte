@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -13,6 +13,7 @@ import { OUTSIDE_CHECKOUT, projectLinks } from '../projects/project-file-test-he
 import { ProjectStore } from '../projects/project-store.ts';
 import type { ClientChannel } from '../wire.ts';
 import { projectArea } from './project.ts';
+import { askOnce } from './test-helpers.ts';
 
 class FakeChannel implements ClientChannel {
     readonly frames: ServerFrame[] = [];
@@ -257,6 +258,21 @@ describe('a client that goes while a project opens', () => {
         await reply;
 
         expect(store.closing(clients.b.connection.client.id, projectId).otherClients).toBe(0);
+    });
+});
+
+describe('a client that goes while it asks to watch the list', () => {
+    test('is not left watching it', async () => {
+        const dispatcher = new Dispatcher();
+        projectArea({ store, scratch: OUTSIDE_CHECKOUT, inline: NO_INLINE_CHATS, reachOpenProjects: () => false }).handlers?.(dispatcher);
+        const watchList = spyOn(store, 'watchList');
+        const gone = { id: 'gone', closed: true };
+
+        expect(await askOnce(dispatcher, gone, 'project.watch', {})).toMatchObject({ ok: true });
+        expect(watchList).not.toHaveBeenCalled();
+
+        expect(await askOnce(dispatcher, { id: 'here' }, 'project.watch', {})).toMatchObject({ ok: true });
+        expect(watchList.mock.calls).toEqual([['here']]);
     });
 });
 

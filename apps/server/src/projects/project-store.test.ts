@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
 import {
     PROJECT_VERSION,
@@ -443,6 +443,74 @@ describe('ProjectStore', () => {
         }
 
         expect((await store.list())[0]!.icon).toMatchObject({ kind: 'image', value: '.ruimte/icon.png' });
+    });
+
+    describe('the list a client watches', () => {
+        const listChanged = (event: SessionEvent): boolean => event.event === 'project.listChanged';
+
+        /* A project no client holds, with the folder watch up for `c1`, whose events land in `changed`. */
+        async function watchedUnheld(): Promise<{ projectId: string; shared: string }> {
+            const opened = await store.openProject({ folder });
+            store.release(opened.summary.projectId);
+            store.watchList('c1');
+            const shared = dirname(documentPathInFolder(folder));
+
+            while (fake.openOn(shared).length === 0) {
+                await new Promise((resolve) => setImmediate(resolve));
+            }
+
+            return { projectId: opened.summary.projectId, shared };
+        }
+
+        test('hears an outside edit of a project no client holds, and a client that does not watch hears nothing of it', async () => {
+            const { projectId, shared } = await watchedUnheld();
+            const heard: SessionEvent[] = [];
+            const off = store.subscribe('c2', (event) => heard.push(event));
+
+            await pull('renamed');
+            fake.on(shared).emit(basename(documentPathInFolder(folder)));
+            await fake.settle();
+
+            while (!changed.some(listChanged)) {
+                await new Promise((resolve) => setImmediate(resolve));
+            }
+
+            off();
+            expect(changed.filter(listChanged)).toEqual([{ event: 'project.listChanged', payload: { projectId } }]);
+            expect(heard.filter(listChanged)).toEqual([]);
+        });
+
+        test('hears nothing through the list of a project a client holds, whose own watcher tells its clients', async () => {
+            const { shared } = await watchedUnheld();
+            const opened = await store.openProject({ folder });
+            store.hold('c2', opened.summary.projectId);
+            changed = [];
+            summaries = [];
+
+            await pull('renamed');
+            for (const watcher of fake.openOn(shared)) {
+                watcher.emit(basename(documentPathInFolder(folder)));
+            }
+            await fake.settle();
+
+            while (!summaries.some((event) => (event.payload as { summary?: { name?: string } }).summary?.name === 'renamed')) {
+                await new Promise((resolve) => setImmediate(resolve));
+            }
+
+            expect(changed.filter(listChanged)).toEqual([]);
+        });
+
+        test('lets go of every folder once the last client that watched leaves, by unwatching or with its socket', async () => {
+            const { shared } = await watchedUnheld();
+            const off = store.subscribe('c2', () => undefined);
+            store.watchList('c2');
+
+            store.unwatchList('c1');
+            expect(fake.openOn(shared)).toHaveLength(1);
+
+            off();
+            expect(fake.openOn(shared)).toEqual([]);
+        });
     });
 
     test('a first open seeds the name from .idea/.name and writes it into the canvas', async () => {
