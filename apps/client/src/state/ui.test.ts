@@ -122,7 +122,7 @@ describe('ui', () => {
 describe('the sidebar width', () => {
     const UI_MODULE = new URL('./ui.ts', import.meta.url).pathname;
     const previousStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
-    const previousWidth = useUi.getState().sidebarWidth;
+    const { sidebarWidth: previousWidth, panelsRestoring: previousRestoring } = useUi.getState();
 
     let stored: Map<string, string>;
 
@@ -145,7 +145,7 @@ describe('the sidebar width', () => {
             Reflect.deleteProperty(globalThis, 'localStorage');
         }
 
-        useUi.setState({ sidebarWidth: previousWidth });
+        useUi.setState({ sidebarWidth: previousWidth, panelsRestoring: previousRestoring });
     });
 
     // A fresh copy of the module is a window after a reload: its store reads the key once, as it is made.

@@ -18,10 +18,13 @@ const MAIN: ProjectCanvasView = {
     layouts: []
 };
 
-const previousWidth = useUi.getState().sidebarWidth;
-
 let machine: FakeMachine;
 let canvas: CanvasPage;
+let before: {
+    window: { width: number; height: number };
+    stored: string | null;
+    ui: Pick<ReturnType<typeof useUi.getState>, 'sidebarOpen' | 'sidebarWidth' | 'panelsRestoring'>;
+};
 
 function sidebar(): HTMLElement {
     const column = canvas.page.host.querySelector<HTMLElement>('#app-sidebar');
@@ -38,9 +41,9 @@ function shownWidth(): number {
     return Number.parseInt(sidebar().querySelector<HTMLElement>(':scope > div')?.style.width ?? '', 10);
 }
 
-async function resizeWindow(width: number): Promise<void> {
+async function resizeWindow(width: number, height = 800): Promise<void> {
     await act(async () => {
-        (window as unknown as { happyDOM: { setViewport(viewport: { width: number; height: number }): void } }).happyDOM.setViewport({ width, height: 800 });
+        (window as unknown as { happyDOM: { setViewport(viewport: { width: number; height: number }): void } }).happyDOM.setViewport({ width, height });
         window.dispatchEvent(new Event('resize'));
     });
 }
@@ -66,6 +69,13 @@ async function dragEdgeBy(distance: number): Promise<void> {
 }
 
 beforeEach(async () => {
+    const { sidebarOpen, sidebarWidth, panelsRestoring } = useUi.getState();
+    before = {
+        window: { width: window.innerWidth, height: window.innerHeight },
+        stored: localStorage.getItem(WIDTH_KEY),
+        ui: { sidebarOpen, sidebarWidth, panelsRestoring }
+    };
+
     localStorage.removeItem(WIDTH_KEY);
     useUi.setState({ sidebarOpen: true, sidebarWidth: null });
     machine = new FakeMachine();
@@ -75,9 +85,15 @@ beforeEach(async () => {
 
 afterEach(async () => {
     await canvas.close();
-    await resizeWindow(1280);
-    localStorage.removeItem(WIDTH_KEY);
-    useUi.setState({ sidebarWidth: previousWidth });
+    await resizeWindow(before.window.width, before.window.height);
+
+    if (before.stored === null) {
+        localStorage.removeItem(WIDTH_KEY);
+    } else {
+        localStorage.setItem(WIDTH_KEY, before.stored);
+    }
+
+    useUi.setState(before.ui);
 });
 
 describe('the width of the sidebar', () => {
@@ -108,16 +124,20 @@ describe('the width of the sidebar', () => {
         expect(shownWidth()).toBe(200);
     });
 
-    test('in a window narrower than when it was dragged, leaves the canvas its room and keeps the stored width', async () => {
+    test('shrinks with a window made narrower, and is back at the dragged width once the window is wide again', async () => {
+        await resizeWindow(1280);
+        await dragEdgeBy(212);
+
+        expect(shownWidth()).toBe(460);
+
         await resizeWindow(700);
-        await act(async () => useUi.getState().setSidebarWidth(460));
 
         expect(shownWidth()).toBe(340);
+        expect(useUi.getState().sidebarWidth).toBe(460);
         expect(localStorage.getItem(WIDTH_KEY)).toBe('460');
 
-        await resizeWindow(500);
-        await act(async () => useUi.getState().setSidebarWidth(470));
+        await resizeWindow(1280);
 
-        expect(shownWidth()).toBe(200);
+        expect(shownWidth()).toBe(460);
     });
 });
