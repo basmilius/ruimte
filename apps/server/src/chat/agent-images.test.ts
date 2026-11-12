@@ -7,7 +7,6 @@ import { AgentFiles } from '../agent-files/files.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, releasedProject, type TestDaemon } from '../testing/test-daemon.ts';
 import { refusalCode, toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
-import { AGENT_ATTACHMENT_LIMIT } from './agent-images.ts';
 import { leadAndShellProject } from './lead-chat-test-helpers.ts';
 
 const MIB = 1024 * 1024;
@@ -114,24 +113,37 @@ describe('chat attach', () => {
         expect((await attach(daemon, 'chat-lead', gif, 'looks-like.png'))[0]).toContain('\timage/gif\t');
     });
 
-    test('refuses an image past the size limit, and the 65th image of a chat', async () => {
+    test('refuses an image past the size limit', async () => {
         const daemon = await bootWithChat();
         const large = Buffer.concat([PNG, Buffer.alloc(10 * MIB)]);
         expect(refusalCode(await attach(daemon, 'chat-lead', large))).toBe('attach-too-large');
-        for (let i = 0; i < AGENT_ATTACHMENT_LIMIT; i++) {
-            expect((await attach(daemon, 'chat-lead', PNG))[0]).toStartWith('attachment\t');
-        }
-        const lines = await attach(daemon, 'chat-lead', PNG);
-        expect(refusalCode(lines)).toBe('attach-limit');
-        expect(lines[0]).toContain(`${AGENT_ATTACHMENT_LIMIT} images and models`);
     });
 
-    test('attaches sent at once cannot pass the limit together', async () => {
+    test('keeps images and models beyond 64 attachments, including concurrent uploads', async () => {
         const daemon = await bootWithChat();
-        const results = await Promise.all(Array.from({ length: AGENT_ATTACHMENT_LIMIT + 6 }, () => attach(daemon, 'chat-lead', PNG)));
-        expect(results.filter((lines) => lines[0]!.startsWith('attachment\t'))).toHaveLength(AGENT_ATTACHMENT_LIMIT);
-        expect(results.filter((lines) => refusalCode(lines) === 'attach-limit')).toHaveLength(6);
-        expect((await readdir(join(home, 'attachments', 'chat-lead'))).filter((name) => name.startsWith('agent-'))).toHaveLength(AGENT_ATTACHMENT_LIMIT);
+        const ids: string[] = [];
+
+        for (let i = 0; i < 64; i++) {
+            const lines = await attach(daemon, 'chat-lead', PNG);
+            expect(lines[0]).toStartWith('attachment\t');
+            ids.push(lines[0]!.split('\t')[1]!);
+        }
+
+        const uploads = [PNG, GLB, PNG, GLB, PNG, GLB];
+        const results = await Promise.all(uploads.map((bytes) => attach(daemon, 'chat-lead', bytes)));
+
+        for (const lines of results) {
+            expect(lines[0]).toStartWith('attachment\t');
+            ids.push(lines[0]!.split('\t')[1]!);
+        }
+
+        expect(new Set(ids).size).toBe(70);
+
+        for (let i = 0; i < ids.length; i++) {
+            const found = await daemon.chatManager.findAttachment('chat-lead', ids[i]!);
+            expect(found).not.toBeNull();
+            expect(await readFile(found!.path)).toEqual(i < 64 ? PNG : uploads[i - 64]!);
+        }
     });
 
     test('stores a binary glTF, a USDZ and an STL by their bytes and points at a Model block', async () => {
@@ -160,15 +172,11 @@ describe('chat attach', () => {
         expect(await stat(join(home, 'attachments', 'chat-lead')).catch(() => null)).toBeNull();
     });
 
-    test('a model may take 50 MiB where an image takes 10, and the two share the limit of a chat', async () => {
+    test('a model may take 50 MiB where an image takes 10', async () => {
         const daemon = await bootWithChat();
         const largest = Math.floor((50 * MIB - 84) / 50);
         expect((await attach(daemon, 'chat-lead', binaryStl(largest), 'large.stl'))[0]).toContain('\tmodel/stl\t');
         expect(refusalCode(await attach(daemon, 'chat-lead', binaryStl(largest + 1), 'larger.stl'))).toBe('attach-too-large');
-        for (let i = 1; i < AGENT_ATTACHMENT_LIMIT; i++) {
-            expect((await attach(daemon, 'chat-lead', PNG))[0]).toStartWith('attachment\t');
-        }
-        expect(refusalCode(await attach(daemon, 'chat-lead', GLB, 'robot.glb'))).toBe('attach-limit');
     });
 
     test('a terminal is told an image attaches only to an AI chat, and nothing is stored', async () => {

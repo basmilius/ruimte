@@ -3,13 +3,9 @@ import { copyFile, lstat, mkdir, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import type { AttachmentStore, ChatSidecar } from '@adecore/agents/chat';
-import { KeyedSerializer } from '@adecore/utils/async';
 import type { ChatAttachment } from '@ruimte/contracts';
 import { withoutControlCharacters } from '../bytes/byte-route.ts';
 import { AGENT_ATTACHMENT_TYPES } from './attachment-type.ts';
-
-/* What an agent may put in its chat, images and models together; the folder goes with a clear or a deletion of the chat, so nothing here keeps an index. */
-export const AGENT_ATTACHMENT_LIMIT = 64;
 
 const ID = /^agent-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/;
 
@@ -51,35 +47,26 @@ function parsed(file: string): { id: string; name: string | null; extension: str
  */
 export class AgentImages implements ChatSidecar {
     private readonly attachments: Pick<AttachmentStore, 'folderOf'>;
-    // One save of a chat at a time, so parallel attaches count the folder one after the other and cannot pass the limit together.
-    private readonly saves = new KeyedSerializer();
 
     constructor(attachments: Pick<AttachmentStore, 'folderOf'>) {
         this.attachments = attachments;
     }
 
-    /* Stores bytes whose type and size the caller already checked against `agentAttachmentType`; refuses past the per-chat limit. */
-    save(chatId: string, upload: { name: string; mime: string; bytes: Uint8Array }): Promise<ChatAttachment> {
-        return this.saves.run(chatId, () => this.store(chatId, upload));
-    }
-
-    private async store(chatId: string, upload: { name: string; mime: string; bytes: Uint8Array }): Promise<ChatAttachment> {
+    /* The caller checks the bytes against `agentAttachmentType` before saving. */
+    async save(chatId: string, upload: { name: string; mime: string; bytes: Uint8Array }): Promise<ChatAttachment> {
         const extension = AGENT_ATTACHMENT_TYPES[upload.mime];
+
         if (extension === undefined) {
             throw new CodedError('attach-not-image', `${upload.mime} is not an image or model type a chat can show`);
         }
+
         const folder = this.attachments.folderOf(chatId);
-        if ((await this.names(folder)).length >= AGENT_ATTACHMENT_LIMIT) {
-            throw new CodedError(
-                'attach-limit',
-                `This chat already holds ${AGENT_ATTACHMENT_LIMIT} images and models you attached; show one of those again instead`
-            );
-        }
         await mkdir(folder, { recursive: true, mode: 0o700 });
         const id = `agent-${randomUUID()}`;
         const name = fittingName(upload.name);
         const path = join(folder, `${id}~${encodeURIComponent(name)}.${extension}`);
         await writeFile(path, upload.bytes, { mode: 0o600 });
+
         return { id, name, mime: upload.mime, size: upload.bytes.byteLength, path };
     }
 

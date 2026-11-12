@@ -215,7 +215,7 @@ export const COMMUNICATE_ACTIONS = {
         input: z.object({ visualId: z.string().min(1).describe('The visual by id, as visual show or visual list printed it') }),
         output: z.object({ visualId: z.string(), title: z.string() })
     },
-    /* The daemon checks the bytes and refuses under its own codes (attach-not-image, attach-too-large, attach-limit). */
+    /* The daemon checks the bytes and refuses under its own codes (attach-not-image, attach-too-large). */
     'chat.attach': {
         title: 'Attach an image or a model to this chat',
         description:
