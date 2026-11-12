@@ -17397,6 +17397,216 @@ public struct ProjectShowViewEvent: Codable, Sendable, Equatable {
     }
 }
 
+public struct ProjectProposals: Codable, Sendable, Equatable {
+    public let `proposals`: [ProjectProposal]
+
+    public init(`proposals`: [ProjectProposal]) {
+        self.`proposals` = `proposals`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `proposals` = try container.decode([ProjectProposal].self, forKey: .`proposals`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`proposals`, forKey: .`proposals`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `proposals` = "proposals"
+    }
+}
+
+public struct ProjectProposal: Codable, Sendable, Equatable {
+    public let `proposalId`: String
+    public let `chatId`: String
+    public let `name`: String
+    public let `folder`: String?
+    public let `reason`: String
+    public let `createdAt`: Double
+    public let `expiresAt`: Double
+
+    public init(`proposalId`: String, `chatId`: String, `name`: String, `folder`: String? = nil, `reason`: String, `createdAt`: Double, `expiresAt`: Double) {
+        self.`proposalId` = `proposalId`
+        self.`chatId` = `chatId`
+        self.`name` = `name`
+        self.`folder` = `folder`
+        self.`reason` = `reason`
+        self.`createdAt` = `createdAt`
+        self.`expiresAt` = `expiresAt`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `proposalId` = try container.decode(String.self, forKey: .`proposalId`)
+        `chatId` = try container.decode(String.self, forKey: .`chatId`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `folder` = try container.decodeIfPresent(String.self, forKey: .`folder`)
+        `reason` = try container.decode(String.self, forKey: .`reason`)
+        `createdAt` = try container.decode(Double.self, forKey: .`createdAt`)
+        `expiresAt` = try container.decode(Double.self, forKey: .`expiresAt`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`proposalId`, forKey: .`proposalId`)
+        try container.encode(`chatId`, forKey: .`chatId`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encodeIfPresent(`folder`, forKey: .`folder`)
+        try container.encode(`reason`, forKey: .`reason`)
+        try container.encode(`createdAt`, forKey: .`createdAt`)
+        try container.encode(`expiresAt`, forKey: .`expiresAt`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `proposalId` = "proposalId"
+        case `chatId` = "chatId"
+        case `name` = "name"
+        case `folder` = "folder"
+        case `reason` = "reason"
+        case `createdAt` = "createdAt"
+        case `expiresAt` = "expiresAt"
+    }
+}
+
+public struct TunnelProposals: Codable, Sendable, Equatable {
+    public let `proposals`: JSONValue
+
+    public init(`proposals`: JSONValue) {
+        self.`proposals` = `proposals`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `proposals` = try container.decode(JSONValue.self, forKey: .`proposals`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`proposals`, forKey: .`proposals`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `proposals` = "proposals"
+    }
+}
+
+public struct TunnelProposal: Codable, Sendable, Equatable {
+    public let `proposalId`: String
+    public let `chatId`: String
+    public let `action`: String
+    public let `kind`: TunnelRowKind
+    public let `hostname`: String
+    public let `port`: Int64?
+    public let `origin`: TunnelOrigin?
+    public let `reason`: String?
+    public let `stale`: Bool
+    public let `createdAt`: Double
+    public let `expiresAt`: Double
+
+    public init(`proposalId`: String, `chatId`: String, `action`: String, `kind`: TunnelRowKind, `hostname`: String, `port`: Int64?, `origin`: TunnelOrigin? = nil, `reason`: String? = nil, `stale`: Bool, `createdAt`: Double, `expiresAt`: Double) {
+        self.`proposalId` = `proposalId`
+        self.`chatId` = `chatId`
+        self.`action` = `action`
+        self.`kind` = `kind`
+        self.`hostname` = `hostname`
+        self.`port` = `port`
+        self.`origin` = `origin`
+        self.`reason` = `reason`
+        self.`stale` = `stale`
+        self.`createdAt` = `createdAt`
+        self.`expiresAt` = `expiresAt`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `proposalId` = try container.decode(String.self, forKey: .`proposalId`)
+        `chatId` = try container.decode(String.self, forKey: .`chatId`)
+        `action` = try container.decode(String.self, forKey: .`action`)
+        `kind` = try container.decode(TunnelRowKind.self, forKey: .`kind`)
+        `hostname` = try container.decode(String.self, forKey: .`hostname`)
+        `port` = try container.decode(Int64?.self, forKey: .`port`)
+        `origin` = try container.decodeIfPresent(TunnelOrigin.self, forKey: .`origin`)
+        `reason` = try container.decodeIfPresent(String.self, forKey: .`reason`)
+        `stale` = try container.decode(Bool.self, forKey: .`stale`)
+        `createdAt` = try container.decode(Double.self, forKey: .`createdAt`)
+        `expiresAt` = try container.decode(Double.self, forKey: .`expiresAt`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`proposalId`, forKey: .`proposalId`)
+        try container.encode(`chatId`, forKey: .`chatId`)
+        try container.encode(`action`, forKey: .`action`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`hostname`, forKey: .`hostname`)
+        try container.encode(`port`, forKey: .`port`)
+        try container.encodeIfPresent(`origin`, forKey: .`origin`)
+        try container.encodeIfPresent(`reason`, forKey: .`reason`)
+        try container.encode(`stale`, forKey: .`stale`)
+        try container.encode(`createdAt`, forKey: .`createdAt`)
+        try container.encode(`expiresAt`, forKey: .`expiresAt`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `proposalId` = "proposalId"
+        case `chatId` = "chatId"
+        case `action` = "action"
+        case `kind` = "kind"
+        case `hostname` = "hostname"
+        case `port` = "port"
+        case `origin` = "origin"
+        case `reason` = "reason"
+        case `stale` = "stale"
+        case `createdAt` = "createdAt"
+        case `expiresAt` = "expiresAt"
+    }
+}
+
+public enum TunnelRowKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `mcp` = "mcp"
+    case `dev` = "dev"
+}
+
+public struct TunnelOrigin: Codable, Sendable, Equatable {
+    public let `https`: Bool?
+    public let `hostHeader`: String?
+    public let `noTlsVerify`: Bool?
+    public let `serverName`: String?
+
+    public init(`https`: Bool? = nil, `hostHeader`: String? = nil, `noTlsVerify`: Bool? = nil, `serverName`: String? = nil) {
+        self.`https` = `https`
+        self.`hostHeader` = `hostHeader`
+        self.`noTlsVerify` = `noTlsVerify`
+        self.`serverName` = `serverName`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `https` = try container.decodeIfPresent(Bool.self, forKey: .`https`)
+        `hostHeader` = try container.decodeIfPresent(String.self, forKey: .`hostHeader`)
+        `noTlsVerify` = try container.decodeIfPresent(Bool.self, forKey: .`noTlsVerify`)
+        `serverName` = try container.decodeIfPresent(String.self, forKey: .`serverName`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(`https`, forKey: .`https`)
+        try container.encodeIfPresent(`hostHeader`, forKey: .`hostHeader`)
+        try container.encodeIfPresent(`noTlsVerify`, forKey: .`noTlsVerify`)
+        try container.encodeIfPresent(`serverName`, forKey: .`serverName`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `https` = "https"
+        case `hostHeader` = "hostHeader"
+        case `noTlsVerify` = "noTlsVerify"
+        case `serverName` = "serverName"
+    }
+}
+
 public struct StoredDocument: Codable, Sendable, Equatable {
     public let `name`: String
     public let `color`: String

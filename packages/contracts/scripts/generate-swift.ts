@@ -767,6 +767,13 @@ const typedRoots: [name: string, source: string, path: (string | number)[], keep
     ['ProjectChangedEvent', 'event.project.changed', [], ['document']],
     ['ProjectSaveResult', 'request.project.save.result', []],
     ['ProjectShowViewEvent', 'event.project.showView', []],
+    ['ProjectProposals', 'event.chat.proposals', []],
+    ['ProjectProposal', 'event.chat.proposals', ['properties', 'proposals', 'items']],
+    // The cards are read one by one, so a card for a change this app cannot name stays out alone.
+    ['TunnelProposals', 'event.tunnel.proposals', [], ['proposals']],
+    ['TunnelProposal', 'event.tunnel.proposals', ['properties', 'proposals', 'items']],
+    ['TunnelRowKind', 'event.tunnel.proposals', ['properties', 'proposals', 'items', 'properties', 'kind']],
+    ['TunnelOrigin', 'event.tunnel.proposals', ['properties', 'proposals', 'items', 'properties', 'origin']],
     // The views are read one by one, so a view this app cannot read does not blank the list.
     ['StoredDocument', 'request.project.open.result', ['properties', 'document'], ['views']],
     ['StoredView', 'request.project.open.result', ['properties', 'document', 'properties', 'views', 'items']],
