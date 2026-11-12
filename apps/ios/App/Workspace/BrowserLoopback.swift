@@ -2,8 +2,7 @@ import Foundation
 import WebKit
 
 /// A loopback address in a browser node means the machine of its project, and the web view runs on this phone.
-/// Until a port that machine shares opens through the connection, such an address is refused instead of
-/// reaching whatever listens on the phone's own loopback.
+/// Such an address is refused instead of reaching whatever listens on the phone's own loopback.
 enum BrowserLoopback {
     /// Whether the host is a spelling of this computer's own loopback that needs no name lookup, the shorthand
     /// and hexadecimal forms of IPv4 that the system accepts included.
@@ -38,7 +37,7 @@ enum BrowserLoopback {
 
     static func refusal(for url: URL) -> String? {
         guard isLoopback(url) else { return nil }
-        return String(localized: "This address is on the project's machine, which this browser cannot open yet.")
+        return String(localized: "This address is on the project's machine, which this browser cannot open.")
     }
 
     /// Content rules that keep a page from another site from asking this phone's loopback for anything: images,

@@ -25,7 +25,7 @@ final class BrowserLoopbackTests: XCTestCase {
     func testTheRefusalIsAnEnglishSentenceInTheTests() {
         XCTAssertEqual(
             BrowserLoopback.refusal(for: URL(string: "http://localhost:3000/")!),
-            "This address is on the project's machine, which this browser cannot open yet.")
+            "This address is on the project's machine, which this browser cannot open.")
     }
 
     /// What the rules match, read as the regular expressions they are, on the URL WebKit parsed.

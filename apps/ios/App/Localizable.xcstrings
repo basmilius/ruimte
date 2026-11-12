@@ -498,12 +498,12 @@
         }
       }
     },
-    "This address is on the project's machine, which this browser cannot open yet." : {
+    "This address is on the project's machine, which this browser cannot open." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dit adres staat op de machine van het project, en die kan deze browser nog niet openen."
+            "value" : "Dit adres staat op de machine van het project, en die kan deze browser niet openen."
           }
         }
       }

@@ -1,6 +1,6 @@
 # Ruimte for iPhone and iPad
 
-A native remote client for Ruimte machines, for iOS and iPadOS 27 (`project.yml`). It opens projects, chats, terminals, files, drawings, diagrams and devices on a machine and runs no daemon of its own. Browser pages use an isolated `WKWebView` without a machine bridge. A loopback address (`localhost`, `127.x`, `::1` and the spellings that resolve there) belongs to the project's machine and is refused in every navigation, frame and redirect, and a content rule list blocks a page's assets from the phone's own loopback (`BrowserLoopback.swift`). Opening a port a machine shares needs a native adapter that is not built yet; the generated `port.*` models are ready for it.
+A native remote client for Ruimte machines, for iOS and iPadOS 27 (`project.yml`). It opens projects, chats, terminals, files, drawings, diagrams and devices on a machine and runs no daemon of its own. Browser pages use an isolated `WKWebView` without a machine bridge. A loopback address (`localhost`, `127.x`, `::1` and the spellings that resolve there) belongs to the project's machine and is refused in every navigation, frame and redirect, and a content rule list blocks a page's assets from the phone's own loopback (`BrowserLoopback.swift`).
 
 ## Design decisions
 
