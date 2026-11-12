@@ -51,7 +51,8 @@ describe('reading account limits from the usage section', () => {
     test('keeps failed values and their age, then serializes taps and permits retry after refusal', async () => {
         expect(page.host.textContent).toContain('Last known numbers');
         expect(page.host.textContent).toContain('May be out of date');
-        expect(page.host.textContent).toContain('CLI unavailable');
+        expect(page.host.textContent).toContain('Could not check the limits.');
+        expect(page.host.textContent).not.toContain('CLI unavailable');
         const pending = Promise.withResolvers<UsageLimitsSnapshot>();
         machine.answer('usage.refreshLimits', () => pending.promise);
         const button = readButton()!;
@@ -172,7 +173,8 @@ describe('reading account limits from the usage section', () => {
         );
         expect(page.host.querySelectorAll('[role="progressbar"]')).toHaveLength(2);
         expect(page.host.textContent?.match(/Last known numbers/g)).toHaveLength(2);
-        expect(page.host.textContent?.match(/CLI unavailable/g)).toHaveLength(2);
+        expect(page.host.textContent?.match(/Could not check the limits\./g)).toHaveLength(2);
+        expect(page.host.textContent).not.toContain('CLI unavailable');
         await page.render(
             <LimitsList limits={{ providers: [{ ...known.providers[0]!, unavailable: { reason: 'no-subscription', message: null } }] }} now={NOW} compact />
         );
