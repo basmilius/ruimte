@@ -3,6 +3,7 @@ import Observation
 import RuimteIntelligentUI
 import RuimtePulsar
 import RuimteShared
+import RuimteTransport
 
 @MainActor @Observable
 final class ChatItemState: Identifiable {
@@ -243,6 +244,8 @@ final class ChatPresentation {
     var conversationRequest: SubagentCrumb?
     /// Whether this is a chat's own thread, which can fork; a sub-agent's thread in its place cannot.
     @ObservationIgnored var forkable = false
+    /// The machine whose `provider.list` says whether this chat's CLI forks.
+    @ObservationIgnored weak var machine: (any MachineRequesting)?
     /// A row asked to fork after this turn; the screen shows the fork sheet.
     var forkRequest: ChatForkRequest?
     /// A row asked to open another chat of the project (a summary's fork); the screen pushes it.
@@ -390,9 +393,8 @@ final class ChatPresentation {
     }
 
     func forkRefusal(turnID: String) -> String? {
-        ChatForking.refusal(
-            info: info, turn: records[turnID]?.item,
-            cliCanFork: info.map { AgentDirectory.shared.canFork($0.provider) } ?? true)
+        let cliCanFork = info.flatMap { info in machine.map { AgentDirectory.shared.canFork(info.provider, on: $0) } }
+        return ChatForking.refusal(info: info, turn: records[turnID]?.item, cliCanFork: cliCanFork ?? true)
     }
 
     /// Scrolls the timeline to an entry, as the message index asks; a jump that searched for it lights it up.

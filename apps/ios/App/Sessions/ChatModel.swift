@@ -176,6 +176,7 @@ final class ChatModel {
         composition = ChatComposition(machineID: machineID, chatID: chatID, root: draftRoot)
         if composition.deliveryUncertain { sendProblem = Self.uncertainSendMessage }
         presentation.forkable = true
+        presentation.machine = client
     }
 
     /// The turn a person stopped that Continue would pick up; kept apart from `items` like `hasSubagentRows`.
@@ -318,7 +319,7 @@ final class ChatModel {
 
     private func loadProviders() async throws -> ProviderListResult {
         let result = try await client.request(.providerList, payload: .object([:])).decoded(as: ProviderListResult.self)
-        AgentDirectory.shared.learn(result.providers)
+        AgentDirectory.shared.learn(result.providers, from: client)
         return result
     }
 

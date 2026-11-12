@@ -224,7 +224,7 @@ private struct ProjectRowMenu: View {
     var body: some View {
         let actions = ProjectListLogic.actions(
             for: item, isView: isView, status: status,
-            canFork: AgentDirectory.shared.canFork(ProjectListLogic.provider(of: item)))
+            canFork: AgentDirectory.shared.canFork(ProjectListLogic.provider(of: item), on: workspace.client))
         Section {
             if actions.contains(.rename) {
                 Button(String(localized: "Rename"), lucideIcon: "pencil") { act(.rename, item) }

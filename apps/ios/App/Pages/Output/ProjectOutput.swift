@@ -268,7 +268,7 @@ enum OutputMachine {
             let answer = try? await client.request(.providerList).decoded(as: ProviderListResult.self)
         {
             providers = answer.providers
-            AgentDirectory.shared.learn(providers)
+            AgentDirectory.shared.learn(providers, from: client)
         }
     }
 

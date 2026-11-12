@@ -48,8 +48,11 @@ enum ChatForking {
     static let titleMax = 120
 
     /// Whether a machine's CLI keeps a conversation that a fork goes on with: the `fork` capability its `provider.list`
-    /// entry reports. Only a machine can say what its CLIs do, so a new CLI needs no update of this app.
-    static func canFork(_ provider: ProviderInfo) -> Bool { provider.capabilities.fork == true }
+    /// entry reports. Only a machine can say what its CLIs do, so a new CLI needs no update of this app. A machine from
+    /// before 0.31 sends no `fork`, and there Claude and Codex forked.
+    static func canFork(_ provider: ProviderInfo) -> Bool {
+        provider.capabilities.fork ?? ["claude", "codex"].contains(provider.kind)
+    }
 
     /// Why a chat cannot be forked after this turn right now, or nil when it can. `cliCanFork` is what the machines'
     /// lists say of the chat's CLI.

@@ -35,18 +35,42 @@ final class ChatForkingTests: XCTestCase {
 
     @MainActor func testOnlyACLIThatReportsTheForkCapabilityForks() {
         let directory = AgentDirectory()
-        XCTAssertTrue(directory.canFork("anything"), "Nothing refuses for the CLI before a machine answered")
-        directory.learn([
-            ProviderWire.provider("newcli", name: "New CLI", capabilities: ["fork": .bool(true)]).providerInfo,
-            ProviderWire.provider("plain", name: "Plain").providerInfo,
-        ])
-        XCTAssertTrue(directory.canFork("newcli"))
-        XCTAssertFalse(directory.canFork("plain"))
-        XCTAssertFalse(directory.canFork("gone"))
+        let machine = ScriptedMachine()
+        XCTAssertTrue(
+            directory.canFork("anything", on: machine), "Nothing refuses for the CLI before a machine answered")
+        directory.learn(
+            [
+                ProviderWire.provider("newcli", name: "New CLI", capabilities: ["fork": .bool(true)]).providerInfo,
+                ProviderWire.provider("plain", name: "Plain", capabilities: ["fork": .bool(false)]).providerInfo,
+            ], from: machine)
+        XCTAssertTrue(directory.canFork("newcli", on: machine))
+        XCTAssertFalse(directory.canFork("plain", on: machine))
+        XCTAssertFalse(directory.canFork("gone", on: machine))
         XCTAssertEqual(directory.name("newcli"), "New CLI")
         XCTAssertEqual(directory.name("gone"), "gone")
         XCTAssertTrue(ChatForking.canFork(ProviderWire.provider("a", capabilities: ["fork": .bool(true)]).providerInfo))
-        XCTAssertFalse(ChatForking.canFork(ProviderWire.provider("a").providerInfo))
+        XCTAssertFalse(
+            ChatForking.canFork(ProviderWire.provider("a", capabilities: ["fork": .bool(false)]).providerInfo))
+    }
+
+    func testAMachineWithoutTheForkCapabilityForksClaudeAndCodexAsBefore() {
+        XCTAssertTrue(ChatForking.canFork(ProviderWire.provider("claude").providerInfo))
+        XCTAssertTrue(ChatForking.canFork(ProviderWire.provider("codex").providerInfo))
+        XCTAssertFalse(ChatForking.canFork(ProviderWire.provider("grok").providerInfo))
+        XCTAssertFalse(
+            ChatForking.canFork(ProviderWire.provider("claude", capabilities: ["fork": .bool(false)]).providerInfo))
+    }
+
+    @MainActor func testEachMachineAnswersForItsOwnCLIs() {
+        let directory = AgentDirectory()
+        let older = ScriptedMachine()
+        let newer = ScriptedMachine()
+        directory.learn([ProviderWire.provider("grok").providerInfo], from: older)
+        directory.learn([ProviderWire.provider("grok", capabilities: ["fork": .bool(true)]).providerInfo], from: newer)
+        XCTAssertFalse(directory.canFork("grok", on: older))
+        XCTAssertTrue(directory.canFork("grok", on: newer))
+        XCTAssertTrue(
+            directory.canFork("grok", on: ScriptedMachine()), "A machine that has not answered refuses itself")
     }
 
     func testANoteAChildLeftWhileItWaitsLeadsToAnswering() {

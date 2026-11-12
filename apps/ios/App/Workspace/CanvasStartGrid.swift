@@ -8,7 +8,7 @@ enum AgentCatalog {
     static func load(_ client: any MachineRequesting) async throws -> [ProviderInfo] {
         let providers = try await client.request(.providerList, payload: .object([:]))
             .decoded(as: ProviderListResult.self).providers
-        AgentDirectory.shared.learn(providers)
+        AgentDirectory.shared.learn(providers, from: client)
         return providers
     }
 
