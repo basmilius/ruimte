@@ -116,6 +116,10 @@ extension Agent {
                         throw AgentError.needsFront("\(Targets.name(app)) did not let element \(index) take the focus (AXError \(result.rawValue)), so clicking it needs the real pointer, and so the app in front")
                     }
                     await Self.settleFocus(on: element, role: AX.role(element))
+                    let landing = self.focusLanding(on: element, in: app)
+                    guard landing.reached else {
+                        throw AgentError.needsFront("\(Targets.name(app)) answered the focus on element \(index) with success, but \(landing.focused.map(Self.name(of:)) ?? "no element") has it, so clicking it needs the real pointer, and so the app in front")
+                    }
                     return ["method": "AXFocused", "element": index, "target": target]
                 }
             }
@@ -330,6 +334,29 @@ extension Agent {
         }
         await Self.settleFocus(on: element, role: AX.role(element))
         try await Task.sleep(for: .milliseconds(80))
+        let landing = focusLanding(on: element, in: app)
+        guard landing.reached else {
+            guard let focused = landing.focused else {
+                throw AgentError("element \(index) (\(Self.name(of: element))) was asked for the focus, but the app names no focused element, so no key was sent; click it first, then go on without element")
+            }
+            throw AgentError("element \(index) (\(Self.name(of: element))) did not take the focus, which stayed on \(Self.name(of: focused)), so no key was sent; click it first, or set-value fills it")
+        }
+    }
+
+    /// An app may answer a focus request with success and keep the focus elsewhere, so what holds it is read back.
+    private func focusLanding(on element: AXUIElement, in app: NSRunningApplication) -> (reached: Bool, focused: AXUIElement?) {
+        let focused = focusedElement(app)
+        let reached = FocusLanding.reached(element, focused: focused, focusedAncestors: focused.map { AX.ancestors(of: $0) } ?? [])
+        return (reached, focused)
+    }
+
+    private static func name(of element: AXUIElement) -> String {
+        let summary = AX.summary(element)
+        let role = summary["role"] as? String ?? "element"
+        guard let label = summary["label"] as? String, !label.isEmpty else {
+            return role
+        }
+        return "\(role) \"\(label)\""
     }
 
     func type(_ app: NSRunningApplication, _ request: Request) async throws -> [String: Any] {
