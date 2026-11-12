@@ -55,6 +55,17 @@ describe('a database view as a loose view', () => {
         expect(useDocument.getState().layout!.columns[0]!.cells[0]).toMatchObject({ viewId: keys[1], tabs: keys });
     });
 
+    test('a table with edits not yet submitted is not replaced, and grows a host with the next one', () => {
+        actOnDatabase({ kind: 'open-table', ref: ORDERS, view: 'data' });
+        const [orders] = useFiles.getState().tabs.map((tab) => tab.key);
+        useFiles.setState({ unsubmitted: { [orders!]: true } });
+        actOnDatabase({ kind: 'open-table', ref: { ...ORDERS, table: 'items' }, view: 'data' });
+        const keys = useFiles.getState().tabs.map((tab) => tab.key);
+
+        expect(keys).toHaveLength(2);
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toMatchObject({ viewId: keys[1], tabs: [orders, keys[1]] });
+    });
+
     test('a row the explorer opens shows the tab and leaves the keyboard in the tree', () => {
         actOnDatabase({ kind: 'open-table', ref: ORDERS, view: 'data', preview: true }, { focus: false });
         expect(useFiles.getState().tabs).toHaveLength(1);
