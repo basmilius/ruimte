@@ -16,6 +16,10 @@ final class DefaultsKeysTests: XCTestCase {
         XCTAssertEqual(Settings.chatStreaming.fallback, .words)
     }
 
+    func testHidingToolCallsKeepsTheNameItIsStoredUnder() {
+        XCTAssertEqual(ChatToolCallsSetting.key, "ruimte.chat.hideToolCalls")
+    }
+
     func testTheProjectsCacheIsKeptPerMachine() {
         XCTAssertEqual(ProjectsCache.key(machineID: "m1"), "ruimte.ios.projects.m1")
         XCTAssertEqual(ProjectsCache.publicKeyKey(machineID: "m1"), "ruimte.ios.projects.m1.publicKey")
