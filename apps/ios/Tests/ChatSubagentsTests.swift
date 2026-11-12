@@ -306,6 +306,45 @@ final class ChatSubagentsTests: XCTestCase {
         await displayFrames(10)
         XCTAssertTrue(machine.requests.contains(.chatDetach))
     }
+
+    /// Only a row without a tool use opens in place, so that is the one whose own steps follow the setting.
+    @MainActor func testAnOpenRowLeavesOutItsToolLinesWhileTheyAreHiddenAndKeepsItsTextAndImages() async {
+        let row = ChatItemState(agentValue("one", status: "done", extra: ["toolUseId": .string("")]).chatItem)
+        let steps = [
+            toolValue("read", parent: "", created: 1, input: .object(["file_path": .string("notes.md")])),
+            ChatWire.item([
+                "id": .string("text"), "kind": .string("assistant"), "text": .string("Looked it over."),
+            ]),
+            ChatWire.item([
+                "id": .string("image"), "kind": .string("tool"), "name": .string("ImageGeneration"),
+                "parentToolUseId": .string(""), "createdAt": .number(3), "state": .string("running"),
+                "input": .object([:]),
+            ]),
+        ]
+        let branch = ChatSubagentBranch(row, children: ["": steps.map { ChatItemState($0.chatItem) }])
+        let presentation = ChatPresentation()
+        presentation.toggleSubagent("one")
+        let host = UIHostingController(rootView: ChatSubagentRow(branch: branch, presentation: presentation))
+        let window = UIWindow.showing(host, size: CGSize(width: 402, height: 874))
+        defer { window.close() }
+        // The steps reach the accessibility tree only on a read after the first one.
+        _ = NativePresentationProbe.labels(in: host.view)
+        let shown = { () async -> [String] in
+            await displayFrames(10)
+            return NativePresentationProbe.labels(in: host.view)
+        }
+
+        let everything = await shown()
+        XCTAssertTrue(everything.contains("Read, notes.md"), "\(everything)")
+        XCTAssertTrue(everything.contains("Looked it over."), "\(everything)")
+        XCTAssertTrue(everything.contains("Generating image"), "\(everything)")
+
+        presentation.setHidesToolCalls(true)
+        let hidden = await shown()
+        XCTAssertFalse(hidden.contains("Read, notes.md"), "\(hidden)")
+        XCTAssertTrue(hidden.contains("Looked it over."), "\(hidden)")
+        XCTAssertTrue(hidden.contains("Generating image"), "\(hidden)")
+    }
 }
 
 @MainActor private final class HeldChatMachine: MachineRequesting {
