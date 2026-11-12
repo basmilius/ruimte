@@ -41,6 +41,53 @@ test('a preview shows at once, and what paints outside the stylesheet follows on
     expect(usePalette.getState()).toMatchObject({ revision: before + 1, previewing: true });
 });
 
+test('a new accent holds every transition while it is written, and the same palette again holds none', () => {
+    const realRequest = globalThis.requestAnimationFrame;
+    const realCancel = globalThis.cancelAnimationFrame;
+    const frames = new Map<number, FrameRequestCallback>();
+    const root = document.documentElement;
+    let id = 0;
+
+    const paintFrames = (count: number): void => {
+        for (let frame = 0; frame < count; frame += 1) {
+            const due = [...frames.values()];
+
+            frames.clear();
+            due.forEach((callback) => callback(0));
+        }
+    };
+
+    globalThis.requestAnimationFrame = (callback) => {
+        frames.set(++id, callback);
+
+        return id;
+    };
+    globalThis.cancelAnimationFrame = (handle) => {
+        frames.delete(handle);
+    };
+
+    try {
+        applyPalette({ light: { accent: '#123456' }, dark: { accent: '#123456' } });
+        paintFrames(2);
+        applyPalette({ light: { accent: '#3366cc' }, dark: { accent: '#3366cc' } });
+
+        expect(document.getElementById('ruimte-palette')?.textContent).toContain('--accent: #3366cc;');
+        expect(root.hasAttribute('data-theme-changing')).toBe(true);
+
+        paintFrames(2);
+
+        expect(root.hasAttribute('data-theme-changing')).toBe(false);
+
+        applyPalette({ light: { accent: '#3366cc' }, dark: { accent: '#3366cc' } });
+
+        expect(root.hasAttribute('data-theme-changing')).toBe(false);
+    } finally {
+        globalThis.requestAnimationFrame = realRequest;
+        globalThis.cancelAnimationFrame = realCancel;
+        root.removeAttribute('data-theme-changing');
+    }
+});
+
 test('the end of a preview counts as a change of the picked colors, which is what the window behind the page hears', () => {
     jest.useFakeTimers();
     applyPalette({ light: { accent: '#123456' }, dark: { accent: '#123456' } });
