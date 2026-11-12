@@ -57,12 +57,55 @@ describe('ConnectedClients', () => {
         connected.announce('client-1', { client: 'ios', clientFeatures: ['tolerantWire'] });
         connected.announce('client-1', {});
 
-        expect(connected.featuresOf('client-1')).toEqual(['tolerantWire']);
+        expect(connected.readsNewerWire('client-1')).toBe(true);
         expect(connected.list('client-1', () => undefined)[0]).not.toHaveProperty('features');
 
         connected.announce('client-1', { client: 'ios' });
-        expect(connected.featuresOf('client-1')).toEqual([]);
-        expect(connected.featuresOf('client-2')).toEqual([]);
+
+        expect(connected.readsNewerWire('client-1')).toBe(false);
+    });
+
+    describe('reads a newer wire', () => {
+        test('for a desktop, Station or iPhone that reported tolerantWire', () => {
+            const { connected } = clients();
+            connected.opened('desktop', { reachability: 'loopback', sessionId: null });
+            connected.opened('station', ACCOUNT);
+            connected.opened('phone', ACCOUNT);
+            connected.announce('desktop', { client: 'desktop', clientFeatures: ['tolerantWire'] });
+            connected.announce('station', { client: 'station', clientFeatures: ['tolerantWire'] });
+            connected.announce('phone', { client: 'ios', clientFeatures: ['otherFeature', 'tolerantWire'] });
+
+            expect(['desktop', 'station', 'phone'].map((id) => connected.readsNewerWire(id))).toEqual([true, true, true]);
+        });
+
+        test('not for a client of before tolerantWire, or one that never told of itself', () => {
+            const { connected } = clients();
+            connected.opened('old-phone', ACCOUNT);
+            connected.opened('old-station', ACCOUNT);
+            connected.opened('silent', { reachability: 'loopback', sessionId: null });
+            connected.announce('old-phone', { client: 'ios', clientVersion: '0.30.2' });
+            connected.announce('old-station', { client: 'station', clientFeatures: ['otherFeature'] });
+
+            expect(['old-phone', 'old-station', 'silent'].map((id) => connected.readsNewerWire(id))).toEqual([false, false, false]);
+        });
+
+        test('not for a peer, even one that reported tolerantWire', () => {
+            const { connected } = clients();
+            connected.opened('peer', { reachability: 'public', sessionId: 'peer-1', peer: { machineId: 'machine-b' } });
+            connected.announce('peer', { client: 'desktop', clientFeatures: ['tolerantWire'] });
+
+            expect(connected.readsNewerWire('peer')).toBe(false);
+        });
+
+        test('not for a channel that closed or was never open', () => {
+            const { connected } = clients();
+            connected.opened('client-1', ACCOUNT);
+            connected.announce('client-1', { client: 'ios', clientFeatures: ['tolerantWire'] });
+            connected.closed('client-1');
+
+            expect(connected.readsNewerWire('client-1')).toBe(false);
+            expect(connected.readsNewerWire('client-2')).toBe(false);
+        });
     });
 
     test('passes a value it does not know through as it came', () => {

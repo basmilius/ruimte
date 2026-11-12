@@ -1,5 +1,5 @@
 import { WatchedSinks } from '@adecore/agents/host';
-import type { ConnectedClient, EndpointInfoPayload } from '@ruimte/contracts';
+import { TOLERANT_WIRE_FEATURE, type ConnectedClient, type EndpointInfoPayload } from '@ruimte/contracts';
 import { isOwner } from '../auth/access.ts';
 import type { ClientAccess, SessionEvent } from '../wire.ts';
 
@@ -22,7 +22,8 @@ function accessOf(access: ClientAccess): string {
 
 /*
  * The channels open on this machine now and what each client told of itself, in memory only. What a
- * client says is only shown: no check, limit or decision reads it. Who may get in is `auth.sessions`.
+ * client says is shown, and grants nothing: no check or limit reads it, and only `readsNewerWire` says
+ * what a client can read. Who may get in is `auth.sessions`.
  */
 export class ConnectedClients extends WatchedSinks<SessionEvent> {
     private readonly entries = new Map<string, Entry>();
@@ -64,9 +65,19 @@ export class ConnectedClients extends WatchedSinks<SessionEvent> {
         this.changed();
     }
 
-    /* What a client reads beyond the wire it shipped with (`clientFeatures`); nothing decides on it yet. */
-    featuresOf(clientId: string): readonly string[] {
-        return this.entries.get(clientId)?.features ?? [];
+    /*
+     * Whether this client keeps what a newer wire added in its place instead of refusing the reply or event, the one
+     * answer to that for every sender. A client that claims it falsely only breaks its own reading. A peer reads every
+     * answer with the request's own schema (`peer/giver/peer-reply.ts`), whatever it reported.
+     */
+    readsNewerWire(clientId: string): boolean {
+        const entry = this.entries.get(clientId);
+
+        if (entry === undefined || entry.access.peer !== undefined) {
+            return false;
+        }
+
+        return entry.features.includes(TOLERANT_WIRE_FEATURE);
     }
 
     list(currentClientId: string, labelOf: (sessionId: string) => string | undefined): ConnectedClient[] {

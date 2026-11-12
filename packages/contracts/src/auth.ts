@@ -107,6 +107,8 @@ export const EndpointInfoPayloadSchema = z.object({
 });
 export type EndpointInfoPayload = z.infer<typeof EndpointInfoPayloadSchema>;
 
+export const TOLERANT_WIRE_FEATURE = 'tolerantWire';
+
 export const USAGE_CLIENT_KINDS = ['desktop', 'ios', 'station'] as const;
 export type UsageClientKind = (typeof USAGE_CLIENT_KINDS)[number];
 

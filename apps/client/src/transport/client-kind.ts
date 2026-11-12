@@ -1,4 +1,4 @@
-import type { EndpointInfoPayload } from '@ruimte/contracts';
+import { TOLERANT_WIRE_FEATURE, type EndpointInfoPayload } from '@ruimte/contracts';
 import { IS_STATION } from '@/station';
 
 interface IdentityEnvironment {
@@ -77,7 +77,7 @@ function browserSystemVersion(os: string | undefined, userAgent: string): string
  * user agent outside the desktop app, and only ever shown; what is unknown is left out.
  */
 // Every build reads replies and events with `readFromMachine` (`link-transport.ts`).
-const CLIENT_FEATURES = ['tolerantWire'];
+const CLIENT_FEATURES = [TOLERANT_WIRE_FEATURE];
 
 export function clientIdentityFrom(env: IdentityEnvironment): EndpointInfoPayload {
     const version = env.version === '' ? {} : { clientVersion: env.version };
