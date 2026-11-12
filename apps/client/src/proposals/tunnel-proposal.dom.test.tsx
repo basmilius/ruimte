@@ -127,6 +127,27 @@ describe('an agent that suggests a tunnel hostname', () => {
         expect(machine.requests('tunnel.proposalConfirm')).toHaveLength(0);
     });
 
+    test('a card the agent asked again shows the new change, and a confirm of the old one confirms nothing of it', async () => {
+        let answer: (value: { accepted: boolean }) => void = () => undefined;
+
+        machine.answer('tunnel.proposalConfirm', () => new Promise((resolve) => (answer = resolve)));
+        await clickOn(button('Confirm'));
+        await until(() => button('Confirming…') !== null);
+        await show([{ ...ADD, proposalId: 'proposal-2', action: 'remove', port: null, origin: undefined, reason: undefined }]);
+        await until(() => text().includes('Remove ruimte-app.bmnw.nl'));
+        await act(async () => answer({ accepted: false }));
+
+        expect(text()).not.toContain('Add ruimte-app.bmnw.nl');
+        expect(button('Confirm')!.disabled).toBe(false);
+        expect(machine.requests('tunnel.proposalConfirm')).toEqual([{ proposalId: ADD.proposalId }]);
+
+        machine.answer('tunnel.proposalConfirm', () => ({ accepted: true }));
+        await clickOn(button('Confirm'));
+        await until(() => machine.requests('tunnel.proposalConfirm').length === 2);
+
+        expect(machine.requests('tunnel.proposalConfirm').at(-1)).toEqual({ proposalId: 'proposal-2' });
+    });
+
     test('a stale card says the hostname changed and only declines', async () => {
         await show([{ ...ADD, action: 'off', origin: undefined, reason: undefined, stale: true }]);
         await until(() => text().includes('ruimte-app.bmnw.nl changed since the agent asked.'));
