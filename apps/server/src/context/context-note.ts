@@ -128,6 +128,15 @@ const DEVICE_NOTE =
 const OUTPUT_NOTE =
     "A result the person should keep beyond this conversation (a report, a build, an export, a recording) goes to the project's Output with `artifact_publish`; an answer for now stays in the conversation.";
 
+/*
+ * A CLI counts an agent with a live background task as busy, and a watch on a log (`tail -f`) never
+ * ends: a subagent that already reported kept its parent waiting until the person stopped the watch.
+ * The CLI's own subagents never see this prompt, so the parent has to pass it on. It says "helper",
+ * since the deepest agent is told nothing about subagents.
+ */
+const BACKGROUND_WATCH_NOTE =
+    'A background watch (a Monitor, `tail -f`) keeps you, or a helper you started, busy until it ends. Stop it once you have what you waited for, and tell every helper you start to do the same.';
+
 /* Without it a reply rebuilds the report it just published, often as a table of its own. */
 export const PUBLISHED_INLINE_NOTE =
     'This chat shows what you publish where you published it, so your reply does not repeat its content or copy its tables: a short summary and what stands out are enough.';
@@ -168,6 +177,7 @@ export function toolsNote({
         ...(computer ? [COMPUTER_NOTE] : []),
         ...(device ? [DEVICE_NOTE] : []),
         OUTPUT_NOTE,
+        BACKGROUND_WATCH_NOTE,
         // A terminal has no thread to show it in, and a child's reply goes to a parent that never saw it.
         ...(terminal || !ui ? [] : [PUBLISHED_INLINE_NOTE]),
         'Ids are for tool calls; to the person, name things by their title, never by id.'

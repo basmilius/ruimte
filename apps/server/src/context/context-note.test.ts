@@ -105,8 +105,8 @@ describe('toolsNote', () => {
 
     test('the note without UI blocks stays within its budget, since it rides along with every agent Ruimte starts', () => {
         const everything = { computer: true, device: true, databases: true, reach: true };
-        expect(toolsNote({ depth: 0, ...everything }).length).toBeLessThanOrEqual(2700);
-        expect(toolsNote({ depth: 0, standalone: true, ...everything }).length).toBeLessThanOrEqual(2800);
+        expect(toolsNote({ depth: 0, ...everything }).length).toBeLessThanOrEqual(2900);
+        expect(toolsNote({ depth: 0, standalone: true, ...everything }).length).toBeLessThanOrEqual(3000);
     });
 
     test('sends a question the turn waits on to the question tool, never to Choices, and names no tool', () => {
