@@ -202,18 +202,24 @@ final class Overlay {
         keepFrontUntil = now + duration
     }
 
-    /// Puts the person's app back when the operated app came forward by itself; false leaves the activation to the take-over rule.
+    /// Puts the person's app back when the operated app came forward by itself; false leaves the activation to the take-over
+    /// rule, also when macOS refused to put it back, since the operated app is then in front of the person.
     private func undoActivation() -> Bool {
+        guard let personsApp, !personsApp.isTerminated else {
+            return false
+        }
         let sinceMouseDown = CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: .leftMouseDown)
         let sinceKey = min(
             CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: .keyDown),
             CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: .flagsChanged)
         )
-        guard ActivationUndo.shouldUndo(now: now, keepUntil: keepFrontUntil, sinceMouseDown: sinceMouseDown, sinceKey: sinceKey), let personsApp, !personsApp.isTerminated else {
-            return false
+        let outcome = ActivationUndo.undo(now: now, keepUntil: keepFrontUntil, sinceMouseDown: sinceMouseDown, sinceKey: sinceKey) {
+            personsApp.activate()
         }
-        personsApp.activate()
-        return true
+        if outcome == .refused {
+            NSLog("Ruimte Computer Use: macOS refused to put \(personsApp.localizedName ?? "the person's app") back in front")
+        }
+        return outcome == .restored
     }
 
     /// Moves the cursor to the target, showing `state` on the way; the real pointer stays put.
