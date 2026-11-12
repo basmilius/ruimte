@@ -22,6 +22,11 @@ export function severalCells(context: MenuContext): boolean {
     return context.cells > 1;
 }
 
+/* An editor has the keyboard, so a row that acts on one can do something. */
+export function editorAvailable(context: MenuContext): boolean {
+    return context.editorAvailable;
+}
+
 export function hosted(context: MenuContext): boolean {
     return context.tabs.hosted;
 }

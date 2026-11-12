@@ -129,7 +129,7 @@ test('chat text shares one contextual reset and keeps the existing editor font c
     expect(offered(spec, 'chat-text-smaller').enabled).not.toBe(false);
     expect(offered(spec, 'zoom-reset').label).toBe('Default Chat Text Size');
     expect(commandIds(spec).filter((id) => id === 'zoom-reset')).toHaveLength(1);
-    expect(offered(spec, 'increase-font-size')).toBeDefined();
+    expect(offered(menuModel(context({ view: 'chat', chat: true, chatTextSize: 3, editorAvailable: true })), 'increase-font-size')).toBeDefined();
     const plain = menuModel(context({ chatTextSize: null }));
     expect(find(plain, 'chat-text-larger')).toBeUndefined();
     expect(offered(plain, 'zoom-reset').label).toBe('Actual Size');
@@ -195,7 +195,7 @@ describe('the agents of the menus', () => {
 
 describe('the menus', () => {
     test('Go disables navigation that has no destination', () => {
-        const spec = menuModel(context({ views: ['Main'] }));
+        const spec = menuModel(context({ views: ['Main'], editorAvailable: true }));
 
         for (const id of [
             'view-previous',
@@ -208,11 +208,17 @@ describe('the menus', () => {
             'node-down',
             'prompts',
             'needs-you-next',
-            'go-to-definition',
-            'next-change'
+            'go-to-definition'
         ]) {
             expect(offered(spec, id).enabled).toBe(false);
         }
+    });
+
+    test('Go leaves out what acts on an editor until one has the keyboard', () => {
+        const ids = commandIds(menuModel(context()));
+        expect(ids).not.toContain('go-to-definition');
+        expect(ids).not.toContain('next-change');
+        expect(offered(menuModel(context({ editorAvailable: true })), 'next-change').enabled).toBeUndefined();
     });
 
     test('Go follows each direction and keeps canvas-only navigation out of other views', () => {
@@ -224,22 +230,12 @@ describe('the menus', () => {
             promptStack: true,
             somethingWaits: true,
             editorAvailable: true,
-            languageAvailable: true
+            languageAvailable: true,
+            cells: 2
         };
         const spec = menuModel(context(navigation));
 
-        for (const id of [
-            'view-next',
-            'camera-back',
-            'focus-right',
-            'focus-down',
-            'node-left',
-            'node-down',
-            'prompts',
-            'needs-you-next',
-            'go-to-definition',
-            'next-change'
-        ]) {
+        for (const id of ['view-next', 'camera-back', 'focus-right', 'focus-down', 'node-left', 'node-down', 'prompts', 'needs-you-next', 'go-to-definition']) {
             expect(offered(spec, id).enabled).toBe(true);
         }
 
@@ -448,8 +444,8 @@ describe('the menus', () => {
         expect(offered(menuModel(context({ host: 'station', view: 'terminal' })), 'edit-undo').enabled).toBe(false);
     });
 
-    test('Open File at Line in Go only acts while a diff is in front', () => {
-        expect(offered(menuModel(context({ diff: false })), 'open-file-at-line').enabled).toBe(false);
+    test('Open File at Line is in Go only while a diff is in front', () => {
+        expect(find(menuModel(context({ diff: false })), 'open-file-at-line')).toBeUndefined();
         expect(offered(menuModel(context({ diff: true })), 'open-file-at-line').enabled).not.toBe(false);
     });
 
@@ -507,21 +503,22 @@ describe('the menus', () => {
     });
 
     test('what waits on a selection or a split is greyed rather than gone', () => {
-        const spec = menuModel(context({ selection: 0, split: { right: false, down: true }, cells: 1 }));
+        const spec = menuModel(context({ selection: 0, split: { right: false, down: true }, cells: 2 }));
         expect(offered(spec, 'group-selection').enabled).toBe(false);
         expect(offered(spec, 'view-promote').enabled).toBe(false);
         expect(offered(spec, 'split-right').enabled).toBe(false);
         expect(offered(spec, 'split-down').enabled).toBe(true);
         expect(offered(spec, 'focus-left').enabled).toBe(false);
+        expect(find(menuModel(context({ cells: 1 })), 'focus-left')).toBeUndefined();
         expect(offered(menuModel(context({ selection: 2 })), 'group-selection').enabled).toBe(true);
         expect(offered(spec, 'group-arrange').enabled).toBe(false);
         expect(offered(menuModel(context({ selection: 1, groupArrangeable: true })), 'group-arrange').enabled).toBe(true);
     });
 
     test('a cell maximizes from View while the grid has more than one, and says so while it does', () => {
-        expect(offered(menuModel(context({ cells: 1 })), 'cell-maximize').enabled).toBe(false);
+        expect(find(menuModel(context({ cells: 1 })), 'cell-maximize')).toBeUndefined();
         const two = find(menuModel(context({ cells: 2, maximized: true })), 'cell-maximize');
-        expect(two).toMatchObject({ enabled: true, checked: true, accelerator: 'CommandOrControl+Shift+Enter' });
+        expect(two).toMatchObject({ checked: true, accelerator: 'CommandOrControl+Shift+Enter' });
     });
 
     test('the maximize key moves to the node item while a node on the canvas is what it acts on', () => {
@@ -533,13 +530,14 @@ describe('the menus', () => {
         expect(offered(node, 'cell-maximize').accelerator).toBeUndefined();
     });
 
-    test('closing the other cells or those to the right sits under Close, greyed while there is nothing to close', () => {
-        const one = menuModel(context({ cells: 1 }));
-        expect(offered(one, 'cell-close-others').enabled).toBe(false);
-        expect(offered(one, 'cell-close-right').enabled).toBe(false);
+    test('closing the other cells or those to the right sits under Close once the grid has more than one', () => {
+        const one = commandIds(menuModel(context({ cells: 1 })));
+        expect(one).not.toContain('cell-close-others');
+        expect(one).not.toContain('cell-close-right');
         const three = menuModel(context({ cells: 3, closesRight: true }));
-        expect(offered(three, 'cell-close-others').enabled).toBe(true);
+        expect(offered(three, 'cell-close-others').enabled).toBeUndefined();
         expect(offered(three, 'cell-close-right').enabled).toBe(true);
+        expect(offered(menuModel(context({ cells: 3, closesRight: false })), 'cell-close-right').enabled).toBe(false);
         expect(commandIds(menuModel(START_SCREEN))).not.toContain('cell-close-others');
     });
 
@@ -560,9 +558,10 @@ describe('the menus', () => {
         expect(commandIds(menuModel(context()))).not.toContain('keep-awake-off');
     });
 
-    test('the folding commands sit together in a submenu of Code, the levels and the documentation comments among them', () => {
-        const folding = menu(menuModel(context()), 'Code').find((node) => node.kind === 'submenu' && node.id === 'folding');
-        expect(folding?.kind === 'submenu' ? folding.items.map((node) => (node.kind === 'command' ? node.id : node.kind)) : []).toEqual([
+    test('the folding commands sit together in a submenu of Code, the levels in one of their own', () => {
+        const folding = menu(menuModel(context({ editorAvailable: true })), 'Code').find((node) => node.kind === 'submenu' && node.id === 'folding');
+        const items = folding?.kind === 'submenu' ? folding.items : [];
+        expect(items.map((node) => (node.kind === 'command' || node.kind === 'submenu' ? node.id : node.kind))).toEqual([
             'collapse-region',
             'expand-region',
             'collapse-region-recursively',
@@ -572,24 +571,38 @@ describe('the menus', () => {
             'fold-selection',
             'collapse-doc-comments',
             'expand-doc-comments',
-            'expand-all-to-level-1',
-            'expand-all-to-level-2',
-            'expand-all-to-level-3',
-            'expand-all-to-level-4',
-            'expand-all-to-level-5'
+            'expand-to-level'
+        ]);
+        const levels = items.find((node) => node.kind === 'submenu' && node.id === 'expand-to-level');
+        expect(levels?.kind === 'submenu' ? levels.items.map((node) => (node.kind === 'command' ? node.label : node.kind)) : []).toEqual([
+            'Level 1',
+            'Level 2',
+            'Level 3',
+            'Level 4',
+            'Level 5'
         ]);
     });
 
-    test('zoom is offered on every view and only works where there is a camera', () => {
-        expect(offered(menuModel(context({ view: 'drawing' })), 'fit').enabled).toBe(true);
-        expect(offered(menuModel(context({ view: 'terminal' })), 'fit').enabled).toBe(false);
+    test('Code is in the bar only while an editor has the keyboard or a pull request can be shown', () => {
+        expect(labels(menuModel(context({ folder: false })))).not.toContain('Code');
+        const editing = menuModel(context({ editorAvailable: true }));
+        expect(find(editing, 'trigger-completion')).toBeDefined();
+        expect(find(editing, 'hippie-completion')).toBeDefined();
+        expect(commandIds(menuModel(context()))).not.toContain('trigger-completion');
+        expect(commandIds(menuModel(START_SCREEN))).not.toContain('paste-from-history');
     });
 
-    test('the panels and the sidebar are check marks, Processes sits in Window', () => {
+    test('zoom is offered only on a view with a camera', () => {
+        expect(offered(menuModel(context({ view: 'drawing' })), 'fit').enabled).toBeUndefined();
+        expect(find(menuModel(context({ view: 'terminal' })), 'fit')).toBeUndefined();
+    });
+
+    test('the panels and the sidebar are check marks, Processes sits among the panels in View', () => {
         const spec = menuModel(context({ panel: 'processes', sidebar: false }));
         expect(offered(spec, 'sidebar').checked).toBe(false);
         expect(offered(spec, 'panel-files').checked).toBe(false);
-        expect(menu(spec, 'Window').some((node) => node.kind === 'command' && node.id === 'panel-processes' && node.checked === true)).toBe(true);
+        expect(menu(spec, 'View').some((node) => node.kind === 'command' && node.id === 'panel-processes' && node.checked === true)).toBe(true);
+        expect(commandIds(spec)).not.toContain('settings-editor');
     });
 
     test('Compare Models sits in Window right under Usage, on the start screen and in a workspace, and in the palette', () => {
@@ -649,10 +662,9 @@ describe('the menus', () => {
         expect(find(spec, 'launches-after-settle-off')).toMatchObject({ label: 'Run Nothing', checked: false });
     });
 
-    test('without launches Run still offers to add one', () => {
+    test('without launches Run only offers to add one', () => {
         const ids = menu(menuModel(context()), 'Run').flatMap((node) => (node.kind === 'command' ? [node.id] : []));
-        expect(ids).toEqual(['launch-run', 'launch-stop', 'launches-stop-all', 'launches-output', 'launches-edit']);
-        expect(offered(menuModel(context()), 'launch-run').enabled).toBe(false);
+        expect(ids).toEqual(['launches-edit']);
     });
 
     test('no menu starts or ends on a line or draws two in a row', () => {

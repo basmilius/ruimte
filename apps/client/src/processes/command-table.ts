@@ -6,6 +6,6 @@ export const PROCESS_COMMANDS = {
         key: 'toggleProcesses',
         icon: Activity,
         palette: true,
-        menu: { menu: 'window', group: 'panels', order: 10, when: (context) => context.workspace, checked: (context) => context.panel === 'processes' }
+        menu: { menu: 'view', group: 'panels', order: 42, when: (context) => context.workspace, checked: (context) => context.panel === 'processes' }
     }
 } satisfies Record<string, CommandSpec>;

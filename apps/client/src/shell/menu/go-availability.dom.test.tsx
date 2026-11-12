@@ -23,6 +23,16 @@ const LEFT: ProjectNode = { id: 'left', kind: 'note', title: 'Left', body: '', x
 let canvas: CanvasPage;
 
 function offered(id: string): Extract<MenuNode, { kind: 'command' }> {
+    const row = menuRow(id);
+
+    if (!row) {
+        throw new Error(`Missing menu command ${id}`);
+    }
+
+    return row;
+}
+
+function menuRow(id: string): Extract<MenuNode, { kind: 'command' }> | undefined {
     const find = (nodes: readonly MenuNode[]): Extract<MenuNode, { kind: 'command' }> | undefined => {
         for (const node of nodes) {
             if (node.kind === 'command' && node.id === id) {
@@ -41,13 +51,7 @@ function offered(id: string): Extract<MenuNode, { kind: 'command' }> {
         return undefined;
     };
 
-    const row = find(menuModel(menuContext('station')).menus.flatMap((menu) => menu.items));
-
-    if (!row) {
-        throw new Error(`Missing menu command ${id}`);
-    }
-
-    return row;
+    return find(menuModel(menuContext('station')).menus.flatMap((menu) => menu.items));
 }
 
 beforeEach(async () => {
@@ -56,7 +60,7 @@ beforeEach(async () => {
 
 afterEach(() => canvas.close());
 
-test('the rendered Go menu disables empty navigation instead of offering no-op clicks', async () => {
+test('the rendered Go menu disables empty navigation and leaves out what has no cell or editor to act on', async () => {
     await canvas.page.renderApp(
         <div data-test-go-menu>
             <StationMenu variant="symbol" />
@@ -70,16 +74,17 @@ test('the rendered Go menu disables empty navigation instead of offering no-op c
         'Next View',
         'Previous Camera Position',
         'Next Camera Position',
-        'Focus Cell Right',
         'Select Node to the Left',
         'Prompts',
-        'Next That Needs You',
-        'Go to Definition'
+        'Next That Needs You'
     ]) {
         const item = menuItem(label);
         expect(item).not.toBeNull();
         expect(item?.getAttribute('aria-disabled')).toBe('true');
     }
+
+    expect(menuItem('Focus Cell Right')).toBeNull();
+    expect(menuItem('Go to Definition')).toBeNull();
 });
 
 test('node targets include derived cards and disappear during gestures or maximization', async () => {
@@ -188,14 +193,14 @@ test('a menu read finds the active cell editor without stealing keyboard focus',
         const menuButton = document.createElement('button');
         document.body.append(menuButton);
         menuButton.focus();
-        expect(offered('next-change').enabled).toBe(true);
+        expect(offered('next-change').enabled).toBeUndefined();
         expect(offered('go-to-definition').enabled).toBe(true);
         expect(document.activeElement).toBe(menuButton);
         expect(focused).toBe(0);
         unregister();
         unregisterLanguage();
-        expect(offered('next-change').enabled).toBe(false);
-        expect(offered('go-to-definition').enabled).toBe(false);
+        expect(menuRow('next-change')).toBeUndefined();
+        expect(menuRow('go-to-definition')).toBeUndefined();
         menuButton.remove();
     } finally {
         unregister();

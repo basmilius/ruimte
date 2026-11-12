@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp, Replace, TextSearch } from 'lucide-react';
+import { editorAvailable } from '@/commands/conditions';
 import { type CommandSpec } from '@/commands/types';
 import { keyOf } from '@/surface/shortcut-overrides';
 import { platformShortcut, TERMINAL_FIND_SHORTCUT } from '@/surface/terminal-keymap';
@@ -27,7 +28,7 @@ export const FIND_COMMANDS = {
         icon: Replace,
         binds: 'workspace',
         palette: true,
-        menu: { menu: 'edit', group: 'find', order: 20 }
+        menu: { menu: 'edit', group: 'find', order: 20, when: editorAvailable }
     },
     // The menu shows no key: its group command holds Cmd+G, and the editor answers the key itself.
     'find-next': {
@@ -35,41 +36,41 @@ export const FIND_COMMANDS = {
         icon: ArrowDown,
         keymap: 'findNext',
         palette: true,
-        menu: { menu: 'edit', group: 'find', order: 30, showsShortcut: () => false }
+        menu: { menu: 'edit', group: 'find', order: 30, when: editorAvailable, showsShortcut: () => false }
     },
     'find-previous': {
         key: 'findPrevious',
         icon: ArrowUp,
         keymap: 'findPrevious',
         palette: true,
-        menu: { menu: 'edit', group: 'find', order: 40, showsShortcut: () => false }
+        menu: { menu: 'edit', group: 'find', order: 40, when: editorAvailable, showsShortcut: () => false }
     },
     'next-problem': {
         key: 'nextProblem',
         icon: ArrowDown,
         keymap: 'nextProblem',
         palette: true,
-        menu: { menu: 'edit', group: 'problems', order: 10 }
+        menu: { menu: 'edit', group: 'problems', order: 10, when: editorAvailable }
     },
     'previous-problem': {
         key: 'previousProblem',
         icon: ArrowUp,
         keymap: 'previousProblem',
         palette: true,
-        menu: { menu: 'edit', group: 'problems', order: 20 }
+        menu: { menu: 'edit', group: 'problems', order: 20, when: editorAvailable }
     },
     'next-highlight': {
         key: 'nextHighlight',
         icon: ArrowDown,
         keymap: 'nextHighlight',
         palette: true,
-        menu: { menu: 'edit', group: 'problems', order: 30 }
+        menu: { menu: 'edit', group: 'problems', order: 30, when: editorAvailable }
     },
     'previous-highlight': {
         key: 'previousHighlight',
         icon: ArrowUp,
         keymap: 'previousHighlight',
         palette: true,
-        menu: { menu: 'edit', group: 'problems', order: 40 }
+        menu: { menu: 'edit', group: 'problems', order: 40, when: editorAvailable }
     }
 } satisfies Record<string, CommandSpec>;

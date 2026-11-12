@@ -7,9 +7,9 @@ export const PROBLEMS_COMMANDS = {
         icon: CircleAlert,
         palette: true,
         menu: {
-            menu: 'window',
+            menu: 'view',
             group: 'panels',
-            order: 20,
+            order: 44,
             when: (context) => context.workspace && !context.scratch,
             checked: (context) => context.panel === 'problems'
         }

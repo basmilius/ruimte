@@ -65,9 +65,10 @@ export const WINDOW_COMMANDS = {
         palette: false,
         menu: { menu: 'help', group: 'help', order: 40, when: (context) => context.safeModeRestart }
     },
-    'settings-editor': { key: 'editorSettings', icon: CodeXml, palette: true, menu: { menu: 'window', group: 'panels', order: 50 } },
-    'settings-machines': { key: 'machines', icon: Server, palette: true, menu: { menu: 'window', group: 'panels', order: 60 } },
-    'settings-computer': { key: 'computerUse', icon: MousePointer2, palette: true, menu: { menu: 'window', group: 'panels', order: 70 } },
+    // Each opens a section of Settings, which the app menu already offers, so they keep only a palette row.
+    'settings-editor': { key: 'editorSettings', icon: CodeXml, palette: true },
+    'settings-machines': { key: 'machines', icon: Server, palette: true },
+    'settings-computer': { key: 'computerUse', icon: MousePointer2, palette: true },
     'window-new': {
         key: 'newWindow',
         icon: AppWindow,

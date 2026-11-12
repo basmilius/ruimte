@@ -12,6 +12,6 @@ export const GIT_COMMANDS = {
         key: 'compareBranches',
         icon: GitCompare,
         palette: true,
-        menu: { menu: 'view', group: 'panels', order: 21, when: (context) => !context.scratch }
+        menu: { menu: 'code', group: 'pull-request', order: 30 }
     }
 } satisfies Record<string, CommandSpec>;

@@ -1,7 +1,7 @@
 import { formatShortcut, type Shortcut } from '@adecore/ui';
 import type { ProjectView } from '@ruimte/contracts';
 import type { MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
-import { desktop as isDesktop, onCanvas } from '@/commands/conditions';
+import { editorAvailable, desktop as isDesktop, onCanvas, severalCells } from '@/commands/conditions';
 import { only, role, separator, shell, submenu, t, tidy, type CommandOptions, type MenuCommand } from '@/commands/menu-builders';
 import type { MenuContext, MenuHost } from '@/commands/menu-context';
 import { menuExtrasOf } from '@/commands/menu-extras';
@@ -152,15 +152,37 @@ const LAYOUT: Record<MenuContainer, readonly MenuGroup[]> = {
     code: [
         { id: 'pull-request', when: (context) => context.folder && !context.scratch },
         { id: 'pr-watch' },
-        { id: 'language' },
-        { id: 'editor', extras: [{ order: 1000, build: (context, command) => [submenu('folding', t('folding'), itemsOf('folding', context, command))] }] }
+        {
+            id: 'language',
+            when: editorAvailable,
+            extras: [{ order: -1, build: (context, command) => [submenu('completion', t('codeCompletion'), itemsOf('completion', context, command))] }]
+        },
+        { id: 'ai', when: editorAvailable },
+        { id: 'templates', when: editorAvailable },
+        {
+            id: 'editor',
+            when: editorAvailable,
+            extras: [{ order: 1000, build: (context, command) => [submenu('folding', t('folding'), itemsOf('folding', context, command))] }]
+        }
     ],
-    folding: [{ id: 'folding' }],
+    completion: [{ id: 'completion' }],
+    folding: [
+        {
+            id: 'folding',
+            extras: [
+                {
+                    order: 1000,
+                    build: (context, command) => [submenu('expand-to-level', t('expandAllToLevel'), itemsOf('expand-to-level', context, command))]
+                }
+            ]
+        }
+    ],
+    'expand-to-level': [{ id: 'levels' }],
     go: [
         { id: 'palette' },
         { id: 'views', when: inWorkspace },
         { id: 'go-view', when: inWorkspace },
-        { id: 'focus', when: inWorkspace },
+        { id: 'focus', when: (context) => context.workspace && severalCells(context) },
         { id: 'nodes', when: (context) => context.workspace && context.view === 'canvas' },
         { id: 'prompts', when: inWorkspace },
         { id: 'language', when: (context) => context.workspace && !context.settingsOpen },
@@ -321,5 +343,6 @@ export function menuModel(context: MenuContext): MenuSpec {
         { ...section('window', t('window')), role: 'window' as const },
         { ...section('help', t('help')), role: 'help' as const }
     ];
-    return { menus: menus.map((menu) => ({ ...menu, items: tidy(menu.items) })) };
+    // A menu with nothing to offer here, such as Code without an editor or a pull request, leaves the bar.
+    return { menus: menus.map((menu) => ({ ...menu, items: tidy(menu.items) })).filter((menu) => menu.items.length > 0 || menu.role !== undefined) };
 }

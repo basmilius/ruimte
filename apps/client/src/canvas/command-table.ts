@@ -51,6 +51,7 @@ export const CANVAS_COMMANDS = {
             menu: 'view',
             group: 'split',
             order: 80,
+            when: onCanvas,
             enabled: (context) => context.nodeMaximizable,
             checked: (context) => context.nodeMaximized,
             showsShortcut: (context) => context.nodeMaximizable
@@ -66,14 +67,14 @@ export const CANVAS_COMMANDS = {
         icon: Maximize2,
         binds: 'workspace',
         palette: true,
-        menu: { menu: 'view', group: 'zoom', order: 10, enabled: zoomable }
+        menu: { menu: 'view', group: 'zoom', order: 10, when: zoomable }
     },
     'zoom-selection': {
         key: 'zoomToSelection',
         icon: Focus,
         binds: 'workspace',
         palette: true,
-        menu: { menu: 'view', group: 'zoom', order: 20, enabled: zoomable }
+        menu: { menu: 'view', group: 'zoom', order: 20, when: zoomable }
     },
     'zoom-node': {
         key: 'zoomToNode',
@@ -91,7 +92,7 @@ export const CANVAS_COMMANDS = {
             menu: 'view',
             group: 'zoom',
             order: 40,
-            enabled: (context) => zoomable(context) || context.chatTextSize !== null,
+            when: (context) => zoomable(context) || context.chatTextSize !== null,
             words: (context) => ({ key: context.chatTextSize === null ? 'zoomReset' : 'chatTextReset' })
         }
     },

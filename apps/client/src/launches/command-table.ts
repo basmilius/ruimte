@@ -12,6 +12,7 @@ export const LAUNCH_COMMANDS = {
             menu: 'run',
             group: 'launch',
             order: 10,
+            when: hasLaunches,
             enabled: (context) => chosenLaunchOf(context) !== null,
             words: (context) => {
                 const chosen = chosenLaunchOf(context);
@@ -28,6 +29,7 @@ export const LAUNCH_COMMANDS = {
             menu: 'run',
             group: 'launch',
             order: 20,
+            when: hasLaunches,
             enabled: (context) => chosenLaunchOf(context)?.live === true,
             words: (context) => {
                 const chosen = chosenLaunchOf(context);
@@ -39,13 +41,13 @@ export const LAUNCH_COMMANDS = {
         key: 'launchesStopAll',
         icon: CircleStop,
         palette: false,
-        menu: { menu: 'run', group: 'launch', order: 30, enabled: (context) => context.launches.some((launch) => launch.live) }
+        menu: { menu: 'run', group: 'launch', order: 30, when: hasLaunches, enabled: (context) => context.launches.some((launch) => launch.live) }
     },
     'launches-output': {
         key: 'launchesOutput',
         icon: SquareTerminal,
         palette: false,
-        menu: { menu: 'run', group: 'setup', order: 20, enabled: (context) => chosenLaunchOf(context) !== null }
+        menu: { menu: 'run', group: 'setup', order: 20, when: hasLaunches, enabled: (context) => chosenLaunchOf(context) !== null }
     },
     'launches-edit': { key: 'launchesEdit', icon: Pencil, palette: true, menu: { menu: 'run', group: 'setup', order: 30 } },
     'launches-after-settle-off': {
@@ -55,6 +57,10 @@ export const LAUNCH_COMMANDS = {
         menu: { menu: 'launches-after-settle', group: 'off', order: 10, checked: (context) => context.afterSettle.chosen === null, radio: true }
     }
 } satisfies Record<string, CommandSpec>;
+
+function hasLaunches(context: MenuContext): boolean {
+    return context.launches.length > 0;
+}
 
 function chosenLaunchOf(context: MenuContext): MenuContext['launches'][number] | null {
     return context.launches.find((launch) => launch.id === context.chosenLaunch) ?? null;

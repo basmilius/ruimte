@@ -32,7 +32,7 @@ export const FILE_COMMANDS = {
         icon: FileText,
         keymap: 'jumpToSource',
         palette: true,
-        menu: { menu: 'go', group: 'editor-navigation', order: 100, enabled: (context) => context.diff }
+        menu: { menu: 'go', group: 'editor-navigation', order: 100, when: (context) => context.diff }
     },
     'panel-files': {
         key: 'toggleFiles',

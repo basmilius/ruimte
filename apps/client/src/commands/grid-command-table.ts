@@ -43,13 +43,19 @@ export const GRID_COMMANDS = {
         key: 'closeOtherCells',
         icon: ListX,
         palette: true,
-        menu: { menu: 'file', group: 'close', order: 40, when: (context) => context.workspace, enabled: severalCells }
+        menu: { menu: 'file', group: 'close', order: 40, when: (context) => context.workspace && severalCells(context) }
     },
     'cell-close-right': {
         key: 'closeCellsRight',
         icon: ArrowRightToLine,
         palette: true,
-        menu: { menu: 'file', group: 'close', order: 50, when: (context) => context.workspace, enabled: (context) => context.closesRight }
+        menu: {
+            menu: 'file',
+            group: 'close',
+            order: 50,
+            when: (context) => context.workspace && severalCells(context),
+            enabled: (context) => context.closesRight
+        }
     },
     'split-right': {
         key: 'splitRight',
@@ -95,7 +101,7 @@ export const GRID_COMMANDS = {
             menu: 'view',
             group: 'split',
             order: 70,
-            enabled: severalCells,
+            when: severalCells,
             checked: (context) => context.maximized,
             showsShortcut: (context) => !context.nodeMaximizable
         }

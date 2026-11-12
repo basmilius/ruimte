@@ -25,6 +25,13 @@ function Publisher() {
     return null;
 }
 
+function listed(spec: MenuSpec, id: string): boolean {
+    const has = (nodes: readonly MenuNode[]): boolean =>
+        nodes.some((node) => (node.kind === 'command' && node.id === id) || (node.kind === 'submenu' && has(node.items)));
+
+    return spec.menus.some((menu) => has(menu.items));
+}
+
 function enabled(spec: MenuSpec, id: string): boolean | undefined {
     const find = (nodes: readonly MenuNode[]): boolean | undefined => {
         for (const node of nodes) {
@@ -123,11 +130,11 @@ test('native menu publication follows prompt, camera and snooze changes and stop
         registerCell('main', editorSurface);
         editorSurface.focus();
         await act(async () => jest.advanceTimersByTime(100));
-        expect(enabled(sent.at(-1)!, 'next-change')).toBe(false);
+        expect(listed(sent.at(-1)!, 'next-change')).toBe(false);
         const offEditor = registerFocusedEditor({ focus() {} } as unknown as Editor, editorSurface);
         releaseEditors = offEditor;
         await act(async () => jest.advanceTimersByTime(100));
-        expect(enabled(sent.at(-1)!, 'next-change')).toBe(true);
+        expect(listed(sent.at(-1)!, 'next-change')).toBe(true);
         expect(enabled(sent.at(-1)!, 'go-to-definition')).toBe(false);
 
         const offLanguage = registerFocusedLanguage({ editor: { focus() {} } } as unknown as EditorLanguage, editorSurface);
@@ -139,11 +146,11 @@ test('native menu publication follows prompt, camera and snooze changes and stop
         expect(enabled(sent.at(-1)!, 'go-to-definition')).toBe(true);
         offEditor();
         await act(async () => jest.advanceTimersByTime(100));
-        expect(enabled(sent.at(-1)!, 'next-change')).toBe(false);
+        expect(listed(sent.at(-1)!, 'next-change')).toBe(false);
         expect(enabled(sent.at(-1)!, 'go-to-definition')).toBe(true);
         offLanguage();
         await act(async () => jest.advanceTimersByTime(100));
-        expect(enabled(sent.at(-1)!, 'go-to-definition')).toBe(false);
+        expect(listed(sent.at(-1)!, 'go-to-definition')).toBe(false);
         await act(async () => unregister());
         await act(async () => jest.advanceTimersByTime(100));
         expect(enabled(sent.at(-1)!, 'prompts')).toBe(false);

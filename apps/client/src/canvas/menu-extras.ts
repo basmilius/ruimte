@@ -6,14 +6,15 @@ export const CANVAS_MENU_EXTRAS: readonly MenuExtra[] = [
         menu: 'kind',
         group: 'canvas-arrange',
         order: 40,
-        build: (context, command) => [
-            submenu(
-                'move-to',
-                t('moveTo'),
-                context.moveTargets.map((target) => command(`view-move-${target.id}`, target.name)),
-                context.moveTargets.length > 0
+        build: (context, command) =>
+            only(
+                context.moveTargets.length > 0,
+                submenu(
+                    'move-to',
+                    t('moveTo'),
+                    context.moveTargets.map((target) => command(`view-move-${target.id}`, target.name))
+                )
             )
-        ]
     },
     {
         menu: 'kind',

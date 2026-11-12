@@ -64,10 +64,15 @@ interface EditorCommandSpec {
     readonly keymap: KeymapId;
     /* A group the Code menu keeps its own submenu for, or the group of another menu the command sits in instead. */
     readonly group?: EditorCommandGroup;
+    /* The depth an Expand All to Level command unfolds to, which its row in that submenu names alone. */
+    readonly level?: number;
 }
 
-/* `folding` is the Code menu's submenu, `lines` and `clipboard` are groups of the Edit menu, `navigate` one of the Go menu and `zoom` one of the View menu. */
-export type EditorCommandGroup = 'folding' | 'lines' | 'clipboard' | 'navigate' | 'zoom';
+/*
+ * `completion` and `folding` are submenus of the Code menu and `level` one of Folding; `lines` and `clipboard`
+ * are groups of the Edit menu, `navigate` one of the Go menu and `zoom` one of the View menu.
+ */
+export type EditorCommandGroup = 'completion' | 'folding' | 'level' | 'lines' | 'clipboard' | 'navigate' | 'zoom';
 
 function command(icon: LucideIcon, name: EditorRunCommand & KeymapId, group?: EditorCommandGroup): EditorCommandSpec {
     return { icon, key: name, command: name, keymap: name, ...(group === undefined ? {} : { group }) };
@@ -76,6 +81,10 @@ function command(icon: LucideIcon, name: EditorRunCommand & KeymapId, group?: Ed
 /* A folding command whose key the keymap names otherwise. */
 function folding(icon: LucideIcon, name: EditorRunCommand, keymap: KeymapId): EditorCommandSpec {
     return { icon, key: name, command: name, keymap, group: 'folding' };
+}
+
+function expandToLevel(name: EditorRunCommand & KeymapId, level: number): EditorCommandSpec {
+    return { ...command(ListTree, name, 'level'), level };
 }
 
 const TABLE = {
@@ -96,11 +105,11 @@ const TABLE = {
     'fold-selection': command(FoldHorizontal, 'foldSelection', 'folding'),
     'collapse-doc-comments': command(Book, 'collapseDocComments', 'folding'),
     'expand-doc-comments': command(BookOpen, 'expandDocComments', 'folding'),
-    'expand-all-to-level-1': command(ListTree, 'expandAllToLevel1', 'folding'),
-    'expand-all-to-level-2': command(ListTree, 'expandAllToLevel2', 'folding'),
-    'expand-all-to-level-3': command(ListTree, 'expandAllToLevel3', 'folding'),
-    'expand-all-to-level-4': command(ListTree, 'expandAllToLevel4', 'folding'),
-    'expand-all-to-level-5': command(ListTree, 'expandAllToLevel5', 'folding'),
+    'expand-all-to-level-1': expandToLevel('expandAllToLevel1', 1),
+    'expand-all-to-level-2': expandToLevel('expandAllToLevel2', 2),
+    'expand-all-to-level-3': expandToLevel('expandAllToLevel3', 3),
+    'expand-all-to-level-4': expandToLevel('expandAllToLevel4', 4),
+    'expand-all-to-level-5': expandToLevel('expandAllToLevel5', 5),
     'select-next-occurrence': command(ScanSearch, 'selectNextOccurrence'),
     'unselect-occurrence': command(BoxSelect, 'unselectOccurrence'),
     'select-all-occurrences': command(ListChecks, 'selectAllOccurrences'),
@@ -117,8 +126,8 @@ const TABLE = {
     'move-statement-up': command(ArrowUpFromLine, 'moveStatementUp', 'lines'),
     'move-statement-down': command(ArrowDownFromLine, 'moveStatementDown', 'lines'),
     'paste-as-plain-text': command(ClipboardType, 'pasteAsPlainText', 'clipboard'),
-    'hippie-completion': command(WholeWord, 'hippieCompletion'),
-    'hippie-backward-completion': command(WholeWord, 'hippieBackwardCompletion'),
+    'hippie-completion': command(WholeWord, 'hippieCompletion', 'completion'),
+    'hippie-backward-completion': command(WholeWord, 'hippieBackwardCompletion', 'completion'),
     'next-change': command(ChevronsDown, 'nextChange', 'navigate'),
     'previous-change': command(ChevronsUp, 'previousChange', 'navigate'),
     'method-up': command(ChevronUp, 'methodUp', 'navigate'),
