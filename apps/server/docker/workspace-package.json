@@ -9,24 +9,24 @@
       "packages/*"
     ],
     "catalog": {
-      "@adecore/agent-contracts": "0.66.1",
-      "@adecore/agents": "0.66.1",
-      "@adecore/agents-react": "0.66.1",
-      "@adecore/charts": "0.66.1",
-      "@adecore/database": "0.66.1",
-      "@adecore/diagram": "0.66.1",
-      "@adecore/drawing": "0.66.1",
-      "@adecore/editor": "0.66.1",
-      "@adecore/editor-react": "0.66.1",
-      "@adecore/intelligent-ui": "0.66.1",
-      "@adecore/lsp": "0.66.1",
-      "@adecore/merge": "0.66.1",
-      "@adecore/plan": "0.66.1",
-      "@adecore/service": "0.66.1",
-      "@adecore/shell": "0.66.1",
-      "@adecore/terminal": "0.66.1",
-      "@adecore/ui": "0.66.1",
-      "@adecore/utils": "0.66.1"
+      "@adecore/agent-contracts": "0.66.2",
+      "@adecore/agents": "0.66.2",
+      "@adecore/agents-react": "0.66.2",
+      "@adecore/charts": "0.66.2",
+      "@adecore/database": "0.66.2",
+      "@adecore/diagram": "0.66.2",
+      "@adecore/drawing": "0.66.2",
+      "@adecore/editor": "0.66.2",
+      "@adecore/editor-react": "0.66.2",
+      "@adecore/intelligent-ui": "0.66.2",
+      "@adecore/lsp": "0.66.2",
+      "@adecore/merge": "0.66.2",
+      "@adecore/plan": "0.66.2",
+      "@adecore/service": "0.66.2",
+      "@adecore/shell": "0.66.2",
+      "@adecore/terminal": "0.66.2",
+      "@adecore/ui": "0.66.2",
+      "@adecore/utils": "0.66.2"
     }
   }
 }
