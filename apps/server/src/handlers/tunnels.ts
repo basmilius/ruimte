@@ -21,7 +21,9 @@ interface TunnelsDeps {
  * Tunnels, the credentials of external MCP clients and the consent of one that waits. Any client reads the state of the
  * tunnels and an agent's cards, and declines a card; everything else is the local secret's, so a client the machine let
  * in changes no tunnel and makes no credential.
- * None of these is on a peer's list. Stopping the area ends cloudflared first and the listener of the external clients after.
+ * None of these is on a peer's list. Stopping the area ends cloudflared first and the listener of the external clients after,
+ * both in `end`: cloudflared may take its full wait behind a slow Cloudflare call, which must not push the chats, tasks
+ * and terminals of `drain` past the shutdown deadline.
  */
 export function tunnelsArea(deps: TunnelsDeps): Area {
     const { service, proposals, credentials, consent, listener, changes, changed } = deps;
@@ -30,8 +32,8 @@ export function tunnelsArea(deps: TunnelsDeps): Area {
         name: 'tunnel',
         sources: [changes],
         stop: [
-            { phase: 'drain', label: 'Stopping tunnels', run: () => service.stop() },
-            { phase: 'drain', label: 'Stopping the external MCP listener', run: () => listener.stop() }
+            { phase: 'end', label: 'Stopping tunnels', run: () => service.stop() },
+            { phase: 'end', label: 'Stopping the external MCP listener', run: () => listener.stop() }
         ],
         handlers: (dispatcher) => {
             dispatcher.register('tunnel.state', () => service.state());
