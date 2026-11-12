@@ -1,7 +1,7 @@
 import { ButtonGroup, EmptyState, messageOf, ScrollArea } from '@adecore/ui';
 import { formatBytes, formatNumber } from '@adecore/ui/format';
 import type { ByteResource, FsReadBinary } from '@ruimte/contracts';
-import { FileText, Maximize, Scan } from 'lucide-react';
+import { FileText, Fullscreen, Ratio } from 'lucide-react';
 import { getDocument, GlobalWorkerOptions, TextLayer, version, type PDFDocumentProxy, type PDFPageProxy } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -220,8 +220,8 @@ export function PdfFile({ source: origin, name, read }: { source: FileSource; na
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar>
                 <ButtonGroup>
-                    <FileToolbarToggle icon={Maximize} label={t('file.image.fit')} active={zoom === 'fit'} onClick={() => changeZoom('fit')} />
-                    <FileToolbarToggle icon={Scan} label={t('file.image.actual')} active={zoom === 'full'} onClick={() => changeZoom('full')} />
+                    <FileToolbarToggle icon={Fullscreen} label={t('file.image.fit')} active={zoom === 'fit'} onClick={() => changeZoom('fit')} />
+                    <FileToolbarToggle icon={Ratio} label={t('file.image.actual')} active={zoom === 'full'} onClick={() => changeZoom('full')} />
                 </ButtonGroup>
             </FileToolbar>
             <FileTextMenu className="flex min-h-0 grow flex-col">

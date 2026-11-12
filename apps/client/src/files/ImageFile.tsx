@@ -1,7 +1,7 @@
 import { ButtonGroup, EmptyState, ScrollArea } from '@adecore/ui';
 import { formatBytes } from '@adecore/ui/format';
 import type { FsReadBinary } from '@ruimte/contracts';
-import { ImageOff, Maximize, Scan } from 'lucide-react';
+import { Fullscreen, ImageOff, Ratio } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileContextMenu, FileToolbar, FileToolbarToggle } from '@/files/FileToolbar';
@@ -30,8 +30,8 @@ export function ImageFile({ source, name, read }: { source: FileSource; name: st
             {drawable ? (
                 <FileToolbar>
                     <ButtonGroup>
-                        <FileToolbarToggle icon={Maximize} label={t('file.image.fit')} active={zoom === 'fit'} onClick={() => setZoom('fit')} />
-                        <FileToolbarToggle icon={Scan} label={t('file.image.actual')} active={zoom === 'full'} onClick={() => setZoom('full')} />
+                        <FileToolbarToggle icon={Fullscreen} label={t('file.image.fit')} active={zoom === 'fit'} onClick={() => setZoom('fit')} />
+                        <FileToolbarToggle icon={Ratio} label={t('file.image.actual')} active={zoom === 'full'} onClick={() => setZoom('full')} />
                     </ButtonGroup>
                 </FileToolbar>
             ) : (
