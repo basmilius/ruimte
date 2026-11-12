@@ -9,6 +9,13 @@ describe('shortcutGroups', () => {
         expect(labels(false)).not.toContain('Back one word');
         expect(labels(false)).toContain('Clear screen and scrollback');
     });
+
+    test('quit and hide are listed on macOS only, cut everywhere', () => {
+        expect(labels(true)).toEqual(expect.arrayContaining(['Cut', 'Hide Ruimte', 'Quit Ruimte']));
+        expect(labels(false)).toContain('Cut');
+        expect(labels(false)).not.toContain('Quit Ruimte');
+        expect(labels(false)).not.toContain('Hide Ruimte');
+    });
 });
 
 describe('shortcutRowId', () => {

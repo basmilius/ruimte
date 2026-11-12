@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { shortcut } from '@adecore/ui';
+import { keyboardGroups } from './keyboard-groups';
 import { extensionUsesKey, refusalOf, resetRefusalOf, sameKey } from './shortcut-refusal';
 import type { ShortcutGroup } from './shortcuts';
 
@@ -64,6 +65,22 @@ describe.each([true, false])('refusalOf, apple %p', (apple) => {
     test('refuses what a browser tab keeps there, and only there', () => {
         expect(refusalOf(shortcut('Mod+W'), 'palette', GROUPS, { apple, browserTab: true })).toEqual({ reason: 'browser' });
         expect(refusalOf(shortcut('Mod+W'), 'palette', GROUPS, context)).toBeNull();
+    });
+});
+
+describe('refusalOf against the fixed keys', () => {
+    const takenOn = (text: string, apple: boolean): boolean =>
+        refusalOf(shortcut(text), 'palette', keyboardGroups(apple), { apple, browserTab: false })?.reason === 'taken';
+
+    test.each([true, false])('refuses cut and every view key, apple %p', (apple) => {
+        for (const text of ['Mod+X', 'Mod+1', 'Mod+2', 'Mod+5', 'Mod+9']) {
+            expect(takenOn(text, apple), text).toBe(true);
+        }
+    });
+
+    test('refuses quit and hide on macOS', () => {
+        expect(takenOn('Mod+Q', true)).toBe(true);
+        expect(takenOn('Mod+H', true)).toBe(true);
     });
 });
 

@@ -3,7 +3,7 @@ import { PROMPT_SHORTCUTS } from '@adecore/agents-react/prompts';
 import { KEY_SHORTCUTS, shortcut, shortcutParts, type Shortcut } from '@adecore/ui';
 import i18next from 'i18next';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
-import { CANVAS_SHORTCUTS, viewShortcut } from '@/surface/canvas/shortcuts';
+import { CANVAS_SHORTCUTS, VIEW_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { keyIn, overridesSnapshot, type OverrideSnapshot, type RowId } from '@/surface/shortcut-overrides';
 import { CLEAR_SHORTCUT, LEAVE_NODE_SHORTCUT, platformShortcut, TERMINAL_FIND_SHORTCUT } from '@/surface/terminal-keymap';
 
@@ -51,7 +51,15 @@ export function shortcutGroups(apple: boolean, snapshot: OverrideSnapshot = over
             shortcuts: [
                 { id: 'palette', keys: keyIn(snapshot, 'palette'), label: say('canvas.palette') },
                 { keys: shortcut('Alt'), then: i18next.t('settings:gesture.hold'), label: say('canvas.usagePeek') },
-                { id: 'voice-control', keys: keyIn(snapshot, 'voice-control'), label: i18next.t('voice:shortcut') }
+                { id: 'voice-control', keys: keyIn(snapshot, 'voice-control'), label: i18next.t('voice:shortcut') },
+                { keys: shortcut('Mod+X'), label: say('app.cut') },
+                // macOS holds these for every app, a browser that shows Ruimte included.
+                ...(apple
+                    ? [
+                          { keys: shortcut('Mod+H'), label: say('app.hide') },
+                          { keys: shortcut('Mod+Q'), label: say('app.quit') }
+                      ]
+                    : [])
             ]
         },
         {
@@ -81,7 +89,7 @@ export function shortcutGroups(apple: boolean, snapshot: OverrideSnapshot = over
             id: 'views',
             title: areaTitle('views'),
             shortcuts: [
-                { keys: viewShortcut(0)!, label: say('views.goTo') },
+                ...VIEW_SHORTCUTS.map((keys, index) => ({ keys, label: i18next.t('settings:shortcuts.views.goTo', { number: index + 1 }) })),
                 { id: 'view-previous', keys: keyIn(snapshot, 'view-previous'), label: say('views.previous') },
                 { id: 'view-next', keys: keyIn(snapshot, 'view-next'), label: say('views.next') },
                 { id: 'view-new', keys: keyIn(snapshot, 'view-new'), label: say('views.new') },

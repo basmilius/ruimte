@@ -807,6 +807,11 @@
             "selectTextEnd": "Select to end of file",
             "acceptGhostWord": "Accept next word of suggestion"
         },
+        "app": {
+            "cut": "Cut",
+            "hide": "Hide Ruimte",
+            "quit": "Quit Ruimte"
+        },
         "canvas": {
             "palette": "Command palette",
             "usagePeek": "Show plan limits",
@@ -826,7 +831,7 @@
             "escape": "Clear selection, or leave the node"
         },
         "views": {
-            "goTo": "Go to view 1 to 9",
+            "goTo": "Go to view {{number}}",
             "previous": "Previous view",
             "next": "Next view",
             "new": "New canvas view",

@@ -807,6 +807,11 @@
             "selectTextEnd": "Selecteren tot einde van bestand",
             "acceptGhostWord": "Volgend woord van suggestie overnemen"
         },
+        "app": {
+            "cut": "Knippen",
+            "hide": "Ruimte verbergen",
+            "quit": "Ruimte afsluiten"
+        },
         "canvas": {
             "palette": "Opdrachtenpalet",
             "usagePeek": "Planlimieten tonen",
@@ -826,7 +831,7 @@
             "escape": "Selectie opheffen, of node verlaten"
         },
         "views": {
-            "goTo": "Naar weergave 1 tot 9",
+            "goTo": "Naar weergave {{number}}",
             "previous": "Vorige weergave",
             "next": "Volgende weergave",
             "new": "Nieuwe canvasweergave",
