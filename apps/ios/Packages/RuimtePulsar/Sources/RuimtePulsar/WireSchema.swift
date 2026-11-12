@@ -183,7 +183,23 @@ public enum WireSchema {
             }
             return try parse(input, schema: target, path: path, definitions: definitions)
         }
-        let value = try projectEntry(input, metadata: schema["x-project-entry"])
+        guard let metadata = schema["x-project-entry"] else {
+            return try parseValue(input, schema: schema, path: path, definitions: definitions)
+        }
+        let entry = try projectEntry(input, metadata: metadata)
+        do {
+            return try parseValue(entry, schema: schema, path: path, definitions: definitions)
+        } catch {
+            // A newer machine may write a word this app does not know into a kind it does know. The entry keeps its
+            // place as unknown, so the rest of the project opens and a save writes it back as it came.
+            guard let unreadable = unreadableEntry(entry, metadata: metadata) else { throw error }
+            return try parseValue(unreadable, schema: schema, path: path, definitions: definitions)
+        }
+    }
+
+    private static func parseValue(_ value: JSONValue, schema: JSONValue, path: String, definitions: JSONValue?) throws
+        -> JSONValue
+    {
         let fail = { WireValidationError.invalid("Invalid \(path)") }
         if let open = schema["x-open-union"], let options = (schema["oneOf"] ?? schema["anyOf"])?.arrayValue {
             return try parseOpenUnion(value, options: options, open: open, path: path, definitions: definitions)
@@ -418,6 +434,14 @@ public enum WireSchema {
             let id = entry["id"]?.stringValue, !id.isEmpty
         else { return .object(entry) }
         return .object(unknownEntry(entry, metadata: metadata))
+    }
+
+    /// An entry of a kind this app knows that still did not read, as `unknown` around it; nil for one without an id.
+    private static func unreadableEntry(_ entry: JSONValue, metadata: JSONValue) -> JSONValue? {
+        guard let raw = entry.objectValue, let kind = raw["kind"]?.stringValue, !kind.isEmpty, kind != "unknown",
+            let id = raw["id"]?.stringValue, !id.isEmpty
+        else { return nil }
+        return .object(unknownEntry(raw, metadata: metadata))
     }
 
     private static func unknownEntry(_ raw: [String: JSONValue], metadata: JSONValue) -> [String: JSONValue] {

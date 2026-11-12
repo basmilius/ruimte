@@ -6,7 +6,7 @@ A native remote client for Ruimte machines, for iOS and iPadOS 27 (`project.yml`
 
 The app follows the desktop wherever a phone can. These are the deliberate differences and the rules a phone adds.
 
-- Project saves are three-way merges with explicit conflict resolution. An unknown view or node kind survives a save.
+- Project saves are three-way merges with explicit conflict resolution. An unknown view or node kind survives a save, and so does a view or node of a known kind holding a word of a newer machine, which reads as unknown (`WireSchema`).
 - Live state is a `LiveResource` (`RuimteTransport`): the events a store listens to, one read on every new link and when an event says the state changed, the watch asked again on every link (`LiveWatch`, shared by its holders), and a clock only for a machine that does not answer the watch. A page that must outlive a push holds it through `LiveHolds`. Chat and terminal attach keep their own reads and take only the events and the link.
 - A visual reply is a `WKWebView` per card, loaded from memory under `ruimte-visual://` with the desktop sandbox host page's policy (`ChatVisualContract.swift`, generated from `packages/csp` by `Scripts/generate-visual.ts`). It runs on an opaque origin without files or storage, and its main frame never navigates away. Tapped links open in Safari.
 - New chat outside a project asks `project.newChat`, which hands back the agent's unused chat instead of making another.
@@ -71,6 +71,8 @@ A design view or node shows its chat and the pages of its folder one at a time. 
 A rule the phone keeps a Swift copy of is held to `Tests/Fixtures/ports.json`, which `packages/contracts/scripts/generate-port-fixtures.ts` writes by calling the TypeScript rule on every case (`PortFixtureTests`): node titles, slugs, a launch's folder and gaps, a group's frame, the lines a link draws, a session's status and which views the sidebar lists. A new port adds its cases there. Signature prefixes come from the generated `SigningPurposes`, and every kind in `wire.json` must be built by the app or listed as the machines' own.
 
 A lost send acknowledgement keeps the draft and asks the person to check the conversation before retrying.
+
+Messages wake a chat at most 30 times an hour. A message held back by that limit says so under its bubble and offers Deliver now, as on the desktop. Deliver now sends a prompt of the person's own with `chat.send`, and that turn reads the waiting messages. A refusal shows under the button.
 
 A machine without a request the app uses (forks, bookmarks, snoozes, plans) says it needs an update.
 
@@ -146,7 +148,7 @@ The system authorization sheet, with no browser callback and no web fallback. Th
 - `stasel/WebRTC` is pinned to `153.0.0`, commit `4266157cd08f92115de885ab12d87196a8db87e1`, in `RuimteTransport`. The machine link carries no audio or video and declares no microphone, camera or background audio.
 - `RuimteVoice` uses LiveKit's WebRTC (`livekit/webrtc-xcframework`, MIT, `150.7871.03`, commit `a41df9e9bcc7ab1d62131fda75c123ea391e5188`), the only build that hands an app the samples of both sides with Apple's voice processing on. Its `LK` prefix lets both frameworks ship side by side.
 - `packages/contracts/scripts/generate-swift.ts` generates the daemon API, schemas, constants, fixtures and closed vocabularies as Swift enums. `AgentKind`, `RuntimeMode`, `AgentStatus` and icon names are open on the wire (`x-open-enum`).
-- A chat item, union member, list element or status word of a newer machine never empties a page: the app shows "Update Ruimte to see this." in its place (a request among them is answered only on the machine), leaves out a listed chat, project or task it cannot read, and reads a newer word as `unknown`, following the stamps `x-open-union`, `x-lossy-items` and `x-open-values`.
+- A chat item, union member, list element or status word of a newer machine never empties a page: the app shows "Update Ruimte to see this." in its place (a request among them is answered only on the machine), leaves out a listed chat, project or task it cannot read, and reads a newer word as `unknown`, following the stamps `x-open-union`, `x-lossy-items` and `x-open-values`. It also leaves out a sub-agent, workflow or visual of `chat.attach` and a request of a session's agent it cannot read; those lists are stamped for the app alone (`APP_LOSSY_ARRAYS` in `generate-swift.ts`).
 - `MachineClient` times out reads only, since a mutation ends when the link closes.
 
 The web authentication callback is exactly `ruimte://pulsar/callback`, checked with the pending state before the exchange. `/v1/providers` decides which sign-in options show.

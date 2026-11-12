@@ -7511,9 +7511,9 @@ public struct ChatAttachResult: Codable, Sendable, Equatable {
         `seq` = try container.decodeIfPresent(Int64.self, forKey: .`seq`)
         `events` = try container.contains(.`events`) ? container.decodeLossy([ChatEvent].self, forKey: .`events`) : nil
         `bookmarks` = try container.decodeIfPresent([ChatAttachResultBookmarksItem].self, forKey: .`bookmarks`)
-        `visuals` = try container.decodeIfPresent([ChatAttachResultVisualsItem].self, forKey: .`visuals`)
-        `subagents` = try container.decodeIfPresent([ChatSubagentItem].self, forKey: .`subagents`)
-        `workflows` = try container.decodeIfPresent([ChatToolItem].self, forKey: .`workflows`)
+        `visuals` = try container.contains(.`visuals`) ? container.decodeLossy([ChatAttachResultVisualsItem].self, forKey: .`visuals`) : nil
+        `subagents` = try container.contains(.`subagents`) ? container.decodeLossy([ChatSubagentItem].self, forKey: .`subagents`) : nil
+        `workflows` = try container.contains(.`workflows`) ? container.decodeLossy([ChatToolItem].self, forKey: .`workflows`) : nil
         `outline` = try container.contains(.`outline`) ? container.decodeLossy([ChatItem].self, forKey: .`outline`) : nil
     }
 
@@ -7733,7 +7733,7 @@ public struct SessionAgent: Codable, Sendable, Equatable {
         `transcriptPath` = try container.decode(String?.self, forKey: .`transcriptPath`)
         `suggestedTitle` = try container.decodeIfPresent(String.self, forKey: .`suggestedTitle`)
         `status` = try container.decode(String.self, forKey: .`status`)
-        `requests` = try container.decodeIfPresent([SessionAgentRequestsItem].self, forKey: .`requests`)
+        `requests` = try container.contains(.`requests`) ? container.decodeLossy([SessionAgentRequestsItem].self, forKey: .`requests`) : nil
         `live` = try container.decode(Bool.self, forKey: .`live`)
         `updatedAt` = try container.decode(Double.self, forKey: .`updatedAt`)
     }

@@ -44,3 +44,12 @@ func temporaryFolder() throws -> URL {
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     return folder
 }
+
+extension JSONValue {
+    /// A copy with one field of this object set, as a test changes one thing about a fixture.
+    func setting(_ key: String, _ value: JSONValue) -> JSONValue {
+        var object = objectValue ?? [:]
+        object[key] = value
+        return .object(object)
+    }
+}

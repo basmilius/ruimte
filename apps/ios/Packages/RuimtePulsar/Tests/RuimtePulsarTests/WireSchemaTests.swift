@@ -32,6 +32,49 @@ struct WireSchemaTests {
         }
     }
 
+    @Test func aKnownNodeWithANewerWordReadsAsUnknownAndReadsTheSameAgain() throws {
+        let node = { (id: String, platform: String) -> JSONValue in
+            .object([
+                "id": .string(id), "kind": .string("device"), "title": .string(id), "x": .number(10), "y": .number(20),
+                "w": .number(320), "h": .number(200),
+                "device": .object([
+                    "platform": .string(platform), "kind": .string("simulator"), "name": .string("Phone"),
+                    "runtime": .string("27"),
+                ]),
+            ])
+        }
+        let save = { (nodes: [JSONValue]) -> JSONValue in
+            .object([
+                "projectId": .string("project"), "baseRev": .number(1),
+                "content": .object([
+                    "version": .number(3), "rev": .number(1), "name": .string("Ruimte"), "color": .string("#155dfc"),
+                    "views": .array([
+                        .object([
+                            "id": .string("main"), "kind": .string("canvas"), "name": .string("Main"),
+                            "nodes": .array(nodes), "texts": .array([]), "edges": .array([]),
+                        ])
+                    ]),
+                ]),
+            ])
+        }
+
+        let read = try WireSchema.validate("request.project.save.payload", save([node("phone", "ios"), node("headset", "visionos")]))
+        let nodes = try #require(read["content"]?["views"]?.arrayValue?.first?["nodes"]?.arrayValue)
+
+        #expect(nodes.map { $0["kind"] } == [.string("device"), .string("unknown")])
+        #expect(nodes[1]["raw"]?["device"]?["platform"] == .string("visionos"))
+        #expect(nodes[1]["x"] == .number(10))
+        #expect(try WireSchema.validate("request.project.save.payload", read) == read)
+        // Without an id the node cannot keep its place, so the view holding it does.
+        var nameless = try #require(node("headset", "visionos").objectValue)
+        nameless["id"] = .string("")
+        let view = try #require(
+            WireSchema.validate("request.project.save.payload", save([.object(nameless)]))["content"]?["views"]?
+                .arrayValue?.first)
+        #expect(view["kind"] == .string("unknown"))
+        #expect(view["raw"]?["nodes"]?.arrayValue?.first?["device"]?["platform"] == .string("visionos"))
+    }
+
     @Test func everyStampedRefinementHasAnImplementation() {
         func names(in value: JSONValue) -> Set<String> {
             var found: Set<String> = []

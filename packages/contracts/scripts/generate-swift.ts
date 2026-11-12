@@ -405,11 +405,24 @@ function openUnionOf(zodSchema: object): { tag: string; base: readonly string[] 
 
     return stamp?.open === 'union' ? stamp : null;
 }
+/*
+ * Lists only the iPhone app reads without an element it cannot read, so a newer status word in one sub-agent, workflow,
+ * visual or request leaves the rest of `chat.attach` and `session.list` standing. They carry no stamp of their own, so
+ * the desktop's reader still refuses such a reply; a stamp on these lists in ADE CORE or `src/tolerance.ts` replaces
+ * this set.
+ */
+const APP_LOSSY_ARRAYS = new Set<unknown>([
+    chat.ChatAttachResultSchema.shape.subagents.unwrap(),
+    chat.ChatAttachResultSchema.shape.workflows.unwrap(),
+    chat.ChatAttachResultSchema.shape.visuals.unwrap(),
+    agent.AgentInfoSchema.shape.requests.unwrap()
+]);
 // A list of which the app leaves out an element it cannot read; an array of an open union is one too, for a member without the shared fields.
 function isLossyArray(zodSchema: unknown): boolean {
     return (
         (typeof zodSchema === 'object' && zodSchema !== null && wireStampOf(zodSchema)?.open === 'items') ||
-        (zodSchema instanceof z.ZodArray && openUnionOf(zodSchema.element) !== null)
+        (zodSchema instanceof z.ZodArray && openUnionOf(zodSchema.element) !== null) ||
+        APP_LOSSY_ARRAYS.has(zodSchema)
     );
 }
 // Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.

@@ -153,6 +153,66 @@ final class SessionWorkspaceTests: XCTestCase {
         XCTAssertEqual(saved["views"]?.arrayValue?[1]["nodes"]?.arrayValue?[1]["future"], .bool(true))
     }
 
+    @MainActor func testANewerWordInAKnownKindOpensTheProjectAndSurvivesASave() async throws {
+        let runtime = AppRuntime(connections: MachineConnections(monitorPaths: false))
+        let machine = Machine(
+            id: "newer-\(UUID().uuidString)", name: "Mac", icon: nil, publicKey: DeviceKey().publicKey,
+            brokerUrl: nil, lastSeenAt: nil)
+        let session = runtime.session(for: machine)
+        let wire = ConflictWire()
+        let device = { (id: String, platform: String) -> JSONValue in
+            .object([
+                "id": .string(id), "kind": .string("device"),
+                "device": .object([
+                    "platform": .string(platform), "kind": .string("simulator"), "name": .string("Phone"),
+                    "runtime": .string("27"),
+                ]),
+            ])
+        }
+        wire.remote = wire.remote.setting(
+            "views",
+            .array([
+                ProjectWire.view(
+                    .object([
+                        "id": .string("main"), "kind": .string("canvas"),
+                        "nodes": .array([device("phone", "ios"), device("headset", "visionos")]),
+                    ])),
+                ProjectWire.view(
+                    .object([
+                        "id": .string("notes"), "kind": .string("canvas"),
+                        "texts": .array([
+                            .object([
+                                "id": .string("title"), "x": .number(0), "y": .number(0), "text": .string("Plan"),
+                                "size": .number(16), "font": .string("serif"),
+                            ])
+                        ]),
+                    ])),
+            ]))
+        session.rpc = wire.client
+        let workspace = MobileWorkspace(session: session, projectID: "project")
+        defer {
+            workspace.stop()
+            wire.client.shutdown()
+            runtime.connections.shutdown()
+            UserDefaults.standard.removeObject(forKey: workspace.storageKey)
+        }
+        workspace.start()
+        await workspace.open()
+        XCTAssertTrue(workspace.ready, workspace.problem ?? "The project did not open")
+
+        XCTAssertEqual(workspace.storedViews[0].nodes.map(\.kind), [.device, .unknown])
+        guard case .unknown(let notes) = workspace.storedViews[1] else {
+            return XCTFail("A view with a word this app does not know reads as unknown")
+        }
+        XCTAssertEqual(notes.raw["texts"]?.arrayValue?.first?["font"], .string("serif"))
+
+        await workspace.edit { $0.setting("name", .string("Renamed")) }
+
+        let saved = try XCTUnwrap(wire.saves.last?["content"]?["views"]?.arrayValue)
+        XCTAssertEqual(saved[0]["nodes"]?.arrayValue?[1]["raw"]?["device"]?["platform"], .string("visionos"))
+        XCTAssertEqual(saved[1]["raw"]?["texts"]?.arrayValue?.first?["font"], .string("serif"))
+    }
+
     @MainActor func testAProjectHasTheTitleAndKindOfItsRowBeforeItOpens() {
         let runtime = AppRuntime(connections: MachineConnections(monitorPaths: false))
         let machine = Machine(

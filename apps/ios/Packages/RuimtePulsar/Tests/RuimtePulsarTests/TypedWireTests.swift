@@ -10,6 +10,49 @@ struct TypedWireTests {
         }.compactMap { $0["output"] }
     }
 
+    @Test func aSubagentWorkflowOrVisualWithANewerWordLeavesTheRestOfTheAttach() throws {
+        let output = try #require(try fixtures("request.chat.attach.result").first)
+        let items = try #require(output["items"]?.arrayValue)
+        let subagent = try #require(items.first { $0["kind"] == .string("subagent") })
+        let tool = try #require(items.first { $0["kind"] == .string("tool") })
+        let visual = { (id: String, layout: String) -> JSONValue in
+            .object([
+                "id": .string(id), "title": .string("Chart"), "at": .number(1000), "maxHeight": .number(400),
+                "layout": .string(layout), "size": .number(10),
+            ])
+        }
+        let attach = output.setting(
+            "subagents", .array([subagent, subagent.setting("status", .string("future-status"))])
+        ).setting(
+            "workflows", .array([tool.setting("state", .string("future-state")), tool])
+        ).setting("visuals", .array([visual("chart", "wide"), visual("next", "future-layout")]))
+
+        let result = try WireSchema.validate("request.chat.attach.result", attach).decoded(as: ChatAttachResult.self)
+
+        #expect(result.items.count == items.count)
+        #expect(result.subagents?.map(\.id) == [try #require(subagent["id"]?.stringValue)])
+        #expect(result.workflows?.map(\.id) == [try #require(tool["id"]?.stringValue)])
+        #expect(result.visuals?.map(\.id) == ["chart"])
+    }
+
+    @Test func aRequestOfANewerKindLeavesTheRestOfTheSessionList() throws {
+        let agent = try #require(try fixtures("event.session.status").first?["agent"])
+        let request = try #require(agent["requests"]?.arrayValue?.first)
+        let session: JSONValue = .object([
+            "sessionId": .string("session-1"), "cwd": .string("/work"), "pid": .number(42), "cols": .number(80),
+            "rows": .number(24), "createdAt": .number(1000), "attached": .number(0), "exited": .bool(false),
+            "agent": agent.setting(
+                "requests",
+                .array([request.setting("id", .string("future")).setting("kind", .string("future-kind")), request])),
+        ])
+
+        let result = try WireSchema.validate("request.session.list.result", .object(["sessions": .array([session])]))
+            .decoded(as: SessionListResult.self)
+
+        #expect(result.sessions.map(\.sessionId) == ["session-1"])
+        #expect(result.sessions.first?.agent.present?.requests?.map(\.id) == [try #require(request["id"]?.stringValue)])
+    }
+
     @Test func everyChatItemKindDecodesAsTheMachineSendsIt() throws {
         let output = try #require(try fixtures("request.chat.attach.result").first)
         let result = try WireSchema.validate("request.chat.attach.result", output).decoded(as: ChatAttachResult.self)

@@ -20084,7 +20084,8 @@
             "maxHeight",
             "size"
           ]
-        }
+        },
+        "x-lossy-items": true
       },
       "subagents": {
         "type": "array",
@@ -20249,7 +20250,8 @@
             "lastTool",
             "itemsTruncated"
           ]
-        }
+        },
+        "x-lossy-items": true
       },
       "workflows": {
         "type": "array",
@@ -20521,7 +20523,8 @@
             "state",
             "parentToolUseId"
           ]
-        }
+        },
+        "x-lossy-items": true
       },
       "outline": {
         "type": "array",
@@ -29098,7 +29101,8 @@
             "maxHeight",
             "size"
           ]
-        }
+        },
+        "x-lossy-items": true
       }
     },
     "required": [
@@ -73632,7 +73636,8 @@
                     "text",
                     "createdAt"
                   ]
-                }
+                },
+                "x-lossy-items": true
               },
               "live": {
                 "type": "boolean"
@@ -73852,7 +73857,8 @@
                           "text",
                           "createdAt"
                         ]
-                      }
+                      },
+                      "x-lossy-items": true
                     },
                     "live": {
                       "type": "boolean"
@@ -74075,7 +74081,8 @@
                     "text",
                     "createdAt"
                   ]
-                }
+                },
+                "x-lossy-items": true
               },
               "live": {
                 "type": "boolean"
@@ -88415,7 +88422,8 @@
             "maxHeight",
             "size"
           ]
-        }
+        },
+        "x-lossy-items": true
       }
     },
     "required": [
@@ -98435,7 +98443,8 @@
                     "text",
                     "createdAt"
                   ]
-                }
+                },
+                "x-lossy-items": true
               },
               "live": {
                 "type": "boolean"
