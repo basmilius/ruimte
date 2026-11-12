@@ -62,6 +62,51 @@ final class ChatProposalTests: XCTestCase {
         XCTAssertEqual(proposal.folder, "/Users/person/Garden")
     }
 
+    func testAFailedFirstReadIsReadAgainWhenAChatShowsItsCards() async throws {
+        let machine = ProposalMachine(answering: [.chatProposals, .tunnelProposals])
+        machine.lists[.chatProposals] = .object(["proposals": .array([project("p1")])])
+        machine.lists[.tunnelProposals] = .object(["proposals": .array([tunnel("t1")])])
+        machine.failing = [.chatProposals, .tunnelProposals]
+        let store = ProposalStore(client: machine)
+        let failed = expectation(description: "The failed reads reach the store")
+        withObservationTracking {
+            _ = store.unread
+        } onChange: {
+            failed.fulfill()
+        }
+        store.start()
+        defer { store.stop() }
+        await fulfillment(of: [failed], timeout: 1)
+        await store.readAgainIfFailed()
+        XCTAssertTrue(store.cards(for: "chat").isEmpty)
+
+        machine.failing = []
+        await store.readAgainIfFailed()
+        XCTAssertEqual(store.cards(for: "chat").map(\.id), ["project:p1", "tunnel:t1"])
+        XCTAssertTrue(store.unread.isEmpty)
+        let reads = machine.sent.count
+        await store.readAgainIfFailed()
+        XCTAssertEqual(machine.sent.count, reads, "a store that read everything asks nothing again")
+    }
+
+    func testAListAnEventBringsIsNoLongerUnread() async {
+        let machine = ProposalMachine(answering: [.chatProposals])
+        machine.failing = [.chatProposals]
+        let store = ProposalStore(client: machine)
+        let failed = expectation(description: "The failed read reaches the store")
+        withObservationTracking {
+            _ = store.unread
+        } onChange: {
+            failed.fulfill()
+        }
+        store.start()
+        defer { store.stop() }
+        await fulfillment(of: [failed], timeout: 1)
+        machine.emit(.chatProposals, .object(["proposals": .array([project("p1")])]))
+        XCTAssertEqual(store.cards(for: "chat").map(\.id), ["project:p1"])
+        XCTAssertTrue(store.unread.isEmpty)
+    }
+
     func testEventsReplaceTheWholeList() throws {
         let machine = ProposalMachine(answering: [])
         let store = ProposalStore(client: machine)
@@ -170,6 +215,7 @@ final class ChatProposalTests: XCTestCase {
     var lists: [WireRequest: JSONValue] = [:]
     var replies: [WireRequest: JSONValue] = [:]
     var failure: Error?
+    var failing: Set<WireRequest> = []
     private(set) var sent: [(WireRequest, JSONValue)] = []
     private var handlers: [WireEvent: @MainActor @Sendable (JSONValue) -> Void] = [:]
 
@@ -182,6 +228,7 @@ final class ChatProposalTests: XCTestCase {
     func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
         if let failure { throw failure }
+        if failing.contains(type) { throw URLError(.timedOut) }
         return lists[type] ?? replies[type] ?? .object([:])
     }
 

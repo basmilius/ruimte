@@ -156,6 +156,7 @@ struct ChatProposalDock: View {
             }
         }
         .onChange(of: store.cards(for: chatID), initial: true) { _, cards in answers.update(cards) }
+        .task(id: store.unread) { await store.readAgainIfFailed() }
     }
 }
 
