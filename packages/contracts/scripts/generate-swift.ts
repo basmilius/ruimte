@@ -405,24 +405,11 @@ function openUnionOf(zodSchema: object): { tag: string; base: readonly string[] 
 
     return stamp?.open === 'union' ? stamp : null;
 }
-/*
- * Lists only the iPhone app reads without an element it cannot read, so a newer status word in one sub-agent, workflow,
- * visual or request leaves the rest of `chat.attach` and `session.list` standing. They carry no stamp of their own, so
- * the desktop's reader still refuses such a reply; a stamp on these lists in ADE CORE or `src/tolerance.ts` replaces
- * this set.
- */
-const APP_LOSSY_ARRAYS = new Set<unknown>([
-    chat.ChatAttachResultSchema.shape.subagents.unwrap(),
-    chat.ChatAttachResultSchema.shape.workflows.unwrap(),
-    chat.ChatAttachResultSchema.shape.visuals.unwrap(),
-    agent.AgentInfoSchema.shape.requests.unwrap()
-]);
 // A list of which the app leaves out an element it cannot read; an array of an open union is one too, for a member without the shared fields.
 function isLossyArray(zodSchema: unknown): boolean {
     return (
         (typeof zodSchema === 'object' && zodSchema !== null && wireStampOf(zodSchema)?.open === 'items') ||
-        (zodSchema instanceof z.ZodArray && openUnionOf(zodSchema.element) !== null) ||
-        APP_LOSSY_ARRAYS.has(zodSchema)
+        (zodSchema instanceof z.ZodArray && openUnionOf(zodSchema.element) !== null)
     );
 }
 // Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.
@@ -1340,6 +1327,21 @@ const withTaskStatus = (parsed: unknown) => {
 
     return { tasks: [result.tasks[0], { ...result.tasks[1], status: 'future-status' }] };
 };
+const toolFixture = chatItemsFixture[4]!;
+const subagentFixture = chatItemsFixture[5]!;
+const visualFixture = (id: string, layout: string) => ({ id, title: 'Chart', at: 1000, maxHeight: 400, layout, size: 10 });
+const requestFixture = { id: 'r', source: 'hook', kind: 'approval', toolName: 'Bash', title: null, text: 'ls', createdAt: 1000 };
+const sessionFixture = (requests: object[]) => ({
+    sessionId: 'session-1',
+    cwd: '/work',
+    pid: 42,
+    cols: 80,
+    rows: 24,
+    createdAt: 1000,
+    attached: 0,
+    exited: false,
+    agent: { kind: 'codex', agentSessionId: 'agent-1', transcriptPath: null, status: 'needs-you', requests, live: true, updatedAt: 1000 }
+});
 // What each language gives up to read the input, in the order a reader meets it; an unknown member is named by its tag.
 const member = (path: (string | number)[], name: string, tag: string) => ({ kind: 'unknown-member', path, name, tag });
 const dropped = (path: (string | number)[]) => ({ kind: 'dropped-element', path });
@@ -1371,6 +1373,30 @@ const tolerated = [
         input: { tasks: [taskFixture, { ...taskFixture, id: 'task-2', status: 'future-status' }] },
         output: withTaskStatus(roots['request.task.list.result']!.parse({ tasks: [taskFixture, { ...taskFixture, id: 'task-2' }] })),
         degraded: [word(['tasks', 1, 'status'], 'TaskStatus', 'future-status')]
+    },
+    {
+        schema: 'request.chat.attach.result',
+        input: {
+            ...attachBase,
+            items: chatItemsFixture,
+            subagents: [subagentFixture, { ...subagentFixture, id: 'subagent-2', status: 'future-status' }],
+            workflows: [{ ...toolFixture, id: 'tool-2', state: 'future-state' }, toolFixture],
+            visuals: [visualFixture('chart', 'wide'), visualFixture('next', 'future-layout')]
+        },
+        output: roots['request.chat.attach.result']!.parse({
+            ...attachBase,
+            items: chatItemsFixture,
+            subagents: [subagentFixture],
+            workflows: [toolFixture],
+            visuals: [visualFixture('chart', 'wide')]
+        }),
+        degraded: [dropped(['visuals', 1]), dropped(['subagents', 1]), dropped(['workflows', 0])]
+    },
+    {
+        schema: 'request.session.list.result',
+        input: { sessions: [sessionFixture([{ ...requestFixture, id: 'future', kind: 'future-kind' }, requestFixture])] },
+        output: roots['request.session.list.result']!.parse({ sessions: [sessionFixture([requestFixture])] }),
+        degraded: [dropped(['sessions', 0, 'agent', 'requests', 0])]
     },
     {
         schema: 'event.chat.status',

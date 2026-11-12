@@ -1,4 +1,5 @@
-import { AgentKindSchema } from '@adecore/agent-contracts/agent';
+import { AgentInfoSchema, AgentKindSchema } from '@adecore/agent-contracts/agent';
+import { ChatAttachResultSchema } from '@adecore/agent-contracts/chat';
 import {
     lossyItems,
     openUnion,
@@ -60,6 +61,12 @@ openUnion(DesignPageResultSchema, 'DesignPageResult', { tag: 'kind', base: [] })
 lossyItems(ProjectListResultSchema.shape.projects);
 lossyItems(ProjectSidebarResultSchema.shape.projects);
 lossyItems(TaskListResultSchema.shape.tasks);
+
+// A newer word in one sub-agent, workflow, visual or request of a session's agent leaves the rest of the chat or session standing.
+lossyItems(ChatAttachResultSchema.shape.subagents.unwrap());
+lossyItems(ChatAttachResultSchema.shape.workflows.unwrap());
+lossyItems(ChatAttachResultSchema.shape.visuals.unwrap());
+lossyItems(AgentInfoSchema.shape.requests.unwrap());
 
 /*
  * The open vocabularies stamped here that are enums, by stamp name, as a strict parse types them. The name sources and

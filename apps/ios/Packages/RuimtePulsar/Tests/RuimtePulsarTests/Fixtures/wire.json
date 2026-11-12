@@ -3856,6 +3856,595 @@
       ]
     },
     {
+      "schema": "request.chat.attach.result",
+      "input": {
+        "info": {
+          "chatId": "chat-1",
+          "provider": "claude",
+          "cwd": "/work",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "opus",
+            "options": {
+              "effort": "high",
+              "thinking": true
+            }
+          },
+          "runtimeMode": "auto",
+          "status": "needs-you",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [
+            "compact"
+          ],
+          "usage": {
+            "contextTokens": 1200,
+            "contextWindow": null,
+            "costUsd": 0.25,
+            "turns": 1
+          },
+          "createdAt": 1000
+        },
+        "history": {
+          "start": 0,
+          "cursor": "c1"
+        },
+        "pending": [],
+        "seq": 12,
+        "items": [
+          {
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "id": "turn-1",
+            "kind": "turn",
+            "state": "running",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "id": "user-1",
+            "kind": "user",
+            "text": "Hello 📱",
+            "mentions": [
+              "src/app.ts"
+            ]
+          },
+          {
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "id": "thinking-1",
+            "kind": "thinking",
+            "text": "Hm",
+            "streaming": false,
+            "endedAt": 1001
+          },
+          {
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "id": "assistant-1",
+            "kind": "assistant",
+            "text": "Hi",
+            "streaming": true,
+            "parentToolUseId": null
+          },
+          {
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "id": "tool-1",
+            "kind": "tool",
+            "toolUseId": "use-1",
+            "name": "Bash",
+            "input": {
+              "command": "ls",
+              "nested": [
+                1,
+                null
+              ]
+            },
+            "output": null,
+            "state": "running",
+            "parentToolUseId": null
+          },
+          {
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "id": "subagent-1",
+            "kind": "subagent",
+            "toolUseId": "use-2",
+            "description": "Explore",
+            "subagentType": null,
+            "prompt": null,
+            "background": false,
+            "status": "running",
+            "startedAt": 1000,
+            "finishedAt": null,
+            "summary": null,
+            "result": null,
+            "usage": null,
+            "lastTool": null,
+            "itemsTruncated": false
+          },
+          {
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "id": "approval-1",
+            "kind": "approval",
+            "requestId": "request-1",
+            "toolUseId": null,
+            "toolName": "Write",
+            "input": null,
+            "description": null,
+            "canAllowAlways": true,
+            "decision": "pending"
+          },
+          {
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "id": "question-1",
+            "kind": "question",
+            "requestId": "request-2",
+            "questions": [
+              {
+                "id": "q",
+                "header": "Pick",
+                "question": "Which?",
+                "choices": [
+                  {
+                    "label": "A",
+                    "description": ""
+                  }
+                ],
+                "multiSelect": false
+              }
+            ],
+            "answers": null,
+            "state": "pending"
+          },
+          {
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "id": "note-1",
+            "kind": "note",
+            "level": "warning",
+            "text": "Careful"
+          },
+          {
+            "createdAt": 1000,
+            "turnId": null,
+            "id": "compaction-1",
+            "kind": "compaction",
+            "preTokens": 90000
+          }
+        ],
+        "subagents": [
+          {
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "id": "subagent-1",
+            "kind": "subagent",
+            "toolUseId": "use-2",
+            "description": "Explore",
+            "subagentType": null,
+            "prompt": null,
+            "background": false,
+            "status": "running",
+            "startedAt": 1000,
+            "finishedAt": null,
+            "summary": null,
+            "result": null,
+            "usage": null,
+            "lastTool": null,
+            "itemsTruncated": false
+          },
+          {
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "id": "subagent-2",
+            "kind": "subagent",
+            "toolUseId": "use-2",
+            "description": "Explore",
+            "subagentType": null,
+            "prompt": null,
+            "background": false,
+            "status": "future-status",
+            "startedAt": 1000,
+            "finishedAt": null,
+            "summary": null,
+            "result": null,
+            "usage": null,
+            "lastTool": null,
+            "itemsTruncated": false
+          }
+        ],
+        "workflows": [
+          {
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "id": "tool-2",
+            "kind": "tool",
+            "toolUseId": "use-1",
+            "name": "Bash",
+            "input": {
+              "command": "ls",
+              "nested": [
+                1,
+                null
+              ]
+            },
+            "output": null,
+            "state": "future-state",
+            "parentToolUseId": null
+          },
+          {
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "id": "tool-1",
+            "kind": "tool",
+            "toolUseId": "use-1",
+            "name": "Bash",
+            "input": {
+              "command": "ls",
+              "nested": [
+                1,
+                null
+              ]
+            },
+            "output": null,
+            "state": "running",
+            "parentToolUseId": null
+          }
+        ],
+        "visuals": [
+          {
+            "id": "chart",
+            "title": "Chart",
+            "at": 1000,
+            "maxHeight": 400,
+            "layout": "wide",
+            "size": 10
+          },
+          {
+            "id": "next",
+            "title": "Chart",
+            "at": 1000,
+            "maxHeight": 400,
+            "layout": "future-layout",
+            "size": 10
+          }
+        ]
+      },
+      "output": {
+        "info": {
+          "chatId": "chat-1",
+          "provider": "claude",
+          "cwd": "/work",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "opus",
+            "options": {
+              "effort": "high",
+              "thinking": true
+            }
+          },
+          "runtimeMode": "auto",
+          "status": "needs-you",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [
+            "compact"
+          ],
+          "usage": {
+            "contextTokens": 1200,
+            "contextWindow": null,
+            "costUsd": 0.25,
+            "turns": 1
+          },
+          "createdAt": 1000
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "kind": "turn",
+            "state": "running",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "user-1",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "kind": "user",
+            "text": "Hello 📱",
+            "mentions": [
+              "src/app.ts"
+            ]
+          },
+          {
+            "id": "thinking-1",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "kind": "thinking",
+            "text": "Hm",
+            "streaming": false,
+            "endedAt": 1001
+          },
+          {
+            "id": "assistant-1",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "kind": "assistant",
+            "text": "Hi",
+            "streaming": true,
+            "parentToolUseId": null
+          },
+          {
+            "id": "tool-1",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "kind": "tool",
+            "toolUseId": "use-1",
+            "name": "Bash",
+            "input": {
+              "command": "ls",
+              "nested": [
+                1,
+                null
+              ]
+            },
+            "output": null,
+            "state": "running",
+            "parentToolUseId": null
+          },
+          {
+            "id": "subagent-1",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "kind": "subagent",
+            "toolUseId": "use-2",
+            "description": "Explore",
+            "subagentType": null,
+            "prompt": null,
+            "background": false,
+            "status": "running",
+            "startedAt": 1000,
+            "finishedAt": null,
+            "summary": null,
+            "result": null,
+            "usage": null,
+            "lastTool": null,
+            "itemsTruncated": false
+          },
+          {
+            "id": "approval-1",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "kind": "approval",
+            "requestId": "request-1",
+            "toolUseId": null,
+            "toolName": "Write",
+            "input": null,
+            "description": null,
+            "canAllowAlways": true,
+            "decision": "pending"
+          },
+          {
+            "id": "question-1",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "kind": "question",
+            "requestId": "request-2",
+            "questions": [
+              {
+                "id": "q",
+                "header": "Pick",
+                "question": "Which?",
+                "choices": [
+                  {
+                    "label": "A",
+                    "description": ""
+                  }
+                ],
+                "multiSelect": false
+              }
+            ],
+            "answers": null,
+            "state": "pending"
+          },
+          {
+            "id": "note-1",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "kind": "note",
+            "level": "warning",
+            "text": "Careful"
+          },
+          {
+            "id": "compaction-1",
+            "createdAt": 1000,
+            "turnId": null,
+            "kind": "compaction",
+            "preTokens": 90000
+          }
+        ],
+        "history": {
+          "start": 0,
+          "cursor": "c1"
+        },
+        "pending": [],
+        "seq": 12,
+        "visuals": [
+          {
+            "id": "chart",
+            "title": "Chart",
+            "at": 1000,
+            "maxHeight": 400,
+            "layout": "wide",
+            "size": 10
+          }
+        ],
+        "subagents": [
+          {
+            "id": "subagent-1",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "kind": "subagent",
+            "toolUseId": "use-2",
+            "description": "Explore",
+            "subagentType": null,
+            "prompt": null,
+            "background": false,
+            "status": "running",
+            "startedAt": 1000,
+            "finishedAt": null,
+            "summary": null,
+            "result": null,
+            "usage": null,
+            "lastTool": null,
+            "itemsTruncated": false
+          }
+        ],
+        "workflows": [
+          {
+            "id": "tool-1",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "kind": "tool",
+            "toolUseId": "use-1",
+            "name": "Bash",
+            "input": {
+              "command": "ls",
+              "nested": [
+                1,
+                null
+              ]
+            },
+            "output": null,
+            "state": "running",
+            "parentToolUseId": null
+          }
+        ]
+      },
+      "degraded": [
+        {
+          "kind": "dropped-element",
+          "path": [
+            "visuals",
+            1
+          ]
+        },
+        {
+          "kind": "dropped-element",
+          "path": [
+            "subagents",
+            1
+          ]
+        },
+        {
+          "kind": "dropped-element",
+          "path": [
+            "workflows",
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "schema": "request.session.list.result",
+      "input": {
+        "sessions": [
+          {
+            "sessionId": "session-1",
+            "cwd": "/work",
+            "pid": 42,
+            "cols": 80,
+            "rows": 24,
+            "createdAt": 1000,
+            "attached": 0,
+            "exited": false,
+            "agent": {
+              "kind": "codex",
+              "agentSessionId": "agent-1",
+              "transcriptPath": null,
+              "status": "needs-you",
+              "requests": [
+                {
+                  "id": "future",
+                  "source": "hook",
+                  "kind": "future-kind",
+                  "toolName": "Bash",
+                  "title": null,
+                  "text": "ls",
+                  "createdAt": 1000
+                },
+                {
+                  "id": "r",
+                  "source": "hook",
+                  "kind": "approval",
+                  "toolName": "Bash",
+                  "title": null,
+                  "text": "ls",
+                  "createdAt": 1000
+                }
+              ],
+              "live": true,
+              "updatedAt": 1000
+            }
+          }
+        ]
+      },
+      "output": {
+        "sessions": [
+          {
+            "sessionId": "session-1",
+            "cwd": "/work",
+            "pid": 42,
+            "cols": 80,
+            "rows": 24,
+            "createdAt": 1000,
+            "attached": 0,
+            "exited": false,
+            "agent": {
+              "kind": "codex",
+              "agentSessionId": "agent-1",
+              "transcriptPath": null,
+              "status": "needs-you",
+              "requests": [
+                {
+                  "id": "r",
+                  "source": "hook",
+                  "kind": "approval",
+                  "toolName": "Bash",
+                  "title": null,
+                  "text": "ls",
+                  "createdAt": 1000
+                }
+              ],
+              "live": true,
+              "updatedAt": 1000
+            }
+          }
+        ]
+      },
+      "degraded": [
+        {
+          "kind": "dropped-element",
+          "path": [
+            "sessions",
+            0,
+            "agent",
+            "requests",
+            0
+          ]
+        }
+      ]
+    },
+    {
       "schema": "event.chat.status",
       "input": {
         "chatId": "chat-1",
