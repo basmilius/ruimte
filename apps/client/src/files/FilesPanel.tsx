@@ -56,7 +56,7 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { PATHS_DRAG_TYPE } from '@/surface/canvas/drop';
+import { writePathsDrag } from '@/surface/canvas/drop';
 import { PanelHeaderActions, PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeaderTitleHidden } from '@/surface/PanelHeaderSlot';
 import type { CopyTarget } from '@/surface/panels/file-copy';
 import {
@@ -549,7 +549,7 @@ export function FilesPanel() {
         // A worktree sits outside the project folder, where a path only names a file whole.
         const named = root === folder ? paths : paths.map((entry) => absoluteOf(root, entry));
         // The canvas needs directory slashes; a chat mention only needs the path.
-        event.dataTransfer.setData(PATHS_DRAG_TYPE, named.join(' '));
+        writePathsDrag(event.dataTransfer, named);
         writeMentionDrag(
             event.dataTransfer,
             named.map((entry) => (isDirectoryPath(entry) ? entry.slice(0, -1) : entry))

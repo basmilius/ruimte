@@ -5,10 +5,12 @@ import {
     carriesPaths,
     catchesStrayDrag,
     dropEffectFor,
+    draggedPaths,
     dropPoints,
     droppedPaths,
     finderRefusal,
     PATHS_DRAG_TYPE,
+    writePathsDrag,
     type DragPayload
 } from '@/surface/canvas/drop';
 
@@ -39,11 +41,10 @@ describe('carriesPaths', () => {
                     values[type] = value;
                 }
             },
-            ['src/main.ts', 'a.txt']
+            ['src/main.ts', 'docs/read me.md']
         );
-        expect(droppedPaths(drag(values))).toEqual(['src/main.ts', 'a.txt']);
-        expect(values[LEGACY_MENTION_DRAG_TYPE]).toBe('src/main.ts a.txt');
-        expect(values[MENTION_DRAG_TYPE]).toBe('src/main.ts a.txt');
+        expect(droppedPaths(drag(values))).toEqual(['src/main.ts', 'docs/read me.md']);
+        expect(values[LEGACY_MENTION_DRAG_TYPE]).toBe(values[MENTION_DRAG_TYPE]);
     });
 
     test('leaves every other drag alone, a file out of Finder among them', () => {
@@ -53,21 +54,36 @@ describe('carriesPaths', () => {
     });
 });
 
+/* A drag as the files tree or a tab writes it. */
+function written(paths: readonly string[]): DragPayload {
+    const values: Record<string, string> = {};
+    writePathsDrag({ setData: (type, value) => void (values[type] = value) }, paths);
+    return drag(values);
+}
+
 describe('droppedPaths', () => {
     test('reads one path', () => {
-        expect(droppedPaths(drag({ [PATHS_DRAG_TYPE]: 'src/main.ts' }))).toEqual(['src/main.ts']);
+        expect(droppedPaths(written(['src/main.ts']))).toEqual(['src/main.ts']);
     });
 
-    test('reads a selection of several, in the order the source wrote them', () => {
-        expect(droppedPaths(drag({ [PATHS_DRAG_TYPE]: 'src/main.ts docs/README.md a.txt' }))).toEqual(['src/main.ts', 'docs/README.md', 'a.txt']);
+    test('keeps a path with spaces in it whole', () => {
+        expect(droppedPaths(written(['docs/dit is een bestand met spaties.pdf']))).toEqual(['docs/dit is een bestand met spaties.pdf']);
+    });
+
+    test('reads a selection of several, with and without spaces, in the order the source wrote them', () => {
+        expect(droppedPaths(written(['src/main.ts', 'docs/read me.md', 'a.txt']))).toEqual(['src/main.ts', 'docs/read me.md', 'a.txt']);
     });
 
     test('leaves a directory out, on either kind of machine', () => {
-        expect(droppedPaths(drag({ [PATHS_DRAG_TYPE]: 'src/ src/main.ts docs\\' }))).toEqual(['src/main.ts']);
+        expect(droppedPaths(written(['src/', 'my docs/', 'src/main.ts', 'docs\\']))).toEqual(['src/main.ts']);
     });
 
     test('takes an absolute path as it is', () => {
-        expect(droppedPaths(drag({ [PATHS_DRAG_TYPE]: '/etc/hosts' }))).toEqual(['/etc/hosts']);
+        expect(droppedPaths(written(['/etc/hosts']))).toEqual(['/etc/hosts']);
+    });
+
+    test('still reads the space separated list of an older window', () => {
+        expect(droppedPaths(drag({ [PATHS_DRAG_TYPE]: 'src/main.ts docs/ a.txt' }))).toEqual(['src/main.ts', 'a.txt']);
     });
 
     test('falls back to the mention type, which has no slashes left to judge', () => {
@@ -82,6 +98,12 @@ describe('droppedPaths', () => {
     test('drops the empty pieces of a payload with stray spaces', () => {
         expect(droppedPaths(drag({ [PATHS_DRAG_TYPE]: '  src/main.ts   a.txt ' }))).toEqual(['src/main.ts', 'a.txt']);
         expect(droppedPaths(drag({ [PATHS_DRAG_TYPE]: '' }))).toEqual([]);
+    });
+});
+
+describe('draggedPaths', () => {
+    test('keeps directories with their slash, for a target that takes a bundle, and paths with spaces whole', () => {
+        expect(draggedPaths(written(['Build/My App.app/', 'shots/screen one.png']))).toEqual(['Build/My App.app/', 'shots/screen one.png']);
     });
 });
 

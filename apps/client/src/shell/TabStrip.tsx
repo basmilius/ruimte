@@ -36,7 +36,7 @@ import { useSessionRow } from '@/state/sessions';
 import { setTabPinned } from '@/state/tab-close';
 import { isUnsavedDraft, useTextDrafts } from '@/state/text-drafts';
 import { useViewPinned } from '@/state/view-pins';
-import { PATHS_DRAG_TYPE } from '@/surface/canvas/drop';
+import { writePathsDrag } from '@/surface/canvas/drop';
 import { isLooseView, viewGlyphOf, type LooseCellView } from '@/surface/cell-view';
 import { useKeyOf } from '@/surface/shortcut-overrides';
 import { StatusDot } from '@/surface/StatusDot';
@@ -144,7 +144,7 @@ function FileTabItem({ tab, tabKey, label }: { tab: FileTab; tabKey: string; lab
             onDragData={
                 tab.view === undefined
                     ? (transfer) => {
-                          transfer.setData(PATHS_DRAG_TYPE, tab.path);
+                          writePathsDrag(transfer, [tab.path]);
                           writeMentionDrag(transfer, [tab.path]);
                       }
                     : undefined

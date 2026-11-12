@@ -24,9 +24,25 @@ export function carriesPaths(types: readonly string[]): boolean {
     return types.includes(PATHS_DRAG_TYPE) || carriesMentions(types);
 }
 
-/* Both types spell a list the same way: space separated, which is what the `@` picker settled on
-   and what the composer reads. A path with a space in it is beyond either of them. */
-function splitPaths(value: string): string[] {
+/* A JSON array, so a path with a space in it stays one path. */
+export function writePathsDrag(data: Pick<DataTransfer, 'setData'>, paths: readonly string[]): void {
+    data.setData(PATHS_DRAG_TYPE, JSON.stringify(paths));
+}
+
+/*
+ * The paths a drag inside the app carries, directories with their slash, in the order the source wrote
+ * them. A window of a build before the JSON array spelled them space separated, which is still read.
+ */
+export function draggedPaths(data: Pick<DragPayload, 'getData'>): string[] {
+    const value = data.getData(PATHS_DRAG_TYPE);
+    try {
+        const parsed: unknown = JSON.parse(value);
+        if (Array.isArray(parsed)) {
+            return parsed.filter((path): path is string => typeof path === 'string' && path !== '');
+        }
+    } catch {
+        // Not JSON, so the older form.
+    }
     return value.split(/\s+/).filter((path) => path !== '');
 }
 
@@ -36,9 +52,9 @@ function splitPaths(value: string): string[] {
  * so it is taken whole.
  */
 export function droppedPaths(data: DragPayload): string[] {
-    const marked = data.getData(PATHS_DRAG_TYPE);
-    if (marked !== '') {
-        return splitPaths(marked).filter((path) => !path.endsWith('/') && !path.endsWith('\\'));
+    const marked = draggedPaths(data);
+    if (marked.length > 0) {
+        return marked.filter((path) => !path.endsWith('/') && !path.endsWith('\\'));
     }
     return droppedMentions(data);
 }

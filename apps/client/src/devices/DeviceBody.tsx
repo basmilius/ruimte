@@ -47,7 +47,7 @@ import { DeviceStream } from '@/devices/DeviceStream';
 import { ANDROID_BUTTONS } from '@/devices/operated';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
-import { PATHS_DRAG_TYPE } from '@/surface/canvas/drop';
+import { draggedPaths, PATHS_DRAG_TYPE } from '@/surface/canvas/drop';
 import { useNodeHost } from '@/surface/nodes/node-host';
 import { failed } from '@/surface/surface-failure';
 import { deviceClientFor } from '@/workspace/connections';
@@ -318,12 +318,8 @@ export function DeviceSurface({ device }: { device: DeviceInfo }) {
 }
 
 /* The paths a drag out of Ruimte's own file tree carries, against the project folder; a file from the Finder has no path here. */
-function draggedPaths(transfer: DataTransfer, folder: string): string[] {
-    return transfer
-        .getData(PATHS_DRAG_TYPE)
-        .split(/\s+/)
-        .filter((path) => path !== '')
-        .map((path) => absoluteOf(folder, path));
+function draggedFrom(transfer: DataTransfer, folder: string): string[] {
+    return draggedPaths(transfer).map((path) => absoluteOf(folder, path));
 }
 
 /* Takes an app to install or pictures to add, dropped from the project's file tree. */
@@ -340,7 +336,7 @@ function DeviceDropZone({ device, children }: { device: DeviceInfo; children: Re
             return;
         }
         event.preventDefault();
-        const action = dropAction(device, draggedPaths(event.dataTransfer, folder));
+        const action = dropAction(device, draggedFrom(event.dataTransfer, folder));
         if (action === null) {
             toastDeviceFailure(t('device.tools.files.dropFailed'), new Error(t('device.tools.files.notTaken')));
             return;
