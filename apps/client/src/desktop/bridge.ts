@@ -1,5 +1,5 @@
 import { setApplePlatform, setWindowControlsSource } from '@adecore/ui';
-import type { DesktopBridge, MachineMode } from '@ruimte/desktop-bridge';
+import { type DesktopBridge, type MachineMode, windowControlsOf } from '@ruimte/desktop-bridge';
 
 export type {
     BrowserRouteBinding,
@@ -78,7 +78,7 @@ export function connectWindowControls(): (() => void) | undefined {
         return;
     }
 
-    let inset: number | null = null;
+    let inset = windowControlsOf(bridge.platform).inset;
     const listeners = new Set<() => void>();
     const take = (state: { inset: number | null }) => {
         inset = state.inset;
