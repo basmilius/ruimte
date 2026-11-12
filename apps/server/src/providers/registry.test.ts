@@ -79,13 +79,13 @@ describe('ProviderRegistry', () => {
      * What an extra account takes from the default one, as `apps/server/README.md` ("Sharing the default Claude account")
      * names it. A change here changes what crosses between two of a person's accounts, so it changes that section too.
      */
-    test('only Claude Code shares a setup between accounts: five entries by link and five settings by copy, never a login', () => {
+    test('only Claude Code shares a setup between accounts: six entries by link and five settings by copy, never a login', () => {
         const registry = new ProviderRegistry();
         const sharing = tableKinds().filter((kind) => registry.get(kind).home?.share !== undefined);
 
         expect(sharing).toEqual(['claude']);
         expect(registry.get('claude').home?.share).toEqual({
-            links: ['CLAUDE.md', 'rules', 'skills', 'agents', 'commands'],
+            links: ['CLAUDE.md', 'rules', 'skills', 'agents', 'commands', 'output-styles'],
             seed: { file: 'settings.json', keys: ['permissions', 'hooks', 'model', 'statusLine', 'outputStyle'] }
         });
     });
