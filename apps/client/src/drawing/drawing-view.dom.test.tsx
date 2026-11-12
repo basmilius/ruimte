@@ -4,7 +4,8 @@ import type { DrawingDocument, ProjectView } from '@ruimte/contracts';
 import { act } from 'react';
 import { renamingView } from '@/project/dialogs';
 import { liveDrawing } from '@/state/drawing';
-import { mount, pressKey, until, type Mounted } from '../../testing/dom';
+import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom';
+import { menuItem } from '../../testing/dom-helpers';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 
@@ -64,6 +65,19 @@ describe('a drawing view', () => {
         await pressKey(document.body, 'r');
 
         expect(liveDrawing(SKETCH.id)?.tool).toBe('rect');
+    });
+
+    test('offers the text sizes up to 96 px in the style menu, and keeps the size picked for what is written next', async () => {
+        await until(() => page.host.querySelector('canvas') !== null && liveDrawing(SKETCH.id) !== null);
+        await clickOn(page.host.querySelector('button[aria-label="Style"]'));
+        await until(() => menuItem('96 px', 'menuitemradio') !== null);
+        const sizes = [...document.querySelectorAll('[role="menuitemradio"]')].map((row) => row.textContent?.trim()).filter((label) => label?.endsWith(' px'));
+
+        expect(sizes).toEqual(['16 px', '20 px', '28 px', '36 px', '48 px', '64 px', '96 px']);
+
+        await clickOn(menuItem('96 px', 'menuitemradio'));
+
+        expect(liveDrawing(SKETCH.id)?.style.textSize).toBe(96);
     });
 
     test('a change the machine announces is drawn in place of what was there', async () => {
