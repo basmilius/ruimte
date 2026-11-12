@@ -38,7 +38,8 @@ Each of these goes with the chat or a clear, and a fork copies only what its cop
 ## Limits and other accounts
 
 - `chat.continueOn` (`continue-on.ts`) moves a limited chat to another account of its CLI. An account that reads its transcripts takes it over in place and opens a turn at once, refusing with `chat-busy` while the CLI runs background work or waits on a request. Any other account gets a fork cut after the limited turn, whose first turn opens at once.
-- Either way the owed `resume-limit` lapses. After a fork the original keeps a note under that turn (`continued-<turnId>`), and no switch turned on later owes that turn a resume there.
+- Either way the owed `resume-limit` lapses. After a fork the original keeps a note under that turn (`continued-<turnId>`), no longer says it is limited, and no switch turned on later owes that turn a resume there.
+- A fork made by Continue on takes the original's work over: its open task (the task's child becomes the fork, whose first turn answers it), the agent that opened it with its depth and ceiling, a place in its group (grown when full) and the lines into it. A chat a person opened, or one an agent on another machine opened, keeps the fork a sibling as before.
 
 ## Moving a chat out of Chats
 

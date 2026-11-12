@@ -486,6 +486,48 @@ describe('forkChat', () => {
         expect(asked.codex).toEqual([{ turnId: 'codex-2' }, null, { turns: 1 }]);
     });
 
+    test('a fork that takes over stands in the full group of the original, grown for it, with the lines into the original and its opener', async () => {
+        const { deps } = stub({ info: info('claude'), items: [turn('turn-1', { lastUuid: 'u-1' })] });
+        const recorded: Parameters<ChatForkDeps['recordFork']>[0][] = [];
+        const canvas = inMemoryCanvas({
+            ...leadProject(),
+            views: [
+                {
+                    kind: 'canvas',
+                    id: 'main',
+                    name: 'Canvas',
+                    nodes: [
+                        { id: 'group-team', kind: 'group', title: 'Team', x: 0, y: 0, w: 624, h: 744 },
+                        { id: 'chat-lead', kind: 'chat', title: 'Lexer', x: 32, y: 72, w: 560, h: 640, provider: 'claude', providerFixed: true },
+                        { id: 'chat-boss', kind: 'chat', title: 'Boss', x: 800, y: 0, w: 560, h: 640, provider: 'claude', providerFixed: true }
+                    ],
+                    texts: [],
+                    edges: [{ id: 'edge-boss', from: 'chat-boss', to: 'chat-lead', label: 'context' }],
+                    layouts: []
+                }
+            ]
+        });
+        const opener = { id: 'chat-boss', depth: 2, ceiling: 'supervised' as const, recount: () => {} };
+        const fork = await forkChat(
+            { ...deps, read: canvas.read, mutate: canvas.mutate, recordFork: async (record) => void recorded.push(record) },
+            { chatId: 'chat-lead', turnId: 'turn-1' },
+            opener,
+            true
+        );
+
+        const main = canvas.document.views[0] as ProjectCanvasView;
+        const group = main.nodes.find((node) => node.id === 'group-team')!;
+        const node = main.nodes.find((candidate) => candidate.id === fork.nodeId)!;
+        expect(group.h).toBeGreaterThan(744);
+        expect(node.x >= group.x && node.y >= group.y && node.x + node.w <= group.x + group.w && node.y + node.h <= group.y + group.h).toBe(true);
+        expect(main.edges.filter((edge) => edge.to === fork.nodeId).map((edge) => [edge.from, edge.label])).toEqual([
+            ['chat-lead', 'context'],
+            ['chat-boss', 'context']
+        ]);
+        expect(fork.edgeId).toBe(main.edges.find((edge) => edge.from === 'chat-lead')!.id);
+        expect(recorded).toEqual([{ projectId: 'p1', nodeId: fork.nodeId, openedBy: 'chat-boss', depth: 2, ceiling: 'supervised' }]);
+    });
+
     test('a node asked to fork into a view gets a view after its canvas, and a chat view still takes a named canvas', async () => {
         const { deps, asked } = stub({ info: info('claude'), items: [turn('turn-1', { lastUuid: 'u-1' })] });
         const canvas = inMemoryCanvas({ ...leadProject(), views: [...leadProject().views, { kind: 'drawing', id: 'sketch', name: 'Sketch' }] });

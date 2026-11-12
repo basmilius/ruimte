@@ -366,9 +366,10 @@ export class ChatManager {
         });
     }
 
-    async continueInFork(forkId: string, limit: ChatTurnLimit['kind']): Promise<void> {
+    /* Opens the fork's first turn, which answers the tasks the original handed over to it. */
+    async continueInFork(forkId: string, limit: ChatTurnLimit['kind'], taskIds: readonly string[]): Promise<void> {
         const info = await this.core.create({ chatId: forkId });
-        this.core.require(forkId).wake({ ...continueOnWake(limit, this.core.accountLabel(info.provider, info.account), true), taskIds: [] });
+        this.core.require(forkId).wake({ ...continueOnWake(limit, this.core.accountLabel(info.provider, info.account), true), taskIds: [...taskIds] });
     }
 
     /* The limited turn of the chat went on in a fork under `account`, so the chat itself never takes it up. */

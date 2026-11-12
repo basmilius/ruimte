@@ -32,10 +32,10 @@ import {
     type ProjectView,
     type Worktree
 } from '@ruimte/contracts';
-import { agentNode } from '../canvas/agents.ts';
+import { agentNode, grownGroup } from '../canvas/agents.ts';
 import type { CanvasHost, MachineHost, ProjectHost } from '../canvas/host.ts';
 import { MAX_CANVAS_NODES, newId } from '../canvas/nodes.ts';
-import { placeFree } from '../canvas/placement.ts';
+import { containersOf, groupMembers, placeFree, placeInGroup } from '../canvas/placement.ts';
 import { branchSlug } from '../canvas/worktree.ts';
 import { errorText } from '../error-text.ts';
 import type { Checkpoints } from '../git/checkpoints.ts';
@@ -366,8 +366,10 @@ async function copyConversation(deps: ChatForkDeps, info: ChatInfo, cut: Cut, na
 /*
  * Snapshot the CLI conversation before creating its node or view, so mounting always finds a stable
  * thread. Failed setup rolls back everything except Codex threads, which its API cannot delete.
+ * `takesOver` makes a fork that goes on with the original's work (Continue on after a limit): it stands in
+ * the original's group, growing it when it has no room, and gets the lines that point into the original.
  */
-export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, opener?: ForkOpener): Promise<ChatForkResult> {
+export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, opener?: ForkOpener, takesOver = false): Promise<ChatForkResult> {
     if (deps.relocating?.(payload.chatId) === true) {
         throw new ChatError('chat-busy', 'The chat is being moved to a project; fork it once that is done');
     }
@@ -470,7 +472,7 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
     });
     return undo.guard(() =>
         deps.mutate(place.projectId, (content) =>
-            landFork(content, { deps, payload, place, forkId, forkInfo, title, provider, account, cwd, worktree: folder.worktree, opener })
+            landFork(content, { deps, payload, place, forkId, forkInfo, title, provider, account, cwd, worktree: folder.worktree, opener, takesOver })
         )
     );
 }
@@ -594,6 +596,7 @@ async function landFork(
         cwd: string;
         worktree: Worktree | undefined;
         opener: ForkOpener | undefined;
+        takesOver: boolean;
     }
 ): Promise<ProjectMutation<ChatForkResult>> {
     const { deps, payload, place, forkId, forkInfo, title, provider, account, opener } = fork;
@@ -677,9 +680,20 @@ async function landFork(
         throw new ChatError('canvas-full', `${canvas.name} already holds the ${MAX_CANVAS_NODES} nodes a canvas may hold`);
     }
     const anchor = place.canvasId === null ? null : (canvas.nodes.find((node) => node.id === payload.chatId) ?? null);
-    const rect = placeFree(canvas.nodes, deps.nodeSize('chat'), anchor);
+    const size = deps.nodeSize('chat');
+    const group = fork.takesOver && anchor !== null ? (containersOf(canvas.nodes).get(anchor.id) ?? null) : null;
+    const inGroup = group === null ? null : placeInGroup(group, groupMembers(group, canvas.nodes), size);
+    const rect = inGroup?.rect ?? placeFree(canvas.nodes, size, anchor);
     const node = agentNode({ id: forkId, chat: true, kind: provider, kindName: nameOf(deps, provider), title, rect, cwd: nodeCwd, account });
-    const edge: ProjectEdge | null = anchor ? { id: newId('edge', content, [forkId]), from: anchor.id, to: forkId, label: 'context' } : null;
+    const edges: ProjectEdge[] = [];
+    if (anchor) {
+        edges.push({ id: newId('edge', content, [forkId]), from: anchor.id, to: forkId, label: 'context' });
+    }
+    // The fork does what the original did, so whatever reached the original reaches the fork too.
+    for (const into of fork.takesOver && anchor ? canvas.edges.filter((edge) => edge.to === anchor.id && edge.from !== forkId) : []) {
+        edges.push({ ...into, id: newId('edge', content, [forkId, ...edges.map((edge) => edge.id)]), to: forkId });
+    }
+    const nodes = [...canvas.nodes.map((candidate) => (candidate.id === group?.id ? grownGroup(candidate, inGroup, forkId) : candidate)), node];
     return {
         content: {
             ...content,
@@ -687,13 +701,13 @@ async function landFork(
                 view.id === canvas.id
                     ? {
                           ...canvas,
-                          nodes: joinGroupUnder({ nodes: [...canvas.nodes, node], texts: canvas.texts }, forkId),
-                          edges: edge ? [...canvas.edges, edge] : canvas.edges
+                          nodes: joinGroupUnder({ nodes, texts: canvas.texts }, forkId),
+                          edges: [...canvas.edges, ...edges]
                       }
                     : view
             )
         },
-        result: { info: forkInfo, nodeId: forkId, viewId: canvas.id, edgeId: edge?.id ?? null, ...answer },
+        result: { info: forkInfo, nodeId: forkId, viewId: canvas.id, edgeId: edges[0]?.id ?? null, ...answer },
         landed
     };
 }

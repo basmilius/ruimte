@@ -120,7 +120,16 @@ export function chatDeps(input: AreaInput): ChatDeps {
             info: (payload) => readForkInfo(forkDeps, payload),
             handoff: (payload) => readHandoff(forkDeps, payload),
             summarize: (chatId) => work.summaries.summarize(chatId),
-            continueOn: (payload) => continueOn({ chats: chatManager, fork: (fork) => forkChat(forkDeps, fork) }, payload)
+            continueOn: (payload) =>
+                continueOn(
+                    {
+                        chats: chatManager,
+                        tasks: work.tasks.coordinator,
+                        lineage: stores.lineage,
+                        fork: (fork, opener) => forkChat(forkDeps, fork, opener, true)
+                    },
+                    payload
+                )
         },
         killed: (chatId) => work.prWatches.stop(chatId),
         moves: chatMover,

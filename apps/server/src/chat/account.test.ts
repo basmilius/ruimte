@@ -257,6 +257,34 @@ describe('going on under another account after a limit', () => {
         expect(original.info.resumeAt).toBeUndefined();
     });
 
+    test('a fork takes over the task of an agent, settles it for the agent that gave it and leaves the original free and no longer limited', async () => {
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        await say('chat-lead', 'plan the work');
+        const childId = await openAgent({ cli: 'claude', task: 'Lexer', prompt: `limit:${RESET_AT / 1000}` });
+        await daemon.until(() => daemon.tasks.openFor(childId)?.paused?.kind === 'usage');
+        const task = daemon.tasks.openFor(childId)!;
+        expect(daemon.chats.get(childId)!.info.limit).toMatchObject({ kind: 'usage' });
+
+        const answer = await daemon.request('chat.continueOn', { chatId: childId, account: 'claude_personal' });
+        const forkId = (answer as { result: { chatId: string } }).result.chatId;
+        expect(forkId).not.toBe(childId);
+        expect(daemon.tasks.get(task.id)).toMatchObject({ childId: forkId, status: 'open' });
+        expect(daemon.lineage.startedBy(forkId)).toBe('chat-lead');
+        expect(daemon.lineage.depthOf(forkId)).toBe(daemon.lineage.depthOf(childId));
+        expect(daemon.chats.get(childId)!.info.limit).toBeUndefined();
+        const canvas = (await store.read(projectId)).views[0] as ProjectCanvasView;
+        expect(canvas.edges.filter((edge) => edge.to === forkId).map((edge) => edge.from)).toEqual(expect.arrayContaining([childId, 'chat-lead']));
+
+        await daemon.until(() => daemon.chats.get(forkId)?.info.activeTurnId === null && turnsIn(forkId).length > 0);
+        expect(turnsIn(forkId).at(-1)!.taskIds).toEqual([task.id]);
+        await invokeTool(daemon, forkId, 'task_done', { result: 'fixed in the fork' });
+        await daemon.until(() => daemon.tasks.get(task.id)?.wake === 'sent');
+        expect(daemon.tasks.get(task.id)).toMatchObject({ status: 'done', result: { text: 'fixed in the fork' } });
+
+        const [given] = await invokeTool(daemon, 'chat-lead', 'task_new', { id: childId, prompt: 'one more thing' });
+        expect(given).not.toStartWith('refused');
+    });
+
     test('a Codex chat whose CLI still runs a command in the background is refused, and keeps the resume it is owed', async () => {
         await daemon.setSwitches({ resumeAtReset: true });
         await daemon.chats.create({ chatId: 'chat-codex', provider: 'codex', cwd: folder });

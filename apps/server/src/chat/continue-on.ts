@@ -1,16 +1,21 @@
-import type { ChatContinueOnPayload, ChatContinueOnResult, ChatForkPayload, ChatForkResult, ChatTurnLimit } from '@ruimte/contracts';
+import type { AgentLineageStore, TaskCoordinator } from '@adecore/agents/coordination';
+import type { ChatContinueOnPayload, ChatContinueOnResult, ChatForkPayload, ChatForkResult, ChatTurnLimit, RuntimeMode } from '@ruimte/contracts';
 import type { ChatManager } from './chat-manager.ts';
 import { ChatError } from './errors.ts';
+import type { ForkOpener } from './fork.ts';
 
 interface ContinueOnDeps {
     chats: ChatManager;
-    fork(payload: ChatForkPayload): Promise<ChatForkResult>;
+    tasks: Pick<TaskCoordinator, 'handOver'>;
+    lineage: Pick<AgentLineageStore, 'startedBy' | 'peerOf' | 'depthOf' | 'ceilingOf'>;
+    fork(payload: ChatForkPayload, opener: ForkOpener | undefined): Promise<ChatForkResult>;
 }
 
 /*
  * Goes on after a turn that stopped on a limit under another account, only because a person asked.
  * An account that reads the chat's transcripts takes the chat over in place; any other gets a fork
- * cut after the limited turn. The original's resume at the reset lapses either way.
+ * cut after the limited turn, which takes over the chat's place, its opener and its open task. The
+ * original's resume at the reset lapses either way.
  */
 export async function continueOn(deps: ContinueOnDeps, payload: ChatContinueOnPayload): Promise<ChatContinueOnResult> {
     if (deps.chats.core.isRelocating(payload.chatId)) {
@@ -21,10 +26,24 @@ export async function continueOn(deps: ContinueOnDeps, payload: ChatContinueOnPa
         deps.chats.continueInPlace(payload.chatId, payload.account);
         return { chatId: payload.chatId };
     }
-    const fork = await deps.fork({ chatId: payload.chatId, turnId, account: payload.account });
+    const opener = openerOf(deps.lineage, payload.chatId, deps.chats.core.require(payload.chatId).info.runtimeMode);
+    const fork = await deps.fork({ chatId: payload.chatId, turnId, account: payload.account }, opener);
     deps.chats.continuedInFork(payload.chatId, fork.info.account);
-    await deps.chats.continueInFork(fork.info.chatId, limit);
+    const task = await deps.tasks.handOver(payload.chatId, fork.info.chatId);
+    await deps.chats.continueInFork(fork.info.chatId, limit, task === null ? [] : [task.id]);
     return { chatId: fork.info.chatId, fork };
+}
+
+/*
+ * The agent that opened the chat here, so the fork is its child with the chat's depth and ceiling; none for a chat
+ * a person opened, or one an agent on another machine opened. Taking over is no new start, so it counts nothing.
+ */
+function openerOf(lineage: ContinueOnDeps['lineage'], chatId: string, mode: RuntimeMode): ForkOpener | undefined {
+    const id = lineage.startedBy(chatId);
+    if (id === null || lineage.peerOf(chatId) !== null) {
+        return undefined;
+    }
+    return { id, depth: lineage.depthOf(chatId), ceiling: lineage.ceilingOf(chatId) ?? mode, recount: () => {} };
 }
 
 /*
