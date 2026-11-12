@@ -138,7 +138,7 @@ Several agents, Claude and Codex, work in this checkout at once. Codex reads thi
 
 A release runs to the end without asking: Bas names a version, and the next thing he reads is that it is live. The steps are the `ruimte-release` skill; recipe and secrets: `docs/RELEASE.md`.
 
-- CI decides. The `ci.yml` run on the tagged commit must be green; nothing is built or tested here for a release, and a published build is never downloaded to try.
+- CI decides. The `ci.yml` run on the tagged commit must be green; nothing is built or tested here for a release, and a published build is never downloaded to try. The tag also starts `ios-tests.yml`, the iPhone app's tests, which no release waits for; a red run there is fixed after the release.
 - A red CI is fixed before the tag: fix, push to main, wait for green. Only what Bas alone can decide goes back to him.
 - The notes ride on the tag: `git tag -a v<version> -F <file> --cleanup=verbatim`, or git strips every `##` heading. `release.yml` builds macOS, Linux and Windows into the draft and publishes it once every build succeeds: as a prerelease for a version with a `-`, otherwise as Latest.
 - Publishing starts `npm.yml` (`ruimte`, its four platform packages and `@ruimte/extension`, same version) and, for a Latest release, `station.yml` and `bench.yml`. A push to main deploys neither web client.

@@ -174,7 +174,7 @@ The app is an Xcode Cloud product built from the committed project and `Ruimte.x
 
 - `Release` starts on every `v*` tag and archives for TestFlight and the App Store. `ci_scripts/ci_post_clone.sh` sets `MARKETING_VERSION` from the tag, a beta's without its suffix (`v0.30.0-beta.7` builds as `0.30.0`), and `CURRENT_PROJECT_VERSION` from `CI_BUILD_NUMBER`, generates the project and installs the Metal component. Both versions live in the spec because `agvtool` fails on a test target with `GENERATE_INFOPLIST_FILE = YES`.
 
-`Release` is the only workflow. GitHub CI (`.github/workflows/native.yml`) tests the Swift packages and builds the app for the simulator on every change under `apps/ios`, so a contract change that breaks the app fails before a tag. It does not run the app's own tests, which take long on those runners, and it skips the app in a release's full run; run the tests in a simulator with `xcodebuild test` when a change calls for it.
+`Release` is the only workflow. GitHub CI (`.github/workflows/native.yml`) tests the Swift packages and builds the app for the simulator on every change under `apps/ios`, so a contract change that breaks the app fails before a tag. It does not run the app's own tests, and it skips the app in a release's full run. `ios-tests.yml` runs `RuimteTests` on every `v*` tag, beside the release and without holding it up; a red run there is a bug to fix after the release. Between tags, run the tests in a simulator with `xcodebuild test` when a change calls for it.
 
 Onboarding refuses a project whose Swift packages live in repositories the team cannot grant access to. The product was made from a generated project without packages, then the real project was generated again; repeat that if it ever has to be made anew.
 
