@@ -25,7 +25,7 @@ export function namesSetting(query: string, settings: readonly Command[]): boole
     return settings.some((setting) => matchScore(setting.label, query) === PREFIX);
 }
 
-/* Commands and actions always come first. A setting the query names only outranks the files, which match the letters loosely; otherwise settings stay last. */
+/* Projects come first. A setting the query names only outranks the files, which match the letters loosely; otherwise settings stay last. */
 export function orderBelowJumps<T>({ named, settings, files, rest }: { named: boolean; settings: readonly T[]; files: readonly T[]; rest: readonly T[] }): T[] {
     return named ? [...rest, ...settings, ...files] : [...files, ...rest, ...settings];
 }

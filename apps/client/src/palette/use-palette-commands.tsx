@@ -165,8 +165,9 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
             ];
         }
         /* The file results already answer to the query in the daemon's ranking, so only the other
-           sections are filtered. Views go first: every node's hint names its view, so its nodes
-           would otherwise bury the view under its own name. */
+           sections are filtered. Actions always lead, so a command keeps its place however many
+           files share its words, and what extensions found always closes the list. Views go before nodes: every node's hint names
+           its view, so its nodes would otherwise bury the view under its own name. */
         const keep = (entry: Entry): boolean => entryMatches(query, entry);
         const settings = settingsEntries(findSettings(query, isApplePlatform())).map((command): Entry => ({
             ...command,
@@ -174,8 +175,14 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
             section: 'settings'
         }));
         const named = namesSetting(query, settings);
-        const rest = [...switches.filter(keep), ...commands.map((command) => asEntry(command, 'actions')).filter(keep)];
-        return [...fromExtensions, ...viewSwitches.filter(keep), ...jumps.filter(keep), ...orderBelowJumps({ named, settings, files, rest })];
+        const actions = commands.map((command) => asEntry(command, 'actions')).filter(keep);
+        return [
+            ...actions,
+            ...viewSwitches.filter(keep),
+            ...jumps.filter(keep),
+            ...orderBelowJumps({ named, settings, files, rest: switches.filter(keep) }),
+            ...fromExtensions
+        ];
     })();
 
     const run = (entry: Entry, newWindow: boolean): void => {

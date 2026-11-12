@@ -32,9 +32,9 @@ describe('settings in the palette', () => {
         expect(namesSetting('', settingsEntries(searchSettings('accent')))).toBe(false);
     });
 
-    test('commands rank above a setting the query names, which ranks above files', () => {
-        const parts = { settings: ['setting'], files: ['file'], rest: ['command'] };
-        expect(orderBelowJumps({ named: true, ...parts })).toEqual(['command', 'setting', 'file']);
-        expect(orderBelowJumps({ named: false, ...parts })).toEqual(['file', 'command', 'setting']);
+    test('projects rank above a setting the query names, which ranks above files', () => {
+        const parts = { settings: ['setting'], files: ['file'], rest: ['project'] };
+        expect(orderBelowJumps({ named: true, ...parts })).toEqual(['project', 'setting', 'file']);
+        expect(orderBelowJumps({ named: false, ...parts })).toEqual(['file', 'project', 'setting']);
     });
 });

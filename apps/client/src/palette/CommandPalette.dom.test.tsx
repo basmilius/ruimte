@@ -92,7 +92,7 @@ describe('the command palette with an extension', () => {
         }
     });
 
-    test('puts what a source finds under a label of its own, apart from the actions', async () => {
+    test('puts what a source finds under a label of its own, below the actions', async () => {
         const removes = [
             contribute('paletteSources', {
                 id: 'poc/issues',
@@ -110,7 +110,7 @@ describe('the command palette with an extension', () => {
             await type('wwyy');
             await until(() => labels().some((label) => label.includes('An issue')) && labels().some((label) => label.includes('Command wwyy')));
 
-            expect(groupLabels()).toEqual(['From extensions', 'Actions']);
+            expect(groupLabels()).toEqual(['Actions', 'From extensions']);
         } finally {
             removes.forEach((remove) => remove());
         }
@@ -461,12 +461,17 @@ describe('the command catalog stays current while its query changes', () => {
         );
     });
 
-    test('arrows cross from views into actions and filtering selects the current first result', async () => {
+    test('arrows cross from actions into views and filtering selects the current first result', async () => {
         await type('open');
+        const order = labels();
+        const firstView = order.findIndex((label) => label.startsWith('Open alpha'));
+        expect(order.findIndex((label) => label.startsWith('Open folder as project'))).toBeLessThan(firstView);
+        for (let i = 0; i < firstView; i++) {
+            await pressKey(field()!, 'ArrowDown');
+        }
+        expect(highlighted()?.textContent).toStartWith('Open alpha');
         await pressKey(field()!, 'ArrowDown');
         expect(highlighted()?.textContent).toStartWith('Open beta');
-        await pressKey(field()!, 'ArrowDown');
-        expect(highlighted()?.textContent).toStartWith('Open folder as project');
         expectFieldHoldsTheKeys(highlighted()!);
         await type('alpha');
         expect(highlighted()?.textContent).toStartWith('Open alpha');
