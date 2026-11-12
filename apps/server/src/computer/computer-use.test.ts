@@ -707,6 +707,8 @@ describe('the person holding the Mac', () => {
         const refusal = await call;
         expect(refusal).toMatchObject({ code: 'taken-over' });
         expect((refusal as { message: string }).message).toContain('a few seconds after they let go');
+        // The helper also holds the Mac as taken over when macOS kept the operated app in front, and says no more in its code.
+        expect((refusal as { message: string }).message).toContain('or macOS kept the app you operate in front of theirs');
         expect(helper.acted.map((request) => request.command)).toEqual(['type']);
     });
 

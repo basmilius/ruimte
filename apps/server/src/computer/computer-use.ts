@@ -57,11 +57,14 @@ export const SESSION_POLL_MS = 2_000;
 /* The release and the dev build of the desktop app. */
 export const RUIMTE_BUNDLE_IDS: ReadonlySet<string> = new Set(['app.ruimte.desktop', 'app.ruimte.desktop.dev']);
 
-/* The person holds the Mac. Nothing the agent does changes that, so the words steer it away from trying. */
+/*
+ * The person holds the Mac. Nothing the agent does changes that, so the words steer it away from trying. A take-over
+ * also follows when macOS refused to bring the person's app back, and the helper names no such cause in its code.
+ */
 const HELD_WORDS: Record<PersonHoldCode, string> = {
     paused: 'The person paused the session. Call computer_state again with wait 40, which holds until they resume, and act only after it: they may have changed the window. Do not try to reach the app another way meanwhile',
     'taken-over':
-        'The person took over the Mac. It comes back to you a few seconds after they let go: call computer_state again with wait 40, which holds until then, and go on from that state, since they may have changed the window. Do not try to reach the app another way meanwhile'
+        'The person took over the Mac, or macOS kept the app you operate in front of theirs and did not bring theirs back. It comes back to you a few seconds after they let go: call computer_state again with wait 40, which holds until then, and go on from that state, since they may have changed the window. Do not try to reach the app another way meanwhile'
 };
 
 const STOPPED_WORDS = 'The person stopped you; ask them before you operate an app again, and once they agree start with computer_state';
