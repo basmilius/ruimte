@@ -9,17 +9,10 @@ const ROWS = [
     { label: 'Agents may delete any view or node', description: 'When off, an agent deletes only the views and nodes it created.', on: false },
     { label: 'Agents may reach all open projects', description: 'Agents in one project can read your other open projects and start agents there.', on: false },
     {
-        label: 'Agents may share a dev port',
-        description:
-            'An agent can share the port of a dev server with your other devices. They open it through the connection to this machine. A development site may trust every request that comes from this machine. You can stop a share from the browser node.',
-        on: false
-    },
-    {
         label: 'Continue after a usage limit',
         description: 'A chat stopped by a usage limit continues once it resets. A turn that failed on an overloaded model tries again later.',
         on: true
-    },
-    { label: 'Visual replies', description: 'A chart, table or mockup above a reply. When off, agents answer in text.', on: true }
+    }
 ] as const;
 
 /* The settings dialog of `@adecore/ui/settings` on the Agents section, with ADE CORE's own rows and switches. */
@@ -28,7 +21,7 @@ export function SettingsAgents() {
         <SettingsFrame
             active="Agents"
             description="What new agents start with and what they may do."
-            label="The Settings dialog on Agents. The navigation lists General, Appearance and Keyboard, then Workspace and AI sections. The pane shows Short texts, with a Text model choice between Automatic and Choose, and What agents may do, with five switches."
+            label="The Settings dialog on Agents. The navigation lists General, Appearance and Keyboard, then Workspace and AI sections. The pane shows Short texts, with a Text model choice between Automatic and Choose, and What agents may do, with three switches."
         >
             <SettingsSection title="Short texts">
                 <SettingsRow
