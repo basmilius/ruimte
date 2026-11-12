@@ -262,6 +262,31 @@ describe('tunnel_propose', () => {
         expect(await call('tunnel_propose', { action: 'off', hostname: 'app.bmnw.nl' })).toEqual([`proposal\t${id}\tstale`]);
     });
 
+    test('asking again replaces the card with a new id, and a confirm of the old id applies nothing', async () => {
+        const rowId = await addRow('app', 5173);
+
+        await call('tunnel_propose', { action: 'edit', hostname: 'app.bmnw.nl', port: 3000 });
+
+        const first = cardId();
+
+        expect(await call('tunnel_propose', { action: 'remove', hostname: 'app.bmnw.nl' })).toEqual([`proposal\t${cardId()}\twaiting`, ANSWER_WAKES_NOTE]);
+
+        const second = cardId();
+
+        expect(second).not.toBe(first);
+        expect(published.at(-1)).toMatchObject([{ proposalId: second, action: 'remove' }]);
+        expect(holds).toEqual([
+            { chatId: CHAT, key: `tunnel-proposal:${first}`, held: true },
+            { chatId: CHAT, key: `tunnel-proposal:${second}`, held: true },
+            { chatId: CHAT, key: `tunnel-proposal:${first}`, held: false }
+        ]);
+        expect(await proposals.confirm(first)).toBe(false);
+        expect(proposals.decline(first)).toBe(false);
+        expect(service.rowsAsMeant().find((row) => row.id === rowId)).toMatchObject({ port: 5173 });
+        expect(woken).toEqual([]);
+        expect((await call('tunnel_list')).join('\n')).not.toContain(first);
+    });
+
     test('a card that nobody answers expires and the agent hears that', async () => {
         await call('tunnel_propose', { action: 'add', hostname: 'vite.bmnw.nl', port: 5173 });
 

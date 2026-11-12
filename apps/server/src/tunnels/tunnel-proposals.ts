@@ -129,7 +129,7 @@ function fingerprintOf(row: Readonly<StoredRow> | undefined): string | null {
 
 /*
  * The cards in which an agent suggests a change to a hostname of Ruimte's, one per chat and hostname: a second
- * suggestion for the same hostname joins the card that stands. Nothing changes here until a person confirms, and a
+ * suggestion for the same hostname replaces the card that stands with one of a new id. Nothing changes here until a person confirms, and a
  * confirm runs the change the screen makes, with its checks, so only that confirm changes what the person asked of a
  * row. A card for a row that changed since goes stale and refuses. The call never waits for the person: a confirm or
  * a decline wakes the chat with the outcome, and a card that went stale or expired reaches the agent with its next
@@ -158,7 +158,7 @@ export class TunnelProposals {
         this.cardMs = options.cardMs ?? TUNNEL_PROPOSAL_CARD_MS;
     }
 
-    /* Checks the change as the screen would, then raises the card or joins the one that stands; throws a `TunnelConfigError` for a change the screen refuses. */
+    /* Checks the change as the screen would, then raises the card, in place of one that stands for the hostname; throws a `TunnelConfigError` for a change the screen refuses. */
     ask(ask: TunnelProposalAsk): TunnelProposalAnswer {
         const key = keyOf(ask.chatId, ask.hostname);
         const told = this.unheard.get(key);
@@ -333,24 +333,14 @@ export class TunnelProposals {
         };
         const standing = this.pending.get(key);
 
-        if (standing !== undefined && !standing.confirming) {
-            standing.cancelExpiry();
-            standing.proposal = { ...words, proposalId: standing.proposal.proposalId, createdAt: standing.proposal.createdAt };
-            standing.change = ask.change;
-            standing.seen = this.seenOf(ask.change);
-            standing.cancelExpiry = this.expireLater(standing);
-            this.publish();
-
-            return standing;
-        }
-
-        if (standing !== undefined) {
+        if (standing?.confirming === true) {
             throw new TunnelConfigError('proposal-busy', `Ruimte is already changing ${ask.hostname} for a card a person confirmed`);
         }
 
-        const ofChat = [...this.pending.values()].filter((pending) => pending.proposal.chatId === ask.chatId).length;
+        const ofChat = [...this.pending.values()].filter((pending) => pending.proposal.chatId === ask.chatId && pending !== standing).length;
+        const others = this.pending.size - (standing === undefined ? 0 : 1);
 
-        if (ofChat >= MAX_CARDS_PER_CHAT || this.pending.size >= MAX_CARDS) {
+        if (ofChat >= MAX_CARDS_PER_CHAT || others >= MAX_CARDS) {
             throw new TunnelConfigError('too-many-proposals', `At most ${MAX_CARDS_PER_CHAT} suggestions of a chat wait for a person at once`);
         }
 
@@ -364,9 +354,16 @@ export class TunnelProposals {
             cancelExpiry: () => undefined
         };
 
+        // The new card holds the chat before the one it replaces lets go, so the chat never reads as free in between.
+        this.chats.hold(ask.chatId, holdKeyOf(pending.proposal.proposalId));
+
+        // A changed suggestion is a card of its own: a confirm already on its way for the old id answers false instead of applying what the person never read.
+        if (standing !== undefined) {
+            this.close(standing);
+        }
+
         pending.cancelExpiry = this.expireLater(pending);
         this.pending.set(key, pending);
-        this.chats.hold(ask.chatId, holdKeyOf(pending.proposal.proposalId));
         this.publish();
 
         return pending;
