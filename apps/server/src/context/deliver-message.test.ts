@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
+import { MAX_MESSAGE_TURNS } from '@adecore/agents/coordination';
 import { ManualClock } from '@adecore/agents/testing';
 import type { ProjectContent } from '@ruimte/contracts';
 import type { ProjectStore } from '../projects/project-store.ts';
@@ -86,6 +87,11 @@ function notified(id: string, at: string, detail: string, title: string): string
 /* What a person reads in the thread about a message, wherever it was written. */
 function linesAbout(daemon: TestDaemon, chatId: string, text: string): string[] {
     return itemsOf(daemon, chatId).flatMap((item) => (item.kind === 'note' && item.text.includes(text) ? [item.text] : []));
+}
+
+/* The message a note in the thread carries, as a client draws it: the field the iPhone and the desktop read `limited` from. */
+function messageNote(daemon: TestDaemon, chatId: string, text: string): unknown {
+    return itemsOf(daemon, chatId).flatMap((item) => (item.kind === 'note' && item.message?.text === text ? [item.message] : []))[0];
 }
 
 describe('a message to a chat', () => {
@@ -179,6 +185,46 @@ describe('a message to a chat', () => {
         await daemon.until(() => repliesOf(daemon, 'chat-other').some((text) => text.includes('sent you a message: the build is green')));
         // The turn a person's prompt opened, not one the machine started for the message.
         expect(turnsOf(daemon, 'chat-other').every((turn) => (turn.messageFrom ?? []).length === 0)).toBe(true);
+    });
+
+    test('past the turns messages may open in an hour waits marked in the thread, until a prompt of the person hands it over', async () => {
+        const daemon = await boot();
+        await idle(daemon, 'chat-lead');
+        await idle(daemon, 'chat-other');
+        await link(daemon, 'chat-lead', 'chat-other');
+        const messageTurns = () => turnsOf(daemon, 'chat-other').filter((turn) => (turn.messageFrom ?? []).length > 0);
+
+        for (let i = 1; i <= MAX_MESSAGE_TURNS; i++) {
+            await notify(daemon, 'chat-lead', 'chat-other', `step ${i}`);
+            await daemon.until(() => messageTurns().length === i && messageTurns().every((turn) => turn.state === 'done'));
+        }
+
+        const lines = await notify(daemon, 'chat-lead', 'chat-other', 'one too many');
+        await daemon.worker.settled();
+
+        expect(lines).toEqual([
+            notified(
+                'chat-other',
+                'waiting',
+                `messages woke that chat ${MAX_MESSAGE_TURNS} times this hour, which is as often as they may; it reads this one when it next takes a turn for another reason, or when a person hands it over (1 waiting)`,
+                'Builder'
+            )
+        ]);
+        expect(messageTurns()).toHaveLength(MAX_MESSAGE_TURNS);
+        expect(messageNote(daemon, 'chat-other', 'one too many')).toEqual({
+            from: 'chat-lead',
+            title: 'Lead',
+            text: 'one too many',
+            state: 'waiting',
+            limited: true
+        });
+
+        // What "Deliver now" sends: a prompt of the person's, whose turn carries the waiting message.
+        await daemon.chats.send('chat-other', 'Read the waiting messages and act on them.');
+        await daemon.until(() => repliesOf(daemon, 'chat-other').some((text) => text.includes('sent you a message: one too many')));
+
+        expect(messageNote(daemon, 'chat-other', 'one too many')).toEqual({ from: 'chat-lead', title: 'Lead', text: 'one too many' });
+        expect(daemon.notices.waiting('chat-other')).toEqual([]);
     });
 
     test('to a chat in a closed project waits until the project opens again', async () => {
