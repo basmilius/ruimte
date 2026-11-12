@@ -1,0 +1,60 @@
+import { describe, expect, test } from 'bun:test';
+import { STEPS } from './client';
+
+// In the DOM run only for its preload: the steps reach a Vite `?worker` import, which the unit run cannot load.
+describe('STEPS', () => {
+    test('start in the order the client needs, none dropped', () => {
+        expect(STEPS.map((step) => step.name)).toEqual([
+            'telemetry',
+            'format',
+            'platform',
+            'windowControls',
+            'staleChunks',
+            'sharedStorage',
+            'sessionLifecycle',
+            'snoozeClock',
+            'nodeActivityTouches',
+            'waitingSince',
+            'agentNotifications',
+            'breakReminder',
+            'attention',
+            'serverInfo',
+            'ping',
+            'endpoints',
+            'startupReport',
+            'desktopUsage',
+            'processWarnings',
+            'tasks',
+            'remoteStatus',
+            'computer',
+            'secrets',
+            'proposals',
+            'tunnelProposals',
+            'consent',
+            'deviceOperated',
+            'planPanel',
+            'connections',
+            'projectList',
+            'windowTabs',
+            'bootWindow',
+            'showView',
+            'agentProjects',
+            'pageHolds',
+            'animations',
+            'keepAwake',
+            'keepAwakeMove',
+            'linkRequest',
+            'pulsarAccount',
+            'autoRegistration',
+            'removal',
+            'onboarding',
+            'agentIntegrations',
+            'wakeReconnect',
+            'providerDetection',
+            'lastSeen',
+            'strayDrops',
+            'shellTheme',
+            'terminalTestHooks'
+        ]);
+    });
+});

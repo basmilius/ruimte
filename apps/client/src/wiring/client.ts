@@ -120,7 +120,7 @@ function reloadOnStaleChunks(): void {
  * The order is the one the client needs, not alphabetical: each step names why it is where it is. The
  * hooks come first, so nothing below runs an action or opens a machine before they are installed.
  */
-const STEPS: readonly Step[] = [
+export const STEPS: readonly Step[] = [
     { name: 'telemetry', start: startTelemetry },
     // Before anything that writes a date or a number, so none of it is written in the default region first.
     { name: 'format', start: connectFormat },
