@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { parsePanel, parseWidth, shownPanel, useUi } from './ui';
 
 describe('ui', () => {
@@ -116,6 +116,55 @@ describe('ui', () => {
         });
         unsubscribe();
         expect(notified).toBe(1);
+    });
+});
+
+describe('the sidebar width', () => {
+    const UI_MODULE = new URL('./ui.ts', import.meta.url).pathname;
+    const previousStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    const previousWidth = useUi.getState().sidebarWidth;
+
+    let stored: Map<string, string>;
+
+    beforeEach(() => {
+        stored = new Map();
+        Object.defineProperty(globalThis, 'localStorage', {
+            configurable: true,
+            value: {
+                getItem: (key: string) => stored.get(key) ?? null,
+                setItem: (key: string, value: string) => void stored.set(key, value),
+                removeItem: (key: string) => void stored.delete(key)
+            }
+        });
+    });
+
+    afterEach(() => {
+        if (previousStorage) {
+            Object.defineProperty(globalThis, 'localStorage', previousStorage);
+        } else {
+            Reflect.deleteProperty(globalThis, 'localStorage');
+        }
+
+        useUi.setState({ sidebarWidth: previousWidth });
+    });
+
+    // A fresh copy of the module is a window after a reload: its store reads the key once, as it is made.
+    test('a dragged width is kept for the app and is where a reloaded window starts', async () => {
+        useUi.getState().setSidebarWidth(320);
+
+        const reloaded = (await import(`${UI_MODULE}?reload=dragged`)) as typeof import('./ui');
+
+        expect(stored.get('ruimte.sidebar.width')).toBe('320');
+        expect(reloaded.useUi.getState().sidebarWidth).toBe(320);
+    });
+
+    test('a reloaded window with nothing stored, or no width stored, starts at the default', async () => {
+        const empty = (await import(`${UI_MODULE}?reload=empty`)) as typeof import('./ui');
+        stored.set('ruimte.sidebar.width', 'wide');
+        const garbled = (await import(`${UI_MODULE}?reload=garbled`)) as typeof import('./ui');
+
+        expect(empty.useUi.getState().sidebarWidth).toBeNull();
+        expect(garbled.useUi.getState().sidebarWidth).toBeNull();
     });
 });
 
