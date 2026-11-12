@@ -143,6 +143,7 @@ export function removeOverrideOf(ids: readonly RowId[]): void {
 /* The key a row has out of the box, undefined for a key the platform leaves unbound. */
 export function defaultKeyOf(id: DefaultKeyId): Shortcut;
 export function defaultKeyOf(id: KeymapId): Shortcut | undefined;
+export function defaultKeyOf(id: RowId): Shortcut | undefined;
 export function defaultKeyOf(id: RowId): Shortcut | undefined {
     return hasDefaultKey(id) ? DEFAULT_KEYS[id] : shortcutFor(id, isApplePlatform());
 }

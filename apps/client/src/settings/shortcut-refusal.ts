@@ -1,7 +1,7 @@
 import { shortcutText, type Shortcut } from '@adecore/ui';
 import { matchesExtensionShortcut } from '@/extensions/action-shortcuts';
-import type { ShortcutGroup } from '@/settings/shortcuts';
-import type { RowId } from '@/surface/shortcut-overrides';
+import type { ShortcutGroup, ShortcutRow } from '@/settings/shortcuts';
+import { defaultKeyOf, type RowId } from '@/surface/shortcut-overrides';
 import { BROWSER_KEEPS } from '@/surface/shortcuts';
 
 type TakenRefusal = { reason: 'taken'; label: string };
@@ -63,16 +63,39 @@ export function refusalOf(next: Shortcut, row: RowId, groups: readonly ShortcutG
 
 /*
  * Why a row may not go back to its default key, or null when it may. Only a holder counts: a default may lack a modifier
- * on purpose, and a browser tab already says which defaults it keeps.
+ * on purpose, and a browser tab already says which defaults it keeps. And only a holder a person moved onto the key:
+ * two defaults that share a key in different places (the palette and a terminal's clear) were shipped that way, and a
+ * fixed holder is one a person could never move out of the way.
  */
 export function resetRefusalOf(fallback: Shortcut | undefined, row: RowId, groups: readonly ShortcutGroup[], apple: boolean): TakenRefusal | null {
-    return fallback === undefined ? null : takenBy(fallback, row, groups, apple);
+    if (fallback === undefined) {
+        return null;
+    }
+
+    return takenBy(fallback, row, groups, apple, (holder) => {
+        if (holder.id === undefined) {
+            return false;
+        }
+
+        const shipped = defaultKeyOf(holder.id);
+
+        return shipped === undefined || !sameKey(shipped, fallback, apple);
+    });
 }
 
-function takenBy(next: Shortcut, row: RowId, groups: readonly ShortcutGroup[], apple: boolean): TakenRefusal | null {
+function takenBy(
+    next: Shortcut,
+    row: RowId,
+    groups: readonly ShortcutGroup[],
+    apple: boolean,
+    counts: (holder: ShortcutRow) => boolean = () => true
+): TakenRefusal | null {
     const holder = groups
         .flatMap((group) => group.shortcuts)
-        .find((candidate) => candidate.id !== row && candidate.then === undefined && candidate.keys.key !== '' && sameKey(candidate.keys, next, apple));
+        .find(
+            (candidate) =>
+                candidate.id !== row && candidate.then === undefined && candidate.keys.key !== '' && sameKey(candidate.keys, next, apple) && counts(candidate)
+        );
 
     return holder === undefined ? null : { reason: 'taken', label: holder.label };
 }

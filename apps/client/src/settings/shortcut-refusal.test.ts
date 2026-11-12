@@ -85,8 +85,26 @@ describe('refusalOf against the fixed keys', () => {
 });
 
 describe.each([true, false])('resetRefusalOf, apple %p', (apple) => {
-    test('names the row that took the default key since', () => {
-        expect(resetRefusalOf(shortcut('Mod+B'), 'palette', GROUPS, apple)).toEqual({ reason: 'taken', label: 'Toggle sidebar' });
+    test('names the row a person moved onto the default key since', () => {
+        const moved: ShortcutGroup[] = [{ id: 'general', title: 'General', shortcuts: [{ id: 'sidebar', keys: shortcut('Mod+K'), label: 'Toggle sidebar' }] }];
+
+        expect(resetRefusalOf(shortcut('Mod+K'), 'palette', moved, apple)).toEqual({ reason: 'taken', label: 'Toggle sidebar' });
+    });
+
+    test('lets a row go back to a default it shares with a fixed row or with the default of another', () => {
+        const shared: ShortcutGroup[] = [
+            {
+                id: 'terminal',
+                title: 'Terminal',
+                shortcuts: [
+                    { keys: shortcut('Mod+K'), label: 'Clear screen and scrollback' },
+                    { id: 'sidebar', keys: shortcut('Mod+B'), label: 'Toggle sidebar' }
+                ]
+            }
+        ];
+
+        expect(resetRefusalOf(shortcut('Mod+K'), 'palette', shared, apple)).toBeNull();
+        expect(resetRefusalOf(shortcut('Mod+B'), 'palette', shared, apple)).toBeNull();
     });
 
     test('lets a row go back to a free default, also one without a modifier', () => {
