@@ -3,6 +3,8 @@ import { LANGUAGE_TRACE_VALUES, type LanguageLogLine, type LanguageServerStatus,
 import { RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { isThisMachine } from '@/state/local-machine';
+import { useWindow, workspaceOf } from '@/workspace/window';
 import { report, useStatuses } from './server-status';
 import type { LanguageStatusTracker } from './status';
 import { actionsOf, kindOf, logLineText, nameOf, type ServerTone } from './status-view';
@@ -74,6 +76,13 @@ export function LogDialog({ server, tracker, onClose }: { server: string | null;
     );
 }
 
+/* The machine refuses `language.worktreeBuild` to every client but the one holding its local secret, the app on that machine. */
+function useCanSetWorktreeBuild(tracker: LanguageStatusTracker): boolean {
+    const endpointId = useWindow((s) => workspaceOf(s.content)?.connection.endpointId ?? null);
+
+    return endpointId !== null && isThisMachine(endpointId) && tracker.canAllowWorktreeBuild();
+}
+
 /* Install, update, step back, restart and show the log of one server, the buttons the status bar and the settings both draw. */
 export function ServerActionButtons({
     status,
@@ -94,6 +103,7 @@ export function ServerActionButtons({
     const { t } = useTranslation('panels');
     const kind = kindOf(status.server);
     const actions = actionsOf(status);
+    const setsWorktreeBuild = useCanSetWorktreeBuild(tracker);
     const fail = (error: unknown): void => report(error, t);
 
     return (
@@ -113,12 +123,12 @@ export function ServerActionButtons({
                     {t('language.rollback', { version: status.previous.version })}
                 </Button>
             )}
-            {status.buildHeld === true && tracker.canAllowWorktreeBuild() && (
+            {status.buildHeld === true && setsWorktreeBuild && (
                 <Button size={size} variant="secondary" onClick={() => void tracker.allowWorktreeBuild().catch(fail)}>
                     {t('language.buildAllow')}
                 </Button>
             )}
-            {status.buildAllowed === true && tracker.canAllowWorktreeBuild() && (
+            {status.buildAllowed === true && setsWorktreeBuild && (
                 <Button size={size} variant="secondary" onClick={() => void tracker.holdWorktreeBuild().catch(fail)}>
                     {t('language.buildHold')}
                 </Button>
