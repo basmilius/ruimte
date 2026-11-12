@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -162,6 +162,18 @@ describe('a page of a design', () => {
 
         expect(await ask('index.html', 'stranger')).toMatchObject({ ok: false, error: { code: 'outside-project' } });
         expect(await ask('index.html', 'client', 'canvas')).toMatchObject({ ok: false, error: { code: 'not-a-design' } });
+    });
+
+    test('is held for nobody when its client left while it was built', async () => {
+        await writeFile(join(folder, 'index.html'), '<p>one</p>');
+        const hold = spyOn(pages, 'hold');
+        const gone = { id: 'client', closed: true };
+
+        expect(await askOnce(dispatcher, gone, 'design.page', { projectId: 'project', designId: 'onboarding', file: 'index.html' })).toMatchObject({
+            ok: false,
+            error: { code: 'closed' }
+        });
+        expect(hold).not.toHaveBeenCalled();
     });
 });
 
