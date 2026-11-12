@@ -5377,50 +5377,6 @@
                     "required": true
                 }
             ]
-        },
-        {
-            "name": "worktree_merge",
-            "annotations": {
-                "readOnlyHint": false,
-                "destructiveHint": true
-            },
-            "fields": [
-                {
-                    "key": "branch",
-                    "type": "string",
-                    "items": null,
-                    "enum": null,
-                    "required": true
-                },
-                {
-                    "key": "message",
-                    "type": "string",
-                    "items": null,
-                    "enum": null,
-                    "required": false
-                },
-                {
-                    "key": "project",
-                    "type": "string",
-                    "items": null,
-                    "enum": null,
-                    "required": true
-                },
-                {
-                    "key": "rebase",
-                    "type": "boolean",
-                    "items": null,
-                    "enum": null,
-                    "required": false
-                },
-                {
-                    "key": "squash",
-                    "type": "boolean",
-                    "items": null,
-                    "enum": null,
-                    "required": false
-                }
-            ]
         }
     ],
     "approvals": [

@@ -100,6 +100,12 @@ test('the approval tools join a credential only with its box, whatever the tier'
     }
 });
 
+test('no tier lists worktree_merge, which refuses every actor but an agent', () => {
+    for (const tier of EXTERNAL_TIERS) {
+        expect(listOf(tier, true).map((tool) => tool.name)).not.toContain('worktree_merge');
+    }
+});
+
 test('the tool lists and the instructions stay within their budget', () => {
     const now = measured();
 

@@ -3,7 +3,8 @@ import type { ExternalTier } from '@ruimte/contracts';
 /*
  * An explicit list per tier, apart from `Audience`, so a tool added later stays out of reach of a client elsewhere until
  * someone adds its name here. Outside every tier: `secret_request`, `task_done`, `context_list`, `chat_attach`, `visual_*`,
- * the `plan_*` tools (they act on the plans of the chat that calls, and a client elsewhere is no chat) and every tool
+ * the `plan_*` tools (they act on the plans of the chat that calls, and a client elsewhere is no chat), `worktree_merge`
+ * (the daemon merges only for an agent, and a person merges from the git panel) and every tool
  * whose input is a path on the machine (`artifact_publish`, `device_install`, `device_media`, `language_*`, `template_new`).
  */
 
@@ -61,7 +62,6 @@ const MACHINE: readonly string[] = [
     'routine_edit',
     'routine_toggle',
     'routine_run',
-    'worktree_merge',
     'tool_list',
     'tool_run',
     'browser_state',
