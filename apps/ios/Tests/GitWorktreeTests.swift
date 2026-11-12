@@ -102,6 +102,21 @@ final class GitWorktreeTests: XCTestCase {
                 request: request))
     }
 
+    @MainActor func testAnOlderMachinesOverwriteRefusalStillOffersAStash() async {
+        let message = "error: Your local changes to the following files would be overwritten by merge:\n\ta.ts"
+        let machine = WorktreeMachine()
+        machine.refusal = ("git-failed", message)
+        let state = GitWorktreesState(repo: "/repo")
+        let request = GitWorktreeMergeRequest(worktree: worktree(), strategy: .merge)
+        await state.merge(client: machine, request: request)
+        XCTAssertEqual(state.outcome, .refused(code: .mergeWouldOverwrite, message: message, request: request))
+        machine.refusal = ("git-failed", "fatal: refusing to merge unrelated histories")
+        await state.merge(client: machine, request: request)
+        XCTAssertEqual(
+            state.outcome,
+            .refused(code: .gitFailed, message: "fatal: refusing to merge unrelated histories", request: request))
+    }
+
     func testTheStashGoesToTheCheckoutThatHasTheTargetOut() {
         let others = [
             GitWorktree(path: "/wt/gone", branch: "develop", missing: true),

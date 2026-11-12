@@ -103,6 +103,18 @@ final class GitSheetTests: XCTestCase {
         }
     }
 
+    func testAnOlderMachinesUnmergedRefusalStillEarnsASecondAsk() async {
+        let machine = ScriptedMachine()
+        let actions = GitBranchActions(repositories: GitRepositories(), path: "/work/api")
+        machine.answers[.gitAction] = { _ in
+            throw MachineClientError.server(code: "git-failed", message: "error: the branch 'old' is not fully merged")
+        }
+        await actions.confirm(client: machine, .deleteBranch(cwd: "/work/api", ref: "old", force: false))
+        guard case .deleteBranch(_, "old", true)? = actions.confirmation else {
+            return XCTFail("The forced delete was not asked")
+        }
+    }
+
     private func host<Content: View>(_ content: Content) throws -> UIWindow {
         try NativePresentationProbe.enableAccessibility()
         return UIWindow.showing(UIHostingController(rootView: content), size: CGSize(width: 402, height: 874))

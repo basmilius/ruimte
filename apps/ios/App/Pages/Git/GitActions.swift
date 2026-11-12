@@ -77,7 +77,7 @@ extension GitRepositories {
         let outcome = await perform(client: client, cwd: cwd, kind: kind, extra: extra)
         if case .failure(let error) = outcome {
             problem = error.localizedDescription
-            refusal = error.machineCode
+            refusal = gitRefusalCode(error)
         } else {
             problem = nil
             refusal = nil
@@ -192,4 +192,19 @@ extension GitRepositories {
             return .failure(error)
         }
     }
+}
+
+/// The code of a git refusal. A machine from before 0.31 sends `git-failed` with git's own words for a branch it will
+/// not delete unmerged and a merge over a changed file, so those words still say which one it was.
+func gitRefusalCode(_ error: any Error) -> MachineErrorCode? {
+    let code = error.machineCode
+    guard code == .gitFailed else { return code }
+    let message = error.localizedDescription
+    if message.contains("not fully merged") { return .branchNotMerged }
+    if message.range(of: "would be overwritten by merge", options: .caseInsensitive) != nil
+        || message.range(of: "commit your changes or stash them", options: .caseInsensitive) != nil
+    {
+        return .mergeWouldOverwrite
+    }
+    return code
 }

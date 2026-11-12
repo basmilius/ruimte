@@ -349,7 +349,7 @@ enum GitWorktreeText {
             }
         } catch is CancellationError {
         } catch {
-            let code = error.machineCode
+            let code = gitRefusalCode(error)
             // A target checked out nowhere names no branch; the folder's own is what to offer instead.
             let folderBranch =
                 code == .targetNotCheckedOut
