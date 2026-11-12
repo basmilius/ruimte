@@ -18,6 +18,6 @@ Decisions the code cannot show. Do not reverse one without asking Bas.
 
 - Computer use is the desktop's own door, off per machine until a person turns it on. Then the `computer_*` tools operate any app, Ruimte included, only after a person let the agent into that app (this time or always, in every mode), and never a terminal.
 - Letting an agent into Ruimte itself is the person's own risk. It can do there whatever the person can, and the daemon refuses nothing extra from the Ruimte window meanwhile.
-- Computer use is a lasting part of Ruimte, also the way agents check their own UI work (2026-11-09; it replaces the plan to remove it).
+- Computer use is a lasting part of Ruimte, also the way agents check their own UI work (2026-11-09).
 - The look of the phantom cursor is Bas's design work; a change elsewhere leaves it as it is. The helper has no session bar: its title, step, pause, take over and stop sit only in the menu bar item (2026-11-09).
 - Its code shares what it has in common with devices (`person-hold.ts`, codes instead of message prefixes), and the helper names a refusal with a `code` (`home-refused` for a request without this home's secret).
