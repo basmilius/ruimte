@@ -159,6 +159,16 @@ describe('rebinding in the Keyboard pane', () => {
         expect(useUi.getState().paletteOpen).toBe(true);
     });
 
+    test('a reset to a default key another row took is refused, and the row that holds it is named', async () => {
+        await record('Command palette', 'y', { ...MOD, altKey: true });
+        await record('New chat', 'k', MOD);
+        await clickOn(resetButton('Command palette'));
+
+        expect(everything()).toContain('New chat already uses this key. Change that shortcut first.');
+        expect(resetButton('Command palette')).not.toBeNull();
+        expect(recorder('Command palette')!.textContent).toContain('Y');
+    });
+
     test('Restore defaults asks first, and then puts every changed row back', async () => {
         await record('Command palette', 'y', { ...MOD, altKey: true });
         await record('Voice Control: press to toggle, hold to talk', 'u', { ...MOD, altKey: true });

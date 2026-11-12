@@ -6,11 +6,22 @@ import { useTranslation } from 'react-i18next';
 import { isDesktop } from '@/desktop/bridge';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { keyboardGroups } from '@/settings/keyboard-groups';
-import { extensionUsesKey, refusalOf } from '@/settings/shortcut-refusal';
+import { extensionUsesKey, refusalOf, resetRefusalOf } from '@/settings/shortcut-refusal';
 import { filterShortcuts, shortcutGroupOf, shortcutRowId, type ShortcutGroup, type ShortcutRow } from '@/settings/shortcuts';
 import { useContributions } from '@/state/extension-registry';
 import { useUi } from '@/state/ui';
-import { isRebound, keyOf, rebind, removeOverride, removeOverrideOf, setShortcutRecording, useOverrides } from '@/surface/shortcut-overrides';
+import type { DefaultKeyId } from '@/surface/default-keys';
+import {
+    defaultKeyOf,
+    isRebound,
+    keyOf,
+    rebind,
+    removeOverride,
+    removeOverrideOf,
+    setShortcutRecording,
+    useOverrides,
+    type OverrideSnapshot
+} from '@/surface/shortcut-overrides';
 
 interface Rebinding {
     groups: readonly ShortcutGroup[];
@@ -20,6 +31,8 @@ interface Rebinding {
 function RowControl({ row, groups, apple }: { row: ShortcutRow } & Rebinding) {
     const { t } = useTranslation('settings');
     const snapshot = useOverrides();
+    // Held with the snapshot it was refused in, so it goes away once any key changes.
+    const [resetRefused, setResetRefused] = useState<{ snapshot: OverrideSnapshot; text: string } | null>(null);
 
     if (row.id === undefined) {
         return <Keys shortcut={row.keys} then={row.then} />;
@@ -40,11 +53,26 @@ function RowControl({ row, groups, apple }: { row: ShortcutRow } & Rebinding) {
               : t('keyboard.taken', { name: found.label });
     };
 
+    const reset = (): void => {
+        const found = resetRefusalOf(defaultKeyOf(id as DefaultKeyId), id, groups, apple);
+
+        if (found !== null) {
+            setResetRefused({ snapshot, text: t('keyboard.resetTaken', { name: found.label }) });
+
+            return;
+        }
+
+        removeOverride(id);
+    };
+
     return (
         <span className="flex items-center gap-1">
-            {isRebound(snapshot, id) && (
-                <IconButton icon={RotateCcw} size="sm" label={t('keyboard.reset', { name: row.label })} onClick={() => removeOverride(id)} />
+            {resetRefused?.snapshot === snapshot && (
+                <span aria-live="polite" className="text-xs text-status-error">
+                    {resetRefused.text}
+                </span>
             )}
+            {isRebound(snapshot, id) && <IconButton icon={RotateCcw} size="sm" label={t('keyboard.reset', { name: row.label })} onClick={reset} />}
             <ShortcutInput
                 value={row.keys}
                 size="sm"

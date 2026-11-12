@@ -923,6 +923,7 @@
         "browserKeeps": "Your browser keeps this key. Press another.",
         "extensionUses": "An extension uses this key too. Ruimte's shortcut runs first.",
         "reset": "Reset {{name}} to its default",
+        "resetTaken": "{{name}} already uses this key. Change that shortcut first.",
         "restoreDefaults": "Restore defaults",
         "restoreTitle": "Restore the default shortcuts?",
         "restoreDescription": "Every shortcut you changed goes back to its default, on this device.",

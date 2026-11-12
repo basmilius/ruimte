@@ -4,7 +4,8 @@ import type { ShortcutGroup } from '@/settings/shortcuts';
 import type { RowId } from '@/surface/shortcut-overrides';
 import { BROWSER_KEEPS } from '@/surface/shortcuts';
 
-type ShortcutRefusal = { reason: 'modifier' } | { reason: 'browser' } | { reason: 'taken'; label: string };
+type TakenRefusal = { reason: 'taken'; label: string };
+type ShortcutRefusal = { reason: 'modifier' } | { reason: 'browser' } | TakenRefusal;
 
 /* The key as the keyboard sends it, so Mod on macOS and Meta compare as the one key they are. */
 function signature(key: Shortcut, apple: boolean): string {
@@ -57,6 +58,18 @@ export function refusalOf(next: Shortcut, row: RowId, groups: readonly ShortcutG
         return { reason: 'browser' };
     }
 
+    return takenBy(next, row, groups, apple);
+}
+
+/*
+ * Why a row may not go back to its default key, or null when it may. Only a holder counts: a default may lack a modifier
+ * on purpose, and a browser tab already says which defaults it keeps.
+ */
+export function resetRefusalOf(fallback: Shortcut | undefined, row: RowId, groups: readonly ShortcutGroup[], apple: boolean): TakenRefusal | null {
+    return fallback === undefined ? null : takenBy(fallback, row, groups, apple);
+}
+
+function takenBy(next: Shortcut, row: RowId, groups: readonly ShortcutGroup[], apple: boolean): TakenRefusal | null {
     const holder = groups
         .flatMap((group) => group.shortcuts)
         .find((candidate) => candidate.id !== row && candidate.then === undefined && candidate.keys.key !== '' && sameKey(candidate.keys, next, apple));

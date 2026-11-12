@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { shortcut } from '@adecore/ui';
-import { extensionUsesKey, refusalOf, sameKey } from './shortcut-refusal';
+import { extensionUsesKey, refusalOf, resetRefusalOf, sameKey } from './shortcut-refusal';
 import type { ShortcutGroup } from './shortcuts';
 
 const GROUPS: ShortcutGroup[] = [
@@ -64,6 +64,18 @@ describe.each([true, false])('refusalOf, apple %p', (apple) => {
     test('refuses what a browser tab keeps there, and only there', () => {
         expect(refusalOf(shortcut('Mod+W'), 'palette', GROUPS, { apple, browserTab: true })).toEqual({ reason: 'browser' });
         expect(refusalOf(shortcut('Mod+W'), 'palette', GROUPS, context)).toBeNull();
+    });
+});
+
+describe.each([true, false])('resetRefusalOf, apple %p', (apple) => {
+    test('names the row that took the default key since', () => {
+        expect(resetRefusalOf(shortcut('Mod+B'), 'palette', GROUPS, apple)).toEqual({ reason: 'taken', label: 'Toggle sidebar' });
+    });
+
+    test('lets a row go back to a free default, also one without a modifier', () => {
+        expect(resetRefusalOf(shortcut('Mod+Alt+Y'), 'palette', GROUPS, apple)).toBeNull();
+        expect(resetRefusalOf(shortcut('Shift+1'), 'palette', GROUPS, apple)).toBeNull();
+        expect(resetRefusalOf(undefined, 'palette', GROUPS, apple)).toBeNull();
     });
 });
 

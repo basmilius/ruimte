@@ -923,6 +923,7 @@
         "browserKeeps": "Je browser houdt deze toets voor zichzelf. Druk op een andere.",
         "extensionUses": "Een extensie gebruikt deze toets ook. De sneltoets van Ruimte gaat voor.",
         "reset": "Zet {{name}} terug naar de standaard",
+        "resetTaken": "{{name}} gebruikt deze toets al. Wijzig eerst die sneltoets.",
         "restoreDefaults": "Standaardwaarden herstellen",
         "restoreTitle": "De standaard sneltoetsen herstellen?",
         "restoreDescription": "Elke sneltoets die je hebt gewijzigd gaat terug naar de standaard, op dit apparaat.",
