@@ -102,7 +102,7 @@ describe('adding the selection to a chat from the editor', () => {
         expect(request?.offer.source).toEqual({ path: '/work/app/src/score.ts' });
     });
 
-    test('is a command of the Code menu with the key the editor table gives it', () => {
-        expect(LANGUAGE_COMMANDS['selection-to-chat']).toMatchObject({ menu: 'code', key: 'selectionToChat', keymap: 'selectionToChat' });
+    test('is a command of the AI submenu under Code with the key the editor table gives it', () => {
+        expect(LANGUAGE_COMMANDS['selection-to-chat']).toMatchObject({ menu: 'ai', key: 'selectionToChat', keymap: 'selectionToChat' });
     });
 });

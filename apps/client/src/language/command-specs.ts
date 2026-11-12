@@ -31,7 +31,9 @@ function editorMenuPlace(group: EditorCommandGroup | undefined, order: number): 
         case 'level':
             return { menu: 'expand-to-level', group: 'levels', order };
         case 'lines':
-            return { menu: 'edit', group: 'lines', order };
+            return { menu: 'edit-lines', group: 'lines', order };
+        case 'selection':
+            return { menu: 'selection', group: 'selection', order };
         case 'clipboard':
             return { menu: 'edit', group: 'clipboard', order };
         case 'navigate':

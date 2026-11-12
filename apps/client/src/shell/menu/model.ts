@@ -72,6 +72,10 @@ function inWorkspace(context: MenuContext): boolean {
     return context.workspace;
 }
 
+function submenuOf(container: MenuContainer, key: string): MenuExtra['build'] {
+    return (context, command) => [submenu(container, t(key), itemsOf(container, context, command))];
+}
+
 function quitRows(): MenuNode[] {
     return [shell('stop-machine-and-quit', t('stopAndQuit')), role('quit', t('quit'))];
 }
@@ -146,37 +150,37 @@ const LAYOUT: Record<MenuContainer, readonly MenuGroup[]> = {
         },
         { id: 'find', when: (context) => context.workspace && !context.settingsOpen },
         { id: 'problems', when: (context) => context.workspace && !context.settingsOpen },
-        { id: 'lines', when: (context) => context.workspace && !context.settingsOpen },
+        {
+            id: 'lines',
+            when: (context) => context.workspace && !context.settingsOpen && editorAvailable(context),
+            extras: [
+                { order: 10, build: submenuOf('edit-lines', 'lines') },
+                { order: 20, build: submenuOf('selection', 'selection') }
+            ]
+        },
         { id: 'search' }
     ],
+    'edit-lines': [{ id: 'lines' }],
+    selection: [{ id: 'selection' }],
+    // The rows that change text as text sit under Edit, so Code keeps what knows the code.
     code: [
         { id: 'pull-request', when: (context) => context.folder && !context.scratch },
         { id: 'pr-watch' },
+        { id: 'language', when: editorAvailable, extras: [{ order: -1, build: submenuOf('completion', 'codeCompletion') }] },
         {
-            id: 'language',
+            id: 'submenus',
             when: editorAvailable,
-            extras: [{ order: -1, build: (context, command) => [submenu('completion', t('codeCompletion'), itemsOf('completion', context, command))] }]
+            extras: [
+                { order: 10, build: submenuOf('ai', 'ai') },
+                { order: 20, build: submenuOf('templates', 'templates') }
+            ]
         },
-        { id: 'ai', when: editorAvailable },
-        { id: 'templates', when: editorAvailable },
-        {
-            id: 'editor',
-            when: editorAvailable,
-            extras: [{ order: 1000, build: (context, command) => [submenu('folding', t('folding'), itemsOf('folding', context, command))] }]
-        }
+        { id: 'editor', when: editorAvailable, extras: [{ order: 1000, build: submenuOf('folding', 'folding') }] }
     ],
     completion: [{ id: 'completion' }],
-    folding: [
-        {
-            id: 'folding',
-            extras: [
-                {
-                    order: 1000,
-                    build: (context, command) => [submenu('expand-to-level', t('expandAllToLevel'), itemsOf('expand-to-level', context, command))]
-                }
-            ]
-        }
-    ],
+    ai: [{ id: 'ai' }],
+    templates: [{ id: 'templates' }],
+    folding: [{ id: 'folding', extras: [{ order: 1000, build: submenuOf('expand-to-level', 'expandAllToLevel') }] }],
     'expand-to-level': [{ id: 'levels' }],
     go: [
         { id: 'palette' },

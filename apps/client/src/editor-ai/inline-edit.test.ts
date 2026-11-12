@@ -110,9 +110,9 @@ describe('Mod+I in the editor', () => {
         });
     });
 
-    test('is a command of the Code menu and the palette with the key of the editor table, beside Show Inline Edit', () => {
-        expect(LANGUAGE_COMMANDS['inline-edit']).toMatchObject({ menu: 'code', key: 'inlineEdit', keymap: 'inlineEdit' });
-        expect(LANGUAGE_COMMANDS['show-inline-edit']).toMatchObject({ menu: 'code', key: 'showInlineEdit' });
+    test('is a command of the AI submenu under Code and the palette with the key of the editor table, beside Show Inline Edit', () => {
+        expect(LANGUAGE_COMMANDS['inline-edit']).toMatchObject({ menu: 'ai', key: 'inlineEdit', keymap: 'inlineEdit' });
+        expect(LANGUAGE_COMMANDS['show-inline-edit']).toMatchObject({ menu: 'ai', key: 'showInlineEdit' });
     });
 });
 

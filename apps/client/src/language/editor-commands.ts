@@ -69,10 +69,11 @@ interface EditorCommandSpec {
 }
 
 /*
- * `completion` and `folding` are submenus of the Code menu and `level` one of Folding; `lines` and `clipboard`
- * are groups of the Edit menu, `navigate` one of the Go menu and `zoom` one of the View menu.
+ * `completion` and `folding` are submenus of the Code menu and `level` one of Folding; `lines` and `selection`
+ * are submenus of the Edit menu and `clipboard` one of its groups, `navigate` a group of the Go menu and `zoom`
+ * one of the View menu.
  */
-export type EditorCommandGroup = 'completion' | 'folding' | 'level' | 'lines' | 'clipboard' | 'navigate' | 'zoom';
+export type EditorCommandGroup = 'completion' | 'folding' | 'level' | 'lines' | 'selection' | 'clipboard' | 'navigate' | 'zoom';
 
 function command(icon: LucideIcon, name: EditorRunCommand & KeymapId, group?: EditorCommandGroup): EditorCommandSpec {
     return { icon, key: name, command: name, keymap: name, ...(group === undefined ? {} : { group }) };
@@ -90,12 +91,12 @@ function expandToLevel(name: EditorRunCommand & KeymapId, level: number): Editor
 const TABLE = {
     'toggle-line-comment': command(Slash, 'toggleLineComment'),
     'toggle-block-comment': command(Code, 'toggleBlockComment'),
-    'join-lines': command(Merge, 'joinLines'),
-    'split-line': command(Split, 'splitLine'),
-    'start-new-line': command(CornerDownLeft, 'startNewLine'),
-    'start-new-line-before': command(CornerLeftUp, 'startNewLineBefore'),
+    'join-lines': command(Merge, 'joinLines', 'lines'),
+    'split-line': command(Split, 'splitLine', 'lines'),
+    'start-new-line': command(CornerDownLeft, 'startNewLine', 'lines'),
+    'start-new-line-before': command(CornerLeftUp, 'startNewLineBefore', 'lines'),
     'toggle-case': command(CaseSensitive, 'toggleCase'),
-    'auto-indent-lines': command(IndentIncrease, 'autoIndentLines'),
+    'auto-indent-lines': command(IndentIncrease, 'autoIndentLines', 'lines'),
     'collapse-region': folding(FoldVertical, 'collapseRegion', 'collapse'),
     'expand-region': folding(UnfoldVertical, 'expandRegion', 'expand'),
     'collapse-region-recursively': folding(ListCollapse, 'collapseRegionRecursively', 'collapseRecursively'),
@@ -110,13 +111,13 @@ const TABLE = {
     'expand-all-to-level-3': expandToLevel('expandAllToLevel3', 3),
     'expand-all-to-level-4': expandToLevel('expandAllToLevel4', 4),
     'expand-all-to-level-5': expandToLevel('expandAllToLevel5', 5),
-    'select-next-occurrence': command(ScanSearch, 'selectNextOccurrence'),
-    'unselect-occurrence': command(BoxSelect, 'unselectOccurrence'),
-    'select-all-occurrences': command(ListChecks, 'selectAllOccurrences'),
-    'add-caret-above': command(ArrowUpToLine, 'addCaretAbove'),
-    'add-caret-below': command(ArrowDownToLine, 'addCaretBelow'),
-    'toggle-column-mode': command(Columns3, 'toggleColumnMode'),
-    'add-caret-per-selected-line': command(TextCursor, 'addCaretPerSelectedLine'),
+    'select-next-occurrence': command(ScanSearch, 'selectNextOccurrence', 'selection'),
+    'unselect-occurrence': command(BoxSelect, 'unselectOccurrence', 'selection'),
+    'select-all-occurrences': command(ListChecks, 'selectAllOccurrences', 'selection'),
+    'add-caret-above': command(ArrowUpToLine, 'addCaretAbove', 'selection'),
+    'add-caret-below': command(ArrowDownToLine, 'addCaretBelow', 'selection'),
+    'toggle-column-mode': command(Columns3, 'toggleColumnMode', 'selection'),
+    'add-caret-per-selected-line': command(TextCursor, 'addCaretPerSelectedLine', 'selection'),
     'sort-lines': command(ArrowDownAZ, 'sortLines', 'lines'),
     'reverse-lines': command(ArrowDownUp, 'reverseLines', 'lines'),
     'unique-lines': command(ListX, 'uniqueLines', 'lines'),
