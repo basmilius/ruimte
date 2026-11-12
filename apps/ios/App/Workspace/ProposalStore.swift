@@ -31,10 +31,15 @@ final class ProposalStore {
         unread = []
     }
 
-    /// Reads again what the last read missed, for a chat that shows its cards now.
+    /// Reads again what the last read missed, for a chat that shows its cards now. Each missed list is asked on its own,
+    /// since a refresh would join a read still waiting on the other list and ask nothing new.
     func readAgainIfFailed() async {
-        guard !unread.isEmpty else { return }
-        await live.refresh()
+        if unread.contains(.chatProposals), let result = await read(.chatProposals, as: ProjectProposals.self) {
+            setProjects(result.proposals)
+        }
+        if unread.contains(.tunnelProposals), let result = await read(.tunnelProposals, as: TunnelProposals.self) {
+            setTunnels(result)
+        }
     }
 
     /// The cards of one chat, the oldest first.

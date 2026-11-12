@@ -89,6 +89,33 @@ final class ChatProposalTests: XCTestCase {
         XCTAssertEqual(machine.sent.count, reads, "a store that read everything asks nothing again")
     }
 
+    func testAListThatFailedIsAskedAgainWhileTheOtherListIsStillOnItsWay() async throws {
+        let machine = ProposalMachine(answering: [.chatProposals, .tunnelProposals])
+        machine.lists[.chatProposals] = .object(["proposals": .array([project("p1")])])
+        machine.lists[.tunnelProposals] = .object(["proposals": .array([tunnel("t1")])])
+        machine.failing = [.chatProposals]
+        machine.suspended = [.tunnelProposals]
+        let store = ProposalStore(client: machine)
+        let failed = expectation(description: "The failed project read reaches the store")
+        withObservationTracking {
+            _ = store.unread
+        } onChange: {
+            failed.fulfill()
+        }
+        store.start()
+        defer { store.stop() }
+        await fulfillment(of: [failed], timeout: 1)
+
+        machine.failing = []
+        let retry = Task { await store.readAgainIfFailed() }
+        await Task.yield()
+        machine.resume(.tunnelProposals)
+        await retry.value
+
+        XCTAssertEqual(store.cards(for: "chat").map(\.id).first, "project:p1")
+        XCTAssertFalse(store.unread.contains(.chatProposals))
+    }
+
     func testAListAnEventBringsIsNoLongerUnread() async {
         let machine = ProposalMachine(answering: [.chatProposals])
         machine.failing = [.chatProposals]
@@ -216,6 +243,8 @@ final class ChatProposalTests: XCTestCase {
     var replies: [WireRequest: JSONValue] = [:]
     var failure: Error?
     var failing: Set<WireRequest> = []
+    var suspended: Set<WireRequest> = []
+    private var waiting: [WireRequest: CheckedContinuation<Void, Never>] = [:]
     private(set) var sent: [(WireRequest, JSONValue)] = []
     private var handlers: [WireEvent: @MainActor @Sendable (JSONValue) -> Void] = [:]
 
@@ -225,8 +254,17 @@ final class ChatProposalTests: XCTestCase {
 
     func emit(_ event: WireEvent, _ payload: JSONValue) { handlers[event]?(payload) }
 
+    /// Lets a suspended request answer, or keeps one that was not asked yet from waiting.
+    func resume(_ type: WireRequest) {
+        suspended.remove(type)
+        waiting.removeValue(forKey: type)?.resume()
+    }
+
     func request(_ type: WireRequest, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
+        if suspended.contains(type) {
+            await withCheckedContinuation { waiting[type] = $0 }
+        }
         if let failure { throw failure }
         if failing.contains(type) { throw URLError(.timedOut) }
         return lists[type] ?? replies[type] ?? .object([:])
