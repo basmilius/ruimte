@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { shortcut } from '@adecore/ui';
+import { overridesSnapshot } from '@/surface/shortcut-overrides';
 import { keyboardGroups } from './keyboard-groups';
 import { extensionUsesKey, refusalOf, resetRefusalOf, sameKey } from './shortcut-refusal';
 import type { ShortcutGroup } from './shortcuts';
@@ -69,8 +70,10 @@ describe.each([true, false])('refusalOf, apple %p', (apple) => {
 });
 
 describe('refusalOf against the fixed keys', () => {
-    const takenOn = (text: string, apple: boolean): boolean =>
-        refusalOf(shortcut(text), 'palette', keyboardGroups(apple), { apple, browserTab: false })?.reason === 'taken';
+    const refusalIn = (text: string, apple: boolean, shell: string | null) =>
+        refusalOf(shortcut(text), 'palette', keyboardGroups(apple, overridesSnapshot(), shell), { apple, browserTab: shell === null });
+    const takenOn = (text: string, apple: boolean, shell: string | null = apple ? 'darwin' : 'linux'): boolean =>
+        refusalIn(text, apple, shell)?.reason === 'taken';
 
     test.each([true, false])('refuses cut and every view key, apple %p', (apple) => {
         for (const text of ['Mod+X', 'Mod+1', 'Mod+2', 'Mod+5', 'Mod+9']) {
@@ -78,9 +81,37 @@ describe('refusalOf against the fixed keys', () => {
         }
     });
 
-    test('refuses quit and hide on macOS', () => {
-        expect(takenOn('Mod+Q', true)).toBe(true);
-        expect(takenOn('Mod+H', true)).toBe(true);
+    test('names the menu item of the macOS shell that holds the key', () => {
+        expect(refusalIn('Mod+Alt+H', true, 'darwin')).toEqual({ reason: 'taken', label: 'Hide other apps' });
+        expect(refusalIn('Mod+M', true, 'darwin')).toEqual({ reason: 'taken', label: 'Minimize window' });
+        expect(refusalIn('Mod+Ctrl+F', true, 'darwin')).toEqual({ reason: 'taken', label: 'Full screen' });
+
+        for (const text of ['Mod+Q', 'Mod+H', 'Mod+Alt+I']) {
+            expect(takenOn(text, true), text).toBe(true);
+        }
+    });
+
+    test('refuses the keys of the Windows and Linux shells', () => {
+        expect(refusalIn('Mod+Y', false, 'win32')).toEqual({ reason: 'taken', label: 'Redo' });
+        expect(refusalIn('Mod+Q', false, 'linux')).toEqual({ reason: 'taken', label: 'Quit Ruimte' });
+        expect(refusalIn('Mod+Q', false, 'win32')).not.toEqual({ reason: 'taken', label: 'Quit Ruimte' });
+
+        for (const shell of ['win32', 'linux']) {
+            expect(takenOn('Mod+M', false, shell), shell).toBe(true);
+            expect(takenOn('Mod+Shift+I', false, shell), shell).toBe(true);
+        }
+    });
+
+    test('in a browser tab on macOS, says the browser keeps what macOS holds', () => {
+        for (const text of ['Mod+Q', 'Mod+H', 'Mod+Alt+H', 'Mod+M']) {
+            expect(refusalIn(text, true, null), text).toEqual({ reason: 'browser' });
+        }
+    });
+
+    test('in a browser tab elsewhere, holds no key for a browser that does not keep it', () => {
+        for (const text of ['Mod+Q', 'Mod+H', 'Mod+Alt+H', 'Mod+M']) {
+            expect(refusalIn(text, false, null), text).not.toEqual({ reason: 'browser' });
+        }
     });
 });
 

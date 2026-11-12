@@ -810,6 +810,10 @@
         "app": {
             "cut": "Knippen",
             "hide": "Ruimte verbergen",
+            "hideOthers": "Andere apps verbergen",
+            "minimize": "Venster minimaliseren",
+            "fullScreen": "Volledig scherm",
+            "developerTools": "Developer Tools",
             "quit": "Ruimte afsluiten"
         },
         "canvas": {

@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { shortcutText } from '@adecore/ui';
+import { overridesSnapshot } from '@/surface/shortcut-overrides';
 import { filterShortcuts, shortcutGroupOf, shortcutGroups, shortcutRowId } from './shortcuts.ts';
 
 describe('shortcutGroups', () => {
@@ -10,11 +12,42 @@ describe('shortcutGroups', () => {
         expect(labels(false)).toContain('Clear screen and scrollback');
     });
 
-    test('quit and hide are listed on macOS only, cut everywhere', () => {
-        expect(labels(true)).toEqual(expect.arrayContaining(['Cut', 'Hide Ruimte', 'Quit Ruimte']));
-        expect(labels(false)).toContain('Cut');
-        expect(labels(false)).not.toContain('Quit Ruimte');
-        expect(labels(false)).not.toContain('Hide Ruimte');
+    describe('the keys of the shell menu', () => {
+        const general = (apple: boolean, shell: string | null): string[] =>
+            shortcutGroups(apple, overridesSnapshot(), shell)
+                .find((group) => group.id === 'general')!
+                .shortcuts.map((row) => `${row.label} ${shortcutText(row.keys)}`);
+
+        test('macOS lists the app and window menu at their keys', () => {
+            expect(general(true, 'darwin')).toEqual(
+                expect.arrayContaining([
+                    'Cut Mod+X',
+                    'Hide Ruimte Mod+H',
+                    'Hide other apps Mod+Alt+H',
+                    'Minimize window Mod+M',
+                    'Full screen Mod+Ctrl+F',
+                    'Developer tools Mod+Alt+I',
+                    'Quit Ruimte Mod+Q'
+                ])
+            );
+        });
+
+        test('Linux quits on Mod+Q and Windows redoes on Mod+Y instead', () => {
+            const shared = ['Cut Mod+X', 'Minimize window Mod+M', 'Full screen F11', 'Developer tools Mod+Shift+I'];
+
+            expect(general(false, 'linux')).toEqual(expect.arrayContaining([...shared, 'Quit Ruimte Mod+Q']));
+            expect(general(false, 'linux')).not.toContain('Redo Mod+Y');
+            expect(general(false, 'win32')).toEqual(expect.arrayContaining([...shared, 'Redo Mod+Y']));
+            expect(general(false, 'win32')).not.toContain('Quit Ruimte Mod+Q');
+            expect(general(false, 'linux')).not.toContain('Hide Ruimte Mod+H');
+        });
+
+        test.each([true, false])('a browser tab lists cut and no key of a shell it lacks, apple %p', (apple) => {
+            const rows = general(apple, null);
+
+            expect(rows).toContain('Cut Mod+X');
+            expect(rows.filter((row) => /^(Hide|Minimize|Full screen|Developer tools|Quit|Redo)/.test(row))).toEqual([]);
+        });
     });
 });
 

@@ -5,3 +5,6 @@ import { shortcut } from '@adecore/ui';
  * row still works with a click. Checked in a tab only, and a browser may keep more.
  */
 export const BROWSER_KEEPS = [shortcut('Mod+W'), shortcut('Mod+T'), shortcut('Mod+N'), shortcut('Mod+Shift+Delete')] as const;
+
+/* What macOS holds for every app, a browser included, so a tab there never hands them to a page either. */
+export const MAC_BROWSER_KEEPS = [shortcut('Mod+H'), shortcut('Mod+Alt+H'), shortcut('Mod+M'), shortcut('Mod+Q')] as const;

@@ -2,6 +2,7 @@ import { SEND_AND_NEW_SHORTCUT } from '@adecore/agents-react/chat';
 import { PROMPT_SHORTCUTS } from '@adecore/agents-react/prompts';
 import { KEY_SHORTCUTS, shortcut, shortcutParts, type Shortcut } from '@adecore/ui';
 import i18next from 'i18next';
+import { desktop } from '@/desktop/bridge';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { CANVAS_SHORTCUTS, VIEW_SHORTCUTS } from '@/surface/canvas/shortcuts';
 import { keyIn, overridesSnapshot, type OverrideSnapshot, type RowId } from '@/surface/shortcut-overrides';
@@ -38,12 +39,47 @@ export function areaTitle(area: KeyboardArea): string {
     return say(`areas.${area}`);
 }
 
+/* The platform of the desktop shell around the page, or null in a browser tab, where no menu of Ruimte's binds a key. */
+export function shellPlatform(): string | null {
+    return desktop()?.platform ?? null;
+}
+
+/*
+ * What the shell's menu binds at an Electron role's default key, or at a key of its own (devtools in
+ * `apps/desktop/src/main/menu.ts`); the roles are placed in `shell/menu/model.ts`. Electron's quit has no key
+ * on Windows, and its redo takes Ctrl+Y there. The role that closes a window is left out: it only stands while
+ * no cell is open, and closing a cell holds the same key otherwise.
+ */
+function shellRows(shell: string | null): ShortcutRow[] {
+    if (shell === null) {
+        return [];
+    }
+
+    if (shell === 'darwin') {
+        return [
+            { keys: shortcut('Mod+H'), label: say('app.hide') },
+            { keys: shortcut('Mod+Alt+H'), label: say('app.hideOthers') },
+            { keys: shortcut('Mod+M'), label: say('app.minimize') },
+            { keys: shortcut('Mod+Ctrl+F'), label: say('app.fullScreen') },
+            { keys: shortcut('Mod+Alt+I'), label: say('app.developerTools') },
+            { keys: shortcut('Mod+Q'), label: say('app.quit') }
+        ];
+    }
+
+    return [
+        { keys: shortcut('Mod+M'), label: say('app.minimize') },
+        { keys: shortcut('F11'), label: say('app.fullScreen') },
+        { keys: shortcut('Mod+Shift+I'), label: say('app.developerTools') },
+        shell === 'win32' ? { keys: shortcut('Mod+Y'), label: say('canvas.redo') } : { keys: shortcut('Mod+Q'), label: say('app.quit') }
+    ];
+}
+
 /*
  * The shortcuts the handlers bind directly and that no command in `commands.ts` names, per platform, in
  * the category of their area. The list is by hand on purpose: the handlers are chains of conditions, not
  * one table. The categories of the editor are not here: `keyboard-groups.ts` builds them from its keymap.
  */
-export function shortcutGroups(apple: boolean, snapshot: OverrideSnapshot = overridesSnapshot()): ShortcutGroup[] {
+export function shortcutGroups(apple: boolean, snapshot: OverrideSnapshot = overridesSnapshot(), shell: string | null = shellPlatform()): ShortcutGroup[] {
     return [
         {
             id: 'general',
@@ -53,13 +89,7 @@ export function shortcutGroups(apple: boolean, snapshot: OverrideSnapshot = over
                 { keys: shortcut('Alt'), then: i18next.t('settings:gesture.hold'), label: say('canvas.usagePeek') },
                 { id: 'voice-control', keys: keyIn(snapshot, 'voice-control'), label: i18next.t('voice:shortcut') },
                 { keys: shortcut('Mod+X'), label: say('app.cut') },
-                // macOS holds these for every app, a browser that shows Ruimte included.
-                ...(apple
-                    ? [
-                          { keys: shortcut('Mod+H'), label: say('app.hide') },
-                          { keys: shortcut('Mod+Q'), label: say('app.quit') }
-                      ]
-                    : [])
+                ...shellRows(shell)
             ]
         },
         {

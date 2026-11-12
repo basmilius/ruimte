@@ -810,6 +810,10 @@
         "app": {
             "cut": "Cut",
             "hide": "Hide Ruimte",
+            "hideOthers": "Hide other apps",
+            "minimize": "Minimize window",
+            "fullScreen": "Full screen",
+            "developerTools": "Developer tools",
             "quit": "Quit Ruimte"
         },
         "canvas": {

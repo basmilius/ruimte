@@ -1,6 +1,6 @@
 import type { Command } from '@/commands/behavior';
 import { commandArea, editorShortcutRows, isEditorCommand } from '@/settings/editor-shortcuts';
-import { areaTitle, KEYBOARD_AREAS, shortcutGroups, type KeyboardArea, type ShortcutGroup, type ShortcutRow } from '@/settings/shortcuts';
+import { areaTitle, KEYBOARD_AREAS, shellPlatform, shortcutGroups, type KeyboardArea, type ShortcutGroup, type ShortcutRow } from '@/settings/shortcuts';
 import { hasDefaultKey } from '@/surface/default-keys';
 import { overridesSnapshot, type OverrideSnapshot } from '@/surface/shortcut-overrides';
 
@@ -12,12 +12,13 @@ import { overridesSnapshot, type OverrideSnapshot } from '@/surface/shortcut-ove
 export function arrangeShortcuts(
     apple: boolean,
     commands: readonly Pick<Command, 'id' | 'label' | 'shortcut'>[],
-    snapshot: OverrideSnapshot = overridesSnapshot()
+    snapshot: OverrideSnapshot = overridesSnapshot(),
+    shell: string | null = shellPlatform()
 ): ShortcutGroup[] {
     const rows = new Map<KeyboardArea, ShortcutRow[]>(KEYBOARD_AREAS.map((area) => [area, []]));
     const listed = new Set<string>();
 
-    for (const group of shortcutGroups(apple, snapshot)) {
+    for (const group of shortcutGroups(apple, snapshot, shell)) {
         rows.get(group.id)!.push(...group.shortcuts);
 
         for (const row of group.shortcuts) {

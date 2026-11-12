@@ -2,7 +2,7 @@ import { shortcutText, type Shortcut } from '@adecore/ui';
 import { matchesExtensionShortcut } from '@/extensions/action-shortcuts';
 import type { ShortcutGroup, ShortcutRow } from '@/settings/shortcuts';
 import { defaultKeyOf, type RowId } from '@/surface/shortcut-overrides';
-import { BROWSER_KEEPS } from '@/surface/shortcuts';
+import { BROWSER_KEEPS, MAC_BROWSER_KEEPS } from '@/surface/shortcuts';
 
 type TakenRefusal = { reason: 'taken'; label: string };
 type ShortcutRefusal = { reason: 'modifier' } | { reason: 'browser' } | TakenRefusal;
@@ -54,7 +54,9 @@ export function refusalOf(next: Shortcut, row: RowId, groups: readonly ShortcutG
         return null;
     }
 
-    if (browserTab && BROWSER_KEEPS.some((kept) => shortcutText(kept) === shortcutText(next))) {
+    const kept = apple ? [...BROWSER_KEEPS, ...MAC_BROWSER_KEEPS] : BROWSER_KEEPS;
+
+    if (browserTab && kept.some((key) => shortcutText(key) === shortcutText(next))) {
         return { reason: 'browser' };
     }
 
