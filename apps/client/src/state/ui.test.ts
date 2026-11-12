@@ -120,7 +120,8 @@ describe('ui', () => {
 });
 
 describe('the sidebar width', () => {
-    const UI_MODULE = new URL('./ui.ts', import.meta.url).pathname;
+    // Relative, since a URL's pathname is no path Windows can import.
+    const UI_MODULE = './ui.ts';
     const previousStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
     const { sidebarWidth: previousWidth, panelsRestoring: previousRestoring } = useUi.getState();
 
