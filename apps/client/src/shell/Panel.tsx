@@ -10,6 +10,7 @@ import { usePanelGap } from '@/surface/panel-layout';
 import { PanelHeaderProvider } from '@/surface/PanelHeaderSlot';
 import { useKeyOf } from '@/surface/shortcut-overrides';
 import { useInstantWidth } from '@/surface/useInstantWidth';
+import { useWindowWidth } from '@/surface/useWindowWidth';
 
 const DEFAULT_WIDTH = 540;
 // A drag stops here instead of squeezing the canvas away.
@@ -29,7 +30,8 @@ export function Panel() {
     const planOpen = useUi((s) => s.planOpen);
     const entry = usePanelEntries().find((candidate) => candidate.kind === panel.kind);
     const Body = entry?.component ?? null;
-    const bounds = { min: entry?.minWidth ?? 240, max: () => window.innerWidth - MIN_CANVAS_WIDTH };
+    const windowWidth = useWindowWidth();
+    const bounds = { min: entry?.minWidth ?? 240, max: () => windowWidth - MIN_CANVAS_WIDTH };
     // The project may have been on a wider window than this one, so its width is clamped on the way in.
     const width = clampColumnSize(bounds, stored ?? DEFAULT_WIDTH);
 

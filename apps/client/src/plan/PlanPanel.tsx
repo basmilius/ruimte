@@ -39,6 +39,7 @@ import { useShownPanel, useUi } from '@/state/ui';
 import { useViewNodes } from '@/state/view-nodes';
 import { usePanelGap } from '@/surface/panel-layout';
 import { useInstantWidth } from '@/surface/useInstantWidth';
+import { useWindowWidth } from '@/surface/useWindowWidth';
 
 // The grid beside the panel keeps at least this much, whatever the drag asks for.
 const MIN_GRID_WIDTH = 360;
@@ -80,7 +81,8 @@ export function PlanPanel() {
         }
     };
     // The project may have been on a wider window than this one, so its width is clamped on the way in.
-    const width = clampColumnSize({ min: PLAN_MIN_WIDTH, max: () => window.innerWidth - MIN_GRID_WIDTH }, stored ?? PLAN_DEFAULT_WIDTH);
+    const windowWidth = useWindowWidth();
+    const width = clampColumnSize({ min: PLAN_MIN_WIDTH, max: () => windowWidth - MIN_GRID_WIDTH }, stored ?? PLAN_DEFAULT_WIDTH);
     const instant = useInstantWidth();
 
     return (
