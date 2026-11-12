@@ -3158,6 +3158,47 @@
         }
       }
     },
+    "Waiting: messages woke this chat as often as they may this hour" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wacht: berichten wekten deze chat dit uur zo vaak als mag"
+          }
+        }
+      }
+    },
+    "Deliver now" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nu bezorgen"
+          }
+        }
+      }
+    },
+    "Read the waiting messages and act on them." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lees de wachtende berichten en handel ernaar."
+          }
+        }
+      }
+    },
+    "The messages could not be delivered: %@" : {
+      "comment" : "%@ is the reason the machine gave",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De berichten konden niet worden bezorgd: %@"
+          }
+        }
+      }
+    },
     "This project" : {
       "localizations" : {
         "nl" : {

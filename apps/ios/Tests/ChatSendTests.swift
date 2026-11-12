@@ -153,6 +153,39 @@ import XCTest
         XCTAssertTrue(restored.deliveryUncertain)
     }
 
+    func testOnlyAMessageHeldForTheHourlyLimitOffersDeliverNow() throws {
+        let note: JSONValue = .object([
+            "from": .string("lead"), "title": .string("Lead"), "state": .string("waiting"), "limited": .bool(true),
+            "text": .string("Next step"),
+        ])
+        XCTAssertTrue(ChatHeldMessages.held(try note.decoded(as: ChatNoteItemMessage.self)))
+        XCTAssertFalse(
+            ChatHeldMessages.held(ChatNoteItemMessage(from: "lead", title: "Lead", state: .waiting, text: "Next step")))
+        XCTAssertFalse(
+            ChatHeldMessages.held(
+                ChatNoteItemMessage(from: "lead", title: "Lead", state: .dropped, limited: true, text: "Next step")))
+        // Delivered: the machine drops both fields from the same note.
+        XCTAssertFalse(ChatHeldMessages.held(ChatNoteItemMessage(from: "lead", title: "Lead", text: "Next step")))
+    }
+
+    func testDeliverNowSendsThePersonsPromptToThisChat() async {
+        let problem = await ChatHeldMessages.deliver(chatID: "chat", client: client)
+
+        XCTAssertNil(problem)
+        XCTAssertEqual(client.requests.map(\.0), [.chatSend])
+        XCTAssertEqual(
+            client.requests.first?.1,
+            .object(["chatId": .string("chat"), "text": .string("Read the waiting messages and act on them.")]))
+    }
+
+    func testDeliverNowSaysWhyTheMachineRefused() async {
+        client.failure = .server(code: "chat-busy", message: "The chat is busy")
+
+        let problem = await ChatHeldMessages.deliver(chatID: "chat", client: client)
+
+        XCTAssertEqual(problem, "The chat is busy")
+    }
+
     private func queueInfo(_ queue: [ChatInfoQueueItem]) -> ChatInfo {
         ChatWire.info(["queue": try! JSONValue(encoding: queue)]).chatInfo
     }

@@ -1383,7 +1383,7 @@ private struct ChatTimelineRow: View {
                 }
             case .note(let note):
                 if let message = note.message {
-                    ChatSentMessage(message: message)
+                    ChatSentMessage(message: message, client: client, chatID: chatID)
                 } else if note.said == true {
                     ChatRuimteSaid(text: note.text)
                 } else {

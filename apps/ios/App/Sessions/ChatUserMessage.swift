@@ -136,6 +136,8 @@ struct ChatUserMessage: View {
 /// on the leading side, since the person did not write it.
 struct ChatSentMessage: View {
     let message: ChatNoteItemMessage
+    let client: any MachineRequesting
+    let chatID: String
     @Environment(\.chatReferenceLookup) private var lookup
 
     var body: some View {
@@ -149,10 +151,63 @@ struct ChatSentMessage: View {
         ) {
             ChatReferenceChip(look: ChatReferenceChip.look(message.from, chat: false, lookup: lookup, lastName: message.title))
         }
-        if let state = message.state {
+        if ChatHeldMessages.held(message) {
+            ChatHeldMessageState(client: client, chatID: chatID)
+        } else if let state = message.state {
             Text(state == .waiting ? String(localized: "Waiting for the next turn") : String(localized: "Expired before the agent read it"))
                 .font(.caption).foregroundStyle(MobileStyle.muted).frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+}
+
+/// A message that waits because messages opened all the turns they may in this chat this hour. A person hands it over
+/// with a prompt of their own, whose turn takes every waiting message along; the machine then drops the mark.
+enum ChatHeldMessages {
+    static func held(_ message: ChatNoteItemMessage) -> Bool { message.limited == true && message.state == .waiting }
+
+    static var prompt: String { String(localized: "Read the waiting messages and act on them.") }
+
+    /// Nil once the machine took the prompt, otherwise what went wrong.
+    @MainActor static func deliver(chatID: String, client: any MachineRequesting) async -> String? {
+        do {
+            _ = try await client.request(
+                .chatSend, payload: .object(["chatId": .string(chatID), "text": .string(prompt)]))
+            AppUsage.count(.messageSent)
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+}
+
+struct ChatHeldMessageState: View {
+    let client: any MachineRequesting
+    let chatID: String
+    @State private var sending = false
+    @State private var problem: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 12) {
+                Text("Waiting: messages woke this chat as often as they may this hour")
+                Button {
+                    Task {
+                        sending = true
+                        problem = await ChatHeldMessages.deliver(chatID: chatID, client: client)
+                        sending = false
+                    }
+                } label: {
+                    Label(String(localized: "Deliver now"), lucideIcon: "send", iconSize: 12).frame(minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .disabled(sending)
+            }
+            if let problem {
+                Text("The messages could not be delivered: \(problem)", comment: "%@ is the reason the machine gave")
+                    .foregroundStyle(MobileStyle.statusError)
+            }
+        }
+        .font(.caption).foregroundStyle(MobileStyle.muted).frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
