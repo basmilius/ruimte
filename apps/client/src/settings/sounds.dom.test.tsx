@@ -27,6 +27,10 @@ function labelled<T extends HTMLElement>(label: string): T | null {
     return document.querySelector<T>(`[aria-label="${label}"]`);
 }
 
+function tab(name: string): HTMLElement | null {
+    return [...document.querySelectorAll<HTMLElement>('[role="tab"]')].find((candidate) => candidate.textContent?.trim() === name) ?? null;
+}
+
 async function pick(option: string): Promise<void> {
     await until(() => document.querySelector('[role="option"]') !== null);
     await clickOn([...document.querySelectorAll('[role="option"]')].find((row) => row.textContent?.includes(option)) ?? null);
@@ -130,6 +134,8 @@ describe('Project settings > Sounds', () => {
         const key = projectSoundKey(currentEndpointId!, current!.projectId);
 
         await act(async () => projectSettingsAsk.set(true));
+        await until(() => tab('Sounds') !== null);
+        await clickOn(tab('Sounds'));
         await until(() => buttonWithText('As in Settings (Bar)') !== null);
         await clickOn(buttonWithText('As in Settings (Bar)'));
         await pick('Nylon');

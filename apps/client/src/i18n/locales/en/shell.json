@@ -489,6 +489,15 @@
         "moveTabRight": "Move tab right"
     },
     "projectSettings": {
+        "sections": {
+            "general": {
+                "label": "General",
+                "description": "The name, color and icon of this project."
+            }
+        },
+        "accountsNone": "Nothing to choose here: every CLI on this machine has one account.",
+        "soundsPackNote": "Another pack than the one in Settings, so you hear which project calls.",
+        "soundsSilentNote": "This project makes no sound, whatever is turned on in Settings.",
         "title": "Project settings",
         "name": "Name",
         "fromFile": "From {{file}}",

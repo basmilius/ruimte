@@ -1,7 +1,9 @@
 import { CHAT_SETTINGS_SECTION } from '@/chat/settings-section';
 import { EXTENSION_SETTINGS_SECTION } from '@/extensions/settings-section';
 import { MACHINE_SETTINGS_SECTION } from '@/machine-ui/settings-section';
+import { PROJECT_SETTINGS_SECTIONS } from '@/project/settings-sections';
 import { PROVIDER_SETTINGS_SECTION } from '@/providers/settings-section';
+import { projectSettingsSectionRegistry } from '@/registry/project-settings-sections';
 import { settingsSectionRegistry } from '@/registry/settings-sections';
 import { AGENT_SETTINGS_SECTION } from '@/settings/agents-section';
 import { APP_SETTINGS_SECTIONS } from '@/settings/app-sections';
@@ -22,4 +24,5 @@ export function installSettingsSections(): void {
         USAGE_SETTINGS_SECTION,
         MACHINE_SETTINGS_SECTION
     );
+    projectSettingsSectionRegistry.add(...PROJECT_SETTINGS_SECTIONS);
 }

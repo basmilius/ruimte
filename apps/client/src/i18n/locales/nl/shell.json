@@ -489,6 +489,15 @@
         "moveTabRight": "Tab naar rechts"
     },
     "projectSettings": {
+        "sections": {
+            "general": {
+                "label": "Algemeen",
+                "description": "De naam, de kleur en het icoon van dit project."
+            }
+        },
+        "accountsNone": "Hier valt niets te kiezen: elke CLI op deze machine heeft één account.",
+        "soundsPackNote": "Een ander pack dan dat in Instellingen, zodat je hoort welk project roept.",
+        "soundsSilentNote": "Dit project maakt geen geluid, wat er ook aan staat in Instellingen.",
         "title": "Projectinstellingen",
         "name": "Naam",
         "fromFile": "Uit {{file}}",

@@ -21,7 +21,11 @@ let workspace: FakeWorkspace;
 let page: Mounted;
 
 function dialog(): HTMLElement | null {
-    return [...document.querySelectorAll<HTMLElement>('[role="dialog"]')].find((candidate) => candidate.textContent?.includes('Project settings')) ?? null;
+    return [...document.querySelectorAll<HTMLElement>('[role="dialog"]')].find((candidate) => candidate.textContent?.includes('Accounts')) ?? null;
+}
+
+function tab(name: string): HTMLElement | null {
+    return [...document.querySelectorAll<HTMLElement>('[role="tab"]')].find((candidate) => candidate.textContent?.trim() === name) ?? null;
 }
 
 function offerSwitch(account: string): HTMLElement | null {
@@ -33,7 +37,8 @@ async function open(accounts?: Record<string, { default?: string; off?: string[]
     page = mount();
     await page.renderApp();
     await act(async () => projectSettingsAsk.set(true));
-    await until(() => dialog() !== null);
+    await until(() => tab('Accounts') !== null);
+    await clickOn(tab('Accounts'));
 }
 
 beforeEach(() => {
@@ -70,7 +75,7 @@ describe('the accounts of a project', () => {
     test('is left out against a machine that keeps no accounts per project', async () => {
         machine.answersOnly(['accounts.list', 'project.open', 'project.save']);
         await open();
-        await until(() => dialog() !== null);
+        await until(() => dialog()?.textContent?.includes('Nothing to choose here') === true);
         expect(offerSwitch('Client')).toBeNull();
     });
 });

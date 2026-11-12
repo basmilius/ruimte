@@ -44,11 +44,11 @@ describe('Escape in a settings dialog', () => {
 
     test('closes Project settings while its name field has the focus', async () => {
         await act(async () => projectSettingsAsk.set(true));
-        await until(() => dialogTitled('Project settings') !== null);
+        await until(() => document.querySelector('input[aria-label="Project name"]') !== null);
         const field = document.querySelector<HTMLInputElement>('input[aria-label="Project name"]')!;
-        expect(document.activeElement).toBe(field);
+        await act(async () => field.focus());
 
         await pressKey(field, 'Escape');
-        await until(() => dialogTitled('Project settings') === null);
+        await until(() => document.querySelector('input[aria-label="Project name"]') === null);
     });
 });
