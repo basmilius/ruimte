@@ -406,7 +406,16 @@ The runtime mode (`supervised`, `auto-accept-edits`, `auto`, `full-access`) is o
 
 An extra Claude account can read the setup of the default one. `accounts.shareConfig { id, shared }` sets `shareConfig` on the account and answers `ProviderAccounts`; `sharedConfigKinds` there names the kinds that offer it, and `endpoint.info` lists the request in `features`. A default account and a kind without a share list are refused with `invalid-account`. `accounts.save` keeps the stored value, so an older client cannot turn it off. A peer machine cannot ask it, as for the other `accounts.*` requests.
 
-ADE CORE does the work in `prepare`, before the hooks go in. `CLAUDE.md`, `rules`, `skills`, `agents` and `commands` become links to the entries of `~/.claude` (`CLAUDE_CONFIG_DIR` of the default account), and `settings.json` is written once with only `permissions`, `hooks`, `model`, `statusLine` and `outputStyle`. Nothing else is named, so a login, `env`, `apiKeyHelper`, history, projects and plugins are never shared. An entry the account already holds stays and is reported in its status message. The seed replaces a settings file only when `ownsSettings` (`src/agents/install.ts`) says it holds nothing but Ruimte's hooks, which is what the installer leaves in every account folder. The installer then merges over the seed on `HOOK_MARKER`, so the hooks copied from the default account never double. Turning it off removes only links to the default folder's entries; real files and the copied `settings.json` stay.
+ADE CORE does the work in `prepare`, before the hooks go in. `CLAUDE.md`, `rules`, `skills`, `agents` and `commands` become links to the entries of `~/.claude` (`CLAUDE_CONFIG_DIR` of the default account), and `settings.json` is written once with only `permissions`, `hooks`, `model`, `statusLine` and `outputStyle`. That closed list is Claude Code's `home.share` in `@adecore/agents`, held by `src/providers/registry.test.ts`, and no other CLI has one.
+
+Nothing else is named, so these stay with each account:
+
+- the sign-in, in `.credentials.json` or the system keychain, and `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` or `CLAUDE_CODE_OAUTH_TOKEN` in a launch;
+- `.claude.json`, with the MCP servers a person added with `claude mcp add`; Ruimte's own MCP server reaches every account through the launch (`withRuimteMcp`), not through the folder;
+- every other key of `settings.json`, such as `env`, `apiKeyHelper` and `enabledPlugins`, and `settings.local.json`;
+- `plugins`, `output-styles`, `projects` (history), `todos` and whatever else the folder holds. A custom output style lives in `output-styles`, so an extra account that copied `outputStyle` names a style it may not have.
+
+The daemon reads no credential file for this. The seed parses `settings.json` and keeps only the five keys, so an `env` or `apiKeyHelper` there never leaves the default folder. An entry the account already holds stays and is reported in its status message. The seed replaces a settings file only when `ownsSettings` (`src/agents/install.ts`) says it holds nothing but Ruimte's hooks, which is what the installer leaves in every account folder. The installer then merges over the seed on `HOOK_MARKER`, so the hooks copied from the default account never double. Turning it off removes only links to the default folder's entries; real files and the copied `settings.json` stay.
 
 ### Claude API
 

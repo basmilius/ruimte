@@ -75,6 +75,21 @@ describe('ProviderRegistry', () => {
         expect(probed).not.toContain('/srv/agy_acp_server.par');
     });
 
+    /*
+     * What an extra account takes from the default one, as `apps/server/README.md` ("Sharing the default Claude account")
+     * names it. A change here changes what crosses between two of a person's accounts, so it changes that section too.
+     */
+    test('only Claude Code shares a setup between accounts: five entries by link and five settings by copy, never a login', () => {
+        const registry = new ProviderRegistry();
+        const sharing = tableKinds().filter((kind) => registry.get(kind).home?.share !== undefined);
+
+        expect(sharing).toEqual(['claude']);
+        expect(registry.get('claude').home?.share).toEqual({
+            links: ['CLAUDE.md', 'rules', 'skills', 'agents', 'commands'],
+            seed: { file: 'settings.json', keys: ['permissions', 'hooks', 'model', 'statusLine', 'outputStyle'] }
+        });
+    });
+
     test('a kind this daemon does not offer gets a provider that starts nothing, never another CLI', async () => {
         const provider = new ProviderRegistry().get('future-cli');
         expect(provider.kind).toBe('future-cli');
