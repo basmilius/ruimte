@@ -11,6 +11,18 @@ public enum ActivationUndo {
         case refused
     }
 
+    /// What follows the activation once the helper tried to undo it.
+    public enum Consequence: Equatable, Sendable {
+        case nothing
+        /// The person brought the app forward.
+        case takeOver
+        /// macOS kept the operated app in front of the person's, which holds the session as a take-over does.
+        case keptInFront
+        /// macOS kept the operated app in front where nothing takes over, such as during the agent's own launch, so only a
+        /// result's `note` says so.
+        case note
+    }
+
     /// How recent the person's own click or key has to be to count as theirs.
     public static let personWindow: TimeInterval = 0.5
 
@@ -28,5 +40,22 @@ public enum ActivationUndo {
             return .left
         }
         return activate() ? .restored : .refused
+    }
+
+    /// `inGrace` is while the agent's own launch may bring the app forward, which is never the person's switch.
+    public static func consequence(of outcome: Outcome, inGrace: Bool, acceptsTakeover: Bool) -> Consequence {
+        let holds = !inGrace && acceptsTakeover
+        switch outcome {
+        case .restored:
+            return .nothing
+        case .left:
+            return holds ? .takeOver : .nothing
+        case .refused:
+            return holds ? .keptInFront : .note
+        }
+    }
+
+    public static func refusal(operated: String, person: String) -> String {
+        "macOS kept \(operated) in front of \(person) and did not bring \(person) back"
     }
 }

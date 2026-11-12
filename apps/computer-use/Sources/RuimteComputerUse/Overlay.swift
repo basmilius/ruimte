@@ -76,6 +76,7 @@ final class Overlay {
     /// The app the person had in front when the agent began an action behind it, and until when it goes back there.
     private var personsApp: NSRunningApplication?
     private var keepFrontUntil: TimeInterval?
+    private var activationNote: String?
     private var mouseMonitor: Any?
     private var activationObserver: NSObjectProtocol?
     private var tick: Timer?
@@ -202,11 +203,10 @@ final class Overlay {
         keepFrontUntil = now + duration
     }
 
-    /// Puts the person's app back when the operated app came forward by itself; false leaves the activation to the take-over
-    /// rule, also when macOS refused to put it back, since the operated app is then in front of the person.
-    private func undoActivation() -> Bool {
+    /// Puts the person's app back when the operated app came forward by itself.
+    private func undoActivation() -> ActivationUndo.Outcome {
         guard let personsApp, !personsApp.isTerminated else {
-            return false
+            return .left
         }
         let sinceMouseDown = CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: .leftMouseDown)
         let sinceKey = min(
@@ -219,7 +219,15 @@ final class Overlay {
         if outcome == .refused {
             NSLog("Ruimte Computer Use: macOS refused to put \(personsApp.localizedName ?? "the person's app") back in front")
         }
-        return outcome == .restored
+        return outcome
+    }
+
+    /// What macOS kept in front without a take-over since the last result; reading it clears it.
+    func takeActivationNote() -> String? {
+        defer {
+            activationNote = nil
+        }
+        return activationNote
     }
 
     /// Moves the cursor to the target, showing `state` on the way; the real pointer stays put.
@@ -344,12 +352,12 @@ final class Overlay {
         render(animated: true)
     }
 
-    func takeOver() {
+    func takeOver(because refusal: AgentError = .takenOver) {
         guard control.isActive, control.mode != .takenOver else {
             return
         }
-        control.takeOver(at: now)
-        onInterrupt?(.takenOver)
+        control.takeOver(at: now, because: refusal)
+        onInterrupt?(refusal)
         render(animated: true)
     }
 
@@ -432,18 +440,26 @@ final class Overlay {
             return
         }
         activationObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] notification in
-            let pid = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.processIdentifier
+            let activated = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+            let pid = activated?.processIdentifier
+            let operatedName = activated?.localizedName ?? "the operated app"
             MainActor.assumeIsolated {
                 guard let self, let pid, self.background != nil, pid == self.operatedPid else {
                     return
                 }
-                if self.undoActivation() {
+                let outcome = self.undoActivation()
+                let consequence = ActivationUndo.consequence(of: outcome, inGrace: self.now <= self.activationGrace, acceptsTakeover: self.control.acceptsTakeover)
+                let refusal = ActivationUndo.refusal(operated: operatedName, person: self.personsApp?.localizedName ?? "the person's app")
+                switch consequence {
+                case .nothing:
                     return
+                case .takeOver:
+                    self.takeOver()
+                case .keptInFront:
+                    self.takeOver(because: .keptInFront(refusal))
+                case .note:
+                    self.activationNote = refusal
                 }
-                guard self.now > self.activationGrace, self.control.acceptsTakeover else {
-                    return
-                }
-                self.takeOver()
             }
         }
     }

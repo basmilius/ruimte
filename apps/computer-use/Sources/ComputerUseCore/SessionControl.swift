@@ -65,9 +65,11 @@ public struct SessionControl: Sendable {
         case .paused:
             return .paused
         case .takenOver:
-            return .takenOver
+            return takeoverRefusal
         }
     }
+
+    private var takeoverRefusal = AgentError.takenOver
 
     /// How the session stands, for the `session` of a reply.
     public var summary: [String: Any] {
@@ -104,7 +106,11 @@ public struct SessionControl: Sendable {
         hold(.paused, at: now)
     }
 
-    public mutating func takeOver(at now: TimeInterval) {
+    /// `refusal` is what agent commands answer until the session runs again.
+    public mutating func takeOver(at now: TimeInterval, because refusal: AgentError = .takenOver) {
+        if isActive, mode != .takenOver {
+            takeoverRefusal = refusal
+        }
         hold(.takenOver, at: now)
         lastPersonInput = now
     }

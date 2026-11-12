@@ -75,6 +75,11 @@ public struct AgentError: Error, Sendable {
     public static let paused = AgentError("the person paused the session; wait until they resume", code: "paused")
     public static let takenOver = AgentError("the person took over; wait until they resume", code: "taken-over")
 
+    /// The person did not take over, but the session is held the same way, so it keeps the code a caller waits on.
+    public static func keptInFront(_ refusal: String) -> AgentError {
+        AgentError("\(refusal), so the session is held as after a take-over; wait until the person resumes", code: "taken-over")
+    }
+
     /// A call in the background that only the front can do; `reason` is the sentence that says why, without its period.
     public static func needsFront(_ reason: String) -> AgentError {
         AgentError(

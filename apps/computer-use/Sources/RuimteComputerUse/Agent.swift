@@ -219,6 +219,9 @@ final class Agent {
                 throw AgentError("unknown command \"\(request.command)\"")
             }
         }
+        if let activationNote = overlay.takeActivationNote() {
+            result["note"] = [result["note"] as? String, activationNote].compactMap { $0 }.joined(separator: "; ")
+        }
         if request.withState == true {
             result["settled"] = await settle(app)
             do {

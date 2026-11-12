@@ -30,4 +30,28 @@ struct ActivationUndoTests {
         #expect(outcome == .left)
         #expect(!asked)
     }
+
+    @Test func aRefusalOutsideTheLaunchHoldsTheSessionAsATakeOver() {
+        #expect(ActivationUndo.consequence(of: .refused, inGrace: false, acceptsTakeover: true) == .keptInFront)
+        #expect(ActivationUndo.consequence(of: .left, inGrace: false, acceptsTakeover: true) == .takeOver)
+    }
+
+    @Test func aRefusalThatTakesNothingOverGoesInTheNote() {
+        #expect(ActivationUndo.consequence(of: .refused, inGrace: true, acceptsTakeover: true) == .note)
+        #expect(ActivationUndo.consequence(of: .refused, inGrace: false, acceptsTakeover: false) == .note)
+        #expect(ActivationUndo.consequence(of: .left, inGrace: true, acceptsTakeover: true) == .nothing)
+        #expect(ActivationUndo.consequence(of: .restored, inGrace: false, acceptsTakeover: true) == .nothing)
+    }
+
+    @Test func aRefusalKeepsTheTakeOverCodeAndSaysWhatMacOSDid() {
+        var control = SessionControl()
+        control.begin(at: 0)
+        let refusal = ActivationUndo.refusal(operated: "Safari", person: "Notes")
+        control.takeOver(at: 1, because: .keptInFront(refusal))
+        #expect(control.refusal?.code == AgentError.takenOver.code)
+        #expect(control.refusal?.message.hasPrefix("macOS kept Safari in front of Notes and did not bring Notes back") == true)
+        control.resume(at: 2)
+        control.takeOver(at: 3)
+        #expect(control.refusal?.message == AgentError.takenOver.message)
+    }
 }
