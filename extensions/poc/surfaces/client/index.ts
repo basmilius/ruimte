@@ -105,7 +105,8 @@ const OTHER_SLOTS = [
     'editorMenu',
     'diffToolbar',
     'terminalToolbar',
-    'browserToolbar'
+    'browserToolbar',
+    'viewAccessory'
 ] as const;
 
 // One for each slot this one has no other use for, so each spot can be checked by eye.
