@@ -126,11 +126,54 @@ export async function standaloneDesignPage(endpointId: string, design: DesignFol
 }
 
 /*
- * A machine holds only a client's newest few built pages, so with many asked at once the oldest can be
- * let go before its first piece went out. That `not-found` is the held page gone, not the design: it is
- * built once more, and a second miss is the failure.
+ * A machine holds at most four of a client's largest built pages and lets go of the oldest past that
+ * (`HeldDesignPages`). With more built at once than it holds, a page goes before it is read, its build
+ * again pushes out the next, and on a link slower than the builds a page goes twice.
  */
-async function builtOnMachine(endpointId: string, page: { projectId: string; designId: string; file: string }): Promise<string> {
+const BUILDS_AT_ONCE = 4;
+
+const turnsByMachine = new Map<string, { running: number; waiting: Array<() => void> }>();
+
+/* Runs `build` once fewer than `BUILDS_AT_ONCE` of this machine's pages are being built and read. */
+async function inTurn<T>(endpointId: string, build: () => Promise<T>): Promise<T> {
+    const turns = turnsByMachine.get(endpointId) ?? { running: 0, waiting: [] };
+
+    turnsByMachine.set(endpointId, turns);
+
+    if (turns.running >= BUILDS_AT_ONCE) {
+        await new Promise<void>((resolve) => turns.waiting.push(resolve));
+    } else {
+        turns.running += 1;
+    }
+
+    try {
+        return await build();
+    } finally {
+        const next = turns.waiting.shift();
+
+        // The slot passes straight to the next in line, so `running` counts it without a gap another call could take.
+        if (next !== undefined) {
+            next();
+        } else {
+            turns.running -= 1;
+        }
+
+        if (turns.running === 0) {
+            turnsByMachine.delete(endpointId);
+        }
+    }
+}
+
+function builtOnMachine(endpointId: string, page: { projectId: string; designId: string; file: string }): Promise<string> {
+    return inTurn(endpointId, () => buildAndRead(endpointId, page));
+}
+
+/*
+ * A page held for this client can still go before it is read, as one left behind by a read that failed
+ * pushes it out. That `not-found` is the held page gone, not the design: it is built once more, and a
+ * second miss is the failure.
+ */
+async function buildAndRead(endpointId: string, page: { projectId: string; designId: string; file: string }): Promise<string> {
     const transport = machineTransport(endpointId);
 
     for (let builds = 1; ; builds += 1) {
