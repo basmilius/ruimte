@@ -8,14 +8,14 @@ API version `1` is a preview. It goes to a small group of invited developers fir
 
 ## 1, preview, agents, the canvas and settings (November 2026)
 
-- `useAgent` reads one agent: its status, what it works on (`activity`), whether a wait was `snoozed`, and its folder and branch. Its `provider` is `null` until the agent reported its CLI, also in the test host. `useSubagents` lists a chat's sub-agents at work, and `useProviders` the agents a person can start. The first two need `agents.status`.
+- `useAgent` reads one agent: its status, what it works on (`activity`), whether a wait was `snoozed`, and its folder and branch. Its `provider` can now be `null`. A chat or a design started on the default CLI has none until it reports which CLI it runs on. A terminal has an agent only once its CLI reported, so its `provider` is never `null`. In the test host an agent's `provider` is `null` unless the test names one, where it was `'claude'` before. `useSubagents` lists a chat's sub-agents at work, and `useProviders` the agents a person can start. The first two need `agents.status`.
 - `defineCanvasOverlay` takes `space: 'canvas'`, to draw over the nodes in the canvas's own coordinates. On screen, `data-canvas-floor` marks what stands at the bottom of the canvas.
 - `useCanvasView`, `useInView` and `nodeColorValue` read what a person sees of the canvas. A node's `color` is one of Ruimte's accents or `null`, and `hidden` says a collapsed group hides it.
 - The `viewAccessory` slot stands beside a chat or terminal open as a view of its own, and `views.focus` hands one the keyboard.
 - `storage` reads and writes `computer` values outside a component, and follows them with `watch`.
 - `useLocale` reads nested keys and plurals.
 - `defineExtensionSettings` takes `section`, which Ruimte grants only to the extensions it ships itself for now.
-- An extension needs no change.
+- An extension that reads `provider` from `useAgent` handles `null`, and a test that counted on `'claude'` names the provider itself. Any other extension needs no change.
 
 ## 1, preview, chats and charts (November 2026)
 
