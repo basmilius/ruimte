@@ -308,9 +308,31 @@ describe('the map of a canvas', () => {
 
 describe('agent notifications', () => {
     test('makes no sound until somebody asks for one', () => {
-        expect(settingsFrom({}).agentsTurnSound).toBe(false);
-        expect(settingsFrom({ agentsTurnSound: true }).agentsTurnSound).toBe(true);
-        expect(settingsFrom({ agentsTurnSound: 1 as unknown as boolean }).agentsTurnSound).toBe(false);
+        expect(settingsFrom({})).toMatchObject({
+            soundPack: 'bar',
+            soundEvents: { question: false, alert: false, limit: false, error: false, finished: false },
+            customSoundPacks: [],
+            projectSounds: {}
+        });
+    });
+
+    test('the one switch there was before turns on the two alerts it covered', () => {
+        const before = { agentsTurnSound: true } as Partial<Settings>;
+
+        expect(settingsFrom(before).soundEvents).toEqual({ question: true, alert: true, limit: false, error: false, finished: false });
+        expect(
+            settingsFrom({ ...before, soundEvents: { question: false, alert: false, limit: true, error: false, finished: false } }).soundEvents.question
+        ).toBe(false);
+    });
+
+    test('a pack nobody has reads as the first one, also for a project', () => {
+        const own = { id: 'custom-1', name: 'Mine', files: { question: 'ping.wav' } };
+
+        expect(settingsFrom({ soundPack: 'gone' }).soundPack).toBe('bar');
+        expect(settingsFrom({ soundPack: 'custom-1', customSoundPacks: [own] }).soundPack).toBe('custom-1');
+        expect(
+            settingsFrom({ projectSounds: { 'local:a': { pack: 'gone' }, 'local:b': { silent: true, pack: 'glass' }, 'local:c': {} } }).projectSounds
+        ).toEqual({ 'local:b': { silent: true, pack: 'glass' } });
     });
 });
 

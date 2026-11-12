@@ -1290,10 +1290,47 @@
         },
         "working": {
             "title": "Keep awake",
-            "description": "When this computer sleeps, every agent pauses.",
-            "sound": {
-                "label": "Notification sound",
-                "description": "Applies to every agent notification."
+            "description": "When this computer sleeps, every agent pauses."
+        },
+        "sounds": {
+            "pack": {
+                "label": "Sound pack",
+                "description": "Every pack plays the same five sounds in a voice of its own. A project can take another pack in its settings."
+            },
+            "packs": {
+                "bar": "Bar",
+                "glass": "Glass",
+                "wood": "Wood",
+                "string": "String",
+                "air": "Air",
+                "grand": "Grand",
+                "felt": "Felt",
+                "nylon": "Nylon",
+                "steel": "Steel",
+                "duo": "Duo"
+            },
+            "newPack": "New pack",
+            "newPackName": "My pack",
+            "events": {
+                "question": "A question or approval waits",
+                "alert": "An alert someone asked for",
+                "limit": "A usage limit is hit",
+                "error": "A session stops with an error",
+                "finished": "A turn finishes"
+            },
+            "play": "Play the sound for: {{event}}",
+            "custom": {
+                "name": "Name of the pack",
+                "choose": "Choose file",
+                "chooseFor": "Choose the file for: {{event}}",
+                "noFile": "No file yet",
+                "delete": "Delete pack",
+                "failed": "Could not keep that file"
+            },
+            "refusal": {
+                "too-large": "That file is over 1 MB",
+                "too-long": "That sound is longer than 5 seconds",
+                "unreadable": "This app cannot play that file"
             }
         },
         "keepAwake": {

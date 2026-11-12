@@ -132,6 +132,8 @@
     },
     "notifications": {
         "finished": "Klaar",
+        "limit": "Gestopt op een verbruikslimiet",
+        "error": "Gestopt met een fout",
         "needsYou": "Wacht op jou",
         "asks": {
             "command": "Wil uitvoeren: {{detail}}",
@@ -500,6 +502,11 @@
         "accounts": "Accounts",
         "accountsNote": "Alleen op deze machine, voor jou. Collega's kiezen hun eigen.",
         "accountsFailed": "Kon de accounts van dit project niet wijzigen",
+        "sounds": "Geluiden",
+        "soundsNote": "Alleen in deze app, voor jou. Welke gebeurtenissen geluid maken stel je in bij Instellingen, Agents.",
+        "soundsSilent": "Stil",
+        "soundsPack": "Geluidspack van dit project",
+        "soundsAsInSettings": "Zoals in Instellingen ({{pack}})",
         "defaultAccount": "Standaardaccount voor {{provider}} in dit project",
         "machineDefault": "Standaard van de machine ({{account}})",
         "offerAccount": "{{account}} aanbieden in dit project"

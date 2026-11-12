@@ -132,6 +132,8 @@
     },
     "notifications": {
         "finished": "Finished",
+        "limit": "Stopped on a usage limit",
+        "error": "Stopped with an error",
         "needsYou": "Needs you",
         "asks": {
             "command": "Wants to run: {{detail}}",
@@ -500,6 +502,11 @@
         "accounts": "Accounts",
         "accountsNote": "Only on this machine, for you. Colleagues choose their own.",
         "accountsFailed": "Could not change the accounts of this project",
+        "sounds": "Sounds",
+        "soundsNote": "Only in this app, for you. Which events make a sound is set in Settings, Agents.",
+        "soundsSilent": "Silent",
+        "soundsPack": "Sound pack of this project",
+        "soundsAsInSettings": "As in Settings ({{pack}})",
         "defaultAccount": "Default account for {{provider}} in this project",
         "machineDefault": "Machine default ({{account}})",
         "offerAccount": "Offer {{account}} in this project"

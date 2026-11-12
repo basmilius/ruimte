@@ -10,7 +10,7 @@ export const AGENT_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
     row('agents.resumeAtReset'),
     row('agents.deleteAnyView'),
     row('agents.reachOpenProjects'),
-    row('agents.working.sound'),
+    row('agents.sounds.pack'),
     row('agents.quietHours'),
     row('agents.breakReminder', canTellIdle),
     row('agents.showViews'),

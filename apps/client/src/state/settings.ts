@@ -47,6 +47,16 @@ import {
     quietClockFrom,
     quietDaysFrom
 } from '@/state/quiet-hours';
+import {
+    customSoundPacksFrom,
+    DEFAULT_SOUND_PACK,
+    projectSoundsFrom,
+    soundEventsFrom,
+    soundPackFrom,
+    type CustomSoundPack,
+    type ProjectSounds,
+    type SoundEvents
+} from '@/state/sounds';
 import { storedJson, switchesFrom } from '@/state/stored-json';
 
 export const SETTINGS_STORAGE_KEY = 'ruimte.settings';
@@ -272,9 +282,14 @@ export interface Settings {
     /* Whether the display stays on as well, which only `always` offers: while an agent works nobody
        needs to watch it. */
     keepAwakeDisplay: boolean;
-    /* Whether agent notifications make a sound. Off, because a sound arrives in whatever the person
-       walked away to do, which may be a call. */
-    agentsTurnSound: boolean;
+    /* The pack the notification sounds come from, one of the built-in ones or a person's own. */
+    soundPack: string;
+    /* Which events make a sound. All off, because a sound arrives in whatever the person walked away to
+       do, which may be a call. */
+    soundEvents: SoundEvents;
+    customSoundPacks: CustomSoundPack[];
+    /* What a project does differently, by machine and project: another pack, or no sound at all. */
+    projectSounds: Record<string, ProjectSounds>;
     /* Whether this computer raises no alert of its own in the hours below, which follow the computer's clock.
        Off to start with. Agents keep working, and what still waits is announced when the hours end. */
     quietHoursOn: boolean;
@@ -393,7 +408,10 @@ const DEFAULT_SETTINGS: Settings = {
     keepAwake: 'off',
     keepAwakeOnBattery: false,
     keepAwakeDisplay: false,
-    agentsTurnSound: false,
+    soundPack: DEFAULT_SOUND_PACK,
+    soundEvents: soundEventsFrom(null, false),
+    customSoundPacks: [],
+    projectSounds: {},
     quietHoursOn: false,
     quietHoursDays: [...DEFAULT_QUIET_DAYS],
     quietHoursStart: DEFAULT_QUIET_START,
@@ -454,6 +472,8 @@ function needsCodeHelpMigration(stored: Partial<Settings>): boolean {
 /* What a stored blob means, key by key. Everything a client wrote before a setting existed, or wrote
    as something else, reads as what a fresh client gets. */
 export function settingsFrom(stored: Partial<Settings>): Settings {
+    const customSoundPacks = customSoundPacksFrom(stored.customSoundPacks);
+
     return {
         ...DEFAULT_SETTINGS,
         ...stored,
@@ -513,7 +533,11 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
                 ? stored.voiceInputDeviceId
                 : DEFAULT_SETTINGS.voiceInputDeviceId,
         voiceConfirmDestructiveActions: stored.voiceConfirmDestructiveActions !== false,
-        agentsTurnSound: stored.agentsTurnSound === true,
+        soundPack: soundPackFrom(stored.soundPack, customSoundPacks),
+        // The one switch there was before these covered the two alerts the desktop raised.
+        soundEvents: soundEventsFrom(stored.soundEvents, (stored as { agentsTurnSound?: unknown }).agentsTurnSound),
+        customSoundPacks,
+        projectSounds: projectSoundsFrom(stored.projectSounds, customSoundPacks),
         quietHoursOn: stored.quietHoursOn === true,
         quietHoursDays: quietDaysFrom(stored.quietHoursDays),
         quietHoursStart: quietClockFrom(stored.quietHoursStart, DEFAULT_QUIET_START),

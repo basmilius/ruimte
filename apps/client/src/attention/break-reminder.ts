@@ -2,6 +2,7 @@ import { formatDuration } from '@adecore/ui/format';
 import i18next from 'i18next';
 import { z } from 'zod';
 import { mayNotify } from '@/attention/notifications';
+import { playEventSound } from '@/attention/sounds';
 import { desktop, type SystemIdleState } from '@/desktop/bridge';
 import { clientQuietState } from '@/state/quiet-hours';
 import { useSettings } from '@/state/settings';
@@ -79,8 +80,11 @@ function notify(stretch: Stretch, now: number): void {
     const notification = new Notification(i18next.t('shell:breakReminder.title'), {
         body: i18next.t('shell:breakReminder.description', { duration: formatDuration(now - stretch.startedAt) }),
         tag: NOTIFICATION_TAG,
-        silent: !useSettings.getState().agentsTurnSound
+        silent: true
     });
+
+    // No session's event and no project's: it sounds as an alert does in the settings' own pack.
+    playEventSound('alert', null, NOTIFICATION_TAG);
 
     notification.onclick = () => {
         window.focus();

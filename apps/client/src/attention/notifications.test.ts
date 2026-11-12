@@ -5,11 +5,13 @@ import { startAttentionWatch, useAttention } from '@/state/attention';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
+import { useProject } from '@/state/project';
 import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
 import { chatInfoOf } from '../../testing/chat-info';
 import { notifyRequested, startAgentNotifications } from './notifications';
+import { setSoundPorts } from './sounds';
 
 beforeEach(() => {
     jest.useFakeTimers();
@@ -94,7 +96,7 @@ test('completed turns only leave an unread mark; needs-you and requested alerts 
     }
 });
 
-test.each(['chat', 'terminal'] as const)('%s requests settle into one notification, then later requests update it quietly', (kind) => {
+test.each(['chat', 'terminal'] as const)('%s requests settle into one notification, then later requests update it quietly', async (kind) => {
     const shown: { title: string; options: NotificationOptions }[] = [];
     const restore = fakeNotifications(shown);
     const key = endpointKey(currentEndpointId(), 'agent');
@@ -132,34 +134,42 @@ test.each(['chat', 'terminal'] as const)('%s requests settle into one notificati
         });
     };
 
-    const sound = useSettings.getState().agentsTurnSound;
+    const events = useSettings.getState().soundEvents;
+    const played: string[] = [];
+    const restoreSound = setSoundPorts({ play: async (url) => void played.push(url.slice(url.lastIndexOf('/sounds/'))), now: () => 0 });
     let stopNotifications = () => {};
     try {
-        useSettings.setState({ agentsTurnSound: true });
+        useSettings.setState({ soundEvents: { ...events, question: true } });
         useDocument.getState().load({ version: 3, rev: 1, name: 'Project', color: '#000', views: [{ kind, id: 'agent', name: 'Build', node: {} }] }, null);
         stopNotifications = startAgentNotifications();
         wait([request('first', 'bun test')]);
         jest.advanceTimersByTime(400);
         wait([request('first', 'bun test')]);
         wait([request('first', 'bun test'), request('second', 'bun run check')]);
-        useSettings.setState({ agentsTurnSound: false });
+        // The sound is the one the wait began with, whatever a person changes while it settles.
+        useSettings.setState({ soundEvents: { ...events, question: false } });
         expect(shown).toEqual([]);
         jest.advanceTimersByTime(599);
         expect(shown).toEqual([]);
         jest.advanceTimersByTime(1);
         expect(shown).toEqual([
-            { title: 'Build', options: expect.objectContaining({ body: 'Wants to run: bun test (+1 more)', tag: 'ruimte-agent', silent: false }) }
+            { title: 'Build', options: expect.objectContaining({ body: 'Wants to run: bun test (+1 more)', tag: 'ruimte-agent', silent: true }) }
         ]);
+        await settled();
+        expect(played).toEqual(['/sounds/bar/rise.wav']);
 
         jest.advanceTimersByTime(10_000);
         wait([request('first', 'bun test'), request('second', 'bun run check'), request('third', 'bun run build')]);
         expect(shown).toEqual([
-            { title: 'Build', options: expect.objectContaining({ body: 'Wants to run: bun test (+1 more)', tag: 'ruimte-agent', silent: false }) },
+            { title: 'Build', options: expect.objectContaining({ body: 'Wants to run: bun test (+1 more)', tag: 'ruimte-agent', silent: true }) },
             { title: 'Build', options: expect.objectContaining({ body: 'Wants to run: bun test (+2 more)', tag: 'ruimte-agent', silent: true }) }
         ]);
+        await settled();
+        expect(played).toHaveLength(1);
     } finally {
         stopNotifications();
-        useSettings.setState({ agentsTurnSound: sound });
+        restoreSound();
+        useSettings.setState({ soundEvents: events });
         useChats.getState().forget(key);
         useSessions.getState().forget(key);
         useDocument.getState().load(null, null);
@@ -339,5 +349,220 @@ test.each(['resume', 'snooze', 'remove', 'permission', 'visible', 'stop'] as con
         useSnoozes.setState({ byKey: {} });
         useDocument.getState().load(null, null);
         restore();
+    }
+});
+
+/* Lets a sound that was asked for reach the player: its file's address loads with the first one, then a few promises settle. */
+async function settled(): Promise<void> {
+    await import('./sound-urls');
+
+    for (let i = 0; i < 10; i++) {
+        await Promise.resolve();
+    }
+}
+
+/* Notifications and sounds of one project with the nodes named, torn down by the returned function. */
+function soundStage(views: { kind: 'chat' | 'terminal'; id: string }[]): {
+    shown: { title: string; options: NotificationOptions }[];
+    played: string[];
+    clock: { now: number };
+    stop: () => void;
+} {
+    const shown: { title: string; options: NotificationOptions }[] = [];
+    const played: string[] = [];
+    const clock = { now: 0 };
+    const restore = fakeNotifications(shown);
+    const before = useSettings.getState();
+    const project = useProject.getState();
+    const restoreSound = setSoundPorts({ play: async (url) => void played.push(url.slice(url.lastIndexOf('/sounds/') + 8)), now: () => clock.now });
+
+    useProject.setState({ current: { projectId: 'atlas' } as never, currentEndpointId: currentEndpointId() });
+    useDocument.getState().load(
+        {
+            version: 3,
+            rev: 1,
+            name: 'Project',
+            color: '#000',
+            views: views.map((view) => ({ ...view, name: view.id, node: view.kind === 'terminal' ? { provider: 'codex' } : {} }))
+        },
+        null
+    );
+
+    const stopNotifications = startAgentNotifications(() => clock.now);
+
+    return {
+        shown,
+        played,
+        clock,
+        stop: () => {
+            stopNotifications();
+            restoreSound();
+            useSettings.setState({ soundPack: before.soundPack, soundEvents: before.soundEvents, projectSounds: before.projectSounds });
+            useProject.setState({ current: project.current, currentEndpointId: project.currentEndpointId });
+
+            for (const view of views) {
+                useSessions.getState().forget(endpointKey(currentEndpointId(), view.id));
+                useChats.getState().forget(endpointKey(currentEndpointId(), view.id));
+            }
+
+            useSnoozes.setState({ byKey: {} });
+            useDocument.getState().load(null, null);
+            restore();
+        }
+    };
+}
+
+const EVERY_EVENT = { question: true, alert: true, limit: true, error: true, finished: true };
+
+test('a turn that stops is announced with its own line and sound, and a usage limit is never also a finished turn', async () => {
+    const stage = soundStage([
+        { kind: 'terminal', id: 'build' },
+        { kind: 'terminal', id: 'lint' },
+        { kind: 'chat', id: 'review' }
+    ]);
+    const key = (id: string): string => endpointKey(currentEndpointId(), id);
+
+    try {
+        useSettings.setState({ soundEvents: EVERY_EVENT });
+        setStatus(key('build'), 'running');
+        setStatus(key('build'), 'idle');
+        setStatus(key('lint'), 'running');
+        setStatus(key('lint'), 'error');
+        useChats.getState().status(key('review'), chatInfoOf('review', { status: 'running' }));
+        useChats.getState().status(key('review'), chatInfoOf('review', { status: 'idle', limit: { kind: 'usage' } }));
+
+        expect(stage.shown).toEqual([
+            { title: 'build', options: { body: 'Finished', tag: 'ruimte-stopped-build', silent: true } },
+            { title: 'lint', options: { body: 'Stopped with an error', tag: 'ruimte-stopped-lint', silent: true } },
+            { title: 'review', options: { body: 'Stopped on a usage limit', tag: 'ruimte-stopped-review', silent: true } }
+        ]);
+        await settled();
+        expect(stage.played).toEqual(['bar/trio.wav', 'bar/knock.wav', 'bar/fall.wav']);
+    } finally {
+        stage.stop();
+    }
+});
+
+test('a turn that stops raises nothing while its event has no sound', async () => {
+    const stage = soundStage([{ kind: 'terminal', id: 'build' }]);
+    const key = endpointKey(currentEndpointId(), 'build');
+
+    try {
+        useSettings.setState({ soundEvents: { ...EVERY_EVENT, finished: false } });
+        setStatus(key, 'running');
+        setStatus(key, 'idle');
+        expect(stage.shown).toEqual([]);
+        await settled();
+        expect(stage.played).toEqual([]);
+    } finally {
+        stage.stop();
+    }
+});
+
+test('a project sounds in its own pack, and a silent project raises nothing for a turn that stops', async () => {
+    const stage = soundStage([{ kind: 'terminal', id: 'build' }]);
+    const key = endpointKey(currentEndpointId(), 'build');
+    const project = endpointKey(currentEndpointId(), 'atlas');
+
+    try {
+        useSettings.setState({ soundEvents: EVERY_EVENT, projectSounds: { [project]: { pack: 'glass' } } });
+        setStatus(key, 'running');
+        setStatus(key, 'idle');
+        await settled();
+        expect(stage.played).toEqual(['glass/trio.wav']);
+
+        useSettings.setState({ projectSounds: { [project]: { silent: true, pack: 'glass' } } });
+        stage.clock.now = 5_000;
+        setStatus(key, 'running');
+        setStatus(key, 'idle');
+        expect(stage.shown).toHaveLength(1);
+        await settled();
+        expect(stage.played).toHaveLength(1);
+    } finally {
+        stage.stop();
+    }
+});
+
+test('two turns that finish within a second sound once, and each still gets its notification', async () => {
+    const stage = soundStage([
+        { kind: 'terminal', id: 'build' },
+        { kind: 'terminal', id: 'lint' }
+    ]);
+    const key = (id: string): string => endpointKey(currentEndpointId(), id);
+
+    try {
+        useSettings.setState({ soundEvents: EVERY_EVENT });
+        setStatus(key('build'), 'running');
+        setStatus(key('lint'), 'running');
+        setStatus(key('build'), 'idle');
+        stage.clock.now = 400;
+        setStatus(key('lint'), 'idle');
+        expect(stage.shown).toHaveLength(2);
+        await settled();
+        expect(stage.played).toEqual(['bar/trio.wav']);
+    } finally {
+        stage.stop();
+    }
+});
+
+test.each(['in sight', 'snoozed', 'quiet hours'] as const)('a turn that stops plays nothing for a node %s', async (why) => {
+    const stage = soundStage([{ kind: 'terminal', id: 'build' }]);
+    const endpointId = currentEndpointId();
+    const key = endpointKey(endpointId, 'build');
+    const before = useSettings.getState();
+
+    try {
+        useSettings.setState({ soundEvents: EVERY_EVENT });
+        setStatus(key, 'running');
+
+        switch (why) {
+            case 'in sight':
+                useDocument.setState({ layout: { columns: [{ size: 1, cells: [{ viewId: 'build', size: 1 }] }], focus: { column: 0, cell: 0 } } });
+                Object.defineProperty(document, 'hasFocus', { value: () => true });
+                break;
+            case 'snoozed':
+                useSnoozes.getState().snooze(endpointId, 'build', 61_000);
+                break;
+            case 'quiet hours':
+                // The hours are read on this computer's clock, so the window is built on the local one.
+                stage.clock.now = new Date(2026, 10, 4, 12, 30).getTime();
+                useSettings.setState({ quietHoursOn: true, quietHoursDays: [1, 2, 3, 4, 5, 6, 7], quietHoursStart: '12:00', quietHoursEnd: '13:00' });
+                break;
+        }
+
+        setStatus(key, 'idle');
+        expect(stage.shown).toEqual([]);
+        await settled();
+        expect(stage.played).toEqual([]);
+    } finally {
+        useSettings.setState({
+            quietHoursOn: before.quietHoursOn,
+            quietHoursDays: before.quietHoursDays,
+            quietHoursStart: before.quietHoursStart,
+            quietHoursEnd: before.quietHoursEnd
+        });
+        stage.stop();
+    }
+});
+
+test('an alert someone asked for sounds in the pack of its own project', async () => {
+    const stage = soundStage([{ kind: 'terminal', id: 'build' }]);
+    const endpointId = currentEndpointId();
+    const claimed: string[] = [];
+    const restoreSound = setSoundPorts({
+        play: async (url) => void stage.played.push(url.slice(url.lastIndexOf('/sounds/') + 8)),
+        now: () => 0,
+        claim: async (tag) => claimed.push(tag) === 1
+    });
+
+    try {
+        useSettings.setState({ soundEvents: EVERY_EVENT, projectSounds: { [endpointKey(endpointId, 'other')]: { pack: 'grand' } } });
+        notifyRequested(endpointId, { projectId: 'other', viewId: 'view', nodeId: 'node', title: 'Deploy', body: 'It is live.' });
+        await settled();
+        expect(stage.played).toEqual(['grand/chime.wav']);
+        expect(claimed).toEqual([`ruimte-requested-${endpointId}-node`]);
+    } finally {
+        restoreSound();
+        stage.stop();
     }
 });

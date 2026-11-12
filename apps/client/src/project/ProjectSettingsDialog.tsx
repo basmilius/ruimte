@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { accentLabel, NODE_ACCENTS } from '@/canvas-model/accents';
 import { ProjectAccountsSection } from '@/project/ProjectAccountsSection';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
+import { ProjectSoundsSection } from '@/project/ProjectSoundsSection';
 import { useProjectIconGroups } from '@/project/use-project-icon-groups';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { useProject } from '@/state/project';
@@ -167,6 +168,7 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
             />
 
             {!scratch && onScreen && <ProjectAccountsSection projectId={project.projectId} endpointId={endpointId} />}
+            <ProjectSoundsSection projectId={project.projectId} endpointId={endpointId} />
 
             {failure && <FormError className="mt-3 break-words">{failure}</FormError>}
 
