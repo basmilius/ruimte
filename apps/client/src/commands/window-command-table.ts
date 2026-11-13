@@ -125,6 +125,7 @@ export const WINDOW_COMMANDS = {
     'project-settings': {
         key: 'projectSettings',
         icon: FolderCog,
+        binds: 'workspace',
         palette: false,
         menu: { menu: 'file', group: 'open', order: 70, when: (context) => context.workspace }
     },

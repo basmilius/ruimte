@@ -9,6 +9,8 @@ export const DEFAULT_KEYS = {
     palette: shortcut('Mod+K'),
     'find-in-files': shortcut('Mod+Shift+F'),
     settings: shortcut('Mod+,'),
+    // The key beside the one of Settings.
+    'project-settings': shortcut('Mod+;'),
     // Only while the settings dialog is up, where it stands in for the canvas's find.
     'settings-search': shortcut('Mod+F'),
     sidebar: shortcut('Mod+B'),

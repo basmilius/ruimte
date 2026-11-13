@@ -84,6 +84,7 @@ const TERMINAL_HANDED_BACK_ROWS: readonly DefaultKeyId[] = [
     'focus-up',
     'focus-down',
     'settings',
+    'project-settings',
     'sidebar',
     'window-new',
     'chat-new'

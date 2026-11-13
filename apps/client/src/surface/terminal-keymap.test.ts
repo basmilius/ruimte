@@ -220,7 +220,9 @@ function eventFor(target: Shortcut, apple: boolean): KeyLike {
         ? `Key${target.key}`
         : /^[0-9]$/.test(target.key)
           ? `Digit${target.key}`
-          : (({ ',': 'Comma', '.': 'Period', '\\': 'Backslash', '[': 'BracketLeft', ']': 'BracketRight' } as Record<string, string>)[target.key] ?? target.key);
+          : (({ ',': 'Comma', ';': 'Semicolon', '.': 'Period', '\\': 'Backslash', '[': 'BracketLeft', ']': 'BracketRight' } as Record<string, string>)[
+                target.key
+            ] ?? target.key);
     return {
         key: target.key,
         code,

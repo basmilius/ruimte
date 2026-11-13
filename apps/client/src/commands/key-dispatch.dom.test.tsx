@@ -27,6 +27,14 @@ describe('the keys of the window', () => {
         expect(windowKey({ ctrlKey: true, key: ',', code: 'Comma' }, false)).toBe('settings');
     });
 
+    test('Project settings has the key beside the one of Settings, only where a project is open', () => {
+        const semicolon = key({ metaKey: true, key: ';', code: 'Semicolon' });
+
+        expect(commandForKey('workspace', semicolon, true)).toBe('project-settings');
+        expect(commandForKey('workspace', key({ ctrlKey: true, key: ';', code: 'Semicolon' }), false)).toBe('project-settings');
+        expect(commandForKey('window', semicolon, true)).toBeNull();
+    });
+
     test('the modifier is strict: Ctrl on macOS and Meta elsewhere open nothing', () => {
         expect(windowKey({ ctrlKey: true, key: 'k', code: 'KeyK' }, true)).toBeNull();
         expect(windowKey({ metaKey: true, key: 'k', code: 'KeyK' }, false)).toBeNull();
