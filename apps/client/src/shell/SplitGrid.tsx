@@ -4,6 +4,7 @@ import { useEffect, useState, type DragEvent as ReactDragEvent, type ReactElemen
 import { placeFilesAction, placeViewAction } from '@/action-port/person-actions';
 import { PromptStack } from '@/canvas/PromptStack';
 import { cellsMoved, registerCell } from '@/layout/cell-rects';
+import { pinScroll } from '@/layout/pin-scroll';
 import { canDropAsTab, canMoveCell, canSplit, cellAt, cellViewIds, locateView, MIN_SHARE, splitTree, type CellAt, type SplitZone } from '@/layout/split';
 import { clampTabLeft, DEFAULT_TAB_WIDTH, gapLeft, positionAfterLifting } from '@/layout/tab-drop';
 import { CellToolbar } from '@/shell/CellToolbar';
@@ -97,12 +98,19 @@ type LiftedTabDrop = TabDrop & { lift: number };
 const TITLE_GAP = 8;
 
 const observers = new Map<string, ResizeObserver>();
+const unpins = new Map<string, () => void>();
 
 function watchCell(viewId: string, element: HTMLElement | null): void {
     observers.get(viewId)?.disconnect();
     observers.delete(viewId);
+    unpins.get(viewId)?.();
+    unpins.delete(viewId);
     registerCell(viewId, element);
-    if (element === null || typeof ResizeObserver === 'undefined') {
+    if (element === null) {
+        return;
+    }
+    unpins.set(viewId, pinScroll(element));
+    if (typeof ResizeObserver === 'undefined') {
         return;
     }
     const observer = new ResizeObserver(() => cellsMoved());
@@ -301,10 +309,8 @@ function Cell({
     const body = (
         /* Registered so the parking layer can put a browser page over this box; its size changes
            with a splitter drag, which moves no state at all, hence the observer. A cell hidden behind
-           a maximized one leaves the registry, which hides its pages without moving a <webview>.
-           Clipped, not hidden: a focus in a node past the edge would scroll a hidden box and slide
-           its view out from under the parked pages. */
-        <div ref={(element) => watchCell(viewId, hidden ? null : element)} className="split-cell-body relative min-h-0 grow overflow-clip">
+           a maximized one leaves the registry, which hides its pages without moving a <webview>. */
+        <div ref={(element) => watchCell(viewId, hidden ? null : element)} className="split-cell-body relative min-h-0 grow overflow-hidden">
             <ViewSurface view={view} />
             <CellOverlay slot="cell">
                 {/* The dock belongs to the canvas under it, so it is drawn in the cell that has the

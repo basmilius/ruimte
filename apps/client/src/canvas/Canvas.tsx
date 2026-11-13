@@ -40,6 +40,7 @@ import { TextElementView } from '@/canvas/TextElementView';
 import { TextToolbar } from '@/canvas/TextToolbar';
 import { CanvasLayers } from '@/extensions/ContributedSlots';
 import { SelectionBar } from '@/extensions/SlotSurfaces';
+import { pinScroll } from '@/layout/pin-scroll';
 import { showFileOnCanvas } from '@/project/views';
 import { carriedByGroups, isNodeActive, maximizedNodeOf, useCanvas, useCanvasCamera, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { useEndpointId } from '@/state/current-endpoint';
@@ -382,7 +383,11 @@ export function Canvas() {
             });
         });
         observer.observe(el);
-        return () => observer.disconnect();
+        const unpin = pinScroll(el);
+        return () => {
+            observer.disconnect();
+            unpin();
+        };
     }, [canvasStore]);
 
     const flushWheel = useWheelCamera(rootRef, canvasStore, {
@@ -893,9 +898,7 @@ export function Canvas() {
                 render={<div />}
                 ref={rootRef}
                 data-surface="canvas"
-                /* Clipped, not hidden: a hidden box scrolls to a focused node past its edge, and the
-                   nodes would slide away from the pages parked over them. */
-                className="canvas-ground relative h-full w-full touch-none overflow-clip"
+                className="canvas-ground relative h-full w-full touch-none overflow-hidden"
                 style={{
                     cursor: aiming ? 'crosshair' : activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : spaceDown ? 'grab' : undefined
                 }}
