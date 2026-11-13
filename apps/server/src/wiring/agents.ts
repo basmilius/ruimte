@@ -57,6 +57,8 @@ import type { DaemonSeams } from './seams.ts';
 import type { UsageBundle } from './usage.ts';
 
 const CHAT_UNLOAD_AFTER_MS = 10 * 60_000;
+// Longer than the unload: a chat on screen is one a person may type in again any moment.
+const CHAT_PROCESS_IDLE_MS = 30 * 60_000;
 
 /* What the daemon keeps for agents across a restart, loaded before anything can take from it. */
 export interface AgentStores {
@@ -324,8 +326,10 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
             databases: () => later.databases().agents
         }),
         store: new ChatStore(config.home, { attachments }),
-        // A chat no window shows and whose CLI is gone holds its whole thread for nobody; its record has it.
+        // A chat no window shows and that has nothing under way holds its whole thread, and an idle CLI, for nobody; its record has the thread.
         unloadAfterMs: CHAT_UNLOAD_AFTER_MS,
+        // A chat on screen keeps its thread and lets go of an idle CLI, or a canvas of chats holds a process each for as long as it is open.
+        releaseProcessAfterMs: CHAT_PROCESS_IDLE_MS,
         attachments,
         checkpoints,
         contextUrl: runtime.contextUrl,

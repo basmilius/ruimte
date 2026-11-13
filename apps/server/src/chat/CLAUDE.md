@@ -52,5 +52,6 @@ Each of these goes with the chat or a clear, and a fork copies only what its cop
 Decisions the code cannot show. Do not reverse one without asking Bas.
 
 - A chat moves to another account after a limit only when a person asks, never by itself.
+- An idle chat lets go of its CLI process by itself, by Bas's choice (November 13, 2026, basmilius/ruimte#104): after 10 minutes when no client reads it, when it also leaves memory (`CHAT_UNLOAD_AFTER_MS`), and after 30 minutes when a client does (`CHAT_PROCESS_IDLE_MS`, both in `wiring/agents.ts`). The conversation stays and the next message resumes it in a new process. A CLI in a turn, or one that holds a request, a goal, a subagent or a background command, is never ended on a clock.
 - Resuming after a limit runs on a clock only when a person turned it on: a machine setting (`resumeAtReset` in `endpoint.json`, off by default) and a chat's own switch beside it, which follows the machine when absent.
 - A `resume-limit` outbox entry carries the time: the reset of a usage limit, or 1, 5 and 15 minutes after an overload, after which the overload is an ordinary error. The entry lapses when a person writes first, stops the chat, turns a switch off, or the node goes.
