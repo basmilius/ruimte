@@ -121,7 +121,7 @@ export const WINDOW_BEHAVIORS = defineBehaviors({
     usage: { run: () => usageDialog.set(true), offered: () => ({ hint: i18next.t('shell:palette.hints.usage') }) },
     models: { run: () => modelsDialog.set(true) },
     'open-folder': { run: () => useUi.getState().openFolderBrowser() },
-    'project-settings': { run: () => projectSettingsAsk.set(true) },
+    'project-settings': { run: () => projectSettingsAsk.set(true), key: (press) => takeKey(press, () => projectSettingsAsk.set(true)) },
     'keep-awake-off': { run: () => setKeepAwake({ keepAwake: 'off' }), offered: () => keepAwakeAvailable() },
     'keep-awake-working': { run: () => setKeepAwake({ keepAwake: 'working' }), offered: () => keepAwakeAvailable() },
     'keep-awake-always': { run: () => setKeepAwake({ keepAwake: 'always' }), offered: () => keepAwakeAvailable() },

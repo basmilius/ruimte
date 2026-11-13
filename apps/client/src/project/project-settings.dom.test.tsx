@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { isApplePlatform } from '@adecore/ui';
 import { act } from 'react';
 import { projectSettingsAsk } from '@/project/dialogs';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
@@ -37,6 +38,20 @@ describe('Project settings', () => {
         expect(everything()).toContain('Atlas');
         expect(document.querySelector<HTMLInputElement>('input[aria-label="Project name"]')?.value).toBe('Atlas');
         expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+    });
+
+    test('opens with the key beside the one of Settings', async () => {
+        await clickOn(document.querySelector('[role="dialog"] [aria-label="Close settings"]'));
+        await until(() => tabs().length === 0);
+
+        const apple = isApplePlatform();
+
+        await act(async () => {
+            document.body.dispatchEvent(
+                new KeyboardEvent('keydown', { key: ';', code: 'Semicolon', bubbles: true, cancelable: true, metaKey: apple, ctrlKey: !apple })
+            );
+        });
+        await until(() => tabs().length > 0);
     });
 
     test('its search finds a row in another section and goes there', async () => {
