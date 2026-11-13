@@ -434,7 +434,7 @@ export class Routines {
         }
     }
 
-    /* Notes what an agent run's chat does now: a wait on a person, its end, a limit. An observer only notes. */
+    /* Notes what an agent run's chat does now: a wait on a person, its end, a limit. An observer only notes, so ending the CLI of a run that ended is owed to the outbox. */
     async observe(chatId: string, info: ChatInfo): Promise<void> {
         const run = this.deps.runs.ofChat(chatId);
         if (run === undefined || !LIVE.has(run.state)) {
@@ -454,6 +454,10 @@ export class Routines {
             ...(ended ? { endedAt: this.deps.now() } : {}),
             ...(now.error === undefined ? {} : { error: now.error })
         });
+        // A run's chat is on no canvas, so nobody closes it: its idle CLI would stay for good.
+        if (ended) {
+            await this.deps.outbox.enqueue(run.projectId, chatId, { kind: 'end-run-process', payload: { runId: run.runId } });
+        }
         this.deps.onChanged(run.projectId);
     }
 

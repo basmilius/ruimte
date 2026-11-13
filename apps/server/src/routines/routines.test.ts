@@ -177,6 +177,30 @@ describe('the clock', () => {
         expect(runs.get(runId!)).toMatchObject({ state: 'done', waited: true });
     });
 
+    test("a run that ended owes the end of its chat's CLI, once, and a run still under way owes nothing", async () => {
+        const { routines } = await build();
+        await routines.save(PROJECT, 0, morning, false);
+        const { runId } = await routines.runNow(PROJECT, 'morning');
+        const chatId = started[0]!.chatId;
+        const owedEnds = () => outbox.ofKind('end-run-process').map((entry) => ({ target: entry.target, payload: entry.payload }));
+        await routines.observe(chatId, { status: 'needs-you', usage: { turns: 0 } } as ChatInfo);
+        expect(owedEnds()).toEqual([]);
+        await routines.observe(chatId, { status: 'idle', usage: { turns: 1 } } as ChatInfo);
+        expect(owedEnds()).toEqual([{ target: chatId, payload: { runId: runId! } }]);
+        // The chat goes on saying it is idle, and the run is no longer live.
+        await routines.observe(chatId, { status: 'idle', usage: { turns: 1 } } as ChatInfo);
+        expect(owedEnds()).toHaveLength(1);
+    });
+
+    test("a run that failed owes the end of its chat's CLI too", async () => {
+        const { routines } = await build();
+        await routines.save(PROJECT, 0, morning, false);
+        await routines.runNow(PROJECT, 'morning');
+        const chatId = started[0]!.chatId;
+        await routines.observe(chatId, { status: 'error', usage: { turns: 0 } } as ChatInfo);
+        expect(outbox.ofKind('end-run-process').map((entry) => entry.target)).toEqual([chatId]);
+    });
+
     test('a due run is skipped, never queued, while the previous one still waits on a person', async () => {
         const { routines, runs } = await build();
         await routines.save(PROJECT, 0, morning, false);

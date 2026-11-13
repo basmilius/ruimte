@@ -14,7 +14,7 @@ import {
 } from './outbox.ts';
 import { connectPeerKind, startRemoteAgentKind, stopRemoteAgentKind, takeRemoteResultKind } from './peer-giver.ts';
 import { deliverRemoteResultKind } from './peer-worker.ts';
-import { routineRunKind } from './routines.ts';
+import { endRunProcessKind, routineRunKind } from './routines.ts';
 import { backgroundLimitKind, deliverWaitingKind, giveTaskKind, wakeParentKind } from './tasks.ts';
 
 /*
@@ -43,7 +43,8 @@ export const OUTBOX_KINDS = [
     startRemoteAgentKind,
     stopRemoteAgentKind,
     takeRemoteResultKind,
-    routineRunKind
+    routineRunKind,
+    endRunProcessKind
 ] as const;
 
 type KindOf<Descriptor> = Descriptor extends OutboxKind<infer Schema> ? z.infer<Schema> : never;

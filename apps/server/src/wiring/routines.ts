@@ -1,4 +1,4 @@
-import { chatOpener } from '@adecore/agents/chat';
+import { ChatError, chatOpener } from '@adecore/agents/chat';
 import { WatchedSinks } from '@adecore/agents/host';
 import type { RoutinePicked, RoutineSkillsPayload, RoutineSkillsResult } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
@@ -39,6 +39,30 @@ export function continuedBrief(brief: string | undefined, picked: RoutinePicked 
     }
     const { note } = attachedReferences({ chats: picked?.chats, references: picked?.references }, lookup);
     return note === null ? brief : `${brief}\n\n${note}`;
+}
+
+/* What ending a chat's CLI asks of the chats, narrow so a test stands in for it. */
+export interface RunChats {
+    get(chatId: string): { pid: number | null } | undefined;
+    restart(chatId: string): Promise<void>;
+}
+
+/*
+ * Ends the CLI of a chat whose routine run ended and keeps its conversation, which a later message or a run that
+ * continues the chat resumes. A chat that took up work again, or whose CLI still holds a command, keeps its
+ * process: that one ends when the chat leaves memory.
+ */
+export async function endRunProcess(chats: RunChats, chatId: string): Promise<void> {
+    if (chats.get(chatId)?.pid == null) {
+        return;
+    }
+    try {
+        await chats.restart(chatId);
+    } catch (e) {
+        if (!(e instanceof ChatError) || e.code !== 'chat-busy') {
+            throw e;
+        }
+    }
 }
 
 interface RoutinesInput {
@@ -180,6 +204,7 @@ export async function wireRoutines({ home, machineId, stores, agents, projects, 
         onChanged: (projectId) => watchers.changed(projectId)
     });
     outboxLink.worker.handle('routine-run', (entry) => routines.handle(entry));
+    outboxLink.worker.handle('end-run-process', (entry) => endRunProcess(chats, entry.target));
     store.onOutsideChange = (projectId) => {
         void routines
             .schedule(projectId)
