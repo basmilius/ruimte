@@ -301,8 +301,10 @@ function Cell({
     const body = (
         /* Registered so the parking layer can put a browser page over this box; its size changes
            with a splitter drag, which moves no state at all, hence the observer. A cell hidden behind
-           a maximized one leaves the registry, which hides its pages without moving a <webview>. */
-        <div ref={(element) => watchCell(viewId, hidden ? null : element)} className="split-cell-body relative min-h-0 grow overflow-hidden">
+           a maximized one leaves the registry, which hides its pages without moving a <webview>.
+           Clipped, not hidden: a focus in a node past the edge would scroll a hidden box and slide
+           its view out from under the parked pages. */
+        <div ref={(element) => watchCell(viewId, hidden ? null : element)} className="split-cell-body relative min-h-0 grow overflow-clip">
             <ViewSurface view={view} />
             <CellOverlay slot="cell">
                 {/* The dock belongs to the canvas under it, so it is drawn in the cell that has the

@@ -893,7 +893,9 @@ export function Canvas() {
                 render={<div />}
                 ref={rootRef}
                 data-surface="canvas"
-                className="canvas-ground relative h-full w-full touch-none overflow-hidden"
+                /* Clipped, not hidden: a hidden box scrolls to a focused node past its edge, and the
+                   nodes would slide away from the pages parked over them. */
+                className="canvas-ground relative h-full w-full touch-none overflow-clip"
                 style={{
                     cursor: aiming ? 'crosshair' : activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : spaceDown ? 'grab' : undefined
                 }}
