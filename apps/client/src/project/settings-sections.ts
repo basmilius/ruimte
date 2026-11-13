@@ -1,6 +1,6 @@
 import { lazyNamed } from '@adecore/ui';
 import i18next from 'i18next';
-import { BellRing, SlidersHorizontal, Users } from 'lucide-react';
+import { SlidersHorizontal, Users } from 'lucide-react';
 import type { ProjectSettingsSectionDefinition } from '@/registry/project-settings-sections';
 
 function words(key: string): () => string {
@@ -31,16 +31,5 @@ export const PROJECT_SETTINGS_SECTIONS: readonly ProjectSettingsSectionDefinitio
         rows: [],
         // The accounts come with the project this window holds, and the Chats project follows the machine.
         available: ({ scratch, onScreen }) => !scratch && onScreen
-    },
-    {
-        id: 'sounds',
-        icon: BellRing,
-        label: words('sounds'),
-        description: words('soundsNote'),
-        pane: lazyNamed(() => import('@/project/ProjectSoundsPane'), 'ProjectSoundsPane'),
-        rows: [
-            { id: 'sounds.pack', label: words('soundsPack') },
-            { id: 'sounds.silent', label: words('soundsSilent') }
-        ]
     }
 ];

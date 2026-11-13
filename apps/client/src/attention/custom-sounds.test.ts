@@ -54,6 +54,13 @@ test('a new pack is the pack in use, takes a name and keeps a file per event', a
     expect(kept.get(`${id}/question`)?.size).toBe(10);
 });
 
+test("a new pack made for a project is that project's, and the pack of the settings stays", () => {
+    const id = addCustomSoundPack('My pack', 'machine/atlas');
+
+    expect(useSettings.getState().soundPack).toBe(before.soundPack);
+    expect(useSettings.getState().projectSounds['machine/atlas']).toEqual({ pack: id });
+});
+
 test('a file that is too large, too long or not a sound is refused and nothing is kept', async () => {
     const id = addCustomSoundPack('My pack');
 

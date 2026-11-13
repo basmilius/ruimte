@@ -91,11 +91,23 @@ function packs(): CustomSoundPack[] {
     return useSettings.getState().customSoundPacks;
 }
 
-/* A new pack of a person's own, without files yet, and the pack in use from now on. */
-export function addCustomSoundPack(name: string): string {
+/*
+ * A new pack of a person's own, without files yet, and the pack in use from now on: of the project named
+ * by `projectKey`, which leaves the settings' pack as it is, or else of the settings.
+ */
+export function addCustomSoundPack(name: string, projectKey?: string): string {
     const id = newCustomPackId();
+    const settings = useSettings.getState();
+    const customSoundPacks = [...packs(), { id, name, files: {} }];
 
-    useSettings.getState().update({ customSoundPacks: [...packs(), { id, name, files: {} }], soundPack: id });
+    if (projectKey === undefined) {
+        settings.update({ customSoundPacks, soundPack: id });
+    } else {
+        settings.update({
+            customSoundPacks,
+            projectSounds: withProjectSounds(settings.projectSounds, projectKey, { ...settings.projectSounds[projectKey], pack: id })
+        });
+    }
 
     return id;
 }

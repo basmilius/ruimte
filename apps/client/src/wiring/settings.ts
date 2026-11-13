@@ -1,3 +1,4 @@
+import { SOUND_PROJECT_SETTINGS_SECTION } from '@/attention/project-settings-section';
 import { CHAT_SETTINGS_SECTION } from '@/chat/settings-section';
 import { EXTENSION_SETTINGS_SECTION } from '@/extensions/settings-section';
 import { MACHINE_SETTINGS_SECTION } from '@/machine-ui/settings-section';
@@ -24,5 +25,5 @@ export function installSettingsSections(): void {
         USAGE_SETTINGS_SECTION,
         MACHINE_SETTINGS_SECTION
     );
-    projectSettingsSectionRegistry.add(...PROJECT_SETTINGS_SECTIONS);
+    projectSettingsSectionRegistry.add(...PROJECT_SETTINGS_SECTIONS, SOUND_PROJECT_SETTINGS_SECTION);
 }

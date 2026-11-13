@@ -145,4 +145,37 @@ describe('Project settings > Sounds', () => {
         expect(useSettings.getState().projectSounds).toEqual({ [key]: { silent: true, pack: 'nylon' } });
         expect(useSettings.getState().soundPack).toBe('bar');
     });
+
+    test('a project takes a new pack of its own with a name and a file, and the settings keep their pack', async () => {
+        const { current, currentEndpointId } = useProject.getState();
+        const key = projectSoundKey(currentEndpointId!, current!.projectId);
+
+        await act(async () => projectSettingsAsk.set(true));
+        await until(() => tab('Sounds') !== null);
+        await clickOn(tab('Sounds'));
+        await until(() => buttonWithText('As in Settings (Bar)') !== null);
+        await clickOn(buttonWithText('As in Settings (Bar)'));
+        await pick('New pack');
+        await until(() => labelled<HTMLInputElement>('Name of the pack') !== null);
+        await typeInto(labelled<HTMLInputElement>('Name of the pack')!, 'Atlas calls');
+
+        const pack = useSettings.getState().customSoundPacks[0]!;
+
+        expect(pack.name).toBe('Atlas calls');
+        expect(useSettings.getState().projectSounds).toEqual({ [key]: { pack: pack.id } });
+        expect(useSettings.getState().soundPack).toBe('bar');
+        expect(switchOf('A turn finishes')).toBeNull();
+
+        await clickOn(labelled('Choose the file for: A turn finishes'));
+        const input = document.querySelector<HTMLInputElement>('input[type="file"][accept="audio/*"]')!;
+        Object.defineProperty(input, 'files', { configurable: true, value: [new File([new Uint8Array(8)], 'done.wav', { type: 'audio/wav' })] });
+        await act(async () => {
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        await until(() => everything().includes('done.wav'));
+
+        await clickOn(labelled('Delete pack'));
+        await until(() => buttonWithText('As in Settings (Bar)') !== null);
+        expect(useSettings.getState().projectSounds).toEqual({});
+    });
 });

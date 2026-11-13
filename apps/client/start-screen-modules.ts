@@ -21,6 +21,7 @@ export const START_SCREEN_MODULES: readonly string[] = [
     'attention/menu-facts.ts',
     'attention/next-waiting.ts',
     'attention/notifications.ts',
+    'attention/project-settings-section.ts',
     'attention/sounds.ts',
     'attention/wait-ask.ts',
     'base64.ts',

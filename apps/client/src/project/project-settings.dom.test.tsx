@@ -33,6 +33,7 @@ afterEach(async () => {
 describe('Project settings', () => {
     test('opens in the dialog of Settings, on the project, with a section per subject', () => {
         expect(tabs()).toEqual(['General', 'Accounts', 'Sounds']);
+        expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Project settings');
         expect(everything()).toContain('Atlas');
         expect(document.querySelector<HTMLInputElement>('input[aria-label="Project name"]')?.value).toBe('Atlas');
         expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1);

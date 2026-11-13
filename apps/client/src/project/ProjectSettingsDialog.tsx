@@ -32,11 +32,12 @@ function findIn(sections: readonly ProjectSettingsSectionDefinition[], query: st
 /*
  * The settings of one project, in the dialog the app's own settings use: a section per subject, each from
  * the feature that owns it (`registry/project-settings-sections.ts`). The dialog keeps the last project it
- * was on, so its panes still draw while it closes.
+ * was on, so its panes still draw while it closes, and it is there closed before the first project, so
+ * the first opening moves in like every later one.
  */
 export function ProjectSettingsDialog({ subject, open, onOpenChange, onOpenChangeComplete }: ProjectSettingsDialogProps) {
-    // The labels come from `i18next.t`, which no redraw follows: this is what draws them again in another language.
-    useTranslation('shell');
+    // The labels of the sections come from `i18next.t`, which no redraw follows: this is what draws them again in another language.
+    const { t } = useTranslation('shell');
 
     const [shown, setShown] = useState(subject);
     const [section, setSection] = useState('general');
@@ -48,11 +49,8 @@ export function ProjectSettingsDialog({ subject, open, onOpenChange, onOpenChang
         setShown(subject);
     }
 
-    if (shown === null) {
-        return null;
-    }
-
-    const sections = registered.filter((definition) => definition.available?.({ scratch: shown.project.scratch === true, onScreen }) ?? true);
+    const scratch = shown?.project.scratch === true;
+    const sections = registered.filter((definition) => definition.available?.({ scratch, onScreen }) ?? true);
 
     return (
         <ProjectSettingsContext value={shown}>
@@ -67,15 +65,18 @@ export function ProjectSettingsDialog({ subject, open, onOpenChange, onOpenChang
                         onOpenChangeComplete(false);
                     }
                 }}
+                title={t('projectSettings.title')}
                 heading={
-                    <ProjectGlyph
-                        projectId={shown.project.projectId}
-                        endpointId={shown.endpointId}
-                        icon={shown.project.icon}
-                        color={shown.project.color}
-                        size={20}
-                        scratch={shown.project.scratch === true}
-                    />
+                    shown !== null && (
+                        <ProjectGlyph
+                            projectId={shown.project.projectId}
+                            endpointId={shown.endpointId}
+                            icon={shown.project.icon}
+                            color={shown.project.color}
+                            size={20}
+                            scratch={scratch}
+                        />
+                    )
                 }
                 section={sections.some((definition) => definition.id === section) ? section : 'general'}
                 onNavigate={({ section: next, target: row }) => {
@@ -87,7 +88,7 @@ export function ProjectSettingsDialog({ subject, open, onOpenChange, onOpenChang
                 }}
                 groups={[
                     {
-                        label: shown.project.name,
+                        label: shown?.project.name ?? null,
                         sections: sections.map((definition) => ({
                             id: definition.id,
                             icon: definition.icon,
