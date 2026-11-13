@@ -132,6 +132,22 @@ export async function setCustomSound(id: string, event: SoundEvent, file: File):
     return null;
 }
 
+/* Turns an event off in a pack, or on again: on, it plays the pack's file or, without one, what the settings play. */
+export function setCustomSoundOff(id: string, event: SoundEvent, off: boolean): void {
+    useSettings.getState().update({
+        customSoundPacks: packs().map((pack) => {
+            if (pack.id !== id) {
+                return pack;
+            }
+
+            const { off: _before, ...rest } = pack;
+            const events = SOUND_EVENTS.filter((candidate) => (candidate === event ? off : pack.off?.includes(candidate) === true));
+
+            return events.length === 0 ? rest : { ...rest, off: events };
+        })
+    });
+}
+
 /* Removes a pack and its files. Whatever used it, the settings or a project, follows the settings' pack again. */
 export async function removeCustomSoundPack(id: string): Promise<void> {
     const settings = useSettings.getState();

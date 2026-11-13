@@ -1323,7 +1323,10 @@
                 "name": "Naam van het pack",
                 "choose": "Kies bestand",
                 "chooseFor": "Kies het bestand voor: {{event}}",
-                "noFile": "Nog geen bestand",
+                "noFile": "Geen bestand, klinkt zoals in {{pack}}",
+                "off": "Uit in dit pack",
+                "turnOff": "Zet uit in dit pack: {{event}}",
+                "turnOn": "Zet aan in dit pack: {{event}}",
                 "delete": "Verwijder pack",
                 "failed": "Kon dat bestand niet bewaren"
             },

@@ -24,6 +24,9 @@ export interface CustomSoundPack {
 
     /* The name of the file picked for each event that has one, as the person's computer named it. */
     files: Partial<Record<SoundEvent, string>>;
+
+    /* The events a person turned off in this pack. An event that is neither off nor has a file sounds as in the settings. */
+    off?: SoundEvent[];
 }
 
 export interface ProjectSounds {
@@ -87,12 +90,14 @@ export function customSoundPacksFrom(stored: unknown): CustomSoundPack[] {
         }
 
         const files = record(pack.files) ?? {};
+        const off = SOUND_EVENTS.filter((event) => Array.isArray(pack.off) && pack.off.includes(event));
 
         return [
             {
                 id: pack.id,
                 name: pack.name,
-                files: Object.fromEntries(SOUND_EVENTS.flatMap((event) => (typeof files[event] === 'string' ? [[event, files[event]]] : [])))
+                files: Object.fromEntries(SOUND_EVENTS.flatMap((event) => (typeof files[event] === 'string' ? [[event, files[event]]] : []))),
+                ...(off.length === 0 ? {} : { off })
             }
         ];
     });
@@ -132,8 +137,35 @@ export function withProjectSounds(projects: Readonly<Record<string, ProjectSound
 }
 
 /*
- * The sound an event makes for a project, or null for none: the event is off, the project is silent, or
- * its pack is a person's own without a file for the event. `projectKey` null is an event no project owns.
+ * The sound a pack makes for an event, or null where a person turned the event off in it. A pack of a
+ * person's own without a file for the event sounds as the pack of the settings does, and that one, when
+ * it has no file either, as the default pack, so a pack with one file of its own is never silent elsewhere.
+ */
+export function packSound(settings: Pick<SoundSettings, 'soundPack' | 'customSoundPacks'>, pack: string, event: SoundEvent): SoundChoice | null {
+    const tried = new Set<string>();
+    let current = pack;
+
+    while (!isBuiltInPack(current)) {
+        const own = settings.customSoundPacks.find((custom) => custom.id === current);
+
+        if (own?.off?.includes(event)) {
+            return null;
+        }
+
+        if (own?.files[event] !== undefined) {
+            return { pack: current, event };
+        }
+
+        tried.add(current);
+        current = tried.has(settings.soundPack) ? DEFAULT_SOUND_PACK : settings.soundPack;
+    }
+
+    return { pack: current, event };
+}
+
+/*
+ * The sound an event makes for a project, or null for none: the event is off, in the settings or in the
+ * pack, or the project is silent. `projectKey` null is an event no project owns.
  */
 export function soundFor(settings: SoundSettings, event: SoundEvent, projectKey: string | null): SoundChoice | null {
     const project = projectKey === null ? undefined : settings.projectSounds[projectKey];
@@ -142,11 +174,5 @@ export function soundFor(settings: SoundSettings, event: SoundEvent, projectKey:
         return null;
     }
 
-    const pack = project?.pack ?? settings.soundPack;
-
-    if (isBuiltInPack(pack)) {
-        return { pack, event };
-    }
-
-    return settings.customSoundPacks.find((custom) => custom.id === pack)?.files[event] === undefined ? null : { pack, event };
+    return packSound(settings, project?.pack ?? settings.soundPack, event);
 }

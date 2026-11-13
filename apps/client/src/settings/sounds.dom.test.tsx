@@ -111,8 +111,17 @@ describe('Settings > Agents > Notifications > Sounds', () => {
 
         expect(pack.name).toBe('Office');
         expect(useSettings.getState().soundPack).toBe(pack.id);
-        expect(everything()).toContain('No file yet');
-        expect(labelled<HTMLButtonElement>('Play the sound for: A question or approval waits')?.disabled).toBe(true);
+        expect(everything()).toContain('No file, sounds as in Bar');
+        await clickOn(labelled('Play the sound for: A usage limit is hit'));
+        await until(() => played.length === 1);
+        expect(played).toEqual(['bar/fall.wav']);
+
+        await clickOn(labelled('Turn off in this pack: A usage limit is hit'));
+        expect(useSettings.getState().customSoundPacks[0]?.off).toEqual(['limit']);
+        expect(everything()).toContain('Off in this pack');
+        expect(labelled<HTMLButtonElement>('Play the sound for: A usage limit is hit')?.disabled).toBe(true);
+        await clickOn(labelled('Turn on in this pack: A usage limit is hit'));
+        expect(useSettings.getState().customSoundPacks[0]?.off).toBeUndefined();
 
         await clickOn(labelled('Choose the file for: A question or approval waits'));
         const input = document.querySelector<HTMLInputElement>('input[type="file"][accept="audio/*"]')!;
@@ -124,7 +133,7 @@ describe('Settings > Agents > Notifications > Sounds', () => {
 
         expect(kept.get(`${pack.id}/question`)?.size).toBe(8);
         await clickOn(labelled('Play the sound for: A question or approval waits'));
-        await until(() => played.length === 1);
+        await until(() => played.length === 2);
     });
 });
 

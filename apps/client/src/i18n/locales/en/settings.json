@@ -1323,7 +1323,10 @@
                 "name": "Name of the pack",
                 "choose": "Choose file",
                 "chooseFor": "Choose the file for: {{event}}",
-                "noFile": "No file yet",
+                "noFile": "No file, sounds as in {{pack}}",
+                "off": "Off in this pack",
+                "turnOff": "Turn off in this pack: {{event}}",
+                "turnOn": "Turn on in this pack: {{event}}",
                 "delete": "Delete pack",
                 "failed": "Could not keep that file"
             },

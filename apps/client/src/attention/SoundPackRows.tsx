@@ -1,12 +1,13 @@
 import { Button, FormError, IconButton, Input, useAsyncAction } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
-import { Play, Trash2 } from 'lucide-react';
+import { Play, Trash2, Volume2, VolumeX } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { removeCustomSoundPack, renameCustomSoundPack, setCustomSound, type SoundFileRefusal } from '@/attention/custom-sounds';
+import { removeCustomSoundPack, renameCustomSoundPack, setCustomSound, setCustomSoundOff, type SoundFileRefusal } from '@/attention/custom-sounds';
 import { playSound } from '@/attention/sounds';
 import { useSettings } from '@/state/settings';
-import { SOUND_EVENTS, type SoundEvent } from '@/state/sounds';
+import { soundPackName } from '@/state/sound-packs';
+import { packSound, SOUND_EVENTS, type SoundEvent } from '@/state/sounds';
 
 const PACK_NAME_MAX = 40;
 
@@ -18,12 +19,14 @@ interface SoundPackRowsProps {
 
 /*
  * The five sounds of a pack, each with a button to hear it. A pack of a person's own also shows its name,
- * the file of each event and a way to delete it. Keyed by pack where it is drawn, so a refusal about one
- * pack's file does not stay under the next.
+ * a way to delete it and, per event, its file or the pack that sounds in its place, and a button that
+ * turns the event off in this pack. Keyed by pack where it is drawn, so a refusal about one pack's file
+ * does not stay under the next.
  */
 export function SoundPackRows({ pack, eventControl }: SoundPackRowsProps) {
     const { t } = useTranslation('settings');
     const custom = useSettings((s) => s.customSoundPacks);
+    const soundPack = useSettings((s) => s.soundPack);
     const own = custom.find((entry) => entry.id === pack);
     const [refusal, setRefusal] = useState<SoundFileRefusal | null>(null);
     const { busy, failure, run } = useAsyncAction(t('agents.sounds.custom.failed'));
@@ -74,14 +77,18 @@ export function SoundPackRows({ pack, eventControl }: SoundPackRowsProps) {
             {SOUND_EVENTS.map((event) => {
                 const label = t(`agents.sounds.events.${event}`);
                 const file = own?.files[event];
-                const silent = own !== undefined && file === undefined;
+                const off = own?.off?.includes(event) === true;
+                const sound = packSound({ soundPack, customSoundPacks: custom }, pack, event);
+                const from = off
+                    ? t('agents.sounds.custom.off')
+                    : (file ?? t('agents.sounds.custom.noFile', { pack: soundPackName(sound?.pack ?? pack, custom, t) }));
 
                 return (
                     <SettingsRow
                         key={event}
                         indent
                         label={label}
-                        description={own === undefined ? undefined : (file ?? t('agents.sounds.custom.noFile'))}
+                        description={own === undefined ? undefined : from}
                         control={
                             <div className="flex items-center gap-2">
                                 {own !== undefined && (
@@ -98,9 +105,18 @@ export function SoundPackRows({ pack, eventControl }: SoundPackRowsProps) {
                                     icon={Play}
                                     size="sm"
                                     label={t('agents.sounds.play', { event: label })}
-                                    disabled={silent}
-                                    onClick={() => playSound({ pack, event })}
+                                    disabled={sound === null}
+                                    onClick={() => sound !== null && playSound(sound)}
                                 />
+                                {own !== undefined && (
+                                    <IconButton
+                                        icon={off ? VolumeX : Volume2}
+                                        size="sm"
+                                        active={off}
+                                        label={t(off ? 'agents.sounds.custom.turnOn' : 'agents.sounds.custom.turnOff', { event: label })}
+                                        onClick={() => setCustomSoundOff(own.id, event, !off)}
+                                    />
+                                )}
                                 {eventControl?.(event, label)}
                             </div>
                         }

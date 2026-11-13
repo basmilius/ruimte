@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { soundFor, withProjectSounds, type SoundSettings } from './sounds';
+import { customSoundPacksFrom, soundFor, withProjectSounds, type SoundSettings } from './sounds';
 
 const OWN = { id: 'custom-1', name: 'Mine', files: { question: 'ping.wav' } };
 
@@ -34,11 +34,43 @@ describe('soundFor', () => {
         expect(soundFor(settings({ projectSounds: { 'local:atlas': { silent: true, pack: 'glass' } } }), 'question', 'local:atlas')).toBeNull();
     });
 
-    test('a pack of a person’s own sounds only for the events it has a file for', () => {
-        const own = settings({ soundPack: OWN.id });
+    test('a pack of a person’s own plays its file, and for an event without one what the settings play', () => {
+        const project = settings({ soundPack: 'glass', projectSounds: { 'local:atlas': { pack: OWN.id } } });
 
-        expect(soundFor(own, 'question', null)).toEqual({ pack: OWN.id, event: 'question' });
-        expect(soundFor(own, 'finished', null)).toBeNull();
+        expect(soundFor(project, 'question', 'local:atlas')).toEqual({ pack: OWN.id, event: 'question' });
+        expect(soundFor(project, 'finished', 'local:atlas')).toEqual({ pack: 'glass', event: 'finished' });
+    });
+
+    test('the settings’ own pack without a file for an event plays the default pack', () => {
+        expect(soundFor(settings({ soundPack: OWN.id }), 'finished', null)).toEqual({ pack: 'bar', event: 'finished' });
+    });
+
+    test('an event turned off in a pack is silent there, with or without a file, and also for a project that falls back on it', () => {
+        const other = { id: 'custom-2', name: 'Other', files: {} };
+        const muted = settings({
+            soundPack: OWN.id,
+            customSoundPacks: [{ ...OWN, off: ['question', 'finished'] }, other],
+            projectSounds: { 'local:atlas': { pack: other.id } }
+        });
+
+        expect(soundFor(muted, 'question', null)).toBeNull();
+        expect(soundFor(muted, 'finished', null)).toBeNull();
+        expect(soundFor(muted, 'finished', 'local:atlas')).toBeNull();
+        expect(soundFor(muted, 'error', 'local:atlas')).toEqual({ pack: 'bar', event: 'error' });
+    });
+});
+
+describe('customSoundPacksFrom', () => {
+    test('keeps the events turned off, and leaves the list out of a pack that has none', () => {
+        expect(
+            customSoundPacksFrom([
+                { ...OWN, off: ['finished', 'nonsense'] },
+                { id: 'custom-2', name: 'Other', files: {}, off: [] }
+            ])
+        ).toEqual([
+            { ...OWN, off: ['finished'] },
+            { id: 'custom-2', name: 'Other', files: {} }
+        ]);
     });
 });
 
