@@ -25,7 +25,6 @@ import { FileCopyRow } from '@/files/FileCopyRow';
 import {
     buildGitTree,
     byCheckout,
-    checkOf,
     checkOfItems,
     compareGitRows,
     entriesOf,
@@ -337,16 +336,19 @@ function GitTree({
 
     const renderControl = (row: FileTreeVisibleRow) => {
         const node = nodeOf(layout, row.path);
-        if (node === undefined || node.group === 'conflicts' || (node.kind === 'repo' && node.items.length === 0)) {
+        if (node === undefined) {
             return null;
         }
-        const state = node.kind === 'file' ? checkOf(node.item.entry) : checkOfItems(node.items);
+        /* A row with nothing to stage keeps its box, disabled, so every row's icon stands in one column. */
+        const items = node.kind === 'file' ? [node.item] : node.items;
+        const empty = items.every((item) => item.entry.group === 'conflicts');
+        const state = empty ? 'unchecked' : checkOfItems(items);
         return (
             <FileTree.Checkbox
                 label={state === 'checked' ? t('git.list.unstage') : t('git.list.stage')}
                 checked={state === 'checked'}
                 indeterminate={state === 'mixed'}
-                disabled={busy}
+                disabled={busy || empty}
                 onCheckedChange={() => toggleRows([row.path])}
             />
         );
