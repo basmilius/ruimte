@@ -28,6 +28,8 @@ public final class UiBlockModel {
     public private(set) var lit: [String: Int] = [:]
     @ObservationIgnored private var litGeneration = 0
     @ObservationIgnored private let readInterval: Duration
+    /// Nil reads only when asked, so a test drives every read itself.
+    @ObservationIgnored private let pollInterval: Duration?
     @ObservationIgnored private let chatID: String
     @ObservationIgnored private let itemID: String
     @ObservationIgnored private let request: Request
@@ -47,7 +49,8 @@ public final class UiBlockModel {
 
     public init(
         chatID: String, itemID: String, block: JSONValue, interpreter: UiInterpreter = .shared,
-        inputSettle: Duration = .milliseconds(300), readInterval: Duration = .seconds(10), request: @escaping Request
+        inputSettle: Duration = .milliseconds(300), readInterval: Duration = .seconds(10),
+        pollInterval: Duration? = .seconds(10), request: @escaping Request
     ) {
         self.chatID = chatID
         self.itemID = itemID
@@ -55,6 +58,7 @@ public final class UiBlockModel {
         self.interpreter = interpreter
         self.inputSettle = inputSettle
         self.readInterval = readInterval
+        self.pollInterval = pollInterval
         self.request = request
     }
 
@@ -402,7 +406,7 @@ public final class UiBlockModel {
 
     private func schedulePolling() {
         polling?.cancel()
-        guard visible, connected, complete, !queries.isEmpty else {
+        guard visible, connected, complete, !queries.isEmpty, let pollInterval else {
             polling = nil
             return
         }
@@ -410,7 +414,7 @@ public final class UiBlockModel {
             while !Task.isCancelled {
                 guard let self else { return }
                 await self.refresh()
-                do { try await Task.sleep(for: .seconds(10)) } catch { return }
+                do { try await Task.sleep(for: pollInterval) } catch { return }
             }
         }
     }

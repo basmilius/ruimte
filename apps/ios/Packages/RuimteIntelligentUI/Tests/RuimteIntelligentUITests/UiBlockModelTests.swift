@@ -31,17 +31,16 @@ private func status(files: Int, rows: [(String, String)]) -> JSONValue {
 }
 
 @MainActor struct UiBlockLiveTests {
-    /// A visible block after its first read, which polling does at once and then not again for ten seconds, so every
-    /// later read is one the test asks for.
+    /// A visible block after its first read. It never polls, so no read in the background races the reads a test
+    /// asks for.
     private func model(_ script: UiQueryScript) async throws -> UiBlockModel {
         let block = try parityBlock("live table")
         let model = UiBlockModel(
-            chatID: "chat", itemID: "item", block: block, readInterval: .zero, request: script.request)
+            chatID: "chat", itemID: "item", block: block, readInterval: .zero, pollInterval: nil,
+            request: script.request)
         await model.update(block: block)
         model.setActive(visible: true, connected: true)
-        for _ in 0..<1_000 where model.readings["$status"]?["readAt"] != .number(1_000) || model.reading {
-            await Task.yield()
-        }
+        await model.refresh()
         try #require(model.readings["$status"]?["readAt"] == .number(1_000))
         return model
     }
