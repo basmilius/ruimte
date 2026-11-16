@@ -17,7 +17,7 @@ const PROGRESS_OWNER = 'ghost-progress';
 const CONTEXT_LINES = 200;
 
 function say(key: string, options?: Record<string, unknown>): string {
-    return i18next.t(`panels:language.ghost.${key}`, options);
+    return i18next.t(`panels:language.ghost.${key}`, options ?? {});
 }
 
 function samePosition(one: EditorPosition, other: EditorPosition): boolean {

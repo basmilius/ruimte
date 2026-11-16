@@ -151,7 +151,8 @@ export function isEditorCommand(id: string): boolean {
 function labelOf(id: KeymapId): string {
     const key = WORDS_OF_KEY[id] ?? id;
     const found = [`shell:palette.commands.${key}`, `shell:menu.${key}`].find((path) => i18next.exists(path));
-    return i18next.t(found ?? `settings:shortcuts.editor.${id}`);
+    const path: string = found ?? `settings:shortcuts.editor.${id}`;
+    return i18next.t(path);
 }
 
 /* Keys the Canvas category already lists under the same words, since one key does both, and the key of the rendered documentation Ruimte does not offer. */

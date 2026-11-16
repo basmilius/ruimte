@@ -3,6 +3,7 @@ import { deviceMatches, type DeviceInfo, type DeviceReference, type LaunchConfig
 import i18next from 'i18next';
 import { OctagonX, Play, RotateCw, Square, type LucideIcon } from 'lucide-react';
 import { createNodeAction, createViewAction } from '@/action-port/person-actions';
+import type { Translate } from '@/i18n/translate';
 import { chosenLaunch, type LaunchView } from '@/launches/model';
 import { useLaunches, type LaunchOwner } from '@/launches/state';
 import { revealNode } from '@/project/views';
@@ -171,7 +172,7 @@ interface LaunchAction {
 }
 
 /* What a launch offers in its phase: a force stop while it stops, a restart and a stop while it runs, else a start. */
-export function launchActions(view: LaunchView, t: (key: string, options?: Record<string, unknown>) => string): LaunchAction[] {
+export function launchActions(view: LaunchView, t: Translate): LaunchAction[] {
     const { id, name } = view.launch;
     if (view.phase === 'stopping') {
         return [{ key: 'force', icon: OctagonX, label: t('forceStop', { name }), run: () => void stopLaunch(id, true) }];

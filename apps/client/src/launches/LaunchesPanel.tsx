@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDeviceList } from '@/clients/devices/state';
 import { useProjectRepos } from '@/controllers/git-repos';
+import type { Translate } from '@/i18n/translate';
 import { openLaunchAddress, showLaunchDevice, startLaunch } from '@/launches/actions';
 import { deviceTargetOf, matchLaunchDevice, type DeviceTarget } from '@/launches/device-target';
 import { LaunchMenu } from '@/launches/LaunchChip';
@@ -25,8 +26,6 @@ import { MachineTerminal } from '@/terminal/MachineTerminal';
 import { drawSession, fittedGrid } from '@/terminal/xterm';
 import { LaunchesScene } from '@/ui/EmptyScenes';
 import { deviceClientFor, sessionClientFor } from '@/workspace/connections';
-
-type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 /* What the picker says after the name: how long it runs and where, or how it ended. */
 function pickerDetail(view: LaunchView, now: number, t: Translate): string {

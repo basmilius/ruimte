@@ -5,6 +5,7 @@ import { GitBranch, Pencil, Play, Plus, Search, ShieldCheck, SquareTerminal } fr
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProjectRepos } from '@/controllers/git-repos';
+import type { Translate } from '@/i18n/translate';
 import { afterSettleCandidates, chooseAfterSettle, chooseLaunch, launchActions, showLaunchOutput, startLaunch } from '@/launches/actions';
 import { foundText, newSuggestions } from '@/launches/editing';
 import { HeldCommand, LaunchDot, LaunchStatusIcon } from '@/launches/LaunchControls';
@@ -213,7 +214,7 @@ function FoundInProject({ document }: { document: LaunchesDocument }) {
 }
 
 /* What a row says beside the name: only a state worth a look, never what the launch runs. */
-function rowHint(view: LaunchView, now: number, t: (key: string, options?: Record<string, unknown>) => string): string | null {
+function rowHint(view: LaunchView, now: number, t: Translate): string | null {
     const { phase, status } = view;
     if (phase === 'held') {
         return t('phase.held');

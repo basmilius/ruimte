@@ -32,7 +32,7 @@ function answerLanguage(code: string): string {
 }
 
 function say(key: string, options?: Record<string, unknown>): string {
-    return i18next.t(`panels:language.editorAssist.${key}`, options);
+    return i18next.t(`panels:language.editorAssist.${key}`, options ?? {});
 }
 
 /*

@@ -92,7 +92,7 @@ export function cronProblemWords(problem: CronProblem): string {
 }
 
 export function blockWords(block: AgendaBlock, timeZone: string): string {
-    const t = (key: string, values?: Record<string, string>): string => i18next.t(`routines:chip.${key}`, values);
+    const t = (key: string, values?: Record<string, string>): string => i18next.t(`routines:chip.${key}`, values ?? {});
     const run = block.run;
     const time = formatClock(run?.at ?? block.at, timeZone);
     switch (block.look) {
@@ -165,7 +165,7 @@ export function rowStatus(entry: RoutineEntry, timeZone: string): { tone: 'needs
 }
 
 export function runWords(run: RoutineRun, timeZone: string): string {
-    const t = (key: string, values?: Record<string, string>): string => i18next.t(`routines:run.${key}`, values);
+    const t = (key: string, values?: Record<string, string>): string => i18next.t(`routines:run.${key}`, values ?? {});
     const took = (): string => formatDuration(Math.max(0, (run.endedAt ?? run.at) - run.at));
     switch (run.state) {
         case 'skipped':

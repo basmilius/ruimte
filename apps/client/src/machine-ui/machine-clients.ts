@@ -28,7 +28,7 @@ const DESKTOP_APPS: Record<string, string> = { macos: 'Ruimte for Mac', windows:
 const STATION_HOST = 'station.ruimte.app';
 
 function t(key: string, values?: Record<string, unknown>): string {
-    return i18next.t(`settings:machine.clients.${key}`, values);
+    return i18next.t(`settings:machine.clients.${key}`, values ?? {});
 }
 
 /* The device goes before the app, so Station on a phone draws a phone while its label still says Station. */

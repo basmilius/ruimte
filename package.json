@@ -12,24 +12,24 @@
       "extensions/poc/*"
     ],
     "catalog": {
-      "@adecore/agent-contracts": "0.66.10",
-      "@adecore/agents": "0.66.10",
-      "@adecore/agents-react": "0.66.10",
-      "@adecore/charts": "0.66.10",
-      "@adecore/database": "0.66.10",
-      "@adecore/diagram": "0.66.10",
-      "@adecore/drawing": "0.66.10",
-      "@adecore/editor": "0.66.10",
-      "@adecore/editor-react": "0.66.10",
-      "@adecore/intelligent-ui": "0.66.10",
-      "@adecore/lsp": "0.66.10",
-      "@adecore/merge": "0.66.10",
-      "@adecore/plan": "0.66.10",
-      "@adecore/service": "0.66.10",
-      "@adecore/shell": "0.66.10",
-      "@adecore/terminal": "0.66.10",
-      "@adecore/ui": "0.66.10",
-      "@adecore/utils": "0.66.10"
+      "@adecore/agent-contracts": "0.67.0",
+      "@adecore/agents": "0.67.0",
+      "@adecore/agents-react": "0.67.0",
+      "@adecore/charts": "0.67.0",
+      "@adecore/database": "0.67.0",
+      "@adecore/diagram": "0.67.0",
+      "@adecore/drawing": "0.67.0",
+      "@adecore/editor": "0.67.0",
+      "@adecore/editor-react": "0.67.0",
+      "@adecore/intelligent-ui": "0.67.0",
+      "@adecore/lsp": "0.67.0",
+      "@adecore/merge": "0.67.0",
+      "@adecore/plan": "0.67.0",
+      "@adecore/service": "0.67.0",
+      "@adecore/shell": "0.67.0",
+      "@adecore/terminal": "0.67.0",
+      "@adecore/ui": "0.67.0",
+      "@adecore/utils": "0.67.0"
     }
   },
   "scripts": {
@@ -58,7 +58,7 @@
     "test:package": "bun scripts/test-integration.ts --suite package",
     "test:devices": "bun scripts/test-integration.ts --suite devices",
     "ui-check": "bun scripts/ui-check.ts",
-    "test:terminal":"bun --config=integration.bunfig.toml test --conditions=source apps/server/src/sessions/terminal-stream.integration.test.ts",
+    "test:terminal": "bun --config=integration.bunfig.toml test --conditions=source apps/server/src/sessions/terminal-stream.integration.test.ts",
     "format": "oxfmt --write \"apps/*/{src,testing,scripts,Scripts,build}/**/*.{ts,tsx,mjs,cjs}\" \"apps/*/*.{ts,tsx,mjs}\" \"extensions/**/*.{ts,tsx,js}\" \"packages/*/{src,scripts}/**/*.{ts,tsx}\" \"packages/extension/*.d.ts\" \"scripts/**/*.ts\"",
     "format:check": "oxfmt --check \"apps/*/{src,testing,scripts,Scripts,build}/**/*.{ts,tsx,mjs,cjs}\" \"apps/*/*.{ts,tsx,mjs}\" \"extensions/**/*.{ts,tsx,js}\" \"packages/*/{src,scripts}/**/*.{ts,tsx}\" \"packages/extension/*.d.ts\" \"scripts/**/*.ts\"",
     "dev:desktop": "bun run --cwd apps/desktop dev",
@@ -70,11 +70,11 @@
     "@adecore/drawing": "catalog:",
     "@adecore/ui": "catalog:",
     "@types/bun": "^1.4.4",
-    "oxfmt": "^0.75.0",
-    "oxlint": "^1.90.0",
-    "oxlint-tsgolint": "^7.0.2005",
+    "oxfmt": "^0.78.0",
+    "oxlint": "^1.93.0",
+    "oxlint-tsgolint": "^7.0.2007",
     "typescript": "^7.0.2",
-    "oxc-parser": "^0.156.0"
+    "oxc-parser": "^0.158.0"
   },
   "trustedDependencies": [
     "electron"

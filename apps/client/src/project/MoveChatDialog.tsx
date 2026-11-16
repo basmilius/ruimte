@@ -22,6 +22,7 @@ import { useEffect, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
 import { desktop } from '@/desktop/bridge';
+import type { Translate } from '@/i18n/translate';
 import type { MoveChatRequest } from '@/project/dialogs';
 import { moveChatDialog } from '@/project/dialogs';
 import {
@@ -433,7 +434,7 @@ function Note({ icon, children }: { icon: LucideIcon; children: string }) {
     );
 }
 
-function refusalText(t: (key: string, options?: Record<string, unknown>) => string, refusal: ChatMoveRefusal): string {
+function refusalText(t: Translate, refusal: ChatMoveRefusal): string {
     if (refusal.reason === 'owed') {
         return refusal.at === undefined ? t('moveChat.refusal.owed') : t('moveChat.refusal.owedAt', { time: formatMoment(new Date(refusal.at)) });
     }

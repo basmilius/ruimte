@@ -37,10 +37,10 @@
         "zod": "^4.6.7"
     },
     "devDependencies": {
-        "@sentry/electron": "8.2.0",
+        "@sentry/electron": "8.4.0",
         "@types/bun": "^1.4.4",
         "@types/node": "^26.6.6",
-        "electron": "^45.2.0",
+        "electron": "^45.3.3",
         "electron-builder": "^26.18.0",
         "electron-updater": "^6.8.11",
         "typescript": "^7.0.2"
