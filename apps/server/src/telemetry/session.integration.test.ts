@@ -37,8 +37,7 @@ test('a run of the daemon goes out as a session with its release and status, and
     expect(session).toBeDefined();
     expect(session).toMatchObject({ status: 'exited', attrs: { release: 'ruimte@0.22.0', environment: 'production' } });
     expect(session?.did).toBeUndefined();
-    // Only the runtime the SDK names itself by; nothing of the person or the machine.
+    // Nothing of the person or the machine.
     const attrs = (session?.attrs ?? {}) as Record<string, string>;
-    expect(Object.keys(attrs).sort()).toEqual(['environment', 'release', 'user_agent']);
-    expect(attrs.user_agent).toMatch(/^Bun\/[\d.]+$/);
+    expect(Object.keys(attrs).sort()).toEqual(['environment', 'release']);
 });
