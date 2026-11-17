@@ -92,7 +92,7 @@ describe('ChatManager over real processes', () => {
         await open('chat-codex', { provider: 'codex' });
         await manager.core.send('chat-codex', 'hello there');
         await waitFor(() => recorder.idle, 'the Codex turn to end');
-        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: hello there (medium)']);
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: hello there (low)']);
         expect(manager.core.get('chat-codex')?.pid).toBeGreaterThan(0);
 
         await manager.core.send('chat-codex', 'crash');

@@ -176,7 +176,7 @@ describe('ChatManager with Codex', () => {
     test('finds image support on a later model page and tolerates older metadata without modalities', async () => {
         modelPage = (params) =>
             params.cursor === 'next'
-                ? { data: [{ model: 'gpt-6-astra', inputModalities: ['text'] }], nextCursor: null }
+                ? { data: [{ model: 'gpt-6.2-astra', inputModalities: ['text'] }], nextCursor: null }
                 : { data: [{ model: 'other', inputModalities: ['text', 'image'] }], nextCursor: 'next' };
         await open('chat-paged');
         await manager.core.send('chat-paged', 'Look', {}, [png]);
@@ -204,7 +204,7 @@ describe('ChatManager with Codex', () => {
             running: false,
             status: 'idle',
             agentSessionId: null,
-            selection: { model: 'gpt-6-astra', options: { effort: 'medium' } },
+            selection: { model: 'gpt-6.2-astra', options: { effort: 'low' } },
             usage: { contextWindow: 258400 }
         });
         expect(codex.started).toHaveLength(0);
@@ -216,16 +216,16 @@ describe('ChatManager with Codex', () => {
         await recorder.untilIdle();
 
         expect(recorder.ofKind('user').map((item) => item.text)).toEqual(['hello there']);
-        expect(recorder.deltas).toBe('echo: hello there (medium)');
+        expect(recorder.deltas).toBe('echo: hello there (low)');
         const assistant = recorder.ofKind('assistant');
         expect(assistant).toHaveLength(1);
-        expect(assistant[0]).toMatchObject({ text: 'echo: hello there (medium)', streaming: false });
+        expect(assistant[0]).toMatchObject({ text: 'echo: hello there (low)', streaming: false });
         const turn = recorder.ofKind('turn')[0];
         expect(turn).toMatchObject({ state: 'done' });
         expect(assistant[0]?.turnId).toBe(turn?.id ?? '');
         // Full access maps to a "never ask" sandbox with full access, which the fake echoes back as the model string.
         expect(recorder.info).toMatchObject({
-            model: 'gpt-6-astra never danger-full-access',
+            model: 'gpt-6.2-astra never danger-full-access',
             usage: { turns: 1, contextTokens: 25090, contextWindow: 258400 }
         });
         expect(recorder.info?.agentSessionId?.startsWith('fake-')).toBe(true);
@@ -408,7 +408,7 @@ describe('ChatManager with Codex', () => {
 
         await manager.core.send('chat-background-reply', 'second');
         await recorder.until(() => recorder.info?.usage.contextTokens === 25092);
-        expect(recorder.ofKind('assistant').at(-1)).toMatchObject({ text: 'echo: second (medium)', streaming: false });
+        expect(recorder.ofKind('assistant').at(-1)).toMatchObject({ text: 'echo: second (low)', streaming: false });
         expect(recorder.info).toMatchObject({ status: 'idle', activeTurnId: null });
         expect(recorder.ofKind('turn').at(-1)?.state).toBe('done');
 
@@ -487,14 +487,14 @@ describe('ChatManager with Codex', () => {
             selection: { model: 'sol', options: { effort: 'xhigh' } },
             runtimeMode: 'supervised'
         });
-        expect(info).toMatchObject({ selection: { model: 'gpt-6.1-sol', options: { effort: 'xhigh' } }, runtimeMode: 'supervised' });
+        expect(info).toMatchObject({ selection: { model: 'gpt-6.2-sol', options: { effort: 'xhigh' } }, runtimeMode: 'supervised' });
         expect(manager.core.configure({ chatId: 'chat-c', runtimeMode: 'supervised' })).toBe(info);
 
         await manager.core.send('chat-c', 'again');
         await recorder.until(() => recorder.info?.usage.turns === 2 && recorder.idle);
         expect(recorder.info?.agentSessionId).toBe(threadId ?? null);
-        expect(recorder.info?.model).toBe('gpt-6.1-sol untrusted read-only');
-        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: first (medium)', 'echo: again (xhigh)']);
+        expect(recorder.info?.model).toBe('gpt-6.2-sol untrusted read-only');
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: first (low)', 'echo: again (xhigh)']);
         expect(codex.started).toHaveLength(2);
         expect(await codex.started[0]!.exited).toBe(0);
     });
@@ -537,7 +537,7 @@ describe('ChatManager with Codex', () => {
         // `thread/resume` hands the fake its old id back; `thread/start` makes a new one.
         expect(recorder.info?.agentSessionId?.startsWith('fake-')).toBe(true);
         expect(recorder.info?.agentSessionId).not.toBe(threadId);
-        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: second (medium)']);
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: second (low)']);
     });
 
     test('a client opening an agent before its outbox start keeps the requested model', async () => {
@@ -654,7 +654,7 @@ describe('ChatManager with Codex', () => {
         await recorder.untilIdle();
         expect(recorder.ofKind('note')[0]).toMatchObject({ level: 'warning', text: expect.stringContaining('could not resume') });
         expect(recorder.info?.agentSessionId?.startsWith('fake-')).toBe(true);
-        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: hi (medium)']);
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: hi (low)']);
     });
 
     test('a turn over the usage limit or on an overloaded server ends in an error that names it', async () => {
@@ -685,7 +685,7 @@ describe('ChatManager with Codex', () => {
         expect(recorder.ofKind('turn')[0]?.state).toBe('error');
         await manager.core.send('chat-f', 'again');
         await recorder.until(() => recorder.info?.usage.turns === 2 && recorder.idle);
-        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: again (medium)']);
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: again (low)']);
     });
 
     test('an app-server that dies mid-turn leaves an error note and the chat can go on', async () => {
@@ -697,7 +697,7 @@ describe('ChatManager with Codex', () => {
 
         await manager.core.send('chat-6', 'again');
         await recorder.untilIdle();
-        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: again (medium)']);
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: again (low)']);
     });
 
     test('a binary that will not start ends the turn with the spawn error', async () => {
@@ -737,7 +737,7 @@ describe('ChatManager with Codex', () => {
 
             await manager.core.send('chat-name', 'hello there');
             await recorder.until(() => recorder.info?.suggestedTitle === 'Greeting the fake');
-            expect(asked).toEqual([{ prompt: 'hello there', answer: 'echo: hello there (medium)' }]);
+            expect(asked).toEqual([{ prompt: 'hello there', answer: 'echo: hello there (low)' }]);
 
             // The app-server was told the same name, which is what its thread list and a resume carry.
             await recorder.untilIdle();

@@ -30,7 +30,7 @@ describe('agent model selection', () => {
     test('a model alias selects that model for a chat, including its defaults', async () => {
         const result = await fx.invoke('agent_start', { cli: 'codex', model: 'sol', prompt: 'implement' });
         expect(result.status).toBe(200);
-        expect(fx.started[0]?.selection).toEqual({ model: 'gpt-6.1-sol', options: { effort: 'medium', serviceTier: false } });
+        expect(fx.started[0]?.selection).toEqual({ model: 'gpt-6.2-sol', options: { effort: 'low', serviceTier: false } });
     });
 
     test('unknown and terminal models refuse before creating nodes, also in a dry run', async () => {
@@ -38,7 +38,7 @@ describe('agent model selection', () => {
         for (const tail of [{}, { dry_run: true }]) {
             const unknown = await fx.invoke('agent_start', { cli: 'codex', model: 'missing', ...tail });
             expect(unknown.lines[0]).toStartWith('refused\tunknown-model\t');
-            expect(unknown.lines.some((line) => line.includes('gpt-6.1-sol'))).toBe(true);
+            expect(unknown.lines.some((line) => line.includes('gpt-6.2-sol'))).toBe(true);
             const terminal = await fx.invoke('agent_start', { cli: 'codex', terminal: true, model: 'sol', ...tail });
             expect(terminal.lines[0]).toStartWith('refused\tmodel-needs-chat\t');
         }
@@ -57,13 +57,13 @@ describe('agent model selection', () => {
         expect((await fx.onDisk()).rev).toBe(before.rev);
         expect(fx.started).toEqual([]);
         expect((await fx.invoke('agent_team', { label: 'Team', roles: JSON.stringify(roles) })).status).toBe(200);
-        expect(fx.started.map((start) => start.selection?.model)).toEqual(['gpt-6.1-sol', 'gpt-6-astra']);
+        expect(fx.started.map((start) => start.selection?.model)).toEqual(['gpt-6.2-sol', 'gpt-6.2-astra']);
     });
 
     test('effort with model starts that model at that effort', async () => {
         const result = await fx.invoke('agent_start', { cli: 'codex', model: 'astra', effort: 'high', prompt: 'research' });
         expect(result.status).toBe(200);
-        expect(fx.started[0]?.selection).toEqual({ model: 'gpt-6-astra', options: { effort: 'high', serviceTier: false } });
+        expect(fx.started[0]?.selection).toEqual({ model: 'gpt-6.2-astra', options: { effort: 'high', serviceTier: false } });
     });
 
     test("effort without model keeps the person's model and its other options", async () => {
@@ -74,26 +74,26 @@ describe('agent model selection', () => {
 
     test("effort without model or a preference applies to the provider's default model", async () => {
         expect((await fx.invoke('agent_start', { cli: 'codex', effort: 'ultra' })).status).toBe(200);
-        expect(fx.started[0]?.selection).toEqual({ model: 'gpt-6-astra', options: { effort: 'ultra', serviceTier: false } });
+        expect(fx.started[0]?.selection).toEqual({ model: 'gpt-6.2-astra', options: { effort: 'ultra', serviceTier: false } });
     });
 
     test("model without effort carries the person's last effort when the new model offers it, and nothing else", async () => {
         fx.knobs.preferredSelections = { codex: { model: 'gpt-6-astra', options: { effort: 'high', serviceTier: true } } };
         await fx.invoke('agent_start', { cli: 'codex', model: 'sol' });
         fx.knobs.preferredSelections = { codex: { model: 'gpt-6-astra', options: { effort: 'ultra', serviceTier: false } } };
-        await fx.invoke('agent_start', { cli: 'codex', model: 'sol' });
+        await fx.invoke('agent_start', { cli: 'codex', model: 'luna' });
         expect(fx.started.map((start) => start.selection)).toEqual([
-            { model: 'gpt-6.1-sol', options: { effort: 'high', serviceTier: false } },
-            { model: 'gpt-6.1-sol', options: { effort: 'medium', serviceTier: false } }
+            { model: 'gpt-6.2-sol', options: { effort: 'high', serviceTier: false } },
+            { model: 'gpt-6-luna', options: { effort: 'medium', serviceTier: false } }
         ]);
     });
 
     test('an effort the model lacks, a model without effort and a terminal refuse before creating nodes', async () => {
         const before = await fx.onDisk();
         for (const tail of [{}, { dry_run: true }]) {
-            const unknown = await fx.invoke('agent_start', { cli: 'codex', model: 'sol', effort: 'ultra', ...tail });
-            expect(unknown.lines[0]).toBe('refused\tunknown-choice\tultra is no reasoning effort of gpt-6.1-sol; it takes low, medium, high, xhigh, max');
-            expect(unknown.lines).toContain('model\tcodex\tgpt-6.1-sol\tGPT-6.1 Sol\teffort low, medium, high, xhigh, max, default medium');
+            const unknown = await fx.invoke('agent_start', { cli: 'codex', model: 'luna', effort: 'ultra', ...tail });
+            expect(unknown.lines[0]).toBe('refused\tunknown-choice\tultra is no reasoning effort of gpt-6-luna; it takes low, medium, high, xhigh, max');
+            expect(unknown.lines).toContain('model\tcodex\tgpt-6-luna\tGPT-6 Luna\teffort low, medium, high, xhigh, max, default medium');
             const none = await fx.invoke('agent_start', { cli: 'claude', model: 'claude-haiku-4-5', effort: 'high', ...tail });
             expect(none.lines[0]).toStartWith('refused\tno-effort\t');
             const terminal = await fx.invoke('agent_start', { cli: 'codex', terminal: true, effort: 'high', ...tail });
@@ -106,7 +106,7 @@ describe('agent model selection', () => {
     test('each team role can choose its own effort, and a wrong one names the role', async () => {
         const roles = [
             { title: 'Research', prompt: 'research', provider: 'codex', model: 'astra', effort: 'high' },
-            { title: 'Build', prompt: 'build', provider: 'codex', model: 'sol', effort: 'medium' }
+            { title: 'Build', prompt: 'build', provider: 'codex', model: 'luna', effort: 'medium' }
         ];
         const invalid = await fx.invoke('agent_team', { label: 'Team', roles: JSON.stringify([...roles, { ...roles[1], effort: 'ultra' }]) });
         expect(invalid.lines[0]).toStartWith('refused\tunknown-choice\trole 2 (effort):');
