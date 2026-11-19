@@ -82,9 +82,7 @@ export function TerminalPane() {
                             onValueChange={(value) => update({ fontSize: value })}
                         />
                     }
-                >
-                    <TerminalPreview fontSize={fontSize} fontFamily={monoFontStack(previewFont)} />
-                </SettingsRow>
+                />
                 <SettingsRow
                     searchId="terminal.font.lineHeight"
                     label={t('terminal.font.lineHeight.label')}
@@ -101,6 +99,10 @@ export function TerminalPane() {
                         />
                     }
                 />
+                {/* Under every font row, since the family and the size both change it. */}
+                <div className="px-4.5 py-3.5">
+                    <TerminalPreview fontSize={fontSize} fontFamily={monoFontStack(previewFont)} />
+                </div>
             </SettingsSection>
             <SettingsSection title={t('terminal.links.title')}>
                 <SettingsRow
