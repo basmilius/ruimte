@@ -93,13 +93,21 @@ const countdowns = [
     29_999,
     30_000,
     9 * MINUTE,
+    59 * MINUTE + 29_999,
+    59 * MINUTE + 30_000,
     HOUR - 1,
     HOUR,
+    4 * HOUR + 59 * MINUTE + 40_000,
+    5 * HOUR,
     12 * HOUR + 8 * MINUTE,
+    23 * HOUR + 59 * MINUTE + 29_999,
+    23 * HOUR + 59 * MINUTE + 40_000,
     DAY - 1,
     DAY,
     4 * DAY + 3 * HOUR,
     4 * DAY + 11.5 * HOUR,
+    6 * DAY + 23 * HOUR + 40 * MINUTE,
+    7 * DAY,
     30 * DAY
 ];
 const clocks = [-1000, 0, 400, 999, 1000, 14_900, 59_999, 3_599_999, HOUR + 2 * MINUTE + 3000, 100 * HOUR];

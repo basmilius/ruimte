@@ -135,17 +135,19 @@ public enum Format {
     /// How long a window still has, tight enough for the end of a bar: `4d 3h`, `12h 8m`, `9m`.
     public static func countdown(milliseconds: Double, in locale: FormatLocale = .current) -> String {
         let left = max(0, milliseconds)
-        if left >= day {
-            let days = (left / day).rounded(.down)
-            return
-                "\(number(days, in: locale))d \(number((left.truncatingRemainder(dividingBy: day)) / hour, in: locale))h"
+        // Rounded once before it splits, so a rest that rounds up carries into the unit above: `5h`, never `4h 60m`.
+        let minutes = max(1, Int((left / minute + 0.5).rounded(.down)))
+        let write = { (value: Int) in number(Double(value), in: locale) }
+        if minutes >= 24 * 60 {
+            let hours = Int((left / hour + 0.5).rounded(.down))
+            let days = "\(write(hours / 24))d"
+            return hours % 24 == 0 ? days : "\(days) \(write(hours % 24))h"
         }
-        if left >= hour {
-            let hours = (left / hour).rounded(.down)
-            let minutes = left.truncatingRemainder(dividingBy: hour) / minute
-            return "\(number(hours, in: locale))h \(number(minutes, in: locale))m"
+        if minutes >= 60 {
+            let hours = "\(write(minutes / 60))h"
+            return minutes % 60 == 0 ? hours : "\(hours) \(write(minutes % 60))m"
         }
-        return "\(number(max(1, (left / minute + 0.5).rounded(.down)), in: locale))m"
+        return "\(write(minutes))m"
     }
 
     /// How long something has been running, to two units: `12s`, `2m 5s`, `3h 20m`. A call that took a fraction of
