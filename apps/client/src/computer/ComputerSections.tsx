@@ -1,7 +1,6 @@
 import { Switch, Button, ErrorBoundary, FormError } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import type { ComputerGrant } from '@ruimte/contracts';
-import { MousePointer2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ComputerAppGrants } from '@/computer/ComputerAppGrants';
@@ -45,7 +44,7 @@ function ThisMacUnavailable() {
     const { t } = useTranslation('settings');
     const [confirming, setConfirming] = useState(false);
     return (
-        <SettingsSection title={t('computer.title')} description={t('computer.description')} icon={MousePointer2}>
+        <SettingsSection title={t('computer.title')} description={t('computer.description')}>
             <SettingsRow
                 searchId="computer.enable"
                 muted
@@ -73,7 +72,7 @@ function ComputerMachine({ endpoint, first }: { endpoint: Endpoint; first: boole
 
     return (
         <>
-            <SettingsSection title={t('computer.title')} description={t('computer.description')} icon={MousePointer2}>
+            <SettingsSection title={t('computer.title')} description={t('computer.description')}>
                 <SettingsRow
                     searchId={first ? 'computer.enable' : undefined}
                     label={t('computer.enable', { machine: endpoint.label })}

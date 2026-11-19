@@ -2,7 +2,7 @@ import { Button, ErrorBoundary, SegmentBar } from '@adecore/ui';
 import { formatBytes } from '@adecore/ui/format';
 import { SettingsRow, TopIcon } from '@adecore/ui/settings';
 import type { ArtifactCleanupProposal, ArtifactStorageResult } from '@ruimte/contracts';
-import { CircleAlert, Eraser, Folder, Package, Trash2 } from 'lucide-react';
+import { CircleAlert, Trash2 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
@@ -112,7 +112,7 @@ function StorageSections({ endpoint }: { endpoint: Endpoint }) {
     const reading = useStorage(endpoint.id, attempt);
     const machine = endpoint.label;
     const outputSection = (children: ReactNode) => (
-        <SettingsSection title={t('storage.output.title')} description={t('storage.output.description')} icon={Package}>
+        <SettingsSection title={t('storage.output.title')} description={t('storage.output.description')}>
             {children}
         </SettingsSection>
     );
@@ -186,7 +186,7 @@ function Proposals({
     const close = (): void => setReview(review === null ? null : { ...review, open: false });
     const shown = proposals.filter((proposal) => !deferred.has(endpointKey(endpointId, proposal.id)));
     return (
-        <SettingsSection title={t('storage.cleanup.title')} description={t('storage.cleanup.description')} icon={Eraser}>
+        <SettingsSection title={t('storage.cleanup.title')} description={t('storage.cleanup.description')}>
             {shown.length === 0 ? (
                 <SettingsRow searchId="machines.machine.storage.cleanup" muted label={t('storage.cleanup.nothing')} />
             ) : (
@@ -237,7 +237,6 @@ function ByProject({ endpointId, machine, projects }: { endpointId: string; mach
     return (
         <SettingsSection
             title={t('storage.projects.title')}
-            icon={Folder}
             footer={
                 <>
                     {t('storage.projects.footer')}

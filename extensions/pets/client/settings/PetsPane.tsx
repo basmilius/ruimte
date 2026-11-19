@@ -1,6 +1,6 @@
 import { useLocale, useProviders } from '@ruimte/extension/client';
 import { Button, Icon, IconButton, Select, SettingsRow, SettingsSection, Switch } from '@ruimte/extension/ui';
-import { Activity, Bot, ImageUp, MapPin, PawPrint, Pencil, Shapes, Trash2 } from 'lucide-react';
+import { ImageUp, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { BEAM_SETTINGS } from '../beam';
 import { EXTRA_FIGURES, packFigures } from '../catalog';
@@ -175,10 +175,10 @@ export default function PetsPane() {
     return (
         <>
             <PetsPreview />
-            <SettingsSection title={t('pets.title')} icon={PawPrint}>
+            <SettingsSection title={t('pets.title')}>
                 <PetSwitchRow id="pets.enabled" setting="pets" />
             </SettingsSection>
-            <SettingsSection title={t('pets.groups.place')} icon={MapPin}>
+            <SettingsSection title={t('pets.groups.place')}>
                 <SettingsRow
                     searchId="pets.place"
                     label={t('pets.place.label')}
@@ -195,7 +195,7 @@ export default function PetsPane() {
                 />
                 <PetSwitchRow id="pets.inViews" setting="petsInViews" />
             </SettingsSection>
-            <SettingsSection title={t('pets.groups.show')} icon={Activity}>
+            <SettingsSection title={t('pets.groups.show')}>
                 <PetSwitchRow id="pets.subagents" setting="petsSubagents" leading={<SubagentsTile />} />
                 <PetSwitchRow id="pets.visitor" setting="petsVisitor" leading={<VisitorTile />} />
                 <SettingsRow
@@ -214,7 +214,7 @@ export default function PetsPane() {
                     }
                 />
             </SettingsSection>
-            <SettingsSection title={t('pets.sprite.label')} icon={Shapes}>
+            <SettingsSection title={t('pets.sprite.label')}>
                 <SettingsRow searchId="pets.sprite" label={t('pets.sprite.label')} description={t('pets.sprite.description')}>
                     <table className="w-full">
                         <caption className="sr-only">{t('pets.sprite.label')}</caption>
@@ -282,7 +282,7 @@ export default function PetsPane() {
                     }
                 />
             </SettingsSection>
-            <SettingsSection title={t('pets.agents.title')} icon={Bot}>
+            <SettingsSection title={t('pets.agents.title')}>
                 <AgentFigures sprites={sprites} />
             </SettingsSection>
             <PetFigureDialog key={edit?.round ?? 0} edit={edit} onClose={() => setEdit(edit === null ? null : { ...edit, open: false })} onSaved={saved} />

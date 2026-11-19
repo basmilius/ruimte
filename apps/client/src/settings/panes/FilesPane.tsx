@@ -1,6 +1,5 @@
 import { Segmented, Stepper } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
-import { Folder, FolderGit2, GitBranch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { WorktreeFolderRow } from '@/machine-ui/MachineSettings';
 import { SettingsSection } from '@/machines/SettingsSection';
@@ -18,7 +17,7 @@ export function FilesPane() {
 
     return (
         <>
-            <SettingsSection title={t('files.files.title')} icon={Folder}>
+            <SettingsSection title={t('files.files.title')}>
                 <SettingsRow
                     searchId="files.files.openFiles"
                     label={t('files.files.openFiles.label')}
@@ -36,7 +35,7 @@ export function FilesPane() {
                 />
                 <SettingSwitchRow id="files.files.hidden" setting="filesShowHidden" />
             </SettingsSection>
-            <SettingsSection title={t('files.git.title')} icon={GitBranch}>
+            <SettingsSection title={t('files.git.title')}>
                 <SettingsRow
                     searchId="files.git.layout"
                     label={t('files.git.layout.label')}
@@ -71,7 +70,7 @@ function WorktreeSection() {
     }
 
     return (
-        <SettingsSection title={t('machineDialog.worktrees')} icon={FolderGit2} scope="computer">
+        <SettingsSection title={t('machineDialog.worktrees')} scope="computer">
             <WorktreeFolderRow endpoint={local} reason={connection.status === 'open' ? null : t('machineDialog.availableWhenAnswering')} />
         </SettingsSection>
     );

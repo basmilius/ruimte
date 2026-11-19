@@ -3,7 +3,6 @@ import { Button, FormError, Switch, Select, type SelectItem, messageOf } from '@
 import { formatPercent } from '@adecore/ui/format';
 import { SettingsRow } from '@adecore/ui/settings';
 import { CLOSED_LID_BATTERY_FLOOR, type RuntimeMode } from '@ruimte/contracts';
-import { BatteryCharging } from 'lucide-react';
 import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { ComputerSections } from '@/computer/ComputerSections';
@@ -110,7 +109,7 @@ function WorkingSection() {
     }
 
     return (
-        <SettingsSection title={t('agents.working.title')} description={t('agents.working.description')} icon={BatteryCharging} scope="computer">
+        <SettingsSection title={t('agents.working.title')} description={t('agents.working.description')} scope="computer">
             <SettingsRow
                 searchId="agents.keepAwake.mode"
                 label={t('agents.keepAwake.mode.label')}

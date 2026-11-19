@@ -74,7 +74,8 @@ function WindowMachineName() {
     return <MachineName id={useEndpointId()} />;
 }
 
-type SettingsSectionProps = Omit<SectionProps, 'tag'> & {
+// No icon before a title: Ruimte's settings sections read as one list, never as kinds of thing.
+type SettingsSectionProps = Omit<SectionProps, 'tag' | 'icon'> & {
     scope?: SettingsScope;
     /* For `machine`: `picked` follows the machine picked in the tag, the one all such sections share. Without it the section is about the machine of this window. */
     machine?: 'picked';

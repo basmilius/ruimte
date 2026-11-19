@@ -2,7 +2,6 @@ import { Button, DisabledReason, Field, Input } from '@adecore/ui';
 import { formatNumber, useFormatLocale } from '@adecore/ui/format';
 import { SettingsRow, TopIcon } from '@adecore/ui/settings';
 import { NODE_SIZE, NODE_SIZE_MAX, NODE_SIZE_MIN, NodeKindSchema, type NodeKind, type NodeSize } from '@ruimte/contracts';
-import { Scaling } from 'lucide-react';
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatNodeSize, setDefaultSize } from '@/canvas/default-size';
@@ -175,7 +174,7 @@ export function NodeSizeSection() {
     }
 
     return (
-        <SettingsSection title={t('views.nodeSizes.title')} description={t('views.nodeSizes.description')} icon={Scaling} scope="machine" machine="picked">
+        <SettingsSection title={t('views.nodeSizes.title')} description={t('views.nodeSizes.description')} scope="machine" machine="picked">
             {/* The section stays, so its picker can go back to a machine that did answer. */}
             {sizes === undefined && <SettingsRow searchId={SEARCH_ID} muted label={t('views.nodeSizes.unknown', { machine: endpoint.label })} />}
             {sizes !== undefined &&
