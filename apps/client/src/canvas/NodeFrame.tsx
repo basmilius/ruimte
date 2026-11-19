@@ -548,7 +548,8 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                     <div
                         data-node-body
                         className={clsx(
-                            'relative min-h-0',
+                            // isolate: a body's own z-indexes, like a chat's composer at z-10, stay under the size readout.
+                            'relative isolate min-h-0',
                             folded ? 'shrink-0' : 'grow',
                             // A thread reads at the node's own 14px, over the 22px a chat gives its prose.
                             kind?.bodyClass
