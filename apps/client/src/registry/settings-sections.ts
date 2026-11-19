@@ -13,7 +13,7 @@ export interface SettingsSearchRow {
     readonly available?: () => boolean;
 }
 
-/* A row whose id is also where its words sit, under `settings:<id>.label` and `.description`, in the pane its id starts with. */
+/* A row whose id is also where its words sit, under `settings:<id>.label` and `.description`. */
 export function settingsRow(id: `${string}.${string}`, available?: () => boolean): SettingsSearchRow {
     return {
         id,
@@ -33,6 +33,9 @@ export type SettingsSlot = 'general' | 'workspace' | 'ai' | 'footer' | 'account'
 export interface SettingsSectionDefinition {
     readonly id: string;
     readonly slot: SettingsSlot;
+
+    /* Drawn as a tab of that section rather than in the navigation, after its own pane and the tabs registered before it. */
+    readonly tabOf?: string;
     readonly icon: LucideIcon;
     readonly split?: boolean;
     /* Read when a section is drawn, never at module level: the translations are not in yet while this file loads. */

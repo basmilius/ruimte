@@ -608,11 +608,15 @@
     "sections": {
         "general": {
             "label": "Algemeen",
-            "description": "Taal, regio, projecten en vensters."
+            "description": "Taal, uiterlijk, meldingen en vensters."
         },
         "appearance": {
             "label": "Uiterlijk",
             "description": "Thema, kleuren, lettertypen en panelen."
+        },
+        "notifications": {
+            "label": "Meldingen",
+            "description": "Geluiden, stille uren en pauzeherinneringen."
         },
         "keyboard": {
             "label": "Toetsenbord",
@@ -640,7 +644,11 @@
         },
         "agents": {
             "label": "Agents",
-            "description": "Waarmee nieuwe agents beginnen en wat ze mogen."
+            "description": "Waarmee agents en chats beginnen, wat ze mogen en wie ze bereikt."
+        },
+        "mcp": {
+            "label": "MCP",
+            "description": "Clients elders die de MCP van Ruimte gebruiken."
         },
         "tunnels": {
             "label": "Tunnels",
@@ -1260,9 +1268,6 @@
             "description": "Voor elke agent. Model en account per agent kies je onder <link>Providers</link>.",
             "permissions": "Permissies",
             "terminalMode": "Terminal-agents starten in"
-        },
-        "notifications": {
-            "title": "Meldingen"
         },
         "views": {
             "title": "Weergaven"
@@ -2270,5 +2275,14 @@
         "builtIn": "Ingebouwd",
         "development": "Ontwikkeling",
         "fromDiskBadge": "Van schijf"
+    },
+    "mcp": {
+        "elsewhere": "Stel de MCP in de app op die machine in.",
+        "outside": {
+            "label": "Van buiten deze machine",
+            "through": "Via https://{{hostname}}/mcp, op je tunnel.",
+            "none": "Voeg onder Tunnels een hostname voor de MCP van Ruimte toe.",
+            "open": "Tunnels openen"
+        }
     }
 }

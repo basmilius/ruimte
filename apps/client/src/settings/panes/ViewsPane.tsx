@@ -7,6 +7,7 @@ import { RENDER_DISTANCES } from '@/canvas-model/render-distance';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { NodeSizeSection } from '@/settings/NodeSizeSection';
+import { PaneTabs } from '@/settings/PaneTabs';
 import { useSettings } from '@/state/settings';
 import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
 
@@ -140,7 +141,7 @@ export function ViewsPane() {
 
     return (
         <>
-            <Segmented value={tab} options={tabs.map((id) => ({ id, label: t(`views.${id}.title`) }))} label={t('views.tabs')} onValueChange={setTab} />
+            <PaneTabs value={tab} tabs={tabs.map((id) => ({ id, label: t(`views.${id}.title`) }))} label={t('views.tabs')} onValueChange={setTab} />
             {tab === 'canvas' && <CanvasTab />}
             {tab === 'drawing' && <DrawingTab />}
             {tab === 'browser' && (

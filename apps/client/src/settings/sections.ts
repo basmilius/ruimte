@@ -29,8 +29,26 @@ function metaOf(definition: SettingsSectionDefinition): SettingsSectionMeta {
 function inSlot(slot: SettingsSlot): SettingsSectionMeta[] {
     return settingsSectionRegistry
         .all()
-        .filter((definition) => definition.slot === slot)
+        .filter((definition) => definition.slot === slot && definition.tabOf === undefined)
         .map(metaOf);
+}
+
+/* The section the navigation shows for one: the section a tab section is drawn in, or the section itself. */
+export function navSectionOf(id: SettingsSectionId): SettingsSectionId {
+    return settingsSectionRegistry.find(id)?.tabOf ?? id;
+}
+
+/* The tabs of a section in the navigation, its own pane first; none for a section without tab sections. */
+export function tabSectionsOf(id: SettingsSectionId): readonly SettingsSectionDefinition[] {
+    const own = settingsSectionRegistry.find(id);
+    const tabs = settingsSectionRegistry.all().filter((definition) => definition.tabOf === id);
+
+    return own === undefined || tabs.length === 0 ? [] : [own, ...tabs];
+}
+
+/* The section whose pane draws a row, so a search result opens the tab that holds it. */
+export function sectionOfRow(rowId: string): SettingsSectionId | null {
+    return settingsSectionRegistry.all().find((definition) => definition.rows.some((row) => row.id === rowId))?.id ?? null;
 }
 
 export function aboutSection(): SettingsSectionMeta {
@@ -59,10 +77,12 @@ export function settingsGroupsWith(contributed: readonly SettingsSectionContribu
     });
 }
 
+/* Every section, a tab section right after the section it is drawn in. */
 export function allSettingsSections(): readonly SettingsSectionMeta[] {
     const contributed = useContributions.getState().settingsSections;
+    const inNavigation = [...settingsGroupsWith(contributed).flatMap((group) => group.sections), aboutSection(), accountSection()];
 
-    return [...settingsGroupsWith(contributed).flatMap((group) => group.sections), aboutSection(), accountSection()];
+    return inNavigation.flatMap((meta) => [meta, ...tabSectionsOf(meta.id).slice(1).map(metaOf)]);
 }
 
 function contributedSection(id: SettingsSectionId): SettingsSectionContribution | undefined {

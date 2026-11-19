@@ -36,8 +36,8 @@ async function pick(option: string): Promise<void> {
     await clickOn([...document.querySelectorAll('[role="option"]')].find((row) => row.textContent?.includes(option)) ?? null);
 }
 
-async function openAgents(): Promise<void> {
-    await act(async () => useUi.getState().setSettings({ open: true, section: 'agents', target: 'agents.sounds.pack' }));
+async function openNotifications(): Promise<void> {
+    await act(async () => useUi.getState().setSettings({ open: true, section: 'notifications', target: 'agents.sounds.pack' }));
     await until(() => everything().includes('Sound pack'));
 }
 
@@ -75,9 +75,9 @@ afterEach(async () => {
     });
 });
 
-describe('Settings > Agents > Notifications > Sounds', () => {
+describe('Settings > General > Notifications > Sounds', () => {
     test('every event is off until turned on, and a pack and an event stay chosen after the settings are read again', async () => {
-        await openAgents();
+        await openNotifications();
         expect(switchOf('A turn finishes')?.getAttribute('aria-checked')).toBe('false');
 
         await clickOn(buttonWithText('Bar'));
@@ -91,7 +91,7 @@ describe('Settings > Agents > Notifications > Sounds', () => {
     });
 
     test('the play button of a row plays that event in the chosen pack', async () => {
-        await openAgents();
+        await openNotifications();
         await clickOn(buttonWithText('Bar'));
         await pick('Grand');
         await clickOn(labelled('Play the sound for: A usage limit is hit'));
@@ -101,7 +101,7 @@ describe('Settings > Agents > Notifications > Sounds', () => {
     });
 
     test('a new pack takes a name and a file, and plays that file', async () => {
-        await openAgents();
+        await openNotifications();
         await clickOn(buttonWithText('Bar'));
         await pick('New pack');
         await until(() => labelled<HTMLInputElement>('Name of the pack') !== null);

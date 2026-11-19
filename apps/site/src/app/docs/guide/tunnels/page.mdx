@@ -1,5 +1,5 @@
 import { Note } from '@/components/docs/guide/ui.tsx';
-import { SettingsTunnels } from '@/components/docs/guide/SettingsTunnels.tsx';
+import { SettingsMcp, SettingsTunnels } from '@/components/docs/guide/SettingsTunnels.tsx';
 
 export const metadata = { title: 'Tunnels' };
 
@@ -64,8 +64,10 @@ If the hostname changed after the agent asked, the card says so and only **Decli
 
 ## Connect a bot to the MCP
 
-1. Under **External clients**, turn on **External MCP**. Ruimte listens on this machine only, at the address shown under the heading. A bot on the same computer uses it without a tunnel.
-2. To reach it from outside, add a **Ruimte MCP** hostname.
+<SettingsMcp />
+
+1. Open Settings, Agents, MCP, and turn on **External MCP**. Ruimte listens on this machine only, at the address shown under **External clients**. A bot on the same computer uses it without a tunnel.
+2. To reach it from outside, add a **Ruimte MCP** hostname under Settings, Tunnels. **Open Tunnels** on the MCP tab takes you there.
 3. Give the bot the address, ending in `/mcp`. **Copy address** in the hostname's menu copies it.
 
 A client that supports OAuth asks Ruimte for access. A window opens on your machine with the address the client comes from and a short code. The name the client gives itself is not verified, so trust the address. Check that the code matches the one on the client's page, choose what the client may do, and click **Approve**.
@@ -90,4 +92,4 @@ A client never types into a terminal, and a terminal's prompts stay where they a
 
 ## Keep an eye on clients
 
-Nothing expires unless you set an end, so check the table under **External clients** now and then. It shows each client's kind, reach, expiry and last use. **Revoke** in its menu ends access from the next request. Agents it already started keep running.
+Nothing expires unless you set an end, so check the table under Settings, Agents, MCP now and then. It shows each client's kind, reach, expiry and last use. **Revoke** in its menu ends access from the next request. Agents it already started keep running.

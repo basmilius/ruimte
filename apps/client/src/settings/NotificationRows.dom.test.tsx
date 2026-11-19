@@ -24,7 +24,7 @@ async function open(idleState: boolean): Promise<void> {
     installDesktop(idleState ? { idleState: async () => 'active' } : {});
     page = mount();
     await page.renderApp();
-    await act(async () => useUi.getState().setSettings({ open: true, section: 'agents', target: 'agents.quietHours' }));
+    await act(async () => useUi.getState().setSettings({ open: true, section: 'notifications', target: 'agents.quietHours' }));
     await until(() => everything().includes('Quiet hours'));
 }
 
@@ -48,7 +48,7 @@ afterEach(async () => {
     });
 });
 
-describe('Settings > Agents > Notifications > Quiet hours', () => {
+describe('Settings > General > Notifications > Quiet hours', () => {
     test('is off with no days or times until it is turned on', async () => {
         await open(false);
         expect(switchOf('Quiet hours')?.getAttribute('aria-checked')).toBe('false');
@@ -82,7 +82,7 @@ describe('Settings > Agents > Notifications > Quiet hours', () => {
     });
 });
 
-describe('Settings > Agents > Notifications > Break reminder', () => {
+describe('Settings > General > Notifications > Break reminder', () => {
     test('is not offered where the system cannot say whether a person is there', async () => {
         await open(false);
         expect(everything()).not.toContain('Break reminder');

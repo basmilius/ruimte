@@ -3,6 +3,13 @@ import { canTellIdle } from '@/desktop/bridge';
 import { settingsRow as row, type SettingsSearchRow } from '@/registry/settings-sections';
 import { hasOpenedMachine } from '@/state/local-machine';
 
+/* Drawn under General, Notifications; their words stay where they were. */
+export const NOTIFICATION_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
+    row('agents.sounds.pack'),
+    row('agents.quietHours'),
+    row('agents.breakReminder', canTellIdle)
+];
+
 export const AGENT_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
     { id: 'agents.defaults.permissions', section: 'agents', label: 'settings:agents.defaults.permissions' },
     row('agents.textModel', hasOpenedMachine),
@@ -10,9 +17,6 @@ export const AGENT_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
     row('agents.resumeAtReset'),
     row('agents.deleteAnyView'),
     row('agents.reachOpenProjects'),
-    row('agents.sounds.pack'),
-    row('agents.quietHours'),
-    row('agents.breakReminder', canTellIdle),
     row('agents.showViews'),
     {
         id: 'agents.keepAwake.mode',

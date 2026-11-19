@@ -2,19 +2,14 @@ import { ErrorBoundary, FormError, Spinner } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import type { TunnelState } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
-import { machineMode } from '@/desktop/bridge';
 import { usePickedMachine } from '@/machines/picked-machine';
 import { SettingsSection } from '@/machines/SettingsSection';
-import { LOCAL_ENDPOINT_ID, type Endpoint } from '@/state/endpoints';
+import type { Endpoint } from '@/state/endpoints';
 import { CloudflareRows } from '@/tunnels/CloudflareRows';
-import { CredentialsSection } from '@/tunnels/CredentialsSection';
 import { HostnamesSection } from '@/tunnels/HostnamesSection';
-import { useTunnels } from '@/tunnels/use-tunnels';
+import { useMachineTunnels } from '@/tunnels/use-machine-tunnels';
 
-/*
- * Reaching Ruimte's MCP and your dev servers from outside, through a tunnel on your own Cloudflare account. Only the
- * desktop app on the machine it runs manages them; any other window reads the state and changes nothing.
- */
+/* Reaching your dev servers and Ruimte's MCP from outside, through a tunnel on your own Cloudflare account. */
 export function TunnelsPane() {
     const { t } = useTranslation('settings');
     const endpoint = usePickedMachine();
@@ -32,19 +27,8 @@ export function TunnelsPane() {
 
 function TunnelsOf({ endpoint }: { endpoint: Endpoint }) {
     const { t } = useTranslation('settings');
-    const tunnels = useTunnels(endpoint.id);
-    const manages = endpoint.id === LOCAL_ENDPOINT_ID && machineMode() === 'local';
+    const { tunnels, manages, waiting, loading } = useMachineTunnels(endpoint, t('tunnels.elsewhere'));
     const { state } = tunnels;
-    const waiting = !tunnels.open
-        ? t('machine.notAnswering')
-        : !tunnels.answers
-          ? t('tunnels.update')
-          : state === null
-            ? t('tunnels.loading')
-            : !manages
-              ? t('tunnels.elsewhere')
-              : null;
-    const loading = tunnels.open && tunnels.answers && state === null;
     // Also while a stage failed: a refused change or a crashed child says so in the tunnel's line, and the hostnames stay.
     const linked = state !== null && state.tunnel !== null && state.hasToken;
 
@@ -58,9 +42,6 @@ function TunnelsOf({ endpoint }: { endpoint: Endpoint }) {
             {tunnels.failure !== null && <FormError>{tunnels.failure}</FormError>}
             {state !== null && manages && linked && (
                 <HostnamesSection state={state} endpointId={endpoint.id} change={tunnels.change} attempt={tunnels.attempt} />
-            )}
-            {state !== null && manages && (
-                <CredentialsSection endpointId={endpoint.id} state={state} credentials={tunnels.credentials} reload={tunnels.load} change={tunnels.change} />
             )}
         </>
     );

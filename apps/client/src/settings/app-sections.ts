@@ -1,6 +1,7 @@
 import { lazyNamed } from '@adecore/ui';
 import i18next from 'i18next';
-import { CodeXml, Folder, Info, Keyboard, LayoutGrid, Palette, Settings, SquareTerminal } from 'lucide-react';
+import { Bell, CodeXml, Folder, Info, Keyboard, LayoutGrid, Palette, Settings, SquareTerminal } from 'lucide-react';
+import { NOTIFICATION_SETTINGS_ROWS } from '@/agents/settings-rows';
 import type { SettingsSectionDefinition } from '@/registry/settings-sections';
 import { APP_SETTINGS_ROWS } from '@/settings/app-rows';
 
@@ -22,11 +23,22 @@ export const APP_SETTINGS_SECTIONS: readonly SettingsSectionDefinition[] = [
     {
         id: 'appearance',
         slot: 'general',
+        tabOf: 'general',
         icon: Palette,
         label: () => i18next.t('settings:sections.appearance.label'),
         description: () => i18next.t('settings:sections.appearance.description'),
         pane: lazyNamed(() => import('@/settings/panes/AppearancePane'), 'AppearancePane'),
         rows: rowsOf('appearance')
+    },
+    {
+        id: 'notifications',
+        slot: 'general',
+        tabOf: 'general',
+        icon: Bell,
+        label: () => i18next.t('settings:sections.notifications.label'),
+        description: () => i18next.t('settings:sections.notifications.description'),
+        pane: lazyNamed(() => import('@/settings/panes/NotificationsPane'), 'NotificationsPane'),
+        rows: NOTIFICATION_SETTINGS_ROWS
     },
     {
         id: 'keyboard',

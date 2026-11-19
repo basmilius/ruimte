@@ -242,7 +242,7 @@ export function openReference(endpointId: string, id: string): void {
     void openProject(endpointId, elsewhere.project.projectId).then(() => openHere(id));
 }
 
-/* An external MCP client that sent a message: Tunnels lists it, and only this machine's settings show its Tunnels. */
+/* An external MCP client that sent a message: the MCP tab lists it, and only this machine's settings show its clients. */
 export function outsideReference(endpointId: string, id: string): OutsideReference | null {
     if (!isExternalActor(id)) {
         return null;
@@ -250,7 +250,7 @@ export function outsideReference(endpointId: string, id: string): OutsideReferen
 
     return {
         icon: Plug,
-        open: isThisMachine(endpointId) ? () => useUi.getState().setSettings({ open: true, section: 'tunnels', target: 'tunnels.mcp' }) : null
+        open: isThisMachine(endpointId) ? () => useUi.getState().setSettings({ open: true, section: 'mcp', target: 'tunnels.mcp' }) : null
     };
 }
 

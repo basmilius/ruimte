@@ -5,6 +5,7 @@ import { MasterDetail, MasterItem, SettingsRow, SettingsSection } from '@adecore
 import {
     Bot,
     Brain,
+    Cable,
     CalendarCheck,
     ChartNoAxesColumn,
     ChevronDown,
@@ -14,9 +15,7 @@ import {
     Info,
     Keyboard,
     LayoutGrid,
-    MessagesSquare,
     Mic,
-    Palette,
     Puzzle,
     Search,
     Server,
@@ -39,7 +38,6 @@ const NAV: readonly { readonly label: string | null; readonly items: readonly (r
         label: null,
         items: [
             [Settings, 'General'],
-            [Palette, 'Appearance'],
             [Keyboard, 'Keyboard']
         ]
     },
@@ -50,6 +48,7 @@ const NAV: readonly { readonly label: string | null; readonly items: readonly (r
             [CodeXml, 'Editor'],
             [SquareTerminal, 'Terminal'],
             [Folder, 'Files and Git'],
+            [Cable, 'Tunnels'],
             [Puzzle, 'Extensions']
         ]
     },
@@ -57,7 +56,6 @@ const NAV: readonly { readonly label: string | null; readonly items: readonly (r
         label: 'AI',
         items: [
             [Brain, 'Providers'],
-            [MessagesSquare, 'Chats'],
             [Bot, 'Agents'],
             [Mic, 'Voice'],
             [ChartNoAxesColumn, 'Usage']

@@ -4,9 +4,21 @@ import { useTranslation } from 'react-i18next';
 import { AccountTab } from '@/machine-ui/AccountTab';
 import { settingsSectionRegistry } from '@/registry/settings-sections';
 import { findSettings } from '@/settings/find-settings';
-import { aboutSection, accountSection, groupLabel, sectionDescription, sectionLabel, settingsGroupsWith, type SettingsSectionMeta } from '@/settings/sections';
+import {
+    aboutSection,
+    accountSection,
+    groupLabel,
+    navSectionOf,
+    sectionDescription,
+    sectionLabel,
+    sectionOfRow,
+    settingsGroupsWith,
+    tabSectionsOf,
+    type SettingsSectionMeta
+} from '@/settings/sections';
+import { SectionTabsPane } from '@/settings/SectionTabsPane';
 import { useContributions, type SettingsSectionContribution } from '@/state/extension-registry';
-import { useUi, type SettingsSectionId } from '@/state/ui';
+import { useUi } from '@/state/ui';
 import { useKeyOf } from '@/surface/shortcut-overrides';
 
 // Built on every render rather than once: the words move with the language, the list does not.
@@ -17,7 +29,7 @@ function entryOf(meta: SettingsSectionMeta, contributed: readonly SettingsSectio
         icon: meta.icon,
         label: sectionLabel(meta.id),
         description: sectionDescription(meta.id),
-        pane: contributed.find((section) => section.id === meta.id)?.component ?? definition!.pane,
+        pane: contributed.find((section) => section.id === meta.id)?.component ?? (tabSectionsOf(meta.id).length > 0 ? SectionTabsPane : definition!.pane),
         split: meta.split,
         hero: definition?.hero
     };
@@ -39,8 +51,14 @@ export function SettingsDialog() {
         <Dialog
             open={open}
             onOpenChange={(next) => setSettings({ open: next })}
-            section={section}
-            onNavigate={({ section: next, target: row }) => setSettings({ section: next as SettingsSectionId, ...(row === undefined ? {} : { target: row }) })}
+            section={navSectionOf(section)}
+            onNavigate={({ section: next, target: row }) =>
+                setSettings({
+                    // A row in a tab section names the section in the navigation, so its tab comes from the row.
+                    section: (typeof row === 'string' ? sectionOfRow(row) : null) ?? next,
+                    ...(row === undefined ? {} : { target: row })
+                })
+            }
             groups={settingsGroupsWith(contributed).map((group) => ({
                 label: group.label === null ? null : groupLabel(group.label),
                 sections: group.sections.map((meta) => entryOf(meta, contributed))
@@ -48,7 +66,11 @@ export function SettingsDialog() {
             footer={[entryOf(aboutSection(), contributed)]}
             account={{ section: entryOf(accountSection(), contributed), tab: <AccountTab sectionId={accountSection().id} /> }}
             search={{
-                find: (query) => findSettings(query, isApplePlatform()),
+                // A row is labeled with the section in the navigation, the only ones the dialog knows; a pane result keeps its tab.
+                find: (query) =>
+                    findSettings(query, isApplePlatform()).map((result) =>
+                        result.id === null ? result : { ...result, section: navSectionOf(result.section) }
+                    ),
                 hint: formatShortcut(searchKey, isApplePlatform()),
                 focusAt: searchAt
             }}

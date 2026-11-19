@@ -7,6 +7,7 @@ import type { SettingsSectionDefinition } from '@/registry/settings-sections';
 export const CHAT_SETTINGS_SECTION: SettingsSectionDefinition = {
     id: 'chats',
     slot: 'ai',
+    tabOf: 'agents',
     icon: MessagesSquare,
     label: () => i18next.t('settings:sections.chats.label'),
     description: () => i18next.t('settings:sections.chats.description'),

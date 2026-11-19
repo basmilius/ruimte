@@ -20,8 +20,9 @@ export function SettingsAgents() {
     return (
         <SettingsFrame
             active="Agents"
-            description="What new agents start with and what they may do."
-            label="The Settings dialog on Agents. The navigation lists General, Appearance and Keyboard, then Workspace and AI sections. The pane shows Short texts, with a Text model choice between Automatic and Choose, and What agents may do, with three switches."
+            description="What agents and chats start with, what they may do and who reaches them."
+            tabs={['Agents', 'Chats', 'MCP']}
+            label="The Settings dialog on Agents. The navigation lists General and Keyboard, then Workspace and AI sections. The pane has the tabs Agents, Chats and MCP. The Agents tab shows Short texts, with a Text model choice between Automatic and Choose, and What agents may do, with three switches."
         >
             <SettingsSection title="Short texts">
                 <SettingsRow

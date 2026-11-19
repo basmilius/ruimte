@@ -11,7 +11,8 @@ import type { SettingsSectionId } from '@/state/ui';
  * only while it is open and the rows cannot be read off the screen.
  */
 export function settingsIndex(): readonly SettingsSearchRow[] {
-    return settingsSectionRegistry.all().flatMap((section) => section.rows);
+    // The section that lists a row draws it, whatever pane its id names: a row keeps its words where a tab moved it.
+    return settingsSectionRegistry.all().flatMap((section) => section.rows.map((row) => ({ ...row, section: section.id })));
 }
 
 export interface SearchResult {

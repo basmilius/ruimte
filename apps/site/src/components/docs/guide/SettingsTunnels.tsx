@@ -5,7 +5,7 @@ import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
 import { MoreHorizontal } from 'lucide-react';
 import { SettingsFrame } from './SettingsFrame.tsx';
 
-/* The columns of `shell/settings/tunnels/HostnamesSection.tsx` and `CredentialsSection.tsx`. */
+/* The columns of `tunnels/HostnamesSection.tsx` and `CredentialsSection.tsx`. */
 const HOSTNAME_COLUMNS = [{ width: 'minmax(0,3fr)' }, { width: 'minmax(0,2fr)', hideBelow: 'md' }, { width: 'auto', align: 'end' }] as const;
 
 const CLIENT_COLUMNS = [
@@ -34,14 +34,13 @@ function Hostname({ name, target, mono = false }: { readonly name: string; reado
     );
 }
 
-/* The Tunnels section of the settings dialog with a tunnel running: the token, the tunnel Ruimte runs, two hostnames of Ruimte and one already on the tunnel, and one client. */
+/* The Tunnels section of the settings dialog with a tunnel running: the token, the tunnel Ruimte runs, two hostnames of Ruimte and one already on the tunnel. */
 export function SettingsTunnels() {
     return (
         <SettingsFrame
             active="Tunnels"
             description="Reach Ruimte's MCP and your dev servers from outside."
-            height={900}
-            label="The Settings dialog on Tunnels. In the Cloudflare card, the API token reaches 2 domains on Bas, with Remove, and the tunnel ruimte-studio-4f2a runs on this computer, with Stop using. Under Hostnames, with an Add hostname button, a table lists the MCP on bmnw.nl and a dev server on passly.dev that points to localhost:3000, each with a switch and a menu, and under Already on this tunnel a hostname someone else added. Under External clients, the External MCP switch is on, with a New bearer button and the address on this machine, and a table lists one client, Hosted bot."
+            label="The Settings dialog on Tunnels. In the Cloudflare card, the API token reaches 2 domains on Bas, with Remove, and the tunnel ruimte-studio-4f2a runs on this computer, with Stop using. Under Hostnames, with an Add hostname button, a table lists the MCP on bmnw.nl and a dev server on passly.dev that points to localhost:3000, each with a switch and a menu, and under Already on this tunnel a hostname someone else added."
         >
             <SettingsSection title="Cloudflare">
                 <SettingsRow label="API token" description="Reaches 2 domains on Bas." control={<Button onClick={() => undefined}>Remove</Button>} />
@@ -83,6 +82,21 @@ export function SettingsTunnels() {
                     </Table.Group>
                 </Table.Root>
             </SettingsSection>
+        </SettingsFrame>
+    );
+}
+
+/* The MCP tab of Agents with the external MCP on: one client, and the hostname that brings it outside. */
+export function SettingsMcp() {
+    return (
+        <SettingsFrame
+            active="Agents"
+            description="What agents and chats start with, what they may do and who reaches them."
+            tabs={['Agents', 'Chats', 'MCP']}
+            tab="MCP"
+            height={620}
+            label="The Settings dialog on Agents, with its MCP tab open. Under External clients, the External MCP switch is on, with a New bearer button and the address on this machine, and a table lists one client, Hosted bot. Below it, From outside this machine names the MCP hostname on the tunnel, with Open Tunnels."
+        >
             <SettingsSection
                 title="External clients"
                 description={
@@ -125,6 +139,13 @@ export function SettingsTunnels() {
                         </Table.Cell>
                     </Table.Row>
                 </Table.Root>
+            </SettingsSection>
+            <SettingsSection>
+                <SettingsRow
+                    label="From outside this machine"
+                    description="Through https://mcp-4f9a1c7e2b83d605.bmnw.nl/mcp, on your tunnel."
+                    control={<Button onClick={() => undefined}>Open Tunnels</Button>}
+                />
             </SettingsSection>
         </SettingsFrame>
     );

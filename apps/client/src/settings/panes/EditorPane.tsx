@@ -1,4 +1,4 @@
-import { ErrorBoundary, Segmented } from '@adecore/ui';
+import { ErrorBoundary } from '@adecore/ui';
 import { useSettingsTarget } from '@adecore/ui/settings';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import { CodeSection } from '@/settings/panes/CodeSection';
 import { EditorFoldingTab } from '@/settings/panes/EditorFoldingTab';
 import { EditorGeneralTab } from '@/settings/panes/EditorGeneralTab';
 import { SmartKeysSection } from '@/settings/panes/SmartKeysSection';
+import { PaneTabs } from '@/settings/PaneTabs';
 
 type EditorTab = 'general' | 'colors' | 'folding' | 'smartKeys' | 'templates' | 'ai' | 'languageServers';
 
@@ -56,7 +57,7 @@ export function EditorPane() {
 
     return (
         <>
-            <Segmented value={tab} options={TABS.map((id) => ({ id, label: t(`editor.tabs.${id}`) }))} label={t('editor.tabs.label')} onValueChange={setTab} />
+            <PaneTabs value={tab} tabs={TABS.map((id) => ({ id, label: t(`editor.tabs.${id}`) }))} label={t('editor.tabs.label')} onValueChange={setTab} />
             {tab === 'general' && <EditorGeneralTab />}
             {tab === 'colors' && <CodeSection />}
             {tab === 'folding' && <EditorFoldingTab />}

@@ -608,11 +608,15 @@
     "sections": {
         "general": {
             "label": "General",
-            "description": "Language, region, projects and windows."
+            "description": "Language, appearance, notifications and windows."
         },
         "appearance": {
             "label": "Appearance",
             "description": "Theme, colors, fonts and panels."
+        },
+        "notifications": {
+            "label": "Notifications",
+            "description": "Sounds, quiet hours and break reminders."
         },
         "keyboard": {
             "label": "Keyboard",
@@ -640,7 +644,11 @@
         },
         "agents": {
             "label": "Agents",
-            "description": "What new agents start with and what they may do."
+            "description": "What agents and chats start with, what they may do and who reaches them."
+        },
+        "mcp": {
+            "label": "MCP",
+            "description": "Clients elsewhere that use Ruimte's MCP."
         },
         "tunnels": {
             "label": "Tunnels",
@@ -1260,9 +1268,6 @@
             "description": "For every agent. Pick each agent's model and account under <link>Providers</link>.",
             "permissions": "Permissions",
             "terminalMode": "Terminal agents start in"
-        },
-        "notifications": {
-            "title": "Notifications"
         },
         "views": {
             "title": "Views"
@@ -2270,5 +2275,14 @@
         "builtIn": "Built-in",
         "development": "Development",
         "fromDiskBadge": "From disk"
+    },
+    "mcp": {
+        "elsewhere": "Set up the MCP in the app on that machine.",
+        "outside": {
+            "label": "From outside this machine",
+            "through": "Through https://{{hostname}}/mcp, on your tunnel.",
+            "none": "Add a hostname for the Ruimte MCP under Tunnels.",
+            "open": "Open Tunnels"
+        }
     }
 }

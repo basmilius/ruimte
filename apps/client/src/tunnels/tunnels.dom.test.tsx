@@ -12,6 +12,7 @@ import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom
 import { buttonWithText, everything, installDesktop, menuItem, removeDesktop, typeInto } from '../../testing/dom-helpers';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
 import { machineBridge } from '../../testing/machine-bridge';
+import { McpPane } from './McpPane';
 import { TunnelsPane } from './TunnelsPane';
 
 let page: Mounted;
@@ -93,6 +94,11 @@ async function pick(select: string, option: string): Promise<void> {
 async function open(): Promise<void> {
     await page.render(<TunnelsPane />);
     await until(() => everything().includes('Cloudflare'));
+}
+
+async function openMcp(): Promise<void> {
+    await page.render(<McpPane />);
+    await until(() => everything().includes('External clients'));
 }
 
 describe('the Cloudflare card', () => {
@@ -703,7 +709,7 @@ describe('the hostnames', () => {
 
 describe('the external MCP', () => {
     test('shows no address while it is off', async () => {
-        await open();
+        await openMcp();
         await until(() => document.querySelector('[role="switch"][aria-label="External MCP"]') !== null);
         expect(everything()).not.toContain('127.0.0.1');
         expect(buttonWithText('New bearer')?.disabled).toBe(true);
@@ -712,22 +718,36 @@ describe('the external MCP', () => {
     test('turns on without a tunnel, which is how it works on loopback with no Cloudflare account', async () => {
         state = bareState();
         machine.answer('tunnel.setMcp', ({ enabled }) => (state = bareState({ mcp: { enabled, port: enabled ? 4230 : null } })));
-        await open();
+        await openMcp();
         await until(() => document.querySelector('[role="switch"][aria-label="External MCP"]') !== null);
         await clickOn(document.querySelector('[role="switch"][aria-label="External MCP"]'));
         await until(() => everything().includes('http://127.0.0.1:4230/mcp'));
         expect(machine.requests('tunnel.setMcp')).toEqual([{ enabled: true }]);
     });
 
-    test('says at its switch that it is not running while its port is taken, and still offers to make a tunnel', async () => {
+    test('says at its switch that it is not running while its port is taken', async () => {
         state = stateOf({
             stage: 'no-tunnel',
             tunnel: null,
             mcp: { enabled: true, port: null, failure: 'The MCP listener did not start. Failed to start server. Is port 4230 in use?' }
         });
-        await open();
+        await openMcp();
         await until(() => everything().includes('Not running. Another app may be using its port.'));
-        expect(buttonWithText('Use')).not.toBeNull();
+    });
+
+    test('says where a client outside this machine reaches it, and opens Tunnels', async () => {
+        state = stateOf({ mcp: { enabled: true, port: 4230 } });
+        await openMcp();
+        await until(() => everything().includes('Add a hostname for the Ruimte MCP under Tunnels.'));
+        await clickOn(buttonWithText('Open Tunnels'));
+        expect(useUi.getState().settings.section).toBe('tunnels');
+
+        state = stateOf({
+            mcp: { enabled: true, port: 4230 },
+            rows: [{ id: 'row-mcp', kind: 'mcp', hostname: 'mcp-x7.bmnw.nl', port: null, enabled: true, comeBack: true }]
+        });
+        await act(async () => machine.emit('tunnel.changed', {}));
+        await until(() => everything().includes('Through https://mcp-x7.bmnw.nl/mcp, on your tunnel.'));
     });
 
     // Council rounds 16 and 17: no Cloudflare row offered Try again here, and the machine's Try again would install cloudflared.
@@ -744,7 +764,7 @@ describe('the external MCP', () => {
 
         state = { ...base(), mcp: failed };
         machine.answer('tunnel.setMcp', ({ enabled }) => (state = { ...base(), mcp: { enabled, port: 4230 } }));
-        await open();
+        await openMcp();
         await until(() => everything().includes('Not running. Another app may be using its port.'));
         await clickOn(buttonWithText('Try again'));
         await until(() => everything().includes('http://127.0.0.1:4230/mcp'));
@@ -773,7 +793,7 @@ describe('a bearer', () => {
 
             return { credential: made, secret: 'rmb_only-shown-once' };
         });
-        await open();
+        await openMcp();
         await until(() => buttonWithText('New bearer') !== null);
         expect(everything()).toContain('No clients yet');
         await clickOn(buttonWithText('New bearer'));
@@ -800,7 +820,7 @@ describe('a bearer', () => {
 
     test('says what the approvals box costs before it is ticked', async () => {
         state = stateOf({ mcp: { enabled: true, port: 4230 } });
-        await open();
+        await openMcp();
         await until(() => buttonWithText('New bearer') !== null);
         await clickOn(buttonWithText('New bearer'));
         await until(() => everything().includes('Approve on your behalf'));
@@ -832,7 +852,7 @@ describe('a bearer', () => {
         machine.answer('credential.create', () => {
             throw new Error('stop here');
         });
-        await open();
+        await openMcp();
         await until(() => buttonWithText('New bearer') !== null);
         await clickOn(buttonWithText('New bearer'));
         await until(() => dialog() !== null);
@@ -879,7 +899,7 @@ describe('the use of a credential', () => {
     test('shows a first use while the pane stays open', async () => {
         state = stateOf({ mcp: { enabled: true, port: 4230 } });
         credentials = [bearer(null, NOW + 28 * 24 * 3_600_000)];
-        await open();
+        await openMcp();
         await until(() => cells().includes('Never'));
         expect(cells().some((cell) => cell.includes('Expires in 28 days'))).toBe(true);
         expect(cells()).toContain('Work · 2 projects · Approves');
@@ -892,7 +912,7 @@ describe('the use of a credential', () => {
     test('says a credential expired', async () => {
         state = stateOf({ mcp: { enabled: true, port: 4230 } });
         credentials = [bearer(null, NOW - 1)];
-        await open();
+        await openMcp();
         await until(() => cells().some((cell) => cell.includes('Expired')));
     });
 
@@ -904,7 +924,7 @@ describe('the use of a credential', () => {
 
             return {};
         });
-        await open();
+        await openMcp();
         await until(() => document.querySelector('button[aria-label="More for Hosted bot"]') !== null);
         await clickOn(document.querySelector('button[aria-label="More for Hosted bot"]'));
         await until(() => menuItem('Revoke') !== null);

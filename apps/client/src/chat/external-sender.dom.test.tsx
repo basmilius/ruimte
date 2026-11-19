@@ -62,7 +62,7 @@ afterEach(async () => {
     restoreLayout();
 });
 
-test('a message from an external MCP client names it under a plug and opens Tunnels in the settings', async () => {
+test('a message from an external MCP client names it under a plug and opens its MCP tab in the settings', async () => {
     await until(() => senderChip() !== null);
     const chip = senderChip()!;
 
@@ -71,7 +71,7 @@ test('a message from an external MCP client names it under a plug and opens Tunn
     expect(everything()).not.toContain('Not in this project');
 
     await clickOn(chip);
-    await until(() => document.querySelector('[role="dialog"]') !== null && everything().includes('Cloudflare'));
+    await until(() => document.querySelector('[role="dialog"]') !== null && everything().includes('External clients'));
 
     expect(machine.requests('tunnel.state').length).toBeGreaterThan(0);
 });

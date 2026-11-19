@@ -18,9 +18,6 @@ import {
 } from '@/controllers/keep-awake';
 import { MachineSwitchSection } from '@/machine-ui/MachineSwitchSection';
 import { SettingsSection } from '@/machines/SettingsSection';
-import { BreakReminderRows } from '@/settings/BreakReminderRows';
-import { QuietHoursRows } from '@/settings/QuietHoursRows';
-import { SoundRows } from '@/settings/SoundRows';
 import { TextModelSection } from '@/settings/TextModelSection';
 import { useUi } from '@/state/ui';
 import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
@@ -39,11 +36,6 @@ export function AgentsPane() {
             <AgentDefaultsSection />
             <TextModelSection />
             <MachineSwitchSection title={t('agents.machine.title')} settings={['agentsDeleteAnyView', 'reachOpenProjects', 'resumeAtReset']} />
-            <SettingsSection title={t('agents.notifications.title')}>
-                <SoundRows />
-                <QuietHoursRows />
-                <BreakReminderRows />
-            </SettingsSection>
             <SettingsSection title={t('agents.views.title')}>
                 <SettingSwitchRow id="agents.showViews" setting="agentsShowViews" />
             </SettingsSection>

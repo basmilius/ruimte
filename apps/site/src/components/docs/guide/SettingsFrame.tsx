@@ -1,6 +1,6 @@
 'use client';
 
-import { Input } from '@adecore/ui';
+import { Input, Tabs } from '@adecore/ui';
 import type { LucideIcon } from 'lucide-react';
 import {
     Brain,
@@ -12,9 +12,7 @@ import {
     Info,
     Keyboard,
     LayoutGrid,
-    MessagesSquare,
     Mic,
-    Palette,
     Puzzle,
     Search,
     Server,
@@ -35,7 +33,6 @@ const GROUPS: readonly { readonly label: string | null; readonly items: readonly
         label: null,
         items: [
             { label: 'General', icon: Settings },
-            { label: 'Appearance', icon: Palette },
             { label: 'Keyboard', icon: Keyboard }
         ]
     },
@@ -46,6 +43,7 @@ const GROUPS: readonly { readonly label: string | null; readonly items: readonly
             { label: 'Editor', icon: CodeXml },
             { label: 'Terminal', icon: SquareTerminal },
             { label: 'Files and Git', icon: Folder },
+            { label: 'Tunnels', icon: Cable },
             { label: 'Extensions', icon: Puzzle }
         ]
     },
@@ -53,26 +51,31 @@ const GROUPS: readonly { readonly label: string | null; readonly items: readonly
         label: 'AI',
         items: [
             { label: 'Providers', icon: Brain },
-            { label: 'Chats', icon: MessagesSquare },
             { label: 'Agents', icon: Bot },
-            { label: 'Tunnels', icon: Cable },
             { label: 'Voice', icon: Mic },
             { label: 'Usage', icon: ChartNoAxesColumn }
         ]
     }
 ];
 
-/* The settings dialog of `@adecore/ui/settings` around one pane: the navigation with the section in front, and the pane's title. */
+/*
+ * The settings dialog of `@adecore/ui/settings` around one pane: the navigation with the section in front, the pane's
+ * title, and the tabs of a section that has them (`settings/SectionTabsPane.tsx`) with `tab` picked.
+ */
 export function SettingsFrame({
     active,
     description,
     label,
+    tabs,
+    tab,
     height = 760,
     children
 }: {
     readonly active: string;
     readonly description: string;
     readonly label: string;
+    readonly tabs?: readonly string[];
+    readonly tab?: string;
     readonly height?: number;
     readonly children: ReactNode;
 }) {
@@ -114,7 +117,20 @@ export function SettingsFrame({
                         <h2 className="text-lg font-semibold text-text">{active}</h2>
                         <p className="mt-0.5 text-xs text-text-muted">{description}</p>
                     </div>
-                    <div className="px-8">{children}</div>
+                    <div className="flex flex-col gap-7 px-8">
+                        {tabs !== undefined && (
+                            <Tabs.Root value={tab ?? tabs[0]}>
+                                <Tabs.List aria-label={active}>
+                                    {tabs.map((name) => (
+                                        <Tabs.Tab key={name} value={name}>
+                                            {name}
+                                        </Tabs.Tab>
+                                    ))}
+                                </Tabs.List>
+                            </Tabs.Root>
+                        )}
+                        {children}
+                    </div>
                 </div>
             </div>
         </Stage>
