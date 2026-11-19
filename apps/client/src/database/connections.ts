@@ -244,6 +244,8 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         if (store.getState().status !== 'ready') {
             store.setState({ status: 'loading' });
         }
+        // Asked beside the list rather than after it, since it needs only the project; it never fails.
+        const access = readAgentAccess(of);
         try {
             const answer = await of.transport.request('database.connections', { projectId: of.projectId });
             if (superseded(of, ticket)) {
@@ -257,7 +259,7 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
             store.setState({ status: 'ready', error: null, rev: answer.rev, saved: answer.connections });
             settle();
             handed = null;
-            await Promise.all([handPasswords(of), readAgentAccess(of)]);
+            await Promise.all([handPasswords(of), access]);
         } catch (error: unknown) {
             if (superseded(of, ticket)) {
                 return;

@@ -25,30 +25,33 @@ interface Registration {
  * The standing lists that more than one client of a machine asks a fresh socket for (the chats, the
  * sessions, the sidebar). A list asked while the same list is on its way on that socket rides on it:
  * the machine answers a list in the step it reads the request and every frame arrives in order, so the
- * answer still to come holds everything the second asker has heard by then.
+ * answer still to come holds everything the second asker has heard by then. The repositories of a
+ * folder have no event that moves them, so every view of one project folder (the git panel, the
+ * launches, each chat's composer) rides on the one ask its first view sent. Only the same payload rides.
  */
-const SHARED_IN_FLIGHT: ReadonlySet<RequestType> = new Set<RequestType>(['session.list', 'chat.list']);
+const SHARED_IN_FLIGHT: ReadonlySet<RequestType> = new Set<RequestType>(['session.list', 'chat.list', 'git.repos']);
 
 /* Per socket rather than per facade: the active machine's facade and that machine's own are two over one socket. */
-const inFlight = new WeakMap<Transport, Map<RequestType, Promise<unknown>>>();
+const inFlight = new WeakMap<Transport, Map<string, Promise<unknown>>>();
 
 function sharedRequest<T extends RequestType>(socket: Transport, type: T, payload: ReadRequestMap[T]['payload']): Promise<ReadRequestMap[T]['result']> {
-    let lists = inFlight.get(socket);
-    if (!lists) {
-        lists = new Map();
-        inFlight.set(socket, lists);
+    let asks = inFlight.get(socket);
+    if (!asks) {
+        asks = new Map();
+        inFlight.set(socket, asks);
     }
-    const known = lists.get(type);
+    const key = `${type}\u0000${JSON.stringify(payload)}`;
+    const known = asks.get(key);
     if (known) {
         return known as Promise<ReadRequestMap[T]['result']>;
     }
     const answer = socket.request(type, payload);
     const settled = (): void => {
-        if (lists.get(type) === answer) {
-            lists.delete(type);
+        if (asks.get(key) === answer) {
+            asks.delete(key);
         }
     };
-    lists.set(type, answer);
+    asks.set(key, answer);
     answer.then(settled, settled);
     return answer;
 }

@@ -277,6 +277,19 @@ describe('ActiveTransport', () => {
         expect(socketOf('a').pending.filter((entry) => entry.type === 'chat.list')).toHaveLength(2);
     });
 
+    test('the repositories of a folder ride on an ask for the same folder, never on one for another or past the cache', () => {
+        const { pool, transport, socketOf } = setup();
+        pool.hold(endpoint('a'));
+
+        void transport.request('git.repos', { folder: '/work/atlas' });
+        void transport.request('git.repos', { folder: '/work/atlas' });
+        expect(socketOf('a').pending).toHaveLength(1);
+
+        void transport.request('git.repos', { folder: '/work/other' });
+        void transport.request('git.repos', { folder: '/work/atlas', fresh: true });
+        expect(socketOf('a').pending).toHaveLength(3);
+    });
+
     test('a list that failed is asked again', async () => {
         const { pool, transport, socketOf } = setup();
         pool.hold(endpoint('a'));

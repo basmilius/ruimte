@@ -9,6 +9,8 @@ interface Held<A> {
     count: number;
     ready: Promise<void>;
     answer: Promise<A | undefined>;
+    /* Whether `answer` came back; until it does, a reader that joins gets it too. */
+    landed: boolean;
     /* Refreshes each reader after its watch is registered again. */
     renewed: Set<() => void>;
 }
@@ -16,8 +18,8 @@ interface Held<A> {
 export interface HeldWatch<A = unknown> {
     /* The current readiness barrier; re-registering a watch replaces it so reads cannot miss writes during startup. */
     ready: Promise<void>;
-    /* What the daemon answered the call that opened the watch; undefined for a reader that joined one
-       already open, since that answer may be long out of date. */
+    /* What the daemon answered the call that opened the watch, also for a reader that joined while that
+       call was out; undefined for one that joined after it came back, since it may be long out of date. */
     answer: Promise<A | undefined>;
     release: () => void;
 }
@@ -43,7 +45,7 @@ export abstract class HeldWatches<A = unknown> {
         const key = endpointKey(endpointId, path);
         const link = this.linkFor(endpointId);
         const open = this.held.get(key);
-        const held = open ?? { endpointId, path, count: 0, ...this.request(link, path), renewed: new Set() };
+        const held = open ?? this.track({ endpointId, path, count: 0, ...this.request(link, path), landed: false, renewed: new Set() });
         held.count += 1;
         this.held.set(key, held);
         this.follow(endpointId, link);
@@ -60,7 +62,7 @@ export abstract class HeldWatches<A = unknown> {
             get ready() {
                 return held.ready;
             },
-            answer: open === undefined ? held.answer : Promise.resolve(undefined),
+            answer: open === undefined || !open.landed ? held.answer : Promise.resolve(undefined),
             release: () => {
                 if (released) {
                     return;
@@ -101,6 +103,8 @@ export abstract class HeldWatches<A = unknown> {
             const next = this.request(link, held.path);
             held.ready = next.ready;
             held.answer = next.answer;
+            held.landed = false;
+            this.track(held);
             void held.ready.then(() => {
                 for (const reader of [...held.renewed]) {
                     reader();
@@ -123,6 +127,18 @@ export abstract class HeldWatches<A = unknown> {
             }
         });
         this.following.set(endpointId, off);
+    }
+
+    private track(held: Held<A>): Held<A> {
+        const { answer } = held;
+        void answer.then(() => {
+            // A renewal that went out since has an answer of its own still to come.
+            if (held.answer === answer) {
+                held.landed = true;
+            }
+        });
+
+        return held;
     }
 
     private request(link: Transport, path: string): { ready: Promise<void>; answer: Promise<A | undefined> } {

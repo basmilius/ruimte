@@ -63,14 +63,18 @@ describe('GitWatches', () => {
         expect(calls).toEqual(['git.watch /repo', 'git.watch /repo', 'git.unwatch /repo']);
     });
 
-    test('only the reader that opened the watch gets the status it answered', async () => {
+    test('a reader that joins while the watch opens shares its status, and one that joins after gets none', async () => {
         const { link } = fakeLink();
         const watches = new GitWatches(() => link);
         const panel = watches.watch('local', '/repo');
-        const tab = watches.watch('local', '/repo');
+        const composer = watches.watch('local', '/repo');
         expect(await panel.answer).toEqual({ status: { cwd: '/repo' } } as never);
+        expect(await composer.answer).toEqual({ status: { cwd: '/repo' } } as never);
+
+        const tab = watches.watch('local', '/repo');
         expect(await tab.answer).toBeUndefined();
         panel.release();
+        composer.release();
         tab.release();
     });
 });

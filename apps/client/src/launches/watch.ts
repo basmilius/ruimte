@@ -75,6 +75,9 @@ function announceFailure(endpointId: string, previous: LaunchStatus | undefined,
  * changed while it was closed was pushed to nobody.
  */
 export function startLaunchWatch(): () => void {
+    // The project on screen a link read as the watch started, which the first follow does not ask again.
+    let starting = true;
+    let readAtStart: string | null = null;
     const offPool = watchPool((link, endpointId) => ({
         onOpen: () => {
             // A failed ask leaves the list as it was; the next open link asks again.
@@ -85,6 +88,10 @@ export function startLaunchWatch(): () => void {
             const open = projectOnScreen();
             if (open !== null && open.endpointId === endpointId) {
                 readDocument(endpointId, open.projectId);
+
+                if (starting) {
+                    readAtStart = endpointKey(endpointId, open.projectId);
+                }
             }
         },
         subscriptions: [
@@ -111,11 +118,13 @@ export function startLaunchWatch(): () => void {
                 useToasts.getState().dismiss(toast.id);
             }
         }
-        if (open !== null) {
+        if (open !== null && key !== readAtStart) {
             readDocument(open.endpointId, open.projectId);
         }
     };
     follow();
+    starting = false;
+    readAtStart = null;
     const offProject = defaultProjectStore.subscribe(follow);
     return () => {
         offPool();
