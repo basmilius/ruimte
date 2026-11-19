@@ -146,8 +146,6 @@ export const ProjectNodeSchema = keepingUnknown(
         expandedHeight: z.number().positive().optional(),
         // Group only: the git worktree every node made inside it starts in.
         worktree: z.object({ path: z.string(), branch: z.string() }).optional(),
-        // Chat and terminal: the GitHub issue the agent was started on, which the node shows as a pill.
-        issue: z.object({ repo: z.string(), number: z.number().int().positive(), url: z.string() }).optional(),
         // Note only: its markdown, and the paper it had before Color covered notes, read as an accent by `notePaperOf` until a person picks a Color, which removes it.
         body: z.string().optional(),
         color: z.string().optional(),
@@ -594,7 +592,6 @@ export const StandaloneNodeSchema = pickKeepingUnknown(ProjectNodeSchema, {
     providerFixed: true,
     runtimeMode: true,
     accent: true,
-    issue: true,
     artifact: true
 });
 export type StandaloneNode = z.infer<typeof StandaloneNodeSchema>;
@@ -906,7 +903,7 @@ export function isChatNode<N extends Pick<ProjectNode, 'kind'>>(node: N): node i
     return node.kind === 'chat' || node.kind === 'design';
 }
 
-const STANDALONE_KEYS = ['cwd', 'command', 'resume', 'provider', 'account', 'providerFixed', 'runtimeMode', 'accent', 'issue', 'artifact'] as const;
+const STANDALONE_KEYS = ['cwd', 'command', 'resume', 'provider', 'account', 'providerFixed', 'runtimeMode', 'accent', 'artifact'] as const;
 
 /* What a node holds once its frame is taken off, as a view of its own keeps it. */
 export function standaloneOf(node: ProjectNode): StandaloneNode {

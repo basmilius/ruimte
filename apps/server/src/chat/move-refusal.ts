@@ -12,7 +12,6 @@ export interface MoveRefusalDeps {
     tasks: { involving(chatId: string): ReadonlyArray<Pick<Task, 'parentId' | 'childId' | 'status'>> };
     outbox: { ofTarget(target: string): readonly unknown[]; owed(kind: 'resume-limit', target: string): { notBefore: number } | undefined };
     notices: { waiting(chatId: string): readonly unknown[] };
-    prWatches: { watchOf(chatId: string): unknown };
 }
 
 /*
@@ -39,9 +38,6 @@ export function moveRefusal(chatId: string, deps: MoveRefusalDeps): ChatMoveRefu
     }
     if (deps.notices.waiting(chatId).length > 0) {
         return { reason: 'messages' };
-    }
-    if (deps.prWatches.watchOf(chatId) !== null) {
-        return { reason: 'pr-watch' };
     }
     return null;
 }

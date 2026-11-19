@@ -14,23 +14,20 @@ import { cloneRepository } from '../git/clone.ts';
 import { compareBranches, compareCommits, readSnapshot } from '../git/compare.ts';
 import { readConflict, readConflicts, resolveConflict, runOperation } from '../git/conflict.ts';
 import { diffCheckout, diffCommit, diffFile } from '../git/diff.ts';
-import { parseIssueRef, readIssue, readPullRequest, runGh } from '../git/github.ts';
 import { IdentityReader } from '../git/identity.ts';
 import { listIgnoredFiles } from '../git/ignored.ts';
 import { readLog } from '../git/log.ts';
 import { suggestMessage } from '../git/message.ts';
 import type { TextWriter } from '../git/one-shot.ts';
-import { prSplits } from '../git/pr-split.ts';
 import { listRefs, readRefCommit } from '../git/refs.ts';
 import { cachedRepos } from '../git/repo-cache.ts';
 import { resolveWithAgent } from '../git/resolve-ai.ts';
-import { GitError, toplevel, type LeftOut } from '../git/run.ts';
+import { toplevel, type LeftOut } from '../git/run.ts';
 import { discardPaths, stagePaths, unstagePaths } from '../git/stage.ts';
 import type { GitStatusWatcher } from '../git/status-watcher.ts';
 import { mergeBaseWith } from '../git/status.ts';
 import type { WorktreeMerge } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
-import type { PrWatchStore } from '../github/pr-watch.ts';
 import type { OneShotPlace } from '../peer/worker/one-shot-place.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { ShortTextModels } from '../short-text/model.ts';
@@ -41,8 +38,6 @@ export interface GitDeps {
     merges: WorktreeMerge;
     statuses: GitStatusWatcher;
     providers: ProviderRegistry;
-    prWatches: PrWatchStore;
-    placeOf(id: string): { projectId: string } | null;
     machineHome: Pick<MachineHome, 'refuse' | 'refuseHolding' | 'stateWithin'>;
     bundles: BundleStore;
     checkpoints: Pick<CheckpointService, 'take' | 'head'>;
@@ -80,34 +75,18 @@ function progressTo(client: ClientConnection, cwd: string, actionId: string) {
 }
 
 export function gitArea(deps: GitDeps): Area {
-    const { statuses, worktrees, prWatches } = deps;
+    const { statuses, worktrees } = deps;
 
     return {
         name: 'git',
-        sources: [statuses, worktrees, prWatches],
+        sources: [statuses, worktrees],
         holders: [statuses],
-        handlers: (dispatcher) => registerRequests(dispatcher, deps),
-        stop: [{ phase: 'halt', label: 'Closing the pull request watches', run: () => prWatches.close() }]
+        handlers: (dispatcher) => registerRequests(dispatcher, deps)
     };
 }
 
 function registerRequests(dispatcher: Dispatcher, deps: GitDeps): void {
-    const {
-        worktrees,
-        merges,
-        statuses,
-        providers,
-        prWatches,
-        placeOf,
-        machineHome,
-        bundles,
-        checkpoints,
-        folderOf,
-        untrusted,
-        untrustFolder,
-        oneShotPlace,
-        textModels
-    } = deps;
+    const { worktrees, merges, statuses, providers, machineHome, bundles, checkpoints, folderOf, untrusted, untrustFolder, oneShotPlace, textModels } = deps;
     // A checkout may hold the home, so what runs over all of it leaves the machine's state out and keeps the open folders.
     const leftOut: LeftOut = (top) => machineHome.stateWithin(top);
     const actions = new GitActions(leftOut);
@@ -272,51 +251,6 @@ function registerRequests(dispatcher: Dispatcher, deps: GitDeps): void {
         return await listRefs(payload.cwd);
     });
 
-    dispatcher.register('git.issue', async (payload) => {
-        await refuse(payload.cwd);
-        const ref = parseIssueRef(payload.ref);
-        if (ref === null) {
-            throw new GitError('issue-not-found', 'Name the issue as a link, owner/repo#12 or #12.');
-        }
-        return await readIssue(runGh, payload.cwd, ref);
-    });
-
-    // The split waits on every page of GitHub's file list, so it is a request of its own and the dialog draws before it.
-    dispatcher.register('git.pr', async (payload) => {
-        await refuse(payload.cwd);
-        const pr = await readPullRequest(runGh, payload.cwd, payload.number);
-        if (pr !== null) {
-            prSplits.note(payload.cwd, pr);
-        }
-        return { pr };
-    });
-
-    dispatcher.register('git.prSplit', async (payload) => {
-        await refuse(payload.cwd);
-
-        return {
-            split: await prSplits.splitAt(payload.cwd, payload.number, payload.headSha, () => readPullRequest(runGh, payload.cwd, payload.number))
-        };
-    });
-
-    dispatcher.register(
-        'git.pr-watch',
-        async (payload) => {
-            // A client names the project and the chat, so the machine checks that the project really holds the chat.
-            if (placeOf(payload.chatId)?.projectId !== payload.projectId) {
-                throw new GitError('pr-watch-refused', 'That chat is not part of this project.');
-            }
-            await refuse(payload.cwd);
-            return { watch: await prWatches.start(payload.projectId, payload.chatId, payload.cwd, payload.number) };
-        },
-        { count: ['prWatches.started'] }
-    );
-    dispatcher.register('git.pr-unwatch', async (payload) => {
-        await prWatches.stop(payload.chatId);
-        return {};
-    });
-    dispatcher.register('git.pr-watches', (payload) => ({ watches: prWatches.list(payload.projectId) }));
-
     dispatcher.register('git.ref-commit', async (payload) => {
         await refuse(payload.cwd);
         return await readRefCommit(payload.cwd, payload.ref);
@@ -337,7 +271,7 @@ function registerRequests(dispatcher: Dispatcher, deps: GitDeps): void {
         return { authors: await authorPictures.authorsOf(payload.cwd) };
     });
 
-    dispatcher.register('git.capabilities', () => readCapabilities(providers, Date.now(), textModels.choice()?.provider));
+    dispatcher.register('git.capabilities', () => readCapabilities(providers, textModels.choice()?.provider));
 
     dispatcher.register(
         'git.action',

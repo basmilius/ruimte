@@ -6,26 +6,12 @@ import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
 import { windowWorkspace } from '@/workspace/window';
 
 /*
- * Facts a component already read in render, handed in so its memo of the rows moves when they do. A command
- * reads one of these first, and its own store when the moment was not handed it.
- */
-export interface MomentFacts {
-    /* The repositories of the project folder with a branch out, which the pull request rows need. */
-    readonly prRepos?: readonly { readonly path: string; readonly label: string }[];
-}
-
-/*
  * What the window stands on right now, read the first time a command asks and then kept for the one
  * palette build or key press. The facts a command needs of its own feature it reads from its own stores.
  */
 export class CommandMoment {
-    readonly facts: MomentFacts;
     private canvasState: CanvasState | null = null;
     private documentState: DocumentState | null = null;
-
-    constructor(facts: MomentFacts = {}) {
-        this.facts = facts;
-    }
 
     /* The start screen is outside every project, so only the commands about the window are offered there. */
     get inWorkspace(): boolean {

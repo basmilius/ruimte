@@ -168,7 +168,6 @@ export function createCanvasNodesSlice(
                 runtimeMode: options.runtimeMode,
                 viewId: options.viewId,
                 path: options.path,
-                ...(options.issue === undefined ? {} : { issue: options.issue }),
                 ...(options.machine === undefined ? {} : { machine: options.machine }),
                 ...(options.artifact === undefined ? {} : { artifact: options.artifact }),
                 ...(options.routine === undefined ? {} : { routine: options.routine })

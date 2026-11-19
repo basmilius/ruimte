@@ -277,7 +277,7 @@ enum CanvasEditing {
         let known: Set<String> = [
             "id", "kind", "title", "titleSource", "x", "y", "w", "h", "accent", "cwd", "command", "resume",
             "provider", "account", "providerFixed", "runtimeMode", "url", "browserOwner", "device", "collapsed",
-            "memberIds", "expandedHeight", "worktree", "issue", "body", "color", "viewId", "path", "raw", "machine",
+            "memberIds", "expandedHeight", "worktree", "body", "color", "viewId", "path", "raw", "machine",
         ]
         let carried = (node.objectValue ?? [:]).filter { !known.contains($0.key) }
         var view: JSONValue = .object([
@@ -297,7 +297,7 @@ enum CanvasEditing {
         default:
             var metadata = carried
             for key in [
-                "cwd", "command", "resume", "provider", "account", "providerFixed", "runtimeMode", "accent", "issue",
+                "cwd", "command", "resume", "provider", "account", "providerFixed", "runtimeMode", "accent",
             ] {
                 metadata[key] = node[key]
             }

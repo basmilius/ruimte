@@ -58,7 +58,6 @@ describe('what a request counts once it was answered', () => {
         expect(counts('git.action', { kind: 'sync' })).toEqual(['git.pulls', 'git.pushes']);
         expect(counts('git.action', { kind: 'checkout' })).toEqual([]);
         expect(counts('git.resolve')).toEqual(['git.conflictsResolved']);
-        expect(counts('git.pr-watch')).toEqual(['prWatches.started']);
     });
 
     test('a database request counts a query only when it executes one', () => {

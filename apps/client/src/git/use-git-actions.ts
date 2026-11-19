@@ -18,7 +18,6 @@ function resultOf(actionId: string, run: GitRun): GitActionResult {
         summary: run.summary,
         output: run.output,
         ...(run.commit === null ? {} : { commit: run.commit }),
-        ...(run.url === null ? {} : { url: run.url }),
         ...(run.conflicts.length === 0 ? {} : { conflicts: run.conflicts })
     };
 }
@@ -89,8 +88,6 @@ async function runGitKind({
             return resultOf(run, await perform('git.stash', { repository, message: subject?.trim() || null, run }));
         case 'stash-pop':
             return resultOf(run, await perform('git.popStash', { repository, stash: ref ?? '', run }));
-        case 'create-pr':
-            return resultOf(run, await perform('git.createPullRequest', { repository, title: subject ?? '', body: body ?? null, run }));
     }
 }
 

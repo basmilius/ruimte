@@ -150,13 +150,6 @@ export const cases: WriteCases = {
         restricted: { run },
         confirms: true
     },
-    'git.createPullRequest': {
-        actors: ['person', 'voice'],
-        input: { repository: 'ruimte', title: 'Cover the actions catalog', body: null },
-        refused: { 'a blank title': { repository: 'ruimte', title: ' ', body: null }, 'no body at all': { repository: 'ruimte', title: 'Tests' } },
-        restricted: { run },
-        confirms: true
-    },
     'git.resolveConflict': {
         actors: ['person'],
         input: resolution,

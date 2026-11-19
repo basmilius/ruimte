@@ -28,7 +28,6 @@ function peerNodeOf(node: CanvasNode): PeerNode | null {
         ...(node.providerFixed === undefined ? {} : { providerFixed: node.providerFixed }),
         ...(node.runtimeMode === undefined ? {} : { runtimeMode: node.runtimeMode }),
         ...(node.accent === undefined ? {} : { accent: node.accent }),
-        ...(node.issue === undefined ? {} : { issue: node.issue }),
         ...(node.device === undefined ? {} : { device: node.device })
     };
 }

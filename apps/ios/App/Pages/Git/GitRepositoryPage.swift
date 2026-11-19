@@ -3,15 +3,13 @@ import RuimteTransport
 import SwiftUI
 
 /// One repository of the project folder: where its branch stands, everything that acts on it alone, its stash,
-/// and the way into its branches, its history, its worktrees and a pull request.
+/// and the way into its branches, its history and its worktrees.
 struct GitRepositoryPage: View {
     let client: any MachineRequesting
     let repositories: GitRepositories
     let path: String
     var workspace: MobileWorkspace?
     @State private var actions: GitBranchActions
-    @State private var pullRequest = false
-    @State private var note: String?
 
     init(client: any MachineRequesting, repositories: GitRepositories, path: String, workspace: MobileWorkspace? = nil)
     {
@@ -32,9 +30,6 @@ struct GitRepositoryPage: View {
             }
             if let problem = repositories.problem {
                 Label(problem, lucideIcon: "triangle-alert").foregroundStyle(MobileStyle.statusError)
-            }
-            if let note {
-                Text(note).font(.caption).foregroundStyle(MobileStyle.muted).textSelection(.enabled)
             }
             if let checkout {
                 Section {
@@ -84,12 +79,6 @@ struct GitRepositoryPage: View {
                             Task { await actions.pop(client: client, stash: nil) }
                         }
                     }.disabled(repositories.busy || refs.stashes.isEmpty)
-                    if refs.capabilities {
-                        Button(String(localized: "Create pull request"), lucideIcon: "git-pull-request") {
-                            pullRequest = true
-                        }
-                        .disabled(repositories.busy || checkout.branch == nil)
-                    }
                 }
                 Section {
                     NavigationLink {
@@ -116,11 +105,6 @@ struct GitRepositoryPage: View {
         }
         .navigationTitle(checkout?.label ?? String(localized: "Repository"))
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(isPresented: $pullRequest) {
-            GitPullRequestPage(client: client, repositories: repositories, path: path, subject: refs.lastSubject) {
-                note = $0
-            }
-        }
         .task(id: path) { await actions.load(client: client) }
         .refreshable {
             await repositories.refresh(client: client, cwd: path)
@@ -188,8 +172,6 @@ struct GitDivergedRow: View {
 @MainActor @Observable final class GitRefsState {
     private(set) var refs: [GitRef] = []
     private(set) var stashes: [GitStash] = []
-    private(set) var capabilities = false
-    private(set) var lastSubject = ""
     private(set) var loading = false
 
     var branches: [GitRef] { refs.filter { $0.kind == .local } }
@@ -197,8 +179,6 @@ struct GitDivergedRow: View {
     func clear() {
         refs = []
         stashes = []
-        capabilities = false
-        lastSubject = ""
     }
 
     func load(client: any MachineRequesting, cwd: String) async {
@@ -209,16 +189,6 @@ struct GitDivergedRow: View {
         {
             refs = answer.refs
             stashes = answer.stashes
-        }
-        if let answer = try? await client.request(.gitCapabilities, payload: .object(["cwd": .string(cwd)]))
-            .decoded(as: GitCapabilitiesResult.self)
-        {
-            capabilities = answer.gh
-        }
-        if let answer = try? await client.request(
-            .gitLog, payload: .object(["cwd": .string(cwd), "limit": .number(1)])
-        ).decoded(as: GitLogResult.self) {
-            lastSubject = answer.commits.first?.subject ?? ""
         }
     }
 }

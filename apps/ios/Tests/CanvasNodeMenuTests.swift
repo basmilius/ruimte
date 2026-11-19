@@ -148,17 +148,13 @@ import Testing
 
     @Test func openAsViewKeepsTheSessionsIdAndWhatItRunsWith() {
         let future: JSONValue = .object(["nested": .array([.number(7), .string("kept")])])
-        let issue: JSONValue = .object([
-            "repo": .string("space/ruimte"), "number": .number(7), "url": .string("https://example.test/issues/7"),
-        ])
         let chat = node("chat-1", "chat").setting("provider", .string("claude")).setting("cwd", .string("app"))
-            .setting("futureSession", future).setting("issue", issue).setting("machine", .string("live-machine"))
+            .setting("futureSession", future).setting("machine", .string("live-machine"))
         let view = CanvasEditing.view(for: chat)
         #expect(view.stableID == "chat-1")
         #expect(view["node"]?["provider"] == .string("claude"))
         #expect(view["node"]?["cwd"] == .string("app"))
         #expect(view["node"]?["futureSession"] == future)
-        #expect(view["node"]?["issue"] == issue)
         #expect(view["node"]?["machine"] == nil)
         let reference: JSONValue = .object(["platform": .string("ios"), "name": .string("iPhone 17")])
         let device = CanvasEditing.view(

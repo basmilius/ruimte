@@ -28,7 +28,6 @@ describe('what the machine says about moving a chat', () => {
         ...daemon,
         store,
         lineage: daemon.lineage,
-        prWatches: daemon.prWatches,
         outbox: daemon.outbox,
         machineHome: new MachineHome(store.home),
         journal: new MoveJournal(store.home),
@@ -67,7 +66,6 @@ describe('what the machine says about moving a chat', () => {
                 summarize: async () => ({}) as never,
                 continueOn: async () => ({}) as never
             },
-            killed: async () => undefined,
             moves: moves(),
             machineOf: () => null,
             starting: () => false

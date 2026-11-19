@@ -84,8 +84,7 @@
             "tasks": "A chat with tasks cannot move to a project yet.",
             "owedAt": "This chat resumes by itself at {{time}}. Write in it or turn off resuming first.",
             "owed": "The machine still has work queued for this chat. Try again once it is done.",
-            "messages": "Messages from other chats wait for its next turn. Move it after that.",
-            "pr-watch": "This chat watches a pull request. Stop watching it first."
+            "messages": "Messages from other chats wait for its next turn. Move it after that."
         }
     }
 }

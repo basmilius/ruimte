@@ -27,10 +27,6 @@ import { FILE_COMMANDS } from '@/files/command-table';
 import { fileFacts } from '@/files/menu-facts';
 import { FIND_COMMANDS } from '@/find/command-table';
 import { GIT_COMMANDS } from '@/git/command-table';
-import { GITHUB_COMMANDS } from '@/github/command-table';
-import { GITHUB_GENERATED } from '@/github/generated-commands';
-import { GITHUB_MENU_EXTRAS } from '@/github/menu-extras';
-import { githubFacts } from '@/github/menu-facts';
 import { LANGUAGE_AND_EDITOR_COMMANDS } from '@/language/command-specs';
 import { languageFacts } from '@/language/menu-facts';
 import { PROBLEMS_COMMANDS } from '@/language/problems-command-table';
@@ -68,7 +64,6 @@ export function installCommands(): void {
     registerCommands(DATABASE_COMMANDS);
     registerCommands(CANVAS_COMMANDS);
     registerCommands(FIND_COMMANDS);
-    registerCommands(GITHUB_COMMANDS);
     registerCommands(GIT_COMMANDS);
     registerCommands(DEVICE_COMMANDS);
     registerCommands(OUTPUT_COMMANDS);
@@ -86,21 +81,9 @@ export function installCommands(): void {
     registerCommands(DICTATION_COMMANDS);
     registerCommands(LANGUAGE_AND_EDITOR_COMMANDS);
 
-    registerMenuFacts(
-        agentFacts,
-        attentionFacts,
-        canvasFacts,
-        chatFacts,
-        fileFacts,
-        githubFacts,
-        languageFacts,
-        launchFacts,
-        routineFacts,
-        terminalFacts,
-        viewFacts
-    );
-    registerMenuExtras(...AGENT_MENU_EXTRAS, ...CANVAS_MENU_EXTRAS, ...CHAT_MENU_EXTRAS, ...GITHUB_MENU_EXTRAS, ...LAUNCH_MENU_EXTRAS, ...VIEW_MENU_EXTRAS);
-    registerGenerated(...AGENT_GENERATED, ...CANVAS_GENERATED, ...CHAT_GENERATED, ...GITHUB_GENERATED, ...LAUNCH_GENERATED, ...VIEW_GENERATED);
+    registerMenuFacts(agentFacts, attentionFacts, canvasFacts, chatFacts, fileFacts, languageFacts, launchFacts, routineFacts, terminalFacts, viewFacts);
+    registerMenuExtras(...AGENT_MENU_EXTRAS, ...CANVAS_MENU_EXTRAS, ...CHAT_MENU_EXTRAS, ...LAUNCH_MENU_EXTRAS, ...VIEW_MENU_EXTRAS);
+    registerGenerated(...AGENT_GENERATED, ...CANVAS_GENERATED, ...CHAT_GENERATED, ...LAUNCH_GENERATED, ...VIEW_GENERATED);
     registerBehaviors(WINDOW_BEHAVIORS);
     // Offered on the start screen too, as main did; what they run loads on first use.
     registerBehaviors(MEASURE_BEHAVIORS);

@@ -30,8 +30,6 @@ export function gitDepsWith(overrides: Partial<GitDeps> = {}): GitDeps {
         merges: {} as never,
         statuses: {} as never,
         providers: {} as never,
-        prWatches: {} as never,
-        placeOf: () => null,
         textModels: { choice: () => null, prepare: async () => null },
         machineHome: HOME_WITHOUT_STATE,
         bundles: {} as never,

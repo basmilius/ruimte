@@ -5,7 +5,7 @@ import { ButtonGroup, ErrorBoundary, Pill, messageOf, Tooltip, FileIcon, Icon, I
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { notePaperOf, type CanvasNodeKind } from '@ruimte/contracts';
 import clsx from 'clsx';
-import { ChevronDown, ChevronRight, CircleDot, CirclePower, CircleX, Crosshair, GitBranch, Hand, Shrink, X, type LucideIcon } from 'lucide-react';
+import { ChevronDown, ChevronRight, CirclePower, CircleX, Crosshair, GitBranch, Hand, Shrink, X, type LucideIcon } from 'lucide-react';
 import { memo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { renameNodeAction } from '@/action-port/person-actions';
@@ -30,7 +30,6 @@ import { useWaitingOn } from '@/chat/waiting-on';
 import { markPeerLapsed, usePeerLapse } from '@/clients/project/peer-lapse';
 import { linkToPeer } from '@/clients/project/peer-linker';
 import { useGroupWorktrees, useWorktreeOf } from '@/controllers/worktrees';
-import { openInSystemBrowser } from '@/desktop/bridge';
 import { nodeInfoOf } from '@/extensions/slots';
 import { NodeHeaderSlot, SlotRow } from '@/extensions/SlotSurfaces';
 import { remoteNodeDialog } from '@/machine-ui/dialogs';
@@ -170,23 +169,6 @@ function RemoteWaitPill({ machine, count }: { machine: string; count: number }) 
         <Tooltip label={label}>
             <Pill icon={<MachineGlyph icon={icon} size={12} />} className="max-w-48" aria-label={label}>
                 {t('remote.waiting', { machine: name })}
-            </Pill>
-        </Tooltip>
-    );
-}
-
-function IssuePill({ issue }: { issue: { repo: string; number: number; url: string } }) {
-    const { t } = useTranslation('canvas');
-    const open = (): void => {
-        if (!/^https:\/\//.test(issue.url)) {
-            return;
-        }
-        openInSystemBrowser(issue.url);
-    };
-    return (
-        <Tooltip label={t('node.issuePill', { issue: `${issue.repo}#${issue.number}` })}>
-            <Pill mono icon={<Icon icon={CircleDot} size={12} />} className="max-w-48" onClick={open}>
-                #{issue.number}
             </Pill>
         </Tooltip>
     );
@@ -497,7 +479,6 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                     )}
                     {!renaming && waitingFor.map(({ machine, count }) => <RemoteWaitPill key={machine} machine={machine} count={count} />)}
                     {nodeWorktree && !renaming && <WorktreePill worktree={nodeWorktree} />}
-                    {node.issue && !renaming && <IssuePill issue={node.issue} />}
                     {isGroup && !node.worktree && groupWorktrees.length > 0 && (
                         <Tooltip label={groupWorktrees.map((worktree) => worktree.branch).join(', ')}>
                             <Pill className="tabular-nums" icon={<Icon icon={GitBranch} size={12} />}>

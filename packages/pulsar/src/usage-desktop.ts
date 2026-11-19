@@ -22,7 +22,6 @@ export const USAGE_DESKTOP_COMMANDS = [
     'windowNew',
     'chatNew',
     'chatNewWorktree',
-    'issueStart',
     'viewNew',
     'viewNewDrawing',
     'viewNewDiagram',
@@ -58,8 +57,6 @@ export const USAGE_DESKTOP_COMMANDS = [
     'settingsSearch',
     'findInFiles',
     'searchChats',
-    'prShow',
-    'prWatchStop',
     'sidebar',
     'panelFiles',
     'panelOutput',
@@ -275,12 +272,11 @@ export const USAGE_DESKTOP_GENERATED_COMMANDS = [
     'launchChoose',
     'launchAfterSettle',
     'layoutApply',
-    'layoutDelete',
-    'prShowIn'
+    'layoutDelete'
 ] as const;
 
 // Rows the table lost, which an older client still counts: a day that names one would fail as a whole.
-export const USAGE_DESKTOP_RETIRED_COMMANDS = ['tabUngroup'] as const;
+export const USAGE_DESKTOP_RETIRED_COMMANDS = ['tabUngroup', 'issueStart', 'prShow', 'prWatchStop', 'prShowIn'] as const;
 
 export type UsageDesktopCommand =
     | (typeof USAGE_DESKTOP_COMMANDS)[number]

@@ -179,25 +179,6 @@ final class GitSheetTests: XCTestCase {
         XCTAssertEqual(model.subject, "")
     }
 
-    func testAPullRequestTakesTheLastSubjectAndReportsWhatTheBranchCarries() async {
-        let machine = GitSheetMachine()
-        let repositories = await GitSheetRepositories.with([checkout("app", branch: "ios-redesign")])
-        let model = GitPullRequestModel(repositories: repositories, path: "/work/app", subject: "")
-        await model.load(client: machine)
-        XCTAssertEqual(model.title, "Share one backoff across transport endpoints")
-        XCTAssertEqual(model.stats?.files, 2)
-        XCTAssertEqual(
-            GitPullRequestModel.summary(
-                files: model.stats!.files, added: model.stats!.added, deleted: model.stats!.deleted),
-            "2 files · +27 −10")
-        let line = await model.create(client: machine)
-        XCTAssertEqual(line, "Pull request ready: https://example.test/pull/7")
-        XCTAssertEqual(model.url?.absoluteString, "https://example.test/pull/7")
-        let created = machine.sent.last { $0.type == .gitAction }
-        XCTAssertEqual(created?.payload["kind"], .string("create-pr"))
-        XCTAssertEqual(created?.payload["subject"], .string("Share one backoff across transport endpoints"))
-    }
-
     func testAWorktreeSaysWhoWorksInIt() {
         let views = ProjectWire.stored([
             .object([
@@ -371,7 +352,7 @@ final class GitSheetTests: XCTestCase {
         if type == .gitAction { onAction?() }
         switch type {
         case .gitCapabilities:
-            return .object(["gh": .bool(true), "messageProvider": .string("claude")])
+            return .object(["gh": .bool(false), "messageProvider": .string("claude")])
         case .providerList:
             return ProviderWire.list([ProviderWire.provider("claude", name: "Claude Code")])
         case .gitSuggestMessage:
@@ -397,11 +378,6 @@ final class GitSheetTests: XCTestCase {
             return .object([
                 "path": .string(""), "diff": .string(""), "added": .number(27), "deleted": .number(10),
                 "binary": .bool(false), "files": .array([file("a.ts", 24, 9), file("b.ts", 3, 1)]),
-            ])
-        case .gitAction where payload["kind"] == .string("create-pr"):
-            return .object([
-                "actionId": .string("a1"), "summary": .string("Pull request ready: https://example.test/pull/7"),
-                "output": .string(""), "url": .string("https://example.test/pull/7"),
             ])
         case .gitWorktreeAdd:
             return .object([

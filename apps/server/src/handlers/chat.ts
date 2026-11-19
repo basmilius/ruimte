@@ -42,8 +42,6 @@ export interface ChatDeps {
     beforeKill: BeforeKill;
     stopNode(nodeId: string, reason: string): Promise<void>;
     forks: ChatForkHandlers;
-    /* Told after a chat was killed, so what the machine kept against it goes too. */
-    killed(chatId: string): Promise<void>;
     moves: ChatMoveHandlers;
     machineOf: MachineOfNode;
     /* Whether another machine's task still has this chat to start, which only the daemon may do: a window would start it in the wrong folder. */
@@ -66,7 +64,7 @@ export function chatArea(deps: ChatDeps): Area {
     };
 }
 
-function registerRequests(dispatcher: Dispatcher, { manager, providers, beforeKill, stopNode, forks, killed, moves, machineOf, starting }: ChatDeps): void {
+function registerRequests(dispatcher: Dispatcher, { manager, providers, beforeKill, stopNode, forks, moves, machineOf, starting }: ChatDeps): void {
     // What the daemon answers differently from a host of chats alone: a task's row stops its node, a stop or a
     // removal first owes the end of the agents a chat opened, and a fork lands on the canvas.
     const {
@@ -131,7 +129,6 @@ function registerRequests(dispatcher: Dispatcher, { manager, providers, beforeKi
     dispatcher.register('chat.kill', async (payload) => {
         await beforeKill(payload.chatId);
         await manager.kill(payload.chatId);
-        await killed(payload.chatId);
         return {};
     });
 }

@@ -44,12 +44,12 @@ test('each kind says what it could not do in its own words, and a kind with none
         },
         alert: () => undefined
     });
-    park({ ...entry, kind: 'deliver-pr-watch', target: 'chat-watcher', payload: { watchId: 'w', key: 'k', text: 't', label: 'l' } }, new Error('no chat'));
+    park({ ...entry, kind: 'deliver-answer', target: 'chat-watcher', payload: { text: 't', label: 'l' } }, new Error('no chat'));
     park({ ...entry, kind: 'resume-run', target: 'chat-1', payload: { turnId: 'turn-1', attempt: 1 } }, new Error('gone'));
     park({ ...entry, kind: 'connect-peer', target: 'peer:m', payload: { machineId: 'm', since: 1, interval: 1 } }, new Error('away'));
     park({ ...entry, kind: 'deliver-waiting', target: 'chat-1', payload: { childId: 'c', requestId: 'r' } }, new Error('away'));
     expect(notes).toEqual([
-        'The machine could not hand Watcher (chat-watcher) the news of its pull request watch: no chat',
+        'The machine could not hand Watcher (chat-watcher) the answer a person gave on its card: no chat',
         'The machine could not resume the turn of Watcher (chat-1) after a restart: gone'
     ]);
 });
@@ -69,7 +69,6 @@ test('work for a chat an agent opened tells that agent, as every kind but a summ
     park({ ...child, kind: 'deliver-answer', payload: { text: 't', label: 'l' } }, new Error('closed'));
     park({ ...child, kind: 'deliver-lost-work', payload: { noteId: 'n' } }, new Error('closed'));
     park({ ...child, kind: 'end-children', payload: { nodeIds: ['grandchild'] } }, new Error('stuck'));
-    park({ ...child, kind: 'deliver-pr-watch', payload: { watchId: 'w', key: 'k', text: 't', label: 'l' } }, new Error('closed'));
     park({ ...child, kind: 'run-after-settle', payload: { turnId: 'turn-1', launchId: 'test', worktree: '/w' } }, new Error('no task'));
     park({ ...entry, kind: 'deliver-answer', target: 'chat-person', payload: { text: 't', label: 'l' } }, new Error('closed'));
 
@@ -77,7 +76,6 @@ test('work for a chat an agent opened tells that agent, as every kind but a summ
         'chat-lead: The machine could not hand Child (chat-child) the answer a person gave on its card: closed',
         'chat-lead: The machine could not tell Child (chat-child) what a restart took: closed',
         'chat-lead: The machine could not end the agents Child (chat-child) opened: stuck',
-        'chat-lead: The machine could not hand Child (chat-child) the news of its pull request watch: closed',
         'chat-lead: The machine could not run the launch task that follows the turn of Child (chat-child): no task'
     ]);
 });

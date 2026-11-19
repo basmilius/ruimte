@@ -142,9 +142,6 @@ export const CANVAS_ACTIONS = {
             beside: agentField(nodeId).describe('Puts the node directly right of this node, top edges level, whatever is there already'),
             device: agentField(z.string().min(1)).describe('The device a device node shows, by the id device.list gives it'),
             resume: resumedSession,
-            issue: forActors(PERSON, z.object({ repo: z.string().min(1), number: z.number().int().positive(), url: z.string().min(1) })).describe(
-                'The GitHub issue an agent node is started on, which the node shows as a pill'
-            ),
             color: agentField(z.enum(NODE_ACCENT_NAMES)).describe('The color of the node; a note takes its paper from it'),
             artifact: forActors(PERSON_AND_AGENT, ArtifactIdSchema).describe("The artifact of this project's Output an artifact node shows"),
             artifactVersion: forActors(PERSON_AND_AGENT, ArtifactVersionIdSchema).describe(

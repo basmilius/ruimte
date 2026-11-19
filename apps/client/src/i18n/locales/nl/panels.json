@@ -437,7 +437,6 @@
             "commit": "Committen",
             "commit-push": "Committen en pushen",
             "create-branch": "Branch aanmaken",
-            "create-pr": "Pull request openen",
             "delete-branch": "Branch verwijderen",
             "fetch": "Fetchen",
             "force-push": "Force pushen",
@@ -463,8 +462,6 @@
             "popStash": "Stash poppen",
             "pull": "Pull",
             "pullAll": "Pull alles",
-            "pullRequest": "Pull request aanmaken…",
-            "showPullRequest": "Pull request tonen",
             "push": "Push",
             "rebase": "Rebasen op…",
             "renameBranch": "Branch hernoemen…",
@@ -473,79 +470,13 @@
             "syncAll": "Sync alles",
             "syncHint": "eerst pull, dan push",
             "branchGroup": "Branch",
-            "stashGroup": "Stash",
-            "pullRequestGroup": "Pull request"
+            "stashGroup": "Stash"
         },
         "changeKind": {
             "code": "Code",
             "tests": "Tests",
             "mocks": "Mocks",
             "generated": "Gegenereerd"
-        },
-        "pr": {
-            "title": "Pull request",
-            "loading": "Pull request lezen…",
-            "none": "Deze branch heeft geen pull request.",
-            "open": "Openen op GitHub",
-            "refresh": "Vernieuwen",
-            "failed": "Kon de pull request niet lezen",
-            "draft": "Concept",
-            "state": {
-                "open": "Open",
-                "merged": "Gemerged",
-                "closed": "Gesloten"
-            },
-            "files_one": "{{count}} bestand gewijzigd",
-            "files_other": "{{count}} bestanden gewijzigd",
-            "noChecks": "Geen checks op deze commit.",
-            "status": "Status",
-            "noThreads": "Geen reviewdraden",
-            "checks": "Checks",
-            "checksFailed_one": "{{count}} check mislukt",
-            "checksFailed_other": "{{count}} checks mislukt",
-            "checksPending_one": "{{count}} check loopt",
-            "checksPending_other": "{{count}} checks lopen",
-            "checksPassed_one": "{{count}} check geslaagd",
-            "checksPassed_other": "{{count}} checks geslaagd",
-            "merge": {
-                "clean": "Klaar om te mergen",
-                "blocked": "Mergen is geblokkeerd",
-                "behind": "Loopt achter op basis",
-                "dirty": "Mergeconflicten",
-                "draft": "Nog een concept",
-                "has_hooks": "Klaar om te mergen, met checks die moeten slagen",
-                "unstable": "Mergebaar, maar checks mislukt",
-                "unknown": "Mergestatus onbekend",
-                "review": {
-                    "approved": "Goedgekeurd",
-                    "changes_requested": "Wijzigingen gevraagd",
-                    "review_required": "Review nodig"
-                }
-            },
-            "threads_one": "{{count}} reviewdraad",
-            "threads_other": "{{count}} reviewdraden",
-            "showBots": "Bots tonen",
-            "showResolved": "Opgeloste tonen",
-            "hidden": "{{bots}} bot- en {{resolved}} opgeloste draden verborgen",
-            "resolved": "opgelost",
-            "outdated": "verouderd",
-            "bot": "bot",
-            "copyToChat": "Naar chat kopiëren…",
-            "copyToChatHint": "Zet de draad in de prompt van een chat. Er gaat niets weg.",
-            "truncated": "Meer reacties dan getoond.",
-            "watch": {
-                "forChat": "Volgen voor chat…",
-                "forChatHint": "Wekt de chat als de checks van deze commit klaar zijn of er een review binnenkomt. Er wordt niets gemerged of gepusht.",
-                "stop": "Stoppen met volgen",
-                "watching": "Gevolgd voor {{chat}}",
-                "ended": "Het volgen is beëindigd.",
-                "merged": "De pull request is gemerged, dus het volgen is beëindigd.",
-                "closed": "De pull request is gesloten, dus het volgen is beëindigd.",
-                "expired": "Het volgen liep 7 dagen en is beëindigd.",
-                "folderMissing": "De map van de chat is weg, dus het volgen is gestopt.",
-                "limit": "Deze machine volgt al 50 pull requests. Stop er eerst één.",
-                "failed": "Kon het volgen niet starten"
-            }
         },
         "branchMenu": {
             "create": "Branch aanmaken…",
@@ -706,14 +637,6 @@
                 "empty": "Geen stashes.",
                 "title": "Stash poppen"
             },
-            "pullRequest": {
-                "body": "Beschrijving",
-                "bodyPlaceholder": "Wat dit verandert en waarom.",
-                "confirm": "Pull request aanmaken",
-                "description": "Publiceert de branch eerst als dat nodig is. De pull request opent in je browser.",
-                "subject": "Titel",
-                "title": "Pull request aanmaken"
-            },
             "rebase": {
                 "confirm": "Rebasen",
                 "description": "Herschrijft je commits boven op die branch. Een gepushte branch heeft daarna een force push nodig. Een conflict pauzeert de rebase, zodat je het oplost of afbreekt.",
@@ -814,7 +737,6 @@
             "failed": "Dat werkte niet",
             "fetch": "Fetchen",
             "merge": "Mergen",
-            "pr": "Pull request openen",
             "pull": "Pullen",
             "push": "Pushen",
             "rebase": "Rebasen",

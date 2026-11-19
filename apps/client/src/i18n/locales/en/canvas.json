@@ -55,14 +55,6 @@
         "context": {
             "tooltip": "Linked context. The agent can read it.",
             "pill": "context"
-        },
-        "issuePill": "Open {{issue}} on GitHub",
-        "prWatchPill": "Watching {{pr}}: {{state}}",
-        "prWatchState": {
-            "pending": "checks running",
-            "success": "checks passed",
-            "failure": "checks failed",
-            "none": "no checks"
         }
     },
     "group": {
@@ -100,7 +92,6 @@
         "startAgentFromNote": "Start agent from note",
         "color": "Color",
         "noAccent": "None",
-        "stopPrWatch": "Stop watching pull request",
         "stopWaiting": "Stop waiting",
         "showRuns": "Show runs",
         "makeDefaultSize": "Set as default size",

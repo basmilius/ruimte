@@ -94,7 +94,6 @@ function runOutput(checkout: Checkout, result: GitActionResult): GitRun {
         summary: result.summary,
         output: result.output,
         commit: result.commit ?? null,
-        url: result.url ?? null,
         conflicts: result.conflicts ?? []
     };
 }
@@ -238,7 +237,6 @@ export function developerActions(document: StoreApi<DocumentState>, overrides: P
                     summary: '',
                     output: '',
                     commit: null,
-                    url: null,
                     conflicts: [],
                     error: { code, message }
                 });
@@ -540,22 +538,6 @@ export function developerActions(document: StoreApi<DocumentState>, overrides: P
                 };
             }
             return { output: await runKind(checkout, 'stash-pop', { ref: stash }, run) };
-        },
-        'git.createPullRequest': async ({ repository, title, body, run }, call) => {
-            const checkout = await checkoutOf(repository, call);
-            if (asksFirst(call)) {
-                const status = await statusOf(checkout);
-                return {
-                    confirmation: {
-                        title: `Create pull request “${title}” for ${branchOf(status)} of ${checkout.label}?`,
-                        consequences: [
-                            ...(status.upstream === null ? [`${branchOf(status)} is published to origin first.`] : []),
-                            'The pull request is public to everyone with access to the repository.'
-                        ]
-                    }
-                };
-            }
-            return { output: await runKind(checkout, 'create-pr', { subject: title, ...(body == null ? {} : { body }) }, run) };
         },
         'git.proposeResolution': async ({ repository, path, run }, call) => ({
             output: await ask('git.resolveAi', { cwd: (await checkoutOf(repository, call)).path, path, actionId: run ?? machine.runId() })

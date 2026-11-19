@@ -84,8 +84,7 @@
             "tasks": "Een chat met taken kan nog niet naar een project.",
             "owedAt": "Deze chat gaat om {{time}} vanzelf verder. Schrijf er eerst in of zet hervatten uit.",
             "owed": "De machine moet nog werk voor deze chat doen. Probeer het opnieuw als dat klaar is.",
-            "messages": "Berichten van andere chats wachten op de volgende turn. Verplaats hem daarna.",
-            "pr-watch": "Deze chat volgt een pull request. Stop dat eerst."
+            "messages": "Berichten van andere chats wachten op de volgende turn. Verplaats hem daarna."
         }
     }
 }

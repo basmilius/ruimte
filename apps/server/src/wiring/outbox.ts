@@ -163,8 +163,6 @@ interface OutboxWiring {
     tasks: TaskWiring;
     endChildren: EndChildrenWiring;
     summaries: SummaryWiring;
-    /* Holds a wake for a chat in a closed project, which waits until the project opens again; for the features that wake a chat. */
-    unlessClosed<Entry extends { target: string }>(handler: (entry: Entry) => Promise<OutboxOutcome>): (entry: Entry) => Promise<OutboxOutcome>;
 }
 
 /*
@@ -361,5 +359,5 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
         }
     });
 
-    return { worker, tasks: taskWiring, endChildren, summaries, unlessClosed };
+    return { worker, tasks: taskWiring, endChildren, summaries };
 }

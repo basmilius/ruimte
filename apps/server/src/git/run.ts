@@ -35,12 +35,8 @@ export type GitErrorCode =
     | 'ref-not-found'
     | 'gh-missing'
     | 'folder-missing'
-    | 'pr-watch-refused'
-    | 'pr-watch-limit'
     | 'gh-unauthenticated'
     | 'gh-failed'
-    | 'issue-not-found'
-    | 'pr-not-found'
     | 'branch-exists'
     | 'target-not-checked-out'
     // git refused to merge over a changed file of the person's, which a stash moves out of the way.

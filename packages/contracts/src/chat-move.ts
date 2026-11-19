@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { ProjectSummarySchema } from './project.ts';
 import { isAbsolutePath } from './stored-path.ts';
 
-export const ChatMoveRefusalReasonSchema = z.enum(['not-in-chats', 'working', 'agents', 'tasks', 'owed', 'messages', 'pr-watch']);
+export const ChatMoveRefusalReasonSchema = z.enum(['not-in-chats', 'working', 'agents', 'tasks', 'owed', 'messages']);
 
 export const ChatMoveTargetSchema = z.union([
     z.object({ projectId: z.string().min(1) }),

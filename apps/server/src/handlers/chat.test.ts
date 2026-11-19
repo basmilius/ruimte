@@ -30,7 +30,6 @@ function register(started: string[]): Dispatcher {
         beforeKill: async () => undefined,
         stopNode: async () => undefined,
         forks: { fork: noMoves, info: noMoves, handoff: noMoves, summarize: noMoves, continueOn: noMoves },
-        killed: async () => undefined,
         moves: { info: noMoves, move: noMoves },
         machineOf: (nodeId) => (nodeId === 'remote' ? 'machine-b' : null),
         starting: () => false

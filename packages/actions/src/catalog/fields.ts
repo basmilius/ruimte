@@ -341,8 +341,6 @@ export const gitRunOutput = z.object({
     summary: z.string(),
     output: z.string(),
     commit: z.object({ hash: z.string(), subject: z.string() }).nullable(),
-    // The pull request a create-pr opened.
-    url: z.string().nullable(),
     // Files git left unmerged: the operation did not fail, it waits in the checkout for a person.
     conflicts: z.array(z.string())
 });

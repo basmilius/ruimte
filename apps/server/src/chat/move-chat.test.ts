@@ -39,7 +39,6 @@ describe('moving a chat from Chats into a project', () => {
         ...daemon,
         store,
         lineage: daemon.lineage,
-        prWatches: daemon.prWatches,
         outbox: daemon.outbox,
         machineHome: new MachineHome(store.home),
         journal,

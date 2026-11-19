@@ -199,7 +199,6 @@ export function canvasActions(document: StoreApi<DocumentState>, reach: CanvasRe
             at,
             cwd,
             resume,
-            issue,
             artifact,
             artifactVersion,
             routine
@@ -222,7 +221,6 @@ export function canvasActions(document: StoreApi<DocumentState>, reach: CanvasRe
                 ...(agent === null ? {} : agentNodeOptions(agent.target, agent.info, sessionOf(resume, cwd))),
                 ...(agent !== null && account != null ? { account } : {}),
                 ...(agent === null && cwd != null && (kind === 'chat' || kind === 'terminal') ? { cwd } : {}),
-                ...(issue != null && (kind === 'chat' || kind === 'terminal') ? { issue } : {}),
                 ...(title
                     ? { title }
                     : kind === 'note' && content

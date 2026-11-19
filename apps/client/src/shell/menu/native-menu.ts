@@ -3,7 +3,6 @@ import i18next from 'i18next';
 import { useEffect } from 'react';
 import { runMenuCommand } from '@/commands/run';
 import { desktop } from '@/desktop/bridge';
-import { usePrRepos } from '@/github/pr-repos';
 import { subscribeFocusedLanguages } from '@/language/focused-language';
 import { useLaunches } from '@/launches/state';
 import { useNewChat } from '@/project/new-chat';
@@ -65,7 +64,6 @@ export function useNativeMenu(): void {
             useServers.subscribe(schedule),
             useWindow.subscribe(schedule),
             useLaunches.subscribe(schedule),
-            usePrRepos.subscribe(schedule),
             useNewChat.subscribe(schedule),
             usePromptStacks.subscribe(schedule),
             useSnoozes.subscribe(schedule),

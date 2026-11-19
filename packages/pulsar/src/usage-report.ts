@@ -96,7 +96,6 @@ const PLAIN_COUNTERS = [
     'git.conflictsResolved',
     'plans.created',
     'visuals.shown',
-    'prWatches.started',
     'database.queries',
     'devices.started',
     'peers.tasks'

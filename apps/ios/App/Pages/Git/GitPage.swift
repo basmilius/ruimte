@@ -28,9 +28,7 @@ struct GitPage: View {
     @State private var commitModel: GitCommitModel?
     @State private var committing = false
     @State private var showRepositories = false
-    @State private var pullRequest: String?
     @State private var repositoryPage: String?
-    @State private var canPullRequest = false
     @State private var diff: GitDiffTarget?
     @State private var conflictFile: GitConflictTarget?
     @State private var note: String?
@@ -104,9 +102,6 @@ struct GitPage: View {
         .navigationDestination(item: $repositoryPage) { path in
             GitRepositoryPage(client: client, repositories: repositories, path: path, workspace: workspace)
         }
-        .navigationDestination(item: $pullRequest) { path in
-            GitPullRequestPage(client: client, repositories: repositories, path: path, subject: "") { note = $0 }
-        }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) { pill }
             ToolbarItem(placement: .topBarTrailing) { moreMenu }
@@ -117,12 +112,6 @@ struct GitPage: View {
         .task(id: folder) {
             await RemotePageLifecycle.run(
                 client: client, events: [.gitWorktrees], load: { await projectWorktrees.load(client: client) })
-        }
-        .task(id: checkouts.first?.path) {
-            guard let probe = checkouts.first?.path else { return }
-            let answer = try? await client.request(.gitCapabilities, payload: .object(["cwd": .string(probe)]))
-                .decoded(as: GitCapabilitiesResult.self)
-            canPullRequest = answer?.gh == true
         }
         .presentationDetents([.medium, .large], selection: $detent)
     }
@@ -194,12 +183,6 @@ struct GitPage: View {
                 Button(GitPanel.pushLabel(only), lucideIcon: "arrow-up") { act(only, GitPanel.pushKind(only)) }
                 Button(String(localized: "Sync"), lucideIcon: "refresh-cw") { act(only, "sync") }
                 Button(String(localized: "Fetch"), lucideIcon: "cloud-download") { act(only, "fetch") }
-                if canPullRequest && only.branch != nil {
-                    Divider()
-                    Button(String(localized: "Create pull request"), lucideIcon: "git-pull-request") {
-                        pullRequest = only.path
-                    }
-                }
                 Divider()
                 Button(String(localized: "Repository"), lucideIcon: "folder-git-2") { repositoryPage = only.path }
             }

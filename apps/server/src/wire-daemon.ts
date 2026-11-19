@@ -223,7 +223,6 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
             tasks: stores.tasks,
             outbox: stores.outbox,
             notices: stores.notices,
-            prWatches: work.prWatches,
             machineHome: machine.machineHome,
             journal: stores.chatMoves,
             snoozes: work.snoozes,

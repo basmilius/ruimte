@@ -3,7 +3,6 @@ import { USAGE_DESKTOP_COMMANDS, USAGE_DESKTOP_PANELS, USAGE_DESKTOP_SETTINGS_SE
 import { CHAT_MOVE_PREFIX } from '@/chat/menu-extras';
 import { commandIds, commandSpec } from '@/commands/registry';
 import { commandUsageName } from '@/commands/usage';
-import { PR_SHOW_IN_PREFIX } from '@/github/menu-extras';
 import { AFTER_SETTLE_PREFIX, LAUNCH_CHOOSE_PREFIX } from '@/launches/menu-extras';
 import { panelRegistry } from '@/registry/panels';
 import { allSettingsSections } from '@/settings/sections';
@@ -41,7 +40,6 @@ describe('commandUsageName', () => {
         expect(commandUsageName(`${CHAT_MOVE_PREFIX}project-1`)).toBe('chatMoveProject');
         expect(commandUsageName(`${LAUNCH_CHOOSE_PREFIX}l1`)).toBe('launchChoose');
         expect(commandUsageName(`${AFTER_SETTLE_PREFIX}t1`)).toBe('launchAfterSettle');
-        expect(commandUsageName(`${PR_SHOW_IN_PREFIX}/Users/jane/app`)).toBe('prShowIn');
         expect(commandUsageName('layout-apply-My layout')).toBe('layoutApply');
     });
 

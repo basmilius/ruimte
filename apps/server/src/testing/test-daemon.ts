@@ -11,9 +11,7 @@ import type { PendingPromptStore } from '../canvas/pending-prompts.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import type { Checkpoints } from '../git/checkpoints.ts';
-import type { GhRunner } from '../git/github.ts';
 import type { Worktrees } from '../git/worktrees.ts';
-import type { PrWatchStore } from '../github/pr-watch.ts';
 import type { EndChildrenWiring } from '../outbox/end-children.ts';
 import type { OutboxStore, OutboxWork } from '../outbox/outbox.ts';
 import type { RemoteTasks, RemoteTasksDeps } from '../peer/giver/remote-tasks.ts';
@@ -42,7 +40,6 @@ export interface TestDaemon {
     outbox: OutboxStore;
     /* What the daemon's own services owe the outbox through, as the cards' answers do. */
     link: OutboxLink;
-    prWatches: PrWatchStore;
     worker: OutboxWorker<OutboxWork>;
     sessions: SessionManager;
     chats: ChatCore;
@@ -106,8 +103,6 @@ interface TestDaemonOptions {
     onLimits?: (update: Parameters<TestSeams['observers']['limits']>[0]) => void;
     /* How pages are previewed and measured; without it a preview is refused and a page shown without heights. */
     visualRender?: Pick<VisualHost, 'preview' | 'measure'>;
-    /* What `gh` answers a pull request watch; without it every call fails. */
-    gh?: GhRunner;
     /* The machines this one gives tasks to: which are linked, the link to each and the reconnect owed while one is away. */
     remote?: {
         machines: NonNullable<CanvasHost['remote']>['machines'];
@@ -144,8 +139,7 @@ export async function bootTestDaemon(options: TestDaemonOptions): Promise<TestDa
         ...(options.claudeCli ? { claudeCli: options.claudeCli } : {}),
         ...(options.codexCli ? { codexCli: options.codexCli } : {}),
         ...(options.ptyAdapter ? { ptyAdapter: options.ptyAdapter } : {}),
-        ...(options.env ? { env: options.env } : {}),
-        ...(options.gh ? { gh: options.gh } : {})
+        ...(options.env ? { env: options.env } : {})
     });
     const seams: TestSeams = {
         ...base,
@@ -207,7 +201,6 @@ export async function bootTestDaemon(options: TestDaemonOptions): Promise<TestDa
         endChildren: work.endChildren,
         peerTasks: work.peerTasks,
         remoteTasks: work.remoteTasks,
-        prWatches: work.prWatches,
         host,
         bundles: wired.bundles,
         alerts: fakes.alerts,

@@ -3,7 +3,6 @@ import { WorktreeSchema } from '@adecore/agent-contracts/worktree';
 import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
 import { BYTES_CHUNK_MAX } from './bytes.ts';
-import { ChangeSplitSchema } from './change-split.ts';
 
 // Made under the app data dir when the branch has no worktree yet.
 export const WorktreeAddPayloadSchema = z.object({
@@ -340,141 +339,6 @@ export const GitRefCommitResultSchema = z.object({
 });
 export type GitRefCommitResult = z.infer<typeof GitRefCommitResultSchema>;
 
-export const GitIssuePayloadSchema = z.object({
-    cwd: z.string().min(1),
-    // A link, `owner/repo#12` or `#12`, which reads in the repository of the folder.
-    ref: z.string().min(1)
-});
-
-export const GitIssueSchema = z.object({
-    repo: z.string(),
-    number: z.number().int().positive(),
-    title: z.string(),
-    body: z.string(),
-    url: z.string(),
-    state: z.string(),
-    author: z.string().nullable(),
-    labels: z.array(z.string())
-});
-export type GitIssue = z.infer<typeof GitIssueSchema>;
-
-export const GitPrCheckStateSchema = z.enum(['pending', 'success', 'failure', 'neutral', 'skipped']);
-export type GitPrCheckState = z.infer<typeof GitPrCheckStateSchema>;
-
-export const GitPrCheckSchema = z.object({
-    // Tells two runs of one name apart: the push run and the pull request run of a workflow are different checks.
-    key: z.string(),
-    name: z.string(),
-    workflow: z.string().optional(),
-    event: z.string().optional(),
-    state: GitPrCheckStateSchema,
-    url: z.string().optional()
-});
-export type GitPrCheck = z.infer<typeof GitPrCheckSchema>;
-
-export const GitPrCommentSchema = z.object({
-    author: z.string(),
-    // A GitHub App or a login ending in [bot], such as a review bot.
-    bot: z.boolean(),
-    body: z.string(),
-    url: z.string(),
-    createdAt: z.string()
-});
-
-export const GitPrThreadSchema = z.object({
-    id: z.string(),
-    path: z.string().optional(),
-    line: z.number().int().optional(),
-    resolved: z.boolean(),
-    outdated: z.boolean(),
-    comments: z.array(GitPrCommentSchema),
-    // More comments than the ones carried.
-    truncated: z.boolean().optional()
-});
-export type GitPrThread = z.infer<typeof GitPrThreadSchema>;
-
-export const GitPullRequestSchema = z.object({
-    repo: z.string(),
-    number: z.number().int().positive(),
-    url: z.string(),
-    title: z.string(),
-    state: z.string(),
-    isDraft: z.boolean(),
-    // The commit the checks belong to; a different one replaces everything read before.
-    headSha: z.string(),
-    headBranch: z.string(),
-    baseBranch: z.string(),
-    mergeable: z.string(),
-    mergeState: z.string(),
-    reviewDecision: z.string().nullable(),
-    checks: z.array(GitPrCheckSchema),
-    checkState: z.enum(['pending', 'success', 'failure', 'none']),
-    threads: z.array(GitPrThreadSchema),
-    // GitHub's own totals for the whole pull request; a machine from before them leaves them out.
-    added: z.number().int().nonnegative().optional(),
-    deleted: z.number().int().nonnegative().optional(),
-    changedFiles: z.number().int().nonnegative().optional()
-});
-export type GitPullRequest = z.infer<typeof GitPullRequestSchema>;
-
-export const GitPullRequestPayloadSchema = z.object({
-    cwd: z.string().min(1),
-    // Without it, the pull request of the branch the folder is on.
-    number: z.number().int().positive().optional()
-});
-
-export const GitPullRequestResultSchema = z.object({
-    pr: GitPullRequestSchema.nullable()
-});
-
-/* `git.prSplit`: the split of a pull request `git.pr` answered, read from every page of GitHub's file list, so it comes after. */
-export const GitPrSplitPayloadSchema = z.object({
-    cwd: z.string().min(1),
-    number: z.number().int().positive(),
-    // The head `git.pr` answered at; a pull request that moved since gives none, since it would disagree with those totals.
-    headSha: z.string().min(1)
-});
-
-export const GitPrSplitResultSchema = z.object({
-    // Null when GitHub's file list could not be read whole, so a split never disagrees with the totals.
-    split: ChangeSplitSchema.nullable()
-});
-
-// A person's watch on one pull request for one chat. The daemon polls it and wakes the chat once per finished state.
-export const GitPrWatchSchema = z.object({
-    id: z.string().min(1),
-    projectId: z.string().min(1).max(256),
-    chatId: z.string().min(1).max(256),
-    cwd: z.string().min(1),
-    repo: z.string(),
-    number: z.number().int().positive(),
-    // Epoch ms; the watch ends seven days after it.
-    startedAt: z.number().int().nonnegative(),
-    // The head and check state the last poll saw, for the pill's tooltip.
-    head: z.string(),
-    checkState: z.enum(['pending', 'success', 'failure', 'none'])
-});
-export type GitPrWatch = z.infer<typeof GitPrWatchSchema>;
-
-export const GitPrWatchPayloadSchema = z.object({
-    projectId: z.string().min(1).max(256),
-    chatId: z.string().min(1).max(256),
-    cwd: z.string().min(1),
-    number: z.number().int().positive().optional()
-});
-export const GitPrWatchResultSchema = z.object({ watch: GitPrWatchSchema });
-export const GitPrUnwatchPayloadSchema = z.object({ chatId: z.string().min(1).max(256) });
-// Without a project, every watch of the machine.
-export const GitPrWatchesPayloadSchema = z.object({ projectId: z.string().min(1).max(256).optional() });
-export const GitPrWatchesResultSchema = z.object({ watches: z.array(GitPrWatchSchema).max(1000) });
-export const GitPrWatchEndReasonSchema = z.enum(['merged', 'closed', 'expired', 'folder-missing']);
-export type GitPrWatchEndReason = z.infer<typeof GitPrWatchEndReasonSchema>;
-// A person's Stop carries no `ended`: only a watch that ended by itself says why, and for which chat.
-export const GitPrWatchesEventSchema = z.object({
-    projectId: z.string().min(1).max(256),
-    ended: z.object({ chatId: z.string().min(1).max(256), reason: GitPrWatchEndReasonSchema }).optional()
-});
-
 export const GitStashSchema = z.object({
     ref: z.string(),
     message: z.string()
@@ -536,8 +400,7 @@ export const GitActionKindSchema = z.enum([
     'stash',
     'stash-pop',
     'commit',
-    'commit-push',
-    'create-pr'
+    'commit-push'
 ]);
 export type GitActionKind = z.infer<typeof GitActionKindSchema>;
 
@@ -550,9 +413,9 @@ export const GitActionPayloadSchema = z.object({
     ref: z.string().min(1).optional(),
     // The name a branch is created or renamed with.
     name: z.string().min(1).optional(),
-    // A commit's subject line, a stash's message, a pull request's title.
+    // A commit's subject line or a stash's message.
     subject: z.string().optional(),
-    // The rest of a commit message or a pull request's body.
+    // The rest of a commit message.
     body: z.string().optional(),
     // Commit: put every changed file in the index first.
     stageAll: z.boolean().optional(),
@@ -577,15 +440,13 @@ export const GitActionResultSchema = z.object({
     // Everything git wrote, so a failure can be copied whole.
     output: z.string(),
     commit: z.object({ hash: z.string(), subject: z.string() }).optional(),
-    // The pull request a `create-pr` opened, for the button that opens it.
-    url: z.string().optional(),
     // Files git left unmerged. A pull or a merge that ends here did not fail: it waits for a person,
     // and the checkout holds the operation until it is finished or taken back.
     conflicts: z.array(z.string()).optional()
 });
 export type GitActionResult = z.infer<typeof GitActionResultSchema>;
 
-export const GitActionPhaseSchema = z.enum(['start', 'fetch', 'stage', 'commit', 'push', 'pull', 'branch', 'stash', 'merge', 'rebase', 'pr', 'done', 'failed']);
+export const GitActionPhaseSchema = z.enum(['start', 'fetch', 'stage', 'commit', 'push', 'pull', 'branch', 'stash', 'merge', 'rebase', 'done', 'failed']);
 export type GitActionPhase = z.infer<typeof GitActionPhaseSchema>;
 
 export const GitProgressEventSchema = z.object({
@@ -646,7 +507,7 @@ export const GitIgnoredFilesResultSchema = z.object({
 export type GitIgnoredFilesResult = z.infer<typeof GitIgnoredFilesResultSchema>;
 
 export const GitCapabilitiesResultSchema = z.object({
-    // Whether `gh` is on the daemon's PATH, which is what opening a pull request needs.
+    // Always false since pull requests left Ruimte; kept because a client from before validates it.
     gh: z.boolean(),
     // The CLI that writes a commit message here, or null on a machine without one installed.
     messageProvider: AgentKindSchema.nullable(),
@@ -963,12 +824,6 @@ export const GIT_REQUEST_SCHEMAS = {
     'git.identity': { payload: GitIdentityPayloadSchema, result: GitIdentityResultSchema },
     'git.stage': { payload: GitStagePayloadSchema, result: EmptySchema },
     'git.discard': { payload: GitDiscardPayloadSchema, result: GitDiscardResultSchema },
-    'git.pr': { payload: GitPullRequestPayloadSchema, result: GitPullRequestResultSchema },
-    'git.prSplit': { payload: GitPrSplitPayloadSchema, result: GitPrSplitResultSchema },
-    'git.pr-watch': { payload: GitPrWatchPayloadSchema, result: GitPrWatchResultSchema },
-    'git.pr-unwatch': { payload: GitPrUnwatchPayloadSchema, result: EmptySchema },
-    'git.pr-watches': { payload: GitPrWatchesPayloadSchema, result: GitPrWatchesResultSchema },
-    'git.issue': { payload: GitIssuePayloadSchema, result: GitIssueSchema },
     'git.ref-commit': { payload: GitRefCommitPayloadSchema, result: GitRefCommitResultSchema },
     'git.refs': { payload: GitCwdPayloadSchema, result: GitRefsResultSchema },
     'git.repos': { payload: GitReposPayloadSchema, result: GitReposResultSchema },
@@ -994,7 +849,5 @@ export const GIT_EVENT_SCHEMAS = {
     'git.status': GitStatusEventSchema,
     'git.changed': GitChangedEventSchema,
     'git.progress': GitProgressEventSchema,
-    // The watches of a project changed (one started, stopped or ended by itself); a client that holds it asks again.
-    'git.pr-watches': GitPrWatchesEventSchema,
     'git.worktrees': GitWorktreesEventSchema
 } as const;

@@ -267,8 +267,7 @@ export function withNodeAsView(views: readonly ProjectView[], nodeId: string): {
                 account: node.account,
                 providerFixed: node.providerFixed,
                 runtimeMode: node.runtimeMode,
-                accent: node.accent,
-                issue: node.issue
+                accent: node.accent
             }
         };
     }

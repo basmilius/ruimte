@@ -11025,16 +11025,6 @@
         }
       }
     },
-    "Create pull request" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pull request aanmaken"
-          }
-        }
-      }
-    },
     "Creates a checkout of this branch. Every terminal and chat you add to the group starts in it." : {
       "localizations" : {
         "nl" : {
@@ -16867,16 +16857,6 @@
         }
       }
     },
-    "Opening pull request" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pull request openen"
-          }
-        }
-      }
-    },
     "Opens the chat" : {
       "localizations" : {
         "nl" : {
@@ -17653,16 +17633,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Branch publiceren"
-          }
-        }
-      }
-    },
-    "Publishes the branch first if needed. The pull request opens in your browser." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Publiceert de branch eerst als dat nodig is. De pull request opent in je browser."
           }
         }
       }
@@ -21857,16 +21827,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Het project ging niet op tijd open."
-          }
-        }
-      }
-    },
-    "The pull request is open." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De pull request staat open."
           }
         }
       }

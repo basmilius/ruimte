@@ -353,18 +353,6 @@ describe('git actions for Voice', () => {
         await confirmed(registry, asked);
         expect(of('git.operation')).toEqual([{ cwd: FOLDER, actionId: 'run-2', action: 'abort' }]);
     });
-
-    test('a pull request asks first, naming the branch it publishes', async () => {
-        const { registry, of } = fake({
-            'git.status': () => status({ branch: 'feature', upstream: null }),
-            'git.action': (payload) => ({ actionId: payload.actionId, summary: 'Pull request ready.', output: '', url: 'https://example.test/pr/1' })
-        });
-        const asked = await registry.execute('git.createPullRequest', { repository: 'atlas', title: 'Lexer', body: null }, VOICE_ACTION_CALL);
-        expect(questionOf(asked)).toContain('feature is published to origin first');
-        expect(of('git.action')).toEqual([]);
-        expect(await confirmed(registry, asked)).toMatchObject({ output: { url: 'https://example.test/pr/1' } });
-        expect(of('git.action')).toEqual([{ cwd: FOLDER, actionId: 'run-2', kind: 'create-pr', subject: 'Lexer' }]);
-    });
 });
 
 describe('worktree actions for Voice', () => {

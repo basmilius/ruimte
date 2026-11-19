@@ -1,6 +1,5 @@
 import type { ActionRegistry } from '@ruimte/actions';
 import { provideClientActionLoader } from '@/action-port/client-action-loader';
-import { watchPrWatches } from '@/github/pr-watches';
 import { provideExtensionChat } from '@/nodes/extension-chat';
 import { PlanSync } from '@/plan/plans';
 import { useDocument } from '@/state/document';
@@ -58,7 +57,6 @@ export function installClientHooks(): ClientHooks {
     watchEveryMachine((endpointId, transport) => reportPresence(transport, () => machineAnswers(pool.statusOf(endpointId), 'presence.report')));
     watchEveryMachine((endpointId, transport) => watchSnoozes(endpointId, transport));
     watchEveryMachine((endpointId, transport) => watchNodeActivity(endpointId, transport, () => machineAnswers(pool.statusOf(endpointId), 'activity.list')));
-    watchEveryMachine((endpointId, transport) => watchPrWatches(endpointId, transport));
     watchEveryMachine((endpointId, transport) => {
         const plans = new PlanSync(endpointId, transport);
 

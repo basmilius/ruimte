@@ -34,7 +34,6 @@ describe('finishing a chat move the machine stopped in the middle of', () => {
             ...daemon,
             store,
             lineage: daemon.lineage,
-            prWatches: daemon.prWatches,
             outbox: daemon.outbox,
             machineHome: new MachineHome(store.home),
             journal,

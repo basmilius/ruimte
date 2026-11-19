@@ -75,21 +75,6 @@ A merge, rebase, cherry-pick or revert that stops on a conflict opens the confli
 
 The wand resolves conflicts that need no choice. **Ask AI for this file** and **Ask AI for all** let an agent propose resolutions. A proposal is only shown: nothing is written, staged or committed until you accept it.
 
-## Pull requests
-
-These need the GitHub CLI (`gh`), installed and logged in on the machine.
-
-| Action | What it does |
-| --- | --- |
-| Create pull request… | Opens a pull request for the current branch |
-| Show pull request | Shows its state, checks and review threads |
-| Copy to chat… | Adds a review thread to a chat's draft, without sending it |
-| Watch for chat… | Wakes a chat each time the checks of the latest commit finish or a review comes in |
-
-A watch never merges or pushes. It ends when you click **Stop watching**, when the pull request is merged or closed, or after 7 days.
-
-**Start from GitHub issue**, in the command palette, takes a link or `owner/repo#12`. It makes a worktree and starts a chat there with the issue as the first prompt.
-
 ## Worktrees
 
 A worktree is a second checkout of the repository on its own branch, so two agents never edit the same files.

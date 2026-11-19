@@ -40,6 +40,6 @@ test('capabilities report an explicit pick even when no CLI is installed', async
     const detect = async () => ({ installed: false, version: null });
     const registry = new ProviderRegistry({ providers: [], detect });
 
-    expect((await readCapabilities(registry, 0, 'codex', detect)).messageProvider).toBe('codex');
-    expect((await readCapabilities(registry, 0, undefined, detect)).messageProvider).toBeNull();
+    expect((await readCapabilities(registry, 'codex')).messageProvider).toBe('codex');
+    expect((await readCapabilities(registry)).messageProvider).toBeNull();
 });

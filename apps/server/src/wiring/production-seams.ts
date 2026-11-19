@@ -3,8 +3,6 @@ import { systemClock } from '@adecore/agents/coordination';
 import { ProviderAccountsService } from '@adecore/agents/providers';
 import { errorText } from '../error-text.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
-import { runGh } from '../git/github.ts';
-import { prSplits } from '../git/pr-split.ts';
 import { Worktrees } from '../git/worktrees.ts';
 import { runCommand } from '../language/runtime.ts';
 import { toolchainCandidates } from '../language/toolchain.ts';
@@ -36,8 +34,6 @@ export function productionSeams(runtime: DaemonRuntime): DaemonSeams {
         git: {
             worktrees: ({ home, agents, now, checkoutRoot, foreign }) => new Worktrees(home, agents, now, checkoutRoot, foreign),
             checkpoints: (home, machineHome) => new Checkpoints(home, machineHome),
-            gh: runGh,
-            splits: prSplits,
             repositoryOf
         },
         projectStore: ({ home, links, overlays }) => new ProjectStore(home, links, overlays),

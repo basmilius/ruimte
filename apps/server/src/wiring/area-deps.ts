@@ -131,7 +131,6 @@ export function chatDeps(input: AreaInput): ChatDeps {
                     payload
                 )
         },
-        killed: (chatId) => work.prWatches.stop(chatId),
         moves: chatMover,
         machineOf: (nodeId) => store.machineOfNode(nodeId),
         starting: (chatId) => stores.lineage.peerOf(chatId) !== null && stores.outbox.owes('start-agent', chatId)
@@ -312,7 +311,7 @@ export function designDeps({ projects }: AreaInput): DesignDeps {
     };
 }
 
-export function gitDeps({ machine, providers, projects, work, git, agents }: AreaInput): GitDeps {
+export function gitDeps({ machine, providers, projects, git, agents }: AreaInput): GitDeps {
     const store = projects.store;
 
     return {
@@ -320,8 +319,6 @@ export function gitDeps({ machine, providers, projects, work, git, agents }: Are
         merges: git.merges,
         statuses: git.statuses,
         providers: providers.providers,
-        prWatches: work.prWatches,
-        placeOf: (id) => store.index.locate(id),
         machineHome: machine.machineHome,
         bundles: git.bundles,
         checkpoints: git.checkpoints,

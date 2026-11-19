@@ -1,5 +1,5 @@
 /* The rows a feature makes once per thing it holds, each kept at its own place in the order below. */
-export type PaletteSlot = 'pull-requests' | 'language' | 'agents' | 'node-moves' | 'layouts' | 'launches' | 'after-settle';
+export type PaletteSlot = 'language' | 'agents' | 'node-moves' | 'layouts' | 'launches' | 'after-settle';
 
 export type PaletteOrderEntry = string | { readonly rows: PaletteSlot };
 
@@ -16,7 +16,6 @@ export const PALETTE_ORDER: readonly PaletteOrderEntry[] = [
     'open-folder',
     'chat-new',
     'chat-new-worktree',
-    'issue-start',
     'chat-send-new',
     'chat-restart',
     'chat-effort-up',
@@ -25,10 +24,7 @@ export const PALETTE_ORDER: readonly PaletteOrderEntry[] = [
     'chat-message-next',
     'chat-make-project',
     'chat-move-to-project',
-    'pr-watch-stop',
     'find-in-files',
-    'pr-show',
-    { rows: 'pull-requests' },
     'search-chats',
     'find',
     { rows: 'language' },

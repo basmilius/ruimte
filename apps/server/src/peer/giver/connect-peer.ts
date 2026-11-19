@@ -1,7 +1,7 @@
 import type { ConnectPeerEntry, OutboxStore, OutboxWork } from '../../outbox/outbox.ts';
 import { RemoteLinkError, RemoteRefusal, refusalWords, type RemoteConnections } from './remote-connections.ts';
 
-// The wait after the first failed attempt, like the first poll of a PR-watch; each failure after it doubles the wait up to the cap.
+// The wait after the first failed attempt; each failure after it doubles the wait up to the cap.
 export const RECONNECT_START_MS = 60_000;
 export const RECONNECT_MAX_MS = 600_000;
 export const RECONNECT_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;

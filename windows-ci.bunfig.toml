@@ -21,7 +21,6 @@ pathIgnorePatterns = [
     "apps/server/src/chat/summary.test.ts",
     "apps/server/src/chat/visuals.test.ts",
     "apps/server/src/context/deliver-message.test.ts",
-    "apps/server/src/github/pr-watch-wiring.test.ts",
     "apps/server/src/outbox/end-children.test.ts",
     "apps/server/src/outbox/resume-run.test.ts",
     "apps/server/src/outbox/start-agent.test.ts",

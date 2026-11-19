@@ -103,8 +103,8 @@ export default function Privacy() {
                     </li>
                     <li>How many voice sessions and dictations there were, and how many files you opened and saved.</li>
                     <li>
-                        How many git commits, pushes and pulls there were and how many conflicts you resolved, and how many plans, visuals, pull request
-                        watches, database queries, started devices and tasks handed to other machines.
+                        How many git commits, pushes and pulls there were and how many conflicts you resolved, and how many plans, visuals, database queries,
+                        started devices and tasks handed to other machines.
                     </li>
                     <li>
                         A few timings, each as the day&apos;s median: how long the desktop app took to start, how long each AI provider took to its first

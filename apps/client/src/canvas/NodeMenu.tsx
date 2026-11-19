@@ -10,7 +10,6 @@ import {
     Copy,
     Crosshair,
     Eraser,
-    EyeOff,
     Expand,
     ExternalLink,
     Frame,
@@ -52,8 +51,6 @@ import { useWorkflowBesideSwitch } from '@/chat/workflow/workflow-beside-state';
 import { useGroupWorktrees, useWorktreeOf } from '@/controllers/worktrees';
 import { NodeMenuSlot } from '@/extensions/SlotSurfaces';
 import { FileActionItems } from '@/files/FileActionItems';
-import { stopPrWatch } from '@/github/pr-watch-actions';
-import { useChatPrWatch } from '@/github/pr-watches';
 import { FlagSubmenu } from '@/project/FlagSubmenu';
 import { askOpenAsView, canOpenAsView, showView } from '@/project/views';
 import { setRunsHidden, useRunsHidden } from '@/routines/runs-hidden';
@@ -110,7 +107,6 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
     const endpointId = useEndpointId();
     // A design's conversation is the one of the chat it shows.
     const chatId = useShownChatOfNode(node) ?? id;
-    const prWatch = useChatPrWatch(chatId);
     const waitingTask = useUnstartedTask(id, node?.machine);
     const maximized = useCanvas((s) => maximizedNodeOf(s) === id);
     const moveLocked = useCanvas((s) => s.locks.move);
@@ -249,7 +245,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
     const place = canOpenAsView(node.kind) || workingFolder !== null || filePath !== null;
     // A chat that has not run a turn yet has nothing to put under Conversation.
     const isChat = node.kind === 'chat' || node.kind === 'design';
-    const conversation = isChat && (offersFork || bookmarked || Boolean(chatSession) || prWatch !== null);
+    const conversation = isChat && (offersFork || bookmarked || Boolean(chatSession));
 
     return (
         <ContextMenu.Popup {...(finalFocus === undefined ? {} : { finalFocus })}>
@@ -292,11 +288,6 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
                         {chatSession && (
                             <ContextMenu.Item onClick={openInTerminal}>
                                 <Icon icon={Terminal} size={14} /> {t('menu.openInTerminal')}
-                            </ContextMenu.Item>
-                        )}
-                        {prWatch !== null && (
-                            <ContextMenu.Item onClick={() => void stopPrWatch(endpointId, chatId)}>
-                                <Icon icon={EyeOff} size={14} /> {t('menu.stopPrWatch')}
                             </ContextMenu.Item>
                         )}
                     </ContextMenu.Popup>

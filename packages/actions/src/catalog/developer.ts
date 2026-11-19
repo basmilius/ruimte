@@ -413,20 +413,6 @@ export const DEVELOPER_ACTIONS = {
         input: z.object({ repository, stash: z.string().min(1).describe('The stash as git.refs lists it, such as stash@{0}'), run: gitRun }),
         output: gitRunOutput
     },
-    'git.createPullRequest': {
-        title: 'Create pull request',
-        description: 'Publishes the branch when needed and opens a pull request with a title and body, after confirmation. Needs gh on the machine.',
-        effect: 'external',
-        domain: 'developer',
-        actors: PERSON_AND_VOICE,
-        input: z.object({
-            repository,
-            title: z.string().trim().min(1).describe('The title of the pull request'),
-            body: z.string().nullable().describe('The description of the pull request'),
-            run: gitRun
-        }),
-        output: gitRunOutput
-    },
     'git.proposeResolution': {
         title: 'Propose a conflict resolution',
         description:

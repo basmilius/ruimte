@@ -69,8 +69,6 @@ export interface AddNodeOptions {
     viewId?: string;
     // Files only: the file it reads, relative to the project folder or absolute outside it.
     path?: string;
-    // Chats and terminals: the GitHub issue the agent was started on.
-    issue?: ProjectNode['issue'];
     // Artifacts only: what of this machine's Output it shows.
     artifact?: ProjectNode['artifact'];
     // Routines only: the routine of the project it shows.

@@ -81,14 +81,12 @@ function context(patch: Partial<MenuContext> = {}): MenuContext {
         newChat: true,
         localMachine: true,
         scratch: false,
-        prWatch: false,
         routines: false,
         chat: false,
         chatTextSize: null,
         terminalKeys: false,
         terminalFind: false,
         diff: false,
-        prRepos: [],
         ...patch
     };
 }
@@ -253,9 +251,9 @@ describe('the menus', () => {
     });
 
     test('macOS opens on the application menu, and the view with the focus names the fifth', () => {
-        expect(labels(menuModel(context()))).toEqual(['Ruimte', 'File', 'Edit', 'Code', 'View', 'Canvas', 'Go', 'Run', 'Window', 'Help']);
-        expect(labels(menuModel(context({ view: 'drawing' })))).toEqual(['Ruimte', 'File', 'Edit', 'Code', 'View', 'Drawing', 'Go', 'Run', 'Window', 'Help']);
-        expect(labels(menuModel(context({ view: 'chat' })))).toEqual(['Ruimte', 'File', 'Edit', 'Code', 'View', 'Chat', 'Go', 'Run', 'Window', 'Help']);
+        expect(labels(menuModel(context()))).toEqual(['Ruimte', 'File', 'Edit', 'View', 'Canvas', 'Go', 'Run', 'Window', 'Help']);
+        expect(labels(menuModel(context({ view: 'drawing' })))).toEqual(['Ruimte', 'File', 'Edit', 'View', 'Drawing', 'Go', 'Run', 'Window', 'Help']);
+        expect(labels(menuModel(context({ view: 'chat' })))).toEqual(['Ruimte', 'File', 'Edit', 'View', 'Chat', 'Go', 'Run', 'Window', 'Help']);
     });
 
     test('the window and help menus carry their role, so macOS lists the open windows there', () => {
@@ -268,7 +266,7 @@ describe('the menus', () => {
 
     test('off macOS Settings sits in File and About in Help', () => {
         const spec = menuModel(context({ apple: false }));
-        expect(labels(spec)).toEqual(['File', 'Edit', 'Code', 'View', 'Canvas', 'Go', 'Run', 'Window', 'Help']);
+        expect(labels(spec)).toEqual(['File', 'Edit', 'View', 'Canvas', 'Go', 'Run', 'Window', 'Help']);
         expect(flatten(menu(spec, 'File')).some((node) => node.kind === 'command' && node.id === 'settings')).toBe(true);
         expect(flatten(menu(spec, 'File')).some((node) => node.kind === 'role' && node.role === 'quit')).toBe(true);
         expect(flatten(menu(spec, 'Help')).some((node) => node.kind === 'command' && node.id === 'about')).toBe(true);
@@ -286,11 +284,6 @@ describe('the menus', () => {
         expect(offered(menuModel(START_SCREEN), 'chat-new').accelerator).toBe('CommandOrControl+Alt+N');
         expect(find(menuModel(context()), 'chat-new')).toBeDefined();
         expect(commandIds(menuModel(context({ newChat: false })))).not.toContain('chat-new');
-    });
-
-    test('stopping a pull request watch is offered only for a chat that has one', () => {
-        expect(commandIds(menuModel(context()))).not.toContain('pr-watch-stop');
-        expect(commandIds(menuModel(context({ prWatch: true })))).toContain('pr-watch-stop');
     });
 
     test('send and start new chat and restart agent session are offered while a chat has the focus, with the composer key shown', () => {
@@ -311,11 +304,9 @@ describe('the menus', () => {
         }
     });
 
-    test('a chat in a worktree and a chat from an issue are offered in any view of a project with a folder', () => {
+    test('a chat in a worktree is offered in any view of a project with a folder', () => {
         for (const view of ['canvas', 'chat', 'terminal'] as const) {
-            const ids = commandIds(menuModel(context({ view })));
-            expect(ids).toContain('chat-new-worktree');
-            expect(ids).toContain('issue-start');
+            expect(commandIds(menuModel(context({ view })))).toContain('chat-new-worktree');
         }
         expect(commandIds(menuModel(context({ folder: false })))).not.toContain('chat-new-worktree');
     });
@@ -369,18 +360,6 @@ describe('the menus', () => {
         });
     });
 
-    test('showing a pull request has one row per repository once the folder holds several', () => {
-        expect(commandIds(menuModel(context()))).toContain('pr-show');
-        const repos = [
-            { path: '/work/backend', label: 'backend' },
-            { path: '/work/web', label: 'web' }
-        ];
-        const ids = commandIds(menuModel(context({ prRepos: repos })));
-        expect(ids).not.toContain('pr-show');
-        expect(ids).toContain('pr-show-in-/work/backend');
-        expect(ids).toContain('pr-show-in-/work/web');
-    });
-
     test('the Chats project has no panels for a folder, no launches and no folder to reveal', () => {
         const spec = menuModel(context({ scratch: true, folder: false }));
         expect(labels(spec)).not.toContain('Run');
@@ -413,7 +392,7 @@ describe('the menus', () => {
 
     test('the station has no shell, no clipboard roles and no release notes', () => {
         const spec = menuModel(context({ host: 'station', apple: true, releaseNotes: false }));
-        expect(labels(spec)).toEqual(['File', 'Edit', 'Code', 'View', 'Canvas', 'Go', 'Run', 'Window', 'Help']);
+        expect(labels(spec)).toEqual(['File', 'Edit', 'View', 'Canvas', 'Go', 'Run', 'Window', 'Help']);
         const nodes = spec.menus.flatMap((entry) => flatten(entry.items));
         expect(nodes.some((node) => node.kind === 'role' || node.kind === 'shell')).toBe(false);
         expect(commandIds(spec)).toContain('about');
@@ -705,7 +684,6 @@ describe('the commands behind the menu', () => {
         }
         expect(languageCommandRows().map((row) => row.id)).toEqual([...LANGUAGE_COMMAND_IDS]);
         expect(editorCommandRows().map((row) => row.id)).toEqual([...EDITOR_COMMAND_IDS]);
-        expect(isPaletteId('pr-show-in-/work/web')).toBe(true);
         expect(isPaletteId('layout-apply-Review')).toBe(true);
         expect(isPaletteId('go-view-2')).toBe(false);
     });

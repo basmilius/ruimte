@@ -164,8 +164,6 @@ const LAYOUT: Record<MenuContainer, readonly MenuGroup[]> = {
     selection: [{ id: 'selection' }],
     // The rows that change text as text sit under Edit, so Code keeps what knows the code.
     code: [
-        { id: 'pull-request', when: (context) => context.folder && !context.scratch },
-        { id: 'pr-watch' },
         { id: 'language', when: editorAvailable, extras: [{ order: -1, build: submenuOf('completion', 'codeCompletion') }] },
         {
             id: 'submenus',

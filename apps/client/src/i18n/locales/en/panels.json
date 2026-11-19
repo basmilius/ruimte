@@ -437,7 +437,6 @@
             "commit": "Committing",
             "commit-push": "Committing and pushing",
             "create-branch": "Creating branch",
-            "create-pr": "Opening pull request",
             "delete-branch": "Deleting branch",
             "fetch": "Fetching",
             "force-push": "Force pushing",
@@ -463,8 +462,6 @@
             "popStash": "Pop stash",
             "pull": "Pull",
             "pullAll": "Pull all",
-            "pullRequest": "Create pull request…",
-            "showPullRequest": "Show pull request",
             "push": "Push",
             "rebase": "Rebase onto…",
             "renameBranch": "Rename branch…",
@@ -473,79 +470,13 @@
             "syncAll": "Sync all",
             "syncHint": "pull, then push",
             "branchGroup": "Branch",
-            "stashGroup": "Stash",
-            "pullRequestGroup": "Pull request"
+            "stashGroup": "Stash"
         },
         "changeKind": {
             "code": "Code",
             "tests": "Tests",
             "mocks": "Mocks",
             "generated": "Generated"
-        },
-        "pr": {
-            "title": "Pull request",
-            "loading": "Reading pull request…",
-            "none": "This branch has no pull request.",
-            "open": "Open on GitHub",
-            "refresh": "Refresh",
-            "failed": "Could not read the pull request",
-            "draft": "Draft",
-            "state": {
-                "open": "Open",
-                "merged": "Merged",
-                "closed": "Closed"
-            },
-            "files_one": "{{count}} file changed",
-            "files_other": "{{count}} files changed",
-            "noChecks": "No checks on this commit.",
-            "status": "Status",
-            "noThreads": "No review threads",
-            "checks": "Checks",
-            "checksFailed_one": "{{count}} check failed",
-            "checksFailed_other": "{{count}} checks failed",
-            "checksPending_one": "{{count}} check running",
-            "checksPending_other": "{{count}} checks running",
-            "checksPassed_one": "{{count}} check passed",
-            "checksPassed_other": "{{count}} checks passed",
-            "merge": {
-                "clean": "Ready to merge",
-                "blocked": "Merging is blocked",
-                "behind": "Behind its base",
-                "dirty": "Merge conflicts",
-                "draft": "Still a draft",
-                "has_hooks": "Ready to merge, with checks to pass",
-                "unstable": "Mergeable, but checks failed",
-                "unknown": "Merge state unknown",
-                "review": {
-                    "approved": "Approved",
-                    "changes_requested": "Changes requested",
-                    "review_required": "Review required"
-                }
-            },
-            "threads_one": "{{count}} review thread",
-            "threads_other": "{{count}} review threads",
-            "showBots": "Show bots",
-            "showResolved": "Show resolved",
-            "hidden": "Hiding {{bots}} bot and {{resolved}} resolved threads",
-            "resolved": "resolved",
-            "outdated": "outdated",
-            "bot": "bot",
-            "copyToChat": "Copy to chat…",
-            "copyToChatHint": "Adds the thread to a chat's prompt. Nothing is sent.",
-            "truncated": "More comments than shown.",
-            "watch": {
-                "forChat": "Watch for chat…",
-                "forChatHint": "Wakes the chat when this commit's checks finish or a review comes in. Nothing is merged or pushed.",
-                "stop": "Stop watching",
-                "watching": "Watched for {{chat}}",
-                "ended": "The watch ended.",
-                "merged": "The pull request was merged, so the watch ended.",
-                "closed": "The pull request was closed, so the watch ended.",
-                "expired": "The watch ran for 7 days and ended.",
-                "folderMissing": "The chat's folder is gone, so the watch ended.",
-                "limit": "This machine already watches 50 pull requests. Stop one first.",
-                "failed": "Could not start the watch"
-            }
         },
         "branchMenu": {
             "create": "Create branch…",
@@ -706,14 +637,6 @@
                 "empty": "No stashes.",
                 "title": "Pop stash"
             },
-            "pullRequest": {
-                "body": "Description",
-                "bodyPlaceholder": "What this changes and why.",
-                "confirm": "Create pull request",
-                "description": "Publishes the branch first if needed. The pull request opens in your browser.",
-                "subject": "Title",
-                "title": "Create pull request"
-            },
             "rebase": {
                 "confirm": "Rebase",
                 "description": "Rewrites your commits on top of that branch. A pushed branch then needs a force push. A conflict pauses the rebase for you to resolve or abort.",
@@ -814,7 +737,6 @@
             "failed": "That did not work",
             "fetch": "Fetching",
             "merge": "Merging",
-            "pr": "Opening pull request",
             "pull": "Pulling",
             "push": "Pushing",
             "rebase": "Rebasing",

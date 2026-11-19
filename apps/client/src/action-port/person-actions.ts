@@ -224,8 +224,6 @@ interface CreateNodeOptions extends AgentSession {
     /* Terminals only: typed in place of the CLI, in the environment of `account`. */
     command?: string;
     path?: string;
-    /* The GitHub issue an agent node was started on. */
-    issue?: { repo: string; number: number; url: string };
     /* The node's middle in world units, which a click or a drop knows and a menu does not. */
     at?: Point;
     /* Artifacts only: the one it shows. */
@@ -256,7 +254,6 @@ export async function createNodeAction(kind: CreatableNodeKind, options: CreateN
         at: options.at ?? null,
         resume: options.resume ?? null,
         cwd: options.cwd ?? null,
-        issue: options.issue ?? null,
         artifact: options.artifact ?? null,
         artifactVersion: options.artifactVersion ?? null,
         routine: options.routine ?? null

@@ -12,7 +12,6 @@ function deps(overrides: Partial<MoveRefusalDeps> = {}): MoveRefusalDeps {
         tasks: { involving: () => [] },
         outbox: outbox(),
         notices: { waiting: () => [] },
-        prWatches: { watchOf: () => null },
         ...overrides
     };
 }
@@ -65,10 +64,6 @@ describe('moveRefusal', () => {
 
     test('refuses a chat with messages waiting', () => {
         expect(moveRefusal('chat-1', deps({ notices: { waiting: () => [{}] } }))).toEqual({ reason: 'messages' });
-    });
-
-    test('refuses a chat that watches a pull request', () => {
-        expect(moveRefusal('chat-1', deps({ prWatches: { watchOf: () => ({ id: 'w' }) } }))).toEqual({ reason: 'pr-watch' });
     });
 
     test('names the first reason in the order of the plan', () => {

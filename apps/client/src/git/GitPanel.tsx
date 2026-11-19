@@ -1,13 +1,12 @@
 import { PromptDialog, useColumnResize, Banner, Button, FormError, Icon, IconButton, PanelEmpty, Menu, messageOf, Separator } from '@adecore/ui';
 import { type GitActionKind, type GitCapabilitiesResult, type GitFile, type GitRef, type GitStash, type Worktree, absoluteOf } from '@ruimte/contracts';
 import i18next from 'i18next';
-import { Archive, ChevronsDownUp, ChevronsUpDown, Folder, GitBranch, GitMerge, GitPullRequest, MoreHorizontal, RefreshCw } from 'lucide-react';
+import { Archive, ChevronsDownUp, ChevronsUpDown, Folder, GitBranch, GitMerge, MoreHorizontal, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ignoreRefusal, perform } from '@/action-port/perform';
 import { assumeStaged, useGitCheckouts, useProjectRepos, visibleRepos, withoutNestedCheckouts, type GitCheckoutRef } from '@/controllers/git-repos';
 import { useProjectNodes, useWorktrees, worktreeLists } from '@/controllers/worktrees';
-import { openInSystemBrowser } from '@/desktop/bridge';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { fullRefName, showBranchCompare } from '@/files/branch-compare';
 import { BranchMenu, type CheckoutRefs } from '@/files/BranchMenu';
@@ -20,7 +19,6 @@ import { GitChoice, GitDiverged, type Choice } from '@/git/GitDialogs';
 import { GitFileList, type GitWork } from '@/git/GitFileList';
 import { PushMenu } from '@/git/PushMenu';
 import { useGitActions, type ActionOutcome, type ManyJob } from '@/git/use-git-actions';
-import { pullRequestDialog } from '@/github/dialogs';
 import { basenameOf } from '@/paths/file-path';
 import { revealNode } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
@@ -60,8 +58,7 @@ type Dialog =
     | { kind: 'switch'; cwd: string; ref: GitRef }
     | { kind: 'discard'; work: GitWork[] }
     | { kind: 'delete-file'; work: GitWork[] }
-    | { kind: 'diverged'; cwd: string; action: GitActionKind; branch: string }
-    | { kind: 'pull-request'; cwd: string; subject: string };
+    | { kind: 'diverged'; cwd: string; action: GitActionKind; branch: string };
 
 function filesOf(work: readonly GitWork[]): GitFile[] {
     return work.flatMap((step) => step.files);
@@ -389,12 +386,6 @@ export function GitPanel() {
         void actOn(path, 'checkout', { ref: ref.name });
     };
 
-    const openPullRequest = (path: string): void => {
-        perform('git.log', { repository: path, limit: 1, cursor: null })
-            .then((answer) => setDialog({ kind: 'pull-request', cwd: path, subject: answer.commits[0]?.subject ?? '' }))
-            .catch(() => setDialog({ kind: 'pull-request', cwd: path, subject: '' }));
-    };
-
     const commit = (
         message: { subject: string; body: string },
         options: { targets: readonly CommitCandidate[]; stageAll: boolean; push: boolean; amend: boolean }
@@ -491,13 +482,10 @@ export function GitPanel() {
         <RepoActionItems
             cwd={path}
             busy={busy}
-            canPullRequest={capabilities?.gh === true}
             stashes={refsByCwd[checkoutKey(path)]?.stashes ?? []}
             branch={branchOf(path) ?? ''}
             onAction={(kind, extra) => void act(path, kind, extra)}
             onDialog={setDialog}
-            onPullRequest={() => openPullRequest(path)}
-            onShowPullRequest={() => pullRequestDialog.set({ cwd: path })}
         />
     );
 
@@ -815,29 +803,6 @@ export function GitPanel() {
                 }}
                 onOpenChange={() => setDialog(null)}
             />
-            <PromptDialog
-                open={dialog?.kind === 'pull-request'}
-                title={t('git.dialog.pullRequest.title')}
-                description={t('git.dialog.pullRequest.description')}
-                field={{ mono: true, label: t('git.dialog.pullRequest.subject'), initial: dialog?.kind === 'pull-request' ? dialog.subject : '' }}
-                area={{ label: t('git.dialog.pullRequest.body'), placeholder: t('git.dialog.pullRequest.bodyPlaceholder') }}
-                confirmLabel={t('git.dialog.pullRequest.confirm')}
-                busy={busy}
-                onConfirm={(subject, body) => {
-                    if (dialog?.kind === 'pull-request') {
-                        void act(
-                            dialog.cwd,
-                            'create-pr',
-                            { subject, body },
-                            {
-                                done: (result) =>
-                                    result.url === undefined ? undefined : { label: t('common:action.open'), run: () => openInSystemBrowser(result.url ?? '') }
-                            }
-                        );
-                    }
-                }}
-                onOpenChange={() => setDialog(null)}
-            />
             <GitDiverged
                 open={dialog?.kind === 'diverged'}
                 branch={dialog?.kind === 'diverged' ? dialog.branch : ''}
@@ -980,18 +945,15 @@ function ActionsMenu({ busy, foldable, onOpen, onAll, onRefresh, onExpandAll, on
 interface RepoActionItemsProps {
     cwd: string;
     busy: boolean;
-    canPullRequest: boolean;
     stashes: readonly GitStash[];
     /* What HEAD is on, which the rename dialog opens with. */
     branch: string;
     onAction(kind: GitActionKind, extra?: { ref: string }): void;
     onDialog(dialog: Dialog): void;
-    onPullRequest(): void;
-    onShowPullRequest(): void;
 }
 
 /* Everything that acts on one repository: what a person reaches for most at the top, a force push apart at the bottom. */
-function RepoActionItems({ cwd, busy, canPullRequest, stashes, branch, onAction, onDialog, onPullRequest, onShowPullRequest }: RepoActionItemsProps) {
+function RepoActionItems({ cwd, busy, stashes, branch, onAction, onDialog }: RepoActionItemsProps) {
     const { t } = useTranslation('panels');
     const popStash = (): void => {
         const step = popStashStep(stashes);
@@ -1051,21 +1013,6 @@ function RepoActionItems({ cwd, busy, canPullRequest, stashes, branch, onAction,
                     </Menu.Item>
                 </Menu.Popup>
             </Menu.SubmenuRoot>
-            {canPullRequest && (
-                <Menu.SubmenuRoot>
-                    <Menu.SubmenuTrigger disabled={busy}>
-                        <Icon icon={GitPullRequest} size={14} /> {t('git.actions.pullRequestGroup')}
-                    </Menu.SubmenuTrigger>
-                    <Menu.Popup>
-                        <Menu.Item disabled={busy} onClick={onPullRequest}>
-                            {t('git.actions.pullRequest')}
-                        </Menu.Item>
-                        <Menu.Item disabled={busy} onClick={onShowPullRequest}>
-                            {t('git.actions.showPullRequest')}
-                        </Menu.Item>
-                    </Menu.Popup>
-                </Menu.SubmenuRoot>
-            )}
             <Menu.Separator />
             <Menu.Item disabled={busy} onClick={() => onDialog({ kind: 'force-push', cwd })}>
                 {t('git.actions.forcePush')}

@@ -32,8 +32,7 @@ const REFUSAL_SENTENCES: Record<ChatMoveRefusal['reason'], string> = {
     agents: 'This chat started agents of its own, or an agent started it. A chat with agents cannot move to a project yet',
     tasks: 'This chat gave a task or has one. A chat with tasks cannot move to a project yet',
     owed: 'The machine still has work queued for this chat. Try again once it is done',
-    messages: 'Messages from other chats are waiting for this chat. It reads them in its next turn. Move it after that',
-    'pr-watch': 'This chat watches a pull request. Stop watching it first'
+    messages: 'Messages from other chats are waiting for this chat. It reads them in its next turn. Move it after that'
 };
 
 export interface MoveChatDeps {

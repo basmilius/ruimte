@@ -23,7 +23,6 @@
 		0B08EEA7B41F37D9CFA38536 /* ChatAnsi.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2828074A703C2AFB6E6A72A9 /* ChatAnsi.swift */; };
 		0B547D0A6B2838F62FB295E9 /* LucideSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 06F665001E0BC007A06510C8 /* LucideSwift */; };
 		0B7FE4C6D2DE9E12A91F6906 /* DrawingToolbarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0EA4FE8F41A92E6DF5B35CD /* DrawingToolbarTests.swift */; };
-		0B95D2DBBC4F10A7C979E61A /* GitPullRequestPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E14367D383EB07F4C4F8872 /* GitPullRequestPage.swift */; };
 		0C50DA276AE717B500B6D27B /* ViewIconPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B68348C7C35F8C9CAC737CA /* ViewIconPicker.swift */; };
 		0C7BBCCED0B7814415E137A6 /* DrawingCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 732B16DF3002A0A3499B1ADF /* DrawingCanvas.swift */; };
 		0D26340839FE3FB0690072DF /* ChatWorkflows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 712F7020AFE86D643A3C20D4 /* ChatWorkflows.swift */; };
@@ -621,7 +620,6 @@
 		2D13983F349B623F11B9F14E /* VoiceCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCoordinatorTests.swift; sourceTree = "<group>"; };
 		2D4223567AE49EA91A34991B /* MobileStatusGlyph.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileStatusGlyph.swift; sourceTree = "<group>"; };
 		2DB727CEBF3E354FC9409B25 /* UsageBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageBackdrop.swift; sourceTree = "<group>"; };
-		2E14367D383EB07F4C4F8872 /* GitPullRequestPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPullRequestPage.swift; sourceTree = "<group>"; };
 		2E1A1F9BC57AF3E744CFA006 /* UsageDaysTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageDaysTests.swift; sourceTree = "<group>"; };
 		2E1ACCE0A05A717A6F7CB302 /* ChatTimelineSnapshots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTimelineSnapshots.swift; sourceTree = "<group>"; };
 		2F0CACBC269A20D7663C70E5 /* TaskStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStore.swift; sourceTree = "<group>"; };
@@ -1651,7 +1649,6 @@
 				1DD11F76EADCD5FAC67A6C80 /* GitModel.swift */,
 				D69D1BF9802A60BF9D50BA2B /* GitPage.swift */,
 				13C495C7F630954ED25CCCA0 /* GitPrompts.swift */,
-				2E14367D383EB07F4C4F8872 /* GitPullRequestPage.swift */,
 				FDD0B866219FA2F1AA2DEED9 /* GitRepositories.swift */,
 				9EA298D49FE8A9452D15132A /* GitRepositoriesPage.swift */,
 				FF867FDF1331EDCFFF2BDAF9 /* GitRepositoryPage.swift */,
@@ -2355,7 +2352,6 @@
 				2584E2F5B2AAE5CCA1F0E64A /* GitModel.swift in Sources */,
 				226093BDE4A09AE44CB9B90A /* GitPage.swift in Sources */,
 				3EE3CE8C06BB6F881F6D0084 /* GitPrompts.swift in Sources */,
-				0B95D2DBBC4F10A7C979E61A /* GitPullRequestPage.swift in Sources */,
 				4438A2B4A36F68A2F9BF3268 /* GitRepositories.swift in Sources */,
 				8248948CAD1B889856F0E22C /* GitRepositoriesPage.swift in Sources */,
 				82193D6DB2962B4D0F595DE0 /* GitRepositoryPage.swift in Sources */,

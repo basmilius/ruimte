@@ -55,14 +55,6 @@
         "context": {
             "tooltip": "Gekoppelde context. De agent kan die lezen.",
             "pill": "context"
-        },
-        "issuePill": "{{issue}} openen op GitHub",
-        "prWatchPill": "{{pr}} gevolgd: {{state}}",
-        "prWatchState": {
-            "pending": "checks lopen",
-            "success": "checks geslaagd",
-            "failure": "checks mislukt",
-            "none": "geen checks"
         }
     },
     "group": {
@@ -100,7 +92,6 @@
         "startAgentFromNote": "Agent starten vanuit de notitie",
         "color": "Kleur",
         "noAccent": "Geen",
-        "stopPrWatch": "Pull request niet meer volgen",
         "stopWaiting": "Niet meer wachten",
         "showRuns": "Runs tonen",
         "makeDefaultSize": "Als standaardgrootte instellen",

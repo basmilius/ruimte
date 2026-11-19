@@ -4,8 +4,6 @@ import type { ChatProvider, CliDetection, ProviderAccountsOptions, ProviderAccou
 import type { LimitsUpdate, UsageMonitorOptions } from '@adecore/agents/usage';
 import type { MachineHome } from '../disk/machine-home.ts';
 import type { Checkpoints } from '../git/checkpoints.ts';
-import type { GhRunner } from '../git/github.ts';
-import type { PrSplits } from '../git/pr-split.ts';
 import type { WorktreeAgents } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import type { RunCommand } from '../language/runtime.ts';
@@ -86,9 +84,6 @@ export interface DaemonSeams {
     git: {
         worktrees(input: WorktreesInput): Worktrees;
         checkpoints(home: string, machineHome: MachineHome): Checkpoints;
-        /* What `gh` answers a pull request watch, and the sizes it reads the pull requests it watches by. */
-        gh: GhRunner;
-        splits: PrSplits;
         /* The repository a file is in, for who wrote which lines. */
         repositoryOf(directory: string): Promise<string | null>;
     };

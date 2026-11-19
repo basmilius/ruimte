@@ -14,7 +14,6 @@ import { ownFolderOf } from '../chat/own-files.ts';
 import type { MachineHome } from '../disk/machine-home.ts';
 import { gitOrThrow, readGit } from '../git/run.ts';
 import { repositoryRoot } from '../git/status.ts';
-import type { PrWatchStore } from '../github/pr-watch.ts';
 import type { ChatMoveHandlers } from '../handlers/chat.ts';
 import type { OutboxStore } from '../outbox/outbox.ts';
 import type { ProjectProposals } from '../projects/project-proposals.ts';
@@ -28,7 +27,6 @@ export interface ChatMoveWiring {
     tasks: TaskStore;
     outbox: OutboxStore;
     notices: NoticeStore;
-    prWatches: PrWatchStore;
     machineHome: Pick<MachineHome, 'refuse'>;
     journal: MoveJournal;
     snoozes: SnoozeStore;
@@ -67,7 +65,7 @@ async function branchOf(folder: string): Promise<string | null> {
 }
 
 function chatMoveRefusalDeps(wiring: ChatMoveWiring): MoveRefusalDeps {
-    const { chats, store, lineage, tasks, outbox, notices, prWatches } = wiring;
+    const { chats, store, lineage, tasks, outbox, notices } = wiring;
     return {
         inChats: (chatId) => chatIsInChats(store, chatId),
         working: (chatId) => {
@@ -81,8 +79,7 @@ function chatMoveRefusalDeps(wiring: ChatMoveWiring): MoveRefusalDeps {
         lineage,
         tasks,
         outbox,
-        notices,
-        prWatches
+        notices
     };
 }
 

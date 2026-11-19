@@ -16,7 +16,6 @@ import { DRAWING_BEHAVIORS } from '@/drawing/commands';
 import { FILE_BEHAVIORS } from '@/files/commands';
 import { FIND_BEHAVIORS } from '@/find/commands';
 import { GIT_BEHAVIORS } from '@/git/commands';
-import { GITHUB_BEHAVIORS, githubPaletteRows } from '@/github/commands';
 import { languagePaletteRows } from '@/language/commands';
 import { PROBLEMS_BEHAVIORS } from '@/language/problems-commands';
 import { afterSettlePaletteRows, LAUNCH_BEHAVIORS, launchPaletteRows } from '@/launches/commands';
@@ -55,7 +54,6 @@ export function installWorkspaceCommands(replacing: boolean = import.meta.hot !=
         FILE_BEHAVIORS,
         FIND_BEHAVIORS,
         GIT_BEHAVIORS,
-        GITHUB_BEHAVIORS,
         GRID_BEHAVIORS,
         LAUNCH_BEHAVIORS,
         OUTPUT_BEHAVIORS,
@@ -70,7 +68,6 @@ export function installWorkspaceCommands(replacing: boolean = import.meta.hot !=
     }
 
     registerPaletteRows({
-        'pull-requests': githubPaletteRows,
         language: languagePaletteRows,
         agents: agentPaletteRows,
         'node-moves': nodeMovePaletteRows,

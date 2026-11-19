@@ -77,7 +77,6 @@ export const cases: WriteCases = {
             beside: { value: 'chat-1', actors: ['agent'] },
             device: { value: 'sim-1', actors: ['agent'] },
             resume: { value: 'session-1', actors: ['person'] },
-            issue: { value: { repo: 'basmilius/ruimte', number: 58, url: 'https://github.com/basmilius/ruimte/issues/58' }, actors: ['person'] },
             color: { value: 'teal', actors: ['agent'] },
             artifact: { value: 'art-1', actors: ['person', 'agent'] },
             artifactVersion: { value: 'ver-1', actors: ['person', 'agent'] },

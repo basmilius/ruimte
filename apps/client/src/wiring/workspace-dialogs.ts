@@ -6,7 +6,6 @@ import { CONFLICT_DIALOGS } from '@/conflicts/dialog';
 import { DATABASE_DIALOGS } from '@/database/dialogs';
 import { DEVICE_DIALOGS } from '@/devices/dialogs';
 import { FILE_DIALOGS } from '@/files/dialogs';
-import { GITHUB_DIALOGS } from '@/github/dialogs';
 import { LAUNCH_DIALOGS } from '@/launches/dialogs';
 import { MACHINE_DIALOGS } from '@/machine-ui/dialogs';
 import { PROJECT_DIALOGS } from '@/project/dialogs';
@@ -30,7 +29,6 @@ export function installWorkspaceDialogs(): void {
         ...PROJECT_DIALOGS,
         ...MACHINE_DIALOGS,
         ...DEVICE_DIALOGS,
-        ...GITHUB_DIALOGS,
         ...ROUTINE_DIALOGS,
         ...ATTENTION_DIALOGS
     );

@@ -7,8 +7,6 @@ import type { AgentKind, Worktree } from '@ruimte/contracts';
 import { parseServerArgs, type ServerConfig } from '../config.ts';
 import type { MachineHome } from '../disk/machine-home.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
-import type { GhRunner } from '../git/github.ts';
-import { PrSplits } from '../git/pr-split.ts';
 import { Worktrees } from '../git/worktrees.ts';
 import type { OutboxWork } from '../outbox/outbox.ts';
 import { ProjectStore } from '../projects/project-store.ts';
@@ -79,8 +77,6 @@ class NoCheckpoints extends Checkpoints {
     }
 }
 
-const NO_GH: GhRunner = () => Promise.resolve({ code: 1, stdout: '', stderr: 'no gh in this test' });
-
 /* A machine that holds nothing awake and has no closed-lid rule, so nothing of it starts a process. */
 const NO_POWER: DaemonSeams['power'] = {
     hold: () => () => ({ kill: () => undefined, exited: Promise.resolve() }),
@@ -128,8 +124,6 @@ export interface TestSeamChoices {
     ptyAdapter?: PtyAdapter;
     /* The environment every CLI starts from. */
     env?: Record<string, string | undefined>;
-    /* What `gh` answers a pull request watch; every call fails without it. */
-    gh?: GhRunner;
 }
 
 export type TestSeams = DaemonSeams & { fakes: TestFakes };
@@ -139,7 +133,7 @@ export type TestSeams = DaemonSeams & { fakes: TestFakes };
  * browser. `overrides` replaces whole seams; what a test only wants to look at is in `fakes`.
  */
 export function testSeams(choices: TestSeamChoices, overrides: Partial<DaemonSeams> = {}): TestSeams {
-    const { home, clock, installed = ['claude'], claudeCli = fakeClaude, codexCli = fakeCodex, ptyAdapter, gh = NO_GH } = choices;
+    const { home, clock, installed = ['claude'], claudeCli = fakeClaude, codexCli = fakeCodex, ptyAdapter } = choices;
     const env = choices.env ?? { PATH: process.env.PATH, HOME: home };
     const { until, recheck } = untilChecked();
     const adapter = new FakePtyAdapter();
@@ -189,8 +183,6 @@ export function testSeams(choices: TestSeamChoices, overrides: Partial<DaemonSea
         git: {
             worktrees: ({ home: gitHome, agents, now, checkoutRoot, foreign }) => new NoWorktrees(gitHome, agents, now, checkoutRoot, foreign),
             checkpoints: (gitHome: string, machineHome: MachineHome) => new NoCheckpoints(gitHome, machineHome),
-            gh,
-            splits: new PrSplits(gh),
             repositoryOf: async () => null
         },
         projectStore: ({ home: storeHome, links, overlays }) => new ProjectStore(storeHome, links, overlays),

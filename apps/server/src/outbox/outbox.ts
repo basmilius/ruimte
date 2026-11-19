@@ -8,7 +8,6 @@ export type StartAgentEntry = OutboxEntryOfKind<'start-agent'>;
 export type WakeParentEntry = OutboxEntryOfKind<'wake-parent'>;
 export type EndChildrenEntry = OutboxEntryOfKind<'end-children'>;
 export type DeliverSummaryEntry = OutboxEntryOfKind<'deliver-summary'>;
-export type DeliverPrWatchEntry = OutboxEntryOfKind<'deliver-pr-watch'>;
 export type DeliverAnswerEntry = OutboxEntryOfKind<'deliver-answer'>;
 export type DeliverLostWorkEntry = OutboxEntryOfKind<'deliver-lost-work'>;
 export type RunAfterSettleEntry = OutboxEntryOfKind<'run-after-settle'>;

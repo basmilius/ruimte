@@ -1,11 +1,9 @@
 import { join } from 'node:path';
-import { chatOpener } from '@adecore/agents/chat';
 import type { OutboxWorker } from '@adecore/agents/coordination';
 import { NodeActivityStore } from '../activity/node-activity.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { errorText } from '../error-text.ts';
 import { BundleStore } from '../git/bundles.ts';
-import { PrWatchStore, prWatchHandler } from '../github/pr-watch.ts';
 import { AfterSettleStore } from '../launches/after-settle.ts';
 import type { EndChildrenWiring } from '../outbox/end-children.ts';
 import type { OutboxWork } from '../outbox/outbox.ts';
@@ -31,7 +29,6 @@ export interface AgentWorkBundle {
     tasks: TaskWiring;
     endChildren: EndChildrenWiring;
     summaries: SummaryWiring;
-    prWatches: PrWatchStore;
     snoozes: SnoozeStore;
     activity: NodeActivityStore;
     afterSettleStore: AfterSettleStore;
@@ -74,21 +71,6 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
     const { outboxLink } = agents;
     const { worker } = outboxLink;
     const { clock } = seams;
-    const prWatches = new PrWatchStore({
-        path: join(home, 'pr-watches.json'),
-        clock,
-        gh: seams.git.gh,
-        random: seams.random,
-        splits: seams.git.splits,
-        enqueue: (projectId, chatId, work) => outboxLink.enqueue(projectId, chatId, work),
-        entries: () => outbox.list(),
-        removeEntry: (id) => outbox.remove(id),
-        onError: (what, error) => console.error(`${what}:`, errorText(error)),
-        paused: (projectId) => projects.isClosed(projectId)
-    });
-    lifecycle.on('placed', (projectId, ids) => prWatches.prune(projectId, ids));
-    projects.onReopened((projectId) => prWatches.resume(projectId));
-
     // The reconnect and the tasks given to other machines need each other, and the tasks of this machine need the wiring of the outbox.
     const reconnect = new ConnectPeer({
         outbox,
@@ -133,12 +115,6 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
         peerParents: (projectId) => projects.peers.canvasIdsOf(projectId),
         remoteStop: (nodeId) => remoteTasks.oweStop(nodeId)
     });
-    worker.handle(
-        'deliver-pr-watch',
-        wiring.unlessClosed(
-            prWatchHandler({ watches: prWatches, openChat: chatOpener({ chats: agents.chats, placed: (nodeId) => projects.index.locate(nodeId) !== null }) })
-        )
-    );
     const remoteTasks = new RemoteTasks({
         connections: seams.remote.connections(remote.connections),
         reconnect: seams.remote.reconnect(reconnect),
@@ -208,7 +184,6 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
         tasks: wiring.tasks,
         endChildren: wiring.endChildren,
         summaries: wiring.summaries,
-        prWatches,
         snoozes,
         activity,
         afterSettleStore,

@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type { OutboxKind, OutboxParkedNote } from '../kind.ts';
-import { deliverPrWatchKind } from './github.ts';
 import { runAfterSettleKind } from './launches.ts';
 import {
     deliverAnswerKind,
@@ -34,7 +33,6 @@ export const OUTBOX_KINDS = [
     endChildrenKind,
     deliverSummaryKind,
     deliverWaitingKind,
-    deliverPrWatchKind,
     deliverAnswerKind,
     deliverLostWorkKind,
     runAfterSettleKind,

@@ -42,8 +42,6 @@ export class Job {
 }
 
 interface StepOptions {
-    /* The executable to run; only the pull request step is not git itself. */
-    command?: string;
     timeout?: number;
 }
 
@@ -126,7 +124,7 @@ export class GitActions {
             const timeout = options.timeout ?? 0;
             const timer = timeout > 0 ? setTimeout(() => job.cancel(), timeout) : null;
             try {
-                const result = await streamCommand(options.command ?? 'git', args, top, {
+                const result = await streamCommand('git', args, top, {
                     onLine: (line) => sink(phase, line),
                     onSpawn: (kill) => job.hold(kill),
                     group: true
@@ -141,14 +139,14 @@ export class GitActions {
             }
         };
 
-        const fail = (text: string, command: string, args: string[], code: GitErrorCode = 'git-failed'): never => {
+        const fail = (text: string, args: string[], code: GitErrorCode = 'git-failed'): never => {
             sink('failed', text);
-            throw new GitError(code, job.canceled ? 'The action was canceled.' : text || `${command} ${args[0]} failed`);
+            throw new GitError(code, job.canceled ? 'The action was canceled.' : text || `git ${args[0]} failed`);
         };
 
         const step: Step = async (phase, args, options = {}) => {
             const { code, text } = await attempt(phase, args, options);
-            return code === 0 ? text : fail(text, options.command ?? 'git', args);
+            return code === 0 ? text : fail(text, args);
         };
 
         const done = (summary: string, extra: Partial<GitActionResult> = {}): GitActionResult => {
@@ -168,7 +166,7 @@ export class GitActions {
             }
             const conflicts = await conflictedFiles(top);
             if (conflicts.length === 0) {
-                return fail(text, 'git', args);
+                return fail(text, args);
             }
             return done(conflicts.length === 1 ? '1 file conflicts.' : `${conflicts.length} files conflict.`, { conflicts });
         };
@@ -230,7 +228,7 @@ export class GitActions {
                 const args = ['branch', '--delete', ...(payload.force === true ? ['--force'] : []), '--end-of-options', ref];
                 const deleted = await attempt('branch', args);
                 if (deleted.code !== 0) {
-                    fail(deleted.text, 'git', args, deleted.text.includes('not fully merged') ? 'branch-not-merged' : 'git-failed');
+                    fail(deleted.text, args, deleted.text.includes('not fully merged') ? 'branch-not-merged' : 'git-failed');
                 }
                 return done(`Deleted ${ref}.`);
             }
@@ -262,18 +260,6 @@ export class GitActions {
                 const commit = await this.commit(payload, step, top);
                 const pushed = await this.push(payload, step, branch, upstream);
                 return done(`Committed ${commit.subject}. ${pushed}`, { commit });
-            }
-            case 'create-pr': {
-                if (upstream === null) {
-                    await this.push({ ...payload, kind: 'publish' }, step, branch, upstream);
-                }
-                const title = required(payload.subject, 'a title for the pull request');
-                const text = await step('pr', ['pr', 'create', '--title', title, '--body', payload.body ?? ''], {
-                    command: 'gh',
-                    timeout: NETWORK_TIMEOUT_MS
-                });
-                const url = /https:\/\/\S+/.exec(text)?.[0] ?? null;
-                return done(url === null ? 'The pull request is open.' : `Pull request ready: ${url}`, url === null ? {} : { url });
             }
         }
     }

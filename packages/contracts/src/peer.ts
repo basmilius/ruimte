@@ -51,7 +51,6 @@ export const PeerNodeSchema = z.object({
     providerFixed: ProjectNodeSchema.shape.providerFixed,
     runtimeMode: ProjectNodeSchema.shape.runtimeMode,
     accent: ProjectNodeSchema.shape.accent,
-    issue: ProjectNodeSchema.shape.issue,
     device: ProjectNodeSchema.shape.device
 });
 export type PeerNode = z.infer<typeof PeerNodeSchema>;
