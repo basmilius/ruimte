@@ -91,13 +91,7 @@ export function CodeSection() {
                         onValueChange={(value) => update({ codeThemeLight: value })}
                     />
                 }
-            >
-                <CodeThemePreview
-                    theme={codeThemeLight}
-                    mode="light"
-                    label={t('editor.colors.preview', { theme: lightThemes.find((theme) => theme.value === codeThemeLight)?.label ?? codeThemeLight })}
-                />
-            </SettingsRow>
+            />
             <SettingsRow
                 searchId="editor.colors.dark"
                 label={t('editor.colors.dark.label')}
@@ -111,13 +105,20 @@ export function CodeSection() {
                         onValueChange={(value) => update({ codeThemeDark: value })}
                     />
                 }
-            >
+            />
+            {/* Side by side under both rows, so the two themes are judged against each other; one above the other where the pane is narrow. */}
+            <div className="grid grid-cols-2 gap-3 px-4.5 py-3.5 max-[960px]:grid-cols-1">
+                <CodeThemePreview
+                    theme={codeThemeLight}
+                    mode="light"
+                    label={t('editor.colors.preview', { theme: lightThemes.find((theme) => theme.value === codeThemeLight)?.label ?? codeThemeLight })}
+                />
                 <CodeThemePreview
                     theme={codeThemeDark}
                     mode="dark"
                     label={t('editor.colors.preview', { theme: darkThemes.find((theme) => theme.value === codeThemeDark)?.label ?? codeThemeDark })}
                 />
-            </SettingsRow>
+            </div>
         </SettingsSection>
     );
 }
