@@ -95,8 +95,8 @@ describe('views of an extension', () => {
     test('draw a chat of the project in front, which opens in its folder', async () => {
         await openWith([CHAT_VIEW]);
         await clickOn(sidebarRow('Write it down'));
-        await until(() => machine.requests('chat.create').length > 0);
+        await until(() => machine.chatsMade().length > 0);
 
-        expect(machine.requests('chat.create')[0]).toMatchObject({ chatId: 'plans-chat', cwd: '/work/atlas' });
+        expect(machine.chatsMade()[0]).toMatchObject({ chatId: 'plans-chat', cwd: '/work/atlas' });
     });
 });

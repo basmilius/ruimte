@@ -33,21 +33,25 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-async function createChat(chatId: string): Promise<ServerFrame> {
+async function ask(type: string, payload: object): Promise<ServerFrame> {
     const frames: ServerFrame[] = [];
-    await daemon.dispatcher.handle(
-        { id: 'window', send: (frame) => frames.push(frame) },
-        JSON.stringify({ id: 'r', type: 'chat.create', payload: { chatId, provider: 'claude' } })
-    );
+    await daemon.dispatcher.handle({ id: 'window', send: (frame) => frames.push(frame) }, JSON.stringify({ id: 'r', type, payload }));
+
     return frames[0]!;
 }
 
-test('a window cannot start the chat of a task another machine gave before the daemon did, so it never runs in the project folder', async () => {
-    // Held, so the window asks while the daemon's start is still owed.
-    daemon.worker.stop();
+function createChat(chatId: string): Promise<ServerFrame> {
+    return ask('chat.create', { chatId, provider: 'claude' });
+}
+
+function attachCreating(chatId: string): Promise<ServerFrame> {
+    return ask('chat.attach', { chatId, create: { provider: 'claude' } });
+}
+
+async function givePeerTask(nodeId: string): Promise<void> {
     await daemon.peerTasks.start(MACHINE, 'channel-1', {
         projectId,
-        nodeId: 'chat-given',
+        nodeId,
         parentId: 'chat-parent',
         title: 'Fix it',
         prompt: 'Fix it',
@@ -55,6 +59,12 @@ test('a window cannot start the chat of a task another machine gave before the d
         ceiling: 'full-access',
         depth: 1
     });
+}
+
+test('a window cannot start the chat of a task another machine gave before the daemon did, so it never runs in the project folder', async () => {
+    // Held, so the window asks while the daemon's start is still owed.
+    daemon.worker.stop();
+    await givePeerTask('chat-given');
     expect(await createChat('chat-given')).toMatchObject({ ok: false, error: { code: 'peer-task-starting' } });
     expect(daemon.chats.get('chat-given')).toBeUndefined();
 
@@ -64,6 +74,24 @@ test('a window cannot start the chat of a task another machine gave before the d
     expect(await createChat('chat-given')).toMatchObject({ ok: true });
 });
 
+test('a window that opens such a chat with an attach that creates it is refused the same way', async () => {
+    daemon.worker.stop();
+    await givePeerTask('chat-given');
+    expect(await attachCreating('chat-given')).toMatchObject({ ok: false, error: { code: 'peer-task-starting' } });
+    expect(daemon.chats.get('chat-given')).toBeUndefined();
+
+    daemon.worker.start();
+    await daemon.worker.settled();
+    expect(await attachCreating('chat-given')).toMatchObject({ ok: true });
+});
+
+test('an attach without create only reads, so the owed start does not refuse it', async () => {
+    daemon.worker.stop();
+    await givePeerTask('chat-given');
+    expect(await ask('chat.attach', { chatId: 'chat-given' })).toMatchObject({ ok: false, error: { code: 'chat-not-found' } });
+});
+
 test('a chat of this machine is started by a window as always', async () => {
     expect(await createChat('chat-own')).toMatchObject({ ok: true });
+    expect(await attachCreating('chat-attached')).toMatchObject({ ok: true });
 });

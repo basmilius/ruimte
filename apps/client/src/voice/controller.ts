@@ -213,7 +213,7 @@ function readFollowUp(id: string, followUp: VoiceChatFollowUp): void {
     readingFollowUps.add(id);
     void (async () => {
         const known = useChats.getState().statusByKey[followUp.key]?.info;
-        const info = known ?? (await transport.request('chat.list', {})).chats.find((chat) => chat.chatId === chatId);
+        const info = known ?? (await transport.request('chat.list', { omitCommands: true })).chats.find((chat) => chat.chatId === chatId);
         if (!info || chatFollowUps.get(id) !== followUp) {
             return;
         }

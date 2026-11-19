@@ -109,7 +109,7 @@ async function snapshotsOf(endpointIds: readonly string[], transport: typeof tra
             if (link?.status !== 'open') {
                 return [endpointId, null];
             }
-            const snapshot = await orNull('chat.list', Promise.all([link.request('chat.list', {}), link.request('session.list', {})]));
+            const snapshot = await orNull('chat.list', Promise.all([link.request('chat.list', { omitCommands: true }), link.request('session.list', {})]));
             return [endpointId, snapshot];
         })
     );

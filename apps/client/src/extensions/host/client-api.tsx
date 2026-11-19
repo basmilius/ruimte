@@ -1557,7 +1557,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
         chats: {
             list: () =>
                 settle('chats.list', async () => {
-                    const { chats } = await callScope().link.request('chat.list', {});
+                    const { chats } = await callScope().link.request('chat.list', { omitCommands: true });
 
                     return chats.filter((chat) => chat.hidden !== true).map(extensionChatOf);
                 }),

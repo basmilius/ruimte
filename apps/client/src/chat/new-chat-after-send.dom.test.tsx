@@ -32,16 +32,20 @@ describe('a new chat opened from a chat with Mod+Alt+Enter', () => {
         modes.set(LEAD.id, 'auto-accept-edits');
         machine = new FakeMachine();
         machine.answer('project.save', ({ baseRev }) => ({ rev: baseRev + 1 }) as never);
-        machine.answer('chat.create', ({ chatId, runtimeMode }) => {
+        const made = (chatId: string, runtimeMode: RuntimeMode | undefined): void => {
             if (!modes.has(chatId) && runtimeMode !== undefined) {
                 modes.set(chatId, runtimeMode);
             }
+        };
+
+        machine.answer('chat.create', ({ chatId, runtimeMode }) => {
+            made(chatId, runtimeMode);
             return {} as never;
         });
-        machine.answer(
-            'chat.attach',
-            ({ chatId }) => ({ info: chatInfoOf(chatId, { runtimeMode: modes.get(chatId) ?? 'supervised' }), items: [], seq: 0 }) as never
-        );
+        machine.answer('chat.attach', ({ chatId, create }) => {
+            made(chatId, create?.runtimeMode);
+            return { info: chatInfoOf(chatId, { runtimeMode: modes.get(chatId) ?? 'supervised' }), items: [], seq: 0 } as never;
+        });
         machine.answer('chat.configure', ({ chatId, runtimeMode }) => {
             if (runtimeMode !== undefined) {
                 modes.set(chatId, runtimeMode);
@@ -54,10 +58,10 @@ describe('a new chat opened from a chat with Mod+Alt+Enter', () => {
         await until(() => machine.requests('chat.attach').some((request) => request.chatId === LEAD.id));
 
         await act(async () => openNewChatAfterSend(currentEndpointId(), LEAD.id));
-        const made = (): string | undefined => machine.requests('chat.create').find((request) => request.chatId !== LEAD.id)?.chatId;
-        await until(() => made() !== undefined && modes.get(made()!) === 'auto-accept-edits');
+        const opened = (): string | undefined => machine.chatsMade().find((request) => request.chatId !== LEAD.id)?.chatId;
+        await until(() => opened() !== undefined && modes.get(opened()!) === 'auto-accept-edits');
 
-        expect(modes.get(made()!)).toBe('auto-accept-edits');
+        expect(modes.get(opened()!)).toBe('auto-accept-edits');
         expect(readChatPreferences().runtimeMode).toBe('supervised');
     });
 });

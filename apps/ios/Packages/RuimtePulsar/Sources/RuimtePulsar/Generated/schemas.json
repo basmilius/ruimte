@@ -10736,6 +10736,68 @@
         "type": "integer",
         "minimum": 0,
         "maximum": 9007199254740991
+      },
+      "create": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "x-open-enum": [
+              "claude",
+              "codex",
+              "gemini",
+              "copilot",
+              "apple"
+            ]
+          },
+          "account": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+          },
+          "cwd": {
+            "type": "string"
+          },
+          "resume": {
+            "type": "string"
+          },
+          "selection": {
+            "type": "object",
+            "properties": {
+              "model": {
+                "type": "string",
+                "minLength": 1
+              },
+              "options": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "boolean"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "model",
+              "options"
+            ]
+          },
+          "runtimeMode": {
+            "type": "string",
+            "x-open-enum": [
+              "supervised",
+              "auto-accept-edits",
+              "auto",
+              "full-access"
+            ]
+          }
+        }
       }
     },
     "required": [
@@ -27642,7 +27704,11 @@
   "request.chat.list.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
-    "properties": {}
+    "properties": {
+      "omitCommands": {
+        "type": "boolean"
+      }
+    }
   },
   "request.chat.list.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

@@ -504,6 +504,8 @@
     "payload chat.answer #": ["answers","chatId","requestId"],
     "payload chat.approve #": ["chatId","decision","requestId"],
     "payload chat.attach #": ["chatId"],
+    "payload chat.attach #/properties/create": [],
+    "payload chat.attach #/properties/create/properties/selection": ["model","options"],
     "payload chat.cancel #": ["chatId"],
     "payload chat.clear #": ["chatId"],
     "payload chat.compact #": ["chatId"],

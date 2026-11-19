@@ -295,7 +295,7 @@ export class SidebarWatch {
         void Promise.all([
             wants('projects') ? this.transport.request('project.sidebar', {}) : null,
             wants('sessions') ? this.transport.request('session.list', {}) : null,
-            wants('chats') ? this.transport.request('chat.list', {}) : null
+            wants('chats') ? this.transport.request('chat.list', { omitCommands: true }) : null
         ])
             .then(([overview, sessions, chats]) => {
                 if (this.disposed || generation !== this.generation) {

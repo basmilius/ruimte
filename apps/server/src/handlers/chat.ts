@@ -85,18 +85,19 @@ function registerRequests(dispatcher: Dispatcher, { manager, providers, beforeKi
             refuseBoundNode(machineOf, payload.chatId);
             return handler(payload, clientId);
         };
+    // An attach that carries `create` makes the chat as `chat.create` would, so it passes the same guard; one without it only reads.
     const unlessStarting =
-        (handler: AgentHandler<'chat.create'>): AgentHandler<'chat.create'> =>
+        <T extends 'chat.create' | 'chat.attach'>(handler: AgentHandler<T>, creates: (payload: Parameters<AgentHandler<T>>[0]) => boolean): AgentHandler<T> =>
         (payload, clientId) => {
-            if (starting(payload.chatId)) {
+            if (creates(payload) && starting(payload.chatId)) {
                 throw new CodedError('peer-task-starting', 'A task from another machine is still starting this chat. Try again in a moment');
             }
             return handler(payload, clientId);
         };
     registerAgentHandlers(dispatcher, {
         ...shared,
-        'chat.create': unlessBound(unlessStarting(shared['chat.create'])),
-        'chat.attach': unlessBound(shared['chat.attach']),
+        'chat.create': unlessBound(unlessStarting(shared['chat.create'], () => true)),
+        'chat.attach': unlessBound(unlessStarting(shared['chat.attach'], (payload) => payload.create !== undefined)),
         'chat.toolOutput': unlessBound(shared['chat.toolOutput'])
     });
 

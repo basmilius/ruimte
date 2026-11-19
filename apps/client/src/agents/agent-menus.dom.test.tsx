@@ -112,7 +112,7 @@ async function openAgentMenu(target: 'Agent (Chat)' | 'Agent (Terminal)', from: 
 async function pick(label: string, kind: 'chat' | 'terminal'): Promise<ProjectNode | undefined> {
     await clickOn(menuItem(label));
     if (kind === 'chat') {
-        await until(() => machine.requests('chat.create').length > 0);
+        await until(() => machine.chatsMade().length > 0);
     }
     await act(async () => windowWorkspace()!.connection.projects.flush());
     await until(() => savedNodes().some((node) => node.kind === kind));
@@ -206,8 +206,8 @@ describe('a turned-off default account', () => {
             await until(() => menuItem('Side') !== null);
             expect(groupRows('Claude Code')).toEqual(['Side', 'Work']);
             await clickOn(menuItem('Side'));
-            await until(() => machine.requests('chat.create').length > 0);
-            expect(machine.requests('chat.create')[0]).toMatchObject({ provider: 'claude', account: 'claude_side' });
+            await until(() => machine.chatsMade().length > 0);
+            expect(machine.chatsMade()[0]).toMatchObject({ provider: 'claude', account: 'claude_side' });
         });
     }
 
@@ -262,8 +262,8 @@ describe('the number of accounts that are on', () => {
         await until(() => menuItem('Codex') !== null);
         expect(submenuLabels()).toEqual(['Claude Code', 'Codex']);
         await clickOn(menuItem('Claude Code'));
-        await until(() => machine.requests('chat.create').length > 0);
-        expect(machine.requests('chat.create')[0]?.account).toBeUndefined();
+        await until(() => machine.chatsMade().length > 0);
+        expect(machine.chatsMade()[0]?.account).toBeUndefined();
     });
 });
 

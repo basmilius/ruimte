@@ -33,9 +33,14 @@ describe('voice inspection actions', () => {
             { sessionId: 'terminal', agent: { kind: 'codex', live: false, status: 'running', updatedAt: 1 } },
             { sessionId: 'plain', agent: null }
         ] as SessionInfo[];
+        const asked: Array<[string, unknown]> = [];
         const transport: Transport = {
             status: 'open',
-            request: (async (type: string) => (type === 'chat.list' ? { chats } : { sessions })) as Transport['request'],
+            request: (async (type: string, payload: unknown) => {
+                asked.push([type, payload]);
+
+                return type === 'chat.list' ? { chats } : { sessions };
+            }) as Transport['request'],
             on: () => () => {},
             subscribeStatus: () => () => {}
         };
@@ -51,6 +56,7 @@ describe('voice inspection actions', () => {
                 ]
             }
         });
+        expect(asked).toContainEqual(['chat.list', { omitCommands: true }]);
     });
 });
 

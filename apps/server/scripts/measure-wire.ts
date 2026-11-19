@@ -166,11 +166,12 @@ async function capture(repository: string, chatSource: string): Promise<string[]
         await request('endpoint.info', {});
         await request('project.list', {});
         await request('project.open', { projectId: opened.summary.projectId });
-        await request('chat.list', {});
+        await request('chat.list', { omitCommands: true });
         for (const { chatId, provider } of chats) {
-            await request('chat.create', { chatId, provider, cwd: folder });
-            // As the clients ask: the newest page, one page back for a scroll, and a reconnect from the last seq.
-            const attached = (await request('chat.attach', { chatId, historyLimit: 60 })) as { history?: { cursor: string | null }; seq?: number } | undefined;
+            // As the clients ask: made and attached in one request, one page back for a scroll, and a reconnect from the last seq.
+            const attached = (await request('chat.attach', { chatId, historyLimit: 60, create: { provider, cwd: folder } })) as
+                | { history?: { cursor: string | null }; seq?: number }
+                | undefined;
             if (typeof attached?.history?.cursor === 'string') {
                 await request('chat.history', { chatId, cursor: attached.history.cursor, limit: 60 });
             }

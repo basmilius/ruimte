@@ -131,6 +131,19 @@ export class FakeMachine implements PooledTransport {
         return this.sent.filter((request) => request.type === type).map((request) => request.payload as RequestMap[T]['payload']);
     }
 
+    /* Every chat the client asked to make, by `chat.create` or by a `chat.attach` that carries `create`, so a test holds either way. */
+    chatsMade(): Array<RequestMap['chat.create']['payload']> {
+        return this.sent.flatMap((request) => {
+            if (request.type === 'chat.create') {
+                return [request.payload as RequestMap['chat.create']['payload']];
+            }
+
+            const attach = request.type === 'chat.attach' ? (request.payload as RequestMap['chat.attach']['payload']) : null;
+
+            return attach?.create === undefined ? [] : [{ ...attach.create, chatId: attach.chatId }];
+        });
+    }
+
     /* Checked against the event's schema, as a client checks what a machine sends, so a test cannot hand a view a shape no machine sends. */
     emit<E extends EventType>(event: E, payload: EventMap[E]): void {
         EVENT_SCHEMAS[event].parse(payload);

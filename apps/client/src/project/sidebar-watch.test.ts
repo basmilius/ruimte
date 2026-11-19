@@ -6,12 +6,14 @@ import { SidebarWatch, type SidebarWatchOptions } from './sidebar-watch';
 class FakeTransport implements Transport {
     status: TransportStatus = 'open';
     calls: string[] = [];
+    payloads: Array<[string, unknown]> = [];
     handlers = new Map<string, Set<(value: never) => void>>();
     statusListeners = new Set<(status: TransportStatus) => void>();
     answer: (type: RequestType) => unknown = (type) =>
         type === 'project.sidebar' ? { projects: [] } : type === 'session.list' ? { sessions: [] } : { chats: [] };
-    async request<T extends RequestType>(type: T): Promise<RequestMap[T]['result']> {
+    async request<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
         this.calls.push(type);
+        this.payloads.push([type, payload]);
         return (await this.answer(type)) as RequestMap[T]['result'];
     }
     on<E extends EventType>(event: E, handler: (value: EventMap[E]) => void): () => void {
@@ -122,6 +124,21 @@ describe('background sidebar updates', () => {
         expect(watcher.getSnapshot().statuses['chat:chat']).toBe('needs-you');
         transport.emit('session.status', { sessionId: 'terminal', agent: { status: 'idle' } });
         expect(watcher.getSnapshot().statuses['terminal:terminal']).toBe('idle');
+    });
+
+    test('asks for the chats without their command lists, and reads a full answer of an older machine all the same', async () => {
+        const transport = new FakeTransport();
+        transport.answer = (type) =>
+            type === 'chat.list'
+                ? { chats: [{ chatId: 'chat', status: 'needs-you', requests: [{ createdAt: 40 }], slashCommands: [{ name: 'review' }], skills: [] }] }
+                : type === 'project.sidebar'
+                  ? { projects: [] }
+                  : { sessions: [] };
+        const watcher = watch(transport);
+        await settle();
+        expect(transport.payloads).toContainEqual(['chat.list', { omitCommands: true }]);
+        expect(watcher.getSnapshot().statuses['chat:chat']).toBe('needs-you');
+        expect(watcher.getSnapshot().waitingSince['chat:chat']).toBe(40);
     });
 
     test('disconnects invalidate in-flight results and a reconnect loads fresh data', async () => {
