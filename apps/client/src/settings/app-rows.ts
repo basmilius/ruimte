@@ -94,13 +94,6 @@ export const APP_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
         description: 'settings:machine.terminalShell.description',
         available: () => hasLocalMachine() && serverInfoOf(LOCAL_ENDPOINT_ID).platform === 'win32'
     },
-    {
-        id: 'agents.integrations',
-        section: 'terminal',
-        label: 'settings:agents.integrations.title',
-        description: 'settings:agents.integrations.search',
-        available: hasLocalMachine
-    },
     row('about.updates.auto'),
     row('about.updates.track'),
     { id: 'about.onboarding', section: 'about', label: 'onboarding:about.label', description: 'onboarding:about.description', available: hasLocalMachine }

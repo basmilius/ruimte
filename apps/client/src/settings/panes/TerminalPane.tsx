@@ -1,7 +1,6 @@
 import { ScrollArea, Segmented, Select, Stepper } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
-import { IntegrationsSection } from '@/agents/IntegrationsSection';
 import { TerminalShellRow } from '@/machine-ui/MachineSettings';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
@@ -122,7 +121,6 @@ export function TerminalPane() {
                     }
                 />
             </SettingsSection>
-            <IntegrationsSection />
         </>
     );
 }

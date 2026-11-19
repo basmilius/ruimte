@@ -92,7 +92,7 @@ export function SettingsMcp() {
         <SettingsFrame
             active="Agents"
             description="What agents and chats start with and what they may do."
-            tabs={['Agents', 'Chats', 'Computer use', 'MCP']}
+            tabs={['Agents', 'Chats', 'Terminal', 'Computer use', 'MCP']}
             tab="MCP"
             height={700}
             label="The Settings dialog on Agents, with its MCP tab open. The External MCP switch is on, with the address on this machine under it. Under External clients, with a New bearer button, a table lists one client, Hosted bot. Below it, From outside this machine names the MCP hostname on the tunnel, with Open Tunnels."

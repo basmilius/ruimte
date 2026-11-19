@@ -628,7 +628,7 @@
         },
         "terminal": {
             "label": "Terminal",
-            "description": "Lettertype, links en agentstatus."
+            "description": "Lettertype en links."
         },
         "views": {
             "label": "Weergaven",
@@ -645,6 +645,10 @@
         "agents": {
             "label": "Agents",
             "description": "Waarmee agents en chats beginnen en wat ze mogen."
+        },
+        "terminalAgents": {
+            "label": "Terminal",
+            "description": "Of een agent in een terminal werkt, klaar is of op je wacht."
         },
         "computer": {
             "label": "Computer use",

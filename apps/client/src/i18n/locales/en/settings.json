@@ -628,7 +628,7 @@
         },
         "terminal": {
             "label": "Terminal",
-            "description": "Font, links and agent status."
+            "description": "Font and links."
         },
         "views": {
             "label": "Views",
@@ -645,6 +645,10 @@
         "agents": {
             "label": "Agents",
             "description": "What agents and chats start with and what they may do."
+        },
+        "terminalAgents": {
+            "label": "Terminal",
+            "description": "Whether an agent in a terminal is working, done or waiting for you."
         },
         "computer": {
             "label": "Computer use",

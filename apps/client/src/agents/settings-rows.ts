@@ -1,7 +1,17 @@
 import { closedLidOffered, keepAwakeAvailable } from '@/controllers/keep-awake';
 import { canTellIdle } from '@/desktop/bridge';
 import { settingsRow as row, type SettingsSearchRow } from '@/registry/settings-sections';
-import { hasOpenedMachine } from '@/state/local-machine';
+import { hasLocalMachine, hasOpenedMachine } from '@/state/local-machine';
+
+export const TERMINAL_AGENT_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
+    {
+        id: 'agents.integrations',
+        section: 'terminalAgents',
+        label: 'settings:agents.integrations.title',
+        description: 'settings:agents.integrations.search',
+        available: hasLocalMachine
+    }
+];
 
 /* Drawn under General, Notifications; their words stay where they were. */
 export const NOTIFICATION_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
