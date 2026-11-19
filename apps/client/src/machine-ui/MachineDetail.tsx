@@ -1,5 +1,5 @@
 import { messageOf, Button, Icon, FormError } from '@adecore/ui';
-import { ConfirmDialog, DetailHeader, SettingsRow, useSettingsTarget } from '@adecore/ui/settings';
+import { ConfirmDialog, DetailHeader, SettingsRow, SettingsTabs, useSettingsTarget } from '@adecore/ui/settings';
 import { CloudUpload, Plug } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -29,7 +29,6 @@ import type { Endpoint } from '@/state/endpoints';
 import { usePulsarMachines } from '@/state/pulsar-machines';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
-import { PaneTabs } from '@/surface/PaneTabs';
 import { machineAnswers } from '@/transport/features';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
 import { addMachineToAccount, leaveAccount, openAccountMachine, refreshAccountMachines } from '@/workspace/account-machines';
@@ -129,7 +128,7 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
                 <RemoveSection entry={entry} model={model} />
             ) : (
                 <>
-                    <PaneTabs
+                    <SettingsTabs
                         value={tab}
                         tabs={MACHINE_TABS.map((id) => ({ id, label: t(`machineDialog.tabs.${id}`) }))}
                         label={t('machineDialog.tabs.label')}

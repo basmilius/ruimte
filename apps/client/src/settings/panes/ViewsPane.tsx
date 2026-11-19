@@ -1,5 +1,5 @@
 import { Segmented, Select, Switch, Keys, shortcut } from '@adecore/ui';
-import { SettingsRow, useSettingsTarget } from '@adecore/ui/settings';
+import { SettingsRow, SettingsTabs, useSettingsTarget } from '@adecore/ui/settings';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NODE_SORT_THENS, NODE_SORTS, sortHasGroups } from '@/canvas-model/node-sort';
@@ -8,7 +8,6 @@ import { canSwipeBetweenPages } from '@/desktop/bridge';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { NodeSizeSection } from '@/settings/NodeSizeSection';
 import { useSettings } from '@/state/settings';
-import { PaneTabs } from '@/surface/PaneTabs';
 import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
 
 type ViewTab = 'canvas' | 'drawing' | 'browser';
@@ -141,7 +140,7 @@ export function ViewsPane() {
 
     return (
         <>
-            <PaneTabs value={tab} tabs={tabs.map((id) => ({ id, label: t(`views.${id}.title`) }))} label={t('views.tabs')} onValueChange={setTab} />
+            <SettingsTabs value={tab} tabs={tabs.map((id) => ({ id, label: t(`views.${id}.title`) }))} label={t('views.tabs')} onValueChange={setTab} />
             {tab === 'canvas' && <CanvasTab />}
             {tab === 'drawing' && <DrawingTab />}
             {tab === 'browser' && (

@@ -1,7 +1,7 @@
 import { LazyBoundary } from '@adecore/ui';
+import { SettingsTabs } from '@adecore/ui/settings';
 import { navSectionOf, sectionLabel, tabSectionsOf } from '@/settings/sections';
 import { useUi } from '@/state/ui';
-import { PaneTabs } from '@/surface/PaneTabs';
 
 /*
  * The pane of a section that has tab sections. The dialog mounts only the pane of the open section, so the section the
@@ -22,7 +22,7 @@ export function SectionTabsPane() {
 
     return (
         <>
-            <PaneTabs
+            <SettingsTabs
                 value={active.id}
                 tabs={tabs.map((tab) => ({ id: tab.id, label: tab.label() }))}
                 label={sectionLabel(parent)}
