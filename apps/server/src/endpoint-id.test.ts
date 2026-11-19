@@ -168,6 +168,7 @@ describe('readOrCreateEndpointIdentity', () => {
                     streamingAllowed: true,
                     resumeAtReset: false,
                     visualReplies: true,
+                    promptSuggestions: false,
                     textModel: null,
                     keepAwake: 'off',
                     keepAwakeOnBattery: false,
@@ -208,6 +209,7 @@ describe('readOrCreateEndpointIdentity', () => {
         { key: 'streamingAllowed', fallback: true, change: false, set: 'setIdentity' },
         { key: 'resumeAtReset', fallback: false, change: true, set: 'setIdentity' },
         { key: 'visualReplies', fallback: true, change: false, set: 'setIdentity' },
+        { key: 'promptSuggestions', fallback: false, change: true, set: 'setIdentity' },
         { key: 'usageStats', fallback: true, change: false, set: 'setSwitches' }
     ] as const)(
         '$key starts at $fallback, survives a restart once changed and writes nothing when back at the default',

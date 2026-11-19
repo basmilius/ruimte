@@ -8220,6 +8220,7 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
     public let `streamingAllowed`: Bool?
     public let `resumeAtReset`: Bool?
     public let `visualReplies`: Bool?
+    public let `promptSuggestions`: Bool?
     public let `textModel`: Presence<EndpointInfoTextModel>
     public let `keepAwake`: KeepAwakeMode?
     public let `keepAwakeOnBattery`: Bool?
@@ -8252,7 +8253,7 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
     public let `features`: [String]?
     public let `viewReferences`: Bool?
 
-    public init(`id`: String, `label`: String, `nameSource`: EndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `textModel`: Presence<EndpointInfoTextModel> = .missing, `keepAwake`: KeepAwakeMode? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `broker`: EndpointBroker? = nil, `lanDoor`: Bool? = nil, `worktreeRoot`: Presence<String> = .missing, `terminalShell`: EndpointTerminalShell? = nil, `nodeSizes`: [String: EndpointNodeSize]? = nil, `usageStats`: Bool? = nil, `startFolder`: String? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: EndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: EndpointInfoReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `brokerFixed`: Bool? = nil, `lan`: Presence<LanDoor> = .missing, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing, `agentIntegrations`: EndpointAgentIntegrations? = nil, `gitBashMissing`: Bool? = nil, `features`: [String]? = nil, `viewReferences`: Bool? = nil) {
+    public init(`id`: String, `label`: String, `nameSource`: EndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `promptSuggestions`: Bool? = nil, `textModel`: Presence<EndpointInfoTextModel> = .missing, `keepAwake`: KeepAwakeMode? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `broker`: EndpointBroker? = nil, `lanDoor`: Bool? = nil, `worktreeRoot`: Presence<String> = .missing, `terminalShell`: EndpointTerminalShell? = nil, `nodeSizes`: [String: EndpointNodeSize]? = nil, `usageStats`: Bool? = nil, `startFolder`: String? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: EndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: EndpointInfoReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `brokerFixed`: Bool? = nil, `lan`: Presence<LanDoor> = .missing, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing, `agentIntegrations`: EndpointAgentIntegrations? = nil, `gitBashMissing`: Bool? = nil, `features`: [String]? = nil, `viewReferences`: Bool? = nil) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
@@ -8263,6 +8264,7 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
         self.`streamingAllowed` = `streamingAllowed`
         self.`resumeAtReset` = `resumeAtReset`
         self.`visualReplies` = `visualReplies`
+        self.`promptSuggestions` = `promptSuggestions`
         self.`textModel` = `textModel`
         self.`keepAwake` = `keepAwake`
         self.`keepAwakeOnBattery` = `keepAwakeOnBattery`
@@ -8308,6 +8310,7 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
         `streamingAllowed` = try container.decodeIfPresent(Bool.self, forKey: .`streamingAllowed`)
         `resumeAtReset` = try container.decodeIfPresent(Bool.self, forKey: .`resumeAtReset`)
         `visualReplies` = try container.decodeIfPresent(Bool.self, forKey: .`visualReplies`)
+        `promptSuggestions` = try container.decodeIfPresent(Bool.self, forKey: .`promptSuggestions`)
         `textModel` = try container.contains(.`textModel`) ? (container.decodeNil(forKey: .`textModel`) ? .null : .value(container.decode(EndpointInfoTextModel.self, forKey: .`textModel`))) : .missing
         `keepAwake` = try container.decodeIfPresent(KeepAwakeMode.self, forKey: .`keepAwake`)
         `keepAwakeOnBattery` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeOnBattery`)
@@ -8357,6 +8360,7 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`streamingAllowed`, forKey: .`streamingAllowed`)
         try container.encodeIfPresent(`resumeAtReset`, forKey: .`resumeAtReset`)
         try container.encodeIfPresent(`visualReplies`, forKey: .`visualReplies`)
+        try container.encodeIfPresent(`promptSuggestions`, forKey: .`promptSuggestions`)
         switch `textModel` {
         case .missing: break
         case .null: try container.encodeNil(forKey: .`textModel`)
@@ -8421,6 +8425,7 @@ public struct EndpointInfo: Codable, Sendable, Equatable {
         case `streamingAllowed` = "streamingAllowed"
         case `resumeAtReset` = "resumeAtReset"
         case `visualReplies` = "visualReplies"
+        case `promptSuggestions` = "promptSuggestions"
         case `textModel` = "textModel"
         case `keepAwake` = "keepAwake"
         case `keepAwakeOnBattery` = "keepAwakeOnBattery"
@@ -8937,6 +8942,7 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
     public let `streamingAllowed`: Bool?
     public let `resumeAtReset`: Bool?
     public let `visualReplies`: Bool?
+    public let `promptSuggestions`: Bool?
     public let `textModel`: Presence<EndpointChangedEventTextModel>
     public let `keepAwake`: KeepAwakeMode?
     public let `keepAwakeOnBattery`: Bool?
@@ -8954,7 +8960,7 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
     public let `lanDoorFixed`: Bool?
     public let `agentIntegrations`: EndpointAgentIntegrations?
 
-    public init(`id`: String, `label`: String, `nameSource`: EndpointNameSource, `icon`: MachineIcon?, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `textModel`: Presence<EndpointChangedEventTextModel> = .missing, `keepAwake`: KeepAwakeMode? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `broker`: EndpointBroker? = nil, `lanDoor`: Bool? = nil, `nodeSizes`: [String: EndpointNodeSize]? = nil, `usageStats`: Bool? = nil, `startFolder`: String? = nil, `keepAwakeLidRule`: Bool? = nil, `brokerUrl`: Presence<String> = .missing, `brokerFixed`: Bool? = nil, `lan`: Presence<LanDoor> = .missing, `lanDoorFixed`: Bool? = nil, `agentIntegrations`: EndpointAgentIntegrations? = nil) {
+    public init(`id`: String, `label`: String, `nameSource`: EndpointNameSource, `icon`: MachineIcon?, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `promptSuggestions`: Bool? = nil, `textModel`: Presence<EndpointChangedEventTextModel> = .missing, `keepAwake`: KeepAwakeMode? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `broker`: EndpointBroker? = nil, `lanDoor`: Bool? = nil, `nodeSizes`: [String: EndpointNodeSize]? = nil, `usageStats`: Bool? = nil, `startFolder`: String? = nil, `keepAwakeLidRule`: Bool? = nil, `brokerUrl`: Presence<String> = .missing, `brokerFixed`: Bool? = nil, `lan`: Presence<LanDoor> = .missing, `lanDoorFixed`: Bool? = nil, `agentIntegrations`: EndpointAgentIntegrations? = nil) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
@@ -8965,6 +8971,7 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
         self.`streamingAllowed` = `streamingAllowed`
         self.`resumeAtReset` = `resumeAtReset`
         self.`visualReplies` = `visualReplies`
+        self.`promptSuggestions` = `promptSuggestions`
         self.`textModel` = `textModel`
         self.`keepAwake` = `keepAwake`
         self.`keepAwakeOnBattery` = `keepAwakeOnBattery`
@@ -8995,6 +9002,7 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
         `streamingAllowed` = try container.decodeIfPresent(Bool.self, forKey: .`streamingAllowed`)
         `resumeAtReset` = try container.decodeIfPresent(Bool.self, forKey: .`resumeAtReset`)
         `visualReplies` = try container.decodeIfPresent(Bool.self, forKey: .`visualReplies`)
+        `promptSuggestions` = try container.decodeIfPresent(Bool.self, forKey: .`promptSuggestions`)
         `textModel` = try container.contains(.`textModel`) ? (container.decodeNil(forKey: .`textModel`) ? .null : .value(container.decode(EndpointChangedEventTextModel.self, forKey: .`textModel`))) : .missing
         `keepAwake` = try container.decodeIfPresent(KeepAwakeMode.self, forKey: .`keepAwake`)
         `keepAwakeOnBattery` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeOnBattery`)
@@ -9025,6 +9033,7 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`streamingAllowed`, forKey: .`streamingAllowed`)
         try container.encodeIfPresent(`resumeAtReset`, forKey: .`resumeAtReset`)
         try container.encodeIfPresent(`visualReplies`, forKey: .`visualReplies`)
+        try container.encodeIfPresent(`promptSuggestions`, forKey: .`promptSuggestions`)
         switch `textModel` {
         case .missing: break
         case .null: try container.encodeNil(forKey: .`textModel`)
@@ -9066,6 +9075,7 @@ public struct EndpointChangedEvent: Codable, Sendable, Equatable {
         case `streamingAllowed` = "streamingAllowed"
         case `resumeAtReset` = "resumeAtReset"
         case `visualReplies` = "visualReplies"
+        case `promptSuggestions` = "promptSuggestions"
         case `textModel` = "textModel"
         case `keepAwake` = "keepAwake"
         case `keepAwakeOnBattery` = "keepAwakeOnBattery"
@@ -10496,7 +10506,6 @@ public struct WorktreeMergeResult: Codable, Sendable, Equatable {
     public let `summary`: String
     public let `output`: String
     public let `commit`: GitActionCommit?
-    public let `url`: String?
     public let `conflicts`: [String]?
     public let `cwd`: String?
     public let `into`: String?
@@ -10504,12 +10513,11 @@ public struct WorktreeMergeResult: Codable, Sendable, Equatable {
     public let `branchDeleted`: Bool?
     public let `kept`: String?
 
-    public init(`actionId`: String, `summary`: String, `output`: String, `commit`: GitActionCommit? = nil, `url`: String? = nil, `conflicts`: [String]? = nil, `cwd`: String? = nil, `into`: String? = nil, `removed`: Bool? = nil, `branchDeleted`: Bool? = nil, `kept`: String? = nil) {
+    public init(`actionId`: String, `summary`: String, `output`: String, `commit`: GitActionCommit? = nil, `conflicts`: [String]? = nil, `cwd`: String? = nil, `into`: String? = nil, `removed`: Bool? = nil, `branchDeleted`: Bool? = nil, `kept`: String? = nil) {
         self.`actionId` = `actionId`
         self.`summary` = `summary`
         self.`output` = `output`
         self.`commit` = `commit`
-        self.`url` = `url`
         self.`conflicts` = `conflicts`
         self.`cwd` = `cwd`
         self.`into` = `into`
@@ -10524,7 +10532,6 @@ public struct WorktreeMergeResult: Codable, Sendable, Equatable {
         `summary` = try container.decode(String.self, forKey: .`summary`)
         `output` = try container.decode(String.self, forKey: .`output`)
         `commit` = try container.decodeIfPresent(GitActionCommit.self, forKey: .`commit`)
-        `url` = try container.decodeIfPresent(String.self, forKey: .`url`)
         `conflicts` = try container.decodeIfPresent([String].self, forKey: .`conflicts`)
         `cwd` = try container.decodeIfPresent(String.self, forKey: .`cwd`)
         `into` = try container.decodeIfPresent(String.self, forKey: .`into`)
@@ -10539,7 +10546,6 @@ public struct WorktreeMergeResult: Codable, Sendable, Equatable {
         try container.encode(`summary`, forKey: .`summary`)
         try container.encode(`output`, forKey: .`output`)
         try container.encodeIfPresent(`commit`, forKey: .`commit`)
-        try container.encodeIfPresent(`url`, forKey: .`url`)
         try container.encodeIfPresent(`conflicts`, forKey: .`conflicts`)
         try container.encodeIfPresent(`cwd`, forKey: .`cwd`)
         try container.encodeIfPresent(`into`, forKey: .`into`)
@@ -10553,7 +10559,6 @@ public struct WorktreeMergeResult: Codable, Sendable, Equatable {
         case `summary` = "summary"
         case `output` = "output"
         case `commit` = "commit"
-        case `url` = "url"
         case `conflicts` = "conflicts"
         case `cwd` = "cwd"
         case `into` = "into"
@@ -10638,7 +10643,6 @@ public enum GitProgressEventPhase: String, CaseIterable, Codable, Sendable, Equa
     case `stash` = "stash"
     case `merge` = "merge"
     case `rebase` = "rebase"
-    case `pr` = "pr"
     case `done` = "done"
     case `failed` = "failed"
 }
@@ -13745,15 +13749,13 @@ public struct GitActionResult: Codable, Sendable, Equatable {
     public let `summary`: String
     public let `output`: String
     public let `commit`: GitActionCommit?
-    public let `url`: String?
     public let `conflicts`: [String]?
 
-    public init(`actionId`: String, `summary`: String, `output`: String, `commit`: GitActionCommit? = nil, `url`: String? = nil, `conflicts`: [String]? = nil) {
+    public init(`actionId`: String, `summary`: String, `output`: String, `commit`: GitActionCommit? = nil, `conflicts`: [String]? = nil) {
         self.`actionId` = `actionId`
         self.`summary` = `summary`
         self.`output` = `output`
         self.`commit` = `commit`
-        self.`url` = `url`
         self.`conflicts` = `conflicts`
     }
 
@@ -13763,7 +13765,6 @@ public struct GitActionResult: Codable, Sendable, Equatable {
         `summary` = try container.decode(String.self, forKey: .`summary`)
         `output` = try container.decode(String.self, forKey: .`output`)
         `commit` = try container.decodeIfPresent(GitActionCommit.self, forKey: .`commit`)
-        `url` = try container.decodeIfPresent(String.self, forKey: .`url`)
         `conflicts` = try container.decodeIfPresent([String].self, forKey: .`conflicts`)
     }
 
@@ -13773,7 +13774,6 @@ public struct GitActionResult: Codable, Sendable, Equatable {
         try container.encode(`summary`, forKey: .`summary`)
         try container.encode(`output`, forKey: .`output`)
         try container.encodeIfPresent(`commit`, forKey: .`commit`)
-        try container.encodeIfPresent(`url`, forKey: .`url`)
         try container.encodeIfPresent(`conflicts`, forKey: .`conflicts`)
     }
 
@@ -13782,7 +13782,6 @@ public struct GitActionResult: Codable, Sendable, Equatable {
         case `summary` = "summary"
         case `output` = "output"
         case `commit` = "commit"
-        case `url` = "url"
         case `conflicts` = "conflicts"
     }
 }
@@ -17975,7 +17974,6 @@ public struct StoredNode: Codable, Sendable, Equatable {
     public let `membersListed`: Bool?
     public let `expandedHeight`: Double?
     public let `worktree`: StoredNodeWorktree?
-    public let `issue`: StoredNodeIssue?
     public let `body`: String?
     public let `color`: String?
     public let `viewId`: String?
@@ -17986,7 +17984,7 @@ public struct StoredNode: Codable, Sendable, Equatable {
     public let `routine`: String?
     public let `chats`: [[String: JSONValue]]?
 
-    public init(`id`: String, `kind`: StoredNodeKind, `title`: String, `titleSource`: StoredNodeTitleSource? = nil, `x`: Double, `y`: Double, `w`: Double, `h`: Double, `accent`: String? = nil, `cwd`: String? = nil, `command`: String? = nil, `resume`: String? = nil, `provider`: String? = nil, `account`: String? = nil, `providerFixed`: Bool? = nil, `runtimeMode`: String? = nil, `url`: String? = nil, `browserOwner`: String? = nil, `device`: StoredNodeDevice? = nil, `collapsed`: Bool? = nil, `memberIds`: [String]? = nil, `membersListed`: Bool? = nil, `expandedHeight`: Double? = nil, `worktree`: StoredNodeWorktree? = nil, `issue`: StoredNodeIssue? = nil, `body`: String? = nil, `color`: String? = nil, `viewId`: String? = nil, `path`: String? = nil, `raw`: [String: JSONValue]? = nil, `machine`: String? = nil, `artifact`: StoredNodeArtifact? = nil, `routine`: String? = nil, `chats`: [[String: JSONValue]]? = nil) {
+    public init(`id`: String, `kind`: StoredNodeKind, `title`: String, `titleSource`: StoredNodeTitleSource? = nil, `x`: Double, `y`: Double, `w`: Double, `h`: Double, `accent`: String? = nil, `cwd`: String? = nil, `command`: String? = nil, `resume`: String? = nil, `provider`: String? = nil, `account`: String? = nil, `providerFixed`: Bool? = nil, `runtimeMode`: String? = nil, `url`: String? = nil, `browserOwner`: String? = nil, `device`: StoredNodeDevice? = nil, `collapsed`: Bool? = nil, `memberIds`: [String]? = nil, `membersListed`: Bool? = nil, `expandedHeight`: Double? = nil, `worktree`: StoredNodeWorktree? = nil, `body`: String? = nil, `color`: String? = nil, `viewId`: String? = nil, `path`: String? = nil, `raw`: [String: JSONValue]? = nil, `machine`: String? = nil, `artifact`: StoredNodeArtifact? = nil, `routine`: String? = nil, `chats`: [[String: JSONValue]]? = nil) {
         self.`id` = `id`
         self.`kind` = `kind`
         self.`title` = `title`
@@ -18011,7 +18009,6 @@ public struct StoredNode: Codable, Sendable, Equatable {
         self.`membersListed` = `membersListed`
         self.`expandedHeight` = `expandedHeight`
         self.`worktree` = `worktree`
-        self.`issue` = `issue`
         self.`body` = `body`
         self.`color` = `color`
         self.`viewId` = `viewId`
@@ -18049,7 +18046,6 @@ public struct StoredNode: Codable, Sendable, Equatable {
         `membersListed` = try container.decodeIfPresent(Bool.self, forKey: .`membersListed`)
         `expandedHeight` = try container.decodeIfPresent(Double.self, forKey: .`expandedHeight`)
         `worktree` = try container.decodeIfPresent(StoredNodeWorktree.self, forKey: .`worktree`)
-        `issue` = try container.decodeIfPresent(StoredNodeIssue.self, forKey: .`issue`)
         `body` = try container.decodeIfPresent(String.self, forKey: .`body`)
         `color` = try container.decodeIfPresent(String.self, forKey: .`color`)
         `viewId` = try container.decodeIfPresent(String.self, forKey: .`viewId`)
@@ -18087,7 +18083,6 @@ public struct StoredNode: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`membersListed`, forKey: .`membersListed`)
         try container.encodeIfPresent(`expandedHeight`, forKey: .`expandedHeight`)
         try container.encodeIfPresent(`worktree`, forKey: .`worktree`)
-        try container.encodeIfPresent(`issue`, forKey: .`issue`)
         try container.encodeIfPresent(`body`, forKey: .`body`)
         try container.encodeIfPresent(`color`, forKey: .`color`)
         try container.encodeIfPresent(`viewId`, forKey: .`viewId`)
@@ -18124,7 +18119,6 @@ public struct StoredNode: Codable, Sendable, Equatable {
         case `membersListed` = "membersListed"
         case `expandedHeight` = "expandedHeight"
         case `worktree` = "worktree"
-        case `issue` = "issue"
         case `body` = "body"
         case `color` = "color"
         case `viewId` = "viewId"
@@ -18246,38 +18240,6 @@ public struct StoredNodeWorktree: Codable, Sendable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case `path` = "path"
         case `branch` = "branch"
-    }
-}
-
-public struct StoredNodeIssue: Codable, Sendable, Equatable {
-    public let `repo`: String
-    public let `number`: Int64
-    public let `url`: String
-
-    public init(`repo`: String, `number`: Int64, `url`: String) {
-        self.`repo` = `repo`
-        self.`number` = `number`
-        self.`url` = `url`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `repo` = try container.decode(String.self, forKey: .`repo`)
-        `number` = try container.decode(Int64.self, forKey: .`number`)
-        `url` = try container.decode(String.self, forKey: .`url`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`repo`, forKey: .`repo`)
-        try container.encode(`number`, forKey: .`number`)
-        try container.encode(`url`, forKey: .`url`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `repo` = "repo"
-        case `number` = "number"
-        case `url` = "url"
     }
 }
 
@@ -18794,10 +18756,9 @@ public struct StoredChatViewNode: Codable, Sendable, Equatable {
     public let `providerFixed`: Bool?
     public let `runtimeMode`: String?
     public let `accent`: String?
-    public let `issue`: StoredChatViewNodeIssue?
     public let `artifact`: StoredChatViewNodeArtifact?
 
-    public init(`cwd`: String? = nil, `command`: String? = nil, `resume`: String? = nil, `provider`: String? = nil, `account`: String? = nil, `providerFixed`: Bool? = nil, `runtimeMode`: String? = nil, `accent`: String? = nil, `issue`: StoredChatViewNodeIssue? = nil, `artifact`: StoredChatViewNodeArtifact? = nil) {
+    public init(`cwd`: String? = nil, `command`: String? = nil, `resume`: String? = nil, `provider`: String? = nil, `account`: String? = nil, `providerFixed`: Bool? = nil, `runtimeMode`: String? = nil, `accent`: String? = nil, `artifact`: StoredChatViewNodeArtifact? = nil) {
         self.`cwd` = `cwd`
         self.`command` = `command`
         self.`resume` = `resume`
@@ -18806,7 +18767,6 @@ public struct StoredChatViewNode: Codable, Sendable, Equatable {
         self.`providerFixed` = `providerFixed`
         self.`runtimeMode` = `runtimeMode`
         self.`accent` = `accent`
-        self.`issue` = `issue`
         self.`artifact` = `artifact`
     }
 
@@ -18820,7 +18780,6 @@ public struct StoredChatViewNode: Codable, Sendable, Equatable {
         `providerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`providerFixed`)
         `runtimeMode` = try container.decodeIfPresent(String.self, forKey: .`runtimeMode`)
         `accent` = try container.decodeIfPresent(String.self, forKey: .`accent`)
-        `issue` = try container.decodeIfPresent(StoredChatViewNodeIssue.self, forKey: .`issue`)
         `artifact` = try container.decodeIfPresent(StoredChatViewNodeArtifact.self, forKey: .`artifact`)
     }
 
@@ -18834,7 +18793,6 @@ public struct StoredChatViewNode: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`providerFixed`, forKey: .`providerFixed`)
         try container.encodeIfPresent(`runtimeMode`, forKey: .`runtimeMode`)
         try container.encodeIfPresent(`accent`, forKey: .`accent`)
-        try container.encodeIfPresent(`issue`, forKey: .`issue`)
         try container.encodeIfPresent(`artifact`, forKey: .`artifact`)
     }
 
@@ -18847,40 +18805,7 @@ public struct StoredChatViewNode: Codable, Sendable, Equatable {
         case `providerFixed` = "providerFixed"
         case `runtimeMode` = "runtimeMode"
         case `accent` = "accent"
-        case `issue` = "issue"
         case `artifact` = "artifact"
-    }
-}
-
-public struct StoredChatViewNodeIssue: Codable, Sendable, Equatable {
-    public let `repo`: String
-    public let `number`: Int64
-    public let `url`: String
-
-    public init(`repo`: String, `number`: Int64, `url`: String) {
-        self.`repo` = `repo`
-        self.`number` = `number`
-        self.`url` = `url`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `repo` = try container.decode(String.self, forKey: .`repo`)
-        `number` = try container.decode(Int64.self, forKey: .`number`)
-        `url` = try container.decode(String.self, forKey: .`url`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`repo`, forKey: .`repo`)
-        try container.encode(`number`, forKey: .`number`)
-        try container.encode(`url`, forKey: .`url`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `repo` = "repo"
-        case `number` = "number"
-        case `url` = "url"
     }
 }
 
@@ -19004,10 +18929,9 @@ public struct StoredTerminalViewNode: Codable, Sendable, Equatable {
     public let `providerFixed`: Bool?
     public let `runtimeMode`: String?
     public let `accent`: String?
-    public let `issue`: StoredTerminalViewNodeIssue?
     public let `artifact`: StoredTerminalViewNodeArtifact?
 
-    public init(`cwd`: String? = nil, `command`: String? = nil, `resume`: String? = nil, `provider`: String? = nil, `account`: String? = nil, `providerFixed`: Bool? = nil, `runtimeMode`: String? = nil, `accent`: String? = nil, `issue`: StoredTerminalViewNodeIssue? = nil, `artifact`: StoredTerminalViewNodeArtifact? = nil) {
+    public init(`cwd`: String? = nil, `command`: String? = nil, `resume`: String? = nil, `provider`: String? = nil, `account`: String? = nil, `providerFixed`: Bool? = nil, `runtimeMode`: String? = nil, `accent`: String? = nil, `artifact`: StoredTerminalViewNodeArtifact? = nil) {
         self.`cwd` = `cwd`
         self.`command` = `command`
         self.`resume` = `resume`
@@ -19016,7 +18940,6 @@ public struct StoredTerminalViewNode: Codable, Sendable, Equatable {
         self.`providerFixed` = `providerFixed`
         self.`runtimeMode` = `runtimeMode`
         self.`accent` = `accent`
-        self.`issue` = `issue`
         self.`artifact` = `artifact`
     }
 
@@ -19030,7 +18953,6 @@ public struct StoredTerminalViewNode: Codable, Sendable, Equatable {
         `providerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`providerFixed`)
         `runtimeMode` = try container.decodeIfPresent(String.self, forKey: .`runtimeMode`)
         `accent` = try container.decodeIfPresent(String.self, forKey: .`accent`)
-        `issue` = try container.decodeIfPresent(StoredTerminalViewNodeIssue.self, forKey: .`issue`)
         `artifact` = try container.decodeIfPresent(StoredTerminalViewNodeArtifact.self, forKey: .`artifact`)
     }
 
@@ -19044,7 +18966,6 @@ public struct StoredTerminalViewNode: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`providerFixed`, forKey: .`providerFixed`)
         try container.encodeIfPresent(`runtimeMode`, forKey: .`runtimeMode`)
         try container.encodeIfPresent(`accent`, forKey: .`accent`)
-        try container.encodeIfPresent(`issue`, forKey: .`issue`)
         try container.encodeIfPresent(`artifact`, forKey: .`artifact`)
     }
 
@@ -19057,40 +18978,7 @@ public struct StoredTerminalViewNode: Codable, Sendable, Equatable {
         case `providerFixed` = "providerFixed"
         case `runtimeMode` = "runtimeMode"
         case `accent` = "accent"
-        case `issue` = "issue"
         case `artifact` = "artifact"
-    }
-}
-
-public struct StoredTerminalViewNodeIssue: Codable, Sendable, Equatable {
-    public let `repo`: String
-    public let `number`: Int64
-    public let `url`: String
-
-    public init(`repo`: String, `number`: Int64, `url`: String) {
-        self.`repo` = `repo`
-        self.`number` = `number`
-        self.`url` = `url`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `repo` = try container.decode(String.self, forKey: .`repo`)
-        `number` = try container.decode(Int64.self, forKey: .`number`)
-        `url` = try container.decode(String.self, forKey: .`url`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`repo`, forKey: .`repo`)
-        try container.encode(`number`, forKey: .`number`)
-        try container.encode(`url`, forKey: .`url`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `repo` = "repo"
-        case `number` = "number"
-        case `url` = "url"
     }
 }
 
@@ -19859,10 +19747,9 @@ public struct StoredArtifactViewNode: Codable, Sendable, Equatable {
     public let `providerFixed`: Bool?
     public let `runtimeMode`: String?
     public let `accent`: String?
-    public let `issue`: StoredArtifactViewNodeIssue?
     public let `artifact`: StoredArtifactViewNodeArtifact?
 
-    public init(`cwd`: String? = nil, `command`: String? = nil, `resume`: String? = nil, `provider`: String? = nil, `account`: String? = nil, `providerFixed`: Bool? = nil, `runtimeMode`: String? = nil, `accent`: String? = nil, `issue`: StoredArtifactViewNodeIssue? = nil, `artifact`: StoredArtifactViewNodeArtifact? = nil) {
+    public init(`cwd`: String? = nil, `command`: String? = nil, `resume`: String? = nil, `provider`: String? = nil, `account`: String? = nil, `providerFixed`: Bool? = nil, `runtimeMode`: String? = nil, `accent`: String? = nil, `artifact`: StoredArtifactViewNodeArtifact? = nil) {
         self.`cwd` = `cwd`
         self.`command` = `command`
         self.`resume` = `resume`
@@ -19871,7 +19758,6 @@ public struct StoredArtifactViewNode: Codable, Sendable, Equatable {
         self.`providerFixed` = `providerFixed`
         self.`runtimeMode` = `runtimeMode`
         self.`accent` = `accent`
-        self.`issue` = `issue`
         self.`artifact` = `artifact`
     }
 
@@ -19885,7 +19771,6 @@ public struct StoredArtifactViewNode: Codable, Sendable, Equatable {
         `providerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`providerFixed`)
         `runtimeMode` = try container.decodeIfPresent(String.self, forKey: .`runtimeMode`)
         `accent` = try container.decodeIfPresent(String.self, forKey: .`accent`)
-        `issue` = try container.decodeIfPresent(StoredArtifactViewNodeIssue.self, forKey: .`issue`)
         `artifact` = try container.decodeIfPresent(StoredArtifactViewNodeArtifact.self, forKey: .`artifact`)
     }
 
@@ -19899,7 +19784,6 @@ public struct StoredArtifactViewNode: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`providerFixed`, forKey: .`providerFixed`)
         try container.encodeIfPresent(`runtimeMode`, forKey: .`runtimeMode`)
         try container.encodeIfPresent(`accent`, forKey: .`accent`)
-        try container.encodeIfPresent(`issue`, forKey: .`issue`)
         try container.encodeIfPresent(`artifact`, forKey: .`artifact`)
     }
 
@@ -19912,40 +19796,7 @@ public struct StoredArtifactViewNode: Codable, Sendable, Equatable {
         case `providerFixed` = "providerFixed"
         case `runtimeMode` = "runtimeMode"
         case `accent` = "accent"
-        case `issue` = "issue"
         case `artifact` = "artifact"
-    }
-}
-
-public struct StoredArtifactViewNodeIssue: Codable, Sendable, Equatable {
-    public let `repo`: String
-    public let `number`: Int64
-    public let `url`: String
-
-    public init(`repo`: String, `number`: Int64, `url`: String) {
-        self.`repo` = `repo`
-        self.`number` = `number`
-        self.`url` = `url`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `repo` = try container.decode(String.self, forKey: .`repo`)
-        `number` = try container.decode(Int64.self, forKey: .`number`)
-        `url` = try container.decode(String.self, forKey: .`url`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`repo`, forKey: .`repo`)
-        try container.encode(`number`, forKey: .`number`)
-        try container.encode(`url`, forKey: .`url`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `repo` = "repo"
-        case `number` = "number"
-        case `url` = "url"
     }
 }
 
@@ -20079,10 +19930,9 @@ public struct StoredDesignViewNode: Codable, Sendable, Equatable {
     public let `providerFixed`: Bool?
     public let `runtimeMode`: String?
     public let `accent`: String?
-    public let `issue`: StoredDesignViewNodeIssue?
     public let `artifact`: StoredDesignViewNodeArtifact?
 
-    public init(`cwd`: String? = nil, `command`: String? = nil, `resume`: String? = nil, `provider`: String? = nil, `account`: String? = nil, `providerFixed`: Bool? = nil, `runtimeMode`: String? = nil, `accent`: String? = nil, `issue`: StoredDesignViewNodeIssue? = nil, `artifact`: StoredDesignViewNodeArtifact? = nil) {
+    public init(`cwd`: String? = nil, `command`: String? = nil, `resume`: String? = nil, `provider`: String? = nil, `account`: String? = nil, `providerFixed`: Bool? = nil, `runtimeMode`: String? = nil, `accent`: String? = nil, `artifact`: StoredDesignViewNodeArtifact? = nil) {
         self.`cwd` = `cwd`
         self.`command` = `command`
         self.`resume` = `resume`
@@ -20091,7 +19941,6 @@ public struct StoredDesignViewNode: Codable, Sendable, Equatable {
         self.`providerFixed` = `providerFixed`
         self.`runtimeMode` = `runtimeMode`
         self.`accent` = `accent`
-        self.`issue` = `issue`
         self.`artifact` = `artifact`
     }
 
@@ -20105,7 +19954,6 @@ public struct StoredDesignViewNode: Codable, Sendable, Equatable {
         `providerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`providerFixed`)
         `runtimeMode` = try container.decodeIfPresent(String.self, forKey: .`runtimeMode`)
         `accent` = try container.decodeIfPresent(String.self, forKey: .`accent`)
-        `issue` = try container.decodeIfPresent(StoredDesignViewNodeIssue.self, forKey: .`issue`)
         `artifact` = try container.decodeIfPresent(StoredDesignViewNodeArtifact.self, forKey: .`artifact`)
     }
 
@@ -20119,7 +19967,6 @@ public struct StoredDesignViewNode: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`providerFixed`, forKey: .`providerFixed`)
         try container.encodeIfPresent(`runtimeMode`, forKey: .`runtimeMode`)
         try container.encodeIfPresent(`accent`, forKey: .`accent`)
-        try container.encodeIfPresent(`issue`, forKey: .`issue`)
         try container.encodeIfPresent(`artifact`, forKey: .`artifact`)
     }
 
@@ -20132,40 +19979,7 @@ public struct StoredDesignViewNode: Codable, Sendable, Equatable {
         case `providerFixed` = "providerFixed"
         case `runtimeMode` = "runtimeMode"
         case `accent` = "accent"
-        case `issue` = "issue"
         case `artifact` = "artifact"
-    }
-}
-
-public struct StoredDesignViewNodeIssue: Codable, Sendable, Equatable {
-    public let `repo`: String
-    public let `number`: Int64
-    public let `url`: String
-
-    public init(`repo`: String, `number`: Int64, `url`: String) {
-        self.`repo` = `repo`
-        self.`number` = `number`
-        self.`url` = `url`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `repo` = try container.decode(String.self, forKey: .`repo`)
-        `number` = try container.decode(Int64.self, forKey: .`number`)
-        `url` = try container.decode(String.self, forKey: .`url`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`repo`, forKey: .`repo`)
-        try container.encode(`number`, forKey: .`number`)
-        try container.encode(`url`, forKey: .`url`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `repo` = "repo"
-        case `number` = "number"
-        case `url` = "url"
     }
 }
 

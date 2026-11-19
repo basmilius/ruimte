@@ -53,6 +53,8 @@ export const MACHINE_SETTINGS = {
     resumeAtReset: row({ schema: z.boolean(), default: false }),
     // The `visual_*` tools. Off only when a person turned it off.
     visualReplies: row({ schema: z.boolean(), default: true }),
+    // A chat a person drives shows the next prompt its CLI predicts. Each prediction is a model request on the person's plan, so it is off until turned on.
+    promptSuggestions: row({ schema: z.boolean(), default: false }),
     // The model that writes new chat titles, commit messages and conflict proposals. Null is Automatic, and so is a pick that will not read.
     textModel: row({ schema: TextModelChoiceSchema, default: null, nullable: true, request: TextModelChoiceSchema.nullable() }),
     // The daemon holds the block, so it holds without a window and for a phone.

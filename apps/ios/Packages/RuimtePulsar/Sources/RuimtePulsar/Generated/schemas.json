@@ -28920,8 +28920,7 @@
                   "agents",
                   "tasks",
                   "owed",
-                  "messages",
-                  "pr-watch"
+                  "messages"
                 ]
               },
               "at": {
@@ -41158,6 +41157,9 @@
       "visualReplies": {
         "type": "boolean"
       },
+      "promptSuggestions": {
+        "type": "boolean"
+      },
       "textModel": {
         "anyOf": [
           {
@@ -41784,6 +41786,9 @@
         "type": "boolean"
       },
       "visualReplies": {
+        "type": "boolean"
+      },
+      "promptSuggestions": {
         "type": "boolean"
       },
       "textModel": {
@@ -42784,6 +42789,9 @@
       "visualReplies": {
         "type": "boolean"
       },
+      "promptSuggestions": {
+        "type": "boolean"
+      },
       "textModel": {
         "anyOf": [
           {
@@ -43148,6 +43156,9 @@
         "type": "boolean"
       },
       "visualReplies": {
+        "type": "boolean"
+      },
+      "promptSuggestions": {
         "type": "boolean"
       },
       "textModel": {
@@ -43797,6 +43808,9 @@
       "visualReplies": {
         "type": "boolean"
       },
+      "promptSuggestions": {
+        "type": "boolean"
+      },
       "textModel": {
         "anyOf": [
           {
@@ -44404,6 +44418,9 @@
       "visualReplies": {
         "type": "boolean"
       },
+      "promptSuggestions": {
+        "type": "boolean"
+      },
       "textModel": {
         "anyOf": [
           {
@@ -44786,6 +44803,9 @@
       "visualReplies": {
         "type": "boolean"
       },
+      "promptSuggestions": {
+        "type": "boolean"
+      },
       "textModel": {
         "anyOf": [
           {
@@ -45146,6 +45166,9 @@
         "type": "boolean"
       },
       "visualReplies": {
+        "type": "boolean"
+      },
+      "promptSuggestions": {
         "type": "boolean"
       },
       "textModel": {
@@ -47225,8 +47248,7 @@
           "stash",
           "stash-pop",
           "commit",
-          "commit-push",
-          "create-pr"
+          "commit-push"
         ]
       },
       "ref": {
@@ -47296,9 +47318,6 @@
           "hash",
           "subject"
         ]
-      },
-      "url": {
-        "type": "string"
       },
       "conflicts": {
         "type": "array",
@@ -48826,72 +48845,6 @@
       "truncated"
     ]
   },
-  "request.git.issue.payload": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "cwd": {
-        "type": "string",
-        "minLength": 1
-      },
-      "ref": {
-        "type": "string",
-        "minLength": 1
-      }
-    },
-    "required": [
-      "cwd",
-      "ref"
-    ]
-  },
-  "request.git.issue.result": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "repo": {
-        "type": "string"
-      },
-      "number": {
-        "type": "integer",
-        "exclusiveMinimum": 0,
-        "maximum": 9007199254740991
-      },
-      "title": {
-        "type": "string"
-      },
-      "body": {
-        "type": "string"
-      },
-      "url": {
-        "type": "string"
-      },
-      "state": {
-        "type": "string"
-      },
-      "author": {
-        "type": [
-          "string",
-          "null"
-        ]
-      },
-      "labels": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
-      }
-    },
-    "required": [
-      "repo",
-      "number",
-      "title",
-      "body",
-      "url",
-      "state",
-      "author",
-      "labels"
-    ]
-  },
   "request.git.log.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -49036,9 +48989,6 @@
           "subject"
         ]
       },
-      "url": {
-        "type": "string"
-      },
       "conflicts": {
         "type": "array",
         "items": {
@@ -49050,556 +49000,6 @@
       "actionId",
       "summary",
       "output"
-    ]
-  },
-  "request.git.pr.payload": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "cwd": {
-        "type": "string",
-        "minLength": 1
-      },
-      "number": {
-        "type": "integer",
-        "exclusiveMinimum": 0,
-        "maximum": 9007199254740991
-      }
-    },
-    "required": [
-      "cwd"
-    ]
-  },
-  "request.git.pr.result": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "pr": {
-        "anyOf": [
-          {
-            "type": "object",
-            "properties": {
-              "repo": {
-                "type": "string"
-              },
-              "number": {
-                "type": "integer",
-                "exclusiveMinimum": 0,
-                "maximum": 9007199254740991
-              },
-              "url": {
-                "type": "string"
-              },
-              "title": {
-                "type": "string"
-              },
-              "state": {
-                "type": "string"
-              },
-              "isDraft": {
-                "type": "boolean"
-              },
-              "headSha": {
-                "type": "string"
-              },
-              "headBranch": {
-                "type": "string"
-              },
-              "baseBranch": {
-                "type": "string"
-              },
-              "mergeable": {
-                "type": "string"
-              },
-              "mergeState": {
-                "type": "string"
-              },
-              "reviewDecision": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "checks": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "key": {
-                      "type": "string"
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "workflow": {
-                      "type": "string"
-                    },
-                    "event": {
-                      "type": "string"
-                    },
-                    "state": {
-                      "type": "string",
-                      "enum": [
-                        "pending",
-                        "success",
-                        "failure",
-                        "neutral",
-                        "skipped"
-                      ]
-                    },
-                    "url": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "key",
-                    "name",
-                    "state"
-                  ]
-                }
-              },
-              "checkState": {
-                "type": "string",
-                "enum": [
-                  "pending",
-                  "success",
-                  "failure",
-                  "none"
-                ]
-              },
-              "threads": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "path": {
-                      "type": "string"
-                    },
-                    "line": {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
-                    },
-                    "resolved": {
-                      "type": "boolean"
-                    },
-                    "outdated": {
-                      "type": "boolean"
-                    },
-                    "comments": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "author": {
-                            "type": "string"
-                          },
-                          "bot": {
-                            "type": "boolean"
-                          },
-                          "body": {
-                            "type": "string"
-                          },
-                          "url": {
-                            "type": "string"
-                          },
-                          "createdAt": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "author",
-                          "bot",
-                          "body",
-                          "url",
-                          "createdAt"
-                        ]
-                      }
-                    },
-                    "truncated": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "resolved",
-                    "outdated",
-                    "comments"
-                  ]
-                }
-              },
-              "added": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
-              },
-              "deleted": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
-              },
-              "changedFiles": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
-              }
-            },
-            "required": [
-              "repo",
-              "number",
-              "url",
-              "title",
-              "state",
-              "isDraft",
-              "headSha",
-              "headBranch",
-              "baseBranch",
-              "mergeable",
-              "mergeState",
-              "reviewDecision",
-              "checks",
-              "checkState",
-              "threads"
-            ]
-          },
-          {
-            "type": "null"
-          }
-        ]
-      }
-    },
-    "required": [
-      "pr"
-    ]
-  },
-  "request.git.pr-unwatch.payload": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "chatId": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 256
-      }
-    },
-    "required": [
-      "chatId"
-    ]
-  },
-  "request.git.pr-unwatch.result": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {}
-  },
-  "request.git.pr-watch.payload": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "projectId": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 256
-      },
-      "chatId": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 256
-      },
-      "cwd": {
-        "type": "string",
-        "minLength": 1
-      },
-      "number": {
-        "type": "integer",
-        "exclusiveMinimum": 0,
-        "maximum": 9007199254740991
-      }
-    },
-    "required": [
-      "projectId",
-      "chatId",
-      "cwd"
-    ]
-  },
-  "request.git.pr-watch.result": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "watch": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "projectId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 256
-          },
-          "chatId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 256
-          },
-          "cwd": {
-            "type": "string",
-            "minLength": 1
-          },
-          "repo": {
-            "type": "string"
-          },
-          "number": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 9007199254740991
-          },
-          "startedAt": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "head": {
-            "type": "string"
-          },
-          "checkState": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "success",
-              "failure",
-              "none"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "projectId",
-          "chatId",
-          "cwd",
-          "repo",
-          "number",
-          "startedAt",
-          "head",
-          "checkState"
-        ]
-      }
-    },
-    "required": [
-      "watch"
-    ]
-  },
-  "request.git.pr-watches.payload": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "projectId": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 256
-      }
-    }
-  },
-  "request.git.pr-watches.result": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "watches": {
-        "maxItems": 1000,
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "projectId": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 256
-            },
-            "chatId": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 256
-            },
-            "cwd": {
-              "type": "string",
-              "minLength": 1
-            },
-            "repo": {
-              "type": "string"
-            },
-            "number": {
-              "type": "integer",
-              "exclusiveMinimum": 0,
-              "maximum": 9007199254740991
-            },
-            "startedAt": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 9007199254740991
-            },
-            "head": {
-              "type": "string"
-            },
-            "checkState": {
-              "type": "string",
-              "enum": [
-                "pending",
-                "success",
-                "failure",
-                "none"
-              ]
-            }
-          },
-          "required": [
-            "id",
-            "projectId",
-            "chatId",
-            "cwd",
-            "repo",
-            "number",
-            "startedAt",
-            "head",
-            "checkState"
-          ]
-        }
-      }
-    },
-    "required": [
-      "watches"
-    ]
-  },
-  "request.git.prSplit.payload": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "cwd": {
-        "type": "string",
-        "minLength": 1
-      },
-      "number": {
-        "type": "integer",
-        "exclusiveMinimum": 0,
-        "maximum": 9007199254740991
-      },
-      "headSha": {
-        "type": "string",
-        "minLength": 1
-      }
-    },
-    "required": [
-      "cwd",
-      "number",
-      "headSha"
-    ]
-  },
-  "request.git.prSplit.result": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "split": {
-        "anyOf": [
-          {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "object",
-                "properties": {
-                  "added": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 9007199254740991
-                  },
-                  "deleted": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 9007199254740991
-                  }
-                },
-                "required": [
-                  "added",
-                  "deleted"
-                ]
-              },
-              "tests": {
-                "type": "object",
-                "properties": {
-                  "added": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 9007199254740991
-                  },
-                  "deleted": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 9007199254740991
-                  }
-                },
-                "required": [
-                  "added",
-                  "deleted"
-                ]
-              },
-              "mocks": {
-                "type": "object",
-                "properties": {
-                  "added": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 9007199254740991
-                  },
-                  "deleted": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 9007199254740991
-                  }
-                },
-                "required": [
-                  "added",
-                  "deleted"
-                ]
-              },
-              "generated": {
-                "type": "object",
-                "properties": {
-                  "added": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 9007199254740991
-                  },
-                  "deleted": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 9007199254740991
-                  }
-                },
-                "required": [
-                  "added",
-                  "deleted"
-                ]
-              }
-            },
-            "required": [
-              "code",
-              "tests",
-              "mocks",
-              "generated"
-            ]
-          },
-          {
-            "type": "null"
-          }
-        ]
-      }
-    },
-    "required": [
-      "split"
     ]
   },
   "request.git.ref-commit.payload": {
@@ -50619,9 +50019,6 @@
           "hash",
           "subject"
         ]
-      },
-      "url": {
-        "type": "string"
       },
       "conflicts": {
         "type": "array",
@@ -54877,27 +54274,6 @@
             "accent": {
               "type": "string"
             },
-            "issue": {
-              "type": "object",
-              "properties": {
-                "repo": {
-                  "type": "string"
-                },
-                "number": {
-                  "type": "integer",
-                  "exclusiveMinimum": 0,
-                  "maximum": 9007199254740991
-                },
-                "url": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "repo",
-                "number",
-                "url"
-              ]
-            },
             "device": {
               "type": "object",
               "properties": {
@@ -58369,27 +57745,6 @@
                               "branch"
                             ]
                           },
-                          "issue": {
-                            "type": "object",
-                            "properties": {
-                              "repo": {
-                                "type": "string"
-                              },
-                              "number": {
-                                "type": "integer",
-                                "exclusiveMinimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "url": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "repo",
-                              "number",
-                              "url"
-                            ]
-                          },
                           "body": {
                             "type": "string"
                           },
@@ -59052,27 +58407,6 @@
                         "accent": {
                           "type": "string"
                         },
-                        "issue": {
-                          "type": "object",
-                          "properties": {
-                            "repo": {
-                              "type": "string"
-                            },
-                            "number": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0,
-                              "maximum": 9007199254740991
-                            },
-                            "url": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "repo",
-                            "number",
-                            "url"
-                          ]
-                        },
                         "artifact": {
                           "type": "object",
                           "properties": {
@@ -59373,27 +58707,6 @@
                         },
                         "accent": {
                           "type": "string"
-                        },
-                        "issue": {
-                          "type": "object",
-                          "properties": {
-                            "repo": {
-                              "type": "string"
-                            },
-                            "number": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0,
-                              "maximum": 9007199254740991
-                            },
-                            "url": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "repo",
-                            "number",
-                            "url"
-                          ]
                         },
                         "artifact": {
                           "type": "object",
@@ -61171,27 +60484,6 @@
                         "accent": {
                           "type": "string"
                         },
-                        "issue": {
-                          "type": "object",
-                          "properties": {
-                            "repo": {
-                              "type": "string"
-                            },
-                            "number": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0,
-                              "maximum": 9007199254740991
-                            },
-                            "url": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "repo",
-                            "number",
-                            "url"
-                          ]
-                        },
                         "artifact": {
                           "type": "object",
                           "properties": {
@@ -61482,27 +60774,6 @@
                         },
                         "accent": {
                           "type": "string"
-                        },
-                        "issue": {
-                          "type": "object",
-                          "properties": {
-                            "repo": {
-                              "type": "string"
-                            },
-                            "number": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0,
-                              "maximum": 9007199254740991
-                            },
-                            "url": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "repo",
-                            "number",
-                            "url"
-                          ]
                         },
                         "artifact": {
                           "type": "object",
@@ -63148,27 +62419,6 @@
                               "branch"
                             ]
                           },
-                          "issue": {
-                            "type": "object",
-                            "properties": {
-                              "repo": {
-                                "type": "string"
-                              },
-                              "number": {
-                                "type": "integer",
-                                "exclusiveMinimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "url": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "repo",
-                              "number",
-                              "url"
-                            ]
-                          },
                           "body": {
                             "type": "string"
                           },
@@ -63830,27 +63080,6 @@
                         "accent": {
                           "type": "string"
                         },
-                        "issue": {
-                          "type": "object",
-                          "properties": {
-                            "repo": {
-                              "type": "string"
-                            },
-                            "number": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0,
-                              "maximum": 9007199254740991
-                            },
-                            "url": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "repo",
-                            "number",
-                            "url"
-                          ]
-                        },
                         "artifact": {
                           "type": "object",
                           "properties": {
@@ -64150,27 +63379,6 @@
                         },
                         "accent": {
                           "type": "string"
-                        },
-                        "issue": {
-                          "type": "object",
-                          "properties": {
-                            "repo": {
-                              "type": "string"
-                            },
-                            "number": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0,
-                              "maximum": 9007199254740991
-                            },
-                            "url": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "repo",
-                            "number",
-                            "url"
-                          ]
                         },
                         "artifact": {
                           "type": "object",
@@ -65941,27 +65149,6 @@
                         "accent": {
                           "type": "string"
                         },
-                        "issue": {
-                          "type": "object",
-                          "properties": {
-                            "repo": {
-                              "type": "string"
-                            },
-                            "number": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0,
-                              "maximum": 9007199254740991
-                            },
-                            "url": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "repo",
-                            "number",
-                            "url"
-                          ]
-                        },
                         "artifact": {
                           "type": "object",
                           "properties": {
@@ -66251,27 +65438,6 @@
                         },
                         "accent": {
                           "type": "string"
-                        },
-                        "issue": {
-                          "type": "object",
-                          "properties": {
-                            "repo": {
-                              "type": "string"
-                            },
-                            "number": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0,
-                              "maximum": 9007199254740991
-                            },
-                            "url": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "repo",
-                            "number",
-                            "url"
-                          ]
                         },
                         "artifact": {
                           "type": "object",
@@ -90799,6 +89965,9 @@
       "visualReplies": {
         "type": "boolean"
       },
+      "promptSuggestions": {
+        "type": "boolean"
+      },
       "textModel": {
         "anyOf": [
           {
@@ -91208,43 +90377,6 @@
       "cwd"
     ]
   },
-  "event.git.pr-watches": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "projectId": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 256
-      },
-      "ended": {
-        "type": "object",
-        "properties": {
-          "chatId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 256
-          },
-          "reason": {
-            "type": "string",
-            "enum": [
-              "merged",
-              "closed",
-              "expired",
-              "folder-missing"
-            ]
-          }
-        },
-        "required": [
-          "chatId",
-          "reason"
-        ]
-      }
-    },
-    "required": [
-      "projectId"
-    ]
-  },
   "event.git.progress": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -91268,7 +90400,6 @@
           "stash",
           "merge",
           "rebase",
-          "pr",
           "done",
           "failed"
         ]
@@ -93671,27 +92802,6 @@
                               "branch"
                             ]
                           },
-                          "issue": {
-                            "type": "object",
-                            "properties": {
-                              "repo": {
-                                "type": "string"
-                              },
-                              "number": {
-                                "type": "integer",
-                                "exclusiveMinimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "url": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "repo",
-                              "number",
-                              "url"
-                            ]
-                          },
                           "body": {
                             "type": "string"
                           },
@@ -94354,27 +93464,6 @@
                         "accent": {
                           "type": "string"
                         },
-                        "issue": {
-                          "type": "object",
-                          "properties": {
-                            "repo": {
-                              "type": "string"
-                            },
-                            "number": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0,
-                              "maximum": 9007199254740991
-                            },
-                            "url": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "repo",
-                            "number",
-                            "url"
-                          ]
-                        },
                         "artifact": {
                           "type": "object",
                           "properties": {
@@ -94675,27 +93764,6 @@
                         },
                         "accent": {
                           "type": "string"
-                        },
-                        "issue": {
-                          "type": "object",
-                          "properties": {
-                            "repo": {
-                              "type": "string"
-                            },
-                            "number": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0,
-                              "maximum": 9007199254740991
-                            },
-                            "url": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "repo",
-                            "number",
-                            "url"
-                          ]
                         },
                         "artifact": {
                           "type": "object",
@@ -96473,27 +95541,6 @@
                         "accent": {
                           "type": "string"
                         },
-                        "issue": {
-                          "type": "object",
-                          "properties": {
-                            "repo": {
-                              "type": "string"
-                            },
-                            "number": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0,
-                              "maximum": 9007199254740991
-                            },
-                            "url": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "repo",
-                            "number",
-                            "url"
-                          ]
-                        },
                         "artifact": {
                           "type": "object",
                           "properties": {
@@ -96784,27 +95831,6 @@
                         },
                         "accent": {
                           "type": "string"
-                        },
-                        "issue": {
-                          "type": "object",
-                          "properties": {
-                            "repo": {
-                              "type": "string"
-                            },
-                            "number": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0,
-                              "maximum": 9007199254740991
-                            },
-                            "url": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "repo",
-                            "number",
-                            "url"
-                          ]
                         },
                         "artifact": {
                           "type": "object",

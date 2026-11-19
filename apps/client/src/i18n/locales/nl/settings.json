@@ -1233,6 +1233,12 @@
             "description": "Een grafiek, tabel of mockup boven een antwoord. Als dit uit staat, antwoorden agents in tekst.",
             "notConnected": "{{machine}} is niet verbonden. Open een van zijn projecten om dit aan te passen."
         },
+        "promptSuggestions": {
+            "label": "Volgende prompt voorstellen",
+            "rowLabel": "Chats op {{machine}} stellen je volgende prompt voor",
+            "description": "Toont na een antwoord wat je hierna kunt sturen. Kost een klein deel van je plan.",
+            "notConnected": "{{machine}} is niet verbonden. Open een van zijn projecten om dit aan te passen."
+        },
         "textModel": {
             "title": "Korte teksten",
             "label": "Tekstmodel",

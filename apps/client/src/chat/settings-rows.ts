@@ -12,5 +12,11 @@ export const CHAT_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
     row('chats.sendKey'),
     row('chats.steerByDefault'),
     row('chats.mapTiles'),
-    { id: 'agents.visualReplies', section: 'chats', label: 'settings:agents.visualReplies.label', description: 'settings:agents.visualReplies.description' }
+    { id: 'agents.visualReplies', section: 'chats', label: 'settings:agents.visualReplies.label', description: 'settings:agents.visualReplies.description' },
+    {
+        id: 'agents.promptSuggestions',
+        section: 'chats',
+        label: 'settings:agents.promptSuggestions.label',
+        description: 'settings:agents.promptSuggestions.description'
+    }
 ];

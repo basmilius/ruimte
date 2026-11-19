@@ -17,6 +17,7 @@ export function startEndpointWatch(): () => void {
                     ...(payload.streamingAllowed === undefined ? {} : { streamingAllowed: payload.streamingAllowed }),
                     resumeAtReset: payload.resumeAtReset === true,
                     ...(payload.visualReplies === undefined ? {} : { visualReplies: payload.visualReplies }),
+                    promptSuggestions: payload.promptSuggestions === true,
                     ...(payload.textModel === undefined ? {} : { textModel: payload.textModel }),
                     ...(payload.keepAwake === undefined
                         ? {}

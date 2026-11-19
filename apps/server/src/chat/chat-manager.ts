@@ -64,6 +64,8 @@ export interface ChatFacts {
     reachOpenProjects(): boolean;
     // Whether an agent may show a page above its reply, read when a chat's CLI starts.
     visualReplies(): boolean;
+    // Whether a chat a person drives shows the next prompt its CLI predicts, read when a chat's CLI starts.
+    promptSuggestions(): boolean;
     // Whether the chat's project has database connections, read when a chat's CLI starts.
     databases(chatId: string): boolean;
     // A client may open an agent before its outbox start; the planned configuration wins over client defaults.
@@ -215,6 +217,9 @@ export class ChatManager {
                 resumeInstructionsFor: (chatId) => this.resumeInstructionsFor(chatId),
                 foldersFor: (chatId) => this.foldersFor(chatId),
                 projectConfigFor: (chatId) => !facts.peerChat(chatId),
+                // Only a person reads a suggestion, so a chat an agent or another machine drives spends nothing on one.
+                promptSuggestionsFor: (chatId) =>
+                    facts.promptSuggestions() && facts.depthOf(chatId) === 0 && !facts.peerChat(chatId) && !facts.inlineChat(chatId),
                 promptNotesFor: (chatId) => this.promptNotesFor(chatId),
                 hiddenFor: (chatId) => facts.inlineChat(chatId),
                 referencesFor: (chatId) => this.referencesFor(chatId),

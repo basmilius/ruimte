@@ -111,7 +111,7 @@ export function ChatsPane() {
             <SettingsSection title={t('chats.maps.title')}>
                 <SettingSwitchRow id="chats.mapTiles" setting="chatMapTiles" />
             </SettingsSection>
-            <MachineSwitchSection title={t('chats.agents.title')} settings={['visualReplies']} />
+            <MachineSwitchSection title={t('chats.agents.title')} settings={['visualReplies', 'promptSuggestions']} />
         </>
     );
 }

@@ -49,6 +49,7 @@ export function adoptEndpointInfo(endpointId: string, info: FromMachine<Endpoint
         streamingAllowed: info.streamingAllowed ?? true,
         resumeAtReset: info.resumeAtReset === true,
         visualReplies: info.visualReplies ?? true,
+        promptSuggestions: info.promptSuggestions === true,
         textModel: info.textModel,
         keepAwake: info.keepAwake ?? 'off',
         keepAwakeOnBattery: info.keepAwakeOnBattery === true,

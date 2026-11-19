@@ -36,6 +36,8 @@ export interface ServerInfo {
     /* Whether a chat that stopped on a limit may be taken up again on a clock. */
     resumeAtReset: boolean;
     visualReplies: boolean;
+    /* Whether a chat a person drives shows the next prompt its CLI predicts. */
+    promptSuggestions: boolean;
     /* The model that writes the machine's short texts; null is Automatic, undefined a machine that predates the setting. */
     textModel?: TextModelChoice | null;
     // The words below come from the machine as it reads them, so one of a newer machine shows as set there.
@@ -95,6 +97,7 @@ const UNKNOWN: ServerInfo = {
     streamingAllowed: true,
     resumeAtReset: false,
     visualReplies: true,
+    promptSuggestions: false,
     keepAwake: 'off',
     keepAwakeOnBattery: false,
     keepAwakeDisplay: false,
@@ -135,6 +138,7 @@ interface ServersStore {
             | 'streamingAllowed'
             | 'resumeAtReset'
             | 'visualReplies'
+            | 'promptSuggestions'
             | 'textModel'
             | 'keepAwake'
             | 'keepAwakeOnBattery'
@@ -176,6 +180,7 @@ interface ServersStore {
                     | 'streamingAllowed'
                     | 'resumeAtReset'
                     | 'visualReplies'
+                    | 'promptSuggestions'
                     | 'textModel'
                     | 'keepAwake'
                     | 'keepAwakeOnBattery'

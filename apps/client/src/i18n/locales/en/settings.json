@@ -1233,6 +1233,12 @@
             "description": "A chart, table or mockup above a reply. When off, agents answer in text.",
             "notConnected": "{{machine}} is not connected. Open one of its projects to change this."
         },
+        "promptSuggestions": {
+            "label": "Suggest next prompt",
+            "rowLabel": "Chats on {{machine}} suggest your next prompt",
+            "description": "After a reply, shows what you might send next. Uses a little of your plan.",
+            "notConnected": "{{machine}} is not connected. Open one of its projects to change this."
+        },
         "textModel": {
             "title": "Short texts",
             "label": "Text model",

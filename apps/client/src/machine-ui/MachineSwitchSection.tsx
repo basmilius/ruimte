@@ -14,7 +14,8 @@ const WORDS: Record<MachineSwitch, string> = {
     agentsDeleteAnyView: 'deleteAnyView',
     reachOpenProjects: 'reachOpenProjects',
     resumeAtReset: 'resumeAtReset',
-    visualReplies: 'visualReplies'
+    visualReplies: 'visualReplies',
+    promptSuggestions: 'promptSuggestions'
 };
 
 function MachineSwitchRow({ endpoint, setting, searchId }: { endpoint: Endpoint; setting: MachineSwitch; searchId?: string }) {

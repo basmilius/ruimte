@@ -354,6 +354,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
             computer: () => computer.usable,
             reachOpenProjects: () => identity.reachOpenProjects,
             visualReplies: () => identity.visualReplies,
+            promptSuggestions: () => identity.promptSuggestions,
             databases: (chatId) => {
                 const folder = index().locate(chatId)?.folder;
                 return folder !== undefined && hasDatabaseConnections(folder);

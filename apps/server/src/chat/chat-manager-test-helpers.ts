@@ -9,6 +9,7 @@ export function quietFacts(overrides: Partial<ChatFacts> = {}): ChatFacts {
         computer: () => false,
         reachOpenProjects: () => false,
         visualReplies: () => false,
+        promptSuggestions: () => false,
         databases: () => false,
         openingAgent: () => undefined,
         contextSources: () => [],
