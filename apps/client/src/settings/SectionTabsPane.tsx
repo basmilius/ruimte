@@ -1,7 +1,7 @@
 import { LazyBoundary } from '@adecore/ui';
-import { PaneTabs } from '@/settings/PaneTabs';
 import { navSectionOf, sectionLabel, tabSectionsOf } from '@/settings/sections';
 import { useUi } from '@/state/ui';
+import { PaneTabs } from '@/surface/PaneTabs';
 
 /*
  * The pane of a section that has tab sections. The dialog mounts only the pane of the open section, so the section the

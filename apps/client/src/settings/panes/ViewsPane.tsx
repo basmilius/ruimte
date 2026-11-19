@@ -7,8 +7,8 @@ import { RENDER_DISTANCES } from '@/canvas-model/render-distance';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
 import { SettingsSection } from '@/machines/SettingsSection';
 import { NodeSizeSection } from '@/settings/NodeSizeSection';
-import { PaneTabs } from '@/settings/PaneTabs';
 import { useSettings } from '@/state/settings';
+import { PaneTabs } from '@/surface/PaneTabs';
 import { SettingSwitchRow } from '@/surface/SettingSwitchRow';
 
 type ViewTab = 'canvas' | 'drawing' | 'browser';

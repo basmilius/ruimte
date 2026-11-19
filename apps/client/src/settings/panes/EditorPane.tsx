@@ -9,7 +9,7 @@ import { CodeSection } from '@/settings/panes/CodeSection';
 import { EditorFoldingTab } from '@/settings/panes/EditorFoldingTab';
 import { EditorGeneralTab } from '@/settings/panes/EditorGeneralTab';
 import { SmartKeysSection } from '@/settings/panes/SmartKeysSection';
-import { PaneTabs } from '@/settings/PaneTabs';
+import { PaneTabs } from '@/surface/PaneTabs';
 
 type EditorTab = 'general' | 'colors' | 'folding' | 'smartKeys' | 'templates' | 'ai' | 'languageServers';
 
