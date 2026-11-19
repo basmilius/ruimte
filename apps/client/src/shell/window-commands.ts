@@ -76,7 +76,7 @@ export const WINDOW_BEHAVIORS = defineBehaviors({
         run: openSettings({ open: true, section: 'machines' }),
         offered: () => ({ hint: i18next.t('shell:palette.hints.remote') })
     },
-    'settings-computer': { run: openSettings({ open: true, section: 'agents', target: 'computer.enable' }) },
+    'settings-computer': { run: openSettings({ open: true, section: 'computer', target: 'computer.enable' }) },
     'window-new': {
         run: openNewWindow,
         offered: () => canOpenWindows(),

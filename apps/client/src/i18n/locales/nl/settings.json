@@ -644,7 +644,11 @@
         },
         "agents": {
             "label": "Agents",
-            "description": "Waarmee agents en chats beginnen, wat ze mogen en wie ze bereikt."
+            "description": "Waarmee agents en chats beginnen en wat ze mogen."
+        },
+        "computer": {
+            "label": "Computer use",
+            "description": "Agents zien en bedienen alleen apps die je toestaat."
         },
         "mcp": {
             "label": "MCP",

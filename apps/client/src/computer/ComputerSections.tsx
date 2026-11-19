@@ -15,7 +15,7 @@ import { SettingsSection } from '@/machines/SettingsSection';
 import type { Endpoint } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 
-/* Computer use under Agents: it is something an agent may do, held to by the machine that runs it. */
+/* Computer use, a tab of Agents: it is something an agent may do, held to by the machine that runs it. */
 export function ComputerSections() {
     const { t } = useTranslation('settings');
     return (

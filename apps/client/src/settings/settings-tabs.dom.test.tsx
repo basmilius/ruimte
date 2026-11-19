@@ -56,10 +56,11 @@ describe('a section drawn as a tab', () => {
         expect(useUi.getState().settings.section).toBe('notifications');
     });
 
-    test('draws Chats and MCP as tabs of Agents, with Tunnels still in the navigation', async () => {
+    test('draws Chats, Computer use and MCP as tabs of Agents, with Tunnels still in the navigation', async () => {
         await act(async () => useUi.getState().setSettings({ open: true, section: 'chats' }));
         await until(() => picked('Chats'));
         expect(picked('Agents')).toBe(true);
+        expect(tab('Computer use')).not.toBeNull();
         expect(tab('MCP')).not.toBeNull();
         expect(tab('Tunnels')).not.toBeNull();
     });

@@ -10,7 +10,7 @@ defineExtensionSettings({
     component: () => import('./settings/PetsPane'),
     section: {
         group: 'workspace',
-        after: 'views',
+        after: 'extensions',
         icon: 'paw-print',
         label: 'section.label',
         description: 'section.description',

@@ -86,34 +86,29 @@ export function SettingsTunnels() {
     );
 }
 
-/* The MCP tab of Agents with the external MCP on: one client, and the hostname that brings it outside. */
+/* The MCP tab of Agents with the external MCP on: its switch, one client, and the hostname that brings it outside. */
 export function SettingsMcp() {
     return (
         <SettingsFrame
             active="Agents"
-            description="What agents and chats start with, what they may do and who reaches them."
-            tabs={['Agents', 'Chats', 'MCP']}
+            description="What agents and chats start with and what they may do."
+            tabs={['Agents', 'Chats', 'Computer use', 'MCP']}
             tab="MCP"
-            height={620}
-            label="The Settings dialog on Agents, with its MCP tab open. Under External clients, the External MCP switch is on, with a New bearer button and the address on this machine, and a table lists one client, Hosted bot. Below it, From outside this machine names the MCP hostname on the tunnel, with Open Tunnels."
+            height={700}
+            label="The Settings dialog on Agents, with its MCP tab open. The External MCP switch is on, with the address on this machine under it. Under External clients, with a New bearer button, a table lists one client, Hosted bot. Below it, From outside this machine names the MCP hostname on the tunnel, with Open Tunnels."
         >
-            <SettingsSection
-                title="External clients"
-                description={
-                    <>
-                        On this machine at <code className="font-mono">http://127.0.0.1:4230/mcp</code>
-                    </>
-                }
-                action={
-                    <div className="flex items-center gap-3">
-                        <span className="flex items-center gap-2 text-xs text-text-muted">
-                            <span aria-hidden>External MCP</span>
-                            <Switch checked onCheckedChange={() => undefined} label="External MCP" />
-                        </span>
-                        <Button onClick={() => undefined}>New bearer</Button>
-                    </div>
-                }
-            >
+            <SettingsSection>
+                <SettingsRow
+                    label="External MCP"
+                    description={
+                        <>
+                            On this machine at <code className="font-mono">http://127.0.0.1:4230/mcp</code>
+                        </>
+                    }
+                    control={<Switch checked onCheckedChange={() => undefined} label="External MCP" />}
+                />
+            </SettingsSection>
+            <SettingsSection title="External clients" action={<Button onClick={() => undefined}>New bearer</Button>}>
                 <Table.Root label="External clients" columns={CLIENT_COLUMNS}>
                     <Table.Head>
                         <Table.Column>Client</Table.Column>

@@ -42,7 +42,7 @@ async function open(platform: string, machine: DesktopBridge['machine']): Promis
     useEndpoints.getState().add(ATTIC);
     page = mount();
     await page.renderApp();
-    await act(async () => useUi.getState().setSettings({ open: true, section: 'agents' }));
+    await act(async () => useUi.getState().setSettings({ open: true, section: 'computer' }));
     await until(() => everything().includes('Allow computer use on Attic'));
 }
 

@@ -31,17 +31,20 @@ export const AGENT_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
         label: 'settings:agents.keepAwake.lid.label',
         description: 'settings:agents.keepAwake.lid.search',
         available: closedLidOffered
-    },
-    { id: 'computer.enable', section: 'agents', label: 'settings:computer.allow', description: 'settings:computer.description' },
+    }
+];
+
+export const COMPUTER_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
+    { id: 'computer.enable', section: 'computer', label: 'settings:computer.allow', description: 'settings:computer.description' },
     {
         id: 'computer.grant.accessibility',
-        section: 'agents',
+        section: 'computer',
         label: 'settings:computer.grant.accessibility.label',
         description: 'settings:computer.grant.accessibility.description'
     },
     {
         id: 'computer.grant.screenRecording',
-        section: 'agents',
+        section: 'computer',
         label: 'settings:computer.grant.screenRecording.label',
         description: 'settings:computer.grant.screenRecording.description'
     }

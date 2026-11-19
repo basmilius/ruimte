@@ -5,7 +5,6 @@ import { SettingsRow } from '@adecore/ui/settings';
 import { CLOSED_LID_BATTERY_FLOOR, type RuntimeMode } from '@ruimte/contracts';
 import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import { ComputerSections } from '@/computer/ComputerSections';
 import {
     setClosedLidRule,
     setKeepAwake,
@@ -38,7 +37,6 @@ export function AgentsPane() {
             <SettingsSection title={t('agents.views.title')}>
                 <SettingSwitchRow id="agents.showViews" setting="agentsShowViews" />
             </SettingsSection>
-            <ComputerSections />
             <WorkingSection />
         </>
     );
