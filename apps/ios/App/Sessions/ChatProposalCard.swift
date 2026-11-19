@@ -53,40 +53,48 @@ enum ChatProposal: Equatable, Identifiable {
         if case .project = self { "folder-plus" } else { "globe" }
     }
 
-    var decline: (request: WireRequest, payload: JSONValue) {
-        switch self {
-        case .project(let proposal):
+    func request(_ answer: ChatProposalAnswer) -> (request: WireRequest, payload: JSONValue)? {
+        switch (self, answer) {
+        case (.project(let proposal), .decline):
             (.chatProposalDecline, .object(["proposalId": .string(proposal.proposalId)]))
-        case .tunnel(let proposal, _):
+        case (.project, .confirm):
+            nil
+        case (.tunnel(let proposal, _), .decline):
             (.tunnelProposalDecline, .object(["proposalId": .string(proposal.proposalId)]))
+        case (.tunnel(let proposal, _), .confirm):
+            (.tunnelProposalConfirm, .object(["proposalId": .string(proposal.proposalId)]))
         }
     }
 
-    /// What the phone may answer. It comes in through the account, never with the machine's local secret, so it is
-    /// never the machine's owner: the machine takes a tunnel card's confirm from its owner alone
-    /// (`tunnel.proposalConfirm`), and a decline from any client it let in. Making a project is the move dialog of
-    /// Ruimte on the machine, which the phone does not have.
+    /// What the phone may answer. Making a project is the move dialog of Ruimte on the machine, which the phone does
+    /// not have.
     func actions(answers: (WireRequest) -> Bool) -> ChatProposalActions {
-        guard answers(decline.request) else {
+        guard let decline = request(.decline), answers(decline.request) else {
             return ChatProposalActions(
-                declines: false,
+                declines: false, confirms: false,
                 note: String(localized: "Answer this in Ruimte on the machine, or update Ruimte to answer here."))
         }
         switch self {
         case .project:
             return ChatProposalActions(
-                declines: true, note: String(localized: "Make it a project in Ruimte on the machine."))
+                declines: true, confirms: false, note: String(localized: "Make it a project in Ruimte on the machine."))
         case .tunnel(let proposal, _):
             // A stale card can only be declined anywhere, and says so itself.
-            return ChatProposalActions(
-                declines: true,
-                note: proposal.stale ? nil : String(localized: "Confirm this in Ruimte on the machine."))
+            if proposal.stale {
+                return ChatProposalActions(declines: true, confirms: false, note: nil)
+            }
+            return ChatProposalActions(declines: true, confirms: answers(.tunnelProposalConfirm), note: nil)
         }
     }
 }
 
+enum ChatProposalAnswer {
+    case confirm, decline
+}
+
 struct ChatProposalActions: Equatable {
     let declines: Bool
+    let confirms: Bool
     /// Where the rest of the answer is given.
     let note: String?
 }
@@ -96,35 +104,37 @@ struct ChatProposalActions: Equatable {
 @MainActor @Observable
 final class ChatProposalAnswers {
     private var live: [ChatProposal] = []
-    private var declined: Set<String> = []
-    private(set) var sendingID: String?
+    private var answered: Set<String> = []
+    private(set) var sending: (id: String, answer: ChatProposalAnswer)?
     private(set) var errors: [String: String] = [:]
 
-    var cards: [ChatProposal] { live.filter { !declined.contains($0.id) } }
+    var cards: [ChatProposal] { live.filter { !answered.contains($0.id) } }
 
     func update(_ cards: [ChatProposal]) {
         live = cards
         let ids = Set(cards.map(\.id))
-        declined.formIntersection(ids)
+        answered.formIntersection(ids)
         errors = errors.filter { ids.contains($0.key) }
     }
 
-    func decline(_ card: ChatProposal, client: any MachineRequesting) async {
-        guard sendingID == nil else { return }
+    func answer(_ card: ChatProposal, _ answer: ChatProposalAnswer, client: any MachineRequesting) async {
+        guard sending == nil, let (request, payload) = card.request(answer) else { return }
         let id = card.id
-        sendingID = id
+        sending = (id, answer)
         errors[id] = nil
-        defer { sendingID = nil }
+        defer { sending = nil }
         let failure: String
         do {
-            let (request, payload) = card.decline
             let result = try await client.request(request, payload: payload)
             if result["accepted"]?.boolValue == true {
                 // Hidden only while the machine still lists it, so a card that comes back shows again.
-                if isLive(id) { declined.insert(id) }
+                if isLive(id) { answered.insert(id) }
                 return
             }
             failure = String(localized: "Already answered or expired")
+        } catch let error as MachineClientError where answer == .confirm && error.code == .forbidden {
+            // An older machine takes a confirm from Ruimte on the machine alone.
+            failure = String(localized: "Update Ruimte on the machine to confirm here, or confirm it there.")
         } catch {
             failure = error.localizedDescription
         }
@@ -148,10 +158,11 @@ struct ChatProposalDock: View {
                 ChatProposalCard(
                     card: card,
                     actions: card.actions { (client as? MachineFeatures)?.answers($0) == true },
-                    sending: answers.sendingID == card.id, locked: answers.sendingID != nil,
+                    sending: answers.sending?.id == card.id ? answers.sending?.answer : nil,
+                    locked: answers.sending != nil,
                     error: answers.errors[card.id], connected: connected
-                ) {
-                    Task { await answers.decline(card, client: client) }
+                ) { answer in
+                    Task { await answers.answer(card, answer, client: client) }
                 }
             }
         }
@@ -163,11 +174,11 @@ struct ChatProposalDock: View {
 private struct ChatProposalCard: View {
     let card: ChatProposal
     let actions: ChatProposalActions
-    let sending: Bool
+    let sending: ChatProposalAnswer?
     let locked: Bool
     let error: String?
     let connected: Bool
-    let decline: () -> Void
+    let answer: (ChatProposalAnswer) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -190,12 +201,23 @@ private struct ChatProposalCard: View {
                 Label(String(localized: "Not connected"), lucideIcon: "wifi-off").font(.caption)
                     .foregroundStyle(MobileStyle.muted)
             }
-            if actions.declines {
+            if actions.declines || actions.confirms {
                 HStack {
                     Spacer(minLength: 0)
-                    Button(sending ? String(localized: "Declining…") : String(localized: "Decline"), action: decline)
+                    if actions.declines {
+                        Button(
+                            sending == .decline ? String(localized: "Declining…") : String(localized: "Decline")
+                        ) { answer(.decline) }
                         .buttonStyle(.mobileCapsuleSmall)
                         .disabled(locked || !connected)
+                    }
+                    if actions.confirms {
+                        Button(
+                            sending == .confirm ? String(localized: "Confirming…") : String(localized: "Confirm")
+                        ) { answer(.confirm) }
+                        .buttonStyle(.mobileCapsuleSmallProminent)
+                        .disabled(locked || !connected)
+                    }
                 }
             }
         }

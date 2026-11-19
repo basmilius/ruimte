@@ -19,8 +19,8 @@ interface TunnelsDeps {
 
 /*
  * Tunnels, the credentials of external MCP clients and the consent of one that waits. Any client reads the state of the
- * tunnels and an agent's cards, and declines a card; everything else is the local secret's, so a client the machine let
- * in changes no tunnel and makes no credential.
+ * tunnels and an agent's cards, and confirms or declines a card; everything else is the local secret's, so a client the
+ * machine let in changes a tunnel only through a card and makes no credential.
  * None of these is on a peer's list. Stopping the area ends cloudflared first and the listener of the external clients after,
  * both in `end`: cloudflared may take its full wait behind a slow Cloudflare call, which must not push the chats, tasks
  * and terminals of `drain` past the shutdown deadline.
@@ -51,9 +51,10 @@ export function tunnelsArea(deps: TunnelsDeps): Area {
             dispatcher.register('tunnel.retry', () => service.retry(), { owner: true });
             dispatcher.register('tunnel.setMcp', ({ enabled }) => service.setMcp(enabled), { owner: true });
 
-            // A card is answered where it shows, as a question of a chat is; a yes makes the change above, so it is the local secret's like that change.
+            // A card is answered wherever it shows, a phone or another computer of the account too, as a chat's approval is.
+            // The yes makes only the change the card names, checked as the screen checks it, never one of the requests above.
             dispatcher.register('tunnel.proposals', () => ({ proposals: proposals.list() }));
-            dispatcher.register('tunnel.proposalConfirm', async ({ proposalId }) => ({ accepted: await proposals.confirm(proposalId) }), { owner: true });
+            dispatcher.register('tunnel.proposalConfirm', async ({ proposalId }) => ({ accepted: await proposals.confirm(proposalId) }));
             dispatcher.register('tunnel.proposalDecline', ({ proposalId }) => ({ accepted: proposals.decline(proposalId) }));
 
             dispatcher.register('credential.list', () => ({ credentials: credentials.list() }), { owner: true });

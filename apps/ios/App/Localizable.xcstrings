@@ -26297,12 +26297,22 @@
         }
       }
     },
-    "Confirm this in Ruimte on the machine." : {
+    "Confirming…" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bevestig dit in Ruimte op de machine."
+            "value" : "Bevestigen…"
+          }
+        }
+      }
+    },
+    "Update Ruimte on the machine to confirm here, or confirm it there." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Werk Ruimte op de machine bij om hier te bevestigen, of bevestig het daar."
           }
         }
       }

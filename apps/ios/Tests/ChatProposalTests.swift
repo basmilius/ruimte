@@ -157,17 +157,19 @@ final class ChatProposalTests: XCTestCase {
         XCTAssertTrue(store.cards(for: "chat").isEmpty)
     }
 
-    func testThePhoneDeclinesATunnelCardAndLeavesTheConfirmToTheMachine() throws {
-        let actions = try card(tunnel("t1")).actions { $0 == .tunnelProposalDecline }
-        XCTAssertEqual(actions, ChatProposalActions(declines: true, note: "Confirm this in Ruimte on the machine."))
+    func testThePhoneConfirmsAndDeclinesATunnelCard() throws {
+        let both: (WireRequest) -> Bool = { [.tunnelProposalDecline, .tunnelProposalConfirm].contains($0) }
+        let actions = try card(tunnel("t1")).actions(answers: both)
+        XCTAssertEqual(actions, ChatProposalActions(declines: true, confirms: true, note: nil))
 
-        let stale = try card(tunnel("t1", stale: true)).actions { $0 == .tunnelProposalDecline }
-        XCTAssertEqual(stale, ChatProposalActions(declines: true, note: nil), "a stale card says so itself")
+        let stale = try card(tunnel("t1", stale: true)).actions(answers: both)
+        XCTAssertEqual(
+            stale, ChatProposalActions(declines: true, confirms: false, note: nil), "a stale card says so itself")
 
         let proposal = try ChatProposal.project(project("p1").decoded(as: ProjectProposal.self))
         XCTAssertEqual(
             proposal.actions { $0 == .chatProposalDecline },
-            ChatProposalActions(declines: true, note: "Make it a project in Ruimte on the machine."))
+            ChatProposalActions(declines: true, confirms: false, note: "Make it a project in Ruimte on the machine."))
     }
 
     func testACardOfAMachineWithoutDeclineHasNoActions() throws {
@@ -175,7 +177,36 @@ final class ChatProposalTests: XCTestCase {
         XCTAssertEqual(
             actions,
             ChatProposalActions(
-                declines: false, note: "Answer this in Ruimte on the machine, or update Ruimte to answer here."))
+                declines: false, confirms: false,
+                note: "Answer this in Ruimte on the machine, or update Ruimte to answer here."))
+    }
+
+    func testConfirmSendsTheCardsIdAndHidesIt() async throws {
+        let machine = ProposalMachine(answering: [.tunnelProposalConfirm])
+        machine.replies[.tunnelProposalConfirm] = .object(["accepted": .bool(true)])
+        let tunnelCard = try card(tunnel("t1"))
+        let answers = ChatProposalAnswers()
+        answers.update([tunnelCard])
+
+        await answers.answer(tunnelCard, .confirm, client: machine)
+
+        XCTAssertEqual(machine.sent.map(\.0), [.tunnelProposalConfirm])
+        XCTAssertEqual(machine.sent.map(\.1), [.object(["proposalId": .string("t1")])])
+        XCTAssertTrue(answers.cards.isEmpty)
+    }
+
+    func testAnOlderMachineThatRefusesTheConfirmSaysWhere() async throws {
+        let machine = ProposalMachine(answering: [.tunnelProposalConfirm])
+        machine.failure = MachineClientError.server(code: "forbidden", message: "Only a person on this machine may ask this")
+        let tunnelCard = try card(tunnel("t1"))
+        let answers = ChatProposalAnswers()
+        answers.update([tunnelCard])
+
+        await answers.answer(tunnelCard, .confirm, client: machine)
+
+        XCTAssertEqual(
+            answers.errors[tunnelCard.id], "Update Ruimte on the machine to confirm here, or confirm it there.")
+        XCTAssertEqual(answers.cards, [tunnelCard])
     }
 
     func testHeadingsFollowTheChange() throws {
@@ -194,8 +225,8 @@ final class ChatProposalTests: XCTestCase {
         let answers = ChatProposalAnswers()
         answers.update([projectCard, tunnelCard])
 
-        await answers.decline(tunnelCard, client: machine)
-        await answers.decline(projectCard, client: machine)
+        await answers.answer(tunnelCard, .decline, client: machine)
+        await answers.answer(projectCard, .decline, client: machine)
 
         XCTAssertEqual(machine.sent.map(\.0), [.tunnelProposalDecline, .chatProposalDecline])
         XCTAssertEqual(
@@ -211,14 +242,14 @@ final class ChatProposalTests: XCTestCase {
         let answers = ChatProposalAnswers()
         answers.update([tunnelCard])
 
-        await answers.decline(tunnelCard, client: machine)
+        await answers.answer(tunnelCard, .decline, client: machine)
         XCTAssertEqual(answers.errors[tunnelCard.id], "Already answered or expired")
         XCTAssertEqual(answers.cards, [tunnelCard])
 
         machine.failure = MachineClientError.server(code: "internal", message: "The machine could not answer")
-        await answers.decline(tunnelCard, client: machine)
+        await answers.answer(tunnelCard, .decline, client: machine)
         XCTAssertEqual(answers.errors[tunnelCard.id], "The machine could not answer")
-        XCTAssertNil(answers.sendingID)
+        XCTAssertNil(answers.sending)
     }
 
     func testACardAskedAgainReplacesTheOldOne() async throws {
@@ -228,7 +259,7 @@ final class ChatProposalTests: XCTestCase {
         let again = try card(tunnel("t2", createdAt: 3))
         let answers = ChatProposalAnswers()
         answers.update([first])
-        await answers.decline(first, client: machine)
+        await answers.answer(first, .decline, client: machine)
         XCTAssertNotNil(answers.errors[first.id])
 
         answers.update([again])

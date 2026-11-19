@@ -11,6 +11,8 @@ public enum MachineErrorCode: String, Sendable {
     case revConflict = "rev-conflict"
     case requestNotFound = "request-not-found"
     case notFound = "not-found"
+    /// A request the machine takes only from Ruimte on the machine itself.
+    case forbidden
     case stale
     case cancelled
     case sessionExists = "session-exists"
