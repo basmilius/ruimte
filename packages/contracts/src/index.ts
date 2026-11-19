@@ -82,6 +82,7 @@ export * from './direct-handshake.ts';
 export * from './direct-liveness.ts';
 export * from './device.ts';
 export * from './design.ts';
+export { freeDesignFolder } from './design-folder.ts';
 export { DesignPageError, inlineDesignPage, type DesignFiles } from './design-inline.ts';
 export {
     assetPathOf,

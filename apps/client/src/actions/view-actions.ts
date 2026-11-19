@@ -2,6 +2,7 @@ import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
 import {
     canShareView,
     flagOf,
+    freeDesignFolder,
     isCanvasView,
     isChatHostView,
     isDiagramView,
@@ -45,7 +46,6 @@ import {
 } from '@/actions/action-reach';
 import { addAgentView, addDesignView } from '@/agents/nodes';
 import { databaseViewShareRefusal } from '@/database/view-sharing';
-import { freeDesignFolder } from '@/design/design-folder';
 import { locateView } from '@/layout/split';
 import { basenameOf } from '@/paths/file-path';
 import { saveViewFiles, viewDeletionFacts, type ViewDeletionMachine } from '@/project/view-deletion';

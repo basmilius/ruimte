@@ -1,8 +1,7 @@
-import { designPlaces, type ProviderInfo } from '@ruimte/contracts';
+import { designPlaces, freeDesignFolder, type ProviderInfo } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { agentNodeOptions } from '@/agents/nodes';
 import type { Point } from '@/canvas-model/math';
-import { freeDesignFolder } from '@/design/design-folder';
 import { designFoldersOnDisk } from '@/design/design-read';
 import type { AgentSession } from '@/state/agent-availability';
 import type { CanvasState } from '@/state/canvas';

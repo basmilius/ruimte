@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { ProjectView } from '@ruimte/contracts';
-import { freeDesignFolder } from './design-folder';
+import { freeDesignFolder } from './design-folder.ts';
+import type { ProjectView } from './project.ts';
 
 function design(id: string, path: string): ProjectView {
     return { kind: 'design', id, name: id, node: {}, path };

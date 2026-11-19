@@ -1,4 +1,5 @@
-import { designPlaces, freeSlug, type ProjectView } from '@ruimte/contracts';
+import { designPlaces, type ProjectView } from './project.ts';
+import { freeSlug } from './slug.ts';
 
 /*
  * The name of the folder a new design keeps its files in: one no other design of the project has and
