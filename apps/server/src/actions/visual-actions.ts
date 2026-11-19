@@ -98,6 +98,16 @@ async function designPageHtml(context: ServerActionContext, path: string): Promi
     }
 }
 
+async function givenOrDesignPage(context: ServerActionContext, tool: string, given: string, designPage: string | undefined): Promise<string> {
+    if (designPage === undefined) {
+        return given;
+    }
+    if (given.trim() !== '') {
+        throw new ToolRefusal('two-pages', `${tool} takes html or design_page, not both`);
+    }
+    return designPageHtml(context, designPage);
+}
+
 async function storeRefusalsAsTool<Result>(work: () => Promise<Result>): Promise<Result> {
     try {
         return await work();
@@ -141,15 +151,13 @@ export const visualActions: ActionHandlers<ServerActionContext> = {
         }
         return { output: { path: await storeRefusalsAsTool(() => writeSource(chatId, name, html)) } };
     },
-    'visual.show': async ({ title, html, maxHeight, layout }, { actor, context }) => ({
-        output: { visual: await showVisual(context, actor.id, { title, html, maxHeight, ...(layout === undefined ? {} : { layout }) }) }
-    }),
+    'visual.show': async ({ title, html: given, maxHeight, layout, designPage }, { actor, context }) => {
+        const html = await givenOrDesignPage(context, 'visual_show', given, designPage);
+        return { output: { visual: await showVisual(context, actor.id, { title, html, maxHeight, ...(layout === undefined ? {} : { layout }) }) } };
+    },
     'visual.preview': async ({ html: given, width, appearance, designPage }, { actor, context }) => {
         const { visuals, chatId } = await visualChat(context, actor.id);
-        if (designPage !== undefined && given.trim() !== '') {
-            throw new ToolRefusal('two-pages', 'visual_preview takes html or design_page, not both');
-        }
-        const html = designPage === undefined ? given : await designPageHtml(context, designPage);
+        const html = await givenOrDesignPage(context, 'visual_preview', given, designPage);
         if (html.trim() === '') {
             throw new ToolRefusal('visual-invalid', 'The page is empty; pass one self-contained HTML document');
         }

@@ -7,7 +7,9 @@ import { openerOf } from '../opener.ts';
 const HiddenAgentSchema = z.object({
     projectId: z.string().min(1),
     openedBy: z.string().min(1),
-    node: ProjectNodeSchema.extend({ kind: z.enum(['chat', 'terminal']) })
+    node: ProjectNodeSchema.extend({ kind: z.enum(['chat', 'terminal']) }),
+    // The design folder of an agent started with `design`, relative to the project folder.
+    design: z.string().min(1).optional()
 });
 
 export type HiddenAgent = z.infer<typeof HiddenAgentSchema>;
@@ -37,6 +39,11 @@ export class HiddenAgentStore {
 
     inProject(projectId: string): HiddenAgent[] {
         return this.records.all().filter((agent) => agent.projectId === projectId);
+    }
+
+    /* The design folders of the project's hidden design agents, relative to the project folder. */
+    designFolders(projectId: string): Array<{ id: string; folder: string }> {
+        return this.inProject(projectId).flatMap((agent) => (agent.design === undefined ? [] : [{ id: agent.node.id, folder: agent.design }]));
     }
 
     async put(agent: HiddenAgent): Promise<void> {

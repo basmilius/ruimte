@@ -333,6 +333,10 @@
                     "worktree": {
                         "type": "boolean"
                     },
+                    "design": {
+                        "type": "boolean",
+                        "description": "With task, from a chat view: a hidden designer"
+                    },
                     "dry_run": {
                         "type": "boolean"
                     }
@@ -3228,6 +3232,9 @@
                         "description": "The most it grows, in CSS pixels"
                     },
                     "html": {
+                        "type": "string"
+                    },
+                    "design_page": {
                         "type": "string"
                     }
                 },

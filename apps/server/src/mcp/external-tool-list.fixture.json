@@ -422,6 +422,13 @@
                     "required": false
                 },
                 {
+                    "key": "design",
+                    "type": "boolean",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
                     "key": "dry_run",
                     "type": "boolean",
                     "items": null,
@@ -1972,6 +1979,13 @@
                 {
                     "key": "cwd",
                     "type": "string",
+                    "items": null,
+                    "enum": null,
+                    "required": false
+                },
+                {
+                    "key": "design",
+                    "type": "boolean",
                     "items": null,
                     "enum": null,
                     "required": false

@@ -195,6 +195,7 @@ const agentStart = defineActionTool('agent', {
         machine: MACHINE_INPUT,
         terminal: z.boolean({ error: 'terminal is true or false' }).optional(),
         worktree: z.boolean({ error: 'worktree is true or false' }).optional(),
+        design: z.boolean({ error: 'design is true or false' }).optional().describe('With task, from a chat view: a hidden designer'),
         dry_run: DRY_RUN_INPUT
     }),
     async run(input, call) {
@@ -222,11 +223,13 @@ const agentStart = defineActionTool('agent', {
                 base: input.base ?? null,
                 machine: input.machine ?? null,
                 effort: input.effort ?? null,
-                account: input.account ?? null
+                account: input.account ?? null,
+                design: input.design === true
             },
             dryRun
         );
         const { edge } = started;
+        const design = started.design === undefined ? [] : [`design\t${field(started.design)}\tthe folder its pages go in; its result names them`];
 
         if (dryRun) {
             // The ends rather than the word "edge": the direction is the thing to check before anything is made.
@@ -239,7 +242,8 @@ const agentStart = defineActionTool('agent', {
                     edge ? `${edge.from} -> ${edge.to}` : '-',
                     ...(input.task === undefined ? [] : ['<new task>'])
                 ].join('\t'),
-                ...started.reads.map((line) => ['dry-run', 'reads', `${line.from} -> ${line.to}`].join('\t'))
+                ...started.reads.map((line) => ['dry-run', 'reads', `${line.from} -> ${line.to}`].join('\t')),
+                ...design
             ];
         }
 
@@ -253,6 +257,7 @@ const agentStart = defineActionTool('agent', {
                 ...(started.taskId === null ? [] : [started.taskId])
             ].join('\t'),
             ...started.reads.map((line) => ['reads', line.edgeId ?? '-', line.from, line.to].join('\t')),
+            ...design,
             ...(input.task === undefined ? [] : [nextLine(false)])
         ];
     }

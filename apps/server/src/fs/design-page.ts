@@ -27,6 +27,8 @@ export interface DesignProject {
     folder: string;
     views: readonly ProjectView[];
     shared: readonly string[];
+    /* The folders of its hidden design agents, by agent id and relative to the project folder; none where a caller reads only the views. */
+    agents?: readonly { id: string; folder: string }[];
 }
 
 /* One page of one design folder: the folder absolute, the page by its path inside it. */
@@ -35,12 +37,15 @@ export interface DesignPageAt {
     file: string;
 }
 
-/* The folder of every design of the project, absolute. */
+/* The folder of every design of the project and of every hidden design agent it names, absolute. */
 export function designFoldersOf(project: DesignProject): Array<{ id: string; folder: string }> {
-    return designPlaces(project.views).map((design) => ({
-        id: design.id,
-        folder: resolve(project.folder, designFolderOf(design, isSharedDesign(design, project.shared)))
-    }));
+    return [
+        ...designPlaces(project.views).map((design) => ({
+            id: design.id,
+            folder: resolve(project.folder, designFolderOf(design, isSharedDesign(design, project.shared)))
+        })),
+        ...(project.agents ?? []).map((agent) => ({ id: agent.id, folder: resolve(project.folder, agent.folder) }))
+    ];
 }
 
 /* The page path inside a design folder as the inliner names it: relative, with slashes, and no step that leaves the folder. */

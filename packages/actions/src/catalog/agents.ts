@@ -219,6 +219,9 @@ export const AGENTS_ACTIONS = {
                 .describe("The reasoning effort for a chat agent, one the model offers; null keeps the person's last pick when the model offers it"),
             account: agentField(z.string().min(1)).describe(
                 "An account a person named in the calling chat as @account:<cli>/<id>, for this CLI; null inherits the caller's"
+            ),
+            design: agentField(z.boolean()).describe(
+                'Makes a hidden chat agent with a task a designer, working in a free folder under .ruimte/private/designs that its result names the pages of'
             )
         }),
         output: z.object({
@@ -230,7 +233,9 @@ export const AGENTS_ACTIONS = {
             edge: drawnLine.nullable(),
             reads: z.array(drawnLine),
             // Null without a task, and in a dry run, which gives none.
-            taskId: z.string().nullable()
+            taskId: z.string().nullable(),
+            // The folder of a design agent, relative to the project folder; absent for any other start.
+            design: z.string().optional()
         })
     },
     'team.start': {

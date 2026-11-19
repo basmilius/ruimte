@@ -178,7 +178,9 @@ $RUIMTE_HOME/
     peers/<hash>/                  0700, the same two folders per peer machine, so no machine reaches another's bundles; cleared at start
   peer-worktrees/                  folders made from another machine's work, recorded as untrusted (src/peer/CLAUDE.md)
   oneshot/                         the empty folder a one-shot CLI run in an untrusted folder works in
-  hidden-agents/<id>.json          agents a chat view started outside the canvas, with their placement
+  hidden-agents/<id>.json          agents a chat view started outside the canvas, with their placement and a design agent's folder
+  skills/                          the skills Ruimte ships, a `ruimte-<name>/` folder each, compared and rewritten at every start
+    .ruimte-skills.json            the folders the daemon wrote; it changes or removes no other folder there
   sessions/                        0700
     <sessionId>.txt                serialized screen plus scrollback of one session
     <sessionId>.agent.json         the agent CLI last seen in that session, for a cold resume
@@ -456,6 +458,8 @@ The chat lifecycle and backends live in `@adecore/agents/chat`; `src/chat/chat-m
 - Attachments are any type, at most 25 MB each and 8 per message, in `attachments/<chatId>/<id>.<ext>`. `GET /attachments/<chatId>/<id>` serves them behind the `/ws` access rules, `inline` only for what a browser paints, with `nosniff` and an immutable cache; a visual's page is always a download.
 - An agent's `chat_attach` names a path, which the daemon reads only inside the folders `src/agent-files/files.ts` allows. `/mcp` takes bodies up to 72 MiB; every other route stops at 24 MiB.
 - A turn checkpoints the chat's folder as a git tree through a private index under `checkpoints/` (`src/git/checkpoints.ts`), leaving the person's index, stashes and commits alone.
+- A person's prompt that names a skill Ruimte ships as `$ruimte-<name>` (`skill.list`) is sent as written. In front of it the chat hears one note per named skill: what the skill is for, the path of its `SKILL.md` and the cli, model and effort the chat runs on. A chat on a plain API hears the text of `SKILL.md` instead, and so does every chat while the daemon could not write the file. Every chat gets the skills folder as a folder it may read (`--add-dir` for Claude Code), and a Ruimte skill a client picked never goes to the CLI as one of its own skills (`src/skills`).
+- `agent_start` with `design` from a chat view starts a hidden chat agent with a task in a free folder under `.ruimte/private/designs/`, which its hidden record keeps, so `design_page` of `visual_preview` and `visual_show` takes its pages.
 - A hidden agent's chat is pruned at daemon start once its tasks settled over 30 days ago, no view holds it and no agent it opened lives (`src/wiring/prune-hidden-chats.ts`). Its worktree stays.
 - `chat.imageTarget` and `chat.saveImage` copy a generated image into the project, never into `.git`, `.ruimte` or machine state, refuse a symlink target and overwrite only with `replace` against the revision read.
 

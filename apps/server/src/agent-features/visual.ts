@@ -4,9 +4,9 @@ import { visualToolkit } from '../tools/visual-tools.ts';
 import { agentVisuals, type VisualHost } from '../visuals/agent-host.ts';
 import { defineAgentFeature } from './feature.ts';
 
-/* The designs of a project as its document has them, which `visual_preview` builds a design page from. */
+/* The designs of a project as its document has them, and the folders of its hidden design agents, which a design page is built from. */
 interface DesignHost {
-    sides(projectId: string): Promise<{ views: readonly ProjectView[]; shared: readonly string[] }>;
+    sides(projectId: string): Promise<{ views: readonly ProjectView[]; shared: readonly string[]; agents: readonly { id: string; folder: string }[] }>;
 }
 
 declare module '../canvas/host.ts' {
@@ -28,7 +28,7 @@ export const visualFeature = defineAgentFeature({
             sides: async (projectId) => {
                 const { views, shared } = await projects.store.place(projectId);
 
-                return { views, shared };
+                return { views, shared, agents: projects.store.hiddenAgents.designFolders(projectId) };
             }
         }
     })

@@ -165,7 +165,11 @@ export const COMMUNICATE_ACTIONS = {
             maxHeight: z.number().nullable().describe('The tallest the frame may grow, in CSS pixels; without it the most a frame may take'),
             layout: VisualLayoutSchema.optional().describe(
                 'inline follows the reply column (default); wide uses the available chat pane for app mockups and dashboards'
-            )
+            ),
+            designPage: z
+                .string()
+                .optional()
+                .describe('An HTML page of a design folder of this project, by its path, built the way the design view shows it; then html stays empty')
         }),
         output: z.object({ visual: ChatVisualSchema })
     },

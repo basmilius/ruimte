@@ -88,7 +88,8 @@ export const cases: WriteCases = {
             branch: { value: 'review', actors: AGENT_ONLY },
             base: { value: 'main', actors: AGENT_ONLY },
             machine: { value: 'machine-b', actors: AGENT_ONLY },
-            account: { value: 'codex_work', actors: AGENT_ONLY }
+            account: { value: 'codex_work', actors: AGENT_ONLY },
+            design: { value: true, actors: AGENT_ONLY }
         }
     },
     'team.start': {

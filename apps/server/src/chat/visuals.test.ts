@@ -173,7 +173,7 @@ describe('visual tools', () => {
         const daemon = await bootWithChat();
         expect(await show(daemon, 'chat-lead', { html: PAGE })).toEqual([
             'refused\tbad-arguments\tvisual_show needs title, a few words that say what the page shows',
-            'fields\ttitle\tlayout\theight\thtml'
+            'fields\ttitle\tlayout\theight\thtml\tdesign_page'
         ]);
         expect((await show(daemon, 'chat-lead', { title: 'Bars', height: 'tall', html: PAGE }))[0]).toBe(
             'refused\tbad-arguments\theight takes a whole number of CSS pixels'
@@ -282,6 +282,29 @@ describe('previews and measured heights', () => {
             refusalCode(await invokeTool(daemon, 'chat-lead', 'visual_preview', { design_page: join(design, '..', '..', '..', '..', 'outside.html') }))
         ).toBe('not-a-design-page');
         expect(asked).toHaveLength(2);
+    });
+
+    test("visual show draws the page of a hidden design agent's folder, and refuses a folder no design or design agent holds", async () => {
+        const made = join(folder, '.ruimte', 'private', 'designs', 'onboarding');
+        const stray = join(folder, '.ruimte', 'private', 'designs', 'stray');
+        await mkdir(made, { recursive: true });
+        await mkdir(stray, { recursive: true });
+        await writeFile(join(made, 'index.html'), '<p>made</p>');
+        await writeFile(join(stray, 'index.html'), '<p>stray</p>');
+        await store.hiddenAgents.put({
+            projectId,
+            openedBy: 'chat-lead',
+            node: { id: 'chat-designer', kind: 'chat', title: 'Onboarding', x: 0, y: 0, w: 480, h: 640 },
+            design: '.ruimte/private/designs/onboarding'
+        });
+        const daemon = await bootWithChat();
+
+        expect((await show(daemon, 'chat-lead', { title: 'Onboarding', design_page: '.ruimte/private/designs/onboarding/index.html' }))[1]).toBe(SHOWN_LINE);
+        expect(await show(daemon, 'chat-lead', { title: 'Stray', design_page: join(stray, 'index.html') })).toEqual([
+            'refused\tnot-a-design-page\tdesign_page takes the path of an HTML page inside a design folder of this project',
+            `folder\t${made}`
+        ]);
+        expect((await daemon.chats.listVisuals('chat-lead')).map((visual) => visual.title)).toEqual(['Onboarding']);
     });
 
     test('a quiet page gets a note, and a page taller than its shot says how much the shot covers', async () => {

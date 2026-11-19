@@ -18,6 +18,7 @@ import {
 } from '@ruimte/contracts';
 import { agentNode, groupLines, grownGroup, namedAccount, readsOf, requireInstalled, requireOfferedKind, startPrompt, terminalMode } from '../canvas/agents.ts';
 import { depthForOpening } from '../canvas/depth.ts';
+import { freeAgentDesignFolder, refuseDesignStart } from '../canvas/design-agent.ts';
 import { NEW_NODE, OPENING_OFF_CANVAS, canvasFor, canvasLines, field, newNode, type AgentStartHost, type ProjectHost, type AgentCall } from '../canvas/host.ts';
 import { modeForOpening } from '../canvas/mode.ts';
 import { EFFORT_REFUSALS, selectionForOpening } from '../canvas/model.ts';
@@ -32,6 +33,7 @@ import { startInputHash } from '../canvas/start-claims.ts';
 import { MAX_TASK_PROMPT_LENGTH, requireChatParent, taskFirstPrompt } from '../canvas/tasks.ts';
 import { MAX_PROJECT_VIEWS } from '../canvas/views.ts';
 import { branchSlug, makeWorktrees, requireRepository } from '../canvas/worktree.ts';
+import { designTaskNote } from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';
 import type { WorktreeWant } from '../git/worktree-host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
@@ -309,6 +311,19 @@ const startAgentNow: StartHandler = async (input, call) => {
     if (hidden && host.hiddenAgents === undefined) {
         throw new ToolRefusal('view-required', OPENING_OFF_CANVAS);
     }
+    const design = input.design === true;
+    if (design) {
+        refuseDesignStart({
+            terminal: input.terminal,
+            view: input.viewId != null,
+            beside: input.beside != null,
+            group: input.group != null,
+            machine: input.machine != null,
+            task: input.task != null,
+            hidden,
+            chat
+        });
+    }
     // An agent on another machine runs that machine's CLI, which it checks itself when the task starts.
     if (remote === null) {
         requireInstalled(host.starts, await host.starts.installedAgents(), kind);
@@ -368,6 +383,15 @@ const startAgentNow: StartHandler = async (input, call) => {
                 throw new ToolRefusal('unknown-group', `${input.group} is not a group on ${canvas.id}`, groupLines(canvas));
             }
             const read = canvas ? nodesNamed(content, canvas, readIds, { cannot: 'no line can run from it into the agent this opens' }) : [];
+            // Under the lock the hidden agents are written in, so two designs started at once never share a folder.
+            const designFolder = design
+                ? await freeAgentDesignFolder(
+                      place.folder,
+                      content.views,
+                      (host.hiddenAgents?.designFolders(place.projectId) ?? []).map((agent) => agent.folder),
+                      input.task ?? input.title ?? 'design'
+                  )
+                : undefined;
 
             const kindName = chat ? ('chat' as const) : ('terminal' as const);
             const size = host.machine.nodeSize(kindName);
@@ -386,7 +410,8 @@ const startAgentNow: StartHandler = async (input, call) => {
                             provider: kind,
                             edge: self && remote === null ? { edgeId: null, from: self.id, to: NEW_NODE } : null,
                             reads: read.map((node) => ({ edgeId: null, from: node.id, to: NEW_NODE })),
-                            taskId: null
+                            taskId: null,
+                            ...(designFolder === undefined ? {} : { design: designFolder })
                         }
                     }
                 };
@@ -439,7 +464,8 @@ const startAgentNow: StartHandler = async (input, call) => {
                 provider: kind,
                 edge: edge ? { edgeId: edge.id, from: edge.from, to: edge.to } : null,
                 reads: readLines,
-                taskId: null
+                taskId: null,
+                ...(designFolder === undefined ? {} : { design: designFolder })
             };
 
             const chatView = loose ? looseChatView(node, caller.caller) : null;
@@ -455,7 +481,12 @@ const startAgentNow: StartHandler = async (input, call) => {
             const start = async (): Promise<void> => {
                 stillAllowed();
                 if (hidden) {
-                    await host.hiddenAgents!.put({ projectId: place.projectId, openedBy: caller.caller, node: { ...node, kind: kindName } });
+                    await host.hiddenAgents!.put({
+                        projectId: place.projectId,
+                        openedBy: caller.caller,
+                        node: { ...node, kind: kindName },
+                        ...(designFolder === undefined ? {} : { design: designFolder })
+                    });
                     stillAllowed();
                 }
                 await host.lineage.put({ projectId: place.projectId, nodeId: id, openedBy: caller.caller, depth, agent: true, ceiling });
@@ -503,7 +534,11 @@ const startAgentNow: StartHandler = async (input, call) => {
                     stillAllowed();
                 }
                 if (prompt !== null) {
-                    const first: FirstPrompt = input.task == null ? { prompt } : taskFirstPrompt(prompt, chat);
+                    const task: FirstPrompt = input.task == null ? { prompt } : taskFirstPrompt(prompt, chat);
+                    const first: FirstPrompt =
+                        designFolder === undefined
+                            ? task
+                            : { ...task, brief: [task.brief, designTaskNote(designFolder)].filter((part) => part !== undefined).join(' ') };
                     await host.starts.holdPrompt(place.projectId, id, first.prompt, first.brief);
                     stillAllowed();
                 }
