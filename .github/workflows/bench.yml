@@ -33,7 +33,7 @@ jobs:
       - uses: ./.github/actions/install
       - run: bun run typecheck
       - run: bun test
-      - run: bun test src/shell/models
+      - run: bun test src/models
         working-directory: apps/client
       # The bench reports its errors and sessions under the release it ships.
       - name: Build
