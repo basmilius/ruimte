@@ -56,9 +56,7 @@ export function EditorGeneralTab() {
                             onValueChange={(value) => update({ codeFontSize: value, codeZoom: null })}
                         />
                     }
-                >
-                    <CodeThemePreview theme={codeTheme} mode={side} label={t('editor.general.font.size.preview')} code={CODE_SIZE_PREVIEW} />
-                </SettingsRow>
+                />
                 <SettingsRow
                     searchId="editor.general.font.lineHeight"
                     label={t('editor.general.font.lineHeight.label')}
@@ -76,6 +74,10 @@ export function EditorGeneralTab() {
                     }
                 />
                 <SettingSwitchRow id="editor.general.font.ligatures" setting="codeLigatures" />
+                {/* Under every font row, since each of them changes it. */}
+                <div className="px-4.5 py-3.5">
+                    <CodeThemePreview theme={codeTheme} mode={side} label={t('editor.general.font.size.preview')} code={CODE_SIZE_PREVIEW} />
+                </div>
             </SettingsSection>
             <SettingsSection title={t('editor.general.display.title')}>
                 <SettingSwitchRow id="editor.general.display.wrap" setting="codeWrap" />

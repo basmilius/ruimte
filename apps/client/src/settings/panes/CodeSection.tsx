@@ -44,9 +44,10 @@ export function CodeThemePreview({ theme, mode, label, code = PREVIEW_CODE }: Co
     }, [code, theme]);
 
     return (
-        <div className="code-theme-preview overflow-hidden rounded-lg border border-border bg-clip-padding" role="img" aria-label={label}>
-            {/* The side's own tokens, so the light theme is judged on the light background while the app is dark. */}
-            <div data-theme={mode}>
+        <div className="code-theme-preview flex flex-col overflow-hidden rounded-lg border border-border bg-clip-padding" role="img" aria-label={label}>
+            {/* The side's own tokens, so the light theme is judged on the light background while the app is dark. It grows
+                with a grid row a taller preview sets, so its background reaches the rounded corners. */}
+            <div data-theme={mode} className="grow">
                 <ScrollArea axis="x">
                     {html === null ? (
                         // The plain lines hold the same height until the highlighted ones arrive, so the pane does not jump.
