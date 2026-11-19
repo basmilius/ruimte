@@ -50,4 +50,31 @@ describe('LoopWatch', () => {
         expect(watch.check(woke + 500)).toBeNull();
         expect(tick(watch, woke + 1500, woke + 4500)).toEqual([]);
     });
+
+    test('knows a sleep since a heartbeat, whether a heartbeat or a check saw it first', () => {
+        const byBeat = new LoopWatch(0, 5000, 1000);
+        byBeat.check(1000);
+        byBeat.beat(1000);
+
+        expect(byBeat.pausedSince(1000)).toBe(false);
+
+        byBeat.beat(60_000);
+
+        expect(byBeat.pausedSince(1000)).toBe(true);
+        expect(byBeat.pausedSince(60_001)).toBe(false);
+
+        const byCheck = new LoopWatch(0, 5000, 1000);
+        byCheck.check(1000);
+        byCheck.check(60_000);
+
+        expect(byCheck.pausedSince(1000)).toBe(true);
+    });
+
+    test('a main thread that blocks while the worker ticks is no sleep', () => {
+        const watch = new LoopWatch(0, 5000, 1000);
+        tick(watch, 1000, 3000);
+        watch.beat(3000);
+
+        expect(watch.pausedSince(0)).toBe(false);
+    });
 });

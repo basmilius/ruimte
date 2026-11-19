@@ -1,4 +1,4 @@
-const HANG_THRESHOLD_MS = 5000;
+export const HANG_THRESHOLD_MS = 5000;
 export const HEARTBEAT_MS = 1000;
 
 type LoopVerdict = { state: 'blocked'; sinceMs: number } | { state: 'recovered'; blockedMs: number } | null;
@@ -11,6 +11,7 @@ export class LoopWatch {
     private lastBeat: number;
     private lastCheck: number;
     private blocked = false;
+    private lastPauseEnd = Number.NEGATIVE_INFINITY;
     private readonly thresholdMs: number;
     private readonly tickMs: number;
 
@@ -23,6 +24,11 @@ export class LoopWatch {
     }
 
     beat(now: number): LoopVerdict {
+        // After a sleep the first heartbeat can come before the worker's own check does.
+        if (this.wasSuspended(now)) {
+            this.lastPauseEnd = now;
+        }
+
         const silentMs = now - this.lastBeat;
         this.lastBeat = now;
         if (!this.blocked) {
@@ -33,11 +39,12 @@ export class LoopWatch {
     }
 
     check(now: number): LoopVerdict {
-        const sinceCheck = now - this.lastCheck;
+        const suspended = this.wasSuspended(now);
         this.lastCheck = now;
         // The machine slept, or the whole process was stopped: the main thread missed nothing the worker saw.
-        if (sinceCheck > 2 * this.tickMs) {
+        if (suspended) {
             this.lastBeat = now;
+            this.lastPauseEnd = now;
             return null;
         }
         const silentMs = now - this.lastBeat;
@@ -46,5 +53,14 @@ export class LoopWatch {
         }
         this.blocked = true;
         return { state: 'blocked', sinceMs: silentMs };
+    }
+
+    /* Whether the worker was suspended at some point after `at`, so a lag the main thread measured since then is no stall. */
+    pausedSince(at: number): boolean {
+        return this.lastPauseEnd >= at;
+    }
+
+    private wasSuspended(now: number): boolean {
+        return now - this.lastCheck > 2 * this.tickMs;
     }
 }

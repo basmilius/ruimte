@@ -1,4 +1,5 @@
 import { describeActivity, type Activity } from './activity.ts';
+import { StallLog } from './loop-lag.ts';
 import { HEARTBEAT_MS, LoopWatch } from './loop-watch.ts';
 import { daemonBeforeSend, daemonClientOptions, nodeContext, type TelemetrySettings } from './reporter.ts';
 
@@ -11,32 +12,60 @@ export interface WatchdogStart {
 
 export interface WatchdogBeat {
     readonly activity: readonly Activity[];
+
+    /* The worst lag of the main thread's sample timer since the previous heartbeat. */
+    readonly lagMs: number;
 }
 
 type Sentry = typeof import('@sentry/bun');
 
 let watch: LoopWatch | null = null;
+let stalls: StallLog | null = null;
 let sentry: Sentry | null = null;
 let activity: readonly Activity[] = [];
+let lastBeatAt = 0;
 
 self.onmessage = (event: MessageEvent<WatchdogStart | WatchdogBeat>) => {
-    if (watch !== null) {
-        activity = 'activity' in event.data ? event.data.activity : [];
+    const now = Date.now();
+    if (watch !== null && stalls !== null) {
+        if (!('activity' in event.data)) {
+            return;
+        }
 
-        const verdict = watch.beat(Date.now());
+        activity = event.data.activity;
+
+        const verdict = watch.beat(now);
         if (verdict?.state === 'recovered') {
             log(`The event loop answers again after ${seconds(verdict.blockedMs)} s`);
         }
+
+        const stall = stalls.beat(now, event.data.lagMs, watch.pausedSince(lastBeatAt), lastActivitySince(lastBeatAt));
+        lastBeatAt = now;
+        if (stall !== null) {
+            log(stall);
+        }
         return;
     }
-    watch = new LoopWatch(Date.now());
+    watch = new LoopWatch(now);
+    stalls = new StallLog(now);
+    lastBeatAt = now;
     if ('telemetry' in event.data && event.data.telemetry !== null) {
         void startReporting(event.data.telemetry);
     }
     setInterval(check, HEARTBEAT_MS);
 };
 
+function lastActivitySince(at: number): string | null {
+    const newest = activity.at(-1);
+    return newest !== undefined && newest.at >= at ? newest.label : null;
+}
+
 function check(): void {
+    const summary = stalls?.check(Date.now()) ?? null;
+    if (summary !== null) {
+        log(summary);
+    }
+
     const verdict = watch?.check(Date.now());
     if (verdict?.state !== 'blocked') {
         return;
