@@ -12,6 +12,7 @@ import type { OutboxWork } from '../outbox/outbox.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import type { PtyAdapter } from '../pty/pty.ts';
+import { MemorySkillDisk } from '../skills/skill-disk-test-helpers.ts';
 import { untilChecked } from '../until-test-helpers.ts';
 import { openAiLive } from '../voice/openai-live.ts';
 import { loopbackUrls, type DaemonRuntime } from '../wiring/runtime.ts';
@@ -192,6 +193,7 @@ export function testSeams(choices: TestSeamChoices, overrides: Partial<DaemonSea
         visualLauncher: () => {
             throw new Error('no browser in this test');
         },
+        skillDisk: new MemorySkillDisk(),
         voiceLive: openAiLive(),
         power: NO_POWER,
         machine: { model: async () => null, sessionFs: nodeSessionFs },

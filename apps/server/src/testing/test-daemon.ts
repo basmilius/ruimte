@@ -23,6 +23,7 @@ import { ProjectStore } from '../projects/project-store.ts';
 import type { FakePtyAdapter } from '../pty/fake-pty.ts';
 import type { PtyAdapter } from '../pty/pty.ts';
 import type { SessionManager } from '../sessions/manager.ts';
+import type { SkillDisk } from '../skills/skill-disk.ts';
 import type { TaskWiring } from '../tasks/wiring.ts';
 import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import type { VisualHost } from '../visuals/agent-host.ts';
@@ -115,6 +116,8 @@ interface TestDaemonOptions {
     };
     /* Providers in place of the built-ins of their kind, such as the Claude API on a service of the test's own. */
     providers?: readonly ChatProvider[];
+    /* Where the skills Ruimte ships are written; an empty disk in memory unless a test needs one that fails. */
+    skillDisk?: SkillDisk;
 }
 
 export async function bootTestDaemon(options: TestDaemonOptions): Promise<TestDaemon> {
@@ -153,7 +156,8 @@ export async function bootTestDaemon(options: TestDaemonOptions): Promise<TestDa
         observers: { ...base.observers, ...(onLimits ? { limits: onLimits } : {}) },
         ...(accounts ? { accounts: () => accounts } : {}),
         ...(remote ? { remote: { connections: () => remote.connections, reconnect: () => remote.reconnect } } : {}),
-        ...(peer ? { peerNotify: () => peer.notify } : {})
+        ...(peer ? { peerNotify: () => peer.notify } : {}),
+        ...(options.skillDisk ? { skillDisk: options.skillDisk } : {})
     };
     const wired = await wireDaemon({ runtime: testRuntime(home), launcher: 'standalone', seams, shutdown: async () => undefined });
     const { stores, agents, work, canvasHost: host, machine: machineBundle } = wired.bundles;

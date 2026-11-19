@@ -46,6 +46,14 @@ export interface ChatDeps {
     machineOf: MachineOfNode;
     /* Whether another machine's task still has this chat to start, which only the daemon may do: a window would start it in the wrong folder. */
     starting(chatId: string): boolean;
+    skills: RuimteSkillPrompts;
+}
+
+/* What a person's prompt that names a Ruimte skill takes along. */
+export interface RuimteSkillPrompts {
+    /* The note the chat hears in front of the prompt, or undefined for a prompt that names no Ruimte skill. */
+    brief(chatId: string, text: string): string | undefined;
+    names(): readonly string[];
 }
 
 export function chatArea(deps: ChatDeps): Area {
@@ -64,7 +72,7 @@ export function chatArea(deps: ChatDeps): Area {
     };
 }
 
-function registerRequests(dispatcher: Dispatcher, { manager, providers, beforeKill, stopNode, forks, moves, machineOf, starting }: ChatDeps): void {
+function registerRequests(dispatcher: Dispatcher, { manager, providers, beforeKill, stopNode, forks, moves, machineOf, starting, skills }: ChatDeps): void {
     // What the daemon answers differently from a host of chats alone: a task's row stops its node, a stop or a
     // removal first owes the end of the agents a chat opened, and a fork lands on the canvas.
     const {
@@ -92,8 +100,30 @@ function registerRequests(dispatcher: Dispatcher, { manager, providers, beforeKi
             }
             return handler(payload, clientId);
         };
+    // A Ruimte skill is no skill of the CLI, which would run a picked one as a command it does not have; the brief carries it instead.
+    const send: AgentHandler<'chat.send'> = (payload) => {
+        const ruimte = new Set(skills.names());
+        const brief = skills.brief(payload.chatId, payload.text);
+        const picked = payload.skills?.filter((name) => !ruimte.has(name));
+
+        return manager.send(
+            payload.chatId,
+            payload.text,
+            {
+                delivery: payload.delivery,
+                mentions: payload.mentions,
+                skills: picked,
+                chats: payload.chats,
+                quoteSource: payload.quoteSource,
+                references: payload.references,
+                ...(brief === undefined ? {} : { brief })
+            },
+            payload.attachments
+        );
+    };
     registerAgentHandlers(dispatcher, {
         ...shared,
+        'chat.send': send,
         'chat.create': unlessBound(unlessStarting(shared['chat.create'], () => true)),
         'chat.attach': unlessBound(unlessStarting(shared['chat.attach'], (payload) => payload.create !== undefined)),
         'chat.toolOutput': unlessBound(shared['chat.toolOutput'])

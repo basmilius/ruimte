@@ -33,6 +33,8 @@ import { errorText } from '../error-text.ts';
 import { passedOverNote, type ProjectAccountChooser } from '../projects/project-accounts.ts';
 import { attachedReferences, type Reference } from '../projects/references.ts';
 import { CHAT_TOKEN_VARIABLE, MCP_URL_VARIABLE, mcpUrlOf } from '../ruimte-mcp.ts';
+import type { PlacedSkill } from '../skills/ruimte-skills.ts';
+import { namedSkills, SKILL_NOTE_LEAD, skillNote } from '../skills/skill-note.ts';
 import { TurnUsage } from '../stats/turn-usage.ts';
 import { countChatStarted } from '../stats/usage-stats.ts';
 import { AgentImages } from './agent-images.ts';
@@ -103,6 +105,10 @@ export interface ChatFacts {
     holdsProject(chatId: string, clientId: string): Promise<boolean>;
     // The account a new chat in a project takes, or null where its project says nothing about the CLI.
     projectAccount: ProjectAccountChooser;
+    // The skills Ruimte ships and where each lies on this machine, for a prompt that names one.
+    skills(): readonly PlacedSkill[];
+    // The folder those skills lie in, which a chat's CLI may read; null while none is there.
+    skillsFolder(): string | null;
 }
 
 interface ChatManagerOptions extends Omit<ChatCoreOptions, 'hooks' | 'uiFenceLanguage' | 'taskRemovedReason'> {
@@ -156,14 +162,16 @@ class ContextNotes implements PromptNotes {
         this.lastFolder = folder;
         const change = previous === null ? null : contextChangeNote(previous, current);
         const messages = this.messages?.next() ?? { shown: [], heard: [] };
+        // The person named the skill themselves, so its note would only repeat their message in the thread.
+        const skill = brief?.startsWith(SKILL_NOTE_LEAD) === true ? brief : undefined;
         return {
             shown: [
-                ...(brief === undefined ? [] : [`${BRIEF_TITLE}\n${brief}`]),
+                ...(brief === undefined || skill !== undefined ? [] : [`${BRIEF_TITLE}\n${brief}`]),
                 ...(moved === null ? [] : [moved]),
                 ...(change === null ? [] : [change]),
                 ...messages.shown
             ],
-            heard: messages.heard
+            heard: [...(skill === undefined ? [] : [skill]), ...messages.heard]
         };
     }
 
@@ -258,6 +266,24 @@ export class ChatManager {
     /* The file behind an attachment id, also of a chat nobody loaded since the daemon started, and of an image an agent attached. */
     async findAttachment(chatId: string, id: string): Promise<ChatAttachment | null> {
         return (await this.core.findAttachment(chatId, id)) ?? this.agentImages.find(chatId, id);
+    }
+
+    /*
+     * The brief a person's prompt carries for the Ruimte skills it names, one note per skill; undefined
+     * for a prompt that names none. A slash command hears no brief in front, so it gets none.
+     */
+    skillBrief(chatId: string, text: string): string | undefined {
+        const info = this.core.get(chatId)?.info;
+        const named = text.startsWith('/') ? [] : namedSkills(text, this.facts.skills());
+
+        if (info === undefined || named.length === 0) {
+            return undefined;
+        }
+
+        const effort = info.selection.options.effort;
+        const run = { cli: info.provider, model: info.selection.model, effort: typeof effort === 'string' ? effort : null };
+
+        return named.map((placed) => skillNote(placed, run)).join('\n\n');
     }
 
     attachAgentImage(chatId: string, upload: { name: string; mime: string; bytes: Uint8Array }): Promise<ChatAttachment> {
@@ -422,13 +448,19 @@ export class ChatManager {
     }
 
     private foldersFor(chatId: string): readonly string[] {
-        if (!this.visuals || !this.facts.visualReplies() || this.facts.inlineChat(chatId)) {
+        if (this.facts.inlineChat(chatId)) {
             return [];
+        }
+        // Claude Code reads a skill's instructions outside the chat's folder only from a folder handed to it.
+        const skills = this.facts.skillsFolder();
+        const handed = skills === null ? [] : [skills];
+        if (!this.visuals || !this.facts.visualReplies()) {
+            return handed;
         }
         const path = this.visuals.workspacePath(chatId);
         // Claude validates --add-dir at startup, including the first turn after a chat was cleared.
         mkdirSync(path, { recursive: true, mode: 0o700 });
-        return [path];
+        return [path, ...handed];
     }
 
     private promptNotesFor(chatId: string): PromptNotes {

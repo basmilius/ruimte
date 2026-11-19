@@ -441,6 +441,7 @@
     "session.runHeld",
     "session.verifyPort",
     "session.write",
+    "skill.list",
     "skills.list",
     "snooze.clear",
     "snooze.list",

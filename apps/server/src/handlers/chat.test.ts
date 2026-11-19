@@ -32,7 +32,8 @@ function register(started: string[]): Dispatcher {
         forks: { fork: noMoves, info: noMoves, handoff: noMoves, summarize: noMoves, continueOn: noMoves },
         moves: { info: noMoves, move: noMoves },
         machineOf: (nodeId) => (nodeId === 'remote' ? 'machine-b' : null),
-        starting: () => false
+        starting: () => false,
+        skills: { brief: () => undefined, names: () => [] }
     }).handlers?.(dispatcher);
     return dispatcher;
 }

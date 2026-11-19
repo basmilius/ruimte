@@ -45,6 +45,7 @@ import { SECRETS_REQUEST_SCHEMAS, SECRETS_EVENT_SCHEMAS } from './secrets.ts';
 import { SERVER_REQUEST_SCHEMAS } from './server.ts';
 import { SESSION_PORTS_REQUEST_SCHEMAS } from './session-ports.ts';
 import { SESSION_REQUEST_SCHEMAS, SESSION_EVENT_SCHEMAS } from './session.ts';
+import { SKILL_REQUEST_SCHEMAS } from './skill.ts';
 import { SNOOZE_REQUEST_SCHEMAS, SNOOZE_EVENT_SCHEMAS } from './snooze.ts';
 import { SQL_BINDING_REQUEST_SCHEMAS, SQL_BINDING_EVENT_SCHEMAS } from './sql-binding.ts';
 import { TASK_REQUEST_SCHEMAS, TASK_EVENT_SCHEMAS } from './task.ts';
@@ -151,6 +152,7 @@ export * from './peer.ts';
 export * from './remote.ts';
 export * from './session-status.ts';
 export * from './slug.ts';
+export * from './skill.ts';
 export * from './snooze.ts';
 export * from './activity.ts';
 export * from './activity.ts';
@@ -196,6 +198,7 @@ export const REQUEST_SCHEMAS = {
     ...PEER_REQUEST_SCHEMAS,
     ...REMOTE_REQUEST_SCHEMAS,
     ...SNOOZE_REQUEST_SCHEMAS,
+    ...SKILL_REQUEST_SCHEMAS,
     ...ACTIVITY_REQUEST_SCHEMAS,
     ...TERMINAL_PREPARE_REQUEST_SCHEMAS,
     ...SESSION_PORTS_REQUEST_SCHEMAS,

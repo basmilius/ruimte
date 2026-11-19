@@ -1,9 +1,11 @@
 import { AttachmentStore, BookmarkStore, ChatCore, ChatStore, ClaudeTitleReader, VisualStore } from '@adecore/agents/chat';
 import { AgentLineageStore, NoticeNotes, NoticeStore, TaskStore, restartBackgroundLimits, unshownNotes, type Clock } from '@adecore/agents/coordination';
+import { homeFolder } from '@ruimte/service/home';
 import { AgentStore } from '../agents/agent-store.ts';
 import { CodexTitleReader } from '../agents/codex-title.ts';
 import type { Area } from '../area.ts';
 import { artifactReport } from '../artifacts/artifact-report.ts';
+import { bestEffort } from '../best-effort.ts';
 import { PendingPromptStore } from '../canvas/pending-prompts.ts';
 import { ChatManager } from '../chat/chat-manager.ts';
 import { MoveJournal } from '../chat/move-journal.ts';
@@ -38,6 +40,8 @@ import { ModeApprovals, personModeOf } from '../sessions/mode-approvals.ts';
 import { prepareShellIntegration, type ShellEnvironment } from '../sessions/shell-integration.ts';
 import { SnapshotStore, scheduleSnapshots, type SnapshotSchedule } from '../sessions/snapshot-store.ts';
 import { ShortTextModels } from '../short-text/model.ts';
+import { RUIMTE_SKILLS } from '../skills/catalog.ts';
+import { RuimteSkills } from '../skills/ruimte-skills.ts';
 import { wakefulClock } from '../timers.ts';
 import { agentBounds } from './agent-bounds.ts';
 import { wakeForWaitingMessages } from './agent-messages.ts';
@@ -144,7 +148,7 @@ interface AgentsInput {
     providers: ProvidersBundle;
     computer: ComputerUse;
     machineHome: MachineHome;
-    seams: Pick<DaemonSeams, 'clock' | 'env' | 'pty' | 'chatSpawn' | 'git' | 'nameChat' | 'observers'>;
+    seams: Pick<DaemonSeams, 'clock' | 'env' | 'pty' | 'chatSpawn' | 'git' | 'nameChat' | 'observers' | 'skillDisk'>;
     later: AgentsLater;
 }
 
@@ -170,6 +174,8 @@ export interface AgentsBundle {
     oneShot: OneShotPlace;
     /* The model a person picked for the machine's short texts: chat titles, commit messages and conflict proposals. */
     textModels: ShortTextModels;
+    /* The skills Ruimte ships, placed under the machine's home for the CLIs to read. */
+    skills: RuimteSkills;
     /* Refuses a directory an agent node may not start in, at every start. */
     startCwd(nodeId: string, cwd: string): Promise<void>;
     /* A bearer token speaks for a terminal session or a chat, for reading context and for agent commands alike. */
@@ -301,6 +307,9 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
     const plans = new PlanStore(config.home, { now: () => clock.now() });
     const bookmarks = new BookmarkStore(config.home);
     const visuals = new VisualStore(config.home, attachments);
+    const skills = new RuimteSkills(homeFolder(config.home, 'skills'), RUIMTE_SKILLS, seams.skillDisk);
+    // Before any chat opens, so its first prompt already points at the files; a machine that cannot write them hands the text.
+    await bestEffort('Placing the skills Ruimte ships', skills.place());
     // A microtask: a queue is taken in the middle of building a prompt, which a thread write must not cut into.
     notices.onSettled((chatId, settled, state) => queueMicrotask(() => chats.settleMessages(chatId, settled, state)));
     const chatManager: ChatManager = new ChatManager({
@@ -389,7 +398,9 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
             taskRows: (chatId) => tasks.ofParent(chatId),
             dropWakes: (chatId) => tasks.dropWake(chatId),
             endChildren: (chatId) => later.work().endChildren.stopNode(chatId, 'a person cleared this chat'),
-            endedAt: (chatId) => lineage.endedAt(chatId)
+            endedAt: (chatId) => lineage.endedAt(chatId),
+            skills: () => skills.placed(),
+            skillsFolder: () => skills.folder()
         },
         plans,
         bookmarks,
@@ -420,6 +431,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         oneShot,
         textModels,
         proposals,
+        skills,
         startCwd: bounds.checkCwd,
         targetForToken,
         messagesFor

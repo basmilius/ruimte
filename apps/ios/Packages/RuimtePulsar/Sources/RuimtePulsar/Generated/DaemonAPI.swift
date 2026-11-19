@@ -349,6 +349,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `sessionRunHeld` = "session.runHeld"
     case `sessionVerifyPort` = "session.verifyPort"
     case `sessionWrite` = "session.write"
+    case `skillList` = "skill.list"
     case `skillsList` = "skills.list"
     case `snoozeClear` = "snooze.clear"
     case `snoozeList` = "snooze.list"

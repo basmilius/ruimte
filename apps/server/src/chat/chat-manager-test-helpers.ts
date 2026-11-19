@@ -29,6 +29,8 @@ export function quietFacts(overrides: Partial<ChatFacts> = {}): ChatFacts {
         checkCwd: OPEN_BOUNDS.checkCwd,
         holdsProject: () => Promise.resolve(true),
         projectAccount: () => null,
+        skills: () => [],
+        skillsFolder: () => null,
         ...overrides
     };
 }

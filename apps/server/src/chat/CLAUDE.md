@@ -6,6 +6,7 @@
 - Plans and agent images are sidecars of the core (`ChatManager` registers them): the core lists, removes and forks them with the bookmarks and visuals, and a fork copies them through `core.copySidecars`.
 - The UI fence name is `RUIMTE_UI_FENCE`, handed to the core once in `ChatManager`; notes read it back as `core.uiFence`, and tool text reads the constant.
 - What the daemon answers to the chat (depth, mode ceiling, linked context, the project a chat is in) is one required `ChatFacts` object built in `wiring/agents.ts`. A test builds a manager with `testChatManager` (`chat-manager-test-helpers.ts`), whose `quietFacts` answer nothing.
+- A person's `chat.send` that names a Ruimte skill (`$ruimte-<name>`, `src/skills`) carries a brief the chat hears and the thread does not show, since the person named the skill themselves. The text goes to the CLI as sent, and a Ruimte skill never goes to it as one of its own picked skills.
 - A change to a chat's start, its UI access or the deletion of its record is a hook of the core (`opening`, `admitUi`, `deleted`), never a method the manager overrides.
 
 ## Forks

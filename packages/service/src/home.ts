@@ -32,7 +32,9 @@ export const HOME_FOLDERS = {
     /* A node's binding to another machine. */
     remote: 'remote',
     /* The Claude Code config folder and usage of an Anthropic API key. */
-    anthropicClaudeApi: 'anthropic-claude-api'
+    anthropicClaudeApi: 'anthropic-claude-api',
+    /* The skills Ruimte ships, which the daemon writes and the chats' CLIs read. */
+    skills: 'skills'
 } as const;
 
 export type HomeFolder = keyof typeof HOME_FOLDERS;

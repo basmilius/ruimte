@@ -15,6 +15,7 @@ import type { HeldProcess, KeepAwakeBlock } from '../power/keep-awake.ts';
 import type { ProjectOverlays } from '../projects/overlays.ts';
 import type { ProjectLinks, ProjectStore } from '../projects/project-store.ts';
 import type { PtyAdapter } from '../pty/pty.ts';
+import type { SkillDisk } from '../skills/skill-disk.ts';
 import type { ProjectSource } from '../telemetry/reporter.ts';
 import type { RenderLauncher } from '../visuals/renderer.ts';
 import type { OpenAiLive } from '../voice/openai-live.ts';
@@ -99,6 +100,8 @@ export interface DaemonSeams {
         findProgram(program: string): string[];
     };
     visualLauncher: RenderLauncher;
+    /* Where the skills Ruimte ships are written under the machine's home. */
+    skillDisk: SkillDisk;
     voiceLive: OpenAiLive;
     /* What holds the machine awake and keeps it on with the lid closed: `caffeinate`, `pmset` and `sudo` on a real Mac. */
     power: {

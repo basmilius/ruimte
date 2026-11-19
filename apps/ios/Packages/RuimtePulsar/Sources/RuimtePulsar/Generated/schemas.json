@@ -73735,6 +73735,48 @@
     "type": "object",
     "properties": {}
   },
+  "request.skill.list.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.skill.list.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "skills": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 1024
+            }
+          },
+          "required": [
+            "name",
+            "title",
+            "description"
+          ]
+        }
+      }
+    },
+    "required": [
+      "skills"
+    ]
+  },
   "request.skills.list.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

@@ -39,6 +39,7 @@ import { secretsArea } from '../handlers/secrets.ts';
 import { serverArea } from '../handlers/server.ts';
 import { sessionPortsArea } from '../handlers/session-ports.ts';
 import { sessionArea } from '../handlers/session.ts';
+import { skillArea } from '../handlers/skill.ts';
 import { snoozeArea } from '../handlers/snooze.ts';
 import { tasksArea } from '../handlers/tasks.ts';
 import { templateArea } from '../handlers/template.ts';
@@ -121,6 +122,7 @@ export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
         agentServersArea({ servers: providers.servers }),
         agentRegistryArea({ agents: providers.registryAgents, versions: providers.versions }),
         snoozeArea({ snoozes: work.snoozes, locate: (nodeId) => store.index.locate(nodeId) }),
+        skillArea({ skills: () => agents.skills.list() }),
         activityArea({ activity: work.activity }),
         gitArea(gitDeps(input)),
         agentWorkLifecycle(work),

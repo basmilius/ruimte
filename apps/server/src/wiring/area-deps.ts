@@ -113,6 +113,10 @@ export function chatDeps(input: AreaInput): ChatDeps {
     return {
         manager: chats,
         providers: providers.providers,
+        skills: {
+            brief: (chatId, text) => chatManager.skillBrief(chatId, text),
+            names: () => agents.skills.list().map((skill) => skill.name)
+        },
         beforeKill: (chatId) => stores.lifecycle.emit('closed', chatId),
         stopNode: work.endChildren.stopNode,
         forks: {
