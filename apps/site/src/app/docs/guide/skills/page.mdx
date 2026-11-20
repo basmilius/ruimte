@@ -1,0 +1,51 @@
+import { DesignCard } from '@/components/docs/guide/DesignCard.tsx';
+import { Shortcut } from '@/components/docs/Shortcut.tsx';
+import { Note } from '@/components/docs/guide/ui.tsx';
+
+export const metadata = { title: 'Skills and designs' };
+
+# Skills and designs
+
+<p className="lead">A skill is a set of instructions you call by name in a chat. Ruimte brings skills of its own, and the first, `$design`, has a design agent make pages while the chat goes on.</p>
+
+<DesignCard />
+
+## Use a skill
+
+Type `$` in a chat's composer and pick a skill. Ruimte's skills come first, with Ruimte's mark, and the CLI's own skills follow.
+
+A skill can go anywhere in a message, in the middle of a sentence too, next to whatever else you ask. Ruimte's skills work with every CLI a chat runs, in the app on your computer and on iPhone and iPad.
+
+## Ask for a design
+
+Write `$design` and what the design is for, such as `$design a settings page for notifications`. The chat starts a design agent in the background and goes on with the rest of your message.
+
+The design agent runs on the chat's CLI, model and reasoning effort. To pick another model, add it with `@`, such as `@opus`. To pick another effort, name it in the message.
+
+<Note>Only a chat that is a view of its own starts a design agent. A chat node on a canvas does not.</Note>
+
+Ask for a mockup without `$design` and the chat answers with a page in the thread instead, as in [Visual replies](/docs/guide/plans-and-forks#visual-replies).
+
+## The design card
+
+The design agent's task shows in the chat as a card. While the agent works, the card shows the page it wrote last. When it is done, the card reads **Done** with the number of pages and shows the page to look at first. With more than one page, pick another in the menu under the preview.
+
+## Open the design
+
+Click **Open design**. The design takes the chat's place, with the design agent's own chat beside the pages. Write to the design agent there to keep working on the design. The back arrow returns to the chat.
+
+| Tool | Use it to |
+| --- | --- |
+| View and interact | Click through the page as a site |
+| Comment | Click an element, say what should change, then send your comments together |
+| Edit | Click an element to style it, or double-click text to change it, then choose **Send to chat** |
+| Draw | Draw over the page and say what the drawing means |
+| Tweaks | Change the values the page offers, such as a color or a layout |
+
+A board of options pans and zooms like [the canvas](/docs/guide/canvas#move-around): scroll or <Shortcut keys="Space" /> and drag to pan, pinch to zoom.
+
+On iPhone and iPad, **Open design** shows the pages and the design agent's chat, one at a time. The tools are in the app on your computer.
+
+## Where the pages go
+
+The pages are HTML files in a folder under `.ruimte/private/designs/` in the project. That folder is yours alone and stays out of git. The design belongs to its chat and does not show up as a Design view in the sidebar.

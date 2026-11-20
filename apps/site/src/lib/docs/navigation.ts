@@ -38,6 +38,7 @@ export const SECTIONS: readonly NavigationSection[] = [
                 pages: [
                     { title: 'Terminals', href: '/docs/guide/terminals' },
                     { title: 'AI chats', href: '/docs/guide/chats' },
+                    { title: 'Skills and designs', href: '/docs/guide/skills' },
                     { title: 'Needs you', href: '/docs/guide/attention' },
                     { title: 'Plans, forks and visuals', href: '/docs/guide/plans-and-forks' },
                     { title: 'Agents working together', href: '/docs/guide/delegation' },
