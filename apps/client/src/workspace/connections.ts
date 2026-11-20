@@ -109,19 +109,42 @@ function preferencesFor(endpointId: string): ReturnType<typeof chatPreferencesPa
 type MachineWatch = (endpointId: string, transport: Transport) => () => void;
 
 const machineWatches = new Set<MachineWatch>();
+/* What each watch started on each machine, so a watch that stops ends on every machine it runs on. */
+const runningWatches = new Map<string, Map<MachineWatch, () => void>>();
 
-/* Hears one more thing of every machine from now on, so a feature above the connections listens without them importing it. */
+/*
+ * Hears one more thing of every machine until it is stopped, so a feature above the connections listens
+ * without them importing it. A watch a workspace adds starts on the machines already built as well.
+ */
 export function watchEveryMachine(watch: MachineWatch): () => void {
     machineWatches.add(watch);
+    for (const [endpointId, running] of runningWatches) {
+        const machine = machines.get(endpointId);
+        if (machine !== undefined) {
+            running.set(watch, watch(endpointId, machine.transport));
+        }
+    }
+
     return () => {
         machineWatches.delete(watch);
+        for (const running of runningWatches.values()) {
+            running.get(watch)?.();
+            running.delete(watch);
+        }
     };
 }
 
 function buildMachine(endpoint: Endpoint): Machine {
     const transport = machineTransport(endpoint.id);
+    const running = new Map([...machineWatches].map((watch) => [watch, watch(endpoint.id, transport)]));
+    runningWatches.set(endpoint.id, running);
     const stops = [
-        ...[...machineWatches].map((watch) => watch(endpoint.id, transport)),
+        () => {
+            runningWatches.delete(endpoint.id);
+            for (const stop of running.values()) {
+                stop();
+            }
+        },
         watchProviderAccounts(endpoint.id, transport),
         transport.on('provider.changed', ({ providers }) => setMachineProviders(endpoint.id, providers)),
         pool.subscribeStatus(endpoint.id, () => reapplyMachineProviders(endpoint.id)),

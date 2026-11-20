@@ -49,7 +49,6 @@ export const START_SCREEN_MODULES: readonly string[] = [
     'chat/file-search.ts',
     'chat/focused-chat.ts',
     'chat/generated-commands.ts',
-    'chat/host-skills.ts',
     'chat/host.ts',
     'chat/login.ts',
     'chat/machine-platform.ts',

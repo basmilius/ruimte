@@ -12,7 +12,6 @@ import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel, type AccentId } from '@/ca
 import { providerCommandDialog } from '@/chat/dialog-state';
 import DiffSyntaxWorker from '@/chat/diff-syntax.worker?worker';
 import { searchFiles } from '@/chat/file-search';
-import { useSkillsOf } from '@/chat/host-skills';
 import { openLogin } from '@/chat/login';
 import { useMachinePlatform } from '@/chat/machine-platform';
 import { openForkDialog } from '@/chat/open-fork';
@@ -135,7 +134,6 @@ export const CHAT_HOST: ChatHostLayer = {
     renderToolActions,
     renderToolResult,
     useExpandingCommands,
-    useSkills: (endpointId) => useSkillsOf(endpointId),
     // Named here, in the app's own source, so Vite serves the worker while it pre-bundles the chat package.
     maps: { useSource: useMapSource, workerUrl: new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url).href },
     notify: (toast) => void useToasts.getState().show(toast),

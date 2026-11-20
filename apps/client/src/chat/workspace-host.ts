@@ -6,6 +6,7 @@ import { answerComputerAsPerson } from '@/action-port/person-actions';
 import { ChatModelView } from '@/chat/ChatModelView';
 import { useComposerStatus } from '@/chat/composer-status';
 import { ComposerDictation } from '@/chat/ComposerDictation';
+import { useSkillsOf } from '@/chat/host-skills';
 import { openNewChatAfterSend } from '@/chat/new-chat-after-send';
 import { prepareCodeBlockAction } from '@/chat/prepare-code-block';
 import { useProjectChats } from '@/chat/project-chats';
@@ -38,7 +39,7 @@ import { isComposerShortcut } from '@/surface/terminal-keymap';
 /*
  * What the chat takes from Ruimte that only a workspace draws: the find over a thread, dictation, the
  * cards the machine raises beside a chat's own prompts, a card in the thread for what it saved to
- * Output, the card of a design agent's task, the ways to a file or another chat of the project, the 3D
+ * Output, the card of a design agent's task, Ruimte's skills after `$`, the ways to a file or another chat of the project, the 3D
  * view of a Model block, and the new chat a send opens beside its own. The workspace hands it to the chat views under it, a layer over `CHAT_HOST`.
  */
 export const WORKSPACE_CHAT_HOST: ChatHostLayer = {
@@ -96,6 +97,7 @@ export const WORKSPACE_CHAT_HOST: ChatHostLayer = {
     useContextSources,
     useThreadCards: useOutputThreadCards,
     useTaskRow: useDesignTaskRow,
+    useSkills: (endpointId) => useSkillsOf(endpointId),
     // Saving needs the project the chat is in, which only a workspace has.
     attachments: {
         actions: (scopeId, chatId, attachment) =>
