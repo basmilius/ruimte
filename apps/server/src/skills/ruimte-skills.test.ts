@@ -1,10 +1,16 @@
 import { describe, expect, test } from 'bun:test';
+import { join } from 'node:path';
 import { RUIMTE_SKILLS } from './catalog.ts';
 import { builtInSkill, RuimteSkills, SKILLS_RECORD } from './ruimte-skills.ts';
 import { MemorySkillDisk } from './skill-disk-test-helpers.ts';
 
 const ROOT = '/home/r/skills';
-const RECORD = `${ROOT}/${SKILLS_RECORD}`;
+const RECORD = at(SKILLS_RECORD);
+
+/* A path under the skills folder as this platform writes it, which the daemon's own paths are. */
+function at(...parts: string[]): string {
+    return join(ROOT, ...parts);
+}
 
 const SKETCH = builtInSkill('sketch', {
     'SKILL.md': '---\nname: ruimte-sketch\ndescription: Draws a sketch.\n---\n\nDraw it.',
@@ -32,49 +38,49 @@ describe('the skills Ruimte ships', () => {
         const disk = new MemorySkillDisk();
         const shelf = await placed(disk);
 
-        expect(disk.folder(`${ROOT}/ruimte-sketch`)).toEqual(SKETCH.files);
+        expect(disk.folder(at('ruimte-sketch'))).toEqual(SKETCH.files);
         expect(recordOf(disk)).toEqual({ folders: ['ruimte-sketch'] });
-        expect(shelf.placed()).toEqual([{ skill: SKETCH, path: `${ROOT}/ruimte-sketch/SKILL.md` }]);
+        expect(shelf.placed()).toEqual([{ skill: SKETCH, path: at('ruimte-sketch', 'SKILL.md') }]);
         expect(shelf.folder()).toBe(ROOT);
     });
 
     test('are written again where a file differs or one was added, and left alone where nothing did', async () => {
         const disk = new MemorySkillDisk();
         await placed(disk);
-        disk.files.set(`${ROOT}/ruimte-sketch/SKILL.md`, 'edited by hand');
-        disk.files.set(`${ROOT}/ruimte-sketch/extra.md`, 'left over');
+        disk.files.set(at('ruimte-sketch', 'SKILL.md'), 'edited by hand');
+        disk.files.set(at('ruimte-sketch', 'extra.md'), 'left over');
 
         await placed(disk);
 
-        expect(disk.folder(`${ROOT}/ruimte-sketch`)).toEqual(SKETCH.files);
+        expect(disk.folder(at('ruimte-sketch'))).toEqual(SKETCH.files);
 
         disk.failing.add('replaceFolder');
         disk.failing.add('writeText');
         const unchanged = await placed(disk);
 
-        expect(unchanged.placed()[0]!.path).toBe(`${ROOT}/ruimte-sketch/SKILL.md`);
+        expect(unchanged.placed()[0]!.path).toBe(at('ruimte-sketch', 'SKILL.md'));
     });
 
     test('that left Ruimte are removed, and only the folders the record names', async () => {
         const disk = new MemorySkillDisk();
         await placed(disk);
-        disk.files.set(`${ROOT}/mine/SKILL.md`, 'written by a person');
+        disk.files.set(at('mine', 'SKILL.md'), 'written by a person');
         disk.files.set(RECORD, JSON.stringify({ folders: ['ruimte-sketch', '../mine'] }));
 
         await placed(disk, []);
 
-        expect(disk.folder(`${ROOT}/ruimte-sketch`)).toEqual({});
-        expect(disk.folder(`${ROOT}/mine`)).toEqual({ 'SKILL.md': 'written by a person' });
+        expect(disk.folder(at('ruimte-sketch'))).toEqual({});
+        expect(disk.folder(at('mine'))).toEqual({ 'SKILL.md': 'written by a person' });
         expect(recordOf(disk)).toEqual({ folders: [] });
     });
 
     test('never take over a folder of their name the daemon did not write, and hand their text instead', async () => {
         const disk = new MemorySkillDisk();
-        disk.files.set(`${ROOT}/ruimte-sketch/SKILL.md`, 'written by a person');
+        disk.files.set(at('ruimte-sketch', 'SKILL.md'), 'written by a person');
 
         const shelf = await placed(disk);
 
-        expect(disk.folder(`${ROOT}/ruimte-sketch`)).toEqual({ 'SKILL.md': 'written by a person' });
+        expect(disk.folder(at('ruimte-sketch'))).toEqual({ 'SKILL.md': 'written by a person' });
         expect(shelf.placed()).toEqual([{ skill: SKETCH, path: null }]);
         expect(shelf.folder()).toBeNull();
     });
@@ -90,6 +96,6 @@ describe('the skills Ruimte ships', () => {
 
         disk.failing.delete('replaceFolder');
 
-        expect((await placed(disk)).placed()[0]!.path).toBe(`${ROOT}/ruimte-sketch/SKILL.md`);
+        expect((await placed(disk)).placed()[0]!.path).toBe(at('ruimte-sketch', 'SKILL.md'));
     });
 });
