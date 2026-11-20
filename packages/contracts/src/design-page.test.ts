@@ -4,6 +4,7 @@ import {
     assetPathOf,
     assetReferences,
     DESIGN_PAGE_BOOTSTRAP_ALLOWANCE,
+    isDesignPage,
     isPagePath,
     pageDataUrl,
     pageMentions,
@@ -129,6 +130,16 @@ describe('a page a design page frames', () => {
         expect(isPagePath('assets/logo.svg')).toBe(false);
         expect(pageMentions(html)).toEqual(['bas.dev.html', 'flows/step-2.html']);
         expect(pageMentions('a backup in notes.html.bak')).toEqual([]);
+    });
+
+    test('is a page of the design unless its name starts with an underscore or a dot', () => {
+        expect(isDesignPage('Pricing.html')).toBe(true);
+        expect(isDesignPage('flows/Step 2.htm')).toBe(true);
+        expect(isDesignPage('_tmp-check.html')).toBe(false);
+        expect(isDesignPage('.draft.html')).toBe(false);
+        expect(isDesignPage('flows/_partial.html')).toBe(false);
+        expect(isDesignPage('assets/logo.svg')).toBe(false);
+        expect(isPagePath('_tmp-check.html')).toBe(true);
     });
 
     test('is found in a run of name characters as long as a page without trying again from every character of it', () => {

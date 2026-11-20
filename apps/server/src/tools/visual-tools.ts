@@ -106,9 +106,7 @@ const visualShow = defineActionTool('visual', {
             .max(VISUAL_LIMITS.maxHeight, `height is from ${VISUAL_LIMITS.minHeight} to ${VISUAL_LIMITS.maxHeight} CSS pixels`)
             .optional()
             .describe('The most it grows, in CSS pixels'),
-        html: z.string().optional(),
-        // The design skill and the design task tell an agent what it takes, so every other session pays nothing for a description.
-        design_page: z.string().optional()
+        html: z.string().optional()
     }),
     async run(input, call) {
         const page = await pageOf('show', input.html, call);
@@ -116,8 +114,7 @@ const visualShow = defineActionTool('visual', {
             title: input.title,
             html: page.html,
             maxHeight: input.height ?? null,
-            ...(input.layout === undefined ? {} : { layout: input.layout }),
-            ...(input.design_page === undefined ? {} : { designPage: input.design_page })
+            ...(input.layout === undefined ? {} : { layout: input.layout })
         });
 
         return [visualRow(visual), SHOWN_LINE];

@@ -93,6 +93,7 @@ export {
     DESIGN_PAGE_MAX_BYTES,
     DESIGN_PAGE_SENT_MAX_BYTES,
     designAssetType,
+    isDesignPage,
     isPagePath
 } from './design-page.ts';
 export * from './change-split.ts';

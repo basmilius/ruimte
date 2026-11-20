@@ -1,9 +1,6 @@
 import type { AgentKind } from '@ruimte/contracts';
 import { SKILL_FILE, type PlacedSkill, type RuimteSkill } from './ruimte-skills.ts';
 
-/* What a skill note starts with, which is how the chat's notes tell it from a brief a person reads in the thread. */
-export const SKILL_NOTE_LEAD = 'Ruimte skill ';
-
 // A chat on a plain API reads files only inside its project folder, so it is handed the instructions themselves.
 const READS_PROJECT_ONLY: ReadonlySet<AgentKind> = new Set(['nanogpt']);
 
@@ -24,6 +21,27 @@ export function namedSkills(text: string, placed: readonly PlacedSkill[]): Place
     return placed.filter((entry) => namesSkill(text, entry.skill.name));
 }
 
+/*
+ * The text with each skill of the list read as its title, `$design` for `$ruimte-design`, for whatever names a chat. A
+ * model that names a session from such a prompt writes the token as a word, often capitalized ("Ruimte-design"), so the
+ * dollar may be missing and the title takes the case of the word it replaces. Only a skill of the list is read, since a
+ * word like `ruimte-release` may be a project's own.
+ */
+export function withSkillTitlesRead(text: string, skills: readonly Pick<RuimteSkill, 'name' | 'title'>[]): string {
+    return skills.reduce(
+        (read, skill) =>
+            read.replace(
+                new RegExp(`(^|[^A-Za-z0-9_$-])(\\$?)(${skill.name})(?![A-Za-z0-9_:-])`, 'gi'),
+                (_word, before: string, dollar: string, name: string) => {
+                    const title = /^[A-Z]/.test(name) ? `${skill.title.charAt(0).toUpperCase()}${skill.title.slice(1)}` : skill.title;
+
+                    return `${before}${dollar}${title}`;
+                }
+            ),
+        text
+    );
+}
+
 function instructionsOf(skill: RuimteSkill): string {
     return skill.files[SKILL_FILE] ?? '';
 }
@@ -32,7 +50,7 @@ function instructionsOf(skill: RuimteSkill): string {
 export function skillNote({ skill, path }: PlacedSkill, run: SkillRun): string {
     const effort = run.effort === null ? "the model's default effort" : `effort ${run.effort}`;
     const lines = [
-        `${SKILL_NOTE_LEAD}${skill.name}: ${skill.description} The person named it with $${skill.name} in this message.`,
+        `Ruimte skill ${skill.name}: ${skill.description} This message names it with $${skill.name}.`,
         `This chat runs on cli ${run.cli}, model ${run.model} and ${effort}.`
     ];
 

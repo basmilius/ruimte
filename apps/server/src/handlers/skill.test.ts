@@ -37,16 +37,22 @@ async function bootWithChat(disk = new MemorySkillDisk()): Promise<TestDaemon> {
     return daemon;
 }
 
-/* Sends as a person's client does and answers what the CLI heard, which the fake echoes back. */
-async function heard(daemon: TestDaemon, text: string): Promise<string> {
+/* Runs one turn and answers what the CLI heard, which the fake echoes back. */
+async function heardAfter(daemon: TestDaemon, prompt: () => Promise<unknown>): Promise<string> {
     const before = turnsOf(daemon, 'chat-lead').length;
-    const answer = await daemon.request('chat.send', { chatId: 'chat-lead', text, skills: ['ruimte-design', 'report'] });
-    expect(answer).toMatchObject({ ok: true });
+    await prompt();
     await daemon.until(() => turnsOf(daemon, 'chat-lead').length === before + 1 && daemon.chats.get('chat-lead')?.info.activeTurnId === null);
     const items = daemon.chats.get('chat-lead')!.thread.list();
     const reply = items.findLast((item) => item.kind === 'assistant');
 
     return reply?.kind === 'assistant' ? reply.text : '';
+}
+
+/* Sends as a person's client does. */
+function heard(daemon: TestDaemon, text: string): Promise<string> {
+    return heardAfter(daemon, async () => {
+        expect(await daemon.request('chat.send', { chatId: 'chat-lead', text, skills: ['ruimte-design', 'report'] })).toMatchObject({ ok: true });
+    });
 }
 
 describe('the skills Ruimte ships', () => {
@@ -72,7 +78,7 @@ describe('the skills Ruimte ships', () => {
         expect(echo).toContain(`This chat runs on cli claude, model ${selection.model} and `);
         expect(echo).toEndWith(`\n\n${text}`);
         const items = daemon.chats.get('chat-lead')!.thread.list();
-        expect(items.findLast((item) => item.kind === 'user')).toMatchObject({ text, skills: ['report'] });
+        expect(items.findLast((item) => item.kind === 'user')).toMatchObject({ text, skills: ['ruimte-design', 'report'] });
         expect(items.filter((item) => item.kind === 'note')).toEqual([]);
         // Claude Code reads outside the chat's folder only what it was handed.
         expect(daemon.claude.started.at(-1)!.argv).toContain(`--add-dir=${join(home, 'skills')}`);
@@ -82,6 +88,20 @@ describe('the skills Ruimte ships', () => {
         const daemon = await bootWithChat();
 
         expect(await heard(daemon, 'use $ruimte-sketch and $ruimte-designer here')).toBe('echo: use $ruimte-sketch and $ruimte-designer here');
+    });
+
+    test('a wake that names one hears the note too, and a slash command hears none', async () => {
+        const daemon = await bootWithChat();
+        const session = daemon.chats.get('chat-lead')!;
+
+        const woken = await heardAfter(daemon, async () => {
+            expect(session.wake({ text: 'Your task is done; go on with $ruimte-design', label: 'Task', taskIds: [] })).not.toBeNull();
+        });
+        const command = await heard(daemon, '/review $ruimte-design');
+
+        expect(woken).toStartWith('echo: Ruimte skill ruimte-design: ');
+        expect(woken).toEndWith('\n\nYour task is done; go on with $ruimte-design');
+        expect(command).toBe('echo: /review $ruimte-design');
     });
 
     test('a machine that cannot write them still starts, and the note carries the instructions', async () => {

@@ -1,6 +1,7 @@
 import { SUGGESTED_TITLE_LIMIT } from '@adecore/agent-contracts/agent';
 import { clipText } from '@adecore/agent-contracts/text';
 import type { NodeTitleSource } from './project.ts';
+import { withSkillTitles } from './skill.ts';
 
 /* Past this a title stops being a name and starts being the message it came from. */
 const TITLE_LIMIT = 48;
@@ -31,7 +32,9 @@ function withoutTail(text: string): string {
  * when one is worth using and without the closing punctuation. Null leaves the node the name it has.
  */
 export function deriveNodeTitle(prompt: string): string | null {
-    const line = (prompt.split('\n').find((candidate) => candidate.trim() !== '') ?? '').replace(/\s+/g, ' ').trim();
+    const line = withSkillTitles(prompt.split('\n').find((candidate) => candidate.trim() !== '') ?? '')
+        .replace(/\s+/g, ' ')
+        .trim();
     if (line === '') {
         return null;
     }

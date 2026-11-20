@@ -113,10 +113,6 @@ export function chatDeps(input: AreaInput): ChatDeps {
     return {
         manager: chats,
         providers: providers.providers,
-        skills: {
-            brief: (chatId, text) => chatManager.skillBrief(chatId, text),
-            names: () => agents.skills.list().map((skill) => skill.name)
-        },
         beforeKill: (chatId) => stores.lifecycle.emit('closed', chatId),
         stopNode: work.endChildren.stopNode,
         forks: {
@@ -305,11 +301,12 @@ export function designDeps({ projects }: AreaInput): DesignDeps {
     return {
         projectOf: async (clientId, projectId) => {
             const folder = (await store.known()).find((project) => project.projectId === projectId)?.folder;
-            if (folder === undefined || !(await store.holdsFolder(clientId, folder, { refuseScratch: true }))) {
+            // The Chats project too: it keeps no designs, but a chat there may start a design agent.
+            if (folder === undefined || !(await store.holdsFolder(clientId, folder))) {
                 return null;
             }
             const { views, shared } = await store.place(projectId);
-            return { folder, views, shared };
+            return { folder, views, shared, agents: store.hiddenAgents.designFolders(projectId) };
         },
         pages: projects.designPages
     };

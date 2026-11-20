@@ -35,7 +35,8 @@ export function quietFacts(overrides: Partial<ChatFacts> = {}): ChatFacts {
     };
 }
 
-export type TestChatOptions = Omit<ConstructorParameters<typeof ChatManager>[0], 'facts'> & Partial<ChatFacts>;
+// A fact wins over an option of the same name (`skills`), as `testChatManager` hands it on.
+export type TestChatOptions = Omit<ConstructorParameters<typeof ChatManager>[0], 'facts' | keyof ChatFacts> & Partial<ChatFacts>;
 
 export function testChatManager(options: TestChatOptions): ChatManager {
     const factKeys = new Set(Object.keys(quietFacts()));

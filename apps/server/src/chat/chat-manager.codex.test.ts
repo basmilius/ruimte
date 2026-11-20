@@ -10,6 +10,7 @@ import type { ContextSource } from '@ruimte/contracts';
 import { CONTEXT_LEAD, chatNote, chatPrompt, contextPrompt, toolsNote } from '../context/context-note.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { OPEN_BOUNDS } from '../sessions/open-bounds-test-helpers.ts';
+import { RUIMTE_SKILLS } from '../skills/catalog.ts';
 import { testChatManager, type TestChatOptions } from './chat-manager-test-helpers.ts';
 import { retire } from './chat-manager.fixture.test.ts';
 import { ChatManager } from './chat-manager.ts';
@@ -24,6 +25,8 @@ let codex: InProcessCli;
 let requests: Array<{ method: string; params: Record<string, unknown> }>;
 let turnSent: (() => void) | null = null;
 let modelPage: ((params: Record<string, unknown>) => unknown) | null;
+// The name Codex gives its thread by itself once a turn starts; null gives none.
+let pushedName: string | null;
 
 const png = { name: 'shot.png', mime: 'image/png', data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=' };
 function turnInputs() {
@@ -46,6 +49,7 @@ beforeEach(async () => {
     requests = [];
     turnSent = null;
     modelPage = null;
+    pushedName = null;
     codex = inProcess((io) => {
         const program = fakeCodexWith({ resumeLead: CONTEXT_LEAD })(io);
         return {
@@ -61,6 +65,9 @@ beforeEach(async () => {
                     io.out({ id: frame.id, result: modelPage(frame.params) });
                 } else {
                     program.onLine(line);
+                }
+                if (frame.method === 'turn/start' && pushedName !== null) {
+                    io.out({ method: 'thread/name/updated', params: { threadId: frame.params.threadId, threadName: pushedName } });
                 }
             }
         };
@@ -769,6 +776,16 @@ describe('ChatManager with Codex', () => {
             await recorder.untilIdle();
             expect(recorder.info?.suggestedTitle).toBe('Named before');
             expect(asked).toEqual([]);
+        });
+
+        test('a name Codex gives its thread by itself reads a skill Ruimte ships as its title', async () => {
+            await remake({ skills: () => RUIMTE_SKILLS.map((skill) => ({ skill, path: null })) });
+            pushedName = 'Ruimte-design pricing page';
+            await open('chat-skill');
+            await manager.core.send('chat-skill', '$ruimte-design a pricing page');
+            await recorder.until(() => recorder.info?.suggestedTitle !== undefined);
+
+            expect(recorder.info?.suggestedTitle).toBe('Design pricing page');
         });
     });
 

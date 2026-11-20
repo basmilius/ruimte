@@ -7487,8 +7487,9 @@ public struct ChatAttachResult: Codable, Sendable, Equatable {
     public let `subagents`: [ChatSubagentItem]?
     public let `workflows`: [ChatToolItem]?
     public let `outline`: [ChatItem]?
+    public let `suggestion`: String?
 
-    public init(`info`: ChatInfo, `items`: [ChatItem], `history`: ChatHistoryPage? = nil, `pending`: [ChatItem]? = nil, `seq`: Int64? = nil, `events`: [ChatEvent]? = nil, `bookmarks`: [ChatAttachResultBookmarksItem]? = nil, `visuals`: [ChatAttachResultVisualsItem]? = nil, `subagents`: [ChatSubagentItem]? = nil, `workflows`: [ChatToolItem]? = nil, `outline`: [ChatItem]? = nil) {
+    public init(`info`: ChatInfo, `items`: [ChatItem], `history`: ChatHistoryPage? = nil, `pending`: [ChatItem]? = nil, `seq`: Int64? = nil, `events`: [ChatEvent]? = nil, `bookmarks`: [ChatAttachResultBookmarksItem]? = nil, `visuals`: [ChatAttachResultVisualsItem]? = nil, `subagents`: [ChatSubagentItem]? = nil, `workflows`: [ChatToolItem]? = nil, `outline`: [ChatItem]? = nil, `suggestion`: String? = nil) {
         self.`info` = `info`
         self.`items` = `items`
         self.`history` = `history`
@@ -7500,6 +7501,7 @@ public struct ChatAttachResult: Codable, Sendable, Equatable {
         self.`subagents` = `subagents`
         self.`workflows` = `workflows`
         self.`outline` = `outline`
+        self.`suggestion` = `suggestion`
     }
 
     public init(from decoder: Decoder) throws {
@@ -7515,6 +7517,7 @@ public struct ChatAttachResult: Codable, Sendable, Equatable {
         `subagents` = try container.contains(.`subagents`) ? container.decodeLossy([ChatSubagentItem].self, forKey: .`subagents`) : nil
         `workflows` = try container.contains(.`workflows`) ? container.decodeLossy([ChatToolItem].self, forKey: .`workflows`) : nil
         `outline` = try container.contains(.`outline`) ? container.decodeLossy([ChatItem].self, forKey: .`outline`) : nil
+        `suggestion` = try container.decodeIfPresent(String.self, forKey: .`suggestion`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -7530,6 +7533,7 @@ public struct ChatAttachResult: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`subagents`, forKey: .`subagents`)
         try container.encodeIfPresent(`workflows`, forKey: .`workflows`)
         try container.encodeIfPresent(`outline`, forKey: .`outline`)
+        try container.encodeIfPresent(`suggestion`, forKey: .`suggestion`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -7544,6 +7548,7 @@ public struct ChatAttachResult: Codable, Sendable, Equatable {
         case `subagents` = "subagents"
         case `workflows` = "workflows"
         case `outline` = "outline"
+        case `suggestion` = "suggestion"
     }
 }
 

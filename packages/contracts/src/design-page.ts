@@ -183,6 +183,17 @@ export function isPagePath(path: string): boolean {
     return /\.html?$/i.test(path);
 }
 
+/*
+ * Whether a file of a design folder is one of its pages, which the pages of a design list and follow. A name that
+ * starts with `_` or `.` is a file an agent wrote to try or check something, framed when a page names it but never
+ * a page of its own.
+ */
+export function isDesignPage(path: string): boolean {
+    const name = path.slice(path.lastIndexOf('/') + 1);
+
+    return isPagePath(name) && !/^[_.]/.test(name);
+}
+
 /* A character a file name may hold in a page's text: one of `[\w%./-]`. */
 function isNameChar(code: number): boolean {
     return isWordChar(code) || code === 37 || code === 46 || code === 47 || code === 45;

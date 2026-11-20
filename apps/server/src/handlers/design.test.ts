@@ -18,6 +18,7 @@ import { askOnce, HOME_WITHOUT_STATE } from './test-helpers.ts';
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
 const VIEWS: ProjectView[] = [{ kind: 'design', id: 'onboarding', name: 'Onboarding', node: {}, path: 'onboarding' }];
+const AGENT = { id: 'chat-designer', folder: '.ruimte/private/designs/sign-in' };
 
 let root: string;
 let project: string;
@@ -33,7 +34,8 @@ beforeEach(async () => {
     pages = new HeldDesignPages();
     dispatcher = new Dispatcher();
     designArea({
-        projectOf: async (clientId, projectId) => (clientId === 'client' && projectId === 'project' ? { folder: project, views: VIEWS, shared: [] } : null),
+        projectOf: async (clientId, projectId) =>
+            clientId === 'client' && projectId === 'project' ? { folder: project, views: VIEWS, shared: [], agents: [AGENT] } : null,
         pages
     }).handlers?.(dispatcher);
     bytesArea({
@@ -78,6 +80,36 @@ async function readHeld(pageId: string, size: number, clientId = 'client'): Prom
 function isHeld(pageId: string, clientId = 'client'): boolean {
     return pages.bytesOf(clientId, pageId) !== null;
 }
+
+describe('a hidden design agent', () => {
+    test('is named by its folder, and any other agent by none, only to a client that has the project open', async () => {
+        expect(await askOnce(dispatcher, { id: 'client' }, 'design.agent', { projectId: 'project', agentId: 'chat-designer' })).toMatchObject({
+            ok: true,
+            result: { folder: join(project, '.ruimte', 'private', 'designs', 'sign-in') }
+        });
+        expect(await askOnce(dispatcher, { id: 'client' }, 'design.agent', { projectId: 'project', agentId: 'chat-lead' })).toMatchObject({
+            ok: true,
+            result: { folder: null }
+        });
+        expect(await askOnce(dispatcher, { id: 'stranger' }, 'design.agent', { projectId: 'project', agentId: 'chat-designer' })).toMatchObject({
+            ok: false,
+            error: { code: 'outside-project' }
+        });
+    });
+
+    test("has the pages of its folder built by its id, as a design's are", async () => {
+        const agentFolder = join(project, '.ruimte', 'private', 'designs', 'sign-in');
+        await mkdir(agentFolder, { recursive: true });
+        await writeFile(join(agentFolder, 'Sign in.html'), '<p>sign in</p>');
+
+        const frame = await ask('Sign in.html', 'client', 'chat-designer');
+
+        expect(frame).toMatchObject({ ok: true, result: { kind: 'page' } });
+        const { pageId, size } = (frame as { result: { pageId: string; size: number } }).result;
+
+        expect(await readHeld(pageId, size)).toBe('<p>sign in</p>');
+    });
+});
 
 describe('a page of a design', () => {
     test('is built with the files and pages it names and held until every byte went out', async () => {
@@ -128,6 +160,20 @@ describe('a page of a design', () => {
         const { pageId, size } = (frame as { result: { pageId: string; size: number } }).result;
 
         expect(await readHeld(pageId, size)).toBe('<img src="assets/linked.png"><iframe src="linked.html"></iframe>');
+    });
+
+    test('is no file an agent keeps for itself, named with an underscore or a dot, which a page still frames', async () => {
+        await writeFile(join(folder, '_tmp-check.html'), '<p>check</p>');
+        await writeFile(join(folder, '.draft.html'), '<p>draft</p>');
+        await writeFile(join(folder, 'index.html'), '<iframe src="_tmp-check.html"></iframe>');
+
+        expect(await ask('_tmp-check.html')).toMatchObject({ ok: false, error: { code: 'outside-design' } });
+        expect(await ask('.draft.html')).toMatchObject({ ok: false, error: { code: 'outside-design' } });
+
+        const frame = await ask('index.html');
+        const { pageId, size } = (frame as { result: { pageId: string; size: number } }).result;
+
+        expect(await readHeld(pageId, size)).toContain('data:text/html');
     });
 
     test('is not read when its folder leads out of the project', async () => {

@@ -29,7 +29,8 @@ describe('a design agent', () => {
         expect(fx.held).toHaveLength(1);
         expect(fx.held[0]!.prompt).toBe(DESIGN_START.prompt);
         expect(fx.held[0]!.brief).toContain(`\`${folder}\``);
-        expect(fx.held[0]!.brief).toContain('index.html');
+        expect(fx.held[0]!.brief).toContain('a descriptive name, such as `Onboarding.html`');
+        expect(fx.held[0]!.brief).not.toContain('index.html');
     });
 
     test('hears the craft of a Design view in its board form, and nothing about a person beside it', async () => {

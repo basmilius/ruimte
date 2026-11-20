@@ -22278,6 +22278,10 @@
           }
         },
         "x-lossy-items": true
+      },
+      "suggestion": {
+        "type": "string",
+        "minLength": 1
       }
     },
     "required": [
@@ -34268,6 +34272,39 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
+  },
+  "request.design.agent.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "agentId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "agentId"
+    ]
+  },
+  "request.design.agent.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "folder": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "folder"
+    ]
   },
   "request.design.page.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -87623,6 +87660,31 @@
     "required": [
       "chatId",
       "toolUseId"
+    ]
+  },
+  "event.chat.suggestion": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "suggestion": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "chatId",
+      "suggestion"
     ]
   },
   "event.chat.visuals": {

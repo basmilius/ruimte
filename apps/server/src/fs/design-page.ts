@@ -11,6 +11,7 @@ import {
     designPlaces,
     DesignPageError,
     inlineDesignPage,
+    isDesignPage,
     isPagePath,
     isSharedDesign,
     type DesignFiles,
@@ -48,6 +49,13 @@ export function designFoldersOf(project: DesignProject): Array<{ id: string; fol
     ];
 }
 
+/* The folder of a hidden design agent of the project, absolute; null for an id that is no such agent. */
+export function designAgentFolder(project: DesignProject, agentId: string): string | null {
+    const agent = project.agents?.find((candidate) => candidate.id === agentId);
+
+    return agent === undefined ? null : resolve(project.folder, agent.folder);
+}
+
 /* The page path inside a design folder as the inliner names it: relative, with slashes, and no step that leaves the folder. */
 function pagePathOf(file: string): string | null {
     const path = assetPathOf(file);
@@ -55,7 +63,11 @@ function pagePathOf(file: string): string | null {
     return path !== null && path === file && isPagePath(path) ? path : null;
 }
 
-/* A page of a design of the project by the design's id; refused for an id that is no design or a path that is no page inside it. */
+/*
+ * A page of a design of the project by the design's id, as a client shows it; refused for an id that is no design or
+ * a path that is no page inside it. A file an agent keeps for itself (`isDesignPage`) is no page a client shows; the
+ * agent itself still previews it by its path.
+ */
 export function designPageById(project: DesignProject, designId: string, file: string): DesignPageAt {
     const design = designFoldersOf(project).find((candidate) => candidate.id === designId);
 
@@ -65,7 +77,7 @@ export function designPageById(project: DesignProject, designId: string, file: s
 
     const path = pagePathOf(file);
 
-    if (path === null) {
+    if (path === null || !isDesignPage(path)) {
         throw new DesignPathError('outside-design', `${file} is no page inside the folder of the design`);
     }
 

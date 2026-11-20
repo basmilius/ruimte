@@ -1,7 +1,10 @@
 import { z } from 'zod';
 import { ProjectIdSchema } from './project.ts';
 
-/* One page of a design of a project: the design by its id, so a client names no folder, and the page by its path inside the folder. */
+/*
+ * One page of a design of a project: the design, or the hidden design agent, by its id, so a client names no
+ * folder, and the page by its path inside the folder.
+ */
 export const DesignPagePayloadSchema = z.object({
     projectId: ProjectIdSchema,
     designId: z.string().min(1),
@@ -52,6 +55,18 @@ export interface DesignPageUnknownResult {
     readonly raw: Readonly<Record<string, unknown>>;
 }
 
+/* An agent of the project, by its node id, that may be a hidden design agent. */
+export const DesignAgentPayloadSchema = z.object({
+    projectId: ProjectIdSchema,
+    agentId: z.string().min(1)
+});
+export type DesignAgentPayload = z.infer<typeof DesignAgentPayloadSchema>;
+
+/* The folder a hidden design agent works in, absolute, which `design.page` takes the agent's id for; null for any other agent. */
+export const DesignAgentResultSchema = z.object({ folder: z.string().nullable() });
+export type DesignAgentResult = z.infer<typeof DesignAgentResultSchema>;
+
 export const DESIGN_REQUEST_SCHEMAS = {
-    'design.page': { payload: DesignPagePayloadSchema, result: DesignPageResultSchema }
+    'design.page': { payload: DesignPagePayloadSchema, result: DesignPageResultSchema },
+    'design.agent': { payload: DesignAgentPayloadSchema, result: DesignAgentResultSchema }
 } as const;

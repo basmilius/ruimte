@@ -34,7 +34,7 @@ import { passedOverNote, type ProjectAccountChooser } from '../projects/project-
 import { attachedReferences, type Reference } from '../projects/references.ts';
 import { CHAT_TOKEN_VARIABLE, MCP_URL_VARIABLE, mcpUrlOf } from '../ruimte-mcp.ts';
 import type { PlacedSkill } from '../skills/ruimte-skills.ts';
-import { namedSkills, SKILL_NOTE_LEAD, skillNote } from '../skills/skill-note.ts';
+import { namedSkills, skillNote, withSkillTitlesRead } from '../skills/skill-note.ts';
 import { TurnUsage } from '../stats/turn-usage.ts';
 import { countChatStarted } from '../stats/usage-stats.ts';
 import { AgentImages } from './agent-images.ts';
@@ -162,16 +162,14 @@ class ContextNotes implements PromptNotes {
         this.lastFolder = folder;
         const change = previous === null ? null : contextChangeNote(previous, current);
         const messages = this.messages?.next() ?? { shown: [], heard: [] };
-        // The person named the skill themselves, so its note would only repeat their message in the thread.
-        const skill = brief?.startsWith(SKILL_NOTE_LEAD) === true ? brief : undefined;
         return {
             shown: [
-                ...(brief === undefined || skill !== undefined ? [] : [`${BRIEF_TITLE}\n${brief}`]),
+                ...(brief === undefined ? [] : [`${BRIEF_TITLE}\n${brief}`]),
                 ...(moved === null ? [] : [moved]),
                 ...(change === null ? [] : [change]),
                 ...messages.shown
             ],
-            heard: [...(skill === undefined ? [] : [skill]), ...messages.heard]
+            heard: messages.heard
         };
     }
 
@@ -229,6 +227,14 @@ export class ChatManager {
                 promptSuggestionsFor: (chatId) =>
                     facts.promptSuggestions() && facts.depthOf(chatId) === 0 && !facts.peerChat(chatId) && !facts.inlineChat(chatId),
                 promptNotesFor: (chatId) => this.promptNotesFor(chatId),
+                promptHeardFor: (chatId, text) => this.skillNotesFor(chatId, text),
+                hostSkillsFor: () => facts.skills().map((placed) => placed.skill.name),
+                // A CLI names its session from the prompt, so a title it pushes itself reads a Ruimte skill as its title too.
+                cliTitleFor: (_chatId, title) =>
+                    withSkillTitlesRead(
+                        title,
+                        facts.skills().map((placed) => placed.skill)
+                    ),
                 hiddenFor: (chatId) => facts.inlineChat(chatId),
                 referencesFor: (chatId) => this.referencesFor(chatId),
                 envFor: (chatId, base) => this.envFor(chatId, base),
@@ -266,24 +272,6 @@ export class ChatManager {
     /* The file behind an attachment id, also of a chat nobody loaded since the daemon started, and of an image an agent attached. */
     async findAttachment(chatId: string, id: string): Promise<ChatAttachment | null> {
         return (await this.core.findAttachment(chatId, id)) ?? this.agentImages.find(chatId, id);
-    }
-
-    /*
-     * The brief a person's prompt carries for the Ruimte skills it names, one note per skill; undefined
-     * for a prompt that names none. A slash command hears no brief in front, so it gets none.
-     */
-    skillBrief(chatId: string, text: string): string | undefined {
-        const info = this.core.get(chatId)?.info;
-        const named = text.startsWith('/') ? [] : namedSkills(text, this.facts.skills());
-
-        if (info === undefined || named.length === 0) {
-            return undefined;
-        }
-
-        const effort = info.selection.options.effort;
-        const run = { cli: info.provider, model: info.selection.model, effort: typeof effort === 'string' ? effort : null };
-
-        return named.map((placed) => skillNote(placed, run)).join('\n\n');
     }
 
     attachAgentImage(chatId: string, upload: { name: string; mime: string; bytes: Uint8Array }): Promise<ChatAttachment> {
@@ -461,6 +449,21 @@ export class ChatManager {
         // Claude validates --add-dir at startup, including the first turn after a chat was cleared.
         mkdirSync(path, { recursive: true, mode: 0o700 });
         return [path, ...handed];
+    }
+
+    /* One note for every Ruimte skill a prompt names, with where it lies and what the chat runs on. */
+    private skillNotesFor(chatId: string, text: string): readonly string[] {
+        const info = this.core.get(chatId)?.info;
+        const named = namedSkills(text, this.facts.skills());
+
+        if (info === undefined || named.length === 0) {
+            return [];
+        }
+
+        const effort = info.selection.options.effort;
+        const run = { cli: info.provider, model: info.selection.model, effort: typeof effort === 'string' ? effort : null };
+
+        return named.map((placed) => skillNote(placed, run));
     }
 
     private promptNotesFor(chatId: string): PromptNotes {

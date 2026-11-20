@@ -38,6 +38,12 @@ describe('deriveNodeTitle', () => {
         expect(deriveNodeTitle('\n\nthe second line is the first with words\nand a third')).toBe('the second line is the first with words');
     });
 
+    test('names a skill Ruimte ships by its title, and leaves any other dollar word as it is', () => {
+        expect(deriveNodeTitle('Maak een $ruimte-design van de loginpagina')).toBe('Maak een $design van de loginpagina');
+        expect(deriveNodeTitle('$ruimte-design (sign up) and $ruimte-designer')).toBe('$design (sign up) and $designer');
+        expect(deriveNodeTitle('Use a$ruimte-design or $ruimte-design:x')).toBe('Use a$ruimte-design or $ruimte-design:x');
+    });
+
     test('collapses the whitespace of that line and trims it', () => {
         expect(deriveNodeTitle('   Fix   the\tflaky   test   ')).toBe('Fix the flaky test');
     });

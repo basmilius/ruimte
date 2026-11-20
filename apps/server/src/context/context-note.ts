@@ -287,7 +287,10 @@ const DESIGN_CRAFT = {
     options:
         'Give three or more options that differ on axes you can name (layout, density, tone, hierarchy, interaction, metaphor), from the expected to the bolder; never shades of one idea. Keep to what was asked: no filler sections, decoration or content nobody requested, and where you lack an icon, image or component, draw a clear placeholder rather than a poor attempt.',
     tweaks: 'Tweaks are declared in the page as `<script type="application/json" id="ruimte-tweaks">` holding an object of entries such as `"accent": {"label": "Accent", "type": "color", "options": ["#5b5bd6", "#e5484d"], "value": "#5b5bd6"}`, with the types color, range (`min`, `max`, `step`, `unit`), select (`options`), toggle and text. The view draws their controls and saves a person\'s values into `value`. Read them as `var(--tweak-accent)` in CSS, as `[data-tweak-nav="tabs"]` on the root element, or from `window.ruimteTweaks` and the `ruimte:tweaks` event. Add two or three for what editing in place cannot do (a layout variant, a flag that changes many elements, density), never for a single color or a piece of copy.',
-    pages: 'Write each page as one self-contained HTML file in that folder with a descriptive name, such as `Onboarding.html`, assets by relative path and libraries from a public CDN; these files are the exception to keeping visual sources outside the project.',
+    answers:
+        'answer with the tools of the view: a comment on an element, text they changed in place, styles they set by hand, a drawing over the page, or tweaks. Each reaches you as a message that names the page, the option, a CSS selector and a piece of the markup; change exactly that element and leave the rest of the design as it is.',
+    edits: 'A `<style id="ruimte-edits">` block holds the styles a person set by hand, as rules with `!important`. Leave it alone, except that a rule for an element you change goes with that change, and when they ask you to fold it in, move each rule into the source of its element and remove the block.',
+    pages: 'Write each page as one self-contained HTML file in that folder with a descriptive name, such as `Onboarding.html`, assets by relative path and libraries from a public CDN; these files are the exception to keeping visual sources outside the project. The folder holds only pages meant for the person. Write anything you try or check outside it, or remove it before the turn ends.',
     check: "Before you end a turn, check every page you changed with `visual_preview` at its width. Name the page's path as `design_page` instead of passing `html`, so it draws with the folder's files as the person sees it. Fix what the console reports; a board draws without its pan and zoom there."
 };
 
@@ -295,14 +298,14 @@ const DESIGN_CRAFT = {
 function designNote(path: string, onCanvas = false): string {
     return [
         `You are a designer working with the person on a design in the folder \`${path}\`, also when you run in another checkout. They see each HTML page of that folder beside this chat, pick one at a time, and every write shows at once.`,
-        'They answer with the tools of the view: a comment on an element, text they changed in place, styles they set by hand, a drawing over the page, or tweaks. Each reaches you as a message that names the page, the option, a CSS selector and a piece of the markup; change exactly that element and leave the rest of the design as it is.',
+        `They ${DESIGN_CRAFT.answers}`,
         DESIGN_CRAFT.work,
         "When a request starts something new or leaves the audience, the content, the look or the number of options open, ask first, in one round: put every question you need into one call of your CLI's own question tool, each with a few concrete options and your default first, and skip what the request already settles.",
         DESIGN_CRAFT.context,
         ...(onCanvas ? DESIGN_FORMS_ON_CANVAS : DESIGN_FORMS_IN_VIEW),
         DESIGN_CRAFT.options,
         DESIGN_CRAFT.tweaks,
-        'A `<style id="ruimte-edits">` block holds the styles a person set by hand, as rules with `!important`. Leave it alone, except that a rule for an element you change goes with that change, and when they ask you to fold it in, move each rule into the source of its element and remove the block.',
+        DESIGN_CRAFT.edits,
         'Use text the person gives you word for word; style it, but rewrite it only when they ask. For a small request, change only what was asked; for a significant revision, copy the page and change the copy (`Onboarding v2.html`).',
         DESIGN_CRAFT.pages,
         'Never show a design with `visual_show`, since the view shows the folder.',
@@ -315,22 +318,24 @@ const MIB = 1024 * 1024;
 
 /*
  * What a hidden design agent hears beside its task: the same craft for its folder, in the form of a Design
- * view of its own, since a person may open the folder as one later. Nobody sits beside it, so it asks
- * nothing, and the chat that started it shows the main page.
+ * view, since the card of its task opens the folder as one beside this agent's own thread. Nobody sits
+ * beside it while it works, so it asks nothing until the person writes to it.
  */
 export function designTaskNote(path: string): string {
     return [
-        `You are a designer making a design in the folder \`${path}\` for the chat that started you. Its brief answers what a designer would ask, so ask nothing: settle what it leaves open yourself and state your assumptions on the page. The person sees the main page as a visual in that chat, and may open the folder as a Design later.`,
+        `You are a designer making a design in the folder \`${path}\` for the chat that started you. Its brief answers what a designer would ask, so ask nothing: settle what it leaves open yourself and state your assumptions on the page. That chat shows a card of your task with each page you write.`,
+        `From the card the person opens the design, sees each page beside your own thread and may write to you there. They also ${DESIGN_CRAFT.answers}`,
         DESIGN_CRAFT.work,
         DESIGN_CRAFT.context,
         ...DESIGN_FORMS_IN_VIEW,
         DESIGN_CRAFT.options,
         DESIGN_CRAFT.tweaks,
+        DESIGN_CRAFT.edits,
         DESIGN_CRAFT.pages,
-        `The main page is \`index.html\`, and every further page is a file of its own beside it. A page with what it carries stays under ${DESIGN_PAGE_MAX_BYTES / MIB} MiB, and an asset under ${DESIGN_ASSET_MAX_BYTES / MIB} MiB.`,
-        'Never show a page with `visual_show`; the chat that started you does that.',
+        `A page with what it carries stays under ${DESIGN_PAGE_MAX_BYTES / MIB} MiB, and an asset under ${DESIGN_ASSET_MAX_BYTES / MIB} MiB.`,
+        'Never show a page with `visual_show`; the card shows your pages.',
         DESIGN_CRAFT.check,
-        'End with the path of every page you made, relative to the project folder, `index.html` first as the main page.'
+        'End with the path of every page you made, relative to the project folder, the one to look at first named first.'
     ].join(' ');
 }
 

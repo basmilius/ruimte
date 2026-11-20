@@ -68,8 +68,7 @@ describe('what the machine says about moving a chat', () => {
             },
             moves: moves(),
             machineOf: () => null,
-            starting: () => false,
-            skills: { brief: () => undefined, names: () => [] }
+            starting: () => false
         }).handlers?.(dispatcher);
         expect(dispatcher.has('chat.moveInfo')).toBe(true);
         expect(dispatcher.has('chat.move')).toBe(true);

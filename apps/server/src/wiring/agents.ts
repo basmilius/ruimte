@@ -42,6 +42,7 @@ import { SnapshotStore, scheduleSnapshots, type SnapshotSchedule } from '../sess
 import { ShortTextModels } from '../short-text/model.ts';
 import { RUIMTE_SKILLS } from '../skills/catalog.ts';
 import { RuimteSkills } from '../skills/ruimte-skills.ts';
+import { withSkillTitlesRead } from '../skills/skill-note.ts';
 import { wakefulClock } from '../timers.ts';
 import { agentBounds } from './agent-bounds.ts';
 import { wakeForWaitingMessages } from './agent-messages.ts';
@@ -223,8 +224,16 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
     });
     stores.lifecycle.on('closed', (chatId) => proposals.forget(chatId));
     const messagesFor = (targetId: string): string[] => notices.take(targetId).map(renderNotice);
+    // A CLI names its session from the prompt it got, so a skill Ruimte ships reads as its title there too.
+    const readTitle = (title: string | null): string | null => (title === null ? null : withSkillTitlesRead(title, RUIMTE_SKILLS));
     // One reader for chats and terminals, so a transcript both look at is only read on from where either stopped.
-    const claudeTitles = new ClaudeTitleReader();
+    const claudeReader = new ClaudeTitleReader();
+    const codexReader = new CodexTitleReader();
+    const claudeTitles = {
+        forSession: async (agentSessionId: string, projectsDir: string, cwd: string) =>
+            readTitle(await claudeReader.forSession(agentSessionId, projectsDir, cwd)),
+        forTranscript: async (path: string) => readTitle(await claudeReader.forTranscript(path))
+    };
     const sessions = new SessionManager({
         adapter: seams.pty,
         env: seams.env,
@@ -250,7 +259,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         },
         checkCwd: bounds.checkCwd,
         claudeTitles,
-        codexTitles: new CodexTitleReader(),
+        codexTitles: { forThread: async (threadId, index) => readTitle(await codexReader.forThread(threadId, index)) },
         accounts: providers.accounts,
         openingAccount: (sessionId, kind, named) => projectAccount(sessionId, kind, named)?.account ?? named ?? providers.accounts.defaultFor(kind),
         providers: providers.providers
@@ -353,8 +362,11 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         // One one-shot call per chat of a CLI that names nothing itself (Codex, Grok, ...), on that CLI first.
         // The machine's text model, when a person picked one, names every new chat; else that CLI first.
         titlePolicy: () => textModels.titlePolicy(),
-        nameChat: (provider, input) =>
-            textModels.title(input, async () => seams.nameChat(providers.providers, provider, { ...input, cwd: await oneShot.cwdFor(input.cwd) })),
+        nameChat: (provider, base) => {
+            // A skill Ruimte ships reads as its title, so a chat started with `$ruimte-design` is not named after Ruimte.
+            const input = { ...base, prompt: withSkillTitlesRead(base.prompt, RUIMTE_SKILLS), answer: withSkillTitlesRead(base.answer, RUIMTE_SKILLS) };
+            return textModels.title(input, async () => seams.nameChat(providers.providers, provider, { ...input, cwd: await oneShot.cwdFor(input.cwd) }));
+        },
         onInterruptedRun: outboxLink.onInterruptedRun,
         lostWork: (chatId, lost) => outboxLink.oweLostWork(chatId, lost, tasks.openFor(chatId) !== undefined),
         facts: {

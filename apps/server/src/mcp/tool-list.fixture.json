@@ -3233,9 +3233,6 @@
                     },
                     "html": {
                         "type": "string"
-                    },
-                    "design_page": {
-                        "type": "string"
                     }
                 },
                 "required": ["title"]

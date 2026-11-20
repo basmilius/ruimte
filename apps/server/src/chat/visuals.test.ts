@@ -173,7 +173,7 @@ describe('visual tools', () => {
         const daemon = await bootWithChat();
         expect(await show(daemon, 'chat-lead', { html: PAGE })).toEqual([
             'refused\tbad-arguments\tvisual_show needs title, a few words that say what the page shows',
-            'fields\ttitle\tlayout\theight\thtml\tdesign_page'
+            'fields\ttitle\tlayout\theight\thtml'
         ]);
         expect((await show(daemon, 'chat-lead', { title: 'Bars', height: 'tall', html: PAGE }))[0]).toBe(
             'refused\tbad-arguments\theight takes a whole number of CSS pixels'
@@ -270,7 +270,6 @@ describe('previews and measured heights', () => {
         expect(asked[0]).toContain('<script data-ruimte-pages>');
         expect(asked[0]).toEndWith('<iframe src="data:text/html;charset=utf-8,%3Cp%3Etwo%3C/p%3E%3C!--"></iframe>');
         expect(asked[1]).toBe('<p>two</p>');
-
         expect(await invokeTool(daemon, 'chat-lead', 'visual_preview', { html: PAGE, design_page: join(design, 'index.html') })).toEqual([
             'refused\ttwo-pages\tvisual_preview takes html or design_page, not both'
         ]);
@@ -282,9 +281,15 @@ describe('previews and measured heights', () => {
             refusalCode(await invokeTool(daemon, 'chat-lead', 'visual_preview', { design_page: join(design, '..', '..', '..', '..', 'outside.html') }))
         ).toBe('not-a-design-page');
         expect(asked).toHaveLength(2);
+
+        // A file the agent keeps to check something is no page a person sees, and still the agent's to preview.
+        await writeFile(join(design, '_check.html'), '<p>check</p>');
+
+        expect((await invokeTool(daemon, 'chat-lead', 'visual_preview', { design_page: join(design, '_check.html') }))[0]).toStartWith('shot\t');
+        expect(asked[2]).toBe('<p>check</p>');
     });
 
-    test("visual show draws the page of a hidden design agent's folder, and refuses a folder no design or design agent holds", async () => {
+    test("visual preview draws the page of a hidden design agent's folder, and refuses a folder no design or design agent holds", async () => {
         const made = join(folder, '.ruimte', 'private', 'designs', 'onboarding');
         const stray = join(folder, '.ruimte', 'private', 'designs', 'stray');
         await mkdir(made, { recursive: true });
@@ -297,14 +302,15 @@ describe('previews and measured heights', () => {
             node: { id: 'chat-designer', kind: 'chat', title: 'Onboarding', x: 0, y: 0, w: 480, h: 640 },
             design: '.ruimte/private/designs/onboarding'
         });
-        const daemon = await bootWithChat();
+        const daemon = await bootWithChat({ visualRender: { preview: async () => previewed() } });
 
-        expect((await show(daemon, 'chat-lead', { title: 'Onboarding', design_page: '.ruimte/private/designs/onboarding/index.html' }))[1]).toBe(SHOWN_LINE);
-        expect(await show(daemon, 'chat-lead', { title: 'Stray', design_page: join(stray, 'index.html') })).toEqual([
+        expect((await invokeTool(daemon, 'chat-lead', 'visual_preview', { design_page: '.ruimte/private/designs/onboarding/index.html' }))[0]).toStartWith(
+            'shot\t'
+        );
+        expect(await invokeTool(daemon, 'chat-lead', 'visual_preview', { design_page: join(stray, 'index.html') })).toEqual([
             'refused\tnot-a-design-page\tdesign_page takes the path of an HTML page inside a design folder of this project',
             `folder\t${made}`
         ]);
-        expect((await daemon.chats.listVisuals('chat-lead')).map((visual) => visual.title)).toEqual(['Onboarding']);
     });
 
     test('a quiet page gets a note, and a page taller than its shot says how much the shot covers', async () => {
