@@ -86,6 +86,8 @@ struct ChatVisualContent: View {
     var onHeight: (Double, Double) -> Void = { _, _ in }
     /// The files a design page's script names while it runs; none for a visual.
     var assets: DesignFiles.RuntimeAssets?
+    /// Where a design page that is a board stands; none for a visual.
+    var board: DesignBoardCamera?
     @Environment(\.colorScheme) private var colorScheme
     @State private var page: Data?
     @State private var shown = false
@@ -95,7 +97,8 @@ struct ChatVisualContent: View {
             if let page {
                 ChatVisualFrame(
                     visual: visual, page: page, theme: colorScheme == .dark ? .dark : .light, fill: fill,
-                    onHeight: onHeight, onShown: { shown = true }, onFailure: { failed = true }, assets: assets
+                    onHeight: onHeight, onShown: { shown = true }, onFailure: { failed = true }, assets: assets,
+                    board: board, fits: board?.fits ?? 0
                 )
                 .opacity(failed ? 0 : 1)
             }
@@ -110,7 +113,9 @@ struct ChatVisualContent: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task(id: visual.id) {
             do {
-                page = try await read()
+                let loaded = try await read()
+                board?.isBoard = DesignBoard.isBoard(loaded)
+                page = loaded
             } catch is CancellationError {
             } catch {
                 failed = true

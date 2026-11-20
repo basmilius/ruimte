@@ -12,6 +12,7 @@ struct AgentDesignPage: View {
     @State private var follow: DesignFollow
     @State private var listing = DesignFiles.Listing()
     @State private var attempt = 0
+    @State private var boards = DesignBoardCameras()
 
     init(design: ChatDesignOpen, workspace: MobileWorkspace) {
         self.design = design
@@ -46,6 +47,11 @@ struct AgentDesignPage: View {
         .navigationSubtitle(side == .pages ? follow.shown.map(DesignFiles.pageName) ?? "" : "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            if side == .pages, let shown = follow.shown, boards.camera(shown).isBoard {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(String(localized: "Fit design"), lucideIcon: "maximize") { boards.camera(shown).fit() }
+                }
+            }
             if side == .pages, !pages.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) { pagesMenu }
             }
@@ -72,7 +78,7 @@ struct AgentDesignPage: View {
                     let writtenAt = pages.first { $0.name == shown }?.mtime ?? 0
                     DesignPageFrame(
                         client: workspace.client, folder: design.folder, file: shown, design: design.agentID,
-                        project: workspace.projectID, fill: true
+                        project: workspace.projectID, fill: true, camera: boards.camera(shown)
                     )
                     // A page written again, or read again, opens anew.
                     .id("\(shown):\(writtenAt):\(attempt)")

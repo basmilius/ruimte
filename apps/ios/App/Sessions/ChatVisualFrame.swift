@@ -153,6 +153,10 @@ struct ChatVisualFrame: UIViewRepresentable {
     var onFailure: () -> Void = {}
     /// The files a design page's script names while it runs. Only a design has them.
     var assets: DesignFiles.RuntimeAssets?
+    /// Where a design page that is a board stands. Only a design has one.
+    var board: DesignBoardCamera?
+    /// The board's `fits` as this was drawn, so a new count fits the board again.
+    var fits = 0
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -161,8 +165,12 @@ struct ChatVisualFrame: UIViewRepresentable {
         return Self.webView(self, coordinator: context.coordinator)
     }
 
+    /// The app's own world in the page, where the page can neither see nor reach what runs.
+    static var world: WKContentWorld { .world(name: "ruimte-visual") }
+
     /// The web view of a frame, loading its page with the theme in the address.
     static func webView(_ frame: ChatVisualFrame, coordinator: Coordinator) -> ChatVisualWebView {
+        let world = Self.world
         let scheme = ChatVisualPageScheme(visualID: frame.visual.id, page: frame.page)
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
@@ -170,7 +178,6 @@ struct ChatVisualFrame: UIViewRepresentable {
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
         configuration.dataDetectorTypes = []
         configuration.allowsInlineMediaPlayback = true
-        let world = WKContentWorld.world(name: "ruimte-visual")
         configuration.userContentController.addUserScript(
             WKUserScript(
                 source: ChatVisualNavigation.bridge, injectionTime: .atDocumentStart, forMainFrameOnly: true,
@@ -185,6 +192,12 @@ struct ChatVisualFrame: UIViewRepresentable {
             configuration.userContentController.addScriptMessageHandler(
                 ChatVisualAssetReplies(assets), contentWorld: .page, name: ChatVisualNavigation.assetHandler)
         }
+        let isBoard = frame.board?.isBoard == true
+        if isBoard {
+            configuration.userContentController.addUserScript(
+                WKUserScript(
+                    source: DesignBoard.script, injectionTime: .atDocumentEnd, forMainFrameOnly: true, in: world))
+        }
         let view = ChatVisualWebView(frame: .zero, configuration: configuration)
         view.fill = frame.fill
         view.isOpaque = false
@@ -198,6 +211,8 @@ struct ChatVisualFrame: UIViewRepresentable {
         view.accessibilityLabel = frame.visual.title
         coordinator.page = scheme.pageURL
         coordinator.shownTheme = frame.theme
+        coordinator.fits = frame.fits
+        if isBoard { coordinator.follow(view.scrollView) }
         view.load(URLRequest(url: address(scheme.pageURL, theme: frame.theme)))
         return view
     }
@@ -210,6 +225,10 @@ struct ChatVisualFrame: UIViewRepresentable {
     func updateUIView(_ view: ChatVisualWebView, context: Context) {
         context.coordinator.parent = self
         context.coordinator.show(theme, in: view)
+        if fits != context.coordinator.fits {
+            context.coordinator.fits = fits
+            context.coordinator.fitBoard(in: view)
+        }
     }
 
     static func dismantleUIView(_ view: ChatVisualWebView, coordinator: Coordinator) {
@@ -223,8 +242,15 @@ struct ChatVisualFrame: UIViewRepresentable {
         var parent: ChatVisualFrame?
         var page: URL?
         var shownTheme: ChatVisualTheme?
+        var fits = 0
         private var loaded = false
         private var shown = false
+        /// The board's size and the frame's, in the page's pixels, as the page last reported them.
+        private var measured: (board: CGSize, frame: CGSize)?
+        /// Whether the view's zoom and scroll are the person's here, which the board's camera then keeps.
+        private var tracking = false
+        private var pinchFollowed = false
+        private var observations: [NSKeyValueObservation] = []
 
         func show(_ theme: ChatVisualTheme, in view: WKWebView) {
             guard loaded, theme != shownTheme else { return }
@@ -248,7 +274,92 @@ struct ChatVisualFrame: UIViewRepresentable {
                 if let url = ChatVisualNavigation.web((message["url"] as? String).flatMap(URL.init(string:))) {
                     UIApplication.shared.open(url)
                 }
+            case "board":
+                if let view { measuredBoard(message, in: view) }
             default: break
+            }
+        }
+
+        /// Takes a person's pan and pinch of a board as theirs from the first one on.
+        func follow(_ scrollView: UIScrollView) {
+            scrollView.panGestureRecognizer.addTarget(self, action: #selector(moved(_:)))
+            followPinch(scrollView)
+            let keep: (UIScrollView) -> Void = { [weak self] scrollView in
+                MainActor.assumeIsolated { self?.keep(scrollView) }
+            }
+            observations = [
+                scrollView.observe(\.contentOffset) { scrollView, _ in keep(scrollView) },
+                scrollView.observe(\.zoomScale) { scrollView, _ in keep(scrollView) },
+            ]
+        }
+
+        // The web view makes its pinch only once the page says it may zoom.
+        private func followPinch(_ scrollView: UIScrollView) {
+            guard !pinchFollowed, let pinch = scrollView.pinchGestureRecognizer else { return }
+            pinchFollowed = true
+            pinch.addTarget(self, action: #selector(moved(_:)))
+        }
+
+        @objc private func moved(_ recognizer: UIGestureRecognizer) {
+            guard recognizer.state == .began, let board = parent?.board else { return }
+            board.touched = true
+            tracking = true
+        }
+
+        private func keep(_ scrollView: UIScrollView) {
+            guard tracking, let board = parent?.board else { return }
+            board.view = (scrollView.zoomScale, scrollView.contentOffset)
+        }
+
+        private func measuredBoard(_ message: [String: Any], in view: WKWebView) {
+            guard let board = parent?.board, let width = message["width"] as? Double,
+                let height = message["height"] as? Double, let frameWidth = message["frameWidth"] as? Double,
+                let frameHeight = message["frameHeight"] as? Double, frameWidth > 0, frameHeight > 0
+            else { return }
+            let first = measured == nil
+            let size = CGSize(width: width, height: height)
+            let frame = CGSize(width: frameWidth, height: frameHeight)
+            measured = (size, frame)
+            markShown()
+            followPinch(view.scrollView)
+            guard board.touched, let kept = board.world else {
+                place(DesignBoard.fit(board: size, frame: frame), in: view)
+                return
+            }
+            let restored = first ? board.view : nil
+            place(kept, in: view) { [weak self, weak view] in
+                guard let view else { return }
+                if let restored {
+                    view.scrollView.setZoomScale(restored.zoom, animated: false)
+                    view.scrollView.setContentOffset(restored.offset, animated: false)
+                }
+                self?.tracking = true
+            }
+        }
+
+        /// The whole board again, at the view's own zoom of one and scrolled to its start.
+        func fitBoard(in view: WKWebView) {
+            guard let board = parent?.board, let measured else { return }
+            board.touched = false
+            board.view = nil
+            tracking = false
+            let scrollView = view.scrollView
+            scrollView.setZoomScale(scrollView.minimumZoomScale, animated: false)
+            scrollView.setContentOffset(
+                CGPoint(x: -scrollView.adjustedContentInset.left, y: -scrollView.adjustedContentInset.top),
+                animated: false)
+            place(DesignBoard.fit(board: measured.board, frame: measured.frame), in: view)
+        }
+
+        private func place(_ camera: DesignBoard.Camera, in view: WKWebView, then: (() -> Void)? = nil) {
+            guard let measured else { return }
+            parent?.board?.world = camera
+            let extent = DesignBoard.extent(board: measured.board, camera: camera)
+            let call =
+                "window.__ruimteBoard.place(\(camera.x), \(camera.y), \(camera.zoom), \(extent.width), \(extent.height)); true;"
+            Task {
+                _ = try? await view.evaluateJavaScript(call, contentWorld: ChatVisualFrame.world)
+                then?()
             }
         }
 
@@ -293,6 +404,8 @@ struct ChatVisualFrame: UIViewRepresentable {
             guard let page, let theme = parent?.theme else { return }
             parent?.assets?.reopen()
             loaded = false
+            measured = nil
+            tracking = false
             shownTheme = theme
             webView.load(URLRequest(url: ChatVisualFrame.address(page, theme: theme)))
         }

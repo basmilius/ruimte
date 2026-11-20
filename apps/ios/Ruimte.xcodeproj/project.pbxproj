@@ -64,6 +64,7 @@
 		2078E1D5C84F273F381AA240 /* LaunchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6D2983C599BF780FEA70F8A /* LaunchModel.swift */; };
 		226093BDE4A09AE44CB9B90A /* GitPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D69D1BF9802A60BF9D50BA2B /* GitPage.swift */; };
 		22B64B6C83CC6D51845273A6 /* ChatOutputCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34EC3280A698C1121455FECB /* ChatOutputCards.swift */; };
+		22BB081A58199C68D95B71D2 /* DesignBoardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9C7E874ACE61B0B07A460B3 /* DesignBoardTests.swift */; };
 		22D4E7461B92CDB6FA1056BB /* ChatSubagentRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2397286316071E20E0ED2DC4 /* ChatSubagentRow.swift */; };
 		232274F1989E0BA90BB73CA8 /* image.webp in Resources */ = {isa = PBXBuildFile; fileRef = 868B09445FC666B30675BD85 /* image.webp */; };
 		234C16E61F763570EB16611F /* ChatThreadRowsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 461A74B56D33B3D98887AA5C /* ChatThreadRowsTests.swift */; };
@@ -232,6 +233,7 @@
 		732C447BB97BFB93D6C23AD5 /* WorkspaceVisualTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D26BE9B9E4DD5A3540DE45FB /* WorkspaceVisualTests.swift */; };
 		7498C72FAEBD74F91C5D444B /* react-bits-license.txt in Resources */ = {isa = PBXBuildFile; fileRef = BBBD76A62FF092943652861E /* react-bits-license.txt */; };
 		74C49C8FF69574D8408DE421 /* WorkspaceViewSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19E795084D99E041A22F82D5 /* WorkspaceViewSections.swift */; };
+		7539F2ED8B23CFA9E88FB1C4 /* DesignBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2952DE9BD14732DC4B874D6 /* DesignBoard.swift */; };
 		7615B8DE933BA6A889564A74 /* MachineStartFolderRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C77364B541B38DAE88B7927 /* MachineStartFolderRow.swift */; };
 		77207C8AC9853E191CE3D8E2 /* VoiceScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC44D00034858B44169CFA7C /* VoiceScene.swift */; };
 		778AE32AE0E2E71F919F2B69 /* ChatStreaming.swift in Sources */ = {isa = PBXBuildFile; fileRef = 734608DCCFF78D2EC3AA1A53 /* ChatStreaming.swift */; };
@@ -933,6 +935,7 @@
 		D20613F31A87DDAC065BA022 /* NowRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowRequest.swift; sourceTree = "<group>"; };
 		D233E5DDE66A2D11678E13AF /* MachineClientsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineClientsSection.swift; sourceTree = "<group>"; };
 		D26BE9B9E4DD5A3540DE45FB /* WorkspaceVisualTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceVisualTests.swift; sourceTree = "<group>"; };
+		D2952DE9BD14732DC4B874D6 /* DesignBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignBoard.swift; sourceTree = "<group>"; };
 		D4BD54102FE5027BBC5278C7 /* FilePDFPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilePDFPreview.swift; sourceTree = "<group>"; };
 		D5D4B5EDC969E1EDFF6BF202 /* document-renderer-licenses.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "document-renderer-licenses.txt"; sourceTree = "<group>"; };
 		D69D1BF9802A60BF9D50BA2B /* GitPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPage.swift; sourceTree = "<group>"; };
@@ -968,6 +971,7 @@
 		E8658D05270F5D27871DF224 /* NotificationSessionPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSessionPage.swift; sourceTree = "<group>"; };
 		E8B857DADDF760B5989FC34A /* ChatResumeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatResumeTests.swift; sourceTree = "<group>"; };
 		E93AE499003A3FE7DA251656 /* ProjectFilesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectFilesTests.swift; sourceTree = "<group>"; };
+		E9C7E874ACE61B0B07A460B3 /* DesignBoardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignBoardTests.swift; sourceTree = "<group>"; };
 		EA1E6B2B79C7846350EFB6FB /* rotated.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = rotated.jpg; sourceTree = "<group>"; };
 		EA4765B876EC0A5E3E010F07 /* FileImagePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileImagePreview.swift; sourceTree = "<group>"; };
 		EAE336B51506F84D7272583D /* ProcessesModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessesModel.swift; sourceTree = "<group>"; };
@@ -1089,6 +1093,7 @@
 				78AF6CD8C27D406B882C8FA0 /* CanvasPage.swift */,
 				945C01FE70408377BA62088E /* CanvasStartGrid.swift */,
 				55A7B354B1C2140F421E6F0F /* DesignAgent.swift */,
+				D2952DE9BD14732DC4B874D6 /* DesignBoard.swift */,
 				95550DD3B0CDBFDFE8C5B0C5 /* DesignPage.swift */,
 				5C1407E547F13EDD860987A9 /* DesignPlace.swift */,
 				AB9FE9579BEA2554FF5CD852 /* DesignScripts.swift */,
@@ -1462,6 +1467,7 @@
 				946752BBBF1A7A60C243497D /* CrashReportsTests.swift */,
 				F186BBDA9E215B7EFE782B1F /* DefaultsKeysTests.swift */,
 				4944525661AF005A42AC5473 /* DesignAgentTests.swift */,
+				E9C7E874ACE61B0B07A460B3 /* DesignBoardTests.swift */,
 				202B3682864DB4188582A378 /* DesignInliningTests.swift */,
 				B18EA9099D4112D211FABBF0 /* DesignPlaceTests.swift */,
 				A7AAF75DE26A0B201AD67AFA /* DeviceToolsTests.swift */,
@@ -2155,6 +2161,7 @@
 				EB87F0D16840DD587A8A8697 /* CrashReportsTests.swift in Sources */,
 				3E72CBBB8FE40D0F094DE4F5 /* DefaultsKeysTests.swift in Sources */,
 				332C489D5AE656FA7FD02D36 /* DesignAgentTests.swift in Sources */,
+				22BB081A58199C68D95B71D2 /* DesignBoardTests.swift in Sources */,
 				A0492EB60C743D24210C31E3 /* DesignInliningTests.swift in Sources */,
 				2FF01D4B33570F88355EF1C4 /* DesignPlaceTests.swift in Sources */,
 				86A3FC0078CC1DE0D49E080F /* DeviceToolsTests.swift in Sources */,
@@ -2336,6 +2343,7 @@
 				576907364C4EADD7032E1D70 /* CrashScrubber.swift in Sources */,
 				A1E8DD43229FDCB50923DE93 /* DefaultsKeys.swift in Sources */,
 				B37D72E33F1F88BF783DD4E0 /* DesignAgent.swift in Sources */,
+				7539F2ED8B23CFA9E88FB1C4 /* DesignBoard.swift in Sources */,
 				54D421EC8B8F46E3BE3CEC1E /* DesignPage.swift in Sources */,
 				6D470C9A9D57012F495C79E4 /* DesignPlace.swift in Sources */,
 				4E0DAF34126168F83F9DA9A4 /* DesignScripts.swift in Sources */,

@@ -175,8 +175,8 @@ struct ChatDesignTaskCard: View {
     }
 }
 
-/// One page laid out at a desktop's width and scaled into the frame, in the sandbox a Design draws it in. It is only
-/// a look: no touch reaches it, and VoiceOver reads it as one picture.
+/// One page laid out at a desktop's width and scaled into the frame, in the sandbox a Design draws it in, and a board
+/// fitted whole into it. It is only a look: no touch reaches it, and VoiceOver reads it as one picture.
 private struct DesignPagePreview: View {
     let client: any MachineRequesting
     let folder: String
@@ -206,7 +206,8 @@ private struct DesignPagePreview: View {
 }
 
 /// One page of a design in the sandbox a visual runs in, with what it reads while it runs bounded per time it opens.
-/// `fill` scrolls and zooms the page inside, as the Design place shows a page; without it the page only shows.
+/// `fill` scrolls and zooms the page inside, as the Design place shows a page; without it the page only shows. A board
+/// opens fitted, and stands where `camera` keeps it; without one it fits each time it opens.
 struct DesignPageFrame: View {
     let client: any MachineRequesting
     let folder: String
@@ -216,10 +217,11 @@ struct DesignPageFrame: View {
     var fill = false
     @State private var failed = false
     @State private var assets: DesignFiles.RuntimeAssets
+    @State private var camera: DesignBoardCamera
 
     init(
         client: any MachineRequesting, folder: String, file: String, design: String, project: String,
-        fill: Bool = false
+        fill: Bool = false, camera: DesignBoardCamera? = nil
     ) {
         self.client = client
         self.folder = folder
@@ -228,6 +230,7 @@ struct DesignPageFrame: View {
         self.project = project
         self.fill = fill
         _assets = State(initialValue: DesignFiles.runtimeAssets(client, folder: folder))
+        _camera = State(initialValue: camera ?? DesignBoardCamera())
     }
 
     var body: some View {
@@ -240,7 +243,8 @@ struct DesignPageFrame: View {
                     read: DesignFiles.fileReader(client))
             },
             fill: fill,
-            assets: assets
+            assets: assets,
+            board: camera
         )
     }
 }

@@ -255,6 +255,7 @@ private struct DesignPageView: View {
     @State private var attempt = 0
     /// What the page reads while it runs, bounded per time the page is opened.
     @State private var assets: DesignFiles.RuntimeAssets
+    @State private var board = DesignBoardCamera()
 
     init(client: any MachineRequesting, folder: String, file: String, design: String, project: String) {
         self.client = client
@@ -275,13 +276,19 @@ private struct DesignPageView: View {
                     read: DesignFiles.fileReader(client))
             },
             fill: true,
-            assets: assets
+            assets: assets,
+            board: board
         )
         .id(attempt)
         .modifier(MobilePageSurface())
         .navigationTitle(DesignFiles.pageName(file))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            if board.isBoard {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(String(localized: "Fit design"), lucideIcon: "maximize") { board.fit() }
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     failed = false

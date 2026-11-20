@@ -12955,6 +12955,16 @@
         }
       }
     },
+    "Fit design" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Design passend zoomen"
+          }
+        }
+      }
+    },
     "Fit drawing" : {
       "localizations" : {
         "nl" : {
