@@ -1,4 +1,4 @@
-import { isPathBelow, type FsEntry } from '@ruimte/contracts';
+import { isDesignPage, isPathBelow, type FsEntry } from '@ruimte/contracts';
 import { TransportError } from '@/transport-api/transport';
 
 export type DesignRead = { kind: 'listed'; entries: FsEntry[] } | { kind: 'missing' } | { kind: 'failed'; reason: string };
@@ -52,10 +52,10 @@ export function scopedListingAfter(before: ScopedListing | null, scope: string, 
     return { scope, listing: listingAfter(listingOf(before, scope) ?? { entries: null, problem: null }, read) };
 }
 
-/* The pages of a design: the HTML files right in its folder, by name, as the tabs above the stage show them. */
+/* The pages of a design: the HTML files right in its folder that are pages (`isDesignPage`), by name, as the tabs above the stage show them. */
 export function designFiles(entries: readonly FsEntry[]): string[] {
     return entries
-        .filter((entry) => entry.kind === 'file' && /\.html?$/i.test(entry.name))
+        .filter((entry) => entry.kind === 'file' && isDesignPage(entry.name))
         .map((entry) => entry.name)
         .sort((one, other) => one.localeCompare(other, undefined, { numeric: true, sensitivity: 'base' }));
 }
@@ -64,6 +64,46 @@ export function designFiles(entries: readonly FsEntry[]): string[] {
 export function pagesByChange(entries: readonly FsEntry[]): string[] {
     const changed = new Map(entries.map((entry) => [entry.name, entry.mtime]));
     return designFiles(entries).sort((one, other) => changed.get(other)! - changed.get(one)!);
+}
+
+/*
+ * The page of `pages` that a text names first, by its file name as it stands in a path or on its own, also
+ * percent-encoded as in a link. A name inside a longer one (`Pricing.html` in `Old Pricing.html`) is the longer one.
+ */
+export function firstNamedPage(text: string, pages: readonly string[]): string | null {
+    const found: { page: string; start: number; end: number }[] = [];
+
+    for (const page of pages) {
+        for (const spelled of new Set([page, encodeURI(page)])) {
+            for (let at = text.indexOf(spelled); at !== -1; at = text.indexOf(spelled, at + 1)) {
+                const end = at + spelled.length;
+
+                if (!/[\w-]/.test(text.charAt(at - 1)) && !/[\w-]/.test(text.charAt(end))) {
+                    found.push({ page, start: at, end });
+                }
+            }
+        }
+    }
+
+    const named = found
+        .filter((match) => !found.some((other) => other.end === match.end && other.start < match.start))
+        .sort((one, other) => one.start - other.start);
+
+    return named[0]?.page ?? null;
+}
+
+/*
+ * The page a design agent's card shows: the one a person picked while it is there, else, once the task is done, the
+ * page its result names first, which the agent is asked to name as the one to look at first; else the newest.
+ */
+export function cardPage(newestFirst: readonly string[], picked: string | null, result: string | null): string | null {
+    if (picked !== null && newestFirst.includes(picked)) {
+        return picked;
+    }
+
+    const named = result === null ? null : firstNamedPage(result, newestFirst);
+
+    return named ?? newestFirst[0] ?? null;
 }
 
 export function pageMtime(entries: readonly FsEntry[], file: string): number | null {

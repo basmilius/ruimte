@@ -284,6 +284,19 @@
     },
     "design": {
         "pages": "Pagina",
+        "card": {
+            "wrote": "{{name}} geschreven",
+            "done_one": "Klaar · {{count}} pagina",
+            "done_other": "Klaar · {{count}} pagina's",
+            "firstPage": "Het design verschijnt hier zodra de eerste pagina geschreven is.",
+            "stoppedEmpty": "De agent stopte voordat er een pagina geschreven was.",
+            "open": "Design openen",
+            "pages": "Pagina's van het design",
+            "inProgress": "Bezig",
+            "preview": "Voorbeeld van {{name}}",
+            "gone": "De map van het design is weg.",
+            "back": "Terug naar de chat"
+        },
         "pageChanged": "Aangepast {{ago}}",
         "loading": "Het design wordt gelezen…",
         "empty": "Nog geen pagina's. Vraag de chat om een eerste ontwerp.",

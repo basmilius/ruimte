@@ -1,5 +1,7 @@
 import { DESIGN_PAGE_MAX_BYTES } from '@ruimte/contracts';
+import { ZOOM_MAX, ZOOM_MIN } from '@/canvas-model/math';
 import { DESIGN_METHODS } from '@/design/design-protocol';
+import { SPACE_CONTROLS } from '@/surface/canvas/space-pan';
 
 /*
  * What runs inside a design page, in the sandbox: the canvas a page asks for with
@@ -13,10 +15,12 @@ const RUNTIME = String.raw`(function () {
     if (window.__ruimteDesign) { return; }
     window.__ruimteDesign = true;
     var M = ${JSON.stringify(DESIGN_METHODS)};
-    var MIN = 0.05, MAX = 8, PAD = 48;
+    var MIN = ${ZOOM_MIN}, MAX = ${ZOOM_MAX}, PAD = 48;
+    var SPACE_WORKS = ${JSON.stringify(`${SPACE_CONTROLS}, textarea`)};
     var staged = window.parent !== window;
-    var canvas = false, world = null, layer = null, told = 0;
+    var canvas = false, world = null, layer = null;
     var camera = { x: PAD, y: PAD, zoom: 1 };
+    var spaceHere = false, spaceThere = false, dragging = false, swallowClick = false;
     var tool = 'view', hovered = null, selected = null, pins = [], tweaks = null;
 
     function post(method, params) {
@@ -30,18 +34,16 @@ const RUNTIME = String.raw`(function () {
         world.style.transform = 'translate(' + camera.x + 'px, ' + camera.y + 'px) scale(' + camera.zoom + ')';
     }
 
-    function apply() {
-        if (!canvas) { return; }
+    function show() {
         place();
         draw();
-        var now = Date.now();
-        clearTimeout(apply.timer);
-        if (now - told > 120) {
-            told = now;
-            post(M.camera, { x: camera.x, y: camera.y, zoom: camera.zoom });
-        } else {
-            apply.timer = setTimeout(function () { told = Date.now(); post(M.camera, { x: camera.x, y: camera.y, zoom: camera.zoom }); }, 140);
-        }
+    }
+
+    // The stage owns the camera; only a move the page makes itself, a fit or a link to an option, goes back to it.
+    function apply() {
+        if (!canvas) { return; }
+        show();
+        post(M.camera, { x: camera.x, y: camera.y, zoom: camera.zoom });
     }
 
     function fitTo(box) {
@@ -51,11 +53,11 @@ const RUNTIME = String.raw`(function () {
         apply();
     }
 
-    // The board is the document; a wide one fits its width and starts at its top, the way a long page reads.
+    // The board is the document; a wide one fits its width, and a tall one starts at its top, the way a long page reads.
     function fitAll() {
         var width = Math.max(world.scrollWidth, 1);
         var zoom = Math.max(MIN, Math.min(1, (innerWidth - 2 * PAD) / width));
-        camera = { zoom: zoom, x: Math.max(PAD, (innerWidth - width * zoom) / 2), y: PAD };
+        camera = { zoom: zoom, x: Math.max(PAD, (innerWidth - width * zoom) / 2), y: Math.max(PAD, (innerHeight - world.scrollHeight * zoom) / 2) };
         apply();
     }
 
@@ -65,10 +67,44 @@ const RUNTIME = String.raw`(function () {
         return { left: left, top: top, width: element.offsetWidth, height: element.offsetHeight };
     }
 
-    function zoomAt(clientX, clientY, factor) {
-        var zoom = Math.min(MAX, Math.max(MIN, camera.zoom * factor));
-        camera = { zoom: zoom, x: clientX - (clientX - camera.x) * (zoom / camera.zoom), y: clientY - (clientY - camera.y) * (zoom / camera.zoom) };
-        apply();
+    function grabCursor() {
+        var root = document.documentElement;
+        root.classList.toggle('ruimte-design-grab', (spaceHere || spaceThere) && !dragging);
+        root.classList.toggle('ruimte-design-grabbing', dragging);
+    }
+
+    function holdSpace(down) {
+        spaceHere = down;
+        grabCursor();
+    }
+
+    // A middle drag pans, and so does a left drag with Space held or on the bare board with the select tool, as on a Ruimte canvas.
+    function startPan(event) {
+        var background = event.target === document.body || event.target === document.documentElement || event.target === world;
+        swallowClick = false;
+        if (!(event.button === 1 || (event.button === 0 && (spaceHere || spaceThere || (background && tool === 'view'))))) { return; }
+        var id = event.pointerId, last = { x: event.clientX, y: event.clientY };
+        // Space and a click of its own would also pick an element with Comment or Edit.
+        swallowClick = event.button === 0;
+        dragging = true;
+        grabCursor();
+        try { document.documentElement.setPointerCapture(id); } catch (e) {}
+        function move(next) {
+            if (next.pointerId !== id) { return; }
+            post(M.pan, { dx: next.clientX - last.x, dy: next.clientY - last.y });
+            last = { x: next.clientX, y: next.clientY };
+        }
+        function end(next) {
+            if (next.pointerId !== id) { return; }
+            dragging = false;
+            grabCursor();
+            removeEventListener('pointermove', move, true);
+            removeEventListener('pointerup', end, true);
+            removeEventListener('pointercancel', end, true);
+        }
+        addEventListener('pointermove', move, true);
+        addEventListener('pointerup', end, true);
+        addEventListener('pointercancel', end, true);
     }
 
     function startCanvas() {
@@ -78,29 +114,32 @@ const RUNTIME = String.raw`(function () {
         while (body.firstChild) { world.appendChild(body.firstChild); }
         body.appendChild(world);
         var style = document.createElement('style');
-        style.textContent = 'html, body { overflow: hidden !important; height: 100% !important; } #ruimte-design-world { position: absolute; left: 0; top: 0; width: max-content; min-width: 100vw; transform-origin: 0 0; }';
+        style.textContent = 'html, body { overflow: hidden !important; height: 100% !important; } #ruimte-design-world { position: absolute; left: 0; top: 0; width: max-content; min-width: 100vw; transform-origin: 0 0; } html.ruimte-design-grab, html.ruimte-design-grab * { cursor: grab !important; } html.ruimte-design-grabbing, html.ruimte-design-grabbing * { cursor: grabbing !important; user-select: none !important; }';
         document.head.appendChild(style);
+        // The stage moves the camera with the canvas's own pan and zoom, so the page only hands the wheel on.
         addEventListener('wheel', function (event) {
             event.preventDefault();
-            if (event.ctrlKey || event.metaKey) {
-                zoomAt(event.clientX, event.clientY, Math.exp(-event.deltaY * (event.deltaMode === 1 ? 0.05 : 0.01)));
-            } else {
-                camera = { zoom: camera.zoom, x: camera.x - event.deltaX, y: camera.y - event.deltaY };
-                apply();
-            }
+            post(M.wheel, { deltaX: event.deltaX, deltaY: event.deltaY, deltaMode: event.deltaMode, ctrlKey: event.ctrlKey, metaKey: event.metaKey, timeStamp: event.timeStamp, x: event.clientX, y: event.clientY });
         }, { passive: false });
-        addEventListener('pointerdown', function (event) {
-            var background = event.target === document.body || event.target === document.documentElement || event.target === world;
-            if (tool === 'draw' || !(event.button === 1 || (event.button === 0 && background && tool === 'view'))) { return; }
+        addEventListener('pointerdown', startPan, true);
+        // Stopped on the mouse event and not the pointer event, which would leave the text selection and the middle button's scroll to the browser.
+        addEventListener('mousedown', function (event) { if (dragging) { event.preventDefault(); } }, true);
+        addEventListener('auxclick', function (event) { if (event.button === 1) { event.preventDefault(); } }, true);
+        addEventListener('click', function (event) {
+            if (!swallowClick) { return; }
+            swallowClick = false;
             event.preventDefault();
-            var from ={ x: event.clientX - camera.x, y: event.clientY - camera.y };
-            document.body.style.cursor = 'grabbing';
-            function move(next) { camera = { zoom: camera.zoom, x: next.clientX - from.x, y: next.clientY - from.y }; apply(); }
-            function end() { document.body.style.cursor = ''; removeEventListener('pointermove', move); removeEventListener('pointerup', end); removeEventListener('pointercancel', end); }
-            addEventListener('pointermove', move);
-            addEventListener('pointerup', end);
-            addEventListener('pointercancel', end);
-        });
+            event.stopImmediatePropagation();
+        }, true);
+        addEventListener('keydown', function (event) {
+            var target = event.target;
+            if (event.code !== 'Space' || (target && (target.isContentEditable || (target.closest && target.closest(SPACE_WORKS))))) { return; }
+            event.preventDefault();
+            if (!spaceHere) { holdSpace(true); }
+        }, true);
+        addEventListener('keyup', function (event) { if (event.code === 'Space' && spaceHere) { holdSpace(false); } }, true);
+        // A Space that goes up while another window has the keyboard never reaches this page.
+        addEventListener('blur', function () { if (spaceHere) { holdSpace(false); } });
         // Told to no one: a page that opens again gets its camera from the stage, which this would overwrite.
         place();
     }
@@ -110,7 +149,7 @@ const RUNTIME = String.raw`(function () {
     // A link to an option flies to it on the canvas and scrolls to it on a page.
     addEventListener('click', function (event) {
         var link = event.target && event.target.closest && event.target.closest('a[href^="#"]');
-        if (!link || tool !== 'view') { return; }
+        if (!link || tool !== 'view' || swallowClick) { return; }
         var target = document.getElementById(decodeURIComponent(link.getAttribute('href').slice(1)));
         if (!target) { return; }
         event.preventDefault();
@@ -292,9 +331,12 @@ const RUNTIME = String.raw`(function () {
         var params = data.params || {};
         if (data.method === M.camera && canvas && isFinite(params.x) && isFinite(params.y) && params.zoom > 0) {
             camera = { x: params.x, y: params.y, zoom: Math.min(MAX, Math.max(MIN, params.zoom)) };
-            apply();
-        } else if (data.method === M.zoom && canvas) {
-            if (params.action === 'fit') { fitAll(); } else if (params.action === 'set' && params.zoom > 0) { zoomAt(innerWidth / 2, innerHeight / 2, params.zoom / camera.zoom); }
+            show();
+        } else if (data.method === M.zoom && canvas && params.action === 'fit') {
+            fitAll();
+        } else if (data.method === M.space && canvas) {
+            spaceThere = params.down === true;
+            grabCursor();
         } else if (data.method === M.tool && typeof params.tool === 'string') {
             tool = params.tool;
             hovered = null;
@@ -323,7 +365,7 @@ const RUNTIME = String.raw`(function () {
         startTools();
         tweaks = readTweaks();
         if (tweaks) { applyTweaks(valuesOf(tweaks)); }
-        post(M.ready, { canvas: canvas, tweaks: tweaks });
+        post(M.ready, canvas ? { canvas: true, tweaks: tweaks, camera: camera } : { canvas: false, tweaks: tweaks });
     }
 
     if (document.readyState === 'loading') {

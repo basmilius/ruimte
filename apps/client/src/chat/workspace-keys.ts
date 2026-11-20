@@ -5,6 +5,7 @@ import { resetChatTextSize, stepChatTextSize } from '@/chat/text-size';
 import { commandForKey } from '@/commands/registry';
 import { countCommand } from '@/commands/usage';
 import { isPlainEscape, type WorkspaceKeys } from '@/commands/workspace-keys';
+import { closeAgentDesign } from '@/design/design-agent';
 import { useRoutinesStage } from '@/state/routines-stage';
 import { useUi } from '@/state/ui';
 import { isTypingTarget } from '@/surface/canvas/typing-target';
@@ -45,12 +46,12 @@ export function chatKeys(): WorkspaceKeys {
                 return true;
             }
 
-            // A chat that shows a sub-agent goes one level back up first, the way a drawing clears its selection before it lets go of the keyboard.
+            // A chat that shows an agent's design or a sub-agent goes one level back up first, the way a drawing clears its selection before it lets go of the keyboard.
             if (!isPlainEscape(event) || isInFloatingLayer(event.target) || isTypingTarget(event.target)) {
                 return false;
             }
             const key = keyboardChatKey();
-            if (key !== null && useSubagentView.getState().back(key)) {
+            if (key !== null && (closeAgentDesign(key) || useSubagentView.getState().back(key))) {
                 event.preventDefault();
                 event.stopPropagation();
 

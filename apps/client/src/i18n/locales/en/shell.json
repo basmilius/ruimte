@@ -284,6 +284,19 @@
     },
     "design": {
         "pages": "Page",
+        "card": {
+            "wrote": "Wrote {{name}}",
+            "done_one": "Done · {{count}} page",
+            "done_other": "Done · {{count}} pages",
+            "firstPage": "The design shows here once its first page is written.",
+            "stoppedEmpty": "The agent stopped before it wrote a page.",
+            "open": "Open design",
+            "pages": "Pages of the design",
+            "inProgress": "In progress",
+            "preview": "Preview of {{name}}",
+            "gone": "The design's folder is gone.",
+            "back": "Back to the chat"
+        },
         "pageChanged": "Changed {{ago}}",
         "loading": "Reading the design…",
         "empty": "No pages yet. Ask the chat for a first design.",

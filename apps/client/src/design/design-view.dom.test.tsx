@@ -109,6 +109,28 @@ describe('a design view', () => {
         expect(posted.find((message) => message.method === DESIGN_METHODS.camera)?.params).toEqual(camera);
     });
 
+    test('moves a board by a drag the page hands over, and draws it back into the page', async () => {
+        const posted: { method: string; params?: unknown }[] = [];
+        const frame = { postMessage: (message: { method: string; params?: unknown }) => posted.push(message) };
+
+        await until(() => shownPage() !== null);
+
+        const stand = document.createElement('iframe');
+
+        Object.defineProperty(stand, 'contentWindow', { value: frame });
+        mounted.host.querySelector('button[aria-label^="Page: "]')?.parentElement?.nextElementSibling?.prepend(stand);
+
+        const say = (method: string, params: object): Promise<void> =>
+            act(async () => {
+                window.dispatchEvent(new MessageEvent('message', { source: frame as never, data: { jsonrpc: '2.0', method, params } }));
+            });
+
+        await say(DESIGN_METHODS.ready, { canvas: true, tweaks: null, camera: { x: 48, y: 48, zoom: 1 } });
+        await say(DESIGN_METHODS.pan, { dx: 30, dy: -10 });
+
+        expect(posted.filter((message) => message.method === DESIGN_METHODS.camera).at(-1)?.params).toEqual({ x: 78, y: 38, zoom: 1 });
+    });
+
     test('a press in the page focuses its cell and leaves the keyboard in the page', async () => {
         await until(() => shownPage() !== null);
 

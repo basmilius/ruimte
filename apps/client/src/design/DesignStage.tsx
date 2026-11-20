@@ -2,11 +2,13 @@ import { Button, EmptyState, Icon, Menu, PromptDialog, Segmented, Separator, Zoo
 import { formatAgo } from '@adecore/ui/format';
 import type { ChatAttachmentUpload, FsEntry } from '@ruimte/contracts';
 import { ChevronDown, FileCode2, MessageSquarePlus, MousePointer2, PenLine, Send, SquareMousePointer, Trash2, TriangleAlert } from 'lucide-react';
-import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useContext, useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from 'react';
 import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
+import type { Camera } from '@/canvas-model/math';
 import { useFolderWatch } from '@/controllers/fs-watch';
+import { createBoardCamera } from '@/design/board-camera';
 import { editsCss, editsOf, withEdits, withTweakValues, type DesignEdits } from '@/design/design-file';
 import { bakePrompt, commentsPrompt, drawPrompt, textEditPrompt, type DesignComment } from '@/design/design-messages';
 import {
@@ -27,7 +29,6 @@ import {
     tweaksOf,
     type DesignElement,
     type DesignTool,
-    type DesignZoom,
     type Tweaks,
     type TweakValue
 } from '@/design/design-protocol';
@@ -39,9 +40,10 @@ import { DesignEditPanel } from '@/design/DesignEditPanel';
 import { DesignPageFrame } from '@/design/DesignPageFrame';
 import { DesignTweaks } from '@/design/DesignTweaks';
 import { useEndpointId } from '@/state/current-endpoint';
-import { designCameraKey, useDesignChat } from '@/state/design-chat';
+import { designCameraKey, useDesignChat, type PageFollow } from '@/state/design-chat';
 import { useToasts } from '@/state/toasts';
 import { CellViewContext } from '@/state/workspace-stores';
+import { isSpaceDown, subscribeSpacePan } from '@/surface/canvas/space-pan';
 import { focusCellOfView } from '@/surface/guest-focus';
 import { NodeNotice } from '@/surface/nodes/NodeNotice';
 import { DesignScene } from '@/ui/EmptyScenes';
@@ -90,6 +92,8 @@ interface StageProps {
     watched: string;
     /* The one page a card on a canvas shows, which offers no other; absent, the bar picks among them all. */
     pinned?: string;
+    /* How the stage takes a page the chat makes; `every` when absent. */
+    follow?: PageFollow;
 }
 
 /*
@@ -99,7 +103,7 @@ interface StageProps {
  * the tweaks and edits not saved yet. What the tools
  * gather goes to the chat in front as an ordinary message; only Edit and Tweaks write the file.
  */
-export function DesignStage({ designId, chatId, folder, watched, pinned }: StageProps) {
+export function DesignStage({ designId, chatId, folder, watched, pinned, follow = 'every' }: StageProps) {
     const { t } = useTranslation('shell');
     const endpointId = useEndpointId();
     const transport = useTransport();
@@ -113,6 +117,8 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
     const shownPage = useDesignChat((state) => state.pages[designId] ?? null);
     const chosen = pinned ?? shownPage;
     const showPage = useDesignChat((state) => state.showPage);
+    const pickPage = useDesignChat((state) => state.pickPage);
+    const followNewPage = useDesignChat((state) => state.followNewPage);
     const [version, setVersion] = useState(0);
     const [reloads, setReloads] = useState(0);
     const [tool, setTool] = useState<DesignTool>('view');
@@ -126,6 +132,8 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
     const [heldFor, setHeldFor] = useState<string | null>(null);
     const [deleting, setDeleting] = useState<string | null>(null);
     const [deleteBusy, setDeleteBusy] = useState(false);
+    const [board] = useState(() => createBoardCamera());
+    const spaceDown = useSyncExternalStore(subscribeSpacePan, isSpaceDown, () => false);
     const now = useNow(MINUTE_MS);
     const frameBox = useRef<HTMLDivElement>(null);
     const located = useRef<((elements: DesignElement[]) => void) | null>(null);
@@ -159,7 +167,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
         known.current = { folder, pages: new Set(pages) };
 
         if (arrived !== undefined && pinned === undefined && !unsent) {
-            showPage(designId, arrived);
+            followNewPage(designId, arrived, follow);
         }
     });
 
@@ -262,14 +270,25 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
                 for (const [selector, styles] of Object.entries(edits)) {
                     frame.postMessage(designMessage(DESIGN_METHODS.style, { selector, styles }), '*');
                 }
-                if (kept !== undefined && message.params.canvas) {
-                    frame.postMessage(designMessage(DESIGN_METHODS.camera, kept), '*');
+
+                const opening = kept ?? message.params.camera;
+
+                if (message.params.canvas && opening !== undefined) {
+                    frame.postMessage(designMessage(DESIGN_METHODS.space, { down: isSpaceDown() }), '*');
+                    // A copy, so the camera the stage still holds for this page counts as a change and reaches the page.
+                    board.store.getState().setCamera({ ...opening });
                 }
+
                 return;
             }
             case DESIGN_METHODS.camera:
-                useDesignChat.getState().keepCamera(designCameraKey(designId, active), message.params);
-                setZoom(message.params.zoom);
+                board.store.getState().setCamera(message.params);
+                return;
+            case DESIGN_METHODS.wheel:
+                board.wheel(message.params, { x: message.params.x, y: message.params.y });
+                return;
+            case DESIGN_METHODS.pan:
+                board.pan(message.params.dx, message.params.dy);
                 return;
             case DESIGN_METHODS.press:
                 if (cellView !== null) {
@@ -315,13 +334,45 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
         send(DESIGN_METHODS.pins, { pins: pinsOf(comments) });
     }, [comments]);
 
+    // The board's camera moves here, from the page's wheel and drags or a camera it reports, and the page draws it.
+    const onCamera = useEffectEvent((camera: Camera): void => {
+        send(DESIGN_METHODS.camera, camera);
+        setZoom(camera.zoom);
+
+        if (active !== null) {
+            useDesignChat.getState().keepCamera(designCameraKey(designId, active), camera);
+        }
+    });
+
+    useEffect(() => {
+        const unsubscribe = board.store.subscribe((state, previous) => {
+            if (state.camera !== previous.camera) {
+                onCamera(state.camera);
+            }
+        });
+
+        return () => {
+            unsubscribe();
+            board.dispose();
+        };
+    }, [board]);
+
+    // Space held while the keyboard is outside the page pans a drag inside it, as it does on a canvas.
+    useEffect(() => {
+        send(DESIGN_METHODS.space, { down: spaceDown });
+    }, [spaceDown]);
+
     const pickTool = (next: DesignTool): void => {
         setTool(next);
         setPicked(null);
         send(DESIGN_METHODS.tool, { tool: next });
     };
 
-    const zoomTo = (next: DesignZoom): void => send(DESIGN_METHODS.zoom, next);
+    const zoomTo = (next: number): void => {
+        const box = frameBox.current;
+
+        board.store.getState().zoomTo(next, box === null ? undefined : { x: box.clientWidth / 2, y: box.clientHeight / 2 });
+    };
 
     const dismiss = (): void => {
         setPicked(null);
@@ -465,7 +516,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
                         <Menu.Popup className="min-w-60">
                             {recent.map(({ file, changed }) => (
                                 <Menu.Row key={file} aria-label={pageName(file)}>
-                                    <Menu.Item className="min-w-0 grow" label={pageName(file)} onClick={() => showPage(designId, file)}>
+                                    <Menu.Item className="min-w-0 grow" label={pageName(file)} onClick={() => pickPage(designId, file)}>
                                         <Icon icon={FileCode2} size={14} className="shrink-0 text-text-muted" />
                                         <span className="flex min-w-0 grow flex-col">
                                             <span className="truncate">{pageName(file)}</span>
@@ -512,13 +563,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
                 {canvas && (
                     <>
                         <Separator />
-                        <ZoomControls
-                            size="sm"
-                            side="bottom"
-                            zoom={zoom}
-                            onZoomChange={(next) => zoomTo({ action: 'set', zoom: next })}
-                            onFitAll={() => zoomTo({ action: 'fit' })}
-                        />
+                        <ZoomControls size="sm" side="bottom" zoom={zoom} onZoomChange={zoomTo} onFitAll={() => send(DESIGN_METHODS.zoom, { action: 'fit' })} />
                     </>
                 )}
             </div>

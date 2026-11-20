@@ -3,10 +3,12 @@ import type { FsEntry } from '@ruimte/contracts';
 import { TransportError } from '@/transport-api/transport';
 import {
     arrangePages,
+    cardPage,
     changeReaches,
     designFiles,
     designReadFailed,
     designScope,
+    firstNamedPage,
     layoutPoint,
     listingAfter,
     listingOf,
@@ -32,6 +34,10 @@ describe('the pages of a design', () => {
         ];
 
         expect(designFiles(entries)).toEqual(['Old.HTM', 'Onboarding v2.html', 'Onboarding v10.html', 'Pricing.html']);
+    });
+
+    test('leave out a file the agent keeps for itself, named with an underscore or a dot', () => {
+        expect(designFiles([entry('Pricing.html'), entry('_tmp-check.html'), entry('.draft.html')])).toEqual(['Pricing.html']);
     });
 
     test('stand beside a design node the most recently changed first, and by name when changed at once', () => {
@@ -145,5 +151,37 @@ describe('the listing of a design folder', () => {
         expect(listingOf(before, designScope('machine', '/work/a'))).toEqual({ entries: pages, problem: null });
         expect(listingOf(before, designScope('machine', '/work/b'))).toBeNull();
         expect(listingOf(null, designScope('machine', '/work/a'))).toBeNull();
+    });
+});
+
+describe("the page a design agent's card shows", () => {
+    const newestFirst = ['Checkout.html', 'Old Pricing.html', 'Pricing.html'];
+    const result = [
+        'Made two pages:',
+        '- `.ruimte/private/designs/shop/Pricing.html`, the board with the variants',
+        '- `.ruimte/private/designs/shop/Checkout.html`'
+    ].join('\n');
+
+    test('is the newest while there is no result', () => {
+        expect(cardPage(newestFirst, null, null)).toBe('Checkout.html');
+    });
+
+    test('is the page the result names first once there is one', () => {
+        expect(cardPage(newestFirst, null, result)).toBe('Pricing.html');
+        expect(cardPage(newestFirst, null, 'Look at [the board](designs/shop/Old%20Pricing.html) first, then Pricing.html.')).toBe('Old Pricing.html');
+    });
+
+    test('takes a name inside a longer one as the longer one', () => {
+        expect(firstNamedPage('See Old Pricing.html, then Pricing.html', newestFirst)).toBe('Old Pricing.html');
+        expect(firstNamedPage('MyPricing.html is gone', newestFirst)).toBeNull();
+    });
+
+    test('is the newest when the result names no page of the folder', () => {
+        expect(cardPage(newestFirst, null, 'Made `Gone.html` and wrote notes in README.md.')).toBe('Checkout.html');
+    });
+
+    test('is the page a person picked, over the result and the newest, while it is there', () => {
+        expect(cardPage(newestFirst, 'Old Pricing.html', result)).toBe('Old Pricing.html');
+        expect(cardPage(newestFirst, 'Removed.html', result)).toBe('Pricing.html');
     });
 });

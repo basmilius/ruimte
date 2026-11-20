@@ -13,7 +13,7 @@ export interface Camera {
     zoom: number;
 }
 
-const ZOOM_MIN = 0.1;
+export const ZOOM_MIN = 0.1;
 export const ZOOM_MAX = 4;
 export const GRID = CANVAS_GRID;
 

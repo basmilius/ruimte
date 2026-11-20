@@ -2,6 +2,7 @@ import { CANVAS_NODE_KINDS } from '@/canvas/node-kinds';
 import { DATABASE_TAB_BODY } from '@/database/tab-body';
 import { DATABASE_TAB_DRAG } from '@/database/tab-drag';
 import { DATABASE_VIEW_KIND } from '@/database/view-kind';
+import { AgentDesignKindBody } from '@/design/DesignKindBody';
 import { DESIGN_NODE_KIND, DESIGN_VIEW_KIND } from '@/design/node-kind';
 import { DEVICE_NODE_KIND, DEVICE_VIEW_KIND } from '@/devices/node-kind';
 import { DIAGRAM_VIEW_KIND } from '@/diagram/view-kind';
@@ -18,6 +19,7 @@ import { nodeKindRegistry } from '@/registry/node-kinds';
 import { viewKindRegistry } from '@/registry/view-kinds';
 import { ROUTINE_NODE_KIND } from '@/routines/node-kind';
 import { tabBodyRegistry } from '@/state/tab-bodies';
+import { provideAgentDesignBody } from '@/surface/nodes/agent-design-slot';
 import { tabDragRegistry } from '@/surface/tab-drags';
 
 let installed = false;
@@ -46,4 +48,5 @@ export function installWorkspaceSurfaces(): void {
     );
     tabBodyRegistry.add(DATABASE_TAB_BODY, ARTIFACT_TAB_BODY, SESSION_TAB_BODY);
     tabDragRegistry.add(DATABASE_TAB_DRAG, ARTIFACT_TAB_DRAG, DIFF_TAB_DRAG);
+    provideAgentDesignBody(AgentDesignKindBody);
 }

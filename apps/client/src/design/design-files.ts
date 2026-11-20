@@ -7,6 +7,8 @@ import { useTransport } from '@/workspace/context';
 interface DesignPages {
     /* Null until the machine first answers. */
     pages: string[] | null;
+    /* When each page was last written, so what shows a page can open it again after a write. */
+    writtenAt: Readonly<Record<string, number>>;
     /* Why the last read failed, with the pages of the read before it still in `pages`. */
     problem: string | null;
     retry(): void;
@@ -61,8 +63,15 @@ export function useDesignPages(endpointId: string, folder: string | null, watche
     const retry = (): void => setVersion((previous) => previous + 1);
 
     if (folder === null || listing === null) {
-        return { pages: null, problem: null, retry };
+        return { pages: null, writtenAt: {}, problem: null, retry };
     }
 
-    return { pages: listing.entries === null ? [] : pagesByChange(listing.entries), problem: listing.problem, retry };
+    const entries = listing.entries ?? [];
+
+    return {
+        pages: pagesByChange(entries),
+        writtenAt: Object.fromEntries(entries.map((entry) => [entry.name, entry.mtime])),
+        problem: listing.problem,
+        retry
+    };
 }

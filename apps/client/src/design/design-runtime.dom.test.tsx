@@ -38,3 +38,50 @@ test('a canvas page opens at its top left at 100%, and tells the stage only that
     expect(transform).toBe('translate(48px, 48px) scale(1)');
     expect(posted.map((message) => message.method)).toEqual([DESIGN_METHODS.ready]);
 });
+
+test('a board hands its wheel and a middle drag to the stage, and grabs while it pans', () => {
+    const posted: { method: string; params?: unknown }[] = [];
+    const stand = { parent: { postMessage: (message: { method: string; params?: unknown }) => posted.push(message) } };
+    const listeners: Record<string, (event: object) => void> = {};
+
+    document.head.innerHTML = '<meta name="ruimte-design" content="canvas">';
+    document.body.innerHTML = '<div id="1a"></div>';
+    new Function('window', 'addEventListener', 'removeEventListener', DESIGN_RUNTIME)(
+        stand,
+        (type: string, listener: (event: object) => void) => {
+            listeners[type] = listener;
+        },
+        () => undefined
+    );
+
+    let prevented = 0;
+    const preventDefault = (): void => {
+        prevented++;
+    };
+
+    listeners.wheel({ deltaX: 3, deltaY: -40, deltaMode: 0, ctrlKey: true, metaKey: false, timeStamp: 7, clientX: 100, clientY: 60, preventDefault });
+    listeners.pointerdown({ button: 1, pointerId: 4, clientX: 10, clientY: 10, target: document.getElementById('1a') });
+    const grabbing = document.documentElement.classList.contains('ruimte-design-grabbing');
+    listeners.mousedown({ button: 1, preventDefault });
+    listeners.pointermove({ pointerId: 4, clientX: 25, clientY: 4 });
+    listeners.pointerup({ pointerId: 4 });
+    const released = !document.documentElement.classList.contains('ruimte-design-grabbing');
+
+    document.head.innerHTML = '';
+    document.body.innerHTML = '';
+
+    expect(posted.find((message) => message.method === DESIGN_METHODS.wheel)?.params).toEqual({
+        deltaX: 3,
+        deltaY: -40,
+        deltaMode: 0,
+        ctrlKey: true,
+        metaKey: false,
+        timeStamp: 7,
+        x: 100,
+        y: 60
+    });
+    expect(posted.find((message) => message.method === DESIGN_METHODS.pan)?.params).toEqual({ dx: 15, dy: -6 });
+    expect(prevented).toBe(2);
+    expect(grabbing).toBe(true);
+    expect(released).toBe(true);
+});

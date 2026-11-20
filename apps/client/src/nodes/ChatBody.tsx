@@ -27,9 +27,11 @@ import { OutputChatContext } from '@/output/chat-scope';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { DEFAULT_CHAT_TEXT_SIZE, useChatTextSizes } from '@/state/chat-text-size';
 import { useEndpointId } from '@/state/current-endpoint';
+import { useDesignChat } from '@/state/design-chat';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { bringPromptToFront } from '@/surface/canvas/prompt-stack';
+import { AgentDesignBody } from '@/surface/nodes/agent-design-slot';
 import { ChatOnCanvasContext } from '@/surface/nodes/chat-on-canvas';
 import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/surface/nodes/node-host';
 import { ConnectionNotice, NodeNotice } from '@/surface/nodes/NodeNotice';
@@ -70,6 +72,9 @@ export function ChatBody({
     const switched = useRef<Promise<void>>(Promise.resolve());
     const { trail } = useSubagentTrail(id);
     const shown = trail.at(-1);
+    // The design of a hidden design agent this chat opened from a task's card stands in its thread's place.
+    const DesignBody = AgentDesignBody;
+    const showsDesign = useDesignChat((state) => state.agentDesigns[endpointKey(endpointId, id)] !== undefined) && DesignBody !== null;
 
     useEffect(() => {
         // Taken once, so a node that leaves after the window moved to another machine still detaches from its own.
@@ -179,7 +184,8 @@ export function ChatBody({
                     wrap={(row) => <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border px-2 py-1">{row}</div>}
                 />
                 <OutputChatContext value={id}>
-                    <Activity mode={visible ? 'visible' : 'hidden'}>
+                    {/* Hidden rather than gone, so the thread is where it was once the design closes. */}
+                    <Activity mode={visible && !showsDesign ? 'visible' : 'hidden'}>
                         <LazyBoundary fallback={<div className="grow" />}>
                             <Timeline
                                 chatId={id}
@@ -207,6 +213,11 @@ export function ChatBody({
                             />
                         </LazyBoundary>
                     </Activity>
+                    {visible && showsDesign && DesignBody !== null && (
+                        <div className="flex min-h-0 grow flex-col">
+                            <DesignBody chatId={id} focused={focused} />
+                        </div>
+                    )}
                     {!visible && (
                         <div className="flex min-h-0 w-full grow items-center justify-center gap-2 px-4 text-text-faint" aria-hidden="true">
                             <Icon icon={MessageSquare} size={20} />

@@ -4,13 +4,19 @@ import type { DesignCamera } from '@/state/design-chat';
 
 /* The methods between the stage and the runtime in a design page, beside the bridge of every visual. */
 export const DESIGN_METHODS = {
-    // From the page: laid out and listening, whether it is a canvas, and the tweaks it declares.
+    // From the page: laid out and listening, whether it is a canvas with the camera it opened at, and the tweaks it declares.
     ready: 'ruimte/design/ready',
     // Both ways: where the camera of a canvas stands. The stage keeps it per page, so a write of the chat does not move it.
     camera: 'ruimte/design/camera',
+    // From the page: a wheel over a canvas, which the stage turns into a pan or a zoom the way a Ruimte canvas does.
+    wheel: 'ruimte/design/wheel',
+    // From the page: how far a drag that pans a canvas moved since the last one.
+    pan: 'ruimte/design/pan',
+    // From the stage: whether Space is held while the keyboard is outside the page, so a drag pans.
+    space: 'ruimte/design/space',
     // From the page: a person pressed in it, which never reaches the cell around the frame.
     press: 'ruimte/design/press',
-    // From the stage: a zoom a person asked for.
+    // From the stage: the whole board fitted into the stage, which only the page can measure.
     zoom: 'ruimte/design/zoom',
     // From the stage: the tool a person holds.
     tool: 'ruimte/design/tool',
@@ -42,8 +48,16 @@ const DesignCameraSchema = z.object({
     zoom: z.number().finite().min(0.01).max(16)
 }) satisfies z.ZodType<DesignCamera>;
 
-/* A zoom around the middle of the stage, or the whole board fitted into it. */
-export type DesignZoom = { action: 'set'; zoom: number } | { action: 'fit' };
+const WheelSchema = z.object({
+    deltaX: z.number().finite(),
+    deltaY: z.number().finite(),
+    deltaMode: z.number().int().min(0).max(2),
+    ctrlKey: z.boolean(),
+    metaKey: z.boolean(),
+    timeStamp: z.number().finite(),
+    x: z.number().finite(),
+    y: z.number().finite()
+});
 
 const TweakValueSchema = z.union([z.string().max(500), z.number().finite(), z.boolean()]);
 export type TweakValue = z.infer<typeof TweakValueSchema>;
@@ -82,8 +96,10 @@ function message<Method extends string, Params extends z.ZodType>(method: Method
 }
 
 const PageMessageSchema = z.discriminatedUnion('method', [
-    message(DESIGN_METHODS.ready, z.object({ canvas: z.boolean(), tweaks: z.unknown() })),
+    message(DESIGN_METHODS.ready, z.object({ canvas: z.boolean(), tweaks: z.unknown(), camera: DesignCameraSchema.optional() })),
     message(DESIGN_METHODS.camera, DesignCameraSchema),
+    message(DESIGN_METHODS.wheel, WheelSchema),
+    message(DESIGN_METHODS.pan, z.object({ dx: z.number().finite(), dy: z.number().finite() })),
     message(DESIGN_METHODS.press, z.object({})),
     message(DESIGN_METHODS.pick, z.object({ tool: z.enum(['comment', 'edit']), element: DesignElementSchema })),
     message(DESIGN_METHODS.text, z.object({ element: DesignElementSchema, before: z.string().max(2000), after: z.string().max(2000) })),

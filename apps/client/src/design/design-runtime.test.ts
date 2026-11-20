@@ -36,6 +36,10 @@ describe('what a design page may say', () => {
             params: { zoom: 0.5 }
         });
         expect(designPageMessage({ jsonrpc: '2.0', method: DESIGN_METHODS.camera, params: { x: 0, y: 0, zoom: 0 } })).toBeNull();
+        const wheel = { deltaX: 0, deltaY: -4, deltaMode: 0, ctrlKey: true, metaKey: false, timeStamp: 12, x: 300, y: 200 };
+        expect(designPageMessage({ jsonrpc: '2.0', method: DESIGN_METHODS.wheel, params: wheel })).toMatchObject({ params: wheel });
+        expect(designPageMessage({ jsonrpc: '2.0', method: DESIGN_METHODS.wheel, params: { ...wheel, deltaY: Infinity } })).toBeNull();
+        expect(designPageMessage({ jsonrpc: '2.0', method: DESIGN_METHODS.pan, params: { dx: 4, dy: -2 } })).toMatchObject({ params: { dx: 4 } });
         expect(designPageMessage({ jsonrpc: '2.0', method: DESIGN_METHODS.pick, params: { tool: 'comment', element } })).toMatchObject({
             params: { element: { option: '2a' } }
         });
