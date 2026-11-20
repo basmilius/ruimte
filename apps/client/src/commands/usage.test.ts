@@ -58,12 +58,12 @@ describe('the counted panels and sections', () => {
                 .map((entry) => entry.id)
                 .toSorted()
         ).toEqual([...USAGE_DESKTOP_PANELS].toSorted());
-        // An older client still counts the Computer use and Storage panes, which this one folded into Agents and a machine's detail.
+        // An older client still counts the Storage pane, which this one folded into a machine's detail.
         expect(
             allSettingsSections()
                 .flatMap((section) => usageSectionOf(section.id) ?? [])
                 .toSorted()
-        ).toEqual(USAGE_DESKTOP_SETTINGS_SECTIONS.filter((section) => section !== 'computer' && section !== 'storage').toSorted());
+        ).toEqual(USAGE_DESKTOP_SETTINGS_SECTIONS.filter((section) => section !== 'storage').toSorted());
     });
 
     test('leave Pets uncounted: opening it counts the dialog and no section', () => {
