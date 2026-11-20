@@ -455,6 +455,9 @@ struct ChatSuggestionRows: View {
                     HStack(spacing: 10) {
                         if let provider = suggestion.provider {
                             ChatProviderMark(provider: provider, size: 18).foregroundStyle(MobileStyle.muted)
+                        } else if suggestion.ruimte {
+                            Image("RuimteMark").resizable().frame(width: 18, height: 18)
+                                .foregroundStyle(MobileStyle.muted).accessibilityHidden(true)
                         } else {
                             Image(lucide: suggestion.icon, size: 18).foregroundStyle(MobileStyle.muted)
                         }

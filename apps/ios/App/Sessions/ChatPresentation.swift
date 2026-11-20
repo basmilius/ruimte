@@ -52,6 +52,8 @@ struct ChatAgentSources {
     var tasks: TaskStore?
     var attention: AttentionStore?
     var models: (String) -> [ProviderModel] = { _ in [] }
+    /// The project of the chat, where a task's child may be a hidden design agent whose row draws its design.
+    weak var workspace: MobileWorkspace?
 }
 
 struct ChatTimelineEntry: Identifiable, Equatable {
@@ -271,6 +273,8 @@ final class ChatPresentation {
     private(set) var saved: [ChatSavedVersion] = []
     /// A card asked to open an item of Output; the screen pushes it.
     var outputRequest: ChatOutputOpen?
+    /// A design agent's card asked to open its design; the screen pushes it.
+    var designRequest: ChatDesignOpen?
     @ObservationIgnored let visualPages = ChatVisualPages()
     /// Whether the machine holds a page of the thread before the first item here, which a visual from before that
     /// item waits for.

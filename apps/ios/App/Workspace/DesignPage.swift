@@ -121,8 +121,6 @@ private struct DesignPagesList: View {
     @State private var listing = DesignFiles.Listing()
     @State private var open: String?
 
-    private var found: Bool { listing.found }
-
     var body: some View {
         VStack(spacing: 0) {
             if let problem = listing.problem {
@@ -134,15 +132,7 @@ private struct DesignPagesList: View {
         .navigationDestination(item: $open) { file in
             DesignPageView(client: client, folder: folder, file: file, design: design, project: project)
         }
-        // Whether the folder is there decides which changes count, so the watch starts over once it comes or goes.
-        .task(id: "\(folder):\(found)") {
-            await RemotePageLifecycle.run(
-                client: client, events: [.fsChanged],
-                matches: RemotePageLifecycle.typed(FsChangedEvent.self) { [folder, found] event in
-                    event.paths.contains { DesignFiles.changeReaches($0, folder: folder, found: found) }
-                },
-                watch: { fsWatch(path: workspaceFolder) }, load: load)
-        }
+        .modifier(DesignListingWatch(client: client, folder: folder, watched: workspaceFolder, listing: $listing))
         .refreshable { await load() }
     }
 
@@ -185,16 +175,71 @@ private struct DesignPagesList: View {
     }
 
     private func load() async {
+        if let read = await DesignFiles.read(folder, client: client) { listing = listing.after(read) }
+    }
+}
+
+extension DesignFiles {
+    /// The client, for the code that builds a page off the main actor. Every call on it is made on the main actor, so
+    /// the page is only ever read through it from there.
+    private struct ReadingClient: @unchecked Sendable {
+        let client: any MachineRequesting
+    }
+
+    @MainActor static func fileReader(_ client: any MachineRequesting)
+        -> @Sendable (String, Int) async throws -> MachineResource
+    {
+        let reading = ReadingClient(client: client)
+        return { path, maxBytes in
+            try await reading.client.readResource(
+                .object(["kind": .string("file"), "path": .string(path)]), maxBytes: maxBytes)
+        }
+    }
+
+    /// What a page reads while it runs, bounded per time the page is opened.
+    @MainActor static func runtimeAssets(_ client: any MachineRequesting, folder: String) -> RuntimeAssets {
+        RuntimeAssets(folder: folder, read: fileReader(client))
+    }
+
+    /// The entries right in a design's folder; nil when the read was cancelled.
+    @MainActor static func read(_ folder: String, client: any MachineRequesting) async -> Result<[FsEntry], Error>? {
         do {
             // Hidden too: git ignores a private design's folder, and a listing leaves out what git ignores.
             let listed = try await client.request(
                 .fsList, payload: .object(["path": .string(folder), "depth": .number(1), "hidden": .bool(true)])
             ).decoded(as: FsListResult.self)
-            listing = listing.after(.success(listed.entries))
+            return .success(listed.entries)
         } catch is CancellationError {
-            return
+            return nil
         } catch {
-            listing = listing.after(.failure(error))
+            return .failure(error)
+        }
+    }
+}
+
+/// Reads the pages of a design folder again whenever something in it changes. The folder may not exist until a chat
+/// makes it, so `watched`, a folder above it, is the watch that sees it come.
+struct DesignListingWatch: ViewModifier {
+    let client: any MachineRequesting
+    let folder: String
+    let watched: String
+    @Binding var listing: DesignFiles.Listing
+
+    func body(content: Content) -> some View {
+        let found = listing.found
+        // Whether the folder is there decides which changes count, so the watch starts over once it comes or goes.
+        content.task(id: "\(folder):\(found)") {
+            await RemotePageLifecycle.run(
+                client: client, events: [.fsChanged],
+                matches: RemotePageLifecycle.typed(FsChangedEvent.self) { [folder] event in
+                    event.paths.contains { DesignFiles.changeReaches($0, folder: folder, found: found) }
+                },
+                watch: { [watched] in fsWatch(path: watched) },
+                load: { [client, folder, _listing] in
+                    if let read = await DesignFiles.read(folder, client: client) {
+                        _listing.wrappedValue = _listing.wrappedValue.after(read)
+                    }
+                })
         }
     }
 }
@@ -217,25 +262,7 @@ private struct DesignPageView: View {
         self.file = file
         self.design = design
         self.project = project
-        _assets = State(initialValue: Self.assets(client, folder: folder))
-    }
-
-    /// The client, for the code that builds the page off the main actor. Every call on it is made on the main actor, so
-    /// the page is only ever read through it from there.
-    private struct ReadingClient: @unchecked Sendable {
-        let client: any MachineRequesting
-    }
-
-    private static func read(_ client: any MachineRequesting) -> @Sendable (String, Int) async throws -> MachineResource {
-        let reading = ReadingClient(client: client)
-        return { path, maxBytes in
-            try await reading.client.readResource(
-                .object(["kind": .string("file"), "path": .string(path)]), maxBytes: maxBytes)
-        }
-    }
-
-    private static func assets(_ client: any MachineRequesting, folder: String) -> DesignFiles.RuntimeAssets {
-        DesignFiles.RuntimeAssets(folder: folder, read: read(client))
+        _assets = State(initialValue: DesignFiles.runtimeAssets(client, folder: folder))
     }
 
     var body: some View {
@@ -244,7 +271,8 @@ private struct DesignPageView: View {
             failed: $failed,
             read: {
                 try await DesignFiles.page(
-                    file, folder: folder, design: design, project: project, client: client, read: Self.read(client))
+                    file, folder: folder, design: design, project: project, client: client,
+                    read: DesignFiles.fileReader(client))
             },
             fill: true,
             assets: assets
@@ -258,7 +286,7 @@ private struct DesignPageView: View {
                 Button {
                     failed = false
                     attempt += 1
-                    assets = Self.assets(client, folder: folder)
+                    assets = DesignFiles.runtimeAssets(client, folder: folder)
                 } label: {
                     Label(String(localized: "Read again"), lucideIcon: "refresh-cw")
                 }

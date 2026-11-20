@@ -71,14 +71,18 @@ enum ChatDraftSyntax {
     }
 
     /// Where the picked files, skills and references sit in the text, longest first when one prefixes another. A
-    /// reference is spelled by the name it was picked with and carries its id.
+    /// reference is spelled by the name it was picked with and carries its id. A skill Ruimte ships is spelled by its
+    /// title in a draft and by its name in what was sent (`skillsByName`); its token carries the name either way.
     static func tokens(
-        in text: String, mentions: [String], skills: [String], references: [ChatDraftReference] = []
+        in text: String, mentions: [String], skills: [String], references: [ChatDraftReference] = [],
+        skillsByName: Bool = false
     ) -> [ChatDraftToken] {
         guard !mentions.isEmpty || !skills.isEmpty || !references.isEmpty else { return [] }
         let code = codeRanges(in: text)
         let choices =
-            mentions.map { ("@", $0, $0) } + skills.map { ("$", $0, $0) } + references.map { ("#", $0.title, $0.id) }
+            mentions.map { ("@", $0, $0) }
+            + skills.map { ("$", skillsByName ? $0 : RuimteSkillNames.spelled($0), $0) }
+            + references.map { ("#", $0.title, $0.id) }
         var found: [ChatDraftToken] = []
         for (kind, spelled, value) in choices.sorted(by: { $0.1.count > $1.1.count }) where !spelled.isEmpty {
             let pattern =
@@ -91,6 +95,26 @@ enum ChatDraftSyntax {
             }
         }
         return found.sorted { $0.range.location < $1.range.location }
+    }
+
+    /// The draft as it is sent: a skill Ruimte ships stands in it by its title and goes out by its name, which is what
+    /// the machine reads.
+    static func sentText(_ text: String, tokens: [ChatDraftToken]) -> String {
+        let result = NSMutableString(string: text)
+        for token in tokens.reversed() where token.kind == "$" && RuimteSkillNames.title(of: token.value) != nil {
+            result.replaceCharacters(in: token.range, with: "$" + token.value)
+        }
+        return result as String
+    }
+
+    /// Sent text taken back into a draft, each skill of Ruimte's among `skills` spelled by its title again.
+    static func draftText(_ text: String, skills: [String]) -> String {
+        let result = NSMutableString(string: text)
+        for token in tokens(in: text, mentions: [], skills: skills, skillsByName: true).reversed() {
+            guard let title = RuimteSkillNames.title(of: token.value) else { continue }
+            result.replaceCharacters(in: token.range, with: "$" + title)
+        }
+        return result as String
     }
 
     /// Where the text spells a model or an account as `@model:<cli>/<id>` or `@account:<cli>/<id>`, as the shared

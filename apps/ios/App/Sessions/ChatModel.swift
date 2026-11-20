@@ -67,6 +67,8 @@ final class ChatModel {
     var searching = false
     var searchProblem: String?
     @ObservationIgnored var referenceSource = ChatReferenceSource()
+    /// The skills the chat's machine ships, offered after `$` above the CLI's own.
+    @ObservationIgnored var ruimteSkills: () -> [RuimteSkill] = { [] }
     /// The other open projects a `#` may point at, while the machine lets agents reach them.
     var reachedProjects: [JSONValue] = []
     var referables: [ChatReferable] { referenceSource.items() }
@@ -574,7 +576,7 @@ final class ChatModel {
             sendUncertain = true
             await composition.flush()
             var values: [String: JSONValue] = [
-                "text": .string(snapshot.text),
+                "text": .string(ChatDraftSyntax.sentText(snapshot.text, tokens: tokens)),
                 "mentions": .array(
                     snapshot.mentions.filter { value in tokens.contains { $0.kind == "@" && $0.value == value } }
                         .map(JSONValue.string)),
@@ -757,12 +759,21 @@ final class ChatModel {
                     }
                 }
             case "$":
-                let result = try await client.request(.skillsList, payload: target())
-                    .decoded(as: SkillsListResult.self)
-                found = result.skills.filter {
-                    query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)
+                found = ChatSuggestion.ruimteSkills(ruimteSkills(), query: query)
+                do {
+                    let result = try await client.request(.skillsList, payload: target())
+                        .decoded(as: SkillsListResult.self)
+                    let shipped = Set(found.map(\.value))
+                    found += result.skills.filter {
+                        !shipped.contains($0.name) && (query.isEmpty || $0.name.localizedCaseInsensitiveContains(query))
+                    }
+                    .map { ChatSuggestion(kind: "$", value: $0.name, title: $0.name, detail: $0.description) }
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch {
+                    // A failed list of the CLI's skills leaves out only those; Ruimte's stay.
+                    if current == searchGeneration, !Task.isCancelled { searchProblem = error.localizedDescription }
                 }
-                .map { ChatSuggestion(kind: "$", value: $0.name, title: $0.name, detail: $0.description) }
             default:
                 var local = ["clear", "stop", "model"]
                 if capabilities?.compaction != ProviderCompaction.none { local.append("compact") }
@@ -808,7 +819,10 @@ final class ChatModel {
         if suggestion.kind == "@" && suggestion.section == nil {
             mentions = Array(Set(mentions + [suggestion.value])).sorted()
         }
-        if suggestion.kind == "$" { skills = Array(Set(skills + [suggestion.value])).sorted() }
+        if suggestion.kind == "$" {
+            skills = Array(Set(skills + [suggestion.value])).sorted()
+            spelled = RuimteSkillNames.spelled(suggestion.value)
+        }
         let insertion = ChatDraftSyntax.insertion(
             text: draft, selection: composition.selection, kind: suggestion.kind, value: spelled)
         draft = insertion.text
@@ -826,6 +840,17 @@ struct ChatSuggestion: Identifiable {
     var section: String? = nil
     /// The CLI whose mark a model or account row wears.
     var provider: String? = nil
+    /// A skill Ruimte ships, which wears Ruimte's mark.
+    var ruimte = false
+
+    /// Ruimte's skills whose title or name holds the query, in the order the machine lists them.
+    static func ruimteSkills(_ skills: [RuimteSkill], query: String) -> [ChatSuggestion] {
+        skills.filter {
+            query.isEmpty || $0.title.localizedCaseInsensitiveContains(query)
+                || $0.name.localizedCaseInsensitiveContains(query)
+        }
+        .map { ChatSuggestion(kind: "$", value: $0.name, title: $0.title, detail: $0.description, ruimte: true) }
+    }
 
     static func heading(_ kind: String) -> String {
         switch kind {

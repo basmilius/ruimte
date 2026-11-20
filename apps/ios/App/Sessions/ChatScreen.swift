@@ -268,6 +268,11 @@ struct ChatScreen: View {
         ) { crumb in
             SubagentConversationPage(model: model, crumb: crumb, session: machineSession)
         }
+        .navigationDestination(item: Bindable(model.presentation).designRequest) { design in
+            if let workspace {
+                AgentDesignPage(design: design, workspace: workspace)
+            }
+        }
         .navigationDestination(item: Bindable(model.presentation).outputRequest) { open in
             if let context = outputContext {
                 OutputItemPage(context: context, artifactID: open.artifactID, title: open.title, pinned: open.versionID)
@@ -364,7 +369,10 @@ struct ChatScreen: View {
         ) { [weak chat] provider in
             chat?.providers.first { $0.kind == provider }?.models ?? []
         }
+        model.presentation.agentSources?.workspace = workspace
         model.presentation.chatModels = { [weak chat] in chat?.models ?? [] }
+        let skillSession = machineSession
+        model.ruimteSkills = { [weak skillSession] in skillSession?.skills.skills ?? [] }
         if let workspace {
             let chatID = model.chatID
             let session = machineSession

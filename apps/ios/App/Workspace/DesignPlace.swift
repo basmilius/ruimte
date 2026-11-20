@@ -89,10 +89,11 @@ enum DesignFiles {
     static let assetMaxBytes = 10 * 1024 * 1024
 
     /// The pages of a design, the HTML files right in its folder, the most recently changed first; a tie keeps the
-    /// order of their names.
+    /// order of their names. A name that starts with `_` or `.` is a file an agent keeps for itself, as `isDesignPage`
+    /// in `packages/contracts` says.
     static func pages(_ entries: [FsEntry]) -> [FsEntry] {
         entries
-            .filter { $0.kind == .file && isPage($0.name) }
+            .filter { $0.kind == .file && isPage($0.name) && !$0.name.hasPrefix("_") && !$0.name.hasPrefix(".") }
             .sorted { one, other in
                 one.mtime == other.mtime
                     ? one.name.localizedStandardCompare(other.name) == .orderedAscending : one.mtime > other.mtime

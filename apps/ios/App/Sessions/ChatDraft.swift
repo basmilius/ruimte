@@ -346,7 +346,9 @@ final class ChatComposition {
         {
             throw DraftFailure(problem)
         }
-        let taken = ChatDraftSyntax.spelling(incoming.chats + (incoming.references ?? []), in: incoming.text)
+        let taken = ChatDraftSyntax.spelling(
+            incoming.chats + (incoming.references ?? []),
+            in: ChatDraftSyntax.draftText(incoming.text, skills: incoming.skills))
         text = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? taken : taken + "\n\n" + text
         mentions = Array(Set(incoming.mentions + mentions)).sorted()
         skills = Array(Set(incoming.skills + skills)).sorted()

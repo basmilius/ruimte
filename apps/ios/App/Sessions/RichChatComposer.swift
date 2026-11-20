@@ -205,12 +205,23 @@ private final class ComposerLayoutManager: NSLayoutManager {
                 }
             }
         }
+        // Over the sigil, which the attributes leave transparent, as the thread draws the mark of a skill in its place.
+        storage.enumerateAttribute(ChatDraftStyle.ruimteMark, in: characters) { value, range, _ in
+            guard let side = value as? CGFloat, let mark = UIImage(named: "RuimteMark") else { return }
+            let glyphs = self.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+            guard let container = self.textContainer(forGlyphAt: glyphs.location, effectiveRange: nil) else { return }
+            let sigil = self.boundingRect(forGlyphRange: glyphs, in: container).offsetBy(dx: origin.x, dy: origin.y)
+            let frame = CGRect(x: sigil.minX + 2, y: sigil.midY - side / 2, width: side, height: side)
+            mark.withTintColor(MobileStyle.textColor, renderingMode: .alwaysOriginal).draw(in: frame)
+        }
     }
 }
 
 private enum ChatDraftStyle {
     static let badge = NSAttributedString.Key("RuimteComposerBadge")
     static let badgeBorder = NSAttributedString.Key("RuimteComposerBadgeBorder")
+    /// The side of Ruimte's mark drawn over the sigil of a skill Ruimte ships.
+    static let ruimteMark = NSAttributedString.Key("RuimteComposerMark")
 
     static func attributed(
         _ text: String, font: UIFont, mentions: [String], skills: [String], references: [ChatDraftReference]
@@ -256,6 +267,14 @@ private enum ChatDraftStyle {
             } else {
                 result.addAttributes(
                     [.font: weight(.traitBold), badge: UIColor.tertiarySystemFill], range: token.range)
+                if token.kind == "$", RuimteSkillNames.title(of: token.value) != nil {
+                    // The text keeps its `$`, which is what a person deletes and copies; the mark only covers it.
+                    let side = round(font.pointSize * 0.8)
+                    let sigil = ("$" as NSString).size(withAttributes: [.font: weight(.traitBold)]).width
+                    result.addAttributes(
+                        [.foregroundColor: UIColor.clear, ruimteMark: side, .kern: max(0, side + 4 - sigil)],
+                        range: NSRange(location: token.range.location, length: 1))
+                }
             }
         }
         return result

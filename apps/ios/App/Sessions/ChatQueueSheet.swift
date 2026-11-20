@@ -37,7 +37,7 @@ struct ChatQueueSheet: View {
 
     private func card(_ message: ChatInfoQueueItem) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(message.text).font(.body).lineLimit(6)
+            Text(verbatim: RuimteSkillNames.withTitles(message.text)).font(.body).lineLimit(6)
             let attachments = message.attachments?.count ?? 0
             if attachments > 0 {
                 Text("\(attachments) attachments").font(.caption)

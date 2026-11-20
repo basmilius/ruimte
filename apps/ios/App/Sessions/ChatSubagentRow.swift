@@ -35,7 +35,31 @@ private struct ChatSubagentOwnRow: View {
     private var expanded: Bool { !opens && presentation.expandedSubagents.contains(item.id) }
     private var opens: Bool { ChatSubagents.canOpen(item) }
 
+    /// The project a task's child may make a design in, and that child's id.
+    private var designSource: (workspace: MobileWorkspace, agent: String)? {
+        guard item.origin == .ruimte, let agent = item.childId, !agent.isEmpty,
+            let workspace = presentation.agentSources?.workspace
+        else { return nil }
+        return (workspace, agent)
+    }
+
     var body: some View {
+        Group {
+            if let source = designSource, let folder = source.workspace.session.designAgents.folder(source.agent) {
+                ChatDesignTaskCard(
+                    item: item, agentID: source.agent, folder: folder, workspace: source.workspace,
+                    presentation: presentation)
+            } else {
+                row
+            }
+        }
+        .task(id: "\(item.childId ?? ""):\(presentation.connected)") {
+            guard let source = designSource, presentation.connected else { return }
+            await source.workspace.session.designAgents.ask(project: source.workspace.projectID, agent: source.agent)
+        }
+    }
+
+    private var row: some View {
         VStack(alignment: .leading, spacing: 8) {
             if opens {
                 // The conversation opens on a page of its own, as a row of the sub-agent list does.
@@ -173,10 +197,12 @@ private struct ChatSubagentStep: View {
 
 /// A task Ruimte gave another node: that agent's mark and model, what the task is about and where it stands, read
 /// from the task's own record and the status of the child's chat. A child without one keeps the task's own words.
-private struct ChatTaskLine: View {
+struct ChatTaskLine: View {
     let item: ChatSubagentItem
     let sources: ChatAgentSources?
     let open: Bool
+    /// Said under the title in place of where the task stands, as a design agent's card says what it wrote.
+    var line: String?
 
     var body: some View {
         let task = ChatSubagents.taskID(item).flatMap { sources?.tasks?.task($0) }
@@ -189,7 +215,16 @@ private struct ChatTaskLine: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(ChatSubagents.taskTitle(item, model: modelName(child)))
                     .fontWeight(.medium).foregroundStyle(MobileStyle.text).lineLimit(1)
-                stateLine(state, task: task).font(.caption).lineLimit(1)
+                Group {
+                    if let line, state == .running {
+                        ChatLiveLabel(text: line)
+                    } else if let line {
+                        Text(line).foregroundStyle(MobileStyle.muted)
+                    } else {
+                        stateLine(state, task: task)
+                    }
+                }
+                .font(.caption).lineLimit(1)
             }
             Spacer(minLength: 0)
             Group {

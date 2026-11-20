@@ -224,7 +224,7 @@ struct ChatFadingText: View {
         var output = Text(verbatim: "")
         var word = 0
         for (pill, range) in runs {
-            let sigil = pill?.icon == nil ? nil : text.characters.index(after: range.lowerBound)
+            let sigil = pill?.hasMark == true ? text.characters.index(after: range.lowerBound) : nil
             guard fades else {
                 output = Text("\(output)\(piece(range, pill: pill, sigil: sigil, arrival: nil))")
                 continue
@@ -251,12 +251,13 @@ struct ChatFadingText: View {
         arrival: TimeInterval?
     ) -> Text {
         var part: Text
-        if let pill, let icon = pill.icon, let sigil, range.contains(sigil) {
+        if let pill, pill.hasMark, let sigil, range.contains(sigil) {
             let after = text.characters.index(after: sigil)
             let gap = AttributedString(
                 String(ChatInlineMarks.padding), attributes: text[sigil..<after].runs.first?.attributes ?? .init())
             let before = Text(AttributedString(text[range.lowerBound..<sigil]))
-            let mark = Text(Image(lucide: icon, size: 12)).foregroundStyle(pill.tint).baselineOffset(-1.5)
+            let image = pill.icon.map { Image(lucide: $0, size: 12) } ?? RuimteSkillNames.mark(size: 12)
+            let mark = Text(image).foregroundStyle(pill.tint).baselineOffset(-1.5)
             let name = Text(AttributedString(text[after..<range.upperBound]))
             part = Text("\(before)\(mark)\(Text(gap))\(name)")
         } else {

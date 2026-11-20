@@ -11711,6 +11711,117 @@
         }
       }
     },
+    "Done · %lld pages" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Done · %lld page"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Done · %lld pages"
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Klaar · %lld pagina"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Klaar · %lld pagina's"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Wrote %@" : {
+      "comment" : "%@ is the name of a page",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ geschreven"
+          }
+        }
+      }
+    },
+    "The agent stopped before it wrote a page." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De agent stopte voordat er een pagina geschreven was."
+          }
+        }
+      }
+    },
+    "The design shows here once its first page is written." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het design verschijnt hier zodra de eerste pagina geschreven is."
+          }
+        }
+      }
+    },
+    "Pages of the design" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pagina's van het design"
+          }
+        }
+      }
+    },
+    "In progress" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bezig"
+          }
+        }
+      }
+    },
+    "Open design" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Design openen"
+          }
+        }
+      }
+    },
+    "The design's folder is gone." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De map van het design is weg."
+          }
+        }
+      }
+    },
     "Dotted" : {
       "localizations" : {
         "nl" : {

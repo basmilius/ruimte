@@ -43,6 +43,8 @@ final class SharedMachineSession {
     @ObservationIgnored lazy var plans = PlanStore(client: rpc)
     @ObservationIgnored lazy var proposals = ProposalStore(client: rpc)
     @ObservationIgnored lazy var icons = MachineIconState(client: rpc, fallback: machine.icon)
+    @ObservationIgnored lazy var skills = RuimteSkillStore(client: rpc)
+    @ObservationIgnored lazy var designAgents = DesignAgentFolders(client: rpc)
     @ObservationIgnored lazy var endpoint = MachineEndpoint(
         client: rpc, machineID: machine.id,
         learnedLan: { [weak self] door in
@@ -122,6 +124,7 @@ final class SharedMachineSession {
         plans.start()
         proposals.start()
         icons.start()
+        skills.start()
         endpoint.start()
         usageWidget.start()
         startPreferences()
@@ -161,6 +164,7 @@ final class SharedMachineSession {
         plans.stop()
         proposals.stop()
         icons.stop()
+        skills.stop()
         endpoint.stop()
         usageWidget.stop()
         stopPreferences()

@@ -255,6 +255,8 @@ struct ChatPill: Hashable, Sendable {
         case code
         case file(String)
         case skill
+        /// A skill Ruimte ships, under Ruimte's mark and by its title.
+        case ruimteSkill
         /// A view, node or chat, by the Lucide mark its sidebar row wears.
         case reference(String)
         /// A model or an account a message names, by `model` or `account`.
@@ -265,10 +267,10 @@ struct ChatPill: Hashable, Sendable {
     /// Tells two pills apart that touch, so each gets a ground of its own.
     let id: Int
 
-    /// The mark drawn in place of the `@` or `$` the text still carries.
+    /// The Lucide mark drawn in place of the `@` or `$` the text still carries; Ruimte's skills wear Ruimte's own.
     var icon: String? {
         switch kind {
-        case .code: nil
+        case .code, .ruimteSkill: nil
         case .file(let path): FileKinds.icon(name: path, kind: path.hasSuffix("/") ? "directory" : "file")
         case .skill: "zap"
         case .reference(let mark): mark
@@ -276,11 +278,14 @@ struct ChatPill: Hashable, Sendable {
         }
     }
 
+    /// Whether a mark stands in place of the sigil.
+    var hasMark: Bool { icon != nil || kind == .ruimteSkill }
+
     var tint: Color {
         switch kind {
         case .code, .reference, .named: MobileStyle.text
         case .file: MobileStyle.accent
-        case .skill: MobileStyle.skill
+        case .skill, .ruimteSkill: MobileStyle.skill
         }
     }
 
@@ -325,7 +330,8 @@ enum ChatInlineMarks {
         let lookup = references.lookup
         var tokens = ChatDraftSyntax.allTokens(
             in: plain,
-            picked: ChatDraftSyntax.tokens(in: plain, mentions: mentions, skills: skills, references: references.picked))
+            picked: ChatDraftSyntax.tokens(
+                in: plain, mentions: mentions, skills: skills, references: references.picked, skillsByName: true))
         if references.named {
             tokens += ChatReferables.namedRanges(in: plain, items: lookup.items, referenced: lookup.referenced)
         }
@@ -340,14 +346,24 @@ enum ChatInlineMarks {
                 let mark = lookup.item(token.value)?.mark ?? ChatReferables.icon("text")
                 let trail = lookup.item(token.value)?.trail.map { "\($0.name) › " }.joined() ?? ""
                 pills.append((span, .reference(mark), chipFont, ChatReferables.url(token.value), trail))
-            case "$": pills.append((span, .skill, chipFont, nil, ""))
+            case "$":
+                let kind: ChatPill.Kind = RuimteSkillNames.title(of: token.value) == nil ? .skill : .ruimteSkill
+                pills.append((span, kind, chipFont, nil, ""))
             case "model", "account": pills.append((span, .named(token.kind), chipFont, nil, ""))
             default: pills.append((span, .file(token.value), chipFont, nil, ""))
             }
         }
         for (id, pill) in pills.sorted(by: { $0.range.lowerBound < $1.range.lowerBound }).enumerated().reversed() {
             let mark = ChatPill(kind: pill.kind, id: id)
-            let range = index(pill.range.lowerBound, in: value)..<index(pill.range.upperBound, in: value)
+            var upper = pill.range.upperBound
+            if mark.kind == .ruimteSkill {
+                // Read by its title, as the desktop's chip reads; the text sent keeps the name.
+                let name = pill.range.lowerBound + 1
+                value.removeSubrange(
+                    index(name, in: value)..<index(name + RuimteSkillNames.prefix.count, in: value))
+                upper -= RuimteSkillNames.prefix.count
+            }
+            let range = index(pill.range.lowerBound, in: value)..<index(upper, in: value)
             value[range][ChatPillAttribute.self] = mark
             if mark.kind != .code {
                 value[range].swiftUI.font = pill.font
@@ -365,7 +381,7 @@ enum ChatInlineMarks {
             pad.swiftUI.font = chipFont
             pad.swiftUI.kern = mark.kind == .code ? 2.5 : 3
             pad[ChatPillAttribute.self] = mark
-            value.insert(pad, at: index(pill.range.upperBound, in: value))
+            value.insert(pad, at: index(upper, in: value))
             value.insert(pad, at: index(pill.range.lowerBound, in: value))
         }
         return value

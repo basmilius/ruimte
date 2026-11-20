@@ -45,7 +45,7 @@ enum NodeTitle {
     static func derive(_ prompt: String) -> String? {
         let lines = prompt.unicodeScalars.split(separator: "\n", omittingEmptySubsequences: false)
         guard let first = lines.first(where: { !JSText.trimmed(String($0)).isEmpty }) else { return nil }
-        let line = JSText.collapsed(String(first))
+        let line = JSText.collapsed(RuimteSkillNames.withTitles(String(first)))
         if line.utf16.count <= limit {
             let name = withoutTail(line)
             return name.isEmpty ? nil : name
