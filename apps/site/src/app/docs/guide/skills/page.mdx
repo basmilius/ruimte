@@ -1,6 +1,5 @@
 import { DesignCard } from '@/components/docs/guide/DesignCard.tsx';
 import { Shortcut } from '@/components/docs/Shortcut.tsx';
-import { Note } from '@/components/docs/guide/ui.tsx';
 
 export const metadata = { title: 'Skills and designs' };
 
@@ -22,7 +21,7 @@ Write `$design` and what the design is for, such as `$design a settings page for
 
 The design agent runs on the chat's CLI, model and reasoning effort. To pick another model, add it with `@`, such as `@opus`. To pick another effort, name it in the message.
 
-<Note>Only a chat that is a view of its own starts a design agent. A chat node on a canvas does not.</Note>
+This works in a chat that is a view of its own and in a chat node on a canvas. The design agent gets no node of its own. It shows only as the card in the chat that asked for it.
 
 Ask for a mockup without `$design` and the chat answers with a page in the thread instead, as in [Visual replies](/docs/guide/plans-and-forks#visual-replies).
 
@@ -32,7 +31,7 @@ The design agent's task shows in the chat as a card. While the agent works, the 
 
 ## Open the design
 
-Click **Open design**. The design takes the chat's place, with the design agent's own chat beside the pages. Write to the design agent there to keep working on the design. The back arrow returns to the chat.
+Click **Open design**. The design opens over the window, with the design agent's own chat beside the pages. Write to the design agent there to keep working on the design. Press <Shortcut keys="Escape" /> or click **Close** to go back to the chat, where you left it.
 
 | Tool | Use it to |
 | --- | --- |
