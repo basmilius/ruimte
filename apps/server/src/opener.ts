@@ -1,3 +1,5 @@
+import { externalActorId } from '@ruimte/contracts';
+
 /*
  * Who opened a node, as the daemon keeps it in the lineage and in a hidden agent's record. Every kind but a node is
  * stored as a prefixed string, which older releases wrote the same way, so the stored form never changes.
@@ -7,12 +9,14 @@ export type Opener =
     | { kind: 'routine'; id: string }
     | { kind: 'voice'; sessionId: string }
     | { kind: 'peer'; machineId: string; parentId: string }
-    | { kind: 'extension'; id: string };
+    | { kind: 'extension'; id: string }
+    | { kind: 'external'; credentialId: string };
 
 const ROUTINE_PREFIX = 'routine:';
 const VOICE_PREFIX = 'voice:';
 const PEER_PREFIX = 'peer:';
 const EXTENSION_PREFIX = 'extension:';
+const EXTERNAL_PREFIX = externalActorId('');
 
 /* A routine's run chats are opened by it, which keeps them in the project without a canvas. */
 export function routineOpener(routineId: string): string {
@@ -47,6 +51,10 @@ export function openerOf(stored: string): Opener {
         return { kind: 'extension', id: stored.slice(EXTENSION_PREFIX.length) };
     }
 
+    if (stored.startsWith(EXTERNAL_PREFIX)) {
+        return { kind: 'external', credentialId: stored.slice(EXTERNAL_PREFIX.length) };
+    }
+
     if (stored.startsWith(PEER_PREFIX)) {
         const rest = stored.slice(PEER_PREFIX.length);
         const split = rest.indexOf(':');
@@ -71,6 +79,8 @@ export function storedOpener(opener: Opener): string {
             return peerOpener(opener.machineId, opener.parentId);
         case 'extension':
             return extensionOpener(opener.id);
+        case 'external':
+            return externalActorId(opener.credentialId);
     }
 }
 

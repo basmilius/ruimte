@@ -6,7 +6,8 @@ const OPENERS: Array<[Opener, string]> = [
     [{ kind: 'routine', id: 'nightly' }, 'routine:nightly'],
     [{ kind: 'voice', sessionId: 'session-1' }, 'voice:session-1'],
     [{ kind: 'peer', machineId: 'machine-a', parentId: 'chat-parent' }, 'peer:machine-a:chat-parent'],
-    [{ kind: 'extension', id: 'acme.tool' }, 'extension:acme.tool']
+    [{ kind: 'extension', id: 'acme.tool' }, 'extension:acme.tool'],
+    [{ kind: 'external', credentialId: 'cred-1' }, 'external-cred-1']
 ];
 
 describe('opener', () => {
@@ -32,6 +33,6 @@ describe('opener', () => {
     });
 
     test('every kind but a node is placeless', () => {
-        expect(OPENERS.filter(([opener]) => isPlaceless(opener)).map(([opener]) => opener.kind)).toEqual(['routine', 'voice', 'peer', 'extension']);
+        expect(OPENERS.filter(([opener]) => isPlaceless(opener)).map(([opener]) => opener.kind)).toEqual(['routine', 'voice', 'peer', 'extension', 'external']);
     });
 });

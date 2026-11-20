@@ -431,7 +431,8 @@ test('what the index says while it warms at start is owed only once the outbox c
 
 test.each([
     ["another machine's agent", { openedBy: 'peer:machine-a:lead', peer: { machineId: 'machine-a' } }],
-    ['a Voice session', { openedBy: 'voice:session-1', ceiling: 'supervised' as const }]
+    ['a Voice session', { openedBy: 'voice:session-1', ceiling: 'supervised' as const }],
+    ['an external MCP client', { openedBy: 'external-cred-1', ceiling: 'supervised' as const }]
 ])('an agent opened by %s is not an orphan, since its opener never was in this project', async (_opener, record) => {
     const { wiring, owed } = await orphanWiring(record);
     wiring.start();
