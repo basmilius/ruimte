@@ -17,6 +17,7 @@ import { defaultDrawings } from './src/state/drawing';
 import { useEndpoints } from './src/state/endpoints';
 import { FALLBACK_LANGUAGE } from './src/state/languages';
 import { useToasts } from './src/state/toasts';
+import { useUi } from './src/state/ui';
 import { installClientHooks } from './src/wiring/client-hooks';
 
 /*
@@ -60,11 +61,12 @@ connectFormat();
 connectPlatform();
 
 /*
- * Files share a worker under `--no-isolate`, and a preload's `afterAll` only runs when the worker ends,
- * so the stores nearly every client test writes go back to their first state after each test.
+ * Files share a process in both runs, and a preload's `afterAll` only runs when it ends, so the stores
+ * nearly every client test writes go back to their first state after each test. Among them `useUi`: a
+ * settings dialog one file left open sits over the next file's window, which then finds no dialog of its own.
  */
 const focusedCanvasStore = focusedCanvas();
-const sharedStores: { getState(): object; setState(state: object, replace: true): void }[] = [useDocument, useEndpoints, useToasts, focusedCanvasStore];
+const sharedStores: { getState(): object; setState(state: object, replace: true): void }[] = [useDocument, useEndpoints, useToasts, useUi, focusedCanvasStore];
 const firstStates = sharedStores.map((store) => store.getState());
 
 afterEach(() => {
