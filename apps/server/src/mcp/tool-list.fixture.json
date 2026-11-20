@@ -335,7 +335,7 @@
                     },
                     "design": {
                         "type": "boolean",
-                        "description": "With task, from a chat view: a hidden designer"
+                        "description": "With task, from a chat: a hidden designer"
                     },
                     "dry_run": {
                         "type": "boolean"

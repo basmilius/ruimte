@@ -195,7 +195,7 @@ const agentStart = defineActionTool('agent', {
         machine: MACHINE_INPUT,
         terminal: z.boolean({ error: 'terminal is true or false' }).optional(),
         worktree: z.boolean({ error: 'worktree is true or false' }).optional(),
-        design: z.boolean({ error: 'design is true or false' }).optional().describe('With task, from a chat view: a hidden designer'),
+        design: z.boolean({ error: 'design is true or false' }).optional().describe('With task, from a chat: a hidden designer'),
         dry_run: DRY_RUN_INPUT
     }),
     async run(input, call) {

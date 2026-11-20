@@ -245,6 +245,42 @@ test('queued hidden agents count toward the concurrent agent limit', async () =>
     expect((await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'codex' }))[0]).toStartWith('refused\ttoo-many-agents\t');
 });
 
+test('a chat node on a canvas keeps its design agent hidden, shows its task in its own thread and ends it when the node goes', async () => {
+    const node = { id: 'chat-node', kind: 'chat' as const, title: 'Lead', provider: 'claude', x: 0, y: 0, w: 560, h: 360 };
+    await store.mutate(projectId, (content) => ({
+        content: { ...content, views: [...content.views, { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [node], texts: [], edges: [], layouts: [] }] },
+        result: undefined
+    }));
+    const daemon = await boot();
+    await daemon.chats.create({ chatId: 'chat-node', provider: 'claude', cwd: folder });
+    const before = await store.read(projectId);
+
+    const lines = await invokeTool(daemon, 'chat-node', 'agent_start', { cli: 'codex', task: 'Screens', prompt: 'slow', design: true });
+    const [childId] = lines[0]!.split('\t');
+    await daemon.until(() => daemon.chats.get(childId!)?.info.activeTurnId != null);
+
+    expect(await store.read(projectId)).toEqual(before);
+    expect(store.index.locate(childId!)).toEqual({ projectId, folder, canvasId: null });
+    expect(store.hiddenAgents.get(childId!)).toMatchObject({ openedBy: 'chat-node', design: '.ruimte/private/designs/screens' });
+    expect(
+        daemon.chats
+            .get('chat-node')
+            ?.thread.list()
+            .find((item) => item.kind === 'subagent')
+    ).toMatchObject({ origin: 'ruimte', childId });
+
+    await store.mutate(projectId, (content) => ({
+        content: { ...content, views: content.views.map((view) => (view.kind === 'canvas' ? { ...view, nodes: [] } : view)) },
+        result: undefined
+    }));
+    await daemon.until(() => daemon.enqueued.some((work) => work.kind === 'end-children'));
+    await daemon.worker.settled();
+
+    expect(daemon.chats.get(childId!)?.info.activeTurnId).toBeNull();
+    expect(store.hiddenAgents.get(childId!)).toBeUndefined();
+    expect(store.index.locate(childId!)).toBeNull();
+});
+
 test('deleting the parent chat stops its hidden agents and removes their placement', async () => {
     const daemon = await boot();
     await leadIdle(daemon);

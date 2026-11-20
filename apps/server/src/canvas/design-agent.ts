@@ -9,16 +9,27 @@ export interface DesignStart {
     view: boolean;
     beside: boolean;
     group: boolean;
+    reads: boolean;
     machine: boolean;
     task: boolean;
-    /* Whether the agent stays off every canvas, which only a chat view's start does. */
-    hidden: boolean;
+    /* Whether Voice or an extension starts it, which has no thread to show the design's card in. */
+    bounded: boolean;
     /* Whether the CLI runs as a chat here. */
     chat: boolean;
 }
 
-/* Refuses `design` on any start but a hidden chat agent with a task on this machine. */
+/*
+ * Refuses `design` on any start but a hidden chat agent with a task on this machine, opened by an agent. A chat view
+ * and a chat node on a canvas alike keep it hidden, since its design opens from the card in the opener's thread.
+ */
 export function refuseDesignStart(start: DesignStart): void {
+    if (start.bounded) {
+        throw new ToolRefusal(
+            'design-needs-chat-opener',
+            'design shows its pages in the thread of the chat that starts it, and you have none; start the agent without design'
+        );
+    }
+
     if (start.terminal || !start.chat) {
         throw new ToolRefusal(
             'design-needs-chat',
@@ -26,10 +37,13 @@ export function refuseDesignStart(start: DesignStart): void {
         );
     }
 
-    const placing = (['view', 'beside', 'group'] as const).filter((field) => start[field]);
+    const placing = (['view', 'beside', 'group', 'reads'] as const).filter((field) => start[field]);
 
     if (placing.length > 0) {
-        throw new ToolRefusal('design-off-canvas', `design starts a hidden agent, which stands on no canvas; leave out ${placing.join(' and ')}`);
+        throw new ToolRefusal(
+            'design-off-canvas',
+            `design starts a hidden agent, which stands on no canvas and opens from the card in your thread; leave out ${placing.join(' and ')}`
+        );
     }
 
     if (start.machine) {
@@ -38,10 +52,6 @@ export function refuseDesignStart(start: DesignStart): void {
 
     if (!start.task) {
         throw new ToolRefusal('design-needs-task', 'design gives the agent a task, whose result names its pages; add task and prompt');
-    }
-
-    if (!start.hidden) {
-        throw new ToolRefusal('design-off-canvas', 'design starts a hidden agent, which only a chat view opens; from a canvas, start the agent without design');
     }
 }
 

@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { canvasFixture, type CanvasFixture } from './canvas-fixture-test-helpers.ts';
+import { refuseDesignStart } from '../canvas/design-agent.ts';
+import { canvasFixture, type CanvasFixture, TOKENS } from './canvas-fixture-test-helpers.ts';
 
 let fx: CanvasFixture;
 
@@ -67,24 +68,95 @@ describe('a design agent', () => {
             fx.invoke('agent_start', { ...DESIGN_START, terminal: true }, 'chat'),
             fx.invoke('agent_start', { ...DESIGN_START, view: 'board' }, 'chat'),
             fx.invoke('agent_start', { ...DESIGN_START, view: 'board', beside: 'term-1' }, 'chat'),
+            fx.invoke('agent_start', { ...DESIGN_START, reads: 'note-1' }, 'chat'),
             fx.invoke('agent_start', { cli: 'claude', design: true, prompt: 'a design' }, 'chat')
         ]);
 
         expect(refusals.map((refusal) => refusal.lines[0])).toEqual([
             'refused\tdesign-needs-chat\tdesign makes a chat agent the designer, whose last answer names its pages; leave out terminal and pick a cli with a chat',
-            'refused\tdesign-off-canvas\tdesign starts a hidden agent, which stands on no canvas; leave out view',
-            'refused\tdesign-off-canvas\tdesign starts a hidden agent, which stands on no canvas; leave out view and beside',
+            'refused\tdesign-off-canvas\tdesign starts a hidden agent, which stands on no canvas and opens from the card in your thread; leave out view',
+            'refused\tdesign-off-canvas\tdesign starts a hidden agent, which stands on no canvas and opens from the card in your thread; leave out view and beside',
+            'refused\tdesign-off-canvas\tdesign starts a hidden agent, which stands on no canvas and opens from the card in your thread; leave out reads',
             'refused\tdesign-needs-task\tdesign gives the agent a task, whose result names its pages; add task and prompt'
         ]);
         expect(fx.started).toEqual([]);
         expect(fx.store.hiddenAgents.all()).toEqual([]);
     });
 
-    test('is refused from a node on a canvas, which opens no hidden agent', async () => {
+    test('is refused from a terminal on a canvas, which gives no task', async () => {
         const { lines } = await fx.invoke('agent_start', DESIGN_START, 'term');
 
-        expect(lines[0]).toBe(
-            'refused\tdesign-off-canvas\tdesign starts a hidden agent, which only a chat view opens; from a canvas, start the agent without design'
+        expect(lines[0]).toStartWith('refused\tnot-a-chat-parent\t');
+        expect(fx.store.hiddenAgents.all()).toEqual([]);
+    });
+});
+
+describe('a design agent of a chat node on a canvas', () => {
+    beforeEach(async () => {
+        await fx.store.mutate(fx.projectId, (current) => ({
+            content: {
+                ...current,
+                views: current.views.map((view) =>
+                    view.id === 'main' && view.kind === 'canvas'
+                        ? { ...view, nodes: [...view.nodes, { id: 'chat-node', kind: 'chat' as const, title: 'Lead', x: 900, y: 0, w: 560, h: 360 }] }
+                        : view
+                )
+            },
+            result: undefined
+        }));
+        TOKENS.node = 'chat-node';
+    });
+
+    afterEach(() => {
+        delete TOKENS.node;
+    });
+
+    test("stays hidden: no node or line on the canvas, and its task is the chat node's", async () => {
+        const before = await fx.canvasOnDisk();
+
+        const { status, lines } = await fx.invoke('agent_start', DESIGN_START, 'node');
+
+        expect(status).toBe(200);
+        const [nodeId, kind, viewId, , edge, taskId] = lines[0]!.split('\t');
+        expect([kind, viewId, edge]).toEqual(['chat', '-', '-']);
+        expect(lines).toContain('design\t.ruimte/private/designs/onboarding-screens\tthe folder its pages go in; its result names them');
+        expect(await fx.canvasOnDisk()).toEqual(before);
+        expect(fx.store.index.locate(nodeId!)).toMatchObject({ canvasId: null });
+        expect(fx.store.hiddenAgents.get(nodeId!)).toMatchObject({ openedBy: 'chat-node', design: '.ruimte/private/designs/onboarding-screens' });
+        expect(fx.tasks.get(taskId!)).toMatchObject({ parentId: 'chat-node', childId: nodeId });
+        expect(fx.lineage.startedBy(nodeId!)).toBe('chat-node');
+    });
+
+    test('never runs in a wider mode than the chat node that opened it', async () => {
+        fx.knobs.modes = { 'chat-node': 'supervised' };
+
+        const wider = await fx.invoke('agent_start', { ...DESIGN_START, mode: 'full-access' }, 'node');
+        const own = await fx.invoke('agent_start', DESIGN_START, 'node');
+
+        expect(wider.lines[0]).toStartWith('refused\tmode-above-parent\t');
+        expect(fx.lineage.ceilingOf(own.lines[0]!.split('\t')[0]!)).toBe('supervised');
+    });
+
+    test('is refused where it would stand on the canvas', async () => {
+        const refusals = await Promise.all([
+            fx.invoke('agent_start', { ...DESIGN_START, beside: 'term-1' }, 'node'),
+            fx.invoke('agent_start', { ...DESIGN_START, view: 'main' }, 'node')
+        ]);
+
+        expect(refusals.map((refusal) => refusal.lines[0])).toEqual([
+            'refused\tdesign-off-canvas\tdesign starts a hidden agent, which stands on no canvas and opens from the card in your thread; leave out beside',
+            'refused\tdesign-off-canvas\tdesign starts a hidden agent, which stands on no canvas and opens from the card in your thread; leave out view'
+        ]);
+        expect(fx.store.hiddenAgents.all()).toEqual([]);
+    });
+});
+
+describe('refusing design', () => {
+    test('from Voice or an extension, which have no thread to show its card in', () => {
+        const start = { terminal: false, view: false, beside: false, group: false, reads: false, machine: false, task: true, bounded: true, chat: true };
+
+        expect(() => refuseDesignStart(start)).toThrow(
+            'design shows its pages in the thread of the chat that starts it, and you have none; start the agent without design'
         );
     });
 });

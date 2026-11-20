@@ -268,9 +268,30 @@ const startAgentNow: StartHandler = async (input, call) => {
     await refuseCrossingStart(context, caller.caller, { viewId: input.viewId, machine: input.machine, task: input.task != null });
     const readIds = readsOf(input.reads ?? null);
     const offCanvas = input.viewId == null && place.canvasId === null;
+    const design = input.design === true;
+    const provider = host.starts.provider(kind);
+    const chat = !input.terminal && opensAsChat(provider);
+    // Judged before anything else reads `hidden`, so a design start hears what design accepts first.
+    if (design) {
+        refuseDesignStart({
+            terminal: input.terminal,
+            view: input.viewId != null,
+            beside: input.beside != null,
+            group: input.group != null,
+            reads: readIds.length > 0,
+            machine: input.machine != null,
+            task: input.task != null,
+            bounded,
+            chat
+        });
+    }
     // A chat view keeps an agent it opens off every canvas; a bounded opener has no chat of its own, so its chat gets a view instead.
     const loose = bounded && offCanvas;
-    const hidden = offCanvas && !bounded;
+    /*
+     * An agent a canvas node opens stands on that canvas, except a design agent: by Bas's choice it stays hidden from a
+     * chat node on a canvas too, so its design opens from the card in the opener's thread, as from a chat view.
+     */
+    const hidden = !bounded && (offCanvas || design);
     // The machine is judged before the agent is: a name that is none, or a combination that means nothing there, makes nothing.
     const remote = input.machine == null ? null : resolveMachine(host, place.projectId, input.machine);
     if (remote !== null) {
@@ -287,8 +308,6 @@ const startAgentNow: StartHandler = async (input, call) => {
     const depth = depthForOpening(caller, 'agent_start', 1);
     // A bounded opener is no node, so the daemon knows no mode of its own; what it starts is held to supervised, whatever the host says.
     const ceiling = bounded ? BOUNDED_CEILING : modeForOpening(caller, input.mode ?? undefined);
-    const provider = host.starts.provider(kind);
-    const chat = !input.terminal && opensAsChat(provider);
     const selection = selectionForOpening(provider, chat, input.model ?? undefined, input.effort ?? undefined, host.starts.preferredSelection(kind));
     if (input.branch != null && !input.worktree) {
         throw new ToolRefusal('branch-needs-worktree', 'branch names the branch of a worktree; add worktree');
@@ -310,19 +329,6 @@ const startAgentNow: StartHandler = async (input, call) => {
     }
     if (hidden && host.hiddenAgents === undefined) {
         throw new ToolRefusal('view-required', OPENING_OFF_CANVAS);
-    }
-    const design = input.design === true;
-    if (design) {
-        refuseDesignStart({
-            terminal: input.terminal,
-            view: input.viewId != null,
-            beside: input.beside != null,
-            group: input.group != null,
-            machine: input.machine != null,
-            task: input.task != null,
-            hidden,
-            chat
-        });
     }
     // An agent on another machine runs that machine's CLI, which it checks itself when the task starts.
     if (remote === null) {
