@@ -70,3 +70,15 @@ test('pruning keeps the ending of a node that left the project and drops the res
     await store.prune('project-1', new Set(['chat-2']));
     expect(store.list().map((entry) => entry.kind)).toEqual(['end-children']);
 });
+
+test('what was owed without being awaited is on disk for the next start once the store is written', async () => {
+    const store = new OutboxStore(home);
+    const kept = store.put('project-1', 'chat-2', { kind: 'background-limit', payload: { taskId: 'task-1', commands: ['sleep 40'] } }, 1000, 1801000);
+    void store.put('project-1', 'chat-1', { kind: 'wake-parent', payload: { taskId: 'task-2' } }, 1001);
+    void store.remove(store.list()[1]!.id);
+    await store.written();
+
+    const next = new OutboxStore(home);
+    await next.load();
+    expect(next.list()).toEqual([await kept]);
+});

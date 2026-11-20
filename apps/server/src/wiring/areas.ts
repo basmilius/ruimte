@@ -125,7 +125,7 @@ export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
         skillArea({ skills: () => agents.skills.list() }),
         activityArea({ activity: work.activity }),
         gitArea(gitDeps(input)),
-        agentWorkLifecycle(work),
+        agentWorkLifecycle(work, stores.outbox),
         agentsLifecycle(agents),
         usageCountsLifecycle(stats),
         usageArea({ usage: usage.usage, limits: usage.limits }),

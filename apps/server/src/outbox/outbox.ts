@@ -26,6 +26,8 @@ export function machineOwed(entry: { kind: string; payload?: unknown }): string 
 
 /* Work the daemon still owes, under `$RUIMTE_HOME/outbox`. The kinds, and which are due later, are in `kinds.ts` and this folder's CLAUDE.md. */
 export class OutboxStore extends BaseOutboxStore<OutboxWork> {
+    private readonly writing = new Set<Promise<unknown>>();
+
     constructor(home: string) {
         super({
             dataDir: home,
@@ -33,6 +35,33 @@ export class OutboxStore extends BaseOutboxStore<OutboxWork> {
             lanesOf: (entry) => traitsOf(entry.kind).lanes?.(entry) ?? [entry.target],
             outlivesTarget: (entry) => traitsOf(entry.kind).outlivesTarget
         });
+    }
+
+    override put(...args: Parameters<BaseOutboxStore<OutboxWork>['put']>): Promise<OutboxEntry> {
+        return this.held(super.put(...args));
+    }
+
+    override update(entry: OutboxEntry): Promise<void> {
+        return this.held(super.update(entry));
+    }
+
+    override remove(id: string): Promise<void> {
+        return this.held(super.remove(id));
+    }
+
+    override prune(projectId: string, ids: ReadonlySet<string>): Promise<void> {
+        return this.held(super.prune(projectId, ids));
+    }
+
+    /*
+     * Resolves once every write begun so far is on disk. An entry is in memory before its file is, and
+     * some are owed without anyone awaiting them (a task's background limit), so a stop that ends
+     * before their files would lose them to the next start.
+     */
+    async written(): Promise<void> {
+        while (this.writing.size > 0) {
+            await Promise.allSettled([...this.writing]);
+        }
     }
 
     /* What is owed of a kind to a target, oldest first; entry shapes stay in here and the feature that wrote them. */
@@ -59,5 +88,13 @@ export class OutboxStore extends BaseOutboxStore<OutboxWork> {
     /* The targets of the work owed to another machine: a task given to it, its result, a stop. */
     targetsOwedTo(machineId: string): string[] {
         return this.list().flatMap((entry) => (machineOwed(entry) === machineId ? [entry.target] : []));
+    }
+
+    private held<T>(write: Promise<T>): Promise<T> {
+        this.writing.add(write);
+        const done = (): void => void this.writing.delete(write);
+        void write.then(done, done);
+
+        return write;
     }
 }

@@ -1,11 +1,13 @@
 import type { Area } from '../area.ts';
+import type { OutboxStore } from '../outbox/outbox.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
 
 /*
  * The outbox worker and what coordinates tasks belong to no request. Tasks settle before the
- * terminals go, and the chats are written after they have.
+ * terminals go, the chats are written after they have, and the outbox is on disk last, since
+ * every step before may still owe it work.
  */
-export function agentWorkLifecycle({ worker, tasks, summaries }: AgentWorkBundle): Area {
+export function agentWorkLifecycle({ worker, tasks, summaries }: AgentWorkBundle, outbox: Pick<OutboxStore, 'written'>): Area {
     return {
         name: 'agent work',
         stop: [
@@ -13,7 +15,8 @@ export function agentWorkLifecycle({ worker, tasks, summaries }: AgentWorkBundle
             { phase: 'halt', label: 'Stopping the task coordinator', run: () => tasks.coordinator.stop() },
             { phase: 'halt', label: 'Stopping waiting tasks', run: () => tasks.waiting.stop() },
             { phase: 'halt', label: 'Stopping summaries', run: () => summaries.coordinator.stop() },
-            { phase: 'drain', label: 'Settling tasks', run: () => tasks.coordinator.settled() }
+            { phase: 'drain', label: 'Settling tasks', run: () => tasks.coordinator.settled() },
+            { phase: 'last', label: 'Writing the outbox', run: () => outbox.written() }
         ]
     };
 }
