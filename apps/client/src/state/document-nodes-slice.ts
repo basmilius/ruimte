@@ -137,8 +137,10 @@ export function createDocumentNodesSlice({
             }
             const { views: next, node } = landed;
             const { [viewId]: _gone, ...viewLocal } = state.viewLocal;
-            set({ views: next, viewLocal, edits: state.edits + 1 });
+            // The canvas on screen takes the node before the view goes: the project reads its nodes there, and a
+            // chat in neither place for a moment reads as closed, which ends it on the machine.
             reloadShownCanvas(peers, next, canvasViewId);
+            set({ views: next, viewLocal, edits: state.edits + 1 });
             const layout = state.layout === null ? null : layoutWithCanvasFor(state.layout, viewId, canvasViewId);
             if (layout !== null) {
                 commit(layout);
