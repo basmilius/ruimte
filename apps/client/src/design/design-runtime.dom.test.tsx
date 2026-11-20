@@ -20,6 +20,38 @@ test('a press anywhere in a page tells the stage before the page can stop it', (
     expect(posted.map((message) => message.method)).toContain(DESIGN_METHODS.press);
 });
 
+test('Escape in a page goes to the stage, except while Edit changes text in place, which it ends', () => {
+    const posted: { method: string }[] = [];
+    const stand = { parent: { postMessage: (message: { method: string }) => posted.push(message) } };
+    const listeners: Record<string, (event: object) => void> = {};
+
+    new Function('window', 'addEventListener', DESIGN_RUNTIME)(stand, (type: string, listener: (event: object) => void, capture?: boolean) => {
+        if (capture === true || type === 'message') {
+            listeners[type] = listener;
+        }
+    });
+    document.head.innerHTML = '';
+    document.body.innerHTML = '';
+
+    let blurred = 0;
+    const key = (target: object): object => ({
+        key: 'Escape',
+        isComposing: false,
+        metaKey: false,
+        ctrlKey: false,
+        altKey: false,
+        target,
+        preventDefault: () => undefined
+    });
+
+    listeners.keydown(key({ isContentEditable: false }));
+    listeners.message({ source: stand.parent, data: { jsonrpc: '2.0', method: DESIGN_METHODS.tool, params: { tool: 'edit' } } });
+    listeners.keydown(key({ isContentEditable: true, blur: () => blurred++ }));
+
+    expect(posted.filter((message) => message.method === DESIGN_METHODS.escape)).toHaveLength(1);
+    expect(blurred).toBe(1);
+});
+
 test('a canvas page opens at its top left at 100%, and tells the stage only that it is ready', () => {
     const posted: { method: string }[] = [];
     const stand = { parent: { postMessage: (message: { method: string }) => posted.push(message) } };

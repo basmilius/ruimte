@@ -4,6 +4,7 @@ import { CANVAS_DIALOGS } from '@/canvas/dialogs';
 import { CHAT_WORKSPACE_DIALOGS } from '@/chat/workspace-dialogs';
 import { CONFLICT_DIALOGS } from '@/conflicts/dialog';
 import { DATABASE_DIALOGS } from '@/database/dialogs';
+import { DESIGN_DIALOGS } from '@/design/dialogs';
 import { DEVICE_DIALOGS } from '@/devices/dialogs';
 import { FILE_DIALOGS } from '@/files/dialogs';
 import { LAUNCH_DIALOGS } from '@/launches/dialogs';
@@ -30,6 +31,7 @@ export function installWorkspaceDialogs(): void {
         ...MACHINE_DIALOGS,
         ...DEVICE_DIALOGS,
         ...ROUTINE_DIALOGS,
+        ...DESIGN_DIALOGS,
         ...ATTENTION_DIALOGS
     );
 }

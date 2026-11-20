@@ -2,7 +2,7 @@ import { Button, EmptyState, Icon, Menu, PromptDialog, Segmented, Separator, Zoo
 import { formatAgo } from '@adecore/ui/format';
 import type { ChatAttachmentUpload, FsEntry } from '@ruimte/contracts';
 import { ChevronDown, FileCode2, MessageSquarePlus, MousePointer2, PenLine, Send, SquareMousePointer, Trash2, TriangleAlert } from 'lucide-react';
-import { useContext, useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from 'react';
+import { useContext, useEffect, useEffectEvent, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/action-port/perform';
@@ -94,6 +94,8 @@ interface StageProps {
     pinned?: string;
     /* How the stage takes a page the chat makes; `every` when absent. */
     follow?: PageFollow;
+    /* Escape pressed in the page while nothing is picked, which the frame keeps from the window. */
+    onEscape?: () => void;
 }
 
 /*
@@ -103,7 +105,7 @@ interface StageProps {
  * the tweaks and edits not saved yet. What the tools
  * gather goes to the chat in front as an ordinary message; only Edit and Tweaks write the file.
  */
-export function DesignStage({ designId, chatId, folder, watched, pinned, follow = 'every' }: StageProps) {
+export function DesignStage({ designId, chatId, folder, watched, pinned, follow = 'every', onEscape }: StageProps) {
     const { t } = useTranslation('shell');
     const endpointId = useEndpointId();
     const transport = useTransport();
@@ -300,6 +302,15 @@ export function DesignStage({ designId, chatId, folder, watched, pinned, follow 
                 return;
             case DESIGN_METHODS.pick:
                 setPicked(message.params.element);
+                return;
+            case DESIGN_METHODS.escape:
+                if (picked !== null) {
+                    setPicked(null);
+                    send(DESIGN_METHODS.clear);
+                } else {
+                    onEscape?.();
+                }
+
                 return;
             case DESIGN_METHODS.text:
                 void tell(textEditPrompt(active, message.params.element, message.params.before, message.params.after));
@@ -501,8 +512,16 @@ export function DesignStage({ designId, chatId, folder, watched, pinned, follow 
         );
     }
 
+    // A comment or edit under way takes Escape before whatever holds the stage, such as the overlay of an agent's design.
+    const letGo = (event: KeyboardEvent): void => {
+        if (event.key === 'Escape' && !event.nativeEvent.isComposing && picked !== null) {
+            event.stopPropagation();
+            dismiss();
+        }
+    };
+
     return (
-        <div className="flex min-h-0 grow flex-col">
+        <div className="flex min-h-0 grow flex-col" onKeyDown={letGo}>
             {/* Built like the bar of a cell, so its last control stands under the cell's own. */}
             <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-surface bg-clip-padding pr-1.5 pl-2 text-xs">
                 {pinned === undefined && (

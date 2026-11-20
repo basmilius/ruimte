@@ -18,10 +18,12 @@ interface DesignSurfaceProps {
     watched: string | null;
     focused: boolean;
     follow?: PageFollow;
+    /* What Escape in the page does once the stage has nothing of its own to let go of. */
+    onEscape?: () => void;
 }
 
-/* A design's chat beside its stage, as a Design view shows it and as a chat shows the design of a hidden design agent. */
-export function DesignSurface({ designId, chatId, folder, watched, focused, follow }: DesignSurfaceProps) {
+/* A design's chat beside its stage, as a Design view shows it and as the design of a hidden design agent opens. */
+export function DesignSurface({ designId, chatId, folder, watched, focused, follow, onEscape }: DesignSurfaceProps) {
     const { t } = useTranslation('shell');
     const row = useRef<HTMLDivElement | null>(null);
     const chat = useRef<HTMLDivElement>(null);
@@ -67,6 +69,7 @@ export function DesignSurface({ designId, chatId, folder, watched, focused, foll
                             folder={folder}
                             watched={watched ?? folder}
                             {...(follow === undefined ? {} : { follow })}
+                            {...(onEscape === undefined ? {} : { onEscape })}
                         />
                     )}
                 </ErrorBoundary>

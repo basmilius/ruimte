@@ -295,7 +295,7 @@
             "inProgress": "Bezig",
             "preview": "Voorbeeld van {{name}}",
             "gone": "De map van het design is weg.",
-            "back": "Terug naar de chat"
+            "close": "Sluiten"
         },
         "pageChanged": "Aangepast {{ago}}",
         "loading": "Het design wordt gelezen…",

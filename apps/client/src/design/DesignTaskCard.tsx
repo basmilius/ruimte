@@ -45,9 +45,9 @@ export function DesignTaskCard({ row, agentId, folder }: { row: HostTaskRow; age
               : undefined;
 
     const open = (): void => {
-        const design = { agentId, title: row.item.description, folder, watched: projectFolder ?? folder, taskId: row.item.id };
+        const design = { endpointId, agentId, title: row.item.description, folder, watched: projectFolder ?? folder, taskId: row.item.id };
 
-        void openAgentDesign(endpointId, row.chatId, design, { file: shown, picked: shown !== null && shown === picked }, t('design.card.gone'));
+        void openAgentDesign(design, { file: shown, picked: shown !== null && shown === picked }, t('design.card.gone'));
     };
 
     const pageIcon = (file: string): ReactNode =>

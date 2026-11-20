@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import type { ChatSubagentItem, FsEntry, ProjectView } from '@ruimte/contracts';
+import type { ChatSubagentItem, FsEntry, ProjectCanvasView, ProjectView } from '@ruimte/contracts';
 import { act } from 'react';
+import { agentDesignDialog } from '@/design/agent-design-dialog';
 import { useDesignAgents } from '@/design/design-agent';
+import { DESIGN_METHODS } from '@/design/design-protocol';
 import { useDesignChat } from '@/state/design-chat';
 import { TransportError } from '@/transport-api/transport';
 import { chatInfoOf } from '../../testing/chat-info';
-import { clickOn, layOutChat, mount, until, type Mounted } from '../../testing/dom';
+import { clickOn, layOutChat, mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 
@@ -77,10 +79,52 @@ function button(label: string): HTMLElement | null {
     );
 }
 
+function overlay(): HTMLElement | null {
+    return document.querySelector<HTMLElement>('[role="dialog"]');
+}
+
+async function openDesign(): Promise<void> {
+    await clickOn(button('Open design'));
+    await until(() => overlay() !== null);
+}
+
+/* The overlay is gone and the keyboard is back on the button it was opened from. */
+async function closedOnCard(): Promise<void> {
+    await until(() => overlay() === null);
+    await until(() => document.activeElement === button('Open design'));
+}
+
+const ELEMENT = {
+    selector: 'body > h1:nth-of-type(1)',
+    option: null,
+    name: 'h1',
+    html: '<h1>Sign in</h1>',
+    text: 'Sign in',
+    rect: { x: 10, y: 10, width: 200, height: 40 },
+    style: {}
+};
+
+/* The real frame waits for a measured width, which this DOM never has; a stand-in in the stage speaks for the page. */
+async function standInFrame(): Promise<(method: string, params: object) => Promise<void>> {
+    await until(() => overlay()?.querySelector('[aria-label^="Page: "]') != null);
+
+    const frame = { postMessage: () => undefined };
+    const stand = document.createElement('iframe');
+
+    Object.defineProperty(stand, 'contentWindow', { value: frame });
+    overlay()!.querySelector('[aria-label^="Page: "]')!.parentElement!.nextElementSibling!.prepend(stand);
+
+    return (method, params) =>
+        act(async () => {
+            window.dispatchEvent(new MessageEvent('message', { source: frame as never, data: { jsonrpc: '2.0', method, params } }));
+        });
+}
+
 beforeEach(() => {
     localStorage.clear();
     useDesignAgents.setState({ folders: {} });
-    useDesignChat.setState({ pages: {}, pickedPages: {}, agentDesigns: {} });
+    useDesignChat.setState({ pages: {}, pickedPages: {} });
+    agentDesignDialog.close();
     restoreLayout = layOutChat();
     listing = [];
     machine = new FakeMachine();
@@ -180,24 +224,72 @@ describe("a design agent's card in its parent's thread", () => {
 });
 
 describe('opening the design from the card', () => {
-    test("shows the agent's thread beside the picked page in the chat's place, writes nothing to the project, and goes back", async () => {
+    test("opens over the window on the card's page beside the agent's thread, keeps the thread underneath, and closes with its button", async () => {
         listing = [page('Sign in.html', 100), page('Sign up.html', 200)];
         await open([taskRow('designer', 'done')]);
         await until(() => button('Open design') !== null);
 
-        await clickOn(button('Open design'));
-        await until(() => button('Back to the chat') !== null);
+        await openDesign();
 
         await until(() => machine.requests('chat.attach').some((request) => request.chatId === 'designer'));
-        await until(() => button('Page: Sign up') !== null);
-        expect(inView(card())).toBe(false);
-        expect(machine.requests('project.save')).toEqual([]);
+        await until(() => overlay()?.querySelector('[aria-label="Page: Sign up"]') != null);
+        expect(overlay()!.textContent).toContain('Design the sign in pages');
+        expect(overlay()!.querySelector('[data-chat-body="designer"]')).not.toBeNull();
+        expect(inView(card())).toBe(true);
 
-        await clickOn(button('Back to the chat'));
-        await until(() => inView(card()));
+        await clickOn([...overlay()!.querySelectorAll<HTMLElement>('button')].find((each) => each.textContent?.trim() === 'Close') ?? null);
+        await closedOnCard();
 
-        expect(button('Back to the chat')).toBeNull();
         expect(machine.requests('project.save')).toEqual([]);
+    });
+
+    test("closes on Escape from the agent's composer, after the composer let go of what it held", async () => {
+        listing = [page('Sign in.html', 100)];
+        await open([taskRow('designer', 'done')]);
+        await until(() => button('Open design') !== null);
+        await openDesign();
+        await until(() => overlay()?.querySelector('[data-chat-body="designer"] .cm-content') != null);
+
+        await pressKey(overlay()!.querySelector('[data-chat-body="designer"] .cm-content')!, 'Escape');
+        await closedOnCard();
+
+        expect(machine.requests('project.save')).toEqual([]);
+    });
+
+    test('closes on Escape the page frame hands over, which first lets go of an element picked with Comment', async () => {
+        listing = [page('Sign in.html', 100)];
+        await open([taskRow('designer', 'done')]);
+        await until(() => button('Open design') !== null);
+        await openDesign();
+        const say = await standInFrame();
+
+        await clickOn(overlay()!.querySelector('[aria-label="Comment"]'));
+        await say(DESIGN_METHODS.pick, { tool: 'comment', element: ELEMENT });
+        await until(() => overlay()?.querySelector('textarea') != null);
+
+        await say(DESIGN_METHODS.escape, {});
+        await until(() => overlay()?.querySelector('textarea') == null);
+        expect(overlay()).not.toBeNull();
+
+        await say(DESIGN_METHODS.escape, {});
+        await closedOnCard();
+    });
+
+    test('leaves the first Escape to a menu open inside it', async () => {
+        listing = [page('Sign in.html', 100), page('Sign up.html', 200)];
+        await open([taskRow('designer', 'done')]);
+        await until(() => button('Open design') !== null);
+        await openDesign();
+        await until(() => overlay()?.querySelector('[aria-label="Page: Sign up"]') != null);
+
+        await clickOn(overlay()!.querySelector('[aria-label="Page: Sign up"]'));
+        await until(() => document.querySelector('[role="menu"]') !== null);
+        await pressKey(document.querySelector('[role="menu"]')!, 'Escape');
+        await until(() => document.querySelector('[role="menu"]') === null);
+        expect(overlay()).not.toBeNull();
+
+        await pressKey(overlay()!, 'Escape');
+        await closedOnCard();
     });
 
     test('follows a page the agent writes until a person picks one, then keeps theirs, and never lists a file the agent keeps for itself', async () => {
@@ -234,7 +326,40 @@ describe('opening the design from the card', () => {
         await clickOn(button('Open design'));
         await until(() => document.body.textContent?.includes("The design's folder is gone.") === true);
 
-        expect(button('Back to the chat')).toBeNull();
+        expect(overlay()).toBeNull();
         expect(card()).not.toBeNull();
+    });
+});
+
+describe('opening the design from the card of a chat node on a canvas', () => {
+    test('opens the same overlay, and Escape from the page frame puts the focus back on the card in the node', async () => {
+        listing = [page('Sign in.html', 100)];
+        const main: ProjectCanvasView = {
+            kind: 'canvas',
+            id: 'main',
+            name: 'Main',
+            nodes: [{ id: 'lead-node', kind: 'chat', title: 'Lead', provider: 'claude', x: 0, y: 0, w: 560, h: 360 }],
+            texts: [],
+            edges: [],
+            layouts: []
+        };
+        machine.answer(
+            'chat.attach',
+            ({ chatId }) => ({ info: chatInfoOf(chatId), items: chatId === 'lead-node' ? [taskRow('designer', 'done')] : [], seq: 0 }) as never
+        );
+        workspace = await openFakeWorkspace(machine, { views: [main] }, { activeViewId: main.id, views: {} });
+        mounted = mount();
+        await mounted.renderApp();
+        await until(() => button('Open design') !== null);
+        expect(card()!.closest('[data-chat-body="lead-node"]')).not.toBeNull();
+
+        await openDesign();
+        await until(() => overlay()?.querySelector('[data-chat-body="designer"]') != null);
+        const say = await standInFrame();
+
+        await say(DESIGN_METHODS.escape, {});
+        await closedOnCard();
+
+        expect(machine.requests('project.save')).toEqual([]);
     });
 });

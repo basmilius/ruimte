@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { create } from 'zustand';
+import { agentDesignDialog, type AgentDesign } from '@/design/agent-design-dialog';
 import { listDesignFolder } from '@/design/design-read';
-import { useDesignChat, type AgentDesign } from '@/state/design-chat';
+import { useDesignChat } from '@/state/design-chat';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { machineTransport } from '@/transport';
@@ -52,40 +53,19 @@ export function useDesignAgentFolder(endpointId: string, projectId: string | nul
     return answers ? (folder ?? null) : null;
 }
 
-/* Gives the card the design was opened from the keyboard back once the chat's thread is in view again. */
-function focusCard(taskId: string): void {
-    requestAnimationFrame(() => {
-        const card = [...document.querySelectorAll<HTMLElement>('[data-design-card]')].find((candidate) => candidate.dataset.designCard === taskId);
+/* The "Open design" button of the card of this task, which the keyboard goes back to once the design closes. */
+export function openDesignButton(taskId: string): HTMLElement | null {
+    const card = [...document.querySelectorAll<HTMLElement>('[data-design-card]')].find((candidate) => candidate.dataset.designCard === taskId);
 
-        card?.querySelector<HTMLElement>('[data-open-design]')?.focus();
-    });
-}
-
-/* Closes the design a chat shows, and hands the keyboard back to its card. False when the chat showed none. */
-export function closeAgentDesign(chatKey: string): boolean {
-    const design = useDesignChat.getState().agentDesigns[chatKey];
-
-    if (design === undefined || !useDesignChat.getState().closeAgentDesign(chatKey)) {
-        return false;
-    }
-
-    focusCard(design.taskId);
-
-    return true;
+    return card?.querySelector<HTMLElement>('[data-open-design]') ?? null;
 }
 
 /*
- * Shows the design of a hidden design agent in the chat's place, on `page`, which `picked` says a person picked
+ * Opens the design of a hidden design agent over the window, on `page`, which `picked` says a person picked
  * themselves. A folder that is gone by now says so in a toast instead, and opens nothing.
  */
-export async function openAgentDesign(
-    endpointId: string,
-    chatId: string,
-    design: AgentDesign,
-    page: { file: string | null; picked: boolean },
-    goneText: string
-): Promise<void> {
-    const read = await listDesignFolder(endpointId, design.folder);
+export async function openAgentDesign(design: AgentDesign, page: { file: string | null; picked: boolean }, goneText: string): Promise<void> {
+    const read = await listDesignFolder(design.endpointId, design.folder);
 
     if (read.kind === 'missing') {
         useToasts.getState().show({ kind: 'error', title: goneText });
@@ -93,5 +73,6 @@ export async function openAgentDesign(
         return;
     }
 
-    useDesignChat.getState().openAgentDesign(endpointKey(endpointId, chatId), design, page.file, page.picked);
+    useDesignChat.getState().openAgentPage(design.agentId, page.file, page.picked);
+    agentDesignDialog.open(design);
 }

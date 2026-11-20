@@ -146,6 +146,18 @@ const RUNTIME = String.raw`(function () {
 
     addEventListener('pointerdown', function () { post(M.press, {}); }, true);
 
+    // A key in the frame never reaches the window, so Escape goes to the stage; text being edited in place lets go of it first.
+    addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape' || event.isComposing || event.metaKey || event.ctrlKey || event.altKey) { return; }
+        var target = event.target;
+        if (target && target.isContentEditable && tool === 'edit') {
+            event.preventDefault();
+            target.blur();
+            return;
+        }
+        post(M.escape, {});
+    }, true);
+
     // A link to an option flies to it on the canvas and scrolls to it on a page.
     addEventListener('click', function (event) {
         var link = event.target && event.target.closest && event.target.closest('a[href^="#"]');

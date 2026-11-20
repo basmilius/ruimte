@@ -27,14 +27,10 @@ interface DesignChatState {
     keepCamera(key: string, camera: DesignCamera): void;
 
     /*
-     * The design of a hidden design agent a chat shows in its thread's place, by the chat's key. A look at the
-     * agent's work rather than a place, like a sub-agent's conversation: one window's, never saved.
+     * Puts a hidden design agent's design on `page` as it opens; `picked` says a person picked it themselves, which a
+     * new page of the agent then leaves in front.
      */
-    agentDesigns: Record<string, AgentDesign>;
-    /* `picked` opens on a page a person picked themselves, which a new page of the agent then leaves in front. */
-    openAgentDesign(chatKey: string, design: AgentDesign, page: string | null, picked: boolean): void;
-    /* False when the chat showed none, so the key can mean something else. */
-    closeAgentDesign(chatKey: string): boolean;
+    openAgentPage(agentId: string, page: string | null, picked: boolean): void;
 }
 
 /*
@@ -43,17 +39,6 @@ interface DesignChatState {
  * writes on by itself while they look.
  */
 export type PageFollow = 'every' | 'until-picked';
-
-/* A hidden design agent's design: the agent, whose chat id is its design's id, and its folder, absolute. */
-export interface AgentDesign {
-    agentId: string;
-    title: string;
-    folder: string;
-    /* What a watch must cover to see the folder come, the project folder. */
-    watched: string;
-    /* The task row the design was opened from, which gets the focus back once it closes. */
-    taskId: string;
-}
 
 export const useDesignChat = create<DesignChatState>((set, get) => ({
     picked: {},
@@ -71,30 +56,15 @@ export const useDesignChat = create<DesignChatState>((set, get) => ({
     },
     cameras: {},
     keepCamera: (key, camera) => set((state) => ({ cameras: { ...state.cameras, [key]: camera } })),
-    agentDesigns: {},
-    openAgentDesign: (chatKey, design, page, picked) =>
+    openAgentPage: (agentId, page, picked) =>
         set((state) => {
-            const { [design.agentId]: _before, ...pickedPages } = state.pickedPages;
+            const { [agentId]: _before, ...pickedPages } = state.pickedPages;
 
             return {
-                agentDesigns: { ...state.agentDesigns, [chatKey]: design },
-                pages: { ...state.pages, [design.agentId]: page },
-                pickedPages: picked ? { ...pickedPages, [design.agentId]: true } : pickedPages
+                pages: { ...state.pages, [agentId]: page },
+                pickedPages: picked ? { ...pickedPages, [agentId]: true } : pickedPages
             };
-        }),
-    closeAgentDesign: (chatKey) => {
-        if (get().agentDesigns[chatKey] === undefined) {
-            return false;
-        }
-
-        set((state) => {
-            const { [chatKey]: _closed, ...rest } = state.agentDesigns;
-
-            return { agentDesigns: rest };
-        });
-
-        return true;
-    }
+        })
 }));
 
 export function designCameraKey(designId: string, file: string): string {

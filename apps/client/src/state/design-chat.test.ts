@@ -23,8 +23,6 @@ test('a design shows the newest chat until a person picks another, and the newes
 });
 
 describe('a page the chat makes', () => {
-    const agentDesign = { agentId: 'designer', title: 'Shop', folder: '/work/shop', watched: '/work', taskId: 'task' };
-
     const before = useDesignChat.getState();
 
     afterEach(() => {
@@ -39,7 +37,7 @@ describe('a page the chat makes', () => {
     });
 
     test("comes in front of a design agent's design until a person picks a page, and then leaves theirs in front", () => {
-        useDesignChat.getState().openAgentDesign('machine:lead', agentDesign, 'Checkout.html', false);
+        useDesignChat.getState().openAgentPage('designer', 'Checkout.html', false);
         useDesignChat.getState().followNewPage('designer', 'Pricing.html', 'until-picked');
 
         expect(useDesignChat.getState().pages.designer).toBe('Pricing.html');
@@ -51,12 +49,12 @@ describe('a page the chat makes', () => {
     });
 
     test('stays behind a page a person picked on the card, and follows again once the design opens without one', () => {
-        useDesignChat.getState().openAgentDesign('machine:lead', agentDesign, 'Checkout.html', true);
+        useDesignChat.getState().openAgentPage('designer', 'Checkout.html', true);
         useDesignChat.getState().followNewPage('designer', 'Pricing.html', 'until-picked');
 
         expect(useDesignChat.getState().pages.designer).toBe('Checkout.html');
 
-        useDesignChat.getState().openAgentDesign('machine:lead', agentDesign, 'Checkout.html', false);
+        useDesignChat.getState().openAgentPage('designer', 'Checkout.html', false);
         useDesignChat.getState().followNewPage('designer', 'Pricing.html', 'until-picked');
 
         expect(useDesignChat.getState().pages.designer).toBe('Pricing.html');

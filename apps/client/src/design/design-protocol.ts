@@ -16,6 +16,8 @@ export const DESIGN_METHODS = {
     space: 'ruimte/design/space',
     // From the page: a person pressed in it, which never reaches the cell around the frame.
     press: 'ruimte/design/press',
+    // From the page: Escape while the page has the keyboard, which never reaches the window around the frame.
+    escape: 'ruimte/design/escape',
     // From the stage: the whole board fitted into the stage, which only the page can measure.
     zoom: 'ruimte/design/zoom',
     // From the stage: the tool a person holds.
@@ -101,6 +103,7 @@ const PageMessageSchema = z.discriminatedUnion('method', [
     message(DESIGN_METHODS.wheel, WheelSchema),
     message(DESIGN_METHODS.pan, z.object({ dx: z.number().finite(), dy: z.number().finite() })),
     message(DESIGN_METHODS.press, z.object({})),
+    message(DESIGN_METHODS.escape, z.object({})),
     message(DESIGN_METHODS.pick, z.object({ tool: z.enum(['comment', 'edit']), element: DesignElementSchema })),
     message(DESIGN_METHODS.text, z.object({ element: DesignElementSchema, before: z.string().max(2000), after: z.string().max(2000) })),
     message(DESIGN_METHODS.located, z.object({ elements: z.array(DesignElementSchema).max(4) })),

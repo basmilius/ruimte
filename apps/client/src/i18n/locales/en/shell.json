@@ -295,7 +295,7 @@
             "inProgress": "In progress",
             "preview": "Preview of {{name}}",
             "gone": "The design's folder is gone.",
-            "back": "Back to the chat"
+            "close": "Close"
         },
         "pageChanged": "Changed {{ago}}",
         "loading": "Reading the design…",
