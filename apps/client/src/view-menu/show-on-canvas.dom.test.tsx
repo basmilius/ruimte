@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectView } from '@ruimte/contracts';
 import { act } from 'react';
+import { focusedCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { startSessionLifecycle } from '@/workspace/session-lifecycle';
 import { mount, until, type Mounted } from '../../testing/dom';
@@ -79,4 +80,60 @@ test('a chat shown on a canvas that is on screen beside it keeps running on the 
 
     expect(mainNodeIds()).toContain(NOTES.id);
     expect(machine.requests('chat.kill')).toEqual([]);
+});
+
+test('a chat that stands in no view for a moment of one change keeps running on the machine', async () => {
+    const machine = new FakeMachine();
+    workspace = await openFakeWorkspace(
+        machine,
+        { views: [MAIN, NOTES] },
+        {
+            activeViewId: NOTES.id,
+            views: {},
+            layout: {
+                columns: [
+                    { cells: [{ viewId: NOTES.id, size: 1 }], size: 1 },
+                    { cells: [{ viewId: MAIN.id, size: 1 }], size: 1 }
+                ],
+                focus: { column: 0, cell: 0 }
+            }
+        }
+    );
+    page = mount();
+    await page.renderApp();
+    await until(() => page.host.querySelector(`[data-sidebar-row="view:${NOTES.id}"]`) !== null);
+    const stopLifecycle = startSessionLifecycle();
+
+    // The order `putOnCanvas` had before: the chat's view goes first, and the canvas takes the node after.
+    await act(async () => {
+        const views = useDocument.getState().views;
+        useDocument.setState({ views: views.filter((view) => view.id !== NOTES.id) });
+        useDocument.setState({ views });
+        useDocument.getState().putOnCanvas(NOTES.id, MAIN.id);
+    });
+    stopLifecycle();
+
+    expect(mainNodeIds()).toContain(NOTES.id);
+    expect(machine.requests('chat.kill')).toEqual([]);
+});
+
+test('a chat whose node a person closes is still ended on the machine', async () => {
+    const machine = new FakeMachine();
+    workspace = await openFakeWorkspace(machine, { views: [MAIN, NOTES] }, { activeViewId: MAIN.id, views: {} });
+    page = mount();
+    await page.renderApp();
+    await until(() => page.host.querySelector(`[data-sidebar-row="view:${NOTES.id}"]`) !== null);
+    const stopLifecycle = startSessionLifecycle();
+
+    await act(async () => {
+        useDocument.getState().putOnCanvas(NOTES.id, MAIN.id);
+    });
+    await act(async () => {
+        focusedCanvas().getState().select([NOTES.id]);
+        focusedCanvas().getState().deleteSelected();
+    });
+    stopLifecycle();
+
+    expect(mainNodeIds()).not.toContain(NOTES.id);
+    expect(machine.requests('chat.kill')).toEqual([{ chatId: NOTES.id }]);
 });

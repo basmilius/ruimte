@@ -131,6 +131,8 @@ describe('a view a person deletes', () => {
     test('ends its sessions at once when the toast is dismissed', async () => {
         await deleteBoard();
         useToasts.getState().dismiss(useToasts.getState().toasts[0]!.id);
+        await Promise.resolve();
+
         expect(ended.sort()).toEqual(['chat:helper', 'terminal:shell']);
         expect(viewIds()).toEqual(['other']);
     });

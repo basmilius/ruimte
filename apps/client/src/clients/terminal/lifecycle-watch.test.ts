@@ -36,6 +36,11 @@ function watch(): () => void {
     return watchNodes((endpointId, id, kind, exit) => (exit === 'closed' ? ended : gone).push(`${endpointId} ${kind}:${id}`));
 }
 
+/* A node leaves once the change that took it out has settled, a microtask after it. */
+async function settled(): Promise<void> {
+    await Promise.resolve();
+}
+
 beforeEach(() => {
     ended = [];
     gone = [];
@@ -87,39 +92,101 @@ describe('a view switch', () => {
 });
 
 describe('a node leaving the document', () => {
-    test('ends by kind', () => {
+    test('ends by kind', async () => {
         focusedCanvas().getState().select(['t1', 'c1', 'b1']);
         focusedCanvas().getState().deleteSelected();
+        await settled();
+
         expect(ended.sort()).toEqual(['local browser:b1', 'local chat:c1', 'local terminal:t1']);
     });
 
-    test('ends a node on a view that is not on screen', () => {
+    test('ends a node on a view that is not on screen', async () => {
         useDocument.getState().deleteView('b');
+        await settled();
+
         expect(ended).toEqual(['local terminal:t2']);
     });
 
-    test('ends nothing when another project swaps in', () => {
+    test('ends nothing when another project swaps in', async () => {
         useDocument.getState().load(project([view('x', [node('t9')])]), { activeViewId: 'x', views: {} });
+        await settled();
+
         expect(ended).toEqual([]);
         expect(gone).toEqual([]);
     });
 
-    test('names the machine it ran on, so the kill goes to that daemon', () => {
+    test('names the machine it ran on, so the kill goes to that daemon', async () => {
         stop?.();
         useEndpoints.getState().add(container);
         useEndpoints.getState().setActive(container.id);
         stop = watch();
         focusedCanvas().getState().select(['t1']);
         focusedCanvas().getState().deleteSelected();
+        await settled();
+
         expect(ended).toEqual(['Xk3p terminal:t1']);
     });
 
-    test('ends nothing of the machine that is left behind when another one takes over', () => {
+    test('ends nothing of the machine that is left behind when another one takes over', async () => {
         useEndpoints.getState().add(container);
         useEndpoints.getState().setActive(container.id);
         focusedCanvas().getState().select(['t1', 'c1']);
         focusedCanvas().getState().deleteSelected();
+        await settled();
+
         expect(ended).toEqual([]);
+    });
+});
+
+describe('a node that stands nowhere for a moment', () => {
+    test('keeps its session when the same change places it again', async () => {
+        focusedCanvas().getState().select(['c1']);
+        focusedCanvas().getState().deleteSelected();
+        focusedCanvas().getState().undo();
+        await settled();
+
+        expect(focusedCanvas().getState().nodes.c1).toBeDefined();
+        expect(ended).toEqual([]);
+        expect(gone).toEqual([]);
+    });
+
+    test('keeps its session when it comes back as a view of another kind', async () => {
+        focusedCanvas().getState().select(['c1']);
+        focusedCanvas().getState().deleteSelected();
+        useDocument.getState().addStandaloneView({ kind: 'chat', id: 'c1', name: 'c1', node: {} });
+        await settled();
+
+        expect(ended).toEqual([]);
+    });
+
+    test('is ended once when it is not placed again, however often it left', async () => {
+        focusedCanvas().getState().select(['c1']);
+        focusedCanvas().getState().deleteSelected();
+        focusedCanvas().getState().undo();
+        focusedCanvas().getState().select(['c1']);
+        focusedCanvas().getState().deleteSelected();
+        await settled();
+        await settled();
+
+        expect(ended).toEqual(['local chat:c1']);
+    });
+
+    test('ends both of two nodes one change took out', async () => {
+        focusedCanvas().getState().select(['t1']);
+        focusedCanvas().getState().deleteSelected();
+        useDocument.getState().deleteView('b');
+        await settled();
+
+        expect(ended.sort()).toEqual(['local terminal:t1', 'local terminal:t2']);
+    });
+
+    test('is still ended when the watch stops before the change settled', () => {
+        focusedCanvas().getState().select(['t1']);
+        focusedCanvas().getState().deleteSelected();
+        stop?.();
+        stop = null;
+
+        expect(ended).toEqual(['local terminal:t1']);
     });
 });
 
@@ -137,30 +204,38 @@ describe('a node another writer took out of the file', () => {
         layouts: null
     });
 
-    test('is only let go of here when it stood on screen, never ended', () => {
+    test('is only let go of here when it stood on screen, never ended', async () => {
         useDocument.getState().applyMerge(without('b1'), { a: removal('b1') }, [], {});
+        await settled();
+
         expect(focusedCanvas().getState().nodes.b1).toBeUndefined();
         expect(ended).toEqual([]);
         expect(gone).toEqual(['local browser:b1']);
     });
 
-    test('is only let go of here when it stood on a view that is not on screen, never ended', () => {
+    test('is only let go of here when it stood on a view that is not on screen, never ended', async () => {
         useDocument.getState().applyMerge(without('t2'), {}, [], {});
+        await settled();
+
         expect(ended).toEqual([]);
         expect(gone).toEqual(['local terminal:t2']);
     });
 
-    test('is only let go of here when the project on screen is read again without it, never ended', () => {
+    test('is only let go of here when the project on screen is read again without it, never ended', async () => {
         useDocument.getState().reload(project(without('b1')), { activeViewId: 'a', views: {} });
+        await settled();
+
         expect(focusedCanvas().getState().nodes.b1).toBeUndefined();
         expect(ended).toEqual([]);
         expect(gone).toEqual(['local browser:b1']);
     });
 
-    test('leaves a close made here right after it ending as before', () => {
+    test('leaves a close made here right after it ending as before', async () => {
         useDocument.getState().applyMerge(without('t2'), {}, [], {});
         focusedCanvas().getState().select(['t1']);
         focusedCanvas().getState().deleteSelected();
+        await settled();
+
         expect(ended).toEqual(['local terminal:t1']);
         expect(gone).toEqual(['local terminal:t2']);
     });

@@ -36,17 +36,44 @@ function liveNodes(): Map<string, CanvasNodeKind> {
     return live;
 }
 
-/* Ends every node that leaves the document, so no store talks to the transport itself. */
+/*
+ * Ends every node that leaves the document, so no store talks to the transport itself. A node is ended
+ * only once the change that took it out has settled, a microtask after it: a move that drops a node in
+ * one store before another store takes it (a view put on a canvas, a node opened as a view) runs in one
+ * synchronous call, and a node that stood nowhere for that moment keeps its session.
+ */
 export function watchNodes(end: NodeEnder): () => void {
     let previous = liveNodes();
     /* What was live when the project on screen began to be read again from disk. */
     let beforeReload: Map<string, CanvasNodeKind> | null = null;
-    const endMissing = (from: Map<string, CanvasNodeKind>, current: Map<string, CanvasNodeKind>, exit: NodeExit): void => {
-        for (const [key, kind] of from) {
-            if (!current.has(key)) {
+    /* What left the document in the change that is still settling, with how it left. */
+    const leaving = new Map<string, { kind: CanvasNodeKind; exit: NodeExit }>();
+    let settleQueued = false;
+    const settle = (): void => {
+        settleQueued = false;
+        if (leaving.size === 0) {
+            return;
+        }
+
+        const live = liveNodes();
+        const left = [...leaving];
+        leaving.clear();
+        for (const [key, { kind, exit }] of left) {
+            if (!live.has(key)) {
                 const { endpointId, id } = splitKey(key);
                 end(endpointId, id, kind, exit);
             }
+        }
+    };
+    const endMissing = (from: Map<string, CanvasNodeKind>, current: Map<string, CanvasNodeKind>, exit: NodeExit): void => {
+        for (const [key, kind] of from) {
+            if (!current.has(key) && !leaving.has(key)) {
+                leaving.set(key, { kind, exit });
+            }
+        }
+        if (leaving.size > 0 && !settleQueued) {
+            settleQueued = true;
+            queueMicrotask(settle);
         }
     };
     const step = (changed: boolean, settling: boolean, merging: boolean): void => {
@@ -112,5 +139,7 @@ export function watchNodes(end: NodeEnder): () => void {
         offCanvas();
         offDocument();
         offEndpoint();
+        // A close made right before the watch stops still ends its session.
+        settle();
     };
 }
