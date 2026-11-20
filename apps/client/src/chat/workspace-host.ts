@@ -16,6 +16,7 @@ import { openUiLink, openUiUrl } from '@/chat/ui-links';
 import { useTimelineFind } from '@/chat/use-chat-find';
 import { useNodeComputerApprovals } from '@/computer/computer';
 import { useContextSources } from '@/context/sources';
+import { useDesignTaskRow } from '@/design/design-task-row';
 import { DesignComposerHeader } from '@/design/DesignChats';
 import { DictationTextarea } from '@/dictation/DictationTextarea';
 import { dictationPreview, dictationRange } from '@/dictation/editor';
@@ -37,8 +38,8 @@ import { isComposerShortcut } from '@/surface/terminal-keymap';
 /*
  * What the chat takes from Ruimte that only a workspace draws: the find over a thread, dictation, the
  * cards the machine raises beside a chat's own prompts, a card in the thread for what it saved to
- * Output, the ways to a file or another chat of the project, the 3D view of a Model block, and the new
- * chat a send opens beside its own. The workspace hands it to the chat views under it, a layer over `CHAT_HOST`.
+ * Output, the card of a design agent's task, the ways to a file or another chat of the project, the 3D
+ * view of a Model block, and the new chat a send opens beside its own. The workspace hands it to the chat views under it, a layer over `CHAT_HOST`.
  */
 export const WORKSPACE_CHAT_HOST: ChatHostLayer = {
     intelligentUi: { openLink: openUiLink, openUrl: openUiUrl },
@@ -94,6 +95,7 @@ export const WORKSPACE_CHAT_HOST: ChatHostLayer = {
     useChatPlace,
     useContextSources,
     useThreadCards: useOutputThreadCards,
+    useTaskRow: useDesignTaskRow,
     // Saving needs the project the chat is in, which only a workspace has.
     attachments: {
         actions: (scopeId, chatId, attachment) =>

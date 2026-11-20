@@ -23,7 +23,6 @@ import { useMapSource } from '@/chat/use-map-source';
 import { visualHostFor } from '@/chat/visuals';
 import { codeHighlighter } from '@/code-highlighter';
 import { CODE_THEMES } from '@/code-themes';
-import { useDesignTaskRow } from '@/design/design-task-row';
 import { desktop } from '@/desktop/bridge';
 import { downloadBlob } from '@/download';
 import { renderEmptyThread, renderMessageActions, renderToolActions, renderToolResult, useExpandingCommands } from '@/extensions/chat-seams';
@@ -137,7 +136,6 @@ export const CHAT_HOST: ChatHostLayer = {
     renderToolResult,
     useExpandingCommands,
     useSkills: (endpointId) => useSkillsOf(endpointId),
-    useTaskRow: (row) => useDesignTaskRow(row),
     // Named here, in the app's own source, so Vite serves the worker while it pre-bundles the chat package.
     maps: { useSource: useMapSource, workerUrl: new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url).href },
     notify: (toast) => void useToasts.getState().show(toast),
