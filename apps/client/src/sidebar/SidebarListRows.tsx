@@ -194,10 +194,9 @@ export function NodeRow({ row, tabbable, snoozable }: RowProps & { row: SidebarN
             </ListRow>
         );
     }
-    const snooze =
-        node.status === 'needs-you' || node.snoozedUntil ? (
-            <SnoozeMenuItems endpointId={endpointId} nodeId={snoozeTargetOf(node)} needsYou={node.status === 'needs-you'} />
-        ) : undefined;
+    // A parent whose sub-agent waits can be put aside too, which takes it out of "Needs you" and the count.
+    const needsYou = node.status === 'needs-you' || node.childWait?.kind === 'needs-you';
+    const snooze = needsYou || node.snoozedUntil ? <SnoozeMenuItems endpointId={endpointId} nodeId={snoozeTargetOf(node)} needsYou={needsYou} /> : undefined;
     const menu = (
         <ContextMenu.Root>
             <ContextMenu.Trigger

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentStatus, NodeKind } from '@ruimte/contracts';
+import type { AgentStatus, NodeKind, Task } from '@ruimte/contracts';
+import type { ChildWait } from '@/state/delegation';
 import {
     buildCombinedSidebar,
     type SidebarGroup,
@@ -117,6 +118,24 @@ function project(views: SidebarView[], activeViewId: string | null): SidebarProj
     };
 }
 
+function childWaits(childId: string, since: number): ChildWait {
+    const task: Task = {
+        id: `task-${childId}`,
+        projectId: 'p1',
+        parentId: 'lead',
+        childId,
+        title: childId,
+        prompt: '',
+        status: 'open',
+        result: null,
+        createdAt: 1,
+        settledAt: null,
+        wake: 'pending'
+    };
+
+    return { kind: 'needs-you', task, since };
+}
+
 function build(views: SidebarView[], activeViewId: string | null, expanded: string[]) {
     return buildSidebar({ project: project(views, activeViewId), expandedIds: new Set(expanded) });
 }
@@ -187,6 +206,28 @@ describe('buildSidebar', () => {
         expect(needs!.rows[0]).toMatchObject({ rowId: 'needs:auth', ownView: true });
         expect(viewNameOf(needs!.rows[0] as SidebarNodeRow)).toBeNull();
         expect(list!.rows[0]).toMatchObject({ rowId: 'view:auth', expandable: false, status: 'needs-you', draft: true });
+    });
+
+    test('a chat whose hidden sub-agent waits stands under "Needs you" in its place, dated by the sub-agent', () => {
+        const parent = { ...node('lead', 'running'), childWait: childWaits('hidden', 3_000) };
+        const older = { ...node('claude', 'needs-you'), wait: { kind: 'waiting' as const, since: 2_000, ask: null } };
+        const [needs] = build([view('backend', [parent, older])], null, []);
+
+        expect(needs!.rows.map((row) => row.rowId)).toEqual(['needs:claude', 'needs:lead']);
+    });
+
+    test('a chat whose sub-agent waits in a view of its own leaves "Needs you" to that sub-agent', () => {
+        const parent = { ...node('lead', 'running'), childWait: childWaits('helper', 3_000) };
+        const [needs] = build([view('backend', [parent, node('helper', 'needs-you')])], null, []);
+
+        expect(needs!.rows.map((row) => row.rowId)).toEqual(['needs:helper']);
+    });
+
+    test('a snoozed chat whose hidden sub-agent waits stays out of "Needs you"', () => {
+        const parent = { ...node('lead', 'running'), childWait: childWaits('hidden', 3_000), snoozedUntil: 5_000 };
+        const sections = build([view('backend', [parent])], null, []);
+
+        expect(sections.map((section) => section.kind)).toEqual(['views']);
     });
 
     test('a snoozed node leaves the section and keeps its status in the list of views', () => {

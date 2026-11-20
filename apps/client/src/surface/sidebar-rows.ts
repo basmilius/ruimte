@@ -218,28 +218,45 @@ function waitsOnYou(node: SidebarNode): boolean {
     return node.status === 'needs-you' && !node.snoozedUntil;
 }
 
+/* A sub-agent in no view (a hidden agent) has no row of its own, so its parent waits under "Needs you" in its place, as the count holds it. */
+function waitsThroughChild(node: SidebarNode, listed: ReadonlySet<string>): boolean {
+    return node.childWait?.kind === 'needs-you' && !listed.has(node.childWait.task.childId) && !node.snoozedUntil;
+}
+
+/* A parent that waits through its sub-agent is dated by when the sub-agent began to wait. */
+function waitOf(node: SidebarNode): Pick<WaitDetails, 'kind' | 'since'> | undefined {
+    if (node.status !== 'needs-you' && node.childWait?.kind === 'needs-you') {
+        return { kind: 'waiting', since: node.childWait.since };
+    }
+
+    return node.wait;
+}
+
 /* What waits for you first, then the views in project order, with the nodes of an open canvas under it. */
 export function buildSidebar({ project, expandedIds, order }: SidebarInput): SidebarSection[] {
     const sections: SidebarSection[] = [];
     const waiting: SidebarRow[] = [];
+    const held = (view: SidebarView): SidebarNode[] => [...view.nodes, ...(view.self ? [view.self] : [])];
+    const listed = new Set(project.views.flatMap(held).flatMap((node) => [node.id, ...(node.chats ?? []).map((chat) => chat.id)]));
+
     for (const view of project.views.filter((candidate) => !candidate.hidden)) {
-        for (const held of [...view.nodes, ...(view.self ? [view.self] : [])]) {
-            for (const node of held.chats ?? [held]) {
-                if (waitsOnYou(node)) {
+        for (const holder of held(view)) {
+            for (const node of holder.chats ?? [holder]) {
+                if (waitsOnYou(node) || waitsThroughChild(node, listed)) {
                     waiting.push({
                         type: 'node',
                         rowId: `needs:${node.id}`,
                         node,
                         viewId: view.id,
                         viewName: view.name,
-                        ...(held === view.self && node.title === view.name ? { ownView: true } : {})
+                        ...(holder === view.self && node.title === view.name ? { ownView: true } : {})
                     });
                 }
             }
         }
     }
     if (waiting.length > 0) {
-        waiting.sort((before, next) => (before.type === 'node' && next.type === 'node' ? compareWaits(before.node.wait, next.node.wait) : 0));
+        waiting.sort((before, next) => (before.type === 'node' && next.type === 'node' ? compareWaits(waitOf(before.node), waitOf(next.node)) : 0));
         sections.push(needsYou([{ key: 'current', label: null, rows: waiting }]));
     }
 
