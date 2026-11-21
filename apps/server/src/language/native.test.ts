@@ -201,11 +201,11 @@ describe('the SQL checkout', () => {
         expect(policy.plan('php-native', '/home/php-native')).not.toBeNull();
     });
 
-    it('pins the standalone v0.2.1 artifacts and their native version', () => {
-        expect(sqlDescriptor.version).toBe('0.2.1');
-        expect(sqlDescriptor.sourceRevision).toBe('07d184db2aa42c00af154811e9b9b4816d241334');
+    it('pins the standalone v0.3.1 artifacts and their native version', () => {
+        expect(sqlDescriptor.version).toBe('0.3.1');
+        expect(sqlDescriptor.sourceRevision).toBe('e7b54f282070d56974480d138d5bf14f35d8175c');
         expect(NATIVE_RELEASES['sql-native']).toBeDefined();
-        expect(Object.keys(sqlDescriptor.assets).sort()).toEqual(['darwin-arm64', 'linux-arm64', 'linux-x64', 'win32-x64']);
+        expect(Object.keys(sqlDescriptor.assets).sort()).toEqual(['darwin-arm64', 'linux-arm64', 'linux-x64', 'win32-arm64', 'win32-x64']);
         for (const [target, asset] of Object.entries(sqlDescriptor.assets)) {
             const [platform, arch] = target.split('-');
             const plan = new NativePolicy({ checkouts: {}, platform: platform as NodeJS.Platform, arch }).plan('sql-native', folder);
@@ -246,10 +246,10 @@ describe('native policy', () => {
         assets: { 'darwin-arm64': { url: 'https://example.test/a.tar.gz', sha256: 'f'.repeat(64), format: 'tar.gz', executable: 'php-language-server' } }
     };
 
-    it('pins the standalone v0.8.2 artifacts and their native version', () => {
-        expect(descriptor.version).toBe('0.8.2');
-        expect(descriptor.stubsCommit).toBe('e4f5f6c3de39f3bab3e9f3fca4b8cdb8b061e681');
-        expect(descriptor.sourceRevision).toBe('29be61c7be697e6f5bd0a9b29500229169383973');
+    it('pins the standalone v0.9.0 artifacts and their native version', () => {
+        expect(descriptor.version).toBe('0.9.0');
+        expect(descriptor.stubsCommit).toBe('5f84a9c87737addd09ad6cc4ad9bd4afb6f794a1');
+        expect(descriptor.sourceRevision).toBe('ffd8c557e7847a507e537347c36f6e14854f4328');
         expect(descriptor).not.toHaveProperty('adecoreVersion');
         expect(Object.keys(descriptor.assets).sort()).toEqual(['darwin-arm64', 'linux-arm64', 'linux-x64', 'win32-arm64', 'win32-x64']);
         for (const [target, asset] of Object.entries(descriptor.assets)) {
