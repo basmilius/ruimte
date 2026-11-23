@@ -103,6 +103,13 @@ describe('what a wait asks first', () => {
         expect(waitDetailsOf({ id: 'docs', kind: 'chat' }, {}, {}, new Map(), ENDPOINT)).toEqual({ kind: 'waiting', since: Infinity, ask: null });
     });
 
+    test('reads a chat held by a card of Ruimte, such as a secret, as a question dated by the card', () => {
+        const cards = new Map([[key('docs'), 300]]);
+
+        expect(waitDetailsOf({ id: 'docs', kind: 'chat' }, {}, {}, new Map(), ENDPOINT, cards)).toEqual({ kind: 'question', since: 300, ask: null });
+        expect(waitDetailsOf({ id: 'other', kind: 'chat' }, {}, {}, new Map(), ENDPOINT, cards).kind).toBe('waiting');
+    });
+
     test('orders approval before question before an unspecified wait, with oldest-first ties and unknown dates last', () => {
         const input = [
             { id: 'unknown', kind: 'waiting' as const, since: Infinity },

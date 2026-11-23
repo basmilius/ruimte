@@ -2,11 +2,11 @@ import type { PromptAction, ApprovalButtonSpec, HostPrompt, PromptSubject } from
 import type { AgentRequest, ComputerApproval, ComputerApprovalChoice, ProjectProposal, SecretRequest, TunnelProposal } from '@ruimte/contracts';
 import i18next from 'i18next';
 import type { ProposalAnswers, TunnelProposalAnswers } from '@/proposals/answer';
-import type { SecretAnswers } from '@/secrets/answer';
+import type { SecretAnswers, SecretValues } from '@/secrets/answer';
 
 /*
  * What Ruimte asks beside a chat's own prompts. The machine asks, and not the CLI, for an agent to
- * operate an app, for a launch's secret and about an agent's suggestion to make its chat a project
+ * operate an app, for a secret and about an agent's suggestion to make its chat a project
  * or to change a hostname of the machine's tunnel. A terminal whose TUI waits is answered only in that TUI.
  */
 type RuimtePromptData =
@@ -18,6 +18,19 @@ type RuimtePromptData =
 
 /* The field of a secret card's answer; the value travels in it only from the card to the machine. */
 export const SECRET_ANSWER_FIELD = 'value';
+
+/* What a card's answer saves: one value, or one per field of a card that asks for several; null while one is empty. */
+export function secretAnswerOf(request: SecretRequest, answers: Readonly<Record<string, string>>): SecretValues | null {
+    if (request.fields === undefined) {
+        const value = answers[SECRET_ANSWER_FIELD];
+
+        return value ? { value } : null;
+    }
+
+    const values = Object.fromEntries(request.fields.map((field) => [field.name, answers[field.name] ?? '']));
+
+    return Object.values(values).every((value) => value !== '') ? { values } : null;
+}
 
 /* Decline is the one choice a secret card offers besides Save, and the one a suggestion's card sends to the machine. */
 export const SECRET_DECLINE = 'decline';
@@ -163,9 +176,9 @@ export async function answerRuimtePrompt(
         // Review opens the dialog from the card itself; only a no reaches the machine from here.
         accepted = declined && proposals !== undefined && (await proposals.decline(data.endpointId, data.proposal.proposalId));
     } else if (data.kind === 'secret-request') {
-        const value = action.kind === 'answer' ? action.answers[SECRET_ANSWER_FIELD] : undefined;
-        if (value !== undefined && value !== '') {
-            accepted = await secrets.save(data.endpointId, data.request.requestId, value);
+        const answer = action.kind === 'answer' ? secretAnswerOf(data.request, action.answers) : null;
+        if (answer !== null) {
+            accepted = await secrets.save(data.endpointId, data.request.requestId, answer);
         } else if (declined) {
             accepted = await secrets.decline(data.endpointId, data.request.requestId);
         }

@@ -40,6 +40,7 @@ describe('wireDaemon', () => {
                 'push',
                 'remote',
                 'routines',
+                'secrets',
                 'settingPorts',
                 'stats',
                 'stores',

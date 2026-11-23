@@ -8,7 +8,6 @@ import { managerSessions } from '../launches/sessions.ts';
 import { LaunchStore } from '../launches/store.ts';
 import { foregroundGroup } from '../processes/foreground.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { SecretService } from '../secrets/secret-service.ts';
 import { SecretStore } from '../secrets/secret-store.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
@@ -19,7 +18,8 @@ import type { Later } from './later.ts';
 export interface LaunchesBundle {
     store: LaunchStore;
     runner: LaunchRunner;
-    secrets: SecretService;
+    /* The values bound to launch variables, which only a launch's process gets. */
+    secretStore: SecretStore;
     agentHost: LaunchHost;
     /* The one launch a person chose to run after a worktree chat settles. */
     afterSettle: AfterSettleLaunches;
@@ -49,12 +49,6 @@ export function wireLaunches({ home, stores, agents, work, projects, later }: La
         checkCwd: (folder, cwd) => checkCwd(folder, cwd, (inside) => later.git().checkouts.paths(inside)),
         resolveEnv: (projectId, launchId, env) => secretStore.resolveEnv(projectId, launchId, env)
     });
-    const secrets = new SecretService({
-        store: secretStore,
-        launches: store,
-        chats: { hold: (nodeId, key) => void chats.holdForPerson(nodeId, key), release: (nodeId, key) => chats.releaseHold(nodeId, key) }
-    });
-    secrets.follow(stores.lifecycle);
     const agentHost = agentLaunches(store, runner, (sessionId) => sessions.get(sessionId)?.plainText() ?? Promise.resolve(null));
     const afterSettle = new AfterSettleLaunches({
         store: work.afterSettleStore,
@@ -75,5 +69,5 @@ export function wireLaunches({ home, stores, agents, work, projects, later }: La
         enqueue: (projectId, chatId, entryWork) => agents.outboxLink.enqueue(projectId, chatId, entryWork)
     });
     agents.outboxLink.worker.handle('run-after-settle', (entry) => afterSettle.handle(entry));
-    return { store, runner, secrets, agentHost, afterSettle };
+    return { store, runner, secretStore, agentHost, afterSettle };
 }

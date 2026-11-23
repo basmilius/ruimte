@@ -148,6 +148,7 @@ describe('a tool of the MCP server', () => {
         expect(toolLine(mcp('1', 'ruimte/device_shot', { device: 'iphone' }))).toEqual(['Device', 'shot device=iphone']);
         expect(toolLine(mcp('1', 'mcp__ruimte__task_done', { result: 'Done' }))).toEqual(['Task', 'task done result=Done']);
         expect(toolLine(mcp('1', 'mcp__ruimte__launch_read', { launch: 'api' }))).toEqual(['Launches', 'read launch=api']);
+        expect(toolLine(mcp('1', 'mcp__ruimte__secret_request', { label: 'Token' }))?.[0]).toBe('Secrets');
         expect(toolLine(mcp('1', 'mcp__ruimte__alert', { text: 'Groen' }))).toEqual(['Notification', 'text=Groen']);
         expect(toolLine(mcp('1', 'mcp__ruimte__guide', { topic: 'canvas' }))).toEqual(['Help', 'topic=canvas']);
         expect(toolLine(mcp('1', 'mcp__ruimte__tool_run', { id: 'lint' }))).toEqual(['Using an extension tool', 'id=lint']);

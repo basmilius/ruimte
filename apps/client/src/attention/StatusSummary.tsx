@@ -16,6 +16,7 @@ import { useTasks } from '@/state/tasks';
 import { useProjectNodes, type ProjectNodeRef } from '@/state/view-nodes';
 import { oldestWaitingFirst, useWaitingSince, waitDetailsOf } from '@/state/waiting';
 import { StatusDot } from '@/surface/StatusDot';
+import { useCardWaits } from './card-waits';
 import { waitAskLine } from './wait-ask';
 
 function Walker({ label, detail, count, ids, children }: { label: string; detail?: ReactNode; count: number; ids: string[]; children: ReactNode }) {
@@ -57,6 +58,7 @@ function WaitingLines({ nodes, ids }: { nodes: readonly ProjectNodeRef[]; ids: r
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.statusByKey);
     const since = useWaitingSince((state) => state.byKey);
+    const cardWaits = useCardWaits();
     const byId = new Map(nodes.map((node) => [node.id, node]));
     const lines = ids.slice(0, WAITING_LINES).flatMap((id) => {
         const node = byId.get(id);
@@ -64,7 +66,7 @@ function WaitingLines({ nodes, ids }: { nodes: readonly ProjectNodeRef[]; ids: r
             return [];
         }
 
-        const detail = waitDetailsOf(node, sessions, chats, since, endpointId);
+        const detail = waitDetailsOf(node, sessions, chats, since, endpointId, cardWaits);
         const ask = detail.ask;
 
         return [{ id, detail, line: t('status.waitingLine', { title: node.title, ask: ask ? waitAskLine(ask) : t('notifications.needsYou') }) }];

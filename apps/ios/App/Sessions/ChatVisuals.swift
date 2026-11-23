@@ -80,7 +80,7 @@ enum ChatVisuals {
             case .tool(let tool):
                 return ChatSubagents.handbackReport(item) == nil && RuimteCommandLook.sent(of: tool) == nil
                     ? item.createdAt : nil
-            case .subagent, .turn, .note, .compaction: return nil
+            case .subagent, .turn, .note, .compaction, .secret: return nil
             }
         }
     }

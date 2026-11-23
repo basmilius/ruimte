@@ -280,7 +280,17 @@ export const cases: WriteCases = {
             'a variable that starts with a digit': { ...secret, variable: '1KEY' },
             'a variable past its limit': { ...secret, variable: 'K'.repeat(SECRET_LIMITS.variable + 1) },
             'a blank reason': { ...secret, reason: ' ' },
-            'a wait past what a call holds': { ...secret, wait: 111 }
+            'a wait past what a call holds': { ...secret, wait: 111 },
+            'a page that is no web address': { ...secret, url: 'javascript:alert(1)' },
+            'one field': { ...secret, delivery: 'file', fields: [{ name: 'TOKEN', label: 'Token' }] },
+            'two fields of one name': {
+                ...secret,
+                delivery: 'file',
+                fields: [
+                    { name: 'TOKEN', label: 'Token' },
+                    { name: 'TOKEN', label: 'Again' }
+                ]
+            }
         }
     },
     'template.add': {

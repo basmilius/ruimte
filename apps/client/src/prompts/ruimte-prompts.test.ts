@@ -113,9 +113,26 @@ describe('a secret card', () => {
         await answerRuimtePrompt(prompt, { kind: 'answer', answers: { value: 'sk_test_1' } }, machine().answer, answers);
         await answerRuimtePrompt(prompt, { kind: 'choose', choiceId: 'decline' }, machine().answer, answers);
         expect(calls).toEqual([
-            ['save', 'm1', 'secret-1', 'sk_test_1'],
+            ['save', 'm1', 'secret-1', { value: 'sk_test_1' }],
             ['decline', 'm1', 'secret-1']
         ]);
+    });
+
+    test('a card with fields saves one value per field, and only once every field has one', async () => {
+        const { calls, answers } = secretMachine();
+        const prompt = secretPrompt('m1', 'chat-1', {
+            ...secret,
+            delivery: 'file',
+            launchId: undefined,
+            fields: [
+                { name: 'EMAIL', label: 'E-mail', masked: false },
+                { name: 'PASSWORD', label: 'Password' }
+            ]
+        });
+
+        await expect(answerRuimtePrompt(prompt, { kind: 'answer', answers: { EMAIL: 'me@example.com' } }, machine().answer, answers)).rejects.toThrow();
+        await answerRuimtePrompt(prompt, { kind: 'answer', answers: { EMAIL: 'me@example.com', PASSWORD: 'hunter2' } }, machine().answer, answers);
+        expect(calls).toEqual([['save', 'm1', 'secret-1', { values: { EMAIL: 'me@example.com', PASSWORD: 'hunter2' } }]]);
     });
 
     test('an empty value sends nothing, and a card that is gone is an error', async () => {

@@ -201,7 +201,8 @@ $RUIMTE_HOME/
   mode-approvals/<hash>.json       0700, the permission mode a person's save gave a terminal agent
   notices/<nodeId>.json            0700, messages left for a node until its agent picks them up
   database-access/<projectId>.json 0700, what agents may do with each connection (see "Databases")
-  secrets/<hash>.json              0700 folder, 0600 files: the secrets of a project's launches (see "Launch secrets")
+  secrets/<hash>.json              0700 folder, 0600 files: the secrets of a project's launches (see "Secrets")
+  secrets/files/<random>           0700 folder, 0600 files: a value an agent asked for its own commands, swept after 24 hours
   voice/openai.json                0700 folder, 0600 file: the OpenAI key of Voice run by the daemon (`ruimte voice key`)
   tunnels/tunnels.json             0700 folder: the tunnel (id, name, account), the rows with the zone and DNS record of each, and whether the external MCP is on
   tunnels/cloudflare-token         0600, the Cloudflare API token a person typed (see "Tunnels"); tunnels/bin/ holds a downloaded `cloudflared`
@@ -292,13 +293,15 @@ A project's connections live in `.ruimte/databases.json` (shared) and `.ruimte/p
 
 Passwords reach the daemon only through `database.passwords` from a project client, kept in memory and bound to where the connection pointed (`src/database/agent-passwords.ts`). Agent access per connection lives in `$RUIMTE_HOME/database-access/<projectId>.json` (`off` or `write`; unlisted is `read`). Any project client may set `off` or `read`; only the local secret sets `write`. Schema snapshots for the SQL servers go to `database-snapshots/` from a read-only session, with no credential or row (`src/database/schema-snapshots.ts`). `src/database/CLAUDE.md` has the rules for agents.
 
-## Launch secrets
+## Secrets
 
-An agent in an AI chat asks for a secret a launch needs with `secret_request` (`src/tools/secret-tools.ts`). The daemon raises a card in that chat (`secret.requests`, `src/secrets/secret-requests.ts`) and holds the chat at `needs-you`. One card stands per chat, launch and variable; it goes when the turn ends, the chat stops, or 15 minutes pass without a new ask. The tool answers only `saved`, `declined`, `cancelled`, `timed-out` or `waiting`, never the value.
+An agent in an AI chat asks for a secret with `secret_request` (`src/tools/secret-tools.ts`). The daemon raises a card in that chat (`secret.requests`, `src/secrets/secret-requests.ts`) and holds the chat at `needs-you`. One card stands per chat and launch variable, or per chat and label for files; it outlives the turn that raised it and goes when the chat stops or 15 minutes pass without a new ask. The tool answers `saved`, `declined`, `cancelled`, `timed-out` or `waiting`, never the value. A person's answer that no call waits for wakes the chat once with the outcome (`OutboxLink.oweAnswer`), and every outcome but `cancelled` leaves a `secret` item in the chat's thread.
 
-A person answers with `secret.save` or `secret.decline`. The value goes into `$RUIMTE_HOME/secrets/<hash>.json` (`src/secrets/secret-store.ts`), one 0600 file per project. The launch gets the marker `ruimte:secret` (`LAUNCH_SECRET_REFERENCE`) in this machine's own launch file, and the approval covers the marker, not the value. A new value changes nothing an approval covers; a marker added or removed outside a person's save asks again. Only the started process gets the value (`resolveEnv` in `src/launches/runner.ts`); a marker without a secret leaves the variable unset.
+A card has one of two deliveries. With `launch` and `variable` it binds the value to that launch (below), and the agent never sees it. Without them the value goes to a file of a random name under `$RUIMTE_HOME/secrets/files` (`src/secrets/secret-files.ts`), one per field when the card asks for several, and the agent gets the paths to read in its own commands. Such a file is the agent's to read, so the card says so; the hourly maintenance sweep takes it after 24 hours. A card may carry `url`, a page the person opens to find the value.
 
-The value is never in a project file, chat log, event, agent reply or log line, and no tool or client file request reaches `secrets/` (`src/disk/machine-home.ts`).
+A person answers with `secret.save` (`value`, or `values` by field name) or `secret.decline`. A launch's value goes into `$RUIMTE_HOME/secrets/<hash>.json` (`src/secrets/secret-store.ts`), one 0600 file per project. The launch gets the marker `ruimte:secret` (`LAUNCH_SECRET_REFERENCE`) in this machine's own launch file, and the approval covers the marker, not the value. A new value changes nothing an approval covers; a marker added or removed outside a person's save asks again. Only the started process gets the value (`resolveEnv` in `src/launches/runner.ts`); a marker without a secret leaves the variable unset.
+
+The value is never in a project file, chat log, event, agent reply or log line, and no tool or client file request reaches `secrets/` (`src/disk/machine-home.ts`). Only an agent's own shell reads a file card's file.
 
 ## Sessions
 

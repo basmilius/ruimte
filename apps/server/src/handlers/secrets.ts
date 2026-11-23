@@ -1,3 +1,4 @@
+import { CodedError } from '@adecore/agents';
 import type { Area } from '../area.ts';
 import type { SecretService } from '../secrets/secret-service.ts';
 
@@ -13,7 +14,13 @@ export function secretsArea({ secrets }: SecretsDeps): Area {
         handlers: (dispatcher) => {
             dispatcher.register('secret.requests', () => ({ requests: secrets.list() }));
 
-            dispatcher.register('secret.save', async (payload) => ({ accepted: await secrets.save(payload.requestId, payload.value) }));
+            dispatcher.register('secret.save', async ({ requestId, value, values }) => {
+                if ((value === undefined) === (values === undefined)) {
+                    throw new CodedError('secret-values', 'A save carries value or values, not both');
+                }
+
+                return { accepted: await secrets.save(requestId, value === undefined ? { values: values ?? {} } : { value }) };
+            });
 
             dispatcher.register('secret.decline', (payload) => ({ accepted: secrets.decline(payload.requestId) }));
         }

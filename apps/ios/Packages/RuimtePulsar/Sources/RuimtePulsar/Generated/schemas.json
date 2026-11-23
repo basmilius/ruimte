@@ -13162,6 +13162,54 @@
                 "kind",
                 "preTokens"
               ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "type": "number"
+                },
+                "turnId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "kind": {
+                  "type": "string",
+                  "const": "secret"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "outcome": {
+                  "type": "string",
+                  "enum": [
+                    "saved",
+                    "declined",
+                    "timed-out",
+                    "cancelled"
+                  ]
+                },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "createdAt",
+                "turnId",
+                "kind",
+                "label",
+                "outcome"
+              ]
             }
           ],
           "x-open-union": {
@@ -14879,6 +14927,54 @@
                 "kind",
                 "preTokens"
               ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "type": "number"
+                },
+                "turnId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "kind": {
+                  "type": "string",
+                  "const": "secret"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "outcome": {
+                  "type": "string",
+                  "enum": [
+                    "saved",
+                    "declined",
+                    "timed-out",
+                    "cancelled"
+                  ]
+                },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "createdAt",
+                "turnId",
+                "kind",
+                "label",
+                "outcome"
+              ]
             }
           ],
           "x-open-union": {
@@ -16589,6 +16685,54 @@
                         "turnId",
                         "kind",
                         "preTokens"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "turnId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "secret"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "outcome": {
+                          "type": "string",
+                          "enum": [
+                            "saved",
+                            "declined",
+                            "timed-out",
+                            "cancelled"
+                          ]
+                        },
+                        "fields": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "createdAt",
+                        "turnId",
+                        "kind",
+                        "label",
+                        "outcome"
                       ]
                     }
                   ],
@@ -20051,6 +20195,54 @@
                           "kind",
                           "preTokens"
                         ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "turnId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "kind": {
+                            "type": "string",
+                            "const": "secret"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "outcome": {
+                            "type": "string",
+                            "enum": [
+                              "saved",
+                              "declined",
+                              "timed-out",
+                              "cancelled"
+                            ]
+                          },
+                          "fields": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "createdAt",
+                          "turnId",
+                          "kind",
+                          "label",
+                          "outcome"
+                        ]
                       }
                     ],
                     "x-open-union": {
@@ -22298,6 +22490,54 @@
                 "turnId",
                 "kind",
                 "preTokens"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "type": "number"
+                },
+                "turnId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "kind": {
+                  "type": "string",
+                  "const": "secret"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "outcome": {
+                  "type": "string",
+                  "enum": [
+                    "saved",
+                    "declined",
+                    "timed-out",
+                    "cancelled"
+                  ]
+                },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "createdAt",
+                "turnId",
+                "kind",
+                "label",
+                "outcome"
               ]
             }
           ],
@@ -27561,6 +27801,54 @@
                 "kind",
                 "preTokens"
               ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "type": "number"
+                },
+                "turnId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "kind": {
+                  "type": "string",
+                  "const": "secret"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "outcome": {
+                  "type": "string",
+                  "enum": [
+                    "saved",
+                    "declined",
+                    "timed-out",
+                    "cancelled"
+                  ]
+                },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "createdAt",
+                "turnId",
+                "kind",
+                "label",
+                "outcome"
+              ]
             }
           ],
           "x-open-union": {
@@ -31515,6 +31803,54 @@
                 "turnId",
                 "kind",
                 "preTokens"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "type": "number"
+                },
+                "turnId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "kind": {
+                  "type": "string",
+                  "const": "secret"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "outcome": {
+                  "type": "string",
+                  "enum": [
+                    "saved",
+                    "declined",
+                    "timed-out",
+                    "cancelled"
+                  ]
+                },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "createdAt",
+                "turnId",
+                "kind",
+                "label",
+                "outcome"
               ]
             }
           ],
@@ -72539,6 +72875,13 @@
               "type": "string",
               "minLength": 1
             },
+            "delivery": {
+              "type": "string",
+              "enum": [
+                "launch",
+                "file"
+              ]
+            },
             "launchId": {
               "type": "string",
               "minLength": 1
@@ -72559,6 +72902,34 @@
             "placeholder": {
               "type": "string"
             },
+            "url": {
+              "type": "string"
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "placeholder": {
+                    "type": "string"
+                  },
+                  "masked": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "label"
+                ]
+              }
+            },
             "replaces": {
               "type": "boolean"
             },
@@ -72573,9 +72944,6 @@
             "requestId",
             "nodeId",
             "projectId",
-            "launchId",
-            "launchName",
-            "variable",
             "label",
             "reason",
             "replaces",
@@ -72601,11 +72969,21 @@
         "type": "string",
         "minLength": 1,
         "maxLength": 16384
+      },
+      "values": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384
+        }
       }
     },
     "required": [
-      "requestId",
-      "value"
+      "requestId"
     ]
   },
   "request.secret.save.result": {
@@ -83404,6 +83782,54 @@
                       "kind",
                       "preTokens"
                     ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "createdAt": {
+                        "type": "number"
+                      },
+                      "turnId": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "kind": {
+                        "type": "string",
+                        "const": "secret"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "outcome": {
+                        "type": "string",
+                        "enum": [
+                          "saved",
+                          "declined",
+                          "timed-out",
+                          "cancelled"
+                        ]
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "createdAt",
+                      "turnId",
+                      "kind",
+                      "label",
+                      "outcome"
+                    ]
                   }
                 ],
                 "x-open-union": {
@@ -86864,6 +87290,54 @@
                         "turnId",
                         "kind",
                         "preTokens"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "turnId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "secret"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "outcome": {
+                          "type": "string",
+                          "enum": [
+                            "saved",
+                            "declined",
+                            "timed-out",
+                            "cancelled"
+                          ]
+                        },
+                        "fields": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "createdAt",
+                        "turnId",
+                        "kind",
+                        "label",
+                        "outcome"
                       ]
                     }
                   ],
@@ -97475,6 +97949,13 @@
               "type": "string",
               "minLength": 1
             },
+            "delivery": {
+              "type": "string",
+              "enum": [
+                "launch",
+                "file"
+              ]
+            },
             "launchId": {
               "type": "string",
               "minLength": 1
@@ -97495,6 +97976,34 @@
             "placeholder": {
               "type": "string"
             },
+            "url": {
+              "type": "string"
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "placeholder": {
+                    "type": "string"
+                  },
+                  "masked": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "label"
+                ]
+              }
+            },
             "replaces": {
               "type": "boolean"
             },
@@ -97509,9 +98018,6 @@
             "requestId",
             "nodeId",
             "projectId",
-            "launchId",
-            "launchName",
-            "variable",
             "label",
             "reason",
             "replaces",

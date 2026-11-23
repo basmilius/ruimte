@@ -22,6 +22,7 @@
         "fresh",
         "refused"
     ],
+    "event.chat.event #/properties/event/oneOf/0/properties/item/oneOf/10/properties/outcome": ["cancelled", "declined", "saved", "timed-out"],
     "event.chat.event #/properties/event/oneOf/0/properties/item/oneOf/3/properties/changes/items/properties/kind": ["add", "delete", "update"],
     "event.chat.event #/properties/event/oneOf/0/properties/item/oneOf/3/properties/state": ["done", "error", "running"],
     "event.chat.event #/properties/event/oneOf/0/properties/item/oneOf/3/properties/workflow/properties/agents/items/properties/status": [
@@ -93,6 +94,7 @@
         "fresh",
         "refused"
     ],
+    "event.chat.event #/properties/event/oneOf/3/properties/items/items/oneOf/10/properties/outcome": ["cancelled", "declined", "saved", "timed-out"],
     "event.chat.event #/properties/event/oneOf/3/properties/items/items/oneOf/3/properties/changes/items/properties/kind": ["add", "delete", "update"],
     "event.chat.event #/properties/event/oneOf/3/properties/items/items/oneOf/3/properties/state": ["done", "error", "running"],
     "event.chat.event #/properties/event/oneOf/3/properties/items/items/oneOf/3/properties/workflow/properties/agents/items/properties/status": [
@@ -503,6 +505,7 @@
     "event.provider.changed #/properties/providers/items/properties/capabilities/properties/diffs": ["before-after", "none", "unified"],
     "event.provider.changed #/properties/providers/items/properties/capabilities/properties/goals": ["command", "native"],
     "event.remote.status #/properties/state": ["closed", "connecting", "open", "waiting"],
+    "event.secret.requests #/properties/requests/items/properties/delivery": ["file", "launch"],
     "event.session.status #/properties/agent/anyOf/0/properties/requests/items/properties/kind": ["approval", "question"],
     "event.task.changed #/properties/task/properties/paused/properties/kind": ["overload", "usage"],
     "event.task.changed #/properties/task/properties/result/anyOf/0/properties/source": ["done", "exit", "turn"],
@@ -632,6 +635,7 @@
         "fresh",
         "refused"
     ],
+    "request.chat.attach.result #/properties/events/items/oneOf/0/properties/item/oneOf/10/properties/outcome": ["cancelled", "declined", "saved", "timed-out"],
     "request.chat.attach.result #/properties/events/items/oneOf/0/properties/item/oneOf/3/properties/changes/items/properties/kind": [
         "add",
         "delete",
@@ -713,6 +717,7 @@
         "fresh",
         "refused"
     ],
+    "request.chat.attach.result #/properties/events/items/oneOf/3/properties/items/items/oneOf/10/properties/outcome": ["cancelled", "declined", "saved", "timed-out"],
     "request.chat.attach.result #/properties/events/items/oneOf/3/properties/items/items/oneOf/3/properties/changes/items/properties/kind": [
         "add",
         "delete",
@@ -776,6 +781,7 @@
         "fresh",
         "refused"
     ],
+    "request.chat.attach.result #/properties/items/items/oneOf/10/properties/outcome": ["cancelled", "declined", "saved", "timed-out"],
     "request.chat.attach.result #/properties/items/items/oneOf/3/properties/changes/items/properties/kind": ["add", "delete", "update"],
     "request.chat.attach.result #/properties/items/items/oneOf/3/properties/state": ["done", "error", "running"],
     "request.chat.attach.result #/properties/items/items/oneOf/3/properties/workflow/properties/agents/items/properties/status": ["done", "failed", "running"],
@@ -803,6 +809,7 @@
         "fresh",
         "refused"
     ],
+    "request.chat.attach.result #/properties/outline/items/oneOf/10/properties/outcome": ["cancelled", "declined", "saved", "timed-out"],
     "request.chat.attach.result #/properties/outline/items/oneOf/3/properties/changes/items/properties/kind": ["add", "delete", "update"],
     "request.chat.attach.result #/properties/outline/items/oneOf/3/properties/state": ["done", "error", "running"],
     "request.chat.attach.result #/properties/outline/items/oneOf/3/properties/workflow/properties/agents/items/properties/status": [
@@ -841,6 +848,7 @@
         "fresh",
         "refused"
     ],
+    "request.chat.attach.result #/properties/pending/items/oneOf/10/properties/outcome": ["cancelled", "declined", "saved", "timed-out"],
     "request.chat.attach.result #/properties/pending/items/oneOf/3/properties/changes/items/properties/kind": ["add", "delete", "update"],
     "request.chat.attach.result #/properties/pending/items/oneOf/3/properties/state": ["done", "error", "running"],
     "request.chat.attach.result #/properties/pending/items/oneOf/3/properties/workflow/properties/agents/items/properties/status": [
@@ -911,6 +919,7 @@
         "fresh",
         "refused"
     ],
+    "request.chat.history.result #/properties/items/items/oneOf/10/properties/outcome": ["cancelled", "declined", "saved", "timed-out"],
     "request.chat.history.result #/properties/items/items/oneOf/3/properties/changes/items/properties/kind": ["add", "delete", "update"],
     "request.chat.history.result #/properties/items/items/oneOf/3/properties/state": ["done", "error", "running"],
     "request.chat.history.result #/properties/items/items/oneOf/3/properties/workflow/properties/agents/items/properties/status": ["done", "failed", "running"],
@@ -963,6 +972,7 @@
         "fresh",
         "refused"
     ],
+    "request.chat.subagent.result #/properties/items/items/oneOf/10/properties/outcome": ["cancelled", "declined", "saved", "timed-out"],
     "request.chat.subagent.result #/properties/items/items/oneOf/3/properties/changes/items/properties/kind": ["add", "delete", "update"],
     "request.chat.subagent.result #/properties/items/items/oneOf/3/properties/state": ["done", "error", "running"],
     "request.chat.subagent.result #/properties/items/items/oneOf/3/properties/workflow/properties/agents/items/properties/status": [
@@ -1751,6 +1761,7 @@
     ],
     "request.routine.runNow.result #/properties/outcome": ["busy", "held", "started"],
     "request.routine.skills.result #/properties/skills/items/properties/source": ["plugin", "project", "user"],
+    "request.secret.requests.result #/properties/requests/items/properties/delivery": ["file", "launch"],
     "request.session.create.result #/properties/agent/anyOf/0/properties/requests/items/properties/kind": ["approval", "question"],
     "request.session.list.result #/properties/sessions/items/properties/agent/anyOf/0/properties/requests/items/properties/kind": ["approval", "question"],
     "request.session.login.result #/properties/agent/anyOf/0/properties/requests/items/properties/kind": ["approval", "question"],

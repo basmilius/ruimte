@@ -21,6 +21,7 @@ import { compareWaits, useWaitingSince, waitDetailsOf } from '@/state/waiting';
 import { bringPromptToFront } from '@/surface/canvas/prompt-stack';
 import type { SidebarNode } from '@/surface/sidebar-rows';
 import { chatScopeOf } from '@/workspace/chat-scope';
+import { useCardWaits } from './card-waits';
 import { closeAttentionQueue, useAttentionQueue } from './queue';
 import { WaitLabel } from './WaitLabel';
 
@@ -64,6 +65,7 @@ function QueueBody({
     const snoozes = useSnoozes((state) => state.byKey);
     const tasks = useTasks((state) => state.byEndpoint);
     const since = useWaitingSince((state) => state.byKey);
+    const cardWaits = useCardWaits();
     const [selected, setSelected] = useState<string | null>(null);
     const [answered, setAnswered] = useState<string | null>(null);
     const views = useDocument((state) => state.views);
@@ -82,7 +84,7 @@ function QueueBody({
     const groups = groupAttention(nodes, sessions, chats, endpointId, unseen, snoozes, tasks);
     const waiting = new Set(groups.needsYou);
     const finished = new Set(groups.finished);
-    const details = new Map(nodes.map((node) => [node.id, waitDetailsOf(node, sessions, chats, since, endpointId)]));
+    const details = new Map(nodes.map((node) => [node.id, waitDetailsOf(node, sessions, chats, since, endpointId, cardWaits)]));
     const asks = nodes.filter((node) => waiting.has(node.id)).sort((before, next) => compareWaits(details.get(before.id), details.get(next.id)));
     const completed = nodes
         .filter((node) => finished.has(node.id))

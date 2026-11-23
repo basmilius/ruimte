@@ -51,7 +51,7 @@ const VERB_LOOKS: Record<ContextVerb, VerbLook> = {
     tool: { name: 'Using an extension tool', from: 2 },
     launches: { name: 'Launches', from: 1 },
     routine: { name: 'Routines', from: 1 },
-    secret: { name: 'Launches', from: 1 },
+    secret: { name: 'Secrets', from: 1 },
     project: { name: 'Project', from: 1 },
     database: { name: 'Database', from: 1 },
     language: { name: 'Language', from: 1 },

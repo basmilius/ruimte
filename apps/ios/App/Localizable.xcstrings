@@ -26567,6 +26567,136 @@
           }
         }
       }
+    },
+    "Paste the secret" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plak het secret"
+          }
+        }
+      }
+    },
+    "Open %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ openen"
+          }
+        }
+      }
+    },
+    "Show %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ tonen"
+          }
+        }
+      }
+    },
+    "Hide %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ verbergen"
+          }
+        }
+      }
+    },
+    "Save securely" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Veilig bewaren"
+          }
+        }
+      }
+    },
+    "Saving…" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bewaren…"
+          }
+        }
+      }
+    },
+    "Kept out of chat, in a private file this agent's commands can read for 24 hours" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buiten de chat, in een privébestand dat de commando's van deze agent 24 uur kunnen lezen"
+          }
+        }
+      }
+    },
+    "Kept out of chat, in private files this agent's commands can read for 24 hours" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buiten de chat, in privébestanden die de commando's van deze agent 24 uur kunnen lezen"
+          }
+        }
+      }
+    },
+    "Saved on this machine. Only its launch gets it, never the agent." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Op deze machine bewaard. Alleen de launch krijgt het, de agent nooit."
+          }
+        }
+      }
+    },
+    "Saved on this machine as %@. Only %@ gets it, never the agent." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Op deze machine bewaard als %1$@. Alleen %2$@ krijgt het, de agent nooit."
+          }
+        }
+      }
+    },
+    "Declined" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geweigerd"
+          }
+        }
+      }
+    },
+    "Not answered in time" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niet op tijd beantwoord"
+          }
+        }
+      }
+    },
+    "Replaces the current value of %@." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vervangt de huidige waarde van %@."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

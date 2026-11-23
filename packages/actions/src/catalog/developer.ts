@@ -10,6 +10,8 @@ import {
     RoutineEntrySchema,
     SECRET_LIMITS,
     SECRET_VARIABLE_PATTERN,
+    SecretDeliverySchema,
+    secretPageUrl,
     GitBlobResultSchema,
     GitCompareModeSchema,
     GitComparePageSchema,
@@ -746,20 +748,48 @@ export const DEVELOPER_ACTIONS = {
     'secret.request': {
         title: 'Ask for a secret',
         description:
-            "Asks the person, in a private card of the caller's chat, for the value of a variable of a launch; the value stays on this machine and only that launch's process gets it.",
+            "Asks the person, in a private card of the caller's chat, for a secret: bound to a variable of a launch, which only that launch's process gets, or written to private files the caller's own commands read for 24 hours.",
         effect: 'external',
         domain: 'developer',
         actors: AGENT,
         input: z.object({
-            launch: launchName,
+            delivery: SecretDeliverySchema.nullish().describe(
+                'launch binds the value to a variable of a launch; file writes it to a private file. Without it, launch when `launch` is given'
+            ),
+            launch: launchName.nullish(),
             variable: z
                 .string()
                 .regex(SECRET_VARIABLE_PATTERN, 'A variable is letters, digits and underscores, not starting with a digit')
                 .max(SECRET_LIMITS.variable)
+                .nullish()
                 .describe('The environment variable of the launch the secret is bound to'),
             label: z.string().trim().min(1).max(SECRET_LIMITS.label).describe('What the person is asked for, such as the name of a service and its key'),
-            reason: z.string().trim().min(1).max(SECRET_LIMITS.reason).describe('Why the launch needs it, in one or two sentences'),
+            reason: z.string().trim().min(1).max(SECRET_LIMITS.reason).describe('What it is for and where to find it, in one or two sentences'),
             placeholder: z.string().trim().min(1).max(SECRET_LIMITS.placeholder).nullish().describe('A hint inside the field, such as the shape of the key'),
+            url: z
+                .string()
+                .trim()
+                .max(SECRET_LIMITS.url)
+                .refine((value) => secretPageUrl(value) !== null, 'url is an http(s) address')
+                .nullish()
+                .describe('The page where the person signs in or makes the value, shown as a button'),
+            fields: z
+                .array(
+                    z.object({
+                        name: z
+                            .string()
+                            .regex(SECRET_VARIABLE_PATTERN, 'A field name is letters, digits and underscores, not starting with a digit')
+                            .max(SECRET_LIMITS.variable),
+                        label: z.string().trim().min(1).max(SECRET_LIMITS.label),
+                        placeholder: z.string().trim().min(1).max(SECRET_LIMITS.placeholder).nullish(),
+                        masked: z.boolean().nullish().describe('False for a value that is no secret, such as a user name')
+                    })
+                )
+                .min(2)
+                .max(SECRET_LIMITS.fields)
+                .refine((fields) => new Set(fields.map((field) => field.name)).size === fields.length, 'Every field has a name of its own')
+                .nullish()
+                .describe('Several values in one card, such as an e-mail address and a password; file delivery only, one file per field'),
             wait: z
                 .number()
                 .int()
@@ -768,13 +798,15 @@ export const DEVELOPER_ACTIONS = {
                 .nullish()
                 .describe('Seconds the call holds for the answer; 6 without it. A card that still waits after that is answered by asking again')
         }),
-        // Never the value: only what became of the card, and on saved the variable now bound.
+        // Never the value: what became of the card, the variable a launch card binds, and on a saved file card where each value is.
         output: z.object({
             requestId: z.string(),
             outcome: z.enum(['saved', 'declined', 'cancelled', 'timed-out', 'waiting']),
-            launchId: z.string(),
-            name: z.string(),
-            variable: z.string()
+            delivery: SecretDeliverySchema,
+            launchId: z.string().nullable(),
+            name: z.string().nullable(),
+            variable: z.string().nullable(),
+            files: z.array(z.object({ field: z.string().nullable(), path: z.string() }))
         })
     },
     /* The machine checks the request whole, so this passes it on unparsed and a grid that pages parses nothing twice. */

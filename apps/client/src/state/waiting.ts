@@ -108,6 +108,8 @@ export interface WaitDetails {
 
 const WAIT_PRIORITY = { approval: 0, question: 1, waiting: 2 } as const;
 
+const NO_CARDS: ReadonlyMap<string, number> = new Map();
+
 // A request of a newer machine's kind still waits on a person, but on what this version cannot say.
 function waitKindOf(request: { kind: string } | undefined): WaitDetails['kind'] {
     return request?.kind === 'approval' || request?.kind === 'question' ? request.kind : 'waiting';
@@ -123,13 +125,20 @@ export function waitDetailsOf(
     sessions: SessionsByKey,
     chats: ChatStatuses,
     since: ReadonlyMap<string, number>,
-    endpointId: string
+    endpointId: string,
+    cards: ReadonlyMap<string, number> = NO_CARDS
 ): WaitDetails {
     const key = endpointKey(endpointOfNode(node, endpointId), node.id);
     const at = waitedSince(node, sessions, chats, since, endpointId);
 
     if (node.kind === 'chat' || node.kind === 'design') {
         const requests = requestsByPriority(chats[key]?.info.requests ?? []);
+        const card = cards.get(key);
+
+        // A card of Ruimte's own asks the person something, as a question of the CLI does.
+        if (requests.length === 0 && card !== undefined) {
+            return { kind: 'question', since: Math.min(at, card), ask: null };
+        }
 
         return { kind: waitKindOf(requests[0]), since: at, ask: chatWaitAsk(requests) };
     }

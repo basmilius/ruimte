@@ -774,6 +774,10 @@ const typedRoots: [name: string, source: string, path: (string | number)[], keep
     ['TunnelProposal', 'event.tunnel.proposals', ['properties', 'proposals', 'items']],
     ['TunnelRowKind', 'event.tunnel.proposals', ['properties', 'proposals', 'items', 'properties', 'kind']],
     ['TunnelOrigin', 'event.tunnel.proposals', ['properties', 'proposals', 'items', 'properties', 'origin']],
+    // The cards are read one by one, so a card of a newer machine this app cannot read stays out alone.
+    ['SecretRequests', 'event.secret.requests', [], ['requests']],
+    ['SecretRequest', 'event.secret.requests', ['properties', 'requests', 'items']],
+    ['SecretField', 'event.secret.requests', ['properties', 'requests', 'items', 'properties', 'fields', 'items']],
     // The views are read one by one, so a view this app cannot read does not blank the list.
     ['StoredDocument', 'request.project.open.result', ['properties', 'document'], ['views']],
     ['StoredView', 'request.project.open.result', ['properties', 'document', 'properties', 'views', 'items']],

@@ -11,13 +11,16 @@
         "deny": "Deny"
     },
     "secret": {
-        "body": "The agent asks for a secret for the launch {{launch}}.",
-        "variable": "Saved on this machine as {{variable}}. Only {{launch}} gets it, never the agent.",
+        "privacyLaunch": "Saved on this machine as {{variable}}. Only {{launch}} gets it, never the agent",
+        "privacyFile": "Kept out of chat, in a private file this agent's commands can read for 24 hours",
+        "privacyFiles": "Kept out of chat, in private files this agent's commands can read for 24 hours",
         "replaces": "Replaces the current value of {{variable}}.",
-        "field": "Secret",
-        "save": "Save",
-        "decline": "Decline",
-        "approval": "Saving approves this variable for the launch, if you approved the launch before."
+        "field": "Paste the secret",
+        "open": "Open {{host}}",
+        "show": "Show {{label}}",
+        "hide": "Hide {{label}}",
+        "save": "Save securely",
+        "decline": "Decline"
     },
     "projectProposal": {
         "title": "This chat suggests a project",

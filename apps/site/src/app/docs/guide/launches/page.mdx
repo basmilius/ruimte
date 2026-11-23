@@ -53,7 +53,9 @@ An approval holds while the launch stays the same. When its command, folder or e
 
 <Note>Agents can add and change launches, but never approve one. An agent starts, restarts and stops only launches you approved. For any other, its chat shows a card that asks you.</Note>
 
-An agent that needs a secret for a launch, such as an API key, asks for it in a card in its chat. Type the value and click **Save**. Only the launch gets the value, never the agent.
+An agent that needs a secret, such as an API key or a password, asks for it in a card in its chat instead of in the conversation. Type or paste the value and click **Save securely**, or click **Decline**. The card can open the page where you find the value, and you can answer it later: the agent hears your answer when you give it.
+
+A secret for a launch goes only to that launch, never to the agent. A secret the agent needs for its own commands goes to a private file on your machine that those commands can read for 24 hours. The card says which of the two it is.
 
 ## Run a task after a worktree chat
 

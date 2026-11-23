@@ -1,6 +1,7 @@
 import { useChats } from '@adecore/agents-react/state';
 import type { AgentStatus } from '@ruimte/contracts';
 import { useEffect, useMemo } from 'react';
+import { useCardWaits } from '@/attention/card-waits';
 import { sidebarWaitingCount, useWaitingCount } from '@/state/attention';
 import { useEndpoints } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
@@ -36,6 +37,7 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
     const sessions = useSessions((state) => state.byKey);
     const chats = useChats((state) => state.statusByKey);
     const waitingSince = useWaitingSince((state) => state.byKey);
+    const cardWaits = useCardWaits();
     // Kept by hand: an effect depends on it.
     const result = useMemo(() => {
         if (!enabled) {
@@ -77,7 +79,7 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
                     ]),
                     snoozedUntil: snoozeOf(snoozes, endpoint.id, value.id),
                     activity: activityOf(activities, endpoint.id, value.id),
-                    wait: waitDetailsOf(value, sessions, chats, waitingSince, endpoint.id)
+                    wait: waitDetailsOf(value, sessions, chats, waitingSince, endpoint.id, cardWaits)
                 });
                 if (state === 'error' && snapshot?.state === 'ready') {
                     incomplete.push({ label: `${summary.name} · ${endpoint.label}`, state });
@@ -156,7 +158,8 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
         activities,
         sessions,
         chats,
-        waitingSince
+        waitingSince,
+        cardWaits
     ]);
     useEffect(() => {
         if (!enabled) {

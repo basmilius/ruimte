@@ -295,8 +295,8 @@
                     },
                     "mode": {
                         "type": "string",
-                        "enum": ["supervised", "auto-accept-edits", "auto", "full-access"],
-                        "description": "Only when the person asks for another mode"
+                        "description": "Only when the person asks for another mode",
+                        "enum": ["supervised", "auto-accept-edits", "auto", "full-access"]
                     },
                     "model": {
                         "type": "string",
@@ -324,9 +324,6 @@
                         "type": "string",
                         "description": "A linked machine; needs task"
                     },
-                    "revision": {
-                        "type": "integer"
-                    },
                     "terminal": {
                         "type": "boolean"
                     },
@@ -339,6 +336,9 @@
                     },
                     "dry_run": {
                         "type": "boolean"
+                    },
+                    "revision": {
+                        "type": "integer"
                     }
                 },
                 "required": ["cli"]
@@ -377,15 +377,12 @@
                     },
                     "mode": {
                         "type": "string",
-                        "enum": ["supervised", "auto-accept-edits", "auto", "full-access"],
-                        "description": "Only when the person asks for another mode"
+                        "description": "Only when the person asks for another mode",
+                        "enum": ["supervised", "auto-accept-edits", "auto", "full-access"]
                     },
                     "machine": {
                         "type": "string",
                         "description": "A linked machine; needs task"
-                    },
-                    "revision": {
-                        "type": "integer"
                     },
                     "task": {
                         "type": "boolean",
@@ -396,6 +393,9 @@
                     },
                     "dry_run": {
                         "type": "boolean"
+                    },
+                    "revision": {
+                        "type": "integer"
                     }
                 },
                 "required": ["label", "roles"]
@@ -637,13 +637,13 @@
                     },
                     "button": {
                         "type": "string",
-                        "enum": ["left", "right"],
-                        "description": "For click"
+                        "description": "For click",
+                        "enum": ["left", "right"]
                     },
                     "state": {
                         "type": "string",
-                        "enum": ["on", "full"],
-                        "description": "on answers what changed, full the whole tree"
+                        "description": "on answers what changed, full the whole tree",
+                        "enum": ["on", "full"]
                     },
                     "wait": {
                         "type": "integer",
@@ -671,10 +671,10 @@
                     },
                     "combo": {
                         "type": "array",
+                        "description": "For key, such as cmd+n or shift+tab",
                         "items": {
                             "type": "string"
-                        },
-                        "description": "For key, such as cmd+n or shift+tab"
+                        }
                     },
                     "value": {
                         "type": "string",
@@ -682,8 +682,8 @@
                     },
                     "direction": {
                         "type": "string",
-                        "enum": ["up", "down", "left", "right"],
-                        "description": "For scroll"
+                        "description": "For scroll",
+                        "enum": ["up", "down", "left", "right"]
                     },
                     "pages": {
                         "type": "number",
@@ -741,15 +741,15 @@
                     },
                     "item": {
                         "type": "array",
+                        "description": "A number from the last listing, or a path such as File > Save",
                         "items": {
                             "type": "string"
-                        },
-                        "description": "A number from the last listing, or a path such as File > Save"
+                        }
                     },
                     "state": {
                         "type": "string",
-                        "enum": ["on", "full"],
-                        "description": "on answers what changed, full the whole tree"
+                        "description": "on answers what changed, full the whole tree",
+                        "enum": ["on", "full"]
                     },
                     "wait": {
                         "type": "integer",
@@ -791,8 +791,8 @@
                     },
                     "state": {
                         "type": "string",
-                        "enum": ["on", "full"],
-                        "description": "on answers what changed, full the whole tree"
+                        "description": "on answers what changed, full the whole tree",
+                        "enum": ["on", "full"]
                     },
                     "wait": {
                         "type": "integer",
@@ -927,8 +927,8 @@
                     },
                     "state": {
                         "type": "string",
-                        "enum": ["on", "full"],
-                        "description": "full answers the whole tree, not what changed"
+                        "description": "full answers the whole tree, not what changed",
+                        "enum": ["on", "full"]
                     },
                     "wait": {
                         "type": "integer",
@@ -996,8 +996,8 @@
                     },
                     "form": {
                         "type": "string",
-                        "enum": ["elements", "image"],
-                        "description": "elements gives a drawing's JSON, image a png"
+                        "description": "elements gives a drawing's JSON, image a png",
+                        "enum": ["elements", "image"]
                     }
                 },
                 "required": ["id"]
@@ -1420,8 +1420,8 @@
                     },
                     "status_bar": {
                         "type": "string",
-                        "enum": ["clean", "default"],
-                        "description": "clean shows 9:41 and full bars"
+                        "description": "clean shows 9:41 and full bars",
+                        "enum": ["clean", "default"]
                     },
                     "battery": {
                         "type": "integer"
@@ -1552,7 +1552,7 @@
                 "properties": {
                     "topic": {
                         "type": "string",
-                        "enum": ["diagram", "drawing", "plan", "nodes", "notes", "roles", "models", "schedule"]
+                        "enum": ["nodes", "notes", "diagram", "drawing", "schedule", "roles", "models", "plan"]
                     }
                 },
                 "required": ["topic"]
@@ -1923,12 +1923,12 @@
                     "view": {
                         "type": "string"
                     },
-                    "revision": {
-                        "type": "integer"
-                    },
                     "append": {
                         "type": "boolean",
                         "description": "Adds under the body instead of replacing it"
+                    },
+                    "revision": {
+                        "type": "integer"
                     }
                 }
             },
@@ -2048,11 +2048,11 @@
                         "type": "string",
                         "description": "Several nodes at once. Format: guide topic nodes"
                     },
-                    "revision": {
-                        "type": "integer"
-                    },
                     "dry_run": {
                         "type": "boolean"
+                    },
+                    "revision": {
+                        "type": "integer"
                     }
                 }
             },
@@ -2276,8 +2276,8 @@
                     },
                     "checks": {
                         "type": "string",
-                        "enum": ["anyone", "agent", "person"],
-                        "description": "Who sets the steps that name none"
+                        "description": "Who sets the steps that name none",
+                        "enum": ["anyone", "agent", "person"]
                     },
                     "dry_run": {
                         "type": "boolean"
@@ -2365,8 +2365,8 @@
                     },
                     "state": {
                         "type": "string",
-                        "enum": ["open", "active", "done", "failed", "skipped", "blocked", "warning", "info"],
-                        "description": "warning and info take a note that says what"
+                        "description": "warning and info take a note that says what",
+                        "enum": ["open", "active", "done", "failed", "skipped", "blocked", "warning", "info"]
                     },
                     "note": {
                         "type": "string"
@@ -2572,8 +2572,8 @@
                     },
                     "per_run": {
                         "type": "string",
-                        "enum": ["new", "continue"],
-                        "description": "A chat per run (new) or one chat (continue)"
+                        "description": "A chat per run (new) or one chat (continue)",
+                        "enum": ["new", "continue"]
                     },
                     "command": {
                         "type": "string"
@@ -2642,8 +2642,8 @@
                     },
                     "per_run": {
                         "type": "string",
-                        "enum": ["new", "continue"],
-                        "description": "A chat per run (new) or one chat (continue)"
+                        "description": "A chat per run (new) or one chat (continue)",
+                        "enum": ["new", "continue"]
                     },
                     "command": {
                         "type": "string"
@@ -2711,7 +2711,7 @@
         },
         {
             "name": "secret_request",
-            "description": "Asks the person in a private card for the secret a launch variable needs. You never see it.",
+            "description": "Asks the person for a secret in a private card, never in the chat. With launch and variable it goes to that launch, unseen by you; without, to private files your commands read for 24 hours, as `cmd \"$(cat <file>)\"`.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -2720,11 +2720,11 @@
                     },
                     "variable": {
                         "type": "string",
-                        "description": "The variable the secret goes in"
+                        "description": "The launch variable"
                     },
                     "label": {
                         "type": "string",
-                        "description": "What the person is asked for"
+                        "description": "Card title"
                     },
                     "reason": {
                         "type": "string"
@@ -2732,12 +2732,39 @@
                     "placeholder": {
                         "type": "string"
                     },
+                    "url": {
+                        "type": "string",
+                        "description": "Sign-in or setup page"
+                    },
+                    "fields": {
+                        "type": "array",
+                        "description": "Several values, one file each",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string"
+                                },
+                                "label": {
+                                    "type": "string"
+                                },
+                                "placeholder": {
+                                    "type": "string"
+                                },
+                                "masked": {
+                                    "type": "boolean",
+                                    "description": "false for no secret, as a user name"
+                                }
+                            },
+                            "required": ["name", "label"]
+                        }
+                    },
                     "wait": {
                         "type": "integer",
                         "description": "Seconds the call holds for the answer"
                     }
                 },
-                "required": ["launch", "variable", "label", "reason"]
+                "required": ["label", "reason"]
             },
             "annotations": {
                 "destructiveHint": false
@@ -3224,8 +3251,8 @@
                     },
                     "layout": {
                         "type": "string",
-                        "enum": ["inline", "wide"],
-                        "description": "wide for mockups and dashboards"
+                        "description": "wide for mockups and dashboards",
+                        "enum": ["inline", "wide"]
                     },
                     "height": {
                         "type": "integer",

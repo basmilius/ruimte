@@ -8,6 +8,7 @@ import { MachineHome } from '../disk/machine-home.ts';
 import { LaunchRunner, type LaunchSessions } from '../launches/runner.ts';
 import { LaunchStore } from '../launches/store.ts';
 import { CommandApprovals } from '../sessions/command-approvals.ts';
+import { SECRET_FILE_MS, SecretFiles, sweepSecretFiles } from './secret-files.ts';
 import { SecretStore } from './secret-store.ts';
 
 const VALUE = 'sk-live-0123456789abcdef';
@@ -95,6 +96,34 @@ describe('SecretStore', () => {
         const machine = new MachineHome(home);
         await expect(machine.refuse(secrets.pathOf('p1'))).rejects.toMatchObject({ code: 'machine-state' });
         await expect(machine.refuse(join(home, 'secrets'))).rejects.toMatchObject({ code: 'machine-state' });
+    });
+});
+
+describe('SecretFiles', () => {
+    test('writes each value to a 0600 file of a random name that no client file request reaches', async () => {
+        const files = new SecretFiles(home);
+        const path = await files.write(VALUE);
+
+        expect(await readFile(path, 'utf8')).toBe(VALUE);
+        expect(basename(path)).toMatch(/^[0-9a-f]{32}$/);
+        expect(await files.write(VALUE)).not.toBe(path);
+
+        if (process.platform !== 'win32') {
+            expect((await stat(path)).mode & 0o777).toBe(0o600);
+            expect((await stat(join(home, 'secrets', 'files'))).mode & 0o777).toBe(0o700);
+        }
+
+        await expect(new MachineHome(home).refuse(path)).rejects.toMatchObject({ code: 'machine-state' });
+    });
+
+    test('the sweep takes a file once it is a day old', async () => {
+        const path = await new SecretFiles(home).write(VALUE);
+        const written = (await stat(path)).mtimeMs;
+        const signal = new AbortController().signal;
+
+        expect((await sweepSecretFiles(home, written + SECRET_FILE_MS - 1, signal)).files).toBe(0);
+        expect((await sweepSecretFiles(home, written + SECRET_FILE_MS, signal)).files).toBe(1);
+        expect(await readdir(join(home, 'secrets', 'files'))).toEqual([]);
     });
 });
 

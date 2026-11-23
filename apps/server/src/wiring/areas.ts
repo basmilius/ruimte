@@ -144,7 +144,7 @@ export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
         chatImageArea(chatImageDeps(input)),
         chatSearchArea(chatSearchDeps(input)),
         proposalsArea({ proposals: agents.proposals }),
-        secretsArea({ secrets: launches.secrets }),
+        secretsArea({ secrets: input.secrets.service }),
         artifactArea({ artifacts: artifacts.artifacts, importer: artifactImporter(input) }),
         peerArtifactsArea({ links: store.peers, artifacts: artifacts.artifacts }),
         peerLinksArea(peerLinksDeps(input)),

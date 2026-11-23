@@ -3,12 +3,14 @@ import RuimtePulsar
 import RuimteTransport
 
 /// The cards in which an agent asks a person what only a person decides: a chat in Chats that would become a
-/// project, and a change to a hostname of the machine's tunnel. The machine tells every connection the whole list of
-/// each whenever it changes, so one read per connection is enough once it succeeds.
+/// project, a change to a hostname of the machine's tunnel, and a secret. The machine tells every connection the whole
+/// list of each whenever it changes, so one read per connection is enough once it succeeds.
 @MainActor @Observable
 final class ProposalStore {
     private(set) var projects: [ProjectProposal] = []
     private(set) var tunnels: [TunnelProposal] = []
+    /// The cards carry no value: a typed secret lives only in its card's view until it is sent.
+    private(set) var secrets: [SecretRequest] = []
     /// The lists whose last read failed. With the link up nothing reads them again until a chat shows its cards.
     private(set) var unread: Set<WireRequest> = []
     @ObservationIgnored private let client: any MachineRequesting
@@ -17,6 +19,7 @@ final class ProposalStore {
         events: [
             .apply(.chatProposals, as: ProjectProposals.self) { [weak self] in self?.setProjects($0.proposals) },
             .apply(.tunnelProposals, as: TunnelProposals.self) { [weak self] in self?.setTunnels($0) },
+            .apply(.secretRequests, as: SecretRequests.self) { [weak self] in self?.setSecrets($0) },
         ],
         read: { [weak self] in await self?.read() })
 
@@ -28,6 +31,7 @@ final class ProposalStore {
         live.stop()
         projects = []
         tunnels = []
+        secrets = []
         unread = []
     }
 
@@ -40,6 +44,14 @@ final class ProposalStore {
         if unread.contains(.tunnelProposals), let result = await read(.tunnelProposals, as: TunnelProposals.self) {
             setTunnels(result)
         }
+        if unread.contains(.secretRequests), let result = await read(.secretRequests, as: SecretRequests.self) {
+            setSecrets(result)
+        }
+    }
+
+    /// The secret cards of one chat, the oldest first. A card belongs to the chat whose node asked.
+    func secretCards(for chatID: String) -> [SecretRequest] {
+        secrets.filter { $0.nodeId == chatID }.sorted { $0.createdAt < $1.createdAt }
     }
 
     /// The cards of one chat, the oldest first.
@@ -61,6 +73,13 @@ final class ProposalStore {
         if next != tunnels { tunnels = next }
     }
 
+    /// A card this app cannot read stays out alone, as a tunnel card does.
+    func setSecrets(_ list: SecretRequests) {
+        unread.remove(.secretRequests)
+        let next = (list.requests.arrayValue ?? []).compactMap { try? $0.decoded(as: SecretRequest.self) }
+        if next != secrets { secrets = next }
+    }
+
     private func read() async {
         let machine = client as? MachineFeatures
         if machine?.answers(.chatProposals) == true,
@@ -72,6 +91,11 @@ final class ProposalStore {
             let result = await read(.tunnelProposals, as: TunnelProposals.self)
         {
             setTunnels(result)
+        }
+        if machine?.answers(.secretRequests) == true,
+            let result = await read(.secretRequests, as: SecretRequests.self)
+        {
+            setSecrets(result)
         }
     }
 

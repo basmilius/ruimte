@@ -1410,6 +1410,8 @@ private struct ChatTimelineRow: View {
             case .compaction(let compaction):
                 ChatCompactionRule(
                     preTokens: compaction.preTokens.map(Double.init), postTokens: compaction.postTokens.map(Double.init))
+            case .secret(let secret):
+                ChatSecretHistoryLine(item: secret)
             case .unknown(let unknown):
                 Label(ChatUnknownItem.words(unknown), lucideIcon: "info", iconSize: 14)
                     .font(.callout).foregroundStyle(MobileStyle.muted)
@@ -1433,6 +1435,44 @@ enum ChatUnknownItem {
         case "question": item.raw["state"] == .string("pending")
         default: false
         }
+    }
+}
+
+/// What became of a secret card, one quiet line in the work log. It names the card and never a value.
+enum ChatSecretRecord {
+    static func symbol(_ outcome: ChatSecretItemOutcome) -> String {
+        switch outcome {
+        case .saved: "checkmark.circle"
+        case .declined: "minus.circle"
+        case .timedOut: "clock"
+        case .cancelled: "xmark.circle"
+        }
+    }
+
+    static func words(_ outcome: ChatSecretItemOutcome) -> String {
+        switch outcome {
+        case .saved: String(localized: "Saved")
+        case .declined: String(localized: "Declined")
+        case .timedOut: String(localized: "Not answered in time")
+        case .cancelled: String(localized: "No longer needed")
+        }
+    }
+
+    static func line(_ item: ChatSecretItem) -> String { "\(item.label) · \(words(item.outcome))" }
+}
+
+private struct ChatSecretHistoryLine: View {
+    let item: ChatSecretItem
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: ChatSecretRecord.symbol(item.outcome)).font(.caption).foregroundStyle(MobileStyle.faint)
+                .accessibilityHidden(true)
+            Text(ChatSecretRecord.line(item)).foregroundStyle(MobileStyle.muted).lineLimit(1)
+        }
+        .font(.caption)
+        .frame(minHeight: 28)
+        .accessibilityElement(children: .combine)
     }
 }
 

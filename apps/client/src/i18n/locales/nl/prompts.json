@@ -11,13 +11,16 @@
         "deny": "Weigeren"
     },
     "secret": {
-        "body": "De agent vraagt een secret voor de launch {{launch}}.",
-        "variable": "Op deze machine bewaard als {{variable}}. Alleen {{launch}} krijgt het, de agent nooit.",
+        "privacyLaunch": "Op deze machine bewaard als {{variable}}. Alleen {{launch}} krijgt het, de agent nooit",
+        "privacyFile": "Buiten de chat, in een privébestand dat de commando's van deze agent 24 uur kunnen lezen",
+        "privacyFiles": "Buiten de chat, in privébestanden die de commando's van deze agent 24 uur kunnen lezen",
         "replaces": "Vervangt de huidige waarde van {{variable}}.",
-        "field": "Secret",
-        "save": "Bewaren",
-        "decline": "Weigeren",
-        "approval": "Bewaren keurt deze variabele goed voor de launch, als je de launch eerder goedkeurde."
+        "field": "Plak het secret",
+        "open": "{{host}} openen",
+        "show": "{{label}} tonen",
+        "hide": "{{label}} verbergen",
+        "save": "Veilig bewaren",
+        "decline": "Weigeren"
     },
     "projectProposal": {
         "title": "Deze chat stelt een project voor",

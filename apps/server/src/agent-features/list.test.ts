@@ -38,6 +38,7 @@ describe('agent features', () => {
                 'projects',
                 'work',
                 'launches',
+                'secrets',
                 'git',
                 'devices',
                 'databases',

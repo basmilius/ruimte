@@ -624,6 +624,8 @@ struct ChatScreen: View {
                     if let proposals = machineSession?.proposals {
                         ChatProposalDock(
                             store: proposals, chatID: model.chatID, client: model.client, connected: model.connected)
+                        ChatSecretDock(
+                            store: proposals, chatID: model.chatID, client: model.client, connected: model.connected)
                     }
                     ChatGoalDock(model: model)
                     ChatCompactionDock(model: model)

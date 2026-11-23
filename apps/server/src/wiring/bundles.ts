@@ -24,6 +24,7 @@ import type { ProjectsBundle } from './projects.ts';
 import type { ProvidersBundle } from './providers.ts';
 import type { RemoteBundle } from './remote.ts';
 import type { RoutinesBundle } from './routines.ts';
+import type { SecretsBundle } from './secrets.ts';
 import type { TemplatesBundle } from './templates.ts';
 import type { TunnelsBundle } from './tunnels.ts';
 import type { UsageStatsBundle } from './usage-stats.ts';
@@ -45,6 +46,7 @@ export interface DaemonBundles {
     remote: RemoteBundle;
     work: AgentWorkBundle;
     launches: LaunchesBundle;
+    secrets: SecretsBundle;
     routines: RoutinesBundle;
     git: GitBundle;
     devices: DevicesBundle;

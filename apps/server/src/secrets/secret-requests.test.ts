@@ -32,12 +32,23 @@ class MemoryStore {
 const ask: SecretAsk = {
     nodeId: 'chat-1',
     projectId: 'p1',
-    launchId: 'api',
-    launchName: 'API',
-    variable: 'API_KEY',
+    target: { delivery: 'launch', launchId: 'api', launchName: 'API', variable: 'API_KEY' },
     label: 'The Stripe test key',
     reason: 'The API calls Stripe on checkout'
 };
+
+const fileAsk: SecretAsk = {
+    nodeId: 'chat-1',
+    projectId: 'p1',
+    target: { delivery: 'file' },
+    label: 'App-specific password',
+    reason: 'notarytool submits the build',
+    url: 'https://account.apple.com/account/manage'
+};
+
+function withTarget(changes: Partial<{ launchId: string; launchName: string; variable: string }>): SecretAsk {
+    return { ...ask, target: { delivery: 'launch', launchId: 'api', launchName: 'API', variable: 'API_KEY', ...changes } };
+}
 
 let timers: ManualTimers;
 let store: MemoryStore;
@@ -48,6 +59,9 @@ let published: SecretRequest[][];
 let events: SessionEvent[];
 let service: SecretService;
 let lifecycle: NodeLifecycle;
+let files: Map<string, string>;
+let wakes: { nodeId: string; text: string }[];
+let records: { nodeId: string; label: string; outcome: string; fields?: string[] }[];
 
 function heldKeys(nodeId: string): string[] {
     return [...(holds.get(nodeId) ?? [])];
@@ -67,8 +81,20 @@ beforeEach(() => {
     holds = new Map();
     published = [];
     events = [];
+    files = new Map();
+    wakes = [];
+    records = [];
     service = new SecretService({
         store,
+        files: {
+            write: async (value) => {
+                const path = `/home/secrets/files/${files.size}`;
+
+                files.set(path, value);
+
+                return path;
+            }
+        },
         launches: {
             bindSecret: async (projectId, launchId, variable) => {
                 if (bindFails) {
@@ -79,7 +105,9 @@ beforeEach(() => {
         },
         chats: {
             hold: (nodeId, key) => holds.set(nodeId, new Set([...(holds.get(nodeId) ?? []), key])),
-            release: (nodeId, key) => holds.get(nodeId)?.delete(key)
+            release: (nodeId, key) => holds.get(nodeId)?.delete(key),
+            answered: (nodeId, wake) => wakes.push({ nodeId, text: wake.text }),
+            record: (nodeId, record) => records.push({ nodeId, ...record })
         },
         now: () => timers.now,
         timers
@@ -102,15 +130,18 @@ describe('a secret card', () => {
         expect(card).toMatchObject({ nodeId: 'chat-1', launchId: 'api', launchName: 'API', variable: 'API_KEY', replaces: false });
         expect(heldKeys('chat-1')).toHaveLength(1);
 
-        expect(await service.save(card!.requestId, VALUE)).toBe(true);
-        expect(await waiting).toEqual({ requestId: card!.requestId, outcome: 'saved' });
+        expect(await service.save(card!.requestId, { value: VALUE })).toBe(true);
+        expect(await waiting).toEqual({ requestId: card!.requestId, outcome: 'saved', files: [] });
         expect(store.values.get('p1/api/API_KEY')).toBe(VALUE);
         expect(bound).toEqual(['p1/api/API_KEY']);
         expect(service.list()).toEqual([]);
         expect(heldKeys('chat-1')).toEqual([]);
         expect(JSON.stringify(events)).not.toContain(VALUE);
+        expect(records).toEqual([{ nodeId: 'chat-1', label: 'The Stripe test key', outcome: 'saved' }]);
+        // The call heard it, so nothing wakes the chat as well.
+        expect(wakes).toEqual([]);
         // A second client that answers late hears it lost.
-        expect(await service.save(card!.requestId, 'other')).toBe(false);
+        expect(await service.save(card!.requestId, { value: 'other' })).toBe(false);
         expect(service.decline(card!.requestId)).toBe(false);
     });
 
@@ -123,7 +154,7 @@ describe('a secret card', () => {
         expect(heldKeys('chat-1')).toEqual([]);
     });
 
-    test('the hold runs out with waiting, asking again joins the same card, and a later answer is told once', async () => {
+    test('the hold runs out with waiting, asking again joins the same card, and a later answer wakes the chat once', async () => {
         const first = service.ask(ask);
         await flush();
         timers.advance(SECRET_WAIT_MS);
@@ -136,16 +167,32 @@ describe('a secret card', () => {
         expect(service.list()).toHaveLength(1);
         expect(service.list()[0]).toMatchObject({ requestId, label: 'The Stripe key' });
         timers.advance(SECRET_WAIT_MS);
-        expect(await second).toEqual({ requestId, outcome: 'waiting' });
+        expect(await second).toEqual({ requestId, outcome: 'waiting', files: [] });
 
         expect(service.decline(requestId)).toBe(true);
-        expect(await service.ask(ask)).toEqual({ requestId, outcome: 'declined' });
-        // Told once: the next ask raises a new card.
+        expect(wakes).toHaveLength(1);
+        expect(wakes[0]).toMatchObject({ nodeId: 'chat-1' });
+        expect(wakes[0]?.text).toStartWith('Declined: The Stripe key.');
+        // The wake told it, so the next ask raises a new card.
         const next = service.ask(ask, 1_000);
         await flush();
         expect(service.list()[0]?.requestId).not.toBe(requestId);
         timers.advance(1_000);
         await next;
+    });
+
+    test('a card outlives the turn that raised it', async () => {
+        const waiting = service.ask(ask);
+        await flush();
+        timers.advance(SECRET_WAIT_MS);
+        await waiting;
+        await lifecycle.emit('turnEnded', 'chat-1', 'done');
+        expect(service.list()).toHaveLength(1);
+        expect(heldKeys('chat-1')).toHaveLength(1);
+
+        expect(await service.save(service.list()[0]!.requestId, { value: VALUE })).toBe(true);
+        expect(wakes.map((wake) => wake.text)).toEqual(['Saved: The Stripe test key, as API_KEY of the launch API. Its next start gets it.']);
+        expect(JSON.stringify(wakes)).not.toContain(VALUE);
     });
 
     test('a card nobody answers times out', async () => {
@@ -157,20 +204,18 @@ describe('a secret card', () => {
         expect(service.list()).toEqual([]);
         expect(heldKeys('chat-1')).toEqual([]);
         expect((await service.ask(ask)).outcome).toBe('timed-out');
+        expect(wakes).toEqual([]);
+        expect(records.map((record) => record.outcome)).toEqual(['timed-out']);
     });
 
-    test('a turn that ends cancels the card, and so does a chat that stops or goes', async () => {
+    test('a chat that goes cancels its card and keeps no line of it', async () => {
         const waiting = service.ask(ask, 30_000);
         await flush();
-        await lifecycle.emit('turnEnded', 'chat-1', 'done');
+        await lifecycle.emit('closed', 'chat-1');
         expect((await waiting).outcome).toBe('cancelled');
         expect(service.list()).toEqual([]);
         expect(heldKeys('chat-1')).toEqual([]);
-
-        const again = service.ask(ask, 30_000);
-        await flush();
-        await lifecycle.emit('closed', 'chat-1');
-        expect((await again).outcome).toBe('cancelled');
+        expect(records).toEqual([]);
     });
 
     test('a failed save keeps the card and leaves no value behind', async () => {
@@ -178,11 +223,11 @@ describe('a secret card', () => {
         await flush();
         const { requestId } = service.list()[0]!;
         bindFails = true;
-        await expect(service.save(requestId, VALUE)).rejects.toThrow('launch-not-found');
+        await expect(service.save(requestId, { value: VALUE })).rejects.toThrow('launch-not-found');
         expect(store.values.size).toBe(0);
         expect(service.list()).toHaveLength(1);
         bindFails = false;
-        expect(await service.save(requestId, VALUE)).toBe(true);
+        expect(await service.save(requestId, { value: VALUE })).toBe(true);
         expect((await waiting).outcome).toBe('saved');
     });
 
@@ -194,10 +239,10 @@ describe('a secret card', () => {
             await flush();
             const { requestId } = service.list()[0]!;
             bindFails = true;
-            await service.save(requestId, VALUE).catch((e: unknown) => touched.push(String(e)));
+            await service.save(requestId, { value: VALUE }).catch((e: unknown) => touched.push(String(e)));
             bindFails = false;
-            await service.save(requestId, VALUE);
-            touched.push(JSON.stringify(await waiting), JSON.stringify(events), JSON.stringify([...holds]));
+            await service.save(requestId, { value: VALUE });
+            touched.push(JSON.stringify(await waiting), JSON.stringify(events), JSON.stringify([...holds]), JSON.stringify(records), JSON.stringify(wakes));
             for (const spy of spies) {
                 touched.push(JSON.stringify(spy.mock.calls));
             }
@@ -221,9 +266,9 @@ describe('a secret card', () => {
 
     test('each chat, launch and variable has a card of its own', async () => {
         const one = service.ask(ask, 1_000);
-        const two = service.ask({ ...ask, variable: 'OTHER' }, 1_000);
+        const two = service.ask(withTarget({ variable: 'OTHER' }), 1_000);
         const three = service.ask({ ...ask, nodeId: 'chat-2' }, 1_000);
-        const four = service.ask({ ...ask, launchId: 'worker', launchName: 'Worker' }, 1_000);
+        const four = service.ask(withTarget({ launchId: 'worker', launchName: 'Worker' }), 1_000);
         await flush();
         const cards = service.list();
         expect(cards.map(({ nodeId, launchId, variable }) => [nodeId, launchId, variable])).toEqual([
@@ -237,7 +282,47 @@ describe('a secret card', () => {
             expect(service.decline(card.requestId)).toBe(true);
         }
         const outcomes = await Promise.all([one, two, three, four]);
-        expect([...outcomes]).toEqual(cards.map(({ requestId }) => ({ requestId, outcome: 'declined' })));
+        expect([...outcomes]).toEqual(cards.map(({ requestId }) => ({ requestId, outcome: 'declined', files: [] })));
         expect(service.list()).toEqual([]);
+    });
+});
+
+describe('a secret card for files', () => {
+    test('a save writes the value to a file and hands back its path, never the value', async () => {
+        const waiting = service.ask(fileAsk, 30_000);
+        await flush();
+        const [card] = service.list();
+        expect(card).toMatchObject({ delivery: 'file', url: 'https://account.apple.com/account/manage', replaces: false });
+        expect(card?.launchId).toBeUndefined();
+
+        expect(await service.save(card!.requestId, { value: VALUE })).toBe(true);
+        expect(await waiting).toEqual({ requestId: card!.requestId, outcome: 'saved', files: [{ field: null, path: '/home/secrets/files/0' }] });
+        expect(files.get('/home/secrets/files/0')).toBe(VALUE);
+        expect(store.values.size).toBe(0);
+        expect(bound).toEqual([]);
+        expect(JSON.stringify(events)).not.toContain(VALUE);
+    });
+
+    test('a card with fields takes one value per field, each in a file of its own', async () => {
+        const fields = [
+            { name: 'EMAIL', label: 'E-mail', masked: false },
+            { name: 'PASSWORD', label: 'Password' }
+        ];
+        const waiting = service.ask({ ...fileAsk, target: { delivery: 'file', fields } });
+        await flush();
+        timers.advance(SECRET_WAIT_MS);
+        await waiting;
+        const { requestId } = service.list()[0]!;
+
+        await expect(service.save(requestId, { value: VALUE })).rejects.toThrow('other values');
+        await expect(service.save(requestId, { values: { EMAIL: 'me@example.com' } })).rejects.toThrow('other values');
+        expect(service.list()).toHaveLength(1);
+
+        expect(await service.save(requestId, { values: { EMAIL: 'me@example.com', PASSWORD: VALUE } })).toBe(true);
+        expect([...files.values()]).toEqual(['me@example.com', VALUE]);
+        expect(records).toEqual([{ nodeId: 'chat-1', label: 'App-specific password', outcome: 'saved', fields: ['E-mail', 'Password'] }]);
+        expect(wakes).toHaveLength(1);
+        expect(wakes[0]?.text).toContain('EMAIL: /home/secrets/files/0\nPASSWORD: /home/secrets/files/1');
+        expect(JSON.stringify(wakes)).not.toContain(VALUE);
     });
 });

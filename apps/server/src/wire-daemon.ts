@@ -41,6 +41,7 @@ import { wireRemote } from './wiring/remote.ts';
 import { wireRoutines } from './wiring/routines.ts';
 import type { DaemonRuntime } from './wiring/runtime.ts';
 import type { DaemonSeams } from './wiring/seams.ts';
+import { wireSecrets } from './wiring/secrets.ts';
 import { wireSettingPorts } from './wiring/setting-ports.ts';
 import { wireTemplates } from './wiring/templates.ts';
 import { wireTunnels } from './wiring/tunnels.ts';
@@ -108,6 +109,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     const remote = provide('remote', await wireRemote({ home, identity, machine, outbox: stores.outbox, later }));
     const work = provide('work', wireAgentWork({ home, identity, stores, agents, projects: projects.store, remote, providers, seams, later }));
     const launches = provide('launches', wireLaunches({ home, stores, agents, work, projects: projects.store, later }));
+    const secrets = provide('secrets', wireSecrets({ home, stores, agents, launches }));
     const routines = provide('routines', await wireRoutines({ home, machineId: identity.id, stores, agents, projects, launches, artifacts }));
     // Before the socket answers, so an agent whose project nobody opened since the restart still reads its links.
     await projects.store.warmIndex();
@@ -138,6 +140,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
             projects,
             work,
             launches,
+            secrets,
             git,
             devices,
             databases,
@@ -185,7 +188,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     const power = provide('power', wirePower(home, identity, agents, seams.power));
     sessions.observe((event) => computer.observe(event));
     chats.observe((event) => computer.observe(event));
-    chats.observe((event) => launches.secrets.observe(event));
+    chats.observe((event) => secrets.service.observe(event));
     chats.observe((event) => extensions.host.forwardEvent(event.event, event.payload));
     sessions.observe((event) => extensions.host.forwardEvent(event.event, event.payload));
     chats.observe((event) => agents.proposals.observe(event));
@@ -248,6 +251,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
             remote,
             work,
             launches,
+            secrets,
             routines,
             git,
             devices,
@@ -312,6 +316,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
         remote,
         work,
         launches,
+        secrets,
         routines,
         git,
         devices,

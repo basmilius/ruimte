@@ -466,7 +466,7 @@ enum RuimteCommandLook {
         "tool": VerbLook(name: "Using an extension tool", from: 2),
         "launches": VerbLook(name: "Launches", from: 1),
         "routine": VerbLook(name: "Routines", from: 1),
-        "secret": VerbLook(name: "Launches", from: 1),
+        "secret": VerbLook(name: "Secrets", from: 1),
         "project": VerbLook(name: "Project", from: 1),
         "database": VerbLook(name: "Database", from: 1),
         "language": VerbLook(name: "Language", from: 1),

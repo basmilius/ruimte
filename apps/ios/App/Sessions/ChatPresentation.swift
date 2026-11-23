@@ -155,7 +155,7 @@ extension ChatTimelineEntry {
         case .selectionSwitch, .changedFiles, .visual, .output: return false
         case .message:
             switch items.first?.item {
-            case .approval?, .question?, .note?: return true
+            case .approval?, .question?, .note?, .secret?: return true
             case .tool(let tool)?:
                 return ChatSubagents.handbackReport(.tool(tool)) == nil && !UiGeneratedImage.isGeneration(tool)
                     && RuimteCommandLook.sent(of: tool) == nil
@@ -658,7 +658,7 @@ final class ChatPresentation {
     /// The closing answer of a settled turn, by its place in the turn's rows. A turn may end on a call the person turned
     /// down, as an agent that stops there does: the answer before it closes the turn, and the refused call and its
     /// denial stay in sight with it. Anything else after the last answer folds the whole turn, a message another node
-    /// sent included; only a plain note does not.
+    /// sent included; only a plain note and the record of a secret card do not.
     static func closingAnswer(_ rows: [ChatTimelineEntry]) -> Int? {
         var refused = Set<String>()
         for index in rows.indices.reversed() {
@@ -672,6 +672,8 @@ final class ChatPresentation {
             case .tool(let tool)? where row.kind == .tools && row.items.count == 1 && refused.contains(tool.toolUseId):
                 continue
             case .note(let note)? where row.kind == .message && note.message == nil:
+                continue
+            case .secret? where row.kind == .message:
                 continue
             case .tool(let tool)? where row.kind == .message && UiGeneratedImage.isGeneration(tool):
                 continue

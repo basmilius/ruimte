@@ -17,6 +17,7 @@ import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { moveViewAction } from '@/action-port/person-actions';
+import { useCardWaits } from '@/attention/card-waits';
 import { useChatDrawers } from '@/extensions/drawn-chats';
 import { SidebarCards } from '@/extensions/SidebarCards';
 import { SlotRow } from '@/extensions/SlotSurfaces';
@@ -156,6 +157,7 @@ export function Sidebar({ brandMenu }: { brandMenu?: ReactNode }) {
     const snoozes = useSnoozes((s) => s.byKey);
     const activities = useNodeActivity((s) => s.byKey);
     const waitingSince = useWaitingSince((state) => state.byKey);
+    const cardWaits = useCardWaits();
     const open = useUi((s) => s.sidebarOpen);
     const expanded = useUi(useShallow((s) => s.sidebarExpanded));
     const instant = useInstantWidth();
@@ -189,7 +191,7 @@ export function Sidebar({ brandMenu }: { brandMenu?: ReactNode }) {
                     kind: node.kind,
                     provider: nodeProvider(node, chats, endpointId) ?? null,
                     status: nodeStatus(node, sessions, chats, endpointId) ?? null,
-                    wait: waitDetailsOf(node, sessions, chats, waitingSince, endpointId),
+                    wait: waitDetailsOf(node, sessions, chats, waitingSince, endpointId, cardWaits),
                     work: nodeWork(node, sessions, chats, endpointId, tasks[machine]),
                     childWait: childWaitOf(node.id, tasks[machine], sessions, chats, machine),
                     draft: (node.kind === 'chat' || node.kind === 'design') && drafts.includes(node.id),

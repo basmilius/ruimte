@@ -1,12 +1,13 @@
 import type { PromptViewProps } from '@adecore/agents-react/prompts';
 import { ApprovalActions, PromptPrimary, PromptCard } from '@adecore/agents-react/prompts';
-import { Button, Icon, Input, ScrollArea, Spinner } from '@adecore/ui';
-import type { ProjectProposal, SecretRequest, TunnelProposal } from '@ruimte/contracts';
+import { Button, Icon, IconButton, Input, ScrollArea, Spinner } from '@adecore/ui';
+import { secretPageUrl, type ProjectProposal, type SecretRequest, type TunnelProposal } from '@ruimte/contracts';
 import type { TFunction } from 'i18next';
-import { TriangleAlert } from 'lucide-react';
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { ExternalLink, Eye, EyeOff, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { useId, useState, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isRuimteApp } from '@/computer/ruimte-app';
+import { openInSystemBrowser } from '@/desktop/bridge';
 import { moveChatDialog } from '@/project/dialogs';
 import { computerButtons, SECRET_ANSWER_FIELD, SECRET_DECLINE, TUNNEL_CONFIRM, tunnelProposalHeading, type RuimtePrompt } from '@/prompts/ruimte-prompts';
 
@@ -87,48 +88,161 @@ export function RuimtePromptView({ prompt, props }: { prompt: RuimtePrompt; prop
  */
 function SecretCard({ request, props }: { request: SecretRequest; props: PromptViewProps }) {
     const { t } = useTranslation('prompts');
-    const { onAction, disabled, sending } = props;
-    const [value, setValue] = useState('');
+    const { onAction, disabled, sending, error, top } = props;
+    const [values, setValues] = useState<Readonly<Record<string, string>>>({});
     const locked = sending || disabled;
-    const words = { launch: request.launchName, variable: request.variable };
+    const fields = secretFieldsOf(request, t('secret.field'));
+    const several = request.fields !== undefined;
+    const complete = fields.every((field) => (values[field.name] ?? '') !== '');
+    const page = request.url === undefined ? null : secretPageUrl(request.url);
+    const words = { launch: request.launchName ?? '', variable: request.variable ?? '' };
 
     const save = (event?: FormEvent): void => {
         event?.preventDefault();
-        if (locked || value === '') {
+
+        if (locked || !complete) {
             return;
         }
-        const sent = value;
-        setValue('');
-        onAction({ kind: 'answer', answers: { [SECRET_ANSWER_FIELD]: sent } });
+
+        const sent = values;
+
+        setValues({});
+        onAction({ kind: 'answer', answers: { ...sent } });
     };
 
+    const fieldOf = (field: SecretFieldView, index: number): ReactNode => (
+        <SecretInput
+            key={field.name}
+            field={field}
+            labelled={several}
+            first={index === 0}
+            disabled={locked}
+            value={values[field.name] ?? ''}
+            onChange={(value) => setValues((current) => ({ ...current, [field.name]: value }))}
+        />
+    );
+
+    const primary = (
+        <PromptPrimary type="submit" form={`secret-${request.requestId}`} disabled={locked || !complete}>
+            {t('secret.save')}
+        </PromptPrimary>
+    );
+
     return (
-        <QuestionCard
-            props={props}
+        <PromptCard
+            kind="question"
             heading={request.label}
-            decline={t('secret.decline')}
-            primary={{ label: t('secret.save'), disabled: value === '', onClick: () => save() }}
+            top={top}
+            busy={sending}
+            notice={disabled ? t('error.notConnected') : null}
+            error={error}
+            actions={
+                <>
+                    <p className="flex min-w-0 grow basis-52 items-center gap-1.5 text-xs text-text-muted">
+                        <Icon icon={ShieldCheck} size={14} className="shrink-0" />
+                        {request.delivery === 'file' ? t(several ? 'secret.privacyFiles' : 'secret.privacyFile') : t('secret.privacyLaunch', words)}
+                    </p>
+                    <Button size="xs" disabled={locked} onClick={() => onAction({ kind: 'choose', choiceId: SECRET_DECLINE })}>
+                        {t('secret.decline')}
+                    </Button>
+                    {several && primary}
+                </>
+            }
         >
-            <p className="text-sm text-text">{t('secret.body', words)}</p>
-            <p className="whitespace-pre-wrap break-words text-sm text-text-muted">{request.reason}</p>
-            <form onSubmit={save}>
-                <Input
-                    data-prompt-entry
-                    type="password"
-                    autoComplete="off"
-                    spellCheck={false}
-                    mono
-                    aria-label={t('secret.field')}
-                    placeholder={request.placeholder ?? t('secret.field')}
-                    disabled={locked}
-                    value={value}
-                    onChange={(event) => setValue(event.target.value)}
-                />
+            <p className="whitespace-pre-wrap break-words text-sm text-text-muted select-text">{request.reason}</p>
+            {page !== null && (
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                    <Button variant="secondary" size="sm" onClick={() => openInSystemBrowser(page.href)}>
+                        {t('secret.open', { host: page.host })}
+                        <Icon icon={ExternalLink} size={14} />
+                    </Button>
+                    <p className="break-all font-mono text-xs text-text-muted select-text">{page.href}</p>
+                </div>
+            )}
+            <form id={`secret-${request.requestId}`} onSubmit={save} autoComplete="off" className={several ? 'flex flex-col gap-2' : 'flex items-center gap-2'}>
+                {several ? fields.map(fieldOf) : <div className="min-w-0 grow">{fields.map(fieldOf)}</div>}
+                {!several && primary}
             </form>
-            <p className="text-xs text-text-muted">{t('secret.variable', words)}</p>
             {request.replaces && <p className="text-xs text-text-muted">{t('secret.replaces', words)}</p>}
-            <p className="text-xs text-text-muted">{t('secret.approval')}</p>
-        </QuestionCard>
+        </PromptCard>
+    );
+}
+
+interface SecretFieldView {
+    name: string;
+    label: string;
+    placeholder: string;
+    masked: boolean;
+}
+
+/* The fields a card shows: its own, or one under the name a single answer travels in. */
+function secretFieldsOf(request: SecretRequest, fallback: string): SecretFieldView[] {
+    if (request.fields === undefined) {
+        return [{ name: SECRET_ANSWER_FIELD, label: request.label, placeholder: request.placeholder ?? fallback, masked: true }];
+    }
+
+    return request.fields.map((field) => ({ name: field.name, label: field.label, placeholder: field.placeholder ?? '', masked: field.masked !== false }));
+}
+
+interface SecretInputProps {
+    field: SecretFieldView;
+    labelled: boolean;
+    first: boolean;
+    disabled: boolean;
+    value: string;
+    onChange(value: string): void;
+}
+
+/* A masked field with a switch to show what was typed; password managers are told to leave it alone. */
+function SecretInput({ field, labelled, first, disabled, value, onChange }: SecretInputProps) {
+    const { t } = useTranslation('prompts');
+    const [revealed, setRevealed] = useState(false);
+    const id = useId();
+
+    const input = (
+        <Input
+            id={id}
+            {...(first ? { 'data-prompt-entry': true } : {})}
+            type={field.masked && !revealed ? 'password' : 'text'}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            data-1p-ignore
+            data-lpignore="true"
+            data-bwignore
+            mono
+            aria-label={field.label}
+            placeholder={field.placeholder}
+            disabled={disabled}
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            end={
+                field.masked ? (
+                    <IconButton
+                        size="2xs"
+                        icon={revealed ? EyeOff : Eye}
+                        label={t(revealed ? 'secret.hide' : 'secret.show', { label: field.label })}
+                        disabled={disabled}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => setRevealed((current) => !current)}
+                    />
+                ) : undefined
+            }
+        />
+    );
+
+    if (!labelled) {
+        return input;
+    }
+
+    return (
+        <div className="flex min-w-0 flex-col gap-1">
+            <label htmlFor={id} className="text-xs font-medium text-text-muted">
+                {field.label}
+            </label>
+            {input}
+        </div>
     );
 }
 
