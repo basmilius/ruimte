@@ -619,7 +619,7 @@ describe('usage', () => {
     test('an unpriced model keeps a null cost and a provider outside the readers is refused', () => {
         const { result } = REQUEST_SCHEMAS['usage.summary'];
         expect(result.safeParse({ ...summary, models: [{ ...summary.models[0], costUsd: null, priceBasis: 'unknown', pricedAs: null }] }).success).toBe(true);
-        expect(result.safeParse({ ...summary, buckets: [{ ...summary.buckets[0], provider: 'antigravity' }] }).success).toBe(false);
+        expect(result.safeParse({ ...summary, buckets: [{ ...summary.buckets[0], provider: 'gemini' }] }).success).toBe(false);
         expect(result.safeParse({ ...summary, buckets: [{ ...summary.buckets[0], totals: { ...totals, output: -1 } }] }).success).toBe(false);
         // A page without a rate shows dollars; a rate of zero would divide an amount away.
         expect(result.safeParse({ ...summary, rate: null }).success).toBe(true);

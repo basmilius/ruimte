@@ -30,7 +30,7 @@ export function ProvidersPane() {
     const claudeInstalled = providers?.find((provider) => provider.kind === 'claude')?.installed !== false;
     useDetectProviders();
     // Only a machine of an older Ruimte runs Antigravity on a server of its own; this one answers `unsupported`.
-    const serverOffered = antigravity.server !== null && antigravity.server.state !== 'unsupported';
+    const offeredServer = antigravity.server !== null && antigravity.server.state !== 'unsupported' ? antigravity.server : null;
     const detailOf = (provider: ProviderInfo) => {
         if (provider.kind === 'anthropic-claude-api') {
             return <ClaudeApiSection key={endpointId} endpointId={endpointId} />;
@@ -44,16 +44,16 @@ export function ProvidersPane() {
         if (agyTooOld(provider, antigravity.server)) {
             return <AgyUpdateSection />;
         }
-        return serverOffered ? <AcpServerSection provider={provider} acp={antigravity} server={antigravity.server} /> : null;
+        return offeredServer ? <AcpServerSection provider={provider} acp={antigravity} server={offeredServer} /> : null;
     };
     // A machine of an older Ruimte installs the server as the step after the CLI; none while it has not said where it stands.
     const installStepOf = (provider: ProviderInfo) =>
-        provider.kind !== 'antigravity' || !serverOffered
+        provider.kind !== 'antigravity' || offeredServer === null
             ? null
             : {
                   title: t('providers.acpServer.step'),
-                  done: antigravity.server.state === 'installed',
-                  body: <AcpServerStepBody acp={antigravity} server={antigravity.server} />
+                  done: offeredServer.state === 'installed',
+                  body: <AcpServerStepBody acp={antigravity} server={offeredServer} />
               };
     // Off is a choice only a Mac offers; elsewhere the detail says why the model is not there.
     const setupStatusOf = (provider: ProviderInfo) => {
