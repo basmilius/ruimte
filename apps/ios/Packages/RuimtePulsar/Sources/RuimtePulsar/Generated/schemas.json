@@ -12215,6 +12215,9 @@
                     "error"
                   ]
                 },
+                "stopped": {
+                  "type": "boolean"
+                },
                 "parentToolUseId": {
                   "type": [
                     "string",
@@ -12862,6 +12865,9 @@
                 },
                 "taskToolUseId": {
                   "type": "string"
+                },
+                "wakeup": {
+                  "type": "boolean"
                 },
                 "endedAt": {
                   "type": [
@@ -13926,6 +13932,9 @@
                     "error"
                   ]
                 },
+                "stopped": {
+                  "type": "boolean"
+                },
                 "parentToolUseId": {
                   "type": [
                     "string",
@@ -14573,6 +14582,9 @@
                 },
                 "taskToolUseId": {
                   "type": "string"
+                },
+                "wakeup": {
+                  "type": "boolean"
                 },
                 "endedAt": {
                   "type": [
@@ -15631,6 +15643,9 @@
                             "error"
                           ]
                         },
+                        "stopped": {
+                          "type": "boolean"
+                        },
                         "parentToolUseId": {
                           "type": [
                             "string",
@@ -16278,6 +16293,9 @@
                         },
                         "taskToolUseId": {
                           "type": "string"
+                        },
+                        "wakeup": {
+                          "type": "boolean"
                         },
                         "endedAt": {
                           "type": [
@@ -19086,6 +19104,9 @@
                               "error"
                             ]
                           },
+                          "stopped": {
+                            "type": "boolean"
+                          },
                           "parentToolUseId": {
                             "type": [
                               "string",
@@ -19734,6 +19755,9 @@
                           "taskToolUseId": {
                             "type": "string"
                           },
+                          "wakeup": {
+                            "type": "boolean"
+                          },
                           "endedAt": {
                             "type": [
                               "number",
@@ -20357,6 +20381,9 @@
                 "done",
                 "error"
               ]
+            },
+            "stopped": {
+              "type": "boolean"
             },
             "parentToolUseId": {
               "type": [
@@ -21325,6 +21352,9 @@
                     "error"
                   ]
                 },
+                "stopped": {
+                  "type": "boolean"
+                },
                 "parentToolUseId": {
                   "type": [
                     "string",
@@ -21972,6 +22002,9 @@
                 },
                 "taskToolUseId": {
                   "type": "string"
+                },
+                "wakeup": {
+                  "type": "boolean"
                 },
                 "endedAt": {
                   "type": [
@@ -26581,6 +26614,9 @@
                     "error"
                   ]
                 },
+                "stopped": {
+                  "type": "boolean"
+                },
                 "parentToolUseId": {
                   "type": [
                     "string",
@@ -27228,6 +27264,9 @@
                 },
                 "taskToolUseId": {
                   "type": "string"
+                },
+                "wakeup": {
+                  "type": "boolean"
                 },
                 "endedAt": {
                   "type": [
@@ -30530,6 +30569,9 @@
                     "error"
                   ]
                 },
+                "stopped": {
+                  "type": "boolean"
+                },
                 "parentToolUseId": {
                   "type": [
                     "string",
@@ -31177,6 +31219,9 @@
                 },
                 "taskToolUseId": {
                   "type": "string"
+                },
+                "wakeup": {
+                  "type": "boolean"
                 },
                 "endedAt": {
                   "type": [
@@ -79619,7 +79664,8 @@
                 "nanogpt",
                 "grok",
                 "copilot",
-                "anthropic-claude-api"
+                "anthropic-claude-api",
+                "antigravity"
               ]
             },
             "account": {
@@ -79807,7 +79853,8 @@
                 "nanogpt",
                 "grok",
                 "copilot",
-                "anthropic-claude-api"
+                "anthropic-claude-api",
+                "antigravity"
               ]
             },
             "account": {
@@ -80073,7 +80120,8 @@
                 "nanogpt",
                 "grok",
                 "copilot",
-                "anthropic-claude-api"
+                "anthropic-claude-api",
+                "antigravity"
               ]
             },
             "model": {
@@ -80171,7 +80219,8 @@
                 "nanogpt",
                 "grok",
                 "copilot",
-                "anthropic-claude-api"
+                "anthropic-claude-api",
+                "antigravity"
               ]
             },
             "model": {
@@ -80289,7 +80338,8 @@
                   "nanogpt",
                   "grok",
                   "copilot",
-                  "anthropic-claude-api"
+                  "anthropic-claude-api",
+                  "antigravity"
                 ]
               },
               "additionalProperties": {
@@ -80488,7 +80538,8 @@
                 "nanogpt",
                 "grok",
                 "copilot",
-                "anthropic-claude-api"
+                "anthropic-claude-api",
+                "antigravity"
               ]
             },
             "path": {
@@ -80534,7 +80585,8 @@
                 "nanogpt",
                 "grok",
                 "copilot",
-                "anthropic-claude-api"
+                "anthropic-claude-api",
+                "antigravity"
               ]
             },
             "label": {
@@ -82405,6 +82457,9 @@
                           "error"
                         ]
                       },
+                      "stopped": {
+                        "type": "boolean"
+                      },
                       "parentToolUseId": {
                         "type": [
                           "string",
@@ -83052,6 +83107,9 @@
                       },
                       "taskToolUseId": {
                         "type": "string"
+                      },
+                      "wakeup": {
+                        "type": "boolean"
                       },
                       "endedAt": {
                         "type": [
@@ -85860,6 +85918,9 @@
                             "error"
                           ]
                         },
+                        "stopped": {
+                          "type": "boolean"
+                        },
                         "parentToolUseId": {
                           "type": [
                             "string",
@@ -86507,6 +86568,9 @@
                         },
                         "taskToolUseId": {
                           "type": "string"
+                        },
+                        "wakeup": {
+                          "type": "boolean"
                         },
                         "endedAt": {
                           "type": [
@@ -98355,7 +98419,8 @@
                 "nanogpt",
                 "grok",
                 "copilot",
-                "anthropic-claude-api"
+                "anthropic-claude-api",
+                "antigravity"
               ]
             },
             "account": {

@@ -4950,13 +4950,14 @@ public struct ChatToolItem: Codable, Sendable, Equatable {
     public let `input`: JSONValue
     public let `output`: String?
     public let `state`: ChatToolState
+    public let `stopped`: Bool?
     public let `parentToolUseId`: String?
     public let `progress`: ChatToolItemProgress?
     public let `changes`: [ChatToolItemChangesItem]?
     public let `workflow`: ChatToolItemWorkflow?
     public let `outputRef`: ChatToolItemOutputRef?
 
-    public init(`id`: String, `createdAt`: Double, `turnId`: String?, `kind`: String = "tool", `toolUseId`: String, `name`: String, `input`: JSONValue, `output`: String?, `state`: ChatToolState, `parentToolUseId`: String?, `progress`: ChatToolItemProgress? = nil, `changes`: [ChatToolItemChangesItem]? = nil, `workflow`: ChatToolItemWorkflow? = nil, `outputRef`: ChatToolItemOutputRef? = nil) {
+    public init(`id`: String, `createdAt`: Double, `turnId`: String?, `kind`: String = "tool", `toolUseId`: String, `name`: String, `input`: JSONValue, `output`: String?, `state`: ChatToolState, `stopped`: Bool? = nil, `parentToolUseId`: String?, `progress`: ChatToolItemProgress? = nil, `changes`: [ChatToolItemChangesItem]? = nil, `workflow`: ChatToolItemWorkflow? = nil, `outputRef`: ChatToolItemOutputRef? = nil) {
         self.`id` = `id`
         self.`createdAt` = `createdAt`
         self.`turnId` = `turnId`
@@ -4966,6 +4967,7 @@ public struct ChatToolItem: Codable, Sendable, Equatable {
         self.`input` = `input`
         self.`output` = `output`
         self.`state` = `state`
+        self.`stopped` = `stopped`
         self.`parentToolUseId` = `parentToolUseId`
         self.`progress` = `progress`
         self.`changes` = `changes`
@@ -4984,6 +4986,7 @@ public struct ChatToolItem: Codable, Sendable, Equatable {
         `input` = try container.decode(JSONValue.self, forKey: .`input`)
         `output` = try container.decode(String?.self, forKey: .`output`)
         `state` = try container.decode(ChatToolState.self, forKey: .`state`)
+        `stopped` = try container.decodeIfPresent(Bool.self, forKey: .`stopped`)
         `parentToolUseId` = try container.decode(String?.self, forKey: .`parentToolUseId`)
         `progress` = try container.decodeIfPresent(ChatToolItemProgress.self, forKey: .`progress`)
         `changes` = try container.decodeIfPresent([ChatToolItemChangesItem].self, forKey: .`changes`)
@@ -5002,6 +5005,7 @@ public struct ChatToolItem: Codable, Sendable, Equatable {
         try container.encode(`input`, forKey: .`input`)
         try container.encode(`output`, forKey: .`output`)
         try container.encode(`state`, forKey: .`state`)
+        try container.encodeIfPresent(`stopped`, forKey: .`stopped`)
         try container.encode(`parentToolUseId`, forKey: .`parentToolUseId`)
         try container.encodeIfPresent(`progress`, forKey: .`progress`)
         try container.encodeIfPresent(`changes`, forKey: .`changes`)
@@ -5019,6 +5023,7 @@ public struct ChatToolItem: Codable, Sendable, Equatable {
         case `input` = "input"
         case `output` = "output"
         case `state` = "state"
+        case `stopped` = "stopped"
         case `parentToolUseId` = "parentToolUseId"
         case `progress` = "progress"
         case `changes` = "changes"
@@ -5728,6 +5733,7 @@ public struct ChatTurnItem: Codable, Sendable, Equatable {
     public let `selection`: ChatTurnItemSelection?
     public let `label`: String?
     public let `taskToolUseId`: String?
+    public let `wakeup`: Bool?
     public let `endedAt`: Double?
     public let `costUsd`: Double
     public let `checkpoint`: String?
@@ -5746,7 +5752,7 @@ public struct ChatTurnItem: Codable, Sendable, Equatable {
     public let `limit`: ChatTurnItemLimit?
     public let `checkpointDiffRef`: ChatTurnItemCheckpointDiffRef?
 
-    public init(`id`: String, `createdAt`: Double, `turnId`: String?, `kind`: String = "turn", `state`: ChatTurnItemState, `origin`: ChatTurnItemOrigin? = nil, `selection`: ChatTurnItemSelection? = nil, `label`: String? = nil, `taskToolUseId`: String? = nil, `endedAt`: Double?, `costUsd`: Double, `checkpoint`: String? = nil, `checkpointHead`: String? = nil, `checkpointHeadAfter`: String? = nil, `checkpointDiff`: ChatTurnItemCheckpointDiff? = nil, `attempt`: Int64? = nil, `resumePending`: Bool? = nil, `deliveryPending`: Bool? = nil, `taskIds`: [String]? = nil, `messageFrom`: [String]? = nil, `messageHop`: Double? = nil, `native`: ChatTurnItemNative? = nil, `checkpointAfter`: String? = nil, `summaryFor`: String? = nil, `limit`: ChatTurnItemLimit? = nil, `checkpointDiffRef`: ChatTurnItemCheckpointDiffRef? = nil) {
+    public init(`id`: String, `createdAt`: Double, `turnId`: String?, `kind`: String = "turn", `state`: ChatTurnItemState, `origin`: ChatTurnItemOrigin? = nil, `selection`: ChatTurnItemSelection? = nil, `label`: String? = nil, `taskToolUseId`: String? = nil, `wakeup`: Bool? = nil, `endedAt`: Double?, `costUsd`: Double, `checkpoint`: String? = nil, `checkpointHead`: String? = nil, `checkpointHeadAfter`: String? = nil, `checkpointDiff`: ChatTurnItemCheckpointDiff? = nil, `attempt`: Int64? = nil, `resumePending`: Bool? = nil, `deliveryPending`: Bool? = nil, `taskIds`: [String]? = nil, `messageFrom`: [String]? = nil, `messageHop`: Double? = nil, `native`: ChatTurnItemNative? = nil, `checkpointAfter`: String? = nil, `summaryFor`: String? = nil, `limit`: ChatTurnItemLimit? = nil, `checkpointDiffRef`: ChatTurnItemCheckpointDiffRef? = nil) {
         self.`id` = `id`
         self.`createdAt` = `createdAt`
         self.`turnId` = `turnId`
@@ -5756,6 +5762,7 @@ public struct ChatTurnItem: Codable, Sendable, Equatable {
         self.`selection` = `selection`
         self.`label` = `label`
         self.`taskToolUseId` = `taskToolUseId`
+        self.`wakeup` = `wakeup`
         self.`endedAt` = `endedAt`
         self.`costUsd` = `costUsd`
         self.`checkpoint` = `checkpoint`
@@ -5786,6 +5793,7 @@ public struct ChatTurnItem: Codable, Sendable, Equatable {
         `selection` = try container.decodeIfPresent(ChatTurnItemSelection.self, forKey: .`selection`)
         `label` = try container.decodeIfPresent(String.self, forKey: .`label`)
         `taskToolUseId` = try container.decodeIfPresent(String.self, forKey: .`taskToolUseId`)
+        `wakeup` = try container.decodeIfPresent(Bool.self, forKey: .`wakeup`)
         `endedAt` = try container.decode(Double?.self, forKey: .`endedAt`)
         `costUsd` = try container.decode(Double.self, forKey: .`costUsd`)
         `checkpoint` = try container.decodeIfPresent(String.self, forKey: .`checkpoint`)
@@ -5816,6 +5824,7 @@ public struct ChatTurnItem: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`selection`, forKey: .`selection`)
         try container.encodeIfPresent(`label`, forKey: .`label`)
         try container.encodeIfPresent(`taskToolUseId`, forKey: .`taskToolUseId`)
+        try container.encodeIfPresent(`wakeup`, forKey: .`wakeup`)
         try container.encode(`endedAt`, forKey: .`endedAt`)
         try container.encode(`costUsd`, forKey: .`costUsd`)
         try container.encodeIfPresent(`checkpoint`, forKey: .`checkpoint`)
@@ -5845,6 +5854,7 @@ public struct ChatTurnItem: Codable, Sendable, Equatable {
         case `selection` = "selection"
         case `label` = "label"
         case `taskToolUseId` = "taskToolUseId"
+        case `wakeup` = "wakeup"
         case `endedAt` = "endedAt"
         case `costUsd` = "costUsd"
         case `checkpoint` = "checkpoint"
