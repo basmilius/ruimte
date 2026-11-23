@@ -182,7 +182,7 @@ test('denying answers the CLI and the tool ends in error', async () => {
     await recorder.until(() => recorder.info?.status === 'needs-you');
     manager.core.approve('chat-3', 'req-1', 'deny', 'not that');
     await recorder.untilIdle();
-    expect(recorder.ofKind('tool')[0]).toMatchObject({ state: 'error', output: 'denied by user' });
+    expect(recorder.ofKind('tool')[0]).toMatchObject({ state: 'error', output: 'The user declined this tool call and said:\nnot that' });
 });
 
 test('a question to the person is answered by id and reaches the CLI by text', async () => {

@@ -31,7 +31,7 @@ export function mcpUrlOf(contextUrl: string): string {
 }
 
 export function ruimteCliMcp(contextUrl: string, tokenVariable: string): CliMcpServer {
-    return { name: MCP_SERVER, url: mcpUrlOf(contextUrl), tokenVariable };
+    return { name: MCP_SERVER, url: mcpUrlOf(contextUrl), tokenVariable, directTools: true };
 }
 
 /*
@@ -46,7 +46,8 @@ export const withRuimteMcp: LaunchDecorator = (launch) => {
         return launch;
     }
 
-    const server: ChatMcpServer = { name: MCP_SERVER, url, tokenVariable: CHAT_TOKEN_VARIABLE, allowTools: true };
+    // Several tools wait up to minutes for a person or a window, which a call from a script would turn into polling.
+    const server: ChatMcpServer = { name: MCP_SERVER, url, tokenVariable: CHAT_TOKEN_VARIABLE, allowTools: true, directTools: true };
 
     return { ...launch, mcpServers: [...(launch.mcpServers ?? []), server] };
 };
