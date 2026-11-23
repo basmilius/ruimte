@@ -11,7 +11,7 @@
 
 ## Forks
 
-- A fork (`chat.fork`, `fork.ts`) copies the CLI's conversation at the click: a Claude transcript cut at `native.lastUuid` (format checked against Claude Code 2.1.273, refused otherwise), or Codex `thread/fork` at `native.turnId`.
+- A fork (`chat.fork`, `fork.ts`) copies the CLI's conversation at the click: a Claude transcript cut at `native.lastUuid` (format checked against Claude Code 2.1.273, refused otherwise), or Codex `thread/fork` at `native.turnId`. A working chat is refused with `chat-busy`, except a Codex chat forked to Codex from a turn that ended before the running one: Codex cuts its own thread there.
 - Its record is written before its node, and its agent's note waits in `preambles`, never on the wire. Its lineage has `relation: 'fork'`, so ending, capping or orphaning the original never touches it. A fork and its original with no shared canvas read each other through that lineage (`apps/server/src/context/fork-origin.ts`).
 - A chat view forks into a chat view after it; a node forks into a node, or with `asView` into a view after its canvas.
 - A fork in a worktree puts its files to the turn's settled tree (`checkpointAfter`) only in its new worktree, never in a shared folder.

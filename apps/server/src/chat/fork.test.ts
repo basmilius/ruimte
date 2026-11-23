@@ -703,27 +703,30 @@ describe('forking a Codex chat', () => {
         await rm(home, { recursive: true, force: true });
     });
 
-    test('thread/fork is asked with the turn id Codex gave turn 2, beside the original that keeps its own process', async () => {
+    /* Resolves once the lead chat reads as `ready` says, as the fake Codex answers in its own time. */
+    const leadReads = (ready: (lead: NonNullable<ReturnType<ChatManager['core']['get']>>) => boolean): Promise<void> =>
+        new Promise<void>((resolve) => {
+            const stop = manager.core.observe(() => {
+                if (ready(manager.core.get('chat-lead')!)) {
+                    stop();
+                    resolve();
+                }
+            });
+        });
+
+    /* A Codex chat of four finished turns, and fork deps on a canvas holding it. */
+    const fourCodexTurns = async () => {
         await manager.core.create({ chatId: 'chat-lead', provider: 'codex', cwd: home });
         for (const word of ['alpha', 'bravo', 'charlie', 'delta']) {
             const before = turnsOf(manager.core.get('chat-lead')!.thread.list()).length;
             await manager.core.send('chat-lead', word);
-            await new Promise<void>((resolve) => {
-                const stop = manager.core.observe(() => {
-                    const lead = manager.core.get('chat-lead')!;
-                    if (lead.info.activeTurnId === null && turnsOf(lead.thread.list()).length === before + 1) {
-                        stop();
-                        resolve();
-                    }
-                });
-            });
+            await leadReads((lead) => lead.info.activeTurnId === null && turnsOf(lead.thread.list()).length === before + 1);
         }
         const lead = manager.core.get('chat-lead')!;
-        const turns = turnsOf(lead.thread.list());
         const leadView = leadProject().views[0] as ProjectCanvasView;
         const canvas = inMemoryCanvas({ ...leadProject(), views: [{ ...leadView, nodes: [{ ...leadView.nodes[0]!, provider: 'codex' as const }] }] });
         const host: Parameters<typeof chatForkDeps>[0]['host'] = {
-            starts: { installedAgents: async () => ['codex'], provider: (kind) => forkProviders.get(kind) },
+            starts: { installedAgents: async () => ['claude', 'codex'], provider: (kind) => forkProviders.get(kind) },
             machine: { nodeSize: (kind) => NODE_SIZE[kind] },
             projects: {
                 locate: () => ({ projectId: 'p1', folder: home, canvasId: 'main' }),
@@ -732,6 +735,11 @@ describe('forking a Codex chat', () => {
             }
         };
         const deps = chatForkDeps({ chats: manager, host, titleFor: () => 'Lexer', lineage: new AgentLineageStore(home) });
+        return { lead, turns: turnsOf(lead.thread.list()), deps };
+    };
+
+    test('thread/fork is asked with the turn id Codex gave turn 2, beside the original that keeps its own process', async () => {
+        const { lead, turns, deps } = await fourCodexTurns();
 
         const result = await forkChat(deps, { chatId: 'chat-lead', turnId: turns[1]!.id });
         expect(fakeCodexForks.at(-1)).toMatchObject({
@@ -743,5 +751,20 @@ describe('forking a Codex chat', () => {
         expect(result.info.agentSessionId).toStartWith('fork-');
         expect(lead.running).toBe(true);
         expect(turnsOf((await new ChatStore(home).read(result.nodeId))!.items)).toHaveLength(2);
+    });
+
+    test('a working chat forks natively from a turn that ended, and only to Codex', async () => {
+        const { lead, turns, deps } = await fourCodexTurns();
+        await manager.core.send('chat-lead', 'slow');
+        await leadReads((current) => current.info.activeTurnId !== null && turnsOf(current.thread.list()).length === turns.length + 1);
+        const running = lead.info.activeTurnId!;
+
+        const result = await forkChat(deps, { chatId: 'chat-lead', turnId: turns[3]!.id });
+        expect(fakeCodexForks.at(-1)).toMatchObject({ threadId: lead.info.agentSessionId, lastTurnId: turns[3]!.native!.turnId });
+        const copied = turnsOf((await new ChatStore(home).read(result.nodeId))!.items);
+        expect(copied.map((turn) => turn.id)).toEqual(turns.map((turn) => turn.id));
+
+        await expect(forkChat(deps, { chatId: 'chat-lead', turnId: running })).rejects.toMatchObject({ code: 'turn-running' });
+        await expect(forkChat(deps, { chatId: 'chat-lead', turnId: turns[3]!.id, provider: 'claude' })).rejects.toMatchObject({ code: 'chat-busy' });
     });
 });

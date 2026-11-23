@@ -378,10 +378,6 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
     if (turn.state === 'running') {
         throw new ChatError('turn-running', 'That turn is still running; fork it once it ends');
     }
-    // A transcript that grows while it is copied is no copy of anything.
-    if (info.activeTurnId !== null) {
-        throw new ChatError('chat-busy', 'The chat is working on a turn; fork it once that turn ends');
-    }
     const provider = payload.provider ?? info.provider;
     const switching = provider !== info.provider;
     const named = forkAccount(deps, payload.chatId, provider, payload.account, switching ? undefined : (info.account ?? info.provider));
@@ -391,6 +387,12 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
     const sameAccount = !switching && account === info.account;
     // Another CLI, or an account that cannot read the original's transcripts, reads the conversation as text instead.
     const handoff = switching || (!sameAccount && deps.accounts?.canContinue(provider, info.account, account) !== true);
+    // A transcript that grows while it is copied is no copy of anything. Codex forks natively up to a named turn,
+    // so a turn that ended before the running one is a stable cut.
+    const nativeCut = !handoff && deps.provider(info.provider).threads !== undefined && turns.slice(index + 1).some((later) => later.id === info.activeTurnId);
+    if (info.activeTurnId !== null && !nativeCut) {
+        throw new ChatError('chat-busy', 'The chat is working on a turn; fork it once that turn ends');
+    }
     // A handoff copies only the thread, so a chat on a provider this machine lost can go on elsewhere.
     if (!forkable(deps, provider) || (!handoff && !forkable(deps, info.provider))) {
         throw new ChatError('chat-unsupported', `${nameOf(deps, forkable(deps, provider) ? info.provider : provider)} has no chat that can be forked`);
