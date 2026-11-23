@@ -710,18 +710,32 @@ describe("a Monitor's turns", () => {
         await watching.settled();
     });
 
-    const turn = (origin: 'user' | 'agent', running: ChatBackgroundTask[], done: ChatBackgroundTask[]): void => {
-        turns += 1;
+    const runningTurn = (origin: 'user' | 'agent', wake: { deliveryPending?: boolean; taskIds?: string[] } = {}): void => {
         watching.consume({
             event: 'chat.event',
             payload: {
                 chatId: 'node',
                 event: {
                     type: 'item',
-                    item: { id: `turn-${turns}`, kind: 'turn', createdAt: NOW, turnId: `turn-${turns}`, state: 'running', origin, endedAt: null, costUsd: 0 }
+                    item: {
+                        id: `turn-${turns}`,
+                        kind: 'turn',
+                        createdAt: NOW,
+                        turnId: `turn-${turns}`,
+                        state: 'running',
+                        origin,
+                        endedAt: null,
+                        costUsd: 0,
+                        ...wake
+                    }
                 }
             }
         });
+    };
+
+    const turn = (origin: 'user' | 'agent', running: ChatBackgroundTask[], done: ChatBackgroundTask[]): void => {
+        turns += 1;
+        runningTurn(origin);
         watching.consume(chatInfo('running', undefined, running));
         watching.consume(chatInfo('idle', undefined, done));
     };
@@ -745,6 +759,15 @@ describe("a Monitor's turns", () => {
 
     test('a turn a person wrote into pushes while the Monitor runs', async () => {
         turn('user', [monitor], [monitor]);
+        expect(await finished()).toBe(1);
+    });
+
+    test('a turn a finished task woke pushes while the Monitor runs, also once the CLI took its prompt', async () => {
+        turns += 1;
+        runningTurn('agent', { deliveryPending: true, taskIds: ['task-1'] });
+        watching.consume(chatInfo('running', undefined, [monitor]));
+        runningTurn('agent', { taskIds: ['task-1'] });
+        watching.consume(chatInfo('idle', undefined, [monitor]));
         expect(await finished()).toBe(1);
     });
 

@@ -175,8 +175,10 @@ export class PushService {
      * again as it is then, since a stop that is over must not come back as a new one.
      */
     private readonly limitPending = new Map<string, Map<string, number>>();
-    /* The chats whose latest turn the CLI opened itself, nobody typing into it. */
+    /* The chats whose latest turn the CLI opened itself, with neither a person nor a wake of the daemon opening it. */
     private readonly agentTurns = new Set<string>();
+    /* The turn a wake of the daemon opened last, by chat, which keeps `origin: 'agent'` once its prompt is acknowledged. */
+    private readonly wakeTurns = new Map<string, string>();
     /* The chats whose turn the CLI opened while a Monitor ran, which is a line of that Monitor rather than a finished turn. */
     private readonly monitorTurns = new Set<string>();
     /* The finished turns that wait out `MONITOR_GRACE_MS`, by chat, each with the timer that pushes it. */
@@ -316,8 +318,13 @@ export class PushService {
                 const limit = info.limit ? { limit: info.limit, provider: info.provider, account: info.account ?? info.provider } : null;
                 this.status('chat', chatId, info.status, info.suggestedTitle ?? 'Agent', chatWaitAsk(info.requests), limit, holdsMonitor(info));
             } else if (chat.type === 'item' && chat.item.kind === 'turn' && chat.item.state === 'running') {
+                // Only a wake opens its turn with `deliveryPending`, and the CLI acknowledging the prompt clears it.
+                if (chat.item.deliveryPending === true) {
+                    this.wakeTurns.set(chatId, chat.item.id);
+                }
+
                 // A turn without an origin is from before the field, when only a person started one.
-                if (chat.item.origin === 'agent') {
+                if (chat.item.origin === 'agent' && this.wakeTurns.get(chatId) !== chat.item.id) {
                     this.agentTurns.add(chatId);
                 } else {
                     this.agentTurns.delete(chatId);
@@ -441,6 +448,7 @@ export class PushService {
 
         if (status === 'exited') {
             this.agentTurns.delete(nodeId);
+            this.wakeTurns.delete(nodeId);
         } else if (monitor && this.agentTurns.has(nodeId)) {
             this.monitorTurns.add(nodeId);
         }
