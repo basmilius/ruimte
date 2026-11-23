@@ -1,4 +1,4 @@
-import { cliExecutable, type ChatProvider } from '@adecore/agents/providers';
+import { cliExecutable, defaultAccountEnv, type ChatProvider } from '@adecore/agents/providers';
 import type { AgentKind } from '@ruimte/contracts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import { GitError, streamWithTimeout, type GitResult } from './run.ts';
@@ -60,6 +60,20 @@ export function oneShotRun(
     return args === null ? null : { args: [...args, ...modelArgs], ...env };
 }
 
+/* What a CLI's default account sets over the daemon's environment, such as its own folder where its accounts run apart. */
+function defaultAccountOf(provider: ChatProvider): Record<string, string> {
+    const env = defaultAccountEnv(provider, process.env);
+    const changed: Record<string, string> = {};
+
+    for (const [name, value] of Object.entries(env)) {
+        if (value !== undefined && value !== process.env[name]) {
+            changed[name] = value;
+        }
+    }
+
+    return changed;
+}
+
 export async function runOneShot(provider: ChatProvider, top: string, prompt: string, timeoutMs: number, options: OneShotOptions): Promise<GitResult> {
     if (options.writer !== undefined) {
         return await options.writer.run(top, prompt, timeoutMs, options.onSpawn);
@@ -71,7 +85,7 @@ export async function runOneShot(provider: ChatProvider, top: string, prompt: st
     return await streamWithTimeout(cliExecutable(provider), run.args, (await options.cwdFor?.(top)) ?? top, timeoutMs, {
         onSpawn: options.onSpawn,
         stdin: run.stdin,
-        env: run.env
+        env: { ...defaultAccountOf(provider), ...run.env }
     });
 }
 
