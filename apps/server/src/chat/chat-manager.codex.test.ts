@@ -240,7 +240,7 @@ describe('ChatManager with Codex', () => {
     });
 
     test('the window the CLI of the pick before reports does not land on a meter that already reads the new one', async () => {
-        await open('chat-window');
+        await open('chat-window', { runtimeMode: 'supervised' });
         await manager.core.send('chat-window', 'tool: date');
         await recorder.until(needsYou);
         expect(recorder.info?.usage.contextWindow).toBe(258400);
@@ -262,7 +262,8 @@ describe('ChatManager with Codex', () => {
     });
 
     test('a command approval becomes an approval card; allowing always sends the policy amendment', async () => {
-        await open('chat-2');
+        // Full access accepts what Codex's own danger check asks, so only a mode that asks shows the card.
+        await open('chat-2', { runtimeMode: 'supervised' });
         await manager.core.send('chat-2', 'tool: date');
         await recorder.until(needsYou);
 
@@ -285,7 +286,7 @@ describe('ChatManager with Codex', () => {
     });
 
     test('denying declines the command and the tool ends in error', async () => {
-        await open('chat-3');
+        await open('chat-3', { runtimeMode: 'supervised' });
         await manager.core.send('chat-3', 'tool: rm -rf /');
         await recorder.until(needsYou);
         manager.core.approve('chat-3', recorder.ofKind('approval')[0]!.requestId, 'deny', 'not that');
