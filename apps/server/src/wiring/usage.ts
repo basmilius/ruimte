@@ -1,4 +1,4 @@
-import { copilotUsageDirectory } from '@adecore/agents/providers';
+import { antigravityUsageDirectory, copilotUsageDirectory } from '@adecore/agents/providers';
 import { limitAccountsOf, limitsFileIn, usageAccountsOf, usageRootsOf, UsageMonitor, UsageService, type LimitAccounts } from '@adecore/agents/usage';
 import type { ServerConfig } from '../config.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
@@ -27,12 +27,13 @@ export function wireUsage(
         home: config.home,
         allowPriceFetch: config.priceFetch,
         knownProjects: () => projects.known(),
-        // A subscription API and Copilot leave no transcript the scan reads, so the daemon keeps a log of their turns.
+        // A subscription API, Copilot and Antigravity leave no transcript the scan reads, so the daemon keeps a log of their turns.
         roots: () => [
             ...usageRootsOf(providers.accounts),
             { provider: 'nanogpt', path: providers.nanogpt.usageDirectory },
             ...claudeApiUsageRoots(providers.claudeApi),
-            { provider: 'copilot', path: copilotUsageDirectory(config.home) }
+            { provider: 'copilot', path: copilotUsageDirectory(config.home) },
+            { provider: 'antigravity', path: antigravityUsageDirectory(config.home) }
         ],
         sessionAccounts: () =>
             sessionAccountsOf(

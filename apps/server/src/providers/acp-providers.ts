@@ -26,6 +26,7 @@ export function createCopilotProvider(catalogStore?: AcpCatalogStore, usageLog?:
     return createSharedCopilotProvider({ ...ruimteChats(catalogStore), ...(usageLog === undefined ? {} : { usageLog }) });
 }
 
-export function createAntigravityProvider(catalogStore?: AcpCatalogStore): ChatProvider {
-    return createSharedAntigravityProvider(ruimteChats(catalogStore));
+/* An Antigravity chat logs every turn's usage too, since agy keeps no file the usage page can read. */
+export function createAntigravityProvider(catalogStore?: AcpCatalogStore, usageLog?: string): ChatProvider {
+    return createSharedAntigravityProvider({ ...ruimteChats(catalogStore), ...(usageLog === undefined ? {} : { usageLog }) });
 }

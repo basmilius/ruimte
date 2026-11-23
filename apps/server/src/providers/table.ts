@@ -1,5 +1,5 @@
 import type { CodexClientInfo } from '@adecore/agents/chat';
-import { copilotUsageDirectory, createClaudeProvider, createCodexProvider, type ChatProvider } from '@adecore/agents/providers';
+import { antigravityUsageDirectory, copilotUsageDirectory, createClaudeProvider, createCodexProvider, type ChatProvider } from '@adecore/agents/providers';
 import type { AgentKind } from '@ruimte/contracts';
 import { withRuimteMcp } from '../ruimte-mcp.ts';
 import { acpCatalogStore } from './acp-catalog-store.ts';
@@ -60,7 +60,8 @@ const ROWS: readonly ProviderRow[] = [
     {
         kind: 'antigravity',
         modelFeed: true,
-        create: (context) => createAntigravityProvider(catalogStoreOf(context, 'antigravity'))
+        create: (context) =>
+            createAntigravityProvider(catalogStoreOf(context, 'antigravity'), context.home === undefined ? undefined : antigravityUsageDirectory(context.home))
     },
     {
         kind: 'copilot',

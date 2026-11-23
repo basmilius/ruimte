@@ -253,6 +253,7 @@ $RUIMTE_HOME/
     prices.json                    the last LiteLLM price table
     exchange-rate.json             the last euro rate for a dollar
     copilot/<session>.jsonl        0600, the usage of every Copilot chat turn, which its CLI keeps nowhere the scanner reads
+    antigravity/<session>.jsonl    0600, the same for every Antigravity chat turn, under the model its session ran
   models/catalogs-v2.json          0700, the last model catalogs from the address book
   models/catalogs.json             0700, the same from `/v1`, read only until the first v2 answer
   models/agents/<kind>.json        0600, the models, effort and commands an ACP agent (Grok, Copilot, Antigravity) last reported
@@ -648,7 +649,7 @@ An agent Ruimte starts gets the daemon's MCP server: `/mcp` on the daemon's port
 
 - The scanner reads every account's transcripts (`~/.claude/projects`, `~/.codex/sessions`, honoring `CLAUDE_CONFIG_DIR` and `CODEX_HOME`).
 - `usage/scan-state.json` is a cache; deleting it costs one cold scan. `usage/history.jsonl` keeps the usage of every transcript ever read, also after its CLI removed it, so deleting it loses that usage for good. `usage/limits.json` keeps the last plan numbers of every account, shown after a restart until that account's next read.
-- Copilot chat turns are logged to `usage/copilot`, a file per session; a Copilot terminal is not counted.
+- Copilot chat turns are logged to `usage/copilot`, a file per session; a Copilot terminal is not counted. Antigravity chat turns go to `usage/antigravity` the same way, under the model the session ran, since agy's prompt response names none.
 - Prices come from LiteLLM's `model_prices_and_context_window.json`, refreshed every 24 hours into `usage/prices.json`, with a bundled fallback. An unpriced model shows as unknown, never free. The ECB euro rate comes from frankfurter.app on the same schedule into `usage/exchange-rate.json`. `--no-price-fetch` turns off both.
 - Plan limits come from the CLIs (`get_usage` over Claude Code's stream-json, `account/rateLimits/read` over Codex's app-server) every five minutes, backing off to an hour after a failure. That clock reads a CLI's default account, and another account only while a chat or terminal used it in the last day since the machine started, or while a client has a usage page open (`usage.subscribe`); the first page to open reads those at once. Cards count as no page. Agents read them with `provider_info`.
 

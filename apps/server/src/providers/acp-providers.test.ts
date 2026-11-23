@@ -1,6 +1,6 @@
 import { describe, expect, setSystemTime, test } from 'bun:test';
 import type { BackendEvent, BackendLaunch } from '@adecore/agents/chat';
-import { agentDefaultCatalog, copilotUsageDirectory, createAcpProvider, type ChatProvider } from '@adecore/agents/providers';
+import { agentDefaultCatalog, antigravityUsageDirectory, copilotUsageDirectory, createAcpProvider, type ChatProvider } from '@adecore/agents/providers';
 import { fakeAcpWith, inProcess, type FakeAcpOptions } from '@adecore/agents/testing';
 import { UsageService } from '@adecore/agents/usage';
 import { withRuimteMcp } from '../ruimte-mcp.ts';
@@ -55,32 +55,37 @@ function run(provider: ChatProvider, options: FakeAcpOptions, overrides: Partial
 
 const HELLO = { promptId: 'p1', text: 'hello', preamble: null, attachments: [], mentions: [], skills: [] };
 
-test("a Copilot turn's usage is logged in the machine's folder and shows on the usage page under Copilot", async () => {
-    const home = await newHome();
-    setSystemTime(Date.UTC(2026, 9, 1, 12));
-    try {
-        const copilot = new RuimteProviderRegistry({ home, detect: async () => ({ installed: true, version: '1.0.0' }) }).get('copilot');
-        const turnUsage = { totalTokens: 1500, inputTokens: 1100, outputTokens: 400, cachedReadTokens: 1000 };
-        const { backend, turnDone } = run(copilot, { turnUsage });
-        await backend.start();
-        backend.sendTurn(HELLO);
-        await turnDone;
-        await backend.dispose();
+for (const [kind, name, folderOf] of [
+    ['copilot', 'Copilot', copilotUsageDirectory],
+    ['antigravity', 'Antigravity', antigravityUsageDirectory]
+] as const) {
+    test(`a ${name} turn's usage is logged in the machine's folder and shows on the usage page under ${name}`, async () => {
+        const home = await newHome();
+        setSystemTime(Date.UTC(2026, 9, 1, 12));
+        try {
+            const provider = new RuimteProviderRegistry({ home, detect: async () => ({ installed: true, version: '1.5.15' }) }).get(kind);
+            const turnUsage = { totalTokens: 1500, inputTokens: 1100, outputTokens: 400, cachedReadTokens: 1000 };
+            const { backend, turnDone } = run(provider, { turnUsage });
+            await backend.start();
+            backend.sendTurn(HELLO);
+            await turnDone;
+            await backend.dispose();
 
-        const usage = new UsageService({
-            home,
-            allowPriceFetch: false,
-            knownProjects: async () => [],
-            roots: () => [{ provider: 'copilot', path: copilotUsageDirectory(home) }]
-        });
-        const summary = await usage.summary({ from: '2026-10-01', to: '2026-10-01', resolution: 'day', timeZone: 'UTC' });
-        usage.stop();
-        expect(summary.models).toEqual([expect.objectContaining({ provider: 'copilot' })]);
-        expect(summary.models[0]!.totals).toMatchObject({ calls: 1, input: 100, cacheRead: 1000, output: 400 });
-    } finally {
-        setSystemTime();
-    }
-});
+            const usage = new UsageService({
+                home,
+                allowPriceFetch: false,
+                knownProjects: async () => [],
+                roots: () => [{ provider: kind, path: folderOf(home) }]
+            });
+            const summary = await usage.summary({ from: '2026-10-01', to: '2026-10-01', resolution: 'day', timeZone: 'UTC' });
+            usage.stop();
+            expect(summary.models).toEqual([expect.objectContaining({ provider: kind })]);
+            expect(summary.models[0]!.totals).toMatchObject({ calls: 1, input: 100, cacheRead: 1000, output: 400 });
+        } finally {
+            setSystemTime();
+        }
+    });
+}
 
 describe("Ruimte's MCP server in an ACP chat", () => {
     const CHAT_ENV = { RUIMTE_MCP_URL: 'http://127.0.0.1:4210/mcp', RUIMTE_CONTEXT_TOKEN: 'chat-token' };
