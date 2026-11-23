@@ -226,6 +226,8 @@ export class ChatManager {
                 // Only a person reads a suggestion, so a chat an agent or another machine drives spends nothing on one.
                 promptSuggestionsFor: (chatId) =>
                     facts.promptSuggestions() && facts.depthOf(chatId) === 0 && !facts.peerChat(chatId) && !facts.inlineChat(chatId),
+                // A chat an agent opened works for it, which a CLI may mark its session with.
+                subagentFor: (chatId) => facts.depthOf(chatId) > 0,
                 promptNotesFor: (chatId) => this.promptNotesFor(chatId),
                 promptHeardFor: (chatId, text) => this.skillNotesFor(chatId, text),
                 hostSkillsFor: () => facts.skills().map((placed) => placed.skill.name),
