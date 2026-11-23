@@ -460,7 +460,8 @@ describe('ChatManager with Codex', () => {
                 };
             });
             await remake({ spawn: probe.spawn });
-            await open('chat-child-approval');
+            // Full access accepts a child's command as it does the root's, so only a mode that asks holds the card.
+            await open('chat-child-approval', { runtimeMode: 'supervised' });
             await manager.core.send('chat-child-approval', 'probe');
             await recorder.until(() => recorder.ofKind('turn')[0]?.state === 'done' && recorder.ofKind('approval')[0]?.decision === 'pending');
             manager.core.cancel('chat-child-approval');
