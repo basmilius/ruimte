@@ -4,7 +4,6 @@ import { ownsSettings } from '../agents/install.ts';
 import { AgentIntegrations } from '../agents/integrations.ts';
 import { bestEffort } from '../best-effort.ts';
 import type { ServerConfig } from '../config.ts';
-import type { AgentServers } from '../handlers/agent-servers.ts';
 import { AcpRegistry } from '../providers/acp-registry.ts';
 import type { AnthropicClaudeApiService } from '../providers/anthropic-claude-api-service.ts';
 import { CliVersions, type OwnInstall } from '../providers/cli-versions.ts';
@@ -26,8 +25,6 @@ export interface ProvidersBundle {
     modelCatalogs: ModelCatalogFeed;
     integrations: AgentIntegrations;
     accounts: ProviderAccountsService;
-    // The chat servers a person installs apart from their CLI (Antigravity's).
-    servers: AgentServers;
     // The agents of the ACP registry a person installed, each a provider of its own.
     registryAgents: RegistryAgents;
     // How each CLI was installed, its version and an update through that route.
@@ -96,32 +93,10 @@ export async function wireProviders(
         refresh === null ? Promise.resolve() : bestEffort('Reading the models of the agents', refresh(providers, accounts, process.env));
     // At the start, so a list the vendor changed while the machine was off is in the first picker.
     void refreshModels();
-    const servers: AgentServers = {
-        of: (kind) => providers.servers.get(kind)?.install,
-        installed: (kind) => {
-            providers.invalidate(kind);
-            void integrations.refreshInstalled();
-        }
-    };
     const registry = new AcpRegistry({ home: config.home });
     const registryAgents = new RegistryAgents({ home: config.home, registry, providers });
     registryAgents.load();
     const ownInstall = (kind: AgentKind): OwnInstall | null => {
-        const server = providers.servers.get(kind);
-        if (server !== undefined) {
-            return {
-                version: server.install.status().installed,
-                path: server.install.launch()?.[0] ?? null,
-                latest: () => Promise.resolve(server.release.version),
-                update: async () => {
-                    const after = await server.install.install();
-                    servers.installed(kind);
-                    if (after.state === 'failed') {
-                        throw new Error(after.error ?? `The ${providers.get(kind).name} server did not install`);
-                    }
-                }
-            };
-        }
         const agent = registryAgents.installed().find((candidate) => candidate.kind === kind);
         if (agent === undefined) {
             return null;
@@ -139,9 +114,9 @@ export async function wireProviders(
         };
     };
     const versions = new CliVersions({
-        executables: { claude: 'claude', codex: 'codex', grok: 'grok', copilot: 'copilot' },
+        executables: { claude: 'claude', codex: 'codex', antigravity: 'agy', grok: 'grok', copilot: 'copilot' },
         own: ownInstall,
-        ownKinds: () => [...providers.servers.keys(), ...registryAgents.installed().map((agent) => agent.kind)],
+        ownKinds: () => registryAgents.installed().map((agent) => agent.kind),
         providers
     });
     // Before the feed listens, so the list it sends reads the new key instead of the cached detection.
@@ -159,7 +134,6 @@ export async function wireProviders(
         modelCatalogs,
         integrations,
         accounts,
-        servers,
         registryAgents,
         versions,
         nameOfCli: (kind) => providers.get(kind).name,

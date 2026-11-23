@@ -11,13 +11,22 @@ import { z } from 'zod';
 import { bestEffort } from '../best-effort.ts';
 import { extractEntries, extractZipFile, readArchive } from '../disk/archive.ts';
 import { downloadFile, type FileDownload } from '../disk/download.ts';
+import { sha256Of } from '../disk/hash.ts';
 import { errorText } from '../error-text.ts';
 import { withRuimteMcp } from '../ruimte-mcp.ts';
 import { acpCatalogStore } from './acp-catalog-store.ts';
 import { RUIMTE_ACP_CLIENT } from './acp-providers.ts';
 import type { AcpRegistry, RegistryDistribution, RegistryEntry } from './acp-registry.ts';
-import { downloadChecked } from './acp-server.ts';
 import { throwOnFailure } from './cli-versions.ts';
+
+/* Downloads to the file and holds it to the checksum, where there is one, before anything unpacks it. */
+async function downloadChecked(download: FileDownload, url: string, destination: string, sha256: string | null): Promise<void> {
+    await download(url, destination);
+
+    if (sha256 !== null && (await sha256Of(destination)) !== sha256) {
+        throw new Error('The download is damaged. Try again.');
+    }
+}
 
 const InstalledSchema = z.object({
     id: z.string(),

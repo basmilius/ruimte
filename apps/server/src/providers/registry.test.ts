@@ -54,25 +54,19 @@ describe('ProviderRegistry', () => {
         }
     });
 
-    test('Antigravity is installed once `agy` is, and chats once its server is there too', async () => {
-        let serverPath: string | null = null;
-        const server = { launch: () => (serverPath === null ? null : [serverPath]) };
+    test('Antigravity is installed once `agy` is, and chats on `agy acp`', async () => {
         const probed: string[] = [];
         const registry = new ProviderRegistry({
-            serverLaunches: { antigravity: server },
             detect: async (command) => {
                 probed.push(command);
-                return { installed: command === 'agy', version: command === 'agy' ? '1.4.0' : null };
+                return { installed: command === 'agy', version: command === 'agy' ? '1.5.15' : null };
             }
         });
-        const antigravity = async () => (await registry.list()).find((provider) => provider.kind === 'antigravity');
+        const antigravity = (await registry.list()).find((provider) => provider.kind === 'antigravity');
 
-        expect(await antigravity()).toMatchObject({ installed: true, version: '1.4.0', capabilities: { chat: false, terminal: true } });
-        serverPath = '/srv/agy_acp_server.par';
-        registry.invalidate('antigravity');
-        expect(await antigravity()).toMatchObject({ installed: true, version: '1.4.0', capabilities: { chat: true, terminal: true } });
-        expect(registry.get('antigravity').command).toEqual(['/srv/agy_acp_server.par']);
-        expect(probed).not.toContain('/srv/agy_acp_server.par');
+        expect(antigravity).toMatchObject({ installed: true, version: '1.5.15', capabilities: { chat: true, terminal: true } });
+        expect(registry.get('antigravity').command).toEqual(['agy', 'acp']);
+        expect(probed).toContain('agy');
     });
 
     /*

@@ -1,45 +1,20 @@
-import { CodedError } from '@adecore/agents';
-import type { AgentKind } from '@ruimte/contracts';
+import type { AgentKind, AgentServerStatus } from '@ruimte/contracts';
 import type { Area } from '../area.ts';
 import { type Dispatcher } from '../dispatcher.ts';
-import type { AcpServerInstall } from '../providers/acp-server.ts';
-
-export interface AgentServers {
-    of(kind: AgentKind): AcpServerInstall | undefined;
-    // Called after an Install, so the next `provider.list` asks again whether the provider is there.
-    installed(kind: AgentKind): void;
-}
-
-interface AgentServersDeps {
-    servers: AgentServers;
-}
 
 /*
- * The chat servers that come apart from their CLI. Installing one downloads a program and makes it runnable
- * on this machine, so only the local secret may press Install; any client the machine let in may see where it stands.
+ * The chat servers that came apart from their CLI. Antigravity's was the last, and its chats now run on `agy acp`,
+ * so a client of an older Ruimte that still asks hears that there is none to install, which hides its server section.
  */
-export function agentServersArea(deps: AgentServersDeps): Area {
-    return { name: 'agent servers', handlers: (dispatcher) => registerRequests(dispatcher, deps) };
+export function agentServersArea(): Area {
+    return { name: 'agent servers', handlers: registerRequests };
 }
 
-function registerRequests(dispatcher: Dispatcher, { servers }: AgentServersDeps): void {
-    const serverOf = (kind: AgentKind): AcpServerInstall => {
-        const server = servers.of(kind);
-        if (server === undefined) {
-            throw new CodedError('no-agent-server', `${kind} has no server of its own to install`);
-        }
-        return server;
-    };
+function noServer(provider: AgentKind): { server: AgentServerStatus } {
+    return { server: { provider, state: 'unsupported', version: '', installed: null } };
+}
 
-    dispatcher.register('provider.server', (payload) => ({ server: serverOf(payload.provider).status() }));
-
-    dispatcher.register(
-        'provider.installServer',
-        async (payload) => {
-            const server = await serverOf(payload.provider).install();
-            servers.installed(payload.provider);
-            return { server };
-        },
-        { owner: true }
-    );
+function registerRequests(dispatcher: Dispatcher): void {
+    dispatcher.register('provider.server', (payload) => noServer(payload.provider));
+    dispatcher.register('provider.installServer', (payload) => noServer(payload.provider), { owner: true });
 }

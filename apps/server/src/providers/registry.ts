@@ -1,6 +1,5 @@
-import { ModelCatalog, ProviderRegistry as AgentProviderRegistry, type AcpServerLaunch, type ChatProvider, type CliDetection } from '@adecore/agents/providers';
+import { ModelCatalog, ProviderRegistry as AgentProviderRegistry, type ChatProvider, type CliDetection } from '@adecore/agents/providers';
 import { pickerGroupsOf, type AgentKind, type ModelSelection, type ProviderInfo } from '@ruimte/contracts';
-import type { AcpServerInstall, AcpServerRelease } from './acp-server.ts';
 import type { AnthropicClaudeApiService } from './anthropic-claude-api-service.ts';
 import type { NanoGptService } from './nanogpt-service.ts';
 import { createProviders, type ProviderCommands } from './table.ts';
@@ -19,8 +18,6 @@ const UNOFFERED_CATALOG = new StoredSelectionCatalog({ defaultModel: '', profile
 
 interface ProviderRegistryOptions {
     providers?: ChatProvider[];
-    // Stands in for the chat server a person installed apart from a CLI, as a test's.
-    serverLaunches?: Partial<Record<AgentKind, AcpServerLaunch>>;
     // How to probe; a test answers without spawning anything.
     detect?: (command: string) => Promise<CliDetection>;
     // Called on every `provider.list`, which is when a newer model catalog is worth asking for.
@@ -36,21 +33,17 @@ export class ProviderRegistry extends AgentProviderRegistry {
     // The services behind the API providers, which keep a key and its models in the daemon's home.
     readonly nanogpt: NanoGptService;
     readonly claudeApi: AnthropicClaudeApiService;
-    // The chat servers a person installs apart from their CLI, which exist once the registry has a home to install into.
-    readonly servers: ReadonlyMap<AgentKind, { install: AcpServerInstall; release: AcpServerRelease }>;
     private readonly onList: (() => void) | null;
 
     constructor(options: ProviderRegistryOptions = {}) {
         const table = createProviders({
             ...(options.home === undefined ? {} : { home: options.home }),
-            ...(options.serverLaunches === undefined ? {} : { serverLaunches: options.serverLaunches }),
             ...(options.commands === undefined ? {} : { commands: options.commands })
         });
 
         super({ providers: options.providers ?? table.providers, ...(options.detect ? { detect: options.detect } : {}) });
         this.nanogpt = table.nanogpt;
         this.claudeApi = table.claudeApi;
-        this.servers = table.servers;
         this.onList = options.onList ?? null;
     }
 

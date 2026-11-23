@@ -2144,6 +2144,12 @@
                 "description": "Runs die een chat zelf start, 1 tot 20. Elke run kost tegoed."
             }
         },
+        "agy": {
+            "title": "Chats",
+            "label": "Werk agy bij om te chatten",
+            "description": "Deze agy is te oud voor chats. Werk hem bij in een terminal. Daarna ben je bij elke agy op deze machine uitgelogd.",
+            "note": "Werk agy bij om te chatten"
+        },
         "acpServer": {
             "title": "Chatserver van {{name}}",
             "description": "Chats met Antigravity hebben de chatserver van Google nodig op deze machine. Je logt in vanuit je eerste chat.",

@@ -23,6 +23,16 @@ function InstallButton({ acp, label, variant }: { acp: AcpServer; label: string;
     );
 }
 
+/* Why Antigravity has no chats on this machine, and what updating `agy` costs. */
+export function AgyUpdateSection() {
+    const { t } = useTranslation('settings');
+    return (
+        <SettingsSection title={t('providers.agy.title')} scope="machine">
+            <SettingsRow searchId="providers.agy" label={t('providers.agy.label')} description={t('providers.agy.description')} />
+        </SettingsSection>
+    );
+}
+
 /* The server of an installed CLI, where a newer pinned version is offered as an update. */
 export function AcpServerSection({ provider, acp, server }: { provider: ProviderInfo; acp: AcpServer; server: AgentServerStatus }) {
     const { t } = useTranslation('settings');

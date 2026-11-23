@@ -2144,6 +2144,12 @@
                 "description": "Runs a chat starts by itself, 1 to 20. Each run spends your allowance."
             }
         },
+        "agy": {
+            "title": "Chats",
+            "label": "Update agy to chat",
+            "description": "This agy is too old for chats. Update it in a terminal. The update signs you out of every agy on this machine.",
+            "note": "Update agy to chat"
+        },
         "acpServer": {
             "title": "{{name}} chat server",
             "description": "Chats with Antigravity need Google's chat server on this machine. You sign in from your first chat.",

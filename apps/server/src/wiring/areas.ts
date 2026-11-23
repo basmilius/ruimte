@@ -125,7 +125,7 @@ export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
             feed: providers.feed,
             now: Date.now
         }),
-        agentServersArea({ servers: providers.servers }),
+        agentServersArea(),
         agentRegistryArea({ agents: providers.registryAgents, versions: providers.versions }),
         snoozeArea({ snoozes: work.snoozes, locate: (nodeId) => store.index.locate(nodeId) }),
         skillArea({ skills: () => agents.skills.list() }),

@@ -1,6 +1,6 @@
 import { describe, expect, setSystemTime, test } from 'bun:test';
 import type { BackendEvent, BackendLaunch } from '@adecore/agents/chat';
-import { agentDefaultCatalog, copilotUsageDirectory, createAcpProvider, type AcpServerLaunch, type ChatProvider } from '@adecore/agents/providers';
+import { agentDefaultCatalog, copilotUsageDirectory, createAcpProvider, type ChatProvider } from '@adecore/agents/providers';
 import { fakeAcpWith, inProcess, type FakeAcpOptions } from '@adecore/agents/testing';
 import { UsageService } from '@adecore/agents/usage';
 import { withRuimteMcp } from '../ruimte-mcp.ts';
@@ -82,21 +82,13 @@ test("a Copilot turn's usage is logged in the machine's folder and shows on the 
     }
 });
 
-test('an Antigravity chat without an installed server points the person at the Providers pane', () => {
-    const provider = createAntigravityProvider({ launch: () => null });
-
-    expect(provider.capabilities.chat).toBe(false);
-    expect(() => run(provider, {})).toThrow('Install the Antigravity server in Settings, Providers first.');
-});
-
 describe("Ruimte's MCP server in an ACP chat", () => {
     const CHAT_ENV = { RUIMTE_MCP_URL: 'http://127.0.0.1:4210/mcp', RUIMTE_CONTEXT_TOKEN: 'chat-token' };
     const RUIMTE_SERVER = { type: 'http', name: 'ruimte', url: 'http://127.0.0.1:4210/mcp', headers: [{ name: 'Authorization', value: 'Bearer chat-token' }] };
-    const installed: AcpServerLaunch = { launch: () => ['agy_acp_server.par'] };
     const chats: Array<[string, () => ChatProvider]> = [
         ['Grok', () => createGrokProvider()],
         ['Copilot', () => createCopilotProvider()],
-        ['Antigravity', () => createAntigravityProvider(installed)],
+        ['Antigravity', () => createAntigravityProvider()],
         [
             'an agent of the ACP registry',
             () => createAcpProvider({ kind: 'example', name: 'Example', command: 'example', catalog: agentDefaultCatalog(), launch: withRuimteMcp })

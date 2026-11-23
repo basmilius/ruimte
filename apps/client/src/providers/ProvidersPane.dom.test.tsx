@@ -63,10 +63,10 @@ function stepStates(): Record<string, string | undefined> {
     return Object.fromEntries(steps.map((step) => [step.querySelector('h4')?.textContent ?? '', step.dataset.state]));
 }
 
-async function openProviders(providers: ProviderInfo[]): Promise<void> {
+async function openProviders(providers: ProviderInfo[], server: AgentServerStatus = SERVER_MISSING): Promise<void> {
     machine = new FakeMachine();
     machine.answer('provider.list', () => ({ providers }));
-    machine.answer('provider.server', () => ({ server: SERVER_MISSING }));
+    machine.answer('provider.server', () => ({ server }));
     workspace = await openFakeWorkspace(machine, { views: [] } as never, { activeViewId: null, views: {} });
     page = mount();
     await page.renderApp();
@@ -114,5 +114,13 @@ describe('the providers list in Settings, Providers', () => {
         await until(() => group()?.textContent?.includes('NanoGPT') === true);
         expect(group()?.textContent).toContain('NanoGPTNo key');
         expect(document.querySelector('[role="dialog"] section[aria-label="Ready"]')).toBeNull();
+    });
+
+    test('an agy too old for chats needs setup, says to update it and offers no chat server', async () => {
+        const tooOld = { ...ANTIGRAVITY, installed: true, version: '1.4.0', capabilities: { ...ANTIGRAVITY.capabilities, chat: false } };
+        await openProviders([tooOld], { provider: 'antigravity', state: 'unsupported', version: '', installed: null });
+        const group = (): HTMLElement | null => document.querySelector<HTMLElement>('[role="dialog"] section[aria-label="Needs setup"]');
+        await until(() => group()?.textContent?.includes('Update agy to chat') === true);
+        expect(document.querySelector('[role="dialog"]')?.textContent).not.toContain('chat server');
     });
 });

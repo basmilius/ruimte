@@ -2,11 +2,11 @@ import { ProvidersPane as Pane } from '@adecore/agents-react/providers';
 import { useProvidersStore } from '@adecore/agents-react/state';
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
-import { AcpServerSection, AcpServerStepBody } from '@/providers/AcpServerSection';
+import { AcpServerSection, AcpServerStepBody, AgyUpdateSection } from '@/providers/AcpServerSection';
 import { ClaudeApiSection, NanoGptSection } from '@/providers/ApiKeySection';
 import { CliVersionSection } from '@/providers/CliVersionSection';
 import { RegistryCatalogPage } from '@/providers/RegistryCatalogPage';
-import { useAcpServer } from '@/providers/use-acp-server';
+import { agyTooOld, useAcpServer } from '@/providers/use-acp-server';
 import { useCliVersions, useRegistryCatalog } from '@/providers/use-provider-installs';
 import { useEndpointId } from '@/state/current-endpoint';
 import { useUi } from '@/state/ui';
@@ -29,6 +29,8 @@ export function ProvidersPane() {
     const providers = useProvidersStore((s) => s.byScope[endpointId]?.providers);
     const claudeInstalled = providers?.find((provider) => provider.kind === 'claude')?.installed !== false;
     useDetectProviders();
+    // Only a machine of an older Ruimte runs Antigravity on a server of its own; this one answers `unsupported`.
+    const serverOffered = antigravity.server !== null && antigravity.server.state !== 'unsupported';
     const detailOf = (provider: ProviderInfo) => {
         if (provider.kind === 'anthropic-claude-api') {
             return <ClaudeApiSection key={endpointId} endpointId={endpointId} />;
@@ -39,11 +41,14 @@ export function ProvidersPane() {
         if (provider.kind !== 'antigravity') {
             return null;
         }
-        return antigravity.server === null ? null : <AcpServerSection provider={provider} acp={antigravity} server={antigravity.server} />;
+        if (agyTooOld(provider, antigravity.server)) {
+            return <AgyUpdateSection />;
+        }
+        return serverOffered ? <AcpServerSection provider={provider} acp={antigravity} server={antigravity.server} /> : null;
     };
-    // The server is the step after the CLI; none while the machine has not said where it stands.
+    // A machine of an older Ruimte installs the server as the step after the CLI; none while it has not said where it stands.
     const installStepOf = (provider: ProviderInfo) =>
-        provider.kind !== 'antigravity' || antigravity.server === null
+        provider.kind !== 'antigravity' || !serverOffered
             ? null
             : {
                   title: t('providers.acpServer.step'),
@@ -59,6 +64,9 @@ export function ProvidersPane() {
         }
         if (provider.kind === 'nanogpt' && !provider.installed) {
             return { text: t('providers.nanogpt.noKey'), tone: 'warning' as const };
+        }
+        if (agyTooOld(provider, antigravity.server)) {
+            return { text: t('providers.agy.note'), tone: 'warning' as const };
         }
         return null;
     };

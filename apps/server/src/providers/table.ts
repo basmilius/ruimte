@@ -1,10 +1,9 @@
 import type { CodexClientInfo } from '@adecore/agents/chat';
-import { copilotUsageDirectory, createClaudeProvider, createCodexProvider, type AcpServerLaunch, type ChatProvider } from '@adecore/agents/providers';
+import { copilotUsageDirectory, createClaudeProvider, createCodexProvider, type ChatProvider } from '@adecore/agents/providers';
 import type { AgentKind } from '@ruimte/contracts';
 import { withRuimteMcp } from '../ruimte-mcp.ts';
 import { acpCatalogStore } from './acp-catalog-store.ts';
-import { ANTIGRAVITY_ACP_RELEASE, createAntigravityProvider, createCopilotProvider, createGrokProvider } from './acp-providers.ts';
-import { AcpServerInstall, type AcpServerRelease } from './acp-server.ts';
+import { createAntigravityProvider, createCopilotProvider, createGrokProvider } from './acp-providers.ts';
 import { createAnthropicClaudeApiProvider } from './anthropic-claude-api-provider.ts';
 import { AnthropicClaudeApiService } from './anthropic-claude-api-service.ts';
 import { createNanoGptProvider } from './nanogpt-provider.ts';
@@ -17,8 +16,6 @@ const RUIMTE_CODEX_CLIENT: CodexClientInfo = { name: 'ruimte', title: 'Ruimte', 
 interface ProviderContext {
     // Where the ACP agents keep what they reported across a restart; absent keeps it in memory only.
     readonly home: string | undefined;
-    // The chat server of a CLI that comes apart from it, once a person installed it; null while there is none to launch.
-    server(kind: AgentKind): AcpServerLaunch | null;
     readonly nanogpt: NanoGptService;
     readonly claudeApi: AnthropicClaudeApiService;
     // What starts a CLI when it is not the one on the path (a test's fake), and how Codex's `--help` is read.
@@ -36,8 +33,6 @@ interface ProviderRow {
     readonly kind: AgentKind;
     // Whether the address book keeps a model catalog for this CLI.
     readonly modelFeed?: true;
-    // The release of the chat server this CLI runs its chat on, when that is installed apart from the CLI.
-    readonly server?: AcpServerRelease;
     create(context: ProviderContext): ChatProvider;
 }
 
@@ -65,8 +60,7 @@ const ROWS: readonly ProviderRow[] = [
     {
         kind: 'antigravity',
         modelFeed: true,
-        server: ANTIGRAVITY_ACP_RELEASE,
-        create: (context) => createAntigravityProvider(context.server('antigravity'), catalogStoreOf(context, 'antigravity'))
+        create: (context) => createAntigravityProvider(catalogStoreOf(context, 'antigravity'))
     },
     {
         kind: 'copilot',
@@ -98,8 +92,6 @@ export function modelFeedKinds(): AgentKind[] {
 
 interface ProviderTableOptions {
     home?: string;
-    // Stands in for the chat server a person installed, as a test's.
-    serverLaunches?: Partial<Record<AgentKind, AcpServerLaunch>>;
     nanogpt?: NanoGptService;
     claudeApi?: AnthropicClaudeApiService;
     commands?: ProviderCommands;
@@ -107,8 +99,6 @@ interface ProviderTableOptions {
 
 interface ProviderSet {
     providers: ChatProvider[];
-    // The chat servers a person installs apart from their CLI, with the release each one is pinned to; only with a home to install into.
-    servers: Map<AgentKind, { install: AcpServerInstall; release: AcpServerRelease }>;
     nanogpt: NanoGptService;
     claudeApi: AnthropicClaudeApiService;
 }
@@ -117,19 +107,10 @@ interface ProviderSet {
 export function createProviders(options: ProviderTableOptions = {}): ProviderSet {
     const made = new Map<AgentKind, ChatProvider>();
     const nanogpt = options.nanogpt ?? new NanoGptService();
-    const servers = new Map<AgentKind, { install: AcpServerInstall; release: AcpServerRelease }>();
-
-    for (const row of ROWS) {
-        if (row.server !== undefined && options.home !== undefined) {
-            servers.set(row.kind, { install: new AcpServerInstall({ provider: row.kind, home: options.home, release: row.server }), release: row.server });
-        }
-    }
-
     let claudeApi = options.claudeApi;
 
     const context: ProviderContext = {
         home: options.home,
-        server: (kind) => options.serverLaunches?.[kind] ?? servers.get(kind)?.install ?? null,
         commands: options.commands ?? {},
         nanogpt,
         get claudeApi() {
@@ -160,7 +141,7 @@ export function createProviders(options: ProviderTableOptions = {}): ProviderSet
 
     const providers = ROWS.map((row) => context.provider(row.kind));
 
-    return { providers, servers, nanogpt, claudeApi: context.claudeApi };
+    return { providers, nanogpt, claudeApi: context.claudeApi };
 }
 
 let shipped: ChatProvider[] | null = null;
@@ -173,8 +154,8 @@ export function shippedProviders(): readonly ChatProvider[] {
 }
 
 /*
- * Whether an agent of this CLI opens as a chat: what the CLI can do, not whether this machine has its chat's server
- * now. A chat whose server is missing still opens as one, and says how to install it.
+ * Whether an agent of this CLI opens as a chat: what the CLI can do, not whether this machine's copy is new enough
+ * now. A chat on a CLI below its floor still opens as one, and says to update it.
  */
 export function opensAsChat(provider: ChatProvider): boolean {
     return (shippedProviders().find((shipped) => shipped.kind === provider.kind) ?? provider).capabilities.chat;

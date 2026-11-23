@@ -56,7 +56,7 @@ describe('terminalCommand', () => {
         expect(terminalCommand({ kind: 'codex', runtimeMode: 'full-access' })).toBe('codex --ask-for-approval never --sandbox danger-full-access');
         expect(terminalCommand({ kind: 'antigravity', runtimeMode: 'supervised' })).toBe('agy');
         expect(terminalCommand({ kind: 'antigravity', runtimeMode: 'auto-accept-edits' })).toBe('agy --mode=accept-edits');
-        expect(terminalCommand({ kind: 'antigravity', runtimeMode: 'auto' })).toBe('agy --mode=accept-edits');
+        expect(terminalCommand({ kind: 'antigravity', runtimeMode: 'auto' })).toBe('agy --mode=auto');
         expect(terminalCommand({ kind: 'antigravity', runtimeMode: 'full-access' })).toBe('agy --dangerously-skip-permissions');
         expect(terminalCommand({ kind: 'copilot', runtimeMode: 'full-access' })).toBe(`copilot ${COPILOT_ALLOW}`);
     });

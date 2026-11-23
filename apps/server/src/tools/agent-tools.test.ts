@@ -183,8 +183,9 @@ describe('agent', () => {
         expect(fx.started.map((start) => start.node)).toEqual(['chat', 'terminal']);
     });
 
-    test('Antigravity without its chat server here still opens as a chat, alone and in a team', async () => {
-        fx.knobs.providers = { antigravity: createAntigravityProvider({ launch: () => null }) };
+    test('Antigravity on an agy too old for chats here still opens as a chat, alone and in a team', async () => {
+        const antigravity = createAntigravityProvider();
+        fx.knobs.providers = { antigravity: { ...antigravity, capabilities: { ...antigravity.capabilities, chat: false } } };
         const alone = await fx.invoke('agent_start', { cli: 'antigravity' });
         const team = await fx.invoke('agent_team', {
             label: 'Crew',

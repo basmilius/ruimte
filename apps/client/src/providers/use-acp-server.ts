@@ -1,5 +1,5 @@
 import { messageOf } from '@adecore/ui';
-import type { AgentKind, AgentServerStatus } from '@ruimte/contracts';
+import type { AgentKind, AgentServerStatus, ProviderInfo } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { listProvidersAgain } from '@/providers/use-provider-installs';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
@@ -13,6 +13,14 @@ export interface AcpServer {
     /* Only the app on the machine itself may install it, since that downloads a program and makes it runnable there. */
     local: boolean;
     install(): Promise<void>;
+}
+
+/*
+ * Whether the machine offers no Antigravity chat because its `agy` is too old for `agy acp`. A machine that still
+ * runs Antigravity on a server of its own (one that reports a server) offers none until it is installed instead.
+ */
+export function agyTooOld(provider: ProviderInfo, server: AgentServerStatus | null): boolean {
+    return provider.kind === 'antigravity' && provider.installed && !provider.capabilities.chat && (server === null || server.state === 'unsupported');
 }
 
 export function useAcpServer(endpointId: string, kind: AgentKind): AcpServer {

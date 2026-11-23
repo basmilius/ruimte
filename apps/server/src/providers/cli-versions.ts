@@ -153,7 +153,7 @@ const npmRegistryLatest: NpmLatest = async (name) => {
 // Homebrew answers from what it has, and never updates itself for a question.
 const BREW_ENV = { HOMEBREW_NO_AUTO_UPDATE: '1', HOMEBREW_NO_ENV_HINTS: '1' };
 
-/* A CLI whose install is Ruimte's own: the Antigravity server, or an agent of the ACP registry. */
+/* A CLI whose install is Ruimte's own: an agent of the ACP registry. */
 export interface OwnInstall {
     version: string | null;
     path: string | null;

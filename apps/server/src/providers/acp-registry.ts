@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { errorText } from '../error-text.ts';
 import { offersKind } from './table.ts';
 
-/* The public ACP registry, the same list the Antigravity server's pin is taken from. */
+/* The public ACP registry. */
 const ACP_REGISTRY_URL = 'https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json';
 
 // The registry's agents this daemon drives with quirks of its own, under a kind of their own; the catalog leaves them out.
