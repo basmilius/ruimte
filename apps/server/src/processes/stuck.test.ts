@@ -81,6 +81,15 @@ describe('silent while working', () => {
         expect(alerts[0]!.since).toBe(T0);
     });
 
+    test('a chat whose turn already said its CLI went quiet gets no second warning for that turn', () => {
+        const quiet = (noted: boolean) =>
+            series(new StuckJudge(), T0, T0 + 14 * MINUTE, MINUTE, (at) => [
+                group([claude({ cpu: 1 })], agent('running', T0, { quietNoted: noted && at >= T0 + 3 * MINUTE }), 'chat')
+            ]);
+        expect(kinds(quiet(false))).toEqual(['silent']);
+        expect(quiet(true)).toEqual([]);
+    });
+
     test('five minute readings with a closed panel cover the window as well', () => {
         const judge = new StuckJudge();
         const alerts = series(judge, T0, T0 + 15 * MINUTE, 5 * MINUTE, () => [group([shell(), claude({ cpu: 2 })], agent('running', T0))]);

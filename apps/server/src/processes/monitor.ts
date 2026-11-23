@@ -45,7 +45,7 @@ class ProcessError extends CodedError<ProcessErrorCode> {}
 interface ProcessMonitorOptions {
     sampler: ProcessSampler | null;
     sessions(): { id: string; pid: number; exited: boolean; agent: AgentInfo | null; label?: string }[];
-    chats(): { id: string; pid: number; provider: AgentKind; status: AgentStatus; updatedAt: number }[];
+    chats(): { id: string; pid: number; provider: AgentKind; status: AgentStatus; updatedAt: number; quietNoted: boolean }[];
     /* What this daemon's sessions carry as `RUIMTE_CONTEXT_URL`, so a stray of another daemon on the machine is not ours. */
     contextUrl(): string | null;
     projectOf?(nodeId: string): string | null;
@@ -380,7 +380,9 @@ export class ProcessMonitor {
                     return [{ nodeId: group.nodeId, kind: 'terminal', agent: state, processes }];
                 }
                 const chat = chatsById.get(group.nodeId);
-                const state = chat ? { kind: chat.provider, status: chat.status, updatedAt: chat.updatedAt, reportsEnd: false } : null;
+                const state = chat
+                    ? { kind: chat.provider, status: chat.status, updatedAt: chat.updatedAt, reportsEnd: false, quietNoted: chat.quietNoted }
+                    : null;
                 return [{ nodeId: group.nodeId, kind: 'chat', agent: state, processes }];
             }),
             daemon: (latest.index.groups.find((group) => group.kind === 'daemon')?.entries ?? []).map((entry) => this.observed(latest, entry)),

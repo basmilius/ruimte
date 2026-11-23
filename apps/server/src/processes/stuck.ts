@@ -42,6 +42,8 @@ export interface AgentState {
     updatedAt: number;
     /* Whether the CLI says goodbye with SessionEnd; without it a clean exit and a crash look the same. */
     reportsEnd: boolean;
+    /* A chat whose open turn already told the person its CLI went quiet; the silent warning would say it twice. */
+    quietNoted?: boolean;
 }
 
 export interface ObservedProcess {
@@ -243,7 +245,7 @@ export class StuckJudge {
         const agent = group.agent;
         const stamp = agent?.updatedAt ?? null;
         const agentProcess = agent === null ? undefined : group.processes.find((process) => process.ownFamily === agent.kind);
-        if (agent?.status === 'running') {
+        if (agent?.status === 'running' && agent.quietNoted !== true) {
             this.judgeSilent(observation, group, agent, agentProcess, raise);
         }
         if (agent !== null && (agent.status === 'idle' || agent.status === 'needs-you')) {
