@@ -185,6 +185,17 @@ describe('installHooks', () => {
         expect((await readFile(path)).equals(before)).toBe(true);
     });
 
+    test('reads an empty hooks file as no settings and writes its hooks into it', async () => {
+        const path = join(dir, 'config', 'hooks.json');
+        await mkdir(join(dir, 'config'));
+        await writeFile(path, '');
+
+        expect(await installHooks(path, 'antigravity')).toEqual({ result: 'written', createdFile: false, createdHooksKey: true });
+        expect(JSON.parse(await readFile(path, 'utf8'))).toEqual({
+            [NAMED_HOOK]: { Stop: [{ type: 'command', command: hookCommand('antigravity'), timeout: 3 }] }
+        });
+    });
+
     test('says a file that already had a hooks key did not get it from us', async () => {
         const path = join(dir, 'settings.json');
         await writeFile(path, '{ "hooks": {} }');

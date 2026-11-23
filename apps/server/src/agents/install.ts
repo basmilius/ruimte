@@ -295,8 +295,9 @@ async function mergeIntoSettings(link: string, key: string, merge: (config: unkn
     return await editingHookFile(path, async () => {
         for (let attempt = 0; attempt < HOOK_FILE_RETRIES; attempt++) {
             const text = await textOrNull(path);
+            // agy leaves an empty `config/hooks.json` behind, which holds no settings rather than broken ones.
             let existing: unknown = {};
-            if (text !== null) {
+            if (text !== null && text.trim() !== '') {
                 try {
                     existing = JSON.parse(text);
                 } catch (e) {

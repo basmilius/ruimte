@@ -397,6 +397,16 @@ describe('http', () => {
         expect((await handleMcpRequest(post(initialize, 'tok-up'), deps)).status).toBe(401);
     });
 
+    // agy's MCP client drops the whole server, and fails its turn, when this notification gets a 400.
+    test.each([[null], ['2025-06-18'], ['2025-11-25']])('a roots change without a session is taken with 202 on protocol %s', async (version) => {
+        const request = post({ jsonrpc: '2.0', method: 'notifications/roots/list_changed' }, 'tok-chat');
+        if (version !== null) {
+            request.headers.set('mcp-protocol-version', version);
+        }
+
+        expect((await handleMcpRequest(request, deps)).status).toBe(202);
+    });
+
     test('initialize answers the instructions, and the tool list is the caller own', async () => {
         const started = (await (await handleMcpRequest(post(initialize, 'tok-chat'), deps)).json()) as { result: { instructions: string } };
         const listed = await handleMcpRequest(post({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }, 'tok-chat'), deps);
