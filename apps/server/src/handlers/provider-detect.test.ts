@@ -12,12 +12,14 @@ let clock: number;
 let probes: string[];
 let grokInstalled: boolean;
 let accountChecks: number;
+let modelReads: number;
 
 beforeEach(() => {
     clock = 1_000_000;
     probes = [];
     grokInstalled = false;
     accountChecks = 0;
+    modelReads = 0;
     const providers = new ProviderRegistry({
         detect: async (command) => {
             probes.push(command);
@@ -30,7 +32,10 @@ beforeEach(() => {
             accountChecks += 1;
         }
     };
-    providerDetectArea({ providers, accounts, feed: { subscribe: () => () => undefined }, now: () => clock }).handlers?.(dispatcher);
+    const refreshModels = async (): Promise<void> => {
+        modelReads += 1;
+    };
+    providerDetectArea({ providers, accounts, refreshModels, feed: { subscribe: () => () => undefined }, now: () => clock }).handlers?.(dispatcher);
 });
 
 async function detect(): Promise<ProviderInfo[]> {
@@ -64,14 +69,14 @@ describe('provider.detect', () => {
         expect(probes.length).toBe(first * 2);
     });
 
-    test('checks the accounts again whenever it probes, so a login made meanwhile shows', async () => {
+    test('checks the accounts and the models of the agents again whenever it probes, so a login or a new model made meanwhile shows', async () => {
         await detect();
-        expect(accountChecks).toBe(1);
+        expect([accountChecks, modelReads]).toEqual([1, 1]);
         clock += PROVIDER_DETECT_INTERVAL_MS - 1;
         await detect();
-        expect(accountChecks).toBe(1);
+        expect([accountChecks, modelReads]).toEqual([1, 1]);
         clock += 1;
         await detect();
-        expect(accountChecks).toBe(2);
+        expect([accountChecks, modelReads]).toEqual([2, 2]);
     });
 });

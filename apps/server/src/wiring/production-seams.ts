@@ -11,6 +11,7 @@ import { macClosedLidSystem } from '../power/closed-lid-system.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { repositoryOf } from '../provenance/file-versions.ts';
 import { RUIMTE_ACCOUNTS_HOST } from '../providers/accounts-host.ts';
+import { refreshAgentModels } from '../providers/model-refresh.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
 import { nodeSkillDisk } from '../skills/skill-disk.ts';
 import { rememberSecret, watchProjects } from '../telemetry/reporter.ts';
@@ -29,7 +30,7 @@ export function productionSeams(runtime: DaemonRuntime): DaemonSeams {
         env: process.env,
         pty: new BunPtyAdapter(),
         chatSpawn: spawnChatProcess,
-        providers: { detect: null, added: [], codexHelp: null },
+        providers: { detect: null, added: [], codexHelp: null, refreshModels: refreshAgentModels },
         accounts: ({ home, providers, install, ownsSettings }) =>
             new ProviderAccountsService({ home, host: RUIMTE_ACCOUNTS_HOST, providers, install, ownsSettings }),
         git: {

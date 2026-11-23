@@ -13,6 +13,8 @@ interface DetectableProviders {
 interface ProviderDetectDeps {
     providers: DetectableProviders;
     accounts: { refresh(): Promise<unknown> };
+    // Never rejects; reads the models only where the last read is old enough.
+    refreshModels(): Promise<void>;
     feed: EventSource;
     now(): number;
 }
@@ -21,7 +23,7 @@ interface ProviderDetectDeps {
  * A client asks this when a person comes back (a window's focus, the Providers pane, a menu that starts an
  * agent), so a CLI installed meanwhile shows up without the daemon polling on a clock. Any client may ask.
  */
-export function providerDetectArea({ providers, accounts, feed, now }: ProviderDetectDeps): Area {
+export function providerDetectArea({ providers, accounts, refreshModels, feed, now }: ProviderDetectDeps): Area {
     return {
         name: 'provider detect',
         sources: [feed],
@@ -35,6 +37,7 @@ export function providerDetectArea({ providers, accounts, feed, now }: ProviderD
                     }
                     // An account reads its CLI on a clock of its own, so a login made meanwhile would wait for it; its new state reaches clients as an event.
                     void bestEffort('accounts.refresh', accounts.refresh());
+                    void refreshModels();
                 }
                 return { providers: await providers.list() };
             });

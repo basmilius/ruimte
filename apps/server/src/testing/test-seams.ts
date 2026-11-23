@@ -159,7 +159,8 @@ export function testSeams(choices: TestSeamChoices, overrides: Partial<DaemonSea
         providers: {
             detect: async (command) => ({ installed: (installed as string[]).includes(command), version: '0.0.0' }),
             added: [],
-            codexHelp: async () => ''
+            codexHelp: async () => '',
+            refreshModels: null
         },
         accounts: ({ home: accountsHome, providers }) =>
             new ProviderAccountsService({

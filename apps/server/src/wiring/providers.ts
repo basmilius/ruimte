@@ -2,6 +2,7 @@ import { cliExecutable, type ProviderAccountsService } from '@adecore/agents/pro
 import type { AgentKind } from '@ruimte/contracts';
 import { ownsSettings } from '../agents/install.ts';
 import { AgentIntegrations } from '../agents/integrations.ts';
+import { bestEffort } from '../best-effort.ts';
 import type { ServerConfig } from '../config.ts';
 import type { AgentServers } from '../handlers/agent-servers.ts';
 import { AcpRegistry } from '../providers/acp-registry.ts';
@@ -32,6 +33,8 @@ export interface ProvidersBundle {
     // How each CLI was installed, its version and an update through that route.
     versions: CliVersions;
     nameOfCli(kind: AgentKind): string;
+    // Reads the models of the agents whose list changes on the vendor's side again, where the last read is a day old.
+    refreshModels(): Promise<void>;
 }
 
 /*
@@ -88,6 +91,11 @@ export async function wireProviders(
     // Before the managers, which start every CLI under the account its node or chat names.
     const accounts = seams.accounts({ home: config.home, providers, install: (kind, folder) => integrations.installFolder(kind, folder), ownsSettings });
     await accounts.load();
+    const refresh = seams.providers.refreshModels;
+    const refreshModels = (): Promise<void> =>
+        refresh === null ? Promise.resolve() : bestEffort('Reading the models of the agents', refresh(providers, accounts, process.env));
+    // At the start, so a list the vendor changed while the machine was off is in the first picker.
+    void refreshModels();
     const servers: AgentServers = {
         of: (kind) => providers.servers.get(kind)?.install,
         installed: (kind) => {
@@ -154,6 +162,7 @@ export async function wireProviders(
         servers,
         registryAgents,
         versions,
-        nameOfCli: (kind) => providers.get(kind).name
+        nameOfCli: (kind) => providers.get(kind).name,
+        refreshModels
     };
 }

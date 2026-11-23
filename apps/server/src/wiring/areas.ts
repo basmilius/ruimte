@@ -118,7 +118,13 @@ export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
         authArea(authDeps(input, later)),
         pushArea({ auth: machine.auth, push, changed: () => push.subscriptionsChanged() }),
         providerKeysArea({ nanogpt: providers.nanogpt, claudeApi: providers.claudeApi }),
-        providerDetectArea({ providers: providers.providers, accounts: providers.accounts, feed: providers.feed, now: Date.now }),
+        providerDetectArea({
+            providers: providers.providers,
+            accounts: providers.accounts,
+            refreshModels: providers.refreshModels,
+            feed: providers.feed,
+            now: Date.now
+        }),
         agentServersArea({ servers: providers.servers }),
         agentRegistryArea({ agents: providers.registryAgents, versions: providers.versions }),
         snoozeArea({ snoozes: work.snoozes, locate: (nodeId) => store.index.locate(nodeId) }),

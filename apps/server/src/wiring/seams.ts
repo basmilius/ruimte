@@ -14,6 +14,7 @@ import type { ClosedLidSystem } from '../power/closed-lid.ts';
 import type { HeldProcess, KeepAwakeBlock } from '../power/keep-awake.ts';
 import type { ProjectOverlays } from '../projects/overlays.ts';
 import type { ProjectLinks, ProjectStore } from '../projects/project-store.ts';
+import type { refreshAgentModels } from '../providers/model-refresh.ts';
 import type { PtyAdapter } from '../pty/pty.ts';
 import type { SkillDisk } from '../skills/skill-disk.ts';
 import type { ProjectSource } from '../telemetry/reporter.ts';
@@ -80,6 +81,8 @@ export interface DaemonSeams {
         added: readonly ChatProvider[];
         /* What `codex --help` prints, which decides the terminal flags Codex takes; null runs the real Codex. */
         codexHelp: ((executable: string) => Promise<string>) | null;
+        /* Asks the agents whose models change on the vendor's side for them again, by starting them; null asks none. */
+        refreshModels: typeof refreshAgentModels | null;
     };
     accounts(input: AccountsInput): ProviderAccountsService;
     git: {
