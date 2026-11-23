@@ -70,7 +70,15 @@ const npmInstall: InstallRun = async (command) => {
     return { exitCode: 0, stdout: '', stderr: '' };
 };
 
-function agents(options: { which?: (command: string) => string | null; run?: InstallRun } = {}): RegistryAgents {
+function restoreEnv(name: string, value: string | undefined): void {
+    if (value === undefined) {
+        delete process.env[name];
+    } else {
+        process.env[name] = value;
+    }
+}
+
+function agents(options: { which?: (command: string) => string | null; run?: InstallRun; platform?: NodeJS.Platform } = {}): RegistryAgents {
     const registry = new AcpRegistry({ home, fetch: async () => document, platform: 'linux', arch: 'x64' });
     return new RegistryAgents({
         home,
@@ -89,7 +97,7 @@ function agents(options: { which?: (command: string) => string | null; run?: Ins
         },
         run: options.run ?? npmInstall,
         which: options.which ?? ((command) => `/usr/bin/${command}`),
-        platform: 'linux'
+        platform: options.platform ?? 'linux'
     });
 }
 
@@ -147,6 +155,35 @@ describe('RegistryAgents', () => {
         const target = join(home, 'agent-registry', 'agents', 'kilo', '7.8.15');
         expect(ran).toEqual([['/usr/bin/npm', 'install', '--prefix', target, '--no-audit', '--no-fund', '@kilocode/cli@7.8.15']]);
         expect(offered.get('kilo')?.command).toEqual([join(target, 'node_modules', '.bin', 'kilo'), 'acp']);
+    });
+
+    test('installs with npm into its own folder whatever prefix the machine inherited', async () => {
+        const saved = { upper: process.env.NPM_CONFIG_PREFIX, lower: process.env.npm_config_prefix };
+        let handed: Record<string, string | undefined> = {};
+
+        process.env.NPM_CONFIG_PREFIX = 'C:\\Users\\bas\\AppData\\Roaming\\npm';
+        process.env.npm_config_prefix = 'C:\\Users\\bas\\AppData\\Roaming\\npm';
+
+        try {
+            const installs = agents({
+                platform: 'win32',
+                run: async (command, options) => {
+                    handed = options.env;
+
+                    return await npmInstall(command, options);
+                }
+            });
+
+            await installs.catalog();
+            expect((await installs.install('kilo')).state).toBe('installed');
+        } finally {
+            restoreEnv('NPM_CONFIG_PREFIX', saved.upper);
+            restoreEnv('npm_config_prefix', saved.lower);
+        }
+
+        expect(ran[0]?.[ran[0].indexOf('--prefix') + 1]).toBe(join(home, 'agent-registry', 'agents', 'kilo', '7.8.15'));
+        expect(Object.keys(handed)).not.toContain('NPM_CONFIG_PREFIX');
+        expect(Object.keys(handed)).not.toContain('npm_config_prefix');
     });
 
     test('says what is missing when the machine has no npm', async () => {

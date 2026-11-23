@@ -49,6 +49,9 @@ export type InstallRun = (command: string[], options: { cwd: string; env: Record
 
 const INSTALL_TIMEOUT_MS = 10 * 60_000;
 
+// `--prefix` already outranks these; dropping them keeps an inherited prefix out of the agent's own folder whatever npm ranks first.
+const NPM_PREFIX_VARIABLES = ['NPM_CONFIG_PREFIX', 'npm_config_prefix'];
+
 const runInstall: InstallRun = (command, options) =>
     runProcess(command, { ...options, timeoutMs: INSTALL_TIMEOUT_MS, timeoutMessage: `${basename(command[0] ?? '')} did not finish in time` });
 
@@ -264,7 +267,12 @@ export class RegistryAgents {
         await mkdir(target, { recursive: true, mode: 0o700 });
         const name = packageName(distribution.package, distribution.type);
         if (distribution.type === 'npm') {
-            await this.runOrThrow([executable, 'install', '--prefix', target, '--no-audit', '--no-fund', distribution.package], target);
+            await this.runOrThrow(
+                [executable, 'install', '--prefix', target, '--no-audit', '--no-fund', distribution.package],
+                target,
+                {},
+                NPM_PREFIX_VARIABLES
+            );
             const manifest = JSON.parse(await readFile(join(target, 'node_modules', name, 'package.json'), 'utf8')) as { bin?: unknown };
             const bin = npmBin(name, manifest.bin);
             if (bin === null) {
@@ -321,8 +329,14 @@ export class RegistryAgents {
         return command;
     }
 
-    private async runOrThrow(command: string[], cwd: string, env: Record<string, string> = {}): Promise<void> {
-        throwOnFailure(command, await this.run(command, { cwd, env: { ...process.env, ...env } }));
+    private async runOrThrow(command: string[], cwd: string, env: Record<string, string> = {}, drop: readonly string[] = []): Promise<void> {
+        const inherited = { ...process.env };
+
+        for (const name of drop) {
+            delete inherited[name];
+        }
+
+        throwOnFailure(command, await this.run(command, { cwd, env: { ...inherited, ...env } }));
     }
 
     private async dropOtherVersions(folder: string, keep: string): Promise<void> {
