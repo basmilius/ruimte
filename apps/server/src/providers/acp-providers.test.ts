@@ -16,7 +16,8 @@ function run(provider: ChatProvider, options: FakeAcpOptions, overrides: Partial
     const requests: Array<{ method: string; params: Record<string, unknown> }> = [];
     const done = Promise.withResolvers<void>();
     const fake = inProcess((io) => {
-        const program = fakeAcpWith(options)(io);
+        // Antigravity's handshake refuses an agy below its floor, so the fake names the release the chats were recorded on.
+        const program = fakeAcpWith({ version: '1.5.15', ...options })(io);
         return {
             onLine: (line) => {
                 const frame = JSON.parse(line) as { method?: string; params?: Record<string, unknown> };
