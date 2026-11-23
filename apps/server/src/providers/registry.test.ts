@@ -48,7 +48,7 @@ describe('ProviderRegistry', () => {
             linux: 'curl -fsSL https://antigravity.google/cli/install.sh | bash',
             win32: 'irm https://antigravity.google/cli/install.ps1 | iex'
         });
-        expect(install.antigravity?.signIn).toEqual([{ kind: 'chat' }, { kind: 'command', command: 'agy' }]);
+        expect(install.antigravity?.signIn).toEqual([{ kind: 'chat' }, { kind: 'command', command: 'agy acp --login' }]);
         for (const kind of ['claude', 'codex', 'antigravity', 'copilot', 'grok']) {
             expect(install[kind]?.guideUrl).toStartWith('https://');
         }
