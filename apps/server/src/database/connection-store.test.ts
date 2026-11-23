@@ -7,7 +7,7 @@ import { fileExists } from '@adecore/utils/fs';
 import type { DatabaseConnection } from '@ruimte/contracts';
 import { PROJECT_WRITE_IO, type ProjectWriteIO } from '../projects/project-write.ts';
 import type { SessionEvent } from '../wire.ts';
-import { DatabaseConnectionStore } from './connection-store.ts';
+import { DatabaseConnectionStore, hasDatabaseConnections } from './connection-store.ts';
 
 let root: string;
 let folder: string;
@@ -331,5 +331,29 @@ describe('DatabaseConnectionStore, a save cut off between its two files', () => 
 
         await expect(storeWith().read('p1', 'c1')).rejects.toMatchObject({ code: 'connections-invalid' });
         crashing.closeAll();
+    });
+});
+
+describe('hasDatabaseConnections', () => {
+    test('a project whose last connection was removed has none, though its file stays', async () => {
+        await store.save('p1', 0, [{ ...shop(), shared: false }], 'c1');
+        expect(hasDatabaseConnections(folder)).toBe(true);
+
+        await store.save('p1', 1, [], 'c1');
+
+        expect(hasDatabaseConnections(folder)).toBe(false);
+    });
+
+    test('a shared connection counts', async () => {
+        await store.save('p1', 0, [shop()], 'c1');
+
+        expect(hasDatabaseConnections(folder)).toBe(true);
+    });
+
+    test('a file from a newer Ruimte or one that does not parse counts as none', async () => {
+        await writeFile(sharedPath(), '{"version":99,"connections":[{}]}\n');
+        await writeFile(privatePath(), '{not json');
+
+        expect(hasDatabaseConnections(folder)).toBe(false);
     });
 });

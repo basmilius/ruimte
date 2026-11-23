@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
 import { CodedError, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
 import { Serializer } from '@adecore/utils/async';
@@ -373,9 +373,30 @@ function emptyState(folder: string): LoadedConnections {
     };
 }
 
-/* Whether a project folder has a connections file at all, which is when its agents hear about `database`. */
+/*
+ * Whether a project folder holds a connection, which is when its agents hear about `database`. Synchronous for the chat
+ * prompt, and held to what the MCP route counts: a file with no connections, or one from a newer Ruimte, shows no tool.
+ */
 export function hasDatabaseConnections(folder: string): boolean {
-    return existsSync(sharedPathIn(folder)) || existsSync(privatePathIn(folder));
+    return holdsConnections(sharedPathIn(folder), DatabasesSharedFileSchema) || holdsConnections(privatePathIn(folder), DatabasesPrivateFileSchema);
+}
+
+function holdsConnections(path: string, schema: typeof DatabasesSharedFileSchema | typeof DatabasesPrivateFileSchema): boolean {
+    let text: string;
+
+    try {
+        text = readFileSync(path, 'utf8');
+    } catch {
+        return false;
+    }
+
+    try {
+        const parsed = schema.safeParse(JSON.parse(text));
+
+        return parsed.success && parsed.data.version <= DATABASES_VERSION && (parsed.data.connections?.length ?? 0) > 0;
+    } catch {
+        return false;
+    }
 }
 
 /* A file from a newer Ruimte is refused and left as it is, never set aside: a later release reads it. */
