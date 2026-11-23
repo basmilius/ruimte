@@ -1,8 +1,8 @@
 import { useChats } from '@adecore/agents-react/state';
 import { Icon, Tooltip } from '@adecore/ui';
+import { scheduledWakeupAt } from '@ruimte/contracts';
 import { Activity, Clock, SquareTerminal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { scheduledWakeupAt } from '@ruimte/contracts';
 import { useWaitingOn } from '@/chat/waiting-on';
 import { useEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
