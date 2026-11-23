@@ -142,7 +142,7 @@ struct MachineUsagePage: View {
                             x: .value("Slot", slot.date, unit: unit),
                             y: .value("Amount", slot.byProvider[provider].map(value) ?? 0)
                         )
-                        .foregroundStyle(by: .value("CLI", usageProviderName(provider)))
+                        .foregroundStyle(by: .value("CLI", Self.label(provider)))
                         .opacity(focus == nil || focus?.id == slot.id ? 1 : 0.45)
                     }
                 }
@@ -155,7 +155,7 @@ struct MachineUsagePage: View {
                 }
             }
             .chartForegroundStyleScale(
-                domain: report.stacked.map(usageProviderName), range: report.stacked.map(Self.color)
+                domain: report.stacked.map(Self.label), range: report.stacked.map(Self.color)
             )
             .chartLegend(.hidden)
             .chartXSelection(value: $selected)
@@ -173,8 +173,8 @@ struct MachineUsagePage: View {
             HStack(spacing: 16) {
                 ForEach(report.providers) { provider in
                     HStack(spacing: 6) {
-                        RoundedRectangle(cornerRadius: 2).fill(Self.color(provider.provider)).frame(width: 8, height: 8)
-                        Text(usageProviderName(provider.provider))
+                        UsageProviderMark(provider: provider.provider, size: 12)
+                        Text(Self.label(provider.provider))
                         Text(format(value(provider.amount))).foregroundStyle(MobileStyle.muted).monospacedDigit()
                     }
                     .font(.caption)
@@ -191,7 +191,7 @@ struct MachineUsagePage: View {
             ForEach(report.stacked, id: \.self) { provider in
                 HStack(spacing: 4) {
                     Circle().fill(Self.color(provider)).frame(width: 6, height: 6)
-                    Text("\(usageProviderName(provider)) \(format(slot.byProvider[provider].map(value) ?? 0))")
+                    Text("\(Self.label(provider)) \(format(slot.byProvider[provider].map(value) ?? 0))")
                 }
                 .font(.caption2).monospacedDigit()
             }
@@ -264,7 +264,7 @@ struct MachineUsagePage: View {
         return VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 8) {
                 if let provider = row.provider {
-                    Circle().fill(Self.color(provider)).frame(width: 7, height: 7).accessibilityHidden(true)
+                    UsageProviderMark(provider: provider, size: 12).accessibilityHidden(true)
                 }
                 Text(title).font(.callout).lineLimit(1)
                 Spacer(minLength: 8)
@@ -302,11 +302,9 @@ struct MachineUsagePage: View {
         ForEach(sections) { section in
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
+                    UsageProviderMark(provider: section.kind, size: 14)
                     if section.named { AccountDot(color: section.color) }
-                    Text(
-                        section.named
-                            ? "\(usageProviderName(section.kind)) · \(section.name)" : usageProviderName(section.kind)
-                    )
+                    Text(section.named ? "\(Self.label(section.kind)) · \(section.name)" : Self.label(section.kind))
                     .font(.callout.weight(.semibold))
                     Spacer()
                     if let plan = section.entry?.plan {
@@ -389,10 +387,25 @@ struct MachineUsagePage: View {
     static func color(_ provider: String) -> Color {
         switch provider {
         case "claude": MobileStyle.chartClaude
+        case "anthropic-claude-api": MobileStyle.chartClaudeApi
         case "codex": MobileStyle.chartCodex
+        case "copilot": MobileStyle.chartCopilot
+        case "nanogpt": MobileStyle.chartNanogpt
+        case "grok": MobileStyle.chartGrok
+        case "antigravity": MobileStyle.chartAntigravity
         default: MobileStyle.muted
         }
     }
+
+    /// The name the desktop's usage page gives a provider (`PROVIDER_LABELS`), for one only a newer machine reads too.
+    static func label(_ provider: String) -> String {
+        labels[provider] ?? usageProviderName(provider)
+    }
+
+    private static let labels = [
+        "claude": "Claude Code", "codex": "Codex", "nanogpt": "NanoGPT", "grok": "Grok", "copilot": "GitHub Copilot",
+        "anthropic-claude-api": "Claude API", "antigravity": "Antigravity",
+    ]
 
     private static func same(_ left: Date, _ right: Date, unit: Calendar.Component) -> Bool {
         Calendar.current.isDate(left, equalTo: right, toGranularity: unit)
@@ -444,6 +457,31 @@ struct LimitBar: View {
     static func reset(_ date: Date, now: Date = Date()) -> String {
         Format.isSameDay(date, now) ? Format.clock(date) : Format.weekdayClock(date)
     }
+}
+
+/// A provider's logo in its chart color, as the desktop's `ChartLogo` draws it. A provider without a logo here, such as
+/// one only a newer machine knows, gets a dot in its color instead of another provider's mark.
+struct UsageProviderMark: View {
+    let provider: String
+    var size: CGFloat = 12
+
+    var body: some View {
+        Group {
+            if let asset = Self.assets[provider] {
+                Image(asset).renderingMode(.template).resizable().scaledToFit()
+                    .frame(width: size, height: size)
+            } else {
+                Circle().frame(width: size / 2, height: size / 2).frame(width: size, height: size)
+            }
+        }
+        .foregroundStyle(MachineUsagePage.color(provider))
+        .accessibilityHidden(true)
+    }
+
+    private static let assets = [
+        "claude": "ClaudeMark", "anthropic-claude-api": "ClaudeApiMark", "codex": "CodexMark",
+        "copilot": "CopilotMark", "nanogpt": "NanoGPTMark", "grok": "GrokMark", "antigravity": "AntigravityMark",
+    ]
 }
 
 struct ShareBar: View {

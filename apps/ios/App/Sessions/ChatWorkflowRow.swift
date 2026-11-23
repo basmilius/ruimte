@@ -174,7 +174,7 @@ struct ChatWorkflowRow: View {
     @State private var failure: String?
     @State private var expanded = false
     private var running: Bool { item.state == .running }
-    private var failed: Bool { item.state == .error }
+    private var failed: Bool { ChatToolPresentation.failed(item) }
 
     var body: some View {
         let phases = ChatWorkflowLayout.phases(workflow, running: running)
@@ -223,7 +223,7 @@ struct ChatWorkflowRow: View {
         let opens = ChatToolBody.opens(item)
         let line = HStack(spacing: 8) {
             Image(lucide: "workflow", size: 14).foregroundStyle(running ? MobileStyle.accent : .primary)
-            ChatLiveLabel(text: Self.stateWord(item.state), active: running).lineLimit(1).fixedSize()
+            ChatLiveLabel(text: Self.stateWord(item), active: running).lineLimit(1).fixedSize()
             Spacer(minLength: 0)
             if counts.total > 0 {
                 Text(Self.countsText(counts)).font(.caption).foregroundStyle(MobileStyle.faint).monospacedDigit()
@@ -291,12 +291,9 @@ struct ChatWorkflowRow: View {
         }
     }
 
-    static func stateWord(_ state: ChatToolState) -> String {
-        switch state {
-        case .running: String(localized: "Workflow running")
-        case .error: String(localized: "Workflow failed")
-        default: String(localized: "Workflow done")
-        }
+    static func stateWord(_ item: ChatToolItem) -> String {
+        if item.state == .running { return String(localized: "Workflow running") }
+        return ChatToolPresentation.failed(item) ? String(localized: "Workflow failed") : String(localized: "Workflow done")
     }
 
     /// "3 agents · 1 working · 2 done": the total, then each state that has an agent, in the color of its state.

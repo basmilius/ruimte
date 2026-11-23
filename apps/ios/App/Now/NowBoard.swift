@@ -92,10 +92,8 @@ struct ProjectViewEntry: Identifiable, Hashable {
     /// The machine names no step of a turn itself, so a turn with nothing beside it reads as its place alone.
     func workingLine(namesMachine: Bool) -> String {
         var parts: [String] = []
-        if activity.background.count == 1, let description = activity.background.first?.description,
-            !description.isEmpty
-        {
-            parts.append(description)
+        if activity.background.count == 1, let name = activity.background.first?.name, !name.isEmpty {
+            parts.append(name)
         } else if !activity.background.isEmpty {
             parts.append(String(localized: "\(activity.background.count) in the background"))
         } else if delegating && status != .running {

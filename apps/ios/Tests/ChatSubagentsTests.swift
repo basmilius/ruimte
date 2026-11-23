@@ -278,6 +278,27 @@ final class ChatSubagentsTests: XCTestCase {
         XCTAssertEqual(ChatBackground.label([task(.shell), task(.monitor)]), "1 shell · 1 monitor")
         XCTAssertEqual(ChatBackground.label([task(.monitor), task(.monitor)]), "2 monitors")
         XCTAssertEqual(ChatBackground.label([task(.shell)]), "1 shell")
+        XCTAssertEqual(ChatBackground.label([task(.unknown("cron"))]), "1 background task")
+    }
+
+    func testAScheduledWakeupReadsItsTimeFromItsIDAndCountsApart() {
+        let wakeup = ChatInfoBackgroundItem(
+            id: "wakeup-1800000000000-toolu_w", kind: .monitor, description: "Scheduled wakeup", command: nil,
+            startedAt: 1_799_999_000_000)
+        let monitor = ChatInfoBackgroundItem(
+            id: "toolu_m", kind: .monitor, description: "Watch CI", command: nil, startedAt: 1_799_999_000_000)
+        XCTAssertEqual(ChatBackground.wakesAt(wakeup.id), 1_800_000_000_000)
+        XCTAssertNil(ChatBackground.wakesAt(monitor.id))
+        XCTAssertNil(ChatBackground.wakesAt("wakeup-later-toolu_w"))
+        XCTAssertEqual(ChatBackground.label([wakeup]), "1 scheduled wakeup")
+        XCTAssertEqual(ChatBackground.label([monitor, wakeup, wakeup]), "1 monitor · 2 scheduled wakeups")
+        XCTAssertEqual(ChatBackground.icon(shell: false, wakeupsOnly: true), "clock")
+        XCTAssertEqual(
+            ChatBackground.name(id: wakeup.id, description: "", command: nil, kind: .monitor), "Scheduled wakeup")
+        let fires = Date(timeIntervalSince1970: 1_800_000_000)
+        XCTAssertEqual(
+            ChatBackground.time(id: wakeup.id, startedAt: wakeup.startedAt, now: fires),
+            "wakes at \(Format.moment(fires, now: fires))")
     }
 
     /// A pushed page makes its chat screen disappear, and a chat nobody holds stops: without the page holding it, the

@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import RuimtePulsar
+import RuimteShared
 import RuimteTransport
 
 struct ProjectRowMarks: Equatable {
@@ -23,10 +24,14 @@ struct ProjectRowMarks: Equatable {
     var working: Bool { !needsYou && (status == .running || delegating) }
 }
 
-/// What a row between turns still runs, named by its oldest command or monitor.
+/// What a row between turns still runs, named by its oldest command, monitor or scheduled wakeup.
 struct ProjectBackground: Equatable {
     var shell: Bool
     var description: String
+    /// Only wakeups wait, which the row marks with a clock.
+    var wakeupsOnly = false
+    /// When the oldest, if it is a wakeup, fires; in epoch milliseconds.
+    var wakesAt: Double?
 }
 
 struct ProjectMarkSources {
@@ -89,8 +94,12 @@ enum ProjectListLogic {
             background: background(of: id, sources: sources))
     }
 
-    static func backgroundLine(_ background: ProjectBackground) -> String {
-        background.description.isEmpty
+    static func backgroundLine(_ background: ProjectBackground, now: Date = .now) -> String {
+        if let wakesAt = background.wakesAt {
+            let moment = Format.moment(Date(timeIntervalSince1970: wakesAt / 1000), now: now)
+            return "\(String(localized: "Scheduled wakeup")) · \(String(localized: "wakes at \(moment)"))"
+        }
+        return background.description.isEmpty
             ? String(localized: "A command it started still runs.")
             : String(localized: "\(background.description) still runs.", comment: "%@ is a command or monitor, such as Run the tests")
     }
@@ -100,7 +109,9 @@ enum ProjectListLogic {
         guard sources.statuses[id] == .idle, !sources.delegating.contains(id),
             let tasks = sources.background[id], let oldest = tasks.min(by: { $0.startedAt < $1.startedAt })
         else { return nil }
-        return ProjectBackground(shell: tasks.contains(where: \.shell), description: oldest.description)
+        return ProjectBackground(
+            shell: tasks.contains(where: \.shell), description: oldest.description,
+            wakeupsOnly: tasks.allSatisfy { $0.wakesAt != nil }, wakesAt: oldest.wakesAt)
     }
 
     /// The actions a view offers; a node of a canvas only offers what acts on its session.

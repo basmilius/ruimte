@@ -2,10 +2,37 @@ import RuimtePulsar
 import RuimteShared
 import SwiftUI
 
-/// What runs in the background of a chat's CLI, as `info.background` lists it: its shells and its monitors.
+/// What runs in the background of a chat's CLI, as `info.background` lists it: its shells, its monitors and the wakeups
+/// it scheduled, as `chat/activity.ts` in `@adecore/agents-react` counts and names them.
 enum ChatBackground {
-    static func counts(_ tasks: [ChatInfoBackgroundItem]) -> (shells: Int, monitors: Int) {
-        (tasks.count { $0.kind == .shell }, tasks.count { $0.kind == .monitor })
+    struct Counts: Equatable {
+        var shells = 0
+        var monitors = 0
+        var wakeups = 0
+        var others = 0
+    }
+
+    /// When a task that is a scheduled wakeup fires, in epoch milliseconds; nil for any other task. The time rides in
+    /// the id, as `scheduledWakeupAt` in `@adecore/agent-contracts` reads it.
+    static func wakesAt(_ id: String) -> Double? {
+        guard let match = id.firstMatch(of: /^wakeup-(\d+)-./) else { return nil }
+        return Double(match.1)
+    }
+
+    static func counts(_ tasks: [ChatInfoBackgroundItem]) -> Counts {
+        var counts = Counts()
+        for task in tasks {
+            if wakesAt(task.id) != nil {
+                counts.wakeups += 1
+            } else if task.kind == .shell {
+                counts.shells += 1
+            } else if task.kind == .monitor {
+                counts.monitors += 1
+            } else {
+                counts.others += 1
+            }
+        }
+        return counts
     }
 
     /// The chip's words, without the kinds that have none running.
@@ -14,7 +41,39 @@ enum ChatBackground {
         return [
             counts.shells > 0 ? String(localized: "\(counts.shells) shells") : nil,
             counts.monitors > 0 ? String(localized: "\(counts.monitors) monitors") : nil,
+            counts.wakeups > 0 ? String(localized: "\(counts.wakeups) scheduled wakeups") : nil,
+            counts.others > 0 ? String(localized: "\(counts.others) background tasks") : nil,
         ].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    /// A terminal while a command runs, a clock while only wakeups wait (the alarm clock means a snooze), else a monitor.
+    static func icon(shell: Bool, wakeupsOnly: Bool) -> String {
+        shell ? "square-terminal" : wakeupsOnly ? "clock" : "activity"
+    }
+
+    /// What a person reads for a task: a wakeup in their words, else what it does, else the command, else its kind.
+    static func name(id: String, description: String, command: String?, kind: ChatInfoBackgroundItemKind) -> String {
+        if wakesAt(id) != nil { return String(localized: "Scheduled wakeup") }
+        return [description, command ?? ""].first { !$0.isEmpty } ?? kindTitle(kind)
+    }
+
+    /// How long a task has run, or for a wakeup when it fires; nil for a task that names no start.
+    static func time(id: String, startedAt: Double, now: Date) -> String? {
+        if let wakesAt = wakesAt(id) {
+            let moment = Format.moment(Date(timeIntervalSince1970: wakesAt / 1000), now: now)
+            return String(localized: "wakes at \(moment)")
+        }
+        guard startedAt > 0 else { return nil }
+        return Format.elapsedShort(milliseconds: max(0, now.timeIntervalSince1970 * 1000 - startedAt))
+    }
+
+    private static func kindTitle(_ kind: ChatInfoBackgroundItemKind) -> String {
+        switch kind {
+        case .shell: String(localized: "Shell")
+        case .monitor: String(localized: "Monitor")
+        // A kind of a newer machine, in its own word.
+        case .unknown(let word): word
+        }
     }
 
     static func subagents(_ count: Int) -> String {
@@ -77,15 +136,18 @@ struct ChatActivityChips: View {
                         }
                     }
                     .buttonStyle(MobileGlassButtonStyle(shape: .capsule))
-                    .accessibilityValue(workflows.count == 1 ? ChatWorkflowRow.stateWord(workflows[0].item.state) : "")
+                    .accessibilityValue(workflows.count == 1 ? ChatWorkflowRow.stateWord(workflows[0].item) : "")
                 }
                 if !background.isEmpty {
-                    let shells = ChatBackground.counts(background).shells
+                    let counts = ChatBackground.counts(background)
                     Menu {
                         backgroundRows(background)
                     } label: {
                         chip(ChatBackground.label(background)) {
-                            Image(lucide: shells > 0 ? "square-terminal" : "activity", size: 13)
+                            Image(
+                                lucide: ChatBackground.icon(
+                                    shell: counts.shells > 0, wakeupsOnly: counts.wakeups == background.count),
+                                size: 13)
                         }
                     }
                     .buttonStyle(MobileGlassButtonStyle(shape: .capsule))
@@ -172,12 +234,11 @@ struct ChatActivityChips: View {
             ForEach(tasks, id: \.id) { task in
                 let command = task.command ?? ""
                 let description = task.description
-                let title = [description, command].first { !$0.isEmpty } ?? Self.kindTitle(task.kind)
-                let startedAt = task.startedAt
-                let elapsed = Date.now.timeIntervalSince1970 * 1000 - startedAt
+                let title = ChatBackground.name(
+                    id: task.id, description: description, command: task.command, kind: task.kind)
                 let detail = [
                     !description.isEmpty && !command.isEmpty ? command : nil,
-                    startedAt > 0 ? Format.elapsedShort(milliseconds: elapsed) : nil,
+                    ChatBackground.time(id: task.id, startedAt: task.startedAt, now: .now),
                 ].compactMap { $0 }.joined(separator: " · ")
                 Button {
                     stop(task)
@@ -186,7 +247,11 @@ struct ChatActivityChips: View {
                         Text("Stop \(title)")
                         if !detail.isEmpty { Text(detail) }
                     } icon: {
-                        Image(lucide: "square", size: 16)
+                        // The row's kind, as the desktop's rows show it; the title says the tap stops it.
+                        Image(
+                            lucide: ChatBackground.icon(
+                                shell: task.kind == .shell, wakeupsOnly: ChatBackground.wakesAt(task.id) != nil),
+                            size: 16)
                     }
                 }
             }
@@ -202,15 +267,6 @@ struct ChatActivityChips: View {
                 failure = ChatActivityFailure(
                     title: String(localized: "Could not stop the task"), message: error.localizedDescription)
             }
-        }
-    }
-
-    private static func kindTitle(_ kind: ChatInfoBackgroundItemKind) -> String {
-        switch kind {
-        case .shell: String(localized: "Shell")
-        case .monitor: String(localized: "Monitor")
-        // A kind of a newer machine, in its own word.
-        case .unknown(let word): word
         }
     }
 

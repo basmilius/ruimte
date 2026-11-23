@@ -20,6 +20,9 @@ final class TaskPresentationTests: XCTestCase {
                 Self.turn(["kind": .string("turn"), "taskIds": .array([.string("a"), .string("b")])])),
             "Woken by 2 tasks")
         XCTAssertEqual(ChatPresentation.agentTurnLabel(Self.turn(["kind": .string("turn")])), "Continued on its own")
+        XCTAssertEqual(
+            ChatPresentation.agentTurnLabel(Self.turn(["kind": .string("turn"), "wakeup": .bool(true)])),
+            "Scheduled wakeup")
     }
 
     @MainActor func testAWakeTurnSaysHowManyMessagesWokeItAndFromWhom() {

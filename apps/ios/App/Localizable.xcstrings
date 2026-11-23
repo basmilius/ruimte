@@ -4505,12 +4505,92 @@
         }
       }
     },
+    "%lld background tasks" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 background task"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld background tasks"
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 achtergrondtaak"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld achtergrondtaken"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld blocked" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld geblokkeerd"
+          }
+        }
+      }
+    },
+    "%lld scheduled wakeups" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 scheduled wakeup"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld scheduled wakeups"
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 geplande wekker"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld geplande wekkers"
+                }
+              }
+            }
           }
         }
       }
@@ -19125,6 +19205,16 @@
         }
       }
     },
+    "Scheduled wakeup" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geplande wekker"
+          }
+        }
+      }
+    },
     "Screen of the device" : {
       "localizations" : {
         "nl" : {
@@ -25947,6 +26037,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gedachte"
+          }
+        }
+      }
+    },
+    "wakes at %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gaat af om %@"
           }
         }
       }

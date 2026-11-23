@@ -451,6 +451,11 @@ final class ChatPresentationTests: XCTestCase {
         XCTAssertNil(ChatToolPresentation.groupFailures([read("a", "done"), read("b", "done")]))
         XCTAssertEqual(
             ChatToolPresentation.groupFailures([read("a", "error"), read("b", "done"), read("c", "error")]), "2 failed")
+        let stopped = tool("s", "Read", ["file_path": .string("s")], state: "error").setting("stopped", .bool(true))
+            .chatTool
+        XCTAssertFalse(ChatToolPresentation.failed(stopped))
+        XCTAssertEqual(ChatToolPresentation.groupFailures([read("a", "error"), stopped]), "1 failed")
+        XCTAssertNil(ChatToolPresentation.groupFailures([stopped]))
         XCTAssertEqual(
             ChatToolPresentation.groupLabel([read("a", "error"), read("b", "done"), read("c", "error")]).text,
             "Read 3 files")

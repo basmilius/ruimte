@@ -1152,7 +1152,9 @@ struct ChatEntryView: View {
                     Button {
                         presentation.openSubagent(toolUseID: task)
                     } label: {
-                        Label(ChatPresentation.agentTurnLabel(turn), lucideIcon: "bot", iconSize: 14)
+                        Label(
+                            ChatPresentation.agentTurnLabel(turn), lucideIcon: turn.wakeup == true ? "clock" : "bot",
+                            iconSize: 14)
                             .lineLimit(1).font(.footnote).foregroundStyle(MobileStyle.muted).frame(minHeight: 28)
                     }.buttonStyle(.plain).disabled(task.isEmpty)
                 }

@@ -205,7 +205,10 @@ struct ProjectRowMarksView: View {
                     .foregroundStyle(marks.status == .running ? MobileStyle.statusRunning : MobileStyle.faint)
             } else if let background = marks.background {
                 // The icons of the background chip over the composer; the hourglass means a wait on a person.
-                Image(lucide: background.shell ? "square-terminal" : "activity", size: 12).foregroundStyle(MobileStyle.faint)
+                Image(
+                    lucide: ChatBackground.icon(shell: background.shell, wakeupsOnly: background.wakeupsOnly), size: 12
+                )
+                .foregroundStyle(MobileStyle.faint)
                     .accessibilityLabel(ProjectListLogic.backgroundLine(background))
             } else if marks.unseen {
                 Circle().fill(MobileStyle.accent).frame(width: 6, height: 6).accessibilityLabel("New activity")

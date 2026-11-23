@@ -267,7 +267,7 @@ private struct ChatToolOutput: View {
 
     var body: some View {
         let text = whole.value ?? ChatToolBody.output(item)
-        let failed = item.state == .error
+        let failed = ChatToolPresentation.failed(item)
         // A beginning whose rest the machine keeps has no count of what it leaves out, so only the whole expands here.
         let beginning = item.outputRef != nil && whole.value == nil
         let exit = failed ? ChatToolBody.exitCode(text) : (code: nil, rest: text)

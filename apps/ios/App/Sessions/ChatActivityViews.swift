@@ -230,7 +230,7 @@ private struct ChatToolLine: View {
     var detail: String?
     var awaitingApproval = false
     private var running: Bool { item.state == .running }
-    private var failed: Bool { item.state == .error }
+    private var failed: Bool { ChatToolPresentation.failed(item) }
 
     var body: some View {
         let run = RuimteCommandLook.run(of: item)

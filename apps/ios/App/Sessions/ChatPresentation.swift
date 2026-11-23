@@ -781,6 +781,7 @@ final class ChatPresentation {
                 ? String(localized: "Woken by \(messages) messages")
                 : String(localized: "Woken by \(messages) messages: \(label)")
         }
+        if turn.wakeup == true { return String(localized: "Scheduled wakeup") }
         if label.isEmpty { return String(localized: "Continued on its own") }
         // The machine names the sub-agent row a wake is about; the CLI also wakes the agent for a command, a monitor or a
         // workflow it ran in the background, which has no such row.
@@ -791,6 +792,9 @@ final class ChatPresentation {
 
 enum ChatToolPresentation {
     static func summary(_ tool: ChatToolItem) -> String { summary(name: tool.name, input: tool.input) }
+
+    /// A call a person stopped ends in `error` too, but draws neutral and counts as no failure (`toolFailed`).
+    static func failed(_ tool: ChatToolItem) -> Bool { tool.state == .error && tool.stopped != true }
 
     /// What a call is about, also for one that is only asked for, as an approval names it.
     static func summary(name: String, input: JSONValue) -> String {
@@ -960,7 +964,7 @@ enum ChatToolPresentation {
 
     /// How many calls of a run failed, said apart from the run's line in the error tone; nil when none did.
     static func groupFailures(_ tools: [ChatToolItem]) -> String? {
-        let failed = tools.filter { $0.state == .error }.count
+        let failed = tools.filter(Self.failed).count
         return failed == 0 ? nil : String(localized: "\(failed) failed")
     }
 

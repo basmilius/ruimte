@@ -48,7 +48,12 @@ public enum RuimteColors {
     public static let statusIdle = RuimteColorToken(light: 0x16a34a, dark: 0x4ade80)
     /// One color per agent CLI and per part of a chat's context, as `@adecore/agents-react/theme.css` has them.
     public static let chartClaude = RuimteColorToken(light: 0xff9500, dark: 0xff9f0a)
+    public static let chartClaudeApi = RuimteColorToken(light: 0xaf52de, dark: 0xbf5af2)
     public static let chartCodex = RuimteColorToken(light: 0x30b0c7, dark: 0x40c8e0)
+    public static let chartCopilot = RuimteColorToken(light: 0x64748b, dark: 0x94a3b8)
+    public static let chartNanogpt = RuimteColorToken(light: 0x34c759, dark: 0x30d158)
+    public static let chartGrok = RuimteColorToken(light: 0xff2d55, dark: 0xff375f)
+    public static let chartAntigravity = RuimteColorToken(light: 0x5856d6, dark: 0x5e5ce6)
     public static let chartContextTools = RuimteColorToken(light: 0x4d7ce6, dark: 0x8aa7f5)
     public static let chartContextFiles = RuimteColorToken(light: 0x9a63e0, dark: 0xb98af3)
     public static let chartContextConversation = RuimteColorToken(light: 0x2f9e5a, dark: 0x6dd08b)

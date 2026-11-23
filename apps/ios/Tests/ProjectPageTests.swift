@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import XCTest
 
 @testable import Ruimte
@@ -52,7 +53,7 @@ final class ProjectListLogicTests: XCTestCase {
         XCTAssertEqual(ProjectListLogic.heaviest([.idle, .running, nil, .exited]), .exited)
     }
 
-    func testAChatBetweenTurnsMarksWhatItLeftRunningUnlessItWorksOrNeedsYou() {
+    func testAChatBetweenTurnsMarksWhatItLeftRunningUnlessItWorksOrNeedsYou() throws {
         let chat = ProjectWire.item(.object(["id": .string("chat"), "kind": .string("chat")]))
         let shell = ChatActivity.Background(description: "Run the tests", startedAt: 2, shell: true)
         let monitor = ChatActivity.Background(description: "Watch CI", startedAt: 1)
@@ -71,6 +72,16 @@ final class ProjectListLogicTests: XCTestCase {
         XCTAssertNil(marks(.idle, [shell], delegating: ["chat"]).background)
         XCTAssertEqual(
             ProjectListLogic.backgroundLine(ProjectBackground(shell: true, description: "Run the tests")), "Run the tests still runs.")
+
+        let wakeup = ChatActivity.Background(description: "Scheduled wakeup", startedAt: 0, wakesAt: 1_800_000_000_000)
+        XCTAssertEqual(
+            marks(.idle, [wakeup]).background,
+            ProjectBackground(shell: false, description: "Scheduled wakeup", wakeupsOnly: true, wakesAt: 1_800_000_000_000))
+        XCTAssertEqual(marks(.idle, [monitor, wakeup]).background?.wakeupsOnly, false)
+        let fires = Date(timeIntervalSince1970: 1_800_000_000)
+        XCTAssertEqual(
+            ProjectListLogic.backgroundLine(try XCTUnwrap(marks(.idle, [wakeup]).background), now: fires),
+            "Scheduled wakeup · wakes at \(Format.moment(fires, now: fires))")
     }
 
     func testALongPressOffersWhatAppliesToTheRow() {

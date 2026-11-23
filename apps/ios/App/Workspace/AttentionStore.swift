@@ -54,6 +54,11 @@ struct ChatActivity: Hashable {
         let startedAt: Double
         /// A command rather than a monitor.
         var shell = false
+        /// When a scheduled wakeup fires, in epoch milliseconds; nil for a command or a monitor.
+        var wakesAt: Double?
+
+        /// What a person reads for it; a wakeup in their words rather than the CLI's.
+        var name: String { wakesAt == nil ? description : String(localized: "Scheduled wakeup") }
     }
 
     var queued = 0
@@ -67,7 +72,9 @@ extension ChatActivity {
         self.init(
             queued: info.queue?.count ?? 0,
             background: (info.background ?? []).map {
-                Background(description: $0.description, startedAt: $0.startedAt, shell: $0.kind == .shell)
+                Background(
+                    description: $0.description, startedAt: $0.startedAt, shell: $0.kind == .shell,
+                    wakesAt: ChatBackground.wakesAt($0.id))
             })
     }
 }
