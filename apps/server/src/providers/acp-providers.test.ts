@@ -1,6 +1,14 @@
 import { describe, expect, setSystemTime, test } from 'bun:test';
+import { join } from 'node:path';
 import type { BackendEvent, BackendLaunch } from '@adecore/agents/chat';
-import { agentDefaultCatalog, antigravityUsageDirectory, copilotUsageDirectory, createAcpProvider, type ChatProvider } from '@adecore/agents/providers';
+import {
+    agentDefaultCatalog,
+    antigravityUsageDirectory,
+    copilotUsageDirectory,
+    createAcpProvider,
+    defaultAccountEnv,
+    type ChatProvider
+} from '@adecore/agents/providers';
 import { fakeAcpWith, inProcess, type FakeAcpOptions } from '@adecore/agents/testing';
 import { UsageService } from '@adecore/agents/usage';
 import { withRuimteMcp } from '../ruimte-mcp.ts';
@@ -87,6 +95,16 @@ for (const [kind, name, folderOf] of [
         }
     });
 }
+
+test("Antigravity's default account runs in the machine's accounts folder, apart from agy's keyring", async () => {
+    const home = await newHome();
+    const provider = new RuimteProviderRegistry({ home, detect: async () => ({ installed: true, version: '1.5.15' }) }).get('antigravity');
+
+    expect(defaultAccountEnv(provider, { HOME: '/home/person' })).toMatchObject({
+        GEMINI_HOME: join(home, 'accounts', 'antigravity'),
+        SSH_CONNECTION: '127.0.0.1 0 127.0.0.1 0'
+    });
+});
 
 describe("Ruimte's MCP server in an ACP chat", () => {
     const CHAT_ENV = { RUIMTE_MCP_URL: 'http://127.0.0.1:4210/mcp', RUIMTE_CONTEXT_TOKEN: 'chat-token' };

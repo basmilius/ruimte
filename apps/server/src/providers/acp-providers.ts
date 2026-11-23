@@ -1,5 +1,7 @@
 import type { AcpClientInfo } from '@adecore/agents/chat';
 import {
+    antigravityDefaultHome,
+    antigravityUsageDirectory,
     createAntigravityProvider as createSharedAntigravityProvider,
     createCopilotProvider as createSharedCopilotProvider,
     createGrokProvider as createSharedGrokProvider,
@@ -26,7 +28,13 @@ export function createCopilotProvider(catalogStore?: AcpCatalogStore, usageLog?:
     return createSharedCopilotProvider({ ...ruimteChats(catalogStore), ...(usageLog === undefined ? {} : { usageLog }) });
 }
 
-/* An Antigravity chat logs every turn's usage too, since agy keeps no file the usage page can read. */
-export function createAntigravityProvider(catalogStore?: AcpCatalogStore, usageLog?: string): ChatProvider {
-    return createSharedAntigravityProvider({ ...ruimteChats(catalogStore), ...(usageLog === undefined ? {} : { usageLog }) });
+/*
+ * An Antigravity chat logs every turn's usage too, since agy keeps no file the usage page can read. Under the daemon's
+ * data folder every account runs apart from agy's shared keyring, the default one in `accounts/antigravity`.
+ */
+export function createAntigravityProvider(catalogStore?: AcpCatalogStore, home?: string): ChatProvider {
+    return createSharedAntigravityProvider({
+        ...ruimteChats(catalogStore),
+        ...(home === undefined ? {} : { usageLog: antigravityUsageDirectory(home), defaultHome: antigravityDefaultHome(home) })
+    });
 }

@@ -71,10 +71,15 @@ export async function wireProviders(
     const integrations = new AgentIntegrations({
         home: config.home,
         fixed: !config.installHooks,
-        accountHomes: (kind) =>
-            Object.entries(accounts.snapshot().accounts)
+        accountHomes: (kind) => {
+            // A CLI whose accounts run apart keeps its default account in a folder of the daemon's own too.
+            const apartDefault = providers.get(kind).home?.apart?.defaultFolder;
+            const extra = Object.entries(accounts.snapshot().accounts)
                 .filter(([id, account]) => account.kind === kind && id !== kind && account.home !== undefined)
-                .map(([, account]) => account.home!),
+                .map(([, account]) => account.home!);
+
+            return apartDefault === undefined ? extra : [apartDefault, ...extra];
+        },
         installed: async (kind) => {
             const command = cliExecutable(providers.get(kind));
             const detect = seams.providers.detect;

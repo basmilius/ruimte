@@ -162,6 +162,7 @@ $RUIMTE_HOME/
   projects.json                    every project the machine knows: id, name, color, folder, and when it was last closed
   providers.json                   the accounts of each agent CLI: kind, label, color, config folder; never a credential
   accounts/<id>/                   0700, the config folder of an account the daemon made (a shadow home for Codex)
+  accounts/antigravity/            0700, the GEMINI_HOME of the default Antigravity account, apart from agy's keyring like every other
   snoozes.json                     the nodes a person put aside, with when each snooze ends
   launch-after-settle.json         per project, the task a person chose to run after a worktree chat settles, and the last turn each chat ran it for
   push-attention.json              the alerts pushed in the last 30 days, which clients mark nodes from
