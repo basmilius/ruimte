@@ -236,6 +236,7 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
 
         const child = Bun.spawn([cliExecutable(provider), ...run.args], {
             cwd: deps.folderOf(payload.projectId) ?? homedir(),
+            ...(run.env === undefined ? {} : { env: { ...process.env, ...run.env } }),
             stdin: run.stdin === undefined ? 'ignore' : new TextEncoder().encode(run.stdin),
             stdout: 'pipe',
             stderr: 'pipe'

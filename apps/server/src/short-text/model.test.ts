@@ -97,6 +97,16 @@ describe('an explicit pick', () => {
         expect(killers).toHaveLength(1);
     });
 
+    test("runs agy under the account's environment with its update turned off", async () => {
+        const test = rig(['agy']);
+        test.choose({ provider: 'antigravity', model: null });
+
+        await (await test.models.prepare())?.run('/work', 'p', 1000);
+
+        expect(test.runs[0]?.command).toBe('agy');
+        expect(test.runs[0]?.options?.env).toMatchObject({ ACCOUNT_OF: 'antigravity/antigravity', AGY_CLI_DISABLE_AUTO_UPDATE: '1' });
+    });
+
     test('takes the cheapest model of the provider when none is chosen', async () => {
         const test = rig(['claude']);
         test.choose({ provider: 'claude', model: null });

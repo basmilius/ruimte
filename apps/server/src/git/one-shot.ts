@@ -37,10 +37,16 @@ export async function oneShotProvider(registry: ProviderRegistry, options: OneSh
 
 /*
  * How a one-shot CLI gets its prompt: on stdin where it reads it there, since an argument is capped and
- * shows in the process list. A model goes in as `--model`, which all of these CLIs take.
+ * shows in the process list. A model goes in as `--model`, which all of these CLIs take. `env` holds the
+ * provider's variables for a one-shot run, which every runner lays over the environment it starts the CLI in.
  */
-export function oneShotRun(provider: ChatProvider, prompt: string, model: string | null = null): { args: string[]; stdin?: string } | null {
+export function oneShotRun(
+    provider: ChatProvider,
+    prompt: string,
+    model: string | null = null
+): { args: string[]; stdin?: string; env?: Record<string, string> } | null {
     const modelArgs = model === null ? [] : ['--model', model];
+    const env = provider.oneShotEnv === undefined ? {} : { env: { ...provider.oneShotEnv } };
 
     if (provider.oneShotStdinArgs) {
         const args = [...provider.oneShotStdinArgs];
@@ -48,10 +54,10 @@ export function oneShotRun(provider: ChatProvider, prompt: string, model: string
         const at = provider.kind === 'codex' && args.at(-1) === '-' ? args.length - 1 : args.length;
         args.splice(at, 0, ...modelArgs);
 
-        return { args, stdin: prompt };
+        return { args, stdin: prompt, ...env };
     }
     const args = provider.oneShotArgs?.(prompt) ?? null;
-    return args === null ? null : { args: [...args, ...modelArgs] };
+    return args === null ? null : { args: [...args, ...modelArgs], ...env };
 }
 
 export async function runOneShot(provider: ChatProvider, top: string, prompt: string, timeoutMs: number, options: OneShotOptions): Promise<GitResult> {
@@ -64,7 +70,8 @@ export async function runOneShot(provider: ChatProvider, top: string, prompt: st
     }
     return await streamWithTimeout(cliExecutable(provider), run.args, (await options.cwdFor?.(top)) ?? top, timeoutMs, {
         onSpawn: options.onSpawn,
-        stdin: run.stdin
+        stdin: run.stdin,
+        env: run.env
     });
 }
 

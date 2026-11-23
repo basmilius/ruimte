@@ -122,7 +122,7 @@ export class ShortTextModels {
                 }
 
                 return await (this.host.run ?? streamWithTimeout)(cliExecutable(provider), run.args, await this.host.cwdFor(cwd), timeoutMs, {
-                    env,
+                    env: { ...env, ...run.env },
                     stdin: run.stdin,
                     onSpawn: (kill) => {
                         accounts.launched?.(provider.kind, account);

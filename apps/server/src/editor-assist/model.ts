@@ -92,7 +92,7 @@ export class EditorAssistModel {
 
             const args = provider.leanOneShotArgs?.(run.args, model) ?? [...run.args, '--model', model];
 
-            const env = assistEnvironment(this.options.accounts, { provider, account }, this.options.env ?? process.env);
+            const env = { ...assistEnvironment(this.options.accounts, { provider, account }, this.options.env ?? process.env), ...run.env };
             let exit!: (code: number | null) => void;
             const exited = new Promise<number | null>((resolve) => {
                 exit = resolve;
