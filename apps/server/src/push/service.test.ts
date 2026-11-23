@@ -5,7 +5,17 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Clock } from '@adecore/agents/coordination';
 import { ManualClock } from '@adecore/agents/testing';
-import type { AgentRequest, AgentStatus, ChatRequestSummary, ChatTurnLimit, ProcessAlert, PushSubscribePayload, ServerFrame } from '@ruimte/contracts';
+import {
+    scheduledWakeupId,
+    type AgentRequest,
+    type AgentStatus,
+    type ChatBackgroundTask,
+    type ChatRequestSummary,
+    type ChatTurnLimit,
+    type ProcessAlert,
+    type PushSubscribePayload,
+    type ServerFrame
+} from '@ruimte/contracts';
 import {
     PUSH_HKDF_SALT,
     PUSH_MAX_AGE_MS,
@@ -134,7 +144,7 @@ function shellRequest(command: string): AgentRequest {
     return { id: command, source: '', kind: 'approval', toolName: 'Bash', title: null, text: command, createdAt: NOW };
 }
 
-function chatInfo(value: AgentStatus, requests?: ChatRequestSummary[]): Parameters<PushService['consume']>[0] {
+function chatInfo(value: AgentStatus, requests?: ChatRequestSummary[], background?: ChatBackgroundTask[]): Parameters<PushService['consume']>[0] {
     return {
         event: 'chat.event',
         payload: {
@@ -155,6 +165,7 @@ function chatInfo(value: AgentStatus, requests?: ChatRequestSummary[]): Paramete
                     slashCommands: [],
                     usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
                     ...(requests ? { requests } : {}),
+                    ...(background ? { background } : {}),
                     createdAt: NOW
                 }
             }
@@ -668,6 +679,98 @@ test('a requested notification uses the connected event without also pushing to 
     expect(pushes).toEqual([]);
     off();
     disconnect();
+});
+
+describe("a Monitor's turns", () => {
+    const monitor: ChatBackgroundTask = { id: 'b1', kind: 'monitor', description: 'Watch the log', command: null, startedAt: NOW };
+    let clock: ManualClock;
+    let watching: PushService;
+    let turns = 0;
+
+    beforeEach(async () => {
+        clock = new ManualClock();
+        watching = new PushService({
+            auth,
+            identity: { id: 'machine', sign: (text) => signMessage(machine.privateKey, text) },
+            now: () => NOW,
+            clock,
+            targetOf: () => 'chat',
+            send: async (push) => {
+                pushes.push(push);
+                return 204;
+            },
+            onError: (error) => {
+                throw error;
+            }
+        });
+        await auth.setPush(sessionId, { ...subscription, notify: ['turn'] });
+    });
+
+    afterEach(async () => {
+        await watching.settled();
+    });
+
+    const turn = (origin: 'user' | 'agent', running: ChatBackgroundTask[], done: ChatBackgroundTask[]): void => {
+        turns += 1;
+        watching.consume({
+            event: 'chat.event',
+            payload: {
+                chatId: 'node',
+                event: {
+                    type: 'item',
+                    item: { id: `turn-${turns}`, kind: 'turn', createdAt: NOW, turnId: `turn-${turns}`, state: 'running', origin, endedAt: null, costUsd: 0 }
+                }
+            }
+        });
+        watching.consume(chatInfo('running', undefined, running));
+        watching.consume(chatInfo('idle', undefined, done));
+    };
+
+    const finished = async (): Promise<number> => {
+        await watching.settled();
+
+        return pushes.filter((push) => push.pushType === 'alert').length;
+    };
+
+    test("a turn the CLI opens for a Monitor's line pushes nothing, and the turn after the Monitor ended pushes once", async () => {
+        turn('agent', [monitor], [monitor]);
+        turn('agent', [monitor], [monitor]);
+        turn('agent', [monitor], [monitor]);
+        clock.advance(60_000);
+        expect(await finished()).toBe(0);
+
+        turn('agent', [], []);
+        expect(await finished()).toBe(1);
+    });
+
+    test('a turn a person wrote into pushes while the Monitor runs', async () => {
+        turn('user', [monitor], [monitor]);
+        expect(await finished()).toBe(1);
+    });
+
+    test('a scheduled wakeup is no Monitor, so the turn it leaves behind pushes', async () => {
+        const wakeup: ChatBackgroundTask = { ...monitor, id: scheduledWakeupId('toolu_wake', NOW + 60_000), description: 'Scheduled wakeup' };
+
+        turn('agent', [wakeup], [wakeup]);
+        expect(await finished()).toBe(1);
+    });
+
+    test("a line's turn that ends after the Monitor did pushes once 5 seconds have passed", async () => {
+        turn('agent', [monitor], []);
+        clock.advance(4_999);
+        expect(await finished()).toBe(0);
+
+        clock.advance(1);
+        expect(await finished()).toBe(1);
+    });
+
+    test("a turn that starts within those 5 seconds replaces the line's turn", async () => {
+        turn('agent', [monitor], []);
+        clock.advance(4_000);
+        turn('agent', [], []);
+        clock.advance(60_000);
+        expect(await finished()).toBe(1);
+    });
 });
 
 describe('a snoozed node', () => {

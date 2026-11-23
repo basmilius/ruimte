@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import type { Clock } from '@adecore/agents/coordination';
+import { systemClock, type Clock } from '@adecore/agents/coordination';
 import { unrefTimeout } from '@adecore/utils/async';
 import {
     PUSH_NOTIFY_DEFAULT,
@@ -7,8 +7,10 @@ import {
     clipText,
     pushWaitText,
     quietState,
+    scheduledWakeupAt,
     terminalWaitAsk,
     type WaitAsk,
+    type ChatInfo,
     type ChatItem,
     type ChatTurnLimit,
     type EventMap,
@@ -124,6 +126,13 @@ const HOLD_MS = 60_000;
 const APPROVAL_HOLD_MS = 10_000;
 // How long one limit without a reset time keeps its other chats quiet.
 const LIMIT_QUIET_MS = 3_600_000;
+// The CLI opens its final turn for a Monitor once the stream ended, so a line's turn that ends after the Monitor waits for it.
+const MONITOR_GRACE_MS = 5_000;
+
+/* A Monitor still running in the chat's background work; a scheduled wakeup is listed as a monitor too, but is none. */
+function holdsMonitor(info: Pick<ChatInfo, 'background'>): boolean {
+    return info.background?.some((task) => task.kind === 'monitor' && scheduledWakeupAt(task) === null) ?? false;
+}
 
 /* What a subscription hears of for a node: the list its project has, else its own, else what every device heard before it could choose. */
 function notifyKinds(subscription: PushSubscribePayload, projectId: string | null): readonly PushNotifyKind[] {
@@ -166,6 +175,13 @@ export class PushService {
      * again as it is then, since a stop that is over must not come back as a new one.
      */
     private readonly limitPending = new Map<string, Map<string, number>>();
+    /* The chats whose latest turn the CLI opened itself, nobody typing into it. */
+    private readonly agentTurns = new Set<string>();
+    /* The chats whose turn the CLI opened while a Monitor ran, which is a line of that Monitor rather than a finished turn. */
+    private readonly monitorTurns = new Set<string>();
+    /* The finished turns that wait out `MONITOR_GRACE_MS`, by chat, each with the timer that pushes it. */
+    private readonly monitorGraces = new Map<string, unknown>();
+    private readonly clock: Clock;
     private machineActivityQueue = Promise.resolve();
     private machineStartedAt = 0;
     private readonly machineActivityStates = new Map<string, string>();
@@ -179,6 +195,7 @@ export class PushService {
     constructor(options: PushServiceOptions) {
         this.options = options;
         this.now = options.now ?? Date.now;
+        this.clock = options.clock ?? systemClock;
         this.attention = new PushAttention(options.attentionPath, this.now);
         options.snoozes?.observe((change) => this.snoozeChanged(change));
         this.quietHold = new QuietHold({
@@ -297,7 +314,14 @@ export class PushService {
             if (chat.type === 'info') {
                 const { info } = chat;
                 const limit = info.limit ? { limit: info.limit, provider: info.provider, account: info.account ?? info.provider } : null;
-                this.status('chat', chatId, info.status, info.suggestedTitle ?? 'Agent', chatWaitAsk(info.requests), limit);
+                this.status('chat', chatId, info.status, info.suggestedTitle ?? 'Agent', chatWaitAsk(info.requests), limit, holdsMonitor(info));
+            } else if (chat.type === 'item' && chat.item.kind === 'turn' && chat.item.state === 'running') {
+                // A turn without an origin is from before the field, when only a person started one.
+                if (chat.item.origin === 'agent') {
+                    this.agentTurns.add(chatId);
+                } else {
+                    this.agentTurns.delete(chatId);
+                }
             } else if (chat.type === 'item' && chat.item.kind === 'tool' && chat.item.state === 'running') {
                 const node = this.nodes.get(chatId);
                 if (node) {
@@ -351,14 +375,16 @@ export class PushService {
         status: AgentStatus,
         title: string,
         ask: WaitAsk | null,
-        limit: ChatLimit | null = null
+        limit: ChatLimit | null = null,
+        monitor = false
     ): void {
         title = this.titleOf(nodeId, title);
         this.options.snoozes?.noteStatus(nodeId, status === 'needs-you');
         const previous = this.nodes.get(nodeId);
-        const startedAt =
-            status === 'running' && previous?.status !== 'running' && previous?.status !== 'needs-you' ? this.now() : (previous?.startedAt ?? this.now());
+        const turnStarts = status === 'running' && previous?.status !== 'running' && previous?.status !== 'needs-you';
+        const startedAt = turnStarts ? this.now() : (previous?.startedAt ?? this.now());
         this.nodes.set(nodeId, { target, status, title, startedAt, ask, limit });
+        this.noteMonitor(nodeId, status, turnStarts, monitor);
         this.synchronizeActivities();
         if (status === previous?.status) {
             return;
@@ -377,23 +403,71 @@ export class PushService {
 
         if (stopped && limit?.limit.kind === 'usage') {
             this.limitAlert(target, nodeId, title, limit);
+        } else if (stopped && status === 'idle' && this.monitorTurns.has(nodeId)) {
+            if (!monitor) {
+                this.awaitMonitorEnd(target, nodeId);
+            }
         } else if (stopped) {
-            this.broadcast(
-                {
-                    kind: 'turn',
-                    target,
-                    nodeId,
-                    title: clipText(title, TITLE_MAX),
-                    body: status === 'idle' ? 'The agent finished its turn.' : 'The agent stopped with an error.',
-                    expiresAt: this.now() + PUSH_MAX_AGE_MS
-                },
-                'turn'
-            );
+            this.broadcast(this.finishedTurn(target, nodeId, title, status), 'turn');
         }
         if (status === 'running' || status === 'needs-you' || status === 'idle' || status === 'error' || status === 'exited') {
             // A snoozed wait is as quiet on the node's own activity as in the machine counts.
             const phase = status === 'running' ? 'running' : status === 'needs-you' && !this.snoozed(nodeId) ? 'needs-you' : 'done';
             this.track(this.deliverActivity(nodeId, { title: clipText(title, TITLE_MAX), phase, startedAt }));
+        }
+    }
+
+    private finishedTurn(target: PushAlertContent['target'], nodeId: string, title: string, status: AgentStatus): PushAlertContent {
+        return {
+            kind: 'turn',
+            target,
+            nodeId,
+            title: clipText(title, TITLE_MAX),
+            body: status === 'idle' ? 'The agent finished its turn.' : 'The agent stopped with an error.',
+            expiresAt: this.now() + PUSH_MAX_AGE_MS
+        };
+    }
+
+    /*
+     * Tells a turn the CLI opened for a Monitor's line apart from one it finished: a chat holds that mark
+     * from the turn's start, or from the first state that shows the Monitor running while the turn does.
+     * A turn that starts replaces a finished one still waiting out its grace.
+     */
+    private noteMonitor(nodeId: string, status: AgentStatus, turnStarts: boolean, monitor: boolean): void {
+        if (turnStarts || status === 'exited') {
+            this.cancelMonitorGrace(nodeId);
+            this.monitorTurns.delete(nodeId);
+        }
+
+        if (status === 'exited') {
+            this.agentTurns.delete(nodeId);
+        } else if (monitor && this.agentTurns.has(nodeId)) {
+            this.monitorTurns.add(nodeId);
+        }
+    }
+
+    /* A Monitor's line whose turn ended after the Monitor did may be its last, unless the final turn starts in time. */
+    private awaitMonitorEnd(target: PushAlertContent['target'], nodeId: string): void {
+        this.cancelMonitorGrace(nodeId);
+        this.monitorGraces.set(
+            nodeId,
+            this.clock.setTimeout(() => {
+                this.monitorGraces.delete(nodeId);
+                const node = this.nodes.get(nodeId);
+
+                if (node?.status === 'idle' && !this.snoozed(nodeId)) {
+                    this.broadcast(this.finishedTurn(target, nodeId, node.title, 'idle'), 'turn');
+                }
+            }, MONITOR_GRACE_MS)
+        );
+    }
+
+    private cancelMonitorGrace(nodeId: string): void {
+        const timer = this.monitorGraces.get(nodeId);
+
+        if (timer !== undefined) {
+            this.clock.clearTimeout(timer);
+            this.monitorGraces.delete(nodeId);
         }
     }
 
