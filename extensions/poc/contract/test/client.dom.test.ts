@@ -58,6 +58,7 @@ clientContract(async (permissions, seed = {}) => {
         ...(seed.visible === undefined ? {} : { canvas: { visible: seed.visible } }),
         answers: {
             ...(seed.server === undefined ? {} : { server: seed.server }),
+            ...(seed.actions === undefined ? {} : { 'machine.run': seed.actions }),
             ...(seed.stream === undefined
                 ? {}
                 : {

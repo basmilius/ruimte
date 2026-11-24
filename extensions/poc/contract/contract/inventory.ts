@@ -35,6 +35,14 @@ const OWN_TERMINAL = 'opens a terminal on the canvas in front, and types only in
 const PROFILE = 'opens a terminal with its profile, and types only into a terminal it opened itself';
 const EACH_TERMINAL = 'opens, types into and reads a terminal each only with its permission';
 const DEFINES = 'defines a terminal profile only when its manifest asks for it, names it as proposed and lists it';
+const SAVES_LAUNCH = 'adds a launch and changes one through the machine, which is handed what the call gave';
+const LISTS_LAUNCHES = 'lists its launches for the machine to start, and tells when they change until it is asked to stop';
+const DEFINES_SOURCES = 'defines a launch source and a problem source only when its manifest asks for each, names it as proposed and lists it';
+const REPORTS = 'reports the problems of a source file by file, replaces what it said of a file and takes it all back';
+const NO_REPORT = 'reports no problem without its permission, outside the project or past what the machine holds of one file';
+const FILES = 'reads and lists the files of a project, and hears a file change until it stops following it';
+const NO_FILES = 'reads, lists and follows no file without files.read, and none outside the project';
+const FOLLOWS = 'hears a launch change and a project open and close in a shape of its own, each only with its permission';
 
 export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, ExtensionApiCoverage>>> = {
     'client/call/agents.start': { scenario: STARTS, refusal: REFUSES },
@@ -53,6 +61,8 @@ export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, E
         refusal: REFUSES
     },
     'client/call/files.watch': { scenario: WATCH, refusal: REFUSES, cleanup: WATCH },
+    'client/call/launches.create': { scenario: SAVES_LAUNCH, refusal: REFUSES },
+    'client/call/launches.edit': { scenario: SAVES_LAUNCH, refusal: REFUSES },
     'client/call/getServer': { scenario: 'calls server/ outside a component with getServer, answering as useServer does' },
     'client/call/nodeColorValue': { scenario: 'reads a node a collapsed group hides as hidden, and its color by its accent and as it is drawn' },
     'client/call/onEvent': { scenario: EVENT, cleanup: EVENT },
@@ -100,6 +110,16 @@ export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, E
     'server/call/chats.list': { scenario: ASKS, refusal: ASKS },
     'server/call/chats.send': { scenario: SENDS, refusal: NOT_ASKED },
     'server/call/emit': { scenario: 'says an event without a payload as one a client hears with none' },
+    'server/call/files.list': { scenario: FILES, refusal: NO_FILES },
+    'server/call/files.readText': { scenario: FILES, refusal: NO_FILES },
+    'server/call/files.watch': { scenario: FILES, refusal: NO_FILES, cleanup: FILES },
+    'server/call/problems.clear': { scenario: REPORTS, refusal: NO_REPORT },
+    'server/call/problems.report': { scenario: REPORTS, refusal: NO_REPORT },
+    'server/event/launch.status': { scenario: FOLLOWS, refusal: FOLLOWS },
+    'server/event/project.closed': { scenario: FOLLOWS, refusal: FOLLOWS },
+    'server/event/project.opened': { scenario: FOLLOWS, refusal: FOLLOWS },
+    'server/provider/defineLaunchSource': { scenario: LISTS_LAUNCHES, refusal: DEFINES_SOURCES, cleanup: LISTS_LAUNCHES },
+    'server/provider/defineProblemSource': { scenario: REPORTS, refusal: DEFINES_SOURCES },
     'server/call/log.info': { scenario: SECRET },
     'server/call/machine.run': { scenario: "checks a machine action's input, and throws for one of the wrong shape" },
     'server/call/onEvent': { scenario: HEARS, cleanup: DEAF },

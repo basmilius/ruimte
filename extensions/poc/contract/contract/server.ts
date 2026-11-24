@@ -29,6 +29,20 @@ export interface ServerWorld {
     variable(terminal: string, name: string): Promise<string | undefined>;
     /* An agent in this terminal asks the person something, as its hook reports it. */
     waits(terminal: string): Promise<void>;
+    /* What a launch source lists in `project`, read as the machine reads it, which also has the source tell of changes. */
+    launches(source: string): Promise<{ title: string; launches: Server.LaunchDescription[] }>;
+    /* How often a launch source said its list changed. */
+    launchChanges(source: string): Promise<number>;
+    /* Has a launch source stop telling of changes, as when the project closes. */
+    unfollowLaunches(source: string): Promise<void>;
+    /* A launch of `project` changed what it does, as the machine's runner says it. */
+    launchIs(launch: string, state: 'running' | 'exited', exitCode: number | null): void;
+    /* A client opened `project`, or the last one closed it. */
+    projectIs(open: boolean): void;
+    /* What the problem sources hold of `project` now: per source and file, the message of each problem. */
+    problems(): Promise<{ source: string; path: string; messages: string[] }[]>;
+    /* Writes a text file of `project`, by its path in the folder, as a person saving it would. */
+    writeFile(path: string, text: string): Promise<void>;
 }
 
 /* What a scenario puts in the manifest beside its permissions, and where the extension came from: a dev link unless it says installed. */
@@ -43,6 +57,11 @@ export type OpenServerWorld = (permissions: Record<string, string>, manifest?: W
 const SENDS = { 'chats.send': 'Says hello' };
 const TERMINALS = { 'canvas.write': 'Opens', 'terminals.write': 'Types', 'terminals.profiles': 'Adds a shell' };
 const PROFILE: WorldManifest = { provides: { terminalProfiles: ['probe-shell'] }, proposed: ['terminalProfiles'] };
+const PROVIDES = { 'launches.provide': 'Lists launches', 'problems.provide': 'Reports problems' };
+const SOURCES: WorldManifest = {
+    provides: { launchSources: ['probe-launches'], problemSources: ['probe-problems'] },
+    proposed: ['launchSources', 'problemSources']
+};
 const NOT_FINAL =
     'This extension uses a part of Ruimte that is not final yet (terminalProfiles). It works while its author develops it, and an installed extension cannot use it.';
 
@@ -268,6 +287,187 @@ export function serverContract(open: OpenServerWorld): void {
         test('does not load with a proposed part as an extension a person installed', async () => {
             await expect(open(TERMINALS, { ...PROFILE, provenance: 'installed' })).rejects.toThrow(NOT_FINAL);
             await expect(open(TERMINALS, { proposed: ['terminalProfiles'], provenance: 'installed' })).rejects.toThrow(NOT_FINAL);
+        });
+
+        test('lists its launches for the machine to start, and tells when they change until it is asked to stop', async () => {
+            const world = await open(PROVIDES, SOURCES);
+
+            expect(await world.launches('probe-launches')).toEqual({
+                title: 'Probe launches',
+                launches: [
+                    { id: 'serve', name: 'Serve', kind: 'service', spawn: { command: 'sh', args: ['-c', 'serve'] }, fingerprint: 'revision-1', port: 4000 }
+                ]
+            });
+            expect(await world.logs()).toContainEqual(expect.stringMatching(/^probe-launches listed a launch that is none: id /));
+            expect(await world.call('bump')).toEqual({ ok: true, value: null });
+            expect(await world.launchChanges('probe-launches')).toBe(1);
+            expect((await world.launches('probe-launches')).launches[0]?.fingerprint).toBe('revision-2');
+
+            await world.unfollowLaunches('probe-launches');
+            await world.call('bump');
+
+            expect(await world.launchChanges('probe-launches')).toBe(1);
+        });
+
+        test('defines a launch source and a problem source only when its manifest asks for each, names it as proposed and lists it', async () => {
+            const allowed = await open(PROVIDES, SOURCES);
+            const unasked = await open({});
+            const unnamed = await open(PROVIDES);
+            const unlisted = await open(PROVIDES, { provides: { launchSources: ['another'], problemSources: ['another'] }, proposed: SOURCES.proposed ?? [] });
+
+            expect(await allowed.call('sourcesRefused')).toEqual({ ok: true, value: { launches: null, problems: null } });
+            expect(await unasked.call('sourcesRefused')).toEqual({
+                ok: true,
+                value: {
+                    launches: `${ID} did not ask for the permission launches.provide in its manifest`,
+                    problems: `${ID} did not ask for the permission problems.provide in its manifest`
+                }
+            });
+            expect(await unnamed.call('sourcesRefused')).toEqual({
+                ok: true,
+                value: {
+                    launches: 'defineLaunchSource is still proposed; name launchSources under proposed in manifest.json',
+                    problems: 'defineProblemSource is still proposed; name problemSources under proposed in manifest.json'
+                }
+            });
+            expect(await unlisted.call('sourcesRefused')).toEqual({
+                ok: true,
+                value: {
+                    launches: 'defineLaunchSource got probe-launches, which manifest.json does not list under provides.launchSources',
+                    problems: 'defineProblemSource got probe-problems, which manifest.json does not list under provides.problemSources'
+                }
+            });
+            expect(await unlisted.call('reports', unlisted.project, 'probe-problems', [])).toEqual({
+                ok: true,
+                value: { ok: false, error: { code: 'not-found', message: `${ID} supplies no problem source probe-problems` } }
+            });
+        });
+
+        test('reports the problems of a source file by file, replaces what it said of a file and takes it all back', async () => {
+            const world = await open(PROVIDES, SOURCES);
+            const todo = { line: 2, column: 4, severity: 'warning', message: 'A TODO is left here', code: 'todo' };
+            const long = { line: 9, severity: 'hint', message: 'This line is long' };
+
+            expect(
+                await world.call('reports', world.project, 'probe-problems', [
+                    { path: 'src/a.ts', problems: [todo, long] },
+                    { path: 'src/b.ts', problems: [long] }
+                ])
+            ).toEqual({ ok: true, value: { ok: true, keys: ['ok', 'value'], value: 'undefined' } });
+            expect(await world.problems()).toEqual([
+                { source: 'probe-problems', path: 'src/a.ts', messages: ['A TODO is left here', 'This line is long'] },
+                { source: 'probe-problems', path: 'src/b.ts', messages: ['This line is long'] }
+            ]);
+
+            // Only the files a report names: `a.ts` is replaced, `b.ts` stays, and a file with nothing is cleared.
+            await world.call('reports', world.project, 'probe-problems', [{ path: 'src/a.ts', problems: [long] }]);
+
+            expect((await world.problems()).map((file) => [file.path, file.messages.length])).toEqual([
+                ['src/a.ts', 1],
+                ['src/b.ts', 1]
+            ]);
+
+            await world.call('reports', world.project, 'probe-problems', [{ path: 'src/b.ts', problems: [] }]);
+
+            expect((await world.problems()).map((file) => file.path)).toEqual(['src/a.ts']);
+            expect(await world.call('clears', world.project, 'probe-problems')).toMatchObject({ ok: true, value: { ok: true } });
+            expect(await world.problems()).toEqual([]);
+        });
+
+        test('reports no problem without its permission, outside the project or past what the machine holds of one file', async () => {
+            const world = await open(PROVIDES, SOURCES);
+            const refused = await open({});
+            const many = Array.from({ length: 201 }, (_, index) => ({ line: index + 1, severity: 'hint', message: 'Too much' }));
+
+            expect(await refused.call('reports', refused.project, 'probe-problems', [])).toEqual(denied('problems.provide'));
+            expect(await refused.call('clears', refused.project, 'probe-problems')).toEqual(denied('problems.provide'));
+            expect(await world.call('reports', world.project, 'probe-problems', [{ path: '../elsewhere.ts', problems: [many[0]] }])).toEqual({
+                ok: true,
+                value: { ok: false, error: { code: 'outside-project', message: '../elsewhere.ts is outside the project folder' } }
+            });
+            expect(await world.call('reports', world.project, 'probe-problems', [{ path: 'src/a.ts', problems: many }])).toEqual({
+                ok: true,
+                value: { ok: false, error: { code: 'limit', message: 'A source reports at most 200 problems per file and 500 files at once' } }
+            });
+            expect(await world.problems()).toEqual([]);
+        });
+
+        test('reads and lists the files of a project, and hears a file change until it stops following it', async () => {
+            const world = await open({ 'files.read': 'Reads' });
+
+            await world.writeFile('notes/today.md', 'Hello');
+            await world.writeFile('notes/sub/deep.md', 'Deep');
+
+            expect(await world.call('readsFile', world.project, 'notes/today.md')).toEqual({ ok: true, value: { ok: true, value: 'Hello' } });
+            expect(await world.call('listsFolder', world.project, 'notes')).toEqual({ ok: true, value: ['directory sub', 'file today.md'] });
+            expect(await world.call('watchesFile', world.project, 'notes/today.md')).toEqual({ ok: true, value: null });
+
+            await world.writeFile('notes/today.md', 'Hello again');
+            await world.writeFile('notes/sub/deep.md', 'Deeper');
+
+            expect(await world.call('readsFile', world.project, 'notes/today.md')).toEqual({ ok: true, value: { ok: true, value: 'Hello again' } });
+            expect(await world.call('fileChanges', 'notes/today.md')).toEqual({ ok: true, value: 1 });
+            expect(await world.call('unwatchesFile', 'notes/today.md')).toEqual({ ok: true, value: null });
+
+            await world.writeFile('notes/today.md', 'Hello once more');
+
+            expect(await world.call('fileChanges', 'notes/today.md')).toEqual({ ok: true, value: 1 });
+        });
+
+        test('reads, lists and follows no file without files.read, and none outside the project', async () => {
+            const allowed = await open({ 'files.read': 'Reads' });
+            const refused = await open({});
+            const outside: Server.Result<unknown> = {
+                ok: true,
+                value: { ok: false, error: { code: 'outside-project', message: '../secret is outside the project folder' } }
+            };
+
+            expect(await refused.call('readsFile', refused.project, 'notes.md')).toEqual(denied('files.read'));
+            expect(await refused.call('listsFolder', refused.project, '.')).toEqual(denied('files.read'));
+            expect(await refused.call('watchesFile', refused.project, 'notes.md')).toEqual(denied('files.read'));
+            expect(await allowed.call('readsFile', allowed.project, '../secret')).toEqual(outside);
+            expect(await allowed.call('listsFolder', allowed.project, '../secret')).toEqual(outside);
+            expect(await allowed.call('watchesFile', allowed.project, '../secret')).toEqual(outside);
+        });
+
+        test('hears a launch change and a project open and close in a shape of its own, each only with its permission', async () => {
+            const allowed = await open({ 'launches.read': 'Follows launches', 'projects.read': 'Follows projects' });
+            const refused = await open({});
+
+            // A first call, so `server/` runs and follows the events before they are fired.
+            await allowed.call('machineHeard');
+            await refused.call('machineHeard');
+
+            for (const world of [allowed, refused]) {
+                world.projectIs(true);
+                world.launchIs('web', 'running', null);
+                world.launchIs('web', 'exited', 1);
+                world.projectIs(false);
+            }
+
+            const project = { id: allowed.project };
+
+            expect(await allowed.call('machineHeard')).toEqual({
+                ok: true,
+                value: {
+                    heard: [
+                        { 'project.opened': { project: { id: allowed.project, name: expect.any(String), folder: expect.any(String) } } },
+                        { 'launch.status': { project, launch: 'web', state: 'running', exitCode: null } },
+                        { 'launch.status': { project, launch: 'web', state: 'exited', exitCode: 1 } },
+                        { 'project.closed': { project } }
+                    ],
+                    // Its filter names another project, so it hears none of this one.
+                    elsewhere: []
+                }
+            });
+            expect(await refused.call('machineHeard')).toEqual({ ok: true, value: { heard: [], elsewhere: [] } });
+            expect(await refused.logs()).toEqual(
+                expect.arrayContaining([
+                    'launch.status needs the permission launches.read in manifest.json',
+                    'project.opened needs the permission projects.read in manifest.json',
+                    'project.closed needs the permission projects.read in manifest.json'
+                ])
+            );
         });
 
         test("checks a machine action's input, and throws for one of the wrong shape", async () => {

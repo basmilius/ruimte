@@ -62,6 +62,8 @@ export interface WorldSeed {
     views?: { id: string; kind: string; name: string }[];
     /* The methods of `server/`, as `useServer` reaches them. */
     server?: Record<string, (...args: never[]) => unknown>;
+    /* What the machine answers an action it runs for the extension, by the action's name, in the shape the API promises. */
+    actions?: Record<string, (input: unknown) => unknown>;
     /* The pieces `agents.stream` answers. */
     stream?: string[];
     /* What the run does after its pieces: fail with this message, or wait until it is stopped. It ends by default. */
@@ -164,6 +166,8 @@ const CALLS: Readonly<Record<string, (api: typeof Client) => unknown>> = {
     'launches.start': (api) => api.launches.start({ launch: 'web' }),
     'launches.restart': (api) => api.launches.restart({ launch: 'web' }),
     'launches.stop': (api) => api.launches.stop({ launch: 'web' }),
+    'launches.create': (api) => api.launches.create({ name: 'Web', kind: 'service', command: 'bun dev' }),
+    'launches.edit': (api) => api.launches.edit({ launch: 'web', command: 'bun run dev' }),
     'routines.list': (api) => api.routines.list(),
     'routines.run': (api) => api.routines.run({ routine: 'nightly' }),
     'routines.pause': (api) => api.routines.pause({ routine: 'nightly' }),
@@ -932,6 +936,22 @@ export function clientContract(open: OpenClientWorld): void {
             const screen = await world.render(Kinds);
 
             expect(screen.text()).toBe('Plan canvas, Board unknown');
+        });
+
+        test('adds a launch and changes one through the machine, which is handed what the call gave', async () => {
+            const asked: unknown[] = [];
+            const saved = (input: unknown) => {
+                asked.push(input);
+
+                return { id: 'web', name: 'Web' };
+            };
+            const world = await open({ 'launches.write': 'Adds a launch' }, { actions: { 'launch.create': saved, 'launch.edit': saved } });
+            const added = { name: 'Web', kind: 'service' as const, command: 'bun dev', env: { PORT: '5173' } };
+            const changed = { launch: 'web', env: { PORT: null } };
+
+            expect(await world.api.launches.create(added)).toEqual({ ok: true, value: { id: 'web', name: 'Web' } });
+            expect(await world.api.launches.edit(changed)).toEqual({ ok: true, value: { id: 'web', name: 'Web' } });
+            expect(asked).toEqual([added, changed]);
         });
 
         test('tells a watch of a folder that a file under it changed, until it stops', async () => {

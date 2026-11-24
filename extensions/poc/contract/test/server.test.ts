@@ -38,7 +38,23 @@ serverContract(async (permissions, { provenance, ...manifest } = {}) => {
             if (waiting !== undefined) {
                 waiting.needsYou = true;
             }
-        }
+        },
+        launches: async (source) => ({ title: server.launchSource(source).title, launches: await server.launchSource(source).list() }),
+        launchChanges: async (source) => server.launchSource(source).changes,
+        unfollowLaunches: (source) => server.launchSource(source).stop(),
+        launchIs: (launch, state, exitCode) => server.fire('launch.status', { project: { id: 'project-a' }, launch, state, exitCode }),
+        projectIs: (open) => {
+            if (open) {
+                server.fire('project.opened', { project: { id: 'project-a', name: 'Project', folder: '/project' } });
+            } else {
+                server.fire('project.closed', { project: { id: 'project-a' } });
+            }
+        },
+        problems: async () =>
+            server.problems.flatMap(({ source, files }) =>
+                files.map((file) => ({ source, path: file.path, messages: file.problems.map((problem) => problem.message) }))
+            ),
+        writeFile: async (path, text) => server.writeFile(path, text)
     };
 });
 

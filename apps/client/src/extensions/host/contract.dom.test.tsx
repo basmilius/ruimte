@@ -278,6 +278,15 @@ clientContract(async (permissions, seed = {}) => {
             throw new TransportError('failed', e instanceof Error ? e.message : String(e));
         }
     });
+    answer('extension.action', ({ action, input }) => {
+        const run = seed.actions !== undefined && Object.hasOwn(seed.actions, action) ? seed.actions[action] : undefined;
+
+        if (run === undefined) {
+            throw new TransportError('unavailable', `This machine does not run ${action} for an extension`);
+        }
+
+        return { output: run(input) };
+    });
     answer('extension.agentStream', async ({ runId }) => {
         asked.resolve();
 

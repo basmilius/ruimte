@@ -1,9 +1,9 @@
 import { afterAll, afterEach, beforeAll } from 'bun:test';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
-import { ExtensionMessageEventSchema, type ProjectContent } from '@ruimte/contracts';
+import { ExtensionMessageEventSchema, extensionProjectPath, type ProjectContent } from '@ruimte/contracts';
 import { serverContract, ID } from '../../../../extensions/poc/contract/contract/server.ts';
 import { serverActions } from '../actions/server-actions-test-helpers.ts';
 import { markDrawnChat } from '../projects/drawn-chat.ts';
@@ -12,10 +12,11 @@ import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
 import { extensionChatStarter } from './extension-chat.ts';
-import { ExtensionHost } from './extension-host.ts';
+import { ExtensionHost, type ExtensionFilesPort } from './extension-host.ts';
 import { runMachineAction } from './machine-actions.ts';
 import { buildExtension, packExtension } from './pack.ts';
 import { terminalWriteRefusal } from './policy.ts';
+import { ExtensionProblems } from './problems.ts';
 import { ExtensionRefusal, extensionFailureOf } from './refusal.ts';
 import { ExtensionStore } from './store.ts';
 import { ExtensionTerminals, extensionTerminalOpener } from './terminals.ts';
@@ -51,6 +52,72 @@ afterAll(async () => {
     projects.closeAll();
     rmSync(root, { recursive: true, force: true });
 });
+
+/*
+ * The files of the project in memory, behind the port the machine's own reads go through, so a change is told the moment
+ * a scenario writes it and no watcher of the disk decides when. `project-files.test.ts` holds the real port.
+ */
+function memoryFiles(folder: string): { port: ExtensionFilesPort; write(path: string, text: string): void } {
+    const texts = new Map<string, string>();
+    const watches = new Map<string, { path: string; changed(): void }>();
+    const placed = (path: string): string => {
+        const full = extensionProjectPath(folder, path);
+
+        if (full === null) {
+            throw new ExtensionRefusal('outside-project', `${path} is outside the project folder`);
+        }
+
+        return relative(folder, full);
+    };
+
+    return {
+        port: {
+            readText: async (_projectId, path) => {
+                const text = texts.get(placed(path));
+
+                if (text === undefined) {
+                    throw new ExtensionRefusal('not-found', `No file ${path} in the project`);
+                }
+
+                return text;
+            },
+            list: async (_projectId, listed) => {
+                const under = placed(listed) === '' ? '' : `${placed(listed)}/`;
+                const names = new Map<string, 'file' | 'directory'>();
+
+                for (const path of texts.keys()) {
+                    if (path.startsWith(under)) {
+                        const [name, ...deeper] = path.slice(under.length).split('/') as [string, ...string[]];
+
+                        names.set(name, deeper.length === 0 ? 'file' : 'directory');
+                    }
+                }
+
+                return [...names]
+                    .toSorted(([left, leftKind], [right, rightKind]) =>
+                        leftKind === rightKind ? left.localeCompare(right) : leftKind === 'directory' ? -1 : 1
+                    )
+                    .map(([name, kind]) => ({ path: join(folder, under, name), name, kind }));
+            },
+            watch: async (extensionId, watch, _projectId, path, changed) => void watches.set(`${extensionId}:${watch}`, { path: placed(path), changed }),
+            unwatch: (extensionId, watch) => void watches.delete(`${extensionId}:${watch}`),
+            unwatchAll: (extensionId) => {
+                for (const key of [...watches.keys()].filter((each) => each.startsWith(`${extensionId}:`))) {
+                    watches.delete(key);
+                }
+            }
+        },
+        write: (path, text) => {
+            texts.set(path, text);
+
+            for (const watch of [...watches.values()]) {
+                if (watch.path === '' || watch.path === path || path.startsWith(`${watch.path}/`)) {
+                    watch.changed();
+                }
+            }
+        }
+    };
+}
 
 /*
  * The machine's own host with `poc.contract` under these permissions, in a process of its own: packed and installed,
@@ -93,8 +160,15 @@ serverContract(async (permissions, { provenance, ...provided } = {}) => {
             });
         }
     });
+    const project = { id: projectId, name: 'Shop', folder: projectFolder };
+    const files = memoryFiles(projectFolder);
+    const problems = new ExtensionProblems({ folderOf: (id) => projects.index.folderOf(id), holders: () => [] });
+    const launchChanges = new Map<string, number>();
     const host: ExtensionHost = new ExtensionHost({
         store,
+        projectFiles: () => files.port,
+        problems: () => problems,
+        launchesChanged: (_id, source) => void launchChanges.set(source, (launchChanges.get(source) ?? 0) + 1),
         terminals: () => ({
             open: openTerminal,
             read: async () => 'The screen',
@@ -193,6 +267,41 @@ serverContract(async (permissions, { provenance, ...provided } = {}) => {
                 message: 'Claude needs your permission to use Bash'
             });
         },
+        launches: async (source) => {
+            const listed = (await host.launchSources(project)).find((listing) => listing.source === source);
+
+            if (listed === undefined) {
+                throw new Error(`${ID} lists no launch source ${source}`);
+            }
+
+            await host.watchLaunchSource(ID, source, project, true);
+
+            return { title: listed.title, launches: listed.launches };
+        },
+        launchChanges: async (source) => launchChanges.get(source) ?? 0,
+        unfollowLaunches: (source) => host.watchLaunchSource(ID, source, project, false),
+        launchIs: (launch, state, exitCode) =>
+            host.forwardEvent('launch.status', {
+                projectId,
+                launchId: launch,
+                sessionId: `launch-${launch}`,
+                kind: 'service',
+                state,
+                exitCode,
+                startedAt: 1,
+                endedAt: state === 'exited' ? 2 : null,
+                port: null,
+                url: null,
+                stopped: false
+            }),
+        projectIs: (open) => host.forwardEvent(open ? 'project.opened' : 'project.closed', open ? { project } : { projectId }),
+        problems: async () =>
+            problems.of(projectId).map((file) => ({
+                source: file.server.slice(ID.length + 1),
+                path: file.path,
+                messages: file.problems.map((problem) => problem.message)
+            })),
+        writeFile: async (path, text) => files.write(path, text),
         logs: async () =>
             readFileSync(store.logFile(ID), 'utf8')
                 .split('\n')
