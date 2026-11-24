@@ -6,6 +6,11 @@ export const metadata = { title: 'Changes to the API' };
 
 API version `1` is a preview. It goes to a small group of invited developers first, and it can still change before Ruimte offers extensions to everyone. Every change lands on this page, newest first, with what an extension has to do about it.
 
+## 1, preview, code hosts and issue trackers (November 2026)
+
+- `defineHostProvider` in `server/` supplies the issues, changes and checks of a project to the Issues panel and to the tools agents read them with. It is a proposed part, behind the new permission `hosts.provide`.
+- `createTestServer` has `hostProvider(id)`, which asks a provider as the machine does, and `checkHostProvider` holds one to the rules every provider keeps.
+
 ## 1, preview, launch sources and problems (November 2026)
 
 - `defineLaunchSource` in `server/` lists launches Ruimte starts, each only after the person approved its command, folder, variables and fingerprint. It is a proposed part, behind `launches.provide`.

@@ -188,6 +188,21 @@ expect(after?.fingerprint).not.toBe(before?.fingerprint);
 
 `list` leaves out a launch the machine would not take, and `logs` says why. `fire('project.opened', { project })` and `fire('launch.status', ...)` hand over the machine events of the same name.
 
+`hostProvider(id)` asks a [host provider](/docs/extensions/server#code-hosts-and-issue-trackers) what the machine asks it, and hands back each answer as the machine reads it: named `<provider>:<id>`, cut to what Ruimte holds, with a check state it does not know as `failure`. `checkHostProvider` runs the rules every provider keeps against your fake service or recorded answers, and rejects with each rule it broke:
+
+```ts
+const machine = await createTestServer<typeof server>();
+const provider = machine.hostProvider('trackline');
+
+await checkHostProvider(provider, {
+    scope: {
+        remote: 'git@trackline.test:acme/shop.git'
+    }
+});
+
+expect((await provider.issues({ assigned: true })).issues[0]?.ref).toBe('trackline:TRK-101');
+```
+
 A test server runs your extension as `ruimte extension dev` does, so a [proposed part](/docs/extensions/manifest#proposed-parts) works. With `provenance: 'installed'` it runs it as an extension a person installed, and `createTestServer` rejects with what that person reads in Settings. In a test host, `terminals` lists what `terminals.open` opened and what was typed into each.
 
 Each test host and test server loads your files afresh, so no state carries from one test to the next. A package from `node_modules` loads once.
