@@ -2046,6 +2046,65 @@
                 "action": "Opnieuw starten",
                 "failed": "Ruimte kon niet opnieuw starten om hier een machine te draaien. Probeer het opnieuw."
             }
+        },
+        "sources": {
+            "title": "Van {{source}}",
+            "subtitle": "{{place}}, van {{source}}",
+            "stop": "Stoppen",
+            "row": {
+                "idle": "Niet gestart",
+                "running": "Hier draait een machine",
+                "preparing": "Bezig met voorbereiden",
+                "held": "Wacht op je goedkeuring",
+                "starting": "Bezig met starten",
+                "joining": "Wacht tot je inlogt",
+                "done": "Gestart",
+                "failed": "Niet gestart",
+                "stopped": "Gestopt"
+            },
+            "start": {
+                "label": "Hier een machine starten",
+                "description": "Je ziet wat er op deze computer draait voordat er iets start.",
+                "action": "Starten"
+            },
+            "running": {
+                "label": "Hier draait al een machine",
+                "description": "Zodra die op je account staat, vind je hem in de lijst met machines."
+            },
+            "preparing": {
+                "label": "{{source}} wordt gevraagd wat er moet draaien"
+            },
+            "held": {
+                "title": "Dit op deze computer uitvoeren?",
+                "description": "{{source}} las dit uit een bestand in dit project. Er draait niets tot je het goedkeurt, en na een wijziging van dat bestand vraagt Ruimte het opnieuw.",
+                "signIn": "Inloggen op de nieuwe machine",
+                "folder": "In {{folder}}",
+                "ask": "Dit draait na elkaar, in deze volgorde.",
+                "approve": "Goedkeuren en starten",
+                "cancel": "Annuleren"
+            },
+            "starting": {
+                "label": "De machine start"
+            },
+            "joining": {
+                "label": "Zet de nieuwe machine op je account",
+                "description": "Open de pagina die hieronder staat, log in en controleer of daar dezelfde code staat. Daarna staat de machine in de lijst.",
+                "open": "Pagina openen"
+            },
+            "done": {
+                "label": "De machine draait",
+                "description": "Hij staat in de lijst met machines, op je account. Open hem daar."
+            },
+            "failed": {
+                "label": "De machine is niet gestart"
+            },
+            "stopped": {
+                "label": "Gestopt",
+                "description": "Ruimte heeft niets verwijderd van wat de start had gemaakt."
+            },
+            "log": {
+                "title": "Wat het schreef"
+            }
         }
     },
     "nav": {

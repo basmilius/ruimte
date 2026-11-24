@@ -2046,6 +2046,65 @@
                 "action": "Restart",
                 "failed": "Ruimte could not restart to run a machine here. Try again."
             }
+        },
+        "sources": {
+            "title": "From {{source}}",
+            "subtitle": "{{place}}, from {{source}}",
+            "stop": "Stop",
+            "row": {
+                "idle": "Not started",
+                "running": "A machine runs here",
+                "preparing": "Getting ready",
+                "held": "Waits for your approval",
+                "starting": "Starting",
+                "joining": "Waits for you to sign in",
+                "done": "Started",
+                "failed": "Did not start",
+                "stopped": "Stopped"
+            },
+            "start": {
+                "label": "Start a machine here",
+                "description": "You see what runs on this computer before anything starts.",
+                "action": "Start"
+            },
+            "running": {
+                "label": "A machine already runs here",
+                "description": "Once it is on your account, it is in the list of machines."
+            },
+            "preparing": {
+                "label": "Asking {{source}} what to run"
+            },
+            "held": {
+                "title": "Run this on this computer?",
+                "description": "{{source}} read this from a file in this project. Nothing runs until you approve it, and a change to that file asks you again.",
+                "signIn": "Sign in on the new machine",
+                "folder": "In {{folder}}",
+                "ask": "These run one after another, in this order.",
+                "approve": "Approve and start",
+                "cancel": "Cancel"
+            },
+            "starting": {
+                "label": "Starting the machine"
+            },
+            "joining": {
+                "label": "Add the new machine to your account",
+                "description": "Open the page named below, sign in and check that it shows the same code. After that the machine is in the list.",
+                "open": "Open the page"
+            },
+            "done": {
+                "label": "The machine runs",
+                "description": "It is in the list of machines, on your account. Open it from there."
+            },
+            "failed": {
+                "label": "The machine did not start"
+            },
+            "stopped": {
+                "label": "Stopped",
+                "description": "Ruimte removed nothing the start had made."
+            },
+            "log": {
+                "title": "What it wrote"
+            }
         }
     },
     "nav": {
