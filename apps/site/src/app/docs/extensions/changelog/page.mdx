@@ -6,6 +6,11 @@ export const metadata = { title: 'Changes to the API' };
 
 API version `1` is a preview. It goes to a small group of invited developers first, and it can still change before Ruimte offers extensions to everyone. Every change lands on this page, newest first, with what an extension has to do about it.
 
+## 1, preview, references and slash commands from the machine (November 2026)
+
+- `defineReference` and `defineSlashCommand` also exist in `server/`. What they offer after `#` and `/` shows in every client of the machine, also one that did not load your `client/`. Both are proposed parts, behind the new permission `composer.provide`.
+- The ones in `client/` stay as they are. An extension needs no change.
+
 ## 1, preview, live data for a chat (November 2026)
 
 - `defineUiSource` in `server/` gives the blocks an agent writes in a chat live data of your extension, drawn by the components Ruimte has. It is a proposed part, behind the new permission `ui.provide`.

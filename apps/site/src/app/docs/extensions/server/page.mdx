@@ -313,6 +313,40 @@ defineMachineSource({
 - A source lists at most 16 places, and a start has at most 16 steps. `cwd` in `spawn` stays inside the project folder or one of its worktrees.
 - `defineMachineSource` throws for an id the manifest does not list, so call it as the module loads.
 
+## References and slash commands
+
+`defineReference` and `defineSlashCommand` of `client/` add to `#` and `/` in a chat, in the window that loaded your client part. The same two in `server/` add them from the machine, so they show in every client of it, such as a phone. Both are [proposed parts](/docs/extensions/manifest#proposed-parts): name `references` and `slashCommands` under `proposed`, list the ids and the names under `provides` and ask for `composer.provide`.
+
+```ts
+defineReference({
+    id: 'tickets',
+    title: 'Tickets',
+    async list({ project }) {
+        const tickets = await ticketsOf(project.folder);
+
+        return tickets.map((ticket) => ({
+            id: ticket.key,
+            name: `${ticket.key} ${ticket.title}`
+        }));
+    },
+    read: (ticket) => textOf(ticket.id)
+});
+
+defineSlashCommand({
+    name: 'ticket',
+    description: 'Puts a ticket in the prompt, by its key',
+    run: (args) => textOf(args.trim())
+});
+```
+
+- Both come down to text in the prompt. The person reads it there and still sends it, so neither starts or sends anything.
+- `list` answers at most 200 things, each with an `id` and a `name` of at most 200 characters. `read` and `run` answer at most 100,000 characters.
+- Both get the project of the chat. Ruimte starts your server part for the list.
+- After a throw the prompt gets a line with your message in place of the text.
+- A reference with the id your client part also uses shows once, and so does a command with the same name. In that window the client's is the one that runs.
+- The name of a command is of lowercase letters, digits and dashes.
+- Both throw for an id or a name the manifest does not list, so call them as the module loads.
+
 ## Live data for a chat
 
 An agent answers with blocks: a table, a chart, a list of entries. A UI source gives those blocks live data of your extension, so the agent writes where the rows come from and Ruimte reads them again while the chat is on screen. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `uiSources` under `proposed`, list the id under `provides.uiSources` and ask for `ui.provide`.

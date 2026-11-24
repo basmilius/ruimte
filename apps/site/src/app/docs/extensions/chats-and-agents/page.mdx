@@ -70,6 +70,8 @@ defineReference({
 });
 ```
 
+Both show in the window that loaded your client part. For a phone, define them in the server part too ([References and slash commands](/docs/extensions/server#references-and-slash-commands)).
+
 ## Running an agent
 
 `agents.run` runs one hidden prompt on one of the person's own CLIs and answers the text whole. `agents.stream` gives the same answer in pieces as the CLI writes them. Both need `agents.run`, and both answer a `Result` ([When a call fails](/docs/extensions/machine#when-a-call-fails)). A stream that fails ends with a piece whose `ok` is false.

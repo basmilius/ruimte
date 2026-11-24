@@ -201,6 +201,16 @@ expect(start.steps.map((step) => step.title)).toEqual(['Build the image', 'Start
 
 Pass `{ signal }` to stop the start while the source describes it. `start` rejects for a description the machine would not take.
 
+`reference(id)` and `slashCommand(name)` ask what your server part offers after `#` and `/`:
+
+```ts
+const tickets = machine.reference('tickets');
+const [first] = await tickets.list();
+
+expect(await tickets.read(first)).toContain(first.name);
+expect(await machine.slashCommand('ticket').run('T-1')).toStartWith('T-1');
+```
+
 `uiSource(id)` reads a UI source as the machine reads it for a block, and holds the answer to the same size:
 
 ```ts

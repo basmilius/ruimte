@@ -68,6 +68,8 @@ Ruimte reads the list without starting the server part, so a provider shows befo
 | `machineSources` | [`defineMachineSource`](/docs/extensions/server#machine-sources) | `machines.provide` |
 | `notificationChannels` | [`defineNotificationChannel`](/docs/extensions/server#notification-channels) | `notifications.provide` |
 | `uiSources` | [`defineUiSource`](/docs/extensions/server#live-data-for-a-chat) | `ui.provide` |
+| `references` | [`defineReference`](/docs/extensions/server#references-and-slash-commands) | `composer.provide` |
+| `slashCommands` | [`defineSlashCommand`](/docs/extensions/server#references-and-slash-commands) | `composer.provide` |
 
 ## Proposed parts
 
@@ -88,6 +90,8 @@ The machine decides this on where it knows an extension came from, never on the 
 | `machineSources` | `provides.machineSources` and `defineMachineSource` |
 | `notificationChannels` | `provides.notificationChannels` and `defineNotificationChannel` |
 | `uiSources` | `provides.uiSources` and `defineUiSource` |
+| `references` | `provides.references` and `defineReference` in `server/` |
+| `slashCommands` | `provides.slashCommands` and `defineSlashCommand` in `server/` |
 
 ## The mark
 
@@ -129,6 +133,7 @@ Reading what is on screen needs no permission. Everything else does, and the API
 | `machines.provide` | List places where Ruimte can start a machine, each started only after the person approved what runs. |
 | `notifications.provide` | Deliver what Ruimte tells the person about their agents, once they turned the channel on. |
 | `ui.provide` | Give the blocks an agent writes in a chat live data to draw. |
+| `composer.provide` | Offer things after `#` and commands after `/` in a chat from the machine. |
 | `projects.read` | Hear when a project opens and closes. |
 | `routines.read` | List routines. |
 | `routines.run` | Run, pause and resume routines. |
