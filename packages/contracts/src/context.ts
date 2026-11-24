@@ -65,6 +65,7 @@ export const CONTEXT_VERBS = [
     'language',
     'template',
     'provider',
-    'computer'
+    'computer',
+    'hosts'
 ] as const;
 export type ContextVerb = (typeof CONTEXT_VERBS)[number];

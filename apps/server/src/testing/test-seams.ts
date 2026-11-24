@@ -185,7 +185,8 @@ export function testSeams(choices: TestSeamChoices, overrides: Partial<DaemonSea
         git: {
             worktrees: ({ home: gitHome, agents, now, checkoutRoot, foreign }) => new NoWorktrees(gitHome, agents, now, checkoutRoot, foreign),
             checkpoints: (gitHome: string, machineHome: MachineHome) => new NoCheckpoints(gitHome, machineHome),
-            repositoryOf: async () => null
+            repositoryOf: async () => null,
+            hostCheckouts: { repos: async () => [], of: async () => null }
         },
         projectStore: ({ home: storeHome, links, overlays }) => new ProjectStore(storeHome, links, overlays),
         nameChat: async () => null,

@@ -234,6 +234,165 @@ export const problems: {
     clear(project: ProjectRef, source: string): Promise<Result<void>>;
 };
 
+/** Where a host provider is asked: the project, and for a code host the remote of the checkout it matched. */
+export interface HostScope {
+    project: ProjectInfo;
+    remote?: string;
+}
+
+/**
+ * Whether the provider answers for this project now. `not-configured` is a tracker's way to say the project is not one of
+ * its own, which leaves it out there. `reason` is what a person reads for `signed-out` and `unreachable`, such as how to sign in.
+ */
+export interface HostStatus {
+    state: 'ready' | 'signed-out' | 'unreachable' | 'not-configured';
+    reason?: string;
+    /** Whose account it reads with, as the host names them. */
+    account?: string;
+}
+
+/** A page of a list. `cursor` is there while the host has more, and comes back as the `cursor` of the next ask. */
+export interface HostPage<Item> {
+    items: Item[];
+    cursor?: string;
+}
+
+export interface HostIssueSummary {
+    /** Its own name within the provider, such as `ENG-12` or `owner/repo#61`. Ruimte puts the provider's id in front. */
+    id: string;
+    title: string;
+    state: 'open' | 'closed';
+    /** The host's own word for the state, for display. */
+    stateLabel?: string;
+    /** An http(s) address a person opens. */
+    url?: string;
+    author?: string;
+    assignees?: string[];
+    labels?: string[];
+    /** ISO 8601. */
+    updatedAt?: string;
+    commentCount?: number;
+}
+
+export interface HostComment {
+    id: string;
+    author: string;
+    body: string;
+    createdAt?: string;
+}
+
+export interface HostIssue extends HostIssueSummary {
+    body: string;
+    /** Oldest first. Ruimte keeps the newest 100. */
+    comments?: HostComment[];
+    /** The changes the host links to it. */
+    changes?: HostChangeSummary[];
+}
+
+/** `pending`, `success`, `failure`, `neutral` or `skipped`. Any other word reads as `failure`, so say one of these for a check that passed. */
+export type HostCheckState = 'pending' | 'success' | 'failure' | 'neutral' | 'skipped';
+
+export interface HostChangeSummary {
+    id: string;
+    title: string;
+    state: 'open' | 'closed' | 'merged';
+    stateLabel?: string;
+    draft?: boolean;
+    url?: string;
+    author?: string;
+    /** The branch it comes from, and the one it goes into. */
+    branch?: string;
+    base?: string;
+    updatedAt?: string;
+    /** Its checks as one state, for a list that knows it without reading each check. */
+    checkState?: HostCheckState;
+}
+
+export interface HostCheck {
+    /** What `checks.log` is asked by. */
+    name: string;
+    state: HostCheckState;
+    url?: string;
+    summary?: string;
+}
+
+/** A review thread nobody resolved yet, by its first comment. */
+export interface HostThread {
+    id: string;
+    author: string;
+    body: string;
+    path?: string;
+    line?: number;
+}
+
+export interface HostChange extends HostChangeSummary {
+    body: string;
+    /** The commit its checks ran on. */
+    headSha: string;
+    checks?: HostCheck[];
+    threads?: HostThread[];
+    size?: { additions: number; deletions: number; files: number };
+    /** The ids of the issues it closes once it lands. */
+    closes?: string[];
+}
+
+export interface HostIssueFilter {
+    /** Only what is assigned to the account the provider reads with. */
+    assigned?: boolean;
+    /** `open` when left out. */
+    state?: 'open' | 'closed' | 'all';
+    query?: string;
+    cursor?: string;
+}
+
+export interface HostChangeFilter {
+    /** `open` when left out. */
+    state?: 'open' | 'closed' | 'merged' | 'all';
+    query?: string;
+    cursor?: string;
+}
+
+export interface IssueCapability {
+    list(scope: HostScope, filter: HostIssueFilter): Promise<HostPage<HostIssueSummary>>;
+    /** Null for an issue the host does not have. */
+    read(scope: HostScope, id: string): Promise<HostIssue | null>;
+    /** The id of the issue a link or a short form names, such as its address or `#12` in this project; null for text that is none of its own. */
+    parse?(scope: HostScope, text: string): string | null | Promise<string | null>;
+}
+
+export interface ChangeCapability {
+    list(scope: HostScope, filter: HostChangeFilter): Promise<HostPage<HostChangeSummary>>;
+    /** With its checks and the review threads nobody resolved. Null for a change the host does not have. */
+    read(scope: HostScope, id: string): Promise<HostChange | null>;
+    /** The id of the open change that comes from this branch, or null. */
+    forBranch(scope: HostScope, branch: string): Promise<string | null>;
+}
+
+export interface CheckCapability {
+    /** What a check of a change wrote, by the name `read` gave it. Ruimte keeps the end. Null for a check without a log. */
+    log(scope: HostScope, change: string, check: string): Promise<{ text: string } | null>;
+}
+
+/**
+ * Needs `hosts.provide`. Proposed: name `hostProviders` under `proposed` in the manifest, and the id under
+ * `provides.hostProviders`. Supplies the issues, changes and checks of a project to Ruimte's own Issues panel and to the
+ * tools agents read them with; Ruimte draws them and keeps which chat works on which issue. With `match` it is a code
+ * host, asked for every repository of a project whose remote it says is its own. Without it, it is a tracker, asked
+ * `status` for every project, where `not-configured` leaves it out. Say only what you can: nothing asks for a part you
+ * left out. Everything you answer is cut to what Ruimte holds of one issue or change. Throws for an id the manifest does not list.
+ */
+export function defineHostProvider(provider: {
+    /** Also what the name of every issue and change starts with, as in `tracker:ENG-12`. */
+    id: string;
+    title: string;
+    /** Whether a checkout's remote, as git has it, is this host's. */
+    match?(remote: string): boolean;
+    status(scope: HostScope): HostStatus | Promise<HostStatus>;
+    issues?: IssueCapability;
+    changes?: ChangeCapability;
+    checks?: CheckCapability;
+}): void;
+
 export interface FileEntry {
     path: string;
     name: string;

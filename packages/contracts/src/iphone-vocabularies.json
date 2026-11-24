@@ -2022,5 +2022,20 @@
     "request.credential.update.result #/properties/credential/properties/grant/properties/tier": ["machine", "read", "work"],
     "request.consent.list.result #/properties/requests/items/properties/defaults/properties/tier": ["machine", "read", "work"],
     "request.consent.answer.result #/properties/credential/anyOf/0/properties/kind": ["bearer", "oauth"],
-    "request.consent.answer.result #/properties/credential/anyOf/0/properties/grant/properties/tier": ["machine", "read", "work"]
+    "request.consent.answer.result #/properties/credential/anyOf/0/properties/grant/properties/tier": ["machine", "read", "work"],
+    "request.host.change.result #/properties/change/anyOf/0/properties/state": ["closed", "merged", "open"],
+    "request.host.change.result #/properties/change/anyOf/0/properties/checkState": ["failure", "neutral", "pending", "skipped", "success"],
+    "request.host.change.result #/properties/change/anyOf/0/properties/checks/items/properties/state": ["failure", "neutral", "pending", "skipped", "success"],
+    "request.host.changes.result #/properties/changes/items/properties/state": ["closed", "merged", "open"],
+    "request.host.changes.result #/properties/changes/items/properties/checkState": ["failure", "neutral", "pending", "skipped", "success"],
+    "request.host.issue.result #/properties/issue/properties/state": ["closed", "open"],
+    "request.host.issue.result #/properties/issue/properties/changes/items/properties/state": ["closed", "merged", "open"],
+    "request.host.issue.result #/properties/issue/properties/changes/items/properties/checkState": ["failure", "neutral", "pending", "skipped", "success"],
+    "request.host.issues.result #/properties/issues/items/properties/state": ["closed", "open"],
+    "request.host.link.result #/properties/link/properties/state": ["closed", "open"],
+    "request.host.link.result #/properties/link/properties/by": ["agent", "change", "person"],
+    "request.host.links.result #/properties/links/items/properties/state": ["closed", "open"],
+    "request.host.links.result #/properties/links/items/properties/by": ["agent", "change", "person"],
+    "request.host.status.result #/properties/providers/items/properties/kind": ["code-host", "tracker"],
+    "request.host.status.result #/properties/providers/items/properties/state": ["ready", "signed-out", "unreachable"]
 }

@@ -4,6 +4,7 @@ import type { ChatProvider, CliDetection, ProviderAccountsOptions, ProviderAccou
 import type { LimitsUpdate, UsageMonitorOptions } from '@adecore/agents/usage';
 import type { MachineHome } from '../disk/machine-home.ts';
 import type { Checkpoints } from '../git/checkpoints.ts';
+import type { HostCheckouts } from '../git/host-checkouts.ts';
 import type { WorktreeAgents } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import type { RunCommand } from '../language/runtime.ts';
@@ -90,6 +91,8 @@ export interface DaemonSeams {
         checkpoints(home: string, machineHome: MachineHome): Checkpoints;
         /* The repository a file is in, for who wrote which lines. */
         repositoryOf(directory: string): Promise<string | null>;
+        /* The checkouts of a folder with their remotes and branch, which the code hosts of a project are found from. */
+        hostCheckouts: HostCheckouts;
     };
     projectStore(input: ProjectStoreInput): ProjectStore;
     nameChat: typeof suggestChatTitle;

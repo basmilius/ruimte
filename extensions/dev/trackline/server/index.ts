@@ -1,5 +1,6 @@
 /// <reference types="bun" />
 import { defineAgentTool, defineNodeContext, defineServer, emit, log, onEvent, schedule, secrets, storage } from '@ruimte/extension/server';
+import { defineTracklineHosts } from './host';
 import { issueText, openService, type TracklineIssue, type TracklineService } from './service';
 
 const KEY = 'key';
@@ -24,6 +25,12 @@ async function service(): Promise<TracklineService> {
 
     return openService(key);
 }
+
+defineTracklineHosts(async () => {
+    const key = await secrets.get(KEY);
+
+    return key === undefined || key === '' ? null : openService(key);
+});
 
 async function chatsByIssue(): Promise<Record<string, string>> {
     return (await storage.get<Record<string, string>>(CHATS)) ?? {};

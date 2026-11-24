@@ -14,6 +14,7 @@ import type { DatabasesBundle } from './databases.ts';
 import type { DevicesBundle } from './devices.ts';
 import type { ExtensionsBundle } from './extensions.ts';
 import type { GitBundle } from './git.ts';
+import type { HostsBundle } from './hosts.ts';
 import type { LanguageBundle } from './language.ts';
 import type { LaunchesBundle } from './launches.ts';
 import type { MachineBundle } from './machine.ts';
@@ -64,6 +65,7 @@ export interface DaemonBundles {
     actions: ServerActions;
     canvasHost: CanvasHost;
     extensions: ExtensionsBundle;
+    hosts: HostsBundle;
     connected: ConnectedClients;
     tunnels: TunnelsBundle;
 }

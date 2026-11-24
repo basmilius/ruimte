@@ -22,6 +22,14 @@ import type {
     ChatSummary,
     ExtensionErrorCode,
     FileProblems,
+    HostChangeFilter,
+    HostChangeSummary,
+    HostCheck,
+    HostComment,
+    HostIssueFilter,
+    HostIssueSummary,
+    HostStatus,
+    HostThread,
     Json,
     LaunchDescription,
     MachineActionName,
@@ -412,6 +420,8 @@ export interface TestServer<Api> {
         stop(project?: Partial<ProjectInfo>): Promise<void>;
         readonly changes: number;
     };
+    /** A host provider `defineHostProvider` named, asked as the machine asks it. Throws for one it did not define. */
+    hostProvider(id: string): TestHostProvider;
     /** What the problem sources hold now, as `problems.report` and `problems.clear` left it: per source, the files with problems. */
     problems: { source: string; files: FileProblems[] }[];
     /** The text files of the project, by path. `writeFile` changes one, or removes it with null, and tells every `files.watch` that follows it. */
@@ -422,6 +432,64 @@ export interface TestServer<Api> {
     /** What an agent reads of a node of this type along a line. */
     nodeContext(nodeType: string, data: Json): Promise<{ text: string }[]>;
 }
+
+/** Where a test asks a host provider: the test server's project unless it names another, and a remote for a code host. */
+export interface TestHostScope {
+    project?: Partial<ProjectInfo>;
+    remote?: string;
+}
+
+/** What Ruimte made of an answer: `ref` is the provider's id, a colon and the `id` the provider gave. */
+type AsRead<Shape> = Omit<Shape, 'id'> & { ref: string };
+
+export type TestIssueSummary = AsRead<HostIssueSummary> & { assignees: string[]; labels: string[] };
+export type TestChangeSummary = AsRead<HostChangeSummary>;
+export type TestIssue = TestIssueSummary & { body: string; comments: HostComment[]; changes: TestChangeSummary[] };
+export type TestChange = TestChangeSummary & {
+    body: string;
+    headSha: string;
+    checks: HostCheck[];
+    threads: HostThread[];
+    size: { additions: number; deletions: number; files: number };
+    /** The refs of the issues it closes. */
+    closes: string[];
+};
+
+/**
+ * A host provider as the machine reads it. Every answer went through what the machine does to one: a text too long is cut,
+ * a line loses its line breaks, an address that is no web page is gone, a check state Ruimte does not know reads as
+ * `failure`, and an entry of a list that is none is left out with the reason in `logs`. An answer of another shape rejects.
+ * Asking for a part the provider left out rejects too, which the machine never does.
+ */
+export interface TestHostProvider {
+    title: string;
+    /** `code-host` for a provider with `match`, else `tracker`. */
+    kind: 'code-host' | 'tracker';
+    capabilities: { issues: boolean; parses: boolean; changes: boolean; checks: boolean };
+    /** False for a tracker. */
+    match(remote: string): Promise<boolean>;
+    /** An answer that is no status reads as `unreachable`. */
+    status(scope?: TestHostScope): Promise<HostStatus>;
+    issues(filter?: HostIssueFilter, scope?: TestHostScope): Promise<{ issues: TestIssueSummary[]; cursor?: string }>;
+    issue(id: string, scope?: TestHostScope): Promise<TestIssue | null>;
+    /** The id of the issue `text` names, or null. */
+    parse(text: string, scope?: TestHostScope): Promise<string | null>;
+    changes(filter?: HostChangeFilter, scope?: TestHostScope): Promise<{ changes: TestChangeSummary[]; cursor?: string }>;
+    change(id: string, scope?: TestHostScope): Promise<TestChange | null>;
+    /** The id of the open change of a branch, or null. */
+    changeOfBranch(branch: string, scope?: TestHostScope): Promise<string | null>;
+    /** The end of a check's log; `truncated` says the start was left out. */
+    checkLog(change: string, check: string, scope?: TestHostScope): Promise<{ text: string; truncated: boolean } | null>;
+}
+
+/**
+ * Holds a host provider to what Ruimte asks of every one, on whatever your fake service or recorded answers hold: `status`
+ * is `ready`, a code host takes the remote of `scope` and no other, a list keeps to the state it was asked for and its
+ * cursor moves on without repeating, what a list names reads back as the same issue or change, something that does not
+ * exist reads as null, a change is found from its own branch, and `parse` reads an issue's own address. It checks only the
+ * parts the provider has, and rejects with every rule it broke.
+ */
+export function checkHostProvider(provider: TestHostProvider, known?: { scope?: TestHostScope }): Promise<void>;
 
 /**
  * Loads `server/index.ts` in this process, against the machine of a test: storage in memory, answers you script and the permissions of

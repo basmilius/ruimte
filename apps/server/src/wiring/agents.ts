@@ -24,6 +24,7 @@ import { errorText } from '../error-text.ts';
 import type { Checkpoints } from '../git/checkpoints.ts';
 import { fileChange } from '../git/diff.ts';
 import { readLog } from '../git/log.ts';
+import { HostLinks } from '../hosts/links.ts';
 import { NodeLifecycle } from '../node-lifecycle.ts';
 import { OutboxStore } from '../outbox/outbox.ts';
 import { agentChatOpening } from '../outbox/start-agent.ts';
@@ -167,6 +168,8 @@ export interface AgentsBundle {
     attachments: AttachmentStore;
     checkpoints: Checkpoints;
     plans: PlanStore;
+    /* Which chat works on which issue, kept beside each chat's record. */
+    hostLinks: HostLinks;
     bookmarks: BookmarkStore;
     visuals: VisualStore;
     /* What came from another machine, which never runs on the configuration of the files it sent. */
@@ -317,6 +320,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
     const attachments = new AttachmentStore(config.home);
     const checkpoints = seams.git.checkpoints(config.home, machineHome);
     const plans = new PlanStore(config.home, { now: () => clock.now() });
+    const hostLinks = new HostLinks(config.home, { now: () => clock.now() });
     const bookmarks = new BookmarkStore(config.home);
     const visuals = new VisualStore(config.home, attachments);
     const skills = new RuimteSkills(homeFolder(config.home, 'skills'), RUIMTE_SKILLS, seams.skillDisk);
@@ -425,6 +429,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
             skillsFolder: () => skills.folder()
         },
         plans,
+        sidecars: [hostLinks],
         bookmarks,
         visuals,
         limitResume: {
@@ -447,6 +452,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         attachments,
         checkpoints,
         plans,
+        hostLinks,
         bookmarks,
         visuals,
         untrusted,

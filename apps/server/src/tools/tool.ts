@@ -15,8 +15,11 @@ import { reachedPlace } from '../canvas/reach.ts';
 import { countToolCall } from '../stats/usage-stats.ts';
 import { noteActivity } from '../telemetry/activity.ts';
 
-/* Who sees a tool: every caller, only an AI chat, only while computer use is on, only in a project with a database connection. */
-export type Audience = 'everyone' | 'chat' | 'computer' | 'database';
+/*
+ * Who sees a tool: every caller, only an AI chat, only while computer use is on, only in a project with a database
+ * connection, only in a project with a code host or an issue tracker.
+ */
+export type Audience = 'everyone' | 'chat' | 'computer' | 'database' | 'hosts';
 
 /* Who calls a tool: the caller and the daemon, and the files and uploads a tool that takes a path reads. */
 export interface ToolCaller extends AgentCall {

@@ -7,11 +7,13 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseExtensionActionInput } from '@ruimte/contracts/extension-actions';
 import { extensionProjectPath } from '@ruimte/contracts/extension-client';
+import type { HostProviderShape } from '@ruimte/contracts/extension-hosts';
 import { EXTENSION_PROBLEM_FILES, EXTENSION_PROBLEMS_PER_FILE, ExtensionProblemsReportSchema } from '@ruimte/contracts/extension-problems';
 import { allowsProposed, proposedRefusal } from '@ruimte/contracts/extension-providers';
 import type * as PublicServer from '../../../../packages/extension/server';
 import type * as PublicTesting from '../../../../packages/extension/testing';
 import { launchesListed } from './descriptions.ts';
+import { testHostProvider } from './host-provider-test.ts';
 import {
     askRefusal,
     eventRefusal,
@@ -162,6 +164,7 @@ class TestMachine {
     readonly profiles = new Map<string, { title: string; icon?: string }>();
     readonly launchSources = new Map<string, { title: string; changes: number }>();
     readonly problemSources = new Map<string, string>();
+    readonly hostProviders = new Map<string, HostProviderShape>();
     readonly problems: { source: string; files: PublicServer.FileProblems[] }[] = [];
     readonly files: Record<string, string>;
     readonly project: PublicServer.ProjectInfo;
@@ -289,6 +292,10 @@ class TestMachine {
             }
         } else if (message.type === 'problemSource') {
             this.problemSources.set(message.id, message.title);
+        } else if (message.type === 'hostProvider') {
+            const { type: _type, id, ...shape } = message;
+
+            this.hostProviders.set(id, shape);
         } else {
             const reason = eventRefusal(message.name, this.permissions);
 
@@ -743,6 +750,19 @@ export async function createTestServer<Api>(options: PublicTesting.TestServerOpt
                     await machine.core.askLaunchSource(id, 'unwatch', { ...machine.project, ...project });
                 }
             };
+        },
+        hostProvider: (id) => {
+            const shape = machine.hostProviders.get(id);
+
+            if (shape === undefined) {
+                throw new Error(`No host provider ${id}. defineHostProvider says what there is`);
+            }
+
+            return testHostProvider(id, shape, {
+                project: machine.project,
+                ask: async (method, args) => wire(await machine.core.askHostProvider(id, method, wire(args))),
+                refused: (reason) => void machine.logs.push(`${id} ${reason}`)
+            });
         },
         problems: machine.problems,
         files: machine.files,

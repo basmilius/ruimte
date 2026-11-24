@@ -4,6 +4,7 @@
  * pipes and files (`server-runtime.ts`); `createTestServer` hands in memory and a clock a test turns.
  */
 import { missingPermissionMessage } from '@ruimte/contracts/extension-client';
+import type { HostProviderMethod, HostProviderShape } from '@ruimte/contracts/extension-hosts';
 import { providerRefusal } from '@ruimte/contracts/extension-providers';
 import type * as PublicServer from '../../../../packages/extension/server';
 import { everyMs, SCHEDULE_NEEDS_CLOCK } from './policy.ts';
@@ -31,6 +32,8 @@ export type ServerMessage =
     // What a launch source said through the `changed` of its `watch`.
     | { type: 'launchesChanged'; source: string; projectId: string }
     | { type: 'problemSource'; id: string; title: string }
+    // A host provider it defined, with the optional parts it has.
+    | ({ type: 'hostProvider'; id: string } & HostProviderShape)
     | { type: 'emit'; name: string; payload: unknown };
 
 interface ServerApiOptions {
@@ -63,6 +66,8 @@ export interface ServerCore {
     askProfile(id: string, method: 'available' | 'spawn', input: unknown): unknown;
     /* Asks a launch source what it lists in a project, or to start or stop telling when that changes. */
     askLaunchSource(id: string, method: LaunchSourceMethod, project: PublicServer.ProjectInfo): unknown;
+    /* Asks a host provider one thing, with the arguments its function takes. Throws `MissingHandler` for a part it left out. */
+    askHostProvider(id: string, method: HostProviderMethod, args: readonly unknown[]): unknown;
     deliver(name: string, payload: unknown): void;
     /* A file or folder `files.watch` follows changed, by the number the watch asked under. */
     fileChanged(watch: number): void;
@@ -73,6 +78,7 @@ export type LaunchSourceMethod = 'list' | 'watch' | 'unwatch';
 type Listener = (payload: unknown) => void;
 type TerminalProfile = Parameters<typeof PublicServer.defineTerminalProfile>[0];
 type LaunchSource = Parameters<typeof PublicServer.defineLaunchSource>[0];
+type HostProvider = Parameters<typeof PublicServer.defineHostProvider>[0];
 
 interface Ref {
     id: string;
@@ -108,6 +114,15 @@ export function callHandler(handlers: Readonly<Record<string, unknown>>, method:
     return (handler as (...values: unknown[]) => unknown)(...args);
 }
 
+/* The function of a provider a method names, bound to the part it is of; undefined for a part the provider left out. */
+function hostProviderCall(provider: HostProvider, method: HostProviderMethod): ((...args: unknown[]) => unknown) | undefined {
+    const [part, name] = method.includes('.') ? method.split('.') : [null, method];
+    const owner: unknown = part === null ? provider : provider[part as 'issues' | 'changes' | 'checks'];
+    const found = owner === undefined ? undefined : (owner as Record<string, unknown>)[name ?? ''];
+
+    return typeof found === 'function' ? (found as (...args: unknown[]) => unknown).bind(owner) : undefined;
+}
+
 export function createServerApi(options: ServerApiOptions): ServerCore {
     const { ask, send, permissions } = options;
     const listeners = new Map<string, Set<Listener>>();
@@ -115,6 +130,7 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
     const nodeContexts = new Map<string, (node: { data: unknown }) => unknown>();
     const profiles = new Map<string, TerminalProfile>();
     const launchSources = new Map<string, LaunchSource>();
+    const hostProviders = new Map<string, HostProvider>();
     // What stops a launch source's watch of a project, by source and project.
     const launchWatches = new Map<string, () => void>();
     const fileWatches = new Map<number, () => void>();
@@ -210,6 +226,20 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
         defineProblemSource(source: { id: string; title: string }): void {
             mayDefine('defineProblemSource', 'problems.provide', source.id);
             send({ type: 'problemSource', id: source.id, title: source.title });
+        },
+        defineHostProvider(provider: HostProvider): void {
+            mayDefine('defineHostProvider', 'hosts.provide', provider.id);
+            hostProviders.set(provider.id, provider);
+            send({
+                type: 'hostProvider',
+                id: provider.id,
+                title: provider.title,
+                matches: provider.match !== undefined,
+                issues: provider.issues !== undefined,
+                parses: provider.issues?.parse !== undefined,
+                changes: provider.changes !== undefined,
+                checks: provider.checks !== undefined
+            });
         },
         problems: {
             report: async (project: Ref, source: string, reported: PublicServer.FileProblems[]) =>
@@ -370,6 +400,21 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
             }
 
             return null;
+        },
+        askHostProvider(id, method, args) {
+            const provider = hostProviders.get(id);
+
+            if (provider === undefined) {
+                throw new MissingHandler(`No host provider ${id}`);
+            }
+
+            const asked = hostProviderCall(provider, method);
+
+            if (asked === undefined) {
+                throw new MissingHandler(`The host provider ${id} has no ${method}`);
+            }
+
+            return asked(...args);
         },
         deliver(name, payload) {
             for (const listener of listeners.get(name) ?? []) {

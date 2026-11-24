@@ -7,6 +7,7 @@
 import { Console } from 'node:console';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { HostProviderMethod } from '@ruimte/contracts/extension-hosts';
 import type * as PublicServer from '../../../../packages/extension/server';
 import { callHandler, createServerApi, MissingHandler, ownValue, parseKeyValues, type KeyValues, type LaunchSourceMethod } from './server-api.ts';
 
@@ -177,6 +178,7 @@ interface Incoming {
     data: unknown;
     context: { caller: string };
     profile: string;
+    provider: string;
     source: string;
     watch: number;
     input: unknown;
@@ -221,6 +223,12 @@ function handle(message: Incoming): void {
             await loaded;
 
             return core.askLaunchSource(message.source, message.method as LaunchSourceMethod, message.input as PublicServer.ProjectInfo);
+        });
+    } else if (message.type === 'hostProvider') {
+        void answer(message.id, async () => {
+            await loaded;
+
+            return core.askHostProvider(message.provider, message.method as HostProviderMethod, message.args);
         });
     } else if (message.type === 'fileChanged') {
         core.fileChanged(message.watch);

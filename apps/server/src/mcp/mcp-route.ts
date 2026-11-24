@@ -28,7 +28,10 @@ interface McpDeps {
     shotFolders?: readonly string[];
 }
 
-/* The tools this caller sees: the chat tools only for an AI chat, computer use while it is on, databases where the project has a connection. */
+/*
+ * The tools this caller sees: the chat tools only for an AI chat, computer use while it is on, databases where the
+ * project has a connection, issues and changes where it has a code host or a tracker.
+ */
 export async function visibleTools(caller: string, host: CanvasHost, tools: readonly Tool[]): Promise<Tool[]> {
     const place = host.projects.locate(caller);
     const kind = (place === null ? null : callerKind(await host.projects.read(place.projectId), caller)) ?? host.hiddenAgents?.get(caller)?.node.kind ?? null;
@@ -37,7 +40,8 @@ export async function visibleTools(caller: string, host: CanvasHost, tools: read
         everyone: true,
         chat: kind === 'chat',
         computer: host.computer?.enabled === true,
-        database: databases.length > 0
+        database: databases.length > 0,
+        hosts: place !== null && (await host.hosts?.hosts.has(place.projectId).catch(() => false)) === true
     };
 
     return tools.filter((tool) => shown[tool.audience]);

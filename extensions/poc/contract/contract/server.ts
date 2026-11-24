@@ -35,6 +35,15 @@ export interface ServerWorld {
     launchChanges(source: string): Promise<number>;
     /* Has a launch source stop telling of changes, as when the project closes. */
     unfollowLaunches(source: string): Promise<void>;
+    /* A host provider as the machine reads it in `project`: what it is, whether it answers, a page of its issues and one issue. */
+    hostProvider(provider: string): Promise<{
+        title: string;
+        kind: 'code-host' | 'tracker';
+        status: Server.HostStatus;
+        issues: { ref: string; title: string; url?: string }[];
+        cursor?: string;
+        issue: { ref: string; body: string; changes: { ref: string; checkState?: string }[] } | null;
+    }>;
     /* A launch of `project` changed what it does, as the machine's runner says it. */
     launchIs(launch: string, state: 'running' | 'exited', exitCode: number | null): void;
     /* A client opened `project`, or the last one closed it. */
@@ -62,6 +71,8 @@ const SOURCES: WorldManifest = {
     provides: { launchSources: ['probe-launches'], problemSources: ['probe-problems'] },
     proposed: ['launchSources', 'problemSources']
 };
+const HOSTS = { 'hosts.provide': 'Shows issues' };
+const HOST: WorldManifest = { provides: { hostProviders: ['probe-host'] }, proposed: ['hostProviders'] };
 const NOT_FINAL =
     'This extension uses a part of Ruimte that is not final yet (terminalProfiles). It works while its author develops it, and an installed extension cannot use it.';
 
@@ -341,6 +352,41 @@ export function serverContract(open: OpenServerWorld): void {
                 ok: true,
                 value: { ok: false, error: { code: 'not-found', message: `${ID} supplies no problem source probe-problems` } }
             });
+        });
+
+        test('supplies the issues of a host for the machine to read, cut and named as Ruimte holds them', async () => {
+            const world = await open(HOSTS, HOST);
+
+            expect(await world.hostProvider('probe-host')).toEqual({
+                title: 'Probe host',
+                kind: 'tracker',
+                status: { state: 'ready', account: 'probe' },
+                // The title lost its line break, and the address that is no web page is gone.
+                issues: [{ ref: 'probe-host:P-1', title: 'First issue all' }],
+                cursor: 'more',
+                // A check state Ruimte does not know never reads as green.
+                issue: { ref: 'probe-host:P-1', body: 'What is asked', changes: [{ ref: 'probe-host:C-1', checkState: 'failure' }] }
+            });
+            expect(await world.logs()).toContainEqual(expect.stringMatching(/^probe-host listed an issue that is none: title /));
+        });
+
+        test('defines a host provider only when its manifest asks for it, names it as proposed and lists it', async () => {
+            const allowed = await open(HOSTS, HOST);
+            const unasked = await open({});
+            const unnamed = await open(HOSTS);
+            const unlisted = await open(HOSTS, { provides: { hostProviders: ['another'] }, proposed: ['hostProviders'] });
+
+            expect(await allowed.call('hostRefused')).toEqual({ ok: true, value: null });
+            expect(await unasked.call('hostRefused')).toEqual({ ok: true, value: `${ID} did not ask for the permission hosts.provide in its manifest` });
+            expect(await unnamed.call('hostRefused')).toEqual({
+                ok: true,
+                value: 'defineHostProvider is still proposed; name hostProviders under proposed in manifest.json'
+            });
+            expect(await unlisted.call('hostRefused')).toEqual({
+                ok: true,
+                value: 'defineHostProvider got probe-host, which manifest.json does not list under provides.hostProviders'
+            });
+            await expect(unlisted.hostProvider('probe-host')).rejects.toThrow('probe-host');
         });
 
         test('reports the problems of a source file by file, replaces what it said of a file and takes it all back', async () => {

@@ -11,6 +11,7 @@ import { databaseFeature } from './database.ts';
 import { deviceFeature } from './device.ts';
 import { toolkitsOf, type ComposedHost } from './feature.ts';
 import { flagFeature } from './flag.ts';
+import { hostFeature } from './host.ts';
 import { languageFeature } from './language.ts';
 import { launchFeature } from './launch.ts';
 import { linkFeature } from './link.ts';
@@ -45,6 +46,7 @@ export const AGENT_FEATURES = [
     languageFeature,
     operationFeature,
     worktreeFeature,
+    hostFeature,
     launchFeature,
     routineFeature,
     projectFeature,

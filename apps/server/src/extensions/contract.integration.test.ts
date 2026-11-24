@@ -6,6 +6,7 @@ import { ManualClock } from '@adecore/agents/testing';
 import { ExtensionMessageEventSchema, extensionProjectPath, type ProjectContent } from '@ruimte/contracts';
 import { serverContract, ID } from '../../../../extensions/poc/contract/contract/server.ts';
 import { serverActions } from '../actions/server-actions-test-helpers.ts';
+import { Hosts } from '../hosts/hosts.ts';
 import { markDrawnChat } from '../projects/drawn-chat.ts';
 import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
@@ -277,6 +278,41 @@ serverContract(async (permissions, { provenance, ...provided } = {}) => {
             await host.watchLaunchSource(ID, source, project, true);
 
             return { title: listed.title, launches: listed.launches };
+        },
+        // Through the hosts of a machine, as a client's `host.status`, `host.issues` and `host.issue` read a provider.
+        hostProvider: async (id) => {
+            const hosts = new Hosts({
+                providers: {
+                    list: () => host.hostProviders(),
+                    ask: (extension, provider, method, args) => host.askHostProvider(extension, provider, method, args),
+                    note: (extension, line) => host.noteProvider(extension, line)
+                },
+                projectOf: async () => project,
+                checkouts: { repos: async () => [], of: async () => null },
+                cwdOf: async () => null,
+                changed: () => undefined
+            });
+            const status = (await hosts.status(projectId)).find((candidate) => candidate.provider === id);
+
+            if (status === undefined) {
+                throw new Error(`${ID} supplies no host provider ${id}`);
+            }
+
+            const page = await hosts.issues({ projectId, provider: id, state: 'all' });
+            const issue = await hosts.issue(projectId, `${id}:P-1`);
+
+            return {
+                title: status.title,
+                kind: status.kind,
+                status: { state: status.state, ...(status.account === undefined ? {} : { account: status.account }) },
+                issues: page.issues.map(({ ref, title, url }) => ({ ref, title, ...(url === undefined ? {} : { url }) })),
+                ...(page.cursor === undefined ? {} : { cursor: page.cursor }),
+                issue: {
+                    ref: issue.ref,
+                    body: issue.body,
+                    changes: issue.changes.map(({ ref, checkState }) => ({ ref, ...(checkState === undefined ? {} : { checkState }) }))
+                }
+            };
         },
         launchChanges: async (source) => launchChanges.get(source) ?? 0,
         unfollowLaunches: (source) => host.watchLaunchSource(ID, source, project, false),

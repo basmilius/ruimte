@@ -23,6 +23,7 @@ import { editorAssistArea } from '../handlers/editor-assist.ts';
 import { extensionsArea } from '../handlers/extensions.ts';
 import { fsArea } from '../handlers/fs.ts';
 import { gitArea } from '../handlers/git.ts';
+import { hostArea } from '../handlers/host.ts';
 import { languageArea } from '../handlers/language.ts';
 import { launchesArea } from '../handlers/launches.ts';
 import { planArea } from '../handlers/plan.ts';
@@ -131,6 +132,7 @@ export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
         skillArea({ skills: () => agents.skills.list() }),
         activityArea({ activity: work.activity }),
         gitArea(gitDeps(input)),
+        hostArea(input.hosts),
         agentWorkLifecycle(work, stores.outbox),
         agentsLifecycle(agents),
         usageCountsLifecycle(stats),

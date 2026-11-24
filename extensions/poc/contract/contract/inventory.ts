@@ -118,6 +118,10 @@ export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, E
     'server/event/launch.status': { scenario: FOLLOWS, refusal: FOLLOWS },
     'server/event/project.closed': { scenario: FOLLOWS, refusal: FOLLOWS },
     'server/event/project.opened': { scenario: FOLLOWS, refusal: FOLLOWS },
+    'server/provider/defineHostProvider': {
+        scenario: 'supplies the issues of a host for the machine to read, cut and named as Ruimte holds them',
+        refusal: 'defines a host provider only when its manifest asks for it, names it as proposed and lists it'
+    },
     'server/provider/defineLaunchSource': { scenario: LISTS_LAUNCHES, refusal: DEFINES_SOURCES, cleanup: LISTS_LAUNCHES },
     'server/provider/defineProblemSource': { scenario: REPORTS, refusal: DEFINES_SOURCES },
     'server/call/log.info': { scenario: SECRET },
