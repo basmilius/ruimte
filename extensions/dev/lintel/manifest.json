@@ -18,5 +18,5 @@
     "provides": {
         "problemSources": ["rules"]
     },
-    "proposed": ["problemSources", "languages"]
+    "proposed": ["problemSources", "languages", "editorDecorations"]
 }

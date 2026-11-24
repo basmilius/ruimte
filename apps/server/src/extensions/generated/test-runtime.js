@@ -222,8 +222,25 @@ var EXTENSION_PROVIDER_POINTS = {
 };
 var EXTENSION_CLIENT_POINTS = {
   projectSettings: { define: "defineProjectSettings", proposed: true },
-  languages: { define: "defineLanguage", proposed: true }
+  languages: { define: "defineLanguage", proposed: true },
+  editorDecorations: { define: "defineEditorDecoration", proposed: true }
 };
+var EDITOR_DECORATION_KINDS = ["info", "success", "warning", "error", "muted"];
+var MAX_EDITOR_DECORATIONS = 2000;
+function editorDecorationsOf(answer) {
+  const marks = [];
+  for (const each of Array.isArray(answer) ? answer : []) {
+    const { line, endLine, kind } = typeof each === "object" && each !== null ? each : {};
+    if (marks.length >= MAX_EDITOR_DECORATIONS) {
+      break;
+    }
+    if (typeof line === "number" && Number.isInteger(line) && line >= 1 && EDITOR_DECORATION_KINDS.includes(kind)) {
+      const last = typeof endLine === "number" && Number.isInteger(endLine) && endLine >= line ? endLine : line;
+      marks.push({ line, endLine: last, kind });
+    }
+  }
+  return marks;
+}
 var MAX_LANGUAGE_GRAMMAR_BYTES = 512 * 1024;
 function names(value) {
   return Array.isArray(value) && value.every((each) => typeof each === "string" && each.length > 0 && each.length <= 64 && !/[\\/]/.test(each));
@@ -8364,6 +8381,7 @@ class TestHost {
   viewAgents = new Map;
   providers;
   focused = [];
+  editors = new Set;
   canvasView;
   watches = new Set;
   edges = [];
@@ -9221,6 +9239,17 @@ function clientApi(host) {
       }
       host.record("language", language);
     },
+    defineEditorDecoration(decoration) {
+      mayUse("defineEditorDecoration");
+      host.record("editorDecoration", decoration);
+      return {
+        refresh: () => {
+          for (const ask of [...host.editors]) {
+            ask();
+          }
+        }
+      };
+    },
     defineFileIcon: (icon) => host.record("fileIcon", icon),
     defineVoiceAction: (action) => host.record("voiceAction", action),
     defineTemplate(template) {
@@ -9862,6 +9891,39 @@ function publicHost(host, api) {
     languageOf(path) {
       const languages = host.definitions.flatMap(({ kind, definition }) => kind === "language" ? [{ id: String(definition.id), extensions: definition.extensions, filenames: definition.filenames ?? [] }] : []);
       return definedLanguageOf(languages, path)?.id ?? null;
+    },
+    openEditor(path) {
+      const full = host.inProject(path);
+      const name = full.slice(Math.max(full.lastIndexOf("/"), full.lastIndexOf("\\")) + 1);
+      const dot = name.lastIndexOf(".");
+      const file = { path: full, name, extension: dot <= 0 ? "" : name.slice(dot + 1).toLowerCase() };
+      let marks = [];
+      let asked = 0;
+      let open = true;
+      const ask = () => {
+        const turn = ++asked;
+        const sources = host.definitions.filter((each) => each.kind === "editorDecoration").map((each) => each.definition);
+        Promise.all(sources.map(async (source) => {
+          const provide = source.provide;
+          return editorDecorationsOf(await provide({ ...file })).map((mark) => ({ decoration: source.id, ...mark }));
+        })).then((answers) => {
+          if (open && turn === asked) {
+            marks = answers.flat();
+            host.changed();
+          }
+        }, (e) => {
+          host.logs.push(`defineEditorDecoration: ${e instanceof Error ? e.message : String(e)}`);
+        });
+      };
+      host.editors.add(ask);
+      ask();
+      return {
+        decorations: () => marks.map((mark) => ({ ...mark })),
+        close() {
+          open = false;
+          host.editors.delete(ask);
+        }
+      };
     },
     context: (place, extra) => host.context(place, extra),
     slot: (definition, place, extra) => host.slot(definition, place, extra),

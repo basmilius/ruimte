@@ -105,7 +105,8 @@ var EXTENSION_PROVIDER_POINTS = {
 };
 var EXTENSION_CLIENT_POINTS = {
   projectSettings: { define: "defineProjectSettings", proposed: true },
-  languages: { define: "defineLanguage", proposed: true }
+  languages: { define: "defineLanguage", proposed: true },
+  editorDecorations: { define: "defineEditorDecoration", proposed: true }
 };
 var MAX_LANGUAGE_GRAMMAR_BYTES = 512 * 1024;
 var EXTENSION_PROPOSED_PARTS = [

@@ -138,6 +138,24 @@ export function defineDiffViewer(viewer: { id: string; title: string; extensions
  * A language Ruimte knows itself keeps its own grammar. Proposed: name `languages` under `proposed` in the manifest.
  */
 export function defineLanguage(language: { id: string; name: string; extensions: string[]; filenames?: string[]; grammar: string }): void;
+/** A mark in the margin of the editor, on one line or on every line up to `endLine`. Lines count from 1. */
+export interface EditorDecoration {
+    line: number;
+    endLine?: number;
+    /** What the mark says, which Ruimte draws in a color of its own. */
+    kind: 'info' | 'success' | 'warning' | 'error' | 'muted';
+}
+
+/**
+ * Marks in the margin of the editor, such as coverage or what a linter found. Ruimte asks `provide` for a file when it
+ * opens in an editor, and again for every open file after `refresh()`. It reads only: you are told which file, never
+ * its text or the selection, and change nothing in it. At most 2000 marks per file; a mark with a line below 1 or a
+ * kind Ruimte does not know is left out. Proposed: name `editorDecorations` under `proposed` in the manifest.
+ */
+export function defineEditorDecoration(decoration: { id: string; provide(file: FileInfo): EditorDecoration[] | Promise<EditorDecoration[]> }): {
+    /** The marks changed: Ruimte asks `provide` again for every file that is open in an editor. */
+    refresh(): void;
+};
 /** An icon from your pack, by its path, for files with these extensions. */
 export function defineFileIcon(icon: { extensions: string[]; path: string }): void;
 /** What a person can ask for by voice, through extension.voiceList and extension.voiceRun. It answers in words. Type `Input` after `parameters`, a JSON Schema. */

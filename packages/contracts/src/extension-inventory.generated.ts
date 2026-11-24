@@ -121,6 +121,7 @@ export const EXTENSION_API_INVENTORY = {
     'client/provider/defineCanvasOverlay': {},
     'client/provider/defineCommand': {},
     'client/provider/defineDiffViewer': {},
+    'client/provider/defineEditorDecoration': {},
     'client/provider/defineExtensionSettings': {},
     'client/provider/defineFileIcon': {},
     'client/provider/defineFileViewer': {},

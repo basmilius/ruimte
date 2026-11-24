@@ -46,8 +46,44 @@ export interface ExtensionClientPoint {
  */
 export const EXTENSION_CLIENT_POINTS: Readonly<Record<string, ExtensionClientPoint>> = {
     projectSettings: { define: 'defineProjectSettings', proposed: true },
-    languages: { define: 'defineLanguage', proposed: true }
+    languages: { define: 'defineLanguage', proposed: true },
+    editorDecorations: { define: 'defineEditorDecoration', proposed: true }
 };
+
+/* What a mark in the editor's margin may say: a fixed set, each drawn in a color of Ruimte's own. */
+export const EDITOR_DECORATION_KINDS = ['info', 'success', 'warning', 'error', 'muted'] as const;
+export type EditorDecorationKind = (typeof EDITOR_DECORATION_KINDS)[number];
+
+// The most marks one decoration puts in one file; the rest is cut, so a source cannot fill the margin of a long file twice over.
+export const MAX_EDITOR_DECORATIONS = 2000;
+
+/* A mark as the editor draws it: lines counted from 1, the last one included. */
+export interface EditorDecorationMark {
+    readonly line: number;
+    readonly endLine: number;
+    readonly kind: EditorDecorationKind;
+}
+
+/* The marks of an answer the editor draws: those with a line from 1 and a kind of the set, up to the most one file takes. */
+export function editorDecorationsOf(answer: unknown): EditorDecorationMark[] {
+    const marks: EditorDecorationMark[] = [];
+
+    for (const each of Array.isArray(answer) ? answer : []) {
+        const { line, endLine, kind } = (typeof each === 'object' && each !== null ? each : {}) as { line?: unknown; endLine?: unknown; kind?: unknown };
+
+        if (marks.length >= MAX_EDITOR_DECORATIONS) {
+            break;
+        }
+
+        if (typeof line === 'number' && Number.isInteger(line) && line >= 1 && (EDITOR_DECORATION_KINDS as readonly unknown[]).includes(kind)) {
+            const last = typeof endLine === 'number' && Number.isInteger(endLine) && endLine >= line ? endLine : line;
+
+            marks.push({ line, endLine: last, kind: kind as EditorDecorationKind });
+        }
+    }
+
+    return marks;
+}
 
 // The most a grammar of an extension's language holds, as the bytes of its JSON file in the pack.
 export const MAX_LANGUAGE_GRAMMAR_BYTES = 512 * 1024;

@@ -1,10 +1,12 @@
 import { afterEach } from 'bun:test';
 import { useChats, useProvidersStore } from '@adecore/agents-react/state';
+import { FakeEditor } from '@adecore/editor/fake';
 import { REQUEST_SCHEMAS, type ChatSubagentItem, type ExtensionManifest, type ProjectView, type RequestMap, type RequestType } from '@ruimte/contracts';
 import { contextSelection } from '@ruimte/contracts/extension-context';
 import { definedLanguageOf, projectSettingKey } from '@ruimte/contracts/extension-providers';
 import { act, createElement, type ComponentType, type ReactElement } from 'react';
 import { runAction } from '@/extensions/action-runs';
+import { DECORATION_COLORS, useEditorDecorations } from '@/extensions/editor-decorations';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
 import * as ui from '@/extensions/host/extension-ui';
 import { useHostDialog } from '@/extensions/host/host-dialog-state';
@@ -482,6 +484,29 @@ clientContract(async (permissions, seed = {}) => {
                 .projectSettings.filter((section) => section.id === ID)
                 .map((section) => section.title),
         languageOf: (path) => definedLanguageOf(useContributions.getState().languages, path)?.language ?? null,
+        // The hook `CodeFile` runs for its editor, on an editor that only keeps what it was told to draw.
+        async openEditor(path) {
+            const editor = new FakeEditor(document.createElement('div'), { text: '' } as never);
+            const full = `${SEED.project.folder}/${path}`;
+            const Open = (): null => {
+                useEditorDecorations(editor, full);
+
+                return null;
+            };
+            const mounted = mount();
+            const kindOf = (color: string): string => Object.entries(DECORATION_COLORS).find(([, token]) => token === color)?.[0] ?? color;
+
+            mounts.push(mounted);
+            await mounted.render(createElement(Open));
+
+            return {
+                marks: () => editor.lineHighlights.map((mark) => ({ line: mark.startLine, endLine: mark.endLine, kind: kindOf(mark.color) })),
+                async close() {
+                    mounts.splice(mounts.indexOf(mounted), 1);
+                    await mounted.unmount();
+                }
+            };
+        },
         // The dialog's row writes the field to the machine, which tells every window that reads it.
         async chooseProjectSetting(key, value) {
             const kept = projectSettingKey(SEED.project.id, key);

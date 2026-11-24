@@ -120,6 +120,11 @@ export interface ClientWorld {
     projectSettings(): string[];
     /* The language of this extension a file is colored in, by its path, or null for a file none of its languages covers. */
     languageOf(path: string): string | null;
+    /*
+     * A file of the project opening in an editor. `marks` is what the extension's decorations show in its margin now, and
+     * `close` is the editor going.
+     */
+    openEditor(path: string): Promise<{ marks(): { line: number; endLine: number; kind: string }[]; close(): Promise<void> }>;
     /* A person choosing a value for a field of that section. */
     chooseProjectSetting(key: string, value: boolean | string): Promise<void>;
 }
@@ -947,6 +952,58 @@ export function clientContract(open: OpenClientWorld): void {
                 'defineLanguage is still proposed; name languages under proposed in manifest.json'
             );
             expect(world.languageOf(`${SEED.project.folder}/rules.probe`)).toBeNull();
+        });
+
+        test('marks lines in the margin of an open file, told only which file, and is asked again after it says they changed until the editor goes', async () => {
+            const world = await open({}, { proposed: ['editorDecorations'] });
+            const told: object[] = [];
+            let found: unknown[] = [
+                { line: 2, kind: 'warning' },
+                { line: 4, endLine: 6, kind: 'success' },
+                // Left out: a line before the first, and a kind that is none of Ruimte's.
+                { line: 0, kind: 'error' },
+                { line: 3, kind: 'purple' }
+            ];
+            const decoration = world.api.defineEditorDecoration({
+                id: 'probe',
+                provide: (file) => {
+                    told.push(file);
+
+                    return found as Client.EditorDecoration[];
+                }
+            });
+            // Something to wait on: both worlds settle an answer over turns of the event loop.
+            const screen = await world.render(() => world.createElement('p', null, 'open'));
+            const editor = await world.openEditor('src/app.ts');
+            const shows = (marks: object[]) => screen.until(() => JSON.stringify(editor.marks()) === JSON.stringify(marks));
+
+            await shows([
+                { line: 2, endLine: 2, kind: 'warning' },
+                { line: 4, endLine: 6, kind: 'success' }
+            ]);
+
+            found = [{ line: 9, kind: 'error' }];
+            decoration.refresh();
+            await shows([{ line: 9, endLine: 9, kind: 'error' }]);
+
+            expect(told).toEqual([
+                { path: `${SEED.project.folder}/src/app.ts`, name: 'app.ts', extension: 'ts' },
+                { path: `${SEED.project.folder}/src/app.ts`, name: 'app.ts', extension: 'ts' }
+            ]);
+
+            await editor.close();
+            decoration.refresh();
+
+            expect(told).toHaveLength(2);
+        });
+
+        test('marks nothing in the margin while its manifest does not name the part as proposed', async () => {
+            const world = await open({});
+
+            expect(() => world.api.defineEditorDecoration({ id: 'probe', provide: () => [{ line: 1, kind: 'info' }] })).toThrow(
+                'defineEditorDecoration is still proposed; name editorDecorations under proposed in manifest.json'
+            );
+            expect((await world.openEditor('src/app.ts')).marks()).toEqual([]);
         });
 
         test('hands out the rows and sections of a settings page with the components', async () => {

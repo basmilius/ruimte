@@ -3,6 +3,7 @@ import { ErrorBoundary } from '@adecore/ui';
 import * as format from '@adecore/ui/format';
 import {
     clientPointRefusal,
+    editorDecorationsOf,
     languageProblem,
     projectSettingKey,
     extensionActionCall,
@@ -970,6 +971,36 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 filenames: language.filenames ?? []
             });
             hold(registerGrammar(language.id, () => fetchGrammar(`${extension.base}${language.grammar}`), reportFailure(`defineLanguage ${language.id}`)));
+        },
+        defineEditorDecoration(decoration: {
+            id: string;
+            provide: (file: PublicClient.FileInfo) => PublicClient.EditorDecoration[] | Promise<PublicClient.EditorDecoration[]>;
+        }) {
+            mayUse('defineEditorDecoration');
+
+            const listeners = new Set<() => void>();
+
+            add('editorDecorations', {
+                id: `${id}/${decoration.id}`,
+                // Only the file goes to the extension, and only marks of the fixed set come back.
+                provide: async (file) => (live() ? editorDecorationsOf(await decoration.provide({ ...file })) : []),
+                onRefresh(listener) {
+                    listeners.add(listener);
+
+                    return () => {
+                        listeners.delete(listener);
+                    };
+                },
+                onFailure: reportFailure(`defineEditorDecoration ${decoration.id}`)
+            });
+
+            return {
+                refresh: whileLive(() => {
+                    for (const listener of [...listeners]) {
+                        listener();
+                    }
+                })
+            };
         },
         defineFileIcon(icon: { extensions: string[]; path: string }) {
             hold(addFileIcons(`${extension.base}${icon.path}`, icon.extensions));

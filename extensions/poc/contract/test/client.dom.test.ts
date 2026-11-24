@@ -118,6 +118,14 @@ clientContract(async (permissions, seed = {}) => {
         settingsSections: () => [],
         projectSettings: () => host.definitions.flatMap(({ kind, definition }) => (kind === 'projectSettings' ? [definition.title ?? NAME] : [])),
         languageOf: (path) => host.languageOf(path),
+        openEditor: async (path) => {
+            const editor = host.openEditor(path);
+
+            return {
+                marks: () => editor.decorations().map(({ line, endLine, kind }) => ({ line, endLine, kind })),
+                close: async () => editor.close()
+            };
+        },
         chooseProjectSetting: async (key, value) => host.setProjectSetting(key, value)
     };
 });

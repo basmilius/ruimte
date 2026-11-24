@@ -1,4 +1,4 @@
-import type { ExtensionManifest, ExtensionSlotName, ExtensionTheme } from '@ruimte/contracts';
+import type { EditorDecorationMark, ExtensionManifest, ExtensionSlotName, ExtensionTheme } from '@ruimte/contracts';
 import type { LucideIcon } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { create } from 'zustand';
@@ -230,6 +230,16 @@ export interface LanguageContribution {
     filenames: readonly string[];
 }
 
+/* Marks an extension puts in the margin of an editor, asked per file. It is told the file and nothing of what is in it. */
+export interface EditorDecorationContribution {
+    // `<extension id>/<decoration>`.
+    id: string;
+    provide(file: { path: string; name: string; extension: string }): Promise<readonly EditorDecorationMark[]>;
+    /* Calls back when the extension said its marks changed, until the function it answers is called. */
+    onRefresh(listener: () => void): () => void;
+    onFailure(text: string): void;
+}
+
 /* The section of an extension among those of a project's settings, which no section of Ruimte's own is named like. */
 export function projectSettingsSectionId(id: string): string {
     return `extension:${id}`;
@@ -271,6 +281,7 @@ export interface Contributions {
     extensionSchemas: readonly ExtensionSchemaContribution[];
     projectSettings: readonly ProjectSettingsContribution[];
     languages: readonly LanguageContribution[];
+    editorDecorations: readonly EditorDecorationContribution[];
 }
 
 type ContributionKind = keyof Contributions;
@@ -298,7 +309,8 @@ export const useContributions = create<Contributions>(() => ({
     extensionSettings: [],
     extensionSchemas: [],
     projectSettings: [],
-    languages: []
+    languages: [],
+    editorDecorations: []
 }));
 
 /* Whether a stored entry is an extension's: every Ruimte keeps it as an unknown kind, so it survives one without the extension. */

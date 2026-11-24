@@ -11,6 +11,7 @@ import { InlineEditLayer } from '@/editor-ai/InlineEditLayer';
 import { ReviewBar, ReviewLayer } from '@/editor-ai/ReviewLayer';
 import { useAgentChanges } from '@/editor-ai/use-agent-changes';
 import { useConflictResolution } from '@/editor-ai/use-conflict-resolution';
+import { useEditorDecorations } from '@/extensions/editor-decorations';
 import { useFileLanguage } from '@/extensions/languages';
 import { DraftBar, EditorNotice } from '@/files/DraftBar';
 import { EditorStatusBar } from '@/files/EditorStatusBar';
@@ -321,6 +322,7 @@ export function CodeFile({ path, read, toolbarExtra, onEditor, frame }: CodeFile
     }, [editorLanguage, nodeId]);
     const gitBase = useGitBase(path, read.text);
     useChangeMarks(editor, gitBase);
+    useEditorDecorations(editor, path);
     const agentChanges = useAgentChanges(editor, path, plain ? undefined : fileLanguage);
     const conflict = useConflictResolution(editor, path);
     const folder = useProject((s) => s.current?.folder ?? null);

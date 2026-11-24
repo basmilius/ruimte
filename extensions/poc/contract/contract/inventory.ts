@@ -102,6 +102,11 @@ export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, E
     'client/provider/defineExtensionSettings': {
         scenario: 'keeps the settings page of an extension Ruimte does not ship under Extensions, also when it asks for a section'
     },
+    'client/provider/defineEditorDecoration': {
+        scenario: 'marks lines in the margin of an open file, told only which file, and is asked again after it says they changed until the editor goes',
+        refusal: 'marks nothing in the margin while its manifest does not name the part as proposed',
+        cleanup: 'marks lines in the margin of an open file, told only which file, and is asked again after it says they changed until the editor goes'
+    },
     'client/provider/defineLanguage': {
         scenario: 'covers the files of a language of its own by extension and by name, and refuses a grammar outside its pack',
         refusal: 'covers no file with a language while its manifest does not name the part as proposed'

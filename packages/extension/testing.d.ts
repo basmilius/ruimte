@@ -7,6 +7,7 @@ import type {
     ContextOf,
     ContextSource,
     DatabaseValue,
+    EditorDecoration,
     FileEntry,
     GitCommit,
     GitFileDiff,
@@ -191,6 +192,14 @@ export interface TestDefinition {
     [key: string]: unknown;
 }
 
+/** A mark in the margin of an editor a test opened, with the id of the decoration that put it there and its last line filled in. */
+export interface TestEditorDecoration {
+    decoration: string;
+    line: number;
+    endLine: number;
+    kind: EditorDecoration['kind'];
+}
+
 export interface TestHost {
     /** What the extension defined, in order, with the object each `define*` was given. */
     definitions: { kind: string; definition: TestDefinition }[];
@@ -205,6 +214,12 @@ export interface TestHost {
     overlay(id: string): TestDefinition;
     /** The id of the language `defineLanguage` gave a file with this name or path, or null for a file none of yours covers. */
     languageOf(path: string): string | null;
+    /**
+     * A file of the project opening in an editor, which asks every `defineEditorDecoration` for its marks, and again after a
+     * `refresh()`. `decorations()` is what the margin shows now; wait for an answer with `until` of a screen, or a turn of the
+     * event loop. `close()` is the editor going, after which nothing asks for that file.
+     */
+    openEditor(path: string): { decorations(): TestEditorDecoration[]; close(): void };
     /** What every slot tells at this place, filled with the project, view, machine and theme, and the selection where the place tells it. A `{ id }` of a node of the project becomes its `NodeInfo`. */
     context<Place extends SlotName>(place: Place, extra?: Partial<Record<keyof SlotContexts[Place], unknown>>): ContextOf<Place>;
     /** How an action, menu or widget shows at this place, or null where it does not. An unknown place throws. */

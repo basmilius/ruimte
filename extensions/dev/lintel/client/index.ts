@@ -1,4 +1,4 @@
-import { defineCommand, defineFileIcon, defineLanguage, getServer, host } from '@ruimte/extension/client';
+import { defineCommand, defineEditorDecoration, defineFileIcon, defineLanguage, files, getServer, host, onEvent } from '@ruimte/extension/client';
 import type { LintelServer } from '../server/index';
 
 // The file a project turns Lintel's rules on and off in. `server/` names the same id for the server it adds.
@@ -11,6 +11,32 @@ defineLanguage({
 });
 
 defineFileIcon({ extensions: ['lintel'], path: 'assets/lintel-file.svg' });
+
+const KINDS = { error: 'error', warning: 'warning', information: 'info', hint: 'muted' } as const;
+
+// The lines its rules find something on, in the margin of the file a person has open. `server/` holds the rules.
+const marks = defineEditorDecoration({
+    id: 'problems',
+    provide: async (file) => {
+        const found = await getServer<LintelServer>().marks(file.path);
+
+        return found.ok ? found.value.map(({ line, severity }) => ({ line, kind: KINDS[severity] })) : [];
+    }
+});
+
+let unfollow = (): void => undefined;
+
+/* A save changes what the rules find, so the margin asks again when a file of the project in front changes. */
+function follow(): void {
+    unfollow();
+
+    const watching = files.watch('.', () => marks.refresh());
+
+    unfollow = watching.ok ? watching.value : () => undefined;
+}
+
+follow();
+onEvent('project.opened', follow);
 
 defineCommand({
     id: 'config-server',

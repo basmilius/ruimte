@@ -33,4 +33,38 @@ describe('Lintel in the window', () => {
         expect(server.languageServers).toEqual([{ name: 'Lintel config', command: 'cat', languages: ['lintel'], patterns: ['*.lintel', 'Lintelfile'] }]);
         expect(host.notifications).toEqual([{ text: 'Look in Settings, Language servers', tone: 'neutral' }]);
     });
+
+    test('marks the lines its rules find something on in the margin of an open file, and again after a save', async () => {
+        const server = await createTestServer<LintelServer>({
+            files: { 'src/app.ts': ['export const port = 5173;', '// TODO: read the port', `const wide = '${'x'.repeat(120)}';`, ''].join('\n') }
+        });
+        const host = await createTestHost({ project: { id: 'project-1', folder: '/project' }, answers: { server } });
+
+        server.fire('project.opened', { project: { id: 'project-1', name: 'Project', folder: '/project' } });
+
+        const editor = host.openEditor('src/app.ts');
+        const marks = (): object[] => editor.decorations().map(({ line, kind }) => ({ line, kind }));
+
+        await settled(() => marks().length === 2);
+
+        expect(editor.decorations()).toEqual([
+            { decoration: 'problems', line: 2, endLine: 2, kind: 'info' },
+            { decoration: 'problems', line: 3, endLine: 3, kind: 'warning' }
+        ]);
+
+        server.writeFile('src/app.ts', 'export const port = 5173;   \n');
+        host.changeFile('src/app.ts');
+        await settled(() => marks().length === 1);
+
+        expect(marks()).toEqual([{ line: 1, kind: 'muted' }]);
+        expect(await server.call('marks', '/project/logo.png')).toEqual({ ok: true, value: [] });
+        expect(await server.call('marks', '/elsewhere/app.ts')).toEqual({ ok: true, value: [] });
+    });
 });
+
+/* Turns of the event loop until the editor has its answer, which comes from `server/` over several awaits. */
+async function settled(check: () => boolean): Promise<void> {
+    for (let turn = 0; turn < 200 && !check(); turn++) {
+        await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+}

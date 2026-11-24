@@ -376,6 +376,18 @@ export function clientApi(host: TestHost) {
 
             host.record('language', language);
         },
+        defineEditorDecoration(decoration: { id: string; provide(file: PublicClient.FileInfo): unknown }): { refresh(): void } {
+            mayUse('defineEditorDecoration');
+            host.record('editorDecoration', decoration);
+
+            return {
+                refresh: () => {
+                    for (const ask of [...host.editors]) {
+                        ask();
+                    }
+                }
+            };
+        },
         defineFileIcon: (icon: object): void => host.record('fileIcon', icon),
         defineVoiceAction: (action: object): void => host.record('voiceAction', action),
         defineTemplate(template: { id: string; title: string; icon?: string; create(context: never): void | Promise<void> }): void {

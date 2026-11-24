@@ -20,6 +20,8 @@ const MAX_FILES = 300;
 const MAX_DEPTH = 6;
 
 interface Following {
+    /* Where the project is on the machine, which a file `client/` asks about is under. */
+    folder: string;
     /* The files Lintel said something about, which a later check takes back when they are clean or gone. */
     reported: Set<string>;
     found: number;
@@ -117,7 +119,7 @@ onEvent('project.opened', ({ project }) => {
         return;
     }
 
-    const followed: Following = { reported: new Set(), found: 0, stopWatching: () => undefined, checking: null, again: false };
+    const followed: Following = { folder: project.folder, reported: new Set(), found: 0, stopWatching: () => undefined, checking: null, again: false };
 
     following.set(project.id, followed);
     void files
@@ -163,6 +165,23 @@ const api = defineServer({
         await followed.checking;
 
         return { files: followed.reported.size, problems: followed.found };
+    },
+    /*
+     * The lines of one file the rules find something on, for the margin of its editor: read now, so a file saved a
+     * moment ago answers as it is. Nothing for a file outside the open projects or one Lintel does not check.
+     */
+    async marks(path: string) {
+        const at = path.replaceAll('\\', '/');
+        const open = [...following].find(([, followed]) => at.startsWith(`${followed.folder.replaceAll('\\', '/')}/`));
+
+        if (open === undefined || !CHECKED.some((end) => at.endsWith(end))) {
+            return [];
+        }
+
+        const [projectId, followed] = open;
+        const read = await files.readText({ id: projectId }, at.slice(followed.folder.length + 1));
+
+        return (read.ok ? problemsIn(read.value) : []).map((problem) => ({ line: problem.line, severity: problem.severity }));
     },
     /*
      * Adds a server for the `.lintel` files `client/` defines as a language, listed in Settings like one a person

@@ -159,6 +159,8 @@ export class TestHost {
     readonly viewAgents = new Map<string, { agent?: Partial<PublicClient.AgentInfo>; subagents?: PublicTesting.TestSubagent[] }>();
     readonly providers: { id: string; name: string }[];
     readonly focused: string[] = [];
+    // What asks the decorations of each editor a test opened again, which `refresh` of a decoration runs.
+    readonly editors = new Set<() => void>();
     canvasView: PublicClient.CanvasView;
     readonly watches = new Set<{ path: string; listener: () => void }>();
     readonly edges: { from: string; to: string }[] = [];

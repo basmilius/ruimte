@@ -208,6 +208,36 @@ A file whose language Ruimte already knows keeps it, and so does a language Ruim
 
 This is a [proposed part](/docs/extensions/manifest#proposed-parts): name `languages` under `proposed`. In a test, `host.languageOf(path)` answers the id of your language for a file.
 
+## Marks in the editor's margin
+
+`defineEditorDecoration` puts a mark beside the line numbers of an open file, for coverage or for what a linter found:
+
+```ts
+const coverage = defineEditorDecoration({
+    id: 'coverage',
+    provide: async (file) => {
+        const lines = await getServer<Server>().uncovered(file.path);
+
+        return lines.ok
+            ? lines.value.map((line) => ({
+                  line,
+                  kind: 'warning'
+              }))
+            : [];
+    }
+});
+
+coverage.refresh();
+```
+
+Ruimte calls `provide` when a file opens in an editor, and again for every open file after `refresh()`. A mark names a `line`, counted from 1, an optional `endLine` and a `kind`. The kind is one of `info`, `success`, `warning`, `error` and `muted`, and Ruimte picks the color, so a mark fits both themes. A mark with any other kind or a line below 1 is left out, and a file shows at most 2000 marks of one decoration.
+
+A decoration only reads. `provide` gets the file's `path`, `name` and `extension`, never its text or the selection, and nothing it answers changes the file. Read the text yourself with `files` when you need it. A mark has no hover text yet.
+
+Marks keep their lines while a person types and move with the text. They are yours to refresh after a save, for example from a `files.watch`.
+
+This is a [proposed part](/docs/extensions/manifest#proposed-parts): name `editorDecorations` under `proposed`. In a test, `host.openEditor(path)` opens a file as an editor would, and its `decorations()` are what the margin shows.
+
 ## Settings, storage and words
 
 They have a page of their own: [Settings and storage](/docs/extensions/settings).
