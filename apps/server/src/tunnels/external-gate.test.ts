@@ -39,6 +39,19 @@ describe('the failure limiter', () => {
         expect(limiter.blocked('a')).toBe(false);
     });
 
+    test('a full map makes room once its sources stopped failing', () => {
+        const clock = { now: 1_000 };
+        const limiter = new FailureLimiter(() => clock.now, 2);
+
+        limiter.fail('a');
+        limiter.fail('b');
+        clock.now += 61_000;
+        failTimes(limiter, 'c', 20);
+
+        expect(limiter.blocked('c')).toBe(true);
+        expect(limiter.blocked('d')).toBe(false);
+    });
+
     test('a flood from many sources does not grow the map past its capacity', () => {
         const limiter = new FailureLimiter(() => 1_000, 3);
 

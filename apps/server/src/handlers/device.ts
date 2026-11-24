@@ -58,9 +58,14 @@ function registerRequests(dispatcher: Dispatcher, { devices, streamingAllowed, h
         },
         { count: ['actions.device'] }
     );
-    dispatcher.register('device.open', (payload, client) => {
+    dispatcher.register('device.open', async (payload, client) => {
         requireStreaming();
-        return devices.open(payload.backendId, payload.platform, payload.deviceId, client.id, payload.stream, payload.formats, payload.binary);
+        const opened = await devices.open(payload.backendId, payload.platform, payload.deviceId, client.id, payload.stream, payload.formats, payload.binary);
+        // A channel that went while the device started was detached before this registered it.
+        if (client.closed) {
+            devices.detachAll(client.id);
+        }
+        return opened;
     });
     // Detach lets a client clean up after the policy changed, so it stays open.
     dispatcher.register('device.detach', (payload, client) => {

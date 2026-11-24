@@ -51,7 +51,16 @@ export class FailureLimiter {
 
     /* The bucket a source counts in: its own, or the shared one once the map is full and the source is not in it. */
     private bucketOf(source: string): string {
-        return this.failures.size >= this.capacity && !this.failures.has(source) ? '*' : source;
+        if (this.failures.size < this.capacity || this.failures.has(source)) {
+            return source;
+        }
+
+        // Sources that stopped failing are only dropped when asked about, so a full map is swept before a new one shares a bucket.
+        for (const tracked of [...this.failures.keys()]) {
+            this.recent(tracked);
+        }
+
+        return this.failures.size >= this.capacity ? '*' : source;
     }
 
     private recent(source: string): number[] {

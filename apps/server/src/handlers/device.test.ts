@@ -79,6 +79,26 @@ describe('device handlers', () => {
         expect(frames.at(-1)).toMatchObject({ ok: false, error: { code: 'simctl-failed', message: 'The simulator could not start' } });
     });
 
+    test('a client that went while its device opened is detached from it', async () => {
+        const detached: string[] = [];
+        const gone = { id: 'client-1', closed: false, send: () => undefined };
+        const { dispatcher } = setup(
+            {
+                open: () => {
+                    gone.closed = true;
+
+                    return Promise.resolve({ streamId: 'device:stream-1' });
+                },
+                detachAll: (clientId: string) => void detached.push(clientId)
+            } as unknown as DeviceManager,
+            () => true
+        );
+
+        await dispatcher.handle(gone, request('device.open', { backendId: 'simctl', platform: 'ios', deviceId: 'phone-1', stream: 'events' }));
+
+        expect(detached).toEqual(['client-1']);
+    });
+
     test('passes the client identity through open, input and detach', async () => {
         const calls: unknown[][] = [];
         const devices = {

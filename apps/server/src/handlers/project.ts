@@ -50,7 +50,10 @@ function registerRequests(dispatcher: Dispatcher, { store, scratch, inline, reac
         const opened = await store.openProject(payload);
         countProjectOpened(opened.summary.projectId);
         // Told after the open, so a client is only counted as watching a project it really got and is still there for.
-        if (!client.closed) {
+        if (client.closed) {
+            // Nobody may hold what this just loaded, and without a holder its watcher would stay.
+            store.letGo(client.id, opened.summary.projectId);
+        } else {
             store.hold(client.id, opened.summary.projectId);
         }
         return opened;

@@ -259,6 +259,26 @@ describe('a client that goes while a project opens', () => {
 
         expect(store.closing(clients.b.connection.client.id, projectId).otherClients).toBe(0);
     });
+
+    test('leaves the project loaded for nobody', async () => {
+        const clients = twoClients();
+        let land = (): void => undefined;
+        const landed = new Promise<void>((resolve) => {
+            land = resolve;
+        });
+        const openProject = store.openProject.bind(store);
+        store.openProject = async (payload) => {
+            await landed;
+            return openProject(payload);
+        };
+
+        const reply = request(clients.a, 'project.open', { folder });
+        clients.a.channel.drop();
+        land();
+        await reply;
+
+        expect(store.openProjectIds()).toEqual([]);
+    });
 });
 
 describe('a client that goes while it asks to watch the list', () => {
