@@ -3,6 +3,7 @@ import type { Clock } from '@adecore/agents/coordination';
 import type { ChatProvider, CliDetection, ProviderAccountsOptions, ProviderAccountsService } from '@adecore/agents/providers';
 import type { LimitsUpdate, UsageMonitorOptions } from '@adecore/agents/usage';
 import type { MachineHome } from '../disk/machine-home.ts';
+import type { RunMachineStep } from '../extensions/machine-steps.ts';
 import type { Checkpoints } from '../git/checkpoints.ts';
 import type { WorktreeAgents } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
@@ -118,6 +119,8 @@ export interface DaemonSeams {
     };
     /* The folders of the checkout whose extensions are Ruimte's own development extensions; none in a compiled daemon. */
     developmentExtensions: readonly string[];
+    /* Runs one program of a machine start an extension described, to its end. */
+    machineSteps: RunMachineStep;
 
     /* The links to other machines, which a test replaces by one it controls. */
     remote: {

@@ -220,6 +220,7 @@ export const EXTENSION_API_INVENTORY = {
     'server/provider/defineAgentTool': { permission: 'agents.tools' },
     'server/provider/defineLanguageServer': { permission: 'languages.servers' },
     'server/provider/defineLaunchSource': { permission: 'launches.provide' },
+    'server/provider/defineMachineSource': { permission: 'machines.provide' },
     'server/provider/defineNodeContext': {},
     'server/provider/defineProblemSource': { permission: 'problems.provide' },
     'server/provider/defineServer': {},

@@ -2,6 +2,7 @@ import { nodeSessionFs, spawnChatProcess, suggestChatTitle } from '@adecore/agen
 import { systemClock } from '@adecore/agents/coordination';
 import { ProviderAccountsService } from '@adecore/agents/providers';
 import { errorText } from '../error-text.ts';
+import { runMachineStep } from '../extensions/machine-steps.ts';
 import { developmentExtensionRoots } from '../extensions/provenance.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { Worktrees } from '../git/worktrees.ts';
@@ -49,6 +50,7 @@ export function productionSeams(runtime: DaemonRuntime): DaemonSeams {
         power: { hold: blockHolder, closedLid: macClosedLidSystem },
         machine: { model: readMachineModel, sessionFs: nodeSessionFs },
         developmentExtensions: developmentExtensionRoots(runtime.compiled, runtime.sourceDir),
+        machineSteps: runMachineStep,
         remote: { connections: (real) => real, reconnect: (real) => real },
         peerNotify: (real) => real,
         observers: {

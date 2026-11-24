@@ -280,6 +280,36 @@ serverContract(async (permissions, { provenance, ...provided } = {}) => {
         },
         launchChanges: async (source) => launchChanges.get(source) ?? 0,
         unfollowLaunches: (source) => host.watchLaunchSource(ID, source, project, false),
+        machines: async (source) => {
+            const listed = (await host.machineSources(project)).find((listing) => listing.source === source);
+
+            if (listed === undefined) {
+                throw new Error(`${ID} lists no machine source ${source}`);
+            }
+
+            return { title: listed.title, candidates: listed.candidates };
+        },
+        machineStart: async (source, candidate, stopped) => {
+            const stop = new AbortController();
+            const reports: string[] = [];
+            const place = (await host.machineSources(project)).flatMap((listing) => listing.candidates).find((listed) => listed.id === candidate);
+
+            if (place === undefined) {
+                throw new Error(`${source} lists no place ${candidate}`);
+            }
+
+            if (stopped) {
+                stop.abort();
+            }
+
+            try {
+                const start = await host.machineStart(ID, source, project, place, { report: (line) => reports.push(line), signal: stop.signal });
+
+                return { start, reports, failure: null };
+            } catch (e) {
+                return { start: null, reports: [], failure: (e as Error).message };
+            }
+        },
         launchIs: (launch, state, exitCode) =>
             host.forwardEvent('launch.status', {
                 projectId,

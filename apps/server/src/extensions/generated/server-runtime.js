@@ -96,7 +96,8 @@ function missingPermissionMessage(extension, permission) {
 var EXTENSION_PROVIDER_POINTS = {
   terminalProfiles: { define: "defineTerminalProfile", permission: "terminals.profiles", proposed: true },
   launchSources: { define: "defineLaunchSource", permission: "launches.provide", proposed: true },
-  problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true }
+  problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true },
+  machineSources: { define: "defineMachineSource", permission: "machines.provide", proposed: true }
 };
 var EXTENSION_PROPOSED_PARTS = Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true);
 function pointOf(kind) {
@@ -169,6 +170,8 @@ function createServerApi(options) {
   const profiles = new Map;
   const launchSources = new Map;
   const launchWatches = new Map;
+  const machineSources = new Map;
+  const machineStarts = new Map;
   const fileWatches = new Map;
   let nextFileWatch = 1;
   const typed = (method, args) => ask(method, args);
@@ -248,6 +251,11 @@ function createServerApi(options) {
     defineProblemSource(source) {
       mayDefine("defineProblemSource", "problems.provide", source.id);
       send({ type: "problemSource", id: source.id, title: source.title });
+    },
+    defineMachineSource(source) {
+      mayDefine("defineMachineSource", "machines.provide", source.id);
+      machineSources.set(source.id, source);
+      send({ type: "machineSource", id: source.id, title: source.title });
     },
     problems: {
       report: async (project, source, reported) => mapResult(await ask("problems.report", [project.id, source, reported]), () => {
@@ -378,6 +386,32 @@ ${project.id}`;
         launchWatches.set(key, await source.watch(project, () => send({ type: "launchesChanged", source: id, projectId: project.id })));
       }
       return null;
+    },
+    async askMachineSource(id, method, { project, candidate, run }) {
+      const source = machineSources.get(id);
+      if (source === undefined) {
+        throw new MissingHandler(`No machine source ${id}`);
+      }
+      if (method === "list") {
+        return source.list(project);
+      }
+      if (candidate === undefined || run === undefined) {
+        throw new TypeError("A start names a place and a number");
+      }
+      const abort = new AbortController;
+      machineStarts.set(run, abort);
+      try {
+        return await source.start(candidate, {
+          project,
+          report: (line) => send({ type: "machineReport", run, line: String(line) }),
+          signal: abort.signal
+        });
+      } finally {
+        machineStarts.delete(run);
+      }
+    },
+    abortMachineStart(run) {
+      machineStarts.get(run)?.abort();
     },
     deliver(name, payload) {
       for (const listener of listeners.get(name) ?? []) {
@@ -540,6 +574,13 @@ function handle(message) {
       await loaded;
       return core.askLaunchSource(message.source, message.method, message.input);
     });
+  } else if (message.type === "machineSource") {
+    answer(message.id, async () => {
+      await loaded;
+      return core.askMachineSource(message.source, message.method, message.input);
+    });
+  } else if (message.type === "machineAbort") {
+    loaded.then(() => core.abortMachineStart(message.run));
   } else if (message.type === "fileChanged") {
     core.fileChanged(message.watch);
   } else if (message.type === "nodeContext") {

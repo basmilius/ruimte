@@ -11,7 +11,7 @@ import { EXTENSION_PROBLEM_FILES, EXTENSION_PROBLEMS_PER_FILE, ExtensionProblems
 import { allowsProposed, proposedRefusal } from '@ruimte/contracts/extension-providers';
 import type * as PublicServer from '../../../../packages/extension/server';
 import type * as PublicTesting from '../../../../packages/extension/testing';
-import { launchesListed } from './descriptions.ts';
+import { candidatesListed, launchesListed, machineStartDescribed } from './descriptions.ts';
 import {
     askRefusal,
     eventRefusal,
@@ -162,6 +162,10 @@ class TestMachine {
     readonly profiles = new Map<string, { title: string; icon?: string }>();
     readonly launchSources = new Map<string, { title: string; changes: number }>();
     readonly problemSources = new Map<string, string>();
+    readonly machineSources = new Map<string, string>();
+    // The lines a machine source reported while it described a start, by the number it was asked under.
+    readonly machineReports = new Map<number, string[]>();
+    nextMachineStart = 1;
     readonly problems: { source: string; files: PublicServer.FileProblems[] }[] = [];
     readonly files: Record<string, string>;
     readonly project: PublicServer.ProjectInfo;
@@ -289,6 +293,10 @@ class TestMachine {
             }
         } else if (message.type === 'problemSource') {
             this.problemSources.set(message.id, message.title);
+        } else if (message.type === 'machineSource') {
+            this.machineSources.set(message.id, message.title);
+        } else if (message.type === 'machineReport') {
+            this.machineReports.get(message.run)?.push(message.line);
         } else {
             const reason = eventRefusal(message.name, this.permissions);
 
@@ -741,6 +749,53 @@ export async function createTestServer<Api>(options: PublicTesting.TestServerOpt
                 },
                 stop: async (project = {}) => {
                     await machine.core.askLaunchSource(id, 'unwatch', { ...machine.project, ...project });
+                }
+            };
+        },
+        machineSource: (id) => {
+            const title = machine.machineSources.get(id);
+
+            if (title === undefined) {
+                throw new Error(`No machine source ${id}. defineMachineSource says what there is`);
+            }
+
+            const list = async (project: Partial<PublicServer.ProjectInfo> = {}) =>
+                candidatesListed(wire(await machine.core.askMachineSource(id, 'list', { project: { ...machine.project, ...project } })), (reason) => {
+                    machine.logs.push(`${id} ${reason}`);
+                });
+
+            return {
+                title,
+                list,
+                start: async (candidateId, options = {}) => {
+                    const project = { ...machine.project, ...options.project };
+                    const candidate = (await list(project)).find((listed) => listed.id === candidateId);
+
+                    if (candidate === undefined) {
+                        throw new Error(`${id} lists no place ${candidateId}`);
+                    }
+
+                    const run = machine.nextMachineStart;
+                    const reports: string[] = [];
+                    const abort = (): void => machine.core.abortMachineStart(run);
+
+                    machine.nextMachineStart += 1;
+                    machine.machineReports.set(run, reports);
+                    options.signal?.addEventListener('abort', abort);
+
+                    try {
+                        const asked = machine.core.askMachineSource(id, 'start', { project, candidate, run });
+
+                        // A stop from before the ask still reaches the source, after the ask it is about.
+                        if (options.signal?.aborted === true) {
+                            abort();
+                        }
+
+                        return { start: machineStartDescribed(wire(await asked)), reports };
+                    } finally {
+                        machine.machineReports.delete(run);
+                        options.signal?.removeEventListener('abort', abort);
+                    }
                 }
             };
         },

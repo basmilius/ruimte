@@ -5,6 +5,7 @@ import { errorText } from '../error-text.ts';
 import { extensionChatStarter } from '../extensions/extension-chat.ts';
 import { ExtensionHost, type ExtensionAsks, type ExtensionFilesPort, type ExtensionProject, type ExtensionTerminalPort } from '../extensions/extension-host.ts';
 import { runMachineAction, outputOf } from '../extensions/machine-actions.ts';
+import { MachineSources } from '../extensions/machine-sources.ts';
 import { terminalWriteRefusal } from '../extensions/policy.ts';
 import { ExtensionProblems } from '../extensions/problems.ts';
 import { extensionProjectFiles } from '../extensions/project-files.ts';
@@ -19,6 +20,7 @@ import { quote } from '../providers/launch.ts';
 import type { ProfileStart } from '../sessions/manager.ts';
 import type { DaemonBundles } from './bundles.ts';
 import type { Later } from './later.ts';
+import type { DaemonSeams } from './seams.ts';
 
 const EXTENSION_QUERY_ROWS = 500;
 
@@ -30,6 +32,8 @@ export interface ExtensionsBundle {
     problems: ExtensionProblems;
     /* What the launch sources of extensions list, which the launch store resolves beside a project's own. */
     launchSources: LaunchSources;
+    /* The places the machine sources of extensions list, and the start of a machine in one. */
+    machineSources: MachineSources;
     /* A client put a project on screen, or the last one closed it: what an extension with `projects.read` follows. */
     projectOpened(projectId: string): void;
     projectClosed(projectId: string): void;
@@ -48,15 +52,18 @@ export interface ExtensionsBundle {
 type ExtensionsLater = Later<
     Pick<
         DaemonBundles,
-        'agents' | 'providers' | 'projects' | 'databases' | 'artifacts' | 'language' | 'canvasHost' | 'actions' | 'git' | 'machine' | 'launches'
+        'agents' | 'providers' | 'projects' | 'databases' | 'artifacts' | 'language' | 'canvasHost' | 'actions' | 'git' | 'machine' | 'launches' | 'stores'
     >
 >;
+
+/* What the extensions take from the seams: where the development extensions live, and what runs the programs of a machine start. */
+type ExtensionSeams = Pick<DaemonSeams, 'developmentExtensions' | 'machineSteps' | 'env'>;
 
 /*
  * The extension host with everything it asks of the machine, built before the machine is up: each
  * ask reaches the bundle that answers it through `later`, so none is patched in after the start.
  */
-export function wireExtensions(home: string, developmentRoots: readonly string[], later: ExtensionsLater): ExtensionsBundle {
+export function wireExtensions(home: string, seams: ExtensionSeams, later: ExtensionsLater): ExtensionsBundle {
     const index = () => later.projects().store.index;
     const readChat = async (chatId: string): Promise<string> =>
         (await later.agents().context.answerSource('extension', { id: chatId, kind: 'chat', title: chatId }, null, null)).text ?? '';
@@ -150,7 +157,7 @@ export function wireExtensions(home: string, developmentRoots: readonly string[]
     };
     const host = new ExtensionHost({
         store: new ExtensionStore(home),
-        developmentRoots,
+        developmentRoots: seams.developmentExtensions,
         asks: () => asks,
         terminals: () => terminalPort,
         projectFiles,
@@ -190,6 +197,20 @@ export function wireExtensions(home: string, developmentRoots: readonly string[]
         projectOf: async (projectId) => (index().folderOf(projectId) === null ? null : projectOf(projectId)),
         changed: (projectId) => later.launches().store.sourcesChanged(projectId)
     });
+    const machineSources = new MachineSources({
+        host: {
+            list: (project) => host.machineSources(project),
+            start: (extension, source, project, candidate, hooks) => host.machineStart(extension, source, project, candidate, hooks)
+        },
+        projectOf: async (projectId) => (index().folderOf(projectId) === null ? null : projectOf(projectId)),
+        approvals: {
+            has: (folder, nodeId, command) => later.stores().commandApprovals.has(folder, nodeId, command),
+            approve: (folder, nodeId, command) => later.stores().commandApprovals.approve(folder, nodeId, command)
+        },
+        run: seams.machineSteps,
+        env: seams.env,
+        cwdOf: async (folder, cwd) => (cwd === undefined ? folder : insideProject(folder, cwd, worktreePaths))
+    });
     // The projects a client has open, so each opening and each close is told once.
     const open = new Set<string>();
 
@@ -198,6 +219,7 @@ export function wireExtensions(home: string, developmentRoots: readonly string[]
         terminals,
         problems,
         launchSources,
+        machineSources,
         projectOpened: (projectId) => {
             if (open.has(projectId)) {
                 return;

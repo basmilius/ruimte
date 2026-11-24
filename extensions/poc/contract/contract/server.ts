@@ -35,6 +35,17 @@ export interface ServerWorld {
     launchChanges(source: string): Promise<number>;
     /* Has a launch source stop telling of changes, as when the project closes. */
     unfollowLaunches(source: string): Promise<void>;
+    /* What a machine source lists in `project`, read as the machine reads it. Rejects for a source the extension does not supply. */
+    machines(source: string): Promise<{ title: string; candidates: Server.MachineCandidate[] }>;
+    /*
+     * Asks a machine source what starts a machine in one of its places, as the machine does before it holds the start
+     * for a person. `stopped` is the person stopping it while the source still describes. Nothing of the answer runs.
+     */
+    machineStart(
+        source: string,
+        candidate: string,
+        stopped: boolean
+    ): Promise<{ start: Server.MachineStart | null; reports: string[]; failure: string | null }>;
     /* A launch of `project` changed what it does, as the machine's runner says it. */
     launchIs(launch: string, state: 'running' | 'exited', exitCode: number | null): void;
     /* A client opened `project`, or the last one closed it. */
@@ -62,6 +73,8 @@ const SOURCES: WorldManifest = {
     provides: { launchSources: ['probe-launches'], problemSources: ['probe-problems'] },
     proposed: ['launchSources', 'problemSources']
 };
+const MACHINES = { 'machines.provide': 'Lists machines' };
+const MACHINE_SOURCES: WorldManifest = { provides: { machineSources: ['probe-machines'] }, proposed: ['machineSources'] };
 const NOT_FINAL =
     'This extension uses a part of Ruimte that is not final yet (terminalProfiles). It works while its author develops it, and an installed extension cannot use it.';
 
@@ -341,6 +354,57 @@ export function serverContract(open: OpenServerWorld): void {
                 ok: true,
                 value: { ok: false, error: { code: 'not-found', message: `${ID} supplies no problem source probe-problems` } }
             });
+        });
+
+        test('lists the places of a machine source, and describes a start for the machine to run until the person stops it', async () => {
+            const world = await open(MACHINES, MACHINE_SOURCES);
+
+            expect(await world.machines('probe-machines')).toEqual({
+                title: 'Probe machines',
+                candidates: [
+                    { id: 'box', title: 'Box', place: 'A box on this computer', running: false },
+                    { id: 'slow', title: 'Slow', place: 'A box that takes its time', running: false },
+                    { id: 'broken', title: 'Broken', place: 'A box with nothing to run', running: true }
+                ]
+            });
+            expect(await world.logs()).toContainEqual(expect.stringMatching(/^probe-machines listed a place that is none: id /));
+            // A description only: the source is handed no way to run it, and no key, token or connection of the machine it starts.
+            expect(await world.machineStart('probe-machines', 'box', false)).toEqual({
+                start: {
+                    steps: [{ title: 'Start the box', spawn: { command: 'sh', args: ['-c', 'box up'] } }],
+                    login: { command: 'sh', args: ['-c', 'box login'] },
+                    fingerprint: 'revision-1'
+                },
+                reports: ['Describing box'],
+                failure: null
+            });
+            expect(await world.machineStart('probe-machines', 'slow', true)).toMatchObject({ start: null, failure: 'Stopped by the person' });
+            expect((await world.machineStart('probe-machines', 'broken', false)).failure).toStartWith('described a start that is none: steps ');
+        });
+
+        test('defines a machine source only when its manifest asks for it, names it as proposed and lists it', async () => {
+            const allowed = await open(MACHINES, MACHINE_SOURCES);
+            const unasked = await open({});
+            const unnamed = await open(MACHINES);
+            const unlisted = await open(MACHINES, { provides: { machineSources: ['another'] }, proposed: ['machineSources'] });
+
+            expect(await allowed.call('machineSourceRefused')).toEqual({ ok: true, value: null });
+            expect(await unasked.call('machineSourceRefused')).toEqual({
+                ok: true,
+                value: `${ID} did not ask for the permission machines.provide in its manifest`
+            });
+            expect(await unnamed.call('machineSourceRefused')).toEqual({
+                ok: true,
+                value: 'defineMachineSource is still proposed; name machineSources under proposed in manifest.json'
+            });
+            expect(await unlisted.call('machineSourceRefused')).toEqual({
+                ok: true,
+                value: 'defineMachineSource got probe-machines, which manifest.json does not list under provides.machineSources'
+            });
+            await expect(unlisted.machines('probe-machines')).rejects.toThrow();
+            await expect(open(MACHINES, { ...MACHINE_SOURCES, provenance: 'installed' })).rejects.toThrow(
+                'This extension uses a part of Ruimte that is not final yet (machineSources).'
+            );
         });
 
         test('reports the problems of a source file by file, replaces what it said of a file and takes it all back', async () => {

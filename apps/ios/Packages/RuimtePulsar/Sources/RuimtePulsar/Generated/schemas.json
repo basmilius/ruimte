@@ -46908,6 +46908,341 @@
     "type": "object",
     "properties": {}
   },
+  "request.extension.machineList.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId"
+    ]
+  },
+  "request.extension.machineList.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "candidates": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "object",
+              "properties": {
+                "extension": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "extension",
+                "id",
+                "title"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "place": {
+              "type": "string"
+            },
+            "running": {
+              "type": "boolean"
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "idle",
+                "preparing",
+                "held",
+                "starting",
+                "joining",
+                "done",
+                "failed",
+                "stopped"
+              ]
+            },
+            "held": {
+              "type": "object",
+              "properties": {
+                "digest": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "programs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string"
+                      },
+                      "command": {
+                        "type": "string"
+                      },
+                      "cwd": {
+                        "type": "string"
+                      },
+                      "env": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      },
+                      "login": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "command",
+                      "cwd"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "digest",
+                "programs"
+              ]
+            },
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "failure": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "source",
+            "id",
+            "title",
+            "place",
+            "running",
+            "state",
+            "lines"
+          ]
+        }
+      }
+    },
+    "required": [
+      "candidates"
+    ]
+  },
+  "request.extension.machineStart.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "extension": {
+        "type": "string",
+        "minLength": 1
+      },
+      "source": {
+        "type": "string",
+        "minLength": 1
+      },
+      "candidate": {
+        "type": "string",
+        "minLength": 1
+      },
+      "approve": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "extension",
+      "source",
+      "candidate"
+    ]
+  },
+  "request.extension.machineStart.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "candidate": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "object",
+            "properties": {
+              "extension": {
+                "type": "string",
+                "minLength": 1
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "extension",
+              "id",
+              "title"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "place": {
+            "type": "string"
+          },
+          "running": {
+            "type": "boolean"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "preparing",
+              "held",
+              "starting",
+              "joining",
+              "done",
+              "failed",
+              "stopped"
+            ]
+          },
+          "held": {
+            "type": "object",
+            "properties": {
+              "digest": {
+                "type": "string",
+                "minLength": 1
+              },
+              "programs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "command": {
+                      "type": "string"
+                    },
+                    "cwd": {
+                      "type": "string"
+                    },
+                    "env": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
+                    "login": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "command",
+                    "cwd"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "digest",
+              "programs"
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "failure": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "id",
+          "title",
+          "place",
+          "running",
+          "state",
+          "lines"
+        ]
+      }
+    },
+    "required": [
+      "candidate"
+    ]
+  },
+  "request.extension.machineStop.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "extension": {
+        "type": "string",
+        "minLength": 1
+      },
+      "source": {
+        "type": "string",
+        "minLength": 1
+      },
+      "candidate": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "extension",
+      "source",
+      "candidate"
+    ]
+  },
+  "request.extension.machineStop.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.extension.remove.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -91495,6 +91830,138 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
+  },
+  "event.extension.machineChanged": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "candidate": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "object",
+            "properties": {
+              "extension": {
+                "type": "string",
+                "minLength": 1
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "extension",
+              "id",
+              "title"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "place": {
+            "type": "string"
+          },
+          "running": {
+            "type": "boolean"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "preparing",
+              "held",
+              "starting",
+              "joining",
+              "done",
+              "failed",
+              "stopped"
+            ]
+          },
+          "held": {
+            "type": "object",
+            "properties": {
+              "digest": {
+                "type": "string",
+                "minLength": 1
+              },
+              "programs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "command": {
+                      "type": "string"
+                    },
+                    "cwd": {
+                      "type": "string"
+                    },
+                    "env": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
+                    "login": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "command",
+                    "cwd"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "digest",
+              "programs"
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "failure": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "id",
+          "title",
+          "place",
+          "running",
+          "state",
+          "lines"
+        ]
+      }
+    },
+    "required": [
+      "projectId",
+      "candidate"
+    ]
   },
   "event.extension.message": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

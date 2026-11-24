@@ -3,6 +3,7 @@ import {
     chats,
     defineAgentTool,
     defineLaunchSource,
+    defineMachineSource,
     defineProblemSource,
     defineServer,
     defineTerminalProfile,
@@ -165,6 +166,47 @@ try {
     problemSourceRefused = (e as Error).message;
 }
 
+const MACHINES = 'probe-machines';
+let machineSourceRefused: string | null = null;
+
+try {
+    defineMachineSource({
+        id: MACHINES,
+        title: 'Probe machines',
+        list: () => [
+            { id: 'box', title: 'Box', place: 'A box on this computer', running: false },
+            { id: 'slow', title: 'Slow', place: 'A box that takes its time', running: false },
+            { id: 'broken', title: 'Broken', place: 'A box with nothing to run', running: true },
+            // No place, so the machine leaves it out and says why.
+            { id: 'Not An Id', title: 'Unnamed', place: '', running: false }
+        ],
+        async start(candidate, { report, signal }) {
+            report(`Describing ${candidate.id}`);
+
+            if (candidate.id === 'slow') {
+                // Answers only once the person stopped the start.
+                await new Promise((_resolve, reject) => {
+                    const stopped = (): void => reject(new Error('Stopped by the person'));
+
+                    if (signal.aborted) {
+                        stopped();
+                    } else {
+                        signal.addEventListener('abort', stopped);
+                    }
+                });
+            }
+
+            return {
+                steps: candidate.id === 'broken' ? [] : [{ title: 'Start the box', spawn: { command: 'sh', args: ['-c', 'box up'] } }],
+                login: { command: 'sh', args: ['-c', 'box login'] },
+                fingerprint: 'revision-1'
+            };
+        }
+    });
+} catch (e) {
+    machineSourceRefused = (e as Error).message;
+}
+
 // What it heard of the machine, in the shape it was handed. The second listener follows another project only.
 const heardOfMachine: object[] = [];
 const heardElsewhere: object[] = [];
@@ -181,6 +223,9 @@ const fileWatches = new Map<string, () => void>();
 const providerApi = defineServer({
     async sourcesRefused() {
         return { launches: launchSourceRefused, problems: problemSourceRefused };
+    },
+    async machineSourceRefused() {
+        return machineSourceRefused;
     },
     /* Changes what the launch source lists, and says so if the machine asked it to. */
     async bump() {

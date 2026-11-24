@@ -25,11 +25,16 @@ export interface ExtensionProviderPoint {
 export const EXTENSION_PROVIDER_POINTS: Readonly<Record<string, ExtensionProviderPoint>> = {
     terminalProfiles: { define: 'defineTerminalProfile', permission: 'terminals.profiles', proposed: true },
     launchSources: { define: 'defineLaunchSource', permission: 'launches.provide', proposed: true },
-    problemSources: { define: 'defineProblemSource', permission: 'problems.provide', proposed: true }
+    problemSources: { define: 'defineProblemSource', permission: 'problems.provide', proposed: true },
+    machineSources: { define: 'defineMachineSource', permission: 'machines.provide', proposed: true }
 };
 
 // The most launches one launch source lists in a project; the rest is cut, so a source cannot fill the menu.
 export const MAX_SOURCED_LAUNCHES = 64;
+
+// The most places one machine source lists in a project, and the most programs one start runs.
+export const MAX_MACHINE_CANDIDATES = 16;
+export const MAX_MACHINE_STEPS = 16;
 
 /* The id a launch of a source goes by among a project's launches, which says the extension and the source it has to come from. */
 export function sourcedLaunchId(extension: string, source: string, launch: string): string {

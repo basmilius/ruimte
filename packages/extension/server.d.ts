@@ -193,6 +193,62 @@ export function defineLaunchSource(source: {
     watch?(project: ProjectInfo, changed: () => void): (() => void) | Promise<() => void>;
 }): void;
 
+/** A place a machine can run in, as a source lists it: a container, a volume, another system on this computer. */
+export interface MachineCandidate {
+    /** Its own within the source, of lowercase letters, digits and dashes. */
+    id: string;
+    title: string;
+    /** Where it is, in words a person reads, such as the name of a container. */
+    place: string;
+    /** A machine already runs there, so Ruimte offers no start. */
+    running: boolean;
+}
+
+/** One program Ruimte runs on this machine, to its end, on the way to a machine in that place. */
+export interface MachineStep {
+    /** What it does, in words a person reads above its output. */
+    title: string;
+    spawn: SpawnDescription;
+}
+
+/** How a machine gets into a place and starts there. The extension describes it; Ruimte runs it, after a person approved it. */
+export interface MachineStart {
+    /** In order, at most 16. A step that ends with another code than 0 ends the start. */
+    steps: MachineStep[];
+    /**
+     * Runs `ruimte login` on the new machine and stays until it ends. The person reads its lines, opens the page they
+     * name, signs in and approves the code, which puts the machine on their account. Leave it out for a machine that is
+     * on the account already. Nothing else puts a machine on an account.
+     */
+    login?: SpawnDescription;
+    /** A digest of every file that decides what runs. A change to it asks a person again. */
+    fingerprint: string;
+}
+
+export interface PrepareContext {
+    project: ProjectInfo;
+    /** A line of progress a person reads. */
+    report(line: string): void;
+    /** Aborted once the person stopped the start. */
+    signal: AbortSignal;
+}
+
+/**
+ * Needs `machines.provide`. Proposed: name `machineSources` under `proposed` in the manifest, and the id under
+ * `provides.machineSources`. Its places show in Settings, Machines of the app on this computer, under `title`. A start
+ * asks `start` what to run, and runs it only after a person approved the programs, their folder, their variables and
+ * the fingerprint together. The new machine has an identity of its own and joins the person's account through its own
+ * `ruimte login`, as every machine does: no call hands an extension a key, a token or a connection to it, and nothing
+ * mounts the login of a CLI on this computer into it. Ruimte stops or removes nothing a start made. At most 16 places
+ * per source. Throws for an id the manifest does not list.
+ */
+export function defineMachineSource(source: {
+    id: string;
+    title: string;
+    list(project: ProjectInfo): MachineCandidate[] | Promise<MachineCandidate[]>;
+    start(candidate: MachineCandidate, context: PrepareContext): MachineStart | Promise<MachineStart>;
+}): void;
+
 /** A place in a file, counted from 1 as a person reads it, and what is wrong there. */
 export interface Problem {
     line: number;

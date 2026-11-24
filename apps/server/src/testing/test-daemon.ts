@@ -30,6 +30,7 @@ import type { VisualHost } from '../visuals/agent-host.ts';
 import { wireDaemon } from '../wire-daemon.ts';
 import type { DaemonBundles } from '../wiring/bundles.ts';
 import type { OutboxLink } from '../wiring/outbox.ts';
+import type { FakeMachineSteps } from './fake-machine-steps.ts';
 import { testRuntime, testSeams, type TestSeams } from './test-seams.ts';
 
 /* One run of the daemon over a home, wired by `wireDaemon` with the seams of `test-seams.ts` where a process or the outside world would be. */
@@ -68,6 +69,8 @@ export interface TestDaemon {
     alerts: string[];
     /* Every piece of work owed since boot, kept after the worker took it off the outbox. */
     enqueued: OutboxWork[];
+    /* The programs a machine start asked to run, none of which ran. */
+    machineSteps: FakeMachineSteps;
     /* A request over the wire from one client, answered by the same handlers a socket reaches. */
     request(type: string, payload: unknown): Promise<ServerFrame>;
     /* Resolves once what a deleted node took along (an unused fork's record) is gone. */
@@ -209,6 +212,7 @@ export async function bootTestDaemon(options: TestDaemonOptions): Promise<TestDa
         bundles: wired.bundles,
         alerts: fakes.alerts,
         enqueued: fakes.enqueued,
+        machineSteps: fakes.machineSteps,
         request: async (type, payload) => {
             const frames: ServerFrame[] = [];
             await wired.dispatcher.handle({ id: 'client-1', send: (frame) => frames.push(frame) }, JSON.stringify({ id: 'request', type, payload }));

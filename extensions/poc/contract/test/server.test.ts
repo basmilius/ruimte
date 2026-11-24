@@ -42,6 +42,20 @@ serverContract(async (permissions, { provenance, ...manifest } = {}) => {
         launches: async (source) => ({ title: server.launchSource(source).title, launches: await server.launchSource(source).list() }),
         launchChanges: async (source) => server.launchSource(source).changes,
         unfollowLaunches: (source) => server.launchSource(source).stop(),
+        machines: async (source) => ({ title: server.machineSource(source).title, candidates: await server.machineSource(source).list() }),
+        machineStart: async (source, candidate, stopped) => {
+            const stop = new AbortController();
+
+            if (stopped) {
+                stop.abort();
+            }
+
+            try {
+                return { ...(await server.machineSource(source).start(candidate, { signal: stop.signal })), failure: null };
+            } catch (e) {
+                return { start: null, reports: [], failure: (e as Error).message };
+            }
+        },
         launchIs: (launch, state, exitCode) => server.fire('launch.status', { project: { id: 'project-a' }, launch, state, exitCode }),
         projectIs: (open) => {
             if (open) {

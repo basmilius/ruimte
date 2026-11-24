@@ -6775,9 +6775,12 @@ var NODE_ACCENT_COLORS = {
 var EXTENSION_PROVIDER_POINTS = {
   terminalProfiles: { define: "defineTerminalProfile", permission: "terminals.profiles", proposed: true },
   launchSources: { define: "defineLaunchSource", permission: "launches.provide", proposed: true },
-  problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true }
+  problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true },
+  machineSources: { define: "defineMachineSource", permission: "machines.provide", proposed: true }
 };
 var MAX_SOURCED_LAUNCHES = 64;
+var MAX_MACHINE_CANDIDATES = 16;
+var MAX_MACHINE_STEPS = 16;
 var EXTENSION_PROPOSED_PARTS = Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true);
 function pointOf(kind) {
   return Object.hasOwn(EXTENSION_PROVIDER_POINTS, kind) ? EXTENSION_PROVIDER_POINTS[kind] ?? null : null;
@@ -6997,6 +7000,8 @@ function createServerApi(options) {
   const profiles = new Map;
   const launchSources = new Map;
   const launchWatches = new Map;
+  const machineSources = new Map;
+  const machineStarts = new Map;
   const fileWatches = new Map;
   let nextFileWatch = 1;
   const typed = (method, args) => ask(method, args);
@@ -7076,6 +7081,11 @@ function createServerApi(options) {
     defineProblemSource(source) {
       mayDefine("defineProblemSource", "problems.provide", source.id);
       send({ type: "problemSource", id: source.id, title: source.title });
+    },
+    defineMachineSource(source) {
+      mayDefine("defineMachineSource", "machines.provide", source.id);
+      machineSources.set(source.id, source);
+      send({ type: "machineSource", id: source.id, title: source.title });
     },
     problems: {
       report: async (project, source, reported) => mapResult(await ask("problems.report", [project.id, source, reported]), () => {
@@ -7207,6 +7217,32 @@ ${project.id}`;
       }
       return null;
     },
+    async askMachineSource(id, method, { project, candidate, run }) {
+      const source = machineSources.get(id);
+      if (source === undefined) {
+        throw new MissingHandler(`No machine source ${id}`);
+      }
+      if (method === "list") {
+        return source.list(project);
+      }
+      if (candidate === undefined || run === undefined) {
+        throw new TypeError("A start names a place and a number");
+      }
+      const abort = new AbortController;
+      machineStarts.set(run, abort);
+      try {
+        return await source.start(candidate, {
+          project,
+          report: (line) => send({ type: "machineReport", run, line: String(line) }),
+          signal: abort.signal
+        });
+      } finally {
+        machineStarts.delete(run);
+      }
+    },
+    abortMachineStart(run) {
+      machineStarts.get(run)?.abort();
+    },
     deliver(name, payload) {
       for (const listener of listeners.get(name) ?? []) {
         listener(payload);
@@ -7321,6 +7357,38 @@ var LaunchDescriptionSchema = object({
   fingerprint: string2().min(1).max(256),
   port: number2().int().min(1).max(65535).optional()
 });
+var MachineCandidateDescriptionSchema = object({
+  id: string2().regex(PROVIDED_ID),
+  title: string2().trim().min(1).max(200),
+  place: string2().trim().max(200),
+  running: boolean2()
+});
+var MachineStartDescriptionSchema = object({
+  steps: array(object({ title: string2().trim().min(1).max(200), spawn: SpawnDescriptionSchema })).min(1).max(MAX_MACHINE_STEPS),
+  login: SpawnDescriptionSchema.optional(),
+  fingerprint: string2().min(1).max(256)
+});
+function candidatesListed(answer, refused) {
+  const candidates = new Map;
+  for (const entry of (Array.isArray(answer) ? answer : []).slice(0, MAX_MACHINE_CANDIDATES)) {
+    const described = MachineCandidateDescriptionSchema.safeParse(entry);
+    if (!described.success) {
+      const issue = described.error.issues[0];
+      refused(`listed a place that is none: ${issue?.path.join(".") ?? ""} ${issue?.message ?? "invalid"}`);
+    } else if (!candidates.has(described.data.id)) {
+      candidates.set(described.data.id, described.data);
+    }
+  }
+  return [...candidates.values()];
+}
+function machineStartDescribed(answer) {
+  const described = MachineStartDescriptionSchema.safeParse(answer);
+  if (!described.success) {
+    const issue = described.error.issues[0];
+    throw new Error(`described a start that is none: ${issue?.path.join(".") ?? ""} ${issue?.message ?? "invalid"}`);
+  }
+  return described.data;
+}
 function launchesListed(answer, refused) {
   const launches = new Map;
   for (const entry of (Array.isArray(answer) ? answer : []).slice(0, MAX_SOURCED_LAUNCHES)) {
@@ -7485,6 +7553,9 @@ class TestMachine {
   profiles = new Map;
   launchSources = new Map;
   problemSources = new Map;
+  machineSources = new Map;
+  machineReports = new Map;
+  nextMachineStart = 1;
   problems = [];
   files;
   project;
@@ -7587,6 +7658,10 @@ class TestMachine {
       }
     } else if (message.type === "problemSource") {
       this.problemSources.set(message.id, message.title);
+    } else if (message.type === "machineSource") {
+      this.machineSources.set(message.id, message.title);
+    } else if (message.type === "machineReport") {
+      this.machineReports.get(message.run)?.push(message.line);
     } else {
       const reason = eventRefusal(message.name, this.permissions);
       if (reason === null) {
@@ -7907,6 +7982,42 @@ async function createTestServer(options = {}) {
         },
         stop: async (project = {}) => {
           await machine.core.askLaunchSource(id, "unwatch", { ...machine.project, ...project });
+        }
+      };
+    },
+    machineSource: (id) => {
+      const title = machine.machineSources.get(id);
+      if (title === undefined) {
+        throw new Error(`No machine source ${id}. defineMachineSource says what there is`);
+      }
+      const list = async (project = {}) => candidatesListed(wire(await machine.core.askMachineSource(id, "list", { project: { ...machine.project, ...project } })), (reason) => {
+        machine.logs.push(`${id} ${reason}`);
+      });
+      return {
+        title,
+        list,
+        start: async (candidateId, options = {}) => {
+          const project = { ...machine.project, ...options.project };
+          const candidate = (await list(project)).find((listed) => listed.id === candidateId);
+          if (candidate === undefined) {
+            throw new Error(`${id} lists no place ${candidateId}`);
+          }
+          const run = machine.nextMachineStart;
+          const reports = [];
+          const abort = () => machine.core.abortMachineStart(run);
+          machine.nextMachineStart += 1;
+          machine.machineReports.set(run, reports);
+          options.signal?.addEventListener("abort", abort);
+          try {
+            const asked = machine.core.askMachineSource(id, "start", { project, candidate, run });
+            if (options.signal?.aborted === true) {
+              abort();
+            }
+            return { start: machineStartDescribed(wire(await asked)), reports };
+          } finally {
+            machine.machineReports.delete(run);
+            options.signal?.removeEventListener("abort", abort);
+          }
         }
       };
     },
@@ -9627,6 +9738,7 @@ var server = {
   defineTerminalProfile: through("defineTerminalProfile"),
   defineLaunchSource: through("defineLaunchSource"),
   defineProblemSource: through("defineProblemSource"),
+  defineMachineSource: through("defineMachineSource"),
   problems: forwarded2("problems"),
   files: forwarded2("files"),
   terminals: forwarded2("terminals"),

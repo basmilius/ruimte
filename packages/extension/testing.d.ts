@@ -24,6 +24,8 @@ import type {
     FileProblems,
     Json,
     LaunchDescription,
+    MachineCandidate,
+    MachineStart,
     MachineActionName,
     MachineInput,
     MachineOutput,
@@ -411,6 +413,18 @@ export interface TestServer<Api> {
         list(project?: Partial<ProjectInfo>): Promise<LaunchDescription[]>;
         stop(project?: Partial<ProjectInfo>): Promise<void>;
         readonly changes: number;
+    };
+    /**
+     * A machine source `defineMachineSource` named, asked as the machine asks it. `list` reads its places, and one the
+     * machine would not take is left out, with the reason in `logs`. `start` asks what starts a machine in a place by its
+     * id, as the machine does before it holds the start for a person's approval: it answers the description and the lines
+     * the source reported, runs nothing, and aborts the signal the source was handed once `signal` aborts. It rejects
+     * for a description the machine would not take. Throws for a source it did not define.
+     */
+    machineSource(id: string): {
+        title: string;
+        list(project?: Partial<ProjectInfo>): Promise<MachineCandidate[]>;
+        start(candidate: string, options?: { project?: Partial<ProjectInfo>; signal?: AbortSignal }): Promise<{ start: MachineStart; reports: string[] }>;
     };
     /** What the problem sources hold now, as `problems.report` and `problems.clear` left it: per source, the files with problems. */
     problems: { source: string; files: FileProblems[] }[];

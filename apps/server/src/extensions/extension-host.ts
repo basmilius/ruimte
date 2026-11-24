@@ -31,7 +31,16 @@ import { errorText } from '../error-text.ts';
 import { bunRuntime } from '../language/runtime.ts';
 import type { SessionSink } from '../wire.ts';
 import { clientFilesOf } from './client-files.ts';
-import { launchesListed, SpawnDescriptionSchema, type LaunchDescription, type SpawnDescription } from './descriptions.ts';
+import {
+    candidatesListed,
+    launchesListed,
+    machineStartDescribed,
+    SpawnDescriptionSchema,
+    type LaunchDescription,
+    type MachineCandidateDescription,
+    type MachineStartDescription,
+    type SpawnDescription
+} from './descriptions.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
 import runtimeSource from './generated/server-runtime.js' with { type: 'text' };
 import {
@@ -71,6 +80,8 @@ const ProtocolMessageSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('launchSource'), id: z.string(), title: z.string().min(1).max(80), watches: z.boolean() }),
     z.object({ type: z.literal('launchesChanged'), source: z.string(), projectId: z.string() }),
     z.object({ type: z.literal('problemSource'), id: z.string(), title: z.string().min(1).max(80) }),
+    z.object({ type: z.literal('machineSource'), id: z.string(), title: z.string().min(1).max(80) }),
+    z.object({ type: z.literal('machineReport'), run: z.number(), line: z.string() }),
     z.object({ type: z.literal('emit'), name: z.string(), payload: z.unknown().optional() }),
     z.object({ type: z.literal('result'), id: z.number(), result: z.unknown().optional(), error: z.string().optional(), code: z.string().optional() })
 ]);
@@ -136,6 +147,9 @@ interface Running {
     // The launch sources and problem sources its module defined, by id.
     launchSources: Map<string, { title: string; watches: boolean }>;
     problemSources: Map<string, { title: string }>;
+    machineSources: Map<string, { title: string }>;
+    // Who reads the lines a machine source reports while it describes a start, by the number it was asked under.
+    machineReports: Map<number, (line: string) => void>;
     subscriptions: Set<string>;
     nextCall: number;
     buffered: string;
@@ -174,6 +188,14 @@ export interface SourceListing {
     // Whether it tells when its list changed, so the machine asks it to.
     watches: boolean;
     launches: LaunchDescription[];
+}
+
+/* What one machine source of an extension lists in a project. */
+export interface MachineSourceListing {
+    extension: string;
+    source: string;
+    title: string;
+    candidates: MachineCandidateDescription[];
 }
 
 const FileReadAskSchema = z.tuple([z.string().min(1), z.string().min(1)]);
@@ -937,6 +959,8 @@ export class ExtensionHost {
             profiles: new Map(),
             launchSources: new Map(),
             problemSources: new Map(),
+            machineSources: new Map(),
+            machineReports: new Map(),
             subscriptions: new Set(),
             nextCall: 1,
             buffered: '',
@@ -1026,6 +1050,12 @@ export class ExtensionHost {
             if (this.mayProvide(id, running, 'defineProblemSource', 'problems.provide', message.id)) {
                 running.problemSources.set(message.id, { title: message.title });
             }
+        } else if (message.type === 'machineSource') {
+            if (this.mayProvide(id, running, 'defineMachineSource', 'machines.provide', message.id)) {
+                running.machineSources.set(message.id, { title: message.title });
+            }
+        } else if (message.type === 'machineReport') {
+            running.machineReports.get(message.run)?.(message.line);
         } else if (message.type === 'launchesChanged') {
             if (running.launchSources.has(message.source)) {
                 this.options.launchesChanged?.(id, message.source, message.projectId);
@@ -1133,6 +1163,96 @@ export class ExtensionHost {
 
         if (running?.launchSources.get(source)?.watches === true) {
             await this.send(running, { type: 'launchSource', source, method: watch ? 'watch' : 'unwatch', input: project }, `${id} launch source ${source}`);
+        }
+    }
+
+    /*
+     * The places the machine sources of this machine's extensions list in a project, by the rules of `launchSources`: a
+     * source's process starts for the list, and one that fails or answers another shape lists nothing.
+     */
+    async machineSources(project: ExtensionProject): Promise<MachineSourceListing[]> {
+        const listings: MachineSourceListing[] = [];
+
+        for (const extension of await this.options.store.list()) {
+            if (isDamaged(extension) || !extension.enabled || this.refusedReason(extension) !== null || this.options.store.serverEntry(extension) === null) {
+                continue;
+            }
+
+            const { id } = extension.manifest;
+            const ids = providedIds(extension.manifest, 'machineSources', allowsProposed(this.provenanceOf(extension)));
+
+            if (ids.length === 0) {
+                continue;
+            }
+
+            try {
+                const running = await this.runningFor(id);
+
+                for (const source of ids) {
+                    const defined = running.machineSources.get(source);
+
+                    if (defined === undefined) {
+                        continue;
+                    }
+
+                    const answer = await this.send(
+                        running,
+                        { type: 'machineSource', source, method: 'list', input: { project } },
+                        `${id} machine source ${source}`
+                    );
+                    const candidates = candidatesListed(answer, (reason) => {
+                        void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${source} ${reason}\n`));
+                    });
+
+                    listings.push({ extension: id, source, title: defined.title, candidates });
+                }
+            } catch (e) {
+                void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `Its machines were not listed: ${errorText(e)}\n`));
+            }
+        }
+
+        return listings;
+    }
+
+    /*
+     * Asks a machine source what starts a machine in one of its places. `report` hears the lines it says meanwhile, and
+     * an aborted `signal` aborts the one the source was handed. The answer is a description only: nothing ran yet.
+     */
+    async machineStart(
+        id: string,
+        source: string,
+        project: ExtensionProject,
+        candidate: MachineCandidateDescription,
+        hooks: { report(line: string): void; signal: AbortSignal }
+    ): Promise<MachineStartDescription> {
+        const running = this.running.get(id);
+
+        if (running?.machineSources.has(source) !== true) {
+            throw new ExtensionRefusal('not-found', `${id} supplies no machine source ${source}`);
+        }
+
+        // The number its reports and an abort go under, which is the one `send` takes for the ask itself.
+        const run = running.nextCall;
+        const abort = (): void => void running.child.stdin.write(`${JSON.stringify({ type: 'machineAbort', run })}\n`);
+
+        running.machineReports.set(run, hooks.report);
+        hooks.signal.addEventListener('abort', abort);
+
+        try {
+            const input = { project, candidate, run };
+            const asked = this.send(running, { type: 'machineSource', source, method: 'start', input }, `${id} machine source ${source}`);
+
+            // A stop from before the ask still reaches the source, after the ask it is about.
+            if (hooks.signal.aborted) {
+                abort();
+            }
+
+            return machineStartDescribed(await asked);
+        } catch (e) {
+            throw e instanceof ExtensionRefusal ? e : new ExtensionRefusal('failed', errorText(e));
+        } finally {
+            running.machineReports.delete(run);
+            hooks.signal.removeEventListener('abort', abort);
         }
     }
 

@@ -31,6 +31,9 @@ export type ServerMessage =
     // What a launch source said through the `changed` of its `watch`.
     | { type: 'launchesChanged'; source: string; projectId: string }
     | { type: 'problemSource'; id: string; title: string }
+    | { type: 'machineSource'; id: string; title: string }
+    // A line a machine source reported while it described a start, by the number the machine asked under.
+    | { type: 'machineReport'; run: number; line: string }
     | { type: 'emit'; name: string; payload: unknown };
 
 interface ServerApiOptions {
@@ -64,15 +67,27 @@ export interface ServerCore {
     /* Asks a launch source what it lists in a project, or to start or stop telling when that changes. */
     askLaunchSource(id: string, method: LaunchSourceMethod, project: PublicServer.ProjectInfo): unknown;
     deliver(name: string, payload: unknown): void;
+    /* Asks a machine source what it lists in a project, or what starts a machine in one of those places. */
+    askMachineSource(id: string, method: 'list' | 'start', input: MachineSourceAsk): unknown;
+    /* The person stopped the start a machine source describes under this number. */
+    abortMachineStart(run: number): void;
     /* A file or folder `files.watch` follows changed, by the number the watch asked under. */
     fileChanged(watch: number): void;
 }
 
 export type LaunchSourceMethod = 'list' | 'watch' | 'unwatch';
 
+export interface MachineSourceAsk {
+    project: PublicServer.ProjectInfo;
+    // Only a start names these: the place as the machine read it from `list`, and the number its reports go under.
+    candidate?: PublicServer.MachineCandidate;
+    run?: number;
+}
+
 type Listener = (payload: unknown) => void;
 type TerminalProfile = Parameters<typeof PublicServer.defineTerminalProfile>[0];
 type LaunchSource = Parameters<typeof PublicServer.defineLaunchSource>[0];
+type MachineSource = Parameters<typeof PublicServer.defineMachineSource>[0];
 
 interface Ref {
     id: string;
@@ -117,6 +132,9 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
     const launchSources = new Map<string, LaunchSource>();
     // What stops a launch source's watch of a project, by source and project.
     const launchWatches = new Map<string, () => void>();
+    const machineSources = new Map<string, MachineSource>();
+    // What aborts the signal of a start a machine source describes, by the number the machine asked under.
+    const machineStarts = new Map<number, AbortController>();
     const fileWatches = new Map<number, () => void>();
     let nextFileWatch = 1;
     const typed = <Value>(method: string, args: unknown[]) => ask(method, args) as Promise<Result<Value>>;
@@ -210,6 +228,11 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
         defineProblemSource(source: { id: string; title: string }): void {
             mayDefine('defineProblemSource', 'problems.provide', source.id);
             send({ type: 'problemSource', id: source.id, title: source.title });
+        },
+        defineMachineSource(source: MachineSource): void {
+            mayDefine('defineMachineSource', 'machines.provide', source.id);
+            machineSources.set(source.id, source);
+            send({ type: 'machineSource', id: source.id, title: source.title });
         },
         problems: {
             report: async (project: Ref, source: string, reported: PublicServer.FileProblems[]) =>
@@ -370,6 +393,38 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
             }
 
             return null;
+        },
+        async askMachineSource(id, method, { project, candidate, run }) {
+            const source = machineSources.get(id);
+
+            if (source === undefined) {
+                throw new MissingHandler(`No machine source ${id}`);
+            }
+
+            if (method === 'list') {
+                return source.list(project);
+            }
+
+            if (candidate === undefined || run === undefined) {
+                throw new TypeError('A start names a place and a number');
+            }
+
+            const abort = new AbortController();
+
+            machineStarts.set(run, abort);
+
+            try {
+                return await source.start(candidate, {
+                    project,
+                    report: (line) => send({ type: 'machineReport', run, line: String(line) }),
+                    signal: abort.signal
+                });
+            } finally {
+                machineStarts.delete(run);
+            }
+        },
+        abortMachineStart(run) {
+            machineStarts.get(run)?.abort();
         },
         deliver(name, payload) {
             for (const listener of listeners.get(name) ?? []) {
