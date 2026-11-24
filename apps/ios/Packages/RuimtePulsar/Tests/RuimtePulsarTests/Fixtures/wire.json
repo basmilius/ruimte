@@ -264,6 +264,8 @@
     "extension.machineList",
     "extension.machineStart",
     "extension.machineStop",
+    "extension.notificationChannelSet",
+    "extension.notificationChannels",
     "extension.remove",
     "extension.setEnabled",
     "extension.storageGet",

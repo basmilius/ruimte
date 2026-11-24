@@ -176,7 +176,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     );
 
     const { sessions, chats } = agents;
-    const push = provide('push', wirePush(home, machine.auth, identity, agents, projects.store, work.snoozes, usage));
+    const push = provide('push', wirePush(home, machine.auth, identity, agents, projects.store, work.snoozes, usage, extensions.notificationChannels));
     sessions.observe((event) => push.consume(event));
     sessions.observe((event) => work.tasks.terminals.sessionEvent(event));
     chats.observe((event) => push.consume(event));

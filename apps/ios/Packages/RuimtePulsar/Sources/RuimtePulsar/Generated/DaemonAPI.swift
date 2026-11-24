@@ -172,6 +172,8 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `extensionMachineList` = "extension.machineList"
     case `extensionMachineStart` = "extension.machineStart"
     case `extensionMachineStop` = "extension.machineStop"
+    case `extensionNotificationChannelSet` = "extension.notificationChannelSet"
+    case `extensionNotificationChannels` = "extension.notificationChannels"
     case `extensionRemove` = "extension.remove"
     case `extensionSetEnabled` = "extension.setEnabled"
     case `extensionStorageGet` = "extension.storageGet"

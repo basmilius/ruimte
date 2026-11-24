@@ -47243,6 +47243,77 @@
     "type": "object",
     "properties": {}
   },
+  "request.extension.notificationChannelSet.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "extension": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$"
+      },
+      "channel": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+      },
+      "on": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "extension",
+      "channel",
+      "on"
+    ]
+  },
+  "request.extension.notificationChannelSet.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.extension.notificationChannels.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.extension.notificationChannels.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "channels": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "extension": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$"
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "on": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "extension",
+            "id",
+            "title",
+            "on"
+          ]
+        }
+      }
+    },
+    "required": [
+      "channels"
+    ]
+  },
   "request.extension.remove.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

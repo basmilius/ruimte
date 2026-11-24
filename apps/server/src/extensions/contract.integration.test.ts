@@ -310,6 +310,19 @@ serverContract(async (permissions, { provenance, ...provided } = {}) => {
                 return { start: null, reports: [], failure: (e as Error).message };
             }
         },
+        notify: async (channel, body, reason) => {
+            const listed = (await host.notificationChannels()).find((each) => each.extension === ID && each.id === channel);
+
+            if (listed === undefined) {
+                throw new Error(`${ID} lists no notification channel ${channel}`);
+            }
+
+            const notification = { title: 'Agent', body, project: { id: projectId }, node: { id: 'node-1' }, reason };
+            const delivered = await host.deliverNotification(ID, channel, notification);
+
+            // The title a process that ran gave it, which the list only knows after the first delivery.
+            return { title: (await host.notificationChannels()).find((each) => each.id === channel)?.title ?? listed.title, delivered };
+        },
         launchIs: (launch, state, exitCode) =>
             host.forwardEvent('launch.status', {
                 projectId,

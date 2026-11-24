@@ -128,6 +128,10 @@ export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, E
         scenario: 'lists the places of a machine source, and describes a start for the machine to run until the person stops it',
         refusal: 'defines a machine source only when its manifest asks for it, names it as proposed and lists it'
     },
+    'server/provider/defineNotificationChannel': {
+        scenario: 'hands a notification channel what to tell a person, and keeps a channel that throws to its own log',
+        refusal: 'defines a notification channel only when its manifest asks for it, names it as proposed and lists it'
+    },
     'server/call/log.info': { scenario: SECRET },
     'server/call/machine.run': { scenario: "checks a machine action's input, and throws for one of the wrong shape" },
     'server/call/onEvent': { scenario: HEARS, cleanup: DEAF },

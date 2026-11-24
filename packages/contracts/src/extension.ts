@@ -305,6 +305,23 @@ export type ExtensionTerminalProfile = z.infer<typeof ExtensionTerminalProfileSc
 export const ExtensionTerminalProfilesPayloadSchema = z.object({ projectId: z.string().min(1) });
 export const ExtensionTerminalProfilesResultSchema = z.object({ profiles: z.array(ExtensionTerminalProfileSchema) });
 
+/* A way an extension of this machine tells a person outside Ruimte, as Settings lists it. Off until a person turns it on. */
+export const ExtensionNotificationChannelSchema = z.object({
+    extension: ExtensionIdSchema,
+    id: ExtensionProvidedIdSchema,
+    // What its `server/` called it, or the extension's name while that has not run yet.
+    title: z.string().min(1).max(80),
+    on: z.boolean()
+});
+export type ExtensionNotificationChannel = z.infer<typeof ExtensionNotificationChannelSchema>;
+
+export const ExtensionNotificationChannelsResultSchema = z.object({ channels: z.array(ExtensionNotificationChannelSchema) });
+export const ExtensionNotificationChannelSetPayloadSchema = z.object({
+    extension: ExtensionIdSchema,
+    channel: ExtensionProvidedIdSchema,
+    on: z.boolean()
+});
+
 /*
  * A terminal the machine makes and starts: beside `beside` or at `at` on the canvas `viewId`, or a view of its own
  * without one. With `picked` a person chose the profile from a menu, so no extension opened the terminal.
@@ -352,7 +369,9 @@ export const EXTENSION_REQUEST_SCHEMAS = {
     'extension.call': { payload: ExtensionCallPayloadSchema, result: ExtensionCallResultSchema },
     'extension.terminalProfiles': { payload: ExtensionTerminalProfilesPayloadSchema, result: ExtensionTerminalProfilesResultSchema },
     'extension.terminalOpen': { payload: ExtensionTerminalOpenPayloadSchema, result: ExtensionTerminalOpenResultSchema },
-    'extension.terminalWrite': { payload: ExtensionTerminalWritePayloadSchema, result: EmptySchema }
+    'extension.terminalWrite': { payload: ExtensionTerminalWritePayloadSchema, result: EmptySchema },
+    'extension.notificationChannels': { payload: EmptySchema, result: ExtensionNotificationChannelsResultSchema },
+    'extension.notificationChannelSet': { payload: ExtensionNotificationChannelSetPayloadSchema, result: EmptySchema }
 } as const;
 
 export const EXTENSION_EVENT_SCHEMAS = {

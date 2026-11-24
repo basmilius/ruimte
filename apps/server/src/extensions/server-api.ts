@@ -34,6 +34,7 @@ export type ServerMessage =
     | { type: 'machineSource'; id: string; title: string }
     // A line a machine source reported while it described a start, by the number the machine asked under.
     | { type: 'machineReport'; run: number; line: string }
+    | { type: 'notificationChannel'; id: string; title: string }
     | { type: 'emit'; name: string; payload: unknown };
 
 interface ServerApiOptions {
@@ -71,6 +72,8 @@ export interface ServerCore {
     askMachineSource(id: string, method: 'list' | 'start', input: MachineSourceAsk): unknown;
     /* The person stopped the start a machine source describes under this number. */
     abortMachineStart(run: number): void;
+    /* Hands a notification channel what to tell a person, and settles once the channel did. */
+    deliverNotification(id: string, notification: PublicServer.Notification): unknown;
     /* A file or folder `files.watch` follows changed, by the number the watch asked under. */
     fileChanged(watch: number): void;
 }
@@ -88,6 +91,7 @@ type Listener = (payload: unknown) => void;
 type TerminalProfile = Parameters<typeof PublicServer.defineTerminalProfile>[0];
 type LaunchSource = Parameters<typeof PublicServer.defineLaunchSource>[0];
 type MachineSource = Parameters<typeof PublicServer.defineMachineSource>[0];
+type NotificationChannel = Parameters<typeof PublicServer.defineNotificationChannel>[0];
 
 interface Ref {
     id: string;
@@ -135,6 +139,7 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
     const machineSources = new Map<string, MachineSource>();
     // What aborts the signal of a start a machine source describes, by the number the machine asked under.
     const machineStarts = new Map<number, AbortController>();
+    const notificationChannels = new Map<string, NotificationChannel>();
     const fileWatches = new Map<number, () => void>();
     let nextFileWatch = 1;
     const typed = <Value>(method: string, args: unknown[]) => ask(method, args) as Promise<Result<Value>>;
@@ -233,6 +238,11 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
             mayDefine('defineMachineSource', 'machines.provide', source.id);
             machineSources.set(source.id, source);
             send({ type: 'machineSource', id: source.id, title: source.title });
+        },
+        defineNotificationChannel(channel: NotificationChannel): void {
+            mayDefine('defineNotificationChannel', 'notifications.provide', channel.id);
+            notificationChannels.set(channel.id, channel);
+            send({ type: 'notificationChannel', id: channel.id, title: channel.title });
         },
         problems: {
             report: async (project: Ref, source: string, reported: PublicServer.FileProblems[]) =>
@@ -425,6 +435,17 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
         },
         abortMachineStart(run) {
             machineStarts.get(run)?.abort();
+        },
+        async deliverNotification(id, notification) {
+            const channel = notificationChannels.get(id);
+
+            if (channel === undefined) {
+                throw new MissingHandler(`No notification channel ${id}`);
+            }
+
+            await channel.deliver(notification);
+
+            return null;
         },
         deliver(name, payload) {
             for (const listener of listeners.get(name) ?? []) {

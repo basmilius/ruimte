@@ -43,6 +43,7 @@ const server = {
     defineLaunchSource: through('defineLaunchSource'),
     defineProblemSource: through('defineProblemSource'),
     defineMachineSource: through('defineMachineSource'),
+    defineNotificationChannel: through('defineNotificationChannel'),
     problems: forwarded('problems'),
     files: forwarded('files'),
     terminals: forwarded('terminals'),

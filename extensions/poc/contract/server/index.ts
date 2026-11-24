@@ -4,6 +4,7 @@ import {
     defineAgentTool,
     defineLaunchSource,
     defineMachineSource,
+    defineNotificationChannel,
     defineProblemSource,
     defineServer,
     defineTerminalProfile,
@@ -207,6 +208,26 @@ try {
     machineSourceRefused = (e as Error).message;
 }
 
+// What the channel was handed, in order.
+const delivered: object[] = [];
+let channelRefused: string | null = null;
+
+try {
+    defineNotificationChannel({
+        id: 'probe-channel',
+        title: 'Probe channel',
+        async deliver(notification) {
+            if (notification.body === 'fail') {
+                throw new Error('The channel is down');
+            }
+
+            delivered.push(notification);
+        }
+    });
+} catch (e) {
+    channelRefused = (e as Error).message;
+}
+
 // What it heard of the machine, in the shape it was handed. The second listener follows another project only.
 const heardOfMachine: object[] = [];
 const heardElsewhere: object[] = [];
@@ -226,6 +247,12 @@ const providerApi = defineServer({
     },
     async machineSourceRefused() {
         return machineSourceRefused;
+    },
+    async channelRefused() {
+        return channelRefused;
+    },
+    async delivered() {
+        return delivered;
     },
     /* Changes what the launch source lists, and says so if the machine asked it to. */
     async bump() {

@@ -249,6 +249,27 @@ export function defineMachineSource(source: {
     start(candidate: MachineCandidate, context: PrepareContext): MachineStart | Promise<MachineStart>;
 }): void;
 
+/** What Ruimte tells a person about an agent, as a channel is handed it. */
+export interface Notification {
+    title: string;
+    body: string;
+    project: ProjectRef;
+    /** The chat or terminal it is about. */
+    node: NodeRef;
+    /** The agent waits for the person, finished its turn, or stopped on a usage limit. */
+    reason: 'needsYou' | 'done' | 'limit';
+}
+
+/**
+ * Needs `notifications.provide`. Proposed: name `notificationChannels` under `proposed` in the manifest, and the id under
+ * `provides.notificationChannels`. A channel shows under Settings, Notifications of the app on this computer and is off
+ * until a person turns it on. Ruimte decides when: `deliver` runs when a phone would get the push, so it waits while
+ * the person is at a desktop and skips what they read or snoozed there. The channel only delivers. One that throws or
+ * does not settle in time loses that one notification, with a line in the extension's log. Throws for an id the
+ * manifest does not list.
+ */
+export function defineNotificationChannel(channel: { id: string; title: string; deliver(notification: Notification): void | Promise<void> }): void;
+
 /** A place in a file, counted from 1 as a person reads it, and what is wrong there. */
 export interface Problem {
     line: number;

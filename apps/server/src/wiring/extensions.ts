@@ -6,6 +6,7 @@ import { extensionChatStarter } from '../extensions/extension-chat.ts';
 import { ExtensionHost, type ExtensionAsks, type ExtensionFilesPort, type ExtensionProject, type ExtensionTerminalPort } from '../extensions/extension-host.ts';
 import { runMachineAction, outputOf } from '../extensions/machine-actions.ts';
 import { MachineSources } from '../extensions/machine-sources.ts';
+import { NotificationChannels } from '../extensions/notification-channels.ts';
 import { terminalWriteRefusal } from '../extensions/policy.ts';
 import { ExtensionProblems } from '../extensions/problems.ts';
 import { extensionProjectFiles } from '../extensions/project-files.ts';
@@ -34,6 +35,8 @@ export interface ExtensionsBundle {
     launchSources: LaunchSources;
     /* The places the machine sources of extensions list, and the start of a machine in one. */
     machineSources: MachineSources;
+    /* The notification channels of extensions and which a person turned on, which the push service tells when a phone would hear. */
+    notificationChannels: NotificationChannels;
     /* A client put a project on screen, or the last one closed it: what an extension with `projects.read` follows. */
     projectOpened(projectId: string): void;
     projectClosed(projectId: string): void;
@@ -211,6 +214,13 @@ export function wireExtensions(home: string, seams: ExtensionSeams, later: Exten
         env: seams.env,
         cwdOf: async (folder, cwd) => (cwd === undefined ? folder : insideProject(folder, cwd, worktreePaths))
     });
+    const notificationChannels = new NotificationChannels(
+        {
+            list: () => host.notificationChannels(),
+            deliver: (extension, channel, notification) => host.deliverNotification(extension, channel, notification)
+        },
+        join(home, 'extension-notification-channels.json')
+    );
     // The projects a client has open, so each opening and each close is told once.
     const open = new Set<string>();
 
@@ -220,6 +230,7 @@ export function wireExtensions(home: string, seams: ExtensionSeams, later: Exten
         problems,
         launchSources,
         machineSources,
+        notificationChannels,
         projectOpened: (projectId) => {
             if (open.has(projectId)) {
                 return;
@@ -272,6 +283,7 @@ export function wireExtensions(home: string, seams: ExtensionSeams, later: Exten
             readSource: async (source, projectId) => (await later.agents().context.answerSource('extension', source, null, null, projectId)).text ?? '',
             providers: later.providers().providers,
             terminalProfiles: async (projectId) => host.terminalProfiles(await projectOf(projectId)),
+            notificationChannels,
             databaseQuery: async (projectId, connection, sql) => {
                 const folder = folderOfProject(projectId);
                 const { result } = await later

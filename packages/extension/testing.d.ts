@@ -29,6 +29,7 @@ import type {
     MachineActionName,
     MachineInput,
     MachineOutput,
+    Notification,
     NodeRef,
     ProjectInfo,
     ProjectRef,
@@ -426,6 +427,13 @@ export interface TestServer<Api> {
         list(project?: Partial<ProjectInfo>): Promise<MachineCandidate[]>;
         start(candidate: string, options?: { project?: Partial<ProjectInfo>; signal?: AbortSignal }): Promise<{ start: MachineStart; reports: string[] }>;
     };
+    /**
+     * A notification channel `defineNotificationChannel` named, handed a notification as the machine hands it one. What
+     * you leave out is filled in: a wait in `project` for the node `node-1`. Answers whether the channel delivered; a throw
+     * of the channel answers false with its reason in `logs`, as the machine writes it to the extension's log. When
+     * Ruimte tells a channel is the machine's to decide, so nothing here waits. Throws for a channel it did not define.
+     */
+    notificationChannel(id: string): { title: string; deliver(notification?: Partial<Notification>): Promise<boolean> };
     /** What the problem sources hold now, as `problems.report` and `problems.clear` left it: per source, the files with problems. */
     problems: { source: string; files: FileProblems[] }[];
     /** The text files of the project, by path. `writeFile` changes one, or removes it with null, and tells every `files.watch` that follows it. */

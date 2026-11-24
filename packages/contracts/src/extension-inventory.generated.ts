@@ -222,6 +222,7 @@ export const EXTENSION_API_INVENTORY = {
     'server/provider/defineLaunchSource': { permission: 'launches.provide' },
     'server/provider/defineMachineSource': { permission: 'machines.provide' },
     'server/provider/defineNodeContext': {},
+    'server/provider/defineNotificationChannel': { permission: 'notifications.provide' },
     'server/provider/defineProblemSource': { permission: 'problems.provide' },
     'server/provider/defineServer': {},
     'server/provider/defineTerminalProfile': { permission: 'terminals.profiles' }

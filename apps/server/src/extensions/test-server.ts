@@ -163,6 +163,7 @@ class TestMachine {
     readonly launchSources = new Map<string, { title: string; changes: number }>();
     readonly problemSources = new Map<string, string>();
     readonly machineSources = new Map<string, string>();
+    readonly notificationChannels = new Map<string, string>();
     // The lines a machine source reported while it described a start, by the number it was asked under.
     readonly machineReports = new Map<number, string[]>();
     nextMachineStart = 1;
@@ -297,6 +298,8 @@ class TestMachine {
             this.machineSources.set(message.id, message.title);
         } else if (message.type === 'machineReport') {
             this.machineReports.get(message.run)?.push(message.line);
+        } else if (message.type === 'notificationChannel') {
+            this.notificationChannels.set(message.id, message.title);
         } else {
             const reason = eventRefusal(message.name, this.permissions);
 
@@ -795,6 +798,37 @@ export async function createTestServer<Api>(options: PublicTesting.TestServerOpt
                     } finally {
                         machine.machineReports.delete(run);
                         options.signal?.removeEventListener('abort', abort);
+                    }
+                }
+            };
+        },
+        notificationChannel: (id) => {
+            const title = machine.notificationChannels.get(id);
+
+            if (title === undefined) {
+                throw new Error(`No notification channel ${id}. defineNotificationChannel says what there is`);
+            }
+
+            return {
+                title,
+                deliver: async (notification = {}) => {
+                    const handed: PublicServer.Notification = {
+                        title: 'Agent',
+                        body: 'The agent needs your attention.',
+                        project: { id: machine.project.id },
+                        node: { id: 'node-1' },
+                        reason: 'needsYou',
+                        ...notification
+                    };
+
+                    try {
+                        await machine.core.deliverNotification(id, wire(handed));
+
+                        return true;
+                    } catch (e) {
+                        machine.logs.push(`${id} did not deliver a notification: ${e instanceof Error ? e.message : String(e)}`);
+
+                        return false;
                     }
                 }
             };

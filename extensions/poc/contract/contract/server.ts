@@ -46,6 +46,11 @@ export interface ServerWorld {
         candidate: string,
         stopped: boolean
     ): Promise<{ start: Server.MachineStart | null; reports: string[]; failure: string | null }>;
+    /*
+     * Hands a notification channel a notification about `node-1` of `project`, as the machine does once it decided one
+     * goes out. Answers the channel's title and whether it delivered. Rejects for a channel the extension does not supply.
+     */
+    notify(channel: string, body: string, reason: Server.Notification['reason']): Promise<{ title: string; delivered: boolean }>;
     /* A launch of `project` changed what it does, as the machine's runner says it. */
     launchIs(launch: string, state: 'running' | 'exited', exitCode: number | null): void;
     /* A client opened `project`, or the last one closed it. */
@@ -75,6 +80,8 @@ const SOURCES: WorldManifest = {
 };
 const MACHINES = { 'machines.provide': 'Lists machines' };
 const MACHINE_SOURCES: WorldManifest = { provides: { machineSources: ['probe-machines'] }, proposed: ['machineSources'] };
+const NOTIFIES = { 'notifications.provide': 'Tells you elsewhere' };
+const CHANNELS: WorldManifest = { provides: { notificationChannels: ['probe-channel'] }, proposed: ['notificationChannels'] };
 const NOT_FINAL =
     'This extension uses a part of Ruimte that is not final yet (terminalProfiles). It works while its author develops it, and an installed extension cannot use it.';
 
@@ -404,6 +411,49 @@ export function serverContract(open: OpenServerWorld): void {
             await expect(unlisted.machines('probe-machines')).rejects.toThrow();
             await expect(open(MACHINES, { ...MACHINE_SOURCES, provenance: 'installed' })).rejects.toThrow(
                 'This extension uses a part of Ruimte that is not final yet (machineSources).'
+            );
+        });
+
+        test('hands a notification channel what to tell a person, and keeps a channel that throws to its own log', async () => {
+            const world = await open(NOTIFIES, CHANNELS);
+
+            expect(await world.notify('probe-channel', 'The agent needs your attention.', 'needsYou')).toEqual({ title: 'Probe channel', delivered: true });
+            expect(await world.notify('probe-channel', 'The turn is done.', 'done')).toEqual({ title: 'Probe channel', delivered: true });
+            expect(await world.call('delivered')).toEqual({
+                ok: true,
+                value: [
+                    { title: 'Agent', body: 'The agent needs your attention.', project: { id: world.project }, node: { id: 'node-1' }, reason: 'needsYou' },
+                    { title: 'Agent', body: 'The turn is done.', project: { id: world.project }, node: { id: 'node-1' }, reason: 'done' }
+                ]
+            });
+            // A channel that fails loses that one notification, and the next one still reaches it.
+            expect(await world.notify('probe-channel', 'fail', 'limit')).toEqual({ title: 'Probe channel', delivered: false });
+            expect(await world.logs()).toContainEqual(expect.stringContaining('did not deliver a notification: The channel is down'));
+            expect((await world.notify('probe-channel', 'Back again.', 'limit')).delivered).toBe(true);
+        });
+
+        test('defines a notification channel only when its manifest asks for it, names it as proposed and lists it', async () => {
+            const allowed = await open(NOTIFIES, CHANNELS);
+            const unasked = await open({});
+            const unnamed = await open(NOTIFIES);
+            const unlisted = await open(NOTIFIES, { provides: { notificationChannels: ['another'] }, proposed: ['notificationChannels'] });
+
+            expect(await allowed.call('channelRefused')).toEqual({ ok: true, value: null });
+            expect(await unasked.call('channelRefused')).toEqual({
+                ok: true,
+                value: `${ID} did not ask for the permission notifications.provide in its manifest`
+            });
+            expect(await unnamed.call('channelRefused')).toEqual({
+                ok: true,
+                value: 'defineNotificationChannel is still proposed; name notificationChannels under proposed in manifest.json'
+            });
+            expect(await unlisted.call('channelRefused')).toEqual({
+                ok: true,
+                value: 'defineNotificationChannel got probe-channel, which manifest.json does not list under provides.notificationChannels'
+            });
+            await expect(unlisted.notify('probe-channel', 'Hello', 'done')).rejects.toThrow();
+            await expect(open(NOTIFIES, { ...CHANNELS, provenance: 'installed' })).rejects.toThrow(
+                'This extension uses a part of Ruimte that is not final yet (notificationChannels).'
             );
         });
 

@@ -97,7 +97,8 @@ var EXTENSION_PROVIDER_POINTS = {
   terminalProfiles: { define: "defineTerminalProfile", permission: "terminals.profiles", proposed: true },
   launchSources: { define: "defineLaunchSource", permission: "launches.provide", proposed: true },
   problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true },
-  machineSources: { define: "defineMachineSource", permission: "machines.provide", proposed: true }
+  machineSources: { define: "defineMachineSource", permission: "machines.provide", proposed: true },
+  notificationChannels: { define: "defineNotificationChannel", permission: "notifications.provide", proposed: true }
 };
 var EXTENSION_PROPOSED_PARTS = Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true);
 function pointOf(kind) {
@@ -172,6 +173,7 @@ function createServerApi(options) {
   const launchWatches = new Map;
   const machineSources = new Map;
   const machineStarts = new Map;
+  const notificationChannels = new Map;
   const fileWatches = new Map;
   let nextFileWatch = 1;
   const typed = (method, args) => ask(method, args);
@@ -256,6 +258,11 @@ function createServerApi(options) {
       mayDefine("defineMachineSource", "machines.provide", source.id);
       machineSources.set(source.id, source);
       send({ type: "machineSource", id: source.id, title: source.title });
+    },
+    defineNotificationChannel(channel) {
+      mayDefine("defineNotificationChannel", "notifications.provide", channel.id);
+      notificationChannels.set(channel.id, channel);
+      send({ type: "notificationChannel", id: channel.id, title: channel.title });
     },
     problems: {
       report: async (project, source, reported) => mapResult(await ask("problems.report", [project.id, source, reported]), () => {
@@ -412,6 +419,14 @@ ${project.id}`;
     },
     abortMachineStart(run) {
       machineStarts.get(run)?.abort();
+    },
+    async deliverNotification(id, notification) {
+      const channel = notificationChannels.get(id);
+      if (channel === undefined) {
+        throw new MissingHandler(`No notification channel ${id}`);
+      }
+      await channel.deliver(notification);
+      return null;
     },
     deliver(name, payload) {
       for (const listener of listeners.get(name) ?? []) {
@@ -578,6 +593,11 @@ function handle(message) {
     answer(message.id, async () => {
       await loaded;
       return core.askMachineSource(message.source, message.method, message.input);
+    });
+  } else if (message.type === "notificationChannel") {
+    answer(message.id, async () => {
+      await loaded;
+      return core.deliverNotification(message.channel, message.input);
     });
   } else if (message.type === "machineAbort") {
     loaded.then(() => core.abortMachineStart(message.run));

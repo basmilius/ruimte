@@ -14,6 +14,7 @@ import type { Area } from '../area.ts';
 import { type Dispatcher } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
 import type { ExtensionHost } from '../extensions/extension-host.ts';
+import type { NotificationChannels } from '../extensions/notification-channels.ts';
 import { asExtensionRefusal, ExtensionRefusal } from '../extensions/refusal.ts';
 import { oneShotProvider, oneShotRun, runOneShot } from '../git/one-shot.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
@@ -28,6 +29,7 @@ export interface ExtensionHandlerDeps {
     readSource(source: ContextSource, projectId: string): Promise<string>;
     providers: ProviderRegistry;
     terminalProfiles(projectId: string): Promise<ExtensionTerminalProfile[]>;
+    notificationChannels: Pick<NotificationChannels, 'list' | 'set'>;
     databaseQuery(projectId: string, connection: string, sql: string): Promise<{ columns: string[]; rows: ExtensionDatabaseValue[][]; hasMore: boolean }>;
 }
 
@@ -144,6 +146,17 @@ export function extensionsArea(deps: ExtensionsDeps): Area {
             registerExtensionAdmin(dispatcher, host);
             // The text of one chat as `chats.read` gives it, so a chat in a view of its own reads as well.
             dispatcher.register('extension.chatRead', async ({ chatId }) => ({ text: await deps.readChat(chatId) }));
+            // Owner only: a channel carries word of a person's agents out of Ruimte, so only the app on this machine turns one on.
+            dispatcher.register('extension.notificationChannels', async () => ({ channels: await deps.notificationChannels.list() }), { owner: true });
+            dispatcher.register(
+                'extension.notificationChannelSet',
+                ({ extension, channel, on }) => {
+                    deps.notificationChannels.set(extension, channel, on);
+
+                    return {};
+                },
+                { owner: true }
+            );
         },
         stop: [{ phase: 'drain', label: 'Stopping extensions', run: () => host.stopAll() }]
     };

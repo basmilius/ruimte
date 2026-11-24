@@ -56,6 +56,10 @@ serverContract(async (permissions, { provenance, ...manifest } = {}) => {
                 return { start: null, reports: [], failure: (e as Error).message };
             }
         },
+        notify: async (channel, body, reason) => ({
+            title: server.notificationChannel(channel).title,
+            delivered: await server.notificationChannel(channel).deliver({ body, reason })
+        }),
         launchIs: (launch, state, exitCode) => server.fire('launch.status', { project: { id: 'project-a' }, launch, state, exitCode }),
         projectIs: (open) => {
             if (open) {

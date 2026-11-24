@@ -6776,7 +6776,8 @@ var EXTENSION_PROVIDER_POINTS = {
   terminalProfiles: { define: "defineTerminalProfile", permission: "terminals.profiles", proposed: true },
   launchSources: { define: "defineLaunchSource", permission: "launches.provide", proposed: true },
   problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true },
-  machineSources: { define: "defineMachineSource", permission: "machines.provide", proposed: true }
+  machineSources: { define: "defineMachineSource", permission: "machines.provide", proposed: true },
+  notificationChannels: { define: "defineNotificationChannel", permission: "notifications.provide", proposed: true }
 };
 var MAX_SOURCED_LAUNCHES = 64;
 var MAX_MACHINE_CANDIDATES = 16;
@@ -7002,6 +7003,7 @@ function createServerApi(options) {
   const launchWatches = new Map;
   const machineSources = new Map;
   const machineStarts = new Map;
+  const notificationChannels = new Map;
   const fileWatches = new Map;
   let nextFileWatch = 1;
   const typed = (method, args) => ask(method, args);
@@ -7086,6 +7088,11 @@ function createServerApi(options) {
       mayDefine("defineMachineSource", "machines.provide", source.id);
       machineSources.set(source.id, source);
       send({ type: "machineSource", id: source.id, title: source.title });
+    },
+    defineNotificationChannel(channel) {
+      mayDefine("defineNotificationChannel", "notifications.provide", channel.id);
+      notificationChannels.set(channel.id, channel);
+      send({ type: "notificationChannel", id: channel.id, title: channel.title });
     },
     problems: {
       report: async (project, source, reported) => mapResult(await ask("problems.report", [project.id, source, reported]), () => {
@@ -7242,6 +7249,14 @@ ${project.id}`;
     },
     abortMachineStart(run) {
       machineStarts.get(run)?.abort();
+    },
+    async deliverNotification(id, notification) {
+      const channel = notificationChannels.get(id);
+      if (channel === undefined) {
+        throw new MissingHandler(`No notification channel ${id}`);
+      }
+      await channel.deliver(notification);
+      return null;
     },
     deliver(name, payload) {
       for (const listener of listeners.get(name) ?? []) {
@@ -7554,6 +7569,7 @@ class TestMachine {
   launchSources = new Map;
   problemSources = new Map;
   machineSources = new Map;
+  notificationChannels = new Map;
   machineReports = new Map;
   nextMachineStart = 1;
   problems = [];
@@ -7662,6 +7678,8 @@ class TestMachine {
       this.machineSources.set(message.id, message.title);
     } else if (message.type === "machineReport") {
       this.machineReports.get(message.run)?.push(message.line);
+    } else if (message.type === "notificationChannel") {
+      this.notificationChannels.set(message.id, message.title);
     } else {
       const reason = eventRefusal(message.name, this.permissions);
       if (reason === null) {
@@ -8017,6 +8035,32 @@ async function createTestServer(options = {}) {
           } finally {
             machine.machineReports.delete(run);
             options.signal?.removeEventListener("abort", abort);
+          }
+        }
+      };
+    },
+    notificationChannel: (id) => {
+      const title = machine.notificationChannels.get(id);
+      if (title === undefined) {
+        throw new Error(`No notification channel ${id}. defineNotificationChannel says what there is`);
+      }
+      return {
+        title,
+        deliver: async (notification = {}) => {
+          const handed = {
+            title: "Agent",
+            body: "The agent needs your attention.",
+            project: { id: machine.project.id },
+            node: { id: "node-1" },
+            reason: "needsYou",
+            ...notification
+          };
+          try {
+            await machine.core.deliverNotification(id, wire(handed));
+            return true;
+          } catch (e) {
+            machine.logs.push(`${id} did not deliver a notification: ${e instanceof Error ? e.message : String(e)}`);
+            return false;
           }
         }
       };
@@ -9739,6 +9783,7 @@ var server = {
   defineLaunchSource: through("defineLaunchSource"),
   defineProblemSource: through("defineProblemSource"),
   defineMachineSource: through("defineMachineSource"),
+  defineNotificationChannel: through("defineNotificationChannel"),
   problems: forwarded2("problems"),
   files: forwarded2("files"),
   terminals: forwarded2("terminals"),

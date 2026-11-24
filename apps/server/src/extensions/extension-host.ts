@@ -82,6 +82,7 @@ const ProtocolMessageSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('problemSource'), id: z.string(), title: z.string().min(1).max(80) }),
     z.object({ type: z.literal('machineSource'), id: z.string(), title: z.string().min(1).max(80) }),
     z.object({ type: z.literal('machineReport'), run: z.number(), line: z.string() }),
+    z.object({ type: z.literal('notificationChannel'), id: z.string(), title: z.string().min(1).max(80) }),
     z.object({ type: z.literal('emit'), name: z.string(), payload: z.unknown().optional() }),
     z.object({ type: z.literal('result'), id: z.number(), result: z.unknown().optional(), error: z.string().optional(), code: z.string().optional() })
 ]);
@@ -150,6 +151,7 @@ interface Running {
     machineSources: Map<string, { title: string }>;
     // Who reads the lines a machine source reports while it describes a start, by the number it was asked under.
     machineReports: Map<number, (line: string) => void>;
+    notificationChannels: Map<string, { title: string }>;
     subscriptions: Set<string>;
     nextCall: number;
     buffered: string;
@@ -961,6 +963,7 @@ export class ExtensionHost {
             problemSources: new Map(),
             machineSources: new Map(),
             machineReports: new Map(),
+            notificationChannels: new Map(),
             subscriptions: new Set(),
             nextCall: 1,
             buffered: '',
@@ -1053,6 +1056,10 @@ export class ExtensionHost {
         } else if (message.type === 'machineSource') {
             if (this.mayProvide(id, running, 'defineMachineSource', 'machines.provide', message.id)) {
                 running.machineSources.set(message.id, { title: message.title });
+            }
+        } else if (message.type === 'notificationChannel') {
+            if (this.mayProvide(id, running, 'defineNotificationChannel', 'notifications.provide', message.id)) {
+                running.notificationChannels.set(message.id, { title: message.title });
             }
         } else if (message.type === 'machineReport') {
             running.machineReports.get(message.run)?.(message.line);
@@ -1291,6 +1298,57 @@ export class ExtensionHost {
         }
 
         return profiles;
+    }
+
+    /*
+     * The notification channels the extensions of this machine supply, from their manifests, so Settings lists one
+     * before its `server/` ran. A process that runs names its channel; one that does not is not started for a list.
+     */
+    async notificationChannels(): Promise<{ extension: string; id: string; title: string }[]> {
+        const channels: { extension: string; id: string; title: string }[] = [];
+
+        for (const extension of await this.options.store.list()) {
+            if (isDamaged(extension) || !extension.enabled || this.refusedReason(extension) !== null || this.options.store.serverEntry(extension) === null) {
+                continue;
+            }
+
+            const { id, name } = extension.manifest;
+            const ids = providedIds(extension.manifest, 'notificationChannels', allowsProposed(this.provenanceOf(extension)));
+
+            for (const channel of ids) {
+                const title = this.running.get(id)?.notificationChannels.get(channel)?.title;
+
+                channels.push({ extension: id, id: channel, title: title ?? (ids.length === 1 ? name : `${name}: ${channel}`) });
+            }
+        }
+
+        return channels;
+    }
+
+    /*
+     * Hands a channel one notification, in its extension's own process, which starts for it. Never rejects: a channel
+     * that is gone, throws or does not answer in time loses this notification alone, and its log says why.
+     */
+    async deliverNotification(id: string, channel: string, notification: object): Promise<boolean> {
+        try {
+            if (!(await this.notificationChannels()).some((listed) => listed.extension === id && listed.id === channel)) {
+                return false;
+            }
+
+            const running = await this.runningFor(id);
+
+            if (!running.notificationChannels.has(channel)) {
+                throw new ExtensionRefusal('not-found', `${id} lists the notification channel ${channel} and did not define it`);
+            }
+
+            await this.send(running, { type: 'notificationChannel', channel, input: notification }, `${id} notification channel ${channel}`);
+
+            return true;
+        } catch (e) {
+            void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${channel} did not deliver a notification: ${errorText(e)}\n`));
+
+            return false;
+        }
     }
 
     /* A profile whose answer fails or never comes still shows: picking it says what is wrong. */

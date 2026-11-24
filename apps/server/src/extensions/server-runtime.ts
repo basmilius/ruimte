@@ -187,6 +187,7 @@ interface Incoming {
     context: { caller: string };
     profile: string;
     source: string;
+    channel: string;
     watch: number;
     run: number;
     input: unknown;
@@ -237,6 +238,12 @@ function handle(message: Incoming): void {
             await loaded;
 
             return core.askMachineSource(message.source, message.method as 'list' | 'start', message.input as MachineSourceAsk);
+        });
+    } else if (message.type === 'notificationChannel') {
+        void answer(message.id, async () => {
+            await loaded;
+
+            return core.deliverNotification(message.channel, message.input as PublicServer.Notification);
         });
     } else if (message.type === 'machineAbort') {
         // Behind the same wait as the start it stops, so a stop that came in with its ask still finds it.
