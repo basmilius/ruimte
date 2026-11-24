@@ -13,10 +13,7 @@
             "browser_history",
             "browser_shot",
             "browser_state",
-            "change_list",
-            "change_read",
             "chat_attach",
-            "ci_logs",
             "computer_act",
             "computer_apps",
             "computer_menu",
@@ -48,9 +45,6 @@
             "device_state",
             "flag",
             "guide",
-            "issue_link",
-            "issue_list",
-            "issue_read",
             "language_file",
             "language_lookup",
             "language_problems",
@@ -594,50 +588,6 @@
             "audience": "everyone"
         },
         {
-            "name": "change_list",
-            "description": "Lists a page of the pull or merge requests of this project's code host.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "provider": {
-                        "type": "string"
-                    },
-                    "state": {
-                        "type": "string",
-                        "enum": ["open", "closed", "merged", "all"]
-                    },
-                    "query": {
-                        "type": "string"
-                    },
-                    "cursor": {
-                        "type": "string",
-                        "description": "From the last page"
-                    }
-                }
-            },
-            "annotations": {
-                "readOnlyHint": true
-            },
-            "audience": "hosts"
-        },
-        {
-            "name": "change_read",
-            "description": "Prints a pull or merge request with its checks and open review threads; without change, the one of your branch.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "change": {
-                        "type": "string",
-                        "description": "As change_list prints it"
-                    }
-                }
-            },
-            "annotations": {
-                "readOnlyHint": true
-            },
-            "audience": "hosts"
-        },
-        {
             "name": "chat_attach",
             "description": "Attaches an image or 3D model to this chat, for Image, Gallery, Compare and Model.",
             "inputSchema": {
@@ -656,30 +606,6 @@
                 "destructiveHint": false
             },
             "audience": "chat"
-        },
-        {
-            "name": "ci_logs",
-            "description": "Prints the end of the logs of the failing checks of a change, or of one check by name.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "change": {
-                        "type": "string",
-                        "description": "As change_list prints it; your branch without it"
-                    },
-                    "check": {
-                        "type": "string",
-                        "description": "A check by its name"
-                    },
-                    "tail": {
-                        "type": "integer"
-                    }
-                }
-            },
-            "annotations": {
-                "readOnlyHint": true
-            },
-            "audience": "hosts"
         },
         {
             "name": "computer_act",
@@ -1635,74 +1561,6 @@
                 "readOnlyHint": true
             },
             "audience": "everyone"
-        },
-        {
-            "name": "issue_link",
-            "description": "Links an issue to your chat, or unlinks it; the host hears nothing of it.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "issue": {
-                        "type": "string"
-                    },
-                    "unlink": {
-                        "type": "boolean"
-                    }
-                },
-                "required": ["issue"]
-            },
-            "annotations": {
-                "destructiveHint": false
-            },
-            "audience": "hosts"
-        },
-        {
-            "name": "issue_list",
-            "description": "Lists a page of the issues of this project's tracker.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "provider": {
-                        "type": "string"
-                    },
-                    "state": {
-                        "type": "string",
-                        "enum": ["open", "closed", "all"]
-                    },
-                    "assigned": {
-                        "type": "boolean",
-                        "description": "Only those assigned to the person"
-                    },
-                    "query": {
-                        "type": "string"
-                    },
-                    "cursor": {
-                        "type": "string",
-                        "description": "From the last page"
-                    }
-                }
-            },
-            "annotations": {
-                "readOnlyHint": true
-            },
-            "audience": "hosts"
-        },
-        {
-            "name": "issue_read",
-            "description": "Prints an issue with its comments and the chats that work on it.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "issue": {
-                        "type": "string"
-                    }
-                },
-                "required": ["issue"]
-            },
-            "annotations": {
-                "readOnlyHint": true
-            },
-            "audience": "hosts"
         },
         {
             "name": "language_file",

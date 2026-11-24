@@ -4,6 +4,211 @@
 var {plugin } = globalThis.Bun;
 import { afterAll, afterEach } from "bun:test";
 
+// apps/server/src/extensions/test-react.ts
+import { realpathSync } from "fs";
+import { createRequire } from "module";
+import { join } from "path";
+var nodeContext = null;
+function fromProject(name) {
+  try {
+    return createRequire(join(process.cwd(), "package.json"))(name);
+  } catch {
+    throw new Error(`This test needs ${name}, which this project does not have: bun add -d ${name.startsWith("@") ? name.split("/").slice(0, 2).join("/") : name.split("/")[0]}`);
+  }
+}
+function besideExtension(name) {
+  const extension = join(process.cwd(), "node_modules", "@ruimte", "extension", "package.json");
+  try {
+    return createRequire(realpathSync(extension))(name);
+  } catch {
+    return fromProject(name);
+  }
+}
+function formatModule() {
+  return besideExtension("@adecore/ui/format");
+}
+function uiModule() {
+  const { SettingsRow, SettingsSection } = besideExtension("@adecore/ui/settings");
+  return { ...besideExtension("@adecore/ui"), SettingsRow, SettingsSection };
+}
+function chartsModule() {
+  return besideExtension("@adecore/charts");
+}
+function agentsUiModule() {
+  return besideExtension("@adecore/agents-react/chat/ui");
+}
+function react() {
+  return fromProject("react");
+}
+function nodeContextOf(module) {
+  nodeContext ??= module.createContext(null);
+  return nodeContext;
+}
+
+// apps/server/src/extensions/test-dom.ts
+var MAX_TURNS = 200;
+var SUSPENDED = "ruimte-suspended";
+var PRESSABLE = 'button, a, [role="button"], [role="menuitem"], [role="tab"], [role="option"], [role="checkbox"], [role="switch"], summary, label';
+var mounted = new Set;
+async function step(module, work) {
+  const scope = globalThis;
+  const before = scope.IS_REACT_ACT_ENVIRONMENT;
+  scope.IS_REACT_ACT_ENVIRONMENT = true;
+  try {
+    await module.act(async () => {
+      await work();
+    });
+  } finally {
+    scope.IS_REACT_ACT_ENVIRONMENT = before;
+  }
+}
+function turn(module) {
+  return step(module, () => new Promise((resolve) => setImmediate(resolve)));
+}
+function unmountAll() {
+  for (const unmount of [...mounted]) {
+    unmount();
+  }
+}
+function textOf(element) {
+  return (element.textContent ?? "").replace(/\s+/g, " ").trim();
+}
+function findIn(container, text, preferred) {
+  const saying = (element) => textOf(element).includes(text) || element.getAttribute("aria-label") === text;
+  const among = [...container.querySelectorAll(preferred)].filter(saying);
+  if (among.length > 0) {
+    return among.at(-1) ?? null;
+  }
+  const all = [...container.querySelectorAll("*")].filter(saying);
+  return all.find((element) => ![...element.children].some(saying)) ?? null;
+}
+function fieldIn(container, name) {
+  const fields = [...container.querySelectorAll("input, textarea")];
+  const labelled = fields.find((field) => field.placeholder === name || field.name === name || field.getAttribute("aria-label") === name || field.id !== "" && textOf(container.querySelector(`label[for="${field.id}"]`) ?? document.createElement("i")) === name || field.closest("label") !== null && textOf(field.closest("label")).includes(name));
+  return labelled ?? null;
+}
+async function settle(module, check, failure) {
+  let last = null;
+  for (let turns = 0;turns < MAX_TURNS; turns++) {
+    try {
+      if (check() !== false) {
+        return;
+      }
+      last = null;
+    } catch (e) {
+      last = e;
+    }
+    await turn(module);
+  }
+  throw last instanceof Error ? last : new Error(failure());
+}
+function needsPage() {
+  if (typeof document === "undefined") {
+    throw new Error("render draws into a page: name the test file *.dom.test.tsx, and ruimte extension test gives it one");
+  }
+}
+async function drawable(target, options) {
+  if ("frame" in target) {
+    throw new Error("A frame surface runs in its own page in Ruimte; render draws component surfaces");
+  }
+  if (typeof target === "object" && "component" in target && typeof target.component === "function") {
+    const loaded = (await target.component()).default;
+    return [loaded, { params: options.params, ...options.context === undefined ? {} : { context: options.context }, ...options.props }];
+  }
+  return [
+    target,
+    {
+      ...options.params === undefined ? {} : { params: options.params },
+      ...options.context === undefined ? {} : { context: options.context },
+      ...options.props
+    }
+  ];
+}
+async function render(target, options = {}) {
+  needsPage();
+  const module = react();
+  const { createRoot } = fromProject("react-dom/client");
+  const [component, props] = await drawable(target, options);
+  const container = document.createElement("div");
+  const failure = { error: null };
+  const drawn = { committed: false };
+  const Committed = () => {
+    module.useEffect(() => {
+      drawn.committed = true;
+    });
+    return null;
+  };
+
+  class Boundary extends module.Component {
+    static getDerivedStateFromError(error) {
+      failure.error = error;
+      return { failed: true };
+    }
+    render() {
+      return this.state?.failed === true ? null : this.props.children;
+    }
+  }
+  document.body.append(container);
+  const root = createRoot(container, { onCaughtError: () => {
+    return;
+  } });
+  const unmount = () => {
+    if (mounted.delete(unmount)) {
+      root.unmount();
+      container.remove();
+    }
+  };
+  const after = async () => {
+    await turn(module);
+    await settle(module, () => failure.error !== null || container.querySelector(SUSPENDED) === null, () => `It is still waiting for what it suspends on, after ${MAX_TURNS} turns`);
+    if (failure.error !== null) {
+      const { error } = failure;
+      failure.error = null;
+      throw error;
+    }
+  };
+  mounted.add(unmount);
+  try {
+    await step(module, () => root.render(module.createElement(Boundary, null, module.createElement(module.Suspense, { fallback: module.createElement(SUSPENDED) }, module.createElement(nodeContextOf(module).Provider, { value: options.node ?? null }, module.createElement(component, props)), module.createElement(Committed)))));
+    await settle(module, () => failure.error !== null || drawn.committed, () => `It is still waiting for what it suspends on, after ${MAX_TURNS} turns`);
+    await after();
+  } catch (e) {
+    unmount();
+    throw e;
+  }
+  return {
+    container,
+    text: () => textOf(container),
+    find: (text) => findIn(container, text, PRESSABLE),
+    async click(target) {
+      const element = typeof target === "string" ? findIn(container, target, PRESSABLE) : target;
+      if (element === null) {
+        throw new Error(`Nothing says ${target} here. The page says: ${textOf(container)}`);
+      }
+      await step(module, () => element.click());
+      await after();
+    },
+    async type(target, text) {
+      const field = typeof target === "string" ? fieldIn(container, target) : target;
+      if (field === null || !("value" in field)) {
+        throw new Error(`No field ${String(target)} here`);
+      }
+      const prototype = field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+      await step(module, () => {
+        Object.getOwnPropertyDescriptor(prototype, "value")?.set?.call(field, text);
+        field.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      await after();
+    },
+    until: (check) => settle(module, check, () => `Still not so after ${MAX_TURNS} turns. The page says: ${textOf(container)}`),
+    unmount
+  };
+}
+
+// apps/server/src/extensions/test-hosts.ts
+import { existsSync } from "fs";
+import { join as join5, resolve as resolve2 } from "path";
+
 // node_modules/.bun/zod@4.6.7/node_modules/zod/v4/core/util.js
 function getEnumValues(entries) {
   const numericValues = Object.values(entries).filter((v) => typeof v === "number");
@@ -3266,9 +3471,9 @@ function isRecursive(inst, stack, resolve) {
     }
   }
   stack.delete(inst);
-  return settle(inst, result);
+  return settle2(inst, result);
 }
-function settle(inst, answer) {
+function settle2(inst, answer) {
   if (answer !== ASSUMED)
     recursive.set(inst, answer === PROVEN);
   return answer;
@@ -6114,503 +6319,6 @@ function refine(fn, _params = {}) {
 function superRefine(fn, params) {
   return _superRefine(fn, params);
 }
-// packages/contracts/src/host.ts
-var PROVIDER_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
-var HOST_LIMITS = {
-  locator: 300,
-  title: 300,
-  name: 120,
-  label: 80,
-  labels: 30,
-  assignees: 30,
-  body: 60000,
-  comments: 100,
-  checks: 100,
-  threads: 100,
-  linked: 30,
-  page: 100,
-  reason: 300,
-  url: 2048,
-  cursor: 500,
-  query: 300,
-  sha: 64,
-  path: 1024,
-  log: 64000
-};
-var HostRefSchema = string2().max(HOST_LIMITS.locator + 65).regex(/^[a-z0-9][a-z0-9-]{0,63}:[\s\S]+$/);
-function hostRef(provider, locator) {
-  return `${provider}:${locator}`;
-}
-var HostIssueStateSchema = _enum(["open", "closed"]);
-var HostChangeStateSchema = _enum(["open", "closed", "merged"]);
-var HOST_CHECK_STATES = ["pending", "success", "failure", "neutral", "skipped"];
-var HostCheckStateSchema = _enum(HOST_CHECK_STATES);
-function hostCheckState(state) {
-  return HOST_CHECK_STATES.find((known) => known === state) ?? "failure";
-}
-function hostChecksState(checks) {
-  const has = (state) => checks.some((check) => check.state === state);
-  return ["failure", "pending", "success", "neutral", "skipped"].find(has);
-}
-var line = (max) => string2().max(max);
-var time2 = string2().max(40);
-var HostChangeSummarySchema = object({
-  ref: HostRefSchema,
-  title: line(HOST_LIMITS.title),
-  state: HostChangeStateSchema,
-  stateLabel: line(HOST_LIMITS.name).optional(),
-  draft: boolean2().optional(),
-  url: string2().max(HOST_LIMITS.url).optional(),
-  author: line(HOST_LIMITS.name).optional(),
-  branch: line(HOST_LIMITS.title).optional(),
-  base: line(HOST_LIMITS.title).optional(),
-  updatedAt: time2.optional(),
-  checkState: HostCheckStateSchema.optional()
-});
-var HostIssueSummarySchema = object({
-  ref: HostRefSchema,
-  title: line(HOST_LIMITS.title),
-  state: HostIssueStateSchema,
-  stateLabel: line(HOST_LIMITS.name).optional(),
-  url: string2().max(HOST_LIMITS.url).optional(),
-  author: line(HOST_LIMITS.name).optional(),
-  assignees: array(line(HOST_LIMITS.name)).max(HOST_LIMITS.assignees),
-  labels: array(line(HOST_LIMITS.label)).max(HOST_LIMITS.labels),
-  updatedAt: time2.optional(),
-  commentCount: number2().int().nonnegative().optional()
-});
-var HostCommentSchema = object({
-  id: line(HOST_LIMITS.locator),
-  author: line(HOST_LIMITS.name),
-  body: string2().max(HOST_LIMITS.body),
-  createdAt: time2.optional()
-});
-var HostIssueSchema = HostIssueSummarySchema.extend({
-  body: string2().max(HOST_LIMITS.body),
-  comments: array(HostCommentSchema).max(HOST_LIMITS.comments),
-  changes: array(HostChangeSummarySchema).max(HOST_LIMITS.linked)
-});
-var HostCheckSchema = object({
-  name: line(HOST_LIMITS.title),
-  state: HostCheckStateSchema,
-  url: string2().max(HOST_LIMITS.url).optional(),
-  summary: line(HOST_LIMITS.title).optional()
-});
-var HostThreadSchema = object({
-  id: line(HOST_LIMITS.locator),
-  author: line(HOST_LIMITS.name),
-  body: string2().max(HOST_LIMITS.body),
-  path: line(HOST_LIMITS.path).optional(),
-  line: number2().int().positive().optional()
-});
-var HostChangeSchema = HostChangeSummarySchema.extend({
-  body: string2().max(HOST_LIMITS.body),
-  headSha: line(HOST_LIMITS.sha),
-  checks: array(HostCheckSchema).max(HOST_LIMITS.checks),
-  threads: array(HostThreadSchema).max(HOST_LIMITS.threads),
-  size: object({ additions: number2().int().nonnegative(), deletions: number2().int().nonnegative(), files: number2().int().nonnegative() }),
-  closes: array(HostRefSchema).max(HOST_LIMITS.linked)
-});
-var HostProviderStateSchema = _enum(["ready", "signed-out", "unreachable"]);
-var HostProviderStatusSchema = object({
-  provider: string2().regex(PROVIDER_ID),
-  extension: string2().min(1),
-  title: line(HOST_LIMITS.name),
-  kind: _enum(["code-host", "tracker"]),
-  remote: string2().max(HOST_LIMITS.url).optional(),
-  repo: string2().optional(),
-  issues: boolean2(),
-  changes: boolean2(),
-  checks: boolean2(),
-  state: HostProviderStateSchema,
-  reason: line(HOST_LIMITS.reason).optional(),
-  account: line(HOST_LIMITS.name).optional()
-});
-var HostLinkSchema = object({
-  chatId: string2().min(1),
-  ref: HostRefSchema,
-  title: line(HOST_LIMITS.title),
-  state: HostIssueStateSchema,
-  stateLabel: line(HOST_LIMITS.name).optional(),
-  url: string2().max(HOST_LIMITS.url).optional(),
-  linkedAt: number2(),
-  by: _enum(["person", "agent", "change"])
-});
-var projectId = string2().min(1);
-var provider = string2().regex(PROVIDER_ID);
-var cursor = string2().max(HOST_LIMITS.cursor);
-var Nothing = object({});
-var ListScope = { projectId, provider, remote: string2().max(HOST_LIMITS.url).optional() };
-var HostStatusPayloadSchema = object({ projectId });
-var HostStatusResultSchema = object({ providers: array(HostProviderStatusSchema) });
-var HostIssuesPayloadSchema = object({
-  ...ListScope,
-  assigned: boolean2().optional(),
-  state: _enum(["open", "closed", "all"]).optional(),
-  query: string2().max(HOST_LIMITS.query).optional(),
-  cursor: cursor.optional()
-});
-var HostIssuesResultSchema = object({ issues: array(HostIssueSummarySchema).max(HOST_LIMITS.page), cursor: cursor.optional() });
-var HostIssuePayloadSchema = object({ projectId, ref: HostRefSchema });
-var HostIssueResultSchema = object({ issue: HostIssueSchema });
-var HostChangesPayloadSchema = object({
-  ...ListScope,
-  state: _enum(["open", "closed", "merged", "all"]).optional(),
-  query: string2().max(HOST_LIMITS.query).optional(),
-  cursor: cursor.optional()
-});
-var HostChangesResultSchema = object({ changes: array(HostChangeSummarySchema).max(HOST_LIMITS.page), cursor: cursor.optional() });
-var HostChangePayloadSchema = object({ projectId, ref: HostRefSchema.optional(), chatId: string2().min(1).optional() });
-var HostChangeResultSchema = object({ change: HostChangeSchema.nullable() });
-var HostCheckLogPayloadSchema = object({ projectId, ref: HostRefSchema, check: string2().min(1).max(HOST_LIMITS.title) });
-var HostCheckLogResultSchema = object({ text: string2().max(HOST_LIMITS.log), truncated: boolean2() });
-var HostWatchPayloadSchema = object({ projectId, ref: HostRefSchema.optional() });
-var HostLinksPayloadSchema = object({ chatId: string2().min(1).optional(), ref: HostRefSchema.optional(), projectId: projectId.optional() });
-var HostLinksResultSchema = object({ links: array(HostLinkSchema) });
-var HostLinkPayloadSchema = object({ projectId, chatId: string2().min(1), ref: HostRefSchema });
-var HostLinkResultSchema = object({ link: HostLinkSchema });
-var HostUnlinkPayloadSchema = object({ chatId: string2().min(1), ref: HostRefSchema });
-var HostUnlinkResultSchema = object({ removed: boolean2() });
-var HostIssuePromptResultSchema = object({ prompt: string2(), title: line(HOST_LIMITS.title), branch: string2() });
-var HOST_EVENT_SCHEMAS = {
-  "host.changed": object({ projectId, ref: HostRefSchema.optional() }),
-  "host.linksChanged": object({ chatId: string2().min(1) })
-};
-
-// apps/server/src/extensions/host-provider-check.ts
-var NOWHERE = "https://nowhere.invalid/nobody/nothing.git";
-var NO_SUCH = "no-such-thing-0000";
-var PAGES = 5;
-async function everyPage(what, read, broke) {
-  const all = [];
-  const seen = new Set;
-  let cursor;
-  for (let page = 0;page < PAGES; page++) {
-    const { items, cursor: next } = await read(cursor);
-    for (const item of items) {
-      if (seen.has(item.ref)) {
-        broke(`${what} listed ${item.ref} twice across its pages`);
-      }
-      seen.add(item.ref);
-      all.push(item);
-    }
-    if (next === undefined) {
-      return all;
-    }
-    if (next === cursor) {
-      broke(`${what} answered the cursor it was asked with, so its pages never end`);
-      return all;
-    }
-    cursor = next;
-  }
-  return all;
-}
-function idOf(ref) {
-  return ref.slice(ref.indexOf(":") + 1);
-}
-async function checkIssues(provider, known, broke) {
-  const open = await everyPage("issues", async (cursor) => {
-    const page = await provider.issues({ state: "open", ...cursor === undefined ? {} : { cursor } }, known.scope);
-    return { items: page.issues, ...page.cursor === undefined ? {} : { cursor: page.cursor } };
-  }, broke);
-  const closed = (await provider.issues({ state: "closed" }, known.scope)).issues;
-  for (const issue of open.filter((candidate) => candidate.state !== "open")) {
-    broke(`issues listed ${issue.ref} as open while its state is ${issue.state}`);
-  }
-  for (const issue of closed.filter((candidate) => candidate.state !== "closed")) {
-    broke(`issues listed ${issue.ref} as closed while its state is ${issue.state}`);
-  }
-  const listed = open[0] ?? closed[0];
-  if (listed === undefined) {
-    broke("issues listed nothing, open or closed, so nothing else of them could be held");
-    return;
-  }
-  const read = await provider.issue(idOf(listed.ref), known.scope);
-  if (read === null) {
-    broke(`issues listed ${listed.ref} and then read it as an issue the host does not have`);
-  } else if (read.ref !== listed.ref || read.title !== listed.title) {
-    broke(`issues read ${listed.ref} as ${read.ref} ${JSON.stringify(read.title)}, which is not what it listed`);
-  }
-  if (await provider.issue(NO_SUCH, known.scope) !== null) {
-    broke("issues read an issue that does not exist as one; answer null for it");
-  }
-  if (!provider.capabilities.parses) {
-    return;
-  }
-  if (listed.url !== undefined && await provider.parse(listed.url, known.scope) !== idOf(listed.ref)) {
-    broke(`parse did not read the address of ${listed.ref} as that issue`);
-  }
-  if (await provider.parse("nothing a tracker would name", known.scope) !== null) {
-    broke("parse read text that names no issue as one; answer null for it");
-  }
-}
-async function checkChanges(provider, known, broke) {
-  const changes = await everyPage("changes", async (cursor) => {
-    const page = await provider.changes({ state: "all", ...cursor === undefined ? {} : { cursor } }, known.scope);
-    return { items: page.changes, ...page.cursor === undefined ? {} : { cursor: page.cursor } };
-  }, broke);
-  const listed = changes.find((change) => change.state === "open") ?? changes[0];
-  if (listed === undefined) {
-    broke("changes listed nothing, so nothing else of them could be held");
-    return;
-  }
-  const read = await provider.change(idOf(listed.ref), known.scope);
-  if (read === null) {
-    broke(`changes listed ${listed.ref} and then read it as a change the host does not have`);
-    return;
-  }
-  if (read.ref !== listed.ref || read.title !== listed.title) {
-    broke(`changes read ${listed.ref} as ${read.ref} ${JSON.stringify(read.title)}, which is not what it listed`);
-  }
-  for (const check of read.checks.filter((candidate) => !HOST_CHECK_STATES.includes(candidate.state))) {
-    broke(`the check ${check.name} of ${read.ref} has the state ${String(check.state)}`);
-  }
-  if (read.state === "open" && read.branch !== undefined && await provider.changeOfBranch(read.branch, known.scope) !== idOf(read.ref)) {
-    broke(`forBranch did not find ${read.ref} from its own branch ${read.branch}`);
-  }
-  if (await provider.changeOfBranch(`${NO_SUCH}/branch`, known.scope) !== null) {
-    broke("forBranch found a change for a branch that has none; answer null for it");
-  }
-  if (await provider.change(NO_SUCH, known.scope) !== null) {
-    broke("changes read a change that does not exist as one; answer null for it");
-  }
-  if (provider.capabilities.checks && await provider.checkLog(idOf(read.ref), `${NO_SUCH} check`, known.scope) !== null) {
-    broke("checks gave a log for a check the change does not have; answer null for it");
-  }
-}
-async function checkHostProvider(provider, known = {}) {
-  const broken = [];
-  const broke = (rule) => void broken.push(rule);
-  const status = await provider.status(known.scope);
-  if (status.state !== "ready") {
-    broke(`status is ${status.state}${status.reason === undefined ? "" : ` (${status.reason})`}; run the check signed in, on a project the provider applies to`);
-  }
-  if (provider.kind === "code-host") {
-    if (known.scope?.remote === undefined || !await provider.match(known.scope.remote)) {
-      broke("match did not take the remote of the scope; a code host is checked with scope.remote set to one of its own");
-    }
-    if (await provider.match(NOWHERE)) {
-      broke(`match took ${NOWHERE} as its own`);
-    }
-  }
-  if (provider.capabilities.issues) {
-    await checkIssues(provider, known, broke);
-  }
-  if (provider.capabilities.changes) {
-    await checkChanges(provider, known, broke);
-  }
-  if (broken.length > 0) {
-    throw new Error(`The host provider broke ${broken.length === 1 ? "a rule" : `${broken.length} rules`}:
-${broken.map((rule) => `- ${rule}`).join(`
-`)}`);
-  }
-}
-
-// apps/server/src/extensions/test-react.ts
-import { realpathSync } from "fs";
-import { createRequire } from "module";
-import { join } from "path";
-var nodeContext = null;
-function fromProject(name) {
-  try {
-    return createRequire(join(process.cwd(), "package.json"))(name);
-  } catch {
-    throw new Error(`This test needs ${name}, which this project does not have: bun add -d ${name.startsWith("@") ? name.split("/").slice(0, 2).join("/") : name.split("/")[0]}`);
-  }
-}
-function besideExtension(name) {
-  const extension = join(process.cwd(), "node_modules", "@ruimte", "extension", "package.json");
-  try {
-    return createRequire(realpathSync(extension))(name);
-  } catch {
-    return fromProject(name);
-  }
-}
-function formatModule() {
-  return besideExtension("@adecore/ui/format");
-}
-function uiModule() {
-  const { SettingsRow, SettingsSection } = besideExtension("@adecore/ui/settings");
-  return { ...besideExtension("@adecore/ui"), SettingsRow, SettingsSection };
-}
-function chartsModule() {
-  return besideExtension("@adecore/charts");
-}
-function agentsUiModule() {
-  return besideExtension("@adecore/agents-react/chat/ui");
-}
-function react() {
-  return fromProject("react");
-}
-function nodeContextOf(module) {
-  nodeContext ??= module.createContext(null);
-  return nodeContext;
-}
-
-// apps/server/src/extensions/test-dom.ts
-var MAX_TURNS = 200;
-var SUSPENDED = "ruimte-suspended";
-var PRESSABLE = 'button, a, [role="button"], [role="menuitem"], [role="tab"], [role="option"], [role="checkbox"], [role="switch"], summary, label';
-var mounted = new Set;
-async function step(module, work) {
-  const scope = globalThis;
-  const before = scope.IS_REACT_ACT_ENVIRONMENT;
-  scope.IS_REACT_ACT_ENVIRONMENT = true;
-  try {
-    await module.act(async () => {
-      await work();
-    });
-  } finally {
-    scope.IS_REACT_ACT_ENVIRONMENT = before;
-  }
-}
-function turn(module) {
-  return step(module, () => new Promise((resolve) => setImmediate(resolve)));
-}
-function unmountAll() {
-  for (const unmount of [...mounted]) {
-    unmount();
-  }
-}
-function textOf(element) {
-  return (element.textContent ?? "").replace(/\s+/g, " ").trim();
-}
-function findIn(container, text, preferred) {
-  const saying = (element) => textOf(element).includes(text) || element.getAttribute("aria-label") === text;
-  const among = [...container.querySelectorAll(preferred)].filter(saying);
-  if (among.length > 0) {
-    return among.at(-1) ?? null;
-  }
-  const all = [...container.querySelectorAll("*")].filter(saying);
-  return all.find((element) => ![...element.children].some(saying)) ?? null;
-}
-function fieldIn(container, name) {
-  const fields = [...container.querySelectorAll("input, textarea")];
-  const labelled = fields.find((field) => field.placeholder === name || field.name === name || field.getAttribute("aria-label") === name || field.id !== "" && textOf(container.querySelector(`label[for="${field.id}"]`) ?? document.createElement("i")) === name || field.closest("label") !== null && textOf(field.closest("label")).includes(name));
-  return labelled ?? null;
-}
-async function settle2(module, check, failure) {
-  let last = null;
-  for (let turns = 0;turns < MAX_TURNS; turns++) {
-    try {
-      if (check() !== false) {
-        return;
-      }
-      last = null;
-    } catch (e) {
-      last = e;
-    }
-    await turn(module);
-  }
-  throw last instanceof Error ? last : new Error(failure());
-}
-function needsPage() {
-  if (typeof document === "undefined") {
-    throw new Error("render draws into a page: name the test file *.dom.test.tsx, and ruimte extension test gives it one");
-  }
-}
-async function drawable(target, options) {
-  if ("frame" in target) {
-    throw new Error("A frame surface runs in its own page in Ruimte; render draws component surfaces");
-  }
-  if (typeof target === "object" && "component" in target && typeof target.component === "function") {
-    const loaded = (await target.component()).default;
-    return [loaded, { params: options.params, ...options.context === undefined ? {} : { context: options.context }, ...options.props }];
-  }
-  return [
-    target,
-    {
-      ...options.params === undefined ? {} : { params: options.params },
-      ...options.context === undefined ? {} : { context: options.context },
-      ...options.props
-    }
-  ];
-}
-async function render(target, options = {}) {
-  needsPage();
-  const module = react();
-  const { createRoot } = fromProject("react-dom/client");
-  const [component, props] = await drawable(target, options);
-  const container = document.createElement("div");
-  const failure = { error: null };
-  const drawn = { committed: false };
-  const Committed = () => {
-    module.useEffect(() => {
-      drawn.committed = true;
-    });
-    return null;
-  };
-
-  class Boundary extends module.Component {
-    static getDerivedStateFromError(error) {
-      failure.error = error;
-      return { failed: true };
-    }
-    render() {
-      return this.state?.failed === true ? null : this.props.children;
-    }
-  }
-  document.body.append(container);
-  const root = createRoot(container, { onCaughtError: () => {
-    return;
-  } });
-  const unmount = () => {
-    if (mounted.delete(unmount)) {
-      root.unmount();
-      container.remove();
-    }
-  };
-  const after = async () => {
-    await turn(module);
-    await settle2(module, () => failure.error !== null || container.querySelector(SUSPENDED) === null, () => `It is still waiting for what it suspends on, after ${MAX_TURNS} turns`);
-    if (failure.error !== null) {
-      const { error } = failure;
-      failure.error = null;
-      throw error;
-    }
-  };
-  mounted.add(unmount);
-  try {
-    await step(module, () => root.render(module.createElement(Boundary, null, module.createElement(module.Suspense, { fallback: module.createElement(SUSPENDED) }, module.createElement(nodeContextOf(module).Provider, { value: options.node ?? null }, module.createElement(component, props)), module.createElement(Committed)))));
-    await settle2(module, () => failure.error !== null || drawn.committed, () => `It is still waiting for what it suspends on, after ${MAX_TURNS} turns`);
-    await after();
-  } catch (e) {
-    unmount();
-    throw e;
-  }
-  return {
-    container,
-    text: () => textOf(container),
-    find: (text) => findIn(container, text, PRESSABLE),
-    async click(target) {
-      const element = typeof target === "string" ? findIn(container, target, PRESSABLE) : target;
-      if (element === null) {
-        throw new Error(`Nothing says ${target} here. The page says: ${textOf(container)}`);
-      }
-      await step(module, () => element.click());
-      await after();
-    },
-    async type(target, text) {
-      const field = typeof target === "string" ? fieldIn(container, target) : target;
-      if (field === null || !("value" in field)) {
-        throw new Error(`No field ${String(target)} here`);
-      }
-      const prototype = field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-      await step(module, () => {
-        Object.getOwnPropertyDescriptor(prototype, "value")?.set?.call(field, text);
-        field.dispatchEvent(new Event("input", { bubbles: true }));
-      });
-      await after();
-    },
-    until: (check) => settle2(module, check, () => `Still not so after ${MAX_TURNS} turns. The page says: ${textOf(container)}`),
-    unmount
-  };
-}
-
-// apps/server/src/extensions/test-hosts.ts
-import { existsSync } from "fs";
-import { join as join5, resolve as resolve2 } from "path";
-
 // packages/contracts/src/artifact.ts
 var ARTIFACT_KINDS = ["report", "image", "build", "export", "recording", "page"];
 var KnownArtifactKindSchema = _enum(ARTIFACT_KINDS);
@@ -7064,8 +6772,7 @@ var NODE_ACCENT_COLORS = {
 var EXTENSION_PROVIDER_POINTS = {
   terminalProfiles: { define: "defineTerminalProfile", permission: "terminals.profiles", proposed: true },
   launchSources: { define: "defineLaunchSource", permission: "launches.provide", proposed: true },
-  problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true },
-  hostProviders: { define: "defineHostProvider", permission: "hosts.provide", proposed: true }
+  problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true }
 };
 var MAX_SOURCED_LAUNCHES = 64;
 var EXTENSION_PROPOSED_PARTS = Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true);
@@ -7279,12 +6986,6 @@ function callHandler(handlers, method, args) {
   }
   return handler(...args);
 }
-function hostProviderCall(provider, method) {
-  const [part, name] = method.includes(".") ? method.split(".") : [null, method];
-  const owner = part === null ? provider : provider[part];
-  const found = owner === undefined ? undefined : owner[name ?? ""];
-  return typeof found === "function" ? found.bind(owner) : undefined;
-}
 function createServerApi(options) {
   const { ask, send, permissions } = options;
   const listeners = new Map;
@@ -7292,7 +6993,6 @@ function createServerApi(options) {
   const nodeContexts = new Map;
   const profiles = new Map;
   const launchSources = new Map;
-  const hostProviders = new Map;
   const launchWatches = new Map;
   const fileWatches = new Map;
   let nextFileWatch = 1;
@@ -7373,20 +7073,6 @@ function createServerApi(options) {
     defineProblemSource(source) {
       mayDefine("defineProblemSource", "problems.provide", source.id);
       send({ type: "problemSource", id: source.id, title: source.title });
-    },
-    defineHostProvider(provider) {
-      mayDefine("defineHostProvider", "hosts.provide", provider.id);
-      hostProviders.set(provider.id, provider);
-      send({
-        type: "hostProvider",
-        id: provider.id,
-        title: provider.title,
-        matches: provider.match !== undefined,
-        issues: provider.issues !== undefined,
-        parses: provider.issues?.parse !== undefined,
-        changes: provider.changes !== undefined,
-        checks: provider.checks !== undefined
-      });
     },
     problems: {
       report: async (project, source, reported) => mapResult(await ask("problems.report", [project.id, source, reported]), () => {
@@ -7518,17 +7204,6 @@ ${project.id}`;
       }
       return null;
     },
-    askHostProvider(id, method, args) {
-      const provider = hostProviders.get(id);
-      if (provider === undefined) {
-        throw new MissingHandler(`No host provider ${id}`);
-      }
-      const asked = hostProviderCall(provider, method);
-      if (asked === undefined) {
-        throw new MissingHandler(`The host provider ${id} has no ${method}`);
-      }
-      return asked(...args);
-    },
     deliver(name, payload) {
       for (const listener of listeners.get(name) ?? []) {
         listener(payload);
@@ -7655,228 +7330,6 @@ function launchesListed(answer, refused) {
     }
   }
   return [...launches.values()];
-}
-
-// packages/contracts/src/extension-hosts.ts
-var HostProviderShapeSchema = object({
-  title: string2().min(1).max(80),
-  matches: boolean2(),
-  issues: boolean2(),
-  parses: boolean2(),
-  changes: boolean2(),
-  checks: boolean2()
-});
-var CONTROL = /[\u0000-\u0008\u000b-\u001f\u007f]/g;
-var LINE_BREAKS = /[\s\u0000-\u001f\u007f]+/g;
-function cut(text, max) {
-  return text.length > max ? text.slice(0, max) : text;
-}
-var text = (max) => string2().transform((value) => cut(value.replace(CONTROL, ""), max));
-var line2 = (max) => string2().transform((value) => cut(value.replace(LINE_BREAKS, " ").trim(), max));
-var named = (max) => line2(max).refine((value) => value !== "", "is empty");
-var list = (item, max) => array(unknown()).transform((entries) => kept(entries.slice(0, max), item));
-var locator = string2().min(1).max(HOST_LIMITS.locator);
-function kept(entries, item) {
-  return entries.flatMap((entry) => {
-    const parsed = item.safeParse(entry);
-    return parsed.success ? [parsed.data] : [];
-  });
-}
-var page = string2().max(HOST_LIMITS.url).optional().transform((value) => {
-  try {
-    return value !== undefined && ["https:", "http:"].includes(new URL(value).protocol) ? value : undefined;
-  } catch {
-    return;
-  }
-});
-var time3 = string2().max(40).optional().transform((value) => value === undefined || Number.isNaN(Date.parse(value)) ? undefined : value);
-var count = number2().int().nonnegative();
-var ProvidedChangeSummary = object({
-  id: locator,
-  title: named(HOST_LIMITS.title),
-  state: _enum(["open", "closed", "merged"]),
-  stateLabel: line2(HOST_LIMITS.name).optional(),
-  draft: boolean2().optional(),
-  url: page,
-  author: line2(HOST_LIMITS.name).optional(),
-  branch: line2(HOST_LIMITS.title).optional(),
-  base: line2(HOST_LIMITS.title).optional(),
-  updatedAt: time3,
-  checkState: unknown().optional()
-});
-var ProvidedIssueSummary = object({
-  id: locator,
-  title: named(HOST_LIMITS.title),
-  state: _enum(["open", "closed"]),
-  stateLabel: line2(HOST_LIMITS.name).optional(),
-  url: page,
-  author: line2(HOST_LIMITS.name).optional(),
-  assignees: list(named(HOST_LIMITS.name), HOST_LIMITS.assignees).optional(),
-  labels: list(named(HOST_LIMITS.label), HOST_LIMITS.labels).optional(),
-  updatedAt: time3,
-  commentCount: count.optional()
-});
-var ProvidedComment = object({
-  id: locator,
-  author: line2(HOST_LIMITS.name),
-  body: text(HOST_LIMITS.body),
-  createdAt: time3
-});
-var ProvidedIssue = ProvidedIssueSummary.extend({
-  body: text(HOST_LIMITS.body),
-  comments: array(unknown()).transform((entries) => kept(entries.slice(-HOST_LIMITS.comments), ProvidedComment)).optional(),
-  changes: list(ProvidedChangeSummary, HOST_LIMITS.linked).optional()
-});
-var ProvidedCheck = object({
-  name: named(HOST_LIMITS.title),
-  state: unknown(),
-  url: page,
-  summary: line2(HOST_LIMITS.title).optional()
-});
-var ProvidedThread = object({
-  id: locator,
-  author: line2(HOST_LIMITS.name),
-  body: text(HOST_LIMITS.body),
-  path: line2(HOST_LIMITS.path).optional(),
-  line: number2().int().positive().optional()
-});
-var ProvidedChange = ProvidedChangeSummary.extend({
-  body: text(HOST_LIMITS.body),
-  headSha: named(HOST_LIMITS.sha),
-  checks: list(ProvidedCheck, HOST_LIMITS.checks).optional(),
-  threads: list(ProvidedThread, HOST_LIMITS.threads).optional(),
-  size: object({ additions: count, deletions: count, files: count }).optional(),
-  closes: list(locator, HOST_LIMITS.linked).optional()
-});
-var ProvidedPage = object({ items: array(unknown()), cursor: string2().min(1).max(HOST_LIMITS.cursor).optional() });
-var ProvidedStatus = object({
-  state: _enum(["ready", "signed-out", "unreachable", "not-configured"]),
-  reason: line2(HOST_LIMITS.reason).optional(),
-  account: line2(HOST_LIMITS.name).optional()
-});
-var ProvidedLog = object({ text: string2() });
-function present(shape) {
-  return Object.fromEntries(Object.entries(shape).filter(([, value]) => value !== undefined));
-}
-function why(error) {
-  const issue = error.issues[0];
-  return `${issue?.path.join(".") ?? ""} ${issue?.message ?? "invalid"}`.trim();
-}
-function changeSummaryOf(provider, change) {
-  const { id, checkState, ...rest } = change;
-  return present({ ref: hostRef(provider, id), ...rest, checkState: checkState === undefined ? undefined : hostCheckState(checkState) });
-}
-function issueSummaryOf(provider, issue) {
-  const { id, assignees, labels, ...rest } = issue;
-  return present({ ref: hostRef(provider, id), ...rest, assignees: assignees ?? [], labels: labels ?? [] });
-}
-function providedHostStatus(answer) {
-  const parsed = ProvidedStatus.safeParse(answer);
-  return parsed.success ? present(parsed.data) : { state: "unreachable", reason: "It gave no answer Ruimte can read." };
-}
-function pageOf(answer, schema, what, read, refused) {
-  const listed = ProvidedPage.safeParse(answer);
-  if (!listed.success) {
-    throw new Error(`It listed no ${what}s: ${why(listed.error)}`);
-  }
-  const items = listed.data.items.slice(0, HOST_LIMITS.page).flatMap((entry) => {
-    const parsed = schema.safeParse(entry);
-    if (!parsed.success) {
-      refused(`listed ${what === "issue" ? "an" : "a"} ${what} that is none: ${why(parsed.error)}`);
-      return [];
-    }
-    return [read(parsed.data)];
-  });
-  return present({ items, cursor: listed.data.cursor });
-}
-function providedIssuePage(provider, answer, refused) {
-  return pageOf(answer, ProvidedIssueSummary, "issue", (issue) => issueSummaryOf(provider, issue), refused);
-}
-function providedChangePage(provider, answer, refused) {
-  return pageOf(answer, ProvidedChangeSummary, "change", (change) => changeSummaryOf(provider, change), refused);
-}
-function providedIssue(provider, answer) {
-  if (answer === null || answer === undefined) {
-    return null;
-  }
-  const parsed = ProvidedIssue.safeParse(answer);
-  if (!parsed.success) {
-    throw new Error(`It answered an issue that is none: ${why(parsed.error)}`);
-  }
-  const { body, comments, changes, ...summary } = parsed.data;
-  return {
-    ...issueSummaryOf(provider, summary),
-    body,
-    comments: (comments ?? []).map(present),
-    changes: (changes ?? []).map((change) => changeSummaryOf(provider, change))
-  };
-}
-function providedChange(provider, answer) {
-  if (answer === null || answer === undefined) {
-    return null;
-  }
-  const parsed = ProvidedChange.safeParse(answer);
-  if (!parsed.success) {
-    throw new Error(`It answered a change that is none: ${why(parsed.error)}`);
-  }
-  const { body, headSha, checks, threads, size, closes, ...summary } = parsed.data;
-  const reduced = (checks ?? []).map((check) => present({ ...check, state: hostCheckState(check.state) }));
-  return present({
-    ...changeSummaryOf(provider, summary),
-    checkState: hostChecksState(reduced),
-    body,
-    headSha,
-    checks: reduced,
-    threads: (threads ?? []).map(present),
-    size: size ?? { additions: 0, deletions: 0, files: 0 },
-    closes: (closes ?? []).map((issue) => hostRef(provider, issue))
-  });
-}
-function providedLocator(answer) {
-  const parsed = locator.safeParse(answer);
-  return parsed.success ? parsed.data : null;
-}
-function providedCheckLog(answer) {
-  if (answer === null || answer === undefined) {
-    return null;
-  }
-  const parsed = ProvidedLog.safeParse(answer);
-  if (!parsed.success) {
-    throw new Error(`It answered a log that is none: ${why(parsed.error)}`);
-  }
-  const log = parsed.data.text.replace(CONTROL, "");
-  return { text: log.slice(-HOST_LIMITS.log), truncated: log.length > HOST_LIMITS.log };
-}
-
-// apps/server/src/extensions/host-provider-test.ts
-function testHostProvider(id, shape, machine) {
-  const scopeOf = (scope = {}) => ({
-    project: { ...machine.project, ...scope.project },
-    ...scope.remote === undefined ? {} : { remote: scope.remote }
-  });
-  return {
-    title: shape.title,
-    kind: shape.matches ? "code-host" : "tracker",
-    capabilities: { issues: shape.issues, parses: shape.parses, changes: shape.changes, checks: shape.checks },
-    match: async (remote) => shape.matches && await machine.ask("match", [remote]) === true,
-    async status(scope) {
-      const { state, reason, account } = providedHostStatus(await machine.ask("status", [scopeOf(scope)]));
-      return { state, ...reason === undefined ? {} : { reason }, ...account === undefined ? {} : { account } };
-    },
-    async issues(filter = {}, scope) {
-      const page = providedIssuePage(id, await machine.ask("issues.list", [scopeOf(scope), filter]), machine.refused);
-      return { issues: page.items, ...page.cursor === undefined ? {} : { cursor: page.cursor } };
-    },
-    issue: async (issue, scope) => providedIssue(id, await machine.ask("issues.read", [scopeOf(scope), issue])),
-    parse: async (text, scope) => providedLocator(await machine.ask("issues.parse", [scopeOf(scope), text])),
-    async changes(filter = {}, scope) {
-      const page = providedChangePage(id, await machine.ask("changes.list", [scopeOf(scope), filter]), machine.refused);
-      return { changes: page.items, ...page.cursor === undefined ? {} : { cursor: page.cursor } };
-    },
-    change: async (change, scope) => providedChange(id, await machine.ask("changes.read", [scopeOf(scope), change])),
-    changeOfBranch: async (branch, scope) => providedLocator(await machine.ask("changes.forBranch", [scopeOf(scope), branch])),
-    checkLog: async (change, check, scope) => providedCheckLog(await machine.ask("checks.log", [scopeOf(scope), change, check]))
-  };
 }
 
 // apps/server/src/extensions/test-loader.ts
@@ -8029,7 +7482,6 @@ class TestMachine {
   profiles = new Map;
   launchSources = new Map;
   problemSources = new Map;
-  hostProviders = new Map;
   problems = [];
   files;
   project;
@@ -8132,9 +7584,6 @@ class TestMachine {
       }
     } else if (message.type === "problemSource") {
       this.problemSources.set(message.id, message.title);
-    } else if (message.type === "hostProvider") {
-      const { type: _type, id, ...shape } = message;
-      this.hostProviders.set(id, shape);
     } else {
       const reason = eventRefusal(message.name, this.permissions);
       if (reason === null) {
@@ -8457,17 +7906,6 @@ async function createTestServer(options = {}) {
           await machine.core.askLaunchSource(id, "unwatch", { ...machine.project, ...project });
         }
       };
-    },
-    hostProvider: (id) => {
-      const shape = machine.hostProviders.get(id);
-      if (shape === undefined) {
-        throw new Error(`No host provider ${id}. defineHostProvider says what there is`);
-      }
-      return testHostProvider(id, shape, {
-        project: machine.project,
-        ask: async (method, args) => wire(await machine.core.askHostProvider(id, method, wire(args))),
-        refused: (reason) => void machine.logs.push(`${id} ${reason}`)
-      });
     },
     problems: machine.problems,
     files: machine.files,
@@ -10185,7 +9623,6 @@ var server = {
   defineTerminalProfile: through("defineTerminalProfile"),
   defineLaunchSource: through("defineLaunchSource"),
   defineProblemSource: through("defineProblemSource"),
-  defineHostProvider: through("defineHostProvider"),
   problems: forwarded2("problems"),
   files: forwarded2("files"),
   terminals: forwarded2("terminals"),
@@ -10196,7 +9633,7 @@ var server = {
   machine: forwarded2("machine"),
   log: forwarded2("log")
 };
-var testing = { createTestHost, createTestServer, refusal, checkHostProvider };
+var testing = { createTestHost, createTestServer, refusal };
 afterEach(unmountAll);
 afterAll(removeTestFolders);
 plugin({

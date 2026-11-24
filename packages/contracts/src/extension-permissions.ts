@@ -50,7 +50,6 @@ export const EXTENSION_PERMISSIONS: readonly string[] = [
     'routines.read',
     'routines.run',
     'problems.provide',
-    'hosts.provide',
     'projects.read',
     'terminals.read',
     'terminals.write',

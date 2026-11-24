@@ -2,7 +2,6 @@ import {
     agents,
     chats,
     defineAgentTool,
-    defineHostProvider,
     defineLaunchSource,
     defineProblemSource,
     defineServer,
@@ -166,38 +165,6 @@ try {
     problemSourceRefused = (e as Error).message;
 }
 
-let hostProviderRefused: string | null = null;
-
-try {
-    defineHostProvider({
-        id: 'probe-host',
-        title: 'Probe host',
-        status: ({ project }) => (project.id === 'another-project' ? { state: 'not-configured' } : { state: 'ready', account: 'probe' }),
-        issues: {
-            list: async (_scope, filter) => ({
-                items: [
-                    { id: 'P-1', title: `First\nissue ${filter.state ?? 'open'}`, state: 'open', url: 'file:///etc/passwd', labels: ['probe'] },
-                    // No issue, so the machine leaves it out and says why.
-                    { id: 'P-2', title: '', state: 'open' }
-                ] as never,
-                cursor: 'more'
-            }),
-            read: async (_scope, id) =>
-                id === 'P-1'
-                    ? {
-                          id,
-                          title: 'First issue',
-                          state: 'open',
-                          body: 'What is asked',
-                          changes: [{ id: 'C-1', title: 'A change', state: 'open', checkState: 'weird' as never }]
-                      }
-                    : null
-        }
-    });
-} catch (e) {
-    hostProviderRefused = (e as Error).message;
-}
-
 // What it heard of the machine, in the shape it was handed. The second listener follows another project only.
 const heardOfMachine: object[] = [];
 const heardElsewhere: object[] = [];
@@ -214,9 +181,6 @@ const fileWatches = new Map<string, () => void>();
 const providerApi = defineServer({
     async sourcesRefused() {
         return { launches: launchSourceRefused, problems: problemSourceRefused };
-    },
-    async hostRefused() {
-        return hostProviderRefused;
     },
     /* Changes what the launch source lists, and says so if the machine asked it to. */
     async bump() {

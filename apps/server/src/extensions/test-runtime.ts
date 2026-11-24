@@ -7,7 +7,6 @@ import { plugin } from 'bun';
 import { afterAll, afterEach } from 'bun:test';
 import type * as PublicServer from '../../../../packages/extension/server';
 import type * as PublicTesting from '../../../../packages/extension/testing';
-import { checkHostProvider } from './host-provider-check.ts';
 import { unmountAll } from './test-dom.ts';
 import { client, createTestHost } from './test-hosts.ts';
 import { agentsUiModule, chartsModule, uiModule } from './test-react.ts';
@@ -43,7 +42,6 @@ const server = {
     defineTerminalProfile: through('defineTerminalProfile'),
     defineLaunchSource: through('defineLaunchSource'),
     defineProblemSource: through('defineProblemSource'),
-    defineHostProvider: through('defineHostProvider'),
     problems: forwarded('problems'),
     files: forwarded('files'),
     terminals: forwarded('terminals'),
@@ -55,7 +53,7 @@ const server = {
     log: forwarded('log')
 } satisfies Server;
 
-const testing = { createTestHost, createTestServer, refusal, checkHostProvider } satisfies typeof PublicTesting;
+const testing = { createTestHost, createTestServer, refusal } satisfies typeof PublicTesting;
 
 // What a test drew leaves the page with it.
 afterEach(unmountAll);

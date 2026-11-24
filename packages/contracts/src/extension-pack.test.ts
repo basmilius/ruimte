@@ -98,7 +98,7 @@ describe('a pack read whole', () => {
         });
         expect(await readExtensionPack(packOf({ 'manifest.json': manifestOf({ proposed: ['teleport'] }) }), gunzip)).toMatchObject({
             ok: false,
-            message: 'acme.pack: teleport is not a proposed part this Ruimte knows (terminalProfiles, launchSources, problemSources, hostProviders)'
+            message: 'acme.pack: teleport is not a proposed part this Ruimte knows (terminalProfiles, launchSources, problemSources)'
         });
     });
 

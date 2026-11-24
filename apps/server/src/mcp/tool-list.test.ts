@@ -49,7 +49,7 @@ function content(): ProjectContent {
     } as ProjectContent;
 }
 
-/* A chat sees everything there is: computer use is on and the project has a connection and a code host. A terminal has none of them. */
+/* A chat sees everything there is: computer use is on and the project has a connection. A terminal has neither. */
 function host(everything: boolean): CanvasHost {
     return {
         projects: {
@@ -57,8 +57,7 @@ function host(everything: boolean): CanvasHost {
             read: async () => content()
         },
         computer: { enabled: everything },
-        databases: { list: async () => (everything ? [{ id: 'db0' }] : []) },
-        hosts: { hosts: { has: async () => everything } }
+        databases: { list: async () => (everything ? [{ id: 'db0' }] : []) }
     } as unknown as CanvasHost;
 }
 

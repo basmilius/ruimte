@@ -14,7 +14,6 @@ import {
     ExtensionProblemsClearSchema,
     ExtensionProblemsReportSchema,
     ExtensionProvidedIdSchema,
-    HostProviderShapeSchema,
     providedIds,
     proposedRefusal,
     providerRefusal,
@@ -23,9 +22,7 @@ import {
     type ExtensionInfo,
     type ExtensionManifest,
     type ExtensionStatus,
-    type ExtensionTerminalProfile,
-    type HostProviderMethod,
-    type HostProviderShape
+    type ExtensionTerminalProfile
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import { bestEffort } from '../best-effort.ts';
@@ -74,7 +71,6 @@ const ProtocolMessageSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('launchSource'), id: z.string(), title: z.string().min(1).max(80), watches: z.boolean() }),
     z.object({ type: z.literal('launchesChanged'), source: z.string(), projectId: z.string() }),
     z.object({ type: z.literal('problemSource'), id: z.string(), title: z.string().min(1).max(80) }),
-    HostProviderShapeSchema.extend({ type: z.literal('hostProvider'), id: z.string() }),
     z.object({ type: z.literal('emit'), name: z.string(), payload: z.unknown().optional() }),
     z.object({ type: z.literal('result'), id: z.number(), result: z.unknown().optional(), error: z.string().optional(), code: z.string().optional() })
 ]);
@@ -140,7 +136,6 @@ interface Running {
     // The launch sources and problem sources its module defined, by id.
     launchSources: Map<string, { title: string; watches: boolean }>;
     problemSources: Map<string, { title: string }>;
-    hostProviders: Map<string, HostProviderShape>;
     subscriptions: Set<string>;
     nextCall: number;
     buffered: string;
@@ -229,12 +224,6 @@ export interface ExtensionTerminalPort {
     /* Types into a terminal, or refuses with what the machine itself keeps of who opened it. */
     write(extensionId: string, nodeId: string, text: string): Promise<void>;
     read(nodeId: string): Promise<string>;
-}
-
-/* A host provider an extension's module defined, with the optional parts it has. */
-export interface DefinedHostProvider extends HostProviderShape {
-    extension: string;
-    id: string;
 }
 
 /* What an extension may do as the store held it once no change of what runs was under way. */
@@ -948,7 +937,6 @@ export class ExtensionHost {
             profiles: new Map(),
             launchSources: new Map(),
             problemSources: new Map(),
-            hostProviders: new Map(),
             subscriptions: new Set(),
             nextCall: 1,
             buffered: '',
@@ -1037,12 +1025,6 @@ export class ExtensionHost {
         } else if (message.type === 'problemSource') {
             if (this.mayProvide(id, running, 'defineProblemSource', 'problems.provide', message.id)) {
                 running.problemSources.set(message.id, { title: message.title });
-            }
-        } else if (message.type === 'hostProvider') {
-            const { type: _type, id: provider, ...shape } = message;
-
-            if (this.mayProvide(id, running, 'defineHostProvider', 'hosts.provide', provider)) {
-                running.hostProviders.set(provider, shape);
             }
         } else if (message.type === 'launchesChanged') {
             if (running.launchSources.has(message.source)) {
@@ -1152,59 +1134,6 @@ export class ExtensionHost {
         if (running?.launchSources.get(source)?.watches === true) {
             await this.send(running, { type: 'launchSource', source, method: watch ? 'watch' : 'unwatch', input: project }, `${id} launch source ${source}`);
         }
-    }
-
-    /*
-     * The host providers of this machine's extensions, with the parts each has. A provider is its extension's process,
-     * so that starts for the list. One that does not start supplies none, and its log says why.
-     */
-    async hostProviders(): Promise<DefinedHostProvider[]> {
-        const defined: DefinedHostProvider[] = [];
-
-        for (const extension of await this.options.store.list()) {
-            if (isDamaged(extension) || !extension.enabled || this.refusedReason(extension) !== null || this.options.store.serverEntry(extension) === null) {
-                continue;
-            }
-
-            const { id } = extension.manifest;
-            const ids = providedIds(extension.manifest, 'hostProviders', allowsProposed(this.provenanceOf(extension)));
-
-            if (ids.length === 0) {
-                continue;
-            }
-
-            try {
-                const running = await this.runningFor(id);
-
-                for (const provider of ids) {
-                    const shape = running.hostProviders.get(provider);
-
-                    if (shape !== undefined) {
-                        defined.push({ extension: id, id: provider, ...shape });
-                    }
-                }
-            } catch (e) {
-                void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `Its host providers were not listed: ${errorText(e)}\n`));
-            }
-        }
-
-        return defined;
-    }
-
-    /* Asks a host provider one thing in its extension's process, which starts for it. The answer is the provider's own, unchecked. */
-    async askHostProvider(id: string, provider: string, method: HostProviderMethod, args: readonly unknown[]): Promise<unknown> {
-        const running = await this.runningFor(id);
-
-        if (!running.hostProviders.has(provider)) {
-            throw new ExtensionRefusal('not-found', `${id} supplies no host provider ${provider}`);
-        }
-
-        return this.send(running, { type: 'hostProvider', provider, method, args }, `${id} host provider ${provider}`);
-    }
-
-    /* Writes what a provider of an extension did wrong to that extension's log, where its author reads it. */
-    noteProvider(id: string, line: string): void {
-        void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${line}\n`));
     }
 
     /*

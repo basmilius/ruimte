@@ -57,8 +57,7 @@ const VERB_LOOKS: Record<ContextVerb, VerbLook> = {
     language: { name: 'Language', from: 1 },
     template: { name: 'Templates', from: 1 },
     provider: { name: 'Providers', from: 1 },
-    computer: { name: 'Computer Use', from: 1 },
-    hosts: { name: 'Issues', from: 0 }
+    computer: { name: 'Computer Use', from: 1 }
 };
 
 const NO_VERB: VerbLook = { name: 'Context', from: 0 };
@@ -79,13 +78,7 @@ const TOOL_VERBS: Readonly<Record<string, ContextVerb>> = {
     agent_answer: 'answer',
     agent_team: 'team',
     agent_fork: 'fork',
-    guide: 'help',
-    issue_list: 'hosts',
-    issue_read: 'hosts',
-    issue_link: 'hosts',
-    change_list: 'hosts',
-    change_read: 'hosts',
-    ci_logs: 'hosts'
+    guide: 'help'
 };
 
 const TOOLKIT_VERBS: Readonly<Record<string, ContextVerb>> = { launch: 'launches' };

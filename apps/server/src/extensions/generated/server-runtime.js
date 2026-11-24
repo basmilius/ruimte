@@ -94,8 +94,7 @@ function missingPermissionMessage(extension, permission) {
 var EXTENSION_PROVIDER_POINTS = {
   terminalProfiles: { define: "defineTerminalProfile", permission: "terminals.profiles", proposed: true },
   launchSources: { define: "defineLaunchSource", permission: "launches.provide", proposed: true },
-  problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true },
-  hostProviders: { define: "defineHostProvider", permission: "hosts.provide", proposed: true }
+  problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true }
 };
 var EXTENSION_PROPOSED_PARTS = Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true);
 function pointOf(kind) {
@@ -160,12 +159,6 @@ function callHandler(handlers, method, args) {
   }
   return handler(...args);
 }
-function hostProviderCall(provider, method) {
-  const [part, name] = method.includes(".") ? method.split(".") : [null, method];
-  const owner = part === null ? provider : provider[part];
-  const found = owner === undefined ? undefined : owner[name ?? ""];
-  return typeof found === "function" ? found.bind(owner) : undefined;
-}
 function createServerApi(options) {
   const { ask, send, permissions } = options;
   const listeners = new Map;
@@ -173,7 +166,6 @@ function createServerApi(options) {
   const nodeContexts = new Map;
   const profiles = new Map;
   const launchSources = new Map;
-  const hostProviders = new Map;
   const launchWatches = new Map;
   const fileWatches = new Map;
   let nextFileWatch = 1;
@@ -254,20 +246,6 @@ function createServerApi(options) {
     defineProblemSource(source) {
       mayDefine("defineProblemSource", "problems.provide", source.id);
       send({ type: "problemSource", id: source.id, title: source.title });
-    },
-    defineHostProvider(provider) {
-      mayDefine("defineHostProvider", "hosts.provide", provider.id);
-      hostProviders.set(provider.id, provider);
-      send({
-        type: "hostProvider",
-        id: provider.id,
-        title: provider.title,
-        matches: provider.match !== undefined,
-        issues: provider.issues !== undefined,
-        parses: provider.issues?.parse !== undefined,
-        changes: provider.changes !== undefined,
-        checks: provider.checks !== undefined
-      });
     },
     problems: {
       report: async (project, source, reported) => mapResult(await ask("problems.report", [project.id, source, reported]), () => {
@@ -398,17 +376,6 @@ ${project.id}`;
         launchWatches.set(key, await source.watch(project, () => send({ type: "launchesChanged", source: id, projectId: project.id })));
       }
       return null;
-    },
-    askHostProvider(id, method, args) {
-      const provider = hostProviders.get(id);
-      if (provider === undefined) {
-        throw new MissingHandler(`No host provider ${id}`);
-      }
-      const asked = hostProviderCall(provider, method);
-      if (asked === undefined) {
-        throw new MissingHandler(`The host provider ${id} has no ${method}`);
-      }
-      return asked(...args);
     },
     deliver(name, payload) {
       for (const listener of listeners.get(name) ?? []) {
@@ -570,11 +537,6 @@ function handle(message) {
     answer(message.id, async () => {
       await loaded;
       return core.askLaunchSource(message.source, message.method, message.input);
-    });
-  } else if (message.type === "hostProvider") {
-    answer(message.id, async () => {
-      await loaded;
-      return core.askHostProvider(message.provider, message.method, message.args);
     });
   } else if (message.type === "fileChanged") {
     core.fileChanged(message.watch);

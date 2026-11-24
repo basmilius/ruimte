@@ -9,7 +9,6 @@ import type { DatabasesBundle } from './databases.ts';
 import type { DevicesBundle } from './devices.ts';
 import type { ExtensionsBundle } from './extensions.ts';
 import type { GitBundle } from './git.ts';
-import type { HostsBundle } from './hosts.ts';
 import type { LanguageBundle } from './language.ts';
 import type { LaunchesBundle } from './launches.ts';
 import type { ProjectsBundle } from './projects.ts';
@@ -31,7 +30,6 @@ interface CanvasHostInput {
     launches: LaunchesBundle;
     secrets: SecretsBundle;
     git: GitBundle;
-    hosts: HostsBundle;
     devices: DevicesBundle;
     databases: DatabasesBundle;
     extensions: NonNullable<CanvasHost['extensions']>;

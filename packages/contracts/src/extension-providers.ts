@@ -25,8 +25,7 @@ export interface ExtensionProviderPoint {
 export const EXTENSION_PROVIDER_POINTS: Readonly<Record<string, ExtensionProviderPoint>> = {
     terminalProfiles: { define: 'defineTerminalProfile', permission: 'terminals.profiles', proposed: true },
     launchSources: { define: 'defineLaunchSource', permission: 'launches.provide', proposed: true },
-    problemSources: { define: 'defineProblemSource', permission: 'problems.provide', proposed: true },
-    hostProviders: { define: 'defineHostProvider', permission: 'hosts.provide', proposed: true }
+    problemSources: { define: 'defineProblemSource', permission: 'problems.provide', proposed: true }
 };
 
 // The most launches one launch source lists in a project; the rest is cut, so a source cannot fill the menu.

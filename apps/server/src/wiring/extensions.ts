@@ -48,7 +48,7 @@ export interface ExtensionsBundle {
 type ExtensionsLater = Later<
     Pick<
         DaemonBundles,
-        'agents' | 'providers' | 'projects' | 'databases' | 'artifacts' | 'language' | 'canvasHost' | 'actions' | 'git' | 'machine' | 'launches' | 'hosts'
+        'agents' | 'providers' | 'projects' | 'databases' | 'artifacts' | 'language' | 'canvasHost' | 'actions' | 'git' | 'machine' | 'launches'
     >
 >;
 
@@ -156,10 +156,7 @@ export function wireExtensions(home: string, developmentRoots: readonly string[]
         projectFiles,
         problems: () => problems,
         launchesChanged: (_id, _source, projectId) => void launchSources.refresh(projectId),
-        providersChanged: (id) => {
-            launchSources.extensionChanged(id);
-            later.hosts().hosts.extensionChanged();
-        },
+        providersChanged: (id) => launchSources.extensionChanged(id),
         startChat: async (...args) => startChat(...args),
         runAction: async (id, projectId, action, input) => {
             const folder = folderOfProject(projectId);

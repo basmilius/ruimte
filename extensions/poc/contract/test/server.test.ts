@@ -42,27 +42,6 @@ serverContract(async (permissions, { provenance, ...manifest } = {}) => {
         launches: async (source) => ({ title: server.launchSource(source).title, launches: await server.launchSource(source).list() }),
         launchChanges: async (source) => server.launchSource(source).changes,
         unfollowLaunches: (source) => server.launchSource(source).stop(),
-        hostProvider: async (id) => {
-            const provider = server.hostProvider(id);
-            const page = await provider.issues({ state: 'all' });
-            const issue = await provider.issue('P-1');
-
-            return {
-                title: provider.title,
-                kind: provider.kind,
-                status: await provider.status(),
-                issues: page.issues.map(({ ref, title, url }) => ({ ref, title, ...(url === undefined ? {} : { url }) })),
-                ...(page.cursor === undefined ? {} : { cursor: page.cursor }),
-                issue:
-                    issue === null
-                        ? null
-                        : {
-                              ref: issue.ref,
-                              body: issue.body,
-                              changes: issue.changes.map(({ ref, checkState }) => ({ ref, ...(checkState === undefined ? {} : { checkState }) }))
-                          }
-            };
-        },
         launchIs: (launch, state, exitCode) => server.fire('launch.status', { project: { id: 'project-a' }, launch, state, exitCode }),
         projectIs: (open) => {
             if (open) {

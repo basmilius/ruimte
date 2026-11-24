@@ -4,7 +4,6 @@ import { ProviderAccountsService } from '@adecore/agents/providers';
 import { errorText } from '../error-text.ts';
 import { developmentExtensionRoots } from '../extensions/provenance.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
-import { gitHostCheckouts } from '../git/host-checkouts.ts';
 import { Worktrees } from '../git/worktrees.ts';
 import { runCommand } from '../language/runtime.ts';
 import { toolchainCandidates } from '../language/toolchain.ts';
@@ -38,8 +37,7 @@ export function productionSeams(runtime: DaemonRuntime): DaemonSeams {
         git: {
             worktrees: ({ home, agents, now, checkoutRoot, foreign }) => new Worktrees(home, agents, now, checkoutRoot, foreign),
             checkpoints: (home, machineHome) => new Checkpoints(home, machineHome),
-            repositoryOf,
-            hostCheckouts: gitHostCheckouts
+            repositoryOf
         },
         projectStore: ({ home, links, overlays }) => new ProjectStore(home, links, overlays),
         nameChat: suggestChatTitle,

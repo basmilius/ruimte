@@ -24,7 +24,6 @@ import { wireDatabases } from './wiring/databases.ts';
 import { createComputer, wireDevices } from './wiring/devices.ts';
 import { wireExtensions } from './wiring/extensions.ts';
 import { wireGit } from './wiring/git.ts';
-import { wireHosts } from './wiring/hosts.ts';
 import type { HttpInput } from './wiring/http.ts';
 import { wireLanguage } from './wiring/language.ts';
 import { lateness } from './wiring/later.ts';
@@ -117,7 +116,6 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     // Before the socket answers, so an agent whose project nobody opened since the restart still reads its links.
     await projects.store.warmIndex();
     const git = provide('git', wireGit(home, identity, machine.machineHome, agents, work, projects.store.peers, seams));
-    const hosts = provide('hosts', wireHosts({ extensions, agents, projects, checkouts: seams.git.hostCheckouts }));
     const devices = provide('devices', wireDevices(runtime, computer, stores.lifecycle, machine.machineHome, seams));
     const usage = provide('usage', wireUsage(config, providers, agents, projects.store, seams));
     const processes = provide(
@@ -146,7 +144,6 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
             launches,
             secrets,
             git,
-            hosts,
             devices,
             databases,
             remote,
@@ -274,7 +271,6 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
             actions: later.actions(),
             canvasHost,
             extensions,
-            hosts,
             connected,
             tunnels
         },
@@ -341,7 +337,6 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
         actions: later.actions(),
         canvasHost,
         extensions,
-        hosts,
         connected,
         tunnels
     };

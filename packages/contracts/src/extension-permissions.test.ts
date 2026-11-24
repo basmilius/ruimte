@@ -29,7 +29,7 @@ test('a manifest is told which of its permissions this Ruimte does not know', ()
     expect(isExtensionPermission('chats.send')).toBe(true);
     expect(isExtensionPermission('chat.send')).toBe(false);
     expect(extensionPermissionProblems({ 'files.read': 'Reads', 'chat.send': 'Sends', 'net:a.com;': 'Calls' })).toEqual([
-        'chat.send is not a permission this Ruimte knows (canvas.write, views.write, artifacts.read, artifacts.write, browser.control, context.read, database.read, devices.control, languages.servers, launches.read, launches.run, launches.write, launches.provide, routines.read, routines.run, problems.provide, hosts.provide, projects.read, terminals.read, terminals.write, terminals.profiles, files.read, files.write, git.read, chats.read, chats.send, agents.run, agents.start, agents.status, agents.tools, usage.read, clock or net:<host>)',
+        'chat.send is not a permission this Ruimte knows (canvas.write, views.write, artifacts.read, artifacts.write, browser.control, context.read, database.read, devices.control, languages.servers, launches.read, launches.run, launches.write, launches.provide, routines.read, routines.run, problems.provide, projects.read, terminals.read, terminals.write, terminals.profiles, files.read, files.write, git.read, chats.read, chats.send, agents.run, agents.start, agents.status, agents.tools, usage.read, clock or net:<host>)',
         'net:a.com; does not name a host; write net:example.com'
     ]);
     expect(extensionPermissionProblems(undefined)).toEqual([]);

@@ -26,7 +26,6 @@ import { EDITOR_ASSIST_REQUEST_SCHEMAS, EDITOR_ASSIST_EVENT_SCHEMAS } from './ed
 import { EXTENSION_EVENT_SCHEMAS, EXTENSION_REQUEST_SCHEMAS } from './extension.ts';
 import { FS_REQUEST_SCHEMAS, FS_EVENT_SCHEMAS } from './fs.ts';
 import { GIT_REQUEST_SCHEMAS, GIT_EVENT_SCHEMAS } from './git.ts';
-import { HOST_REQUEST_SCHEMAS, HOST_EVENT_SCHEMAS } from './host.ts';
 import { LANGUAGE_REQUEST_SCHEMAS, LANGUAGE_EVENT_SCHEMAS } from './language.ts';
 import { LAUNCHES_REQUEST_SCHEMAS, LAUNCHES_EVENT_SCHEMAS } from './launches.ts';
 import { MACHINE_UPDATE_REQUEST_SCHEMAS, MACHINE_UPDATE_EVENT_SCHEMAS } from './machine-update.ts';
@@ -175,8 +174,6 @@ export * from './extension-client.ts';
 export * from './extension-pack.ts';
 export * from './extension-permissions.ts';
 export * from './extension-problems.ts';
-export * from './extension-hosts.ts';
-export * from './host.ts';
 export * from './extension-providers.ts';
 export * from './extension-results.ts';
 export * from './voice.ts';
@@ -234,7 +231,6 @@ export const REQUEST_SCHEMAS = {
     ...GIT_REQUEST_SCHEMAS,
     ...AUTH_REQUEST_SCHEMAS,
     ...TUNNEL_REQUEST_SCHEMAS,
-    ...HOST_REQUEST_SCHEMAS,
     ...PROCESSES_REQUEST_SCHEMAS,
     ...COMPUTER_REQUEST_SCHEMAS,
     ...SECRETS_REQUEST_SCHEMAS,
@@ -289,7 +285,6 @@ export const EVENT_SCHEMAS = {
     ...GIT_EVENT_SCHEMAS,
     ...AUTH_EVENT_SCHEMAS,
     ...TUNNEL_EVENT_SCHEMAS,
-    ...HOST_EVENT_SCHEMAS,
     ...PROCESSES_EVENT_SCHEMAS,
     ...COMPUTER_EVENT_SCHEMAS,
     ...SECRETS_EVENT_SCHEMAS,

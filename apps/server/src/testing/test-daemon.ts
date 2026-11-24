@@ -11,7 +11,6 @@ import type { PendingPromptStore } from '../canvas/pending-prompts.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import type { Checkpoints } from '../git/checkpoints.ts';
-import type { HostCheckouts } from '../git/host-checkouts.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import type { EndChildrenWiring } from '../outbox/end-children.ts';
 import type { OutboxStore, OutboxWork } from '../outbox/outbox.ts';
@@ -89,8 +88,6 @@ interface TestDaemonOptions {
     checkpoints?: Checkpoints;
     /* Real worktrees for the tools; without them a project is in no repository. */
     worktrees?: Worktrees;
-    /* The checkouts a code host is found from, with their remotes; without them a project has none. */
-    hostCheckouts?: HostCheckouts;
     /* The CLIs this machine says it has; Claude Code alone unless a test needs another. */
     installed?: AgentKind[];
     /* What runs as Claude Code; the plain fake unless a test needs one that misbehaves. */
@@ -154,8 +151,7 @@ export async function bootTestDaemon(options: TestDaemonOptions): Promise<TestDa
         git: {
             ...base.git,
             ...(worktrees ? { worktrees: () => worktrees } : {}),
-            ...(checkpoints ? { checkpoints: () => checkpoints } : {}),
-            ...(options.hostCheckouts ? { hostCheckouts: options.hostCheckouts } : {})
+            ...(checkpoints ? { checkpoints: () => checkpoints } : {})
         },
         observers: { ...base.observers, ...(onLimits ? { limits: onLimits } : {}) },
         ...(accounts ? { accounts: () => accounts } : {}),

@@ -138,8 +138,7 @@ export const USAGE_VERB_COUNTERS = {
     routine: 'verbsLaunches',
     secret: 'verbsSecret',
     language: 'verbsLanguage',
-    template: 'verbsRead',
-    hosts: 'verbsRead'
+    template: 'verbsRead'
 } as const satisfies Record<string, UsageCounter>;
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
