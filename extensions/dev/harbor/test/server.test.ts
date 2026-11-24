@@ -2,6 +2,20 @@ import { describe, expect, test } from 'bun:test';
 import { createTestServer } from '@ruimte/extension/testing';
 import type { HarborServer } from '../server';
 
+const COMPOSE = [
+    '# The services of the shop',
+    'services:',
+    '  web:',
+    '    command: bun run dev',
+    '    port: 5173',
+    '  migrate:',
+    '    command: bun run migrate',
+    '    kind: task',
+    '    workdir: api',
+    '  Unnamed Service:',
+    '    command: never listed',
+    ''
+].join('\n');
 const NOT_OPENED = { code: 'refused' as const, message: 'dev.harbor did not open the terminal shell-1, so it cannot type into it' };
 
 describe('Harbor on the machine', () => {
@@ -67,7 +81,8 @@ describe('Harbor on the machine', () => {
     });
 
     test('opens no terminal and types into none without the permission of each', async () => {
-        const server = await createTestServer<HarborServer>({ manifest: { permissions: { 'terminals.profiles': 'Adds a shell' } } });
+        const permissions = { 'launches.provide': 'Lists', 'terminals.profiles': 'Adds a shell' };
+        const server = await createTestServer<HarborServer>({ manifest: { permissions } });
 
         expect(await server.call('openShell', 'project-1')).toEqual({
             ok: false,
@@ -82,8 +97,110 @@ describe('Harbor on the machine', () => {
 
     test('does not load as an extension a person installed, where a proposed part does not work', async () => {
         await expect(createTestServer<HarborServer>({ provenance: 'installed' })).rejects.toThrow(
-            'This extension uses a part of Ruimte that is not final yet (terminalProfiles). It works while its author develops it, and an installed extension cannot use it.'
+            'This extension uses a part of Ruimte that is not final yet (terminalProfiles, launchSources). It works while its author develops it, and an installed extension cannot use it.'
         );
+    });
+
+    test('lists the services of harbor.yaml as launches Ruimte starts, each with the digest of the file', async () => {
+        const server = await createTestServer<HarborServer>({ files: { 'harbor.yaml': COMPOSE } });
+        const source = server.launchSource('compose');
+        const launches = await source.list();
+
+        expect(source.title).toBe('Harbor');
+        expect(launches).toEqual([
+            {
+                id: 'web',
+                name: 'web',
+                kind: 'service',
+                spawn: { command: 'sh', args: ['-c', 'bun run dev'], env: { HARBOR_SERVICE: 'web' } },
+                fingerprint: expect.stringMatching(/^[0-9a-f]{64}$/),
+                port: 5173
+            },
+            {
+                id: 'migrate',
+                name: 'migrate',
+                kind: 'task',
+                spawn: { command: 'sh', args: ['-c', 'bun run migrate'], env: { HARBOR_SERVICE: 'migrate' }, cwd: 'api' },
+                fingerprint: launches[0]?.fingerprint
+            }
+        ]);
+        expect(server.asked.map((ask) => [ask.method, ask.args])).toEqual([
+            ['files.readText', [{ id: 'project-1' }, 'harbor.yaml']],
+            ['files.watch', [{ id: 'project-1' }, 'harbor.yaml']]
+        ]);
+    });
+
+    test('tells Ruimte when harbor.yaml changed, and then lists it under another digest, which asks the person again', async () => {
+        const server = await createTestServer<HarborServer>({ files: { 'harbor.yaml': COMPOSE } });
+        const source = server.launchSource('compose');
+        const [before] = await source.list();
+
+        server.writeFile('src/app.ts', 'export {};\n');
+
+        expect(source.changes).toBe(0);
+
+        server.writeFile('harbor.yaml', COMPOSE.replace('bun run dev', 'bun run dev --host'));
+
+        expect(source.changes).toBe(1);
+
+        const [after] = await source.list();
+
+        expect(after?.spawn.args).toEqual(['-c', 'bun run dev --host']);
+        expect(after?.fingerprint).not.toBe(before?.fingerprint);
+
+        // A comment changes no command, and the file a person approved is still another file.
+        server.writeFile('harbor.yaml', `# Reviewed\n${COMPOSE}`);
+
+        const [commented] = await source.list();
+
+        expect(commented?.spawn).toEqual(before?.spawn);
+        expect(commented?.fingerprint).not.toBe(before?.fingerprint);
+    });
+
+    test('lists nothing in a project without harbor.yaml, and still hears when one is written', async () => {
+        const server = await createTestServer<HarborServer>();
+        const source = server.launchSource('compose');
+
+        expect(await source.list()).toEqual([]);
+
+        server.writeFile('harbor.yaml', COMPOSE);
+
+        expect(source.changes).toBe(1);
+        expect((await source.list()).map((launch) => launch.id)).toEqual(['web', 'migrate']);
+    });
+
+    test('follows the launches of its own services to say which run, and no launch of anything else', async () => {
+        const server = await createTestServer<HarborServer>();
+        const project = { id: 'project-1' };
+
+        server.fire('launch.status', { project, launch: 'dev.harbor:compose:web', state: 'starting', exitCode: null });
+        server.fire('launch.status', { project, launch: 'dev', state: 'running', exitCode: null });
+        server.fire('launch.status', { project, launch: 'dev.harbor:compose:migrate', state: 'running', exitCode: null });
+
+        expect(await server.call('running', 'project-1')).toEqual({ ok: true, value: ['web', 'migrate'] });
+
+        server.fire('launch.status', { project, launch: 'dev.harbor:compose:migrate', state: 'exited', exitCode: 0 });
+
+        expect(await server.call('running', 'project-1')).toEqual({ ok: true, value: ['web'] });
+        expect(await server.call('running', 'another')).toEqual({ ok: true, value: [] });
+        expect(server.emitted.at(-1)).toEqual({ name: 'harbor.running', payload: { projectId: 'project-1', services: ['web'] } });
+    });
+
+    test('reads no file and follows no launch without the permission of each, and says so in its log', async () => {
+        const permissions = { 'launches.provide': 'Lists', 'terminals.profiles': 'Adds a shell' };
+        const server = await createTestServer<HarborServer>({ manifest: { permissions }, files: { 'harbor.yaml': COMPOSE } });
+
+        expect(await server.launchSource('compose').list()).toEqual([]);
+
+        server.fire('launch.status', { project: { id: 'project-1' }, launch: 'dev.harbor:compose:web', state: 'running', exitCode: null });
+
+        expect(await server.call('running', 'project-1')).toEqual({ ok: true, value: [] });
+        expect(server.logs).toEqual([
+            'launch.status needs the permission launches.read in manifest.json',
+            'files.readText answered permission-denied: dev.harbor did not ask for the permission files.read in its manifest',
+            'files.watch answered permission-denied: dev.harbor did not ask for the permission files.read in its manifest',
+            'Harbor does not follow harbor.yaml: dev.harbor did not ask for the permission files.read in its manifest'
+        ]);
     });
 
     test('defines no profile its manifest does not name as proposed, list or ask the permission for', async () => {

@@ -314,6 +314,16 @@
         "react-dom": "^19.3.1",
       },
     },
+    "extensions/dev/lintel": {
+      "name": "@ruimte/extension-dev-lintel",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/extension": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.4.4",
+      },
+    },
     "extensions/dev/pulseboard": {
       "name": "@ruimte/extension-dev-pulseboard",
       "version": "0.0.0",
@@ -1364,6 +1374,8 @@
     "@ruimte/extension-dev-boardwalk": ["@ruimte/extension-dev-boardwalk@workspace:extensions/dev/boardwalk"],
 
     "@ruimte/extension-dev-harbor": ["@ruimte/extension-dev-harbor@workspace:extensions/dev/harbor"],
+
+    "@ruimte/extension-dev-lintel": ["@ruimte/extension-dev-lintel@workspace:extensions/dev/lintel"],
 
     "@ruimte/extension-dev-pulseboard": ["@ruimte/extension-dev-pulseboard@workspace:extensions/dev/pulseboard"],
 

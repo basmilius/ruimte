@@ -10,6 +10,11 @@ const EXTENSIONS = join(import.meta.dir, '../../../../extensions');
 // Each by its folder and the id its manifest carries.
 const PRODUCTS = ['trackline', 'boardwalk', 'beacon', 'pulseboard'].map((name) => [`dev/${name}`, `dev.${name}`] as const);
 const POCS = ['surfaces', 'machine', 'frame', 'themes', 'broken', 'broken-load'].map((name) => [`poc/${name}`, `poc.${name}`] as const);
+// The products that use a proposed part, each with the parts a person reads of.
+const PROPOSED = [
+    ['dev/harbor', 'dev.harbor', 'terminalProfiles, launchSources'],
+    ['dev/lintel', 'dev.lintel', 'problemSources']
+] as const;
 const TRACKLINE = 'dev.trackline';
 const KEY = 'trk_demo1234';
 const root = mkdtempSync(join(tmpdir(), 'ruimte-extension-development-'));
@@ -40,7 +45,7 @@ afterEach(() => hosts.splice(0).forEach((host) => host.stopAll()));
 afterAll(() => {
     rmSync(root, { recursive: true, force: true });
 
-    for (const [folder] of [...PRODUCTS, ...POCS, ['dev/harbor']]) {
+    for (const [folder] of [...PRODUCTS, ...POCS, ...PROPOSED]) {
         rmSync(join(EXTENSIONS, folder, 'dist'), { recursive: true, force: true });
     }
 });
@@ -53,16 +58,16 @@ describe('the development extensions', () => {
         expect(info.manifest.id).toBe(id);
     });
 
-    test('Harbor packs, and installs nowhere while it uses a proposed part, which only a link of it runs', async () => {
-        const { host } = hostIn('install-harbor');
-        const pack = await packOf('dev/harbor');
+    test.each(PROPOSED)('%s packs, and installs nowhere while it uses a proposed part, which only a link of it runs', async (folder, id, parts) => {
+        const { host } = hostIn(`install-${id}`);
+        const pack = await packOf(folder);
 
         await expect(host.install(pack)).rejects.toThrow(
-            'This extension uses a part of Ruimte that is not final yet (terminalProfiles). It works while its author develops it, and an installed extension cannot use it.'
+            `This extension uses a part of Ruimte that is not final yet (${parts}). It works while its author develops it, and an installed extension cannot use it.`
         );
         expect(await host.list()).toEqual([]);
 
-        expect(await host.linked(join(EXTENSIONS, 'dev/harbor', 'dist'))).toBe('dev.harbor');
+        expect(await host.linked(join(EXTENSIONS, folder, 'dist'))).toBe(id);
         expect((await host.list())[0]).toMatchObject({ provenance: 'dev-link', enabled: true });
         expect((await host.list())[0]?.refused).toBeUndefined();
     });

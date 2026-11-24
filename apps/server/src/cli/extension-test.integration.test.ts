@@ -44,6 +44,7 @@ describe('ruimte extension test', () => {
         ['limits', []],
         ['dev/trackline', []],
         ['dev/harbor', []],
+        ['dev/lintel', []],
         ['dev/boardwalk', []],
         ['dev/beacon', []],
         ['dev/pulseboard', []],

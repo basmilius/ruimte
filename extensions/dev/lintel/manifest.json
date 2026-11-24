@@ -1,0 +1,21 @@
+{
+    "id": "dev.lintel",
+    "name": "Lintel",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "category": "Code quality",
+    "description": "Checks the files of a project against a few fixed rules and lists what it finds with the problems of the editor.",
+    "color": "#b45309",
+    "autostart": true,
+    "permissions": {
+        "files.read": "Reads the files of the project it checks",
+        "problems.provide": "Lists what it finds with the problems of the editor",
+        "projects.read": "Checks a project while you have it open",
+        "clock": "Checks every open project again every five minutes"
+    },
+    "provides": {
+        "problemSources": ["rules"]
+    },
+    "proposed": ["problemSources"]
+}

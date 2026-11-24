@@ -5,16 +5,20 @@
     "api": 1,
     "publisher": "Ruimte",
     "category": "Containers",
-    "description": "The services of a project's compose file: a shell in one of them, opened from the menu of a new terminal or with its first command typed.",
+    "description": "The services of a project's harbor.yaml as launches, and a shell in one of them, opened from the menu of a new terminal or with its first command typed.",
     "color": "#0369a1",
     "permissions": {
         "canvas.write": "Opens a terminal for a shell in a service",
+        "files.read": "Reads harbor.yaml in the project folder",
+        "launches.provide": "Lists the services of harbor.yaml as launches",
+        "launches.read": "Shows which of its services run",
         "terminals.profiles": "Adds a shell in a service to the menu of a new terminal",
         "terminals.read": "Shows the last line of the terminal you select",
         "terminals.write": "Types the first command into a shell it opened"
     },
     "provides": {
-        "terminalProfiles": ["service-shell"]
+        "terminalProfiles": ["service-shell"],
+        "launchSources": ["compose"]
     },
-    "proposed": ["terminalProfiles"]
+    "proposed": ["terminalProfiles", "launchSources"]
 }

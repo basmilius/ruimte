@@ -61,4 +61,26 @@ describe('Harbor', () => {
         expect(await host.run(host.action('shell-view'), 'commandPalette')).toEqual({ ok: true, value: undefined });
         expect(server.terminals[0]?.spawn?.env).toEqual({ HARBOR_SERVICE: 'db', HARBOR_WORKDIR: '/var/lib/postgresql' });
     });
+
+    test('shows which services of the compose file run, as their launches start and end', async () => {
+        const server = await createTestServer<HarborServer>();
+        const host = await createTestHost({ project: { id: 'project-1' }, answers: { server } });
+        const card = await host.render(host.card('service'));
+        // A launch changes on the machine, and what `server/` then says reaches the card as a client hears it.
+        const launchIs = (state: 'running' | 'exited'): void => {
+            server.fire('launch.status', { project: { id: 'project-1' }, launch: 'dev.harbor:compose:web', state, exitCode: state === 'exited' ? 0 : null });
+
+            const said = server.emitted.at(-1);
+
+            host.emit(said?.name ?? '', said?.payload);
+        };
+
+        expect(card.find('Running: web')).toBeNull();
+
+        launchIs('running');
+        await card.until(() => card.find('Running: web') !== null);
+
+        launchIs('exited');
+        await card.until(() => card.find('Running: web') === null);
+    });
 });
