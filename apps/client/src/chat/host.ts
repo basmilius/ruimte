@@ -40,7 +40,7 @@ import { useTasks } from '@/state/tasks';
 import { useTheme } from '@/state/theme';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { transportFor, type Transport } from '@/transport';
+import { machineTransport, transportFor, type Transport } from '@/transport';
 import { readPiece } from '@/transport-api/piece';
 import { readResource } from '@/transport/byte-transfer';
 import { machineAnswers, useMachineAnswers } from '@/transport/features';
@@ -148,10 +148,8 @@ export const CHAT_HOST: ChatHostLayer = {
                 : { state: 'refused', code: 'diffs-unsupported' };
         },
         subscribe: (endpointId, chatId, changed) => {
-            const transport = transportFor(endpointId);
-            if (transport === null) {
-                return () => {};
-            }
+            // The transport that outlives its link, so a subscription made before the first socket or kept past an idle close still hears.
+            const transport = machineTransport(endpointId);
             const project = (): { projectId: string; folder: string } | null => (endpointId === currentEndpointId() ? useProject.getState().current : null);
             const off = [
                 transport.on('git.status', ({ cwd }) => {

@@ -10,17 +10,28 @@ import { machineTransport } from '@/transport';
 import { fireAndForget } from '@/transport-api/transport';
 import { voiceOnMachine } from '@/voice/route';
 
+const GATHERING_TIMEOUT_MS = 5_000;
+
+/* Done once the peer says so or the wait ran out: a closed peer and an interface that never answers say nothing, and the offer holds what was found by then. */
 function gatheringComplete(peer: RTCPeerConnection): Promise<void> {
     if (peer.iceGatheringState === 'complete') {
         return Promise.resolve();
     }
+
     return new Promise((resolve) => {
+        const done = (): void => {
+            window.clearTimeout(timer);
+            peer.removeEventListener('icegatheringstatechange', changed);
+            resolve();
+        };
+
         const changed = (): void => {
             if (peer.iceGatheringState === 'complete') {
-                peer.removeEventListener('icegatheringstatechange', changed);
-                resolve();
+                done();
             }
         };
+
+        const timer = window.setTimeout(done, GATHERING_TIMEOUT_MS);
         peer.addEventListener('icegatheringstatechange', changed);
     });
 }
@@ -175,11 +186,18 @@ export class LiveSession {
         }
         await this.#peer.setLocalDescription(await this.#peer.createOffer());
         await gatheringComplete(this.#peer);
+        // Closed while it gathered: an offer sent now would open a session at the service that nobody hears.
+        if (this.#closed) {
+            return;
+        }
         const offer = this.#peer.localDescription?.sdp;
         if (!offer) {
             throw new Error(i18next.t('voice:error.noSession'));
         }
         const answer = await this.#route.start(offer, preferences);
+        if (this.#closed) {
+            return;
+        }
         await this.#peer.setRemoteDescription({ type: 'answer', sdp: answer });
     }
 

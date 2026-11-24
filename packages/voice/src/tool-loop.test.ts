@@ -18,6 +18,25 @@ function responseCompleted(delegationId: string): LiveEvent {
 }
 
 describe('VoiceToolLoop', () => {
+    test('a call that outlives a reset sends nothing to the next session', async () => {
+        const sent: LiveEvent[] = [];
+        const result = Promise.withResolvers<Record<string, unknown>>();
+        const finished = Promise.withResolvers<void>();
+        const loop = new VoiceToolLoop(
+            (event) => sent.push(event),
+            () => result.promise,
+            { toolNames, observer: { responseEvent() {}, responseRequested() {}, callStarted() {}, callFinished: () => finished.resolve() } }
+        );
+
+        loop.handle(functionCall('d1', 'c1', 'inspect_workspace', '{}'));
+        loop.reset();
+        result.resolve({ ok: true });
+        await finished.promise;
+        await Promise.resolve();
+
+        expect(sent).toEqual([]);
+    });
+
     test('executes a completed function call and continues after its response completes', async () => {
         const sent: LiveEvent[] = [];
         const calls: unknown[] = [];

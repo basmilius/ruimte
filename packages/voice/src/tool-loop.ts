@@ -31,6 +31,7 @@ export class VoiceToolLoop {
     readonly #calls = new Set<string>();
     readonly #pending = new Map<string, Promise<void>[]>();
     readonly #observer: ToolLoopObserver | null;
+    #generation = 0;
 
     constructor(send: VoiceToolSend, execute: VoiceToolExecute, { toolNames, observer = null }: VoiceToolLoopOptions) {
         this.#send = send;
@@ -49,7 +50,7 @@ export class VoiceToolLoop {
         if (call && !this.#calls.has(call.callId)) {
             this.#calls.add(call.callId);
             this.#observer?.callStarted(observed.delegationId, call.callId, call.name, call.arguments);
-            const run = this.#run(call);
+            const run = this.#run(call, this.#generation);
             const pending = this.#pending.get(observed.delegationId) ?? [];
             pending.push(run);
             this.#pending.set(observed.delegationId, pending);
@@ -62,7 +63,11 @@ export class VoiceToolLoop {
         const pending = this.#pending.get(delegationId);
         if (pending?.length) {
             this.#pending.delete(delegationId);
+            const generation = this.#generation;
             void Promise.all(pending).then(() => {
+                if (generation !== this.#generation) {
+                    return;
+                }
                 this.#observer?.responseRequested(delegationId);
                 this.#send({ type: 'response.create', event_id: crypto.randomUUID() });
             });
@@ -70,11 +75,12 @@ export class VoiceToolLoop {
     }
 
     reset(): void {
+        this.#generation += 1;
         this.#calls.clear();
         this.#pending.clear();
     }
 
-    async #run(call: LiveFunctionCall): Promise<void> {
+    async #run(call: LiveFunctionCall, generation: number): Promise<void> {
         let output: Record<string, unknown>;
         try {
             output = await this.#execute(call.name, call.arguments, call.callId);
@@ -82,6 +88,10 @@ export class VoiceToolLoop {
             output = { ok: false, code: 'tool-error', message: error instanceof Error ? error.message : 'The Ruimte tool failed.' };
         }
         this.#observer?.callFinished(call.callId, output);
+        // A call that outlived a reset answers a session that is gone, and the next one never asked for it.
+        if (generation !== this.#generation) {
+            return;
+        }
         this.#send({
             type: 'response.item.create',
             event_id: crypto.randomUUID(),
