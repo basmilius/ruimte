@@ -36,10 +36,13 @@ import {
     launchesListed,
     machineStartDescribed,
     SpawnDescriptionSchema,
+    uiAnswerRead,
+    uiSourceDescribed,
     type LaunchDescription,
     type MachineCandidateDescription,
     type MachineStartDescription,
-    type SpawnDescription
+    type SpawnDescription,
+    type UiSourceDescription
 } from './descriptions.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
 import runtimeSource from './generated/server-runtime.js' with { type: 'text' };
@@ -83,6 +86,7 @@ const ProtocolMessageSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('machineSource'), id: z.string(), title: z.string().min(1).max(80) }),
     z.object({ type: z.literal('machineReport'), run: z.number(), line: z.string() }),
     z.object({ type: z.literal('notificationChannel'), id: z.string(), title: z.string().min(1).max(80) }),
+    z.object({ type: z.literal('uiSource'), id: z.string(), description: z.unknown(), parameters: z.unknown().optional() }),
     z.object({ type: z.literal('emit'), name: z.string(), payload: z.unknown().optional() }),
     z.object({ type: z.literal('result'), id: z.number(), result: z.unknown().optional(), error: z.string().optional(), code: z.string().optional() })
 ]);
@@ -152,6 +156,7 @@ interface Running {
     // Who reads the lines a machine source reports while it describes a start, by the number it was asked under.
     machineReports: Map<number, (line: string) => void>;
     notificationChannels: Map<string, { title: string }>;
+    uiSources: Map<string, UiSourceDescription>;
     subscriptions: Set<string>;
     nextCall: number;
     buffered: string;
@@ -964,6 +969,7 @@ export class ExtensionHost {
             machineSources: new Map(),
             machineReports: new Map(),
             notificationChannels: new Map(),
+            uiSources: new Map(),
             subscriptions: new Set(),
             nextCall: 1,
             buffered: '',
@@ -1060,6 +1066,16 @@ export class ExtensionHost {
         } else if (message.type === 'notificationChannel') {
             if (this.mayProvide(id, running, 'defineNotificationChannel', 'notifications.provide', message.id)) {
                 running.notificationChannels.set(message.id, { title: message.title });
+            }
+        } else if (message.type === 'uiSource') {
+            if (this.mayProvide(id, running, 'defineUiSource', 'ui.provide', message.id)) {
+                const described = uiSourceDescribed(message.description, message.parameters);
+
+                if (typeof described === 'string') {
+                    void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `The UI source ${message.id} ${described}\n`));
+                } else {
+                    running.uiSources.set(message.id, described);
+                }
             }
         } else if (message.type === 'machineReport') {
             running.machineReports.get(message.run)?.(message.line);
@@ -1298,6 +1314,58 @@ export class ExtensionHost {
         }
 
         return profiles;
+    }
+
+    /*
+     * The UI sources of this machine's extensions. A source says what it is from its own process: with `start` that
+     * starts for the list, as for `launchSources`, and without it only a process that runs says its sources.
+     */
+    async uiSources(start: boolean): Promise<{ extension: string; id: string; described: UiSourceDescription }[]> {
+        const sources: { extension: string; id: string; described: UiSourceDescription }[] = [];
+
+        for (const extension of await this.options.store.list()) {
+            if (isDamaged(extension) || !extension.enabled || this.refusedReason(extension) !== null || this.options.store.serverEntry(extension) === null) {
+                continue;
+            }
+
+            const { id } = extension.manifest;
+            const ids = providedIds(extension.manifest, 'uiSources', allowsProposed(this.provenanceOf(extension)));
+
+            if (ids.length === 0) {
+                continue;
+            }
+
+            try {
+                const running = start ? await this.runningFor(id) : this.running.get(id);
+
+                for (const source of running === undefined ? [] : ids) {
+                    const described = running?.uiSources.get(source);
+
+                    if (described !== undefined) {
+                        sources.push({ extension: id, id: source, described });
+                    }
+                }
+            } catch (e) {
+                void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `Its UI sources were not listed: ${errorText(e)}\n`));
+            }
+        }
+
+        return sources;
+    }
+
+    /* What a UI source answers a block, read in its extension's own process. Only a source of a process that runs answers. */
+    async readUiSource(id: string, source: string, args: Record<string, unknown>, project: ExtensionProject): Promise<unknown> {
+        const running = this.running.get(id);
+
+        if (running?.uiSources.has(source) !== true) {
+            throw new ExtensionRefusal('not-found', `${id} supplies no UI source ${source}`);
+        }
+
+        try {
+            return uiAnswerRead(await this.send(running, { type: 'uiSource', source, input: { args, project } }, `${id} UI source ${source}`));
+        } catch (e) {
+            throw e instanceof ExtensionRefusal ? e : new ExtensionRefusal('failed', errorText(e));
+        }
     }
 
     /*

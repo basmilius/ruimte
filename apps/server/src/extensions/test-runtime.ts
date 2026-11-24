@@ -44,6 +44,7 @@ const server = {
     defineProblemSource: through('defineProblemSource'),
     defineMachineSource: through('defineMachineSource'),
     defineNotificationChannel: through('defineNotificationChannel'),
+    defineUiSource: through('defineUiSource'),
     problems: forwarded('problems'),
     files: forwarded('files'),
     terminals: forwarded('terminals'),

@@ -310,6 +310,22 @@ serverContract(async (permissions, { provenance, ...provided } = {}) => {
                 return { start: null, reports: [], failure: (e as Error).message };
             }
         },
+        uiSource: async (id) => {
+            const listed = (await host.uiSources(true)).find((source) => source.extension === ID && source.id === id);
+
+            if (listed === undefined) {
+                throw new Error(`${ID} supplies no UI source ${id}`);
+            }
+
+            return { name: `${ID}/${id}`, ...listed.described };
+        },
+        readUi: async (id, args) => {
+            try {
+                return { value: await host.readUiSource(ID, id, args, project) };
+            } catch (e) {
+                return { failure: (e as Error).message };
+            }
+        },
         notify: async (channel, body, reason) => {
             const listed = (await host.notificationChannels()).find((each) => each.extension === ID && each.id === channel);
 

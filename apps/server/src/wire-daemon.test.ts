@@ -122,6 +122,7 @@ describe('wireDaemon', () => {
                 'templates',
                 'terminals',
                 'tunnels',
+                'uiSources',
                 'untrusted',
                 'visuals',
                 'worktrees'

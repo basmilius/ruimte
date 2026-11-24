@@ -1,4 +1,5 @@
 import { UI_GROUPS, uiGroupDescription, type UiGroupName } from '@adecore/intelligent-ui';
+import { EXTENSION_UI_SOURCE } from '@ruimte/contracts/extension-providers';
 import { z } from 'zod';
 import { defineTool, defineToolkit } from './tool.ts';
 
@@ -25,13 +26,27 @@ function groupLines(group: UiGroupName): string[] {
     ];
 }
 
+/* The live data extensions add, which every group may draw: the name a block reads it under, its arguments and what it is. */
+function sourceLines(sources: readonly { name: string; description: string; parameters?: object }[]): string[] {
+    if (sources.length === 0) {
+        return [];
+    }
+
+    return [
+        `prints\tsource\tname\targs as JSON Schema\tdescription\tlive data of an extension, read as $rows = @Query("${EXTENSION_UI_SOURCE}", {source: "<name>", args: {...}})`,
+        ...sources.map(
+            (source) => `source\t${source.name}\t${source.parameters === undefined ? '-' : JSON.stringify(source.parameters)}\t${source.description}`
+        )
+    ];
+}
+
 const uiCatalog = defineTool('ui', {
     name: 'ui_catalog',
     description: 'Lists the UI components a visual may use, one group at a time.',
     annotations: { readOnly: true },
     audience: 'chat',
     input: z.object({ group: z.enum(GROUP_NAMES, { error: `ui_catalog needs group, one of ${GROUP_NAMES.join(', ')}` }) }),
-    run: async (input) => groupLines(input.group)
+    run: async (input, call) => [...groupLines(input.group), ...sourceLines((await call.host.uiSources?.refresh(true)) ?? [])]
 });
 
 /* Named as the usage counter its calls add to, which the usage report and the client know. */

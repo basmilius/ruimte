@@ -70,6 +70,8 @@ export interface ChatFacts {
     promptSuggestions(): boolean;
     // Whether the chat's project has database connections, read when a chat's CLI starts.
     databases(chatId: string): boolean;
+    // The UI sources extensions supply, as the last ask of them found, read when a chat's CLI starts.
+    extensionUiSources(): readonly { name: string; description: string }[];
     // A client may open an agent before its outbox start; the planned configuration wins over client defaults.
     openingAgent(chatId: string): ChatCreatePayload | undefined;
     // The sources themselves, so a chat can name them to its agent and tell it what came and went between turns.
@@ -408,6 +410,7 @@ export class ChatManager {
             visuals: this.tellsVisuals(chatId),
             databases: !this.facts.inlineChat(chatId) && this.facts.databases(chatId),
             reach: !this.facts.inlineChat(chatId) && this.facts.reachOpenProjects(),
+            extensionSources: this.facts.inlineChat(chatId) ? [] : this.facts.extensionUiSources(),
             uiFence: this.core.uiFence,
             design: this.facts.design(chatId)
         };

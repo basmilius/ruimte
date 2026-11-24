@@ -6777,11 +6777,18 @@ var EXTENSION_PROVIDER_POINTS = {
   launchSources: { define: "defineLaunchSource", permission: "launches.provide", proposed: true },
   problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true },
   machineSources: { define: "defineMachineSource", permission: "machines.provide", proposed: true },
-  notificationChannels: { define: "defineNotificationChannel", permission: "notifications.provide", proposed: true }
+  notificationChannels: { define: "defineNotificationChannel", permission: "notifications.provide", proposed: true },
+  uiSources: { define: "defineUiSource", permission: "ui.provide", proposed: true }
 };
 var MAX_SOURCED_LAUNCHES = 64;
 var MAX_MACHINE_CANDIDATES = 16;
 var MAX_MACHINE_STEPS = 16;
+var MAX_UI_SOURCE_DESCRIPTION = 200;
+var MAX_UI_SOURCE_PARAMETERS_BYTES = 2048;
+var MAX_UI_SOURCE_ANSWER_BYTES = 32768;
+function uiSourceName(extension, source) {
+  return `${extension}/${source}`;
+}
 var EXTENSION_PROPOSED_PARTS = Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true);
 function pointOf(kind) {
   return Object.hasOwn(EXTENSION_PROVIDER_POINTS, kind) ? EXTENSION_PROVIDER_POINTS[kind] ?? null : null;
@@ -7004,6 +7011,7 @@ function createServerApi(options) {
   const machineSources = new Map;
   const machineStarts = new Map;
   const notificationChannels = new Map;
+  const uiSources = new Map;
   const fileWatches = new Map;
   let nextFileWatch = 1;
   const typed = (method, args) => ask(method, args);
@@ -7093,6 +7101,16 @@ function createServerApi(options) {
       mayDefine("defineNotificationChannel", "notifications.provide", channel.id);
       notificationChannels.set(channel.id, channel);
       send({ type: "notificationChannel", id: channel.id, title: channel.title });
+    },
+    defineUiSource(source) {
+      mayDefine("defineUiSource", "ui.provide", source.id);
+      uiSources.set(source.id, source);
+      send({
+        type: "uiSource",
+        id: source.id,
+        description: source.description,
+        ...source.parameters === undefined ? {} : { parameters: source.parameters }
+      });
     },
     problems: {
       report: async (project, source, reported) => mapResult(await ask("problems.report", [project.id, source, reported]), () => {
@@ -7258,6 +7276,13 @@ ${project.id}`;
       await channel.deliver(notification);
       return null;
     },
+    readUiSource(id, args, project) {
+      const source = uiSources.get(id);
+      if (source === undefined) {
+        throw new MissingHandler(`No UI source ${id}`);
+      }
+      return source.read(args, { project });
+    },
     deliver(name, payload) {
       for (const listener of listeners.get(name) ?? []) {
         listener(payload);
@@ -7417,6 +7442,28 @@ function launchesListed(answer, refused) {
   }
   return [...launches.values()];
 }
+function uiSourceDescribed(description, parameters) {
+  if (typeof description !== "string" || description.trim() === "" || description.length > MAX_UI_SOURCE_DESCRIPTION) {
+    return `needs a description of at most ${MAX_UI_SOURCE_DESCRIPTION} characters`;
+  }
+  if (parameters === undefined) {
+    return { description: description.trim() };
+  }
+  if (typeof parameters !== "object" || parameters === null || Array.isArray(parameters)) {
+    return "takes parameters as a JSON Schema object";
+  }
+  if (Buffer.byteLength(JSON.stringify(parameters)) > MAX_UI_SOURCE_PARAMETERS_BYTES) {
+    return `takes parameters of at most ${MAX_UI_SOURCE_PARAMETERS_BYTES} bytes`;
+  }
+  return { description: description.trim(), parameters };
+}
+function uiAnswerRead(answer) {
+  const text = JSON.stringify(answer ?? null);
+  if (Buffer.byteLength(text) > MAX_UI_SOURCE_ANSWER_BYTES) {
+    throw new Error(`answered more than ${MAX_UI_SOURCE_ANSWER_BYTES} bytes`);
+  }
+  return JSON.parse(text);
+}
 
 // apps/server/src/extensions/test-loader.ts
 import { mkdirSync, mkdtempSync, rmSync } from "fs";
@@ -7570,6 +7617,7 @@ class TestMachine {
   problemSources = new Map;
   machineSources = new Map;
   notificationChannels = new Map;
+  uiSources = new Map;
   machineReports = new Map;
   nextMachineStart = 1;
   problems = [];
@@ -7680,6 +7728,13 @@ class TestMachine {
       this.machineReports.get(message.run)?.push(message.line);
     } else if (message.type === "notificationChannel") {
       this.notificationChannels.set(message.id, message.title);
+    } else if (message.type === "uiSource") {
+      const described = uiSourceDescribed(message.description, message.parameters);
+      if (typeof described === "string") {
+        this.logs.push(`The UI source ${message.id} ${described}`);
+      } else {
+        this.uiSources.set(message.id, described);
+      }
     } else {
       const reason = eventRefusal(message.name, this.permissions);
       if (reason === null) {
@@ -8037,6 +8092,17 @@ async function createTestServer(options = {}) {
             options.signal?.removeEventListener("abort", abort);
           }
         }
+      };
+    },
+    uiSource: (id) => {
+      const described = machine.uiSources.get(id);
+      if (described === undefined) {
+        throw new Error(`No UI source ${id}. defineUiSource says what there is`);
+      }
+      return {
+        name: uiSourceName(machine.id, id),
+        ...described,
+        read: async (args = {}, project = {}) => uiAnswerRead(await machine.core.readUiSource(id, wire(args), { ...machine.project, ...project }))
       };
     },
     notificationChannel: (id) => {
@@ -9784,6 +9850,7 @@ var server = {
   defineProblemSource: through("defineProblemSource"),
   defineMachineSource: through("defineMachineSource"),
   defineNotificationChannel: through("defineNotificationChannel"),
+  defineUiSource: through("defineUiSource"),
   problems: forwarded2("problems"),
   files: forwarded2("files"),
   terminals: forwarded2("terminals"),

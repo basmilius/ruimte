@@ -13,6 +13,7 @@ import { extensionProjectFiles } from '../extensions/project-files.ts';
 import { ExtensionRefusal } from '../extensions/refusal.ts';
 import { ExtensionStore } from '../extensions/store.ts';
 import { ExtensionTerminals, extensionTerminalOpener, insideProject } from '../extensions/terminals.ts';
+import { ExtensionUiSources } from '../extensions/ui-sources.ts';
 import { runExtensionPrompt, type ExtensionHandlerDeps } from '../handlers/extensions.ts';
 import { LaunchSources } from '../launches/sources.ts';
 import { HEADLESS_TERMINAL } from '../outbox/start-agent.ts';
@@ -37,6 +38,8 @@ export interface ExtensionsBundle {
     machineSources: MachineSources;
     /* The notification channels of extensions and which a person turned on, which the push service tells when a phone would hear. */
     notificationChannels: NotificationChannels;
+    /* The UI sources of extensions, which a block in a chat reads and a chat's prompt names. */
+    uiSources: ExtensionUiSources;
     /* A client put a project on screen, or the last one closed it: what an extension with `projects.read` follows. */
     projectOpened(projectId: string): void;
     projectClosed(projectId: string): void;
@@ -166,7 +169,11 @@ export function wireExtensions(home: string, seams: ExtensionSeams, later: Exten
         projectFiles,
         problems: () => problems,
         launchesChanged: (_id, _source, projectId) => void launchSources.refresh(projectId),
-        providersChanged: (id) => launchSources.extensionChanged(id),
+        providersChanged: (id) => {
+            launchSources.extensionChanged(id);
+            // Without starting anything: a process that just ended must not come back for a list.
+            void uiSources.refresh(false);
+        },
         startChat: async (...args) => startChat(...args),
         runAction: async (id, projectId, action, input) => {
             const folder = folderOfProject(projectId);
@@ -221,6 +228,13 @@ export function wireExtensions(home: string, seams: ExtensionSeams, later: Exten
         },
         join(home, 'extension-notification-channels.json')
     );
+    const uiSources: ExtensionUiSources = new ExtensionUiSources(
+        {
+            list: (start) => host.uiSources(start),
+            read: (extension, source, args, project) => host.readUiSource(extension, source, args, project)
+        },
+        async (projectId) => (index().folderOf(projectId) === null ? null : projectOf(projectId))
+    );
     // The projects a client has open, so each opening and each close is told once.
     const open = new Set<string>();
 
@@ -231,10 +245,14 @@ export function wireExtensions(home: string, seams: ExtensionSeams, later: Exten
         launchSources,
         machineSources,
         notificationChannels,
+        uiSources,
         projectOpened: (projectId) => {
             if (open.has(projectId)) {
                 return;
             }
+
+            // A chat's prompt names the sources without waiting, so they are asked for once a project is on screen.
+            void uiSources.refresh(true);
 
             open.add(projectId);
             void projectOf(projectId).then(

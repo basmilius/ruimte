@@ -98,7 +98,8 @@ var EXTENSION_PROVIDER_POINTS = {
   launchSources: { define: "defineLaunchSource", permission: "launches.provide", proposed: true },
   problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true },
   machineSources: { define: "defineMachineSource", permission: "machines.provide", proposed: true },
-  notificationChannels: { define: "defineNotificationChannel", permission: "notifications.provide", proposed: true }
+  notificationChannels: { define: "defineNotificationChannel", permission: "notifications.provide", proposed: true },
+  uiSources: { define: "defineUiSource", permission: "ui.provide", proposed: true }
 };
 var EXTENSION_PROPOSED_PARTS = Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true);
 function pointOf(kind) {
@@ -174,6 +175,7 @@ function createServerApi(options) {
   const machineSources = new Map;
   const machineStarts = new Map;
   const notificationChannels = new Map;
+  const uiSources = new Map;
   const fileWatches = new Map;
   let nextFileWatch = 1;
   const typed = (method, args) => ask(method, args);
@@ -263,6 +265,16 @@ function createServerApi(options) {
       mayDefine("defineNotificationChannel", "notifications.provide", channel.id);
       notificationChannels.set(channel.id, channel);
       send({ type: "notificationChannel", id: channel.id, title: channel.title });
+    },
+    defineUiSource(source) {
+      mayDefine("defineUiSource", "ui.provide", source.id);
+      uiSources.set(source.id, source);
+      send({
+        type: "uiSource",
+        id: source.id,
+        description: source.description,
+        ...source.parameters === undefined ? {} : { parameters: source.parameters }
+      });
     },
     problems: {
       report: async (project, source, reported) => mapResult(await ask("problems.report", [project.id, source, reported]), () => {
@@ -427,6 +439,13 @@ ${project.id}`;
       }
       await channel.deliver(notification);
       return null;
+    },
+    readUiSource(id, args, project) {
+      const source = uiSources.get(id);
+      if (source === undefined) {
+        throw new MissingHandler(`No UI source ${id}`);
+      }
+      return source.read(args, { project });
     },
     deliver(name, payload) {
       for (const listener of listeners.get(name) ?? []) {
@@ -598,6 +617,12 @@ function handle(message) {
     answer(message.id, async () => {
       await loaded;
       return core.deliverNotification(message.channel, message.input);
+    });
+  } else if (message.type === "uiSource") {
+    answer(message.id, async () => {
+      await loaded;
+      const { args, project } = message.input;
+      return core.readUiSource(message.source, args, project);
     });
   } else if (message.type === "machineAbort") {
     loaded.then(() => core.abortMachineStart(message.run));

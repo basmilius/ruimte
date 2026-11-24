@@ -51,6 +51,10 @@ export interface ServerWorld {
      * goes out. Answers the channel's title and whether it delivered. Rejects for a channel the extension does not supply.
      */
     notify(channel: string, body: string, reason: Server.Notification['reason']): Promise<{ title: string; delivered: boolean }>;
+    /* A UI source as the machine tells an agent of it. Rejects for a source the extension does not supply. */
+    uiSource(id: string): Promise<{ name: string; description: string; parameters?: object }>;
+    /* What a UI source answers a block of a chat in `project`, or the reason the block gets nothing. */
+    readUi(id: string, args: Record<string, Server.Json>): Promise<{ value: unknown } | { failure: string }>;
     /* A launch of `project` changed what it does, as the machine's runner says it. */
     launchIs(launch: string, state: 'running' | 'exited', exitCode: number | null): void;
     /* A client opened `project`, or the last one closed it. */
@@ -82,6 +86,8 @@ const MACHINES = { 'machines.provide': 'Lists machines' };
 const MACHINE_SOURCES: WorldManifest = { provides: { machineSources: ['probe-machines'] }, proposed: ['machineSources'] };
 const NOTIFIES = { 'notifications.provide': 'Tells you elsewhere' };
 const CHANNELS: WorldManifest = { provides: { notificationChannels: ['probe-channel'] }, proposed: ['notificationChannels'] };
+const SHOWS = { 'ui.provide': 'Gives a chat rows to draw' };
+const UI_SOURCES: WorldManifest = { provides: { uiSources: ['probe-rows', 'probe-vague'] }, proposed: ['uiSources'] };
 const NOT_FINAL =
     'This extension uses a part of Ruimte that is not final yet (terminalProfiles). It works while its author develops it, and an installed extension cannot use it.';
 
@@ -411,6 +417,45 @@ export function serverContract(open: OpenServerWorld): void {
             await expect(unlisted.machines('probe-machines')).rejects.toThrow();
             await expect(open(MACHINES, { ...MACHINE_SOURCES, provenance: 'installed' })).rejects.toThrow(
                 'This extension uses a part of Ruimte that is not final yet (machineSources).'
+            );
+        });
+
+        test('answers a block with what a UI source reads for its project, and nothing for a throw or an answer that is too large', async () => {
+            const world = await open(SHOWS, UI_SOURCES);
+
+            expect(await world.uiSource('probe-rows')).toEqual({
+                name: `${ID}/probe-rows`,
+                description: 'Rows of the probe',
+                parameters: { type: 'object', properties: { count: { type: 'number' } } }
+            });
+            expect(await world.readUi('probe-rows', { count: 2 })).toEqual({ value: { project: world.project, rows: [{ row: 1 }, { row: 2 }] } });
+            expect(await world.readUi('probe-rows', { count: 'fail' })).toEqual({ failure: 'The probe has no rows today' });
+            expect(await world.readUi('probe-rows', { count: 'large' })).toEqual({ failure: 'answered more than 32768 bytes' });
+            // A source that does not say what it is reaches no agent, and its log says why.
+            await expect(world.uiSource('probe-vague')).rejects.toThrow();
+            expect(await world.logs()).toContainEqual('The UI source probe-vague needs a description of at most 200 characters');
+        });
+
+        test('defines a UI source only when its manifest asks for it, names it as proposed and lists it', async () => {
+            const allowed = await open(SHOWS, UI_SOURCES);
+            const unasked = await open({});
+            const unnamed = await open(SHOWS);
+            const unlisted = await open(SHOWS, { provides: { uiSources: ['another'] }, proposed: ['uiSources'] });
+
+            expect(await allowed.call('uiSourceRefused')).toEqual({ ok: true, value: null });
+            expect(await unasked.call('uiSourceRefused')).toEqual({ ok: true, value: `${ID} did not ask for the permission ui.provide in its manifest` });
+            expect(await unnamed.call('uiSourceRefused')).toEqual({
+                ok: true,
+                value: 'defineUiSource is still proposed; name uiSources under proposed in manifest.json'
+            });
+            expect(await unlisted.call('uiSourceRefused')).toEqual({
+                ok: true,
+                value: 'defineUiSource got probe-rows, which manifest.json does not list under provides.uiSources'
+            });
+            await expect(unlisted.uiSource('probe-rows')).rejects.toThrow();
+            expect(await unlisted.readUi('probe-rows', {})).toHaveProperty('failure');
+            await expect(open(SHOWS, { ...UI_SOURCES, provenance: 'installed' })).rejects.toThrow(
+                'This extension uses a part of Ruimte that is not final yet (uiSources).'
             );
         });
 

@@ -428,6 +428,19 @@ export interface TestServer<Api> {
         start(candidate: string, options?: { project?: Partial<ProjectInfo>; signal?: AbortSignal }): Promise<{ start: MachineStart; reports: string[] }>;
     };
     /**
+     * A UI source `defineUiSource` named, read as the machine reads it for a block. `name` is what a block writes as
+     * `source`, and `description` and `parameters` are what an agent is told. `read` hands over the arguments and the
+     * project, and rejects for an answer the machine would not hand a block: one over 32 KB, or a throw. A source whose
+     * description or parameters the machine does not take is not here, with the reason in `logs`. Throws for a source
+     * it did not define.
+     */
+    uiSource(id: string): {
+        name: string;
+        description: string;
+        parameters?: object;
+        read(args?: Record<string, Json>, project?: Partial<ProjectInfo>): Promise<Json>;
+    };
+    /**
      * A notification channel `defineNotificationChannel` named, handed a notification as the machine hands it one. What
      * you leave out is filled in: a wait in `project` for the node `node-1`. Answers whether the channel delivered; a throw
      * of the channel answers false with its reason in `logs`, as the machine writes it to the extension's log. When

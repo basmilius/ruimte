@@ -27,7 +27,8 @@ export const EXTENSION_PROVIDER_POINTS: Readonly<Record<string, ExtensionProvide
     launchSources: { define: 'defineLaunchSource', permission: 'launches.provide', proposed: true },
     problemSources: { define: 'defineProblemSource', permission: 'problems.provide', proposed: true },
     machineSources: { define: 'defineMachineSource', permission: 'machines.provide', proposed: true },
-    notificationChannels: { define: 'defineNotificationChannel', permission: 'notifications.provide', proposed: true }
+    notificationChannels: { define: 'defineNotificationChannel', permission: 'notifications.provide', proposed: true },
+    uiSources: { define: 'defineUiSource', permission: 'ui.provide', proposed: true }
 };
 
 // The most launches one launch source lists in a project; the rest is cut, so a source cannot fill the menu.
@@ -36,6 +37,22 @@ export const MAX_SOURCED_LAUNCHES = 64;
 // The most places one machine source lists in a project, and the most programs one start runs.
 export const MAX_MACHINE_CANDIDATES = 16;
 export const MAX_MACHINE_STEPS = 16;
+
+/*
+ * The one source of a UI block that reads from an extension: `@Query("extension", { source, args })`. The sources a
+ * block may name are fixed when the machine starts, so an extension's own goes in the arguments.
+ */
+export const EXTENSION_UI_SOURCE = 'extension';
+
+// What a UI source says of itself to the agent that writes a block, and the most its answer holds.
+export const MAX_UI_SOURCE_DESCRIPTION = 200;
+export const MAX_UI_SOURCE_PARAMETERS_BYTES = 2048;
+export const MAX_UI_SOURCE_ANSWER_BYTES = 32_768;
+
+/* The name a UI source of an extension goes by in a block, which no source of Ruimte's own can have: those hold no slash. */
+export function uiSourceName(extension: string, source: string): string {
+    return `${extension}/${source}`;
+}
 
 /* The id a launch of a source goes by among a project's launches, which says the extension and the source it has to come from. */
 export function sourcedLaunchId(extension: string, source: string, launch: string): string {

@@ -38,8 +38,8 @@ describe('what a manifest provides', () => {
 
     test('is told of a kind and a proposed part this Ruimte does not know, a missing permission and a part it did not name', () => {
         expect(extensionProvidesProblems({ provides: { machines: ['devcontainer'] }, proposed: ['machines'] })).toEqual([
-            'machines is not a proposed part this Ruimte knows (terminalProfiles, launchSources, problemSources, machineSources, notificationChannels)',
-            'provides.machines is not something this Ruimte takes from an extension (terminalProfiles, launchSources, problemSources, machineSources, notificationChannels)'
+            'machines is not a proposed part this Ruimte knows (terminalProfiles, launchSources, problemSources, machineSources, notificationChannels, uiSources)',
+            'provides.machines is not something this Ruimte takes from an extension (terminalProfiles, launchSources, problemSources, machineSources, notificationChannels, uiSources)'
         ]);
         expect(extensionProvidesProblems({ provides: HARBOR.provides })).toEqual([
             'provides.terminalProfiles needs the permission terminals.profiles',

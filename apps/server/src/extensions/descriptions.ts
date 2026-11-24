@@ -1,8 +1,16 @@
 /*
  * What a provider of an extension hands back for Ruimte to run, checked the same way by the machine and by
- * `createTestServer`: a program to start, a launch that starts one, and a place for a machine with what starts one there.
+ * `createTestServer`: a program to start, a launch that starts one, a place for a machine with what starts one there,
+ * and a UI source with what it answers a block.
  */
-import { MAX_MACHINE_CANDIDATES, MAX_MACHINE_STEPS, MAX_SOURCED_LAUNCHES } from '@ruimte/contracts/extension-providers';
+import {
+    MAX_MACHINE_CANDIDATES,
+    MAX_MACHINE_STEPS,
+    MAX_SOURCED_LAUNCHES,
+    MAX_UI_SOURCE_ANSWER_BYTES,
+    MAX_UI_SOURCE_DESCRIPTION,
+    MAX_UI_SOURCE_PARAMETERS_BYTES
+} from '@ruimte/contracts/extension-providers';
 import { z } from 'zod';
 
 const PROVIDED_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -95,4 +103,43 @@ export function launchesListed(answer: unknown, refused: (reason: string) => voi
     }
 
     return [...launches.values()];
+}
+
+/* What a UI source says of itself, as the agent that writes a block is told. */
+export interface UiSourceDescription {
+    description: string;
+    parameters?: object;
+}
+
+/* What a UI source said of itself, or the reason the machine does not take it. */
+export function uiSourceDescribed(description: unknown, parameters: unknown): UiSourceDescription | string {
+    if (typeof description !== 'string' || description.trim() === '' || description.length > MAX_UI_SOURCE_DESCRIPTION) {
+        return `needs a description of at most ${MAX_UI_SOURCE_DESCRIPTION} characters`;
+    }
+
+    if (parameters === undefined) {
+        return { description: description.trim() };
+    }
+
+    if (typeof parameters !== 'object' || parameters === null || Array.isArray(parameters)) {
+        return 'takes parameters as a JSON Schema object';
+    }
+
+    if (Buffer.byteLength(JSON.stringify(parameters)) > MAX_UI_SOURCE_PARAMETERS_BYTES) {
+        return `takes parameters of at most ${MAX_UI_SOURCE_PARAMETERS_BYTES} bytes`;
+    }
+
+    return { description: description.trim(), parameters };
+}
+
+/* What a UI source answered a read with, as a block gets it, or a throw that says why it does not. */
+export function uiAnswerRead(answer: unknown): unknown {
+    const text = JSON.stringify(answer ?? null);
+
+    if (Buffer.byteLength(text) > MAX_UI_SOURCE_ANSWER_BYTES) {
+        throw new Error(`answered more than ${MAX_UI_SOURCE_ANSWER_BYTES} bytes`);
+    }
+
+    // Through JSON, so a block never gets what JSON cannot say, whichever way the answer came.
+    return JSON.parse(text) as unknown;
 }

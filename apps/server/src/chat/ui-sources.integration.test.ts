@@ -72,6 +72,14 @@ beforeEach(async () => {
             return [];
         },
         launches: async () => [{ launchId: 'api-id', name: 'API', kind: 'service', approved: true, port: null, url: null, members: [], status: null }],
+        extensionSources: () => ({
+            supplies: async (name) => name === 'acme.tracker/issues',
+            read: async (name, args, projectId) => {
+                reads.push(`${name} ${JSON.stringify(args)} ${projectId}`);
+
+                return [{ id: 'T-1' }];
+            }
+        }),
         databases: () => ({
             captureUiAccess: async () => [],
             authorizeUiRead: async () => {},
@@ -126,6 +134,25 @@ test("a moved chat does not read the old project's queries or links", async () =
         message: expect.stringContaining('another project')
     });
     expect(await host.link!(info(), access, { type: 'Node', id: 'local' })).toMatchObject({ state: 'plain', code: 'access-unavailable' });
+});
+
+test('a source of an extension reads for the project the block was written in, and not once the chat moved or the source went', async () => {
+    const host = ruimteUiSources(hosts);
+    const access = await host.capture(info());
+    const source = host.sources.extension!;
+    const args = source.args.parse({ source: 'acme.tracker/issues', args: { state: 'open' } }) as Record<string, never>;
+
+    await source.authorize(info(), access, args);
+    expect(await source.read(info(), args, new AbortController().signal, access)).toEqual([{ id: 'T-1' }]);
+    expect(reads).toEqual(['acme.tracker/issues {"state":"open"} p']);
+    expect(source.args.parse({ source: 'acme.tracker/issues' })).toEqual({ source: 'acme.tracker/issues', args: {} });
+
+    await expect(source.authorize(info(), access, { source: 'acme.tracker/gone', args: {} } as never)).rejects.toThrow(
+        'No extension supplies this source now.'
+    );
+    hosts.place = () => ({ projectId: 'other', folder });
+    await expect(source.authorize(info(), access, args)).rejects.toThrow('moved to another project');
+    await expect(source.read(info(), args, new AbortController().signal, access)).rejects.toThrow('moved to another project');
 });
 
 test('tasks can read only their writing chat and launches only their project', async () => {

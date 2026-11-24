@@ -56,6 +56,18 @@ serverContract(async (permissions, { provenance, ...manifest } = {}) => {
                 return { start: null, reports: [], failure: (e as Error).message };
             }
         },
+        uiSource: async (id) => {
+            const { read: _read, ...told } = server.uiSource(id);
+
+            return told;
+        },
+        readUi: async (id, args) => {
+            try {
+                return { value: await server.uiSource(id).read(args) };
+            } catch (e) {
+                return { failure: (e as Error).message };
+            }
+        },
         notify: async (channel, body, reason) => ({
             title: server.notificationChannel(channel).title,
             delivered: await server.notificationChannel(channel).deliver({ body, reason })

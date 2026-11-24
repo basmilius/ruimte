@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { compileUi } from '@adecore/intelligent-ui';
 import type { ContextSource } from '@ruimte/contracts';
+import { EXTENSION_UI_SOURCE } from '@ruimte/contracts/extension-providers';
 import { NODE_NEW_KINDS } from '../canvas/node-kinds.ts';
 import { ruimteUiSources, type UiSourceHosts } from '../chat/ui-sources.ts';
 import { tableKinds } from '../providers/table.ts';
@@ -24,7 +25,8 @@ const SOURCE_HOSTS: UiSourceHosts = {
     gitDiff: unused,
     launches: unused,
     tasks: unused,
-    databases: unused
+    databases: unused,
+    extensionSources: unused
 };
 
 const text: ContextSource = { id: 'text-1', kind: 'text', title: 'Sprint goals' };
@@ -60,7 +62,21 @@ describe('toolsNote', () => {
         const sources = ruimteUiSources(SOURCE_HOSTS).sources;
         const querySchemas = Object.fromEntries(Object.entries(sources).map(([name, source]) => [name, source.args]));
         const advertised = [...VISUAL_NOTE.matchAll(/\b([a-z]+\.[a-z]+) (\{[^}]*\})/g)].filter(([, name]) => Object.hasOwn(sources, name!));
-        expect(advertised.map(([, name]) => name).toSorted()).toEqual(Object.keys(sources).toSorted());
+        // The source of extensions is said only where one supplies something, in words of its own.
+        expect(advertised.map(([, name]) => name).toSorted()).toEqual(
+            Object.keys(sources)
+                .filter((name) => name !== EXTENSION_UI_SOURCE)
+                .toSorted()
+        );
+        const written = `$data = @Query("${EXTENSION_UI_SOURCE}", {source: "acme.tracker/issues", args: {state: "open"}})`;
+        const [extension] = compileUi(`\`\`\`${RUIMTE_UI_FENCE}\n${written}\n<Summary>{@Count($data)}</Summary>\n\`\`\``, {
+            id: 'extension',
+            final: true,
+            fenceLanguage: RUIMTE_UI_FENCE,
+            querySchemas,
+            now: () => 0
+        });
+        expect(extension?.diagnostics).toEqual([]);
         for (const [, name, args] of advertised) {
             const block = `\`\`\`${RUIMTE_UI_FENCE}\n$data = @Query("${name}", ${args})\n<Summary>{@Count($data)}</Summary>\n\`\`\``;
             const [compiled] = compileUi(block, { id: name!, final: true, fenceLanguage: RUIMTE_UI_FENCE, querySchemas, now: () => 0 });
@@ -85,6 +101,23 @@ describe('toolsNote', () => {
         expect(child).not.toContain('@Query');
         expect(child).toContain('`visual_show`');
         expect(VISUAL_RESUME_NOTE).not.toContain(RUIMTE_UI_FENCE);
+    });
+
+    test('names the sources extensions add only where there are some, with how a block reads one', () => {
+        const told = toolsNote({
+            depth: 0,
+            visuals: true,
+            uiFence: RUIMTE_UI_FENCE,
+            extensionSources: [{ name: 'acme.tracker/issues', description: 'Open issues' }]
+        });
+
+        expect(told).toContain(
+            'Extensions add sources, read as @Query("extension", {source: "<name>", args: {...}}): acme.tracker/issues (Open issues). `ui_catalog` lists their arguments.'
+        );
+        expect(toolsNote({ depth: 0, visuals: true, uiFence: RUIMTE_UI_FENCE })).not.toContain('Extensions add sources');
+        expect(toolsNote({ depth: 1, visuals: true, extensionSources: [{ name: 'acme.tracker/issues', description: 'Open issues' }] })).not.toContain(
+            'acme.tracker'
+        );
     });
 
     test('the UI and visual notes together stay within their size budget, listing names and required props instead of every prop', () => {

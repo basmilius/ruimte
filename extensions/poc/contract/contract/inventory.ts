@@ -132,6 +132,10 @@ export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, E
         scenario: 'hands a notification channel what to tell a person, and keeps a channel that throws to its own log',
         refusal: 'defines a notification channel only when its manifest asks for it, names it as proposed and lists it'
     },
+    'server/provider/defineUiSource': {
+        scenario: 'answers a block with what a UI source reads for its project, and nothing for a throw or an answer that is too large',
+        refusal: 'defines a UI source only when its manifest asks for it, names it as proposed and lists it'
+    },
     'server/call/log.info': { scenario: SECRET },
     'server/call/machine.run': { scenario: "checks a machine action's input, and throws for one of the wrong shape" },
     'server/call/onEvent': { scenario: HEARS, cleanup: DEAF },

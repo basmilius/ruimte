@@ -16,9 +16,10 @@ import {
     type LaunchStatus,
     type Task
 } from '@ruimte/contracts';
+import { EXTENSION_UI_SOURCE } from '@ruimte/contracts/extension-providers';
 import { z } from 'zod';
 import { checkCwd } from '../canvas/project-paths.ts';
-import { UI_SOURCE_ARGS } from '../context/ui-source-args.ts';
+import { EXTENSION_UI_SOURCE_ARGS, UI_SOURCE_ARGS } from '../context/ui-source-args.ts';
 import type { AgentDatabases, DatabasePlace } from '../database/agent-databases.ts';
 import { realOrNull } from '../disk/real-path.ts';
 import type { FileChangeOptions } from '../git/diff.ts';
@@ -45,6 +46,11 @@ export interface UiSourceHosts {
     launches(projectId: string): Promise<UiLaunch[]>;
     tasks(chatId: string): Task[];
     databases(): Pick<AgentDatabases, 'captureUiAccess' | 'authorizeUiRead' | 'query'>;
+    /* The UI sources of extensions: whether one supplies `name` now, and what it answers for a project. */
+    extensionSources(): {
+        supplies(name: string): Promise<boolean>;
+        read(name: string, args: Record<string, unknown>, projectId: string): Promise<unknown>;
+    };
 }
 
 // A busy checkout lists thousands of files, and a reading stops at 64 KB.
@@ -183,6 +189,23 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
                     .tasks(info.chatId)
                     .slice(-100)
                     .map(({ id, childId, title, status, createdAt, settledAt }) => ({ id, childId, title, status, createdAt, settledAt }))
+        },
+        [EXTENSION_UI_SOURCE]: {
+            args: EXTENSION_UI_SOURCE_ARGS,
+            result: z.json(),
+            // The chat's own access, as for every source: the project the block was written in, which is what the extension is told.
+            authorize: async (info, input, args) => {
+                await authorize(info, input);
+
+                if (!(await host.extensionSources().supplies(String(args.source)))) {
+                    throw new ChatUiRefusal('source-unregistered', 'No extension supplies this source now.');
+                }
+            },
+            read: async (info, args, _signal, input) => {
+                const access = await authorize(info, input);
+
+                return host.extensionSources().read(String(args.source), (args.args ?? {}) as Record<string, unknown>, access.projectId);
+            }
         },
         'database.query': {
             args: UI_SOURCE_ARGS['database.query'],

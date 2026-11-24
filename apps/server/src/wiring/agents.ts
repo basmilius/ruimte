@@ -351,7 +351,8 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
             },
             launches: (projectId) => later.launches().agentHost.list(projectId),
             tasks: (chatId) => tasks.ofParent(chatId),
-            databases: () => later.databases().agents
+            databases: () => later.databases().agents,
+            extensionSources: () => later.extensions().uiSources
         }),
         store: new ChatStore(config.home, { attachments }),
         // A chat no window shows and that has nothing under way holds its whole thread, and an idle CLI, for nobody; its record has the thread.
@@ -390,6 +391,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
                 const folder = index().locate(chatId)?.folder;
                 return folder !== undefined && hasDatabaseConnections(folder);
             },
+            extensionUiSources: () => later.extensions().uiSources.listed(),
             modeCeiling: bounds.modeCeiling,
             peerChat: (chatId) => untrusted.node(chatId),
             checkCwd: bounds.checkCwd,

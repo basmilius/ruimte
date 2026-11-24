@@ -245,6 +245,14 @@ function handle(message: Incoming): void {
 
             return core.deliverNotification(message.channel, message.input as PublicServer.Notification);
         });
+    } else if (message.type === 'uiSource') {
+        void answer(message.id, async () => {
+            await loaded;
+
+            const { args, project } = message.input as { args: Record<string, PublicServer.Json>; project: PublicServer.ProjectInfo };
+
+            return core.readUiSource(message.source, args, project);
+        });
     } else if (message.type === 'machineAbort') {
         // Behind the same wait as the start it stops, so a stop that came in with its ask still finds it.
         void loaded.then(() => core.abortMachineStart(message.run));

@@ -11,6 +11,7 @@ export function quietFacts(overrides: Partial<ChatFacts> = {}): ChatFacts {
         visualReplies: () => false,
         promptSuggestions: () => false,
         databases: () => false,
+        extensionUiSources: () => [],
         openingAgent: () => undefined,
         contextSources: () => [],
         reference: () => null,

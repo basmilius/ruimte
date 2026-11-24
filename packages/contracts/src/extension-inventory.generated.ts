@@ -225,5 +225,6 @@ export const EXTENSION_API_INVENTORY = {
     'server/provider/defineNotificationChannel': { permission: 'notifications.provide' },
     'server/provider/defineProblemSource': { permission: 'problems.provide' },
     'server/provider/defineServer': {},
-    'server/provider/defineTerminalProfile': { permission: 'terminals.profiles' }
+    'server/provider/defineTerminalProfile': { permission: 'terminals.profiles' },
+    'server/provider/defineUiSource': { permission: 'ui.provide' }
 } as const;

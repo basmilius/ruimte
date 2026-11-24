@@ -8,6 +8,7 @@ import {
     defineProblemSource,
     defineServer,
     defineTerminalProfile,
+    defineUiSource,
     emit,
     files,
     log,
@@ -208,6 +209,31 @@ try {
     machineSourceRefused = (e as Error).message;
 }
 
+let uiSourceRefused: string | null = null;
+
+try {
+    defineUiSource({
+        id: 'probe-rows',
+        description: 'Rows of the probe',
+        parameters: { type: 'object', properties: { count: { type: 'number' } } },
+        read({ count }, { project }) {
+            if (count === 'fail') {
+                throw new Error('The probe has no rows today');
+            }
+
+            if (count === 'large') {
+                return 'x'.repeat(40_000);
+            }
+
+            return { project: project.id, rows: Array.from({ length: Number(count ?? 0) }, (_unused, index) => ({ row: index + 1 })) };
+        }
+    });
+    // No description, so the machine tells no agent of it.
+    defineUiSource({ id: 'probe-vague', description: '', read: () => null });
+} catch (e) {
+    uiSourceRefused = (e as Error).message;
+}
+
 // What the channel was handed, in order.
 const delivered: object[] = [];
 let channelRefused: string | null = null;
@@ -247,6 +273,9 @@ const providerApi = defineServer({
     },
     async machineSourceRefused() {
         return machineSourceRefused;
+    },
+    async uiSourceRefused() {
+        return uiSourceRefused;
     },
     async channelRefused() {
         return channelRefused;

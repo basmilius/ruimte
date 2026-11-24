@@ -270,6 +270,23 @@ export interface Notification {
  */
 export function defineNotificationChannel(channel: { id: string; title: string; deliver(notification: Notification): void | Promise<void> }): void;
 
+/**
+ * Needs `ui.provide`. Proposed: name `uiSources` under `proposed` in the manifest, and the id under
+ * `provides.uiSources`. Live data for a block an agent writes in a chat: the agent reads it as
+ * `@Query("extension", { source: "<extension id>/<id>", args: { ... } })` and the components Ruimte already has draw
+ * the answer. `description` (at most 200 characters) and `parameters`, a JSON Schema of `args` (at most 2 KB), are what
+ * the agent is told. `read` gets the arguments as the block wrote them, so check them, and the project of the chat that
+ * wrote the block. It only reads: a block is read again on its own, by every client that shows it. Its answer is JSON
+ * of at most 32 KB; a larger one, a throw and an answer that takes too long show as a failed read in the block. Throws
+ * for an id the manifest does not list.
+ */
+export function defineUiSource(source: {
+    id: string;
+    description: string;
+    parameters?: object;
+    read(args: Record<string, Json>, context: { project: ProjectInfo }): Json | Promise<Json>;
+}): void;
+
 /** A place in a file, counted from 1 as a person reads it, and what is wrong there. */
 export interface Problem {
     line: number;

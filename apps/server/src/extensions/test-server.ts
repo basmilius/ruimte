@@ -8,10 +8,10 @@ import { join, resolve } from 'node:path';
 import { parseExtensionActionInput } from '@ruimte/contracts/extension-actions';
 import { extensionProjectPath } from '@ruimte/contracts/extension-client';
 import { EXTENSION_PROBLEM_FILES, EXTENSION_PROBLEMS_PER_FILE, ExtensionProblemsReportSchema } from '@ruimte/contracts/extension-problems';
-import { allowsProposed, proposedRefusal } from '@ruimte/contracts/extension-providers';
+import { allowsProposed, proposedRefusal, uiSourceName } from '@ruimte/contracts/extension-providers';
 import type * as PublicServer from '../../../../packages/extension/server';
 import type * as PublicTesting from '../../../../packages/extension/testing';
-import { candidatesListed, launchesListed, machineStartDescribed } from './descriptions.ts';
+import { candidatesListed, launchesListed, machineStartDescribed, uiAnswerRead, uiSourceDescribed, type UiSourceDescription } from './descriptions.ts';
 import {
     askRefusal,
     eventRefusal,
@@ -164,6 +164,7 @@ class TestMachine {
     readonly problemSources = new Map<string, string>();
     readonly machineSources = new Map<string, string>();
     readonly notificationChannels = new Map<string, string>();
+    readonly uiSources = new Map<string, UiSourceDescription>();
     // The lines a machine source reported while it described a start, by the number it was asked under.
     readonly machineReports = new Map<number, string[]>();
     nextMachineStart = 1;
@@ -300,6 +301,14 @@ class TestMachine {
             this.machineReports.get(message.run)?.push(message.line);
         } else if (message.type === 'notificationChannel') {
             this.notificationChannels.set(message.id, message.title);
+        } else if (message.type === 'uiSource') {
+            const described = uiSourceDescribed(message.description, message.parameters);
+
+            if (typeof described === 'string') {
+                this.logs.push(`The UI source ${message.id} ${described}`);
+            } else {
+                this.uiSources.set(message.id, described);
+            }
         } else {
             const reason = eventRefusal(message.name, this.permissions);
 
@@ -800,6 +809,20 @@ export async function createTestServer<Api>(options: PublicTesting.TestServerOpt
                         options.signal?.removeEventListener('abort', abort);
                     }
                 }
+            };
+        },
+        uiSource: (id) => {
+            const described = machine.uiSources.get(id);
+
+            if (described === undefined) {
+                throw new Error(`No UI source ${id}. defineUiSource says what there is`);
+            }
+
+            return {
+                name: uiSourceName(machine.id, id),
+                ...described,
+                read: async (args = {}, project = {}) =>
+                    uiAnswerRead(await machine.core.readUiSource(id, wire(args), { ...machine.project, ...project })) as Json
             };
         },
         notificationChannel: (id) => {
