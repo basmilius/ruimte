@@ -1,4 +1,4 @@
-<img src="assets/logo.svg" alt="" width="64" height="64">
+<img src="assets/AppIcon.export/AppIcon%20Exports/AppIcon-iOS-Default-128@2x.png" alt="" width="96" height="96">
 
 # Ruimte
 
