@@ -8,13 +8,14 @@ import { ExtensionStore } from './store.ts';
 
 const EXTENSIONS = join(import.meta.dir, '../../../../extensions');
 // Each by its folder and the id its manifest carries.
-const PRODUCTS = ['trackline', 'boardwalk', 'beacon'].map((name) => [`dev/${name}`, `dev.${name}`] as const);
+const PRODUCTS = ['boardwalk', 'beacon'].map((name) => [`dev/${name}`, `dev.${name}`] as const);
 const POCS = ['surfaces', 'machine', 'frame', 'themes', 'broken', 'broken-load'].map((name) => [`poc/${name}`, `poc.${name}`] as const);
 // The products that use a proposed part, each with the parts a person reads of.
 const PROPOSED = [
     ['dev/harbor', 'dev.harbor', 'terminalProfiles, launchSources, machineSources'],
     ['dev/lintel', 'dev.lintel', 'problemSources'],
-    ['dev/pulseboard', 'dev.pulseboard', 'notificationChannels']
+    ['dev/pulseboard', 'dev.pulseboard', 'notificationChannels'],
+    ['dev/trackline', 'dev.trackline', 'uiSources']
 ] as const;
 const TRACKLINE = 'dev.trackline';
 const KEY = 'trk_demo1234';
@@ -34,6 +35,12 @@ async function packOf(folder: string): Promise<string> {
     const { path } = await packExtension(join(EXTENSIONS, folder));
 
     return readFileSync(path).toString('base64');
+}
+
+/* Trackline uses proposed parts, so it runs as `ruimte extension dev` links it. */
+async function linkTrackline(host: ExtensionHost): Promise<void> {
+    await packOf('dev/trackline');
+    await host.linked(join(EXTENSIONS, 'dev/trackline', 'dist'));
 }
 
 async function until(condition: () => boolean): Promise<void> {
@@ -76,7 +83,7 @@ describe('the development extensions', () => {
     test('Trackline keeps its key and its chats over a restart, and the key is private', async () => {
         const { host, home } = hostIn('restart');
 
-        await host.install(await packOf('dev/trackline'));
+        await linkTrackline(host);
 
         expect(await host.call(TRACKLINE, 'account', [])).toBeNull();
         expect(await host.call(TRACKLINE, 'connect', [KEY])).toBe('mira');
@@ -95,7 +102,7 @@ describe('the development extensions', () => {
         const heard: unknown[] = [];
 
         host.subscribe('client', (event) => heard.push(event));
-        await host.install(await packOf('dev/trackline'));
+        await linkTrackline(host);
         await host.call(TRACKLINE, 'connect', [KEY]);
         await host.call(TRACKLINE, 'assign', ['TRK-101', 'chat-1']);
 
@@ -113,7 +120,7 @@ describe('the development extensions', () => {
     test('Trackline offers an agent a tool, only while it runs', async () => {
         const { host } = hostIn('tools');
 
-        await host.install(await packOf('dev/trackline'));
+        await linkTrackline(host);
         await until(() => host.agentTools().length > 0);
         await host.call(TRACKLINE, 'connect', [KEY]);
 
@@ -138,7 +145,7 @@ describe('the development extensions', () => {
         });
 
         hosts.push(host);
-        await host.install(await packOf('dev/trackline'));
+        await linkTrackline(host);
         await host.install(await packOf('dev/boardwalk'));
 
         expect(await host.startAgent(TRACKLINE, { projectId: 'project-1', title: 'TRK-101' })).toEqual({ nodeId: 'chat-1' });

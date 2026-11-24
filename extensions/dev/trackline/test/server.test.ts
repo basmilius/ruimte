@@ -3,7 +3,7 @@ import { createTestServer } from '@ruimte/extension/testing';
 import type { TracklineServer } from '../server';
 
 const KEY = 'trk_demo1234';
-const WITHOUT_CHATS = { 'agents.tools': 'Looks up', clock: 'Checks' };
+const WITHOUT_CHATS = { 'agents.tools': 'Looks up', clock: 'Checks', 'ui.provide': 'Shows' };
 
 function connected(options: Parameters<typeof createTestServer>[0] = {}) {
     return createTestServer<TracklineServer>({ secrets: { key: KEY }, ...options });
@@ -22,6 +22,20 @@ describe('Trackline on the machine', () => {
         expect(server.secrets).toEqual({ key: KEY });
         expect(server.storage).toEqual({});
         expect(server.emitted).toEqual([{ name: 'issues.changed' }]);
+    });
+
+    test('gives a block in a chat the issues as rows, all of them or those in one state, and says so without a key', async () => {
+        const server = await connected();
+        const source = server.uiSource('issues');
+
+        expect(source.name).toBe('dev.trackline/issues');
+        expect(source.description).toBe('The issues of the Trackline account: key, title, state, assignee and labels');
+        expect(source.parameters).toEqual({ type: 'object', properties: { state: { enum: ['open', 'closed'] } } });
+        expect(await source.read({ state: 'closed' })).toEqual([
+            { key: 'TRK-98', title: expect.any(String), state: 'closed', assignee: expect.any(String), labels: expect.any(String) }
+        ]);
+        expect(((await source.read()) as unknown[]).length).toBe(4);
+        await expect((await createTestServer<TracklineServer>()).uiSource('issues').read()).rejects.toThrow('Connect your Trackline account first');
     });
 
     test('lists the issues of the account with the chat a person started on each', async () => {

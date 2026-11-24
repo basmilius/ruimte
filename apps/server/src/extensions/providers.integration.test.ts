@@ -13,6 +13,7 @@ const EXTENSIONS = join(import.meta.dir, '../../../../extensions/dev');
 const HARBOR = 'dev.harbor';
 const LINTEL = 'dev.lintel';
 const PULSEBOARD = 'dev.pulseboard';
+const TRACKLINE = 'dev.trackline';
 const WEB = 'dev.harbor:compose:web';
 const MIGRATE = 'dev.harbor:compose:migrate';
 const COMPOSE = ['services:', '  web:', '    command: bun run dev', '    port: 5173', '  migrate:', '    command: bun run migrate', '    kind: task', ''].join(
@@ -339,5 +340,41 @@ describe('Pulseboard, a notification channel in a process of its own', () => {
         await host.setEnabled(PULSEBOARD, false);
 
         expect(await owner('extension.notificationChannels', {})).toMatchObject({ ok: true, result: { channels: [] } });
+    });
+});
+
+describe('Trackline, a UI source in a process of its own', () => {
+    beforeAll(async () => {
+        await link('trackline');
+        await host.call(TRACKLINE, 'connect', ['trk_demo1234']);
+    });
+
+    test('tells an agent of its source, with the arguments it takes', async () => {
+        expect(await daemon.bundles.extensions.uiSources.refresh(true)).toEqual([
+            {
+                name: 'dev.trackline/issues',
+                description: 'The issues of the Trackline account: key, title, state, assignee and labels',
+                parameters: { type: 'object', properties: { state: { enum: ['open', 'closed'] } } }
+            }
+        ]);
+        expect(await tool('ui_catalog', { group: 'data' })).toContain(
+            'source\tdev.trackline/issues\t{"type":"object","properties":{"state":{"enum":["open","closed"]}}}\tThe issues of the Trackline account: key, title, state, assignee and labels'
+        );
+    });
+
+    test('answers a block with the issues of the account, for a project of this machine only', async () => {
+        const sources = daemon.bundles.extensions.uiSources;
+
+        expect(await sources.read('dev.trackline/issues', { state: 'closed' }, projectId)).toEqual([
+            { key: 'TRK-98', title: expect.any(String), state: 'closed', assignee: expect.any(String), labels: expect.any(String) }
+        ]);
+        await expect(sources.read('dev.trackline/issues', {}, 'no-such-project')).rejects.toThrow('No extension supplies dev.trackline/issues here');
+    });
+
+    test('is gone from what an agent is told once it is turned off', async () => {
+        await host.setEnabled(TRACKLINE, false);
+
+        expect(await daemon.bundles.extensions.uiSources.refresh(true)).toEqual([]);
+        expect(await daemon.bundles.extensions.uiSources.supplies('dev.trackline/issues')).toBe(false);
     });
 });

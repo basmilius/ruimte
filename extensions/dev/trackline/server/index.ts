@@ -1,5 +1,5 @@
 /// <reference types="bun" />
-import { defineAgentTool, defineNodeContext, defineServer, emit, log, onEvent, schedule, secrets, storage } from '@ruimte/extension/server';
+import { defineAgentTool, defineNodeContext, defineServer, defineUiSource, emit, log, onEvent, schedule, secrets, storage } from '@ruimte/extension/server';
 import { issueText, openService, type TracklineIssue, type TracklineService } from './service';
 
 const KEY = 'key';
@@ -53,6 +53,20 @@ defineAgentTool<{ key: string }>({
     description: 'Reads an issue of the Trackline account by its key, such as TRK-101, with its changes and their checks',
     parameters: { type: 'object', properties: { key: { type: 'string' } }, required: ['key'] },
     run: ({ key }) => textOf(key)
+});
+
+// The rows a block in a chat draws, read again by every client that shows it. Without a key it says so, which the block shows.
+defineUiSource({
+    id: 'issues',
+    description: 'The issues of the Trackline account: key, title, state, assignee and labels',
+    parameters: { type: 'object', properties: { state: { enum: ['open', 'closed'] } } },
+    async read({ state }) {
+        const issues = (await service()).issues();
+
+        return issues
+            .filter((issue) => state === undefined || issue.state === state)
+            .map(({ key, title, state: is, assignee, labels }) => ({ key, title, state: is, assignee, labels: labels.join(', ') }));
+    }
 });
 
 schedule({
