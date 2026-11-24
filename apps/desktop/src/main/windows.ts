@@ -38,6 +38,7 @@ export function installWindows(ipc: DesktopIpc, options: WindowChannelOptions): 
     let openingInactive = false;
     // Where each window's page draws its tab strip, in the page's coordinates, for a tab dragged over it.
     const tabStrips = new Map<number, { x: number; y: number; width: number; height: number }>();
+    const stripWatched = new WeakSet<Electron.BrowserWindow>();
 
     /* A window that keeps a project as a tab it does not show is asked to show it, once it came to the front. */
     const showOnHolder = (key: string | null): void => {
@@ -121,7 +122,9 @@ export function installWindows(ipc: DesktopIpc, options: WindowChannelOptions): 
             tabStrips.delete(window.id);
             return;
         }
-        if (!tabStrips.has(window.id)) {
+        // Once per window: a strip that comes and goes would stack a listener each time it came back.
+        if (!stripWatched.has(window)) {
+            stripWatched.add(window);
             window.once('closed', () => tabStrips.delete(window.id));
         }
         tabStrips.set(window.id, strip);

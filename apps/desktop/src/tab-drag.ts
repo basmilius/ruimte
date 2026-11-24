@@ -28,6 +28,8 @@ interface TabDragDeps<Window extends DragWindow> {
 
 interface Drag<Window> {
     key: string;
+    /* The window whose page holds the press and says when it lets go. */
+    source: Window;
     /* The window that follows the pointer: the one the tab tore off into, or its own window for its only tab. */
     dragged: Window;
     /* The point of the dragged window under the pointer: the middle of its tab, as soon as its strip is known. */
@@ -61,13 +63,22 @@ export function createTabDrag<Window extends DragWindow>(deps: TabDragDeps<Windo
     const undock = (current: Drag<Window>, docked: Window): void => {
         current.docked = null;
         deps.transfer(current.key, current.dragged);
-        docked.webContents.send('window:release-project', current.key);
+
+        if (!docked.isDestroyed()) {
+            docked.webContents.send('window:release-project', current.key);
+        }
+
         current.dragged.setOpacity(1);
     };
 
     const tick = (): void => {
         const current = drag;
-        if (current === null || current.dragged.isDestroyed()) {
+        if (current === null) {
+            return;
+        }
+        // The page that holds the press went with its window, so nothing says the press let go any more.
+        if (current.dragged.isDestroyed() || current.source.isDestroyed()) {
+            end();
             return;
         }
         if (current.halfTab !== null) {
@@ -93,17 +104,22 @@ export function createTabDrag<Window extends DragWindow>(deps: TabDragDeps<Windo
         }
     };
 
-    const end = (): void => {
+    // A declaration, since `tick` ends a drag whose window went.
+    function end(): void {
         const current = drag;
         drag = null;
         if (current === null) {
             return;
         }
         current.stop();
-        const { dragged, docked } = current;
+        const { dragged } = current;
         if (dragged.isDestroyed()) {
             return;
         }
+        if (current.docked?.isDestroyed()) {
+            undock(current, current.docked);
+        }
+        const { docked } = current;
         // Only a strip takes a tab; let go anywhere else, over another window as well, it stays a window of its own.
         if (docked === null) {
             dragged.focus();
@@ -111,7 +127,7 @@ export function createTabDrag<Window extends DragWindow>(deps: TabDragDeps<Windo
         }
         docked.focus();
         dragged.close();
-    };
+    }
 
     return {
         /*
@@ -132,6 +148,7 @@ export function createTabDrag<Window extends DragWindow>(deps: TabDragDeps<Windo
             const offFront = whole ? () => undefined : deps.onFront(dragged, () => end());
             drag = {
                 key,
+                source,
                 dragged,
                 grab,
                 halfTab: whole || tabWidth === null ? null : tabWidth / 2,

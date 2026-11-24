@@ -147,6 +147,32 @@ describe('dragging a tab out of a window', () => {
         expect(drag.dragging()).toBe(false);
     });
 
+    test('a window that closed with the tab in its strip gives it back to a window of its own', () => {
+        const other = fakeWindow('other');
+        const { drag, torn, transfers, move } = setup(other);
+        drag.start(fakeWindow('source'), 'local:a', { x: 0, y: 0 }, false);
+        move({ x: 300, y: 20 });
+        other.close();
+        const sent = other.sent.length;
+        drag.end();
+        expect(other.sent).toHaveLength(sent);
+        expect(transfers.at(-1)).toEqual(['local:a', 'torn']);
+        expect(torn.opacity).toBe(1);
+        expect(torn.closed).toBe(false);
+        expect(torn.focused).toBe(1);
+    });
+
+    test('a drag ends when the window that holds the press closes', () => {
+        const source = fakeWindow('source');
+        const { drag, torn, move, ticking } = setup();
+        drag.start(source, 'local:a', { x: 0, y: 0 }, false);
+        source.close();
+        move({ x: 600, y: 400 });
+        expect(ticking()).toBe(false);
+        expect(drag.dragging()).toBe(false);
+        expect(torn.focused).toBe(1);
+    });
+
     test('the only tab of a window moves that window itself', () => {
         const other = fakeWindow('other');
         const source = fakeWindow('source');

@@ -134,10 +134,11 @@ function installSaveStreams(ipc: DesktopIpc): void {
     ipc.handle('save-stream:begin', async (event, suggestedName: string, mime: string) => {
         const window = ipc.senderWindow(event);
         const path = window ? await askSavePath(window, suggestedName, mime) : null;
-        if (path === null) {
+        const contents = event.sender;
+        // A page that went while the dialog was up would own a file nothing closes.
+        if (path === null || contents.isDestroyed()) {
             return null;
         }
-        const contents = event.sender;
         if (!watched.has(contents.id)) {
             watched.add(contents.id);
             const owner = contents.id;

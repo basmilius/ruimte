@@ -37,11 +37,19 @@ export function installLogin(ipc: DesktopIpc): { signedIn(): Promise<boolean> } 
 
     ipc.handle('pulsar:address-book', () => addressBookUrl);
 
+    const cancelPending = (): void => {
+        pendingLogin?.cancel();
+        pendingLogin = null;
+    };
+
     ipc.handle('pulsar:login-listen', async () => {
         // One login at a time: a second click starts over rather than leaving a port open for the first.
-        pendingLogin?.cancel();
-        pendingLogin = await listenForLogin();
-        return { redirectUri: pendingLogin.redirectUri };
+        cancelPending();
+        const login = await listenForLogin();
+        // A click that came while this one opened its port is waiting by now, and goes the same way.
+        cancelPending();
+        pendingLogin = login;
+        return { redirectUri: login.redirectUri };
     });
 
     ipc.handle('pulsar:login-callback', async (event) => {
