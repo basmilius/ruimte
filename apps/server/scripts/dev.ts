@@ -7,12 +7,20 @@ import { DEV_PORT, devRuimteHome } from '@ruimte/service/runtime';
  * Windows has neither that default nor a HOME.
  */
 const env = { ...process.env, RUIMTE_HOME: devRuimteHome() };
+const cwd = join(import.meta.dir, '..');
 const child = Bun.spawn(['bun', '--conditions=source', '--watch', 'src/main.ts', '--port', String(DEV_PORT), ...process.argv.slice(2)], {
-    cwd: join(import.meta.dir, '..'),
+    cwd,
     env,
     stdio: ['inherit', 'inherit', 'inherit']
 });
+// Beside the daemon and never part of it: the one place that links the development extensions, so nothing else loads them.
+const extensions = Bun.spawn(['bun', '--conditions=source', 'scripts/dev-extensions.ts'], { cwd, env, stdio: ['ignore', 'inherit', 'inherit'] });
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-    process.on(signal, () => child.kill(signal));
+    process.on(signal, () => {
+        child.kill(signal);
+        extensions.kill(signal);
+    });
 }
-process.exit(await child.exited);
+const code = await child.exited;
+extensions.kill();
+process.exit(code);

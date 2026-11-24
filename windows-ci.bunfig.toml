@@ -9,6 +9,7 @@ pathIgnorePatterns = [
     "**/docs/reports/**",
     "extensions/*/test/**",
     "extensions/poc/*/test/**",
+    "extensions/dev/*/test/**",
     # Reads every source file, and says the same on every platform.
     "apps/client/src/state/view-nodes.test.ts",
     # These boot a whole test daemon per test, with the same result on a slow runner.
