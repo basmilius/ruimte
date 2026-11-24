@@ -1,7 +1,7 @@
 import { Heatmap, Sparkline } from '@ruimte/extension/charts';
 import { useAgents, useServer, useStorage, useUsageLimits } from '@ruimte/extension/client';
 import { Button } from '@ruimte/extension/ui';
-import type { PulseboardServer } from '../server/index';
+import type { PulseboardServer, Told } from '../server/index';
 
 const GOAL = 'goal';
 const GOAL_STEP = 5;
@@ -16,6 +16,8 @@ export default function ActivityView() {
     // Written by `server/` as it counts, under the same keys.
     const [chatTurns] = useStorage('chatTurns', 0, 'machine');
     const [terminalTurns] = useStorage('terminalTurns', 0, 'machine');
+    // Filled by the notification channel of `server/`, once a person turned it on in Settings.
+    const [told] = useStorage<Told[]>('told', [], 'machine');
     const working = agents.filter((agent) => agent.status === 'running').length;
 
     return (
@@ -58,6 +60,15 @@ export default function ActivityView() {
             ) : (
                 <span style={{ color: 'var(--text-muted)' }}>{history.error.message}</span>
             )}
+            <section style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <strong>What Ruimte told you</strong>
+                {told.length === 0 && <span style={{ color: 'var(--text-muted)' }}>Nothing yet. Turn Pulseboard on under Settings, Notifications.</span>}
+                {told.map((entry, index) => (
+                    <span key={index}>
+                        {entry.title}: {entry.body}
+                    </span>
+                ))}
+            </section>
             <section style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <strong>Plan windows</strong>
                 {limits.length === 0 && <span style={{ color: 'var(--text-muted)' }}>No plan window yet.</span>}

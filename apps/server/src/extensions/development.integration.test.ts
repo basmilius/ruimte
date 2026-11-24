@@ -8,12 +8,13 @@ import { ExtensionStore } from './store.ts';
 
 const EXTENSIONS = join(import.meta.dir, '../../../../extensions');
 // Each by its folder and the id its manifest carries.
-const PRODUCTS = ['trackline', 'boardwalk', 'beacon', 'pulseboard'].map((name) => [`dev/${name}`, `dev.${name}`] as const);
+const PRODUCTS = ['trackline', 'boardwalk', 'beacon'].map((name) => [`dev/${name}`, `dev.${name}`] as const);
 const POCS = ['surfaces', 'machine', 'frame', 'themes', 'broken', 'broken-load'].map((name) => [`poc/${name}`, `poc.${name}`] as const);
 // The products that use a proposed part, each with the parts a person reads of.
 const PROPOSED = [
     ['dev/harbor', 'dev.harbor', 'terminalProfiles, launchSources, machineSources'],
-    ['dev/lintel', 'dev.lintel', 'problemSources']
+    ['dev/lintel', 'dev.lintel', 'problemSources'],
+    ['dev/pulseboard', 'dev.pulseboard', 'notificationChannels']
 ] as const;
 const TRACKLINE = 'dev.trackline';
 const KEY = 'trk_demo1234';

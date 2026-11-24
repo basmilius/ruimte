@@ -21,13 +21,34 @@ describe('Pulseboard on the machine', () => {
     });
 
     test('counts only what its manifest lets it follow', async () => {
-        const server = await createTestServer<PulseboardServer>({ manifest: { permissions: { 'chats.read': 'Counts' } } });
+        const server = await createTestServer<PulseboardServer>({ manifest: { permissions: { 'chats.read': 'Counts', 'notifications.provide': 'Lists' } } });
 
         server.fire('chat.status', { chat: CHAT });
         server.fire('session.status', { nodeId: 'terminal-1', status: 'running' });
 
         expect(await server.call('counts')).toEqual({ ok: true, value: { chats: 1, terminals: 0 } });
         expect(server.logs).toContain('session.status needs the permission terminals.read in manifest.json');
+    });
+
+    test('keeps what Ruimte told the person through its channel, newest first and at most twenty', async () => {
+        const server = await createTestServer<PulseboardServer>();
+        const channel = server.notificationChannel('log');
+
+        expect(channel.title).toBe('Pulseboard');
+        expect(await channel.deliver({ title: 'Import', body: 'The agent needs your attention.' })).toBe(true);
+        expect(await channel.deliver({ title: 'Search', body: 'The turn is done.', reason: 'done' })).toBe(true);
+        expect(server.storage.told).toEqual([
+            { title: 'Search', body: 'The turn is done.', reason: 'done' },
+            { title: 'Import', body: 'The agent needs your attention.', reason: 'needsYou' }
+        ]);
+
+        for (let turn = 0; turn < 25; turn++) {
+            await channel.deliver({ title: `Turn ${turn}`, reason: 'done' });
+        }
+
+        expect(server.storage.told).toHaveLength(20);
+        expect(server.storage.told).toContainEqual(expect.objectContaining({ title: 'Turn 24' }));
+        expect(server.storage.told).not.toContainEqual(expect.objectContaining({ title: 'Import' }));
     });
 
     test('answers the history of the account, a row of the week per part of the day', async () => {

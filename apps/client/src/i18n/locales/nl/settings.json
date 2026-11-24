@@ -1307,6 +1307,10 @@
                 "description": "Werken zonder pauze."
             }
         },
+        "notificationChannels": {
+            "label": "Melden via {{title}}",
+            "description": "Stuurt ook wat je telefoon zou krijgen, als een agent je nodig heeft, klaar is of een gebruikslimiet bereikt. Het wacht zolang je achter deze computer zit."
+        },
         "working": {
             "title": "Wakker houden",
             "description": "Als deze computer slaapt, pauzeert elke agent."

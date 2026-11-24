@@ -12,6 +12,7 @@ import { buildExtension } from './pack.ts';
 const EXTENSIONS = join(import.meta.dir, '../../../../extensions/dev');
 const HARBOR = 'dev.harbor';
 const LINTEL = 'dev.lintel';
+const PULSEBOARD = 'dev.pulseboard';
 const WEB = 'dev.harbor:compose:web';
 const MIGRATE = 'dev.harbor:compose:migrate';
 const COMPOSE = ['services:', '  web:', '    command: bun run dev', '    port: 5173', '  migrate:', '    command: bun run migrate', '    kind: task', ''].join(
@@ -85,6 +86,18 @@ async function until<Value>(read: () => Promise<Value | null>): Promise<Value> {
     throw new Error('It never came');
 }
 
+/* A request from the app on this machine, which is the client that presented the local secret. */
+async function owner(type: string, payload: unknown): Promise<ServerFrame> {
+    const frames: ServerFrame[] = [];
+
+    await daemon.dispatcher.handle(
+        { id: 'owner-1', access: { reachability: 'loopback', sessionId: null }, send: (frame) => frames.push(frame) },
+        JSON.stringify({ id: 'request', type, payload })
+    );
+
+    return frames[0]!;
+}
+
 beforeAll(async () => {
     ({ root, folder, store, projectId } = await releasedProject('ruimte-extension-providers-', CONTENT));
     writeFileSync(join(folder, 'harbor.yaml'), COMPOSE);
@@ -107,18 +120,6 @@ describe('Harbor, a machine source in a process of its own', () => {
     const target = { projectId: '', extension: HARBOR, source: 'compose-machine', candidate: 'workbench' };
     const heard: MachineCandidate[] = [];
     const LOGIN = 'sh -c sh scripts/login.sh';
-
-    /* A request from the app on this machine, which is the client that presented the local secret. */
-    async function owner(type: string, payload: unknown): Promise<ServerFrame> {
-        const frames: ServerFrame[] = [];
-
-        await daemon.dispatcher.handle(
-            { id: 'owner-1', access: { reachability: 'loopback', sessionId: null }, send: (frame) => frames.push(frame) },
-            JSON.stringify({ id: 'request', type, payload })
-        );
-
-        return frames[0]!;
-    }
 
     async function start(approve?: string): Promise<MachineCandidate> {
         const frame = await owner('extension.machineStart', { ...target, ...(approve === undefined ? {} : { approve }) });
@@ -296,5 +297,47 @@ describe('Lintel, a problem source in a process of its own', () => {
 
         expect(daemon.bundles.extensions.problems.of(projectId)).toEqual([]);
         expect((await tool('language_problems'))[0]).toStartWith('refused\tno-workspace-diagnostics\t');
+    });
+});
+
+describe('Pulseboard, a notification channel in a process of its own', () => {
+    const told = async (): Promise<{ title: string; body: string; reason: string }[]> => {
+        const frame = await daemon.request('extension.storageGet', { id: PULSEBOARD, key: 'told' });
+
+        return 'ok' in frame && frame.ok ? ((frame.result as { value?: { title: string; body: string; reason: string }[] }).value ?? []) : [];
+    };
+
+    beforeAll(() => link('pulseboard'));
+
+    test('lists its channel off to the app on this machine, and to no client a statement let in', async () => {
+        expect(await owner('extension.notificationChannels', {})).toMatchObject({
+            ok: true,
+            result: { channels: [{ extension: PULSEBOARD, id: 'log', title: 'Pulseboard', on: false }] }
+        });
+        expect(await daemon.request('extension.notificationChannels', {})).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+        expect(await daemon.request('extension.notificationChannelSet', { extension: PULSEBOARD, channel: 'log', on: true })).toMatchObject({
+            ok: false,
+            error: { code: 'forbidden' }
+        });
+    });
+
+    test('hears nothing while it is off, and what a phone would hear once a person turned it on', async () => {
+        daemon.bundles.push.alert('chat', 'chat-lead', 'Lead', 'Before the switch');
+        await daemon.bundles.push.settled();
+        await daemon.bundles.extensions.notificationChannels.settled();
+        expect(await told()).toEqual([]);
+
+        expect(await owner('extension.notificationChannelSet', { extension: PULSEBOARD, channel: 'log', on: true })).toMatchObject({ ok: true });
+        daemon.bundles.push.alert('chat', 'chat-lead', 'Lead', 'The build is red');
+        await daemon.bundles.push.settled();
+        await daemon.bundles.extensions.notificationChannels.settled();
+
+        expect(await told()).toEqual([{ title: 'Lead', body: 'The build is red', reason: 'needsYou' }]);
+    });
+
+    test('hears nothing more once it is turned off as an extension', async () => {
+        await host.setEnabled(PULSEBOARD, false);
+
+        expect(await owner('extension.notificationChannels', {})).toMatchObject({ ok: true, result: { channels: [] } });
     });
 });

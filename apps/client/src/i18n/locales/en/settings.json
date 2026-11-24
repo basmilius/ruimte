@@ -1307,6 +1307,10 @@
                 "description": "Of work without a break."
             }
         },
+        "notificationChannels": {
+            "label": "Notify through {{title}}",
+            "description": "Also sends what your phone would get, when an agent needs you, finishes or reaches a usage limit. It waits while you are at this computer."
+        },
         "working": {
             "title": "Keep awake",
             "description": "When this computer sleeps, every agent pauses."
