@@ -64,6 +64,35 @@ describe('the problems panel', () => {
         expect(everything()).toContain('closed.ts');
     });
 
+    test('asks the machine for what extensions reported, and lists it with the name of its source', async () => {
+        machine.answer('language.reportedProblems', () => ({}));
+        await openPanel();
+        await until(() => machine.requests('language.reportedProblems').length > 0);
+
+        expect(machine.requests('language.reportedProblems')[0]).toEqual({ projectId: PROJECT_ID });
+
+        await act(async () => {
+            machine.emit('language.diagnostics', {
+                projectId: PROJECT_ID,
+                path: 'src/app.ts',
+                server: 'dev.lintel/rules',
+                diagnostics: [
+                    {
+                        range: { start: { line: 1, character: 3 }, end: { line: 1, character: 7 } },
+                        severity: 3,
+                        message: 'A TODO is left here',
+                        source: 'Lintel',
+                        code: 'marker'
+                    }
+                ]
+            });
+        });
+        await until(() => everything().includes('A TODO is left here'));
+
+        expect(everything()).toContain('app.ts');
+        expect(everything()).toContain('Lintel');
+    });
+
     test('says the project has none after a check that found nothing', async () => {
         await openPanel();
         await until(() => checkButton() !== null);

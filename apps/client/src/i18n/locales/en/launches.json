@@ -28,6 +28,12 @@
         "cancel": "Cancel",
         "confirm": "Launch"
     },
+    "source": {
+        "from": "From {{name}}",
+        "approveTitle": "Run a command from {{name}}?",
+        "approveDescription": "{{name}} read this launch from a file in the project. It runs on this machine only after you approve it, and asks again when that file changes.",
+        "approveAll": "Approve all from {{name}}"
+    },
     "busy": {
         "title": "Port {{port}} is in use",
         "description": "Stop {{other}} and launch {{name}}?",

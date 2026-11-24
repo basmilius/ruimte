@@ -6,10 +6,18 @@ import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProjectRepos } from '@/controllers/git-repos';
 import type { Translate } from '@/i18n/translate';
-import { afterSettleCandidates, chooseAfterSettle, chooseLaunch, launchActions, showLaunchOutput, startLaunch } from '@/launches/actions';
+import {
+    afterSettleCandidates,
+    approveSourceAndStart,
+    chooseAfterSettle,
+    chooseLaunch,
+    launchActions,
+    showLaunchOutput,
+    startLaunch
+} from '@/launches/actions';
 import { foundText, newSuggestions } from '@/launches/editing';
 import { HeldCommand, LaunchDot, LaunchStatusIcon } from '@/launches/LaunchControls';
-import { headlineOf, launchSections, type LaunchView } from '@/launches/model';
+import { headlineOf, launchSections, oneSourceOf, shownLaunches, sourceSections, type LaunchView } from '@/launches/model';
 import { useLaunches, useLaunchSuggestions, useProjectLaunches } from '@/launches/state';
 import { useUi } from '@/state/ui';
 
@@ -27,9 +35,12 @@ export function LaunchChip() {
         return null;
     }
 
-    const askedName = ask === null ? '' : (document?.launches.find((launch) => launch.id === ask.launchId)?.name ?? '');
-    const busyName = ask?.kind === 'busy' ? (document?.launches.find((launch) => launch.id === ask.busy.launchId)?.name ?? '') : '';
+    const launches = document === null ? [] : shownLaunches(document);
+    const askedName = ask === null ? '' : (launches.find((launch) => launch.id === ask.launchId)?.name ?? '');
+    const busyName = ask?.kind === 'busy' ? (launches.find((launch) => launch.id === ask.busy.launchId)?.name ?? '') : '';
     const busyPort = ask?.kind === 'busy' ? ask.busy.port : '';
+    // What waits comes from one extension's source when every launch of the ask does, which is then what the question names.
+    const heldSource = ask?.kind === 'held' ? oneSourceOf(ask.held) : null;
 
     return (
         <div ref={anchor} className="flex shrink-0">
@@ -62,11 +73,29 @@ export function LaunchChip() {
                 }}
             >
                 <Popover.Popup anchor={anchor} align="end" className="flex w-96 flex-col gap-2 p-3">
-                    <Popover.Title className="font-medium text-text">{t('approve.title')}</Popover.Title>
-                    <Popover.Description className="text-text-muted">{t('approve.description')}</Popover.Description>
+                    <Popover.Title className="font-medium text-text">
+                        {heldSource === null ? t('approve.title') : t('source.approveTitle', { name: heldSource.title })}
+                    </Popover.Title>
+                    <Popover.Description className="text-text-muted">
+                        {heldSource === null ? t('approve.description') : t('source.approveDescription', { name: heldSource.title })}
+                    </Popover.Description>
                     {ask?.kind === 'held' && ask.held.map((held) => <HeldCommand key={held.launchId} held={held} />)}
                     <div className="flex justify-end gap-2 pt-1">
                         <Popover.Close render={<Button variant="secondary" size="sm" />}>{t('approve.cancel')}</Popover.Close>
+                        {heldSource !== null && (
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => {
+                                    if (ask?.kind === 'held') {
+                                        useLaunches.getState().setAsk(null);
+                                        void approveSourceAndStart(heldSource, ask.launchId, { restart: ask.restart, replace: ask.replace, owner: ask.owner });
+                                    }
+                                }}
+                            >
+                                {t('source.approveAll', { name: heldSource.title })}
+                            </Button>
+                        )}
                         <Button
                             variant="primary"
                             size="sm"
@@ -109,6 +138,8 @@ export function LaunchMenu({ repos, showOutput = true }: { repos: readonly GitRe
     const { t } = useTranslation('launches');
     const { document, folder, views } = useProjectLaunches();
     const sections = document === null || folder === null ? [] : launchSections(document.launches, folder, repos);
+    const listed = document === null ? [] : sourceSections(document);
+    const any = sections.length > 0 || listed.length > 0;
 
     return (
         <>
@@ -123,9 +154,19 @@ export function LaunchMenu({ repos, showOutput = true }: { repos: readonly GitRe
                     })}
                 </Menu.Group>
             ))}
-            {sections.length > 0 && <Menu.Separator />}
+            {listed.map((section) => (
+                <Menu.Group key={`${section.source.extension}/${section.source.id}`}>
+                    <Menu.GroupLabel>{t('source.from', { name: section.source.title })}</Menu.GroupLabel>
+                    {section.launches.map((launch) => {
+                        const view = views.get(launch.id);
+                        // An extension lists it, so there is nothing of it to edit here.
+                        return view === undefined ? null : <LaunchRow key={launch.id} view={view} listed />;
+                    })}
+                </Menu.Group>
+            ))}
+            {any && <Menu.Separator />}
             {document !== null && <AfterSettleMenu document={document} />}
-            {sections.length > 0 && showOutput && (
+            {any && showOutput && (
                 <Menu.Item onClick={() => showLaunchOutput()}>
                     <Icon icon={SquareTerminal} size={14} /> {t('showOutput')}
                 </Menu.Item>
@@ -229,7 +270,7 @@ function rowHint(view: LaunchView, now: number, t: Translate): string | null {
     return null;
 }
 
-function LaunchRow({ view }: { view: LaunchView }) {
+function LaunchRow({ view, listed = false }: { view: LaunchView; listed?: boolean }) {
     const { t } = useTranslation('launches');
     const now = useNow(30_000);
     const { launch } = view;
@@ -252,11 +293,13 @@ function LaunchRow({ view }: { view: LaunchView }) {
                     onClick={action.run}
                 />
             ))}
-            <Menu.RowAction
-                icon={Pencil}
-                label={t('editLaunch', { name: launch.name })}
-                onClick={() => useLaunches.getState().setDialog({ kind: 'edit', launchId: launch.id })}
-            />
+            {!listed && (
+                <Menu.RowAction
+                    icon={Pencil}
+                    label={t('editLaunch', { name: launch.name })}
+                    onClick={() => useLaunches.getState().setDialog({ kind: 'edit', launchId: launch.id })}
+                />
+            )}
         </Menu.Row>
     );
 }

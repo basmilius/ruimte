@@ -1,4 +1,14 @@
-import { isPathBelow, launchCwdOf, type GitRepo, type LaunchConfigEntry, type LaunchesDocument, type LaunchStatus } from '@ruimte/contracts';
+import {
+    isPathBelow,
+    launchCwdOf,
+    type GitRepo,
+    type LaunchConfigEntry,
+    type LaunchesDocument,
+    type LaunchHeld,
+    type LaunchSourceRef,
+    type LaunchStatus,
+    type SourcedLaunch
+} from '@ruimte/contracts';
 
 /*
  * What a launch looks like from here. A launch a person stopped, or a service that ended cleanly on
@@ -18,6 +28,26 @@ export interface LaunchView {
 }
 
 export const EMPTY_DOCUMENT: LaunchesDocument = { rev: 0, launches: [], approved: [] };
+
+/*
+ * Every launch a person can start: those of the project's files, then what an extension lists. An extension's launch is
+ * in no file, so the editor and a save go by `document.launches` alone and never by this list.
+ */
+export function shownLaunches(document: LaunchesDocument): LaunchConfigEntry[] {
+    const listed = (document.sourced ?? []).map(listedEntry);
+
+    return listed.length === 0 ? document.launches : [...document.launches, ...listed];
+}
+
+/* A launch of a source in the shape every row and the output panel draw a launch from. */
+function listedEntry({ source: _source, ...launch }: SourcedLaunch): LaunchConfigEntry {
+    return { ...launch, shared: false };
+}
+
+/* The extension source that lists a launch, as a person reads it; null for a launch of the project's own files. */
+export function launchSourceOf(document: LaunchesDocument | null, launchId: string): LaunchSourceRef | null {
+    return document?.sourced?.find((launch) => launch.id === launchId)?.source ?? null;
+}
 
 function isLive(status: LaunchStatus | undefined): boolean {
     return status !== undefined && status.state !== 'exited';
@@ -74,12 +104,13 @@ function memberViews(views: ReadonlyMap<string, LaunchView>, group: LaunchConfig
 export function launchViews(document: LaunchesDocument, statuses: Readonly<Record<string, LaunchStatus>>): Map<string, LaunchView> {
     const approved = new Set(document.approved);
     const views = new Map<string, LaunchView>();
-    for (const launch of document.launches) {
+    const launches = shownLaunches(document);
+    for (const launch of launches) {
         if (launch.kind !== 'group') {
             views.set(launch.id, singleView(launch, statuses[launch.id], approved.has(launch.id)));
         }
     }
-    for (const launch of document.launches) {
+    for (const launch of launches) {
         if (launch.kind === 'group') {
             views.set(launch.id, groupView(launch, memberViews(views, launch), approved.has(launch.id)));
         }
@@ -89,7 +120,40 @@ export function launchViews(document: LaunchesDocument, statuses: Readonly<Recor
 
 /* The launch the chip shows: the one this client chose, else the first of the menu. */
 export function chosenLaunch(document: LaunchesDocument, chosenId: string | undefined): LaunchConfigEntry | null {
-    return document.launches.find((launch) => launch.id === chosenId) ?? document.launches[0] ?? null;
+    const launches = shownLaunches(document);
+
+    return launches.find((launch) => launch.id === chosenId) ?? launches[0] ?? null;
+}
+
+/* The one source every launch that waits comes from, or null when one of them is a launch of the project's files or they come from two. */
+export function oneSourceOf(held: readonly LaunchHeld[]): LaunchSourceRef | null {
+    const first = held[0]?.source;
+    const same = first !== undefined && held.every((each) => each.source?.extension === first.extension && each.source.id === first.id);
+
+    return same ? first : null;
+}
+
+interface SourceSection {
+    source: LaunchSourceRef;
+    launches: LaunchConfigEntry[];
+}
+
+/* What extensions list, per source in the order the machine gave them, each under the name of its source. */
+export function sourceSections(document: LaunchesDocument): SourceSection[] {
+    const sections: SourceSection[] = [];
+
+    for (const listed of document.sourced ?? []) {
+        const { source } = listed;
+        const section = sections.find((each) => each.source.extension === source.extension && each.source.id === source.id);
+
+        if (section === undefined) {
+            sections.push({ source, launches: [listedEntry(listed)] });
+        } else {
+            section.launches.push(listedEntry(listed));
+        }
+    }
+
+    return sections;
 }
 
 /*

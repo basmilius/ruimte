@@ -1,10 +1,10 @@
 import { messageOf } from '@adecore/ui';
-import { deviceMatches, type DeviceInfo, type DeviceReference, type LaunchConfigEntry, type LaunchesDocument } from '@ruimte/contracts';
+import { deviceMatches, type DeviceInfo, type DeviceReference, type LaunchConfigEntry, type LaunchesDocument, type LaunchSourceRef } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { OctagonX, Play, RotateCw, Square, type LucideIcon } from 'lucide-react';
 import { createNodeAction, createViewAction } from '@/action-port/person-actions';
 import type { Translate } from '@/i18n/translate';
-import { chosenLaunch, type LaunchView } from '@/launches/model';
+import { chosenLaunch, shownLaunches, type LaunchView } from '@/launches/model';
 import { useLaunches, type LaunchOwner } from '@/launches/state';
 import { revealNode } from '@/project/views';
 import { useDocument } from '@/state/document';
@@ -53,7 +53,9 @@ function failed(title: string, e: unknown): void {
 }
 
 function nameOf(at: Target, launchId: string): string {
-    return useLaunches.getState().documents[at.key]?.launches.find((launch) => launch.id === launchId)?.name ?? launchId;
+    const document = useLaunches.getState().documents[at.key];
+
+    return (document === undefined ? [] : shownLaunches(document)).find((launch) => launch.id === launchId)?.name ?? launchId;
 }
 
 interface StartOptions {
@@ -87,6 +89,28 @@ export async function startLaunch(launchId: string, options: StartOptions = {}):
     } catch (e) {
         failed(i18next.t('launches:startFailed', { name: nameOf(at, launchId) }), e);
     }
+}
+
+/*
+ * A person's yes to everything one source of an extension lists in the project, and then the start that asked. What the
+ * source lists after its file changed asks again.
+ */
+export async function approveSourceAndStart(source: LaunchSourceRef, launchId: string, options: StartOptions = {}): Promise<void> {
+    const at = linkedTarget(options.owner);
+
+    if (at === null) {
+        return;
+    }
+
+    try {
+        await at.link.request('launches.approveSource', { projectId: at.projectId, extension: source.extension, source: source.id });
+    } catch (e) {
+        failed(i18next.t('launches:startFailed', { name: nameOf(at, launchId) }), e);
+
+        return;
+    }
+
+    await startLaunch(launchId, options);
 }
 
 export async function stopLaunch(launchId: string, force = false): Promise<void> {
@@ -158,7 +182,7 @@ export function runChosenLaunch(): void {
     }
     const document = useLaunches.getState().documents[at.key];
     const statuses = useLaunches.getState().statuses[at.key] ?? {};
-    const launch = document?.launches.find((candidate) => candidate.id === launchId);
+    const launch = (document === undefined ? [] : shownLaunches(document)).find((candidate) => candidate.id === launchId);
     const ids = launch?.kind === 'group' ? (launch.launches ?? []) : [launchId];
     void startLaunch(launchId, { restart: ids.some((id) => statuses[id] !== undefined && statuses[id].state !== 'exited') });
 }
