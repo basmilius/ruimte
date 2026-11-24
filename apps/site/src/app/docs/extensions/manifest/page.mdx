@@ -65,7 +65,6 @@ Ruimte reads the list without starting the server part, so a provider shows befo
 | `terminalProfiles` | [`defineTerminalProfile`](/docs/extensions/server#terminal-profiles) | `terminals.profiles` |
 | `launchSources` | [`defineLaunchSource`](/docs/extensions/server#launch-sources) | `launches.provide` |
 | `problemSources` | [`defineProblemSource`](/docs/extensions/server#problems) | `problems.provide` |
-| `hostProviders` | [`defineHostProvider`](/docs/extensions/server#code-hosts-and-issue-trackers) | `hosts.provide` |
 
 ## Proposed parts
 
@@ -121,7 +120,6 @@ Reading what is on screen needs no permission. Everything else does, and the API
 | `launches.write` | Add and change launches, which wait for the person's approval. |
 | `launches.provide` | List launches Ruimte finds for a project, each started only after the person approved it. |
 | `problems.provide` | Report problems that show with the editor's own. |
-| `hosts.provide` | Supply the issues, changes and checks of a code host or an issue tracker. |
 | `projects.read` | Hear when a project opens and closes. |
 | `routines.read` | List routines. |
 | `routines.run` | Run, pause and resume routines. |

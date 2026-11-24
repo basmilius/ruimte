@@ -273,53 +273,6 @@ const reported = await problems.report(project, 'rules', [
 
 `defineProblemSource` throws for an id the manifest does not list, and `report` answers `not-found` for a source it did not define.
 
-## Code hosts and issue trackers
-
-A host provider supplies the issues, pull or merge requests and checks of a project. Ruimte draws them in its own Issues panel, keeps which chat works on which issue, and gives agents the tools `issue_list`, `issue_read`, `issue_link`, `change_list`, `change_read` and `ci_logs`. Your extension only answers what the host has. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `hostProviders` under `proposed`, list the id under `provides.hostProviders` and ask for `hosts.provide`.
-
-```ts
-defineHostProvider({
-    id: 'trackline',
-    title: 'Trackline',
-    match: (remote) => remote.includes('trackline.test'),
-    status: async () => {
-        const account = await signedIn();
-
-        return account === null
-            ? {
-                  state: 'signed-out',
-                  reason: 'Sign in to Trackline first.'
-              }
-            : {
-                  state: 'ready',
-                  account
-              };
-    },
-    issues: {
-        list: async (scope, filter) => ({
-            items: await service.issues(filter),
-            cursor: undefined
-        }),
-        read: (scope, id) => service.issue(id),
-        parse: (scope, text) => keyIn(text)
-    }
-});
-```
-
-- With `match` the provider is a code host. Ruimte asks it for every repository of a project and hands `match` each remote as git has it. The remote it takes comes back as `scope.remote`.
-- Without `match` it is a tracker. Ruimte asks `status` for every project, and `not-configured` leaves the provider out of that project.
-- `status` says `ready`, `signed-out` or `unreachable`. A person reads `reason` in the panel, so write what they can do about it.
-- `issues`, `changes` and `checks` are optional. Say what the host can do, and Ruimte never asks for a part you left out.
-- An issue or a change has an `id` of your own, such as `ENG-12`. Ruimte names it `<provider>:<id>` everywhere, so two providers never share a name.
-- A list answers a page. Give `cursor` while the host has more, and it comes back as `filter.cursor`.
-- `read` answers `null` for something the host does not have. `changes.forBranch` answers the id of the open change of a branch, which is how a chat finds its own.
-- A check is `pending`, `success`, `failure`, `neutral` or `skipped`. Any other word reads as `failure`, so map the host's own conclusions yourself.
-- `checks.log` answers the text of one check by the name `changes.read` gave it. Ruimte keeps the end.
-
-Ruimte treats every answer as text a stranger wrote. It cuts a long text, takes the line breaks out of a title, drops an address that is not http or https, and leaves an entry of a list out when it is no issue or change, with the reason in your log. Agents get all of it quoted as data.
-
-A provider only reads. Nothing in it writes to the host yet.
-
 ## Language servers
 
 With `languages.servers`, an extension adds a language server for a language Ruimte does not know:
