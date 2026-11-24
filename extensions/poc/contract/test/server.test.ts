@@ -9,6 +9,8 @@ serverContract(async (permissions) => {
         answers: {
             'agents.start': () => ({ id: 'chat-1' }),
             'chats.send': () => undefined,
+            'agents.run': ({ prompt }) => ({ text: `Answer to ${prompt}` }),
+            'chats.list': () => [{ id: 'chat-1', provider: 'claude', status: 'idle', model: null, cwd: '/work' }],
             'machine.run': { 'launch.start': ({ launch }) => ({ id: launch, name: launch }) }
         }
     });

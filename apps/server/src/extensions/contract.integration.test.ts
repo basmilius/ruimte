@@ -61,7 +61,11 @@ serverContract(async (permissions) => {
     const store = new ExtensionStore(join(root, `home-${worlds}`));
     const host = new ExtensionHost({
         store,
-        asks: () => ({ 'chats.send': async () => undefined }),
+        asks: () => ({
+            'chats.send': async () => undefined,
+            'agents.run': async ({ prompt }: { prompt: string }) => ({ text: `Answer to ${prompt}` }),
+            'chats.list': async () => [{ id: 'chat-1', provider: 'claude', status: 'idle', model: null, cwd: '/work' }]
+        }),
         startChat: extensionChatStarter({
             host: daemon.host,
             actions: serverActions,

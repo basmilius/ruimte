@@ -1,4 +1,4 @@
-import { agents, chats, defineAgentTool, defineServer, emit, machine, onEvent, storage } from '@ruimte/extension/server';
+import { agents, chats, defineAgentTool, defineServer, emit, log, machine, onEvent, secrets, storage } from '@ruimte/extension/server';
 import { hear, heard } from './heard';
 
 // As the module loads, as an extension that sets itself up from what it kept does.
@@ -50,6 +50,21 @@ const api = defineServer({
         const sent = await chats.send(chatId, 'Hello');
 
         return sent.ok ? { ok: true, keys: Object.keys(sent), value: String(sent.value) } : sent;
+    },
+    async asks(prompt: string) {
+        return agents.run({ prompt });
+    },
+    async chatIds() {
+        const listed = await chats.list();
+
+        return listed.ok ? listed.value.map((chat) => chat.id) : listed;
+    },
+    // Beside what storage holds under the same key, which a secret never reaches.
+    async hide(value: string) {
+        await secrets.set('token', value);
+        log.info('Kept a secret');
+
+        return [(await secrets.get('token')) ?? null, (await storage.get<string>('token')) ?? null];
     },
     async startsChat(projectId: string) {
         return agents.start({ project: { id: projectId }, prompt: 'Hello', title: 'Helper' });

@@ -2,8 +2,9 @@
  * What `server/` of an extension does, held the same way against `createTestServer` (`test/server.test.ts`) and the
  * `ExtensionHost` of the machine with a real process (`apps/server/src/extensions/contract.integration.test.ts`).
  * Each world runs `poc.contract`'s own `server/` with the permissions a scenario asks for, answers `chats.send`,
- * answers `launch.start` with the launch it was given, and starts a chat in `project`, which the machine's world
- * does with its own chat start and action registry.
+ * answers `agents.run` with `Answer to <prompt>`, lists the one chat `chat-1`, answers `launch.start` with the launch
+ * it was given, and starts a chat in `project`, which the machine's world does with its own chat start and action
+ * registry.
  */
 import { describe, expect, test } from 'bun:test';
 import type * as Server from '../../../../packages/extension/server';
@@ -119,6 +120,27 @@ export function serverContract(open: OpenServerWorld): void {
                 ok: true,
                 value: { ok: false, error: { code: 'permission-denied', message: `${ID} did not ask for the permission chats.send in its manifest` } }
             });
+        });
+
+        test('asks an agent and lists the chats, each only with its permission', async () => {
+            const allowed = await open({ 'agents.run': 'Asks', 'chats.read': 'Lists' });
+            const refused = await open({});
+            const denied = (permission: string): Server.Result<unknown> => ({
+                ok: true,
+                value: { ok: false, error: { code: 'permission-denied', message: `${ID} did not ask for the permission ${permission} in its manifest` } }
+            });
+
+            expect(await allowed.call('asks', 'Hi')).toEqual({ ok: true, value: { ok: true, value: { text: 'Answer to Hi' } } });
+            expect(await allowed.call('chatIds')).toEqual({ ok: true, value: ['chat-1'] });
+            expect(await refused.call('asks', 'Hi')).toEqual(denied('agents.run'));
+            expect(await refused.call('chatIds')).toEqual(denied('chats.read'));
+        });
+
+        test('keeps a secret apart from what it stores, and writes what it logs', async () => {
+            const world = await open({});
+
+            expect(await world.call('hide', 'hunter2')).toEqual({ ok: true, value: ['hunter2', null] });
+            expect(await world.logs()).toContain('Kept a secret');
         });
 
         test('says an event without a payload as one a client hears with none', async () => {

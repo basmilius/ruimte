@@ -29,6 +29,8 @@ const SENDS = 'sends a chat at most 20 messages an hour, each with value undefin
 const NOT_ASKED = 'refuses what the manifest does not ask for, in the words of the machine';
 const CHAT = 'starts a chat a person sees with agents.start, and none without it';
 const TOOL = 'answers an agent through its tool, and has no tool without agents.tools';
+const ASKS = 'asks an agent and lists the chats, each only with its permission';
+const SECRET = 'keeps a secret apart from what it stores, and writes what it logs';
 
 export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, ExtensionApiCoverage>>> = {
     'client/call/agents.start': { scenario: STARTS, refusal: REFUSES },
@@ -85,11 +87,16 @@ export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, E
     'manifest/contribution/id': { scenario: NOT_ASKED },
     'manifest/contribution/name': { scenario: REFUSES },
     'manifest/contribution/permissions': { scenario: REFUSES },
+    'server/call/agents.run': { scenario: ASKS, refusal: ASKS },
     'server/call/agents.start': { scenario: CHAT, refusal: CHAT },
+    'server/call/chats.list': { scenario: ASKS, refusal: ASKS },
     'server/call/chats.send': { scenario: SENDS, refusal: NOT_ASKED },
     'server/call/emit': { scenario: 'says an event without a payload as one a client hears with none' },
+    'server/call/log.info': { scenario: SECRET },
     'server/call/machine.run': { scenario: "checks a machine action's input, and throws for one of the wrong shape" },
     'server/call/onEvent': { scenario: HEARS, cleanup: DEAF },
+    'server/call/secrets.get': { scenario: SECRET },
+    'server/call/secrets.set': { scenario: SECRET },
     'server/call/storage.delete': { scenario: 'reads a key it deleted as one it never wrote' },
     'server/call/storage.get': { scenario: LOADS },
     'server/call/storage.set': { scenario: LOADS },
@@ -260,14 +267,9 @@ export const EXTENSION_API_KNOWN_GAPS: Readonly<Partial<Record<ExtensionApiRow, 
         'manifest/contribution/version'
     ]),
     ...gaps("The probe's `server/` does not use it yet.", [
-        'server/call/agents.run',
-        'server/call/chats.list',
         'server/call/chats.read',
         'server/call/log.error',
-        'server/call/log.info',
         'server/call/schedule',
-        'server/call/secrets.get',
-        'server/call/secrets.set',
         'server/event/chat.status',
         'server/event/session.status',
         'server/provider/defineLanguageServer',
