@@ -1160,7 +1160,8 @@ struct ChatEntryView: View {
                 }
             case .selectionSwitch:
                 if let from = entry.switchedFrom, let to = entry.items.first?.item.turnItem?.selection {
-                    ChatSelectionSwitchRule(from: from, to: to, models: presentation.chatModels())
+                    ChatSelectionSwitchRule(
+                        from: from, to: to, models: presentation.chatModels(), provider: presentation.info?.provider)
                 }
             case .changedFiles:
                 if let turn = entry.items.first {
