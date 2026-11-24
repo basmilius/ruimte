@@ -2,7 +2,7 @@ import { afterEach } from 'bun:test';
 import { useChats, useProvidersStore } from '@adecore/agents-react/state';
 import { REQUEST_SCHEMAS, type ChatSubagentItem, type ExtensionManifest, type ProjectView, type RequestMap, type RequestType } from '@ruimte/contracts';
 import { contextSelection } from '@ruimte/contracts/extension-context';
-import { projectSettingKey } from '@ruimte/contracts/extension-providers';
+import { definedLanguageOf, projectSettingKey } from '@ruimte/contracts/extension-providers';
 import { act, createElement, type ComponentType, type ReactElement } from 'react';
 import { runAction } from '@/extensions/action-runs';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
@@ -481,6 +481,7 @@ clientContract(async (permissions, seed = {}) => {
                 .getState()
                 .projectSettings.filter((section) => section.id === ID)
                 .map((section) => section.title),
+        languageOf: (path) => definedLanguageOf(useContributions.getState().languages, path)?.language ?? null,
         // The dialog's row writes the field to the machine, which tells every window that reads it.
         async chooseProjectSetting(key, value) {
             const kept = projectSettingKey(SEED.project.id, key);

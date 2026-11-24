@@ -186,6 +186,28 @@ defineFileIcon({
 
 A viewer opens every file with those extensions, with Ruimte's own view one click away. The file viewer gets `file` with its `text`; the diff viewer gets `file` and the `diff`.
 
+## Languages
+
+`defineLanguage` gives a file type Ruimte does not know its colors in the editor and the viewer:
+
+```ts
+defineLanguage({
+    id: 'lintel',
+    name: 'Lintel',
+    extensions: ['lintel'],
+    filenames: ['Lintelfile'],
+    grammar: 'assets/lintel.tmLanguage.json'
+});
+```
+
+`grammar` is the path of a TextMate grammar in your pack, as JSON with a `scopeName`, at most 512 KB. Put it under `assets/`, which `pack` copies. Ruimte reads it when the first such file opens. A grammar it cannot read leaves the file plain text, and `ruimte extension dev` prints why.
+
+`extensions` are without the dot, and `filenames` are whole names. `id` is lowercase letters, digits and dashes. It is the name a [language server](/docs/extensions/server#language-servers) of yours lists under `languages`, so the grammar, the server and a `defineFileIcon` for the same extension make a language pack.
+
+A file whose language Ruimte already knows keeps it, and so does a language Ruimte has a grammar for. A grammar stays loaded until the window reloads, so reload after you change one.
+
+This is a [proposed part](/docs/extensions/manifest#proposed-parts): name `languages` under `proposed`. In a test, `host.languageOf(path)` answers the id of your language for a file.
+
 ## Settings, storage and words
 
 They have a page of their own: [Settings and storage](/docs/extensions/settings).

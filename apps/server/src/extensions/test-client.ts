@@ -6,7 +6,7 @@ import { parseExtensionActionInput, type ExtensionActionName } from '@ruimte/con
  */
 import { extensionWord, lazyComponentProblem, shortcutProblem } from '@ruimte/contracts/extension-client';
 import { contextSelection } from '@ruimte/contracts/extension-context';
-import { clientPointRefusal, projectSettingKey } from '@ruimte/contracts/extension-providers';
+import { clientPointRefusal, languageProblem, projectSettingKey } from '@ruimte/contracts/extension-providers';
 import { NODE_ACCENT_COLORS } from '@ruimte/contracts/node-accents';
 import type * as PublicClient from '../../../../packages/extension/client';
 import { terminalProfileRefusal, terminalWriteRefusal } from './policy.ts';
@@ -364,6 +364,17 @@ export function clientApi(host: TestHost) {
         defineDiffViewer(viewer: { id: string; component: unknown }): void {
             assertLazy(viewer, `defineDiffViewer ${viewer.id}`);
             host.record('diffViewer', viewer);
+        },
+        defineLanguage(language: { id: string; name: string; extensions: string[]; filenames?: string[]; grammar: string }): void {
+            mayUse('defineLanguage');
+
+            const problem = languageProblem(language);
+
+            if (problem !== null) {
+                throw new TypeError(problem);
+            }
+
+            host.record('language', language);
         },
         defineFileIcon: (icon: object): void => host.record('fileIcon', icon),
         defineVoiceAction: (action: object): void => host.record('voiceAction', action),

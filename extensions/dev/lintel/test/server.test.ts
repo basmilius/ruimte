@@ -140,7 +140,7 @@ describe('Lintel on the machine', () => {
             'dev.lintel did not ask for the permission problems.provide in its manifest'
         );
         await expect(createTestServer<LintelServer>({ provenance: 'installed' })).rejects.toThrow(
-            'This extension uses a part of Ruimte that is not final yet (problemSources). It works while its author develops it, and an installed extension cannot use it.'
+            'This extension uses a part of Ruimte that is not final yet (problemSources, languages'
         );
     });
 });

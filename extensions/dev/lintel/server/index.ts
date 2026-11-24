@@ -1,4 +1,15 @@
-import { defineProblemSource, defineServer, files, log, onEvent, problems, schedule, type FileProblems, type ProjectRef } from '@ruimte/extension/server';
+import {
+    defineLanguageServer,
+    defineProblemSource,
+    defineServer,
+    files,
+    log,
+    onEvent,
+    problems,
+    schedule,
+    type FileProblems,
+    type ProjectRef
+} from '@ruimte/extension/server';
 import { problemsIn } from './lint';
 import { CHECKED, SKIPPED } from './service';
 
@@ -152,6 +163,15 @@ const api = defineServer({
         await followed.checking;
 
         return { files: followed.reported.size, problems: followed.found };
+    },
+    /*
+     * Adds a server for the `.lintel` files `client/` defines as a language, listed in Settings like one a person
+     * added. Lintel ships no server, so the program only echoes; null once it is added, or why it was not.
+     */
+    async addConfigServer() {
+        const added = await defineLanguageServer({ name: 'Lintel config', command: 'cat', languages: ['lintel'], patterns: ['*.lintel', 'Lintelfile'] });
+
+        return added.ok ? null : added.error.message;
     }
 });
 

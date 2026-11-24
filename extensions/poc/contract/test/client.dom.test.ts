@@ -117,6 +117,7 @@ clientContract(async (permissions, seed = {}) => {
         // An extension under test is never one Ruimte ships, which alone gets a section of its own.
         settingsSections: () => [],
         projectSettings: () => host.definitions.flatMap(({ kind, definition }) => (kind === 'projectSettings' ? [definition.title ?? NAME] : [])),
+        languageOf: (path) => host.languageOf(path),
         chooseProjectSetting: async (key, value) => host.setProjectSetting(key, value)
     };
 });

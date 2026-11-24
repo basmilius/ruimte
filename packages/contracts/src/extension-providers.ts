@@ -45,8 +45,65 @@ export interface ExtensionClientPoint {
  * before its code runs, so a part here has no ids under `provides` and no permission of its own.
  */
 export const EXTENSION_CLIENT_POINTS: Readonly<Record<string, ExtensionClientPoint>> = {
-    projectSettings: { define: 'defineProjectSettings', proposed: true }
+    projectSettings: { define: 'defineProjectSettings', proposed: true },
+    languages: { define: 'defineLanguage', proposed: true }
 };
+
+// The most a grammar of an extension's language holds, as the bytes of its JSON file in the pack.
+export const MAX_LANGUAGE_GRAMMAR_BYTES = 512 * 1024;
+
+interface DefinedLanguage {
+    readonly id?: unknown;
+    readonly name?: unknown;
+    readonly extensions?: unknown;
+    readonly filenames?: unknown;
+    readonly grammar?: unknown;
+}
+
+function names(value: unknown): value is readonly string[] {
+    return Array.isArray(value) && value.every((each) => typeof each === 'string' && each.length > 0 && each.length <= 64 && !/[\\/]/.test(each));
+}
+
+/*
+ * Why a language an extension defines is none Ruimte takes, or null: an id the highlighter and a language server can
+ * name, files it covers, and a grammar that is a JSON file of its own pack.
+ */
+export function languageProblem(language: DefinedLanguage): string | null {
+    const { id, name, extensions, filenames = [], grammar } = language;
+
+    if (typeof id !== 'string' || !/^[a-z][a-z0-9-]{0,39}$/.test(id)) {
+        return 'defineLanguage: id is lowercase letters, digits and dashes, starting with a letter';
+    }
+
+    if (typeof name !== 'string' || name.length === 0 || name.length > 60) {
+        return `defineLanguage ${id}: name is 1 to 60 characters`;
+    }
+
+    if (!names(extensions) || !names(filenames) || extensions.length + filenames.length === 0 || extensions.length + filenames.length > 32) {
+        return `defineLanguage ${id}: extensions and filenames are 1 to 32 names without a slash, such as lintel or Lintelfile`;
+    }
+
+    if (typeof grammar !== 'string' || !/^[^/.:][^:]*\.json$/.test(grammar) || grammar.split('/').includes('..')) {
+        return `defineLanguage ${id}: grammar is the path of a JSON file in the pack, such as assets/${id}.tmLanguage.json`;
+    }
+
+    return null;
+}
+
+/* The language of an extension a file is in, by its name: a whole file name first, then what follows its last dot. */
+export function definedLanguageOf<Language extends { readonly extensions: readonly string[]; readonly filenames: readonly string[] }>(
+    languages: readonly Language[],
+    path: string
+): Language | null {
+    const name = path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1).toLowerCase();
+    const dot = name.lastIndexOf('.');
+    const extension = dot <= 0 ? null : name.slice(dot + 1);
+
+    return (
+        languages.find((language) => language.filenames.some((each) => each.toLowerCase() === name)) ??
+        (extension === null ? null : (languages.find((language) => language.extensions.some((each) => each.toLowerCase() === extension)) ?? null))
+    );
+}
 
 // The most launches one launch source lists in a project; the rest is cut, so a source cannot fill the menu.
 export const MAX_SOURCED_LAUNCHES = 64;

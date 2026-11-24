@@ -52,6 +52,7 @@ export const definePaletteSource = call('definePaletteSource');
 export const defineSlashCommand = call('defineSlashCommand');
 export const defineReference = call('defineReference');
 export const defineDiffViewer = call('defineDiffViewer');
+export const defineLanguage = call('defineLanguage');
 export const defineFileIcon = call('defineFileIcon');
 export const defineVoiceAction = call('defineVoiceAction');
 export const defineTemplate = call('defineTemplate');

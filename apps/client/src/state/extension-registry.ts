@@ -219,6 +219,17 @@ export interface ProjectSettingsContribution {
     component: ComponentType;
 }
 
+/* A language an extension defined: the files it covers. Its grammar waits with the highlighter (`code-highlighter.ts`). */
+export interface LanguageContribution {
+    // `<extension id>/<language>`.
+    id: string;
+    // What the highlighter and a language server know it by.
+    language: string;
+    name: string;
+    extensions: readonly string[];
+    filenames: readonly string[];
+}
+
 /* The section of an extension among those of a project's settings, which no section of Ruimte's own is named like. */
 export function projectSettingsSectionId(id: string): string {
     return `extension:${id}`;
@@ -259,6 +270,7 @@ export interface Contributions {
     extensionSettings: readonly ExtensionSettingsContribution[];
     extensionSchemas: readonly ExtensionSchemaContribution[];
     projectSettings: readonly ProjectSettingsContribution[];
+    languages: readonly LanguageContribution[];
 }
 
 type ContributionKind = keyof Contributions;
@@ -285,7 +297,8 @@ export const useContributions = create<Contributions>(() => ({
     commands: [],
     extensionSettings: [],
     extensionSchemas: [],
-    projectSettings: []
+    projectSettings: [],
+    languages: []
 }));
 
 /* Whether a stored entry is an extension's: every Ruimte keeps it as an unknown kind, so it survives one without the extension. */

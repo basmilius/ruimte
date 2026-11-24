@@ -3,6 +3,7 @@ import { ErrorBoundary } from '@adecore/ui';
 import * as format from '@adecore/ui/format';
 import {
     clientPointRefusal,
+    languageProblem,
     projectSettingKey,
     extensionActionCall,
     extensionAgentStatus,
@@ -32,6 +33,7 @@ import { createContext, createElement, lazy, Suspense, use, useContext, useEffec
 import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
 import { accentColor } from '@/canvas-model/accents';
+import { registerGrammar } from '@/code-highlighter';
 import { folderWatches } from '@/controllers/fs-watch';
 import { databaseConnections } from '@/database/connections';
 import { desktop } from '@/desktop/bridge';
@@ -56,6 +58,7 @@ import { ExtensionChat } from '@/extensions/host/ExtensionChat';
 import { askHost, openOverlay, type OpenOverlay } from '@/extensions/host/host-dialog-state';
 import { useMachineStorage } from '@/extensions/host/machine-storage';
 import { namedIcon } from '@/extensions/host/named-icon';
+import { fetchGrammar } from '@/extensions/languages';
 import { extensionRequest } from '@/extensions/machine-request';
 import { ProjectSchemaSettings } from '@/extensions/ProjectSchemaSettings';
 import { baseContext, nodeInfoIn, useNodeInfo, useNodeSources, type NodeInfo } from '@/extensions/slots';
@@ -949,6 +952,24 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 extensions: viewer.extensions.map((name) => name.toLowerCase()),
                 component: surfaceOf(extension, viewer) as ComponentType<{ file: { path: string; name: string; extension: string }; diff: string }>
             });
+        },
+        defineLanguage(language: { id: string; name: string; extensions: string[]; filenames?: string[]; grammar: string }) {
+            mayUse('defineLanguage');
+
+            const problem = languageProblem(language);
+
+            if (problem !== null) {
+                throw new TypeError(problem);
+            }
+
+            add('languages', {
+                id: `${id}/${language.id}`,
+                language: language.id,
+                name: language.name,
+                extensions: language.extensions,
+                filenames: language.filenames ?? []
+            });
+            hold(registerGrammar(language.id, () => fetchGrammar(`${extension.base}${language.grammar}`), reportFailure(`defineLanguage ${language.id}`)));
         },
         defineFileIcon(icon: { extensions: string[]; path: string }) {
             hold(addFileIcons(`${extension.base}${icon.path}`, icon.extensions));

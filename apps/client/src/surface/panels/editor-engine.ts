@@ -1,6 +1,6 @@
 import type { EditorEngine } from '@adecore/editor';
 import { isApplePlatform } from '@adecore/ui';
-import { codeHighlighter } from '@/code-highlighter';
+import { codeHighlighter, ensureGrammar } from '@/code-highlighter';
 import { currentEditorKeymap } from '@/surface/shortcut-overrides';
 import { shellShortcuts } from '@/surface/terminal-keymap';
 import SearchWorker from './search.worker.ts?worker';
@@ -30,9 +30,14 @@ export function loadEditorEngine(): Promise<EditorEngine> {
 async function createEngine(): Promise<EditorEngine> {
     const apple = isApplePlatform();
     const { createSmartEditorEngine, shikiScopeColors, shikiTokenizers } = await import('@adecore/editor');
+    const tokenizers = shikiTokenizers(codeHighlighter);
     return createSmartEditorEngine({
         searchWorker: () => new SearchWorker(),
-        tokenizer: shikiTokenizers(codeHighlighter),
+        // The grammar of a language an extension defined goes in first, since the editor asks Shiki for it by name.
+        tokenizer: async (language, theme, text) => {
+            await ensureGrammar(language);
+            return tokenizers(language, theme, text);
+        },
         scopeColors: shikiScopeColors(codeHighlighter),
         // Asked on every key press, so a key a person rebinds reaches an editor that is already open.
         handBack: () => shellShortcuts(apple),

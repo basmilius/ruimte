@@ -124,6 +124,7 @@ export const EXTENSION_API_INVENTORY = {
     'client/provider/defineExtensionSettings': {},
     'client/provider/defineFileIcon': {},
     'client/provider/defineFileViewer': {},
+    'client/provider/defineLanguage': {},
     'client/provider/defineMarkdownBlock': {},
     'client/provider/defineMenu': {},
     'client/provider/defineNode': {},

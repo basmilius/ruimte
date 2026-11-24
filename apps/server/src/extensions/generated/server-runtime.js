@@ -104,8 +104,10 @@ var EXTENSION_PROVIDER_POINTS = {
   slashCommands: { define: "defineSlashCommand", permission: "composer.provide", proposed: true }
 };
 var EXTENSION_CLIENT_POINTS = {
-  projectSettings: { define: "defineProjectSettings", proposed: true }
+  projectSettings: { define: "defineProjectSettings", proposed: true },
+  languages: { define: "defineLanguage", proposed: true }
 };
+var MAX_LANGUAGE_GRAMMAR_BYTES = 512 * 1024;
 var EXTENSION_PROPOSED_PARTS = [
   ...Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true),
   ...Object.keys(EXTENSION_CLIENT_POINTS).filter((kind) => EXTENSION_CLIENT_POINTS[kind]?.proposed === true)

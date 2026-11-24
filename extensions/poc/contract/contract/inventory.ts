@@ -102,6 +102,10 @@ export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, E
     'client/provider/defineExtensionSettings': {
         scenario: 'keeps the settings page of an extension Ruimte does not ship under Extensions, also when it asks for a section'
     },
+    'client/provider/defineLanguage': {
+        scenario: 'covers the files of a language of its own by extension and by name, and refuses a grammar outside its pack',
+        refusal: 'covers no file with a language while its manifest does not name the part as proposed'
+    },
     'client/provider/defineNode': { scenario: NODE },
     'client/provider/defineProjectSettings': { scenario: PROJECT_SETTING, refusal: NO_PROJECT_SETTING },
     'client/provider/defineView': { scenario: 'keeps a view of its own as a view of a kind Ruimte does not know, as useViews reads it' },

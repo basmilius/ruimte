@@ -4,7 +4,7 @@
  */
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { projectSettingKey } from '@ruimte/contracts/extension-providers';
+import { definedLanguageOf, projectSettingKey } from '@ruimte/contracts/extension-providers';
 import type * as PublicClient from '../../../../packages/extension/client';
 import type * as PublicTesting from '../../../../packages/extension/testing';
 import { clientApi, type ClientApi } from './test-client.ts';
@@ -68,6 +68,15 @@ function publicHost(host: TestHost, api: ClientApi): PublicTesting.TestHost {
         node: (id) => host.defined('node', id),
         card: (id) => host.defined('sidebarCard', id),
         overlay: (id) => host.defined('overlay', id),
+        languageOf(path) {
+            const languages = host.definitions.flatMap(({ kind, definition }) =>
+                kind === 'language'
+                    ? [{ id: String(definition.id), extensions: definition.extensions as string[], filenames: (definition.filenames ?? []) as string[] }]
+                    : []
+            );
+
+            return definedLanguageOf(languages, path)?.id ?? null;
+        },
         context: (place, extra) => host.context(place, extra) as never,
         slot: (definition, place, extra) => host.slot(definition, place, extra),
         run: (definition, place, extra) => host.run(definition, place, extra),

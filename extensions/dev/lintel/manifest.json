@@ -5,11 +5,12 @@
     "api": 1,
     "publisher": "Ruimte",
     "category": "Code quality",
-    "description": "Checks the files of a project against a few fixed rules and lists what it finds with the problems of the editor.",
+    "description": "Checks the files of a project against a few fixed rules and lists what it finds with the problems of the editor. Colors its own config files.",
     "color": "#b45309",
     "autostart": true,
     "permissions": {
         "files.read": "Reads the files of the project it checks",
+        "languages.servers": "Adds a language server for its config files when you ask",
         "problems.provide": "Lists what it finds with the problems of the editor",
         "projects.read": "Checks a project while you have it open",
         "clock": "Checks every open project again every five minutes"
@@ -17,5 +18,5 @@
     "provides": {
         "problemSources": ["rules"]
     },
-    "proposed": ["problemSources"]
+    "proposed": ["problemSources", "languages"]
 }

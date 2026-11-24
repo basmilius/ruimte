@@ -203,6 +203,8 @@ export interface TestHost {
     node(id: string): TestDefinition;
     card(id: string): TestDefinition;
     overlay(id: string): TestDefinition;
+    /** The id of the language `defineLanguage` gave a file with this name or path, or null for a file none of yours covers. */
+    languageOf(path: string): string | null;
     /** What every slot tells at this place, filled with the project, view, machine and theme, and the selection where the place tells it. A `{ id }` of a node of the project becomes its `NodeInfo`. */
     context<Place extends SlotName>(place: Place, extra?: Partial<Record<keyof SlotContexts[Place], unknown>>): ContextOf<Place>;
     /** How an action, menu or widget shows at this place, or null where it does not. An unknown place throws. */

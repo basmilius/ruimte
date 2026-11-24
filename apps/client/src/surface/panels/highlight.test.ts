@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { getSingletonHighlighter } from 'shiki';
-import { codeHighlighter } from '@/code-highlighter';
+import { codeHighlighter, registerGrammar } from '@/code-highlighter';
 import { CODE_PALETTES } from '../../code-themes';
 import { highlightCode, highlightDocumentChunks } from './highlight';
 
@@ -8,6 +8,77 @@ import { highlightCode, highlightDocumentChunks } from './highlight';
 // and leaves the rest of it one token. The shorthand `highlightCode` draws with shares this singleton.
 const warm = await getSingletonHighlighter({ themes: ['github-dark'], langs: ['typescript'] });
 warm.codeToTokensBase('const answer = 42;', { lang: 'typescript', theme: 'github-dark', tokenizeTimeLimit: 0 });
+
+const PROBE_GRAMMAR = {
+    scopeName: 'source.probe',
+    patterns: [
+        { name: 'comment.line.number-sign.probe', match: '#.*$' },
+        { name: 'keyword.control.probe', match: '\\brule\\b' }
+    ]
+};
+
+describe('a grammar registered for a language Shiki does not bundle', () => {
+    test('colors a snippet and a whole file of that language, read once and only when a file asks', async () => {
+        let reads = 0;
+        const stop = registerGrammar(
+            'probe-language',
+            async () => {
+                reads += 1;
+
+                return PROBE_GRAMMAR;
+            },
+            () => undefined
+        );
+
+        expect(reads).toBe(0);
+
+        const snippet = await highlightCode('rule one # why', 'probe-language', 'ruimte-dark');
+        const document = await highlightDocumentChunks(['rule one # why'], 'probe-language', 'ruimte-dark')(0);
+
+        expect(snippet.toLowerCase()).toContain(CODE_PALETTES.dark.colors.keyword);
+        expect(snippet.toLowerCase()).toContain(CODE_PALETTES.dark.colors.comment);
+        expect(document.toLowerCase()).toContain(CODE_PALETTES.dark.colors.comment);
+        expect(reads).toBe(1);
+
+        stop();
+    });
+
+    test('leaves the file plain text and says why when the grammar cannot be read', async () => {
+        const failures: string[] = [];
+        const stop = registerGrammar(
+            'probe-broken',
+            async () => {
+                throw new Error('the grammar is over 512 KB');
+            },
+            (reason) => failures.push(reason)
+        );
+        const html = await highlightCode('rule one # why', 'probe-broken', 'ruimte-dark');
+
+        expect(html).toContain('rule one # why');
+        expect(failures).toEqual(['the grammar is over 512 KB']);
+
+        stop();
+    });
+
+    test('never replaces the grammar of a language Ruimte colors itself', async () => {
+        let reads = 0;
+        const stop = registerGrammar(
+            'typescript',
+            async () => {
+                reads += 1;
+
+                return PROBE_GRAMMAR;
+            },
+            () => undefined
+        );
+        const html = await highlightCode('const kept = 1; // the other snippet', 'typescript', 'ruimte-dark');
+
+        expect(html.toLowerCase()).toContain(CODE_PALETTES.dark.colors.keyword);
+        expect(reads).toBe(0);
+
+        stop();
+    });
+});
 
 describe('highlighting code', () => {
     test('draws in one of our own themes by its id', async () => {

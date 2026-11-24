@@ -118,6 +118,8 @@ export interface ClientWorld {
     settingsSections(): string[];
     /* The title of the section this extension has in the settings of the project in front, if it has one. */
     projectSettings(): string[];
+    /* The language of this extension a file is colored in, by its path, or null for a file none of its languages covers. */
+    languageOf(path: string): string | null;
     /* A person choosing a value for a field of that section. */
     chooseProjectSetting(key: string, value: boolean | string): Promise<void>;
 }
@@ -922,6 +924,29 @@ export function clientContract(open: OpenClientWorld): void {
                 'defineProjectSettings is still proposed; name projectSettings under proposed in manifest.json'
             );
             expect(world.projectSettings()).toEqual([]);
+        });
+
+        test('covers the files of a language of its own by extension and by name, and refuses a grammar outside its pack', async () => {
+            const world = await open({}, { proposed: ['languages'] });
+            const probe = { id: 'probe', name: 'Probe', extensions: ['probe'], filenames: ['Probefile'], grammar: 'assets/probe.tmLanguage.json' };
+
+            world.api.defineLanguage(probe);
+
+            expect(world.languageOf(`${SEED.project.folder}/rules.PROBE`)).toBe('probe');
+            expect(world.languageOf(`${SEED.project.folder}/sub/Probefile`)).toBe('probe');
+            expect(world.languageOf(`${SEED.project.folder}/notes.md`)).toBeNull();
+            expect(() => world.api.defineLanguage({ ...probe, id: 'other', grammar: '../other.json' })).toThrow(TypeError);
+            expect(() => world.api.defineLanguage({ ...probe, id: 'Other' })).toThrow(TypeError);
+            expect(() => world.api.defineLanguage({ ...probe, id: 'other', extensions: [], filenames: [] })).toThrow(TypeError);
+        });
+
+        test('covers no file with a language while its manifest does not name the part as proposed', async () => {
+            const world = await open({});
+
+            expect(() => world.api.defineLanguage({ id: 'probe', name: 'Probe', extensions: ['probe'], grammar: 'assets/probe.tmLanguage.json' })).toThrow(
+                'defineLanguage is still proposed; name languages under proposed in manifest.json'
+            );
+            expect(world.languageOf(`${SEED.project.folder}/rules.probe`)).toBeNull();
         });
 
         test('hands out the rows and sections of a settings page with the components', async () => {

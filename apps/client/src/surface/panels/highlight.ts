@@ -1,5 +1,5 @@
 import type { ShikiTransformer } from 'shiki';
-import { codeHighlighter } from '@/code-highlighter';
+import { codeHighlighter, ensureGrammar } from '@/code-highlighter';
 import { shikiThemeOf } from '@/code-themes';
 
 type Highlight = (code: string, language: string, theme: string, document: boolean) => Promise<string>;
@@ -29,9 +29,11 @@ function loadHighlighter(): Promise<Highlight> {
         ([{ bundledLanguages }, { documentLanguageOf, loadGrammar }]) =>
             async (code, language, theme, document) => {
                 const grammar = document ? documentLanguageOf(language) : language;
-                const known = grammar in bundledLanguages || grammar !== language;
                 // The editor's own loader, so a file reads the same in both and embedded languages come with it.
                 const highlighter = await codeHighlighter();
+                await ensureGrammar(grammar);
+                // A grammar an extension registered counts once it is in; one that failed to load leaves plain text.
+                const known = grammar in bundledLanguages || grammar !== language || highlighter.getLoadedLanguages().includes(grammar);
                 const lang = known && (await loadGrammar(highlighter, grammar, code)) ? grammar : 'text';
                 await withTheme(highlighter, theme);
                 return highlighter.codeToHtml(code, { lang, theme, transformers: [DROP_LINE_BREAKS] });
@@ -70,6 +72,7 @@ export function highlightDocumentChunks(blocks: readonly string[], language: str
         loading ??= Promise.all([codeHighlighter(), import('@adecore/editor/shiki')])
             .then(async ([highlighter, { shikiDocumentHighlighter }]) => {
                 await withTheme(highlighter, theme);
+                await ensureGrammar(language);
                 return shikiDocumentHighlighter(async () => highlighter, blocks, language, theme, [DROP_LINE_BREAKS]);
             })
             .catch((error: unknown) => {

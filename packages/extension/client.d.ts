@@ -130,6 +130,14 @@ export function defineReference(reference: {
 }): void;
 /** Opens a changed file with these extensions in your component, with Ruimte's own diff one click away. */
 export function defineDiffViewer(viewer: { id: string; title: string; extensions: string[]; component: LazyComponent<{ file: FileInfo; diff: string }> }): void;
+/**
+ * A language of your own: the files it covers and the TextMate grammar the editor and the viewer color them with, so a
+ * language pack is more than a language server. `id` is what a language server of yours names under `languages`, in
+ * lowercase letters, digits and dashes. `extensions` are without the dot and `filenames` are whole names, such as
+ * `Lintelfile`. `grammar` is the path of a JSON file in your pack, at most 512 KB, read when the first such file opens.
+ * A language Ruimte knows itself keeps its own grammar. Proposed: name `languages` under `proposed` in the manifest.
+ */
+export function defineLanguage(language: { id: string; name: string; extensions: string[]; filenames?: string[]; grammar: string }): void;
 /** An icon from your pack, by its path, for files with these extensions. */
 export function defineFileIcon(icon: { extensions: string[]; path: string }): void;
 /** What a person can ask for by voice, through extension.voiceList and extension.voiceRun. It answers in words. Type `Input` after `parameters`, a JSON Schema. */
