@@ -51,16 +51,11 @@ async function link(name: string): Promise<void> {
 }
 
 async function launches(): Promise<LaunchesDocument> {
-    const answer = await daemon.request('launches.read', { projectId });
-
-    if (!answer.ok) {
-        throw new Error(answer.error.message);
-    }
-
-    // What the sources list comes in after the answer, as a client hears it with `launches.changed`.
+    // A client's read loads the launches, and what the sources list comes in after its answer, as `launches.changed` tells it.
+    expect(await daemon.request('launches.read', { projectId })).toMatchObject({ ok: true });
     await daemon.bundles.launches.store.resolveAll(projectId);
 
-    return (await daemon.bundles.launches.store.read(projectId)) as LaunchesDocument;
+    return daemon.bundles.launches.store.read(projectId);
 }
 
 function tool(name: string, input: Record<string, unknown> = {}): Promise<string[]> {

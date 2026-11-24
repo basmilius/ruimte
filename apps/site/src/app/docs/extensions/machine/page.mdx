@@ -141,11 +141,24 @@ Each of these calls the machine action of the same name, so `launches.start({ la
 
 | Object | Calls | Permissions |
 | --- | --- | --- |
-| `launches` | `list`, `read`, `start`, `restart`, `stop` | `launches.read` to read, `launches.run` for the rest |
+| `launches` | `list`, `read`, `start`, `restart`, `stop`, `create`, `edit` | `launches.read` to read, `launches.write` for `create` and `edit`, `launches.run` for the rest |
 | `routines` | `list`, `run`, `pause`, `resume` | `routines.read` to list, `routines.run` for the rest |
 | `artifacts` | `list`, `read`, `publish` | `artifacts.read` to read, `artifacts.write` to publish |
 | `browser` | `inspect`, `navigate`, `back`, `forward`, `reload`, `screenshot` | `browser.control` |
 | `devices` | `list`, `inspect`, `screenshot`, `tap`, `launch` | `devices.control` |
+
+`launches.create` adds a launch to the person's own launches, and `launches.edit` changes one. Neither approves anything. The launch starts only after the person approved it from the launch menu, and `launches.start` answers `refused` until then:
+
+```ts
+const added = await launches.create({
+    name: 'Preview',
+    kind: 'service',
+    command: 'bun run preview',
+    url: 'http://localhost:4173'
+});
+```
+
+Each launch in `launches.list` has a `source`: the title of the [launch source](/docs/extensions/server#launch-sources) that lists it, or `null` for a launch of the project's own files. A launch of a source cannot be edited.
 
 A browser or device takes the node it is on:
 

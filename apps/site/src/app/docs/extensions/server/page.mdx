@@ -48,8 +48,43 @@ onEvent('chat.status', ({ chat }) => {
 | `chat.status` | `{ chat }`, a chat that changed what it is doing | `chats.read` |
 | `chat.event` | `{ chatId }`, something new in a chat's thread | `chats.read` |
 | `session.status` | `{ nodeId, status }`, the agent in a terminal | `terminals.read` |
+| `launch.status` | `{ project, launch, state, exitCode }`, a launch that started, came up, is being stopped or ended | `launches.read` |
+| `project.opened` | `{ project }`, with its name and folder, when the first client opens a project | `projects.read` |
+| `project.closed` | `{ project }`, when the last client closed it and nothing of it runs any more | `projects.read` |
 
 Any other name is refused, and the log says why. To follow them while no client is open, set `"autostart": true` in the manifest.
+
+Each event has a shape of its own, smaller than what Ruimte's clients hear. A third argument narrows an event to one project:
+
+```ts
+onEvent('launch.status', ({ launch, state }) => log.info(`${launch} is ${state}`), {
+    project: {
+        id: projectId
+    }
+});
+```
+
+`project.opened` fires for a project a person opens while the server part runs. With `"autostart": true` that is every project, since the server part then starts with the machine.
+
+## Files
+
+With `files.read`, the server part reads the files of a project. It names the project, and a path outside the project folder answers `outside-project`:
+
+```ts
+const project = {
+    id: projectId
+};
+const read = await files.readText(project, 'compose.yaml');
+const listed = await files.list(project, 'src');
+const watching = await files.watch(project, 'compose.yaml', () => log.info('compose.yaml changed'));
+
+if (watching.ok) {
+    // Later, to stop following it.
+    watching.value();
+}
+```
+
+`watch` follows one file, or everything under a folder. It also tells of a file that is not there yet, once someone writes it. Ruimte lets go of every watch when the server part stops.
 
 ## Storage and secrets
 
@@ -156,6 +191,87 @@ Your extension describes the program and Ruimte runs it. The terminal, its scrol
 - `defineTerminalProfile` throws for an id the manifest does not list, so call it as the module loads.
 
 A terminal a person opened with your profile is theirs: `terminals.write` refuses it. Turning the extension off takes the profile out of the menu. A terminal that already runs keeps running, and starts as a plain shell the next time, with a line that says why.
+
+## Launch sources
+
+A launch source lists launches Ruimte finds for a project, such as the services of a compose file or the scripts of a build tool. They show in the launch menu under the title of the source, beside the launches a person made, and agents see them in `launch_list`. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `launchSources` under `proposed`, list the id under `provides.launchSources` and ask for `launches.provide`.
+
+```ts
+defineLaunchSource({
+    id: 'compose',
+    title: 'Compose',
+    async list(project) {
+        const read = await files.readText(project, 'compose.yaml');
+
+        if (!read.ok) {
+            return [];
+        }
+
+        return servicesIn(read.value).map((service) => ({
+            id: service.name,
+            name: service.name,
+            kind: 'service',
+            spawn: {
+                command: 'docker',
+                args: ['compose', 'up', service.name]
+            },
+            fingerprint: digestOf(read.value),
+            port: service.port
+        }));
+    },
+    async watch(project, changed) {
+        const watching = await files.watch(project, 'compose.yaml', changed);
+
+        return watching.ok ? watching.value : () => undefined;
+    }
+});
+```
+
+Your extension describes each launch and Ruimte runs it, so its terminal, status, restart and stop work as for any launch. A source never starts a process itself.
+
+- **A person approves first.** A launch from a source starts only after a person approved it on this machine, as a command from a project file does. The approval covers the command, the folder, the variables and the `fingerprint`. A person approves one launch, or everything the source lists in the project at once.
+- **`fingerprint` is a digest of every file that decides what runs.** When it changes, Ruimte asks the person again, also when the command stayed the same. Ruimte reads the list again before every start, so a launch never runs on a file the person did not see.
+- **`watch` is optional.** Call `changed` when the list should be read again. Without it the menu shows what the source listed last, until a start or a reopened project reads it again.
+- A launch is `service` or `task`, and its `id` is lowercase letters, digits and dashes. Among the launches of a project its id is `<extension id>:<source id>:<id>`, which is what `launch.status` and the `launches` calls name it by.
+- `port` tells Ruimte when a service is up. `cwd` in `spawn` stays inside the project folder or one of its worktrees.
+- A source lists at most 64 launches, and nothing of them is written to a project file. A launch is gone once its source stops listing it, or the extension is turned off.
+- `defineLaunchSource` throws for an id the manifest does not list, so call it as the module loads.
+
+No extension call approves a launch, and neither does an agent.
+
+## Problems
+
+A problem source reports what a linter or a scanner found. Its problems show with the editor's own in the Problems panel, under the title of the source, and agents read them with `language_problems`. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `problemSources` under `proposed`, list the id under `provides.problemSources` and ask for `problems.provide`.
+
+```ts
+defineProblemSource({
+    id: 'rules',
+    title: 'Lintel'
+});
+
+const reported = await problems.report(project, 'rules', [
+    {
+        path: 'src/app.ts',
+        problems: [
+            {
+                line: 12,
+                column: 5,
+                severity: 'warning',
+                message: 'A TODO is left here',
+                code: 'marker'
+            }
+        ]
+    }
+]);
+```
+
+- `report` replaces everything the source said about the files it names, and leaves every other file alone. A file with an empty `problems` is cleared.
+- `clear(project, source)` takes back everything the source said in the project.
+- A `Problem` counts lines and columns from 1. `column`, `endLine`, `endColumn` and `code` are optional, and `severity` is `error`, `warning`, `information` or `hint`.
+- A source holds at most 200 problems per file and 500 files per project. A report past either answers `limit` and changes nothing.
+- Ruimte keeps the problems in memory. They go when the project closes, and when the extension is turned off, changed or removed, so report again when the server part starts.
+
+`defineProblemSource` throws for an id the manifest does not list, and `report` answers `not-found` for a source it did not define.
 
 ## Language servers
 

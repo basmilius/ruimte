@@ -167,6 +167,27 @@ expect(await machine.profile('service-shell').spawn()).toMatchObject({
 });
 ```
 
+Give the project's text files under `files`, by path. `files.readText`, `files.list` and `files.watch` read them, and `writeFile(path, text)` changes one and tells every watch that follows it. `launchSource(id)` asks a launch source what the machine asks it, and `problems` holds what the problem sources reported:
+
+```ts
+const machine = await createTestServer<typeof server>({
+    files: {
+        'compose.yaml': 'services:\n  web:\n    command: bun run dev\n'
+    }
+});
+const source = machine.launchSource('compose');
+const [before] = await source.list();
+
+machine.writeFile('compose.yaml', 'services:\n  web:\n    command: bun run dev --host\n');
+
+const [after] = await source.list();
+
+expect(source.changes).toBe(1);
+expect(after?.fingerprint).not.toBe(before?.fingerprint);
+```
+
+`list` leaves out a launch the machine would not take, and `logs` says why. `fire('project.opened', { project })` and `fire('launch.status', ...)` hand over the machine events of the same name.
+
 A test server runs your extension as `ruimte extension dev` does, so a [proposed part](/docs/extensions/manifest#proposed-parts) works. With `provenance: 'installed'` it runs it as an extension a person installed, and `createTestServer` rejects with what that person reads in Settings. In a test host, `terminals` lists what `terminals.open` opened and what was typed into each.
 
 Each test host and test server loads your files afresh, so no state carries from one test to the next. A package from `node_modules` loads once.

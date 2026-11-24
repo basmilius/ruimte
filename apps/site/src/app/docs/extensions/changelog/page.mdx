@@ -6,6 +6,16 @@ export const metadata = { title: 'Changes to the API' };
 
 API version `1` is a preview. It goes to a small group of invited developers first, and it can still change before Ruimte offers extensions to everyone. Every change lands on this page, newest first, with what an extension has to do about it.
 
+## 1, preview, launch sources and problems (November 2026)
+
+- `defineLaunchSource` in `server/` lists launches Ruimte starts, each only after the person approved its command, folder, variables and fingerprint. It is a proposed part, behind `launches.provide`.
+- `defineProblemSource` and `problems` in `server/` report problems that show with the editor's own and that agents read. Both are a proposed part, behind `problems.provide`.
+- `files` is in `server/` as well, where `readText`, `list` and `watch` name the project.
+- `onEvent` in `server/` hears `launch.status` with `launches.read`, and `project.opened` and `project.closed` with the new permission `projects.read`. It takes a third argument that narrows an event to one project.
+- `launches.create` and `launches.edit` add and change a launch, with the new permission `launches.write`. Neither approves it.
+- A launch in `launches.list` has a `source`, which is `null` for a launch of the project's own files.
+- An extension needs no change.
+
 ## 1, preview, terminals and proposed parts (November 2026)
 
 - `terminals.open` in the client now answers a promise. The machine makes the terminal and starts it, so a write right after it lands. An extension that read its answer without `await` adds one.
