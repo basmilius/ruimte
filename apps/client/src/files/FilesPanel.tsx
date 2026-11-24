@@ -49,7 +49,7 @@ import { useEndpointId } from '@/state/current-endpoint';
 import { useFiles } from '@/state/files';
 import { filesRootOf, useFilesRoot } from '@/state/files-root';
 import { useGit } from '@/state/git';
-import { gitTargets, type GitTarget } from '@/state/git-target';
+import { boundGroupsOf, gitTargets, type BoundGroup, type GitTarget } from '@/state/git-target';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
@@ -131,7 +131,8 @@ export function FilesPanel() {
     const endpointId = useEndpointId();
     const tabLimit = useSettings((s) => s.filesTabLimit);
     const transport = useTransport();
-    const nodes = useCanvas((s) => s.nodes);
+    // One string of the worktree groups: the node map itself is new on every frame of a drag.
+    const boundGroups = useCanvas((s) => JSON.stringify(boundGroupsOf(s.nodes)));
     const projectNodes = useProjectNodes();
     const worktrees = useWorktrees(transport, endpointId, folder);
     const { repos } = useProjectRepos(folder);
@@ -745,7 +746,7 @@ export function FilesPanel() {
         useFilesRoot.getState().pick(rootKey, entry.path);
     };
 
-    const targets = gitTargets(nodes, worktrees, folder, repos);
+    const targets = gitTargets(JSON.parse(boundGroups) as BoundGroup[], worktrees, folder, repos);
     /* The chip names one checkout's branch, or the repositories over a folder of several. */
     const named = worktree === null && repos.length > 1;
     const only = named ? null : (checkouts[0] ?? null);

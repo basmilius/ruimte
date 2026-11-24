@@ -25,7 +25,16 @@ export function useWorldPointer(rootRef: RefObject<HTMLDivElement | null>): Poin
                 });
             }
         };
-        const onLeave = (): void => setPoint(null);
+        const onLeave = (): void => {
+            // A frame still waiting would put the hints back after the pointer left.
+            if (frame !== null) {
+                window.cancelAnimationFrame(frame);
+                frame = null;
+            }
+
+            setPoint(null);
+        };
+
         el.addEventListener('pointermove', onMove);
         el.addEventListener('pointerleave', onLeave);
         return () => {

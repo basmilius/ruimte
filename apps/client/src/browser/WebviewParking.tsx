@@ -72,6 +72,7 @@ function cellBoxOf(measured: Map<HTMLElement, CellBox>, cell: HTMLElement | null
 
 /* Answered once per canvas and kept until its nodes change, since it is asked again on every pan. */
 const coveringCache = new Map<string, Covering>();
+const MAX_COVERINGS = 16;
 
 function coveringIn(viewId: string, canvas: CanvasState): Record<string, PageHole[]> {
     const aimed = canvas.linkDraft?.over ?? null;
@@ -88,6 +89,10 @@ function coveringIn(viewId: string, canvas: CanvasState): Record<string, PageHol
     }
     const ringed = new Set(aimed === null ? canvas.selection : [...canvas.selection, aimed]);
     const over = nodesOverBrowsers(canvas.nodes, canvas.order, canvas.hidden, ringed);
+    // Each entry holds a whole canvas, so the views a person left do not stay for the life of the window.
+    if (coveringCache.size >= MAX_COVERINGS && !coveringCache.has(viewId)) {
+        coveringCache.clear();
+    }
     coveringCache.set(viewId, { nodes: canvas.nodes, order: canvas.order, hidden: canvas.hidden, selection: canvas.selection, aimed, over });
     return over;
 }
@@ -99,9 +104,10 @@ export function WebviewParking() {
 
 // The React Compiler leaves this as written (a `??=`), so its memo stays by hand.
 function DesktopWebviewParking() {
-    // Selects the object and derives the keys separately, since a selector that builds a new array loops forever.
-    const byKey = useBrowser((s) => s.byKey);
-    const keys = useMemo(() => Object.keys(byKey), [byKey]);
+    /* One string, so the list is new only when a page comes or goes: every title, favicon and loading
+       state patches the object, and a new list restarts the effects below with their listeners. */
+    const keyList = useBrowser((s) => Object.keys(s.byKey).join('\n'));
+    const keys = useMemo(() => (keyList === '' ? [] : keyList.split('\n')), [keyList]);
     const hosts = useRef(new Map<string, HTMLDivElement>());
     const clips = useRef(new Map<string, HTMLDivElement>());
     const root = useRef<HTMLDivElement>(null);

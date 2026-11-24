@@ -56,18 +56,23 @@ export function gitTarget(nodes: Record<string, CanvasNode>, selection: string[]
     return { cwd: folder, label: folder === null ? '' : basenameOf(folder), branch: null, kind: 'project' };
 }
 
+/* A group bound to a worktree, as far as the list of checkouts names it. */
+export interface BoundGroup {
+    path: string;
+    title: string;
+}
+
+export function boundGroupsOf(nodes: Record<string, CanvasNode>): BoundGroup[] {
+    return Object.values(nodes).flatMap((node) => (node.kind === 'group' && node.worktree ? [{ path: node.worktree.path, title: node.title }] : []));
+}
+
 /*
  * Every checkout the panel can be pointed at by hand: the repositories of the project folder first,
  * then the worktrees the daemon knows, each with the group that binds it when there is one. The order
  * is the one the daemon reports, so a menu built from this reads the same way twice. A folder whose
  * repositories are not in yet still offers itself, which is every project with exactly one.
  */
-export function gitTargets(
-    nodes: Record<string, CanvasNode>,
-    worktrees: readonly Worktree[],
-    folder: string | null,
-    repos: readonly GitRepo[] = []
-): GitTarget[] {
+export function gitTargets(groups: readonly BoundGroup[], worktrees: readonly Worktree[], folder: string | null, repos: readonly GitRepo[] = []): GitTarget[] {
     const targets: GitTarget[] =
         repos.length > 0
             ? repos.map((repo) => ({
@@ -84,7 +89,7 @@ export function gitTargets(
         if (worktree.missing) {
             continue;
         }
-        const group = Object.values(nodes).find((node) => node.kind === 'group' && node.worktree?.path === worktree.path);
+        const group = groups.find((entry) => entry.path === worktree.path);
         targets.push({
             cwd: worktree.path,
             label: worktree.branch,

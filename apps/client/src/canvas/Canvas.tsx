@@ -221,8 +221,9 @@ export function Canvas() {
         const native = gesture && ((gesture.kind === 'move' && gesture.moved) || gesture.kind === 'resize' || gesture.kind === 'text-resize');
         const lineMove = !gesture && gesturing && selection.some((id) => state.lines[id] !== undefined);
         if (!native && !lineMove && lineDraft === null) {
-            setGuides([]);
-            setGaps([]);
+            // The same empty list when there was nothing, since a new one renders the canvas once more.
+            setGuides((before) => (before.length === 0 ? before : []));
+            setGaps((before) => (before.length === 0 ? before : []));
             return;
         }
         const movingGroups = gesture?.kind === 'move' || lineMove;

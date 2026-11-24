@@ -26,7 +26,7 @@ import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { fileTabOf, useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
-import { gitPlace, gitTarget, gitTargets, type GitPick, type GitTarget } from '@/state/git-target';
+import { boundGroupsOf, gitPlace, gitTarget, gitTargets, type GitPick, type GitTarget } from '@/state/git-target';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useServers } from '@/state/server';
@@ -89,7 +89,7 @@ export function GitPanel() {
     const [picked, setPicked] = useState<GitPick | null>(null);
     const projectNodes = useProjectNodes();
     const { repos, truncated: reposTruncated, reload: reloadRepos } = useProjectRepos(folder);
-    const targets = useMemo(() => gitTargets(nodes, worktrees, folder, repos), [nodes, worktrees, folder, repos]);
+    const targets = useMemo(() => gitTargets(boundGroupsOf(nodes), worktrees, folder, repos), [nodes, worktrees, folder, repos]);
     /* The worktree the panel is in, if it is in one: that is the whole list then, the way it always was. */
     const { worktree, following } = gitPlace(derived, picked, targets);
     const followedNode = following && derived.via !== undefined ? (nodes[derived.via] ?? null) : null;

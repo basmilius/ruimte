@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { CanvasNode } from './canvas.ts';
-import { gitPlace, gitTarget, gitTargets, type GitTarget } from './git-target.ts';
+import { boundGroupsOf, gitPlace, gitTarget, gitTargets, type GitTarget } from './git-target.ts';
 
 function node(id: string, over: Partial<CanvasNode> = {}): CanvasNode {
     return {
@@ -80,7 +80,7 @@ describe('gitTarget', () => {
 
 describe('gitTargets', () => {
     test('a worktree whose folder is gone is no checkout to point at', () => {
-        expect(gitTargets({}, [{ path: '/wt/gone', branch: 'gone', missing: true }], '/repo').map((target) => target.cwd)).toEqual(['/repo']);
+        expect(gitTargets([], [{ path: '/wt/gone', branch: 'gone', missing: true }], '/repo').map((target) => target.cwd)).toEqual(['/repo']);
     });
 
     test('the project folder comes first, then every worktree the daemon knows', () => {
@@ -88,7 +88,7 @@ describe('gitTargets', () => {
             { path: '/wt/feature', branch: 'feature/x' },
             { path: '/wt/fix', branch: 'fix/y' }
         ];
-        expect(gitTargets(nodes(group), worktrees, '/repo')).toEqual([
+        expect(gitTargets(boundGroupsOf(nodes(group)), worktrees, '/repo')).toEqual([
             { cwd: '/repo', label: 'repo', branch: null, kind: 'project' },
             { cwd: '/wt/feature', label: 'feature/x', branch: 'feature/x', kind: 'worktree', group: 'g1' },
             { cwd: '/wt/fix', label: 'fix/y', branch: 'fix/y', kind: 'worktree' }
@@ -100,7 +100,7 @@ describe('gitTargets', () => {
             { path: '/repo', label: 'repo', kind: 'root' as const },
             { path: '/repo/backend', label: 'backend', kind: 'submodule' as const }
         ];
-        expect(gitTargets({}, [], '/repo', repos)).toEqual([
+        expect(gitTargets([], [], '/repo', repos)).toEqual([
             { cwd: '/repo', label: 'repo', branch: null, kind: 'repo' },
             { cwd: '/repo/backend', label: 'backend', branch: null, kind: 'repo' }
         ]);
@@ -108,16 +108,16 @@ describe('gitTargets', () => {
 
     test('a folder that is no repository itself offers only the ones inside it', () => {
         const repos = [{ path: '/apps/one', label: 'one', kind: 'nested' as const }];
-        expect(gitTargets({}, [], '/apps', repos)).toEqual([{ cwd: '/apps/one', label: 'one', branch: null, kind: 'repo' }]);
+        expect(gitTargets([], [], '/apps', repos)).toEqual([{ cwd: '/apps/one', label: 'one', branch: null, kind: 'repo' }]);
     });
 
     test('a folder that is the one repository it holds is not a repository to name', () => {
         const repos = [{ path: '/repo', label: 'repo', kind: 'root' as const }];
-        expect(gitTargets({}, [], '/repo', repos)).toEqual([{ cwd: '/repo', label: 'repo', branch: null, kind: 'project' }]);
+        expect(gitTargets([], [], '/repo', repos)).toEqual([{ cwd: '/repo', label: 'repo', branch: null, kind: 'project' }]);
     });
 
     test('without an open project only supplied worktrees are offered', () => {
-        expect(gitTargets({}, [{ path: '/wt/feature', branch: 'feature/x' }], null).map((target) => target.cwd)).toEqual(['/wt/feature']);
+        expect(gitTargets([], [{ path: '/wt/feature', branch: 'feature/x' }], null).map((target) => target.cwd)).toEqual(['/wt/feature']);
     });
 });
 
