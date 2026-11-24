@@ -141,6 +141,18 @@ For the pieces of a chat without an agent behind them, such as the answer of `ag
 
 With `chats.read`, `chats.list()` and `chats.read(id)` read every chat. With `chats.send`, `chats.send(id, text)` sends a message that wakes the chat. `useChat(id)` follows one chat's status in a component, and `useAgents()` (with `agents.status`) every agent on the canvas. A status is one of `idle`, `running`, `needsYou` and `stopped`, the same word in the client and the server part.
 
+`chats.inspect({ chat })`, also with `chats.read`, says what a chat of the project runs on: its provider, model and permission mode, whether a turn runs, how many messages are queued, and how many sub-agents and background commands it has. `waitsOn` is `approval`, `question` or `null`. You learn that the agent waits, never what it asked, because answering is the person's. From `server/` it is `machine.run(project, 'chat.inspect', { chat })`.
+
+```ts
+const state = await chats.inspect({
+    chat: chatId
+});
+
+if (state.ok && state.value.waitsOn === 'approval') {
+    showBadge(chatId);
+}
+```
+
 `useAgent(node)` reads one agent closely, also with `agents.status`. It takes a node, or a chat or terminal open as a view of its own, and answers `null` where no agent runs, such as a terminal whose command is no agent:
 
 ```tsx

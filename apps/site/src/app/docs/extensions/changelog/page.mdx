@@ -6,6 +6,10 @@ export const metadata = { title: 'Changes to the API' };
 
 API version `1` is a preview. It goes to a small group of invited developers first, and it can still change before Ruimte offers extensions to everyone. Every change lands on this page, newest first, with what an extension has to do about it.
 
+## 1, preview, what a chat waits on (November 2026)
+
+- `chats.inspect` reads what a chat runs on and whether it waits for an approval or an answer, with `chats.read`. In `server/` it is the machine action `chat.inspect`.
+
 ## 1, preview, launch sources and problems (November 2026)
 
 - `defineLaunchSource` in `server/` lists launches Ruimte starts, each only after the person approved its command, folder, variables and fingerprint. It is a proposed part, behind `launches.provide`.
