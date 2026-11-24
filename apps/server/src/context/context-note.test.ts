@@ -4,16 +4,7 @@ import type { ContextSource } from '@ruimte/contracts';
 import { NODE_NEW_KINDS } from '../canvas/node-kinds.ts';
 import { ruimteUiSources, type UiSourceHosts } from '../chat/ui-sources.ts';
 import { tableKinds } from '../providers/table.ts';
-import {
-    chatPrompt,
-    contextChangeNote,
-    contextHint,
-    contextPrompt,
-    hookContext,
-    PUBLISHED_INLINE_NOTE,
-    toolsNote,
-    VISUAL_RESUME_NOTE
-} from './context-note.ts';
+import { chatPrompt, contextChangeNote, contextHint, contextPrompt, hookContext, toolsNote, VISUAL_RESUME_NOTE } from './context-note.ts';
 import { RUIMTE_UI_FENCE } from './ui-fence.ts';
 
 const TOOLS_NOTE = toolsNote({ depth: 0 });
@@ -82,9 +73,8 @@ describe('toolsNote', () => {
         expect(VISUAL_NOTE).toContain('Queries only read, never start work or run writes.');
         expect(VISUAL_NOTE).toContain('`ui_catalog` gives props and rules');
         expect(VISUAL_NOTE).toContain('places: Map, Place');
-        expect(VISUAL_NOTE).toContain('`chat_attach` and `Image attachment=<id>`');
-        expect(VISUAL_NOTE).toContain('a model file (STL, binary glTF, USDZ) with `Model attachment=<id>` only when the person asks to see it');
-        expect(VISUAL_NOTE).toContain('Stat in Stats');
+        expect(VISUAL_NOTE).toContain('`chat_attach` and `attachment=<id>`');
+        expect(VISUAL_NOTE).toContain('Column in Table');
         expect(VISUAL_NOTE).toContain('File and Diff paths, and file links, are relative to your working folder');
         expect(VISUAL_NOTE).toContain('@Query("database.query"');
         expect(VISUAL_NOTE).not.toContain('query show');
@@ -99,14 +89,14 @@ describe('toolsNote', () => {
 
     test('the UI and visual notes together stay within their size budget, listing names and required props instead of every prop', () => {
         const added = toolsNote({ depth: 0, visuals: true, uiFence: RUIMTE_UI_FENCE }).length - toolsNote({ depth: 0 }).length;
-        expect(added).toBeLessThanOrEqual(4750);
+        expect(added).toBeLessThanOrEqual(3800);
         expect(VISUAL_NOTE).not.toContain('Props:');
     });
 
     test('the note without UI blocks stays within its budget, since it rides along with every agent Ruimte starts', () => {
         const everything = { computer: true, device: true, databases: true, reach: true };
-        expect(toolsNote({ depth: 0, ...everything }).length).toBeLessThanOrEqual(2900);
-        expect(toolsNote({ depth: 0, standalone: true, ...everything }).length).toBeLessThanOrEqual(3000);
+        expect(toolsNote({ depth: 0, ...everything }).length).toBeLessThanOrEqual(2550);
+        expect(toolsNote({ depth: 0, standalone: true, ...everything }).length).toBeLessThanOrEqual(2650);
     });
 
     test('sends a question the turn waits on to the question tool, never to Choices, and names no tool', () => {
@@ -114,14 +104,6 @@ describe('toolsNote', () => {
         expect(VISUAL_NOTE).not.toContain('<Choices>');
         expect(VISUAL_NOTE).not.toContain('next steps to pick');
         expect(VISUAL_NOTE).not.toMatch(/AskUserQuestion|request_user_input|ask_user/i);
-    });
-
-    test('tells a chat a person reads not to repeat what it published, and nobody else', () => {
-        expect(toolsNote({ depth: 0, standalone: true })).toContain(PUBLISHED_INLINE_NOTE);
-        expect(toolsNote({ depth: 0 })).toContain(PUBLISHED_INLINE_NOTE);
-        expect(toolsNote({ depth: 1, standalone: true })).not.toContain(PUBLISHED_INLINE_NOTE);
-        expect(toolsNote({ depth: 0, standalone: true, terminal: true })).not.toContain(PUBLISHED_INLINE_NOTE);
-        expect(PUBLISHED_INLINE_NOTE).toContain('does not repeat its content or copy its tables');
     });
 
     test('names computer use only while it is on for this machine', () => {
@@ -380,11 +362,4 @@ describe('contextChangeNote', () => {
         expect(note).toContain('Added: "dev server" (terminal).');
         expect(note).toContain('Removed: "Sprint goals" (text).');
     });
-});
-
-test('every agent learns how to send a notification only when requested', () => {
-    for (const standalone of [false, true]) {
-        const note = toolsNote({ depth: 0, standalone });
-        expect(note).toContain('Call `alert` only when the person asked to be notified, at the moment they named');
-    }
 });

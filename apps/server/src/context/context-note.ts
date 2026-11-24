@@ -58,18 +58,14 @@ function opensAt(depth: number): string | null {
     return null;
 }
 
-const ALERT_NOTE = 'Call `alert` only when the person asked to be notified, at the moment they named.';
-
 /* Said only while a person turned computer use on for this machine; off, the tools are not offered. */
 const COMPUTER_NOTE =
     "The `computer_*` tools operate this Mac's apps, each once the person lets you in; use them only when asked to work in an app. Stay in the background and ask before you set `front`, which interrupts the person. When they pause, take over or stop you, wait for them or ask them instead of calling again in a loop.";
 
 /* Said only to an AI chat while visual replies are on for this machine; a terminal has no thread to show a page in. */
-const VISUAL_FILES_NOTE =
-    "Write a visual's page with `visual_write`, under a name of its own, which keeps it in this chat's storage and never in the project unless the person asks for an export; write the same name to update it.";
+const VISUAL_FILES_NOTE = "Write a visual's page with `visual_write`, never in the project unless the person asks for an export.";
 
-const VISUAL_LAYOUT_NOTE =
-    'Keep the page responsive and check it with `visual_preview` at 360 and 1200 pixels wide; `layout` wide on `visual_show` gives a mockup or dashboard more width than the reply column.';
+const VISUAL_LAYOUT_NOTE = 'Keep the page responsive and check it with `visual_preview` at 360 and 1200 pixels wide.';
 
 const UI_DETAIL_HINT = '`ui_catalog` gives props and rules';
 
@@ -90,8 +86,8 @@ function uiNote(databases: boolean, uiFence: string | undefined): string {
         uiSessionNote({ fenceLanguage: uiFence, catalog: 'names', detailHint: UI_DETAIL_HINT }) +
         [
             'Write a block when the answer has structure a person scans or acts on (numbers to compare, rows, steps, a status, shortcuts after finished work); what a sentence or a short list says stays prose.',
-            'Children sit in their parent: Stat in Stats, Column in Table, Option in Segmented, Select or Radio, Item in Checklist, Choice in Choices, Step in Steps, Event in Timeline, Place in Map, Image in Gallery, Entry in EntityList, Tab in Tabs, Section in Sections, Source in Sources, Part in Parts, Change in Changes, Pane in Columns, Alternative in Alternatives with Pro and Con in it, Branch and Leaf in Tree.',
-            'Show an image file of your own with `chat_attach` and `Image attachment=<id>`, a model file (STL, binary glTF, USDZ) with `Model attachment=<id>` only when the person asks to see it.',
+            'Children sit in their parent, a Stat in Stats: Column in Table, Option in Segmented, Select or Radio, Item in Checklist, Event in Timeline, Place in Map, Image in Gallery, Entry in EntityList, Pane in Columns, Alternative in Alternatives with Pro and Con in it, Branch and Leaf in Tree.',
+            'Show an image or model file of your own with `chat_attach` and `attachment=<id>`.',
             'Each items={$rows} as="row" names each item, read without $ as {row.name}. Chart data rows are {label: "Core", passed: 32, failed: 1}. File and Diff paths, and file links, are relative to your working folder; a Node id is one a Ruimte tool printed.',
             `Live data: $name = @Query("source", {args}), with these sources and arguments: ${sources}. git.status gives the branch, ahead, behind, counts per state and the first files.${databases ? ' database.query rows are records for Table and Chart.' : ''} Sources are literal; arguments may reference local inputs. Queries only read, never start work or run writes.`
         ].join(' ')
@@ -136,13 +132,13 @@ const OUTPUT_NOTE =
 const BACKGROUND_WATCH_NOTE =
     'A background watch (a Monitor, `tail -f`) keeps you, or a helper you started, busy until it ends. Stop it once you have what you waited for, and tell every helper you start to do the same.';
 
-/* Without it a reply rebuilds the report it just published, often as a table of its own. */
+/* Said in a routine's brief; a chat reads the same from the result of `artifact_publish`. Without it a reply rebuilds the report it just published. */
 export const PUBLISHED_INLINE_NOTE =
     'This chat shows what you publish where you published it, so your reply does not repeat its content or copy its tables: a short summary and what stands out are enough.';
 
 // The tool rather than the projects themselves, since which projects are open changes during a session.
 const REACH_NOTE =
-    'This machine lets you reach its other open projects: `project_list` lists them, and the tools that take `project` work there. `project_open`, `project_activate` and `project_close` open one under Recent, show one, or ask the person to close one. Use that only for what the person asks of another project.';
+    'This machine lets you reach its other open projects: `project_list` lists them, and the tools that take `project` work there. Use that only for what the person asks of another project.';
 
 export function toolsNote({
     depth,
@@ -177,8 +173,6 @@ export function toolsNote({
         ...(device ? [DEVICE_NOTE] : []),
         OUTPUT_NOTE,
         BACKGROUND_WATCH_NOTE,
-        // A terminal has no thread to show it in, and a child's reply goes to a parent that never saw it.
-        ...(terminal || !ui ? [] : [PUBLISHED_INLINE_NOTE]),
         'Ids are for tool calls; to the person, name things by their title, never by id.'
     ];
 
@@ -196,7 +190,6 @@ export function toolsNote({
                   ]
                 : []),
             depth === 0 ? CHAT_VIEW_CANVAS_NOTE : HIDDEN_AGENT_PLACEMENT,
-            ALERT_NOTE,
             ...closing
         ].join(' ');
     }
@@ -206,7 +199,6 @@ export function toolsNote({
     return [
         PRODUCT_NOTE,
         standalone ? TERMINAL_VIEW_NOTE : CANVAS_NODE_NOTE,
-        ALERT_NOTE,
         ...(opens === null ? [] : [opens, AGENT_PERMISSION_NOTE, ...(terminal ? [] : [TAG_NOTE])]),
         ...(depth < MAX_AGENT_DEPTH && !standalone ? ['With a `task`, the result comes back as your next message, so end your turn instead of polling.'] : []),
         ...closing
