@@ -2,6 +2,7 @@ import { DATABASES_PANEL } from '@/database/panel';
 import { DEVICES_PANEL } from '@/devices/panel';
 import { FILES_PANEL } from '@/files/panel';
 import { GIT_PANEL } from '@/git/panel';
+import { ISSUES_PANEL } from '@/issues/panel';
 import { PROBLEMS_PANEL } from '@/language/problems-panel';
 import { LAUNCHES_PANEL } from '@/launches/panel';
 import { OUTPUT_PANEL } from '@/output/panel';
@@ -15,5 +16,16 @@ import { VOICE_PANEL } from '@/voice/panel';
  * Control beside the palette's button.
  */
 export function installPanels(): void {
-    panelRegistry.add(FILES_PANEL, GIT_PANEL, DATABASES_PANEL, DEVICES_PANEL, OUTPUT_PANEL, PROCESSES_PANEL, LAUNCHES_PANEL, PROBLEMS_PANEL, VOICE_PANEL);
+    panelRegistry.add(
+        FILES_PANEL,
+        GIT_PANEL,
+        ISSUES_PANEL,
+        DATABASES_PANEL,
+        DEVICES_PANEL,
+        OUTPUT_PANEL,
+        PROCESSES_PANEL,
+        LAUNCHES_PANEL,
+        PROBLEMS_PANEL,
+        VOICE_PANEL
+    );
 }

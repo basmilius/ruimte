@@ -9,12 +9,13 @@ import { SlotRow } from '@/extensions/SlotSurfaces';
 import { TerminalViewAccessory } from '@/extensions/ViewAccessorySlot';
 import { FileMenuItems } from '@/files/FileMenuItems';
 import { LooseGlyph } from '@/files/LooseGlyph';
+import { useChatChangeRead } from '@/issues/chat-facts';
 import { cellAt, type CellAt } from '@/layout/split';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { MaximizedIndicator } from '@/shell/MaximizedIndicator';
 import { TabStrip } from '@/shell/TabStrip';
 import { useCellBarSlot } from '@/shell/top-row-slot';
-import { useHasViewToolbar, useViewToolbarLeads } from '@/shell/view-toolbar';
+import { chatIdOf, useHasViewToolbar, useViewToolbarLeads } from '@/shell/view-toolbar';
 import { ViewToolbar } from '@/shell/ViewToolbar';
 import { useDocument } from '@/state/document';
 import { isLooseView, viewGlyphOf, type CellView } from '@/surface/cell-view';
@@ -98,6 +99,8 @@ export function CellToolbar({
     const hosted = tabs !== undefined;
     const hasViewToolbar = useHasViewToolbar(view);
     const leads = useViewToolbarLeads(view);
+    // The cell is there before its bar shows anything, so the change of a chat's branch is asked for from here.
+    useChatChangeRead(chatIdOf(view));
     /* A lone cell with nothing to do takes no bar. The wrapper stays, so the body keeps its place
        in the tree and a session inside it survives the bar coming and going. */
     const bare = !hosted && !closable && !hasViewToolbar;

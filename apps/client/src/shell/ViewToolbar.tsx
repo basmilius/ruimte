@@ -6,6 +6,8 @@ import { DesignActions } from '@/design/DesignActions';
 import { DeviceToolbar } from '@/devices/DeviceBody';
 import { useDictation } from '@/dictation/controller';
 import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
+import { hasHostFacts, useChatHostFacts } from '@/issues/chat-facts';
+import { HostPills } from '@/issues/ChatHostPills';
 import { BrowserToolbar } from '@/nodes/BrowserBody';
 import { ForkPill } from '@/nodes/ForkPill';
 import { PlanPill } from '@/plan/PlanPill';
@@ -26,6 +28,8 @@ export function ViewToolbar({ view, focused }: { view: CellView | null; focused:
     const dictationEnabled = useDictation((state) => state.model?.enabled === true);
     const forked = useIsFork(view);
     const planned = useHasPlans(chatIdOf(view));
+    const hostFacts = useChatHostFacts(chatIdOf(view));
+    const hosted = hasHostFacts(hostFacts);
     const endpointId = useEndpointId();
     const ports = useSessionPortControl(view?.kind === 'terminal' ? view.id : '');
     const operating = useNodeComputerSession(endpointId, view?.kind === 'terminal' ? view.id : chatIdOf(view)) !== null;
@@ -66,13 +70,14 @@ export function ViewToolbar({ view, focused }: { view: CellView | null; focused:
         );
     }
     if (view.kind === 'chat') {
-        if (!forked && !planned && !operating) {
+        if (!forked && !planned && !hosted && !operating) {
             return null;
         }
         return (
             <div className="flex min-w-0 grow items-center gap-1.5">
                 {forked && <ForkPill chatId={view.id} />}
                 {planned && <PlanPill chatId={view.id} />}
+                {hosted && <HostPills {...hostFacts} />}
                 {operating && <ComputerIndicator nodeId={view.id} />}
             </div>
         );

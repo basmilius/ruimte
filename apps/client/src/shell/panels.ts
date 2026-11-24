@@ -2,6 +2,8 @@ import type { LucideIcon } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { panelRegistry, type PanelDefinition } from '@/registry/panels';
 import { useContributions, type PanelContribution, type PanelGroup } from '@/state/extension-registry';
+import { useOfferedPanels } from '@/state/offered-panels';
+import { panelTraits } from '@/state/panel-traits';
 import { panelHidden, type PanelKind } from '@/state/ui';
 
 export type { PanelGroup };
@@ -57,5 +59,9 @@ export function closesFromRail(kind: PanelKind): boolean {
 }
 
 export function useToolbarPanels(scratch: boolean): readonly PanelEntry[] {
-    return usePanelEntries().filter((entry) => entry.toolbar && !panelHidden(entry.kind, scratch));
+    const offered = useOfferedPanels((state) => state.offered);
+
+    return usePanelEntries().filter(
+        (entry) => entry.toolbar && !panelHidden(entry.kind, scratch) && (panelTraits(entry.kind).onOffer !== true || offered[entry.kind] === true)
+    );
 }
