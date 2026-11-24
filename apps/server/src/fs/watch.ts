@@ -71,7 +71,8 @@ export class FolderWatcher {
                 // A platform that reports no name could have touched anything under the root.
                 state.touched.add(name === null ? root : dirname(join(root, name)));
 
-                if (name === null) {
+                // Past the most an event carries the names are dropped here, so a build that writes a million files holds none of them.
+                if (name === null || (state.changedPaths?.size ?? 0) > MAX_CHANGED_PATHS) {
                     state.changedPaths = null;
                 } else {
                     state.changedPaths?.add(join(root, name));

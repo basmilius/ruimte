@@ -184,9 +184,11 @@ async function searchWithRipgrep(
         found += 1;
     };
 
+    // A decoder of its own: one that streams holds half a character between chunks, which a second search would get.
+    const stream = new TextDecoder();
     let truncated = false;
     for await (const chunk of proc.stdout) {
-        rest += decoder.decode(chunk, { stream: true });
+        rest += stream.decode(chunk, { stream: true });
         const parts = rest.split('\n');
         rest = parts.pop() ?? '';
         for (const part of parts) {

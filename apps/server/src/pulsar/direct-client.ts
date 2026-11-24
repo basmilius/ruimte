@@ -218,7 +218,7 @@ export class DirectClient {
         return new Promise((resolve, reject) => {
             channel.onClose(() => reject(new Error('The channel closed during the handshake')));
             channel.receiveWith((raw) => {
-                const frame = parseHandshakeFrame(JSON.parse(raw));
+                const frame = parseHandshakeFrame(parsedFrame(raw));
                 if (frame === null) {
                     reject(new Error(`The machine sent something other than a handshake: ${raw.slice(0, 120)}`));
                     return;
@@ -256,8 +256,8 @@ export class DirectClient {
         for (const listener of this.frameListeners) {
             listener(raw);
         }
-        const frame = JSON.parse(raw) as { id?: string | null; ok?: boolean; result?: unknown; error?: { code: string; message: string } };
-        if (typeof frame.id !== 'string' || frame.ok === undefined) {
+        const frame = parsedFrame(raw) as { id?: string | null; ok?: boolean; result?: unknown; error?: { code: string; message: string } } | null;
+        if (frame === null || typeof frame !== 'object' || typeof frame.id !== 'string' || frame.ok === undefined) {
             return;
         }
         const entry = this.pending.get(frame.id);
@@ -274,6 +274,15 @@ export class DirectClient {
 }
 
 /* The answer to a challenge, or null when the machine that sent it is not the one this credential pinned. */
+/* Null for a frame that is no JSON: a throw in a channel callback is uncaught, which ends the daemon. */
+function parsedFrame(raw: string): unknown {
+    try {
+        return JSON.parse(raw);
+    } catch {
+        return null;
+    }
+}
+
 async function proofFor(
     credential: Exclude<DirectCredential, { kind: 'none' }>,
     frame: DirectChallengeFrame,
