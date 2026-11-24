@@ -41,6 +41,8 @@ jobs:
       # bundles: `tsc -b` costs minutes per build here, and `verify` already checks the types.
       - run: bun run --cwd apps/client bundle:station
       - run: bun run --cwd apps/client bundle:bench
+      # Once every bundle of this job is there: none may hold a development extension, which only the dev launch loads.
+      - run: bun scripts/check-build-outputs.ts
       # The unit shards run on Linux; a case-insensitive volume is what only a Mac has under these tests.
       - run: bun test --conditions=source apps/server/src/fs
 

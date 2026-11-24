@@ -21,6 +21,14 @@ describe('ci.yml', () => {
         expect(runs).toContain('bun run --cwd apps/client bundle:station');
         expect(runs).toContain('bun run --cwd apps/client bundle:bench');
     });
+
+    test('searches what it built for a development extension, after the last build of that job', () => {
+        const runs = (workflow('ci.yml').jobs.build?.steps ?? []).map((step) => step.run ?? '');
+        const builds = runs.flatMap((run, i) => (/ (build|build:bundle|bundle:\w+)$/.test(run) ? [i] : []));
+
+        expect(builds.length).toBeGreaterThan(2);
+        expect(runs.indexOf('bun scripts/check-build-outputs.ts')).toBeGreaterThan(Math.max(...builds));
+    });
 });
 
 describe('windows-ci.bunfig.toml', () => {
