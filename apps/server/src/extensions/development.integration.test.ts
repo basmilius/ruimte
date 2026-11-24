@@ -15,7 +15,7 @@ const PROPOSED = [
     ['dev/harbor', 'dev.harbor', 'terminalProfiles, launchSources, machineSources'],
     ['dev/lintel', 'dev.lintel', 'problemSources'],
     ['dev/pulseboard', 'dev.pulseboard', 'notificationChannels'],
-    ['dev/trackline', 'dev.trackline', 'uiSources']
+    ['dev/trackline', 'dev.trackline', 'uiSources, references, slashCommands']
 ] as const;
 const TRACKLINE = 'dev.trackline';
 const KEY = 'trk_demo1234';

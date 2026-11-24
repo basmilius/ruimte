@@ -1,5 +1,18 @@
 /// <reference types="bun" />
-import { defineAgentTool, defineNodeContext, defineServer, defineUiSource, emit, log, onEvent, schedule, secrets, storage } from '@ruimte/extension/server';
+import {
+    defineAgentTool,
+    defineNodeContext,
+    defineReference,
+    defineServer,
+    defineSlashCommand,
+    defineUiSource,
+    emit,
+    log,
+    onEvent,
+    schedule,
+    secrets,
+    storage
+} from '@ruimte/extension/server';
 import { issueText, openService, type TracklineIssue, type TracklineService } from './service';
 
 const KEY = 'key';
@@ -53,6 +66,45 @@ defineAgentTool<{ key: string }>({
     description: 'Reads an issue of the Trackline account by its key, such as TRK-101, with its changes and their checks',
     parameters: { type: 'object', properties: { key: { type: 'string' } }, required: ['key'] },
     run: ({ key }) => textOf(key)
+});
+
+/* A text for the prompt in place of a failure: the person reads it there, before anything is sent. */
+async function readable(what: string, read: () => Promise<string>): Promise<string> {
+    try {
+        return await read();
+    } catch (e) {
+        return `(${what} could not be read: ${e instanceof Error ? e.message : String(e)})`;
+    }
+}
+
+// From the machine, so `#` and `/issue` also work on a phone and in a window that did not load `client/`.
+defineReference({
+    id: 'issues',
+    title: 'Trackline issues',
+    async list() {
+        const key = await secrets.get(KEY);
+
+        return key === undefined || key === ''
+            ? []
+            : openService(key)
+                  .issues()
+                  .map((issue) => ({ id: issue.key, name: `${issue.key} ${issue.title}` }));
+    },
+    read: (issue) => readable(issue.name, () => textOf(issue.id))
+});
+
+defineSlashCommand({
+    name: 'issue',
+    description: 'Puts a Trackline issue in the prompt, by its key',
+    async run(args) {
+        const key = args.trim();
+
+        if (key === '') {
+            return 'Name an issue after /issue, such as TRK-101.';
+        }
+
+        return readable(key, async () => `Work on this issue.\n\n${await textOf(key)}`);
+    }
 });
 
 // The rows a block in a chat draws, read again by every client that shows it. Without a key it says so, which the block shows.

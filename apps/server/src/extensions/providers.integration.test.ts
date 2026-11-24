@@ -378,3 +378,47 @@ describe('Trackline, a UI source in a process of its own', () => {
         expect(await daemon.bundles.extensions.uiSources.supplies('dev.trackline/issues')).toBe(false);
     });
 });
+
+describe('Trackline, a reference and a slash command in a process of its own', () => {
+    beforeAll(() => host.setEnabled(TRACKLINE, true));
+
+    test('offers a client its issues after # and its command after /, with no window of its own to ask', async () => {
+        const frame = await daemon.request('extension.composerItems', { projectId });
+
+        expect(frame).toMatchObject({
+            ok: true,
+            result: { commands: [{ extension: TRACKLINE, name: 'issue', description: 'Puts a Trackline issue in the prompt, by its key' }] }
+        });
+        expect('ok' in frame && frame.ok && (frame.result as { references: object[] }).references).toContainEqual({
+            extension: TRACKLINE,
+            reference: 'issues',
+            title: 'Trackline issues',
+            id: 'TRK-101',
+            name: 'TRK-101 Sign-in loops back to the start'
+        });
+    });
+
+    test('answers a pick and a command with the text for the prompt, and sends nothing itself', async () => {
+        const picked = { projectId, extension: TRACKLINE, reference: 'issues', id: 'TRK-101', name: 'TRK-101 Sign-in loops back to the start' };
+
+        expect(await daemon.request('extension.referenceRead', picked)).toMatchObject({
+            ok: true,
+            result: { text: expect.stringContaining('TRK-101: Sign-in loops back to the start') }
+        });
+        expect(await daemon.request('extension.commandExpand', { projectId, extension: TRACKLINE, name: 'issue', args: 'TRK-102' })).toMatchObject({
+            ok: true,
+            result: { text: expect.stringMatching(/^Work on this issue\.\n\nTRK-102: /) }
+        });
+        expect(await daemon.request('extension.commandExpand', { projectId, extension: TRACKLINE, name: 'triage', args: '' })).toMatchObject({
+            ok: false,
+            error: { code: 'not-found' }
+        });
+        expect(await daemon.request('extension.composerItems', { projectId: 'no-such-project' })).toMatchObject({ ok: false, error: { code: 'not-found' } });
+    });
+
+    test('offers nothing more once it is turned off', async () => {
+        await host.setEnabled(TRACKLINE, false);
+
+        expect(await daemon.request('extension.composerItems', { projectId })).toMatchObject({ ok: true, result: { references: [], commands: [] } });
+    });
+});

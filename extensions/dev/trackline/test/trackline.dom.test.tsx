@@ -5,11 +5,6 @@ import type { TracklineServer } from '../server';
 const KEY = 'trk_demo1234';
 const ISSUE = { id: 'issue-1', title: 'TRK-101', extension: { type: 'issue', data: { key: 'TRK-101' } } };
 
-interface Listed {
-    list(): Promise<{ id: string; name: string }[]>;
-    read(item: { id: string; name: string }): Promise<string>;
-}
-
 async function hostWith(options: TestHostOptions = {}, secrets: Record<string, string> = { key: KEY }) {
     const server = await createTestServer<TracklineServer>({ secrets });
     const host = await createTestHost({ ...options, answers: { server, ...options.answers } });
@@ -124,22 +119,11 @@ describe('Trackline', () => {
         });
     });
 
-    test('offers its issues after # in a chat, each as the text an agent reads', async () => {
+    test('asks for a written issue after /triage, from the window alone', async () => {
         const { host } = await hostWith();
-        const reference = defined<Listed>(host, 'reference', 'issues');
-        const issues = await reference.list();
+        const command = defined<{ run(args: string): Promise<string> }>(host, 'slashCommand', 'triage');
 
-        expect(issues.map((issue) => issue.name)).toContain('TRK-102 Export a report as a spreadsheet');
-        expect(await reference.read(issues[1] as { id: string; name: string })).toContain('Finance wants the monthly report');
-    });
-
-    test('puts an issue in the prompt after /issue, and says what is missing without a key', async () => {
-        const { host } = await hostWith();
-        const command = defined<{ run(args: string): Promise<string> }>(host, 'slashCommand', 'issue');
-
-        expect(await command.run(' TRK-103 ')).toStartWith('Work on this issue.\n\nTRK-103: Search is slow on large accounts');
-        expect(await command.run('')).toBe('Name an issue after /issue, such as TRK-101.');
-        expect(await command.run('TRK-7')).toBe('(TRK-7 could not be read: Trackline has no issue TRK-7)');
+        expect(await command.run('the login loop')).toBe('Write this up as a Trackline issue with a title, steps to reproduce and a severity: the login loop');
     });
 
     test('adds the issue a person picks to the canvas, titled with its key', async () => {

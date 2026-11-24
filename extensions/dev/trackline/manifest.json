@@ -13,10 +13,13 @@
         "canvas.write": "Puts an issue on the canvas and links its chat to it",
         "chats.read": "Shows which issues a chat is working on",
         "clock": "Checks your account for new issues every five minutes",
-        "ui.provide": "Lets an agent show your issues as a live list in a chat"
+        "ui.provide": "Lets an agent show your issues as a live list in a chat",
+        "composer.provide": "Offers your issues after # and /issue in a chat, also on your phone"
     },
     "provides": {
-        "uiSources": ["issues"]
+        "uiSources": ["issues"],
+        "references": ["issues"],
+        "slashCommands": ["issue"]
     },
-    "proposed": ["uiSources"]
+    "proposed": ["uiSources", "references", "slashCommands"]
 }

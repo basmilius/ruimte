@@ -5,7 +5,6 @@ import {
     defineNode,
     definePaletteSource,
     definePanel,
-    defineReference,
     defineSidebarCard,
     defineSlashCommand,
     getServer,
@@ -36,36 +35,7 @@ defineNode<{ key: string }>({
     component: () => import('./IssueNode')
 });
 
-defineReference({
-    id: 'issues',
-    title: 'Trackline issues',
-    list: async () => {
-        const issues = await server.issues();
-
-        return issues.ok ? issues.value.map((issue) => ({ id: issue.key, name: `${issue.key} ${issue.title}` })) : [];
-    },
-    read: async (issue) => {
-        const text = await server.text(issue.id);
-
-        return text.ok ? text.value : `(${issue.name} could not be read: ${text.error.message})`;
-    }
-});
-
-defineSlashCommand({
-    name: 'issue',
-    description: 'Puts a Trackline issue in the prompt, by its key',
-    run: async (args) => {
-        const key = args.trim();
-
-        if (key === '') {
-            return 'Name an issue after /issue, such as TRK-101.';
-        }
-
-        const text = await server.text(key);
-
-        return text.ok ? `Work on this issue.\n\n${text.value}` : `(${key} could not be read: ${text.error.message})`;
-    }
-});
+// The issues after `#` and `/issue` come from `server/`, so a phone has them too. This one is words alone.
 defineSlashCommand({
     name: 'triage',
     description: 'Asks for a Trackline issue written from what you describe',

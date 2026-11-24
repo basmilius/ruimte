@@ -3,7 +3,7 @@ import { createTestServer } from '@ruimte/extension/testing';
 import type { TracklineServer } from '../server';
 
 const KEY = 'trk_demo1234';
-const WITHOUT_CHATS = { 'agents.tools': 'Looks up', clock: 'Checks', 'ui.provide': 'Shows' };
+const WITHOUT_CHATS = { 'agents.tools': 'Looks up', clock: 'Checks', 'ui.provide': 'Shows', 'composer.provide': 'Offers' };
 
 function connected(options: Parameters<typeof createTestServer>[0] = {}) {
     return createTestServer<TracklineServer>({ secrets: { key: KEY }, ...options });
@@ -22,6 +22,28 @@ describe('Trackline on the machine', () => {
         expect(server.secrets).toEqual({ key: KEY });
         expect(server.storage).toEqual({});
         expect(server.emitted).toEqual([{ name: 'issues.changed' }]);
+    });
+
+    test('offers its issues after # in a chat, each as the text an agent reads, and none without a key', async () => {
+        const reference = (await connected()).reference('issues');
+        const issues = await reference.list();
+
+        expect(reference.title).toBe('Trackline issues');
+        expect(issues.map((issue) => issue.name)).toContain('TRK-102 Export a report as a spreadsheet');
+        expect(await reference.read(issues[1]!)).toContain('Finance wants the monthly report');
+        expect(await reference.read({ id: 'TRK-7', name: 'TRK-7 Gone' })).toBe('(TRK-7 Gone could not be read: Trackline has no issue TRK-7)');
+        expect(await (await createTestServer<TracklineServer>()).reference('issues').list()).toEqual([]);
+    });
+
+    test('puts an issue in the prompt after /issue, and says what is missing', async () => {
+        const command = (await connected()).slashCommand('issue');
+
+        expect(await command.run(' TRK-103 ')).toStartWith('Work on this issue.\n\nTRK-103: Search is slow on large accounts');
+        expect(await command.run('')).toBe('Name an issue after /issue, such as TRK-101.');
+        expect(await command.run('TRK-7')).toBe('(TRK-7 could not be read: Trackline has no issue TRK-7)');
+        expect(await (await createTestServer<TracklineServer>()).slashCommand('issue').run('TRK-101')).toBe(
+            '(TRK-101 could not be read: Connect your Trackline account first)'
+        );
     });
 
     test('gives a block in a chat the issues as rows, all of them or those in one state, and says so without a key', async () => {
