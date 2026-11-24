@@ -188,6 +188,19 @@ expect(after?.fingerprint).not.toBe(before?.fingerprint);
 
 `list` leaves out a launch the machine would not take, and `logs` says why. `fire('project.opened', { project })` and `fire('launch.status', ...)` hand over the machine events of the same name.
 
+`machineSource(id)` asks a machine source the same way. `start` takes the id of a place and answers the description with the lines the source reported. It runs nothing:
+
+```ts
+const source = machine.machineSource('container');
+const [place] = await source.list();
+const { start, reports } = await source.start(place.id);
+
+expect(reports).toEqual(['Reading container.json']);
+expect(start.steps.map((step) => step.title)).toEqual(['Build the image', 'Start the container']);
+```
+
+Pass `{ signal }` to stop the start while the source describes it. `start` rejects for a description the machine would not take.
+
 A test server runs your extension as `ruimte extension dev` does, so a [proposed part](/docs/extensions/manifest#proposed-parts) works. With `provenance: 'installed'` it runs it as an extension a person installed, and `createTestServer` rejects with what that person reads in Settings. In a test host, `terminals` lists what `terminals.open` opened and what was typed into each.
 
 Each test host and test server loads your files afresh, so no state carries from one test to the next. A package from `node_modules` loads once.

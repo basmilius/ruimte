@@ -239,6 +239,80 @@ Your extension describes each launch and Ruimte runs it, so its terminal, status
 
 No extension call approves a launch, and neither does an agent.
 
+## Machine sources
+
+A machine source lists places where a Ruimte machine can run for a project, such as a container or a volume the machine on this computer cannot work in. Each place shows in Settings, Machines of the app on that computer, under the title of the source. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `machineSources` under `proposed`, list the id under `provides.machineSources` and ask for `machines.provide`.
+
+```ts
+defineMachineSource({
+    id: 'container',
+    title: 'Containers',
+    async list(project) {
+        const read = await files.readText(project, 'container.json');
+
+        if (!read.ok) {
+            return [];
+        }
+
+        return [
+            {
+                id: 'dev',
+                title: 'Dev container',
+                place: nameIn(read.value),
+                running: false
+            }
+        ];
+    },
+    async start(candidate, { project, report, signal }) {
+        report('Reading container.json');
+
+        const read = await files.readText(project, 'container.json');
+
+        signal.throwIfAborted();
+
+        if (!read.ok) {
+            throw new Error(read.error.message);
+        }
+
+        return {
+            steps: [
+                {
+                    title: 'Build the image',
+                    spawn: {
+                        command: 'docker',
+                        args: ['build', '-t', 'dev', '.']
+                    }
+                },
+                {
+                    title: 'Start the container',
+                    spawn: {
+                        command: 'docker',
+                        args: ['run', '-d', '--name', 'dev', '-v', 'dev-home:/root', 'dev']
+                    }
+                }
+            ],
+            login: {
+                command: 'docker',
+                args: ['exec', 'dev', 'ruimte', 'login']
+            },
+            fingerprint: digestOf(read.value)
+        };
+    }
+});
+```
+
+`start` only describes. Ruimte runs the steps on this computer, one after another, with no shell in between, and shows their output to the person. A step that ends with another code than 0 ends the start.
+
+- **A person approves first.** Ruimte shows every program with its folder before anything runs, and the person approves it in the app on that computer. The approval covers the programs, their folders, their variables and the `fingerprint`, so a changed file asks again. No extension call approves a start, and neither does an agent.
+- **The new machine signs itself in.** `login` runs `ruimte login` on the new machine and stays until it ends. It prints a page and a code. The person opens the page, signs in and approves the code, and the machine is on their account. From there every client reaches it as it reaches any machine. Leave `login` out for a machine that is on the account already.
+- **Your extension gets no way in.** No call hands it a key, an account token or a connection to the machine it started, and it does not see the output of the steps.
+- **A login of its own.** Give the new machine a home of its own, in a volume, so its CLIs sign in there once. Do not mount the login of a CLI on this computer into it: the code of the project runs there too.
+- **Nothing is cleaned up.** A person's stop asks the program that runs to end, once. Ruimte stops and removes no container, volume or file a start made, also not after a failure.
+- `report` writes a line of progress above the output. `signal` aborts once the person stopped the start while `start` still runs.
+- `running: true` says a machine already runs in a place, and Ruimte then offers no start there.
+- A source lists at most 16 places, and a start has at most 16 steps. `cwd` in `spawn` stays inside the project folder or one of its worktrees.
+- `defineMachineSource` throws for an id the manifest does not list, so call it as the module loads.
+
 ## Problems
 
 A problem source reports what a linter or a scanner found. Its problems show with the editor's own in the Problems panel, under the title of the source, and agents read them with `language_problems`. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `problemSources` under `proposed`, list the id under `provides.problemSources` and ask for `problems.provide`.
