@@ -466,6 +466,12 @@ export interface TestServer<Api> {
      * description or parameters the machine does not take is not here, with the reason in `logs`. Throws for a source
      * it did not define.
      */
+    /**
+     * An agent `defineAgentProvider` described, as the machine takes it: the kind it goes by among the providers, its name,
+     * the program Ruimte starts for a chat and the models the picker offers first. Nothing starts here. One whose
+     * description the machine does not take is not here, with the reason in `logs`. Rejects for an agent it did not define.
+     */
+    agentProvider(id: string): Promise<{ kind: string; name: string; protocol: 'acp'; spawn: SpawnDescription; models: { id: string; name: string }[] }>;
     uiSource(id: string): {
         name: string;
         description: string;

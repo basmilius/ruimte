@@ -2,6 +2,7 @@ import { basename, join } from 'node:path';
 import { CustomLanguageServerInputSchema, extensionChatOf, type ExtensionTerminalProfile } from '@ruimte/contracts';
 import { extensionActionCall } from '../actions/context.ts';
 import { errorText } from '../error-text.ts';
+import { ExtensionAgentProviders } from '../extensions/agent-providers.ts';
 import { extensionChatStarter } from '../extensions/extension-chat.ts';
 import { ExtensionHost, type ExtensionAsks, type ExtensionFilesPort, type ExtensionProject, type ExtensionTerminalPort } from '../extensions/extension-host.ts';
 import { runMachineAction, outputOf } from '../extensions/machine-actions.ts';
@@ -40,6 +41,8 @@ export interface ExtensionsBundle {
     notificationChannels: NotificationChannels;
     /* The UI sources of extensions, which a block in a chat reads and a chat's prompt names. */
     uiSources: ExtensionUiSources;
+    /* The agents extensions describe, offered among the machine's providers. */
+    agentProviders: ExtensionAgentProviders;
     /* A client put a project on screen, or the last one closed it: what an extension with `projects.read` follows. */
     projectOpened(projectId: string): void;
     projectClosed(projectId: string): void;
@@ -173,7 +176,9 @@ export function wireExtensions(home: string, seams: ExtensionSeams, later: Exten
             launchSources.extensionChanged(id);
             // Without starting anything: a process that just ended must not come back for a list.
             void uiSources.refresh(false);
+            void agentProviders.refresh(false);
         },
+        agentsDescribed: () => void agentProviders.refresh(false),
         startChat: async (...args) => startChat(...args),
         runAction: async (id, projectId, action, input) => {
             const folder = folderOfProject(projectId);
@@ -235,6 +240,14 @@ export function wireExtensions(home: string, seams: ExtensionSeams, later: Exten
         },
         async (projectId) => (index().folderOf(projectId) === null ? null : projectOf(projectId))
     );
+    const agentProviders: ExtensionAgentProviders = new ExtensionAgentProviders({
+        list: (start) => host.agentProviders(start),
+        providers: {
+            add: (provider) => later.providers().providers.add(provider),
+            remove: (kind) => later.providers().providers.remove(kind),
+            invalidate: (kind) => later.providers().providers.invalidate(kind)
+        }
+    });
     // The projects a client has open, so each opening and each close is told once.
     const open = new Set<string>();
 
@@ -246,6 +259,7 @@ export function wireExtensions(home: string, seams: ExtensionSeams, later: Exten
         machineSources,
         notificationChannels,
         uiSources,
+        agentProviders,
         projectOpened: (projectId) => {
             if (open.has(projectId)) {
                 return;
@@ -253,6 +267,8 @@ export function wireExtensions(home: string, seams: ExtensionSeams, later: Exten
 
             // A chat's prompt names the sources without waiting, so they are asked for once a project is on screen.
             void uiSources.refresh(true);
+            // A picker lists an agent only once its extension described it, which takes its process.
+            void agentProviders.refresh(true);
 
             open.add(projectId);
             void projectOf(projectId).then(

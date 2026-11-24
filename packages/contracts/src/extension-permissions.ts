@@ -68,6 +68,7 @@ export const EXTENSION_PERMISSIONS: readonly string[] = [
     'agents.start',
     'agents.status',
     'agents.tools',
+    'agents.provide',
     'usage.read',
     'clock'
 ];

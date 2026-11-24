@@ -75,6 +75,11 @@ serverContract(async (permissions, { provenance, ...manifest } = {}) => {
         },
         pick: async (reference, item) => server.reference(reference).read(item),
         slash: async (name, args) => server.slashCommand(name).run(args),
+        agent: async (id) => {
+            const { kind, name, spawn, models } = await server.agentProvider(id);
+
+            return { kind, name, command: [spawn.command, ...(spawn.args ?? [])], env: spawn.env ?? {}, models };
+        },
         uiSource: async (id) => {
             const { read: _read, ...told } = server.uiSource(id);
 

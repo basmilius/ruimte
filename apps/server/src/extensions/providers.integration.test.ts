@@ -10,6 +10,7 @@ import type { ExtensionHost } from './extension-host.ts';
 import { buildExtension } from './pack.ts';
 
 const EXTENSIONS = join(import.meta.dir, '../../../../extensions/dev');
+const BEACON = 'dev.beacon';
 const HARBOR = 'dev.harbor';
 const LINTEL = 'dev.lintel';
 const PULSEBOARD = 'dev.pulseboard';
@@ -420,5 +421,37 @@ describe('Trackline, a reference and a slash command in a process of its own', (
         await host.setEnabled(TRACKLINE, false);
 
         expect(await daemon.request('extension.composerItems', { projectId })).toMatchObject({ ok: true, result: { references: [], commands: [] } });
+    });
+});
+
+describe('Beacon, an agent provider in a process of its own', () => {
+    const KIND = 'x-dev-beacon-inspector';
+    const inspector = async (): Promise<{ name: string; installed: boolean; models: { slug: string }[] } | null> => {
+        const frame = await daemon.request('provider.list', {});
+        const providers =
+            'ok' in frame && frame.ok
+                ? (frame.result as { providers: { kind: string; name: string; installed: boolean; models: { slug: string }[] }[] }).providers
+                : [];
+
+        return providers.find((provider) => provider.kind === KIND) ?? null;
+    };
+
+    beforeAll(() => link('beacon'));
+
+    test('offers its agent to a client among the providers of the machine, by the name and the models it described, and starts no program for it', async () => {
+        // What opening a project does: the process of an extension that lists an agent starts, and says what the agent is.
+        await daemon.bundles.extensions.agentProviders.refresh(true);
+
+        const offered = await until(inspector);
+
+        expect(offered.name).toBe('Beacon Inspector');
+        expect(offered.models.map((model) => model.slug)).toEqual(['inspector-fast', 'inspector-deep']);
+        // Its program is fictional, and whether it is there is read from the path.
+        expect(offered.installed).toBe(false);
+    });
+
+    test('takes its agent along when it is turned off', async () => {
+        await host.setEnabled(BEACON, false);
+        await until(async () => ((await inspector()) === null ? true : null));
     });
 });

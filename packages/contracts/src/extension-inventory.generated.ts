@@ -222,6 +222,7 @@ export const EXTENSION_API_INVENTORY = {
     'server/event/project.closed': { permission: 'projects.read' },
     'server/event/project.opened': { permission: 'projects.read' },
     'server/event/session.status': { permission: 'terminals.read' },
+    'server/provider/defineAgentProvider': { permission: 'agents.provide' },
     'server/provider/defineAgentTool': { permission: 'agents.tools' },
     'server/provider/defineLanguageServer': { permission: 'languages.servers' },
     'server/provider/defineLaunchSource': { permission: 'launches.provide' },

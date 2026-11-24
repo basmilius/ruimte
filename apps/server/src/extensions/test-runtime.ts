@@ -47,6 +47,7 @@ const server = {
     defineUiSource: through('defineUiSource'),
     defineReference: through('defineReference'),
     defineSlashCommand: through('defineSlashCommand'),
+    defineAgentProvider: through('defineAgentProvider'),
     problems: forwarded('problems'),
     files: forwarded('files'),
     terminals: forwarded('terminals'),

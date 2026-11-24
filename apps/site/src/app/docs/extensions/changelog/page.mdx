@@ -6,6 +6,11 @@ export const metadata = { title: 'Changes to the API' };
 
 API version `1` is a preview. It goes to a small group of invited developers first, and it can still change before Ruimte offers extensions to everyone. Every change lands on this page, newest first, with what an extension has to do about it.
 
+## 1, preview, agent providers (November 2026)
+
+- `defineAgentProvider` in `server/` offers an agent that speaks ACP in the model pickers. You describe its program and Ruimte starts it for a chat. It is a proposed part, behind the new permission `agents.provide`.
+- An extension needs no change.
+
 ## 1, preview, marks in the editor's margin (November 2026)
 
 - `defineEditorDecoration` in `client/` marks lines beside the line numbers of an open file, in a kind Ruimte colors. It reads only: it is told which file and nothing of what is in it. It is a proposed part, `editorDecorations`, and takes no permission.

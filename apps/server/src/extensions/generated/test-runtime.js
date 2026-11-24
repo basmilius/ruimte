@@ -218,8 +218,15 @@ var EXTENSION_PROVIDER_POINTS = {
   notificationChannels: { define: "defineNotificationChannel", permission: "notifications.provide", proposed: true },
   uiSources: { define: "defineUiSource", permission: "ui.provide", proposed: true },
   references: { define: "defineReference", permission: "composer.provide", proposed: true },
-  slashCommands: { define: "defineSlashCommand", permission: "composer.provide", proposed: true }
+  slashCommands: { define: "defineSlashCommand", permission: "composer.provide", proposed: true },
+  agentProviders: { define: "defineAgentProvider", permission: "agents.provide", proposed: true }
 };
+var MAX_AGENT_PROVIDER_MODELS = 64;
+var MAX_AGENT_KIND = 32;
+function extensionAgentKind(extension, provider) {
+  const kind = `x-${`${extension}-${provider}`.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}`;
+  return kind.length <= MAX_AGENT_KIND ? kind : null;
+}
 var EXTENSION_CLIENT_POINTS = {
   projectSettings: { define: "defineProjectSettings", proposed: true },
   languages: { define: "defineLanguage", proposed: true },
@@ -7081,6 +7088,7 @@ function createServerApi(options) {
   const uiSources = new Map;
   const references = new Map;
   const slashCommands = new Map;
+  let agentsDescribed = Promise.resolve();
   const fileWatches = new Map;
   let nextFileWatch = 1;
   const typed = (method, args) => ask(method, args);
@@ -7191,6 +7199,25 @@ function createServerApi(options) {
       slashCommands.set(command.name, command);
       send({ type: "slashCommand", name: command.name, description: command.description });
     },
+    defineAgentProvider(provider) {
+      mayDefine("defineAgentProvider", "agents.provide", provider.id);
+      if (extensionAgentKind(options.provides.id, provider.id) === null) {
+        throw new Error(`defineAgentProvider ${provider.id}: the id of the extension and this id are together at most 29 characters`);
+      }
+      const spawn = provider.spawn();
+      const describe = (models) => send({ type: "agentProvider", id: provider.id, description: { name: provider.name, protocol: provider.protocol, spawn, models } });
+      if (provider.models === undefined) {
+        describe([]);
+        return;
+      }
+      const listed = (async () => provider.models?.() ?? [])().then(describe, (e) => {
+        options.log.error(`The models of ${provider.id} could not be listed:`, e);
+        describe([]);
+      });
+      agentsDescribed = Promise.all([agentsDescribed, listed]).then(() => {
+        return;
+      });
+    },
     problems: {
       report: async (project, source, reported) => mapResult(await ask("problems.report", [project.id, source, reported]), () => {
         return;
@@ -7294,6 +7321,7 @@ function createServerApi(options) {
   };
   return {
     server,
+    agentsDescribed: () => agentsDescribed,
     runTool(name, input, context) {
       const tool = tools.get(name);
       if (tool === undefined) {
@@ -7550,6 +7578,20 @@ function launchesListed(answer, refused) {
   }
   return [...launches.values()];
 }
+var AgentProviderDescriptionSchema = object({
+  name: string2().trim().min(1).max(80),
+  protocol: literal("acp"),
+  spawn: SpawnDescriptionSchema,
+  models: array(object({ id: string2().min(1).max(200), name: string2().trim().min(1).max(120) })).max(MAX_AGENT_PROVIDER_MODELS)
+});
+function agentProviderDescribed(description) {
+  const described = AgentProviderDescriptionSchema.safeParse(description);
+  if (described.success) {
+    return described.data;
+  }
+  const issue = described.error.issues[0];
+  return `is no agent Ruimte can start: ${issue?.path.join(".") ?? ""} ${issue?.message ?? "invalid"}`;
+}
 function uiSourceDescribed(description, parameters) {
   if (typeof description !== "string" || description.trim() === "" || description.length > MAX_UI_SOURCE_DESCRIPTION) {
     return `needs a description of at most ${MAX_UI_SOURCE_DESCRIPTION} characters`;
@@ -7749,6 +7791,7 @@ class TestMachine {
   machineSources = new Map;
   notificationChannels = new Map;
   uiSources = new Map;
+  agentProviders = new Map;
   references = new Map;
   slashCommands = new Map;
   machineReports = new Map;
@@ -7871,6 +7914,13 @@ class TestMachine {
         this.logs.push(`The UI source ${message.id} ${described}`);
       } else {
         this.uiSources.set(message.id, described);
+      }
+    } else if (message.type === "agentProvider") {
+      const described = agentProviderDescribed(message.description);
+      if (typeof described === "string") {
+        this.logs.push(`The agent ${message.id} ${described}`);
+      } else {
+        this.agentProviders.set(message.id, described);
       }
     } else {
       const reason = eventRefusal(message.name, this.permissions);
@@ -8253,6 +8303,14 @@ async function createTestServer(options = {}) {
         description,
         run: async (args = "", project = {}) => composerTextRead(wire(await machine.core.expandCommand(name, args, { ...machine.project, ...project })))
       };
+    },
+    agentProvider: async (id) => {
+      await machine.core.agentsDescribed();
+      const described = machine.agentProviders.get(id);
+      if (described === undefined) {
+        throw new Error(`No agent provider ${id}. defineAgentProvider says what there is`);
+      }
+      return { kind: extensionAgentKind(machine.id, id) ?? "", ...described };
     },
     uiSource: (id) => {
       const described = machine.uiSources.get(id);
@@ -10095,6 +10153,7 @@ var server = {
   defineUiSource: through("defineUiSource"),
   defineReference: through("defineReference"),
   defineSlashCommand: through("defineSlashCommand"),
+  defineAgentProvider: through("defineAgentProvider"),
   problems: forwarded2("problems"),
   files: forwarded2("files"),
   terminals: forwarded2("terminals"),

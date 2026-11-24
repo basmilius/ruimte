@@ -70,6 +70,7 @@ Ruimte reads the list without starting the server part, so a provider shows befo
 | `uiSources` | [`defineUiSource`](/docs/extensions/server#live-data-for-a-chat) | `ui.provide` |
 | `references` | [`defineReference`](/docs/extensions/server#references-and-slash-commands) | `composer.provide` |
 | `slashCommands` | [`defineSlashCommand`](/docs/extensions/server#references-and-slash-commands) | `composer.provide` |
+| `agentProviders` | [`defineAgentProvider`](/docs/extensions/server#agent-providers) | `agents.provide` |
 
 ## Proposed parts
 
@@ -92,6 +93,7 @@ The machine decides this on where it knows an extension came from, never on the 
 | `uiSources` | `provides.uiSources` and `defineUiSource` |
 | `references` | `provides.references` and `defineReference` in `server/` |
 | `slashCommands` | `provides.slashCommands` and `defineSlashCommand` in `server/` |
+| `agentProviders` | `provides.agentProviders` and `defineAgentProvider` |
 | `projectSettings` | [`defineProjectSettings`](/docs/extensions/settings#settings-of-a-project) and `useProjectSetting` in `client/`, `projectSettings` in `server/` |
 | `languages` | [`defineLanguage`](/docs/extensions/surfaces#languages) in `client/` |
 | `editorDecorations` | [`defineEditorDecoration`](/docs/extensions/surfaces#marks-in-the-editors-margin) in `client/` |
@@ -129,6 +131,7 @@ Reading what is on screen needs no permission. Everything else does, and the API
 | `agents.start` | Start a chat a person sees, supervised at most. |
 | `agents.status` | Read what every agent is doing. |
 | `agents.tools` | Offer agents a tool. |
+| `agents.provide` | Offer an agent of your own in the model pickers, which Ruimte starts for a chat. |
 | `usage.read` | Read how much of their plans the person used. |
 | `launches.read` | List and read launches. |
 | `launches.run` | Start, restart and stop launches. |

@@ -8,10 +8,11 @@ import { ExtensionStore } from './store.ts';
 
 const EXTENSIONS = join(import.meta.dir, '../../../../extensions');
 // Each by its folder and the id its manifest carries.
-const PRODUCTS = ['boardwalk', 'beacon'].map((name) => [`dev/${name}`, `dev.${name}`] as const);
+const PRODUCTS = ['boardwalk'].map((name) => [`dev/${name}`, `dev.${name}`] as const);
 const POCS = ['surfaces', 'machine', 'frame', 'themes', 'broken', 'broken-load'].map((name) => [`poc/${name}`, `poc.${name}`] as const);
 // The products that use a proposed part, each with the parts a person reads of.
 const PROPOSED = [
+    ['dev/beacon', 'dev.beacon', 'agentProviders'],
     ['dev/harbor', 'dev.harbor', 'terminalProfiles, launchSources, machineSources, projectSettings'],
     ['dev/lintel', 'dev.lintel', 'problemSources, languages, editorDecorations'],
     ['dev/pulseboard', 'dev.pulseboard', 'notificationChannels'],
@@ -161,7 +162,9 @@ describe('the development extensions', () => {
         });
 
         hosts.push(host);
-        await host.install(await packOf('dev/beacon'));
+        // Linked, as `bun dev` does: Beacon uses proposed parts, which no install takes.
+        await packOf('dev/beacon');
+        await host.linked(join(EXTENSIONS, 'dev/beacon', 'dist'));
         await host.runAction('dev.beacon', 'project', 'browser.inspect', {});
 
         expect(ran).toEqual(['browser.inspect']);
@@ -194,9 +197,9 @@ describe('the development extensions', () => {
     test('a client with no shell gets the client part and never the server part', async () => {
         const { host } = hostIn('files');
 
-        await host.install(await packOf('dev/beacon'));
+        await host.install(await packOf('dev/boardwalk'));
 
-        const { files } = await host.clientFiles('dev.beacon');
+        const { files } = await host.clientFiles('dev.boardwalk');
 
         expect(Object.keys(files)).toContain('manifest.json');
         expect(Object.keys(files).some((path) => path.startsWith('client/'))).toBe(true);

@@ -8,10 +8,11 @@ import { join, resolve } from 'node:path';
 import { parseExtensionActionInput } from '@ruimte/contracts/extension-actions';
 import { extensionProjectPath } from '@ruimte/contracts/extension-client';
 import { EXTENSION_PROBLEM_FILES, EXTENSION_PROBLEMS_PER_FILE, ExtensionProblemsReportSchema } from '@ruimte/contracts/extension-problems';
-import { allowsProposed, projectSettingKey, proposedRefusal, uiSourceName } from '@ruimte/contracts/extension-providers';
+import { allowsProposed, extensionAgentKind, projectSettingKey, proposedRefusal, uiSourceName } from '@ruimte/contracts/extension-providers';
 import type * as PublicServer from '../../../../packages/extension/server';
 import type * as PublicTesting from '../../../../packages/extension/testing';
 import {
+    agentProviderDescribed,
     candidatesListed,
     composerTextRead,
     launchesListed,
@@ -19,6 +20,7 @@ import {
     referenceItemsListed,
     uiAnswerRead,
     uiSourceDescribed,
+    type AgentProviderDescription,
     type UiSourceDescription
 } from './descriptions.ts';
 import {
@@ -174,6 +176,7 @@ class TestMachine {
     readonly machineSources = new Map<string, string>();
     readonly notificationChannels = new Map<string, string>();
     readonly uiSources = new Map<string, UiSourceDescription>();
+    readonly agentProviders = new Map<string, AgentProviderDescription>();
     readonly references = new Map<string, string>();
     readonly slashCommands = new Map<string, string>();
     // The lines a machine source reported while it described a start, by the number it was asked under.
@@ -323,6 +326,14 @@ class TestMachine {
                 this.logs.push(`The UI source ${message.id} ${described}`);
             } else {
                 this.uiSources.set(message.id, described);
+            }
+        } else if (message.type === 'agentProvider') {
+            const described = agentProviderDescribed(message.description);
+
+            if (typeof described === 'string') {
+                this.logs.push(`The agent ${message.id} ${described}`);
+            } else {
+                this.agentProviders.set(message.id, described);
             }
         } else {
             const reason = eventRefusal(message.name, this.permissions);
@@ -854,6 +865,18 @@ export async function createTestServer<Api>(options: PublicTesting.TestServerOpt
                 description,
                 run: async (args = '', project = {}) => composerTextRead(wire(await machine.core.expandCommand(name, args, { ...machine.project, ...project })))
             };
+        },
+        agentProvider: async (id) => {
+            // One that lists its models says what it is once they are read.
+            await machine.core.agentsDescribed();
+
+            const described = machine.agentProviders.get(id);
+
+            if (described === undefined) {
+                throw new Error(`No agent provider ${id}. defineAgentProvider says what there is`);
+            }
+
+            return { kind: extensionAgentKind(machine.id, id) ?? '', ...described };
         },
         uiSource: (id) => {
             const described = machine.uiSources.get(id);

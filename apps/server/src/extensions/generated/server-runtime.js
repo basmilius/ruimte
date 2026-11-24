@@ -101,8 +101,14 @@ var EXTENSION_PROVIDER_POINTS = {
   notificationChannels: { define: "defineNotificationChannel", permission: "notifications.provide", proposed: true },
   uiSources: { define: "defineUiSource", permission: "ui.provide", proposed: true },
   references: { define: "defineReference", permission: "composer.provide", proposed: true },
-  slashCommands: { define: "defineSlashCommand", permission: "composer.provide", proposed: true }
+  slashCommands: { define: "defineSlashCommand", permission: "composer.provide", proposed: true },
+  agentProviders: { define: "defineAgentProvider", permission: "agents.provide", proposed: true }
 };
+var MAX_AGENT_KIND = 32;
+function extensionAgentKind(extension, provider) {
+  const kind = `x-${`${extension}-${provider}`.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}`;
+  return kind.length <= MAX_AGENT_KIND ? kind : null;
+}
 var EXTENSION_CLIENT_POINTS = {
   projectSettings: { define: "defineProjectSettings", proposed: true },
   languages: { define: "defineLanguage", proposed: true },
@@ -202,6 +208,7 @@ function createServerApi(options) {
   const uiSources = new Map;
   const references = new Map;
   const slashCommands = new Map;
+  let agentsDescribed = Promise.resolve();
   const fileWatches = new Map;
   let nextFileWatch = 1;
   const typed = (method, args) => ask(method, args);
@@ -312,6 +319,25 @@ function createServerApi(options) {
       slashCommands.set(command.name, command);
       send({ type: "slashCommand", name: command.name, description: command.description });
     },
+    defineAgentProvider(provider) {
+      mayDefine("defineAgentProvider", "agents.provide", provider.id);
+      if (extensionAgentKind(options.provides.id, provider.id) === null) {
+        throw new Error(`defineAgentProvider ${provider.id}: the id of the extension and this id are together at most 29 characters`);
+      }
+      const spawn = provider.spawn();
+      const describe = (models) => send({ type: "agentProvider", id: provider.id, description: { name: provider.name, protocol: provider.protocol, spawn, models } });
+      if (provider.models === undefined) {
+        describe([]);
+        return;
+      }
+      const listed = (async () => provider.models?.() ?? [])().then(describe, (e) => {
+        options.log.error(`The models of ${provider.id} could not be listed:`, e);
+        describe([]);
+      });
+      agentsDescribed = Promise.all([agentsDescribed, listed]).then(() => {
+        return;
+      });
+    },
     problems: {
       report: async (project, source, reported) => mapResult(await ask("problems.report", [project.id, source, reported]), () => {
         return;
@@ -415,6 +441,7 @@ function createServerApi(options) {
   };
   return {
     server,
+    agentsDescribed: () => agentsDescribed,
     runTool(name, input, context) {
       const tool = tools.get(name);
       if (tool === undefined) {

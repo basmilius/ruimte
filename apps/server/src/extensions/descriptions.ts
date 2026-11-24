@@ -4,6 +4,7 @@
  * a UI source with what it answers a block, and what a reference or a slash command puts in a prompt.
  */
 import {
+    MAX_AGENT_PROVIDER_MODELS,
     MAX_COMPOSER_TEXT,
     MAX_MACHINE_CANDIDATES,
     MAX_MACHINE_STEPS,
@@ -105,6 +106,27 @@ export function launchesListed(answer: unknown, refused: (reason: string) => voi
     }
 
     return [...launches.values()];
+}
+
+const AgentProviderDescriptionSchema = z.object({
+    name: z.string().trim().min(1).max(80),
+    protocol: z.literal('acp'),
+    spawn: SpawnDescriptionSchema,
+    models: z.array(z.object({ id: z.string().min(1).max(200), name: z.string().trim().min(1).max(120) })).max(MAX_AGENT_PROVIDER_MODELS)
+});
+export type AgentProviderDescription = z.infer<typeof AgentProviderDescriptionSchema>;
+
+/* What an agent provider said of itself, or the reason the machine does not offer it. */
+export function agentProviderDescribed(description: unknown): AgentProviderDescription | string {
+    const described = AgentProviderDescriptionSchema.safeParse(description);
+
+    if (described.success) {
+        return described.data;
+    }
+
+    const issue = described.error.issues[0];
+
+    return `is no agent Ruimte can start: ${issue?.path.join('.') ?? ''} ${issue?.message ?? 'invalid'}`;
 }
 
 /* What a UI source says of itself, as the agent that writes a block is told. */

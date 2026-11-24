@@ -415,6 +415,44 @@ Ruimte decides when, and your channel only delivers.
 - A device's own quiet hours and what it follows stay that device's. A channel gets every notification of the machine, so filter on `reason` or `project` if yours should say less.
 - `defineNotificationChannel` throws for an id the manifest does not list, so call it as the module loads.
 
+## Agent providers
+
+An agent provider offers an agent of your own in the model pickers, beside the agents Ruimte knows. The agent has to speak the Agent Client Protocol (ACP) on its standard input and output. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `agentProviders` under `proposed`, list the id under `provides.agentProviders` and ask for `agents.provide`.
+
+```ts
+import { defineAgentProvider } from '@ruimte/extension/server';
+
+defineAgentProvider({
+    id: 'inspector',
+    name: 'Beacon Inspector',
+    protocol: 'acp',
+    spawn: () => ({
+        command: 'beacon-inspector',
+        args: ['acp'],
+        env: {
+            BEACON_RULES: 'account'
+        }
+    }),
+    models: async () => [
+        {
+            id: 'inspector-fast',
+            name: 'Inspector Fast'
+        }
+    ]
+});
+```
+
+You describe the agent and Ruimte starts it. The chat, its thread, its approvals and its stop are Ruimte's, as for every agent.
+
+- Ruimte calls `spawn` once, as your server part loads, and runs that program for each chat in the chat's own folder. It ignores `cwd`. `env` goes on top of the person's own variables.
+- `models` names what the picker offers first, at most 64. Without it the picker has one entry, Default. Once a chat runs, the models the agent reports take their place.
+- Ruimte hands the agent no key and reads none. The agent signs in the way it does on its own, and a chat that needs a sign-in says so.
+- The picker lists the agent once your server part ran, which happens when a project opens. An agent whose program is not on the machine shows as not installed. Ruimte looks for the program on the path and never runs it to find out.
+- The agent leaves the pickers when a person turns your extension off or removes it. A chat that used it stays in the project and cannot go on until the agent is back.
+- The extension's id and this `id` together are at most 29 characters, and `defineAgentProvider` throws past that and for an id the manifest does not list.
+
+In a test, `server.agentProvider(id)` answers what the machine takes of your description.
+
 ## Problems
 
 A problem source reports what a linter or a scanner found. Its problems show with the editor's own in the Problems panel, under the title of the source, and agents read them with `language_problems`. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `problemSources` under `proposed`, list the id under `provides.problemSources` and ask for `problems.provide`.

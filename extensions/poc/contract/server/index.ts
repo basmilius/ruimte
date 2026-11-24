@@ -1,6 +1,7 @@
 import {
     agents,
     chats,
+    defineAgentProvider,
     defineAgentTool,
     defineLaunchSource,
     defineMachineSource,
@@ -220,6 +221,23 @@ try {
     machineSourceRefused = (e as Error).message;
 }
 
+let agentProviderRefused: string | null = null;
+
+try {
+    defineAgentProvider({
+        id: 'probe-agent',
+        name: 'Probe agent',
+        protocol: 'acp',
+        spawn: () => ({ command: 'probe-agent', args: ['acp'], env: { PROBE_MODE: 'chat' } }),
+        models: async () => [
+            { id: 'probe-small', name: 'Small' },
+            { id: 'probe-large', name: 'Large' }
+        ]
+    });
+} catch (e) {
+    agentProviderRefused = (e as Error).message;
+}
+
 const composerRefused: { reference: string | null; command: string | null } = { reference: null, command: null };
 
 try {
@@ -323,6 +341,9 @@ const providerApi = defineServer({
     },
     async uiSourceRefused() {
         return uiSourceRefused;
+    },
+    async agentProviderRefused() {
+        return agentProviderRefused;
     },
     async channelRefused() {
         return channelRefused;

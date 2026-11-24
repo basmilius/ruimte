@@ -4,7 +4,7 @@
  * pipes and files (`server-runtime.ts`); `createTestServer` hands in memory and a clock a test turns.
  */
 import { missingPermissionMessage } from '@ruimte/contracts/extension-client';
-import { clientPointRefusal, projectSettingKey, providerRefusal } from '@ruimte/contracts/extension-providers';
+import { clientPointRefusal, extensionAgentKind, projectSettingKey, providerRefusal } from '@ruimte/contracts/extension-providers';
 import type * as PublicServer from '../../../../packages/extension/server';
 import { everyMs, SCHEDULE_NEEDS_CLOCK } from './policy.ts';
 
@@ -38,6 +38,8 @@ export type ServerMessage =
     | { type: 'uiSource'; id: string; description: string; parameters?: object }
     | { type: 'reference'; id: string; title: string }
     | { type: 'slashCommand'; name: string; description: string }
+    // An agent it describes for the machine to start: its name, how it speaks, its program and the models it names.
+    | { type: 'agentProvider'; id: string; description: unknown }
     | { type: 'emit'; name: string; payload: unknown };
 
 interface ServerApiOptions {
@@ -64,6 +66,8 @@ export class MissingHandler extends Error {}
 
 export interface ServerCore {
     server: typeof PublicServer;
+    /* Settles once every agent provider the module defined said what it is, which one that lists its models does a moment later. */
+    agentsDescribed(): Promise<void>;
     runTool(name: string, input: unknown, context: { caller: string }): unknown;
     readNodeContext(nodeType: string, data: unknown): unknown;
     /* Asks a terminal profile where it shows, or what it starts. */
@@ -110,6 +114,7 @@ type NotificationChannel = Parameters<typeof PublicServer.defineNotificationChan
 type UiSource = Parameters<typeof PublicServer.defineUiSource>[0];
 type Reference = Parameters<typeof PublicServer.defineReference>[0];
 type SlashCommand = Parameters<typeof PublicServer.defineSlashCommand>[0];
+type AgentProvider = Parameters<typeof PublicServer.defineAgentProvider>[0];
 
 interface Ref {
     id: string;
@@ -161,6 +166,8 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
     const uiSources = new Map<string, UiSource>();
     const references = new Map<string, Reference>();
     const slashCommands = new Map<string, SlashCommand>();
+    // Settles once every agent provider that lists its models said what it is.
+    let agentsDescribed: Promise<void> = Promise.resolve();
     const fileWatches = new Map<number, () => void>();
     let nextFileWatch = 1;
     const typed = <Value>(method: string, args: unknown[]) => ask(method, args) as Promise<Result<Value>>;
@@ -284,6 +291,31 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
             mayDefine('defineSlashCommand', 'composer.provide', command.name);
             slashCommands.set(command.name, command);
             send({ type: 'slashCommand', name: command.name, description: command.description });
+        },
+        defineAgentProvider(provider: AgentProvider): void {
+            mayDefine('defineAgentProvider', 'agents.provide', provider.id);
+
+            if (extensionAgentKind(options.provides.id, provider.id) === null) {
+                throw new Error(`defineAgentProvider ${provider.id}: the id of the extension and this id are together at most 29 characters`);
+            }
+
+            // Described here, once: the machine starts the program for each chat without asking this process again.
+            const spawn = provider.spawn();
+            const describe = (models: { id: string; name: string }[]): void =>
+                send({ type: 'agentProvider', id: provider.id, description: { name: provider.name, protocol: provider.protocol, spawn, models } });
+
+            if (provider.models === undefined) {
+                describe([]);
+
+                return;
+            }
+
+            const listed = (async () => provider.models?.() ?? [])().then(describe, (e: unknown) => {
+                options.log.error(`The models of ${provider.id} could not be listed:`, e);
+                describe([]);
+            });
+
+            agentsDescribed = Promise.all([agentsDescribed, listed]).then(() => undefined);
         },
         problems: {
             report: async (project: Ref, source: string, reported: PublicServer.FileProblems[]) =>
@@ -410,6 +442,7 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
 
     return {
         server,
+        agentsDescribed: () => agentsDescribed,
         runTool(name, input, context) {
             const tool = tools.get(name);
 

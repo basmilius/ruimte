@@ -2,8 +2,9 @@ import { afterAll, afterEach, beforeAll } from 'bun:test';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
+import type { ChatProvider } from '@adecore/agents/providers';
 import { ManualClock } from '@adecore/agents/testing';
-import { ExtensionMessageEventSchema, extensionProjectPath, type ProjectContent } from '@ruimte/contracts';
+import { ExtensionMessageEventSchema, extensionAgentKind, extensionProjectPath, type ProjectContent } from '@ruimte/contracts';
 import { serverContract, ID } from '../../../../extensions/poc/contract/contract/server.ts';
 import { serverActions } from '../actions/server-actions-test-helpers.ts';
 import { markDrawnChat } from '../projects/drawn-chat.ts';
@@ -11,6 +12,7 @@ import { projectOverlays } from '../projects/overlays.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../testing/test-daemon.ts';
+import { ExtensionAgentProviders } from './agent-providers.ts';
 import { extensionChatStarter } from './extension-chat.ts';
 import { ExtensionHost, type ExtensionFilesPort } from './extension-host.ts';
 import { runMachineAction } from './machine-actions.ts';
@@ -164,11 +166,19 @@ serverContract(async (permissions, { provenance, ...provided } = {}) => {
     const files = memoryFiles(projectFolder);
     const problems = new ExtensionProblems({ folderOf: (id) => projects.index.folderOf(id), holders: () => [] });
     const launchChanges = new Map<string, number>();
+    // The probe lists its models before it says what its agent is, so that comes a moment after its process is up.
+    const agentDescribed = Promise.withResolvers<void>();
+    const offered = new Map<string, ChatProvider>();
+    const agents = new ExtensionAgentProviders({
+        list: (start) => host.agentProviders(start),
+        providers: { add: (provider) => void offered.set(provider.kind, provider), remove: (kind) => void offered.delete(kind), invalidate: () => undefined }
+    });
     const host: ExtensionHost = new ExtensionHost({
         store,
         projectFiles: () => files.port,
         problems: () => problems,
         launchesChanged: (_id, source) => void launchChanges.set(source, (launchChanges.get(source) ?? 0) + 1),
+        agentsDescribed: () => agentDescribed.resolve(),
         terminals: () => ({
             open: openTerminal,
             read: async () => 'The screen',
@@ -320,6 +330,30 @@ serverContract(async (permissions, { provenance, ...provided } = {}) => {
         },
         pick: (reference, item) => host.readReference(ID, reference, item, project),
         slash: (name, args) => host.expandCommand(ID, name, args, project),
+        // As the machine's wiring offers it: the provider the registry is handed once the extension's process described it.
+        agent: async (id) => {
+            if (!(await host.agentProviders(true)).some((listed) => listed.extension === ID && listed.id === id)) {
+                throw new Error(`${ID} supplies no agent ${id}`);
+            }
+
+            await agentDescribed.promise;
+            await agents.refresh(false);
+
+            const described = (await host.agentProviders(false)).find((listed) => listed.id === id)?.described;
+            const provider = offered.get(extensionAgentKind(ID, id) ?? '');
+
+            if (provider === undefined || described === null || described === undefined) {
+                throw new Error(`${ID} supplies no agent ${id}`);
+            }
+
+            return {
+                kind: provider.kind,
+                name: provider.name,
+                command: [...provider.command],
+                env: described.spawn.env ?? {},
+                models: provider.catalog.list().map((model) => ({ id: model.slug, name: model.name }))
+            };
+        },
         uiSource: async (id) => {
             const listed = (await host.uiSources(true)).find((source) => source.extension === ID && source.id === id);
 

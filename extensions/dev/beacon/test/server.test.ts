@@ -21,4 +21,25 @@ describe('Beacon on the machine', () => {
             value: '# Beacon: About\n\nChecked: /about\n\n## Findings (0)\n\nNothing found.\n'
         });
     });
+
+    test('describes Beacon Inspector as an agent Ruimte starts over ACP, with the models of the account', async () => {
+        const server = await createTestServer<BeaconServer>();
+
+        expect(await server.agentProvider('inspector')).toEqual({
+            kind: 'x-dev-beacon-inspector',
+            name: 'Beacon Inspector',
+            protocol: 'acp',
+            spawn: { command: 'beacon-inspector', args: ['acp'], env: { BEACON_RULES: 'account' } },
+            models: [
+                { id: 'inspector-fast', name: 'Inspector Fast' },
+                { id: 'inspector-deep', name: 'Inspector Deep' }
+            ]
+        });
+    });
+
+    test('describes no agent in an extension a person installed, where a proposed part does not work', async () => {
+        await expect(createTestServer<BeaconServer>({ provenance: 'installed' })).rejects.toThrow(
+            'This extension uses a part of Ruimte that is not final yet (agentProviders'
+        );
+    });
 });

@@ -62,6 +62,12 @@ export interface ServerWorld {
     uiSource(id: string): Promise<{ name: string; description: string; parameters?: object }>;
     /* What a UI source answers a block of a chat in `project`, or the reason the block gets nothing. */
     readUi(id: string, args: Record<string, Server.Json>): Promise<{ value: unknown } | { failure: string }>;
+    /*
+     * An agent as the machine offers it among its providers: the kind it goes by, its name, the program a chat with it
+     * starts with the variables on top of the person's own, and the models a picker lists first. Nothing is started.
+     * Rejects for an agent the extension does not supply.
+     */
+    agent(id: string): Promise<{ kind: string; name: string; command: string[]; env: Record<string, string>; models: { id: string; name: string }[] }>;
     /* A launch of `project` changed what it does, as the machine's runner says it. */
     launchIs(launch: string, state: 'running' | 'exited', exitCode: number | null): void;
     /* A client opened `project`, or the last one closed it. */
@@ -100,6 +106,8 @@ const COMPOSER: WorldManifest = {
     provides: { references: ['probe-things'], slashCommands: ['probe-echo'] },
     proposed: ['references', 'slashCommands']
 };
+const AGENTS = { 'agents.provide': 'Offers an agent' };
+const AGENT_PROVIDERS: WorldManifest = { provides: { agentProviders: ['probe-agent'] }, proposed: ['agentProviders'] };
 const NOT_FINAL =
     'This extension uses a part of Ruimte that is not final yet (terminalProfiles). It works while its author develops it, and an installed extension cannot use it.';
 
@@ -422,6 +430,45 @@ export function serverContract(open: OpenServerWorld): void {
             });
             expect(await world.machineStart('probe-machines', 'slow', true)).toMatchObject({ start: null, failure: 'Stopped by the person' });
             expect((await world.machineStart('probe-machines', 'broken', false)).failure).toStartWith('described a start that is none: steps ');
+        });
+
+        test('describes an agent for the machine to offer among its providers, with the program a chat starts and the models it names', async () => {
+            const world = await open(AGENTS, AGENT_PROVIDERS);
+
+            expect(await world.call('agentProviderRefused')).toEqual({ ok: true, value: null });
+            expect(await world.agent('probe-agent')).toEqual({
+                kind: 'x-poc-contract-probe-agent',
+                name: 'Probe agent',
+                command: ['probe-agent', 'acp'],
+                env: { PROBE_MODE: 'chat' },
+                models: [
+                    { id: 'probe-small', name: 'Small' },
+                    { id: 'probe-large', name: 'Large' }
+                ]
+            });
+        });
+
+        test('defines an agent provider only when its manifest asks for it, names it as proposed and lists it', async () => {
+            const unasked = await open({});
+            const unnamed = await open(AGENTS);
+            const unlisted = await open(AGENTS, { provides: { agentProviders: ['another'] }, proposed: ['agentProviders'] });
+
+            expect(await unasked.call('agentProviderRefused')).toEqual({
+                ok: true,
+                value: `${ID} did not ask for the permission agents.provide in its manifest`
+            });
+            expect(await unnamed.call('agentProviderRefused')).toEqual({
+                ok: true,
+                value: 'defineAgentProvider is still proposed; name agentProviders under proposed in manifest.json'
+            });
+            expect(await unlisted.call('agentProviderRefused')).toEqual({
+                ok: true,
+                value: 'defineAgentProvider got probe-agent, which manifest.json does not list under provides.agentProviders'
+            });
+            await expect(unlisted.agent('probe-agent')).rejects.toThrow();
+            await expect(open(AGENTS, { ...AGENT_PROVIDERS, provenance: 'installed' })).rejects.toThrow(
+                'This extension uses a part of Ruimte that is not final yet (agentProviders).'
+            );
         });
 
         test('defines a machine source only when its manifest asks for it, names it as proposed and lists it', async () => {

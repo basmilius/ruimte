@@ -287,6 +287,23 @@ export function defineUiSource(source: {
     read(args: Record<string, Json>, context: { project: ProjectInfo }): Json | Promise<Json>;
 }): void;
 
+/**
+ * Needs `agents.provide`. Proposed: name `agentProviders` under `proposed` in the manifest, and the id under
+ * `provides.agentProviders`. An agent that speaks the Agent Client Protocol on its standard input and output, offered in
+ * the model pickers beside the agents Ruimte knows. You describe and Ruimte starts: `spawn` answers the program once, as
+ * your server part loads, and Ruimte runs it for each chat in that chat's own folder, so `cwd` of the description is not
+ * used. `models` names what the picker offers until the agent reports its own in a chat, at most 64; without it the
+ * picker has one entry, Default. Ruimte hands the agent no key and reads none: it signs in the way it does on its own.
+ * The extension's id and this id together are at most 29 characters. Throws for an id the manifest does not list.
+ */
+export function defineAgentProvider(provider: {
+    id: string;
+    name: string;
+    protocol: 'acp';
+    spawn(): SpawnDescription;
+    models?(): { id: string; name: string }[] | Promise<{ id: string; name: string }[]>;
+}): void;
+
 /** A thing a reference lists after `#`: `id` is its own within the reference, `name` is what a person picks it by. */
 export interface ReferenceItem {
     id: string;

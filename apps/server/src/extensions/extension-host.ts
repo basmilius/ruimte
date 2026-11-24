@@ -34,6 +34,7 @@ import { bunRuntime } from '../language/runtime.ts';
 import type { SessionSink } from '../wire.ts';
 import { clientFilesOf } from './client-files.ts';
 import {
+    agentProviderDescribed,
     candidatesListed,
     composerTextRead,
     launchesListed,
@@ -42,6 +43,7 @@ import {
     SpawnDescriptionSchema,
     uiAnswerRead,
     uiSourceDescribed,
+    type AgentProviderDescription,
     type LaunchDescription,
     type MachineCandidateDescription,
     type MachineStartDescription,
@@ -93,6 +95,7 @@ const ProtocolMessageSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('reference'), id: z.string(), title: z.string().min(1).max(80) }),
     z.object({ type: z.literal('slashCommand'), name: z.string(), description: z.string().max(200) }),
     z.object({ type: z.literal('uiSource'), id: z.string(), description: z.unknown(), parameters: z.unknown().optional() }),
+    z.object({ type: z.literal('agentProvider'), id: z.string(), description: z.unknown() }),
     z.object({ type: z.literal('emit'), name: z.string(), payload: z.unknown().optional() }),
     z.object({ type: z.literal('result'), id: z.number(), result: z.unknown().optional(), error: z.string().optional(), code: z.string().optional() })
 ]);
@@ -163,6 +166,8 @@ interface Running {
     machineReports: Map<number, (line: string) => void>;
     notificationChannels: Map<string, { title: string }>;
     uiSources: Map<string, UiSourceDescription>;
+    // The agents its module described for the machine to start, by id.
+    agentProviders: Map<string, AgentProviderDescription>;
     // What its module offers after `#` and `/` in a chat, by id and by name.
     references: Map<string, { title: string }>;
     slashCommands: Map<string, { description: string }>;
@@ -303,6 +308,8 @@ export interface ExtensionHostOptions {
     launchesChanged?: (extensionId: string, source: string, projectId: string) => void;
     // What an extension supplies may differ from here on: it was turned on or off, changed, removed, or its process ended by itself.
     providersChanged?: (extensionId: string) => void;
+    // The process of an extension described an agent for the machine to start.
+    agentsDescribed?: (extensionId: string) => void;
     addLanguageServer?: (extensionId: string, server: object) => Promise<void>;
     // Stops what runs of them also when the change cannot be saved, and then rejects.
     removeLanguageServers?: (extensionId: string) => Promise<void>;
@@ -979,6 +986,7 @@ export class ExtensionHost {
             machineReports: new Map(),
             notificationChannels: new Map(),
             uiSources: new Map(),
+            agentProviders: new Map(),
             references: new Map(),
             slashCommands: new Map(),
             subscriptions: new Set(),
@@ -1094,6 +1102,18 @@ export class ExtensionHost {
                     void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `The UI source ${message.id} ${described}\n`));
                 } else {
                     running.uiSources.set(message.id, described);
+                }
+            }
+        } else if (message.type === 'agentProvider') {
+            if (this.mayProvide(id, running, 'defineAgentProvider', 'agents.provide', message.id)) {
+                const described = agentProviderDescribed(message.description);
+
+                if (typeof described === 'string') {
+                    void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `The agent ${message.id} ${described}\n`));
+                } else {
+                    running.agentProviders.set(message.id, described);
+                    // One that lists its models says what it is a moment after its module loaded, so whoever asked before hears now.
+                    this.options.agentsDescribed?.(id);
                 }
             }
         } else if (message.type === 'machineReport') {
@@ -1437,6 +1457,42 @@ export class ExtensionHost {
         } catch (e) {
             throw e instanceof ExtensionRefusal ? e : new ExtensionRefusal('failed', errorText(e));
         }
+    }
+
+    /*
+     * The agent providers the enabled extensions list in their manifests. One whose process described it comes with
+     * that description; one whose process does not run comes with null, so what was known of it can stand. With
+     * `start` the process of each starts for the list.
+     */
+    async agentProviders(start: boolean): Promise<{ extension: string; id: string; version: string; described: AgentProviderDescription | null }[]> {
+        const providers: { extension: string; id: string; version: string; described: AgentProviderDescription | null }[] = [];
+
+        for (const extension of await this.options.store.list()) {
+            if (isDamaged(extension) || !extension.enabled || this.refusedReason(extension) !== null || this.options.store.serverEntry(extension) === null) {
+                continue;
+            }
+
+            const { id, version } = extension.manifest;
+            const ids = providedIds(extension.manifest, 'agentProviders', allowsProposed(this.provenanceOf(extension)));
+
+            if (ids.length === 0) {
+                continue;
+            }
+
+            let running = this.running.get(id);
+
+            try {
+                running = start ? await this.runningFor(id) : running;
+            } catch (e) {
+                void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `Its agents were not listed: ${errorText(e)}\n`));
+            }
+
+            for (const provider of ids) {
+                providers.push({ extension: id, id: provider, version, described: running?.agentProviders.get(provider) ?? null });
+            }
+        }
+
+        return providers;
     }
 
     /*

@@ -13,6 +13,11 @@
         "artifacts.write": "Keeps each report in Output",
         "agents.run": "Asks one of your agents to sum up the findings",
         "chats.send": "Sends the last report to a chat when you ask",
-        "database.read": "Checks that the databases of the project answer"
-    }
+        "database.read": "Checks that the databases of the project answer",
+        "agents.provide": "Offers Beacon Inspector as an agent"
+    },
+    "provides": {
+        "agentProviders": ["inspector"]
+    },
+    "proposed": ["agentProviders"]
 }

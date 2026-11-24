@@ -30,8 +30,25 @@ export const EXTENSION_PROVIDER_POINTS: Readonly<Record<string, ExtensionProvide
     notificationChannels: { define: 'defineNotificationChannel', permission: 'notifications.provide', proposed: true },
     uiSources: { define: 'defineUiSource', permission: 'ui.provide', proposed: true },
     references: { define: 'defineReference', permission: 'composer.provide', proposed: true },
-    slashCommands: { define: 'defineSlashCommand', permission: 'composer.provide', proposed: true }
+    slashCommands: { define: 'defineSlashCommand', permission: 'composer.provide', proposed: true },
+    agentProviders: { define: 'defineAgentProvider', permission: 'agents.provide', proposed: true }
 };
+
+// The most models one agent provider of an extension names; an agent reports its own once a chat with it runs.
+export const MAX_AGENT_PROVIDER_MODELS = 64;
+
+// What a provider's kind holds at most (`AGENT_KIND_MAX_LENGTH` of the agent contracts), which this file cannot import.
+const MAX_AGENT_KIND = 32;
+
+/*
+ * The kind an agent of an extension goes by among the machine's providers: `x-`, the extension and its id, in the
+ * letters a kind takes, so it never meets a CLI Ruimte knows itself. Null when the two are too long for a kind.
+ */
+export function extensionAgentKind(extension: string, provider: string): string | null {
+    const kind = `x-${`${extension}-${provider}`.toLowerCase().replaceAll(/[^a-z0-9]+/g, '-')}`;
+
+    return kind.length <= MAX_AGENT_KIND ? kind : null;
+}
 
 /* One part of `@ruimte/extension/client` that is still proposed: a function a manifest names under `proposed` before it may call it. */
 export interface ExtensionClientPoint {

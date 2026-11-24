@@ -24,6 +24,12 @@ export interface ReportInput {
     summary: string | null;
 }
 
+/* The models of Beacon Inspector, the agent of the account, as its service would list them. */
+export const INSPECTOR_MODELS: readonly { id: string; name: string }[] = [
+    { id: 'inspector-fast', name: 'Inspector Fast' },
+    { id: 'inspector-deep', name: 'Inspector Deep' }
+];
+
 const BY_PATH: Readonly<Record<string, readonly Finding[]>> = {
     '/': [
         { rule: 'contrast', severity: 'medium', text: 'The gray text under the heading is too light to read on white.' },
